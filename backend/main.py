@@ -101,6 +101,9 @@ async def health():
     }
 
 
+# Serve React static assets
+app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="assets")
+
 # Serve React frontend for all non-API routes
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
