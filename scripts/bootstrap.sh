@@ -31,7 +31,7 @@ echo "Firewall configured"
 
 # Clone repo (update this URL after you push to GitHub)
 if [ ! -d "/opt/dxedge" ]; then
-    git clone https://github.com/YOUR_GITHUB/dxedge.git /opt/dxedge
+    git clone https://github.com/sagejw-svg/dxedge.git /opt/dxedge
 fi
 cd /opt/dxedge
 
