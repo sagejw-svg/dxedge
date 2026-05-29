@@ -2,7 +2,7 @@
 
 Live HF propagation, band conditions, DX cluster spots, and PSKReporter data for amateur radio operators.
 
-**Live at:** https://dxedge.net
+**Live at:** https://dxedge.com
 
 ## Features
 
@@ -41,7 +41,7 @@ npm run dev   # proxies /api to localhost:8000
 
 ### 1. Spin up a droplet
 - DigitalOcean, Ubuntu 24.04, $8/mo (1GB RAM)
-- Add DNS A records pointing dxedge.net and www.dxedge.net at droplet IP
+- Add DNS A records pointing dxedge.com and www.dxedge.com at droplet IP
 
 ### 2. Push this repo to GitHub
 

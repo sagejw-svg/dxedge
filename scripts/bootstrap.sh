@@ -42,21 +42,21 @@ npm run build
 cd ..
 
 # Get SSL certificate (HTTP must be reachable first)
-echo "Getting SSL certificate for dxedge.net..."
+echo "Getting SSL certificate for dxedge.com..."
 certbot certonly \
     --standalone \
     --non-interactive \
     --agree-tos \
     --email james@wilsonhaven.com \
-    -d dxedge.net \
-    -d www.dxedge.net
+    -d dxedge.com \
+    -d www.dxedge.com
 
 # Start the stack
 docker compose up -d --build
 
 echo ""
 echo "=== DXEdge is live ==="
-echo "https://dxedge.net"
+echo "https://dxedge.com"
 echo ""
 echo "Useful commands:"
 echo "  docker compose logs -f        # watch logs"

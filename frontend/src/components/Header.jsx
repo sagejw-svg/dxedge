@@ -7,7 +7,7 @@ export default function Header({ callsign, grid, onCallsign, onGrid, loading, la
             propagation intel
           </div>
           <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 700, color: '#eee', letterSpacing: -0.5 }}>
-            DXEdge<span style={{ color: 'var(--dim)', fontSize: 13, marginLeft: 6, fontWeight: 400 }}>.net</span>
+            DXEdge<span style={{ color: 'var(--dim)', fontSize: 13, marginLeft: 6, fontWeight: 400 }}>.com</span>
           </h1>
           {matrixLoaded && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--teal)', marginTop: 2 }}>
