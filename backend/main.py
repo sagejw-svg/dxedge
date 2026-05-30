@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -16,6 +16,37 @@ from database import init_db, load_solar_history, load_recent_spots
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+
+# --- WebSocket connection manager ---
+class SpotBroadcaster:
+    def __init__(self):
+        self._clients: set[WebSocket] = set()
+
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self._clients.add(ws)
+        logger.info(f"WS client connected ({len(self._clients)} total)")
+
+    def disconnect(self, ws: WebSocket):
+        self._clients.discard(ws)
+        logger.info(f"WS client disconnected ({len(self._clients)} remaining)")
+
+    async def broadcast(self, spot: dict):
+        if not self._clients:
+            return
+        import json
+        msg = json.dumps({"type": "spot", "data": spot})
+        dead = set()
+        for ws in self._clients:
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                dead.add(ws)
+        self._clients -= dead
+
+broadcaster = SpotBroadcaster()
 
 solar_poller = SolarPoller()
 cluster_poller = ClusterPoller()
@@ -46,6 +77,25 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+
+# --- WebSocket live spots ---
+@app.websocket("/ws/spots")
+async def ws_spots(websocket: WebSocket):
+    await broadcaster.connect(websocket)
+    try:
+        # Send current spots immediately on connect
+        import json
+        spots = cache.get("spots") or []
+        await websocket.send_text(json.dumps({"type": "init", "data": spots[:100]}))
+        # Keep alive - client sends pings
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        broadcaster.disconnect(websocket)
+    except Exception:
+        broadcaster.disconnect(websocket)
 
 
 # --- Solar ---

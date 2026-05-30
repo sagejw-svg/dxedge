@@ -4,6 +4,7 @@ import logging
 from xml.etree import ElementTree as ET
 from cache import cache
 from database import save_psk_spots, load_psk_spots, prune_old_psk
+from dxcc import enrich_spot
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,7 @@ class PSKPoller:
                     raise Exception(f"HTTP {r.status}")
                 text = await r.text()
                 spots = parse_psk_xml(text)
+                spots = [enrich_spot(s) for s in spots]
                 logger.info(f"PSK {grid4}: {len(spots)} spots")
                 # Persist to DB
                 if spots:

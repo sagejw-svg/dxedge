@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timezone
 from cache import cache
 from database import save_spots, load_recent_spots, prune_old_spots
+from dxcc import enrich_spot
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,13 @@ class ClusterPoller:
             save_spots([spot])
         except Exception as e:
             logger.debug(f"DB save spot failed: {e}")
+        # Broadcast to WebSocket clients
+        try:
+            import asyncio
+            from main import broadcaster
+            asyncio.create_task(broadcaster.broadcast(spot))
+        except Exception:
+            pass
 
     async def load_from_db(self):
         """Restore spots from DB on startup so we have data immediately."""
@@ -130,6 +138,7 @@ class ClusterPoller:
                 if text.upper().startswith("DX DE"):
                     spot = parse_spot(text)
                     if spot:
+                        enrich_spot(spot)
                         self._add_spot(spot)
                         logger.debug(f"Spot: {spot['callsign']} {spot['band']} {spot['freq']}")
         finally:

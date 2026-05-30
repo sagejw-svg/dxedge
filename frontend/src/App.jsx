@@ -8,6 +8,7 @@ import PSK from './components/PSK'
 import DXWindows from './components/DXWindows'
 import LoTW from './components/LoTW'
 import Header from './components/Header'
+import React from 'react'
 import Clocks from './components/Clocks'
 import VOACAP from './components/VOACAP'
 import HamClock from './components/HamClock'
@@ -30,6 +31,58 @@ const GRID_NEIGHBORS = {
 function getGridsToTry(grid) {
   const g4 = grid.slice(0, 4).toUpperCase()
   return GRID_NEIGHBORS[g4] || [g4]
+}
+
+
+// WebSocket hook for live spots
+function useLiveSpots(onSpot) {
+  const wsRef = React.useRef(null)
+  const reconnectRef = React.useRef(null)
+
+  const connect = React.useCallback(() => {
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    const ws = new WebSocket(`${proto}://${window.location.host}/ws/spots`)
+
+    ws.onopen = () => {
+      console.log('WS connected')
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current)
+        reconnectRef.current = null
+      }
+    }
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data)
+        onSpot(msg)
+      } catch {}
+    }
+
+    ws.onclose = () => {
+      console.log('WS disconnected - reconnecting in 5s')
+      reconnectRef.current = setTimeout(connect, 5000)
+    }
+
+    ws.onerror = () => ws.close()
+
+    // Keepalive ping every 30s
+    const ping = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.send('ping')
+    }, 30000)
+
+    wsRef.current = { ws, ping }
+  }, [onSpot])
+
+  React.useEffect(() => {
+    connect()
+    return () => {
+      if (wsRef.current) {
+        clearInterval(wsRef.current.ping)
+        wsRef.current.ws.close()
+      }
+      if (reconnectRef.current) clearTimeout(reconnectRef.current)
+    }
+  }, [connect])
 }
 
 export default function App() {
@@ -55,19 +108,37 @@ export default function App() {
     if (!silent) setLoading(true)
     setError(null)
     try {
-      const [solarData, spotsData] = await Promise.all([
-        api.solar(),
-        api.spots(),
-      ])
+      const solarData = await api.solar()
       setSolar(solarData)
-      setSpots(spotsData.spots || [])
       setLastUpdate(new Date())
+      // Only fetch spots via REST if WS hasn't populated them yet
+      if (spots.length === 0) {
+        const spotsData = await api.spots()
+        setSpots(spotsData.spots || [])
+      }
     } catch (e) {
       setError(e.message)
     } finally {
       setLoading(false)
     }
+  }, [spots.length])
+
+  // WebSocket live spot feed
+  const handleWsMessage = useCallback((msg) => {
+    if (msg.type === 'init') {
+      setSpots(msg.data || [])
+    } else if (msg.type === 'spot') {
+      setSpots(prev => {
+        // Deduplicate: remove same callsign+band
+        const filtered = prev.filter(
+          s => !(s.callsign === msg.data.callsign && s.band === msg.data.band)
+        )
+        return [msg.data, ...filtered].slice(0, 500)
+      })
+    }
   }, [])
+
+  useLiveSpots(handleWsMessage)
 
   const fetchPSK = useCallback(async () => {
     const gridsToTry = getGridsToTry(grid)
