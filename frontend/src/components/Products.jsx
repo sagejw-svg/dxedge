@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const CATEGORIES = ['All', 'SDR Hardware', 'Radios', 'Raspberry Pi', 'Antennas', 'Accessories', 'Books']
+const CATEGORIES = ['All', 'SDR Hardware', 'Radios', 'Raspberry Pi', 'Antennas', 'Accessories', 'Books', 'Sites']
 
 const PRODUCTS = [
   // SDR Hardware
@@ -234,6 +234,148 @@ const PRODUCTS = [
     icon: '📱',
   },
 
+
+  // Palomar Engineers
+  {
+    id: 'palomar',
+    category: 'Accessories',
+    name: 'Palomar Engineers',
+    tagline: 'RFI solutions and ferrite products',
+    description: 'The go-to source for ferrite chokes, line isolators, snap-on cores, and RFI suppression products. If you have RF in your shack, audio hum on transmit, or TVI issues, Palomar has the ferrite solution. Also makes excellent 1:1 current baluns.',
+    price: '$15-150',
+    link: 'https://www.palomar-engineers.com',
+    badge: 'RFI Fixes',
+    badgeColor: '#ff9933',
+    specs: ['Ferrite chokes', 'Line isolators', 'Snap-on cores', 'Current baluns'],
+    icon: '🔩',
+  },
+  // Balun Designs
+  {
+    id: 'balun-designs',
+    category: 'Accessories',
+    name: 'Balun Designs',
+    tagline: 'High-quality baluns and ununs',
+    description: 'Precision-wound baluns and ununs built to handle real power levels. The 4:1 voltage balun and 1:1 current balun are fixtures in serious HF stations. Used by contest operators and DXers who need something that won't fail at legal limit.',
+    price: '$30-150',
+    link: 'https://balundesigns.com',
+    badge: 'Contest Grade',
+    badgeColor: '#7affb2',
+    specs: ['1:1 current baluns', '4:1 voltage baluns', '9:1 ununs', 'Legal limit rated'],
+    icon: '⚡',
+  },
+  // M5Stack Cardputer
+  {
+    id: 'cardputer',
+    category: 'Raspberry Pi',
+    name: 'M5Stack Cardputer',
+    tagline: 'Pocket ESP32 computer with keyboard',
+    description: 'A credit-card-sized ESP32-S3 computer with a tiny QWERTY keyboard and 1.14" display. WiFi + BT built in. Hams use these for portable CW keyers, CAT controllers, APRS trackers, Meshtastic nodes, and FT8 decoders. Astonishing capability for $30.',
+    price: '$30',
+    link: 'https://shop.m5stack.com/products/m5stack-cardputer-kit-w-m5stamps3',
+    badge: 'Pocket Computer',
+    badgeColor: '#a78bfa',
+    specs: ['ESP32-S3', 'QWERTY keyboard', 'WiFi + BT', '1.14" display'],
+    icon: '💳',
+  },
+  // sBitx
+  {
+    id: 'sbitx',
+    category: 'Radios',
+    name: 'sBITX v3',
+    tagline: 'Open-source HF SDR transceiver with Pi',
+    description: 'A Raspberry Pi-based open-source HF SDR transceiver covering 80m-10m at 10W. Created by Ashhar Farhan VU2ESE (who also designed the legendary uBITX). Full software-defined architecture with a touch-screen display. The open-source HF radio to watch.',
+    price: '$220',
+    link: 'https://www.hfsignals.com/index.php/sbitx/',
+    badge: 'Open Source',
+    badgeColor: '#00ff9d',
+    specs: ['80m-10m HF', '10W output', 'Pi-based SDR', 'Touch screen'],
+    icon: '🖥️',
+  },
+  // QRP Labs
+  {
+    id: 'qrp-labs',
+    category: 'Radios',
+    name: 'QRP Labs QCX+',
+    tagline: 'The best $55 CW transceiver ever made',
+    description: 'Hans Summers G0UPL created a phenomenon with the QCX series. A single-band CW transceiver kit for $55 with superb receiver performance. Build your own radio, learn electronics, make contacts worldwide at 5W. The WSPR beacon kits are legendary too.',
+    price: '$55',
+    link: 'https://www.qrp-labs.com',
+    badge: 'Kit of the Decade',
+    badgeColor: '#ffd600',
+    specs: ['Single band CW', '5W output', 'Kit build', 'Superhet receiver'],
+    icon: '🏆',
+  },
+  // Elecraft
+  {
+    id: 'elecraft-kx3',
+    category: 'Radios',
+    name: 'Elecraft KX3',
+    tagline: 'The ultimate portable HF transceiver',
+    description: 'The KX3 remains the gold standard for portable HF. Exceptional receiver, 10W (upgradable to 100W with KXPA100), and a feature set that rivals full-size rigs. Built-in ATU, antenna analyzer, and CW keyer. SOTA and POTA operators swear by it.',
+    price: '$900-1100',
+    link: 'https://elecraft.com/products/kx3-all-mode-160-6-m-transceiver',
+    badge: 'SOTA Gold Standard',
+    badgeColor: '#ffd600',
+    specs: ['160m-6m', '10W (100W option)', 'Built-in ATU', 'Sub-1lb portable'],
+    icon: '🎖️',
+  },
+  // Meshtastic
+  {
+    id: 'meshtastic',
+    category: 'Accessories',
+    name: 'Meshtastic',
+    tagline: 'LoRa mesh networking for hams and preppers',
+    description: 'Open-source firmware for LoRa radios creating an off-grid mesh network. No internet, no cell towers, no infrastructure - just radio nodes passing messages. Hugely popular with hams for emergency comm and outdoor adventures. Runs on $25 LilyGO boards.',
+    price: '$25-50',
+    link: 'https://meshtastic.org',
+    badge: 'Off-Grid Comms',
+    badgeColor: '#00ff9d',
+    specs: ['LoRa 915 MHz', 'Mesh networking', 'GPS tracking', 'No license needed (US)'],
+    icon: '🕸️',
+  },
+  // LilyGO
+  {
+    id: 'lilygo-t3s3',
+    category: 'Raspberry Pi',
+    name: 'LilyGO T3-S3 LoRa',
+    tagline: 'ESP32-S3 + LoRa + display dev board',
+    description: 'A compact ESP32-S3 board with integrated LoRa radio, small display, and battery charging. The preferred hardware for Meshtastic nodes. Also great for APRS experimentation, portable digital ops, and general embedded radio projects.',
+    price: '$25-35',
+    link: 'https://www.lilygo.cc/products/t3s3-v1-0',
+    badge: 'Meshtastic Ready',
+    badgeColor: '#7a9fff',
+    specs: ['ESP32-S3', 'LoRa 915/868 MHz', '0.96" OLED', 'LiPo charging'],
+    icon: '📟',
+  },
+  // Chameleon Antenna
+  {
+    id: 'chameleon',
+    category: 'Antennas',
+    name: 'Chameleon CHA F-Loop 2.0',
+    tagline: 'Compact magnetic loop for field ops',
+    description: 'A precision magnetic loop antenna covering 40m-15m that breaks down to a small package. Used by POTA operators, backpackers, and anyone needing a quiet, compact antenna. Better signal-to-noise than a random wire in noisy environments.',
+    price: '$300-400',
+    link: 'https://chameleonantenna.com',
+    badge: 'Portable Loop',
+    badgeColor: '#7affb2',
+    specs: ['40m-15m', 'Compact travel size', 'Low noise floor', 'No radials needed'],
+    icon: '🦎',
+  },
+  // SOTAbeams
+  {
+    id: 'sotabeams',
+    category: 'Antennas',
+    name: 'SOTAbeams Band Hopper',
+    tagline: 'Lightweight linked dipole for summit ops',
+    description: 'Lightweight linked dipoles designed specifically for SOTA summit activations. Simple clip links switch bands in seconds. The Band Hopper IV covers 40/30/20/17m from a single feeder. Weighs almost nothing - essential for any serious portable operator.',
+    price: '$50-80',
+    link: 'https://www.sotabeams.co.uk',
+    badge: 'SOTA Essential',
+    badgeColor: '#ff9933',
+    specs: ['40/30/20/17m', 'Linked dipole', 'Ultra-lightweight', 'Summit proven'],
+    icon: '⛰️',
+  },
+
   // Books
   {
     id: 'arrl-handbook',
@@ -396,6 +538,61 @@ export default function Products() {
           no products match "{search}"
         </div>
       )}
+
+
+      {/* Sites Worth Bookmarking */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+          sites worth bookmarking
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+          {[
+            { name: 'Palomar Engineers',    url: 'https://www.palomar-engineers.com',  desc: 'Ferrite, chokes, RFI fixes' },
+            { name: 'Balun Designs',        url: 'https://balundesigns.com',            desc: 'Contest-grade baluns & ununs' },
+            { name: 'QRP Labs',             url: 'https://www.qrp-labs.com',            desc: 'QCX+ kits, WSPR beacons' },
+            { name: 'HF Signals / sBITX',  url: 'https://www.hfsignals.com',           desc: 'Open-source HF SDR rigs' },
+            { name: 'Elecraft',             url: 'https://elecraft.com',                desc: 'KX2/KX3 portable HF rigs' },
+            { name: 'M5Stack',              url: 'https://shop.m5stack.com',            desc: 'Cardputer & ESP32 modules' },
+            { name: 'LilyGO',               url: 'https://www.lilygo.cc',              desc: 'LoRa + ESP32 boards' },
+            { name: 'Meshtastic',           url: 'https://meshtastic.org',              desc: 'LoRa off-grid mesh comms' },
+            { name: 'SOTAbeams',            url: 'https://www.sotabeams.co.uk',         desc: 'Lightweight portable antennas' },
+            { name: 'Chameleon Antenna',    url: 'https://chameleonantenna.com',        desc: 'Portable HF antenna systems' },
+            { name: 'RTL-SDR Blog',         url: 'https://www.rtl-sdr.com',            desc: 'RTL-SDR news, tutorials, shop' },
+            { name: 'SignalsEverywhere',    url: 'https://www.youtube.com/@SignalsEverywhere', desc: 'SDR YouTube channel' },
+            { name: 'KiwiSDR Network',      url: 'https://sdr.hu',                      desc: 'Public KiwiSDR stations' },
+            { name: 'WebSDR',               url: 'http://websdr.org',                   desc: 'Web-based SDR receivers' },
+            { name: 'POTA',                 url: 'https://pota.app',                    desc: 'Parks on the Air program' },
+            { name: 'SOTA',                 url: 'https://www.sota.org.uk',             desc: 'Summits on the Air program' },
+            { name: 'DX World',             url: 'https://www.dx-world.net',            desc: 'DXpedition news & info' },
+            { name: 'ARRL',                 url: 'https://www.arrl.org',               desc: 'American Radio Relay League' },
+            { name: 'eHam.net',             url: 'https://www.eham.net',               desc: 'Reviews, forums, classifieds' },
+            { name: 'QRZ.com',              url: 'https://www.qrz.com',               desc: 'Callsign lookup & logbook' },
+            { name: 'hamspots.net',         url: 'https://hamspots.net',               desc: 'DX spots with DXCC filter' },
+            { name: 'DX Maps',              url: 'https://www.dxmaps.com',             desc: 'Real-time propagation map' },
+            { name: 'WSPR Rocks',           url: 'https://wspr.rocks',                 desc: 'WSPR reception visualization' },
+            { name: 'JS8Call',              url: 'https://js8call.com',                desc: 'Keyboard-to-keyboard HF digital' },
+          ].map(site => (
+            <a key={site.name} href={site.url} target="_blank" rel="noreferrer"
+              style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'var(--bg1)', border: '1px solid var(--border)',
+                borderRadius: 7, padding: '10px 12px',
+                transition: 'border-color 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#444'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+                  {site.name} ↗
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--dim)', fontStyle: 'italic' }}>
+                  {site.desc}
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
 
       <p style={{ marginTop: 20, fontSize: 11, color: 'var(--dim)', fontStyle: 'italic' }}>
         Prices approximate and subject to change. Links go to manufacturer or retailer sites. No affiliate relationships. 73 de K6WRJ
