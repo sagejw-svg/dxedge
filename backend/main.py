@@ -145,27 +145,34 @@ async def get_voacap_summary(
     if not all_predictions:
         raise HTTPException(503, "Prediction unavailable")
 
-    # For each hour: take the BEST region's average band reliability
-    # This shows peak DX opportunity rather than a washed-out average
+    # For each hour: compute per-band average across regions + overall score
+    ALL_BANDS = ["10m","15m","17m","20m","30m","40m","80m"]
     summary = []
     for h in range(24):
         region_scores = []
+        band_avgs = {b: [] for b in ALL_BANDS}
+
         for pred in all_predictions:
             hour_data = pred["hours"][h]
-            band_vals = list(hour_data["bands"].values())
-            if band_vals:
-                # Weight: focus on 40m-17m (most active DX bands)
-                dx_bands = ["40m","30m","20m","17m","15m"]
-                dx_vals = [hour_data["bands"].get(b, 0) for b in dx_bands]
-                region_scores.append(sum(dx_vals) / len(dx_vals))
-        # Use 75th percentile score (best-ish region, not just the single best)
+            dx_bands = ["40m","30m","20m","17m","15m"]
+            dx_vals = [hour_data["bands"].get(b, 0) for b in dx_bands]
+            region_scores.append(sum(dx_vals) / len(dx_vals))
+            for b in ALL_BANDS:
+                band_avgs[b].append(hour_data["bands"].get(b, 0))
+
+        # 75th percentile overall score
         if region_scores:
             region_scores.sort(reverse=True)
             idx = max(0, len(region_scores)//4)
             score = round(region_scores[idx], 3)
         else:
             score = 0
-        summary.append({"utc": h, "score": score})
+
+        # Average per band across regions
+        bands = {b: round(sum(v)/len(v), 2) if v else 0
+                 for b, v in band_avgs.items()}
+
+        summary.append({"utc": h, "score": score, "bands": bands})
 
     result = {
         "grid": grid.upper(),
