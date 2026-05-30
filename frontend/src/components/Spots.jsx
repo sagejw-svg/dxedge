@@ -1,8 +1,26 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 const BANDS = ['', '160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
 const MODES = ['', 'FT8', 'FT4', 'SSB', 'CW', 'RTTY']
 const CONT_FLAG = { EU: '🌍', AS: '🌏', OC: '🌏', AF: '🌍', SA: '🌎', NA: '🌎' }
+
+const BAND_ORDER = ['160m','80m','40m','30m','20m','17m','15m','12m','10m','6m']
+
+function SortHeader({ label, field, sort, onSort, style }) {
+  const active = sort.field === field
+  const icon = !active ? '⇅' : sort.dir === 'asc' ? '↑' : '↓'
+  return (
+    <span onClick={() => onSort(field)} style={{
+      fontFamily: 'var(--font-mono)', fontSize: 10, color: active ? 'var(--teal)' : 'var(--dim)',
+      letterSpacing: 2, textTransform: 'uppercase', cursor: 'pointer',
+      userSelect: 'none', display: 'flex', alignItems: 'center', gap: 3,
+      ...style
+    }}>
+      {label}
+      <span style={{ fontSize: 9, opacity: active ? 1 : 0.4 }}>{icon}</span>
+    </span>
+  )
+}
 
 function SpotRow({ spot, needed }) {
   return (
@@ -12,7 +30,7 @@ function SpotRow({ spot, needed }) {
       borderBottom: '1px solid var(--border)',
       background: needed ? '#7affb208' : 'transparent',
       borderLeft: needed ? '3px solid var(--teal)' : '3px solid transparent',
-      animation: 'fadeIn 0.3s ease both'
+      animation: 'fadeIn 0.2s ease both'
     }}>
       <span style={{ fontSize: 16 }}>{CONT_FLAG[spot.continent] || '📡'}</span>
       <div>
@@ -33,14 +51,55 @@ function SpotRow({ spot, needed }) {
 export default function Spots({ spots, needsMatrix }) {
   const [filterBand, setFilterBand] = useState('')
   const [filterMode, setFilterMode] = useState('')
+  const [sort, setSort] = useState({ field: 'time_utc', dir: 'desc' })
   const hasNeeds = !!needsMatrix && Object.keys(needsMatrix).length > 0
 
-  // Client-side filtering - instant, no refetch needed
-  const filtered = spots.filter(s => {
-    if (filterBand && s.band !== filterBand) return false
-    if (filterMode && s.mode?.toUpperCase() !== filterMode.toUpperCase()) return false
-    return true
-  })
+  const handleSort = (field) => {
+    setSort(prev => ({
+      field,
+      dir: prev.field === field && prev.dir === 'asc' ? 'desc' : 'asc'
+    }))
+  }
+
+  const filtered = useMemo(() => {
+    let result = spots.filter(s => {
+      if (filterBand && s.band !== filterBand) return false
+      if (filterMode && s.mode?.toUpperCase() !== filterMode.toUpperCase()) return false
+      return true
+    })
+
+    result = [...result].sort((a, b) => {
+      let av, bv
+      switch (sort.field) {
+        case 'callsign':
+          av = a.callsign || ''; bv = b.callsign || ''
+          break
+        case 'freq':
+          av = a.freq || 0; bv = b.freq || 0
+          break
+        case 'band':
+          av = BAND_ORDER.indexOf(a.band); bv = BAND_ORDER.indexOf(b.band)
+          if (av < 0) av = 99; if (bv < 0) bv = 99
+          break
+        case 'mode':
+          av = a.mode || ''; bv = b.mode || ''
+          break
+        case 'time_utc':
+          av = a.time_utc || ''; bv = b.time_utc || ''
+          break
+        case 'dxcc':
+          av = a.dxcc || a.comment || ''; bv = b.dxcc || b.comment || ''
+          break
+        default:
+          return 0
+      }
+      if (av < bv) return sort.dir === 'asc' ? -1 : 1
+      if (av > bv) return sort.dir === 'asc' ?  1 : -1
+      return 0
+    })
+
+    return result
+  }, [spots, filterBand, filterMode, sort])
 
   const selectStyle = {
     fontFamily: 'var(--font-mono)', fontSize: 13,
@@ -68,15 +127,27 @@ export default function Spots({ spots, needsMatrix }) {
             LoTW needs active
           </span>
         )}
+        {sort.field !== 'time_utc' && (
+          <button onClick={() => setSort({ field: 'time_utc', dir: 'desc' })} style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10, background: 'transparent',
+            border: '1px solid var(--border)', color: 'var(--muted)',
+            padding: '4px 10px', borderRadius: 4, cursor: 'pointer'
+          }}>reset sort</button>
+        )}
       </div>
 
       {/* Spot list */}
       <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 64px 52px 56px', gap: 10, padding: '6px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
-          {['', 'callsign', 'freq', 'band', 'mode', 'utc'].map(h => (
-            <span key={h} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--dim)', letterSpacing: 2, textTransform: 'uppercase' }}>{h}</span>
-          ))}
+        {/* Sortable column headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 64px 52px 56px', gap: 10, padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+          <span />
+          <SortHeader label="callsign" field="callsign" sort={sort} onSort={handleSort} />
+          <SortHeader label="freq"     field="freq"     sort={sort} onSort={handleSort} />
+          <SortHeader label="band"     field="band"     sort={sort} onSort={handleSort} />
+          <SortHeader label="mode"     field="mode"     sort={sort} onSort={handleSort} />
+          <SortHeader label="utc"      field="time_utc" sort={sort} onSort={handleSort} />
         </div>
+
         {filtered.length === 0 ? (
           <div style={{ padding: 36, textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--dim)' }}>
             {spots.length === 0 ? 'no spots yet - cluster connecting...' : 'no spots match current filter'}
