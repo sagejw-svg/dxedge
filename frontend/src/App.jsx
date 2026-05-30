@@ -8,6 +8,7 @@ import PSK from './components/PSK'
 import DXWindows from './components/DXWindows'
 import LoTW from './components/LoTW'
 import Header from './components/Header'
+import Clock from './components/Clock'
 
 const TABS = [
   { id: 'bands',   label: 'Bands' },
@@ -124,6 +125,8 @@ export default function App() {
         loading={loading} lastUpdate={lastUpdate}
         onRefresh={() => fetchData()} matrixLoaded={!!matrix}
       />
+
+      <Clock grid={grid} />
 
       {solar && <Solar data={solar} />}
 
