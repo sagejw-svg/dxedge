@@ -28,5 +28,7 @@ export const api = {
   voacap:         (grid, region)  => get(`/voacap?grid=${grid||'CM95'}&region=${region||'EU'}`),
   summary:        (grid)          => get(`/voacap/summary?grid=${grid||'CM95'}`),
   recommendation: (grid)          => get(`/recommendation?grid=${grid||'CM95'}`),
+  dashboard:      (grid)          => get(`/dashboard?grid=${grid||'CM95'}`),
+  pskCallsign:    (call, hours)   => get(`/callsign?call=${call}&hours=${hours||2}`),
   health:         ()              => get('/health'),
 }

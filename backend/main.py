@@ -146,6 +146,40 @@ async def get_lotw(payload: dict):
         raise HTTPException(502, f"LoTW error: {e}")
 
 
+
+# --- Dashboard (single endpoint for initial page load) ---
+@app.get("/api/dashboard")
+async def get_dashboard(
+    grid: str = Query(default="CM95", min_length=4, max_length=6),
+):
+    """Single endpoint returning solar + spots + recommendation.
+    Replaces three separate calls on page load."""
+    from datetime import datetime, timezone
+
+    cache_key = f"dashboard_{grid.upper()}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    solar = cache.get("solar")
+    spots = cache.get("spots") or []
+
+    # Recommendation (lightweight - uses cached VOACAP if available)
+    rec_key = f"rec_{grid.upper()}_{round(solar.get('sfi',140)) if solar else 140}_{round(solar.get('k_index',2),1) if solar else 2}"
+    rec = cache.get(rec_key)
+
+    result = {
+        "solar":          solar,
+        "spots":          spots[:200],
+        "spots_total":    len(spots),
+        "recommendation": rec,
+        "grid":           grid.upper(),
+        "timestamp":      datetime.now(timezone.utc).isoformat(),
+    }
+
+    cache.set(cache_key, result, ttl=30)  # short TTL - data changes frequently
+    return result
+
 # --- Solar history ---
 @app.get("/api/solar/history")
 async def get_solar_history(hours: int = 48):

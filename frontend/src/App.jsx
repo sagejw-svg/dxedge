@@ -99,6 +99,7 @@ export default function App() {
   const [grid, setGrid] = useState(() => localStorage.getItem('dxedge_grid') || 'CM95')
   const [callsign, setCallsign] = useState(() => localStorage.getItem('dxedge_call') || '')
   const [matrix, setMatrix] = useState(null)
+  const [rec, setRec] = useState(null)
   const intervalRef = useRef(null)
 
   const savePrefs = useCallback((call, gr) => {
@@ -110,20 +111,25 @@ export default function App() {
     if (!silent) setLoading(true)
     setError(null)
     try {
-      const solarData = await api.solar()
-      setSolar(solarData)
+      // Single dashboard call replaces solar + spots + recommendation
+      const dash = await api.dashboard(grid)
+      if (dash.solar)  setSolar(dash.solar)
+      if (dash.spots?.length > 0 && spots.length === 0) setSpots(dash.spots)
+      if (dash.recommendation) setRec(dash.recommendation)
       setLastUpdate(new Date())
-      // Only fetch spots via REST if WS hasn't populated them yet
-      if (spots.length === 0) {
-        const spotsData = await api.spots()
-        setSpots(spotsData.spots || [])
-      }
     } catch (e) {
-      setError(e.message)
+      // Fallback to individual calls if dashboard fails
+      try {
+        const solarData = await api.solar()
+        setSolar(solarData)
+        setLastUpdate(new Date())
+      } catch (e2) {
+        setError(e2.message)
+      }
     } finally {
       setLoading(false)
     }
-  }, [spots.length])
+  }, [grid, spots.length])
 
   // WebSocket live spot feed
   const handleWsMessage = useCallback((msg) => {
@@ -200,7 +206,7 @@ export default function App() {
         callsign={callsign} grid={grid}
         onCallsign={(v) => { setCallsign(v); savePrefs(v, grid) }}
         onGrid={(v) => { setGrid(v); savePrefs(callsign, v) }}
-        loading={loading} lastUpdate={lastUpdate}
+        loading={loading} lastUpdate={lastUpdate} rec={rec}
         onRefresh={() => fetchData()} matrixLoaded={!!matrix}
       />
 

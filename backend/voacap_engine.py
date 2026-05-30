@@ -76,19 +76,25 @@ def solar_zenith(lat: float, lon: float, utc_hour: float) -> float:
 
 
 def estimate_fof2(sfi: float, zenith: float) -> float:
-    """Estimate F2 layer critical frequency (MHz)"""
+    """Estimate F2 layer critical frequency (MHz).
+    Calibrated to produce realistic values:
+      SFI=120, noon (zenith~30°) -> ~7 MHz
+      SFI=70,  noon              -> ~4 MHz
+      Night                      -> 2-3 MHz
+    """
     if zenith >= 102:
-        return max(2.5, 0.003 * sfi + 1.5)
+        # Deep night
+        return max(2.0, 0.02 * sfi - 0.5)
     elif zenith >= 90:
         # Twilight transition
         factor = (102 - zenith) / 12.0
-        night = max(2.5, 0.003 * sfi + 1.5)
+        night = max(2.0, 0.02 * sfi - 0.5)
         cos_z = math.cos(math.radians(80))
-        day = max(3.0, 0.009 * math.sqrt(sfi) * (cos_z ** 0.3) * 8 + 2)
+        day   = max(3.5, 0.06 * sfi * (cos_z ** 0.3))
         return night + factor * (day - night)
     else:
         cos_z = math.cos(math.radians(zenith))
-        return max(3.0, 0.009 * math.sqrt(sfi) * (cos_z ** 0.3) * 8 + 2)
+        return max(3.5, 0.06 * sfi * (cos_z ** 0.3))
 
 
 def muf_multiplier(dist_km: float) -> float:
