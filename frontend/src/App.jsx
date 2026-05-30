@@ -8,7 +8,7 @@ import PSK from './components/PSK'
 import DXWindows from './components/DXWindows'
 import LoTW from './components/LoTW'
 import Header from './components/Header'
-import Clock from './components/Clock'
+import Clocks from './components/Clocks'
 import VOACAP from './components/VOACAP'
 import HourlySummary from './components/HourlySummary'
 
@@ -129,7 +129,7 @@ export default function App() {
         onRefresh={() => fetchData()} matrixLoaded={!!matrix}
       />
 
-      <Clock grid={grid} />
+      <Clocks />
 
       {solar && <Solar data={solar} />}
 
