@@ -17,6 +17,8 @@ from voacap_engine import predict_path, REGIONS
 from database import init_db, load_solar_history, load_recent_spots
 from pota import fetch_pota, fetch_sota
 from contests import fetch_contests
+from alerts import run_alert_loop
+from database import save_subscription, delete_subscription
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -66,6 +68,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(psk_poller.run()),
     ]
     init_db()
+    asyncio.create_task(run_alert_loop())
     logger.info("DXEdge pollers started")
     yield
     for t in tasks:
@@ -385,6 +388,39 @@ app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="a
 async def serve_frontend(full_path: str):
     return FileResponse("/app/frontend/dist/index.html")
 
+
+
+# --- Push alert subscriptions ---
+@app.post("/api/alerts/subscribe")
+async def subscribe_alerts(body: dict):
+    callsign = (body.get("callsign") or "").upper().strip()
+    topic    = (body.get("topic") or "").strip()
+    alerts   = body.get("alerts", ["10m_open", "k_storm"])
+    if not callsign or not topic:
+        raise HTTPException(400, "callsign and topic required")
+    if len(topic) > 64 or not topic.replace("-","").replace("_","").isalnum():
+        raise HTTPException(400, "invalid topic name")
+    save_subscription(callsign, topic, alerts)
+    return {"status": "subscribed", "topic": topic, "callsign": callsign}
+
+
+@app.delete("/api/alerts/subscribe/{topic}")
+async def unsubscribe_alerts(topic: str):
+    delete_subscription(topic)
+    return {"status": "unsubscribed"}
+
+
+@app.get("/api/alerts/test/{topic}")
+async def test_alert(topic: str):
+    from alerts import send_ntfy
+    sent = await send_ntfy(
+        topic    = topic,
+        title    = "DXEdge Test Alert",
+        message  = "Your DXEdge alerts are working! 73 de K6WRJ",
+        priority = "default",
+        tags     = ["radio_button", "white_check_mark"],
+    )
+    return {"sent": sent, "topic": topic}
 
 # --- Contest calendar ---
 @app.get("/api/contests")

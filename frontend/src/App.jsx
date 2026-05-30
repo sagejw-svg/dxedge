@@ -18,6 +18,8 @@ import SolarHistory from './components/SolarHistory'
 import GrayLine from './components/GrayLine'
 import Activations from './components/Activations'
 import ContestCalendar from './components/ContestCalendar'
+import Alerts from './components/Alerts'
+import Credits from './components/Credits'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -28,6 +30,8 @@ const TABS = [
   { id: 'grayline', label: 'Gray Line' },
   { id: 'pota',     label: 'POTA/SOTA' },
   { id: 'contests', label: 'Contests' },
+  { id: 'alerts',   label: 'Alerts' },
+  { id: 'credits',  label: 'Credits' },
   { id: 'windows', label: 'DX Windows' },
   { id: 'lotw',    label: 'LoTW' },
   { id: 'tools',   label: 'Tools' },
@@ -261,6 +265,8 @@ export default function App() {
           {tab === 'grayline' && <GrayLine grid={grid} />}
           {tab === 'pota'     && <Activations />}
           {tab === 'contests' && <ContestCalendar />}
+          {tab === 'alerts'   && <Alerts callsign={callsign} />}
+          {tab === 'credits'  && <Credits />}
           {tab === 'windows' && <DXWindows />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'tools'   && <HamClock />}

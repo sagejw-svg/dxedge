@@ -26,6 +26,15 @@ def init_db():
     """Create tables if they don't exist."""
     with get_conn() as conn:
         conn.executescript("""
+            CREATE TABLE IF NOT EXISTS alert_subscriptions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                callsign    TEXT NOT NULL,
+                topic       TEXT NOT NULL UNIQUE,
+                alerts      TEXT NOT NULL DEFAULT '["10m_open","k_storm","gray_line"]',
+                created_at  TEXT NOT NULL,
+                last_sent   TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS spots (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 callsign    TEXT NOT NULL,
@@ -78,7 +87,14 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_psk_band      ON psk_spots(band);
             CREATE INDEX IF NOT EXISTS idx_psk_timestamp ON psk_spots(timestamp DESC);
         """)
-    logger.info(f"Database initialized at {DB_PATH}")
+            CREATE TABLE IF NOT EXISTS alert_subscriptions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                callsign    TEXT NOT NULL,
+                topic       TEXT NOT NULL UNIQUE,
+                alerts      TEXT NOT NULL DEFAULT '["10m_open","k_storm","gray_line"]',
+                created_at  TEXT NOT NULL,
+                last_sent   TEXT
+            );
 
 
 # --- Spots ---
@@ -220,3 +236,36 @@ def prune_old_psk(hours: int = 6):
             "DELETE FROM psk_spots WHERE timestamp < datetime('now', ? || ' hours')",
             (f"-{hours}",)
         )
+
+
+# --- Alert subscriptions ---
+
+def save_subscription(callsign: str, topic: str, alerts: list) -> bool:
+    import json
+    now = datetime.now(timezone.utc).isoformat()
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO alert_subscriptions (callsign, topic, alerts, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(topic) DO UPDATE SET
+                callsign=excluded.callsign,
+                alerts=excluded.alerts
+        """, (callsign.upper(), topic, json.dumps(alerts), now))
+    return True
+
+
+def get_subscriptions() -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM alert_subscriptions").fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_last_sent(topic: str):
+    now = datetime.now(timezone.utc).isoformat()
+    with get_conn() as conn:
+        conn.execute("UPDATE alert_subscriptions SET last_sent=? WHERE topic=?", (now, topic))
+
+
+def delete_subscription(topic: str):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM alert_subscriptions WHERE topic=?", (topic,))
