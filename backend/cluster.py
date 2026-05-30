@@ -147,21 +147,47 @@ class ClusterPoller:
 
     async def run(self):
         await self.load_from_db()
-        cluster_index = 0
-        prune_counter = 0
+
+        cluster_index   = 0
+        prune_counter   = 0
+        fail_count      = 0          # consecutive failures
+        BACKOFF_BASE    = 10         # seconds
+        BACKOFF_MAX     = 600        # 10 minutes ceiling
+        BACKOFF_RESET   = 300        # reset fail count after 5 min of success
+
+        last_success = asyncio.get_event_loop().time()
+
         while True:
             host, port = CLUSTERS[cluster_index % len(CLUSTERS)]
             try:
                 await self.connect_and_read(host, port)
+                # Successful connection (ran for a while)
+                fail_count   = 0
+                last_success = asyncio.get_event_loop().time()
+                # Small pause before reconnecting to same/next cluster
+                await asyncio.sleep(5)
+
+            except asyncio.CancelledError:
+                raise
+
             except Exception as e:
-                logger.warning(f"Cluster {host}:{port} failed: {e}")
-                cluster_index += 1
-            # Prune old spots from DB every hour
+                fail_count += 1
+                cluster_index += 1  # try next cluster on next attempt
+
+                # Exponential backoff: 10s, 20s, 40s, 80s, ... capped at 10min
+                delay = min(BACKOFF_BASE * (2 ** (fail_count - 1)), BACKOFF_MAX)
+
+                logger.warning(
+                    f"Cluster {host}:{port} failed (attempt {fail_count}): {e}. "
+                    f"Retrying in {delay}s..."
+                )
+                await asyncio.sleep(delay)
+
+            # Prune old spots from DB approximately hourly
             prune_counter += 1
-            if prune_counter >= 60:
+            if prune_counter >= 20:
                 try:
                     prune_old_spots(hours=24)
                 except Exception:
                     pass
                 prune_counter = 0
-            await asyncio.sleep(POLL_INTERVAL)
