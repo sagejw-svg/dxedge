@@ -10,6 +10,7 @@ import LoTW from './components/LoTW'
 import Header from './components/Header'
 import Clocks from './components/Clocks'
 import VOACAP from './components/VOACAP'
+import HamClock from './components/HamClock'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'predict', label: 'Predict' },
   { id: 'windows', label: 'DX Windows' },
   { id: 'lotw',    label: 'LoTW' },
+  { id: 'tools',   label: 'Tools' },
 ]
 
 // Neighboring grids to try if primary returns 0 spots
@@ -170,6 +172,7 @@ export default function App() {
           {tab === 'predict' && <VOACAP grid={grid} />}
           {tab === 'windows' && <DXWindows />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
+          {tab === 'tools'   && <HamClock />}
         </>
       )}
 
