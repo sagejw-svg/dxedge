@@ -20,12 +20,12 @@ async function post(path, body) {
 }
 
 export const api = {
-  solar: () => get('/solar'),
-  spots: (band, mode) => get(`/spots?limit=200${band ? `&band=${band}` : ''}${mode ? `&mode=${mode}` : ''}`),
-  psk: (grid) => get(`/psk?grid=${grid || 'CM95'}`),
-  lotw: (login, password) => post('/lotw', { login, password }),
-  health: () => get('/health'),
-  voacap: (grid, region) => get(`/voacap?grid=${grid || 'CM95'}&region=${region || 'EU'}`),
+  get,
+  solar:   ()             => get('/solar'),
+  spots:   (band, mode)   => get(`/spots?limit=200${band?`&band=${band}`:''}${mode?`&mode=${mode}`:''}`),
+  psk:     (grid)         => get(`/psk?grid=${grid||'CM95'}`),
+  lotw:    (login, pass)  => post('/lotw', { login, password: pass }),
+  voacap:  (grid, region) => get(`/voacap?grid=${grid||'CM95'}&region=${region||'EU'}`),
+  summary: (grid)         => get(`/voacap/summary?grid=${grid||'CM95'}`),
+  health:  ()             => get('/health'),
 }
-
-// Added separately to avoid overwrite

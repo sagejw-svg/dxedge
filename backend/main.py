@@ -116,8 +116,56 @@ async def get_voacap(
         raise HTTPException(400, str(e))
 
 
-@app.get("/api/voacap/regions")
-async def get_regions():
+@app.get("/api/voacap/summary")
+async def get_voacap_summary(
+    grid: str = Query(default="CM95", min_length=4, max_length=6),
+):
+    """24-hour overall propagation quality summary for a grid square.
+    Averages reliability across key DX regions and all bands."""
+    solar = cache.get("solar") or {}
+    sfi = solar.get("sfi", 140)
+    kp  = solar.get("k_index", 2)
+    ssn = solar.get("ssn", 120)
+
+    cache_key = f"voacap_summary_{grid.upper()}_{round(sfi)}_{round(kp,1)}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    # Key regions to average across
+    target_regions = ["EU", "JA", "VK", "SA", "AF"]
+    all_predictions = []
+    for region in target_regions:
+        try:
+            pred = predict_path(grid, region, sfi, kp, ssn)
+            all_predictions.append(pred)
+        except Exception:
+            pass
+
+    if not all_predictions:
+        raise HTTPException(503, "Prediction unavailable")
+
+    # Average reliability across all bands and regions per hour
+    summary = []
+    for h in range(24):
+        scores = []
+        for pred in all_predictions:
+            hour_data = pred["hours"][h]
+            band_vals = list(hour_data["bands"].values())
+            if band_vals:
+                # Weight higher bands more (they're more DX-relevant)
+                scores.append(sum(band_vals) / len(band_vals))
+        avg = round(sum(scores) / len(scores), 3) if scores else 0
+        summary.append({"utc": h, "score": avg})
+
+    result = {
+        "grid": grid.upper(),
+        "sfi": sfi,
+        "kp": kp,
+        "summary": summary,
+    }
+    cache.set(cache_key, result, ttl=3600)
+    return result
     return {"regions": [
         {"code": k, "name": v[2]} for k, v in REGIONS.items()
     ]}

@@ -10,6 +10,7 @@ import LoTW from './components/LoTW'
 import Header from './components/Header'
 import Clock from './components/Clock'
 import VOACAP from './components/VOACAP'
+import HourlySummary from './components/HourlySummary'
 
 const TABS = [
   { id: 'bands',   label: 'Bands' },
@@ -163,7 +164,7 @@ export default function App() {
             ))}
           </div>
 
-          {tab === 'bands'   && <Bands conditions={solar.band_conditions} />}
+          {tab === 'bands'   && <><Bands conditions={solar.band_conditions} /><HourlySummary grid={grid} /></>}
           {tab === 'spots'   && <Spots spots={displayedSpots} needsMatrix={matrix} />}
           {tab === 'psk'     && <PSK spots={pskSpots} grid={grid} gridsUsed={pskGridsUsed} onRefresh={fetchPSK} conditions={solar.band_conditions} />}
           {tab === 'predict' && <VOACAP grid={grid} />}
