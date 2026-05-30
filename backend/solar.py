@@ -3,6 +3,7 @@ import aiohttp
 import logging
 from datetime import datetime, timezone
 from cache import cache
+from database import save_solar, load_latest_solar
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,11 @@ class SolarPoller:
         }
 
         cache.set("solar", result, ttl=POLL_INTERVAL + 60)
+        # Persist to SQLite
+        try:
+            save_solar(result)
+        except Exception as e:
+            logger.debug(f"DB save solar failed: {e}")
         logger.info(f"Solar updated: SFI={sfi} K={kp:.1f} SSN={ssn}")
         return result
 
@@ -107,7 +113,25 @@ class SolarPoller:
             conditions.append({"band": band, "condition": label})
         return conditions
 
+    async def restore_from_db(self):
+        """Load last solar reading from DB so cache is warm on startup."""
+        try:
+            row = load_latest_solar()
+            if row:
+                cache.set("solar", {
+                    "sfi": row["sfi"], "k_index": row["k_index"],
+                    "a_index": row["a_index"], "ssn": row["ssn"],
+                    "x_class": row["x_class"], "source": row["source"] + " (cached)",
+                    "updated": row["timestamp"],
+                    "summary": self._summary(row["sfi"], row["k_index"], row["a_index"]),
+                    "band_conditions": self._band_conditions(row["sfi"], row["k_index"]),
+                }, ttl=POLL_INTERVAL + 60)
+                logger.info(f"Restored solar from DB: SFI={row['sfi']} K={row['k_index']}")
+        except Exception as e:
+            logger.warning(f"Could not restore solar from DB: {e}")
+
     async def run(self):
+        await self.restore_from_db()
         while True:
             try:
                 await self.fetch()

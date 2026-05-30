@@ -12,6 +12,7 @@ from pskreporter import PSKPoller
 from lotw import query_lotw
 from cache import cache
 from voacap_engine import predict_path, REGIONS
+from database import init_db, load_solar_history, load_recent_spots
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(cluster_poller.run()),
         asyncio.create_task(psk_poller.run()),
     ]
+    init_db()
     logger.info("DXEdge pollers started")
     yield
     for t in tasks:
@@ -90,6 +92,13 @@ async def get_lotw(payload: dict):
         return {"adif": adif}
     except Exception as e:
         raise HTTPException(502, f"LoTW error: {e}")
+
+
+# --- Solar history ---
+@app.get("/api/solar/history")
+async def get_solar_history(hours: int = 48):
+    """Solar readings for the last N hours from DB."""
+    return {"readings": load_solar_history(hours=min(hours, 168))}
 
 
 # --- VOACAP propagation prediction ---

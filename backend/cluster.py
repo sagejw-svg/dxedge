@@ -3,6 +3,7 @@ import re
 import logging
 from datetime import datetime, timezone
 from cache import cache
+from database import save_spots, load_recent_spots, prune_old_spots
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class ClusterPoller:
         self._connected = False
 
     def _add_spot(self, spot: dict):
-        # Deduplicate: same callsign + band within 10 min
+        # Deduplicate in memory: same callsign + band
         self._spots = [
             s for s in self._spots
             if not (s["callsign"] == spot["callsign"] and s["band"] == spot["band"])
@@ -86,6 +87,22 @@ class ClusterPoller:
         if len(self._spots) > MAX_SPOTS:
             self._spots = self._spots[:MAX_SPOTS]
         cache.set("spots", self._spots, ttl=SPOT_TTL)
+        # Persist to SQLite
+        try:
+            save_spots([spot])
+        except Exception as e:
+            logger.debug(f"DB save spot failed: {e}")
+
+    async def load_from_db(self):
+        """Restore spots from DB on startup so we have data immediately."""
+        try:
+            db_spots = load_recent_spots(limit=MAX_SPOTS)
+            if db_spots:
+                self._spots = db_spots
+                cache.set("spots", self._spots, ttl=SPOT_TTL)
+                logger.info(f"Restored {len(db_spots)} spots from DB")
+        except Exception as e:
+            logger.warning(f"Could not restore spots from DB: {e}")
 
     async def connect_and_read(self, host: str, port: int):
         logger.info(f"Connecting to DX cluster {host}:{port}")
@@ -120,7 +137,9 @@ class ClusterPoller:
             self._connected = False
 
     async def run(self):
+        await self.load_from_db()
         cluster_index = 0
+        prune_counter = 0
         while True:
             host, port = CLUSTERS[cluster_index % len(CLUSTERS)]
             try:
@@ -128,4 +147,12 @@ class ClusterPoller:
             except Exception as e:
                 logger.warning(f"Cluster {host}:{port} failed: {e}")
                 cluster_index += 1
+            # Prune old spots from DB every hour
+            prune_counter += 1
+            if prune_counter >= 60:
+                try:
+                    prune_old_spots(hours=24)
+                except Exception:
+                    pass
+                prune_counter = 0
             await asyncio.sleep(POLL_INTERVAL)

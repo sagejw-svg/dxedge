@@ -3,6 +3,7 @@ import aiohttp
 import logging
 from xml.etree import ElementTree as ET
 from cache import cache
+from database import save_psk_spots, load_psk_spots, prune_old_psk
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,12 @@ class PSKPoller:
                 text = await r.text()
                 spots = parse_psk_xml(text)
                 logger.info(f"PSK {grid4}: {len(spots)} spots")
+                # Persist to DB
+                if spots:
+                    try:
+                        save_psk_spots(spots, grid4)
+                    except Exception as e:
+                        logger.debug(f"DB save PSK failed: {e}")
                 return spots
 
     async def fetch_region(self, grids: list[str]) -> list[dict]:
