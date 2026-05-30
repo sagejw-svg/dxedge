@@ -21,11 +21,12 @@ async function post(path, body) {
 
 export const api = {
   get,
-  solar:   ()             => get('/solar'),
-  spots:   (band, mode)   => get(`/spots?limit=200${band?`&band=${band}`:''}${mode?`&mode=${mode}`:''}`),
-  psk:     (grid)         => get(`/psk?grid=${grid||'CM95'}`),
-  lotw:    (login, pass)  => post('/lotw', { login, password: pass }),
-  voacap:  (grid, region) => get(`/voacap?grid=${grid||'CM95'}&region=${region||'EU'}`),
-  summary: (grid)         => get(`/voacap/summary?grid=${grid||'CM95'}`),
-  health:  ()             => get('/health'),
+  solar:          ()              => get('/solar'),
+  spots:          (band, mode)    => get(`/spots?limit=200${band?`&band=${band}`:''}${mode?`&mode=${mode}`:''}`),
+  psk:            (grid)          => get(`/psk?grid=${grid||'CM95'}`),
+  lotw:           (login, pass)   => post('/lotw', { login, password: pass }),
+  voacap:         (grid, region)  => get(`/voacap?grid=${grid||'CM95'}&region=${region||'EU'}`),
+  summary:        (grid)          => get(`/voacap/summary?grid=${grid||'CM95'}`),
+  recommendation: (grid)          => get(`/recommendation?grid=${grid||'CM95'}`),
+  health:         ()              => get('/health'),
 }

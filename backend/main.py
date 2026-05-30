@@ -184,6 +184,86 @@ async def get_regions():
     ]}
 
 
+
+# --- Operating recommendation ---
+@app.get("/api/recommendation")
+async def get_recommendation(
+    grid: str = Query(default="CM95", min_length=4, max_length=6),
+):
+    """Best band/time for local and DX operating from a grid square."""
+    solar = cache.get("solar") or {}
+    sfi   = solar.get("sfi", 140)
+    kp    = solar.get("k_index", 2)
+    ssn   = solar.get("ssn", 120)
+
+    cache_key = f"rec_{grid.upper()}_{round(sfi)}_{round(kp,1)}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    from datetime import datetime, timezone
+    now_utc = datetime.now(timezone.utc)
+    current_h = now_utc.hour
+
+    BANDS_ORDER = ["10m","12m","15m","17m","20m","30m","40m","80m"]
+
+    def best_for_path(region, max_hours=24):
+        try:
+            pred = predict_path(grid, region, sfi, kp, ssn)
+        except Exception:
+            return None, None, 0
+        best_score, best_band, best_hour = 0, "20m", current_h
+        for h_data in pred["hours"]:
+            for band in BANDS_ORDER:
+                score = h_data["bands"].get(band, 0)
+                if score > best_score:
+                    best_score = score
+                    best_band  = band
+                    best_hour  = h_data["utc"]
+        return best_band, best_hour, best_score
+
+    # Local = NA path (short, within continent)
+    local_band, local_hour, local_score = best_for_path("NA")
+    # DX = best of EU and JA
+    eu_band, eu_hour, eu_score = best_for_path("EU")
+    ja_band, ja_hour, ja_score = best_for_path("JA")
+    if ja_score > eu_score:
+        dx_band, dx_hour, dx_score = ja_band, ja_hour, ja_score
+        dx_region = "JA"
+    else:
+        dx_band, dx_hour, dx_score = eu_band, eu_hour, eu_score
+        dx_region = "EU"
+
+    def hour_label(h):
+        diff = (h - current_h) % 24
+        if diff == 0:    return "now"
+        if diff == 1:    return "in 1h"
+        if diff <= 6:    return f"in {diff}h"
+        return f"{String(h).padStart(2,'0')}:00Z" if False else f"{h:02d}:00Z"
+
+    def quality_word(score):
+        if score >= 0.75: return "excellent"
+        if score >= 0.55: return "good"
+        if score >= 0.35: return "fair"
+        return "marginal"
+
+    local_text = (f"Local: {local_band} {quality_word(local_score)} "
+                  f"({hour_label(local_hour)})"
+                  if local_band else "Local: 40m (check conditions)")
+    dx_text    = (f"DX to {dx_region}: {dx_band} {quality_word(dx_score)} "
+                  f"({hour_label(dx_hour)})"
+                  if dx_band else "DX: 20m (check conditions)")
+
+    result = {
+        "grid": grid.upper(),
+        "local": {"band": local_band, "hour": local_hour, "score": round(local_score, 2), "text": local_text},
+        "dx":    {"band": dx_band,    "hour": dx_hour,    "score": round(dx_score, 2),    "text": dx_text,  "region": dx_region},
+        "summary": f"{local_text}  ·  {dx_text}",
+        "sfi": sfi, "kp": kp,
+    }
+    cache.set(cache_key, result, ttl=1800)
+    return result
+
 @app.get("/api/health")
 async def health():
     return {
