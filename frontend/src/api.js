@@ -25,4 +25,7 @@ export const api = {
   psk: (grid) => get(`/psk?grid=${grid || 'CM95'}`),
   lotw: (login, password) => post('/lotw', { login, password }),
   health: () => get('/health'),
+  voacap: (grid, region) => get(`/voacap?grid=${grid || 'CM95'}&region=${region || 'EU'}`),
 }
+
+// Added separately to avoid overwrite

@@ -11,6 +11,7 @@ from cluster import ClusterPoller
 from pskreporter import PSKPoller
 from lotw import query_lotw
 from cache import cache
+from voacap_engine import predict_path, REGIONS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,7 +92,35 @@ async def get_lotw(payload: dict):
         raise HTTPException(502, f"LoTW error: {e}")
 
 
-# --- Health check ---
+# --- VOACAP propagation prediction ---
+@app.get("/api/voacap")
+async def get_voacap(
+    grid: str = Query(default="CM95", min_length=4, max_length=6),
+    region: str = Query(default="EU"),
+):
+    solar = cache.get("solar") or {}
+    sfi = solar.get("sfi", 140)
+    kp  = solar.get("k_index", 2)
+    ssn = solar.get("ssn", 120)
+
+    cache_key = f"voacap_{grid.upper()}_{region.upper()}_{round(sfi)}_{round(kp, 1)}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        result = predict_path(grid, region, sfi, kp, ssn)
+        cache.set(cache_key, result, ttl=3600)
+        return result
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/voacap/regions")
+async def get_regions():
+    return {"regions": [
+        {"code": k, "name": v[2]} for k, v in REGIONS.items()
+    ]}
 @app.get("/api/health")
 async def health():
     return {

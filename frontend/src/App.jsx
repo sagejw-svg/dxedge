@@ -9,11 +9,13 @@ import DXWindows from './components/DXWindows'
 import LoTW from './components/LoTW'
 import Header from './components/Header'
 import Clock from './components/Clock'
+import VOACAP from './components/VOACAP'
 
 const TABS = [
   { id: 'bands',   label: 'Bands' },
   { id: 'spots',   label: 'DX Spots' },
   { id: 'psk',     label: 'Live RX' },
+  { id: 'predict', label: 'Predict' },
   { id: 'windows', label: 'DX Windows' },
   { id: 'lotw',    label: 'LoTW' },
 ]
@@ -164,6 +166,7 @@ export default function App() {
           {tab === 'bands'   && <Bands conditions={solar.band_conditions} />}
           {tab === 'spots'   && <Spots spots={displayedSpots} needsMatrix={matrix} />}
           {tab === 'psk'     && <PSK spots={pskSpots} grid={grid} gridsUsed={pskGridsUsed} onRefresh={fetchPSK} conditions={solar.band_conditions} />}
+          {tab === 'predict' && <VOACAP grid={grid} />}
           {tab === 'windows' && <DXWindows />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
         </>
