@@ -15,6 +15,7 @@ from lotw import query_lotw
 from cache import cache
 from voacap_engine import predict_path, REGIONS
 from database import init_db, load_solar_history, load_recent_spots
+from pota import fetch_pota, fetch_sota
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -382,6 +383,28 @@ app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="a
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     return FileResponse("/app/frontend/dist/index.html")
+
+
+# --- POTA / SOTA spots ---
+@app.get("/api/pota")
+async def get_pota():
+    return {"spots": await fetch_pota()}
+
+@app.get("/api/sota")
+async def get_sota():
+    return {"spots": await fetch_sota()}
+
+@app.get("/api/activations")
+async def get_activations():
+    """Combined POTA + SOTA spots."""
+    pota, sota = await asyncio.gather(fetch_pota(), fetch_sota())
+    all_spots = pota + sota
+    all_spots.sort(key=lambda x: x.get("time_utc",""), reverse=True)
+    return {
+        "pota": pota,
+        "sota": sota,
+        "total": len(all_spots),
+    }
 
 # --- Callsign spot lookup ---
 @app.get("/api/callsign")

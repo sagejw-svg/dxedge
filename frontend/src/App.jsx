@@ -14,6 +14,9 @@ import VOACAP from './components/VOACAP'
 import HamClock from './components/HamClock'
 import CallsignLookup from './components/CallsignLookup'
 import Products from './components/Products'
+import SolarHistory from './components/SolarHistory'
+import GrayLine from './components/GrayLine'
+import Activations from './components/Activations'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -21,6 +24,8 @@ const TABS = [
   { id: 'spots',   label: 'DX Spots' },
   { id: 'psk',     label: 'Live RX' },
   { id: 'predict', label: 'Predict' },
+  { id: 'grayline', label: 'Gray Line' },
+  { id: 'pota',     label: 'POTA/SOTA' },
   { id: 'windows', label: 'DX Windows' },
   { id: 'lotw',    label: 'LoTW' },
   { id: 'tools',   label: 'Tools' },
@@ -247,10 +252,12 @@ export default function App() {
             ))}
           </div>
 
-          {tab === 'bands'   && <><Bands conditions={solar.band_conditions} /><HourlySummary grid={grid} /></>}
+          {tab === 'bands'   && <><Bands conditions={solar.band_conditions} /><SolarHistory /><HourlySummary grid={grid} /></>}
           {tab === 'spots'   && <Spots spots={displayedSpots} needsMatrix={matrix} />}
           {tab === 'psk'     && <PSK spots={pskSpots} grid={grid} gridsUsed={pskGridsUsed} onRefresh={fetchPSK} conditions={solar.band_conditions} />}
           {tab === 'predict' && <VOACAP grid={grid} />}
+          {tab === 'grayline' && <GrayLine grid={grid} />}
+          {tab === 'pota'     && <Activations />}
           {tab === 'windows' && <DXWindows />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'tools'   && <HamClock />}
