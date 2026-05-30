@@ -20,6 +20,7 @@ import Activations from './components/Activations'
 import ContestCalendar from './components/ContestCalendar'
 import Alerts from './components/Alerts'
 import Credits from './components/Credits'
+import APRS from './components/APRS'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -30,6 +31,7 @@ const TABS = [
   { id: 'grayline', label: 'Gray Line' },
   { id: 'pota',     label: 'POTA/SOTA' },
   { id: 'contests', label: 'Contests' },
+  { id: 'aprs',     label: 'APRS' },
   { id: 'alerts',   label: 'Alerts' },
   { id: 'credits',  label: 'Credits' },
   { id: 'windows', label: 'DX Windows' },
@@ -265,6 +267,7 @@ export default function App() {
           {tab === 'grayline' && <GrayLine grid={grid} />}
           {tab === 'pota'     && <Activations />}
           {tab === 'contests' && <ContestCalendar />}
+          {tab === 'aprs'     && <APRS grid={grid} callsign={callsign} />}
           {tab === 'alerts'   && <Alerts callsign={callsign} />}
           {tab === 'credits'  && <Credits />}
           {tab === 'windows' && <DXWindows />}
