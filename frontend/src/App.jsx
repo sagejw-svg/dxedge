@@ -13,6 +13,7 @@ import Clocks from './components/Clocks'
 import VOACAP from './components/VOACAP'
 import HamClock from './components/HamClock'
 import CallsignLookup from './components/CallsignLookup'
+import Products from './components/Products'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -24,6 +25,7 @@ const TABS = [
   { id: 'lotw',    label: 'LoTW' },
   { id: 'tools',   label: 'Tools' },
   { id: 'callsign', label: 'Callsign' },
+  { id: 'products', label: 'Gear' },
 ]
 
 // Neighboring grids to try if primary returns 0 spots
@@ -253,6 +255,7 @@ export default function App() {
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
+          {tab === 'products' && <Products />}
         </>
       )}
 
