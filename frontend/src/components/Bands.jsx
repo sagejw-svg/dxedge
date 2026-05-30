@@ -46,7 +46,10 @@ export default function Bands({ conditions }) {
   if (!conditions) return null
   return (
     <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 10 }}>band conditions</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase' }}>band conditions</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', fontStyle: 'italic' }}>based on solar flux · see 24h chart for time-of-day</div>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {conditions.map(b => <BandRow key={b.band} {...b} />)}
       </div>

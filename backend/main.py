@@ -145,18 +145,27 @@ async def get_voacap_summary(
     if not all_predictions:
         raise HTTPException(503, "Prediction unavailable")
 
-    # Average reliability across all bands and regions per hour
+    # For each hour: take the BEST region's average band reliability
+    # This shows peak DX opportunity rather than a washed-out average
     summary = []
     for h in range(24):
-        scores = []
+        region_scores = []
         for pred in all_predictions:
             hour_data = pred["hours"][h]
             band_vals = list(hour_data["bands"].values())
             if band_vals:
-                # Weight higher bands more (they're more DX-relevant)
-                scores.append(sum(band_vals) / len(band_vals))
-        avg = round(sum(scores) / len(scores), 3) if scores else 0
-        summary.append({"utc": h, "score": avg})
+                # Weight: focus on 40m-17m (most active DX bands)
+                dx_bands = ["40m","30m","20m","17m","15m"]
+                dx_vals = [hour_data["bands"].get(b, 0) for b in dx_bands]
+                region_scores.append(sum(dx_vals) / len(dx_vals))
+        # Use 75th percentile score (best-ish region, not just the single best)
+        if region_scores:
+            region_scores.sort(reverse=True)
+            idx = max(0, len(region_scores)//4)
+            score = round(region_scores[idx], 3)
+        else:
+            score = 0
+        summary.append({"utc": h, "score": score})
 
     result = {
         "grid": grid.upper(),
@@ -166,9 +175,15 @@ async def get_voacap_summary(
     }
     cache.set(cache_key, result, ttl=3600)
     return result
+
+
+@app.get("/api/voacap/regions")
+async def get_regions():
     return {"regions": [
         {"code": k, "name": v[2]} for k, v in REGIONS.items()
     ]}
+
+
 @app.get("/api/health")
 async def health():
     return {
