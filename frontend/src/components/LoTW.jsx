@@ -2,24 +2,25 @@ import { useState } from 'react'
 import { api } from '../api'
 import { parseADIF, buildNeedsMatrix, getDXCCSummary } from '../adif'
 
-export default function LoTW({ callsign, onSuccess, matrixLoaded }) {
+export default function LoTW({ callsign: defaultCallsign, onSuccess, matrixLoaded }) {
+  const [lotwCall, setLotwCall] = useState(defaultCallsign || '')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [summary, setSummary] = useState(null)
 
   const handleFetch = async () => {
-    if (!callsign || !password) return
+    if (!lotwCall || !password) return
     setLoading(true)
     setError(null)
     try {
-      const { adif } = await api.lotw(callsign, password)
+      const { adif } = await api.lotw(lotwCall, password)
       const qsos = parseADIF(adif)
       const matrix = buildNeedsMatrix(qsos)
       const sum = getDXCCSummary(matrix)
       setSummary({ qsos: qsos.length, entities: sum.length, list: sum })
       onSuccess(adif)
-      setPassword('') // clear password immediately
+      setPassword('')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -27,52 +28,64 @@ export default function LoTW({ callsign, onSuccess, matrixLoaded }) {
     }
   }
 
+  const inputStyle = {
+    fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700,
+    background: 'var(--bg1)', border: '1px solid var(--border)',
+    color: 'var(--text)', padding: '8px 12px', borderRadius: 6,
+    outline: 'none', width: '100%'
+  }
+
+  const labelStyle = {
+    fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--muted)',
+    letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4, display: 'block'
+  }
+
   return (
     <div>
-      <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 12 }}>
+      <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: 20 }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
           lotw integration
         </div>
 
-        <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', lineHeight: 1.7, marginBottom: 16 }}>
-          Enter your LoTW password to load your confirmed QSOs. Your credentials are used once to fetch ADIF data and are never stored. The needs matrix is built in your browser only.
+        <p style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', lineHeight: 1.7, marginBottom: 20 }}>
+          Enter your LoTW callsign and password to load confirmed QSOs. Credentials are used once and never stored. Your needs matrix is built in the browser only.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 320 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>callsign</label>
-            <input value={callsign} readOnly style={{
-              fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,
-              background: 'var(--bg2)', border: '1px solid var(--border)',
-              color: 'var(--muted)', padding: '7px 10px', borderRadius: 6, outline: 'none'
-            }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 360 }}>
+          <div>
+            <label style={labelStyle}>lotw callsign</label>
+            <input
+              value={lotwCall}
+              onChange={e => setLotwCall(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === 'Enter' && handleFetch()}
+              placeholder="K6WRJ"
+              maxLength={10}
+              style={inputStyle}
+            />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>lotw password</label>
+          <div>
+            <label style={labelStyle}>lotw password</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleFetch()}
               placeholder="your LoTW password"
-              style={{
-                fontFamily: 'var(--font-mono)', fontSize: 13,
-                background: 'var(--bg1)', border: '1px solid var(--border)',
-                color: 'var(--text)', padding: '7px 10px', borderRadius: 6, outline: 'none'
-              }}
+              style={inputStyle}
             />
           </div>
 
           <button
             onClick={handleFetch}
-            disabled={loading || !callsign || !password}
+            disabled={loading || !lotwCall || !password}
             style={{
-              fontFamily: 'var(--font-mono)', fontSize: 12,
+              fontFamily: 'var(--font-mono)', fontSize: 13,
               background: loading ? 'var(--bg2)' : 'var(--bg1)',
               border: `1px solid ${loading ? 'var(--border)' : '#7affb244'}`,
               color: loading ? 'var(--dim)' : 'var(--teal)',
-              padding: '9px 16px', borderRadius: 6, marginTop: 4
+              padding: '10px 18px', borderRadius: 6, cursor: loading ? 'default' : 'pointer',
+              marginTop: 4
             }}
           >
             {loading ? 'fetching from LoTW...' : 'load confirmed QSOs'}
@@ -80,31 +93,31 @@ export default function LoTW({ callsign, onSuccess, matrixLoaded }) {
         </div>
 
         {error && (
-          <div style={{ marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--red)' }}>
+          <div style={{ marginTop: 16, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--red)' }}>
             {error}
           </div>
         )}
       </div>
 
       {summary && (
-        <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginTop: 12 }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 12 }}>needs matrix loaded</div>
-          <div style={{ display: 'flex', gap: 20, marginBottom: 14 }}>
+        <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginTop: 14 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>needs matrix loaded</div>
+          <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
             <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: 'var(--teal)', fontWeight: 700 }}>{summary.qsos.toLocaleString()}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>confirmed QSOs</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, color: 'var(--teal)', fontWeight: 700 }}>{summary.qsos.toLocaleString()}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>confirmed QSOs</div>
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: 'var(--yellow)', fontWeight: 700 }}>{summary.entities}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>DXCC confirmed</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, color: 'var(--yellow)', fontWeight: 700 }}>{summary.entities}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>DXCC confirmed</div>
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: 'var(--blue)', fontWeight: 700 }}>{340 - summary.entities}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>still needed</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, color: 'var(--blue)', fontWeight: 700 }}>{340 - summary.entities}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>still needed</div>
             </div>
           </div>
-          <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
-            DX Spots tab now highlights needed entities in green. Switch to DX Spots to see your needs.
+          <p style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic' }}>
+            Switch to DX Spots - needed entities are highlighted in green.
           </p>
         </div>
       )}
