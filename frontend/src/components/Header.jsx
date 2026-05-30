@@ -50,7 +50,7 @@ export default function Header({ callsign, grid, onCallsign, onGrid, loading, la
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <label style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>grid</label>
+          <label style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>grid <span style={{ color: 'var(--dim)', fontSize: 8 }}>(for live rx)</span></label>
           <input
             value={grid}
             onChange={e => onGrid(e.target.value.toUpperCase())}

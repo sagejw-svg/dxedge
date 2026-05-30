@@ -101,6 +101,11 @@ export default function App() {
   }, [fetchData])
   useEffect(() => { if (tab === 'psk') fetchPSK() }, [tab, fetchPSK])
 
+  // Auto-refresh PSK when grid changes
+  useEffect(() => {
+    if (tab === 'psk') fetchPSK()
+  }, [grid])
+
   const handleLoTWSuccess = useCallback((adif) => {
     const qsos = parseADIF(adif)
     const m = buildNeedsMatrix(qsos)
