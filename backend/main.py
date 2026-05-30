@@ -16,6 +16,7 @@ from cache import cache
 from voacap_engine import predict_path, REGIONS
 from database import init_db, load_solar_history, load_recent_spots
 from pota import fetch_pota, fetch_sota
+from contests import fetch_contests
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -384,6 +385,11 @@ app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="a
 async def serve_frontend(full_path: str):
     return FileResponse("/app/frontend/dist/index.html")
 
+
+# --- Contest calendar ---
+@app.get("/api/contests")
+async def get_contests():
+    return {"contests": await fetch_contests()}
 
 # --- POTA / SOTA spots ---
 @app.get("/api/pota")
