@@ -348,3 +348,122 @@ app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="a
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     return FileResponse("/app/frontend/dist/index.html")
+
+# --- Callsign spot lookup ---
+@app.get("/api/callsign")
+async def get_callsign_spots(
+    call: str = Query(min_length=3, max_length=12),
+    hours: int = Query(default=2, ge=1, le=12),
+):
+    """Recent PSKReporter spots for a specific callsign.
+    Returns spots heard BY this call and spots OF this call."""
+    import aiohttp
+    from xml.etree import ElementTree as ET
+    from dxcc import enrich_spot
+
+    call = call.upper().strip()
+    cache_key = f"callsign_{call}_{hours}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    PSK_URL = "https://retrieve.pskreporter.info/query"
+    window = -(hours * 3600)
+
+    FREQ_TO_BAND = [
+        (1800,2000,"160m"),(3500,4000,"80m"),(7000,7300,"40m"),
+        (10100,10150,"30m"),(14000,14350,"20m"),(18068,18168,"17m"),
+        (21000,21450,"15m"),(24890,24990,"12m"),(28000,29700,"10m"),(50000,54000,"6m"),
+    ]
+    def hz_to_band(hz):
+        khz = hz / 1000
+        for lo, hi, band in FREQ_TO_BAND:
+            if lo <= khz <= hi: return band
+        return None
+
+    def parse_xml(xml_text, mode):
+        spots = []
+        try:
+            root = ET.fromstring(xml_text)
+            for rep in root.findall(".//receptionReport"):
+                try:
+                    freq_hz = int(rep.get("frequency") or 0)
+                except ValueError:
+                    freq_hz = 0
+                band = hz_to_band(freq_hz) if freq_hz else None
+                try:
+                    snr = int(rep.get("sNR") or -99)
+                except ValueError:
+                    snr = -99
+                spots.append({
+                    "callsign":   rep.get("senderCallsign","").upper(),
+                    "receiver":   rep.get("receiverCallsign","").upper(),
+                    "receiver_grid": rep.get("receiverLocator",""),
+                    "sender_grid":   rep.get("senderLocator",""),
+                    "freq_hz":    freq_hz,
+                    "band":       band or "?",
+                    "snr":        snr,
+                    "mode":       rep.get("mode","FT8"),
+                    "country":    rep.get("senderDXCC","") if mode=="heard_by" else rep.get("receiverCallsign",""),
+                    "timestamp":  rep.get("flowStartSeconds",""),
+                    "type":       mode,
+                })
+        except ET.ParseError:
+            pass
+        return spots
+
+    heard_by = []  # stations that heard this callsign
+    hearing  = []  # stations this callsign heard
+
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as session:
+        # Who heard this callsign?
+        try:
+            url = f"{PSK_URL}?senderCallsign={call}&flowStartSeconds={window}&rronly=1"
+            async with session.get(url) as r:
+                if r.status == 200:
+                    heard_by = parse_xml(await r.text(), "heard_by")
+        except Exception as e:
+            logger.warning(f"PSK senderCallsign {call}: {e}")
+
+        await asyncio.sleep(0.5)  # be polite
+
+        # What has this callsign heard?
+        try:
+            url = f"{PSK_URL}?receiverCallsign={call}&flowStartSeconds={window}&rronly=1"
+            async with session.get(url) as r:
+                if r.status == 200:
+                    hearing = parse_xml(await r.text(), "hearing")
+        except Exception as e:
+            logger.warning(f"PSK receiverCallsign {call}: {e}")
+
+    # Enrich heard_by spots
+    for s in heard_by:
+        enrich_spot(s)
+
+    # Deduplicate heard_by by receiver+band, keep best SNR
+    seen = {}
+    for s in heard_by:
+        key = f"{s['receiver']}-{s['band']}"
+        if key not in seen or s["snr"] > seen[key]["snr"]:
+            seen[key] = s
+    heard_by = sorted(seen.values(), key=lambda x: x["snr"], reverse=True)
+
+    # Deduplicate hearing by callsign+band
+    seen2 = {}
+    for s in hearing:
+        key = f"{s['callsign']}-{s['band']}"
+        if key not in seen2 or s["snr"] > seen2[key]["snr"]:
+            seen2[key] = s
+    hearing = sorted(seen2.values(), key=lambda x: x["snr"], reverse=True)
+
+    result = {
+        "callsign": call,
+        "hours": hours,
+        "heard_by": heard_by[:100],
+        "hearing":  hearing[:100],
+        "heard_by_count": len(heard_by),
+        "hearing_count":  len(hearing),
+    }
+    cache.set(cache_key, result, ttl=300)  # 5 min cache
+    return result
+

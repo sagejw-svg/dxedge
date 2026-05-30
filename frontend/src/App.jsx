@@ -12,6 +12,7 @@ import React from 'react'
 import Clocks from './components/Clocks'
 import VOACAP from './components/VOACAP'
 import HamClock from './components/HamClock'
+import CallsignLookup from './components/CallsignLookup'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'windows', label: 'DX Windows' },
   { id: 'lotw',    label: 'LoTW' },
   { id: 'tools',   label: 'Tools' },
+  { id: 'callsign', label: 'Callsign' },
 ]
 
 // Neighboring grids to try if primary returns 0 spots
@@ -244,6 +246,7 @@ export default function App() {
           {tab === 'windows' && <DXWindows />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'tools'   && <HamClock />}
+          {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
         </>
       )}
 
