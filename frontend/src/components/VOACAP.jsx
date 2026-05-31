@@ -115,17 +115,23 @@ function HeatMap({ hours, currentUtc }) {
 }
 
 export default function VOACAP({ grid }) {
+  const [txGrid, setTxGrid] = useState(grid || 'CM95')
   const [region, setRegion] = useState('EU')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  // Sync txGrid with prop only on initial mount
+  useEffect(() => {
+    setTxGrid(prev => prev === 'CM95' && grid ? grid : prev)
+  }, [grid])
+
   const currentUtc = new Date().getUTCHours()
 
   const fetchPrediction = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const result = await api.voacap(grid, region)
+      const result = await api.voacap(txGrid, region)
       setData(result)
     } catch(e) {
       setError(e.message)
@@ -134,7 +140,7 @@ export default function VOACAP({ grid }) {
     }
   }, [grid, region])
 
-  useEffect(() => { fetchPrediction() }, [fetchPrediction])
+  useEffect(() => { fetchPrediction() }, [fetchPrediction, txGrid])
 
   const bestNow = data?.hours?.[currentUtc]?.best_band
   const mufNow = data?.hours?.[currentUtc]?.muf
@@ -151,10 +157,25 @@ export default function VOACAP({ grid }) {
       {/* Controls */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <label style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>from</label>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--teal)', padding: '6px 12px', background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 6 }}>
-            {grid || 'CM95'}
-          </div>
+          <label style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase' }}>from grid</label>
+          <input
+            value={txGrid}
+            onChange={e => setTxGrid(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0,6))}
+            onBlur={() => { if (txGrid.length >= 4) fetchPrediction() }}
+            onKeyDown={e => e.key === 'Enter' && txGrid.length >= 4 && fetchPrediction()}
+            placeholder="CM95"
+            maxLength={6}
+            autoCorrect="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            style={{
+              fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700,
+              color: 'var(--teal)', padding: '6px 12px',
+              background: 'var(--bg1)', border: '1px solid #7affb244',
+              borderRadius: 6, outline: 'none', width: 90,
+              WebkitAppearance: 'none',
+            }}
+          />
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--dim)', alignSelf: 'flex-end', paddingBottom: 6 }}>→</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

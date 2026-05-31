@@ -109,31 +109,54 @@ def muf_multiplier(dist_km: float) -> float:
 
 def circuit_reliability(freq: float, muf: float, fof2: float,
                         dist_km: float, kp: float) -> float:
-    """Estimate reliability (0.0-1.0) for given freq/path/conditions"""
-    # Geomagnetic penalty
-    geo = max(0.1, 1.0 - max(0, kp - 2) * 0.12)
+    """
+    Estimate reliability (0.0-1.0) for given freq/path/conditions.
+    Calibrated to match VOACAP output:
+      - Good conditions, optimal freq -> ~60-65%
+      - Marginal conditions -> ~30-45%
+      - Near MUF or near LUF -> drops sharply
+    """
+    # Geomagnetic penalty - K>=5 kills polar paths, K>=3 degrades
+    geo = max(0.05, 1.0 - max(0, kp - 2) * 0.15)
 
-    luf = max(1.8, fof2 * 0.9)  # Lowest usable frequency
+    # Lowest usable frequency (D-layer absorption cutoff)
+    # Higher during daytime (high fof2), lower at night
+    luf = max(1.5, fof2 * 0.75)
 
     if freq > muf * 1.05:
-        return 0.0  # Above MUF
+        return 0.0  # Above MUF - no propagation
 
     if freq < luf:
+        # Below LUF - D-layer absorption
         ratio = freq / luf
-        return max(0.0, ratio ** 2.5) * 0.25 * geo
+        return max(0.0, ratio ** 2.0) * 0.20 * geo
 
-    # Usable range
+    # Distance penalty: longer paths have more hops, more absorption
+    dist_factor = max(0.45, 1.0 - (dist_km - 1000) / 18000)
+
     muf_ratio = freq / muf
-    if muf_ratio > 0.90:
-        rel = max(0.0, 1.0 - (muf_ratio - 0.90) / 0.15) * 0.8
-    elif muf_ratio > 0.70:
-        rel = 0.85
-    elif muf_ratio > 0.50:
-        rel = 0.90
-    else:
-        rel = 0.75  # Too far below MUF, lower layers absorb
 
-    return rel * geo
+    if muf_ratio > 0.95:
+        # Just at/above MUF - propagation unreliable
+        rel = max(0.0, 1.0 - (muf_ratio - 0.95) / 0.10)
+        rel *= 0.35
+    elif muf_ratio > 0.85:
+        # Near MUF - good but variable
+        rel = 0.55 - (muf_ratio - 0.85) * 2.0
+    elif muf_ratio > 0.65:
+        # Optimal range - near-MUF gives best signal
+        rel = 0.65
+    elif muf_ratio > 0.45:
+        # Usable but lower signal strength
+        rel = 0.55
+    elif muf_ratio > 0.25:
+        # Low freq relative to MUF - absorption increasing
+        rel = 0.35
+    else:
+        # Well below MUF - heavy D/E layer absorption
+        rel = 0.15
+
+    return rel * geo * dist_factor
 
 
 def predict_path(tx_grid: str, region_code: str,
