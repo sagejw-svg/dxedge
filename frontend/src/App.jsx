@@ -22,6 +22,7 @@ import Alerts from './components/Alerts'
 import Credits from './components/Credits'
 import CustomDashboard from './components/CustomDashboard'
 import Feedback from './components/Feedback'
+import Support from './components/Support'
 import APRS from './components/APRS'
 import Satellites from './components/Satellites'
 import HourlySummary from './components/HourlySummary'
@@ -49,6 +50,7 @@ const TABS = [
   { id: 'products', label: 'Gear' },
   { id: 'custom',   label: 'Custom' },
   { id: 'feedback', label: 'Feedback' },
+  { id: 'support',  label: 'Support' },
   { id: 'credits',  label: 'Credits' },
 ]
 
@@ -300,6 +302,7 @@ export default function App() {
           {tab === 'alerts'   && <Alerts callsign={callsign} />}
           {tab === 'custom'   && <CustomDashboard grid={grid} callsign={callsign} solar={solar} spots={displayedSpots} pskSpots={pskSpots} matrix={matrix} />}
           {tab === 'feedback' && <Feedback />}
+          {tab === 'support'  && <Support />}
           {tab === 'credits'  && <Credits />}
           {tab === 'windows' && <DXWindows />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}

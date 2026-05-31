@@ -380,10 +380,21 @@ async def get_recommendation(
 
 @app.get("/api/health")
 async def health():
+    from datetime import datetime, timezone
+    solar   = cache.get("solar")
+    spots   = cache.get("spots") or []
+    tles    = cache.get("sat_tles") or {}
+    pota    = cache.get("pota_spots") or []
     return {
-        "status": "ok",
-        "solar": cache.get("solar") is not None,
-        "spots": len(cache.get("spots") or []),
+        "status":       "ok",
+        "timestamp":    datetime.now(timezone.utc).isoformat(),
+        "solar":        solar is not None,
+        "sfi":          solar.get("sfi") if solar else None,
+        "k_index":      solar.get("k_index") if solar else None,
+        "spots":        len(spots),
+        "sat_tles":     len(tles),
+        "pota_spots":   len(pota),
+        "version":      "2.0",
     }
 
 

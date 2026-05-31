@@ -75,3 +75,29 @@ docker compose up -d --build
 MIT - free to use, fork, and build on.
 
 73 de K6WRJ
+
+## Monitoring
+
+### UptimeRobot Setup (free)
+1. Sign up at https://uptimerobot.com (free tier: 50 monitors, 5 min checks)
+2. Add New Monitor:
+   - Monitor Type: HTTP(s)
+   - Friendly Name: DXEdge Health
+   - URL: https://dxedge.net/api/health
+   - Monitoring Interval: 5 minutes
+3. Add alert contact (email or SMS)
+4. The health endpoint returns JSON with status, solar data, spot count
+
+Health endpoint response:
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-05-31T...",
+  "solar": true,
+  "sfi": 120,
+  "k_index": 2.0,
+  "spots": 500,
+  "sat_tles": 12,
+  "version": "2.0"
+}
+```
