@@ -97,7 +97,7 @@ const SolarHistory = memo(function SolarHistory() {
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-            <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} interval="preserveStartEnd" />
+            <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} interval={23} />
             <YAxis tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} domain={['auto', 'auto']} />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={150} stroke="#ffd60033" strokeDasharray="4 4" label={{ value: 'excellent', fill: '#ffd60055', fontSize: 8, fontFamily: 'monospace' }} />
@@ -111,7 +111,7 @@ const SolarHistory = memo(function SolarHistory() {
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-            <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} interval="preserveStartEnd" />
+            <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} interval={23} />
             <YAxis tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} domain={[0, 9]} />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={5} stroke="#ff4d4d55" strokeDasharray="4 4" label={{ value: 'storm', fill: '#ff4d4d88', fontSize: 8, fontFamily: 'monospace' }} />
@@ -126,7 +126,7 @@ const SolarHistory = memo(function SolarHistory() {
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-            <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} interval="preserveStartEnd" />
+            <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} interval={23} />
             <YAxis tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} domain={['auto', 'auto']} />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={150} stroke="#ffd60033" strokeDasharray="4 4" label={{ value: 'solar max', fill: '#ffd60055', fontSize: 8, fontFamily: 'monospace' }} />

@@ -21,8 +21,11 @@ function ContestCard({ contest }) {
     ? '⏰ TODAY'
     : contest.days_away === 1
     ? '⏰ TOMORROW'
-    : contest.is_upcoming
-    ? `⏰ in ${contest.days_away} days`
+    : contest.days_away <= 7
+    ? `⏰ in ${contest.days_away} day${contest.days_away !== 1 ? 's' : ''}`
+    : contest.days_away <= 14
+    ? `⏰ next week`
+    : `⏰ in ${Math.ceil(contest.days_away / 7)} weeks`
     : ''
 
   return (

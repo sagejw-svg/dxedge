@@ -178,22 +178,18 @@ export default function App() {
 
   const fetchPSK = useCallback(async () => {
     const gridsToTry = getGridsToTry(grid)
+
+    // Fetch all grids in parallel
+    const results = await Promise.allSettled(
+      gridsToTry.map(g => api.psk(g).then(d => ({ grid: g, spots: d.spots || [] })))
+    )
+
     let allSpots = []
     let gridsWithSpots = []
-
-    for (const g of gridsToTry) {
-      try {
-        const data = await api.psk(g)
-        const s = data.spots || []
-        if (s.length > 0) {
-          allSpots = [...allSpots, ...s]
-          gridsWithSpots.push(g)
-          // If primary grid has spots, stop. Otherwise keep expanding.
-          if (g === gridsToTry[0] && s.length > 5) break
-          if (allSpots.length > 50) break
-        }
-      } catch (e) {
-        console.warn(`PSK fetch ${g} failed:`, e.message)
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.spots.length > 0) {
+        allSpots = [...allSpots, ...r.value.spots]
+        gridsWithSpots.push(r.value.grid)
       }
     }
 
