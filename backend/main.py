@@ -139,7 +139,13 @@ async def get_psk(grid: str = Query(default="CM95", min_length=4, max_length=6))
 
 # --- LoTW proxy ---
 @app.post("/api/lotw")
-async def get_lotw(payload: dict):
+async def get_lotw(payload: dict, request: Request):
+    # Rate limit: 5 requests per IP per minute
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    allowed, retry_after = lotw_limiter.is_allowed(ip)
+    if not allowed:
+        raise HTTPException(429, f"Too many LoTW requests. Try again in {retry_after}s.")
+
     login = payload.get("login")
     password = payload.get("password")
     if not login or not password:

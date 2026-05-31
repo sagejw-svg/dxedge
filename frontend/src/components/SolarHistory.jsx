@@ -35,16 +35,23 @@ export default function SolarHistory() {
     setLoading(true)
     api.get('/solar/history?hours=48')
       .then(r => {
-        const readings = (r.readings || []).map(row => ({
+        const allReadings = (r.readings || []).map(row => ({
           ...row,
-          time: new Date(row.timestamp).toLocaleTimeString('en-US', {
-            hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC'
-          }) + 'Z',
-          date: new Date(row.timestamp).toLocaleDateString('en-US', {
-            month: 'short', day: 'numeric', timeZone: 'UTC'
-          }),
           kColor: kColor(row.k_index),
         }))
+        // Build smart time labels - show date when day changes
+        const readings = allReadings.map((row, i) => {
+          const d = new Date(row.timestamp)
+          const prev = i > 0 ? new Date(allReadings[i-1].timestamp) : null
+          const dayChanged = prev && d.getUTCDate() !== prev.getUTCDate()
+          const timeStr = d.toISOString().slice(11, 16) + 'Z'
+          const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+          return {
+            ...row,
+            time: dayChanged ? dateStr : timeStr,
+            date: dateStr,
+          }
+        })
         setData(readings)
       })
       .catch(() => {})

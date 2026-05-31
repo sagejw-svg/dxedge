@@ -106,9 +106,15 @@ class ClusterPoller:
         try:
             db_spots = load_recent_spots(limit=MAX_SPOTS)
             if db_spots:
+                # Re-enrich DXCC data in case it was missing when stored
+                enriched = 0
+                for s in db_spots:
+                    if not s.get("flag") or not s.get("dxcc"):
+                        enrich_spot(s)
+                        enriched += 1
                 self._spots = db_spots
                 cache.set("spots", self._spots, ttl=SPOT_TTL)
-                logger.info(f"Restored {len(db_spots)} spots from DB")
+                logger.info(f"Restored {len(db_spots)} spots from DB ({enriched} re-enriched)")
         except Exception as e:
             logger.warning(f"Could not restore spots from DB: {e}")
 

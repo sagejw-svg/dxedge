@@ -118,6 +118,7 @@ export default function App() {
   const [callsign, setCallsign] = useState(() => localStorage.getItem('dxedge_call') || '')
   const [matrix, setMatrix] = useState(null)
   const [rec, setRec] = useState(null)
+  const [wsStatus, setWsStatus] = useState('connecting') // connecting|live|reconnecting
   const intervalRef = useRef(null)
 
   const savePrefs = useCallback((call, gr) => {
@@ -224,7 +225,7 @@ export default function App() {
         callsign={callsign} grid={grid}
         onCallsign={(v) => { setCallsign(v); savePrefs(v, grid) }}
         onGrid={(v) => { setGrid(v); savePrefs(callsign, v) }}
-        loading={loading} lastUpdate={lastUpdate} rec={rec}
+        loading={loading} lastUpdate={lastUpdate} rec={rec} wsStatus={wsStatus}
         onRefresh={() => fetchData()} matrixLoaded={!!matrix}
       />
 
@@ -250,17 +251,35 @@ export default function App() {
 
       {solar && (
         <>
-          {/* Tab bar */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto' }}>
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
-                fontFamily: 'var(--font-mono)', fontSize: 12, flex: '0 0 auto',
-                background: tab === t.id ? 'var(--bg2)' : 'transparent',
-                border: `1px solid ${tab === t.id ? '#7affb244' : 'var(--border)'}`,
-                color: tab === t.id ? 'var(--teal)' : 'var(--muted)',
-                padding: '8px 18px', borderRadius: 6,
-              }}>{t.label}</button>
-            ))}
+          {/* Tab bar - scrollable with group separators */}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: 16,
+            scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div style={{ display: 'flex', gap: 4, minWidth: 'max-content', paddingBottom: 2 }}>
+              {TABS.map((t, i) => {
+                const isActive = tab === t.id
+                // Add separator before groups
+                const prevId = TABS[i - 1]?.id
+                const showSep = i > 0 && (
+                  (t.id === 'pota' && prevId === 'grayline') ||
+                  (t.id === 'lotw' && prevId === 'callsign') ||
+                  (t.id === 'aprs' && prevId === 'lotw') ||
+                  (t.id === 'tools' && prevId === 'alerts')
+                )
+                return (
+                  <span key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {showSep && <span style={{ width: 1, height: 20, background: '#222', flexShrink: 0 }} />}
+                    <button onClick={() => setTab(t.id)} style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0,
+                      background: isActive ? 'var(--bg2)' : 'transparent',
+                      border: `1px solid ${isActive ? '#7affb244' : 'var(--border)'}`,
+                      color: isActive ? 'var(--teal)' : 'var(--muted)',
+                      padding: '7px 14px', borderRadius: 6, cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}>{t.label}</button>
+                  </span>
+                )
+              })}
+            </div>
           </div>
 
           {tab === 'bands'   && <><Bands conditions={solar.band_conditions} /><SolarHistory /><HourlySummary grid={grid} /></>}

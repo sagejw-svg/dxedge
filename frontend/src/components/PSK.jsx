@@ -74,8 +74,18 @@ export default function PSK({ spots, grid, gridsUsed, onRefresh, conditions }) {
       </div>
 
       {activeBands.length === 0 ? (
-        <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: 36, textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--dim)' }}>
-          no spots found in {grid.slice(0,4)} area · last 2h
+        <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: 24 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--dim)', textAlign: 'center', marginBottom: 12 }}>
+            no spots found in {grid.slice(0,4)} area · last 2h
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--dim)', lineHeight: 1.7, maxWidth: 480, margin: '0 auto' }}>
+            <p style={{ marginBottom: 6 }}>
+              <span style={{ color: 'var(--muted)' }}>Live RX shows stations heard by PSKReporter receivers near your grid.</span>
+            </p>
+            <p>Possible reasons for no spots: no active PSKReporter receivers in your area,
+            no FT8/FT4 activity in the last 2 hours, or your grid square ({grid.slice(0,4)}) may be expanding
+            to neighbors automatically. Try adjusting your grid to the nearest active station.</p>
+          </div>
         </div>
       ) : (
         activeBands.map(band => (

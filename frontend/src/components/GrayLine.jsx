@@ -41,10 +41,13 @@ export default function GrayLine({ grid }) {
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setSunPos(sunPosition())
-      setTime(new Date())
-    }, 30000) // update every 30s
+    const update = () => {
+      if (!document.hidden) {
+        setSunPos(sunPosition())
+        setTime(new Date())
+      }
+    }
+    const t = setInterval(update, 30000)
     return () => clearInterval(t)
   }, [])
 

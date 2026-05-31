@@ -27,8 +27,13 @@ export default function Header({ callsign, grid, onCallsign, onGrid, loading, la
             DXEdge<span style={{ color: 'var(--dim)', fontSize: 13, marginLeft: 6, fontWeight: 400 }}>.net</span>
           </h1>
           {matrixLoaded && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--teal)', marginTop: 2 }}>
-              LoTW needs matrix loaded
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--teal)',
+              background: '#7affb215', border: '1px solid #7affb233',
+              padding: '2px 8px', borderRadius: 3, marginTop: 4,
+              display: 'inline-block'
+            }}>
+              ✓ LoTW needs matrix active
             </div>
           )}
         </div>
@@ -46,6 +51,12 @@ export default function Header({ callsign, grid, onCallsign, onGrid, loading, la
               {lastUpdate.toISOString().slice(11, 16)}Z
             </span>
           )}
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: 9,
+            color: wsStatus === 'live' ? 'var(--teal)' : wsStatus === 'reconnecting' ? 'var(--yellow)' : 'var(--dim)',
+          }}>
+            {wsStatus === 'live' ? '● live' : wsStatus === 'reconnecting' ? '○ reconnecting...' : '○ connecting...'}
+          </span>
         </div>
       </div>
 

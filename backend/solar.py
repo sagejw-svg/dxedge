@@ -74,6 +74,19 @@ class SolarPoller:
             save_solar(result)
         except Exception as e:
             logger.debug(f"DB save solar failed: {e}")
+
+        # Invalidate VOACAP caches if conditions changed significantly
+        prev = cache.get("solar")
+        if prev:
+            sfi_delta = abs(prev.get("sfi", sfi) - sfi)
+            kp_delta  = abs(prev.get("k_index", kp) - kp)
+            if sfi_delta >= 10 or kp_delta >= 1:
+                # Bust VOACAP caches so predictions regenerate with new data
+                for key in cache.keys():
+                    if key.startswith("voacap") or key.startswith("rec_") or key.startswith("dashboard"):
+                        cache.delete(key)
+                logger.info(f"VOACAP cache busted (SFI delta={sfi_delta}, K delta={kp_delta:.1f})")
+
         logger.info(f"Solar updated: SFI={sfi} K={kp:.1f} SSN={ssn}")
         return result
 
