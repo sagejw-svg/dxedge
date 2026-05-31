@@ -188,7 +188,7 @@ async def get_dashboard(
         "timestamp":      datetime.now(timezone.utc).isoformat(),
     }
 
-    cache.set(cache_key, result, ttl=30)  # short TTL - data changes frequently
+    cache.set(cache_key, result, ttl=60)  # 60s - solar updates every 15min, spots stream via WS
     return result
 
 # --- Solar history ---

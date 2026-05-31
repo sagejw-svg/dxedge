@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 
 const BANDS = ['', '160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
 const MODES = ['', 'FT8', 'FT4', 'SSB', 'CW', 'RTTY']
@@ -48,7 +48,7 @@ function SpotRow({ spot, needed }) {
   )
 }
 
-export default function Spots({ spots, needsMatrix }) {
+const Spots = memo(function Spots({ spots, needsMatrix }) {
   const [filterBand, setFilterBand] = useState('')
   const [filterMode, setFilterMode] = useState('')
   const [sort, setSort] = useState({ field: 'time_utc', dir: 'desc' })
@@ -161,4 +161,6 @@ export default function Spots({ spots, needsMatrix }) {
       </div>
     </div>
   )
-}
+})
+
+export default Spots
