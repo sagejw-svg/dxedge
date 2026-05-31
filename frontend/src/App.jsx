@@ -21,6 +21,7 @@ import ContestCalendar from './components/ContestCalendar'
 import Alerts from './components/Alerts'
 import Credits from './components/Credits'
 import APRS from './components/APRS'
+import Satellites from './components/Satellites'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
@@ -37,6 +38,7 @@ const TABS = [
   // Logbook
   { id: 'lotw',     label: 'LoTW' },
   // Monitoring & alerts
+  { id: 'sats',     label: 'Satellites' },
   { id: 'aprs',     label: 'APRS' },
   { id: 'alerts',   label: 'Alerts' },
   // Resources
@@ -289,6 +291,7 @@ export default function App() {
           {tab === 'grayline' && <GrayLine grid={grid} />}
           {tab === 'pota'     && <Activations />}
           {tab === 'contests' && <ContestCalendar />}
+          {tab === 'sats'     && <Satellites grid={grid} />}
           {tab === 'aprs'     && <APRS grid={grid} callsign={callsign} />}
           {tab === 'alerts'   && <Alerts callsign={callsign} />}
           {tab === 'credits'  && <Credits />}

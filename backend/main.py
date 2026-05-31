@@ -17,6 +17,7 @@ from voacap_engine import predict_path, REGIONS
 from database import init_db, load_solar_history, load_recent_spots
 from pota import fetch_pota, fetch_sota
 from contests import fetch_contests
+from satellites import fetch_tles, current_positions, predict_passes, grid_to_latlon as sat_grid_to_latlon
 from alerts import run_alert_loop
 from database import save_subscription, delete_subscription
 
@@ -423,6 +424,36 @@ async def test_alert(topic: str):
         tags     = ["radio_button", "white_check_mark"],
     )
     return {"sent": sent, "topic": topic}
+
+
+# --- Satellite tracking ---
+@app.get("/api/satellites/positions")
+async def get_sat_positions():
+    tles = await fetch_tles()
+    if not tles:
+        raise HTTPException(503, "TLE data unavailable")
+    return {"positions": current_positions(tles), "count": len(tles)}
+
+
+@app.get("/api/satellites/passes")
+async def get_sat_passes(
+    grid: str = Query(default="CM95", min_length=4, max_length=6),
+    hours: int = Query(default=24, ge=1, le=48),
+):
+    cache_key = f"sat_passes_{grid.upper()}_{hours}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    tles = await fetch_tles()
+    if not tles:
+        raise HTTPException(503, "TLE data unavailable")
+
+    obs_lat, obs_lon = sat_grid_to_latlon(grid)
+    passes = predict_passes(tles, obs_lat, obs_lon, hours)
+    result = {"passes": passes, "grid": grid.upper(), "obs_lat": obs_lat, "obs_lon": obs_lon}
+    cache.set(cache_key, result, ttl=300)  # 5 min cache
+    return result
 
 # --- Contest calendar ---
 @app.get("/api/contests")
