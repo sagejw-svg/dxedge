@@ -53,7 +53,8 @@ fi
 # Restart containers
 cd "$REPO_DIR"
 log "Restarting containers..."
-docker compose up -d --build 2>&1 | tail -20 | tee -a "$LOG"
+docker compose build --no-cache backend 2>&1 | tail -10 | tee -a "$LOG"
+docker compose up -d 2>&1 | tail -5 | tee -a "$LOG"
 
 if [ $? -eq 0 ]; then
     log "Deploy complete. Running: $(git rev-parse --short HEAD)"
