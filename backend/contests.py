@@ -111,7 +111,7 @@ async def fetch_contests() -> list[dict]:
             headers={"User-Agent": "Mozilla/5.0 DXEdge/1.0 ham radio dashboard"}
         ) as session:
             # Fetch weekly calendar
-            async with session.get("https://www.contestcalendar.com/weeklycal.html") as r:
+            async with session.get("https://www.contestcalendar.com/fivewkcal.html") as r:
                 if r.status != 200:
                     return []
                 html = await r.text()
@@ -151,7 +151,7 @@ async def fetch_contests() -> list[dict]:
             try:
                 start_dt = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                 days_away = (start_dt - now).days
-                is_upcoming = 0 < days_away <= 7
+                is_upcoming = 0 < days_away <= 21
             except Exception:
                 days_away = 99
                 is_upcoming = False
@@ -172,7 +172,7 @@ async def fetch_contests() -> list[dict]:
 
         # Sort: active first, then by date
         contests.sort(key=lambda x: (not x["is_active"], x["start"]))
-        cache.set("contests", contests, ttl=3600 * 6)  # 6hr cache
+        cache.set("contests", contests, ttl=3600 * 3)  # 3hr cache for multi-week data
         logger.info(f"Fetched {len(contests)} contests")
         return contests
 

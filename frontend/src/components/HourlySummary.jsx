@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo} from 'react'
 import { api } from '../api'
 
 const BANDS = ['10m','15m','17m','20m','30m','40m','80m']
@@ -22,7 +22,7 @@ function scoreLabel(score) {
   return 'poor'
 }
 
-export default function HourlySummary({ grid }) {
+const HourlySummary = memo(function HourlySummary({ grid }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [hovered, setHovered] = useState(null) // {utc, band?}
@@ -79,8 +79,7 @@ export default function HourlySummary({ grid }) {
                 color: h.utc === currentUtc ? 'var(--teal)' : 'var(--dim)',
                 fontWeight: h.utc === currentUtc ? 700 : 400,
                 borderBottom: h.utc === currentUtc ? '2px solid var(--teal)' : '2px solid transparent',
-                paddingBottom: 2, marginBottom: 4,
-              }}>
+                paddingBottom: 2, marginBottom: 4 }}>
                 {h.utc % 6 === 0 ? String(h.utc).padStart(2,'0') : ''}
               </div>
             ))}
@@ -110,8 +109,7 @@ export default function HourlySummary({ grid }) {
                         ? '1px solid rgba(122,255,178,0.8)'
                         : isHov ? '1px solid rgba(255,255,255,0.3)' : '1px solid #0a0a0a',
                       cursor: 'default', borderRadius: 1,
-                      transition: 'opacity 0.1s',
-                    }}
+                      transition: 'opacity 0.1s' }}
                   />
                 )
               })}
@@ -143,8 +141,7 @@ export default function HourlySummary({ grid }) {
                     opacity: isHov ? 1 : 0.8,
                     border: isCurrent ? '1px solid white' : isHov ? '1px solid rgba(255,255,255,0.3)' : 'none',
                     borderRadius: 2,
-                    transition: 'height 0.3s ease, opacity 0.1s',
-                  }} />
+                    transition: 'height 0.3s ease, opacity 0.1s' }} />
                 </div>
               )
             })}
@@ -157,8 +154,7 @@ export default function HourlySummary({ grid }) {
                 flex: 1, textAlign: 'center',
                 fontFamily: 'var(--font-mono)', fontSize: 8,
                 color: h.utc === currentUtc ? 'var(--teal)' : 'var(--dim)',
-                fontWeight: h.utc === currentUtc ? 700 : 400,
-              }}>
+                fontWeight: h.utc === currentUtc ? 700 : 400 }}>
                 {h.utc % 6 === 0 ? String(h.utc).padStart(2,'0') : ''}
               </div>
             ))}
@@ -219,3 +215,5 @@ export default function HourlySummary({ grid }) {
     </div>
   )
 }
+
+export default HourlySummary

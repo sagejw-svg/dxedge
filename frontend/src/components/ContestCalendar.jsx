@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo} from 'react'
 import { api } from '../api'
 
 const TIER_LABEL = { 1: 'Major', 2: 'Regional', 3: 'Weekly' }
@@ -6,8 +6,7 @@ const TIER_COLOR = { 1: '#00ff9d', 2: '#ffd600', 3: '#7a9fff' }
 
 const MODE_ICONS = {
   CW: '—·—',  SSB: '🎙', FT8: 'FT8', FT4: 'FT4',
-  RTTY: 'TTY', 'CW/SSB': '—·— 🎙', Various: '★', All: '★',
-}
+  RTTY: 'TTY', 'CW/SSB': '—·— 🎙', Various: '★', All: '★' }
 
 function ContestCard({ contest }) {
   const color = contest.is_active
@@ -32,8 +31,7 @@ function ContestCard({ contest }) {
       border: `1px solid ${contest.is_active ? '#00ff9d44' : contest.is_upcoming ? '#ffd60033' : 'var(--border)'}`,
       borderLeft: `3px solid ${color}`,
       borderRadius: 8, padding: '10px 14px',
-      display: 'flex', flexDirection: 'column', gap: 5,
-    }}>
+      display: 'flex', flexDirection: 'column', gap: 5 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: contest.is_active ? 'var(--green)' : 'var(--text)' }}>
@@ -78,7 +76,7 @@ function ContestCard({ contest }) {
   )
 }
 
-export default function ContestCalendar() {
+const ContestCalendar = memo(function ContestCalendar() {
   const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState('all') // 'all'|'active'|'major'|'cw'|'digital'|'ssb'
@@ -186,3 +184,5 @@ export default function ContestCalendar() {
     </div>
   )
 }
+
+export default ContestCalendar

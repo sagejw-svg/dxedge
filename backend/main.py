@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import JSONResponse
-from ratelimit import lotw_limiter
+from ratelimit import lotw_limiter, api_limiter, compute_limiter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -71,6 +71,11 @@ async def lifespan(app: FastAPI):
     init_db()
     asyncio.create_task(run_alert_loop())
     logger.info("DXEdge pollers started")
+    # Register graceful shutdown handler
+    import signal
+    def _shutdown(sig, frame):
+        logger.info(f"Received signal {sig} - shutting down gracefully")
+    signal.signal(signal.SIGTERM, _shutdown)
     yield
     for t in tasks:
         t.cancel()
@@ -206,10 +211,14 @@ async def get_solar_history(hours: int = 48):
 
 # --- VOACAP propagation prediction ---
 @app.get("/api/voacap")
-async def get_voacap(
+async def get_voacap(request: Request,
     grid: str = Query(default="CM95", min_length=4, max_length=6),
     region: str = Query(default="EU"),
 ):
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    allowed, retry = compute_limiter.is_allowed(ip)
+    if not allowed:
+        raise HTTPException(429, f"Too many requests. Try again in {retry}s.")
     solar = cache.get("solar") or {}
     sfi = solar.get("sfi", 140)
     kp  = solar.get("k_index", 2)
@@ -453,9 +462,14 @@ async def get_sat_positions():
 
 @app.get("/api/satellites/passes")
 async def get_sat_passes(
+    request: Request,
     grid: str = Query(default="CM95", min_length=4, max_length=6),
     hours: int = Query(default=24, ge=1, le=48),
 ):
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    allowed, retry = compute_limiter.is_allowed(ip)
+    if not allowed:
+        raise HTTPException(429, f"Too many requests. Try again in {retry}s.")
     cache_key = f"sat_passes_{grid.upper()}_{hours}"
     cached = cache.get(cache_key)
     if cached:
@@ -499,7 +513,7 @@ async def get_activations():
 
 # --- Callsign spot lookup ---
 @app.get("/api/callsign")
-async def get_callsign_spots(
+async def get_callsign_spots(request: Request,
     call: str = Query(min_length=3, max_length=12),
     hours: int = Query(default=2, ge=1, le=12),
 ):

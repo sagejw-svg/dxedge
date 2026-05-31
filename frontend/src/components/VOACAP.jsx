@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo} from 'react'
 import { api } from '../api'
 
 const REGIONS = [
@@ -46,8 +46,7 @@ function HeatMap({ hours, currentUtc }) {
               color: h.utc === currentUtc ? 'var(--teal)' : 'var(--dim)',
               fontWeight: h.utc === currentUtc ? 700 : 400,
               borderBottom: h.utc === currentUtc ? '2px solid var(--teal)' : '2px solid transparent',
-              paddingBottom: 2, marginBottom: 4,
-            }}>{String(h.utc).padStart(2,'0')}</div>
+              paddingBottom: 2, marginBottom: 4 }}>{String(h.utc).padStart(2,'0')}</div>
           ))}
         </div>
 
@@ -72,8 +71,7 @@ function HeatMap({ hours, currentUtc }) {
                     fontFamily: 'var(--font-mono)', fontSize: 9,
                     color: r > 0.1 ? relText(r) : 'transparent',
                     cursor: 'default', flexShrink: 0,
-                    borderRadius: 2,
-                  }}>
+                    borderRadius: 2 }}>
                   {r > 0.1 ? Math.round(r*100) : ''}
                 </div>
               )
@@ -89,8 +87,7 @@ function HeatMap({ hours, currentUtc }) {
               width: cellW, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'var(--font-mono)', fontSize: 8,
               color: h.utc === currentUtc ? 'var(--teal)' : 'var(--dim)',
-              flexShrink: 0,
-            }}>{h.muf}</div>
+              flexShrink: 0 }}>{h.muf}</div>
           ))}
         </div>
 
@@ -114,7 +111,7 @@ function HeatMap({ hours, currentUtc }) {
   )
 }
 
-export default function VOACAP({ grid }) {
+const VOACAP = memo(function VOACAP({ grid }) {
   const [txGrid, setTxGrid] = useState(grid || 'CM95')
   const [region, setRegion] = useState('EU')
   const [data, setData] = useState(null)
@@ -173,8 +170,7 @@ export default function VOACAP({ grid }) {
               color: 'var(--teal)', padding: '6px 12px',
               background: 'var(--bg1)', border: '1px solid #7affb244',
               borderRadius: 6, outline: 'none', width: 90,
-              WebkitAppearance: 'none',
-            }}
+              WebkitAppearance: 'none' }}
           />
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--dim)', alignSelf: 'flex-end', paddingBottom: 6 }}>→</div>
@@ -255,3 +251,5 @@ export default function VOACAP({ grid }) {
     </div>
   )
 }
+
+export default VOACAP

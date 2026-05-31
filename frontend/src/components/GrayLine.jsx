@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo} from 'react'
 
 function solarDeclination() {
   const now = new Date()
@@ -24,8 +24,7 @@ function gridToLatLon(grid) {
   const g = grid.toUpperCase()
   return {
     lon: (g.charCodeAt(0) - 65) * 20 - 180 + parseInt(g[2]) * 2 + 1,
-    lat: (g.charCodeAt(1) - 65) * 10 - 90  + parseInt(g[3]) + 0.5,
-  }
+    lat: (g.charCodeAt(1) - 65) * 10 - 90  + parseInt(g[3]) + 0.5 }
 }
 
 const W = 640, H = 320
@@ -34,7 +33,7 @@ function ll2xy(lon, lat) {
   return [(lon + 180) * W / 360, (90 - lat) * H / 180]
 }
 
-export default function GrayLine({ grid }) {
+const GrayLine = memo(function GrayLine({ grid }) {
   const canvasRef   = useRef(null)
   const worldRef    = useRef(null) // cached world polygons
   const [sunPos, setSunPos] = useState(sunPosition())
@@ -236,3 +235,5 @@ export default function GrayLine({ grid }) {
     </div>
   )
 }
+
+export default GrayLine

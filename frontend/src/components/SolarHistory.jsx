@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo} from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts'
 import { api } from '../api'
 
@@ -14,8 +14,7 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div style={{
       background: '#0e0e0e', border: '1px solid #2a2a2a',
-      borderRadius: 6, padding: '10px 14px', fontFamily: 'var(--font-mono)',
-    }}>
+      borderRadius: 6, padding: '10px 14px', fontFamily: 'var(--font-mono)' }}>
       <div style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>{label}</div>
       {payload.map(p => (
         <div key={p.dataKey} style={{ fontSize: 11, color: p.color, marginBottom: 2 }}>
@@ -26,7 +25,7 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-export default function SolarHistory() {
+const SolarHistory = memo(function SolarHistory() {
   const [data, setData]       = useState([])
   const [loading, setLoading] = useState(false)
   const [view, setView]       = useState('sfi') // 'sfi' | 'kp' | 'ssn'
@@ -37,8 +36,7 @@ export default function SolarHistory() {
       .then(r => {
         const allReadings = (r.readings || []).map(row => ({
           ...row,
-          kColor: kColor(row.k_index),
-        }))
+          kColor: kColor(row.k_index) }))
         // Build smart time labels - show date when day changes
         const readings = allReadings.map((row, i) => {
           const d = new Date(row.timestamp)
@@ -49,8 +47,7 @@ export default function SolarHistory() {
           return {
             ...row,
             time: dayChanged ? dateStr : timeStr,
-            date: dateStr,
-          }
+            date: dateStr }
         })
         setData(readings)
       })
@@ -144,3 +141,5 @@ export default function SolarHistory() {
     </div>
   )
 }
+
+export default SolarHistory

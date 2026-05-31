@@ -50,3 +50,9 @@ class RateLimiter:
 
 # LoTW: 5 requests per IP per minute
 lotw_limiter = RateLimiter(max_requests=5, window_seconds=60)
+
+# General API limiter - 60 req/min/IP (generous for normal use)
+api_limiter = RateLimiter(max_requests=60, window_seconds=60)
+
+# Compute-heavy endpoints - 10 req/min/IP
+compute_limiter = RateLimiter(max_requests=10, window_seconds=60)

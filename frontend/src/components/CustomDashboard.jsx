@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import ErrorBoundary from './ErrorBoundary'
 import Solar from './Solar'
 import Bands from './Bands'
 import Clocks from './Clocks'
@@ -264,10 +265,12 @@ export default function CustomDashboard({ grid, callsign, solar, spots, pskSpots
                   <button onClick={() => toggleWidget(w.id)} style={{ fontFamily: 'var(--font-mono)', fontSize: 9, background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer' }}>remove</button>
                 </div>
               )}
-              <WidgetRenderer
-                id={w.id} grid={grid} callsign={callsign}
-                solar={solar} spots={spots} pskSpots={pskSpots} matrix={matrix}
-              />
+              <ErrorBoundary label={w.label}>
+                <WidgetRenderer
+                  id={w.id} grid={grid} callsign={callsign}
+                  solar={solar} spots={spots} pskSpots={pskSpots} matrix={matrix}
+                />
+              </ErrorBoundary>
             </div>
           ))}
         </div>

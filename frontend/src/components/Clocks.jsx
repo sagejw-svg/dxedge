@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo} from 'react'
 
 const CLOCK_CONFIGS = [
   { id: 'utc',     label: 'UTC',     tz: 'UTC',                   fixed: true  },
@@ -45,8 +45,7 @@ function getTimeInZone(tz) {
     seconds: parseInt(p.second),
     dateStr: `${p.month}/${p.day}`,
     abbr:    new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
-               .formatToParts(now).find(x => x.type === 'timeZoneName')?.value || tz,
-  }
+               .formatToParts(now).find(x => x.type === 'timeZoneName')?.value || tz }
 }
 
 function AnalogClock({ label, tz, isUtc, customTz, onCustomChange }) {
@@ -183,7 +182,7 @@ function AnalogClock({ label, tz, isUtc, customTz, onCustomChange }) {
   )
 }
 
-export default function Clocks() {
+const Clocks = memo(function Clocks() {
   const [, forceUpdate] = useState(0)
   const [customTz, setCustomTz] = useState(
     () => localStorage.getItem('dxedge_custom_tz') || 'Europe/London'
@@ -227,3 +226,5 @@ export default function Clocks() {
     </div>
   )
 }
+
+export default Clocks

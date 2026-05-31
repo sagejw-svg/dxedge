@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo} from 'react'
 
 const BAND_ORDER = ['10m', '12m', '15m', '17m', '20m', '30m', '40m', '80m', '160m', '6m']
 const C = {
@@ -44,7 +44,7 @@ function BandGroup({ band, spots, condition }) {
   )
 }
 
-export default function PSK({ spots, grid, gridsUsed, onRefresh, conditions }) {
+const PSK = memo(function PSK({ spots, grid, gridsUsed, onRefresh, conditions }) {
   const condMap = Object.fromEntries((conditions || []).map(c => [c.band, c.condition]))
 
   const byBand = {}
@@ -95,3 +95,5 @@ export default function PSK({ spots, grid, gridsUsed, onRefresh, conditions }) {
     </div>
   )
 }
+
+export default PSK

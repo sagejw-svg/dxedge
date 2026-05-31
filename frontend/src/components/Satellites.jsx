@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo} from 'react'
 import { api } from '../api'
 
 const W = 640, H = 320
@@ -13,8 +13,7 @@ function gridToLatLon(grid) {
   const g = grid.toUpperCase()
   return {
     lat: (g.charCodeAt(1) - 65) * 10 - 90  + parseInt(g[3]) + 0.5,
-    lon: (g.charCodeAt(0) - 65) * 20 - 180 + parseInt(g[2]) * 2 + 1,
-  }
+    lon: (g.charCodeAt(0) - 65) * 20 - 180 + parseInt(g[2]) * 2 + 1 }
 }
 
 function azLabel(az) {
@@ -49,8 +48,7 @@ function PassCard({ pass, isNext }) {
       background: isNext ? '#7affb210' : 'var(--bg1)',
       border: `1px solid ${isNext ? '#7affb244' : inProgress ? '#ffd60033' : 'var(--border)'}`,
       borderLeft: `3px solid ${inProgress ? '#ffd600' : isNext ? 'var(--teal)' : 'var(--border)'}`,
-      borderRadius: 8, padding: '10px 14px', marginBottom: 8,
-    }}>
+      borderRadius: 8, padding: '10px 14px', marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {inProgress && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--yellow)', background: '#ffd60020', padding: '1px 6px', borderRadius: 3 }}>IN PROGRESS</span>}
@@ -94,7 +92,7 @@ function PassCard({ pass, isNext }) {
   )
 }
 
-export default function Satellites({ grid }) {
+const Satellites = memo(function Satellites({ grid }) {
   const canvasRef  = useRef(null)
   const worldRef   = useRef(null)
   const [positions, setPositions] = useState([])
@@ -323,3 +321,5 @@ export default function Satellites({ grid }) {
     </div>
   )
 }
+
+export default Satellites

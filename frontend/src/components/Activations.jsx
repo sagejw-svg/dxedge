@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo} from 'react'
 import { api } from '../api'
 
 const BAND_COLOR = {
@@ -29,8 +29,7 @@ function SpotCard({ spot }) {
             fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
             color: isPOTA ? 'var(--teal)' : 'var(--yellow)',
             background: isPOTA ? '#7affb215' : '#ffd60015',
-            padding: '1px 6px', borderRadius: 3,
-          }}>{spot.type}</span>
+            padding: '1px 6px', borderRadius: 3 }}>{spot.type}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
             {spot.callsign}
           </span>
@@ -70,7 +69,7 @@ function SpotCard({ spot }) {
   )
 }
 
-export default function Activations() {
+const Activations = memo(function Activations() {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [filter, setFilter]   = useState('all') // 'all' | 'pota' | 'sota'
@@ -190,3 +189,5 @@ export default function Activations() {
     </div>
   )
 }
+
+export default Activations
