@@ -158,10 +158,20 @@ def predict_path(tx_grid: str, region_code: str,
         z_tx  = solar_zenith(tx_lat, tx_lon, h)
         z_mid = solar_zenith(mid_lat, mid_lon, h)
         z_rx  = solar_zenith(rx_lat, rx_lon, h)
-        worst = max(z_tx, z_mid, z_rx)
 
-        fof2 = estimate_fof2(sfi, worst)
-        muf  = fof2 * muf_mult
+        # Use midpoint zenith for F2 layer estimate - the reflection
+        # happens at the path midpoint, not the endpoints.
+        # Apply an absorption penalty if either endpoint is nighttime.
+        fof2 = estimate_fof2(sfi, z_mid)
+
+        # Night absorption: if TX or RX is in deep night, attenuate
+        night_penalty = 1.0
+        if z_tx > 100 and z_rx > 100:
+            night_penalty = 0.6  # both ends night
+        elif z_tx > 100 or z_rx > 100:
+            night_penalty = 0.85  # one end night
+
+        muf  = fof2 * muf_mult * night_penalty
 
         bands = {}
         for band, freq in BANDS:
