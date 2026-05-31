@@ -86,7 +86,7 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_psk_band      ON psk_spots(band);
             CREATE INDEX IF NOT EXISTS idx_psk_timestamp ON psk_spots(timestamp DESC);
-        """)
+
             CREATE TABLE IF NOT EXISTS alert_subscriptions (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 callsign    TEXT NOT NULL,
@@ -95,7 +95,7 @@ def init_db():
                 created_at  TEXT NOT NULL,
                 last_sent   TEXT
             );
-
+        """)
 
 # --- Spots ---
 

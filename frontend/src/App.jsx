@@ -24,21 +24,26 @@ import APRS from './components/APRS'
 import HourlySummary from './components/HourlySummary'
 
 const TABS = [
-  { id: 'bands',   label: 'Bands' },
-  { id: 'spots',   label: 'DX Spots' },
-  { id: 'psk',     label: 'Live RX' },
-  { id: 'predict', label: 'Predict' },
+  // Propagation & operating
+  { id: 'bands',    label: 'Bands' },
+  { id: 'spots',    label: 'DX Spots' },
+  { id: 'psk',      label: 'Live RX' },
+  { id: 'predict',  label: 'Predict' },
   { id: 'grayline', label: 'Gray Line' },
+  // Activity feeds
   { id: 'pota',     label: 'POTA/SOTA' },
   { id: 'contests', label: 'Contests' },
+  { id: 'callsign', label: 'Callsign' },
+  // Logbook
+  { id: 'lotw',     label: 'LoTW' },
+  // Monitoring & alerts
   { id: 'aprs',     label: 'APRS' },
   { id: 'alerts',   label: 'Alerts' },
-  { id: 'credits',  label: 'Credits' },
-  { id: 'windows', label: 'DX Windows' },
-  { id: 'lotw',    label: 'LoTW' },
-  { id: 'tools',   label: 'Tools' },
-  { id: 'callsign', label: 'Callsign' },
+  // Resources
+  { id: 'tools',    label: 'Tools' },
+  { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
+  { id: 'credits',  label: 'Credits' },
 ]
 
 // Neighboring grids to try if primary returns 0 spots
@@ -61,7 +66,6 @@ function useLiveSpots(onSpot) {
     const ws = new WebSocket(`${proto}://${window.location.host}/ws/spots`)
 
     ws.onopen = () => {
-      console.log('WS connected')
       if (reconnectRef.current) {
         clearTimeout(reconnectRef.current)
         reconnectRef.current = null
@@ -76,7 +80,6 @@ function useLiveSpots(onSpot) {
     }
 
     ws.onclose = () => {
-      console.log('WS disconnected - reconnecting in 5s')
       reconnectRef.current = setTimeout(connect, 5000)
     }
 
