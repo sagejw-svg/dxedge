@@ -81,7 +81,12 @@ app = FastAPI(title="DXEdge API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://dxedge.net",
+        "https://www.dxedge.net",
+        "http://localhost:5173",   # Vite dev server
+        "http://localhost:3000",
+    ],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )

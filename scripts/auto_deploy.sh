@@ -1,6 +1,6 @@
 #!/bin/bash
 # Auto-deploy script - checks GitHub every 5 minutes for new commits
-# Runs as a systemd service
+# Smart rebuild: only rebuilds backend container when Python files change
 
 REPO_DIR="/opt/dxedge"
 LOG="/var/log/dxedge_deploy.log"
@@ -28,8 +28,8 @@ if [ "$LOCAL" = "$REMOTE" ]; then
     exit 0
 fi
 
-log "New version detected: $LOCAL -> $REMOTE"
-log "Pulling changes..."
+log "New version detected: ${LOCAL:0:7} -> ${REMOTE:0:7}"
+log "Changes: $(git log --oneline ${LOCAL}..${REMOTE} | head -5)"
 
 git pull origin main --quiet
 if [ $? -ne 0 ]; then
@@ -37,28 +37,38 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Show what changed
-log "Changes: $(git log --oneline ${LOCAL}..${REMOTE} | head -5)"
+# Check what changed to decide what to rebuild
+BACKEND_CHANGED=$(git diff ${LOCAL}..${REMOTE} --name-only | grep -E '^backend/|^docker-compose|^nginx/' | wc -l)
+FRONTEND_CHANGED=$(git diff ${LOCAL}..${REMOTE} --name-only | grep -E '^frontend/' | wc -l)
 
-# Rebuild frontend
-log "Building frontend..."
-cd "$REPO_DIR/frontend"
-npm run build --silent
-if [ $? -ne 0 ]; then
-    log "ERROR: frontend build failed - rolling back"
-    git reset --hard "$LOCAL"
-    exit 1
+log "Backend changes: $BACKEND_CHANGED files | Frontend changes: $FRONTEND_CHANGED files"
+
+# Rebuild frontend if needed
+if [ "$FRONTEND_CHANGED" -gt 0 ] || [ "$BACKEND_CHANGED" -gt 0 ]; then
+    log "Building frontend..."
+    cd "$REPO_DIR/frontend"
+    npm run build --silent
+    if [ $? -ne 0 ]; then
+        log "ERROR: frontend build failed - rolling back"
+        git reset --hard "$LOCAL"
+        exit 1
+    fi
+    log "Frontend built successfully"
 fi
 
 # Restart containers
 cd "$REPO_DIR"
-log "Restarting containers..."
-docker compose build --no-cache backend 2>&1 | tail -10 | tee -a "$LOG"
-docker compose up -d 2>&1 | tail -5 | tee -a "$LOG"
-
-if [ $? -eq 0 ]; then
-    log "Deploy complete. Running: $(git rev-parse --short HEAD)"
+if [ "$BACKEND_CHANGED" -gt 0 ]; then
+    log "Backend changed - rebuilding container (no-cache)..."
+    docker compose build --no-cache backend 2>&1 | tail -5 | tee -a "$LOG"
+    if [ $? -ne 0 ]; then
+        log "ERROR: backend build failed"
+        exit 1
+    fi
+    docker compose up -d 2>&1 | tail -3 | tee -a "$LOG"
 else
-    log "ERROR: docker compose failed"
-    exit 1
+    log "Frontend only - restarting nginx (no backend rebuild needed)"
+    docker compose restart nginx 2>&1 | tail -2 | tee -a "$LOG"
 fi
+
+log "Deploy complete. Running: $(git rev-parse --short HEAD)"

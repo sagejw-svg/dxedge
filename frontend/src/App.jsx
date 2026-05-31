@@ -23,6 +23,7 @@ import Credits from './components/Credits'
 import CustomDashboard from './components/CustomDashboard'
 import Feedback from './components/Feedback'
 import Support from './components/Support'
+import ErrorBoundary from './components/ErrorBoundary'
 import APRS from './components/APRS'
 import Satellites from './components/Satellites'
 import HourlySummary from './components/HourlySummary'
@@ -259,34 +260,38 @@ export default function App() {
 
       {solar && (
         <>
-          {/* Tab bar - scrollable with group separators */}
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: 16,
-            scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div style={{ display: 'flex', gap: 4, minWidth: 'max-content', paddingBottom: 2 }}>
-              {TABS.map((t, i) => {
-                const isActive = tab === t.id
-                // Add separator before groups
-                const prevId = TABS[i - 1]?.id
-                const showSep = i > 0 && (
-                  (t.id === 'pota' && prevId === 'grayline') ||
-                  (t.id === 'lotw' && prevId === 'callsign') ||
-                  (t.id === 'aprs' && prevId === 'lotw') ||
-                  (t.id === 'tools' && prevId === 'alerts')
-                )
-                return (
-                  <span key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {showSep && <span style={{ width: 1, height: 20, background: '#222', flexShrink: 0 }} />}
-                    <button onClick={() => setTab(t.id)} style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0,
-                      background: isActive ? 'var(--bg2)' : 'transparent',
-                      border: `1px solid ${isActive ? '#7affb244' : 'var(--border)'}`,
-                      color: isActive ? 'var(--teal)' : 'var(--muted)',
-                      padding: '7px 14px', borderRadius: 6, cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}>{t.label}</button>
+          {/* Grouped tab bar */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {TAB_GROUPS.map(group => (
+                <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--dim)',
+                    letterSpacing: 2, textTransform: 'uppercase', paddingLeft: 2 }}>
+                    {group.label}
                   </span>
-                )
-              })}
+                  <div style={{ display: 'flex', gap: 3, background: 'var(--bg1)',
+                    border: '1px solid var(--border)', borderRadius: 7, padding: '3px' }}>
+                    {group.tabs.map(t => {
+                      const isActive = tab === t.id
+                      return (
+                        <button key={t.id} onClick={() => setTab(t.id)} title={t.label} style={{
+                          fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0,
+                          background: isActive ? '#7affb220' : 'transparent',
+                          border: `1px solid ${isActive ? '#7affb244' : 'transparent'}`,
+                          color: isActive ? 'var(--teal)' : 'var(--muted)',
+                          padding: '5px 10px', borderRadius: 5, cursor: 'pointer',
+                          whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4,
+                        }}>
+                          <span style={{ fontSize: 12 }}>{t.icon}</span>
+                          <span style={{ display: window.innerWidth < 500 ? 'none' : undefined }}>
+                            {t.label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -104,6 +104,18 @@ const SOURCES = [
     ],
   },
   {
+    category: 'Satellite Tracking',
+    items: [
+      {
+        name: 'SatNOGS Database',
+        url: 'https://db.satnogs.org',
+        what: 'Ham satellite TLE data (Two-Line Elements) backed by Space-Track.org',
+        note: 'Free public API. TLE data cached 6 hours. Powers the Satellites tab pass predictions.',
+        icon: '🛰️',
+      },
+    ],
+  },
+  {
     category: 'Propagation Tools',
     items: [
       {
