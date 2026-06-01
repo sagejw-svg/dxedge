@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,13 +36,13 @@ jobs:
       - name: Detect what changed
         id: changes
         run: |
-          git diff --name-only HEAD~1 HEAD > /tmp/changed_files.txt
-          if grep -qE '^backend/|^nginx/|^docker-compose' /tmp/changed_files.txt; then
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          echo "Changed files: $CHANGED"
+          if echo "$CHANGED" | grep -qE '^backend/|^nginx/|^docker-compose'; then
             echo "backend=true" >> $GITHUB_OUTPUT
           else
             echo "backend=false" >> $GITHUB_OUTPUT
           fi
-          echo "Changed files:"; cat /tmp/changed_files.txt
 
       - name: Copy built frontend to droplet
         uses: appleboy/scp-action@v0.1.7
@@ -60,19 +65,16 @@ jobs:
             set -e
             cd /opt/dxedge
             LOG=/var/log/dxedge_deploy.log
-
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Actions deploy starting" >> $LOG
             git pull origin main
-
             if [ "$BACKEND_CHANGED" = "true" ]; then
               echo "[$(date)] Backend changed - rebuilding container" >> $LOG
               docker compose build --no-cache backend
               docker compose up -d
             else
-              echo "[$(date)] Frontend-only deploy - restarting nginx" >> $LOG
+              echo "[$(date)] Frontend-only - restarting nginx" >> $LOG
               docker compose restart nginx
             fi
-
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete: $(git rev-parse --short HEAD)" >> $LOG
 
       - name: Verify health
