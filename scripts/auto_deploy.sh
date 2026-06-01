@@ -47,7 +47,15 @@ log "Backend changes: $BACKEND_CHANGED files | Frontend changes: $FRONTEND_CHANG
 if [ "$FRONTEND_CHANGED" -gt 0 ] || [ "$BACKEND_CHANGED" -gt 0 ]; then
     log "Building frontend..."
     cd "$REPO_DIR/frontend"
-    npm run build --silent
+    # Ensure swap exists for 1GB droplet (Vite needs ~300-400MB)
+    if [ ! -f /swapfile ]; then
+        log "Creating 1GB swapfile..."
+        fallocate -l 1G /swapfile && chmod 600 /swapfile
+        mkswap /swapfile && swapon /swapfile
+        log "Swap created"
+    fi
+    # Cap Node.js heap to avoid OOM, use --max-old-space-size
+    NODE_OPTIONS="--max-old-space-size=768" npm run build 2>&1 | tail -30 | tee -a "$LOG"
     if [ $? -ne 0 ]; then
         log "ERROR: frontend build failed - rolling back"
         git reset --hard "$LOCAL"
