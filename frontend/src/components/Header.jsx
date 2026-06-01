@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
 
-export default function Header({ callsign, grid, onCallsign, onGrid, loading, lastUpdate, onRefresh, matrixLoaded }) {
+export default function Header({ callsign, grid, onCallsign, onGrid, loading, lastUpdate, onRefresh, matrixLoaded, wsStatus }) {
   const [rec, setRec] = useState(null)
 
   useEffect(() => {

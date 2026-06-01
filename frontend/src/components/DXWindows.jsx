@@ -11,13 +11,13 @@ const WINDOWS = [
 
 const CONT_FLAG = { EU: '🌍', AS: '🌏', OC: '🌏', AF: '🌍', SA: '🌎', NA: '🌎' }
 
-export default function DXWindows() {
+export default function DXWindows({ grid = 'CM95' }) {
   const utcH = new Date().getUTCHours()
 
   return (
     <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase' }}>dx windows from cm95</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--dim)', letterSpacing: 3, textTransform: 'uppercase' }}>dx windows from {grid.toUpperCase()}</span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--muted)' }}>{String(utcH).padStart(2, '0')}:00Z now</span>
       </div>
 

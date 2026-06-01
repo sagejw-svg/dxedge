@@ -124,7 +124,7 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [error, setError] = useState(null)
   const [grid, setGrid] = useState(() => localStorage.getItem('dxedge_grid') || 'CM95')
-  const [callsign, setCallsign] = useState(() => localStorage.getItem('dxedge_call') || '')
+  const [callsign, setCallsign] = useState(() => localStorage.getItem('dxedge_call') || 'K6WRJ')
   const [matrix, setMatrix] = useState(null)
   const [rec, setRec] = useState(null)
   const [wsStatus, setWsStatus] = useState('connecting') // connecting|live|reconnecting
@@ -226,13 +226,15 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', maxWidth: 1000, margin: '0 auto', padding: '20px 20px' }}>
 
-      <Header
-        callsign={callsign} grid={grid}
-        onCallsign={(v) => { setCallsign(v); savePrefs(v, grid) }}
-        onGrid={(v) => { setGrid(v); savePrefs(callsign, v) }}
-        loading={loading} lastUpdate={lastUpdate} rec={rec} wsStatus={wsStatus}
-        onRefresh={() => fetchData()} matrixLoaded={!!matrix}
-      />
+      <ErrorBoundary>
+        <Header
+          callsign={callsign} grid={grid}
+          onCallsign={(v) => { setCallsign(v); savePrefs(v, grid) }}
+          onGrid={(v) => { setGrid(v); savePrefs(callsign, v) }}
+          loading={loading} lastUpdate={lastUpdate} rec={rec} wsStatus={wsStatus}
+          onRefresh={() => fetchData()} matrixLoaded={!!matrix}
+        />
+      </ErrorBoundary>
 
       <Clocks />
 
@@ -305,7 +307,7 @@ export default function App() {
           {tab === 'feedback' && <Feedback />}
           {tab === 'support'  && <Support />}
           {tab === 'credits'  && <Credits />}
-          {tab === 'windows' && <DXWindows />}
+          {tab === 'windows' && <DXWindows grid={grid} />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
