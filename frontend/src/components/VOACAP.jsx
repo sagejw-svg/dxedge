@@ -251,5 +251,6 @@ const VOACAP = memo(function VOACAP({ grid }) {
     </div>
   )
 }
+)
 
 export default VOACAP

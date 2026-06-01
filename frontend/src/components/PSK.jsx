@@ -95,5 +95,6 @@ const PSK = memo(function PSK({ spots, grid, gridsUsed, onRefresh, conditions })
     </div>
   )
 }
+)
 
 export default PSK

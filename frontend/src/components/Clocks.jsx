@@ -226,5 +226,6 @@ const Clocks = memo(function Clocks() {
     </div>
   )
 }
+)
 
 export default Clocks

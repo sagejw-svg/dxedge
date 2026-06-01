@@ -1,0 +1,91 @@
+name: Deploy DXEdge
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Build frontend
+        run: npm run build --prefix frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+
+      - name: Detect what changed
+        id: changes
+        run: |
+          git diff --name-only HEAD~1 HEAD > /tmp/changed_files.txt
+          cat /tmp/changed_files.txt
+          if grep -qE '^backend/|^nginx/|^docker-compose' /tmp/changed_files.txt; then
+            echo "backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Changed files:"
+          cat /tmp/changed_files.txt
+
+      - name: Deploy to droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: BACKEND_CHANGED=${{ steps.changes.outputs.backend }}
+          script: |
+            set -e
+            cd /opt/dxedge
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Actions deploy starting" >> /var/log/dxedge_deploy.log
+
+            # Pull latest code
+            git pull origin main
+
+            # Copy built frontend from runner (uploaded below)
+            echo "Frontend already built by runner - syncing dist/"
+
+            if [ "$BACKEND_CHANGED" = "true" ]; then
+              echo "[$(date)] Backend changed - rebuilding container" >> /var/log/dxedge_deploy.log
+              docker compose build --no-cache backend
+              docker compose up -d
+            else
+              docker compose restart nginx
+            fi
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete: $(git rev-parse --short HEAD)" >> /var/log/dxedge_deploy.log
+
+      - name: Copy frontend dist to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "frontend/dist/*"
+          target: "/opt/dxedge/frontend/dist/"
+          strip_components: 2
+
+      - name: Verify health
+        run: |
+          sleep 5
+          curl -sf https://dxedge.net/api/health | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print(f'Health: {d[\"status\"]} | SFI={d[\"sfi\"]} | spots={d[\"spots\"]}')
+          assert d['status'] == 'ok', 'Health check failed'
+          "

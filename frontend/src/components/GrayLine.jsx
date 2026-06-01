@@ -235,5 +235,6 @@ const GrayLine = memo(function GrayLine({ grid }) {
     </div>
   )
 }
+)
 
 export default GrayLine

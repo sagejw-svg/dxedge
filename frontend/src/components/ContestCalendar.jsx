@@ -187,5 +187,6 @@ const ContestCalendar = memo(function ContestCalendar() {
     </div>
   )
 }
+)
 
 export default ContestCalendar

@@ -141,5 +141,6 @@ const SolarHistory = memo(function SolarHistory() {
     </div>
   )
 }
+)
 
 export default SolarHistory

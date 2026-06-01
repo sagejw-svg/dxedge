@@ -215,5 +215,6 @@ const HourlySummary = memo(function HourlySummary({ grid }) {
     </div>
   )
 }
+)
 
 export default HourlySummary

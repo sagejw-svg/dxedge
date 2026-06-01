@@ -189,5 +189,6 @@ const Activations = memo(function Activations() {
     </div>
   )
 }
+)
 
 export default Activations

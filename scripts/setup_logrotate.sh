@@ -2,7 +2,8 @@
 # Run once to set up log rotation for dxedge deploy log
 
 cat > /etc/logrotate.d/dxedge << 'LOGROTATE'
-/var/log/dxedge_deploy.log {
+/var/log/dxedge_*.log {
+    su root root
     size 10M
     rotate 5
     compress

@@ -321,5 +321,6 @@ const Satellites = memo(function Satellites({ grid }) {
     </div>
   )
 }
+)
 
 export default Satellites
