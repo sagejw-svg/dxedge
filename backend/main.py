@@ -184,6 +184,13 @@ async def get_dashboard(
         return cached
 
     solar = cache.get("solar")
+    # If solar cache is empty, try to fetch it now rather than returning null
+    if not solar:
+        try:
+            solar = await solar_poller.fetch()
+        except Exception as e:
+            logger.warning(f"Dashboard inline solar fetch failed: {e}")
+
     spots = cache.get("spots") or []
 
     # Recommendation (lightweight - uses cached VOACAP if available)
@@ -649,6 +656,34 @@ async def get_callsign_spots(request: Request,
     cache.set(cache_key, result, ttl=300)  # 5 min cache
     return result
 
+
+
+
+@app.get("/api/debug")
+async def debug_state():
+    """Show internal state for troubleshooting. Remove in production."""
+    from datetime import datetime, timezone
+    solar = cache.get("solar")
+    spots = cache.get("spots") or []
+    tles  = cache.get("sat_tles") or {}
+    import os
+    dist = "/app/frontend/dist"
+    return {
+        "time_utc":    datetime.now(timezone.utc).isoformat(),
+        "cache": {
+            "solar":   bool(solar),
+            "sfi":     solar.get("sfi") if solar else None,
+            "spots":   len(spots),
+            "sat_tles": len(tles),
+        },
+        "filesystem": {
+            "dist_exists":       os.path.isdir(dist),
+            "index_html":        os.path.isfile(f"{dist}/index.html"),
+            "world_json":        os.path.isfile(f"{dist}/world.json"),
+            "world_json_bytes":  os.path.getsize(f"{dist}/world.json") if os.path.isfile(f"{dist}/world.json") else 0,
+        },
+        "cache_keys": cache.keys(),
+    }
 
 # Serve React frontend - try real file first, fall back to index.html for SPA routing
 @app.get("/{full_path:path}")
