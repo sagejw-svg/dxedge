@@ -255,7 +255,7 @@ const PRODUCTS = [
     category: 'Accessories',
     name: 'Balun Designs',
     tagline: 'High-quality baluns and ununs',
-    description: 'Precision-wound baluns and ununs built to handle real power levels. The 4:1 voltage balun and 1:1 current balun are fixtures in serious HF stations. Used by contest operators and DXers who need something that won't fail at legal limit.',
+    description: 'Precision-wound baluns and ununs built to handle real power levels. The 4:1 voltage balun and 1:1 current balun are fixtures in serious HF stations. Used by contest operators and DXers who need something that won\'t fail at legal limit.',
     price: '$30-150',
     link: 'https://balundesigns.com',
     badge: 'Contest Grade',
