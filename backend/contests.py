@@ -111,7 +111,7 @@ async def fetch_contests() -> list[dict]:
             headers={"User-Agent": "Mozilla/5.0 DXEdge/1.0 ham radio dashboard"}
         ) as session:
             # Fetch weekly calendar
-            async with session.get("https://www.contestcalendar.com/fivewkcal.html") as r:
+            async with session.get("https://www.contestcalendar.com/weeklycont.php") as r:
                 if r.status != 200:
                     return []
                 html = await r.text()

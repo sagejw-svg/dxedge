@@ -1,162 +1,96 @@
 """
-Simplified HF propagation prediction engine.
-Uses real solar data (SFI, K-index) and great circle geometry to estimate
-hourly band reliability for point-to-point paths.
-Based on ionospheric propagation principles from VOACAP/IONCAP literature.
+Simplified HF propagation estimator for DXEdge.
+Models F2 circuit reliability using solar zenith angles
+at TX, path midpoint, and RX to create realistic 24h band predictions.
 """
 import math
-from datetime import datetime, timezone
 
-# Target regions: (lat, lon, display_name)
 REGIONS = {
-    'EU':  (51.0,   10.0, 'Europe'),
-    'JA':  (36.0,  138.0, 'Japan'),
-    'VK':  (-25.0, 134.0, 'Australia/NZ'),
-    'AS':  (45.0,   90.0, 'Central Asia'),
-    'AF':  ( 0.0,   20.0, 'Africa'),
-    'SA':  (-15.0, -60.0, 'South America'),
-    'NA':  (45.0,  -75.0, 'NE North America'),
-    'UA9': (55.0,   60.0, 'Russia/Siberia'),
+    'EU':   (50.0,  10.0, 'Europe'),
+    'AS':   (35.0,  90.0, 'Asia'),
+    'AF':   ( 0.0,  20.0, 'Africa'),
+    'SA':   (-15.0,-60.0, 'South America'),
+    'NA':   (40.0, -95.0, 'North America'),
+    'OC':   (-25.0,135.0, 'Oceania'),
+    'JA':   (36.0, 138.0, 'Japan'),
+    'VK':   (-27.0,133.0, 'Australia'),
+    'ZL':   (-41.0,174.0, 'New Zealand'),
 }
 
 BANDS = [
-    ('10m', 28.5),
-    ('12m', 24.9),
-    ('15m', 21.2),
-    ('17m', 18.1),
-    ('20m', 14.2),
-    ('30m', 10.1),
-    ('40m',  7.1),
-    ('80m',  3.75),
+    ('80m',  3.5), ('60m',  5.3), ('40m', 7.0), ('30m',10.1),
+    ('20m', 14.0), ('17m', 18.0), ('15m', 21.0), ('12m', 24.9),
+    ('10m', 28.0), ('6m',  50.0),
 ]
 
 
 def maidenhead_to_latlon(grid: str) -> tuple[float, float]:
-    g = grid.upper().strip()
-    if len(g) < 4:
-        return 32.7, -117.1  # Default: San Diego
-    lon = (ord(g[0]) - 65) * 20 - 180 + int(g[2]) * 2 + 1.0
-    lat = (ord(g[1]) - 65) * 10 - 90  + int(g[3]) * 1 + 0.5
+    g = grid.upper()
+    lon = (ord(g[0]) - ord('A')) * 20 - 180 + (ord(g[2]) - ord('0')) * 2 + 1
+    lat = (ord(g[1]) - ord('A')) * 10 - 90  + (ord(g[3]) - ord('0'))     + 0.5
+    if len(g) >= 6:
+        lon += (ord(g[4]) - ord('A') + 0.5) * (2/24)
+        lat += (ord(g[5]) - ord('A') + 0.5) * (1/24)
     return lat, lon
 
 
 def great_circle(lat1, lon1, lat2, lon2) -> tuple[float, float]:
-    """Returns (distance_km, azimuth_degrees)"""
     R = 6371.0
-    la1, lo1, la2, lo2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    dlat = la2 - la1
-    dlon = lo2 - lo1
-    a = math.sin(dlat/2)**2 + math.cos(la1)*math.cos(la2)*math.sin(dlon/2)**2
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin((phi2-phi1)/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dl/2)**2
     dist = R * 2 * math.asin(math.sqrt(max(0, min(1, a))))
-    y = math.sin(dlon) * math.cos(la2)
-    x = math.cos(la1)*math.sin(la2) - math.sin(la1)*math.cos(la2)*math.cos(dlon)
-    az = math.degrees(math.atan2(y, x)) % 360
+    # Azimuth
+    y = math.sin(dl) * math.cos(phi2)
+    x = math.cos(phi1)*math.sin(phi2) - math.sin(phi1)*math.cos(phi2)*math.cos(dl)
+    az = (math.degrees(math.atan2(y, x)) + 360) % 360
     return dist, az
 
 
 def path_midpoint(lat1, lon1, lat2, lon2) -> tuple[float, float]:
-    la1, lo1, la2, lo2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    bx = math.cos(la2) * math.cos(lo2 - lo1)
-    by = math.cos(la2) * math.sin(lo2 - lo1)
-    lat_m = math.atan2(math.sin(la1)+math.sin(la2), math.sqrt((math.cos(la1)+bx)**2+by**2))
-    lon_m = lo1 + math.atan2(by, math.cos(la1)+bx)
-    return math.degrees(lat_m), math.degrees(lon_m)
+    phi1, lam1 = math.radians(lat1), math.radians(lon1)
+    phi2, lam2 = math.radians(lat2), math.radians(lon2)
+    Bx = math.cos(phi2) * math.cos(lam2 - lam1)
+    By = math.cos(phi2) * math.sin(lam2 - lam1)
+    lat_m = math.degrees(math.atan2(
+        math.sin(phi1) + math.sin(phi2),
+        math.sqrt((math.cos(phi1)+Bx)**2 + By**2)
+    ))
+    lon_m = math.degrees(lam1 + math.atan2(By, math.cos(phi1) + Bx))
+    return lat_m, lon_m
 
 
 def solar_zenith(lat: float, lon: float, utc_hour: float) -> float:
-    """Solar zenith angle in degrees"""
-    now = datetime.now(timezone.utc)
-    doy = now.timetuple().tm_yday
-    decl = math.radians(23.45 * math.sin(math.radians((360/365.0)*(doy - 80))))
-    hour_angle = math.radians((utc_hour + lon/15.0 - 12.0) * 15.0)
+    """Solar zenith angle in degrees (0=overhead, >90=below horizon)."""
+    doy = 152  # ~June 1
+    decl = math.radians(23.45 * math.sin(math.radians(360/365 * (doy - 81))))
+    hour_angle = math.radians(15 * (utc_hour + lon/15 - 12))
     lat_r = math.radians(lat)
     cos_z = (math.sin(lat_r)*math.sin(decl) +
              math.cos(lat_r)*math.cos(decl)*math.cos(hour_angle))
     return math.degrees(math.acos(max(-1.0, min(1.0, cos_z))))
 
 
-def estimate_fof2(sfi: float, zenith: float) -> float:
-    """Estimate F2 layer critical frequency (MHz).
-    Calibrated to produce realistic values:
-      SFI=120, noon (zenith~30°) -> ~7 MHz
-      SFI=70,  noon              -> ~4 MHz
-      Night                      -> 2-3 MHz
+def f2_layer_strength(zenith: float, sfi: float) -> float:
     """
-    if zenith >= 102:
-        # Deep night
-        return max(2.0, 0.02 * sfi - 0.5)
+    F2 layer electron density proxy (0-1 scale).
+    Peaks at solar noon, drops at night but never zero (residual ionization).
+    """
+    if zenith >= 105:
+        # Deep night - residual only
+        night_floor = max(0.05, (sfi - 60) / 400)
+        return night_floor
     elif zenith >= 90:
-        # Twilight transition
-        factor = (102 - zenith) / 12.0
-        night = max(2.0, 0.02 * sfi - 0.5)
-        cos_z = math.cos(math.radians(80))
-        day   = max(3.5, 0.06 * sfi * (cos_z ** 0.3))
-        return night + factor * (day - night)
+        # Twilight - transition from night floor to day value
+        factor = (105 - zenith) / 15.0
+        night_floor = max(0.05, (sfi - 60) / 400)
+        day_val = max(0.25, (sfi - 60) / 200)
+        return night_floor + factor * (day_val - night_floor)
     else:
+        # Daytime - cosine-based model
         cos_z = math.cos(math.radians(zenith))
-        return max(3.5, 0.06 * sfi * (cos_z ** 0.3))
-
-
-def muf_multiplier(dist_km: float) -> float:
-    """MUF multiplication factor for F2 paths"""
-    if dist_km < 500:   return 1.6
-    if dist_km < 1000:  return 2.0
-    if dist_km < 2000:  return 2.8
-    if dist_km < 4000:  return 3.5
-    if dist_km < 8000:  return 4.2
-    return 4.8
-
-
-def circuit_reliability(freq: float, muf: float, fof2: float,
-                        dist_km: float, kp: float) -> float:
-    """
-    Estimate reliability (0.0-1.0) for given freq/path/conditions.
-    Calibrated to match VOACAP output:
-      - Good conditions, optimal freq -> ~60-65%
-      - Marginal conditions -> ~30-45%
-      - Near MUF or near LUF -> drops sharply
-    """
-    # Geomagnetic penalty - K>=5 kills polar paths, K>=3 degrades
-    geo = max(0.05, 1.0 - max(0, kp - 2) * 0.15)
-
-    # Lowest usable frequency (D-layer absorption cutoff)
-    # Higher during daytime (high fof2), lower at night
-    luf = max(1.5, fof2 * 0.75)
-
-    if freq > muf * 1.05:
-        return 0.0  # Above MUF - no propagation
-
-    if freq < luf:
-        # Below LUF - D-layer absorption
-        ratio = freq / luf
-        return max(0.0, ratio ** 2.0) * 0.20 * geo
-
-    # Distance penalty: longer paths have more hops, more absorption
-    dist_factor = max(0.45, 1.0 - (dist_km - 1000) / 18000)
-
-    muf_ratio = freq / muf
-
-    if muf_ratio > 0.95:
-        # Just at/above MUF - propagation unreliable
-        rel = max(0.0, 1.0 - (muf_ratio - 0.95) / 0.10)
-        rel *= 0.35
-    elif muf_ratio > 0.85:
-        # Near MUF - good but variable
-        rel = 0.55 - (muf_ratio - 0.85) * 2.0
-    elif muf_ratio > 0.65:
-        # Optimal range - near-MUF gives best signal
-        rel = 0.65
-    elif muf_ratio > 0.45:
-        # Usable but lower signal strength
-        rel = 0.55
-    elif muf_ratio > 0.25:
-        # Low freq relative to MUF - absorption increasing
-        rel = 0.35
-    else:
-        # Well below MUF - heavy D/E layer absorption
-        rel = 0.15
-
-    return rel * geo * dist_factor
+        base = max(0.25, (sfi - 60) / 200)
+        return base + (1.0 - base) * (cos_z ** 0.4)
 
 
 def predict_path(tx_grid: str, region_code: str,
@@ -174,53 +108,89 @@ def predict_path(tx_grid: str, region_code: str,
     az_lp = (az_sp + 180) % 360
 
     mid_lat, mid_lon = path_midpoint(tx_lat, tx_lon, rx_lat, rx_lon)
-    muf_mult = muf_multiplier(dist_sp)
+
+    # Geomagnetic penalty (K-index)
+    geo_penalty = max(0.05, 1.0 - max(0, kp - 2) * 0.18)
+
+    # Distance factor: long paths have more hops and absorption
+    dist_factor = max(0.35, 1.0 - max(0, dist_sp - 2000) / 20000)
 
     hours = []
     for h in range(24):
         z_tx  = solar_zenith(tx_lat, tx_lon, h)
         z_mid = solar_zenith(mid_lat, mid_lon, h)
-        z_rx  = solar_zenith(rx_lat, rx_lon, h)
+        z_rx  = solar_zenith(rx_lat,  rx_lon,  h)
 
-        # Use midpoint zenith for F2 layer estimate - the reflection
-        # happens at the path midpoint, not the endpoints.
-        # Apply an absorption penalty if either endpoint is nighttime.
-        fof2 = estimate_fof2(sfi, z_mid)
+        # F2 strength at each key point
+        f2_tx  = f2_layer_strength(z_tx,  sfi)
+        f2_mid = f2_layer_strength(z_mid, sfi)
+        f2_rx  = f2_layer_strength(z_rx,  sfi)
 
-        # Night absorption: if TX or RX is in deep night, attenuate
-        night_penalty = 1.0
-        if z_tx > 100 and z_rx > 100:
-            night_penalty = 0.6  # both ends night
-        elif z_tx > 100 or z_rx > 100:
-            night_penalty = 0.85  # one end night
+        # Combined path F2 - weakest link in the chain
+        # Midpoint weighted most (that's where the reflection happens)
+        f2_path = (f2_tx * 0.25 + f2_mid * 0.50 + f2_rx * 0.25)
 
-        muf  = fof2 * muf_mult * night_penalty
+        # MUF estimate: F2 path strength maps to critical frequency
+        # At SFI=120 with full sun, foF2 ~ 8 MHz -> MUF for 9000km ~ 30 MHz
+        # Scale: f2_path=1.0 -> MUF=28 MHz (great conditions)
+        #        f2_path=0.5 -> MUF=14 MHz (moderate)
+        #        f2_path=0.1 -> MUF=5 MHz (night/poor)
+        muf = max(3.0, f2_path * 28.0 * (sfi / 150) ** 0.5)
+
+        # LUF (D-layer absorption cutoff) rises with solar activity during day
+        if z_mid < 90:
+            cos_z_mid = math.cos(math.radians(z_mid))
+            luf = 2.0 + cos_z_mid * 4.0 * (sfi / 150) ** 0.5
+        else:
+            luf = 1.5  # night - D layer gone
 
         bands = {}
         for band, freq in BANDS:
-            bands[band] = round(circuit_reliability(freq, muf, fof2, dist_sp, kp), 2)
+            if freq > muf * 1.08:
+                # Above MUF - no propagation
+                rel = 0.0
+            elif freq > muf * 0.95:
+                # Just at MUF - marginal
+                rel = max(0.0, 1.0 - (freq/muf - 0.95) / 0.13) * 0.25
+            elif freq > muf * 0.75:
+                # Near MUF - optimal window
+                t = (freq - muf * 0.75) / (muf * 0.20)
+                rel = 0.45 + t * 0.30  # 0.45-0.75
+            elif freq > muf * 0.50:
+                # Moderate - well-established path
+                t = (freq - muf * 0.50) / (muf * 0.25)
+                rel = 0.30 + t * 0.15  # 0.30-0.45
+            elif freq < luf:
+                # Below LUF - D-layer absorption
+                ratio = freq / luf if luf > 0 else 0
+                rel = max(0.0, ratio ** 2) * 0.15
+            else:
+                # Low MUF ratio - some absorption but path exists
+                rel = 0.20
 
-        # Best band this hour
+            rel *= geo_penalty * dist_factor
+            bands[band] = round(min(0.99, rel), 2)
+
         best = max(bands, key=bands.get) if bands else '20m'
 
         hours.append({
-            'utc': h,
-            'muf': round(muf, 1),
-            'fof2': round(fof2, 1),
-            'best_band': best if bands[best] > 0.3 else None,
-            'bands': bands,
+            'utc':        h,
+            'muf':        round(muf, 1),
+            'fof2':       round(f2_path * 8.0, 1),  # approx foF2
+            'best_band':  best if bands[best] > 0.15 else None,
+            'bands':      bands,
         })
 
     return {
-        'tx_grid': tx_grid.upper(),
-        'region': region_code.upper(),
-        'region_name': region[2],
-        'distance_sp_km': round(dist_sp),
-        'azimuth_sp': round(az_sp),
-        'distance_lp_km': round(dist_lp),
-        'azimuth_lp': round(az_lp),
-        'sfi': sfi,
-        'kp': kp,
-        'ssn': ssn,
-        'hours': hours,
+        'tx_grid':         tx_grid.upper(),
+        'region':          region_code.upper(),
+        'region_name':     region[2],
+        'distance_sp_km':  round(dist_sp),
+        'azimuth_sp':      round(az_sp),
+        'distance_lp_km':  round(dist_lp),
+        'azimuth_lp':      round(az_lp),
+        'sfi':             sfi,
+        'kp':              kp,
+        'ssn':             ssn,
+        'hours':           hours,
     }
