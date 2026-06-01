@@ -26,7 +26,6 @@ function ContestCard({ contest }) {
     : contest.days_away <= 14
     ? `⏰ next week`
     : `⏰ in ${Math.ceil(contest.days_away / 7)} weeks`
-    : ''
 
   return (
     <div style={{
