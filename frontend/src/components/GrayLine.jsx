@@ -42,10 +42,12 @@ const GrayLine = memo(function GrayLine({ grid }) {
 
   // Load world data once
   useEffect(() => {
-    fetch('/world.json')
+    const ctrl = new AbortController()
+    fetch('/world.json', { signal: ctrl.signal })
       .then(r => r.json())
       .then(data => { worldRef.current = data; setLoaded(true) })
-      .catch(() => { worldRef.current = []; setLoaded(true) })
+      .catch(e => { if (e.name !== 'AbortError') { worldRef.current = []; setLoaded(true) } })
+    return () => ctrl.abort()
   }, [])
 
   // Update every 30s, pause when hidden

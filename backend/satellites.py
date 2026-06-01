@@ -96,36 +96,39 @@ def _gmst(jd_full: float) -> float:
 
 
 async def fetch_tles() -> dict:
-    """Fetch TLEs for ham sats from SatNOGS."""
+    """Fetch TLEs for ham sats from SatNOGS.
+    
+    Note: SatNOGS ignores repeated norad_cat_id params, so we fetch all
+    TLEs and filter locally by our HAM_SATS dict.
+    """
     cached = cache.get("sat_tles")
     if cached:
         return cached
 
     tles = {}
-    ids = list(HAM_SATS.keys())
+    ham_ids = set(HAM_SATS.keys())
 
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20)) as session:
-            # Fetch in batches of 20
-            for i in range(0, len(ids), 20):
-                batch = ids[i:i+20]
-                params = "&".join(f"norad_cat_id={n}" for n in batch)
-                async with session.get(f"{SATNOGS_URL}&{params}") as r:
-                    if r.status == 200:
-                        data = await r.json(content_type=None)
-                        for tle in (data if isinstance(data, list) else []):
-                            norad = tle.get("norad_cat_id")
-                            if norad and tle.get("tle1") and tle.get("tle2"):
-                                tles[norad] = {
-                                    "tle1": tle["tle1"],
-                                    "tle2": tle["tle2"],
-                                    "name": HAM_SATS.get(norad, {}).get("name",
-                                            tle.get("tle0","").strip().lstrip("0 ")),
-                                }
-                await asyncio.sleep(0.5)
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+            # SatNOGS does not support batched NORAD ID queries - fetch all, filter locally
+            async with session.get(f"{SATNOGS_URL}&page_size=2000") as r:
+                if r.status == 200:
+                    data = await r.json(content_type=None)
+                    for tle in (data if isinstance(data, list) else []):
+                        norad = tle.get("norad_cat_id")
+                        if norad in ham_ids and tle.get("tle1") and tle.get("tle2"):
+                            tles[norad] = {
+                                "tle1": tle["tle1"],
+                                "tle2": tle["tle2"],
+                                "name": HAM_SATS.get(norad, {}).get("name",
+                                        tle.get("tle0", "").strip().lstrip("0 ")),
+                            }
+                else:
+                    logger.warning(f"SatNOGS returned {r.status}")
 
-        logger.info(f"Fetched TLEs for {len(tles)} ham satellites")
-        cache.set("sat_tles", tles, ttl=3600 * 6)  # 6hr cache
+        logger.info(f"Fetched TLEs for {len(tles)}/{len(ham_ids)} ham satellites")
+        if tles:
+            cache.set("sat_tles", tles, ttl=3600 * 6)  # 6hr cache
     except Exception as e:
         logger.warning(f"TLE fetch failed: {e}")
 

@@ -68,6 +68,8 @@ class SolarPoller:
             "band_conditions": self._band_conditions(sfi, kp),
         }
 
+        # Read previous BEFORE overwriting - used for VOACAP cache bust
+        prev = cache.get("solar")
         cache.set("solar", result, ttl=POLL_INTERVAL + 60)
         # Persist to SQLite
         try:
@@ -76,7 +78,6 @@ class SolarPoller:
             logger.debug(f"DB save solar failed: {e}")
 
         # Invalidate VOACAP caches if conditions changed significantly
-        prev = cache.get("solar")
         if prev:
             sfi_delta = abs(prev.get("sfi", sfi) - sfi)
             kp_delta  = abs(prev.get("k_index", kp) - kp)

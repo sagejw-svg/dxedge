@@ -367,7 +367,7 @@ async def get_recommendation(
         if diff == 0:    return "now"
         if diff == 1:    return "in 1h"
         if diff <= 6:    return f"in {diff}h"
-        return f"{String(h).padStart(2,'0')}:00Z" if False else f"{h:02d}:00Z"
+        return f"{h:02d}:00Z"
 
     def quality_word(score):
         if score >= 0.75: return "excellent"
@@ -436,6 +436,24 @@ async def subscribe_alerts(body: dict):
 async def unsubscribe_alerts(topic: str):
     delete_subscription(topic)
     return {"status": "unsubscribed"}
+
+
+@app.get("/api/alerts/subscriptions")
+async def list_subscriptions(callsign: str = Query(default=None)):
+    """List alert subscriptions, optionally filtered by callsign."""
+    from database import get_subscriptions
+    import json
+    subs = get_subscriptions()
+    if callsign:
+        subs = [s for s in subs if s.get("callsign","").upper() == callsign.upper()]
+    return {"subscriptions": [
+        {
+            "callsign": s["callsign"],
+            "topic":    s["topic"],
+            "alerts":   json.loads(s.get("alerts","[]")),
+            "last_sent": s.get("last_sent"),
+        } for s in subs
+    ]}
 
 
 @app.get("/api/alerts/test/{topic}")
