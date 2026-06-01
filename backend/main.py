@@ -650,7 +650,13 @@ async def get_callsign_spots(request: Request,
     return result
 
 
-# Serve React frontend for all non-API routes
+# Serve React frontend - try real file first, fall back to index.html for SPA routing
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
+    import os
+    # Serve real files from dist root (world.json, manifest.json, sw.js, favicon.svg etc.)
+    static_path = f"/app/frontend/dist/{full_path}"
+    if full_path and os.path.isfile(static_path):
+        return FileResponse(static_path)
+    # Fall back to index.html for all SPA client-side routes
     return FileResponse("/app/frontend/dist/index.html")
