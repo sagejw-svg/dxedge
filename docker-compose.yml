@@ -12,6 +12,12 @@ services:
       - dxedge-data:/data
     networks:
       - dxedge
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 20s
 
   nginx:
     image: nginx:alpine
@@ -26,7 +32,8 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - dxedge
 

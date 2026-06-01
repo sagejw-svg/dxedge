@@ -230,7 +230,8 @@ async def get_voacap(request: Request,
         return cached
 
     try:
-        result = predict_path(grid, region, sfi, kp, ssn)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, predict_path, grid, region, sfi, kp, ssn)
         cache.set(cache_key, result, ttl=3600)
         return result
     except ValueError as e:
@@ -256,9 +257,10 @@ async def get_voacap_summary(
     # Key regions to average across
     target_regions = ["EU", "JA", "VK", "SA", "AF"]
     all_predictions = []
+    loop = asyncio.get_event_loop()
     for region in target_regions:
         try:
-            pred = predict_path(grid, region, sfi, kp, ssn)
+            pred = await loop.run_in_executor(None, predict_path, grid, region, sfi, kp, ssn)
             all_predictions.append(pred)
         except Exception:
             pass
@@ -335,7 +337,7 @@ async def get_recommendation(
 
     BANDS_ORDER = ["10m","12m","15m","17m","20m","30m","40m","80m"]
 
-    def best_for_path(region, max_hours=24):
+    def _best_for_path(region):
         try:
             pred = predict_path(grid, region, sfi, kp, ssn)
         except Exception:
@@ -350,11 +352,11 @@ async def get_recommendation(
                     best_hour  = h_data["utc"]
         return best_band, best_hour, best_score
 
-    # Local = NA path (short, within continent)
-    local_band, local_hour, local_score = best_for_path("NA")
-    # DX = best of EU and JA
-    eu_band, eu_hour, eu_score = best_for_path("EU")
-    ja_band, ja_hour, ja_score = best_for_path("JA")
+    # Run all three path predictions concurrently in thread pool
+    loop = asyncio.get_event_loop()
+    local_band, local_hour, local_score = await loop.run_in_executor(None, _best_for_path, "NA")
+    eu_band,    eu_hour,    eu_score    = await loop.run_in_executor(None, _best_for_path, "EU")
+    ja_band,    ja_hour,    ja_score    = await loop.run_in_executor(None, _best_for_path, "JA")
     if ja_score > eu_score:
         dx_band, dx_hour, dx_score = ja_band, ja_hour, ja_score
         dx_region = "JA"
