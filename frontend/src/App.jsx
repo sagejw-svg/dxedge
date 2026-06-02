@@ -55,6 +55,48 @@ const TABS = [
   { id: 'credits',  label: 'Credits' },
 ]
 
+const TAB_GROUPS = [
+  {
+    label: 'Propagation',
+    tabs: [
+      { id: 'bands',    label: 'Bands',     icon: '📡' },
+      { id: 'spots',    label: 'DX Spots',  icon: '📊' },
+      { id: 'psk',      label: 'Live RX',   icon: '📻' },
+      { id: 'predict',  label: 'Predict',   icon: '🌐' },
+      { id: 'grayline', label: 'Gray Line', icon: '🌍' },
+    ],
+  },
+  {
+    label: 'Activity',
+    tabs: [
+      { id: 'pota',     label: 'POTA/SOTA', icon: '🏕' },
+      { id: 'contests', label: 'Contests',  icon: '🏆' },
+      { id: 'sats',     label: 'Satellites',icon: '🛰' },
+      { id: 'aprs',     label: 'APRS',      icon: '📍' },
+    ],
+  },
+  {
+    label: 'Logbook',
+    tabs: [
+      { id: 'lotw',     label: 'LoTW',      icon: '📋' },
+      { id: 'callsign', label: 'Callsign',  icon: '🔍' },
+      { id: 'alerts',   label: 'Alerts',    icon: '🔔' },
+      { id: 'windows',  label: 'DX Windows',icon: '🔭' },
+    ],
+  },
+  {
+    label: 'More',
+    tabs: [
+      { id: 'tools',    label: 'Tools',     icon: '🛠' },
+      { id: 'products', label: 'Gear',      icon: '📦' },
+      { id: 'custom',   label: 'Custom',    icon: '⚙️' },
+      { id: 'feedback', label: 'Feedback',  icon: '💬' },
+      { id: 'support',  label: 'Support',   icon: '❤️' },
+      { id: 'credits',  label: 'Credits',   icon: '📜' },
+    ],
+  },
+]
+
 // Neighboring grids to try if primary returns 0 spots
 const GRID_NEIGHBORS = {
   CM95: ['CM95', 'CM96', 'CM85', 'DM04', 'DM05', 'CM94', 'CM86'],
