@@ -152,7 +152,9 @@ export default function App() {
         setSolar(solarData)
         setLastUpdate(new Date())
       } catch (e2) {
-        setError(e2.message)
+        setError('Solar data unavailable - retrying...')
+        // Auto-retry after 10s
+        setTimeout(() => fetchData(true), 10000)
       }
     } finally {
       setLoading(false)

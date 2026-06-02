@@ -121,6 +121,24 @@ async def ws_spots(websocket: WebSocket):
 async def get_solar():
     data = cache.get("solar")
     if not data:
+        # Try restoring from DB before giving up
+        try:
+            from database import load_latest_solar
+            row = load_latest_solar()
+            if row:
+                data = {
+                    "sfi": row["sfi"], "k_index": row["k_index"],
+                    "a_index": row["a_index"], "ssn": row["ssn"],
+                    "x_class": row["x_class"], "source": row["source"] + " (cached)",
+                    "updated": row["timestamp"],
+                    "summary": solar_poller._summary(row["sfi"], row["k_index"], row["a_index"]),
+                    "band_conditions": solar_poller._band_conditions(row["sfi"], row["k_index"]),
+                }
+                cache.set("solar", data, ttl=300)
+                logger.info(f"Solar restored from DB on demand: SFI={row['sfi']}")
+        except Exception as e:
+            logger.warning(f"Solar DB restore failed: {e}")
+    if not data:
         raise HTTPException(503, "Solar data not yet available")
     return data
 
@@ -184,10 +202,12 @@ async def get_dashboard(
         return cached
 
     solar = cache.get("solar")
-    # If solar cache is empty, try to fetch it now rather than returning null
+    # If solar cache is empty, try a quick inline fetch (5s timeout)
     if not solar:
         try:
-            solar = await solar_poller.fetch()
+            solar = await asyncio.wait_for(solar_poller.fetch(), timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("Dashboard inline solar fetch timed out - will retry on next poll")
         except Exception as e:
             logger.warning(f"Dashboard inline solar fetch failed: {e}")
 
