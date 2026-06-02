@@ -11,14 +11,6 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    // Chunk splitting reduces peak memory during build
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          react:    ['react', 'react-dom'],
-          recharts: ['recharts'],
-        }
-      }
-    }
+    chunkSizeWarningLimit: 600,
   }
 })
