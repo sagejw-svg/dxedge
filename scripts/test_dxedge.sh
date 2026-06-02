@@ -1,67 +1,72 @@
 #!/bin/bash
+# DXEdge diagnostic script
+# Tests via nginx (HTTPS) since backend is not on host localhost
+
 echo "======================================"
 echo "DXEdge Diagnostics - $(date -u)"
 echo "======================================"
 
 echo ""
-echo "--- Docker Container Status ---"
+echo "--- Container Status ---"
 docker compose -f /opt/dxedge/docker-compose.yml ps
 
 echo ""
 echo "--- Memory / CPU ---"
-docker stats --no-stream 2>/dev/null
-
-echo ""
-echo "--- Backend Logs (last 30 lines) ---"
-docker logs dxedge-backend --tail 30 2>&1
-
-echo ""
-echo "--- API Checks (direct to backend) ---"
-for ep in "health" "solar" "dashboard?grid=CM95"; do
-    code=$(curl -s -o /tmp/resp.txt -w "%{http_code}" --max-time 8 "http://localhost:8000/api/$ep")
-    size=$(wc -c < /tmp/resp.txt)
-    first=$(head -c 1 /tmp/resp.txt)
-    if [ "$first" = "{" ] || [ "$first" = "[" ]; then
-        echo "  OK   /api/$ep → HTTP $code (${size}b)"
-    else
-        echo "  FAIL /api/$ep → HTTP $code: $(cat /tmp/resp.txt | head -c 100)"
-    fi
-done
-
-echo ""
-echo "--- Static Files (direct to backend) ---"
-for f in "/" "/world.json" "/sw.js" "/manifest.json" "/assets/index-D4zQxphD.js"; do
-    code=$(curl -s -o /tmp/resp.txt -w "%{http_code}" --max-time 8 "http://localhost:8000$f")
-    size=$(wc -c < /tmp/resp.txt)
-    echo "  $f → HTTP $code (${size}b)"
-done
-
-echo ""
-echo "--- Nginx Checks (via HTTPS) ---"
-for ep in "/" "/api/health" "/api/solar" "/world.json" "/assets/index-D4zQxphD.js"; do
-    code=$(curl -sk -o /tmp/resp.txt -w "%{http_code}" --max-time 8 "https://localhost$ep")
-    size=$(wc -c < /tmp/resp.txt)
-    echo "  $ep → HTTP $code (${size}b)"
-done
-
-echo ""
-echo "--- dist/ Contents ---"
-ls -lh /opt/dxedge/frontend/dist/
-echo ""
-ls -lh /opt/dxedge/frontend/dist/assets/
+docker stats --no-stream
 
 echo ""
 echo "--- Git Status ---"
 cd /opt/dxedge && git log --oneline -5
 
 echo ""
-echo "--- world.json served correctly? ---"
-curl -s http://localhost:8000/world.json | head -c 60
+echo "--- dist/ Contents ---"
+ls -lh /opt/dxedge/frontend/dist/
+echo ""
+ls -lh /opt/dxedge/frontend/dist/assets/ 2>/dev/null
 
 echo ""
+echo "--- API Checks (via nginx HTTPS) ---"
+for ep in "health" "solar" "dashboard?grid=CM95" "debug"; do
+    result=$(curl -sk --max-time 10 "https://localhost/api/$ep")
+    code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 10 "https://localhost/api/$ep")
+    size=${#result}
+    first="${result:0:1}"
+    if [ "$first" = "{" ] || [ "$first" = "[" ]; then
+        echo "  OK   /api/$ep → HTTP $code (${size}b)"
+    else
+        echo "  FAIL /api/$ep → HTTP $code: ${result:0:80}"
+    fi
+done
+
 echo ""
-echo "--- Debug endpoint ---"
-curl -s http://localhost:8000/api/debug | python3 -m json.tool
+echo "--- Static Files (via nginx HTTPS) ---"
+for f in "/" "/world.json" "/sw.js" "/manifest.json" "/assets/index-D4zQxphD.js" "/diag.html"; do
+    code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 10 "https://localhost$f")
+    size=$(curl -sk --max-time 10 "https://localhost$f" | wc -c)
+    echo "  $f → HTTP $code (${size}b)"
+done
+
+echo ""
+echo "--- Backend container exec check ---"
+docker exec dxedge-backend python3 -c "
+import sys
+sys.path.insert(0, '/app')
+from cache import cache
+solar = cache.get('solar')
+print(f'solar in cache: {bool(solar)}')
+print(f'sfi: {solar.get(\"sfi\") if solar else None}')
+print(f'cache keys: {cache.keys()}')
+import os
+dist = '/app/frontend/dist'
+print(f'dist exists: {os.path.isdir(dist)}')
+print(f'world.json: {os.path.isfile(dist+\"/world.json\")} ({os.path.getsize(dist+\"/world.json\") if os.path.isfile(dist+\"/world.json\") else 0}b)')
+print(f'index.html: {os.path.isfile(dist+\"/index.html\")}')
+print(f'assets: {os.listdir(dist+\"/assets\") if os.path.isdir(dist+\"/assets\") else \"MISSING\"}')
+" 2>&1
+
+echo ""
+echo "--- Backend logs (last 20) ---"
+docker logs dxedge-backend --tail 20 2>&1
 
 echo ""
 echo "======================================"
