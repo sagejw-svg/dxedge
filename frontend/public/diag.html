@@ -4,16 +4,36 @@
 <title>DXEdge Diagnostics</title>
 <style>
 body { background:#111; color:#0f0; font-family:monospace; padding:20px; font-size:13px; }
-.ok { color:#0f0; } .fail { color:#f44; } .warn { color:#fa0; }
+.ok { color:#0f0; } .fail { color:#f44; } .warn { color:#fa0; } .info { color:#7af; }
 h2 { color:#7affb2; }
-pre { background:#000; padding:10px; border:1px solid #333; overflow-x:auto; }
+pre { background:#000; padding:10px; border:1px solid #333; overflow-x:auto; white-space:pre-wrap; }
+button { background:#333; color:#0f0; border:1px solid #0f0; padding:8px 16px; margin:4px; cursor:pointer; font-family:monospace; }
 </style>
 </head>
 <body>
-<h2>DXEdge Diagnostics</h2>
-<pre id="out">Running checks...</pre>
+<h2>DXEdge Diagnostics v2</h2>
+<button onclick="run()">Re-run</button>
+<button onclick="loadApp()">Load App (with error capture)</button>
+<button onclick="clearSW()">Clear Service Worker</button>
+<pre id="out">Running...</pre>
+
 <script>
 const out = document.getElementById('out');
+const errors = [];
+
+// Capture ALL JS errors globally
+window.onerror = (msg, src, line, col, err) => {
+  errors.push({ msg, src: src?.split('/').pop(), line, col, stack: err?.stack });
+  log(`JS ERROR: ${msg}`, 'fail');
+  log(`  at ${src?.split('/').pop()}:${line}:${col}`, 'fail');
+  if (err?.stack) log('  ' + err.stack.split('\n').slice(1,4).join('\n  '), 'fail');
+};
+window.onunhandledrejection = (e) => {
+  errors.push({ msg: e.reason?.message || String(e.reason) });
+  log(`UNHANDLED PROMISE: ${e.reason?.message || e.reason}`, 'fail');
+  if (e.reason?.stack) log('  ' + e.reason.stack.split('\n').slice(1,3).join('\n  '), 'fail');
+};
+
 function log(msg, cls='') {
   const line = document.createElement('div');
   line.className = cls;
@@ -21,72 +41,108 @@ function log(msg, cls='') {
   out.appendChild(line);
 }
 
-async function check(label, url) {
-  try {
-    const t0 = Date.now();
-    const r = await fetch(url);
-    const ms = Date.now() - t0;
-    const text = await r.text();
-    if (r.ok) {
-      log(`OK   ${label} → HTTP ${r.status} (${text.length}b, ${ms}ms)`, 'ok');
-      return { ok: true, text };
-    } else {
-      log(`FAIL ${label} → HTTP ${r.status}: ${text.slice(0,80)}`, 'fail');
-      return { ok: false };
+async function loadApp() {
+  out.innerHTML = '';
+  errors.length = 0;
+  log('Loading app JS in iframe to capture errors...');
+  log('');
+
+  // Create an iframe that loads the real app
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'width:100%;height:400px;border:1px solid #333;background:#000';
+  document.body.appendChild(frame);
+
+  frame.contentWindow.onerror = (msg, src, line, col, err) => {
+    log(`IFRAME JS ERROR: ${msg}`, 'fail');
+    log(`  at ${src?.split('/').pop()}:${line}:${col}`, 'fail');
+    if (err?.stack) log('  ' + err.stack.split('\n').slice(0,5).join('\n  '), 'fail');
+  };
+  frame.contentWindow.onunhandledrejection = (e) => {
+    log(`IFRAME PROMISE ERROR: ${e.reason?.message || e.reason}`, 'fail');
+  };
+
+  frame.src = '/';
+
+  setTimeout(() => {
+    try {
+      const root = frame.contentDocument?.getElementById('root');
+      log(`Root div children: ${root?.children?.length || 0}`);
+      log(`Root innerHTML length: ${root?.innerHTML?.length || 0}`);
+      if (root?.innerHTML?.length > 0) {
+        log('App rendered content (first 200 chars):', 'ok');
+        log(root.innerHTML.slice(0, 200), 'info');
+      } else {
+        log('Root div is EMPTY - React did not render', 'fail');
+      }
+    } catch(e) {
+      log('Cannot access iframe: ' + e.message, 'warn');
     }
-  } catch(e) {
-    log(`FAIL ${label} → ${e.message}`, 'fail');
-    return { ok: false };
+  }, 5000);
+
+  log('(Waiting 5 seconds for app to load...)');
+}
+
+async function clearSW() {
+  out.innerHTML = '';
+  log('Clearing service workers and caches...');
+  const regs = await navigator.serviceWorker.getRegistrations();
+  for (const r of regs) {
+    await r.unregister();
+    log(`Unregistered SW: ${r.scope}`, 'ok');
   }
+  const keys = await caches.keys();
+  for (const k of keys) {
+    await caches.delete(k);
+    log(`Deleted cache: ${k}`, 'ok');
+  }
+  log('Done - reload the main site now', 'ok');
 }
 
 async function run() {
   out.innerHTML = '';
-  log('=== DXEdge Diagnostics ' + new Date().toUTCString() + ' ===');
+  log('=== DXEdge Diagnostics v2 ' + new Date().toUTCString() + ' ===');
+  log('');
+  log('--- Browser Info ---');
+  log(`UA: ${navigator.userAgent}`);
+  log(`SW support: ${'serviceWorker' in navigator}`);
   log('');
 
   log('--- Assets ---');
-  await check('index.html',     '/');
-  await check('main JS',        '/assets/index-D4zQxphD.js');
-  await check('CSS',            '/assets/index-CP3qRF0U.css');
-  await check('world.json',     '/world.json');
-  await check('sw.js',          '/sw.js');
-  await check('manifest.json',  '/manifest.json');
-  log('');
-
-  log('--- API Endpoints ---');
-  const health = await check('health',    '/api/health');
-  const solar  = await check('solar',     '/api/solar');
-  const dash   = await check('dashboard', '/api/dashboard?grid=CM95');
-  await check('recommendation', '/api/recommendation?grid=CM95');
-  await check('spots',          '/api/spots?limit=5');
-  await check('debug',          '/api/debug');
-  log('');
-
-  log('--- Service Worker ---');
-  if ('serviceWorker' in navigator) {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    log(`SW registrations: ${regs.length}`);
-    regs.forEach(r => log(`  scope: ${r.scope} | state: ${r.active?.state || 'none'}`));
-    const cache_names = await caches.keys();
-    log(`Cache names: ${JSON.stringify(cache_names)}`);
-  } else {
-    log('Service workers not supported', 'warn');
-  }
-  log('');
-
-  log('--- Dashboard JSON ---');
-  if (dash.ok) {
+  const assets = [
+    ['index.html', '/'],
+    ['main JS', '/assets/index-D4zQxphD.js'],
+    ['CSS', '/assets/index-CP3qRF0U.css'],
+    ['world.json', '/world.json'],
+    ['sw.js', '/sw.js'],
+  ];
+  for (const [label, url] of assets) {
     try {
-      const d = JSON.parse(dash.text);
-      log(`solar: ${JSON.stringify(d.solar ? {sfi:d.solar.sfi, k:d.solar.k_index} : null)}`);
-      log(`spots: ${d.spots?.length || 0}`);
-      log(`rec: ${JSON.stringify(d.recommendation ? {band:d.recommendation.local?.band} : null)}`);
-    } catch(e) { log('JSON parse failed: ' + e.message, 'fail'); }
+      const r = await fetch(url, { cache: 'no-store' });
+      const text = await r.text();
+      log(`${ r.ok ? 'OK  ' : 'FAIL'} ${label} → ${r.status} (${text.length}b)`, r.ok ? 'ok' : 'fail');
+    } catch(e) { log(`FAIL ${label} → ${e.message}`, 'fail'); }
   }
-
   log('');
-  log('=== Done ===');
+
+  log('--- API ---');
+  for (const [label, url] of [['solar','/api/solar'],['dashboard','/api/dashboard?grid=CM95']]) {
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      const j = await r.json();
+      log(`${ r.ok ? 'OK  ' : 'FAIL'} ${label} → ${r.status} | sfi=${j.sfi || j.solar?.sfi || '?'}`, r.ok ? 'ok' : 'fail');
+    } catch(e) { log(`FAIL ${label} → ${e.message}`, 'fail'); }
+  }
+  log('');
+
+  log('--- SW / Cache ---');
+  const regs = await navigator.serviceWorker.getRegistrations();
+  log(`SW registrations: ${regs.length}`);
+  for (const r of regs) log(`  ${r.scope} | ${r.active?.state}`);
+  const cacheKeys = await caches.keys();
+  log(`Caches: ${JSON.stringify(cacheKeys)}`);
+  log('');
+
+  log('=== Click "Load App" to capture JS errors during React init ===', 'warn');
 }
 run();
 </script>
