@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DXEdge Diagnostics</title>
+<style>
+body { background:#111; color:#0f0; font-family:monospace; padding:20px; font-size:13px; }
+.ok { color:#0f0; } .fail { color:#f44; } .warn { color:#fa0; }
+h2 { color:#7affb2; }
+pre { background:#000; padding:10px; border:1px solid #333; overflow-x:auto; }
+</style>
+</head>
+<body>
+<h2>DXEdge Diagnostics</h2>
+<pre id="out">Running checks...</pre>
+<script>
+const out = document.getElementById('out');
+function log(msg, cls='') {
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = msg;
+  out.appendChild(line);
+}
+
+async function check(label, url) {
+  try {
+    const t0 = Date.now();
+    const r = await fetch(url);
+    const ms = Date.now() - t0;
+    const text = await r.text();
+    if (r.ok) {
+      log(`OK   ${label} → HTTP ${r.status} (${text.length}b, ${ms}ms)`, 'ok');
+      return { ok: true, text };
+    } else {
+      log(`FAIL ${label} → HTTP ${r.status}: ${text.slice(0,80)}`, 'fail');
+      return { ok: false };
+    }
+  } catch(e) {
+    log(`FAIL ${label} → ${e.message}`, 'fail');
+    return { ok: false };
+  }
+}
+
+async function run() {
+  out.innerHTML = '';
+  log('=== DXEdge Diagnostics ' + new Date().toUTCString() + ' ===');
+  log('');
+
+  log('--- Assets ---');
+  await check('index.html',     '/');
+  await check('main JS',        '/assets/index-D4zQxphD.js');
+  await check('CSS',            '/assets/index-CP3qRF0U.css');
+  await check('world.json',     '/world.json');
+  await check('sw.js',          '/sw.js');
+  await check('manifest.json',  '/manifest.json');
+  log('');
+
+  log('--- API Endpoints ---');
+  const health = await check('health',    '/api/health');
+  const solar  = await check('solar',     '/api/solar');
+  const dash   = await check('dashboard', '/api/dashboard?grid=CM95');
+  await check('recommendation', '/api/recommendation?grid=CM95');
+  await check('spots',          '/api/spots?limit=5');
+  await check('debug',          '/api/debug');
+  log('');
+
+  log('--- Service Worker ---');
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    log(`SW registrations: ${regs.length}`);
+    regs.forEach(r => log(`  scope: ${r.scope} | state: ${r.active?.state || 'none'}`));
+    const cache_names = await caches.keys();
+    log(`Cache names: ${JSON.stringify(cache_names)}`);
+  } else {
+    log('Service workers not supported', 'warn');
+  }
+  log('');
+
+  log('--- Dashboard JSON ---');
+  if (dash.ok) {
+    try {
+      const d = JSON.parse(dash.text);
+      log(`solar: ${JSON.stringify(d.solar ? {sfi:d.solar.sfi, k:d.solar.k_index} : null)}`);
+      log(`spots: ${d.spots?.length || 0}`);
+      log(`rec: ${JSON.stringify(d.recommendation ? {band:d.recommendation.local?.band} : null)}`);
+    } catch(e) { log('JSON parse failed: ' + e.message, 'fail'); }
+  }
+
+  log('');
+  log('=== Done ===');
+}
+run();
+</script>
+</body>
+</html>
