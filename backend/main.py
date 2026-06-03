@@ -421,7 +421,7 @@ async def get_recommendation(
     cache.set(cache_key, result, ttl=1800)
     return result
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     from datetime import datetime, timezone
     solar   = cache.get("solar")
