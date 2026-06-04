@@ -205,7 +205,7 @@ const Satellites = memo(function Satellites({ grid }) {
       }
     }
 
-  }, [positions, passes, worldLoaded, grid, selected])
+  }, [positions, passes, worldLoaded, grid, selected, tab])
 
   const nextPass = passes[0]
   const inProgress = passes.filter(p => {

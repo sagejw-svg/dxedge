@@ -7,6 +7,7 @@ import asyncio
 import aiohttp
 import logging
 import re
+import html
 from datetime import datetime, timezone
 from cache import cache
 
@@ -125,7 +126,7 @@ async def fetch_contests() -> list[dict]:
         seen = set()
         for row in rows:
             cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)
-            clean = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
+            clean = [html.unescape(re.sub(r'<[^>]+>', '', c)).strip() for c in cells]
             if len(clean) < 2 or not clean[0] or not clean[1]:
                 continue
             name = clean[0]
