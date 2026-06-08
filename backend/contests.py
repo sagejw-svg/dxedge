@@ -7,7 +7,6 @@ import asyncio
 import aiohttp
 import logging
 import re
-import html
 from datetime import datetime, timezone
 from cache import cache
 
@@ -68,35 +67,57 @@ def enrich_contest(name: str) -> dict:
 
 
 def parse_date(date_str: str, year: int) -> tuple[str, str]:
-    """Parse date string like 'May 30', 'May 30-31', 'Jun 1' -> (start, end) ISO dates."""
+    """Parse contestcalendar.com date strings into (start, end) ISO dates.
+
+    Handles formats like:
+      '0000Z, Jun 6 to 2359Z, Jun 8'    (range with times)
+      '1300Z, June 6 to 0100Z, Jun 7'    (mixed full/short month)
+      '0000Z-0100Z, Jun 8'               (single day, time range)
+      'May 30-31'                        (legacy short form)
+      'May 31-Jun 1'                     (legacy cross-month)
+      'Jun 6'                            (single day)
+    """
     date_str = date_str.strip()
-    months = {"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6,
-              "Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12}
+    months = {"jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,
+              "jul":7,"aug":8,"sep":9,"oct":10,"nov":11,"dec":12,
+              "january":1,"february":2,"march":3,"april":4,"june":6,
+              "july":7,"august":8,"september":9,"october":10,
+              "november":11,"december":12}
+
+    def parse_month_day(s):
+        # Find "MonthName DayNumber" anywhere in s, return (month_num, day_num) or None
+        m = re.search(r'([A-Za-z]+)\s+(\d+)', s)
+        if m:
+            mon = months.get(m.group(1).lower())
+            if mon:
+                return mon, int(m.group(2))
+        return None
+
     try:
-        # Range: "May 30-31" or "May 31-Jun 1"
-        if "-" in date_str:
-            parts = date_str.split("-")
-            start_str = parts[0].strip()
-            end_str = parts[1].strip()
-            # Parse start
-            sp = start_str.split()
-            sm, sd = months.get(sp[0], 1), int(sp[1]) if len(sp) > 1 else 1
-            # Parse end - may have month prefix or not
-            ep = end_str.split()
-            if len(ep) == 2:
-                em, ed = months.get(ep[0], sm), int(ep[1])
-            else:
-                em, ed = sm, int(ep[0])
-            start = f"{year}-{sm:02d}-{sd:02d}"
-            end   = f"{year}-{em:02d}-{ed:02d}"
-        else:
-            parts = date_str.split()
-            if len(parts) >= 2:
-                m, d = months.get(parts[0], 1), int(parts[1])
-                start = end = f"{year}-{m:02d}-{d:02d}"
-            else:
-                start = end = f"{year}-01-01"
-        return start, end
+        if " to " in date_str.lower():
+            # "0000Z, Jun 6 to 2359Z, Jun 8"
+            parts = re.split(r'\s+to\s+', date_str, maxsplit=1, flags=re.IGNORECASE)
+            sm = parse_month_day(parts[0])
+            em = parse_month_day(parts[1]) if len(parts) > 1 else sm
+            if not sm: return "", ""
+            if not em: em = sm
+            return f"{year}-{sm[0]:02d}-{sm[1]:02d}", f"{year}-{em[0]:02d}-{em[1]:02d}"
+
+        # No "to": might be "May 30-31", "0000Z-0100Z, Jun 8", or "Jun 6"
+        md = parse_month_day(date_str)
+        if md:
+            start = end = f"{year}-{md[0]:02d}-{md[1]:02d}"
+            # Check for day range like "May 30-31"
+            range_m = re.search(r'([A-Za-z]+)\s+(\d+)\s*-\s*(?:([A-Za-z]+)\s+)?(\d+)', date_str)
+            if range_m:
+                sm_name, sd, em_name, ed = range_m.groups()
+                sm = months.get(sm_name.lower()) or md[0]
+                em = months.get(em_name.lower()) if em_name else sm
+                start = f"{year}-{sm:02d}-{int(sd):02d}"
+                end   = f"{year}-{em:02d}-{int(ed):02d}"
+            return start, end
+
+        return "", ""
     except Exception:
         return "", ""
 
@@ -117,20 +138,26 @@ async def fetch_contests() -> list[dict]:
                     return []
                 html = await r.text()
 
-        # Parse rows
+        # Parse contest header rows of the form:
+        # <a name="ID">CONTEST NAME</a>: 0000Z, Jun 6 to 2359Z, Jun 8</strong>
+        # Detail rows (Mode, Bands, etc.) are ignored.
         now = datetime.now(timezone.utc)
         year = now.year
-        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.DOTALL)
+        import html as html_mod
+
+        header_re = re.compile(
+            r'<a\s+name="(\d+)">([^<]+)</a>\s*:\s*([^<]+?)\s*</strong>',
+            re.DOTALL | re.IGNORECASE
+        )
 
         contests = []
         seen = set()
-        for row in rows:
-            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)
-            clean = [html.unescape(re.sub(r'<[^>]+>', '', c)).strip() for c in cells]
-            if len(clean) < 2 or not clean[0] or not clean[1]:
+        for match in header_re.finditer(html):
+            name = html_mod.unescape(match.group(2)).strip()
+            date_str = html_mod.unescape(match.group(3)).strip()
+
+            if not name or not date_str:
                 continue
-            name = clean[0]
-            date_str = clean[1]
 
             # Deduplicate
             key = f"{name}|{date_str}"
