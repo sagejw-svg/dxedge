@@ -33,10 +33,25 @@ LOCAL=$(git rev-parse HEAD 2>/dev/null)
 git fetch origin main --quiet 2>/dev/null
 REMOTE=$(git rev-parse origin/main 2>/dev/null)
 
-if [ "$LOCAL" = "$REMOTE" ]; then
+# Track last successfully deployed commit (not just current HEAD)
+# This catches the case where user did manual git pull but never rebuilt
+STATE_FILE="/var/lib/dxedge_last_deployed"
+LAST_DEPLOYED=$(cat "$STATE_FILE" 2>/dev/null || echo "")
+
+# If both remote == local AND last_deployed == local, truly nothing to do
+if [ "$LOCAL" = "$REMOTE" ] && [ "$LAST_DEPLOYED" = "$LOCAL" ]; then
     exit 0
 fi
 
+# If LOCAL == REMOTE but LAST_DEPLOYED differs, code is pulled but not deployed
+if [ "$LOCAL" = "$REMOTE" ] && [ "$LAST_DEPLOYED" != "$LOCAL" ]; then
+    log "Code at $LOCAL is pulled but never deployed (last: ${LAST_DEPLOYED:-none}) - rebuilding"
+    REMOTE="$LOCAL"  # treat current HEAD as 'new'
+    # Set a sentinel old commit so diffs detect all current files
+    LOCAL=$(git rev-parse "$LOCAL~1" 2>/dev/null || echo "")
+fi
+
+echo "$REMOTE" > /var/lib/dxedge_last_deployed
 log "=========================================="
 log "New version: ${LOCAL:0:7} -> ${REMOTE:0:7}"
 log "Changes:"
@@ -129,4 +144,5 @@ if [ "$HEALTH" = "200" ]; then
 else
     log "⚠ Deploy complete but health check returned $HEALTH"
 fi
+echo "$REMOTE" > /var/lib/dxedge_last_deployed
 log "=========================================="
