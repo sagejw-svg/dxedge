@@ -210,7 +210,7 @@ import {
   farnsworthGaps, tokenize, alignCopy, normalizeCopy,
   randomCallsigns, randomGroups, randomWords, randomQSO, LETTERS, DIGITS,
   acquireWakeLock, releaseWakeLock,
-} from '/morse/core.js?v=3'
+} from '/morse/core.js?v=4'
 
 const $ = id => document.getElementById(id)
 
@@ -228,7 +228,8 @@ const player = new CWPlayer(S)
 
 const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t }
 const clearAll = () => {
-  timers.forEach(clearTimeout); timers = []
+  timers.forEach(t => { if (t && t._i !== undefined) clearInterval(t._i); else clearTimeout(t) })
+  timers = []
   if (answerTimer) { clearTimeout(answerTimer); answerTimer = null }
 }
 
@@ -444,6 +445,10 @@ function stop() {
 }
 
 window.addEventListener('keydown', e => {
+  if (mode === 'copy') {
+    if (e.key === 'Escape' && copyPlaying) { e.preventDefault(); copyStop(); $('copyState').textContent = 'stopped' }
+    return
+  }
   if (mode !== 'drill' || !running) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
   if (e.key === 'Escape') { e.preventDefault(); stop(); return }
@@ -490,8 +495,16 @@ async function copyPlay() {
   $('copyState').textContent = 'sending ' + tokens.filter(t => t !== ' ').length +
                               ' characters \u00b7 ' + Math.round(totalMs / 1000) + 's'
   $('ans').focus()
-  later(() => { if (copyPlaying) { copyStop(); $('copyState').textContent = 'sent \u00b7 check when ready' } },
-        totalMs + 400)
+  const t0 = performance.now()
+  const tick = setInterval(() => {
+    if (!copyPlaying) { clearInterval(tick); return }
+    const left = Math.max(0, Math.round((totalMs - (performance.now() - t0)) / 1000))
+    $('copyState').textContent = left + 's left \u00b7 stop or press esc to cut it short'
+  }, 500)
+  timers.push({ _i: tick })
+  later(() => { clearInterval(tick)
+    if (copyPlaying) { copyStop(); $('copyState').textContent = 'sent \u00b7 check when ready' } },
+    totalMs + 400)
 }
 
 function copyCheck() {
@@ -571,8 +584,9 @@ const srcRow = $('rowSrc')
 SOURCES.forEach(([label, gen]) => {
   const b = document.createElement('button')
   b.textContent = label
-  b.onclick = () => { $('src').value = gen(); $('ans').value = ''; $('copyScore').textContent = ''
-                      $('diffCard').classList.add('hide'); copySent = '' }
+  b.onclick = () => { copyStop(); $('src').value = gen(); $('ans').value = ''
+                      $('copyScore').textContent = ''
+                      $('diffCard').classList.add('hide'); copySent = ''; previewLength() }
   srcRow.appendChild(b)
 })
 $('bPlay').onclick = copyPlay
@@ -580,14 +594,33 @@ $('bStopCopy').onclick = () => { copyStop(); $('copyState').textContent = 'stopp
 $('bCheck').onclick = copyCheck
 $('bClear').onclick = () => { $('ans').value = ''; $('copyScore').textContent = ''
                               $('diffCard').classList.add('hide'); $('ans').focus() }
+function previewLength() {
+  const toks = tokenize($('src').value)
+  const n = toks.filter(t => t !== ' ').length
+  if (!n) { $('copyState').textContent = ''; return }
+  const dit = 1.2 / S.charWpm
+  const gaps = farnsworthGaps(S.charWpm, S.effWpm)
+  let ms = 0
+  toks.forEach((t, i) => {
+    if (t === ' ') { ms += gaps.wordGapMs; return }
+    ms += (MORSE[t] || '').split('').reduce((a, e) => a + ((e === '-' ? 3 : 1) + 1) * dit * 1000, 0)
+    if (i < toks.length - 1 && toks[i + 1] !== ' ') ms += gaps.charGapMs
+  })
+  const secs = Math.round(ms / 1000)
+  $('copyState').textContent = n + ' characters \u00b7 about ' +
+    (secs >= 60 ? Math.floor(secs / 60) + 'm ' + (secs % 60) + 's' : secs + 's') + ' to send'
+}
+$('src').addEventListener('input', previewLength)
+
 $('src').value = randomCallsigns(8)
+previewLength()
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { if (running) stop(); if (copyPlaying) copyStop() }
 })
 window.addEventListener('pagehide', () => { player.close() })
 
-const BUILD = 'v0.2.1'
+const BUILD = 'v0.2.2'
 $('build').textContent = 'build ' + BUILD
 
 paintSettings(); paintStats(); paintGrid()

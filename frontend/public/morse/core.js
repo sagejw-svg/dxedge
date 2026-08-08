@@ -184,7 +184,8 @@ export class CWPlayer {
     gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.volume), t + RAMP)
     gain.gain.setValueAtTime(Math.max(0.0002, this.volume), t + dur - RAMP)
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-    osc.connect(gain).connect(ctx.destination)
+    this.begin()
+    osc.connect(gain).connect(this.master())
     osc.start(t)
     osc.stop(t + dur + 0.02)
     this.nodes.push(osc, gain)
@@ -196,10 +197,39 @@ export class CWPlayer {
     return !!this.ctx && this.ctx.state === 'running'
   }
 
+  /*
+   * Every element routes through one master gain. Silencing the master is
+   * what actually stops a transmission: it is O(1) and cannot be defeated
+   * by losing track of individual nodes, which is how a long send used to
+   * become unstoppable.
+   */
+  master() {
+    if (!this.ctx) return null
+    if (!this._master || this._master.context !== this.ctx) {
+      this._master = this.ctx.createGain()
+      this._master.connect(this.ctx.destination)
+    }
+    return this._master
+  }
+
+  /* Cancel anything in flight and reopen the master for a new transmission. */
+  begin() {
+    this.stop()
+    const m = this.master()
+    if (m) {
+      const now = this.ctx.currentTime
+      m.gain.cancelScheduledValues(now)
+      m.gain.setValueAtTime(1, now)
+    }
+    return this.ctx
+  }
+
   /* Schedule one code string. Returns its audible length in ms. */
   play(code, startDelayMs = 60) {
     const ctx = this.resume()
     if (!ctx || !code) return 0
+    this.begin()
+    const master = this.master()
     const dit = ditSeconds(this.charWpm)
     const RAMP = 0.005
     let t = ctx.currentTime + startDelayMs / 1000
@@ -213,13 +243,12 @@ export class CWPlayer {
       gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.volume), t + RAMP)
       gain.gain.setValueAtTime(Math.max(0.0002, this.volume), t + dur - RAMP)
       gain.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-      osc.connect(gain).connect(ctx.destination)
+      osc.connect(gain).connect(master)
       osc.start(t)
       osc.stop(t + dur + 0.02)
       this.nodes.push(osc, gain)
       t += dur + dit
     }
-    this.prune()
     return codeMs(code, this.charWpm)
   }
 
@@ -231,6 +260,8 @@ export class CWPlayer {
   playTokens(tokens, startDelayMs = 150) {
     const ctx = this.resume()
     if (!ctx) return { totalMs: 0, marks: [] }
+    this.begin()
+    const master = this.master()
     const dit = ditSeconds(this.charWpm)
     const { charGapMs, wordGapMs } = farnsworthGaps(this.charWpm, this.effWpm)
     const RAMP = 0.005
@@ -253,7 +284,7 @@ export class CWPlayer {
         gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.volume), t + RAMP)
         gain.gain.setValueAtTime(Math.max(0.0002, this.volume), t + dur - RAMP)
         gain.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-        osc.connect(gain).connect(ctx.destination)
+        osc.connect(gain).connect(master)
         osc.start(t)
         osc.stop(t + dur + 0.02)
         this.nodes.push(osc, gain)
@@ -263,22 +294,34 @@ export class CWPlayer {
       if (i < tokens.length - 1 && tokens[i + 1] !== ' ') t += charGapMs / 1000
     })
 
-    this.prune()
     return { totalMs: (t - t0) * 1000, marks }
   }
 
-  prune() {
-    if (this.nodes.length > 400) this.nodes = this.nodes.slice(-200)
-  }
-
-  /* Kill anything already scheduled, for Stop mid-transmission. */
+  /*
+   * Kill anything already scheduled. Two independent mechanisms, because a
+   * long send schedules hundreds of nodes and any one of them surviving
+   * means audio keeps coming:
+   *   1. zero the master gain, which silences everything instantly
+   *   2. stop and disconnect each node so nothing is left running
+   */
   stop() {
-    for (const n of this.nodes) { try { n.stop ? n.stop() : n.disconnect() } catch { /* already done */ } }
+    if (this.ctx && this._master) {
+      try {
+        const now = this.ctx.currentTime
+        this._master.gain.cancelScheduledValues(now)
+        this._master.gain.setValueAtTime(0, now)
+      } catch { /* context closed */ }
+    }
+    for (const n of this.nodes) {
+      try { if (n.stop) n.stop() } catch { /* not started or already stopped */ }
+      try { n.disconnect() } catch { /* already disconnected */ }
+    }
     this.nodes = []
   }
 
   close() {
     this.stop()
+    this._master = null
     if (this.ctx) { try { this.ctx.close() } catch { /* already closed */ } this.ctx = null }
   }
 }

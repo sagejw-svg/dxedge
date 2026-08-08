@@ -67,6 +67,7 @@ export default function Morse() {
   const [ans, setAns]           = useState('')
   const [sent, setSent]         = useState('')
   const [copyState, setCopyState] = useState('')
+  const [sending, setSending]   = useState(false)
   const [result, setResult]     = useState(null)
 
   const playerRef   = useRef(null)
@@ -81,6 +82,7 @@ export default function Morse() {
   const statsRef    = useRef({})
   const settRef     = useRef(DEFAULTS)
   const askRef      = useRef(null)
+  const tickRef     = useRef(null)
   const inputRef    = useRef(null)
   const loadedRef   = useRef(false)
 
@@ -118,6 +120,24 @@ export default function Morse() {
   }, [])
 
   const pool = useMemo(() => activePool(S.poolKey, S.kochCount), [S.poolKey, S.kochCount])
+
+  /* How long the current source will take to send, so a three minute QSO
+   * is not a surprise after pressing Send. */
+  const preview = useMemo(() => {
+    const toks = tokenize(src)
+    const n = toks.filter(t => t !== ' ').length
+    if (!n) return null
+    const dit = 1.2 / S.charWpm
+    const g = farnsworthGaps(S.charWpm, S.effWpm)
+    let ms = 0
+    toks.forEach((t, i) => {
+      if (t === ' ') { ms += g.wordGapMs; return }
+      ms += (MORSE[t] || '').split('').reduce((a, e) => a + ((e === '-' ? 3 : 1) + 1) * dit * 1000, 0)
+      if (i < toks.length - 1 && toks[i + 1] !== ' ') ms += g.charGapMs
+    })
+    const secs = Math.round(ms / 1000)
+    return `${n} characters \u00b7 about ${secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`} to send`
+  }, [src, S.charWpm, S.effWpm])
   const gaps = useMemo(() => farnsworthGaps(S.charWpm, S.effWpm), [S.charWpm, S.effWpm])
 
   /* --- drill engine --- */
@@ -271,6 +291,7 @@ export default function Morse() {
       runningRef.current = false
       timers.forEach(clearTimeout)
       if (answerRef.current) clearTimeout(answerRef.current)
+      if (tickRef.current) clearInterval(tickRef.current)
       releaseWakeLock()
       player.close()
     }
@@ -290,10 +311,27 @@ export default function Morse() {
     setSent(text)
     setResult(null)
     const { totalMs } = playerRef.current.playTokens(tokens)
-    const n = tokens.filter(t => t !== ' ').length
-    setCopyState(`sending ${n} characters \u00b7 ${Math.round(totalMs / 1000)}s`)
-    later(() => setCopyState('sent \u00b7 check when ready'), totalMs + 400)
+    setSending(true)
+    const t0 = performance.now()
+    const tick = setInterval(() => {
+      const left = Math.max(0, Math.round((totalMs - (performance.now() - t0)) / 1000))
+      setCopyState(`${left}s left \u00b7 stop or press esc to cut it short`)
+    }, 500)
+    tickRef.current = tick
+    later(() => {
+      clearInterval(tick); tickRef.current = null
+      setSending(false)
+      setCopyState('sent \u00b7 check when ready')
+    }, totalMs + 400)
   }, [src, clearAll, later])
+
+  const copyStop = useCallback(() => {
+    playerRef.current.stop()
+    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null }
+    clearAll()
+    setSending(false)
+    setCopyState('stopped')
+  }, [clearAll])
 
   const copyCheck = useCallback(() => {
     if (!sent) { setCopyState('send something first'); return }
@@ -312,9 +350,18 @@ export default function Morse() {
     })
   }, [sent, ans, persist])
 
+  useEffect(() => {
+    if (mode !== 'copy') return
+    const onEsc = (e) => { if (e.key === 'Escape' && sending) { e.preventDefault(); copyStop() } }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [mode, sending, copyStop])
+
   const newSource = useCallback((gen) => {
     playerRef.current.stop()
+    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null }
     clearAll()
+    setSending(false)
     setSrc(gen()); setAns(''); setSent(''); setResult(null); setCopyState('')
   }, [clearAll])
 
@@ -529,8 +576,10 @@ export default function Morse() {
                 resize: 'vertical', lineHeight: 1.7 }} />
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 11 }}>
               <button onClick={copyPlay} style={{ ...chip(true), fontSize: 12, padding: '8px 20px', fontWeight: 600 }}>Send</button>
-              <button onClick={() => { playerRef.current.stop(); clearAll(); setCopyState('stopped') }} style={chip(false)}>Stop</button>
-              <span style={{ ...mono, fontSize: 10, color: 'var(--dim)' }}>{copyState}</span>
+              <button onClick={copyStop} style={sending ? { ...chip(false), borderColor: 'var(--red)', color: 'var(--red)' } : chip(false)}>Stop</button>
+              <span style={{ ...mono, fontSize: 10, color: sending ? 'var(--yellow)' : 'var(--dim)' }}>
+                {copyState || preview}
+              </span>
             </div>
           </div>
 
