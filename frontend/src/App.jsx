@@ -378,6 +378,18 @@ export default function App() {
           }}>{l} ↗</a>
         ))}
       </footer>
+      <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <a href="/cyber/" style={{
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--teal)',
+          border: '1px solid var(--teal)', padding: '6px 14px', borderRadius: 5,
+          letterSpacing: 1, textTransform: 'uppercase', textDecoration: 'none'
+        }}>DX//EDGE · CYBER →</a>
+        <a href="/aethersdr/" style={{
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--teal)',
+          border: '1px solid var(--teal)', padding: '6px 14px', borderRadius: 5,
+          letterSpacing: 1, textTransform: 'uppercase', textDecoration: 'none'
+        }}>DX//EDGE · AETHERSDR →</a>
+      </div>
     </div>
   )
 }

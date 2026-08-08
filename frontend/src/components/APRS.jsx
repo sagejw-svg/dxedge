@@ -11,13 +11,6 @@ function gridToLatLon(grid) {
 
 const APRS_SITES = [
   {
-    name: 'aprs.fi',
-    url: (lat, lon) => `https://aprs.fi/#!lat=${lat.toFixed(2)}&lng=${lon.toFixed(2)}&z=10`,
-    desc: 'Primary APRS tracking map - live positions, weather, messages',
-    icon: '🗺️',
-    canEmbed: true,
-  },
-  {
     name: 'aprs.rocks',
     url: () => 'https://aprs.rocks',
     desc: 'APRS web client with modern UI',
@@ -43,7 +36,7 @@ const APRS_SITES = [
 ]
 
 export default function APRS({ grid, callsign }) {
-  const [activeMap, setActiveMap] = useState('aprs.fi')
+  const [activeMap, setActiveMap] = useState('APRS Direct')
   const [lookupCall, setLookupCall] = useState(callsign || '')
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('dxedge_aprsfi_key') || '')
   const [lookupResult, setLookupResult] = useState(null)
