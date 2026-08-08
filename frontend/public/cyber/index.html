@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>DX//EDGE · CYBER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #08101C; --surface: #0C1828; --surface2: #111F34;
+    --border: #192E48; --cyan: #00C8FF; --green: #00E89A;
+    --amber: #FFB93A; --red: #FF4455; --text: #B0C8DC;
+    --bright: #D8EAF5; --muted: #4E6880;
+    --mono: 'Share Tech Mono', monospace; --sans: 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--sans);
+    line-height: 1.5; min-height: 100vh; padding: 16px;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ============ HEADER + RADAR ============ */
+  .header {
+    position: relative; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; overflow: hidden;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .radar {
+    position: absolute; top: -120%; right: -30%; width: 480px; height: 480px;
+    background: conic-gradient(from 0deg, transparent 0%, rgba(0,200,255,0.18) 8%, transparent 14%);
+    border-radius: 50%; animation: spin 9s linear infinite; pointer-events: none; z-index: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .header-left, .header-right { position: relative; z-index: 1; }
+  .logo {
+    font-family: var(--mono); font-size: 22px; color: var(--bright); letter-spacing: 2px;
+  }
+  .logo .accent { color: var(--cyan); }
+  .logo .section { color: var(--green); margin-left: 8px; }
+  .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .refresh-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--cyan);
+    font-family: var(--mono); font-size: 12px; padding: 7px 14px; border-radius: 5px;
+    cursor: pointer; letter-spacing: 1px;
+  }
+  .refresh-btn:hover { background: var(--border); }
+  .refresh-btn.spinning { animation: spin 1s linear infinite; }
+  .clock { font-family: var(--mono); text-align: right; line-height: 1.3; }
+  .clock-time { font-size: 18px; color: var(--bright); }
+  .clock-date { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; }
+  .badge {
+    font-family: var(--mono); background: var(--surface2); border: 1px solid var(--green);
+    color: var(--green); padding: 5px 10px; border-radius: 4px; font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot {
+    width: 8px; height: 8px; background: var(--green); border-radius: 50%;
+    animation: pulse 1.6s ease-in-out infinite; box-shadow: 0 0 6px var(--green);
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .ioc-search {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 18px; margin-bottom: 16px;
+  }
+  .ioc-search-label {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .ioc-input-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ioc-input {
+    flex: 1; min-width: 240px; background: var(--bg); border: 1px solid var(--border);
+    color: var(--bright); padding: 10px 14px; border-radius: 5px;
+    font-family: var(--mono); font-size: 14px; outline: none;
+  }
+  .ioc-input:focus { border-color: var(--cyan); }
+  .ioc-type {
+    font-family: var(--mono); font-size: 11px; color: var(--amber);
+    padding: 4px 10px; background: var(--surface2); border-radius: 4px;
+  }
+  .ioc-pivots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .pivot-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--cyan);
+    padding: 5px 10px; font-family: var(--mono); font-size: 11px;
+    border-radius: 4px; text-decoration: none;
+  }
+  .pivot-btn:hover { background: var(--border); border-color: var(--cyan); text-decoration: none; }
+
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-family: var(--mono); font-size: 12px; color: var(--bright);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .panel-status {
+    font-family: var(--mono); font-size: 9px; padding: 3px 8px;
+    border-radius: 3px; letter-spacing: 1px;
+  }
+  .status-live { background: rgba(0, 232, 154, 0.15); color: var(--green); border: 1px solid var(--green); }
+  .status-info { background: rgba(0, 200, 255, 0.15); color: var(--cyan); border: 1px solid var(--cyan); }
+  .status-critical { background: rgba(255, 68, 85, 0.15); color: var(--red); border: 1px solid var(--red); }
+  .status-warn { background: rgba(255, 185, 58, 0.15); color: var(--amber); border: 1px solid var(--amber); }
+  .panel-body {
+    padding: 14px 16px; max-height: 400px; overflow-y: auto; flex: 1;
+  }
+  .panel-body::-webkit-scrollbar { width: 6px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+
+  .feed-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-title { font-size: 13px; color: var(--bright); line-height: 1.4; margin-bottom: 4px; display: block; }
+  .feed-title:hover { color: var(--cyan); text-decoration: none; }
+  .feed-meta { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
+  .feed-source { color: var(--cyan); }
+  .feed-error { font-size: 12px; color: var(--red); padding: 8px 0; font-family: var(--mono); }
+
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; overflow-x: auto; }
+  .tab {
+    background: none; border: none; color: var(--muted); padding: 8px 14px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+  .cve-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .cve-item:last-child { border-bottom: none; }
+  .cve-line1 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .cve-id { font-family: var(--mono); font-size: 13px; color: var(--cyan); font-weight: 600; }
+  .chip { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; }
+  .chip-critical { background: rgba(255, 68, 85, 0.2); color: var(--red); border: 1px solid var(--red); }
+  .chip-high { background: rgba(255, 185, 58, 0.2); color: var(--amber); border: 1px solid var(--amber); }
+  .chip-ransomware { background: var(--red); color: white; font-weight: 700; }
+  .chip-epss-high { background: rgba(255, 68, 85, 0.2); color: var(--red); border: 1px solid var(--red); }
+  .chip-epss-med { background: rgba(255, 185, 58, 0.2); color: var(--amber); border: 1px solid var(--amber); }
+  .chip-epss-low { background: rgba(0, 200, 255, 0.15); color: var(--cyan); border: 1px solid var(--cyan); }
+  .cve-product { font-size: 12px; color: var(--bright); margin-bottom: 3px; }
+  .cve-name { font-size: 12px; color: var(--text); margin-bottom: 3px; line-height: 1.4; }
+  .cve-dates { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  .tools-group { margin-bottom: 14px; }
+  .tools-group:last-child { margin-bottom: 0; }
+  .tools-group-label {
+    font-family: var(--mono); font-size: 9px; color: var(--muted);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .tools-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tool-link {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; font-family: var(--mono); font-size: 11px;
+    border-radius: 4px; text-decoration: none;
+  }
+  .tool-link:hover { background: var(--border); border-color: var(--cyan); color: var(--cyan); text-decoration: none; }
+
+  .drill-lesson { background: var(--surface2); border-left: 3px solid var(--cyan); border-radius: 4px; padding: 12px 14px; }
+  .drill-title { font-family: var(--mono); font-size: 13px; color: var(--bright); margin-bottom: 10px; letter-spacing: 0.5px; }
+  .drill-bullets { list-style: none; margin-bottom: 10px; }
+  .drill-bullets li { font-size: 12px; color: var(--text); padding: 4px 0 4px 16px; position: relative; }
+  .drill-bullets li::before { content: "▸"; position: absolute; left: 0; color: var(--cyan); }
+  .drill-link { font-family: var(--mono); font-size: 11px; color: var(--cyan); display: inline-block; margin-top: 4px; }
+
+  .prop-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .prop-stat { background: var(--surface2); border: 1px solid var(--border); padding: 8px 12px; border-radius: 5px; min-width: 80px; }
+  .prop-stat-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .prop-stat-value { font-family: var(--mono); font-size: 18px; color: var(--bright); margin-top: 2px; }
+  .prop-stat-value.good { color: var(--green); }
+  .prop-stat-value.warn { color: var(--amber); }
+  .prop-stat-value.bad { color: var(--red); }
+  .band-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+  .band-table th, .band-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  .band-table th { color: var(--muted); letter-spacing: 1px; font-weight: normal; text-transform: uppercase; font-size: 9px; }
+  .band-good { color: var(--green); }
+  .band-fair { color: var(--amber); }
+  .band-poor { color: var(--red); }
+
+  .footer { margin-top: 20px; padding: 14px 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; }
+  .footer .sep { color: var(--border); padding: 0 8px; }
+  .loading { color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 12px 0; text-align: center; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="radar"></div>
+    <div class="header-left">
+      <div class="logo">DX<span class="accent">//</span>EDGE<span class="section">· CYBER</span></div>
+    </div>
+    <div class="header-right">
+      <button class="refresh-btn" onclick="refreshAll()" id="refreshBtn">↻ REFRESH</button>
+      <div class="clock">
+        <div class="clock-time" id="clockTime">--:--:--</div>
+        <div class="clock-date" id="clockDate">---</div>
+      </div>
+      <div class="badge"><span class="dot"></span>K6WRJ</div>
+    </div>
+  </header>
+
+  <section class="ioc-search">
+    <div class="ioc-search-label">IOC PIVOT SEARCH</div>
+    <div class="ioc-input-row">
+      <input id="iocInput" class="ioc-input" placeholder="CVE-2024-1234 · 8.8.8.8 · domain.com · sha256 hash · https://url"
+             oninput="detectIOC()" onkeydown="if(event.key==='Enter') openFirstPivot()" />
+      <span id="iocType" class="ioc-type" style="display:none">TYPE</span>
+    </div>
+    <div id="iocPivots" class="ioc-pivots"></div>
+  </section>
+
+  <main class="grid">
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">DAILY DRILL — 5 MIN</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="tabs" id="drillTabs"></div>
+        <div id="drillContent"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">CISA KEV <span id="kevCount" style="color:var(--muted)"></span></span>
+        <span class="panel-status status-critical">CRITICAL</span>
+      </div>
+      <div class="panel-body" id="kevBody"><div class="loading">loading CISA KEV catalog...</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">CRITICAL CVEs — LAST 30 DAYS</span>
+        <span class="panel-status status-critical">CRITICAL</span>
+      </div>
+      <div class="panel-body" id="cveBody"><div class="loading">loading NVD critical CVEs...</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">HF PROPAGATION</span>
+        <span class="panel-status status-live">LIVE</span>
+      </div>
+      <div class="panel-body" id="propBody"><div class="loading">loading solar data...</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">QUICK TOOLS</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="tools-group">
+          <div class="tools-group-label">Threat Intel</div>
+          <div class="tools-buttons">
+            <a class="tool-link" href="https://www.virustotal.com/" target="_blank" rel="noopener">VirusTotal</a>
+            <a class="tool-link" href="https://www.shodan.io/" target="_blank" rel="noopener">Shodan</a>
+            <a class="tool-link" href="https://urlscan.io/" target="_blank" rel="noopener">urlscan.io</a>
+            <a class="tool-link" href="https://www.abuseipdb.com/" target="_blank" rel="noopener">AbuseIPDB</a>
+          </div>
+        </div>
+        <div class="tools-group">
+          <div class="tools-group-label">Frameworks</div>
+          <div class="tools-buttons">
+            <a class="tool-link" href="https://attack.mitre.org/" target="_blank" rel="noopener">MITRE ATT&CK</a>
+            <a class="tool-link" href="https://nvd.nist.gov/" target="_blank" rel="noopener">NVD</a>
+            <a class="tool-link" href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener">CISA KEV</a>
+            <a class="tool-link" href="https://haveibeenpwned.com/" target="_blank" rel="noopener">Have I Been Pwned</a>
+          </div>
+        </div>
+        <div class="tools-group">
+          <div class="tools-group-label">Network / Cert</div>
+          <div class="tools-buttons">
+            <a class="tool-link" href="https://mxtoolbox.com/" target="_blank" rel="noopener">MXToolbox</a>
+            <a class="tool-link" href="https://search.censys.io/" target="_blank" rel="noopener">Censys</a>
+            <a class="tool-link" href="https://crt.sh/" target="_blank" rel="noopener">crt.sh</a>
+            <a class="tool-link" href="https://www.ssllabs.com/ssltest/" target="_blank" rel="noopener">SSL Labs</a>
+          </div>
+        </div>
+        <div class="tools-group">
+          <div class="tools-group-label">Professional</div>
+          <div class="tools-buttons">
+            <a class="tool-link" href="https://www.isaca.org/" target="_blank" rel="noopener">ISACA</a>
+            <a class="tool-link" href="https://www.isc2.org/" target="_blank" rel="noopener">ISC2</a>
+            <a class="tool-link" href="https://csrc.nist.gov/" target="_blank" rel="noopener">NIST CSRC</a>
+            <a class="tool-link" href="https://www.sans.org/" target="_blank" rel="noopener">SANS</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">CYBER NEWS</span>
+        <span class="panel-status status-live">LIVE</span>
+      </div>
+      <div class="panel-body">
+        <div class="tabs" id="newsTabs"></div>
+        <div id="newsContent"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">CISA ADVISORIES</span>
+        <span class="panel-status status-warn">WARN</span>
+      </div>
+      <div class="panel-body" id="cisaBody"><div class="loading">loading CISA advisories...</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">AI &amp; POST-QUANTUM</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="tabs" id="aiPqcTabs"></div>
+        <div id="aiPqcContent"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <a href="https://dxedge.net">dxedge.net</a><span class="sep">·</span>K6WRJ<span class="sep">·</span>
+    LAST REFRESH: <span id="lastRefresh">--:--</span> UTC
+    <span class="sep">·</span><a href="/aethersdr/">AETHERSDR →</a>
+  </footer>
+
+<script>
+'use strict';
+const PROXY = 'https://api.allorigins.win/raw?url=';
+const CACHE_PREFIX = 'dxedge_cyber_';
+const CACHE_MAX = 1500000;
+const REFRESH_MS = 30 * 60 * 1000;
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function relTime(d) {
+  const t = (d instanceof Date) ? d.getTime() : Date.parse(d);
+  if (!t) return '';
+  const diff = Math.max(0, Date.now() - t);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const days = Math.floor(h / 24);
+  if (days < 30) return days + 'd ago';
+  return Math.floor(days / 30) + 'mo ago';
+}
+async function getCached(key, url, opts = {}) {
+  const cacheKey = CACHE_PREFIX + key;
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const text = await r.text();
+    if (text.length < CACHE_MAX) {
+      try { localStorage.setItem(cacheKey, text); } catch (e) {}
+    }
+    return text;
+  } catch (e) {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return cached;
+    throw e;
+  }
+}
+function parseFeed(xml) {
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    let items = Array.from(doc.querySelectorAll('item'));
+    let isAtom = false;
+    if (!items.length) {
+      items = Array.from(doc.querySelectorAll('entry'));
+      isAtom = true;
+    }
+    return items.map(it => {
+      let title = it.querySelector('title')?.textContent?.trim() || '';
+      let link = '';
+      if (isAtom) {
+        const links = it.querySelectorAll('link');
+        for (const l of links) {
+          const rel = l.getAttribute('rel');
+          if (!rel || rel === 'alternate') { link = l.getAttribute('href'); break; }
+        }
+      } else {
+        link = it.querySelector('link')?.textContent?.trim() || '';
+      }
+      const dateStr =
+        it.querySelector('pubDate')?.textContent ||
+        it.querySelector('updated')?.textContent ||
+        it.querySelector('published')?.textContent || '';
+      return { title, link, date: dateStr ? new Date(dateStr) : null };
+    });
+  } catch (e) { return []; }
+}
+
+function tickClock() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('clockTime').textContent =
+    pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  document.getElementById('clockDate').textContent =
+    days[d.getUTCDay()] + ' ' + pad(d.getUTCDate()) + ' ' + months[d.getUTCMonth()] + ' ' + d.getUTCFullYear() + ' UTC';
+}
+setInterval(tickClock, 1000); tickClock();
+
+const IOC_RE = {
+  cve: /^CVE-\d{4}-\d{4,7}$/i,
+  ipv4: /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$/,
+  md5: /^[a-f0-9]{32}$/i,
+  sha1: /^[a-f0-9]{40}$/i,
+  sha256: /^[a-f0-9]{64}$/i,
+  url: /^https?:\/\/[^\s]+$/i,
+  domain: /^(?!:\/\/)([a-z0-9-]+\.)+[a-z]{2,}$/i,
+};
+const PIVOT_TARGETS = {
+  cve: v => [
+    ['NVD', `https://nvd.nist.gov/vuln/detail/${v}`],
+    ['CVE.org', `https://www.cve.org/CVERecord?id=${v}`],
+    ['EPSS', `https://api.first.org/data/v1/epss?cve=${v}&pretty=true`],
+    ['Exploit-DB', `https://www.exploit-db.com/search?cve=${v}`],
+  ],
+  ipv4: v => [
+    ['Shodan', `https://www.shodan.io/host/${v}`],
+    ['GreyNoise', `https://www.greynoise.io/viz/ip/${v}`],
+    ['AbuseIPDB', `https://www.abuseipdb.com/check/${v}`],
+    ['VirusTotal', `https://www.virustotal.com/gui/ip-address/${v}`],
+    ['Censys', `https://search.censys.io/hosts/${v}`],
+  ],
+  hash: v => [
+    ['VirusTotal', `https://www.virustotal.com/gui/file/${v}`],
+    ['MalwareBazaar', `https://bazaar.abuse.ch/browse.php?search=${v}`],
+    ['Hybrid Analysis', `https://www.hybrid-analysis.com/search?query=${v}`],
+  ],
+  domain: v => [
+    ['urlscan.io', `https://urlscan.io/domain/${v}`],
+    ['VirusTotal', `https://www.virustotal.com/gui/domain/${v}`],
+    ['crt.sh', `https://crt.sh/?q=${encodeURIComponent(v)}`],
+    ['AbuseIPDB', `https://www.abuseipdb.com/check/${v}`],
+  ],
+  url: v => [
+    ['urlscan.io', `https://urlscan.io/search/#${encodeURIComponent(v)}`],
+    ['VirusTotal', `https://www.virustotal.com/gui/search/${encodeURIComponent(v)}`],
+  ],
+};
+function detectIOCType(raw) {
+  const v = raw.trim();
+  if (!v) return null;
+  if (IOC_RE.cve.test(v)) return { type: 'CVE', kind: 'cve', val: v.toUpperCase() };
+  if (IOC_RE.ipv4.test(v)) return { type: 'IPv4', kind: 'ipv4', val: v };
+  if (IOC_RE.sha256.test(v)) return { type: 'SHA-256', kind: 'hash', val: v.toLowerCase() };
+  if (IOC_RE.sha1.test(v)) return { type: 'SHA-1', kind: 'hash', val: v.toLowerCase() };
+  if (IOC_RE.md5.test(v)) return { type: 'MD5', kind: 'hash', val: v.toLowerCase() };
+  if (IOC_RE.url.test(v)) return { type: 'URL', kind: 'url', val: v };
+  if (IOC_RE.domain.test(v)) return { type: 'DOMAIN', kind: 'domain', val: v.toLowerCase() };
+  return null;
+}
+function detectIOC() {
+  const raw = document.getElementById('iocInput').value;
+  const typeEl = document.getElementById('iocType');
+  const pivotsEl = document.getElementById('iocPivots');
+  const det = detectIOCType(raw);
+  if (!det) { typeEl.style.display = 'none'; pivotsEl.innerHTML = ''; return; }
+  typeEl.textContent = det.type; typeEl.style.display = 'inline-block';
+  const targets = PIVOT_TARGETS[det.kind](det.val);
+  pivotsEl.innerHTML = targets.map(([name, url]) =>
+    `<a class="pivot-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(name)} ↗</a>`
+  ).join('');
+}
+function openFirstPivot() {
+  const det = detectIOCType(document.getElementById('iocInput').value);
+  if (!det) return;
+  const [, url] = PIVOT_TARGETS[det.kind](det.val)[0];
+  window.open(url, '_blank', 'noopener');
+}
+
+const DRILL_DATA = {
+  claude: [
+    { title: 'Effective system prompts', bullets: ['Lead with role + goal, then constraints, then format - structure matters more than length', 'Use XML-style tags or markdown headers to delineate sections that Claude must treat differently', 'Constraints in negatives ("never do X") are weaker than positives ("always do Y")'], link: 'https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview' },
+    { title: 'Chain-of-thought + scratchpad', bullets: ['Ask Claude to "think step by step" or "reason through this before answering" - measurable accuracy gains', 'For complex tasks, wrap reasoning in <thinking> tags and final answer in <answer> tags', 'Extended thinking budget can be tuned for math, code review, threat modeling tasks'], link: 'https://docs.claude.com/en/docs/build-with-claude/extended-thinking' },
+    { title: 'Tool use & function calling', bullets: ['Tools are functions Claude can call - define name, description, JSON Schema for inputs', 'Claude returns tool_use blocks; you execute and return tool_result blocks in next turn', 'For unreliable tools, build retry + fallback logic outside the model rather than relying on it'], link: 'https://docs.claude.com/en/docs/build-with-claude/tool-use' },
+    { title: 'Multi-turn conversation patterns', bullets: ['Maintain full message history - Claude is stateless between API calls', 'Use a stable system prompt; vary only user messages for consistent behavior', 'For long sessions, summarize earlier turns into the system prompt to reduce token cost'], link: 'https://docs.claude.com/en/docs/build-with-claude/conversation' },
+    { title: 'Vision + document analysis', bullets: ['PDFs, images, and screenshots can be sent as base64 in the content array', 'For multi-page PDFs, page-by-page extraction often beats single-shot for accuracy', 'Diagrams and architecture screenshots are great inputs for threat modeling sessions'], link: 'https://docs.claude.com/en/docs/build-with-claude/vision' },
+    { title: 'Skills + agent workflows', bullets: ['Skills are folders Claude reads at runtime: SKILL.md + supporting scripts + examples', 'Claude Code uses skills heavily for codebase patterns, document creation, deployment', 'Build skills as "best practice playbooks" rather than fragile prompts'], link: 'https://docs.claude.com/en/docs/agents-and-tools/agent-skills' },
+    { title: 'Constitutional AI & safety', bullets: ['Claude is trained with Constitutional AI - a set of principles balancing helpfulness, harmlessness, honesty', 'Refusals follow rules baked in; jailbreaks via roleplay or hypotheticals are explicitly trained against', 'For security research use cases, frame requests with clear defensive context'], link: 'https://www.anthropic.com/news/claudes-constitution' },
+  ],
+  ai_sec: [
+    { title: 'Prompt injection: direct vs indirect', bullets: ['Direct: attacker controls the user prompt ("ignore prior instructions and...")', 'Indirect: attacker plants instructions in data the LLM reads (email, web page, PDF)', 'Indirect is far more dangerous in agentic workflows - mitigation = treat tool output as untrusted input'], link: 'https://owasp.org/www-project-top-10-for-large-language-model-applications/' },
+    { title: 'Training data poisoning', bullets: ['Attacker contributes malicious data to training corpora to embed backdoors', 'Trigger phrases activate hidden behavior - hard to detect via standard eval', 'Counter: provenance tracking, anomaly detection during training, behavioral red-team eval'], link: 'https://atlas.mitre.org/techniques/AML.T0020' },
+    { title: 'Model extraction & inversion', bullets: ['Extraction: attacker queries production model to copy its weights or behavior at lower cost', 'Inversion: reconstruct sensitive training data from model outputs (membership inference)', 'Defenses: rate limiting, output perturbation, differential privacy in training'], link: 'https://atlas.mitre.org/techniques/AML.T0024' },
+    { title: 'Adversarial prompts & jailbreaks', bullets: ['Universal jailbreaks find prompt prefixes that bypass safety across many models', 'Multi-shot jailbreaks exhaust context-window safety with many fake examples', 'Defense in depth: input filtering + output filtering + capability sandboxing > model-side only'], link: 'https://www.anthropic.com/research/many-shot-jailbreaking' },
+    { title: 'LLM in the workflow: agent risks', bullets: ['Agents that act on data (read mail, click links, run code) inherit data-source trust assumptions', 'A malicious page can hijack a browsing agent; a malicious PDF can hijack a doc-summary agent', 'Treat every external read as a potential prompt injection surface'], link: 'https://embracethered.com/blog/' },
+    { title: 'RAG-specific threats', bullets: ['RAG indexes pull untrusted external content - perfect channel for indirect prompt injection', 'Embedding-space attacks: poisoned doc that crowds out legitimate results for target queries', 'Tag retrieved content explicitly so the LLM knows what is data vs instruction'], link: 'https://arxiv.org/abs/2402.07867' },
+    { title: 'Red-teaming LLM apps', bullets: ['Build an eval set of harmful prompts BEFORE production - test every model + system-prompt change against it', 'Automate adversarial generation: GCG, PAIR, etc. produce novel jailbreaks', 'Score not just "did it refuse" but "did the surrounding system catch it"'], link: 'https://arxiv.org/abs/2202.03286' },
+  ],
+  cyber: [
+    { title: 'Threat hunting fundamentals', bullets: ['Hypothesis-driven: form a specific TTP hypothesis, then look for evidence in logs', 'Pyramid of pain: hunting on TTPs/tools is high-value; hunting on hashes/IPs is low-value', 'Document negative findings - "we looked, found nothing" is a result'], link: 'https://www.threathunting.net/' },
+    { title: 'IOC analysis pivots', bullets: ['Single IOC -> related infra via passive DNS, WHOIS, certificate transparency, file similarity', 'VirusTotal Graph + Shodan + crt.sh + GreyNoise = a fast 4-source pivot routine', 'Always check noise sources before alerting - is this IP scanning the whole internet, or just you?'], link: 'https://www.greynoise.io/' },
+    { title: 'MITRE ATT&CK in practice', bullets: ['Map detections to specific (sub)techniques - drives gap analysis and reporting', 'D3FEND complements ATT&CK with defensive countermeasures', 'Detection engineering: per technique, ask "what artifact would prove this happened?"'], link: 'https://attack.mitre.org/' },
+    { title: 'Incident response: PICERL', bullets: ['Prepare > Identify > Contain > Eradicate > Recover > Lessons-Learned', 'Containment trade-off: isolate fast (lose forensics) vs collect first (risk spread)', 'Pre-built runbooks per top-5 likely incident types beats writing from scratch under pressure'], link: 'https://www.sans.org/white-papers/33901/' },
+    { title: 'Zero trust pragmatics', bullets: ['Identity is the new perimeter - every request authenticated + authorized in context', 'Microsegmentation: blast radius minimization, even inside the "trusted" network', 'Start with your crown jewels - boil-the-ocean zero-trust programs fail'], link: 'https://csrc.nist.gov/pubs/sp/800/207/final' },
+    { title: 'Cloud security posture (CSPM)', bullets: ['Misconfiguration is the #1 cloud breach root cause - public buckets, wide IAM, missing logging', 'Continuous control checks beat point-in-time audits', 'Centralize: org-wide guardrails (SCPs, policies) > per-account fixes'], link: 'https://www.cisa.gov/secure-cloud-business-applications-scuba' },
+    { title: 'Phishing-resistant MFA', bullets: ['TOTP and SMS are phishable via AitM proxies - users surrender both code + cookie', 'WebAuthn/FIDO2/passkeys bind to origin, defeat AitM by design', 'Prioritize phishing-resistant MFA for admins + privileged roles first'], link: 'https://www.cisa.gov/sites/default/files/2023-02/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf' },
+  ],
+};
+function renderDrill() {
+  const tracks = [{ id: 'claude', label: 'Claude' }, { id: 'ai_sec', label: 'AI Security' }, { id: 'cyber', label: 'Cyber' }];
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  const featured = tracks[dayIndex % 3].id;
+  const cycle = Math.floor(dayIndex / 3);
+  const tabsEl = document.getElementById('drillTabs');
+  tabsEl.innerHTML = tracks.map(t =>
+    `<button class="tab" data-track="${t.id}" onclick="selectDrill('${t.id}')">${t.label}${t.id === featured ? ' ★' : ''}</button>`
+  ).join('');
+  selectDrill(featured, cycle);
+  window._drillCycle = cycle;
+}
+function selectDrill(trackId, cycle) {
+  cycle = (cycle != null) ? cycle : (window._drillCycle || 0);
+  document.querySelectorAll('#drillTabs .tab').forEach(b => b.classList.toggle('active', b.dataset.track === trackId));
+  const lessons = DRILL_DATA[trackId];
+  const lesson = lessons[cycle % lessons.length];
+  document.getElementById('drillContent').innerHTML = `
+    <div class="drill-lesson">
+      <div class="drill-title">${escapeHtml(lesson.title)}</div>
+      <ul class="drill-bullets">${lesson.bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>
+      <a class="drill-link" href="${escapeHtml(lesson.link)}" target="_blank" rel="noopener">go deeper ↗</a>
+    </div>`;
+}
+
+async function loadKEV() {
+  const body = document.getElementById('kevBody');
+  try {
+    const text = await getCached('kev', PROXY + encodeURIComponent('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json'));
+    const data = JSON.parse(text);
+    const items = (data.vulnerabilities || []).slice();
+    items.sort((a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''));
+    document.getElementById('kevCount').textContent = '· ' + (data.count || items.length) + ' total';
+    const top = items.slice(0, 8);
+    body.innerHTML = top.map(v => `
+      <div class="cve-item" data-cveid="${escapeHtml(v.cveID)}">
+        <div class="cve-line1">
+          <a class="cve-id" href="https://nvd.nist.gov/vuln/detail/${escapeHtml(v.cveID)}" target="_blank" rel="noopener">${escapeHtml(v.cveID)}</a>
+          ${v.knownRansomwareCampaignUse === 'Known' ? '<span class="chip chip-ransomware">RANSOMWARE</span>' : ''}
+        </div>
+        <div class="cve-product">${escapeHtml(v.vendorProject || '')} ${escapeHtml(v.product || '')}</div>
+        <div class="cve-name">${escapeHtml(v.vulnerabilityName || '')}</div>
+        <div class="cve-dates">added ${escapeHtml(v.dateAdded || '')} · due ${escapeHtml(v.dueDate || '')}</div>
+      </div>`).join('') || '<div class="feed-error">No KEV entries returned</div>';
+    enrichEPSS(top.map(v => v.cveID));
+  } catch (e) {
+    body.innerHTML = `<div class="feed-error">CISA KEV failed: ${escapeHtml(e.message)} · <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener">open feed ↗</a></div>`;
+  }
+}
+
+async function loadNVD() {
+  const body = document.getElementById('cveBody');
+  try {
+    const end = new Date();
+    const start = new Date(end.getTime() - 30 * 86400000);
+    const fmt = d => d.toISOString().replace(/\.\d{3}Z$/, '.000') + ' UTC-00:00';
+    const target = `https://services.nvd.nist.gov/rest/json/cves/2.0?cvssV3Severity=CRITICAL&resultsPerPage=8&pubStartDate=${encodeURIComponent(fmt(start))}&pubEndDate=${encodeURIComponent(fmt(end))}`;
+    const text = await getCached('nvd', PROXY + encodeURIComponent(target));
+    const data = JSON.parse(text);
+    const items = (data.vulnerabilities || []).slice(0, 8);
+    body.innerHTML = items.map(v => {
+      const cve = v.cve || {};
+      const id = cve.id || '';
+      const metrics = cve.metrics || {};
+      const m31 = (metrics.cvssMetricV31 || metrics.cvssMetricV30 || [])[0];
+      const score = m31?.cvssData?.baseScore;
+      const sev = m31?.cvssData?.baseSeverity || (score >= 9 ? 'CRITICAL' : 'HIGH');
+      const desc = (cve.descriptions || []).find(d => d.lang === 'en')?.value || '';
+      const trunc = desc.length > 220 ? desc.slice(0, 220) + '…' : desc;
+      return `
+        <div class="cve-item" data-cveid="${escapeHtml(id)}">
+          <div class="cve-line1">
+            <span class="chip ${sev === 'CRITICAL' ? 'chip-critical' : 'chip-high'}">${escapeHtml(sev)}${score ? ' · ' + score : ''}</span>
+            <a class="cve-id" href="https://nvd.nist.gov/vuln/detail/${escapeHtml(id)}" target="_blank" rel="noopener">${escapeHtml(id)}</a>
+          </div>
+          <div class="cve-name">${escapeHtml(trunc)}</div>
+          <div class="cve-dates">published ${relTime(cve.published)}</div>
+        </div>`;
+    }).join('') || '<div class="feed-error">No CRITICAL CVEs published in last 30 days</div>';
+    enrichEPSS(items.map(v => v.cve?.id).filter(Boolean));
+  } catch (e) {
+    body.innerHTML = `<div class="feed-error">NVD fetch failed: ${escapeHtml(e.message)} · <a href="https://nvd.nist.gov/vuln/search" target="_blank" rel="noopener">open feed ↗</a></div>`;
+  }
+}
+
+async function enrichEPSS(cveList) {
+  if (!cveList?.length) return;
+  try {
+    const url = `https://api.first.org/data/v1/epss?cve=${encodeURIComponent(cveList.join(','))}`;
+    const text = await getCached('epss_' + cveList.join('_').slice(0, 80), PROXY + encodeURIComponent(url));
+    const data = JSON.parse(text);
+    const byCve = {};
+    (data.data || []).forEach(r => { byCve[r.cve] = parseFloat(r.epss); });
+    document.querySelectorAll('.cve-item').forEach(el => {
+      const id = el.dataset.cveid;
+      const p = byCve[id];
+      if (p == null) return;
+      const pct = Math.round(p * 100);
+      const cls = pct >= 50 ? 'chip-epss-high' : pct >= 10 ? 'chip-epss-med' : 'chip-epss-low';
+      if (!el.querySelector('.epss-chip')) {
+        el.querySelector('.cve-line1').insertAdjacentHTML('beforeend',
+          `<span class="chip ${cls} epss-chip" title="EPSS - probability of exploitation in next 30 days">EPSS ${pct}%</span>`);
+      }
+    });
+  } catch (e) {}
+}
+
+async function loadProp() {
+  const body = document.getElementById('propBody');
+  try {
+    const text = await getCached('hamqsl', PROXY + encodeURIComponent('https://www.hamqsl.com/solar.xml'));
+    const xml = new DOMParser().parseFromString(text, 'text/xml');
+    const get = tag => xml.querySelector(tag)?.textContent?.trim() || '-';
+    const sfi = get('solarflux');
+    const k = parseFloat(get('kindex'));
+    const a = get('aindex');
+    const ssn = get('sunspots');
+    const kCls = k <= 2 ? 'good' : k <= 4 ? 'warn' : 'bad';
+    const bands = xml.querySelectorAll('calculatedconditions band');
+    const rows = {};
+    bands.forEach(b => {
+      const name = b.getAttribute('name'); const time = b.getAttribute('time');
+      if (!rows[name]) rows[name] = {};
+      rows[name][time] = b.textContent.trim();
+    });
+    const order = ['80m-40m', '30m-20m', '17m-15m', '12m-10m'];
+    const trCells = name => {
+      const r = rows[name] || {};
+      const cell = v => `<td class="band-${(v || '').toLowerCase()}">${escapeHtml(v || '-')}</td>`;
+      return `<tr><td>${escapeHtml(name)}</td>${cell(r.day)}${cell(r.night)}</tr>`;
+    };
+    body.innerHTML = `
+      <div class="prop-summary">
+        <div class="prop-stat"><div class="prop-stat-label">SFI</div><div class="prop-stat-value">${escapeHtml(sfi)}</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">K-Index</div><div class="prop-stat-value ${kCls}">${escapeHtml(get('kindex'))}</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">A-Index</div><div class="prop-stat-value">${escapeHtml(a)}</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">SSN</div><div class="prop-stat-value">${escapeHtml(ssn)}</div></div>
+      </div>
+      <table class="band-table">
+        <thead><tr><th>Band</th><th>Day</th><th>Night</th></tr></thead>
+        <tbody>${order.map(trCells).join('')}</tbody>
+      </table>
+      <div style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--muted)">
+        source: hamqsl.com · also at <a href="/" target="_blank">dxedge.net</a>
+      </div>`;
+  } catch (e) {
+    body.innerHTML = `<div class="feed-error">solar fetch failed: ${escapeHtml(e.message)} · <a href="https://www.hamqsl.com/solar.html" target="_blank" rel="noopener">open feed ↗</a></div>`;
+  }
+}
+
+function renderFeedItems(items, limit = 10) {
+  if (!items || !items.length) return '<div class="feed-error">no items</div>';
+  return items.slice(0, limit).map(it => `
+    <div class="feed-item">
+      <a class="feed-title" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>
+      <div class="feed-meta"><span class="feed-source">${escapeHtml(it.source || '')}</span> · ${escapeHtml(relTime(it.date))}</div>
+    </div>`).join('');
+}
+async function loadFeedTab(cacheKey, url, sourceLabel, contentEl, limit = 10) {
+  contentEl.innerHTML = '<div class="loading">loading…</div>';
+  try {
+    const text = await getCached(cacheKey, PROXY + encodeURIComponent(url));
+    const items = parseFeed(text).map(i => ({ ...i, source: sourceLabel }));
+    contentEl.innerHTML = renderFeedItems(items, limit);
+  } catch (e) {
+    contentEl.innerHTML = `<div class="feed-error">${escapeHtml(sourceLabel)}: ${escapeHtml(e.message)} · <a href="${escapeHtml(url)}" target="_blank" rel="noopener">open feed ↗</a></div>`;
+  }
+}
+function buildTabbedPanel(tabsId, contentId, tabs) {
+  const tabsEl = document.getElementById(tabsId);
+  const contentEl = document.getElementById(contentId);
+  tabsEl.innerHTML = tabs.map((t, i) =>
+    `<button class="tab${i === 0 ? ' active' : ''}" data-i="${i}">${escapeHtml(t.label)}</button>`).join('');
+  const select = i => {
+    Array.from(tabsEl.children).forEach((b, j) => b.classList.toggle('active', j === i));
+    const t = tabs[i];
+    loadFeedTab(t.key, t.url, t.label, contentEl, t.limit || 8);
+  };
+  tabsEl.querySelectorAll('.tab').forEach(b => b.onclick = () => select(parseInt(b.dataset.i)));
+  select(0);
+}
+
+async function loadCISA() {
+  const el = document.getElementById('cisaBody');
+  try {
+    const url = 'https://www.cisa.gov/cybersecurity-advisories/all.xml';
+    const text = await getCached('cisa', PROXY + encodeURIComponent(url));
+    const items = parseFeed(text).map(i => ({ ...i, source: 'CISA' }));
+    el.innerHTML = renderFeedItems(items, 10);
+  } catch (e) {
+    el.innerHTML = `<div class="feed-error">CISA: ${escapeHtml(e.message)} · <a href="https://www.cisa.gov/cybersecurity-advisories" target="_blank" rel="noopener">open feed ↗</a></div>`;
+  }
+}
+
+function refreshAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  Promise.allSettled([loadKEV(), loadNVD(), loadProp(), loadCISA()]).finally(() => {
+    btn.classList.remove('spinning');
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('lastRefresh').textContent = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
+  });
+  buildTabbedPanel('newsTabs', 'newsContent', [
+    { key: 'krebs', label: 'Krebs', url: 'https://krebsonsecurity.com/feed/' },
+    { key: 'thn',   label: 'The Hacker News', url: 'https://feeds.feedburner.com/TheHackersNews' },
+    { key: 'bc',    label: 'BleepingComputer', url: 'https://www.bleepingcomputer.com/feed/' },
+    { key: 'dr',    label: 'Dark Reading', url: 'https://www.darkreading.com/rss.xml' },
+    { key: 'reg',   label: 'The Register', url: 'https://www.theregister.com/security/headlines.atom' },
+  ]);
+  buildTabbedPanel('aiPqcTabs', 'aiPqcContent', [
+    { key: 'sw',  label: 'AI Security', url: 'https://www.securityweek.com/feed/' },
+    { key: 'pqc', label: 'Post-Quantum', url: 'https://news.google.com/rss/search?q=post+quantum+cryptography+NIST+PQC&hl=en&gl=US&ceid=US:en' },
+  ]);
+}
+
+renderDrill();
+refreshAll();
+setInterval(refreshAll, REFRESH_MS);
+</script>
+</body>
+</html>

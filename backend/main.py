@@ -710,12 +710,16 @@ async def debug_state():
 async def serve_frontend(full_path: str):
     import os
     DIST = "/app/frontend/dist"
-    # Serve real files from dist root (world.json, manifest.json, sw.js, favicon.svg etc.)
     if full_path:
+        # Try direct file match first
         static_path = os.path.join(DIST, full_path)
         if os.path.isfile(static_path):
             return FileResponse(static_path)
-    # Fall back to index.html for all SPA client-side routes
+        # Try {path}/index.html for directory-style URLs (/cyber, /aethersdr)
+        index_path = os.path.join(DIST, full_path, "index.html")
+        if os.path.isfile(index_path):
+            return FileResponse(index_path)
+    # SPA fallback
     index = os.path.join(DIST, "index.html")
     if os.path.isfile(index):
         return FileResponse(index)

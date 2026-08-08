@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>DX//EDGE · AETHERSDR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #08101C; --surface: #0C1828; --surface2: #111F34;
+    --border: #192E48; --cyan: #00C8FF; --green: #00E89A;
+    --amber: #FFB93A; --red: #FF4455; --text: #B0C8DC;
+    --bright: #D8EAF5; --muted: #4E6880;
+    --mono: 'Share Tech Mono', monospace; --sans: 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; min-height: 100vh; padding: 16px; }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .header {
+    position: relative; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; overflow: hidden;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .radar {
+    position: absolute; top: -120%; right: -30%; width: 480px; height: 480px;
+    background: conic-gradient(from 0deg, transparent 0%, rgba(0,200,255,0.18) 8%, transparent 14%);
+    border-radius: 50%; animation: spin 9s linear infinite; pointer-events: none; z-index: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .header-left, .header-right { position: relative; z-index: 1; }
+  .logo { font-family: var(--mono); font-size: 22px; color: var(--bright); letter-spacing: 2px; }
+  .logo .accent { color: var(--cyan); }
+  .logo .section { color: var(--green); margin-left: 8px; }
+  .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .refresh-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--cyan);
+    font-family: var(--mono); font-size: 12px; padding: 7px 14px; border-radius: 5px;
+    cursor: pointer; letter-spacing: 1px;
+  }
+  .refresh-btn:hover { background: var(--border); }
+  .refresh-btn.spinning { animation: spin 1s linear infinite; }
+  .clock { font-family: var(--mono); text-align: right; line-height: 1.3; }
+  .clock-time { font-size: 18px; color: var(--bright); }
+  .clock-date { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; }
+  .badge {
+    font-family: var(--mono); background: var(--surface2); border: 1px solid var(--green);
+    color: var(--green); padding: 5px 10px; border-radius: 4px; font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 1.6s ease-in-out infinite; box-shadow: 0 0 6px var(--green); }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+
+  .topnav {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; margin-bottom: 16px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .topnav a {
+    font-family: var(--mono); font-size: 11px; color: var(--text); padding: 6px 12px;
+    border: 1px solid var(--border); border-radius: 4px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .topnav a:hover { color: var(--cyan); border-color: var(--cyan); text-decoration: none; }
+  .topnav .nav-out { margin-left: auto; color: var(--green); border-color: rgba(0,232,154,0.4); }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .panel-title { font-family: var(--mono); font-size: 12px; color: var(--bright); letter-spacing: 2px; text-transform: uppercase; }
+  .panel-status { font-family: var(--mono); font-size: 9px; padding: 3px 8px; border-radius: 3px; letter-spacing: 1px; }
+  .status-live { background: rgba(0, 232, 154, 0.15); color: var(--green); border: 1px solid var(--green); }
+  .status-info { background: rgba(0, 200, 255, 0.15); color: var(--cyan); border: 1px solid var(--cyan); }
+  .panel-body { padding: 14px 16px; max-height: 420px; overflow-y: auto; flex: 1; }
+  .panel-body::-webkit-scrollbar { width: 6px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+
+  .about-lead { font-size: 13px; color: var(--bright); line-height: 1.6; margin-bottom: 14px; }
+  .about-lead .ver {
+    display: inline-block; font-family: var(--mono); font-size: 11px; color: var(--green);
+    background: rgba(0, 232, 154, 0.1); padding: 2px 8px; border-radius: 3px;
+    border: 1px solid var(--green); margin-left: 6px;
+  }
+  .about-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .about-meta-cell { background: var(--surface2); border: 1px solid var(--border); padding: 8px 12px; border-radius: 5px; }
+  .about-meta-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+  .about-meta-value { font-family: var(--mono); font-size: 12px; color: var(--bright); }
+  .about-features { list-style: none; }
+  .about-features li { font-size: 12px; padding: 5px 0 5px 16px; position: relative; color: var(--text); }
+  .about-features li::before { content: "▸"; position: absolute; left: 0; color: var(--cyan); }
+  .about-features strong { color: var(--bright); font-weight: 600; }
+
+  .feed-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-title { font-size: 13px; color: var(--bright); line-height: 1.4; margin-bottom: 4px; display: block; }
+  .feed-title:hover { color: var(--cyan); text-decoration: none; }
+  .feed-meta { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
+  .feed-source { color: var(--cyan); }
+  .feed-error { font-size: 12px; color: var(--red); padding: 8px 0; font-family: var(--mono); }
+  .loading { color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 12px 0; text-align: center; }
+
+  .link-group { margin-bottom: 14px; }
+  .link-group:last-child { margin-bottom: 0; }
+  .link-group-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .link-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .link-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; font-family: var(--mono); font-size: 11px;
+    border-radius: 4px; text-decoration: none;
+  }
+  .link-btn:hover { background: var(--border); border-color: var(--cyan); color: var(--cyan); text-decoration: none; }
+  .link-btn.primary { color: var(--green); border-color: rgba(0,232,154,0.3); }
+  .link-btn.primary:hover { color: var(--green); border-color: var(--green); }
+
+  .yt-channels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .yt-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; text-decoration: none; }
+  .yt-card:hover { border-color: var(--cyan); text-decoration: none; }
+  .yt-name { font-family: var(--mono); font-size: 12px; color: var(--bright); margin-bottom: 2px; }
+  .yt-handle { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  .footer { margin-top: 20px; padding: 14px 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; }
+  .footer .sep { color: var(--border); padding: 0 8px; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="radar"></div>
+    <div class="header-left">
+      <div class="logo">DX<span class="accent">//</span>EDGE<span class="section">· AETHERSDR</span></div>
+    </div>
+    <div class="header-right">
+      <button class="refresh-btn" onclick="refreshAll()" id="refreshBtn">↻ REFRESH</button>
+      <div class="clock">
+        <div class="clock-time" id="clockTime">--:--:--</div>
+        <div class="clock-date" id="clockDate">---</div>
+      </div>
+      <div class="badge"><span class="dot"></span>K6WRJ</div>
+    </div>
+  </header>
+
+  <nav class="topnav">
+    <a href="#about">About</a>
+    <a href="#releases">Releases</a>
+    <a href="#news">News</a>
+    <a href="#training">Training</a>
+    <a href="#youtube">YouTube</a>
+    <a class="nav-out" href="/cyber/">← CYBER</a>
+    <a class="nav-out" href="/" style="margin-left:0">DXEDGE.NET</a>
+  </nav>
+
+  <main class="grid">
+
+    <section class="panel" id="about">
+      <div class="panel-header">
+        <span class="panel-title">ABOUT AETHERSDR</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="about-lead">
+          <strong style="color:var(--bright)">AetherSDR</strong> is a Linux-native client for FlexRadio Systems transceivers, built in
+          <strong style="color:var(--cyan)">Qt6 / C++20</strong>, that speaks the SmartSDR protocol natively — no Wine, no VM. Also runs on macOS and Windows.
+          <span class="ver" id="aboutVersion">v26.6.3</span>
+        </div>
+        <div class="about-meta">
+          <div class="about-meta-cell">
+            <div class="about-meta-label">License</div>
+            <div class="about-meta-value">GPL-3.0</div>
+          </div>
+          <div class="about-meta-cell">
+            <div class="about-meta-label">Firmware</div>
+            <div class="about-meta-value">SmartSDR 4.x</div>
+          </div>
+          <div class="about-meta-cell">
+            <div class="about-meta-label">Radios</div>
+            <div class="about-meta-value">FLEX-6000 / 8000 / Aurora</div>
+          </div>
+          <div class="about-meta-cell">
+            <div class="about-meta-label">Platforms</div>
+            <div class="about-meta-value">Linux · macOS · Windows</div>
+          </div>
+        </div>
+        <ul class="about-features">
+          <li><strong>GPU spectrum &amp; waterfall</strong> via Qt RHI — multi-slice, multi-panadapter</li>
+          <li><strong>Aetherial Audio Channel Strip</strong> — unified RX/TX DSP (EQ, compressor, de-esser, reverb, limiter)</li>
+          <li><strong>Six noise-reduction engines</strong> plus DAX virtual audio + IQ (4 RX + 1 TX)</li>
+          <li><strong>AetherModem</strong> packet radio (KISS-over-TCP) + APRS support</li>
+          <li><strong>AetherSweep</strong> built-in SWR analyzer</li>
+          <li><strong>SpotHub</strong> aggregates DX Cluster, RBN, WSJT-X, POTA, FreeDV Reporter</li>
+          <li><strong>CW operator suite</strong> with real-time Morse decoder</li>
+          <li><strong>FreeDV RADE</strong> digital voice</li>
+          <li><strong>SmartLink remote</strong> + TCI v2.0 server</li>
+          <li><strong>Hardware control</strong> — rigctld, MIDI, FlexControl, Stream Deck, serial PTT/CW</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel" id="releases">
+      <div class="panel-header">
+        <span class="panel-title">LATEST RELEASES</span>
+        <span class="panel-status status-live">LIVE</span>
+      </div>
+      <div class="panel-body" id="releasesBody"><div class="loading">loading GitHub releases…</div></div>
+    </section>
+
+    <section class="panel" id="news" style="grid-column: span 2">
+      <div class="panel-header">
+        <span class="panel-title">SDR &amp; HAM NEWS</span>
+        <span class="panel-status status-live">LIVE</span>
+      </div>
+      <div class="panel-body" id="newsBody"><div class="loading">aggregating feeds…</div></div>
+    </section>
+
+    <section class="panel" id="training">
+      <div class="panel-header">
+        <span class="panel-title">TRAINING &amp; DOCS</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="link-group">
+          <div class="link-group-label">AetherSDR</div>
+          <div class="link-buttons">
+            <a class="link-btn primary" href="https://github.com/aethersdr/AetherSDR/wiki" target="_blank" rel="noopener">Wiki</a>
+            <a class="link-btn primary" href="https://github.com/aethersdr/AetherSDR/discussions" target="_blank" rel="noopener">Discussions</a>
+            <a class="link-btn primary" href="https://github.com/aethersdr/AetherSDR/releases" target="_blank" rel="noopener">Releases</a>
+          </div>
+        </div>
+        <div class="link-group">
+          <div class="link-group-label">FlexRadio</div>
+          <div class="link-buttons">
+            <a class="link-btn" href="https://community.flexradio.com/discussion/8033474/aethersdr" target="_blank" rel="noopener">Community Thread</a>
+            <a class="link-btn" href="https://helpdesk.flexradio.com/" target="_blank" rel="noopener">Knowledge Base</a>
+            <a class="link-btn" href="https://www.flexradio.com/smartsdr/" target="_blank" rel="noopener">SmartSDR</a>
+            <a class="link-btn" href="https://www.flexradio.com/third-party-software-collaboration/" target="_blank" rel="noopener">3rd-Party Software</a>
+          </div>
+        </div>
+        <div class="link-group">
+          <div class="link-group-label">Related Tools</div>
+          <div class="link-buttons">
+            <a class="link-btn" href="https://wsjt.sourceforge.io/wsjtx.html" target="_blank" rel="noopener">WSJT-X</a>
+            <a class="link-btn" href="https://www.gnuradio.org/" target="_blank" rel="noopener">GNU Radio</a>
+            <a class="link-btn" href="https://www.dxsummit.fi/" target="_blank" rel="noopener">DX Cluster</a>
+            <a class="link-btn" href="https://pota.app/" target="_blank" rel="noopener">POTA</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="youtube">
+      <div class="panel-header">
+        <span class="panel-title">YOUTUBE</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="link-group">
+          <div class="link-group-label">Topic Search</div>
+          <div class="link-buttons">
+            <a class="link-btn primary" href="https://www.youtube.com/results?search_query=AetherSDR" target="_blank" rel="noopener">AetherSDR ↗</a>
+            <a class="link-btn" href="https://www.youtube.com/results?search_query=FlexRadio+SmartSDR" target="_blank" rel="noopener">FlexRadio SmartSDR ↗</a>
+            <a class="link-btn" href="https://www.youtube.com/results?search_query=SDR+setup" target="_blank" rel="noopener">SDR Setup ↗</a>
+          </div>
+        </div>
+        <div class="link-group">
+          <div class="link-group-label">Channels</div>
+          <div class="yt-channels">
+            <a class="yt-card" href="https://www.youtube.com/results?search_query=FlexRadio+Systems" target="_blank" rel="noopener">
+              <div class="yt-name">FlexRadio Systems</div>
+              <div class="yt-handle">official channel</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/@HamRadioCrashCourse" target="_blank" rel="noopener">
+              <div class="yt-name">Ham Radio Crash Course</div>
+              <div class="yt-handle">@HamRadioCrashCourse</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/results?search_query=Ham+Radio+2.0" target="_blank" rel="noopener">
+              <div class="yt-name">Ham Radio 2.0</div>
+              <div class="yt-handle">Jason · KC5HWB</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/@SignalsEverywhere" target="_blank" rel="noopener">
+              <div class="yt-name">SignalsEverywhere</div>
+              <div class="yt-handle">@SignalsEverywhere</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/@TechMindsOfficial" target="_blank" rel="noopener">
+              <div class="yt-name">Tech Minds</div>
+              <div class="yt-handle">@TechMindsOfficial</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/@w2aew" target="_blank" rel="noopener">
+              <div class="yt-name">W2AEW</div>
+              <div class="yt-handle">@w2aew</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/@DXCommander" target="_blank" rel="noopener">
+              <div class="yt-name">DX Commander</div>
+              <div class="yt-handle">@DXCommander</div>
+            </a>
+            <a class="yt-card" href="https://www.youtube.com/results?search_query=Temporarily+Offline+ham+radio" target="_blank" rel="noopener">
+              <div class="yt-name">Temporarily Offline</div>
+              <div class="yt-handle">name-search</div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">QUICK LINKS</span>
+        <span class="panel-status status-info">INFO</span>
+      </div>
+      <div class="panel-body">
+        <div class="link-group">
+          <div class="link-group-label">AetherSDR</div>
+          <div class="link-buttons">
+            <a class="link-btn primary" href="https://github.com/aethersdr/AetherSDR" target="_blank" rel="noopener">GitHub Repo</a>
+            <a class="link-btn primary" href="https://github.com/aethersdr/AetherSDR/releases" target="_blank" rel="noopener">Download</a>
+            <a class="link-btn" href="https://apps.microsoft.com/detail/9nc6bmwfn811" target="_blank" rel="noopener">Microsoft Store</a>
+          </div>
+        </div>
+        <div class="link-group">
+          <div class="link-group-label">FlexRadio</div>
+          <div class="link-buttons">
+            <a class="link-btn" href="https://www.flexradio.com/" target="_blank" rel="noopener">Flexradio.com</a>
+            <a class="link-btn" href="https://community.flexradio.com/" target="_blank" rel="noopener">Community</a>
+          </div>
+        </div>
+        <div class="link-group">
+          <div class="link-group-label">Ham Resources</div>
+          <div class="link-buttons">
+            <a class="link-btn" href="https://www.qrz.com/" target="_blank" rel="noopener">QRZ.com</a>
+            <a class="link-btn" href="https://www.hamqsl.com/solar.html" target="_blank" rel="noopener">Solar / Propagation</a>
+            <a class="link-btn" href="https://www.eham.net/reviews/" target="_blank" rel="noopener">eHam Reviews</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <a href="https://dxedge.net">dxedge.net</a><span class="sep">·</span>K6WRJ<span class="sep">·</span>
+    LAST REFRESH: <span id="lastRefresh">--:--</span> UTC
+  </footer>
+
+<script>
+'use strict';
+const PROXY = 'https://api.allorigins.win/raw?url=';
+const CACHE_PREFIX = 'dxedge_aether_';
+const CACHE_MAX = 1500000;
+const REFRESH_MS = 30 * 60 * 1000;
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function relTime(d) {
+  const t = (d instanceof Date) ? d.getTime() : Date.parse(d);
+  if (!t) return '';
+  const diff = Math.max(0, Date.now() - t);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const days = Math.floor(h / 24);
+  if (days < 30) return days + 'd ago';
+  return Math.floor(days / 30) + 'mo ago';
+}
+async function getCached(key, url) {
+  const cacheKey = CACHE_PREFIX + key;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const text = await r.text();
+    if (text.length < CACHE_MAX) {
+      try { localStorage.setItem(cacheKey, text); } catch (e) {}
+    }
+    return text;
+  } catch (e) {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return cached;
+    throw e;
+  }
+}
+function parseFeed(xml) {
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    let items = Array.from(doc.querySelectorAll('item'));
+    let isAtom = false;
+    if (!items.length) {
+      items = Array.from(doc.querySelectorAll('entry'));
+      isAtom = true;
+    }
+    return items.map(it => {
+      let title = it.querySelector('title')?.textContent?.trim() || '';
+      let link = '';
+      if (isAtom) {
+        const links = it.querySelectorAll('link');
+        for (const l of links) {
+          const rel = l.getAttribute('rel');
+          if (!rel || rel === 'alternate') { link = l.getAttribute('href'); break; }
+        }
+      } else {
+        link = it.querySelector('link')?.textContent?.trim() || '';
+      }
+      const dateStr =
+        it.querySelector('pubDate')?.textContent ||
+        it.querySelector('updated')?.textContent ||
+        it.querySelector('published')?.textContent || '';
+      return { title, link, date: dateStr ? new Date(dateStr) : null };
+    });
+  } catch (e) { return []; }
+}
+
+function tickClock() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('clockTime').textContent =
+    pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  document.getElementById('clockDate').textContent =
+    days[d.getUTCDay()] + ' ' + pad(d.getUTCDate()) + ' ' + months[d.getUTCMonth()] + ' ' + d.getUTCFullYear() + ' UTC';
+}
+setInterval(tickClock, 1000); tickClock();
+
+async function loadReleases() {
+  const body = document.getElementById('releasesBody');
+  const url = 'https://github.com/aethersdr/AetherSDR/releases.atom';
+  try {
+    const text = await getCached('releases', PROXY + encodeURIComponent(url));
+    const items = parseFeed(text);
+    if (!items.length) throw new Error('no entries');
+    const newest = items[0];
+    const m = newest.title.match(/v?(\d+\.\d+\.\d+[\w.-]*)/);
+    if (m) document.getElementById('aboutVersion').textContent = 'v' + m[1];
+    body.innerHTML = items.slice(0, 8).map(it => `
+      <div class="feed-item">
+        <a class="feed-title" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>
+        <div class="feed-meta"><span class="feed-source">GitHub</span> · ${escapeHtml(relTime(it.date))}</div>
+      </div>`).join('');
+  } catch (e) {
+    body.innerHTML = `<div class="feed-error">releases fetch failed: ${escapeHtml(e.message)} · <a href="${escapeHtml(url)}" target="_blank" rel="noopener">open feed ↗</a></div>`;
+  }
+}
+
+const NEWS_SOURCES = [
+  { key: 'aether-rel', label: 'AetherSDR', url: 'https://github.com/aethersdr/AetherSDR/releases.atom' },
+  { key: 'flex',       label: 'FlexRadio',  url: 'https://www.flexradio.com/feed/' },
+  { key: 'rtl',        label: 'RTL-SDR',    url: 'https://www.rtl-sdr.com/feed/' },
+  { key: 'hackaday',   label: 'Hackaday',   url: 'https://hackaday.com/category/radio-hacks/feed/' },
+];
+async function loadNews() {
+  const body = document.getElementById('newsBody');
+  const results = await Promise.allSettled(NEWS_SOURCES.map(s =>
+    getCached(s.key, PROXY + encodeURIComponent(s.url)).then(t =>
+      parseFeed(t).map(i => ({ ...i, source: s.label }))
+    )
+  ));
+  const items = [];
+  const errors = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') items.push(...r.value);
+    else errors.push(NEWS_SOURCES[i]);
+  });
+  items.sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+  const top = items.slice(0, 20);
+  let html = top.map(it => `
+    <div class="feed-item">
+      <a class="feed-title" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>
+      <div class="feed-meta"><span class="feed-source">${escapeHtml(it.source)}</span> · ${escapeHtml(relTime(it.date))}</div>
+    </div>`).join('');
+  if (errors.length) {
+    html += `<div class="feed-error">${errors.length} source(s) failed: ${errors.map(e =>
+      `<a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.label)} ↗</a>`).join(', ')}</div>`;
+  }
+  body.innerHTML = html || '<div class="feed-error">no news available</div>';
+}
+
+function refreshAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  Promise.allSettled([loadReleases(), loadNews()]).finally(() => {
+    btn.classList.remove('spinning');
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('lastRefresh').textContent = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
+  });
+}
+refreshAll();
+setInterval(refreshAll, REFRESH_MS);
+</script>
+</body>
+</html>
