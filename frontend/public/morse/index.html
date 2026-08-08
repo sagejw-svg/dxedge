@@ -109,6 +109,12 @@
   </div>
   <div id="kochList" style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px"></div>
 
+  <div class="lbl" style="margin:16px 0 8px">audio check</div>
+  <div class="row">
+    <button id="bTest">Play test tone</button>
+    <span id="testState" style="font-family:var(--mono);font-size:10px;color:var(--dim)"></span>
+  </div>
+
   <div class="row" style="margin-top:16px">
     <button id="bReset">Reset all progress</button>
     <button id="bDefaults">Restore defaults</button>
@@ -203,7 +209,8 @@ import {
   activePool, pickChar, applyResult, blankStat, loadStore, saveStore,
   farnsworthGaps, tokenize, alignCopy, normalizeCopy,
   randomCallsigns, randomGroups, randomWords, randomQSO, LETTERS, DIGITS,
-} from '/morse/core.js?v=2'
+  acquireWakeLock, releaseWakeLock,
+} from '/morse/core.js?v=3'
 
 const $ = id => document.getElementById(id)
 
@@ -402,8 +409,14 @@ function replay() {
   }
 }
 
-function start() {
-  if (!player.resume()) { $('stageMsg').textContent = 'this browser has no web audio support'; return }
+async function start() {
+  $('stageMsg').textContent = 'starting audio...'
+  const ctx = await player.prime()
+  if (!ctx) {
+    showIdle('audio blocked \u00b7 open settings and try the test tone', '!')
+    return
+  }
+  acquireWakeLock()
   running = true; current = null; session = { asked: 0, hit: 0 }; streak = 0
   $('bRun').textContent = 'Stop session'
   $('bRun').style.borderColor = 'var(--red)'; $('bRun').style.color = 'var(--red)'
@@ -415,7 +428,7 @@ function start() {
 
 function stop() {
   running = false; promptId++; answered = true; current = null
-  clearAll(); player.stop()
+  clearAll(); player.stop(); releaseWakeLock()
   $('bRun').textContent = 'Start session'
   $('bRun').style.borderColor = 'var(--green)'; $('bRun').style.color = 'var(--green)'
   $('bRun').style.background = 'rgba(0,255,157,.1)'
@@ -456,16 +469,17 @@ const SOURCES = [
 
 function copyStop() {
   copyPlaying = false
-  player.stop(); clearAll()
+  player.stop(); clearAll(); releaseWakeLock()
   $('bStopCopy').disabled = true
   $('bPlay').disabled = false
   $('copyState').textContent = ''
 }
 
-function copyPlay() {
+async function copyPlay() {
   const text = $('src').value.trim()
   if (!text) { $('copyState').textContent = 'nothing to send'; return }
-  if (!player.resume()) { $('copyState').textContent = 'no web audio support'; return }
+  const ctx = await player.prime()
+  if (!ctx) { $('copyState').textContent = 'audio blocked \u00b7 try the test tone in settings'; return }
   copySent = text
   const tokens = tokenize(text)
   if (!tokens.length) { $('copyState').textContent = 'no sendable characters'; return }
@@ -539,6 +553,13 @@ $('bRun').onclick   = () => running ? stop() : start()
 $('stage').onclick  = () => { if (running) $('hidden').focus() }
 $('hidden').oninput = e => { e.target.value = '' }
 
+$('bTest').onclick = async () => {
+  $('testState').textContent = 'starting...'
+  const ctx = await player.prime()
+  if (!ctx) { $('testState').textContent = 'blocked by the browser'; return }
+  player.testTone()
+  $('testState').textContent = 'sent a ' + S.toneHz + ' Hz tone at ' + Math.round(S.volume * 100) + '% volume'
+}
 $('bDefaults').onclick = () => { S = { ...DEFAULTS }; player.set(S); persist(); paintSettings() }
 $('bReset').onclick = () => {
   if (!confirm('Erase all Morse progress on this device? Settings are kept.')) return
@@ -566,7 +587,7 @@ document.addEventListener('visibilitychange', () => {
 })
 window.addEventListener('pagehide', () => { player.close() })
 
-const BUILD = 'v0.2'
+const BUILD = 'v0.2.1'
 $('build').textContent = 'build ' + BUILD
 
 paintSettings(); paintStats(); paintGrid()

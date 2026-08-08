@@ -138,10 +138,62 @@ export class CWPlayer {
     if (!this.ctx) {
       const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)
       if (!AC) { this.unsupported = true; return null }
+      /* iOS routes plain Web Audio through the ringer channel, so the hardware
+       * silent switch mutes it. Declaring the session as playback moves it to
+       * the media channel and overrides the switch. iOS 16.4+, ignored elsewhere. */
+      try {
+        if (typeof navigator !== 'undefined' && navigator.audioSession) {
+          navigator.audioSession.type = 'playback'
+        }
+      } catch { /* not supported, fall through */ }
       this.ctx = new AC()
     }
     if (this.ctx.state === 'suspended') this.ctx.resume()
     return this.ctx
+  }
+
+  /*
+   * Await a genuinely running context before any scheduling happens.
+   * ctx.resume() is asynchronous: while the context is suspended its
+   * currentTime is frozen, so anything scheduled at currentTime + delta
+   * lands in the past and fires all at once (or not at all) on resume.
+   * Call this from the user gesture that starts a session.
+   */
+  async prime() {
+    const ctx = this.resume()
+    if (!ctx) return null
+    for (let i = 0; i < 3 && ctx.state !== 'running'; i++) {
+      try { await ctx.resume() } catch { /* retry */ }
+      if (ctx.state !== 'running') await new Promise(r => setTimeout(r, 60))
+    }
+    return ctx.state === 'running' ? ctx : null
+  }
+
+  /* Short beep so the operator can confirm audio without starting a session. */
+  testTone(ms = 250) {
+    const ctx = this.resume()
+    if (!ctx) return 0
+    const RAMP = 0.005
+    const dur = ms / 1000
+    const t = ctx.currentTime + 0.05
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = this.toneHz
+    gain.gain.setValueAtTime(0.0001, t)
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.volume), t + RAMP)
+    gain.gain.setValueAtTime(Math.max(0.0002, this.volume), t + dur - RAMP)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    osc.connect(gain).connect(ctx.destination)
+    osc.start(t)
+    osc.stop(t + dur + 0.02)
+    this.nodes.push(osc, gain)
+    return ms
+  }
+
+  /* True when audio is genuinely playable right now. */
+  get ready() {
+    return !!this.ctx && this.ctx.state === 'running'
   }
 
   /* Schedule one code string. Returns its audible length in ms. */
@@ -406,4 +458,30 @@ export function alignCopy(sent, typed) {
   ops.reverse()
   const hits = ops.filter(o => o.op === 'hit').length
   return { ops, hits, total: n, accuracy: n ? hits / n : 0 }
+}
+
+
+/* --- screen wake lock --------------------------------------------- *
+ * A drill runs for minutes with no touch input, so the phone would
+ * otherwise sleep mid-session. Best effort: unsupported browsers and
+ * denied requests both just no-op.
+ * ------------------------------------------------------------------ */
+
+let _wakeLock = null
+
+export async function acquireWakeLock() {
+  try {
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return false
+    if (_wakeLock) return true
+    _wakeLock = await navigator.wakeLock.request('screen')
+    _wakeLock.addEventListener('release', () => { _wakeLock = null })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function releaseWakeLock() {
+  try { if (_wakeLock) _wakeLock.release() } catch { /* already gone */ }
+  _wakeLock = null
 }

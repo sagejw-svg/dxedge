@@ -4,6 +4,7 @@ import {
   activePool, pickChar, applyResult, loadStore, saveStore,
   farnsworthGaps, tokenize, alignCopy,
   randomCallsigns, randomGroups, randomWords, randomQSO, LETTERS, DIGITS,
+  acquireWakeLock, releaseWakeLock,
 } from '../morse-core'
 
 /* ------------------------------------------------------------------ *
@@ -60,6 +61,7 @@ export default function Morse() {
   const [session, setSession]   = useState({ asked: 0, hit: 0 })
   const [streak, setStreak]     = useState(0)
   const [audioErr, setAudioErr] = useState('')
+  const [testState, setTestState] = useState('')
 
   const [src, setSrc]           = useState(() => randomCallsigns(8))
   const [ans, setAns]           = useState('')
@@ -210,6 +212,7 @@ export default function Morse() {
     setRunning(false)
     clearAll()
     playerRef.current.stop()
+    releaseWakeLock()
     setSession(s => {
       if (s.asked) setDisplay({ kind: 'summary', acc: Math.round(s.hit / s.asked * 100), asked: s.asked })
       else setDisplay({ kind: 'idle', text: '\u00b7\u2212 \u00b7\u2212\u00b7 \u00b7\u2212\u00b7\u2212\u00b7', msg: 'press start, then type what you hear' })
@@ -217,12 +220,14 @@ export default function Morse() {
     })
   }, [clearAll])
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     setAudioErr('')
-    if (!playerRef.current.resume()) {
-      setAudioErr('This browser has no Web Audio support, so the trainer cannot play tones.')
+    const ctx = await playerRef.current.prime()
+    if (!ctx) {
+      setAudioErr('The browser blocked audio. Open Settings and try the test tone.')
       return
     }
+    acquireWakeLock()
     currentRef.current = null
     setSession({ asked: 0, hit: 0 })
     setStreak(0)
@@ -266,16 +271,18 @@ export default function Morse() {
       runningRef.current = false
       timers.forEach(clearTimeout)
       if (answerRef.current) clearTimeout(answerRef.current)
+      releaseWakeLock()
       player.close()
     }
   }, [])
 
   /* --- copy practice --- */
 
-  const copyPlay = useCallback(() => {
+  const copyPlay = useCallback(async () => {
     const text = src.trim()
     if (!text) { setCopyState('nothing to send'); return }
-    if (!playerRef.current.resume()) { setCopyState('no Web Audio support'); return }
+    const ctx = await playerRef.current.prime()
+    if (!ctx) { setCopyState('audio blocked \u00b7 try the test tone in Settings'); return }
     const tokens = tokenize(text)
     if (!tokens.length) { setCopyState('no sendable characters'); return }
     playerRef.current.stop()
@@ -389,7 +396,19 @@ export default function Morse() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <div style={{ ...label, margin: '16px 0 8px' }}>audio check</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button style={chip(false)} onClick={async () => {
+              setTestState('starting...')
+              const ctx = await playerRef.current.prime()
+              if (!ctx) { setTestState('blocked by the browser'); return }
+              playerRef.current.testTone()
+              setTestState(`sent a ${S.toneHz} Hz tone at ${Math.round(S.volume * 100)}% volume`)
+            }}>Play test tone</button>
+            <span style={{ ...mono, fontSize: 10, color: 'var(--dim)' }}>{testState}</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
             <button style={chip(false)} onClick={() => {
               if (!window.confirm('Erase all Morse progress on this device? Settings are kept.')) return
               statsRef.current = {}
