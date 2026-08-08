@@ -356,7 +356,7 @@ export default function App() {
           {tab === 'credits'  && <Credits />}
           {tab === 'windows' && <DXWindows grid={grid} />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
-          {tab === 'morse'   && <Morse callsign={callsign} />}
+          {tab === 'morse'   && <Morse />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}

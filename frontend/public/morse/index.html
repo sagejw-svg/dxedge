@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Adaptive Morse code trainer. Farnsworth timing, Koch progression, callsign and QSO copy practice. Runs entirely in your browser.">
+<title>DX//EDGE &middot; MORSE</title>
+<link rel="canonical" href="https://dxedge.net/morse/">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080808; --bg1:#0e0e0e; --bg2:#141414; --border:#1e1e1e;
+    --text:#e0e0e0; --muted:#888; --dim:#444;
+    --green:#00ff9d; --teal:#7affb2; --yellow:#ffd600; --blue:#7a9fff; --red:#ff6b6b;
+    --mono:'SF Mono','Fira Code','Consolas',monospace;
+  }
+  html{font-size:15px}
+  @media(min-width:1200px){html{font-size:16px}}
+  body{background:var(--bg);color:var(--text);font-family:Georgia,serif;line-height:1.6;
+       padding:16px;max-width:900px;margin:0 auto;-webkit-text-size-adjust:100%}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:var(--bg1)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button,input,select,textarea{font-family:var(--mono);color:var(--text)}
+  button{cursor:pointer;background:var(--bg1);border:1px solid var(--border);
+         border-radius:5px;padding:6px 13px;font-size:11px;color:var(--muted)}
+  button:hover:not(:disabled){border-color:var(--dim);color:var(--text)}
+  button:disabled{cursor:default;opacity:.4}
+  button.on{border-color:var(--green);background:rgba(0,255,157,.08);color:var(--green)}
+  :focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .lbl{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:3px;text-transform:uppercase}
+  .card{border:1px solid var(--border);background:var(--bg1);border-radius:6px;padding:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  header{display:flex;justify-content:space-between;align-items:baseline;
+         border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+  h1{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:2px;color:var(--green)}
+  #stage{position:relative;border:1px solid var(--border);border-radius:8px;background:#000;
+         min-height:250px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #glyph{font-family:var(--mono);font-weight:700;line-height:1;font-size:clamp(84px,22vw,180px);
+         animation:fadeIn .12s ease-out}
+  #hidden{position:absolute;opacity:0;width:1px;height:1px;bottom:0;left:0;border:none}
+  .stat{border:1px solid var(--border);background:var(--bg1);border-radius:6px;padding:9px 11px}
+  .stat b{font-family:var(--mono);font-size:19px;font-weight:400;display:block;margin-top:3px}
+  .grid5{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:9px}
+  .cell{font-family:var(--mono);font-size:11px;padding:5px 0;text-align:center;border-radius:4px;
+        border:1px solid var(--border);background:var(--bg2);color:var(--dim)}
+  .cells{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px}
+  input[type=range]{accent-color:var(--green);width:100%}
+  input[type=text],input[type=email],textarea{background:var(--bg2);border:1px solid var(--border);
+        border-radius:5px;padding:8px 10px;font-size:12px;width:100%}
+  textarea{resize:vertical;line-height:1.7}
+  .hide{display:none!important}
+  .set{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;
+       font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .set output{color:var(--green)}
+  footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--border);
+         font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DX//EDGE &middot; MORSE</h1>
+  <div class="lbl"><a href="/" style="color:var(--dim)">&larr; dashboard</a></div>
+</header>
+
+<div class="row" style="margin-bottom:14px">
+  <button id="mDrill" class="on">Drill</button>
+  <button id="mCopy">Copy practice</button>
+  <button id="mSet" style="margin-left:auto">Settings</button>
+</div>
+
+<!-- ============================ SETTINGS ============================ -->
+<div id="panelSet" class="card hide" style="margin-bottom:16px">
+  <div class="lbl" style="margin-bottom:12px">sending</div>
+  <div class="set">
+    <label for="sTone">Tone</label><output id="oTone"></output>
+    <input id="sTone" type="range" min="300" max="1000" step="10" style="grid-column:1/3">
+
+    <label for="sChar">Character speed</label><output id="oChar"></output>
+    <input id="sChar" type="range" min="8" max="35" step="1" style="grid-column:1/3">
+
+    <label for="sEff">Effective speed (Farnsworth)</label><output id="oEff"></output>
+    <input id="sEff" type="range" min="4" max="35" step="1" style="grid-column:1/3">
+
+    <label for="sVol">Volume</label><output id="oVol"></output>
+    <input id="sVol" type="range" min="0" max="100" step="1" style="grid-column:1/3">
+  </div>
+
+  <div class="lbl" style="margin:16px 0 8px">answer window</div>
+  <div class="row" id="rowWait"></div>
+
+  <div class="lbl" style="margin:16px 0 8px">character set</div>
+  <div class="row" id="rowPool"></div>
+
+  <div class="lbl" style="margin:16px 0 8px">koch progression</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
+    Koch order introduces characters in the sequence that reaches solid copy fastest. Set to
+    <em>off</em> to drill the whole character set at once.
+  </p>
+  <div class="set">
+    <label for="sKoch">Characters in play</label><output id="oKoch"></output>
+    <input id="sKoch" type="range" min="0" max="39" step="1" style="grid-column:1/3">
+  </div>
+  <div id="kochList" style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px"></div>
+
+  <div class="row" style="margin-top:16px">
+    <button id="bReset">Reset all progress</button>
+    <button id="bDefaults">Restore defaults</button>
+  </div>
+</div>
+
+<!-- ============================== DRILL ============================= -->
+<section id="panelDrill">
+  <div class="row" style="margin-bottom:14px">
+    <button id="bRun" class="on" style="font-size:12px;padding:8px 20px;font-weight:600">Start session</button>
+    <span id="poolNote" style="font-family:var(--mono);font-size:10px;color:var(--dim)"></span>
+  </div>
+
+  <div id="stage">
+    <div id="stageInner" style="text-align:center;padding:18px">
+      <div id="glyph" class="hide"></div>
+      <div id="idleArt" style="font-family:var(--mono);font-size:28px;color:var(--dim);letter-spacing:6px">&middot;&minus; &middot;&minus;&middot; &middot;&minus;&middot;&minus;&middot;</div>
+      <div id="stageMsg" class="lbl" style="margin-top:15px">press start, then type what you hear</div>
+    </div>
+    <input id="hidden" inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Morse answer">
+  </div>
+
+  <div style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;margin:9px 0 16px">
+    space replays &middot; esc stops &middot; tap the panel on a phone to raise the keyboard
+  </div>
+
+  <div class="grid5" style="margin-bottom:16px">
+    <div class="stat"><span class="lbl">session</span><b id="vAcc" style="color:var(--green)">--</b></div>
+    <div class="stat"><span class="lbl">streak</span><b id="vStreak">0</b></div>
+    <div class="stat"><span class="lbl">sent</span><b id="vSent">0</b></div>
+    <div class="stat"><span class="lbl">lifetime</span><b id="vLife" style="color:var(--teal)">--</b></div>
+    <div class="stat"><span class="lbl">reps</span><b id="vReps" style="color:var(--muted)">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:11px">
+      <span class="lbl">per character</span>
+      <span class="lbl" id="gridKey">accuracy</span>
+    </div>
+    <div class="cells" id="cells"></div>
+    <div id="gridEmpty" style="font-size:12px;color:var(--muted)">Run a session and every character you have seen will show up here.</div>
+  </div>
+</section>
+
+<!-- ============================== COPY ============================== -->
+<section id="panelCopy" class="hide">
+  <div class="row" style="margin-bottom:12px" id="rowSrc"></div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="lbl" style="margin-bottom:9px">what will be sent</div>
+    <textarea id="src" rows="3" spellcheck="false"></textarea>
+    <div class="row" style="margin-top:11px">
+      <button id="bPlay" class="on" style="font-size:12px;padding:8px 20px;font-weight:600">Send</button>
+      <button id="bStopCopy" disabled>Stop</button>
+      <span id="copyState" style="font-family:var(--mono);font-size:10px;color:var(--dim)"></span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="lbl" style="margin-bottom:9px">copy it here</div>
+    <textarea id="ans" rows="3" spellcheck="false" autocapitalize="characters" autocorrect="off"
+      placeholder="type what you hear, then check"></textarea>
+    <div class="row" style="margin-top:11px">
+      <button id="bCheck" style="font-size:12px;padding:8px 20px">Check</button>
+      <button id="bClear">Clear</button>
+      <span id="copyScore" style="font-family:var(--mono);font-size:12px"></span>
+    </div>
+  </div>
+
+  <div id="diffCard" class="card hide">
+    <div class="lbl" style="margin-bottom:11px">where it went wrong</div>
+    <div id="diff" style="font-family:var(--mono);font-size:15px;line-height:2.1;word-break:break-all"></div>
+    <div class="lbl" style="margin-top:13px">
+      <span style="color:var(--green)">green</span> copied &middot;
+      <span style="color:var(--red)">red</span> wrong &middot;
+      <span style="color:var(--yellow)">yellow</span> missed &middot;
+      <span style="color:var(--blue)">blue</span> extra
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div id="foot"></div>
+  <div id="build" style="margin-top:4px;opacity:.6"></div>
+  <div style="margin-top:6px">runs entirely in your browser &middot; nothing is uploaded &middot;
+    <a href="/">dxedge.net</a></div>
+</footer>
+
+<script type="module">
+import {
+  MORSE, POOLS, POOL_LABELS, KOCH_ORDER, DEFAULTS, CWPlayer,
+  activePool, pickChar, applyResult, blankStat, loadStore, saveStore,
+  farnsworthGaps, tokenize, alignCopy, normalizeCopy,
+  randomCallsigns, randomGroups, randomWords, randomQSO, LETTERS, DIGITS,
+} from '/morse/core.js?v=2'
+
+const $ = id => document.getElementById(id)
+
+/* ------------------------------- state ------------------------------- */
+
+let S = { ...DEFAULTS }
+let stats = {}
+let running = false, mode = 'drill'
+let current = null, buf = '', promptId = 0, answered = true, askedAt = 0
+let session = { asked: 0, hit: 0 }, streak = 0
+let timers = [], answerTimer = null
+let copySent = '', copyPlaying = false
+
+const player = new CWPlayer(S)
+
+const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t }
+const clearAll = () => {
+  timers.forEach(clearTimeout); timers = []
+  if (answerTimer) { clearTimeout(answerTimer); answerTimer = null }
+}
+
+function persist() {
+  saveStore({ stats, settings: S })
+}
+
+function boot() {
+  const s = loadStore()
+  if (s) {
+    stats = s.stats || {}
+    S = { ...DEFAULTS, ...(s.settings || {}) }
+  }
+  if (S.effWpm > S.charWpm) S.effWpm = S.charWpm
+  player.set(S)
+}
+
+/* ----------------------------- settings UI ---------------------------- */
+
+const WAITS = [['2 s', 2000], ['4 s', 4000], ['8 s', 8000], ['no limit', 0]]
+
+function buildChoices(el, items, get, set) {
+  el.innerHTML = ''
+  items.forEach(([label, val]) => {
+    const b = document.createElement('button')
+    b.textContent = label
+    b.onclick = () => { set(val); persist(); paintSettings() }
+    b.dataset.val = String(val)
+    el.appendChild(b)
+  })
+  el._get = get
+}
+
+function paintChoices(el) {
+  if (!el._get) return
+  const cur = String(el._get())
+  ;[...el.children].forEach(b => b.classList.toggle('on', b.dataset.val === cur))
+}
+
+function paintSettings() {
+  $('sTone').value = S.toneHz;  $('oTone').textContent = S.toneHz + ' Hz'
+  $('sChar').value = S.charWpm; $('oChar').textContent = S.charWpm + ' wpm'
+  $('sEff').max = S.charWpm
+  if (S.effWpm > S.charWpm) S.effWpm = S.charWpm
+  $('sEff').value = S.effWpm
+  const gaps = farnsworthGaps(S.charWpm, S.effWpm)
+  $('oEff').textContent = S.effWpm >= S.charWpm
+    ? 'off (' + S.charWpm + ' wpm)'
+    : S.effWpm + ' wpm \u00b7 ' + Math.round(gaps.charGapMs) + ' ms gap'
+  $('sVol').value = Math.round(S.volume * 100); $('oVol').textContent = Math.round(S.volume * 100) + '%'
+  $('sKoch').value = S.kochCount
+  $('oKoch').textContent = S.kochCount ? S.kochCount + ' of 39' : 'off'
+  $('kochList').textContent = S.kochCount ? KOCH_ORDER.slice(0, S.kochCount).join(' ') : ''
+  paintChoices($('rowWait')); paintChoices($('rowPool'))
+  const p = activePool(S.poolKey, S.kochCount)
+  $('poolNote').textContent = p.length + ' characters in rotation'
+  player.set(S)
+  paintGrid()
+}
+
+function wireRange(id, apply) {
+  $(id).addEventListener('input', e => { apply(Number(e.target.value)); paintSettings() })
+  $(id).addEventListener('change', persist)
+}
+
+/* ------------------------------- drill -------------------------------- */
+
+function showGlyph(text, color) {
+  $('idleArt').classList.add('hide'); $('stageMsg').classList.add('hide')
+  const g = $('glyph')
+  g.textContent = text; g.style.color = color; g.classList.remove('hide')
+}
+
+function showIdle(msg, art) {
+  $('glyph').classList.add('hide')
+  $('idleArt').classList.remove('hide'); $('stageMsg').classList.remove('hide')
+  $('idleArt').textContent = art
+  $('idleArt').style.fontSize = art.length <= 2 ? '46px' : '28px'
+  $('stageMsg').textContent = msg
+}
+
+function paintStats() {
+  $('vAcc').textContent = session.asked ? Math.round(session.hit / session.asked * 100) + '%' : '--'
+  $('vStreak').textContent = streak
+  $('vStreak').style.color = streak >= 10 ? 'var(--yellow)' : 'var(--text)'
+  $('vSent').textContent = session.asked
+  const seen = Object.values(stats).reduce((a, s) => a + s.seen, 0)
+  const hit  = Object.values(stats).reduce((a, s) => a + s.correct, 0)
+  $('vLife').textContent = seen ? Math.round(hit / seen * 100) + '%' : '--'
+  $('vReps').textContent = seen
+  $('foot').textContent = seen ? seen + ' characters copied on this device' : ''
+}
+
+function paintGrid() {
+  const pool = activePool(S.poolKey, S.kochCount)
+  const rows = pool.map(c => ({ c, s: stats[c] })).filter(x => x.s && x.s.seen > 0)
+  $('gridEmpty').classList.toggle('hide', rows.length > 0)
+  const box = $('cells'); box.innerHTML = ''
+  rows.sort((a, b) => (a.s.correct / a.s.seen) - (b.s.correct / b.s.seen))
+  for (const { c, s } of rows) {
+    const acc = s.correct / s.seen
+    const d = document.createElement('div')
+    d.className = 'cell'
+    d.title = c + '  ' + MORSE[c] + '  ' + s.correct + '/' + s.seen +
+              (s.rtMs ? '  ~' + (s.rtMs / 1000).toFixed(1) + 's' : '')
+    d.innerHTML = '<div style="color:var(--text);font-weight:700">' + c + '</div>' +
+                  '<div style="font-size:9px">' + Math.round(acc * 100) + '</div>'
+    d.style.borderColor = acc >= 0.9 ? 'rgba(0,255,157,.35)'
+                        : acc >= 0.7 ? 'rgba(255,214,0,.35)' : 'rgba(255,107,107,.4)'
+    box.appendChild(d)
+  }
+}
+
+function ask() {
+  if (!running) return
+  const pool = activePool(S.poolKey, S.kochCount)
+  const c = pickChar(pool, stats, current)
+  const id = ++promptId
+  current = c; answered = false; buf = ''
+  showIdle('listening', '\u00b7')
+
+  const ms = player.play(MORSE[c])
+  askedAt = performance.now() + ms
+
+  if (answerTimer) clearTimeout(answerTimer)
+  if (S.answerMs > 0) {
+    answerTimer = setTimeout(() => {
+      // token guard: a stale timer must never score the character after it
+      if (!running || id !== promptId || answered) return
+      answered = true
+      score(c, false, 0)
+      reinforce(c)
+    }, ms + S.answerMs)
+  }
+}
+
+function score(c, ok, rt) {
+  stats[c] = applyResult(stats[c], ok, rt)
+  session.asked++; if (ok) session.hit++
+  streak = ok ? streak + 1 : 0
+  persist(); paintStats(); paintGrid()
+}
+
+function reinforce(c) {
+  showGlyph(c, '#fff')
+  const ms = player.play(MORSE[c])
+  const gap = farnsworthGaps(S.charWpm, S.effWpm).charGapMs
+  later(() => { later(ask, gap) }, Math.max(1100, ms + 700))
+}
+
+function answer(value) {
+  if (!current || answered) return
+  answered = true; promptId++
+  if (answerTimer) { clearTimeout(answerTimer); answerTimer = null }
+  const c = current
+  const ok = value === c
+  score(c, ok, Math.max(0, performance.now() - askedAt))
+  if (ok) {
+    showGlyph(c, 'var(--green)')
+    const gap = Math.max(250, farnsworthGaps(S.charWpm, S.effWpm).charGapMs - 340)
+    later(() => later(ask, gap), 340)
+  } else {
+    reinforce(c)
+  }
+}
+
+function replay() {
+  if (!running || !current || answered) return
+  const ms = player.play(MORSE[current])
+  askedAt = performance.now() + ms
+  if (answerTimer && S.answerMs > 0) {
+    clearTimeout(answerTimer)
+    const id = promptId, c = current
+    answerTimer = setTimeout(() => {
+      if (!running || id !== promptId || answered) return
+      answered = true; score(c, false, 0); reinforce(c)
+    }, ms + S.answerMs)
+  }
+}
+
+function start() {
+  if (!player.resume()) { $('stageMsg').textContent = 'this browser has no web audio support'; return }
+  running = true; current = null; session = { asked: 0, hit: 0 }; streak = 0
+  $('bRun').textContent = 'Stop session'
+  $('bRun').style.borderColor = 'var(--red)'; $('bRun').style.color = 'var(--red)'
+  $('bRun').style.background = 'rgba(255,107,107,.08)'
+  $('hidden').focus()
+  paintStats()
+  later(ask, 300)
+}
+
+function stop() {
+  running = false; promptId++; answered = true; current = null
+  clearAll(); player.stop()
+  $('bRun').textContent = 'Start session'
+  $('bRun').style.borderColor = 'var(--green)'; $('bRun').style.color = 'var(--green)'
+  $('bRun').style.background = 'rgba(0,255,157,.1)'
+  if (session.asked) {
+    const acc = Math.round(session.hit / session.asked * 100)
+    showIdle(session.asked + ' sent \u00b7 ' + acc + '% copied \u00b7 press start to go again',
+             acc >= 90 ? 'FB' : acc >= 70 ? 'OK' : 'AGN')
+    $('idleArt').style.color = acc >= 90 ? 'var(--green)' : acc >= 70 ? 'var(--yellow)' : 'var(--red)'
+  } else {
+    $('idleArt').style.color = 'var(--dim)'
+    showIdle('press start, then type what you hear', '\u00b7\u2212 \u00b7\u2212\u00b7 \u00b7\u2212\u00b7\u2212\u00b7')
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (mode !== 'drill' || !running) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (e.key === 'Escape') { e.preventDefault(); stop(); return }
+  if (e.key === ' ') { e.preventDefault(); replay(); return }
+  const k = e.key.toUpperCase()
+  if (k.length !== 1 || !/[A-Z0-9.,?/]/.test(k)) return
+  e.preventDefault()
+  if (!current || answered) return
+  buf = (buf + k).slice(-current.length)
+  if (buf.length >= current.length) { const v = buf; buf = ''; answer(v) }
+  else showIdle('listening', buf)
+})
+
+/* ------------------------------- copy --------------------------------- */
+
+const SOURCES = [
+  ['callsigns', () => randomCallsigns(8)],
+  ['letter groups', () => randomGroups(10, 5, LETTERS)],
+  ['mixed groups', () => randomGroups(10, 5, [...LETTERS, ...DIGITS])],
+  ['ham words', () => randomWords(12)],
+  ['full QSO', () => randomQSO()],
+]
+
+function copyStop() {
+  copyPlaying = false
+  player.stop(); clearAll()
+  $('bStopCopy').disabled = true
+  $('bPlay').disabled = false
+  $('copyState').textContent = ''
+}
+
+function copyPlay() {
+  const text = $('src').value.trim()
+  if (!text) { $('copyState').textContent = 'nothing to send'; return }
+  if (!player.resume()) { $('copyState').textContent = 'no web audio support'; return }
+  copySent = text
+  const tokens = tokenize(text)
+  if (!tokens.length) { $('copyState').textContent = 'no sendable characters'; return }
+  player.stop(); clearAll()
+  const { totalMs } = player.playTokens(tokens)
+  copyPlaying = true
+  $('bPlay').disabled = true; $('bStopCopy').disabled = false
+  $('copyState').textContent = 'sending ' + tokens.filter(t => t !== ' ').length +
+                              ' characters \u00b7 ' + Math.round(totalMs / 1000) + 's'
+  $('ans').focus()
+  later(() => { if (copyPlaying) { copyStop(); $('copyState').textContent = 'sent \u00b7 check when ready' } },
+        totalMs + 400)
+}
+
+function copyCheck() {
+  if (!copySent) { $('copyScore').textContent = 'send something first'; return }
+  const r = alignCopy(copySent, $('ans').value)
+  const pct = Math.round(r.accuracy * 100)
+  $('copyScore').textContent = pct + '%  (' + r.hits + '/' + r.total + ')'
+  $('copyScore').style.color = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--red)'
+  const d = $('diff'); d.innerHTML = ''
+  for (const o of r.ops) {
+    const sp = document.createElement('span')
+    if (o.op === 'hit')       { sp.textContent = o.sent === ' ' ? '\u00b7' : o.sent; sp.style.color = 'var(--green)' }
+    else if (o.op === 'sub')  { sp.textContent = o.typed;  sp.style.color = 'var(--red)'
+                                sp.title = 'sent ' + o.sent; sp.style.textDecoration = 'underline' }
+    else if (o.op === 'miss') { sp.textContent = o.sent === ' ' ? '\u00b7' : o.sent
+                                sp.style.color = 'var(--yellow)'; sp.style.opacity = '.75'
+                                sp.title = 'missed' }
+    else                      { sp.textContent = o.typed; sp.style.color = 'var(--blue)'; sp.title = 'extra' }
+    sp.style.padding = '0 1px'
+    d.appendChild(sp)
+  }
+  $('diffCard').classList.remove('hide')
+
+  // roll copy-mode results into the same per-character stats as the drill
+  for (const o of r.ops) {
+    const c = o.sent
+    if (!c || c === ' ' || !MORSE[c]) continue
+    stats[c] = applyResult(stats[c], o.op === 'hit', 0)
+  }
+  persist(); paintStats(); paintGrid()
+}
+
+/* ------------------------------- wiring ------------------------------- */
+
+function setMode(m) {
+  mode = m
+  if (m === 'drill') copyStop(); else if (running) stop()
+  $('mDrill').classList.toggle('on', m === 'drill')
+  $('mCopy').classList.toggle('on', m === 'copy')
+  $('panelDrill').classList.toggle('hide', m !== 'drill')
+  $('panelCopy').classList.toggle('hide', m !== 'copy')
+  history.replaceState(null, '', m === 'copy' ? '#copy' : '#drill')
+}
+
+boot()
+
+buildChoices($('rowWait'), WAITS, () => S.answerMs, v => { S.answerMs = v })
+buildChoices($('rowPool'), POOL_LABELS.map(([k, l]) => [l, k]), () => S.poolKey, v => { S.poolKey = v })
+wireRange('sTone', v => S.toneHz = v)
+wireRange('sChar', v => { S.charWpm = v; if (S.effWpm > v) S.effWpm = v })
+wireRange('sEff',  v => S.effWpm = v)
+wireRange('sVol',  v => S.volume = v / 100)
+wireRange('sKoch', v => S.kochCount = v)
+
+$('mDrill').onclick = () => setMode('drill')
+$('mCopy').onclick  = () => setMode('copy')
+$('mSet').onclick   = () => { const p = $('panelSet'); p.classList.toggle('hide'); $('mSet').classList.toggle('on', !p.classList.contains('hide')) }
+$('bRun').onclick   = () => running ? stop() : start()
+$('stage').onclick  = () => { if (running) $('hidden').focus() }
+$('hidden').oninput = e => { e.target.value = '' }
+
+$('bDefaults').onclick = () => { S = { ...DEFAULTS }; player.set(S); persist(); paintSettings() }
+$('bReset').onclick = () => {
+  if (!confirm('Erase all Morse progress on this device? Settings are kept.')) return
+  stats = {}; session = { asked: 0, hit: 0 }; streak = 0
+  persist(); paintStats(); paintGrid()
+}
+
+const srcRow = $('rowSrc')
+SOURCES.forEach(([label, gen]) => {
+  const b = document.createElement('button')
+  b.textContent = label
+  b.onclick = () => { $('src').value = gen(); $('ans').value = ''; $('copyScore').textContent = ''
+                      $('diffCard').classList.add('hide'); copySent = '' }
+  srcRow.appendChild(b)
+})
+$('bPlay').onclick = copyPlay
+$('bStopCopy').onclick = () => { copyStop(); $('copyState').textContent = 'stopped' }
+$('bCheck').onclick = copyCheck
+$('bClear').onclick = () => { $('ans').value = ''; $('copyScore').textContent = ''
+                              $('diffCard').classList.add('hide'); $('ans').focus() }
+$('src').value = randomCallsigns(8)
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (running) stop(); if (copyPlaying) copyStop() }
+})
+window.addEventListener('pagehide', () => { player.close() })
+
+const BUILD = 'v0.2'
+$('build').textContent = 'build ' + BUILD
+
+paintSettings(); paintStats(); paintGrid()
+if (location.hash === '#copy') setMode('copy')
+
+/* Diagnostic handle, in the same spirit as /diag.html and /api/debug.
+ * Open the console and inspect __morse to see live trainer state. */
+window.__morse = {
+  get current()  { return current },
+  get running()  { return running },
+  get stats()    { return stats },
+  get settings() { return S },
+  get session()  { return session },
+  pool: () => activePool(S.poolKey, S.kochCount),
+}
+</script>
+</body>
+</html>
