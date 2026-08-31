@@ -43,7 +43,7 @@
     cursor: pointer; letter-spacing: 1px;
   }
   .refresh-btn:hover { background: var(--border); }
-  .refresh-btn.spinning { animation: spin 1s linear infinite; }
+  .refresh-btn.busy { opacity: 0.5; cursor: default; }
   .clock { font-family: var(--mono); text-align: right; line-height: 1.3; }
   .clock-time { font-size: 18px; color: var(--bright); }
   .clock-date { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; }
@@ -345,7 +345,7 @@
 
 <script>
 'use strict';
-const PROXY = 'https://api.allorigins.win/raw?url=';
+const PROXY = '/api/feed?url=';
 const CACHE_PREFIX = 'dxedge_aether_';
 const CACHE_MAX = 1500000;
 const REFRESH_MS = 30 * 60 * 1000;
@@ -480,9 +480,9 @@ async function loadNews() {
 
 function refreshAll() {
   const btn = document.getElementById('refreshBtn');
-  btn.classList.add('spinning');
+  btn.classList.add('busy');
   Promise.allSettled([loadReleases(), loadNews()]).finally(() => {
-    btn.classList.remove('spinning');
+    btn.classList.remove('busy');
     const d = new Date();
     const pad = n => String(n).padStart(2, '0');
     document.getElementById('lastRefresh').textContent = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());

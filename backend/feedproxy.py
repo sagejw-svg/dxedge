@@ -1,0 +1,119 @@
+"""Same-origin feed proxy for the standalone /cyber/ and /aethersdr/ pages.
+
+Those pages fetched every live feed through https://api.allorigins.win, a free
+third party CORS proxy. On 2026-08-31 it started returning 408 and 503, which
+took out every live panel on both pages: CISA KEV, NVD, EPSS, solar, and all
+news tabs. It also meant every visitor's feed requests were routed through a
+third party that had no reason to see them.
+
+This endpoint replaces it with a same-origin fetch, and is deliberately narrow:
+
+- HTTPS only, and only to hosts in ALLOWED_HOSTS. An arbitrary-URL proxy is an
+  SSRF primitive, so the allowlist is the whole point. Do not widen it to a
+  suffix match: "evil-cisa.gov" and "cisa.gov.attacker.net" must not pass.
+- Redirects are not followed. Otherwise an allowlisted host could bounce the
+  request to an internal address and defeat the allowlist.
+- Response size and read timeout are capped.
+- Responses are cached server side, so upstreams see one request per TTL rather
+  than one per visitor, which is also what keeps NVD from rate limiting us.
+"""
+import logging
+from urllib.parse import urlparse
+
+import aiohttp
+from cache import cache
+
+logger = logging.getLogger(__name__)
+
+# Exact hostname matches only. Every entry here is a feed one of the two
+# standalone pages actually renders. Adding a host means accepting that the
+# server will fetch arbitrary paths on it, so add deliberately.
+ALLOWED_HOSTS = frozenset({
+    # cyber page
+    "www.cisa.gov",
+    "services.nvd.nist.gov",
+    "api.first.org",
+    "www.hamqsl.com",
+    "krebsonsecurity.com",
+    "feeds.feedburner.com",
+    "www.bleepingcomputer.com",
+    "www.darkreading.com",
+    "www.theregister.com",
+    "www.securityweek.com",
+    "news.google.com",
+    # aethersdr page
+    "github.com",
+    "www.flexradio.com",
+    "www.rtl-sdr.com",
+    "hackaday.com",
+})
+
+MAX_BYTES = 4 * 1024 * 1024
+TIMEOUT_S = 15
+DEFAULT_TTL = 900
+
+# Sent upstream so we look like a browser. Several of these feeds 403 a bare
+# aiohttp user agent.
+UA = "Mozilla/5.0 (compatible; DXEdgeFeedProxy/1.0; +https://dxedge.net)"
+
+
+class FeedProxyError(Exception):
+    """Raised with a message safe to show a visitor."""
+
+    def __init__(self, message: str, status: int = 502):
+        super().__init__(message)
+        self.message = message
+        self.status = status
+
+
+def validate(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise FeedProxyError("only https urls are allowed", 400)
+    if parsed.hostname is None or parsed.hostname.lower() not in ALLOWED_HOSTS:
+        raise FeedProxyError("host not in the feed allowlist", 403)
+    return url
+
+
+async def fetch_feed(url: str, ttl: int = DEFAULT_TTL) -> tuple[str, str]:
+    """Return (body, content_type). Raises FeedProxyError on failure."""
+    validate(url)
+
+    key = f"feedproxy:{url}"
+    cached = cache.get(key)
+    if cached:
+        return cached
+
+    timeout = aiohttp.ClientTimeout(total=TIMEOUT_S)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(
+                url,
+                headers={"User-Agent": UA, "Accept": "*/*"},
+                allow_redirects=False,
+            ) as resp:
+                if resp.status in (301, 302, 303, 307, 308):
+                    raise FeedProxyError(
+                        f"upstream redirected ({resp.status}), not following", 502
+                    )
+                if resp.status != 200:
+                    raise FeedProxyError(f"upstream returned {resp.status}", 502)
+
+                body = await resp.content.read(MAX_BYTES + 1)
+                if len(body) > MAX_BYTES:
+                    raise FeedProxyError("upstream response too large", 502)
+
+                content_type = resp.headers.get("Content-Type", "text/plain")
+                text = body.decode("utf-8", errors="replace")
+    except FeedProxyError:
+        raise
+    except aiohttp.ClientError as e:
+        logger.warning("feed proxy client error for %s: %s", url, e)
+        raise FeedProxyError("could not reach upstream feed", 502)
+    except TimeoutError:
+        logger.warning("feed proxy timeout for %s", url)
+        raise FeedProxyError("upstream feed timed out", 504)
+
+    result = (text, content_type)
+    cache.set(key, result, ttl=ttl)
+    return result

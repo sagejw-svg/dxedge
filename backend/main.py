@@ -17,6 +17,7 @@ from voacap_engine import predict_path, REGIONS
 from database import init_db, load_solar_history, load_recent_spots
 from pota import fetch_pota, fetch_sota
 from contests import fetch_contests
+from feedproxy import fetch_feed, FeedProxyError
 from satellites import fetch_tles, current_positions, predict_passes, grid_to_latlon as sat_grid_to_latlon
 from alerts import run_alert_loop
 from database import save_subscription, delete_subscription
@@ -677,6 +678,21 @@ async def get_callsign_spots(request: Request,
     return result
 
 
+
+
+# --- Feed proxy for the standalone /cyber/ and /aethersdr/ pages ---
+# Replaces the third party api.allorigins.win, which went down (408/503) and
+# took every live panel on both pages with it. Allowlisted hosts only, no
+# redirect following, size and timeout capped, cached. See feedproxy.py.
+@app.get("/api/feed")
+async def get_feed(url: str = Query(..., max_length=2048)):
+    from fastapi.responses import PlainTextResponse
+    try:
+        body, content_type = await fetch_feed(url)
+    except FeedProxyError as e:
+        return PlainTextResponse(e.message, status_code=e.status)
+    media = "application/json" if "json" in content_type else "text/plain"
+    return PlainTextResponse(body, media_type=media)
 
 
 @app.get("/api/debug")
