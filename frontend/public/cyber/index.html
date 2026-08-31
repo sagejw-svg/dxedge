@@ -580,7 +580,8 @@ async function loadNVD() {
   try {
     const end = new Date();
     const start = new Date(end.getTime() - 30 * 86400000);
-    const fmt = d => d.toISOString().replace(/\.\d{3}Z$/, '.000') + ' UTC-00:00';
+    // NVD 2.0 rejects the legacy ' UTC-00:00' suffix with a 404. Plain ISO.
+    const fmt = d => d.toISOString().replace(/\.\d{3}Z$/, '.000');
     const target = `https://services.nvd.nist.gov/rest/json/cves/2.0?cvssV3Severity=CRITICAL&resultsPerPage=8&pubStartDate=${encodeURIComponent(fmt(start))}&pubEndDate=${encodeURIComponent(fmt(end))}`;
     const text = await getCached('nvd', PROXY + encodeURIComponent(target));
     const data = JSON.parse(text);
@@ -635,7 +636,7 @@ async function enrichEPSS(cveList) {
 async function loadProp() {
   const body = document.getElementById('propBody');
   try {
-    const text = await getCached('hamqsl', PROXY + encodeURIComponent('https://www.hamqsl.com/solar.xml'));
+    const text = await getCached('hamqsl', PROXY + encodeURIComponent('https://www.hamqsl.com/solarxml.php'));
     const xml = new DOMParser().parseFromString(text, 'text/xml');
     const get = tag => xml.querySelector(tag)?.textContent?.trim() || '-';
     const sfi = get('solarflux');

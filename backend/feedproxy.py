@@ -11,8 +11,12 @@ This endpoint replaces it with a same-origin fetch, and is deliberately narrow:
 - HTTPS only, and only to hosts in ALLOWED_HOSTS. An arbitrary-URL proxy is an
   SSRF primitive, so the allowlist is the whole point. Do not widen it to a
   suffix match: "evil-cisa.gov" and "cisa.gov.attacker.net" must not pass.
-- Redirects are not followed. Otherwise an allowlisted host could bounce the
-  request to an internal address and defeat the allowlist.
+- Redirects ARE followed, but every hop is re-validated against the allowlist
+  before it is fetched. Refusing them outright was too blunt: several real feeds
+  (The Register, Google News) answer 302 on their canonical URL. Chasing them
+  blindly would let an allowlisted host bounce us somewhere internal, so each
+  Location goes through validate() exactly like the original URL, and the chain
+  is capped at MAX_REDIRECTS.
 - Response size and read timeout are capped.
 - Responses are cached server side, so upstreams see one request per TTL rather
   than one per visitor, which is also what keeps NVD from rate limiting us.
@@ -58,6 +62,7 @@ ALLOWED_HOSTS = frozenset({
 })
 
 MAX_BYTES = 4 * 1024 * 1024
+MAX_REDIRECTS = 3
 TIMEOUT_S = 15
 DEFAULT_TTL = 900
 
@@ -94,48 +99,59 @@ async def fetch_feed(url: str, ttl: int = DEFAULT_TTL) -> tuple[str, str]:
         return cached
 
     timeout = aiohttp.ClientTimeout(total=TIMEOUT_S)
+    current = url
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            # encoded=True stops aiohttp re-quoting a URL that is already
-            # percent-encoded. Without it the NVD query, whose date params
-            # contain %3A and %20, gets double-encoded into %253A / %2520 and
-            # NVD answers with an HTML error page instead of JSON.
-            async with session.get(
-                yarl.URL(url, encoded=True),
-                headers={"User-Agent": UA, "Accept": "*/*"},
-                allow_redirects=False,
-            ) as resp:
-                if resp.status in (301, 302, 303, 307, 308):
-                    raise FeedProxyError(
-                        f"upstream redirected ({resp.status}), not following", 502
-                    )
-                if resp.status != 200:
-                    raise FeedProxyError(f"upstream returned {resp.status}", 502)
+            for _hop in range(MAX_REDIRECTS + 1):
+                # encoded=True stops aiohttp re-quoting a URL that is already
+                # percent-encoded. Without it the NVD query, whose date params
+                # contain %3A and %20, gets double-encoded into %253A / %2520
+                # and NVD answers with an error page instead of JSON.
+                async with session.get(
+                    yarl.URL(current, encoded=True),
+                    headers={"User-Agent": UA, "Accept": "*/*"},
+                    allow_redirects=False,
+                ) as resp:
+                    if resp.status in (301, 302, 303, 307, 308):
+                        location = resp.headers.get("Location")
+                        if not location:
+                            raise FeedProxyError("redirect with no Location", 502)
+                        # Resolve a relative Location against the current URL,
+                        # then run the result through the same allowlist check.
+                        # This is what stops a redirect escaping the allowlist.
+                        nxt = str(yarl.URL(current).join(yarl.URL(location)))
+                        validate(nxt)
+                        current = nxt
+                        continue
 
-                # StreamReader.read(n) returns AT MOST n bytes, not exactly n,
-                # so a single call silently truncates a large body. The CISA KEV
-                # catalog is several MB and came back cut mid-string, which the
-                # page then failed to parse. Read to EOF, capping as we go.
-                chunks = []
-                total = 0
-                async for chunk in resp.content.iter_chunked(65536):
-                    total += len(chunk)
-                    if total > MAX_BYTES:
-                        raise FeedProxyError("upstream response too large", 502)
-                    chunks.append(chunk)
-                body = b"".join(chunks)
+                    if resp.status != 200:
+                        raise FeedProxyError(f"upstream returned {resp.status}", 502)
 
-                content_type = resp.headers.get("Content-Type", "text/plain")
-                text = body.decode("utf-8", errors="replace")
+                    # StreamReader.read(n) returns AT MOST n bytes, not exactly
+                    # n, so one call silently truncates a large body. The CISA
+                    # KEV catalog is over 1.5MB and came back cut mid-string.
+                    # Read to EOF, enforcing the cap as we go.
+                    chunks = []
+                    total = 0
+                    async for chunk in resp.content.iter_chunked(65536):
+                        total += len(chunk)
+                        if total > MAX_BYTES:
+                            raise FeedProxyError("upstream response too large", 502)
+                        chunks.append(chunk)
+
+                    body = b"".join(chunks)
+                    content_type = resp.headers.get("Content-Type", "text/plain")
+                    text = body.decode("utf-8", errors="replace")
+                    result = (text, content_type)
+                    cache.set(key, result, ttl=ttl)
+                    return result
+
+            raise FeedProxyError("too many redirects", 502)
     except FeedProxyError:
         raise
     except aiohttp.ClientError as e:
-        logger.warning("feed proxy client error for %s: %s", url, e)
+        logger.warning("feed proxy client error for %s: %s", current, e)
         raise FeedProxyError("could not reach upstream feed", 502)
     except TimeoutError:
-        logger.warning("feed proxy timeout for %s", url)
+        logger.warning("feed proxy timeout for %s", current)
         raise FeedProxyError("upstream feed timed out", 504)
-
-    result = (text, content_type)
-    cache.set(key, result, ttl=ttl)
-    return result
