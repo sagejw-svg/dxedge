@@ -75,6 +75,9 @@ jobs:
               echo "[$(date)] Frontend-only - restarting nginx" >> $LOG
               docker compose restart nginx
             fi
+            # Certificate guard. Exits immediately unless the cert is expired or
+            # within 30 days of it. Never fails the deploy: it always exits 0.
+            bash scripts/cert_repair.sh || true
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete: $(git rev-parse --short HEAD)" >> $LOG
 
       - name: Verify health
