@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,7 +36,15 @@ jobs:
       - name: Detect what changed
         id: changes
         run: |
-          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          # github.event.before is the commit main pointed at before this push.
+          # Diffing HEAD~1..HEAD only inspects the LAST commit, so a push of
+          # several commits could miss a backend change in an earlier one.
+          BEFORE="${{ github.event.before }}"
+          if [ -n "$BEFORE" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            CHANGED=$(git diff --name-only "$BEFORE" HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          fi
           echo "Changed files: $CHANGED"
           if echo "$CHANGED" | grep -qE '^backend/|^nginx/|^docker-compose'; then
             echo "backend=true" >> $GITHUB_OUTPUT
@@ -60,9 +68,9 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          envs: BACKEND_CHANGED=${{ steps.changes.outputs.backend }}
           script: |
             set -e
+            BACKEND_CHANGED="${{ steps.changes.outputs.backend }}"
             cd /opt/dxedge
             LOG=/var/log/dxedge_deploy.log
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Actions deploy starting" >> $LOG

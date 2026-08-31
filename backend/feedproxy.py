@@ -16,6 +16,14 @@ This endpoint replaces it with a same-origin fetch, and is deliberately narrow:
 - Response size and read timeout are capped.
 - Responses are cached server side, so upstreams see one request per TTL rather
   than one per visitor, which is also what keeps NVD from rate limiting us.
+
+Deployment note: when this module first shipped, the pages kept failing because
+/api/feed returned the SPA index.html. The cause was not here. deploy.yml passed
+the rebuild flag as `envs: BACKEND_CHANGED=<value>`, but appleboy/ssh-action's
+`envs` input takes a list of variable NAMES to forward, not NAME=value pairs. So
+the flag arrived empty, the workflow always took the "frontend only" branch, and
+the backend container was never rebuilt. If a backend change ever appears not to
+take effect, check that branch in the deploy log before suspecting the code.
 """
 import logging
 from urllib.parse import urlparse
