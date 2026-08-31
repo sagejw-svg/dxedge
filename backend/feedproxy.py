@@ -29,6 +29,7 @@ import logging
 from urllib.parse import urlparse
 
 import aiohttp
+import yarl
 from cache import cache
 
 logger = logging.getLogger(__name__)
@@ -95,8 +96,12 @@ async def fetch_feed(url: str, ttl: int = DEFAULT_TTL) -> tuple[str, str]:
     timeout = aiohttp.ClientTimeout(total=TIMEOUT_S)
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
+            # encoded=True stops aiohttp re-quoting a URL that is already
+            # percent-encoded. Without it the NVD query, whose date params
+            # contain %3A and %20, gets double-encoded into %253A / %2520 and
+            # NVD answers with an HTML error page instead of JSON.
             async with session.get(
-                url,
+                yarl.URL(url, encoded=True),
                 headers={"User-Agent": UA, "Accept": "*/*"},
                 allow_redirects=False,
             ) as resp:
@@ -107,9 +112,18 @@ async def fetch_feed(url: str, ttl: int = DEFAULT_TTL) -> tuple[str, str]:
                 if resp.status != 200:
                     raise FeedProxyError(f"upstream returned {resp.status}", 502)
 
-                body = await resp.content.read(MAX_BYTES + 1)
-                if len(body) > MAX_BYTES:
-                    raise FeedProxyError("upstream response too large", 502)
+                # StreamReader.read(n) returns AT MOST n bytes, not exactly n,
+                # so a single call silently truncates a large body. The CISA KEV
+                # catalog is several MB and came back cut mid-string, which the
+                # page then failed to parse. Read to EOF, capping as we go.
+                chunks = []
+                total = 0
+                async for chunk in resp.content.iter_chunked(65536):
+                    total += len(chunk)
+                    if total > MAX_BYTES:
+                        raise FeedProxyError("upstream response too large", 502)
+                    chunks.append(chunk)
+                body = b"".join(chunks)
 
                 content_type = resp.headers.get("Content-Type", "text/plain")
                 text = body.decode("utf-8", errors="replace")
