@@ -438,6 +438,10 @@ async def health():
         "spots":        len(spots),
         "sat_tles":     len(tles),
         "pota_spots":   len(pota),
+        # Lets a deploy check confirm this container is running code that has
+        # the feed proxy, rather than inferring it from a 200 that the SPA
+        # catch-all would also return.
+        "feed_proxy":   True,
         "version":      "2.0",
     }
 
