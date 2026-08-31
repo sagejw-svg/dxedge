@@ -10,7 +10,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -69,16 +69,46 @@ jobs:
             git pull origin main
             if [ "$BACKEND_CHANGED" = "true" ]; then
               echo "[$(date)] Backend changed - rebuilding container" >> $LOG
-              docker compose build --no-cache backend
+              docker compose build backend
               docker compose up -d
             else
               echo "[$(date)] Frontend-only - restarting nginx" >> $LOG
               docker compose restart nginx
             fi
+            # Verify the backend container actually restarted onto the new
+            # image. Without this the deploy can "succeed" while the old
+            # container keeps running, which is exactly what happened on
+            # 2026-08-31: the frontend SCP lands before this SSH step, so a
+            # stale backend serves a fresh frontend and nothing reports it.
+            if [ "$BACKEND_CHANGED" = "true" ]; then
+              sleep 10
+              RUNNING_SINCE=$(docker inspect -f '{{.State.StartedAt}}' dxedge-backend)
+              echo "[$(date)] backend container started at $RUNNING_SINCE" >> $LOG
+              docker compose ps backend >> $LOG
+              if ! docker compose ps backend | grep -qi 'up\|running'; then
+                echo "[$(date)] ERROR: backend container is not running" >> $LOG
+                exit 1
+              fi
+            fi
+
             # Certificate guard. Exits immediately unless the cert is expired or
             # within 30 days of it. Never fails the deploy: it always exits 0.
             bash scripts/cert_repair.sh || true
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete: $(git rev-parse --short HEAD)" >> $LOG
+
+      - name: Verify feed proxy is live
+        run: |
+          sleep 5
+          CODE=$(curl -s -o /tmp/feed.out -w '%{http_code}' \
+            "https://dxedge.net/api/feed?url=https%3A%2F%2Fwww.rtl-sdr.com%2Ffeed%2F")
+          echo "api/feed returned $CODE"
+          # A stale backend has no /api/feed route, so the SPA catch-all answers
+          # with index.html and a 200. Status alone cannot tell them apart.
+          if head -c 60 /tmp/feed.out | grep -qi '<!DOCTYPE html'; then
+            echo "ERROR: /api/feed fell through to the SPA catch-all."
+            echo "The backend container is running stale code."
+            exit 1
+          fi
 
       - name: Verify health
         run: |
