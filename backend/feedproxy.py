@@ -13,7 +13,7 @@ This endpoint replaces it with a same-origin fetch, and is deliberately narrow:
   suffix match: "evil-cisa.gov" and "cisa.gov.attacker.net" must not pass.
 - Redirects ARE followed, but every hop is re-validated against the allowlist
   before it is fetched. Refusing them outright was too blunt: several real feeds
-  (The Register, Google News) answer 302 on their canonical URL. Chasing them
+  (Google News, and formerly The Register) answer 302 on their canonical URL. Chasing them
   blindly would let an allowlisted host bounce us somewhere internal, so each
   Location goes through validate() exactly like the original URL, and the chain
   is capped at MAX_REDIRECTS.
@@ -51,7 +51,7 @@ ALLOWED_HOSTS = frozenset({
     "feeds.feedburner.com",
     "www.bleepingcomputer.com",
     "www.darkreading.com",
-    "www.theregister.com",
+    "isc.sans.edu",
     "www.securityweek.com",
     "news.google.com",
     # aethersdr page

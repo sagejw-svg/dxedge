@@ -1,0 +1,63 @@
+name: Weekly link-rot check
+
+# The nightly automated health check runs in a sandbox that cannot fetch
+# arbitrary outbound domains, so the ~150 external links on the site are
+# checked here instead, where egress is normal. Results are published to
+# the droplet as a static file the nightly check reads from the site:
+#
+#   https://dxedge.net/health/linkcheck.json
+#
+# The target path sits inside frontend/dist, which deploy.yml's SCP step
+# copies over without deleting extra files, so the report survives deploys.
+# It always exits green: broken links are data for the nightly report, not
+# a build failure.
+
+on:
+  schedule:
+    - cron: '17 9 * * 1'   # Mondays 09:17 UTC (2:17am PT / 1:17am PST)
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  linkcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run link checker
+        run: python3 scripts/health/linkcheck.py -o out/linkcheck.json
+
+      - name: Show summary
+        run: |
+          python3 - <<'EOF'
+          import json
+          d = json.load(open('out/linkcheck.json'))
+          print(f"{d['ok']}/{d['total']} ok, {len(d['blocked'])} blocked, {len(d['broken'])} broken")
+          EOF
+
+      - name: Publish report to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "out/linkcheck.json"
+          target: "/opt/dxedge/frontend/dist/health/"
+          strip_components: 1
+
+      - name: Verify it serves as JSON
+        run: |
+          sleep 3
+          BODY=$(curl -s "https://dxedge.net/health/linkcheck.json?cb=$(date +%s)")
+          # A missing file falls through to the SPA catch-all, which answers
+          # with index.html and HTTP 200 - so parse, don't trust the status.
+          echo "$BODY" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print('Serving:', d['generated_at'], '-', d['ok'], 'of', d['total'], 'ok')
+          "
