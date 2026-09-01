@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v6'
+const CACHE_NAME = 'dxedge-v7'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -28,9 +28,10 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Never cache API calls, WebSocket, or external resources
+  // Never cache API calls, WebSocket, health reports, or external resources
   if (url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/ws/') ||
+      url.pathname.startsWith('/health/') ||
       url.origin !== location.origin) {
     return // Let network handle it
   }
