@@ -45,7 +45,12 @@ async def fetch_pota() -> list[dict]:
                             "mode": s.get("mode","").upper(),
                             "spotter": s.get("spotter",""),
                             "comments": s.get("comments",""),
-                            "time_utc": (s.get("spotTime","") or "")[:5],
+                            # spotTime is a full ISO timestamp ("2026-08-31T10:02:34"),
+                            # so slicing the first 5 characters rendered every POTA
+                            # spot's UTC column as "2026-". Match the SOTA format so
+                            # /api/activations can still sort the two sources against
+                            # each other as plain strings.
+                            "time_utc": (s.get("spotTime","") or "")[:16].replace("T", " "),
                             "type": "POTA",
                         })
                     except Exception:

@@ -1,0 +1,87 @@
+{
+  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
+  "schema_version": 1,
+  "last_run": "2026-09-01T04:30:00Z",
+  "consecutive_cert_failures": 0,
+  "runs": [
+    {
+      "date": "2026-09-01",
+      "cert": {
+        "status": "ok",
+        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS, no CERTIFICATE_VERIFY_FAILED",
+        "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot in place since 2026-08-31"
+      },
+      "main_dashboard": {
+        "api_health": "ok",
+        "sfi": 140,
+        "k_index": 2,
+        "spots": 500,
+        "feed_proxy": true,
+        "sat_tles_metric": 0,
+        "pota_spots_metric": 0,
+        "diagnosis": "sat_tles and pota_spots in /api/health are PASSIVE cache reads. Nothing repopulates them on a timer: sat TLEs are fetched only when /api/satellites/* is hit (6h TTL) and POTA only when /api/pota or /api/activations is hit (120s TTL). Both therefore read 0 whenever the cache is cold, which is most of the time. Verified live this run: /api/satellites/positions returned 9 satellites, /api/pota returned 11 spots, api.pota.app and db.satnogs.org both answered 200 directly. NOT a broken feed. Do not re-investigate as an outage; only escalate if the endpoints themselves fail.",
+        "endpoints_verified": ["/api/health", "/api/debug", "/api/pota", "/api/satellites/positions"]
+      },
+      "cyber_page": {
+        "browser_check": "not possible - no browser reachable in this scheduled cloud run",
+        "allorigins_regression": false,
+        "feeds_via_api_feed": {
+          "cisa_kev_json": "not checked this run",
+          "cisa_advisories_all_xml": "ok",
+          "nvd_2.0": "ok without date params; the page's date-bearing URL could not be re-verified from this environment (WebFetch mangles the double-encoded query and never reaches the app), but the exact shape is present in the server cache from 2026-08-31 and the code path is unchanged",
+          "epss_first_org": "ok",
+          "hamqsl_solarxml": "ok",
+          "krebs": "ok",
+          "hackernews_feedburner": "ok",
+          "bleepingcomputer": "ok",
+          "darkreading": "ok",
+          "securityweek": "ok",
+          "google_news_pqc": "ok",
+          "theregister": "still failing, 403 from upstream through the proxy - known and already reported 2026-08-31, do not re-report"
+        }
+      },
+      "aethersdr_page": {
+        "browser_check": "not possible - no browser reachable in this scheduled cloud run",
+        "allorigins_regression": false,
+        "feeds_via_api_feed": {
+          "github_releases_atom": "ok, 3 entries",
+          "flexradio": "ok",
+          "rtl_sdr": "ok",
+          "hackaday_radio_hacks": "ok"
+        }
+      },
+      "outbound_links_checked": [],
+      "outbound_links_skipped_reason": "WebFetch to hosts outside dxedge.net returns PROVENANCE_REQUIRED in an unattended scheduled run - each new domain needs a human to approve the fetch, and nobody is present. Step 4 cannot run in this configuration. 155 distinct outbound URLs remain unchecked.",
+      "problems_reported": [
+        "POTA time_utc parser bug (fixed this run)",
+        "outbound link checking blocked by fetch approvals (escalated to James 2026-09-01)",
+        "backend/tests fails at collection importing estimate_fof2 from voacap_engine (pre-existing, outstanding)"
+      ],
+      "fixes_pushed": [
+        "backend/pota.py: time_utc sliced a full ISO timestamp to its first 5 characters, so every POTA spot rendered as \"2026-\". Now formatted like the SOTA parser."
+      ]
+    }
+  ],
+  "known_issues_do_not_re_report": [
+    {
+      "id": "theregister-403",
+      "since": "2026-08-31",
+      "detail": "www.theregister.com/security/headlines.atom 302s and returns 403 to non-browser clients. Likely cannot be served through any server side proxy. Reported already."
+    },
+    {
+      "id": "health-metric-cold-cache",
+      "since": "2026-09-01",
+      "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold. Cosmetic, not an outage. See main_dashboard.diagnosis above."
+    },
+    {
+      "id": "backend-tests-collection-error",
+      "since": "before 2026-08-31",
+      "detail": "backend/tests imports estimate_fof2 from voacap_engine, which does not exist. Pre-existing break, not caused by the nightly run. Do not paper over by deleting the import."
+    },
+    {
+      "id": "api-rate-limit-on-feed",
+      "since": "2026-08-31",
+      "detail": "nginx.conf limits /api/ to 30r/m burst 10 per IP and the cyber page fires several /api/feed calls per load. Nightly checks must pace their requests. Needs its own limit_req zone, which is a nginx.conf change and therefore an escalation, not an autonomous fix."
+    }
+  ]
+}
