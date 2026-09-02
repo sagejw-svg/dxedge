@@ -137,6 +137,11 @@
       "detail": "www.cisa.gov returns 403 to a direct WebFetch from this container but serves the same URLs fine through /api/feed, which sends a browser User-Agent. Check CISA feeds through the proxy, never directly."
     },
     {
+      "id": "deploy-verification-gap",
+      "since": "2026-09-02",
+      "detail": "A frontend-only change cannot be positively verified from this container. WebFetch strips script and link tags, so the hashed /assets/ bundle path is unreadable, curl is not permitted, and api.github.com is blocked so the workflow run status cannot be queried. The achievable checks are: /api/health returns ok, both standalone pages render, and /sw.js is served fresh. Treat those as the bar; do not claim bundle-level confirmation."
+    },
+    {
       "id": "pat-expiry-note-stale",
       "since": "2026-09-02",
       "detail": "The Mem note 'DXEdge - GitHub & Credentials' says the PAT expires ~August 27 2026. It authenticated and pushed successfully on 2026-09-02, so the note is wrong or the token was reissued. Harmless, but the note should be corrected so a future run does not skip repair work believing the token is dead."
