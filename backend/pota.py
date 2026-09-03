@@ -63,6 +63,30 @@ async def fetch_pota() -> list[dict]:
         return []
 
 
+def _is_sota_tombstone(s: dict) -> bool:
+    """True for the synthetic row api2.sota.org.uk prepends to every spots response.
+
+    Since 2026-09 the upstream injects a sentinel record (id 9999999999999999,
+    every call/summit field literally "DEPRECATED") carrying a deprecation
+    notice in `comments`. It has no frequency, so it parsed as a freq-0.0 spot
+    and rendered as the top row of the activations panel. It is a notice, not a
+    spot, so it is dropped here.
+
+    This filter is NOT the migration. /api/spots/50/-1 is deprecated on both
+    api2 and api-db2 and the upstream's stated removal date has already passed;
+    moving to the replacement API needs a human, because SOTA's terms of service
+    (https://api-db2.sota.org.uk/docs) require a named point of contact
+    registered in their "API-consumers" group and give no documented successor
+    endpoint. Tracked in scripts/health/state.json under awaiting_james.
+    """
+    sentinel = {"DEPRECATED", ""}
+    return (
+        str(s.get("callsign", "")).upper() == "DEPRECATED"
+        and str(s.get("activatorCallsign", "")).upper() in sentinel
+        and str(s.get("summitCode", "")).upper() in sentinel
+    )
+
+
 async def fetch_sota() -> list[dict]:
     cached = cache.get("sota_spots")
     if cached:
@@ -75,6 +99,8 @@ async def fetch_sota() -> list[dict]:
                 data = await r.json(content_type=None)
                 spots = []
                 for s in (data if isinstance(data, list) else []):
+                    if _is_sota_tombstone(s):
+                        continue
                     try:
                         freq = float(s.get("frequency") or 0)
                         spots.append({

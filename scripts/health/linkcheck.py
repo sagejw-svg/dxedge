@@ -41,6 +41,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -72,6 +73,29 @@ BLOCKED_STATUSES = {401, 403, 405, 429}
 # Hosts that are templates/placeholders, not real endpoints to probe.
 SKIP_SUBSTRINGS = ("localhost", "127.0.0.1", "example.com", "{", "%s")
 
+# Not outbound links, so not link rot. These are matched as whole URLs.
+#   fonts.googleapis.com / fonts.gstatic.com are <link rel="preconnect">
+#   origin hints; the bare origins legitimately 404 and are never navigated to.
+#   "https://url" is a fragment of prose inside a script block that URL_RE
+#   picks up. All three were reported BROKEN on 2026-09-03 and are noise.
+SKIP_EXACT = frozenset({
+    "https://fonts.googleapis.com",
+    "https://fonts.gstatic.com",
+    "https://url",
+})
+
+# Client-rendered sites that answer every deep route with HTTP 404 while still
+# serving the app shell, so the route renders correctly in a real browser.
+# Verified 2026-09-03: https://atlas.mitre.org/techniques/AML.T0020 returns 404
+# but renders as "Training Data Poisoning | MITRE ATLAS", and both AML.T0020 and
+# AML.T0024 are present in the current mitre-atlas/atlas-data ATLAS.yaml.
+# A future run must NOT "repair" these by deleting them.
+SPA_404_HOSTS = frozenset({"atlas.mitre.org"})
+
+# Retail and CDN endpoints that answer bots with 503/502 rather than 403.
+# Same meaning as BLOCKED_STATUSES: says nothing about the link's health.
+BOT_WALL_HOSTS = frozenset({"www.amazon.com"})
+
 
 def collect_urls():
     """Return {url: [files it appears in]}."""
@@ -84,7 +108,7 @@ def collect_urls():
         text = path.read_text(encoding="utf-8", errors="replace")
         for m in URL_RE.finditer(text):
             url = m.group(0).rstrip(".,;:!?`&")
-            if any(s in url for s in SKIP_SUBSTRINGS):
+            if any(s in url for s in SKIP_SUBSTRINGS) or url in SKIP_EXACT:
                 continue
             found.setdefault(url, [])
             if rel not in found[url]:
@@ -95,6 +119,7 @@ def collect_urls():
 def check_one(url):
     """Return (status_label, http_status_or_None, note)."""
     last_note = ""
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
     for attempt in (1, 2):
         req = urllib.request.Request(url, headers=HEADERS, method="GET")
         try:
@@ -104,6 +129,11 @@ def check_one(url):
         except urllib.error.HTTPError as e:
             if e.code in BLOCKED_STATUSES:
                 return ("blocked", e.code, "bot-blocked or auth-gated; likely fine in a browser")
+            if e.code == 404 and host in SPA_404_HOSTS:
+                return ("blocked", e.code,
+                        "client-rendered site: 404 status but the route renders in a browser")
+            if e.code in (502, 503) and host in BOT_WALL_HOSTS:
+                return ("blocked", e.code, "bot-walled with 5xx; likely fine in a browser")
             return ("broken", e.code, "")
         except urllib.error.URLError as e:
             reason = getattr(e, "reason", e)
