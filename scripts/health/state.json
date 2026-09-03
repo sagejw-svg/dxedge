@@ -91,6 +91,23 @@
         "frontend/public/cyber/index.html: docs.claude.com/en/docs/build-with-claude/conversation returned a hard 404, now platform.claude.com/docs/en/build-with-claude/working-with-messages (verified 200, 'Using the Messages API', contains the 'Multiple conversational turns / the Messages API is stateless' section the card's bullets describe).",
         "frontend/public/aethersdr/index.html: flexradio.com/third-party-software-collaboration/ returned 404, now flexradio.com/api/works-with-flex/ (verified 200, 'Works with Flex', the vendor's current third-party software page).",
         "scripts/health/linkcheck.py: suppress the four classes of false positive above so future nights do not re-escalate them or delete valid links."
+      ],
+      "commit": "49e82d2dc24906996b282f2ed51280991a547543",
+      "deploy_result": {
+        "status": "success, verified",
+        "verified_at": "2026-09-03T04:47Z",
+        "checks": [
+          "/api/health 200 status ok, timestamp fresh (04:45:44Z). Note: before this deploy /api/health was serving a timestamp exactly 24h stale while /api/debug time_utc was current; the container restart cleared it. Watch for it recurring.",
+          "/api/sota now returns 5 spots with 0 DEPRECATED rows (was 6 with the tombstone first).",
+          "/cyber/ re-checked in headless Chromium after deploy: 13 /api/feed requests all 200, 0 console errors, 0 page errors, 0 inline failures, 10 tabs traversed.",
+          "/aethersdr/ re-checked in headless Chromium after deploy: 4 /api/feed requests all 200, 0 console errors, 0 page errors, 0 inline failures.",
+          "Both link repairs confirmed live in the served HTML; neither 404 URL remains.",
+          "GET / returns 200."
+        ]
+      },
+      "outstanding": [
+        "backend/tests still fails at collection: test_dxedge.py imports estimate_fof2, voacap_engine defines f2_layer_strength instead. Pre-existing, untouched, not papered over.",
+        "6 items in awaiting_james (3 carried from 2026-09-02, 3 raised tonight)."
       ]
     },
     {
