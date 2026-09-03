@@ -28,6 +28,7 @@ import APRS from './components/APRS'
 import Satellites from './components/Satellites'
 import HourlySummary from './components/HourlySummary'
 import Morse from './components/Morse'
+import Invaders from './components/Invaders'
 
 const TABS = [
   // Propagation & operating
@@ -48,6 +49,7 @@ const TABS = [
   { id: 'alerts',   label: 'Alerts' },
   // Resources
   { id: 'morse',    label: 'Morse' },
+  { id: 'invaders', label: 'Invaders' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
@@ -90,6 +92,7 @@ const TAB_GROUPS = [
     label: 'More',
     tabs: [
       { id: 'morse',    label: 'Morse',     icon: '〰️' },
+      { id: 'invaders', label: 'Invaders',  icon: '👾' },
       { id: 'tools',    label: 'Tools',     icon: '🛠' },
       { id: 'products', label: 'Gear',      icon: '📦' },
       { id: 'custom',   label: 'Custom',    icon: '⚙️' },
@@ -357,6 +360,7 @@ export default function App() {
           {tab === 'windows' && <DXWindows grid={grid} />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'morse'   && <Morse />}
+          {tab === 'invaders' && <Invaders />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}

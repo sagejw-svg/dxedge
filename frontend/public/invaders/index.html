@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="DX Invaders. Blast the QRM, grab the DX. A ham radio arcade game that scores in DXCC entities worked. Runs entirely in your browser.">
+<title>DX//EDGE &middot; INVADERS</title>
+<link rel="canonical" href="https://dxedge.net/invaders/">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080808; --bg1:#0e0e0e; --bg2:#141414; --border:#1e1e1e;
+    --text:#e0e0e0; --muted:#888; --dim:#444;
+    --green:#00ff9d; --teal:#7affb2; --yellow:#ffd600; --blue:#7a9fff; --red:#ff6b6b;
+    --mono:'SF Mono','Fira Code','Consolas',monospace;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);
+            overflow:hidden;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+  #wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        flex-direction:column;gap:6px}
+  canvas{display:block;background:#000;touch-action:none;outline:none;
+         -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+         image-rendering:pixelated;image-rendering:crisp-edges}
+  canvas:focus-visible{outline:1px solid var(--dim)}
+  #foot{font-size:9px;color:var(--dim);letter-spacing:3px;text-transform:uppercase}
+  #foot a{color:var(--dim);text-decoration:none}
+  #foot a:hover{color:var(--muted)}
+  #foot.hide{display:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" tabindex="0" aria-label="DX Invaders game"></canvas>
+  <div id="foot" class="hide">dx//edge &middot; <a href="/">dxedge.net</a> &middot; m mutes &middot; p pauses</div>
+</div>
+<script>
+(function () {
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * DX Invaders v0.1
+ * Enemies are QRM, lids and jammers. DX callsigns drift down the band;
+ * catch one with your rig to work that DXCC entity. Score is the number
+ * of unique entities worked this run, out of the 340 on the ARRL list.
+ * No dependencies, no backend. High score lives in localStorage.
+ * ------------------------------------------------------------------ */
+
+const W = 480, H = 640, HUD = 34;
+const DXCC_TOTAL = 340, HONOR_ROLL = 331;
+const HI_KEY = 'dxInvaders_hi', MUTE_KEY = 'dxInvaders_mute';
+const C = {
+  bg: '#000', text: '#e0e0e0', muted: '#888', dim: '#444', border: '#1e1e1e',
+  green: '#00ff9d', teal: '#7affb2', yellow: '#ffd600', blue: '#7a9fff', red: '#ff6b6b',
+  qrm: '#2fbf86', lid: '#ffd600', jam: '#ff6b6b',
+};
+const FONT = "'SF Mono','Fira Code','Consolas',monospace";
+
+/* --- DXCC entities: [prefix, name, rarity]. Rarity 0 common, 1 semi, 2 rare.
+ * A trailing * on the prefix means it already carries its digit position and
+ * takes letters only. Callsigns are generated from these blocks, never from a
+ * list of real operators. The pool is a working subset; the HUD counts to 340. */
+const ENT = [
+['W','USA',0],['VE','Canada',0],['XE','Mexico',0],['G','England',0],['GM','Scotland',0],
+['GW','Wales',0],['GI','N. Ireland',0],['GD','Isle of Man',1],['GJ','Jersey',1],['GU','Guernsey',1],
+['EI','Ireland',0],['F','France',0],['DL','Germany',0],['EA','Spain',0],['CT','Portugal',0],
+['I','Italy',0],['PA','Netherlands',0],['ON','Belgium',0],['LX','Luxembourg',1],['HB9','Switzerland',0],
+['HB0','Liechtenstein',1],['OE','Austria',0],['OK','Czechia',0],['OM','Slovakia',0],['SP','Poland',0],
+['HA','Hungary',0],['YO','Romania',0],['LZ','Bulgaria',0],['SV','Greece',0],['SV5','Dodecanese',1],
+['SV9','Crete',1],['SV2A*','Mount Athos',2],['9A','Croatia',0],['S5','Slovenia',0],['E7','Bosnia-Herz.',0],
+['YU','Serbia',0],['Z3','N. Macedonia',0],['ZA','Albania',1],['4O','Montenegro',1],['OZ','Denmark',0],
+['SM','Sweden',0],['LA','Norway',0],['OH','Finland',0],['OH0','Aland Is',1],['OJ0','Market Reef',1],
+['ES','Estonia',0],['YL','Latvia',0],['LY','Lithuania',0],['UA','Eur. Russia',0],['UA2','Kaliningrad',1],
+['UA9','Asiatic Russia',0],['R1FJ*','Franz Josef Land',2],['UR','Ukraine',0],['EW','Belarus',0],
+['ER','Moldova',0],['TA','Turkey',0],['4X','Israel',0],['TK','Corsica',1],['IS0','Sardinia',1],
+['3A','Monaco',1],['HV','Vatican',2],['T7','San Marino',1],['1A0','SMOM',2],['4U1UN*','UN HQ',2],
+['ZB2','Gibraltar',1],['TF','Iceland',0],['OX','Greenland',1],['OY','Faroe Is',1],['JW','Svalbard',1],
+['JX','Jan Mayen',2],['ZC4','UK Bases Cyprus',1],['5B','Cyprus',0],['9H','Malta',0],['EA8','Canary Is',0],
+['EA9','Ceuta & Melilla',1],['CU','Azores',0],['CT3','Madeira',0],
+['JA','Japan',0],['HL','South Korea',0],['P5','DPRK',2],['BY','China',0],['BV','Taiwan',0],
+['BV9P*','Pratas Is',2],['BS7H*','Scarborough Reef',2],['VR2','Hong Kong',1],['XX9','Macao',1],
+['VU','India',0],['VU4','Andaman & Nicobar',2],['VU7','Lakshadweep',2],['HS','Thailand',0],
+['9M2','W. Malaysia',0],['9M6','E. Malaysia',1],['9M0','Spratly Is',2],['9V','Singapore',0],
+['YB','Indonesia',0],['DU','Philippines',0],['V85','Brunei',1],['4W','Timor-Leste',2],['XW','Laos',1],
+['XU','Cambodia',1],['3W','Vietnam',1],['XZ','Myanmar',2],['JT','Mongolia',1],['JD1','Ogasawara',1],
+['JD1','Minami Torishima',2],['AP','Pakistan',1],['S2','Bangladesh',1],['4S','Sri Lanka',1],
+['8Q','Maldives',1],['9N','Nepal',1],['A5','Bhutan',2],['YA','Afghanistan',2],['UN','Kazakhstan',1],
+['EX','Kyrgyzstan',1],['EY','Tajikistan',2],['EZ','Turkmenistan',2],['UK','Uzbekistan',1],
+['4L','Georgia',1],['EK','Armenia',1],['4J','Azerbaijan',1],['A4','Oman',1],['A6','UAE',1],
+['A7','Qatar',1],['A9','Bahrain',1],['9K','Kuwait',1],['HZ','Saudi Arabia',1],['7O','Yemen',2],
+['YI','Iraq',2],['EP','Iran',2],['OD','Lebanon',1],['YK','Syria',2],['JY','Jordan',1],['E4','Palestine',2],
+['VK','Australia',0],['VK9L*','Lord Howe',1],['VK9N*','Norfolk Is',1],['VK9C*','Cocos-Keeling',2],
+['VK9X*','Christmas Is',2],['VK9M*','Mellish Reef',2],['VK9W*','Willis Is',2],['VK0H*','Heard Is',2],
+['VK0M*','Macquarie Is',2],['ZL','New Zealand',0],['ZL7','Chatham Is',1],['ZL8','Kermadec',2],
+['ZL9','NZ Subantarctic',2],['P2','Papua New Guinea',1],['H4','Solomon Is',1],['H40','Temotu',2],
+['YJ','Vanuatu',1],['3D2','Fiji',1],['3D2','Rotuma',2],['3D2','Conway Reef',2],['A3','Tonga',1],
+['5W','Samoa',1],['KH8','American Samoa',1],['KH8','Swains Is',2],['T2','Tuvalu',2],['T30','W. Kiribati',2],
+['T31','C. Kiribati',2],['T32','E. Kiribati',2],['T33','Banaba',2],['V6','Micronesia',1],
+['V7','Marshall Is',1],['T8','Palau',1],['KH2','Guam',1],['KH0','Mariana Is',1],['C2','Nauru',2],
+['E51','S. Cook Is',1],['E51','N. Cook Is',2],['ZK3','Tokelau',2],['FO','French Polynesia',1],
+['FO','Marquesas',2],['FO','Austral Is',2],['FO','Clipperton',2],['FK','New Caledonia',1],
+['FK','Chesterfield',2],['FW','Wallis & Futuna',2],['VP6','Pitcairn',2],['VP6','Ducie Is',2],
+['KH6','Hawaii',0],['KH7K*','Kure Is',2],['KH1','Baker & Howland',2],['KH3','Johnston Is',2],
+['KH4','Midway',2],['KH5','Palmyra & Jarvis',2],['KH9','Wake Is',2],['KL7','Alaska',0],
+['PY','Brazil',0],['PY0F*','Fernando de Noronha',1],['PY0S*','St. Peter & Paul',2],['PY0T*','Trindade',2],
+['LU','Argentina',0],['CE','Chile',0],['CE0Y*','Easter Is',1],['CE0Z*','Juan Fernandez',2],['CE0X*','San Felix',2],
+['CX','Uruguay',0],['OA','Peru',0],['HK','Colombia',0],['HK0','San Andres',1],['HK0','Malpelo',2],
+['YV','Venezuela',0],['YV0','Aves Is',2],['HC','Ecuador',0],['HC8','Galapagos',1],['CP','Bolivia',0],
+['ZP','Paraguay',0],['FY','French Guiana',0],['8R','Guyana',1],['PZ','Suriname',1],
+['VP8','Falkland Is',1],['VP8','S. Georgia',2],['VP8','S. Orkney',2],['VP8','S. Sandwich',2],
+['VP8','S. Shetland',2],['KC4','Antarctica',1],['3Y0','Bouvet',2],['3Y0','Peter I',2],
+['KP4','Puerto Rico',0],['KP2','US Virgin Is',0],['KP1','Navassa',2],['KP5','Desecheo',2],['CO','Cuba',0],
+['HI','Dominican Rep.',0],['HH','Haiti',1],['TI','Costa Rica',0],['TI9','Cocos Is',2],['TG','Guatemala',0],
+['HR','Honduras',0],['YS','El Salvador',0],['YN','Nicaragua',0],['HP','Panama',0],['XF4','Revillagigedo',2],
+['8P','Barbados',0],['J6','St. Lucia',0],['9Y','Trinidad & Tobago',0],['6Y','Jamaica',0],['ZF','Cayman Is',0],
+['FM','Martinique',0],['FG','Guadeloupe',0],['P4','Aruba',0],['PJ2','Curacao',0],['PJ4','Bonaire',0],
+['VP9','Bermuda',0],['C6','Bahamas',0],['V2','Antigua & Barbuda',0],['V3','Belize',0],['V4','St. Kitts & Nevis',1],
+['J3','Grenada',1],['J7','Dominica',1],['J8','St. Vincent',1],['FS','St. Martin',0],['PJ7','Sint Maarten',0],
+['PJ5','Saba & St. Eustatius',1],['FJ','St. Barthelemy',1],['VP2E*','Anguilla',1],['VP2M*','Montserrat',1],
+['VP2V*','British Virgin Is',1],['VP5','Turks & Caicos',1],['CY0','Sable Is',2],['CY9','St. Paul Is',2],
+['FP','St. Pierre & Miquelon',1],
+['ZS','South Africa',0],['ZS8','Marion Is',2],['CN','Morocco',0],['S0','Western Sahara',2],['7X','Algeria',1],
+['3V','Tunisia',1],['5A','Libya',2],['SU','Egypt',0],['ST','Sudan',1],['Z8','South Sudan',2],['ET','Ethiopia',1],
+['E3','Eritrea',2],['J2','Djibouti',1],['T5','Somalia',2],['5Z','Kenya',0],['5H','Tanzania',1],['5X','Uganda',1],
+['9J','Zambia',1],['9X','Rwanda',1],['9U','Burundi',2],['7Q','Malawi',1],['C9','Mozambique',1],['Z2','Zimbabwe',1],
+['A2','Botswana',1],['V5','Namibia',1],['3DA','Eswatini',1],['7P','Lesotho',1],['5R','Madagascar',1],
+['3B8','Mauritius',1],['3B9','Rodrigues',2],['3B7','Agalega',2],['FR','Reunion',1],['FH','Mayotte',2],
+['S7','Seychelles',1],['D6','Comoros',2],['9G','Ghana',1],['5N','Nigeria',1],['TU',"Cote d'Ivoire",1],
+['6W','Senegal',1],['9L','Sierra Leone',1],['EL','Liberia',1],['C5','The Gambia',1],['TZ','Mali',1],
+['TY','Benin',1],['5V','Togo',1],['XT','Burkina Faso',1],['5U','Niger',1],['TT','Chad',2],
+['TL','Central African Rep.',2],['TR','Gabon',1],['TN','Rep. of the Congo',2],['9Q','DR Congo',1],
+['D2','Angola',1],['3C','Equatorial Guinea',2],['3C0','Annobon',2],['TJ','Cameroon',1],['5T','Mauritania',1],
+['D4','Cape Verde',1],['J5','Guinea-Bissau',2],['3X','Guinea',2],['S9','Sao Tome & Principe',2],
+['ZD7','St. Helena',1],['ZD8','Ascension Is',1],['ZD9','Tristan da Cunha',2],['VQ9','Chagos',2],
+['FT4W*','Crozet',2],['FT5X*','Kerguelen',2],['FT5Z*','Amsterdam & St. Paul',2],['FT4G*','Glorioso',2],
+['FT4J*','Juan de Nova',2],['FT4T*','Tromelin',2],['FT4E*','Europa',2],
+];
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function makeCall(e) {
+  let p = e[0], nd = false;
+  if (p.endsWith('*')) { p = p.slice(0, -1); nd = true; }
+  let s = p;
+  if (!nd && !/\d$/.test(p)) s += String(ri(0, 9));
+  // Prefixes that already carry their digit block (FT4G, 4U1UN) take 1-2 letters, the rest 2-3.
+  const n = nd ? (Math.random() < 0.5 ? 2 : 1) : (Math.random() < 0.65 ? 3 : 2);
+  for (let i = 0; i < n; i++) s += LETTERS[ri(0, 25)];
+  return s;
+}
+
+/* --- sprites (original pixel art, 1 char = 1 cell) --- */
+const SPR = {
+  qrm: [[
+    '.X..X..X.',
+    'X.XXXXX.X',
+    '.XXXXXXX.',
+    'XX.XXX.XX',
+    '.XXXXXXX.',
+    'X.XX.XX.X',
+    '.X..X..X.'], [
+    'X..X..X..',
+    '.XXXXXXX.',
+    'XXXXXXXXX',
+    'XX.XXX.XX',
+    'XXXXXXXXX',
+    '.X.XX.XX.',
+    '..X..X..X']],
+  lid: [[
+    '...XXXXX...',
+    '..XXXXXXX..',
+    '.XXXXXXXXX.',
+    'XXXXXXXXXXX',
+    '..X.....X..',
+    '..XX...XX..',
+    '...XXXXX...',
+    '..X.....X..'], [
+    '...XXXXX...',
+    '..XXXXXXX..',
+    '.XXXXXXXXX.',
+    'XXXXXXXXXXX',
+    '..X.....X..',
+    '..XX...XX..',
+    '...X.X.X...',
+    '....X.X....']],
+  jam: [[
+    'X....X....X',
+    '.X...X...X.',
+    '..X.XXX.X..',
+    '....XXX....',
+    '...XXXXX...',
+    '....X.X....',
+    '...XX.XX...',
+    '..XX...XX..',
+    '.XXXXXXXXX.'], [
+    '.....X.....',
+    'X....X....X',
+    '.X..XXX..X.',
+    '..X.XXX.X..',
+    '...XXXXX...',
+    '....X.X....',
+    '...XX.XX...',
+    '..XX...XX..',
+    '.XXXXXXXXX.']],
+  ship: [[
+    '......X......',
+    '..XXXXXXXXX..',
+    '......X......',
+    '....XXXXX....',
+    '......X......',
+    '.XXXXXXXXXXX.',
+    'XXXXXXXXXXXXX',
+    'XX.XXXXXXX.XX']],
+};
+const PX = 3;
+const cache = new Map();
+function sprite(name, frame, color) {
+  const key = name + frame + color;
+  if (cache.has(key)) return cache.get(key);
+  const rows = SPR[name][frame % SPR[name].length];
+  const c = document.createElement('canvas');
+  c.width = rows[0].length * PX; c.height = rows.length * PX;
+  const g = c.getContext('2d');
+  g.fillStyle = color;
+  rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === 'X') g.fillRect(x * PX, y * PX, PX, PX); });
+  cache.set(key, c);
+  return c;
+}
+const sw = (n) => SPR[n][0][0].length * PX, sh = (n) => SPR[n][0].length * PX;
+
+/* --- audio: tiny, optional, never throws --- */
+let actx = null, muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+function prime() {
+  if (actx) { if (actx.state === 'suspended') actx.resume().catch(() => {}); return; }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = new AC();
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  } catch (e) { actx = null; }
+}
+function tone(f, ms, type, gain, at) {
+  if (muted || !actx || actx.state !== 'running') return;
+  try {
+    const t = actx.currentTime + (at || 0);
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain || 0.05, t + 0.004);
+    g.gain.setValueAtTime(gain || 0.05, t + ms / 1000 - 0.008);
+    g.gain.linearRampToValueAtTime(0, t + ms / 1000);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + ms / 1000 + 0.01);
+  } catch (e) {}
+}
+function noise(ms, gain) {
+  if (muted || !actx || actx.state !== 'running') return;
+  try {
+    const n = Math.floor(actx.sampleRate * ms / 1000);
+    const buf = actx.createBuffer(1, n, actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = actx.createBufferSource(), g = actx.createGain();
+    s.buffer = buf; g.gain.value = gain || 0.08;
+    s.connect(g); g.connect(actx.destination); s.start();
+  } catch (e) {}
+}
+const SFX = {
+  fire:   () => tone(1200, 35, 'square', 0.03),
+  hit:    () => noise(50, 0.05),
+  kill:   () => { noise(90, 0.07); tone(160, 70, 'sawtooth', 0.04); },
+  worked: () => { tone(700, 60, 'sine', 0.07, 0); tone(700, 180, 'sine', 0.07, 0.09); tone(700, 60, 'sine', 0.07, 0.30); },
+  dupe:   () => tone(300, 90, 'triangle', 0.04),
+  lost:   () => { tone(500, 80, 'sine', 0.04, 0); tone(380, 120, 'sine', 0.04, 0.09); },
+  ouch:   () => { noise(220, 0.1); tone(90, 260, 'sawtooth', 0.06); },
+  wave:   () => { tone(520, 60, 'square', 0.04, 0); tone(780, 60, 'square', 0.04, 0.08); tone(1040, 100, 'square', 0.04, 0.16); },
+  over:   () => { tone(400, 120, 'square', 0.05, 0); tone(300, 120, 'square', 0.05, 0.14); tone(200, 300, 'square', 0.05, 0.28); },
+};
+
+/* --- state --- */
+let hi = 0;
+try { hi = parseInt(localStorage.getItem(HI_KEY) || '0', 10) || 0; } catch (e) {}
+let state = 'title', paused = false, tNow = 0, lastFrame = 0, shake = 0;
+let ship, bullets, ebullets, enemies, form, dxs, parts, pops, worked, workedList, wave, lives, dxTimer, waveTimer, msg, msgT, milestone;
+const keys = {};
+let ptr = { down: false, x: null };
+
+function reset() {
+  ship = { x: W / 2, y: H - 46, w: sw('ship'), h: sh('ship'), cool: 0, inv: 0, dead: 0 };
+  bullets = []; ebullets = []; enemies = []; dxs = []; parts = []; pops = [];
+  worked = new Set(); workedList = [];
+  wave = 0; lives = 3; dxTimer = 2.5; waveTimer = 0; msg = ''; msgT = 0; milestone = 0;
+  nextWave();
+}
+
+function nextWave() {
+  wave++;
+  const cols = 8, rows = Math.min(5, 3 + Math.floor(wave / 2));
+  const SX = 46, SY = 40;
+  enemies = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const lidRows = rows >= 5 ? 2 : 1;
+    const type = r === 0 ? 'jam' : (r <= lidRows ? 'lid' : 'qrm');
+    const hp = type === 'jam' ? 3 : type === 'lid' ? 2 : 1;
+    enemies.push({ c, r, type, hp, max: hp, alive: true, flash: 0, w: sw(type), h: sh(type) });
+  }
+  form = { x: (W - cols * SX) / 2 + 8, y: HUD + 46, dir: 1, SX, SY, total: enemies.length, frame: 0, ft: 0, fire: 0 };
+  ebullets = [];
+  waveTimer = 1.2;
+  msg = 'WAVE ' + wave; msgT = 1.4;
+  if (wave > 1) SFX.wave();
+}
+
+function alive() { return enemies.filter(e => e.alive); }
+function ex(e) { return form.x + e.c * form.SX; }
+function ey(e) { return form.y + e.r * form.SY; }
+
+/* --- DX spawning --- */
+function spawnDX(minRarity, x) {
+  let pool = ENT.filter(e => e[2] >= minRarity);
+  // Nudge toward entities not yet worked so a long run keeps finding new ones.
+  const fresh = pool.filter(e => !worked.has(e[1]));
+  if (fresh.length && Math.random() < 0.8) pool = fresh;
+  // Weight by rarity so rare DX stays rare on the ordinary spawner.
+  let e = pick(pool);
+  if (minRarity === 0) { for (let i = 0; i < 3 && e[2] === 2 && Math.random() < 0.7; i++) e = pick(pool); }
+  const call = makeCall(e);
+  const r = e[2];
+  dxs.push({
+    e, call, x: x != null ? x : ri(60, W - 60), y: HUD + 8, w: 0, h: 18,
+    vy: r === 2 ? 96 : r === 1 ? 76 : 60, ph: Math.random() * 6.28,
+    amp: r === 2 ? 70 : 34, t: 0,
+  });
+}
+
+/* --- update --- */
+function update(dt) {
+  tNow += dt;
+  if (msgT > 0) msgT -= dt;
+  if (shake > 0) shake -= dt;
+
+  // popups and particles run in every state
+  pops.forEach(p => { p.t += dt; p.y -= 14 * dt; });
+  pops = pops.filter(p => p.t < p.life);
+  parts.forEach(p => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 120 * dt; });
+  parts = parts.filter(p => p.t < p.life);
+
+  if (state !== 'play' || paused) return;
+
+  // ship
+  const speed = 300;
+  let dir = 0;
+  if (keys.ArrowLeft || keys.KeyA) dir -= 1;
+  if (keys.ArrowRight || keys.KeyD) dir += 1;
+  if (ptr.down && ptr.x != null) {
+    const d = ptr.x - ship.x;
+    if (Math.abs(d) > 4) ship.x += Math.sign(d) * Math.min(Math.abs(d), speed * 1.4 * dt);
+  }
+  ship.x += dir * speed * dt;
+  ship.x = Math.max(ship.w / 2 + 4, Math.min(W - ship.w / 2 - 4, ship.x));
+  ship.cool -= dt;
+  if (ship.inv > 0) ship.inv -= dt;
+  if (ship.dead > 0) { ship.dead -= dt; if (ship.dead <= 0) { ship.inv = 2; } }
+  if ((keys.Space || keys.ArrowUp || keys.KeyW || ptr.down) && ship.cool <= 0 && ship.dead <= 0 && waveTimer <= 0) {
+    if (bullets.length < 2) {
+      bullets.push({ x: ship.x, y: ship.y - ship.h / 2, vy: -520 });
+      ship.cool = 0.22; SFX.fire();
+    }
+  }
+
+  // wave intro pause
+  if (waveTimer > 0) { waveTimer -= dt; return; }
+
+  // formation
+  const al = alive();
+  if (!al.length) { nextWave(); spawnDX(1); return; }
+  const frac = 1 - al.length / form.total;
+  const fs = (24 + 6 * (wave - 1)) * (1 + 1.8 * frac * frac + 0.5 * frac);
+  form.x += form.dir * fs * dt;
+  let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
+  al.forEach(e => { minX = Math.min(minX, ex(e)); maxX = Math.max(maxX, ex(e) + e.w); maxY = Math.max(maxY, ey(e) + e.h); });
+  if (form.dir > 0 && maxX > W - 10) { form.dir = -1; form.y += 10; form.x -= (maxX - (W - 10)); }
+  else if (form.dir < 0 && minX < 10) { form.dir = 1; form.y += 10; form.x += (10 - minX); }
+  form.ft += dt * (0.8 + 2.5 * frac);
+  if (form.ft > 0.5) { form.ft = 0; form.frame ^= 1; }
+  if (maxY >= ship.y - ship.h / 2 - 4) { gameOver('QRM took the band'); return; }
+
+  // enemy fire: lowest alive per column, plus jammers broadcasting from the top
+  form.fire -= dt;
+  if (form.fire <= 0) {
+    form.fire = Math.max(0.3, 1.5 - 0.1 * wave - 0.6 * frac) * (0.6 + Math.random() * 0.8);
+    const cols = {};
+    al.forEach(e => { if (!cols[e.c] || e.r > cols[e.c].r) cols[e.c] = e; });
+    const shooter = pick(Object.values(cols));
+    if (shooter) ebullets.push({ x: ex(shooter) + shooter.w / 2, y: ey(shooter) + shooter.h, vy: 170 + 12 * wave, j: Math.random() * 6.28 });
+    const jams = al.filter(e => e.type === 'jam');
+    if (jams.length && Math.random() < 0.25) {
+      const j = pick(jams);
+      ebullets.push({ x: ex(j) + j.w / 2, y: ey(j) + j.h, vy: 230 + 12 * wave, j: Math.random() * 6.28, jam: true });
+    }
+  }
+
+  // enemy flash timers
+  al.forEach(e => { if (e.flash > 0) e.flash -= dt; });
+
+  // player bullets
+  bullets.forEach(b => { b.y += b.vy * dt; });
+  bullets = bullets.filter(b => {
+    if (b.y < HUD) return false;
+    for (const e of al) {
+      if (!e.alive) continue;
+      const x = ex(e), y = ey(e);
+      if (b.x >= x && b.x <= x + e.w && b.y >= y && b.y <= y + e.h) {
+        e.hp--; e.flash = 0.08; SFX.hit();
+        if (e.hp <= 0) {
+          e.alive = false; SFX.kill();
+          const col = e.type === 'jam' ? C.jam : e.type === 'lid' ? C.lid : C.qrm;
+          for (let i = 0; i < 8; i++) parts.push({ x: x + e.w / 2, y: y + e.h / 2, vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.7) * 200, t: 0, life: 0.5 + Math.random() * 0.3, c: col });
+          if (e.type === 'jam' && Math.random() < 0.55) { spawnDX(1, x + e.w / 2); pops.push({ x: x + e.w / 2, y, text: 'JAMMER DOWN, DX OPENS', c: C.red, t: 0, life: 1.2 }); }
+        }
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // enemy bullets
+  ebullets.forEach(b => { b.y += b.vy * dt; b.j += dt * 30; });
+  ebullets = ebullets.filter(b => {
+    if (b.y > H) return false;
+    if (ship.dead <= 0 && ship.inv <= 0 &&
+        Math.abs(b.x - ship.x) < ship.w / 2 - 2 && b.y > ship.y - ship.h / 2 && b.y < ship.y + ship.h / 2) {
+      hitShip(); return false;
+    }
+    return true;
+  });
+
+  // DX drift and catch
+  dxTimer -= dt;
+  if (dxTimer <= 0) {
+    spawnDX(0);
+    dxTimer = (5 + Math.random() * 2.5) * (0.45 + 0.55 * (1 - frac));
+  }
+  dxs.forEach(d => {
+    d.t += dt; d.y += d.vy * dt;
+    d.x += Math.cos(d.ph + d.t * (d.e[2] === 2 ? 2.4 : 1.4)) * d.amp * dt;
+    d.x = Math.max(40, Math.min(W - 40, d.x));
+  });
+  dxs = dxs.filter(d => {
+    const w = d.w || 60;
+    if (ship.dead <= 0 && Math.abs(d.x - ship.x) < (w / 2 + ship.w / 2 - 6) && Math.abs(d.y - ship.y) < (d.h / 2 + ship.h / 2)) {
+      workDX(d); return false;
+    }
+    if (d.y > H + 10) {
+      pops.push({ x: d.x, y: H - 90, text: 'QSB, lost ' + d.call, c: C.dim, t: 0, life: 1.1 }); SFX.lost();
+      return false;
+    }
+    return true;
+  });
+}
+
+function workDX(d) {
+  const name = d.e[1];
+  if (worked.has(name)) {
+    pops.push({ x: d.x, y: d.y - 10, text: 'DUPE ' + d.call, c: C.muted, t: 0, life: 1.0 }); SFX.dupe(); return;
+  }
+  worked.add(name); workedList.push({ call: d.call, name, r: d.e[2] });
+  const col = d.e[2] === 2 ? C.yellow : d.e[2] === 1 ? C.teal : C.green;
+  pops.push({ x: d.x, y: d.y - 10, text: 'WORKED ' + d.call + ' \u00b7 ' + name, c: col, t: 0, life: 1.6 });
+  SFX.worked();
+  const n = worked.size;
+  if (n >= 100 && milestone < 100) { milestone = 100; msg = 'DXCC!'; msgT = 2; }
+  else if (n >= HONOR_ROLL && milestone < HONOR_ROLL) { milestone = HONOR_ROLL; msg = 'HONOR ROLL'; msgT = 3; }
+  if (n > hi) { hi = n; try { localStorage.setItem(HI_KEY, String(hi)); } catch (e) {} }
+}
+
+function hitShip() {
+  lives--; SFX.ouch(); shake = 0.3;
+  for (let i = 0; i < 14; i++) parts.push({ x: ship.x, y: ship.y, vx: (Math.random() - 0.5) * 260, vy: (Math.random() - 0.8) * 220, t: 0, life: 0.6 + Math.random() * 0.3, c: C.green });
+  ebullets = [];
+  if (lives <= 0) { gameOver('Rig destroyed'); return; }
+  ship.dead = 1.0;
+  ship.x = W / 2;
+  msg = lives === 1 ? 'LAST RIG' : lives + ' RIGS LEFT'; msgT = 1.3;
+}
+
+function gameOver(why) {
+  state = 'over'; msg = why; msgT = 0; SFX.over();
+  bullets = []; ebullets = []; dxs = [];
+}
+
+function start() { reset(); state = 'play'; paused = false; }
+
+/* --- input --- */
+const cv = document.getElementById('c');
+const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyA', 'KeyD', 'KeyW', 'KeyP', 'KeyM', 'Enter', 'Escape'];
+function anyStart() {
+  prime();
+  if (state === 'title' || state === 'over') { start(); return true; }
+  if (paused) { paused = false; lastFrame = 0; return true; }
+  return false;
+}
+window.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (GAME_KEYS.includes(e.code)) e.preventDefault();
+  if (e.repeat) { keys[e.code] = true; return; }
+  if (e.code === 'KeyM') { muted = !muted; try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (x) {} pops.push({ x: W / 2, y: H - 100, text: muted ? 'MUTED' : 'SOUND ON', c: C.dim, t: 0, life: 0.9 }); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { if (state === 'play') { paused = !paused; lastFrame = 0; } return; }
+  if (e.code === 'Enter' || e.code === 'Space') { if (anyStart()) return; }
+  keys[e.code] = true;
+  prime();
+});
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; ptr.down = false; });
+
+function px(ev) { const r = cv.getBoundingClientRect(); return (ev.clientX - r.left) / r.width * W; }
+cv.addEventListener('pointerdown', (ev) => {
+  ev.preventDefault();
+  try { cv.focus({ preventScroll: true }); } catch (e) { cv.focus(); }
+  if (anyStart()) return;
+  try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
+  ptr.down = true; ptr.x = px(ev);
+});
+cv.addEventListener('pointermove', (ev) => { if (ptr.down) ptr.x = px(ev); });
+const release = () => { ptr.down = false; ptr.x = null; };
+cv.addEventListener('pointerup', release);
+cv.addEventListener('pointercancel', release);
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') { paused = true; } });
+
+/* --- render --- */
+const cx = cv.getContext('2d');
+let scale = 1, dpr = 1;
+function fit() {
+  const wrap = cv.parentNode;
+  const foot = document.getElementById('foot');
+  const aw = wrap.clientWidth || W, ah = (wrap.clientHeight || H) - (foot.classList.contains('hide') ? 0 : 22);
+  scale = Math.max(0.2, Math.min(aw / W, ah / H));
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = Math.round(W * scale * dpr); cv.height = Math.round(H * scale * dpr);
+  cv.style.width = Math.round(W * scale) + 'px'; cv.style.height = Math.round(H * scale) + 'px';
+}
+window.addEventListener('resize', fit);
+
+function text(s, x, y, size, color, align, weight) {
+  cx.font = (weight || 400) + ' ' + size + 'px ' + FONT;
+  cx.fillStyle = color; cx.textAlign = align || 'left'; cx.textBaseline = 'middle';
+  cx.fillText(s, x, y);
+}
+
+function draw() {
+  cx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  cx.imageSmoothingEnabled = false;
+  cx.fillStyle = C.bg; cx.fillRect(0, 0, W, H);
+  if (shake > 0) cx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+
+  // faint band lines
+  cx.strokeStyle = '#0c0c0c'; cx.lineWidth = 1;
+  for (let y = HUD + 20; y < H - 60; y += 40) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
+
+  if (state === 'title') { drawTitle(); return; }
+
+  // HUD
+  cx.fillStyle = '#050505'; cx.fillRect(0, 0, W, HUD);
+  cx.fillStyle = C.border; cx.fillRect(0, HUD - 1, W, 1);
+  const n = worked ? worked.size : 0;
+  text('DX: ' + n + ' / ' + DXCC_TOTAL, 12, HUD / 2, 14, C.green, 'left', 700);
+  text('WAVE ' + wave, W / 2, HUD / 2, 11, C.muted, 'center');
+  text('HI ' + hi, W - 12, HUD / 2 - 6, 9, C.dim, 'right');
+  for (let i = 0; i < lives; i++) { cx.fillStyle = C.green; cx.fillRect(W - 12 - (i + 1) * 12, HUD / 2 + 3, 8, 5); }
+
+  // enemies
+  enemies.forEach(e => {
+    if (!e.alive) return;
+    const col = e.flash > 0 ? '#ffffff' : e.type === 'jam' ? C.jam : e.type === 'lid' ? C.lid : C.qrm;
+    cx.globalAlpha = e.type === 'qrm' ? 0.85 : 1;
+    cx.drawImage(sprite(e.type, form.frame, col), ex(e), ey(e));
+    cx.globalAlpha = 1;
+  });
+
+  // DX pills
+  cx.font = '700 12px ' + FONT;
+  dxs.forEach(d => {
+    const r = d.e[2];
+    const col = r === 2 ? C.yellow : r === 1 ? C.teal : C.text;
+    const w = cx.measureText(d.call).width + 16; d.w = w;
+    const x = d.x - w / 2, y = d.y - 9;
+    cx.fillStyle = 'rgba(8,8,8,.9)'; cx.fillRect(x, y, w, 18);
+    cx.strokeStyle = col; cx.lineWidth = r === 2 ? 2 : 1; cx.strokeRect(x + 0.5, y + 0.5, w - 1, 17);
+    if (r === 2 && Math.floor(d.t * 6) % 2 === 0) { cx.fillStyle = 'rgba(255,214,0,.12)'; cx.fillRect(x, y, w, 18); }
+    text(d.call, d.x, d.y, 12, col, 'center', 700);
+  });
+
+  // bullets
+  cx.fillStyle = C.green;
+  bullets.forEach(b => cx.fillRect(b.x - 1, b.y - 8, 2, 10));
+  ebullets.forEach(b => {
+    cx.fillStyle = b.jam ? C.red : '#c96';
+    for (let i = 0; i < 4; i++) cx.fillRect(b.x - 1 + Math.sin(b.j + i * 1.7) * 2, b.y - 8 + i * 3, 2, 2);
+  });
+
+  // ship
+  if (ship.dead <= 0 && (ship.inv <= 0 || Math.floor(tNow * 12) % 2 === 0)) {
+    cx.drawImage(sprite('ship', 0, C.green), ship.x - ship.w / 2, ship.y - ship.h / 2);
+  }
+
+  // particles and popups
+  parts.forEach(p => { cx.globalAlpha = 1 - p.t / p.life; cx.fillStyle = p.c; cx.fillRect(p.x, p.y, 3, 3); });
+  cx.globalAlpha = 1;
+  pops.forEach(p => { cx.globalAlpha = Math.min(1, 2 * (1 - p.t / p.life)); text(p.text, Math.max(70, Math.min(W - 70, p.x)), p.y, 11, p.c, 'center', 700); });
+  cx.globalAlpha = 1;
+
+  // center message
+  if (msgT > 0 && state === 'play') text(msg, W / 2, H / 2 - 40, 26, C.green, 'center', 700);
+  if (paused && state === 'play') {
+    cx.fillStyle = 'rgba(0,0,0,.6)'; cx.fillRect(0, HUD, W, H - HUD);
+    text('PAUSED', W / 2, H / 2 - 12, 26, C.green, 'center', 700);
+    text('space or tap to resume', W / 2, H / 2 + 20, 11, C.muted, 'center');
+  }
+  if (state === 'over') drawOver();
+}
+
+function drawTitle() {
+  const t = tNow;
+  text('DX//EDGE', W / 2, 96, 12, C.dim, 'center');
+  text('DX INVADERS', W / 2, 138, 38, C.green, 'center', 700);
+  text('blast the QRM  \u00b7  grab the DX', W / 2, 176, 12, C.muted, 'center');
+  // parade of sprites
+  const px0 = W / 2 - 150;
+  [['qrm', C.qrm, 'QRM'], ['lid', C.lid, 'LID'], ['jam', C.jam, 'JAMMER']].forEach((s, i) => {
+    const x = px0 + i * 100 + Math.sin(t * 2 + i) * 6;
+    cx.drawImage(sprite(s[0], Math.floor(t * 2) % 2, s[1]), x, 214);
+    text(s[2], x + sw(s[0]) / 2, 258, 9, C.dim, 'center');
+    text(['1 hit', '2 hits', '3 hits, drops DX'][i], x + sw(s[0]) / 2, 272, 9, C.dim, 'center');
+  });
+  // a sample DX pill
+  cx.font = '700 12px ' + FONT;
+  const call = 'P5DX';
+  const w = cx.measureText(call).width + 16, y = 300 + Math.sin(t * 1.5) * 4;
+  cx.strokeStyle = C.yellow; cx.lineWidth = 2; cx.strokeRect(W / 2 - w / 2, y, w, 18);
+  text(call, W / 2, y + 9, 12, C.yellow, 'center', 700);
+  text('catch a callsign with your rig to work the entity', W / 2, 336, 10, C.muted, 'center');
+  text('score is unique DXCC entities out of ' + DXCC_TOTAL, W / 2, 352, 10, C.muted, 'center');
+
+  cx.drawImage(sprite('ship', 0, C.green), W / 2 - sw('ship') / 2, 392);
+  text('arrows or A/D move  \u00b7  space, W or click fires', W / 2, 436, 10, C.dim, 'center');
+  text('phone: touch and drag to move, hold to fire', W / 2, 452, 10, C.dim, 'center');
+  text('p pause  \u00b7  m ' + (muted ? 'unmute' : 'mute'), W / 2, 468, 10, C.dim, 'center');
+
+  if (hi) text('HI  ' + hi + ' entities', W / 2, 512, 12, C.teal, 'center', 700);
+  if (Math.floor(t * 2) % 2 === 0) text('press space or tap to start', W / 2, 556, 13, C.green, 'center', 700);
+}
+
+function drawOver() {
+  cx.fillStyle = 'rgba(0,0,0,.9)'; cx.fillRect(0, HUD, W, H - HUD);
+  const n = worked.size;
+  text('QRT', W / 2, HUD + 56, 34, C.red, 'center', 700);
+  text(msg, W / 2, HUD + 88, 11, C.muted, 'center');
+  text('You worked ' + n + ' ' + (n === 1 ? 'entity' : 'entities') + '. Honor Roll is ' + HONOR_ROLL + '.', W / 2, HUD + 126, 13, C.text, 'center', 700);
+  const newHi = n > 0 && n >= hi;
+  text(newHi ? 'NEW HIGH SCORE' : 'HI ' + hi, W / 2, HUD + 150, 11, newHi ? C.yellow : C.dim, 'center', 700);
+
+  // log of what you worked
+  if (workedList.length) {
+    text('LOG', W / 2, HUD + 186, 9, C.dim, 'center');
+    cx.font = '400 10px ' + FONT;
+    let x = 30, y = HUD + 206, line = 0;
+    const maxLines = 14;
+    for (const w of workedList) {
+      const s = w.call + ' ' + w.name;
+      const ww = cx.measureText(s).width + 14;
+      if (x + ww > W - 30) { x = 30; y += 16; line++; }
+      if (line >= maxLines) { text('and ' + (workedList.length - workedList.indexOf(w)) + ' more', W / 2, y + 16, 10, C.dim, 'center'); break; }
+      text(s, x, y, 10, w.r === 2 ? C.yellow : w.r === 1 ? C.teal : C.muted, 'left');
+      x += ww;
+    }
+  } else {
+    text('no DX in the log. Clear the QRM and catch a callsign next time.', W / 2, HUD + 200, 10, C.dim, 'center');
+  }
+  if (Math.floor(tNow * 2) % 2 === 0) text('press space or tap to play again', W / 2, H - 70, 13, C.green, 'center', 700);
+  text('keep the DX coming at dxedge.net', W / 2, H - 42, 9, C.dim, 'center');
+}
+
+/* --- loop --- */
+function frame(ts) {
+  if (!lastFrame) lastFrame = ts;
+  const dt = Math.min(0.05, (ts - lastFrame) / 1000);
+  lastFrame = ts;
+  update(dt); draw();
+  requestAnimationFrame(frame);
+}
+
+reset(); state = 'title';
+if (window.self === window.top) document.getElementById('foot').classList.remove('hide');
+fit();
+try { cv.focus({ preventScroll: true }); } catch (e) {}
+requestAnimationFrame(frame);
+
+// test hook, not used by the game
+window.__dx = { update, start, get state() { return state; }, get worked() { return worked; }, get enemies() { return enemies; }, get dxs() { return dxs; }, get ebullets() { return ebullets; }, get msg() { return msg; }, form: () => form, get lives() { return lives; }, get wave() { return wave; }, ship: () => ship, keys, spawnDX, makeCall, ENT, gameOver };
+})();
+</script>
+</body>
+</html>
