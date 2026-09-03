@@ -89,10 +89,15 @@ const TAB_GROUPS = [
     ],
   },
   {
+    label: 'Games',
+    tabs: [
+      { id: 'invaders', label: 'Invaders',  icon: '👾' },
+    ],
+  },
+  {
     label: 'More',
     tabs: [
       { id: 'morse',    label: 'Morse',     icon: '〰️' },
-      { id: 'invaders', label: 'Invaders',  icon: '👾' },
       { id: 'tools',    label: 'Tools',     icon: '🛠' },
       { id: 'products', label: 'Gear',      icon: '📦' },
       { id: 'custom',   label: 'Custom',    icon: '⚙️' },
@@ -360,7 +365,7 @@ export default function App() {
           {tab === 'windows' && <DXWindows grid={grid} />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'morse'   && <Morse />}
-          {tab === 'invaders' && <Invaders />}
+          {tab === 'invaders' && <Invaders callsign={callsign} />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}
