@@ -1,9 +1,43 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-03T04:55:00Z",
+  "last_run": "2026-09-04T04:30:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
+    {
+      "date": "2026-09-04",
+      "run_outcome": "BLOCKED - no live verification performed",
+      "blocker": "WebFetch was unavailable for the entire run. Every call, including a control fetch of https://example.com/, returned PROVENANCE_REQUIRED: 'The permission request for this URL was not answered in time.' That is an interactive approval gate, and this is an unattended 21:00 PT run with nobody to approve it. WebSearch still worked; git over HTTPS still worked.",
+      "why_no_workaround": "Deliberate. The 2026-09-03 note 'browser-check-now-possible' describes reaching the live site with headless Chromium via a local relay, and running linkcheck.py against arbitrary hosts with plain python. Those were used on 09-03 as a SUPPLEMENT while WebFetch was working. Tonight they would be a substitute for a fetch permission that was requested and not granted, which is exactly the circumvention this environment forbids. No container-side HTTP was issued to dxedge.net or any outbound host this run. Only the static, offline checks below were performed.",
+      "cert": {
+        "status": "unknown",
+        "evidence": "Not checked. /api/health could not be fetched.",
+        "counter_note": "consecutive_cert_failures deliberately left at 0. An unverified cert is not a failed cert; incrementing would corrupt the 3-strike escalation counter."
+      },
+      "main_dashboard": {
+        "api_health": "unknown - not fetched",
+        "feeds": "unknown - not fetched",
+        "static_check": "git log reviewed. The only commits since the 09-03 run are James's own: 819813d 'Add DX Invaders tab (v0.1)' and 210a0c3 'Invaders: operator callsign + Games tab group'. They touch frontend/public/invaders/index.html, frontend/src/components/Invaders.jsx, App.jsx and sw.js. No backend, feed, proxy or allowlist code was modified, so no new feed surface was introduced."
+      },
+      "cyber_page": {
+        "browser_check": "NOT DONE - no browser reachable and no permitted way to load the live page.",
+        "allorigins_regression": false,
+        "allorigins_evidence": "Static grep of the whole tree. The only two hits for 'allorigins' are explanatory comments in backend/main.py:688 and backend/feedproxy.py:3 describing why it was removed. Neither standalone page references it.",
+        "allowlist_gaps": "none. Static extraction of every feed URL literal in both pages, resolved to hostnames and diffed against ALLOWED_HOSTS in backend/feedproxy.py: all 8 cyber hosts present (cisa.gov, isc.sans.edu, krebsonsecurity, news.google, bleepingcomputer, darkreading, securityweek, feedburner) plus the dynamically built NVD and EPSS hosts. No feedproxy allowlist change made or needed.",
+        "direct_fetch_bypass": "none. Both pages route every feed through const PROXY = '/api/feed?url='. No cross-origin fetch() call in either file."
+      },
+      "aethersdr_page": {
+        "browser_check": "NOT DONE - same blocker.",
+        "allorigins_regression": false,
+        "allowlist_gaps": "none. All 4 hosts present: github.com, www.flexradio.com, www.rtl-sdr.com, hackaday.com.",
+        "direct_fetch_bypass": "none."
+      },
+      "outbound_links_checked": "NONE this run. No link may be judged dead without fetching it, and fetching was not available. The 14-day rotation window is unaffected: the full 156-URL sweep on 2026-09-03 still covers every curated URL until 2026-09-17.",
+      "credentials": "PAT verified live. git ls-remote over HTTPS with the Basic auth header succeeded and returned main at 210a0c3, so the token still authenticates. Reconfirms known issue 'pat-expiry-note-stale': the Mem note's '~August 27 2026' expiry is wrong.",
+      "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py:64 imports estimate_fof2; backend/voacap_engine.py defines f2_layer_strength and has no estimate_fof2. Pre-existing.",
+      "repairs_made": "none - nothing could be safely diagnosed without live checks",
+      "commits_pushed": "state file only"
+    },
     {
       "date": "2026-09-03",
       "cert": {
@@ -264,6 +298,11 @@
       "id": "browser-check-now-possible",
       "since": "2026-09-03",
       "detail": "Contrary to the 2026-09-01 and 2026-09-02 notes, a real browser IS available to this run: headless Chromium at /opt/pw-browsers with python playwright. Chromium cannot reach the internet directly (the egress proxy resets its connections), so the working pattern is: run a small local HTTP relay that serves the live page and forwards its same-origin /api/ calls upstream, then point Chromium at 127.0.0.1 with --no-proxy-server. Arbitrary outbound hosts are also reachable from plain curl/python in this container, so linkcheck.py can be run here directly rather than sampling 25-40 links a night."
+    },
+    {
+      "id": "webfetch-provenance-gate",
+      "since": "2026-09-04",
+      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run."
     }
   ],
   "awaiting_james": [
