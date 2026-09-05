@@ -56,8 +56,19 @@
         "why_not_fixed": "Changing which metric the panel displays, or tightening the filter, changes what the panel shows. That is a data-semantics change, explicitly outside the autonomous mandate, and the root cause is unverified. Reported instead of guessed."
       },
       "repairs_made": "none - nothing was broken",
-      "commits_pushed": "state file only",
-      "notification": "PushNotification sent naming the NVD severity-label decision. No email: nothing was fixed, so the email trigger did not apply."
+      "commits_pushed": "b22fc39 (state file only)",
+      "notification": "PushNotification sent naming the NVD severity-label decision. No email: nothing was fixed, so the email trigger did not apply.",
+      "deploy_result": {
+        "status": "success, verified",
+        "commit": "b22fc39b7c12c1ef91ad47634cffcdf3f86290be",
+        "verified_at": "2026-09-05T04:50Z",
+        "checks": [
+          "/api/health returns status ok with a fresh timestamp (04:41:49Z). No stale-timestamp recurrence.",
+          "/cyber/ re-checked in headless Chromium after deploy: 15 API requests all 200, 10 tabs traversed, 0 page errors, 0 inline failures, 0 allorigins.",
+          "/aethersdr/ re-checked after deploy: 5 API requests all 200, 0 page errors, 0 inline failures, 0 allorigins.",
+          "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
+        ]
+      }
     },
     {
       "date": "2026-09-04",
