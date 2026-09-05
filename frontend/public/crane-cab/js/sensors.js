@@ -8,7 +8,26 @@
 // slack mirrors load.onSurface with near-zero tension
 // collision: AABB of the load vs mission deck volumes, emit collision on rising edge
 // swayAngle = hypot(load.swing.x, load.swing.y)
+//
+// PHASE 1 SCOPE: only radius, hookHeight, heading are filled here. Everything
+// else above (actualLoad, ratedLoad, capacityPct, lmiLock, a2b, slack,
+// collision, wind, swayAngle) stays at its state.js default (0 / false) and
+// is Phase 2's job. Do not touch it here.
 
 export function init(ctx) {}
 
-export function update(ctx, dt) {}
+export function update(ctx, dt) {
+  const { state } = ctx;
+  const c = state.crane;
+  const s = state.sensors;
+
+  s.radius = c.radius;
+
+  const loadHalfHeight = state.load.attached ? (state.load.size[1] || 0) / 2 : 0;
+  s.hookHeight = c.cabHeight + 1.8 - c.line - loadHalfHeight;
+
+  let deg = (c.slew * 180) / Math.PI;
+  deg = deg % 360;
+  if (deg < 0) deg += 360;
+  s.heading = deg;
+}

@@ -1,12 +1,216 @@
 // Three.js scene. READ state, never write it.
-// Phase 0: placeholder geometry so orientation is visible. Phase 1 replaces
-// the boxes with a proper cab shell, jib, trolley, hook block, and deck.
+// Phase 0 had placeholder boxes. Phase 1 adds a fuller cab shell, a hook
+// sheave, procedural textures, decorative pickup props, and a generic
+// stadium-style backdrop for depth. All textures are drawn on <canvas> at
+// runtime (no image files, no CDN beyond the Three.js import already in
+// index.html) so this stays a dependency-free static folder.
+//
+// The pickup props below are a visual preview only: static crates placed at
+// every mission's pickup.pos so the deck doesn't look empty. They are not
+// hookable yet. Real attach/pendulum physics is Phase 2 (pendulum.js,
+// sensors.js) and mission loading is Phase 3/4 (missions.js); until that's
+// wired, every mission's prop is shown at once rather than just the active
+// one.
+//
+// The backdrop is an original, generic tiered bowl with light towers. It is
+// deliberately not a depiction of any real, trademarked venue (hard rule 7:
+// no copied art). See CLAUDE.md.
 
 import * as THREE from 'three';
+import { MISSIONS } from '../data/missions.js';
 
 let renderer, scene, camera;
-let trolley, ropeGeom, hook;
+let trolley, ropeGeom, hook, sheave;
 const parts = {};
+
+// ---------- Procedural textures ----------
+
+function canvasTexture(size, draw) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  draw(canvas.getContext('2d'), size);
+  const tex = new THREE.CanvasTexture(canvas);
+  if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function steelTexture({ base = '#c9b23a', hazard = false } = {}) {
+  const tex = canvasTexture(256, (ctx, s) => {
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, s, s);
+    // Brushed-metal streaks, subtle.
+    for (let i = 0; i < 60; i++) {
+      ctx.globalAlpha = 0.05 + Math.random() * 0.05;
+      ctx.fillStyle = Math.random() > 0.5 ? '#000' : '#fff';
+      ctx.fillRect(Math.random() * s, 0, 1, s);
+    }
+    ctx.globalAlpha = 1;
+    if (hazard) {
+      // Generic yellow/black hazard bands at both ends. No lettering, no logo.
+      const bandH = s * 0.16;
+      for (const y0 of [0, s - bandH]) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, y0, s, bandH);
+        ctx.clip();
+        for (let x = -bandH * 2; x < s + bandH * 2; x += bandH) {
+          ctx.fillStyle = '#181818';
+          ctx.beginPath();
+          ctx.moveTo(x, y0 - bandH);
+          ctx.lineTo(x + bandH, y0 - bandH);
+          ctx.lineTo(x + bandH * 2.5, y0 + bandH * 2);
+          ctx.lineTo(x + bandH * 1.5, y0 + bandH * 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+  });
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function deckTexture() {
+  const tex = canvasTexture(512, (ctx, s) => {
+    ctx.fillStyle = '#46463f';
+    ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 1400; i++) {
+      const x = Math.random() * s, y = Math.random() * s;
+      const v = 12 + Math.random() * 22;
+      ctx.fillStyle = `rgba(${v | 0},${v | 0},${(v - 2) | 0},0.3)`;
+      ctx.fillRect(x, y, 2, 2);
+    }
+    // Faint site staging outline, generic construction yellow.
+    ctx.strokeStyle = 'rgba(255, 205, 60, 0.22)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 18]);
+    ctx.strokeRect(s * 0.06, s * 0.06, s * 0.88, s * 0.88);
+  });
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(30, 30);
+  return tex;
+}
+
+function crateTexture(hue) {
+  const tex = canvasTexture(256, (ctx, s) => {
+    ctx.fillStyle = hue;
+    ctx.fillRect(0, 0, s, s);
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(6, 6, s - 12, s - 12);
+    ctx.beginPath();
+    ctx.moveTo(6, s / 2); ctx.lineTo(s - 6, s / 2);
+    ctx.moveTo(s / 2, 6); ctx.lineTo(s / 2, s - 6);
+    ctx.stroke();
+  });
+  return tex;
+}
+
+function grandstandTexture() {
+  const tex = canvasTexture(256, (ctx, s) => {
+    const rows = 16;
+    for (let i = 0; i < rows; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#5b6a72' : '#4d5960';
+      ctx.fillRect(0, (i / rows) * s, s, s / rows + 1);
+    }
+    ctx.globalAlpha = 0.55;
+    for (let i = 0; i < 700; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#c7cfd2' : '#868b8e';
+      ctx.fillRect(Math.random() * s, Math.random() * s * 0.92, 2, 3);
+    }
+    ctx.globalAlpha = 1;
+  });
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.repeat.set(10, 1);
+  return tex;
+}
+
+// ---------- Decorative pickup props (visual preview, not yet hookable) ----------
+
+const CRATE_HUES = ['#8a6a3e', '#6f7b63', '#5a6b7a', '#7a5a4a'];
+
+function buildPickupProps(scene) {
+  MISSIONS.forEach((m, i) => {
+    const [sx, sy, sz] = m.load.size;
+    const [px, py, pz] = m.pickup.pos;
+
+    const crate = new THREE.Mesh(
+      new THREE.BoxGeometry(sx, sy, sz),
+      new THREE.MeshLambertMaterial({ map: crateTexture(CRATE_HUES[i % CRATE_HUES.length]) })
+    );
+    crate.position.set(px, py + sy / 2, pz);
+    scene.add(crate);
+
+    // Rigging strap: a flattened ring resting on top, hinting the load can
+    // be hooked once Phase 2 wires real pickup.
+    const strap = new THREE.Mesh(
+      new THREE.TorusGeometry(Math.min(sx, sz) * 0.32, 0.025, 6, 20),
+      new THREE.MeshLambertMaterial({ color: 0xdadada })
+    );
+    strap.rotation.x = Math.PI / 2;
+    strap.position.set(px, py + sy + 0.03, pz);
+    scene.add(strap);
+
+    // Soft ground shadow decal for props sitting on the deck.
+    if (py <= 0.05) {
+      const shadow = new THREE.Mesh(
+        new THREE.CircleGeometry(Math.max(sx, sz) * 0.7, 20),
+        new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 })
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.set(px, 0.015, pz);
+      scene.add(shadow);
+    }
+  });
+}
+
+// ---------- Generic stadium-style backdrop ----------
+// Original tiered bowl + light towers. Not a likeness of any real stadium.
+
+function buildStadiumBackdrop(scene) {
+  const group = new THREE.Group();
+  const bowlRadiusBottom = 230;
+  const bowlRadiusTop = 260;
+  const bowlHeight = 46;
+
+  const bowl = new THREE.Mesh(
+    new THREE.CylinderGeometry(bowlRadiusTop, bowlRadiusBottom, bowlHeight, 48, 1, true),
+    new THREE.MeshLambertMaterial({ map: grandstandTexture(), side: THREE.BackSide })
+  );
+  bowl.position.y = bowlHeight / 2;
+  group.add(bowl);
+
+  // Rim cap, a plain band suggesting an upper concourse, generic gray.
+  const rim = new THREE.Mesh(
+    new THREE.CylinderGeometry(bowlRadiusTop + 3, bowlRadiusTop, 3, 48, 1, true),
+    new THREE.MeshLambertMaterial({ color: 0x3d454a, side: THREE.BackSide })
+  );
+  rim.position.y = bowlHeight + 1.5;
+  group.add(rim);
+
+  // Light towers around the rim. Emissive-looking panels via MeshBasicMaterial
+  // so they read as lit even without a real light rig.
+  const towerCount = 8;
+  const poleMat = new THREE.MeshLambertMaterial({ color: 0x2a2c2e });
+  const panelMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8 });
+  for (let i = 0; i < towerCount; i++) {
+    const a = (i / towerCount) * Math.PI * 2;
+    const r = bowlRadiusTop - 4;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 30, 8), poleMat);
+    pole.position.set(Math.cos(a) * r, bowlHeight + 15, Math.sin(a) * r);
+    group.add(pole);
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 0.6), panelMat);
+    panel.position.set(Math.cos(a) * r, bowlHeight + 30, Math.sin(a) * r);
+    panel.lookAt(0, bowlHeight + 30, 0);
+    group.add(panel);
+  }
+
+  scene.add(group);
+}
+
+// ---------- Scene setup ----------
 
 export function init(ctx, canvas) {
   const { state } = ctx;
@@ -26,10 +230,10 @@ export function init(ctx, canvas) {
   scene.add(sun);
   scene.add(new THREE.HemisphereLight(0xbfd0e0, 0x3a3a34, 0.7));
 
-  // Deck. Grid on a plane so height and radius read at a glance.
+  // Deck. Textured concrete/asphalt with a grid overlay so height and radius read at a glance.
   const deck = new THREE.Mesh(
     new THREE.PlaneGeometry(600, 600),
-    new THREE.MeshLambertMaterial({ color: 0x4a4a45 })
+    new THREE.MeshLambertMaterial({ map: deckTexture() })
   );
   deck.rotation.x = -Math.PI / 2;
   scene.add(deck);
@@ -37,36 +241,65 @@ export function init(ctx, canvas) {
   grid.position.y = 0.02;
   scene.add(grid);
 
+  buildStadiumBackdrop(scene);
+  buildPickupProps(scene);
+
   // Slewing group: everything above the slew ring turns together.
   const slewGroup = new THREE.Group();
   scene.add(slewGroup);
   parts.slewGroup = slewGroup;
 
-  const steel = new THREE.MeshLambertMaterial({ color: 0xc9b23a }); // painted yellow, generic
+  const steelTex = steelTexture({ base: '#c9b23a', hazard: true });
+  steelTex.repeat.set(4, 1);
+  const steel = new THREE.MeshLambertMaterial({ map: steelTex });
+  const steelPlain = new THREE.MeshLambertMaterial({ map: steelTexture({ base: '#c9b23a' }) });
 
   const mast = new THREE.Mesh(new THREE.BoxGeometry(2, state.crane.cabHeight + 4, 2), steel);
   mast.position.y = (state.crane.cabHeight + 4) / 2;
   scene.add(mast);
 
-  const jib = new THREE.Mesh(new THREE.BoxGeometry(state.crane.jibLength, 1.4, 1.4), steel);
+  const jib = new THREE.Mesh(new THREE.BoxGeometry(state.crane.jibLength, 1.4, 1.4), steelPlain);
   jib.position.set(state.crane.jibLength / 2, state.crane.cabHeight + 2.5, 0);
   slewGroup.add(jib);
 
-  const counterJib = new THREE.Mesh(new THREE.BoxGeometry(14, 1.2, 1.2), steel);
+  const counterJib = new THREE.Mesh(new THREE.BoxGeometry(14, 1.2, 1.2), steelPlain);
   counterJib.position.set(-7, state.crane.cabHeight + 2.5, 0);
   slewGroup.add(counterJib);
 
-  trolley = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 1.8), new THREE.MeshLambertMaterial({ color: 0x333333 }));
+  const darkMetal = new THREE.MeshLambertMaterial({ map: steelTexture({ base: '#2b2b2b' }) });
+
+  trolley = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 1.8), darkMetal);
   slewGroup.add(trolley);
+
+  // Sheave: the small pulley wheel the rope runs over on the underside of the trolley.
+  sheave = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.28, 0.18, 14),
+    new THREE.MeshLambertMaterial({ color: 0x151515 })
+  );
+  sheave.rotation.z = Math.PI / 2;
+  slewGroup.add(sheave);
 
   ropeGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
   const rope = new THREE.Line(ropeGeom, new THREE.LineBasicMaterial({ color: 0x111111 }));
   slewGroup.add(rope);
 
-  hook = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.6), new THREE.MeshLambertMaterial({ color: 0x222222 }));
-  slewGroup.add(hook);
+  // Hook block (mass at the bottom of the rope) plus an open hook arc below it.
+  const hookGroup = new THREE.Group();
+  slewGroup.add(hookGroup);
+  hook = hookGroup;
+  const hookBlock = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), darkMetal);
+  hookBlock.position.y = 0.3;
+  hookGroup.add(hookBlock);
+  const hookArc = new THREE.Mesh(
+    new THREE.TorusGeometry(0.28, 0.06, 8, 16, Math.PI * 1.35),
+    new THREE.MeshLambertMaterial({ color: 0x1a1a1a })
+  );
+  hookArc.rotation.z = Math.PI * 0.6;
+  hookArc.position.y = -0.15;
+  hookGroup.add(hookArc);
 
-  // Cab shell. Camera sits inside. A few dark bars suggest the glass frame.
+  // Cab shell. Camera sits inside. Fuller enclosure: pillars, header, roof
+  // plate, a glass floor pane, a seat, and a console box.
   const cabGroup = new THREE.Group();
   cabGroup.position.set(1.6, state.crane.cabHeight, 1.9);
   slewGroup.add(cabGroup);
@@ -80,9 +313,52 @@ export function init(ctx, canvas) {
   };
   bar(0.08, 2.2, 0.08, 1.0, 1.1, -1.0);   // front right pillar
   bar(0.08, 2.2, 0.08, 1.0, 1.1, 1.0);    // front left pillar
+  bar(0.08, 2.2, 0.08, -0.4, 1.1, -1.0);  // rear right pillar
+  bar(0.08, 2.2, 0.08, -0.4, 1.1, 1.0);   // rear left pillar
   bar(0.08, 0.08, 2.1, 1.0, 2.2, 0);      // header
-  bar(2.4, 0.08, 2.1, -0.2, 2.2, 0);      // roof edge
-  bar(2.4, 0.06, 2.1, -0.2, -0.02, 0);    // floor edge (floor glass in the real cab)
+
+  // Solid roof plate (the earlier build only had a thin roof-edge bar).
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 2.1), frameMat);
+  roof.position.set(0.3, 2.24, 0);
+  cabGroup.add(roof);
+
+  // Glass floor pane, faint and translucent, for looking straight down at the load.
+  const floorGlass = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.5, 2.0),
+    new THREE.MeshBasicMaterial({ color: 0xbfe0ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
+  );
+  floorGlass.rotation.x = -Math.PI / 2;
+  floorGlass.position.set(0.3, -0.01, 0);
+  cabGroup.add(floorGlass);
+  bar(1.6, 0.06, 2.1, 0.3, -0.02, 0);     // floor edge frame around the glass
+
+  // Seat, roughly under and behind the camera eye point.
+  const seatMat = new THREE.MeshLambertMaterial({ color: 0x2f2f2f });
+  const seatBase = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 0.55), seatMat);
+  seatBase.position.set(-0.55, 0.95, 0);
+  cabGroup.add(seatBase);
+  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.55), seatMat);
+  seatBack.position.set(-0.8, 1.3, 0);
+  cabGroup.add(seatBack);
+
+  // Console box under the glass, ahead of the camera. A couple of faint
+  // canvas-drawn indicator lights, generic, no branding.
+  const consoleTex = canvasTexture(64, (c2, s) => {
+    c2.fillStyle = '#141414';
+    c2.fillRect(0, 0, s, s);
+    c2.fillStyle = '#3fae55';
+    c2.fillRect(s * 0.15, s * 0.4, s * 0.15, s * 0.15);
+    c2.fillStyle = '#c98f2b';
+    c2.fillRect(s * 0.42, s * 0.4, s * 0.15, s * 0.15);
+    c2.fillStyle = '#a33';
+    c2.fillRect(s * 0.68, s * 0.4, s * 0.15, s * 0.15);
+  });
+  const consoleBox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.5, 1.5),
+    new THREE.MeshLambertMaterial({ map: consoleTex })
+  );
+  consoleBox.position.set(0.75, 0.65, 0);
+  cabGroup.add(consoleBox);
 
   window.addEventListener('resize', resize);
   resize();
@@ -108,6 +384,7 @@ export function update(ctx) {
 
   const topY = c.cabHeight + 1.8;
   trolley.position.set(c.radius, topY, 0);
+  sheave.position.set(c.radius, topY - 0.5, 0);
   const hookY = topY - c.line;
   hook.position.set(
     c.radius + Math.sin(state.load.swing.y) * c.line,
@@ -119,7 +396,8 @@ export function update(ctx) {
   pos.setXYZ(1, hook.position.x, hookY, hook.position.z);
   pos.needsUpdate = true;
 
-  // Camera: eye height in the seat, looks out along the jib. Drag look-around later.
+  // Camera: eye height in the seat, looks out along the jib. Look-around
+  // deltas are applied to state.look by crane.js; this only reads it.
   eye.set(0.2, 1.35, 0);
   parts.cabGroup.localToWorld(eye);
   camera.position.copy(eye);
