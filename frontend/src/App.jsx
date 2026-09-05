@@ -29,8 +29,11 @@ import Satellites from './components/Satellites'
 import HourlySummary from './components/HourlySummary'
 import Morse from './components/Morse'
 import Invaders from './components/Invaders'
+import CraneCab from './components/CraneCab'
 
 const TABS = [
+  // Crane Cab
+  { id: 'cranecab', label: 'Crane Cab' },
   // Propagation & operating
   { id: 'bands',    label: 'Bands' },
   { id: 'spots',    label: 'DX Spots' },
@@ -60,6 +63,12 @@ const TABS = [
 ]
 
 const TAB_GROUPS = [
+  {
+    label: 'Crane Cab',
+    tabs: [
+      { id: 'cranecab', label: 'Crane Cab', icon: '🏗' },
+    ],
+  },
   {
     label: 'Propagation',
     tabs: [
@@ -366,6 +375,7 @@ export default function App() {
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'morse'   && <Morse />}
           {tab === 'invaders' && <Invaders callsign={callsign} />}
+          {tab === 'cranecab' && <CraneCab />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}

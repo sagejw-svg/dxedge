@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#1c2124">
+  <title>Crane Cab</title>
+  <link rel="stylesheet" href="css/game.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Three.js draws here. Cab glass, jib, deck. -->
+    <canvas id="glass" aria-label="View from the crane cab"></canvas>
+
+    <!-- Console cluster. Gauges live here, not in a floating HUD. Phase 1 wires values. -->
+    <section id="console" aria-label="Cab console">
+      <div class="cluster">
+        <div class="gauge" data-gauge="load">
+          <span class="value" id="g-load">0</span>
+          <span class="label">Load</span>
+        </div>
+        <div class="gauge" data-gauge="rated">
+          <span class="value" id="g-rated">0</span>
+          <span class="label">Rated</span>
+        </div>
+        <div class="gauge capacity" data-gauge="capacity">
+          <div class="bar"><div class="fill" id="g-capfill"></div></div>
+          <span class="value" id="g-cappct">0%</span>
+          <span class="label">Capacity</span>
+        </div>
+        <div class="gauge" data-gauge="radius">
+          <span class="value" id="g-radius">0</span>
+          <span class="label">Radius</span>
+        </div>
+        <div class="gauge" data-gauge="height">
+          <span class="value" id="g-height">0</span>
+          <span class="label">Hook height</span>
+        </div>
+        <div class="gauge" data-gauge="heading">
+          <span class="value" id="g-heading">000</span>
+          <span class="label">Slew</span>
+        </div>
+        <div class="gauge" data-gauge="wind">
+          <span class="value" id="g-wind">0</span>
+          <span class="label">Wind</span>
+        </div>
+        <div class="lamps">
+          <span class="lamp" id="l-a2b">A2B</span>
+          <span class="lamp" id="l-slack">Slack</span>
+          <span class="lamp" id="l-lmi">LMI</span>
+          <span class="lamp" id="l-brake">Brake</span>
+        </div>
+      </div>
+
+      <!-- Radio head. Channel, PTT LED, caption strip, reply strip. Phase 3 wires it. -->
+      <div class="radio">
+        <div class="head">
+          <span class="channel" id="r-channel">TC-1 GROUND</span>
+          <span class="ptt" id="r-ptt"></span>
+        </div>
+        <div class="caption" id="r-caption" aria-live="polite"></div>
+        <div class="replies" id="r-replies"></div>
+      </div>
+    </section>
+
+    <!-- Title card. First tap also unlocks Web Audio. -->
+    <div id="title" class="card">
+      <h1>Crane Cab</h1>
+      <p>You are in the seat of a flat-top tower crane. Ground talks first. Keep the load quiet.</p>
+      <p class="fine">Entertainment only. Not operator training. Generic crane, no manufacturer names or logos.</p>
+      <button id="btn-start" type="button">Take the seat</button>
+    </div>
+
+    <!-- Pause card. Phase 5 fills controls and settings. -->
+    <div id="pause" class="card" hidden>
+      <h2>Paused</h2>
+      <button id="btn-resume" type="button">Back to the seat</button>
+    </div>
+
+    <!-- Debug overlay. F3 toggles. Never shipped visible. -->
+    <pre id="debug" hidden></pre>
+
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
