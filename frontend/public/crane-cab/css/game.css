@@ -212,6 +212,47 @@ html, body {
 }
 .card .fine { color: var(--text-dim); font-size: 13px; }
 
+/* Key settings list on the title card. */
+.card .controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(190px, 1fr));
+  gap: 5px 26px;
+  margin: 4px 0 12px;
+  padding: 0;
+  max-width: 34em;
+  text-align: left;
+}
+.card .controls > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.card .controls dt {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.card .controls dd {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.card .controls kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 1px 6px;
+  margin-right: 2px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--lamp);
+  background: var(--glass);
+  border: 1px solid #0a0f11;
+  border-radius: 3px;
+}
+
+@media (max-width: 720px) {
+  .card .controls { grid-template-columns: 1fr; }
+}
+
 .card button {
   margin-top: 18px;
   font: inherit;
