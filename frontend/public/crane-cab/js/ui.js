@@ -9,6 +9,7 @@ export function init(ctx) {
   el = {
     load: $('g-load'), rated: $('g-rated'), capfill: $('g-capfill'), cappct: $('g-cappct'),
     radius: $('g-radius'), height: $('g-height'), heading: $('g-heading'), wind: $('g-wind'),
+    reach: $('g-reach'), reachfill: $('g-reachfill'),
     a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
     channel: $('r-channel'), ptt: $('r-ptt'), caption: $('r-caption'), replies: $('r-replies'),
     debug: $('debug')
@@ -26,8 +27,14 @@ export function init(ctx) {
 function fmtLen(m, units) {
   return units === 'imperial' ? `${Math.round(m * 3.28084)} ft` : `${m.toFixed(1)} m`;
 }
+// PHASE 2B fix: the old imperial branch divided pounds by 1000 (kips) and labelled it "t".
+// US cab displays read in pounds. Metric reads kg under a tonne, tonnes above.
 function fmtMass(kg, units) {
-  return units === 'imperial' ? `${(kg * 2.20462 / 1000).toFixed(2)} t` : `${(kg / 1000).toFixed(2)} t`;
+  if (units === 'imperial') return `${Math.round(kg * 2.20462).toLocaleString('en-US')} lb`;
+  return kg < 1000 ? `${Math.round(kg)} kg` : `${(kg / 1000).toFixed(2)} t`;
+}
+function fmtLenShort(m, units) {
+  return units === 'imperial' ? `${Math.round(m * 3.28084)}` : `${m.toFixed(1)}`;
 }
 function fmtWind(mps, units) {
   return units === 'imperial' ? `${Math.round(mps * 2.23694)} mph` : `${Math.round(mps * 3.6)} km/h`;
@@ -44,6 +51,10 @@ export function update(ctx) {
   el.capfill.style.width = `${Math.min(100, s.capacityPct)}%`;
   el.capfill.className = 'fill' + (s.capacityPct >= 90 ? ' alarm' : s.capacityPct >= 70 ? ' warn' : '');
   el.radius.textContent = fmtLen(s.radius, u);
+  // Reach: where the trolley is against how far this load may go. Same colour bands as capacity.
+  el.reach.textContent = `${fmtLenShort(s.radius, u)} / ${fmtLen(s.maxLoadRadius, u)}`;
+  el.reachfill.style.width = `${Math.min(100, s.reachPct)}%`;
+  el.reachfill.className = 'fill' + (s.reachPct >= 90 ? ' alarm' : s.reachPct >= 70 ? ' warn' : '');
   el.height.textContent = fmtLen(s.hookHeight, u);
   el.heading.textContent = String(Math.round(s.heading)).padStart(3, '0') + '\u00B0';
   el.wind.textContent = fmtWind(s.wind, u);
@@ -78,7 +89,7 @@ export function update(ctx) {
     el.debug.textContent =
 `fps ${state.time.fps}  t ${state.time.t.toFixed(1)}  phase ${state.phase}
 slew ${(c.slew * 180 / Math.PI).toFixed(1)}deg  vel ${c.slewVel.toFixed(3)}
-radius ${c.radius.toFixed(2)}  line ${c.line.toFixed(2)}
+radius ${c.radius.toFixed(2)}  line ${c.line.toFixed(2)}  reach ${s.maxLoadRadius.toFixed(2)} (${s.reachPct.toFixed(0)}%)
 sway ${(s.swayAngle * 180 / Math.PI).toFixed(2)}deg  lmi ${s.capacityPct.toFixed(0)}%
 a2b ${s.a2b} slack ${s.slack} lock ${s.lmiLock} hit ${s.collision}
 radio ${state.radio.script ?? '-'} / ${state.radio.node ?? '-'}  tx ${state.radio.tx}  faults ${state.radio.faults}

@@ -59,7 +59,7 @@ html, body {
 
 .cluster {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   grid-template-rows: 1fr auto;
   gap: 8px 10px;
   align-content: start;
@@ -308,7 +308,7 @@ html, body {
 @media (max-width: 720px) {
   :root { --console-h: 196px; }
   #console { grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 8px; }
-  .cluster { grid-template-columns: repeat(4, 1fr); }
+  .cluster { grid-template-columns: repeat(4, 1fr); grid-template-rows: auto auto auto; }
   .gauge .value { font-size: 17px; }
   .gauge .label { font-size: 10px; }
   .radio .caption { font-size: 14px; min-height: 2em; }

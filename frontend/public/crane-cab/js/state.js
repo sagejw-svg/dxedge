@@ -2,6 +2,8 @@
 // Render and audio READ ONLY. Units inside the sim are SI (m, kg, s, rad).
 // Display conversion happens in ui.js based on settings.units.
 
+import { CRANE } from '../data/crane.js';
+
 export function createState() {
   return {
     time: { t: 0, dt: 1 / 120, frame: 0, fps: 0 },
@@ -27,9 +29,10 @@ export function createState() {
       slew: 0, slewVel: 0,           // rad, rad/s
       radius: 20, radiusVel: 0,      // trolley distance from mast, m
       line: 30, lineVel: 0,          // rope paid out below trolley, m
-      jibLength: 55, minRadius: 3.5,
-      minLine: 2.5, maxLine: 70,
-      cabHeight: 42,                 // seat height above deck, m
+      jibLength: CRANE.jibLength, minRadius: CRANE.minRadius,
+      maxRadius: CRANE.maxRadius,    // trolley stop; data/crane.js is the one place to change it
+      minLine: CRANE.minLine, maxLine: CRANE.maxLine,
+      cabHeight: CRANE.cabHeight,    // seat height above deck, m
       brakeOn: false, estopped: false
     },
 
@@ -45,7 +48,8 @@ export function createState() {
       radius: 0, hookHeight: 0, heading: 0,
       actualLoad: 0, ratedLoad: 0, capacityPct: 0,
       lmiLock: false, a2b: false, slack: false, collision: false,
-      wind: 0, swayAngle: 0
+      wind: 0, swayAngle: 0,
+      maxLoadRadius: 0, reachPct: 0  // Phase 2B: how far out this load may go
     },
 
     // Radio director. radio.js owns this.

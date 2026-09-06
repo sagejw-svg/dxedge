@@ -20,6 +20,11 @@ const state = createState();
 const bus = createBus(state);
 const ctx = { state, bus };
 
+// Test harness hook. Only present when the page is opened with ?debug, so headless
+// verification (mine and the nightly's) can read and poke state without a throwaway
+// harness page. Never exposed on a normal load.
+if (new URLSearchParams(location.search).has('debug')) window.__cab = ctx;
+
 save.load(ctx);
 input.init(ctx);
 crane.init(ctx);

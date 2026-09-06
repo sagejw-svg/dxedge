@@ -18,6 +18,7 @@
 
 import * as THREE from 'three';
 import { MISSIONS } from '../data/missions.js';
+import { CRANE } from '../data/crane.js';
 
 let renderer, scene, camera;
 let trolley, ropeGeom, hook, sheave;
@@ -212,6 +213,33 @@ function buildStadiumBackdrop(scene) {
 
 // ---------- Scene setup ----------
 
+const RING_SEGMENTS = 96;
+
+function ringPoints(radius) {
+  const pts = new Float32Array(RING_SEGMENTS * 3);
+  for (let i = 0; i < RING_SEGMENTS; i += 1) {
+    const a = (i / RING_SEGMENTS) * Math.PI * 2;
+    pts[i * 3] = Math.cos(a) * radius;
+    pts[i * 3 + 1] = 0.06;
+    pts[i * 3 + 2] = Math.sin(a) * radius;
+  }
+  return pts;
+}
+
+function deckRing(radius, color, opacity) {
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(ringPoints(radius), 3));
+  const line = new THREE.LineLoop(geom, new THREE.LineBasicMaterial({ color, transparent: true, opacity }));
+  return { line, geom, radius };
+}
+
+function setRingRadius(ring, radius) {
+  if (Math.abs(radius - ring.radius) < 0.1) return;
+  ring.radius = radius;
+  ring.geom.attributes.position.array.set(ringPoints(radius));
+  ring.geom.attributes.position.needsUpdate = true;
+}
+
 export function init(ctx, canvas) {
   const { state } = ctx;
 
@@ -243,6 +271,13 @@ export function init(ctx, canvas) {
 
   buildStadiumBackdrop(scene);
   buildPickupProps(scene);
+
+  // PHASE 2B reach rings. Grey ring at the trolley stop, amber ring at the radius
+  // where the chart runs out for the load on the hook. Both are painted on the
+  // deck around the mast so the operator can see how far out the load may go.
+  parts.stopRing = deckRing(CRANE.maxRadius, 0x8a8f93, 0.55);
+  parts.loadRing = deckRing(CRANE.maxRadius, 0xe0a83a, 0.9);
+  scene.add(parts.stopRing.line, parts.loadRing.line);
 
   // Slewing group: everything above the slew ring turns together.
   const slewGroup = new THREE.Group();
@@ -382,7 +417,9 @@ export function update(ctx) {
 
   parts.slewGroup.rotation.y = -c.slew;
 
-  const topY = c.cabHeight + 1.8;
+  setRingRadius(parts.loadRing, state.sensors.maxLoadRadius || CRANE.maxRadius);
+
+  const topY = c.cabHeight + CRANE.hookDrop;
   trolley.position.set(c.radius, topY, 0);
   sheave.position.set(c.radius, topY - 0.5, 0);
   const hookY = topY - c.line;

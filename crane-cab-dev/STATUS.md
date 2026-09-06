@@ -7,7 +7,15 @@ fresh session doesn't have to reverse-engineer it from git history.
 
 ## Current state
 
-- Last completed phase: **2 (Physics + sensors)** — pendulum.js (two
+- Last completed phase: **2B (review fixes + reach)** — data/crane.js is the single
+  crane spec (jib length, trolley stop, speeds, load chart); Reach gauge and deck rings
+  (amber = chart limit for the load on the hook, grey = trolley stop); pendulum plane
+  now fixed in the world while the jib slews; wind has a world direction per mission;
+  damping retuned (0.05 base + 0.3 x slider); predictive A2B on stopping distance; LMI
+  approach caps trolley-out to range I above 90% and brakes at lock; imperial mass in
+  pounds; `?debug` URL flag exposes window.__cab for harness verification. Built and
+  verified headlessly in chat 2026-09-05, delivered as a patch for James to push.
+  Previous: **2 (Physics + sensors)** — pendulum.js (two
   small-angle DOF, damping, deck contact, wind lean) and the remaining
   sensors.js fields (actualLoad, ratedLoad, capacityPct, lmiLock, a2b,
   slack, collision, swayAngle) done per docs/PHASE-2-PROMPT.md. A fixed
@@ -23,7 +31,7 @@ fresh session doesn't have to reverse-engineer it from git history.
   /heading, render.js, plus procedural textures, preview crates, stadium
   backdrop, title-card controls reference, and the reopenable help button)
   shipped 2026-09-05; see the Notion Changelog for its tuning numbers.
-- Next phase: **3 (Radio + missions 0/1)** — no prompt doc written yet.
+- Next phase: **3 (Radio + missions 0/1)** — prompt is docs/PHASE-3-PROMPT.md.
   Covers audio.js buses, radio.js director, reply strip, doubling, ack
   timer, and missions 0/1 as data. This is also where the Phase 2 test
   load gets replaced by a real radio-driven pickup.

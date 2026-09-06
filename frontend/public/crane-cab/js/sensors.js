@@ -12,44 +12,20 @@
 // PHASE 1 filled radius, hookHeight and heading. PHASE 2 fills the rest.
 
 import { MISSIONS } from '../data/missions.js';
+import { CRANE, ratedAtRadius, maxRadiusForLoad } from '../data/crane.js';
 
 const G = 9.81;
 
-// Generic load chart. Not any manufacturer's data - the shape (capacity falling
-// off with radius) is the point. Linear interpolation between points, flat
-// outside the ends.
-const LOAD_CHART = [
-  { r: 10, kg: 6000 },
-  { r: 20, kg: 4000 },
-  { r: 30, kg: 2600 },
-  { r: 40, kg: 1900 },
-  { r: 50, kg: 1400 },
-  { r: 55, kg: 1200 }
-];
-
-const A2B_MARGIN = 0.5;        // m of line above the mechanical stop where A2B trips
-const LMI_LOCK_PCT = 100;      // capacity % at which hoist-up and trolley-out cut
+// PHASE 2B: the load chart and the A2B / LMI constants live in data/crane.js.
+// A2B is predictive: it trips when the rope left above the stop is no more than
+// the margin plus the distance the hoist still needs to decelerate, so at range II
+// the block comes to rest above the stop instead of on it.
+// Reach: maxLoadRadius is the inverse of the chart at the current actual load.
 const SLACK_TENSION_FRACTION = 0.05;
 
 let wasLocked = false;
 let wasA2b = false;
 let wasCollision = false;
-
-function ratedAtRadius(r) {
-  const first = LOAD_CHART[0];
-  const last = LOAD_CHART[LOAD_CHART.length - 1];
-  if (r <= first.r) return first.kg;
-  if (r >= last.r) return last.kg;
-  for (let i = 0; i < LOAD_CHART.length - 1; i += 1) {
-    const a = LOAD_CHART[i];
-    const b = LOAD_CHART[i + 1];
-    if (r <= b.r) {
-      const t = (r - a.r) / (b.r - a.r);
-      return a.kg + (b.kg - a.kg) * t;
-    }
-  }
-  return last.kg;
-}
 
 function currentMission(state) {
   if (state.mission.id === null || state.mission.id === undefined) return null;
@@ -72,7 +48,7 @@ function loadAABB(state) {
 
   const cx = jibX * cos - jibZ * sin;
   const cz = jibX * sin + jibZ * cos;
-  const cy = c.cabHeight + 1.8 - c.line - sy / 2;
+  const cy = c.cabHeight + CRANE.hookDrop - c.line - sy / 2;
 
   return {
     min: [cx - sx / 2, cy - sy / 2, cz - sz / 2],
@@ -103,7 +79,7 @@ export function update(ctx, dt) {
   s.radius = c.radius;
 
   const loadHalfHeight = load.attached ? (load.size[1] || 0) / 2 : 0;
-  s.hookHeight = c.cabHeight + 1.8 - c.line - loadHalfHeight;
+  s.hookHeight = c.cabHeight + CRANE.hookDrop - c.line - loadHalfHeight;
 
   let deg = (c.slew * 180) / Math.PI;
   deg = deg % 360;
@@ -117,13 +93,19 @@ export function update(ctx, dt) {
   s.ratedLoad = ratedAtRadius(c.radius);
   s.capacityPct = s.ratedLoad > 0 ? (s.actualLoad / s.ratedLoad) * 100 : 0;
 
-  s.lmiLock = s.capacityPct >= LMI_LOCK_PCT;
+  s.lmiLock = s.capacityPct >= CRANE.lmi.lockPct;
   if (s.lmiLock && !wasLocked) bus.emit('lmi.lock', { capacityPct: s.capacityPct });
   wasLocked = s.lmiLock;
 
-  // --- Anti-two-block ---
-  s.a2b = c.line <= c.minLine + A2B_MARGIN;
-  if (s.a2b && !wasA2b) bus.emit('alarm.a2b', { line: c.line });
+  // --- Reach --- how far out this load may go before the chart says no.
+  s.maxLoadRadius = load.attached && s.actualLoad > 0 ? maxRadiusForLoad(s.actualLoad) : CRANE.maxRadius;
+  s.reachPct = s.maxLoadRadius > 0 ? (c.radius / s.maxLoadRadius) * 100 : 0;
+
+  // --- Anti-two-block (predictive) ---
+  const vUp = Math.max(0, -c.lineVel);                       // rope shortening speed
+  const stoppingDistance = (vUp * vUp) / (2 * CRANE.hoist.accel);
+  s.a2b = (c.line - CRANE.minLine) <= CRANE.a2bMargin + stoppingDistance;
+  if (s.a2b && !wasA2b) bus.emit('alarm.a2b', { line: c.line, stoppingDistance });
   wasA2b = s.a2b;
 
   // --- Slack line ---

@@ -7,6 +7,9 @@
 // (|swing| below 0.5 deg for 1.5 s). Sets load.onSurface, load.tension.
 // Hook / unhook is ground-controlled by radio.js via bus, never by a grab key.
 
+import { CRANE } from '../data/crane.js';
+import { MISSIONS } from '../data/missions.js';
+
 const G = 9.81;
 
 // --- PHASE 2 TESTING DEFAULT -------------------------------------------------
@@ -27,8 +30,11 @@ const MAX_SWING = 0.35;            // rad, ~20 deg
 // does not fire the load out of the model.
 const DRIVE_ACCEL_CLAMP = 3.0;     // m/s^2
 
-const BASE_DAMPING = 0.02;         // 1/s, the "light damping" of the header
-const DAMPING_ASSIST = 1.0;        // 1/s per unit of settings.damping (0..1)
+// PHASE 2B retune. Amplitude decays as exp(-damping * t / 2), so 0.20/s (the default
+// 0.5 slider) takes a 4 deg swing to 0.1 deg in about 37 s. A real crane rings for a
+// minute or more, which is what BASE_DAMPING alone gives at slider 0. Feel check pending.
+const BASE_DAMPING = 0.05;         // 1/s, rope and air drag
+const DAMPING_ASSIST = 0.3;        // 1/s per unit of settings.damping (0..1)
 const DECK_DAMPING = 6.0;          // 1/s extra while the load is resting on a surface
 
 // Rope paid out past first contact before tension has fully bled off to slack.
@@ -91,6 +97,29 @@ export function update(ctx, dt) {
   prevSlewVel = c.slewVel;
   prevRadiusVel = c.radiusVel;
 
+  // PHASE 2B: the pendulum plane is fixed in the world, not in the jib frame. The jib
+  // turned by slewVel * dt this tick, so every world-fixed vector appears turned the
+  // other way in jib coordinates. Rotate the swing angle and velocity vectors to match
+  // before integrating. Without this a radial swing reads as radial again after a
+  // 90 degree slew, which is not what a hanging load does.
+  // Sign: render.js rotates the jib group by -slew about y, and swing.y maps to local
+  // +x (along the jib) while swing.x maps to local +z (across it). A world-fixed vector
+  // therefore transforms by R_y(+a) in local coordinates: radial' = radial cos a +
+  // tangential sin a, tangential' = tangential cos a - radial sin a. Verified in a
+  // headless run: after a 45 degree slew a free swing has x and y in anti-phase.
+  {
+    const a = c.slewVel * dt;
+    if (a !== 0) {
+      const cs = Math.cos(a), sn = Math.sin(a);
+      let x = swing.x, y = swing.y;
+      swing.x = x * cs - y * sn;
+      swing.y = x * sn + y * cs;
+      x = swing.vx; y = swing.vy;
+      swing.vx = x * cs - y * sn;
+      swing.vy = x * sn + y * cs;
+    }
+  }
+
   // Tangential drive is the linear accel of the trolley as the house slews.
   // Coriolis (2 * radiusVel * slewVel) and centripetal (radius * slewVel^2) are
   // deliberately omitted - the header specifies a small-angle two-DOF model driven
@@ -100,7 +129,7 @@ export function update(ctx, dt) {
 
   // --- Deck contact and line tension ---
   // Hook block height above the deck, then the bottom face of what hangs on it.
-  const hookY = c.cabHeight + 1.8 - c.line;
+  const hookY = c.cabHeight + CRANE.hookDrop - c.line;
   const loadHeight = load.attached ? (load.size[1] || 0) : 0;
   const bottomY = hookY - loadHeight;
 
@@ -124,15 +153,24 @@ export function update(ctx, dt) {
   wasSlack = slack;
 
   // --- Wind drive ---
-  // Steady horizontal push on the load face, applied along the radial axis
-  // (wind blowing out along the jib). sensors.js publishes the speed; reading it
-  // here is one tick stale, which is fine and keeps the two systems decoupled.
-  let windAccel = 0;
+  // Steady horizontal push on the load face. PHASE 2B: the wind has a world direction
+  // (mission.wind.dir, degrees it blows FROM, 0 = site north, same convention as the
+  // slew heading), projected onto the jib frame so the lean shifts as the house slews.
+  // sensors.js publishes the speed; reading it here is one tick stale, which is fine
+  // and keeps the two systems decoupled.
+  let windRadial = 0;
+  let windTangential = 0;
   if (load.attached && load.mass > 0) {
     const v = state.sensors.wind || 0;
     const area = (load.size[0] || 0) * (load.size[1] || 0);
     const force = 0.5 * AIR_DENSITY * DRAG_COEFF * area * v * v;
-    windAccel = force / load.mass;
+    const accel = force / load.mass;
+    const mission = MISSIONS.find((m) => m.id === state.mission.id);
+    const dirFrom = mission && mission.wind && mission.wind.dir !== undefined ? mission.wind.dir : 0;
+    const toward = (dirFrom + 180) * Math.PI / 180;
+    const rel = toward - c.slew;
+    windRadial = accel * Math.cos(rel);
+    windTangential = accel * Math.sin(rel);
   }
 
   // --- Integrate the two DOF ---
@@ -145,8 +183,8 @@ export function update(ctx, dt) {
 
   // A pivot accelerating one way leaves the load behind, so the drive enters
   // with a negative sign. Wind pushes the load the way it blows, so it does not.
-  const accelX = -gOverL * swing.x - damping * swing.vx - driveTangential / L;
-  const accelY = -gOverL * swing.y - damping * swing.vy - driveRadial / L + windAccel / L;
+  const accelX = -gOverL * swing.x - damping * swing.vx - driveTangential / L + windTangential / L;
+  const accelY = -gOverL * swing.y - damping * swing.vy - driveRadial / L + windRadial / L;
 
   swing.vx += accelX * dt;
   swing.vy += accelY * dt;

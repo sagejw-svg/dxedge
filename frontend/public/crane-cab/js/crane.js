@@ -16,18 +16,26 @@
 // so they're extrapolated using the same I = 0.4x II, micro = 0.1x II ratio
 // the hoist numbers already show. Flagging this as a deviation to revisit
 // in the Phase 2 sandbox pass if the feel is off.
+//
+// PHASE 2B: the numbers live in data/crane.js now. LMI approach behaviour added:
+// at or above the pre-alarm percent, trolley-out is capped to range I speed; while
+// locked, trolley-out brakes at 2x accel instead of coasting on the normal ramp.
+
+import { CRANE } from '../data/crane.js';
 
 const RANGE_SPEED = {
-  slew:    { micro: 0.012, I: 0.048, II: 0.12 },
-  trolley: { micro: 0.10,  I: 0.40,  II: 1.00 },
-  hoist:   { micro: 0.15,  I: 0.60,  II: 1.50 }
+  slew: CRANE.slew.max,
+  trolley: CRANE.trolley.max,
+  hoist: CRANE.hoist.max
 };
 
 const ACCEL = {
-  slew: 0.06,     // rad/s^2
-  trolley: 0.6,   // m/s^2
-  hoist: 1.2      // m/s^2
+  slew: CRANE.slew.accel,        // rad/s^2
+  trolley: CRANE.trolley.accel,  // m/s^2
+  hoist: CRANE.hoist.accel       // m/s^2
 };
+
+const LMI_BRAKE_FACTOR = 2.0;    // trolley-out decel multiplier while locked
 
 const LOOK_PITCH_MIN = -1.2;
 const LOOK_PITCH_MAX = 0.6;
@@ -87,12 +95,18 @@ export function update(ctx, dt) {
   // --- Trolley (radius) --- positive intent.trolley = out (radius grows).
   let trolleyIntent = intent.trolley;
   if (trolleyIntent > 0 && sensors.lmiLock) trolleyIntent = 0; // LMI blocks out only
-  const trolleyMax = RANGE_SPEED.trolley[range];
+  let trolleyMax = RANGE_SPEED.trolley[range];
+  // Near the chart limit the real crane slows trolley-out on its own. Cap to range I.
+  if (trolleyIntent > 0 && sensors.capacityPct >= CRANE.lmi.preAlarmPct) {
+    trolleyMax = Math.min(trolleyMax, RANGE_SPEED.trolley.I);
+  }
   const trolleyTarget = trolleyIntent * trolleyMax;
-  const trolleyAccel = ACCEL.trolley * massFactor;
+  let trolleyAccel = ACCEL.trolley * massFactor;
+  // Locked and still rolling out: brake, do not coast. Unscaled by mass on purpose.
+  if (sensors.lmiLock && c.radiusVel > 0) trolleyAccel = ACCEL.trolley * LMI_BRAKE_FACTOR;
   c.radiusVel = approach(c.radiusVel, trolleyTarget, trolleyAccel * dt);
   const radiusMin = c.minRadius;
-  const radiusMax = c.jibLength - 1;
+  const radiusMax = c.maxRadius;
   c.radiusVel = clampVel(c.radius, c.radiusVel, radiusMin, radiusMax);
   c.radius += c.radiusVel * dt;
   if (c.radius < radiusMin) { c.radius = radiusMin; c.radiusVel = 0; }
