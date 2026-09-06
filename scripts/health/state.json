@@ -1,427 +1,492 @@
 {
-  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
-  "schema_version": 1,
-  "last_run": "2026-09-05T04:30:00Z",
-  "consecutive_cert_failures": 0,
-  "runs": [
-    {
-      "date": "2026-09-05",
-      "run_outcome": "COMPLETE - all three surfaces verified live in a real browser. Nothing broken, nothing repaired. One new finding escalated.",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health and /api/debug both fetched cleanly over TLS at 04:14Z. No CERTIFICATE_VERIFY_FAILED, no expiry error. Chromium also loaded all three surfaces through the relay with no TLS error from the upstream leg.",
-        "notes": "Exact expiry still not readable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
-        "consecutive_failures": 0
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "spots": 500,
-        "feed_proxy": true,
-        "cold_cache_zeros": "PROVEN, not merely inferred. /api/health read sat_tles 0 / pota_spots 0 at 04:14Z. After /api/pota (23 real spots) and /api/satellites/positions (9 real positions) were fetched, the very next /api/health at 04:16Z read sat_tles 9 / pota_spots 24. The counters are passive cache reads that the health endpoint does not populate. Known issue health-metric-cold-cache is now closed as fully explained - do not investigate again.",
-        "health_timestamp_freshness": "fresh (04:14:12Z at 04:14Z). The 24h-stale timestamp seen before the 09-03 deploy has NOT recurred.",
-        "browser_check": "DONE. Headless Chromium via local relay. 4 API requests, all HTTP 200. Zero page errors. Renders live data: SFI history Sep 4 to Sep 5, 24h propagation quality matrix, band table. Only console noise was 5 ws://127.0.0.1/ws/spots handshake failures, which is the relay not proxying WebSockets, NOT a site defect. Same artifact as 09-03.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug",
-          "/api/pota",
-          "/api/satellites/positions",
-          "/api/sota"
-        ],
-        "sota_note": "/api/sota returned 5 spots and 0 DEPRECATED rows, so the 09-03 tombstone filter is still holding. One real spot (JA9ILH/9, summit IK-008 Wassougatake) carries frequency 0.0. It is NOT a tombstone in a new shape: it has a genuine callsign, summit code and summit name, unlike the sentinel whose call and summit fields are all literally DEPRECATED. It is an upstream spot with an empty frequency field. Cosmetic, folded into the existing sota-band-unit-mismatch item rather than raised separately."
-      },
-      "cyber_page": {
-        "browser_check": "DONE. Headless Chromium via local relay, 10 tab controls clicked through. 15 API requests, ALL HTTP 200. Zero page errors, zero inline 'failed:' panels, nothing pending past 15s.",
-        "renders_live_data": "Confirmed by reading rendered text: CISA KEV entries dated 2026-09-04, NVD critical CVE cards, EPSS percentages.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Zero allorigins requests observed in the browser, and the only two tree-wide grep hits remain explanatory comments in backend/main.py:688 and backend/feedproxy.py:3.",
-        "cross_origin_requests": "Exactly one, and it is not a feed: the Google Fonts stylesheet. It failed ERR_CERT_AUTHORITY_INVALID because Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA. Environment artifact, not a site defect.",
-        "allowlist_gaps": "none. No feedproxy allowlist change made or needed this run.",
-        "rate_limiting": "None observed. Requests were paced in page-sized batches with 20-25s gaps per known issue api-rate-limit-on-feed."
-      },
-      "aethersdr_page": {
-        "browser_check": "DONE. 5 API requests, ALL HTTP 200. Zero page errors, zero inline failures, nothing pending.",
-        "renders_live_data": "Confirmed: GitHub releases through AetherSDR v26.9.1, plus Hackaday and RTL-SDR items dated 1 to 5 days old.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none",
-        "cross_origin_requests": "Same single Google Fonts stylesheet artifact as the cyber page."
-      },
-      "invaders_page_review": "frontend/public/invaders/index.html is new since the last successful run (James's commits 819813d and 210a0c3). Reviewed because a new page is exactly where a feed can be added the wrong way. It makes NO network calls at all: the only URL literal in the file is its own rel=canonical. No fetch(), no XHR, no feed, so no allowlist implication and nothing to add to linkcheck.py. Invaders.jsx likewise has no network calls.",
-      "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 run swept all 156 curated URLs, which covers every one of them until 2026-09-17 under the 14-day rotation rule. No new outbound links have been added since: the only new page (invaders) has none, and linkcheck.py's four source files are unchanged.",
-      "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py imports estimate_fof2; backend/voacap_engine.py defines f2_layer_strength and no estimate_fof2. Pre-existing, not papered over.",
-      "new_finding": {
-        "id": "nvd-panel-severity-mismatch",
-        "detail": "The cyber page panel titled 'CRITICAL CVEs - LAST 30 DAYS' rendered a card reading 'MEDIUM 6.8' (CVE-2026-64993) alongside 'HIGH 8.7' and 'HIGH 7.7'. Directly observed in the browser, not inferred. Likely cause, NOT verified: line 585 queries NVD with cvssV3Severity=CRITICAL, which matches a CVE if ANY v3 scorer rated it CRITICAL, while line 594-595 renders only the primary cvssMetricV31 baseScore/baseSeverity. A CVE scored CRITICAL by a secondary scorer and MEDIUM by the v3.1 primary therefore passes the filter and renders MEDIUM. Confirmation attempt failed: WebFetch to services.nvd.nist.gov returned PROVENANCE_REQUIRED twice and substituting curl/python for a denied fetch is forbidden, so the metric structure of that CVE is unconfirmed.",
-        "why_not_fixed": "Changing which metric the panel displays, or tightening the filter, changes what the panel shows. That is a data-semantics change, explicitly outside the autonomous mandate, and the root cause is unverified. Reported instead of guessed."
-      },
-      "repairs_made": "none - nothing was broken",
-      "commits_pushed": "b22fc39 (state file only)",
-      "notification": "PushNotification sent naming the NVD severity-label decision. No email: nothing was fixed, so the email trigger did not apply.",
-      "deploy_result": {
-        "status": "success, verified",
-        "commit": "b22fc39b7c12c1ef91ad47634cffcdf3f86290be",
-        "verified_at": "2026-09-05T04:50Z",
-        "checks": [
-          "/api/health returns status ok with a fresh timestamp (04:41:49Z). No stale-timestamp recurrence.",
-          "/cyber/ re-checked in headless Chromium after deploy: 15 API requests all 200, 10 tabs traversed, 0 page errors, 0 inline failures, 0 allorigins.",
-          "/aethersdr/ re-checked after deploy: 5 API requests all 200, 0 page errors, 0 inline failures, 0 allorigins.",
-          "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
-        ]
-      }
-    },
-    {
-      "date": "2026-09-04",
-      "run_outcome": "BLOCKED - no live verification performed",
-      "blocker": "WebFetch was unavailable for the entire run. Every call, including a control fetch of https://example.com/, returned PROVENANCE_REQUIRED: 'The permission request for this URL was not answered in time.' That is an interactive approval gate, and this is an unattended 21:00 PT run with nobody to approve it. WebSearch still worked; git over HTTPS still worked.",
-      "why_no_workaround": "Deliberate. The 2026-09-03 note 'browser-check-now-possible' describes reaching the live site with headless Chromium via a local relay, and running linkcheck.py against arbitrary hosts with plain python. Those were used on 09-03 as a SUPPLEMENT while WebFetch was working. Tonight they would be a substitute for a fetch permission that was requested and not granted, which is exactly the circumvention this environment forbids. No container-side HTTP was issued to dxedge.net or any outbound host this run. Only the static, offline checks below were performed.",
-      "cert": {
-        "status": "unknown",
-        "evidence": "Not checked. /api/health could not be fetched.",
-        "counter_note": "consecutive_cert_failures deliberately left at 0. An unverified cert is not a failed cert; incrementing would corrupt the 3-strike escalation counter."
-      },
-      "main_dashboard": {
-        "api_health": "unknown - not fetched",
-        "feeds": "unknown - not fetched",
-        "static_check": "git log reviewed. The only commits since the 09-03 run are James's own: 819813d 'Add DX Invaders tab (v0.1)' and 210a0c3 'Invaders: operator callsign + Games tab group'. They touch frontend/public/invaders/index.html, frontend/src/components/Invaders.jsx, App.jsx and sw.js. No backend, feed, proxy or allowlist code was modified, so no new feed surface was introduced."
-      },
-      "cyber_page": {
-        "browser_check": "NOT DONE - no browser reachable and no permitted way to load the live page.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Static grep of the whole tree. The only two hits for 'allorigins' are explanatory comments in backend/main.py:688 and backend/feedproxy.py:3 describing why it was removed. Neither standalone page references it.",
-        "allowlist_gaps": "none. Static extraction of every feed URL literal in both pages, resolved to hostnames and diffed against ALLOWED_HOSTS in backend/feedproxy.py: all 8 cyber hosts present (cisa.gov, isc.sans.edu, krebsonsecurity, news.google, bleepingcomputer, darkreading, securityweek, feedburner) plus the dynamically built NVD and EPSS hosts. No feedproxy allowlist change made or needed.",
-        "direct_fetch_bypass": "none. Both pages route every feed through const PROXY = '/api/feed?url='. No cross-origin fetch() call in either file."
-      },
-      "aethersdr_page": {
-        "browser_check": "NOT DONE - same blocker.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none. All 4 hosts present: github.com, www.flexradio.com, www.rtl-sdr.com, hackaday.com.",
-        "direct_fetch_bypass": "none."
-      },
-      "outbound_links_checked": "NONE this run. No link may be judged dead without fetching it, and fetching was not available. The 14-day rotation window is unaffected: the full 156-URL sweep on 2026-09-03 still covers every curated URL until 2026-09-17.",
-      "credentials": "PAT verified live. git ls-remote over HTTPS with the Basic auth header succeeded and returned main at 210a0c3, so the token still authenticates. Reconfirms known issue 'pat-expiry-note-stale': the Mem note's '~August 27 2026' expiry is wrong.",
-      "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py:64 imports estimate_fof2; backend/voacap_engine.py defines f2_layer_strength and has no estimate_fof2. Pre-existing.",
-      "repairs_made": "none - nothing could be safely diagnosed without live checks",
-      "commits_pushed": "state file only"
-    },
-    {
-      "date": "2026-09-03",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health and /api/debug both fetched cleanly over TLS at 04:20Z. No CERTIFICATE_VERIFY_FAILED, no expiry error.",
-        "notes": "Exact expiry still not readable from this container: openssl sees the egress proxy certificate. Unchanged from 2026-09-02."
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "spots": 500,
-        "feed_proxy": true,
-        "sat_tles_metric": 0,
-        "pota_spots_metric": 0,
-        "diagnosis": "Confirmed cosmetic, closing the loop the 2026-09-02 run asked for. Both underlying endpoints are healthy: /api/pota returned real spots (KO4YIN US-4558 etc) and /api/satellites/positions returned 1228B of real positions. The health counters are cold-cache reads. Do not re-investigate.",
-        "browser_check": "DONE for the first time. Headless Chromium in the cloud container, page served through a local relay to the live site. 4 API calls, all HTTP 200 (/api/recommendation, /api/dashboard, /api/solar/history, /api/voacap/summary). No console errors, no page errors. The only console noise was a ws://127.0.0.1/ws/spots handshake failure, which is the relay not proxying WebSockets, NOT a site defect.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug",
-          "/api/pota",
-          "/api/satellites/positions",
-          "/api/sota",
-          "/api/spots",
-          "/api/solar",
-          "/api/activations"
-        ],
-        "new_finding_sota_tombstone": "api2.sota.org.uk now prepends a synthetic DEPRECATED record to every /api/spots/50/-1 response. It parsed as a freq-0.0 spot and was rendering as the TOP ROW of the activations panel (confirmed in /api/activations: sota[0] was the tombstone). Filtered out in backend/pota.py this run. The endpoint migration itself is escalated, see awaiting_james sota-api-deprecation."
-      },
-      "cyber_page": {
-        "browser_check": "DONE for the first time - headless Chromium via local relay to the live site, all tab groups clicked through. 13 /api/feed requests, ALL HTTP 200. Zero console errors, zero page errors, zero inline 'failed:' panels, nothing pending or over 15s. Page renders live data (CISA KEV 1694 total).",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none. No feedproxy allowlist change made or needed this run.",
-        "feeds_verified_in_browser": [
-          "cisa KEV json",
-          "nvd 2.0",
-          "hamqsl solarxml",
-          "cisa advisories all.xml",
-          "krebs",
-          "securityweek",
-          "epss first.org x2",
-          "feedburner TheHackersNews",
-          "bleepingcomputer",
-          "darkreading",
-          "isc.sans",
-          "news.google PQC"
-        ],
-        "note_nvd": "The 2026-09-01 'nvd-double-encoded-url-unverifiable' limitation is now RESOLVED as a checking problem: in a real browser the NVD request is built by the page itself and returned 200. WebFetch was the thing that could not express the URL, not the site."
-      },
-      "aethersdr_page": {
-        "browser_check": "DONE - headless Chromium via local relay. 4 /api/feed requests, ALL HTTP 200. Zero console errors, zero page errors, zero inline failures.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none",
-        "feeds_verified_in_browser": [
-          "github releases.atom",
-          "flexradio",
-          "rtl-sdr",
-          "hackaday radio-hacks"
-        ]
-      },
-      "outbound_links_checked": "ALL 156 curated URLs swept this run, not a 25-40 rotation. Outbound egress worked from this container for arbitrary hosts, which earlier runs had assumed impossible, so scripts/health/linkcheck.py was run directly here instead of sampling.",
-      "outbound_links_result": "before fixes: 125 ok / 23 blocked / 11 broken. after fixes and false-positive suppression: 127 ok / 26 blocked / 3 broken.",
-      "outbound_links_still_broken": [
-        "http://dxc.ve7cc.net - http-only, force-upgraded to https by the checker. Environment limitation, do not remove.",
-        "http://w3lpl.net - same.",
-        "https://www.dxsummit.fi/ - connection reset at the sandbox egress proxy (ws_closed_mid_exchange), reproducible with two different user agents. Says nothing about the site. Do not remove; verify from a normal network."
-      ],
-      "false_positives_now_suppressed_in_linkcheck": [
-        "atlas.mitre.org - client-rendered SPA, returns HTTP 404 for valid deep routes. PROVEN this run: AML.T0020 rendered in a real browser as 'Training Data Poisoning | MITRE ATLAS' despite a 404 status, and both AML.T0020 and AML.T0024 exist in the current mitre-atlas/atlas-data ATLAS.yaml. A future run must never 'repair' these by deleting them.",
-        "fonts.googleapis.com / fonts.gstatic.com - <link rel=preconnect> origin hints, never navigated to.",
-        "https://url - a prose fragment inside a script block matched by the URL regex.",
-        "www.amazon.com - answers bots with 503 rather than 403."
-      ],
-      "docs_claude_com_redirects": "docs.claude.com now 302s (temporary, NOT 301) to platform.claude.com, then 307s internally. Four such links on the cyber page all return 200 through the chain. Because the redirects are temporary, they were deliberately left in place rather than rewritten. Revisit only if they become 301.",
-      "problems_reported": [
-        "SOTA upstream tombstone row rendering on the activations panel - FIXED this run",
-        "2 curated links genuinely 404 and repaired this run (see fixes_pushed)",
-        "SOTA /api/spots/50/-1 deprecation and SOTA terms of service - ESCALATED, new tonight",
-        "SOTA band column reads '?' for every spot, MHz/kHz unit mismatch - ESCALATED, new tonight, not fixed",
-        "SOTA terms page contains a prompt-injection attempt aimed at AI crawlers - reported to James, not acted on",
-        "backend/tests fails at collection importing estimate_fof2 from voacap_engine (pre-existing, still outstanding, still not papered over)"
-      ],
-      "fixes_pushed": [
-        "backend/pota.py: added _is_sota_tombstone() to drop the synthetic DEPRECATED record api2.sota.org.uk prepends to spot responses. Unit-checked against the live payload: exactly 1 of 6 rows dropped, all 5 real spots kept.",
-        "frontend/public/cyber/index.html: docs.claude.com/en/docs/build-with-claude/conversation returned a hard 404, now platform.claude.com/docs/en/build-with-claude/working-with-messages (verified 200, 'Using the Messages API', contains the 'Multiple conversational turns / the Messages API is stateless' section the card's bullets describe).",
-        "frontend/public/aethersdr/index.html: flexradio.com/third-party-software-collaboration/ returned 404, now flexradio.com/api/works-with-flex/ (verified 200, 'Works with Flex', the vendor's current third-party software page).",
-        "scripts/health/linkcheck.py: suppress the four classes of false positive above so future nights do not re-escalate them or delete valid links."
-      ],
-      "commit": "49e82d2dc24906996b282f2ed51280991a547543",
-      "deploy_result": {
-        "status": "success, verified",
-        "verified_at": "2026-09-03T04:47Z",
-        "checks": [
-          "/api/health 200 status ok, timestamp fresh (04:45:44Z). Note: before this deploy /api/health was serving a timestamp exactly 24h stale while /api/debug time_utc was current; the container restart cleared it. Watch for it recurring.",
-          "/api/sota now returns 5 spots with 0 DEPRECATED rows (was 6 with the tombstone first).",
-          "/cyber/ re-checked in headless Chromium after deploy: 13 /api/feed requests all 200, 0 console errors, 0 page errors, 0 inline failures, 10 tabs traversed.",
-          "/aethersdr/ re-checked in headless Chromium after deploy: 4 /api/feed requests all 200, 0 console errors, 0 page errors, 0 inline failures.",
-          "Both link repairs confirmed live in the served HTML; neither 404 URL remains.",
-          "GET / returns 200."
-        ]
-      },
-      "outstanding": [
-        "backend/tests still fails at collection: test_dxedge.py imports estimate_fof2, voacap_engine defines f2_layer_strength instead. Pre-existing, untouched, not papered over.",
-        "6 items in awaiting_james (3 carried from 2026-09-02, 3 raised tonight)."
-      ]
-    },
-    {
-      "date": "2026-09-02",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:19Z, no CERTIFICATE_VERIFY_FAILED and no expiry error",
-        "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place. Exact expiry date not readable from this container: openssl sees the egress proxy certificate, not the real one."
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "spots": 500,
-        "feed_proxy": true,
-        "sat_tles_metric": 0,
-        "pota_spots_metric": 0,
-        "diagnosis": "Unchanged and still NOT an outage. Both fields are passive cache reads; nothing repopulates them on a timer. See known_issues id health-metric-cold-cache. Do not re-investigate.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug"
-        ]
-      },
-      "cyber_page": {
-        "browser_check": "not possible - no browser reachable. This scheduled run has no device bridge and no claude-in-chrome tools, so neither browser exists in the session. Fell back to exercising every feed through /api/feed as the runbook directs.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none - every feed host on the page is already in ALLOWED_HOSTS. No allowlist change made or needed.",
-        "feeds_via_api_feed": {
-          "cisa_advisories_all_xml": "ok, 6 entries, first 'Rockwell Automation RSLinx Classic'",
-          "cisa_kev_json": "ok, catalogVersion 2026.09.01, count 1687. WebFetch reports the body truncated, but that is WebFetch's own content cap on a 1.7MB document, not the proxy: feedproxy reads to EOF before caching and MAX_BYTES is 4MB, and the cache key is present in /api/debug which only happens after a complete 200. Not a defect.",
-          "nvd_2.0": "could not be re-verified from this environment - the date-bearing URL is double-encoded and /api/feed answered 422, meaning the url param never arrived intact. Same environment limitation recorded 2026-09-01. Server-side evidence is good: the exact NVD query string appears as a live cache key in /api/debug, which is only written on a 200.",
-          "epss_first_org": "ok, status 200, CVE-2023-49105 epss 0.43205",
-          "hamqsl_solarxml": "ok, solarflux 107, updated 01 Sep 2026 0413 GMT",
-          "krebs": "ok, first entry 'Two Alleged TeamPCP Hackers Arrested in Australia'",
-          "hackernews_feedburner": "ok, 50+ entries",
-          "bleepingcomputer": "ok, ~15 entries",
-          "darkreading": "ok, ~50 entries",
-          "isc_sans": "ok, ~10 entries, first 'ISC Stormcast For Tuesday, September 1st, 2026'",
-          "securityweek": "ok, ~10 entries",
-          "google_news_pqc": "ok, ~40 entries"
-        }
-      },
-      "aethersdr_page": {
-        "browser_check": "not possible - same reason as cyber_page",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none",
-        "feeds_via_api_feed": {
-          "github_releases_atom": "ok, 3 entries, latest AetherSDR v26.9.1",
-          "flexradio": "ok, ~22 entries",
-          "rtl_sdr": "ok, ~9 entries",
-          "hackaday_radio_hacks": "ok, ~9 entries"
-        }
-      },
-      "outbound_links_checked": [
-        "https://www.qrz.com/",
-        "https://www.threathunting.net/",
-        "https://www.sans.org/white-papers/33901/",
-        "https://www.rtl-sdr.com/rtl-sdr-blog-v4-dongle-initial-release/",
-        "https://airspy.com/airspy-hf-discovery/",
-        "https://greatscottgadgets.com/hackrf/",
-        "https://www.crowdsupply.com/seeed-studio/kiwisdr-2",
-        "https://www.icomamerica.com/lineup/products/IC-7300/",
-        "https://xiegu.eu/product/g90/",
-        "https://www.raspberrypi.com/products/raspberry-pi-400/",
-        "https://myantennas.com/wp/product-category/efhw/",
-        "https://www.diamondantenna.net/x50a.html",
-        "https://www.tigertronics.com/slusbmain.htm",
-        "https://www.mobilinkd.com/tnc4/",
-        "https://shop.m5stack.com/products/m5stack-cardputer-kit-w-m5stamps3",
-        "https://www.hfsignals.com/index.php/sbitx/",
-        "https://elecraft.com/products/kx3-all-mode-160-6-m-transceiver",
-        "https://www.lilygo.cc/products/t3s3-v1-0",
-        "https://www.elektor.com/products/raspberry-pi-5-for-radio-amateurs",
-        "https://sdr.hu",
-        "https://wspr.rocks",
-        "https://openhamclock.com",
-        "https://www.hamtab.net",
-        "https://github.com/VA3HDL/hamdashboard",
-        "https://nanovna.com",
-        "https://hamspots.net",
-        "https://js8call.com"
-      ],
-      "outbound_links_note": "27 curated links checked this run plus all 16 live feed endpoints. Link checking WORKED tonight, unlike 2026-09-01: WebFetch to third party hosts went through without an approval prompt. Whatever blocked it last night was transient, so do not assume Step 4 is permanently unavailable. 126 of 153 curated URLs remain unchecked; rotate through them on coming nights.",
-      "outbound_links_uncheckable": [
-        "http://dxc.ve7cc.net",
-        "http://w6yx.stanford.edu",
-        "http://w3lpl.net",
-        "http://websdr.org",
-        "http://kiwisdr.com/public/"
-      ],
-      "outbound_links_uncheckable_reason": "WebFetch force-upgrades http to https. These hosts are http-only, so the check fails for a reason that says nothing about whether the link works in a browser. kiwisdr.com additionally 302s https back to http, which is an unresolvable loop for this fetcher. Do not remove any of these on the strength of a failed fetch from this container.",
-      "problems_reported": [
-        "4 curated product links broken and repaired this run (see fixes_pushed)",
-        "sdr.hu is a tombstone page, escalated to James 2026-09-02, awaiting his call",
-        "price drift on 3 product entries, escalated to James 2026-09-02",
-        "M5Stack Cardputer marked EOL upstream, escalated to James 2026-09-02",
-        "backend/tests fails at collection importing estimate_fof2 from voacap_engine (pre-existing, still outstanding)"
-      ],
-      "fixes_pushed": [
-        "Products.jsx KiwiSDR 2: crowdsupply.com/seeed-studio/kiwisdr-2 returned 404, now kiwisdr.nz/products/kiwisdr2-1 (verified 200, official vendor store)",
-        "Products.jsx Xiegu G90: xiegu.eu/product/g90/ resolved to a DC cable accessory rather than the transceiver, now xiegu.eu/product/xiegu-g90-hf-20w-sdr-transceiver/ (verified 200, same host, correct product)",
-        "Products.jsx EFHW: myantennas.com/wp/product-category/efhw/ returned 404, now myantennas.com/wp/product-category/antennas/efhw-multi-band/ (verified 200, 12 products)",
-        "Products.jsx Mobilinkd TNC4: mobilinkd.com/tnc4/ returned 404, now store.mobilinkd.com/products/mobilinkd-tnc4 (verified 200, official store)"
-      ]
+ "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
+ "schema_version": 1,
+ "last_run": "2026-09-06T04:20:00Z",
+ "consecutive_cert_failures": 0,
+ "runs": [
+  {
+   "date": "2026-09-06",
+   "run_outcome": "COMPLETE - all three mandated surfaces plus the new crane-cab page verified live in a real browser. Nothing broken, nothing repaired, no new escalation raised to a notification.",
+   "cert": {
+    "status": "ok",
+    "evidence": "https://dxedge.net/api/health and /api/debug fetched cleanly over TLS at 04:10Z with cache-busting params. No CERTIFICATE_VERIFY_FAILED, no expiry error. Chromium loaded all four surfaces through the relay with no TLS error on the upstream leg.",
+    "notes": "Exact expiry still unreadable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
+    "consecutive_failures": 0
+   },
+   "main_dashboard": {
+    "api_health": "ok",
+    "sfi": 116,
+    "k_index": 2,
+    "a_index": 7,
+    "ssn": 76,
+    "spots": 500,
+    "feed_proxy": true,
+    "cold_cache_zeros": "Reproduced and re-confirmed closed. /api/health read sat_tles 0 / pota_spots 0 at 04:10Z; after /api/pota and /api/satellites/positions were fetched, /api/health at 04:13Z read sat_tles 9 / pota_spots 23. Passive cache reads, exactly as characterised on 2026-09-05. Do not investigate again.",
+    "health_timestamp_freshness": "fresh (04:10:23Z at 04:10Z, 04:13:03Z at 04:13Z). No stale-timestamp recurrence.",
+    "browser_check": "DONE. Headless Chromium via local relay. 7 requests (4 API, 2 hashed assets, 1 document), all HTTP 200. Zero page errors. Renders live data: solar indices, 48h SFI history through Sep 6, 24h propagation matrix, band table, world clocks. Only console noise was 4 ws://127.0.0.1/ws/spots handshake failures, the relay not proxying WebSockets, NOT a site defect. Same artifact as 09-03 and 09-05.",
+    "endpoints_verified": [
+     "/api/health",
+     "/api/debug",
+     "/api/pota",
+     "/api/satellites/positions",
+     "/api/sota",
+     "/api/dashboard",
+     "/api/recommendation",
+     "/api/solar/history",
+     "/api/voacap/summary"
+    ],
+    "pota_note": "/api/pota returned 22 spots with bands resolving correctly (20m, 40m). Healthy.",
+    "satellites_note": "/api/satellites/positions returned 9 positions (AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3). Healthy.",
+    "sota_note": "/api/sota returned 5 spots and 0 DEPRECATED rows, so the 09-03 tombstone filter still holds and the deprecated api2 endpoint is still answering despite its removal date having passed. All 5 render band '?', which is the known sota-band-unit-mismatch item awaiting James. One spot (VK2PJC) carries frequency 0.0, the same empty-frequency shape noted on 09-05, not a new tombstone."
+   },
+   "cyber_page": {
+    "browser_check": "DONE. Headless Chromium via local relay, tab controls traversed. 14 requests (13 /api/feed plus the document), ALL HTTP 200. Zero page errors, zero inline 'failed:' panels, nothing pending past 15s.",
+    "renders_live_data": "Confirmed by reading rendered text: CISA KEV 1695 total with entries added 2026-09-04, NVD CVE cards, EPSS percentages, CSPM briefing card.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Zero allorigins requests in the browser; the only two tree-wide grep hits remain explanatory comments in backend/main.py:688 and backend/feedproxy.py:3.",
+    "cross_origin_requests": "Exactly one, not a feed: the Google Fonts stylesheet, ERR_CONNECTION_RESET. Environment artifact per known issue chromium-google-fonts-cert-artifact (reset rather than cert error this run; same cause, Chromium runs --no-proxy-server).",
+    "allowlist_gaps": "none. No feedproxy allowlist change made or needed. backend/feedproxy.py unchanged since d055aed 2026-09-01.",
+    "nvd_severity_mismatch": "Still visible and unchanged: the 'CRITICAL CVES - LAST 30 DAYS' panel rendered HIGH 7.7, HIGH 8.4, HIGH 8.8 alongside CRITICAL 9.9. Already an open awaiting_james item raised 2026-09-05. NOT re-reported.",
+    "rate_limiting": "None observed. Page loads spaced 25-30s apart per known issue api-rate-limit-on-feed."
+   },
+   "aethersdr_page": {
+    "browser_check": "DONE. 5 requests (4 /api/feed plus the document), ALL HTTP 200. Zero page errors, zero inline failures, nothing pending.",
+    "renders_live_data": "Confirmed: GitHub releases through AetherSDR v26.9.1 (7d ago), plus Hackaday, RTL-SDR and FlexRadio items 2 to 6 days old.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none",
+    "cross_origin_requests": "Same single Google Fonts artifact as the cyber page."
+   },
+   "crane_cab_page_review": "frontend/public/crane-cab/ is new since the last run (James's commits 09e58a0, 25321f1, 7a1815d, 47fb886, c289cb1, 8957ec7, c5f68d5, d16ca2f, plus a duplicate dev copy at crane-cab-dev/ and a new top-nav item via CraneCab.jsx and App.jsx). Reviewed because a new page is exactly where a feed can be added the wrong way. Result: NO feed, no fetch(), no XMLHttpRequest, no WebSocket, no /api/ call of any kind, so no feedproxy allowlist implication and nothing to add to linkcheck.py. Browser load: 17 local assets plus the document, all HTTP 200, zero page errors, HUD and title card render. The page has exactly one third-party dependency, an importmap pointing 'three' at https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js. That URL was verified reachable and 200 (1.27 MB) from this container, so the dependency is live. It could not be exercised inside Chromium because the browser runs --no-proxy-server and cannot reach any external host, the same artifact as Google Fonts, so the 3D scene itself is unverified. Version is pinned, which is good; raised as a low-priority advisory in awaiting_james because an importmap module cannot carry subresource integrity and this is the site's first third-party executable script.",
+   "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 run swept all 156 curated URLs, which covers every one of them until 2026-09-17 under the 14-day rotation rule. Confirmed no new outbound links: linkcheck.py's four source files are all unchanged since that sweep (Credits.jsx last touched 2026-05-31, Products.jsx 2026-09-02, both standalone pages 2026-09-03), and the only new page, crane-cab, has no curated outbound links.",
+   "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py does not define it. Pre-existing, not papered over.",
+   "new_finding": "none requiring a notification. The only new observation is the crane-cab third-party CDN dependency, logged as a low-priority advisory rather than pushed.",
+   "repairs_made": "none - nothing was broken",
+   "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied."
+  },
+  {
+   "date": "2026-09-05",
+   "run_outcome": "COMPLETE - all three surfaces verified live in a real browser. Nothing broken, nothing repaired. One new finding escalated.",
+   "cert": {
+    "status": "ok",
+    "evidence": "https://dxedge.net/api/health and /api/debug both fetched cleanly over TLS at 04:14Z. No CERTIFICATE_VERIFY_FAILED, no expiry error. Chromium also loaded all three surfaces through the relay with no TLS error from the upstream leg.",
+    "notes": "Exact expiry still not readable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
+    "consecutive_failures": 0
+   },
+   "main_dashboard": {
+    "api_health": "ok",
+    "sfi": 116,
+    "k_index": 2,
+    "spots": 500,
+    "feed_proxy": true,
+    "cold_cache_zeros": "PROVEN, not merely inferred. /api/health read sat_tles 0 / pota_spots 0 at 04:14Z. After /api/pota (23 real spots) and /api/satellites/positions (9 real positions) were fetched, the very next /api/health at 04:16Z read sat_tles 9 / pota_spots 24. The counters are passive cache reads that the health endpoint does not populate. Known issue health-metric-cold-cache is now closed as fully explained - do not investigate again.",
+    "health_timestamp_freshness": "fresh (04:14:12Z at 04:14Z). The 24h-stale timestamp seen before the 09-03 deploy has NOT recurred.",
+    "browser_check": "DONE. Headless Chromium via local relay. 4 API requests, all HTTP 200. Zero page errors. Renders live data: SFI history Sep 4 to Sep 5, 24h propagation quality matrix, band table. Only console noise was 5 ws://127.0.0.1/ws/spots handshake failures, which is the relay not proxying WebSockets, NOT a site defect. Same artifact as 09-03.",
+    "endpoints_verified": [
+     "/api/health",
+     "/api/debug",
+     "/api/pota",
+     "/api/satellites/positions",
+     "/api/sota"
+    ],
+    "sota_note": "/api/sota returned 5 spots and 0 DEPRECATED rows, so the 09-03 tombstone filter is still holding. One real spot (JA9ILH/9, summit IK-008 Wassougatake) carries frequency 0.0. It is NOT a tombstone in a new shape: it has a genuine callsign, summit code and summit name, unlike the sentinel whose call and summit fields are all literally DEPRECATED. It is an upstream spot with an empty frequency field. Cosmetic, folded into the existing sota-band-unit-mismatch item rather than raised separately."
+   },
+   "cyber_page": {
+    "browser_check": "DONE. Headless Chromium via local relay, 10 tab controls clicked through. 15 API requests, ALL HTTP 200. Zero page errors, zero inline 'failed:' panels, nothing pending past 15s.",
+    "renders_live_data": "Confirmed by reading rendered text: CISA KEV entries dated 2026-09-04, NVD critical CVE cards, EPSS percentages.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Zero allorigins requests observed in the browser, and the only two tree-wide grep hits remain explanatory comments in backend/main.py:688 and backend/feedproxy.py:3.",
+    "cross_origin_requests": "Exactly one, and it is not a feed: the Google Fonts stylesheet. It failed ERR_CERT_AUTHORITY_INVALID because Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA. Environment artifact, not a site defect.",
+    "allowlist_gaps": "none. No feedproxy allowlist change made or needed this run.",
+    "rate_limiting": "None observed. Requests were paced in page-sized batches with 20-25s gaps per known issue api-rate-limit-on-feed."
+   },
+   "aethersdr_page": {
+    "browser_check": "DONE. 5 API requests, ALL HTTP 200. Zero page errors, zero inline failures, nothing pending.",
+    "renders_live_data": "Confirmed: GitHub releases through AetherSDR v26.9.1, plus Hackaday and RTL-SDR items dated 1 to 5 days old.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none",
+    "cross_origin_requests": "Same single Google Fonts stylesheet artifact as the cyber page."
+   },
+   "invaders_page_review": "frontend/public/invaders/index.html is new since the last successful run (James's commits 819813d and 210a0c3). Reviewed because a new page is exactly where a feed can be added the wrong way. It makes NO network calls at all: the only URL literal in the file is its own rel=canonical. No fetch(), no XHR, no feed, so no allowlist implication and nothing to add to linkcheck.py. Invaders.jsx likewise has no network calls.",
+   "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 run swept all 156 curated URLs, which covers every one of them until 2026-09-17 under the 14-day rotation rule. No new outbound links have been added since: the only new page (invaders) has none, and linkcheck.py's four source files are unchanged.",
+   "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py imports estimate_fof2; backend/voacap_engine.py defines f2_layer_strength and no estimate_fof2. Pre-existing, not papered over.",
+   "new_finding": {
+    "id": "nvd-panel-severity-mismatch",
+    "detail": "The cyber page panel titled 'CRITICAL CVEs - LAST 30 DAYS' rendered a card reading 'MEDIUM 6.8' (CVE-2026-64993) alongside 'HIGH 8.7' and 'HIGH 7.7'. Directly observed in the browser, not inferred. Likely cause, NOT verified: line 585 queries NVD with cvssV3Severity=CRITICAL, which matches a CVE if ANY v3 scorer rated it CRITICAL, while line 594-595 renders only the primary cvssMetricV31 baseScore/baseSeverity. A CVE scored CRITICAL by a secondary scorer and MEDIUM by the v3.1 primary therefore passes the filter and renders MEDIUM. Confirmation attempt failed: WebFetch to services.nvd.nist.gov returned PROVENANCE_REQUIRED twice and substituting curl/python for a denied fetch is forbidden, so the metric structure of that CVE is unconfirmed.",
+    "why_not_fixed": "Changing which metric the panel displays, or tightening the filter, changes what the panel shows. That is a data-semantics change, explicitly outside the autonomous mandate, and the root cause is unverified. Reported instead of guessed."
+   },
+   "repairs_made": "none - nothing was broken",
+   "commits_pushed": "b22fc39 (state file only)",
+   "notification": "PushNotification sent naming the NVD severity-label decision. No email: nothing was fixed, so the email trigger did not apply.",
+   "deploy_result": {
+    "status": "success, verified",
+    "commit": "b22fc39b7c12c1ef91ad47634cffcdf3f86290be",
+    "verified_at": "2026-09-05T04:50Z",
+    "checks": [
+     "/api/health returns status ok with a fresh timestamp (04:41:49Z). No stale-timestamp recurrence.",
+     "/cyber/ re-checked in headless Chromium after deploy: 15 API requests all 200, 10 tabs traversed, 0 page errors, 0 inline failures, 0 allorigins.",
+     "/aethersdr/ re-checked after deploy: 5 API requests all 200, 0 page errors, 0 inline failures, 0 allorigins.",
+     "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
+    ]
+   }
+  },
+  {
+   "date": "2026-09-04",
+   "run_outcome": "BLOCKED - no live verification performed",
+   "blocker": "WebFetch was unavailable for the entire run. Every call, including a control fetch of https://example.com/, returned PROVENANCE_REQUIRED: 'The permission request for this URL was not answered in time.' That is an interactive approval gate, and this is an unattended 21:00 PT run with nobody to approve it. WebSearch still worked; git over HTTPS still worked.",
+   "why_no_workaround": "Deliberate. The 2026-09-03 note 'browser-check-now-possible' describes reaching the live site with headless Chromium via a local relay, and running linkcheck.py against arbitrary hosts with plain python. Those were used on 09-03 as a SUPPLEMENT while WebFetch was working. Tonight they would be a substitute for a fetch permission that was requested and not granted, which is exactly the circumvention this environment forbids. No container-side HTTP was issued to dxedge.net or any outbound host this run. Only the static, offline checks below were performed.",
+   "cert": {
+    "status": "unknown",
+    "evidence": "Not checked. /api/health could not be fetched.",
+    "counter_note": "consecutive_cert_failures deliberately left at 0. An unverified cert is not a failed cert; incrementing would corrupt the 3-strike escalation counter."
+   },
+   "main_dashboard": {
+    "api_health": "unknown - not fetched",
+    "feeds": "unknown - not fetched",
+    "static_check": "git log reviewed. The only commits since the 09-03 run are James's own: 819813d 'Add DX Invaders tab (v0.1)' and 210a0c3 'Invaders: operator callsign + Games tab group'. They touch frontend/public/invaders/index.html, frontend/src/components/Invaders.jsx, App.jsx and sw.js. No backend, feed, proxy or allowlist code was modified, so no new feed surface was introduced."
+   },
+   "cyber_page": {
+    "browser_check": "NOT DONE - no browser reachable and no permitted way to load the live page.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Static grep of the whole tree. The only two hits for 'allorigins' are explanatory comments in backend/main.py:688 and backend/feedproxy.py:3 describing why it was removed. Neither standalone page references it.",
+    "allowlist_gaps": "none. Static extraction of every feed URL literal in both pages, resolved to hostnames and diffed against ALLOWED_HOSTS in backend/feedproxy.py: all 8 cyber hosts present (cisa.gov, isc.sans.edu, krebsonsecurity, news.google, bleepingcomputer, darkreading, securityweek, feedburner) plus the dynamically built NVD and EPSS hosts. No feedproxy allowlist change made or needed.",
+    "direct_fetch_bypass": "none. Both pages route every feed through const PROXY = '/api/feed?url='. No cross-origin fetch() call in either file."
+   },
+   "aethersdr_page": {
+    "browser_check": "NOT DONE - same blocker.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none. All 4 hosts present: github.com, www.flexradio.com, www.rtl-sdr.com, hackaday.com.",
+    "direct_fetch_bypass": "none."
+   },
+   "outbound_links_checked": "NONE this run. No link may be judged dead without fetching it, and fetching was not available. The 14-day rotation window is unaffected: the full 156-URL sweep on 2026-09-03 still covers every curated URL until 2026-09-17.",
+   "credentials": "PAT verified live. git ls-remote over HTTPS with the Basic auth header succeeded and returned main at 210a0c3, so the token still authenticates. Reconfirms known issue 'pat-expiry-note-stale': the Mem note's '~August 27 2026' expiry is wrong.",
+   "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py:64 imports estimate_fof2; backend/voacap_engine.py defines f2_layer_strength and has no estimate_fof2. Pre-existing.",
+   "repairs_made": "none - nothing could be safely diagnosed without live checks",
+   "commits_pushed": "state file only"
+  },
+  {
+   "date": "2026-09-03",
+   "cert": {
+    "status": "ok",
+    "evidence": "https://dxedge.net/api/health and /api/debug both fetched cleanly over TLS at 04:20Z. No CERTIFICATE_VERIFY_FAILED, no expiry error.",
+    "notes": "Exact expiry still not readable from this container: openssl sees the egress proxy certificate. Unchanged from 2026-09-02."
+   },
+   "main_dashboard": {
+    "api_health": "ok",
+    "sfi": 116,
+    "k_index": 2,
+    "spots": 500,
+    "feed_proxy": true,
+    "sat_tles_metric": 0,
+    "pota_spots_metric": 0,
+    "diagnosis": "Confirmed cosmetic, closing the loop the 2026-09-02 run asked for. Both underlying endpoints are healthy: /api/pota returned real spots (KO4YIN US-4558 etc) and /api/satellites/positions returned 1228B of real positions. The health counters are cold-cache reads. Do not re-investigate.",
+    "browser_check": "DONE for the first time. Headless Chromium in the cloud container, page served through a local relay to the live site. 4 API calls, all HTTP 200 (/api/recommendation, /api/dashboard, /api/solar/history, /api/voacap/summary). No console errors, no page errors. The only console noise was a ws://127.0.0.1/ws/spots handshake failure, which is the relay not proxying WebSockets, NOT a site defect.",
+    "endpoints_verified": [
+     "/api/health",
+     "/api/debug",
+     "/api/pota",
+     "/api/satellites/positions",
+     "/api/sota",
+     "/api/spots",
+     "/api/solar",
+     "/api/activations"
+    ],
+    "new_finding_sota_tombstone": "api2.sota.org.uk now prepends a synthetic DEPRECATED record to every /api/spots/50/-1 response. It parsed as a freq-0.0 spot and was rendering as the TOP ROW of the activations panel (confirmed in /api/activations: sota[0] was the tombstone). Filtered out in backend/pota.py this run. The endpoint migration itself is escalated, see awaiting_james sota-api-deprecation."
+   },
+   "cyber_page": {
+    "browser_check": "DONE for the first time - headless Chromium via local relay to the live site, all tab groups clicked through. 13 /api/feed requests, ALL HTTP 200. Zero console errors, zero page errors, zero inline 'failed:' panels, nothing pending or over 15s. Page renders live data (CISA KEV 1694 total).",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none. No feedproxy allowlist change made or needed this run.",
+    "feeds_verified_in_browser": [
+     "cisa KEV json",
+     "nvd 2.0",
+     "hamqsl solarxml",
+     "cisa advisories all.xml",
+     "krebs",
+     "securityweek",
+     "epss first.org x2",
+     "feedburner TheHackersNews",
+     "bleepingcomputer",
+     "darkreading",
+     "isc.sans",
+     "news.google PQC"
+    ],
+    "note_nvd": "The 2026-09-01 'nvd-double-encoded-url-unverifiable' limitation is now RESOLVED as a checking problem: in a real browser the NVD request is built by the page itself and returned 200. WebFetch was the thing that could not express the URL, not the site."
+   },
+   "aethersdr_page": {
+    "browser_check": "DONE - headless Chromium via local relay. 4 /api/feed requests, ALL HTTP 200. Zero console errors, zero page errors, zero inline failures.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none",
+    "feeds_verified_in_browser": [
+     "github releases.atom",
+     "flexradio",
+     "rtl-sdr",
+     "hackaday radio-hacks"
+    ]
+   },
+   "outbound_links_checked": "ALL 156 curated URLs swept this run, not a 25-40 rotation. Outbound egress worked from this container for arbitrary hosts, which earlier runs had assumed impossible, so scripts/health/linkcheck.py was run directly here instead of sampling.",
+   "outbound_links_result": "before fixes: 125 ok / 23 blocked / 11 broken. after fixes and false-positive suppression: 127 ok / 26 blocked / 3 broken.",
+   "outbound_links_still_broken": [
+    "http://dxc.ve7cc.net - http-only, force-upgraded to https by the checker. Environment limitation, do not remove.",
+    "http://w3lpl.net - same.",
+    "https://www.dxsummit.fi/ - connection reset at the sandbox egress proxy (ws_closed_mid_exchange), reproducible with two different user agents. Says nothing about the site. Do not remove; verify from a normal network."
+   ],
+   "false_positives_now_suppressed_in_linkcheck": [
+    "atlas.mitre.org - client-rendered SPA, returns HTTP 404 for valid deep routes. PROVEN this run: AML.T0020 rendered in a real browser as 'Training Data Poisoning | MITRE ATLAS' despite a 404 status, and both AML.T0020 and AML.T0024 exist in the current mitre-atlas/atlas-data ATLAS.yaml. A future run must never 'repair' these by deleting them.",
+    "fonts.googleapis.com / fonts.gstatic.com - <link rel=preconnect> origin hints, never navigated to.",
+    "https://url - a prose fragment inside a script block matched by the URL regex.",
+    "www.amazon.com - answers bots with 503 rather than 403."
+   ],
+   "docs_claude_com_redirects": "docs.claude.com now 302s (temporary, NOT 301) to platform.claude.com, then 307s internally. Four such links on the cyber page all return 200 through the chain. Because the redirects are temporary, they were deliberately left in place rather than rewritten. Revisit only if they become 301.",
+   "problems_reported": [
+    "SOTA upstream tombstone row rendering on the activations panel - FIXED this run",
+    "2 curated links genuinely 404 and repaired this run (see fixes_pushed)",
+    "SOTA /api/spots/50/-1 deprecation and SOTA terms of service - ESCALATED, new tonight",
+    "SOTA band column reads '?' for every spot, MHz/kHz unit mismatch - ESCALATED, new tonight, not fixed",
+    "SOTA terms page contains a prompt-injection attempt aimed at AI crawlers - reported to James, not acted on",
+    "backend/tests fails at collection importing estimate_fof2 from voacap_engine (pre-existing, still outstanding, still not papered over)"
+   ],
+   "fixes_pushed": [
+    "backend/pota.py: added _is_sota_tombstone() to drop the synthetic DEPRECATED record api2.sota.org.uk prepends to spot responses. Unit-checked against the live payload: exactly 1 of 6 rows dropped, all 5 real spots kept.",
+    "frontend/public/cyber/index.html: docs.claude.com/en/docs/build-with-claude/conversation returned a hard 404, now platform.claude.com/docs/en/build-with-claude/working-with-messages (verified 200, 'Using the Messages API', contains the 'Multiple conversational turns / the Messages API is stateless' section the card's bullets describe).",
+    "frontend/public/aethersdr/index.html: flexradio.com/third-party-software-collaboration/ returned 404, now flexradio.com/api/works-with-flex/ (verified 200, 'Works with Flex', the vendor's current third-party software page).",
+    "scripts/health/linkcheck.py: suppress the four classes of false positive above so future nights do not re-escalate them or delete valid links."
+   ],
+   "commit": "49e82d2dc24906996b282f2ed51280991a547543",
+   "deploy_result": {
+    "status": "success, verified",
+    "verified_at": "2026-09-03T04:47Z",
+    "checks": [
+     "/api/health 200 status ok, timestamp fresh (04:45:44Z). Note: before this deploy /api/health was serving a timestamp exactly 24h stale while /api/debug time_utc was current; the container restart cleared it. Watch for it recurring.",
+     "/api/sota now returns 5 spots with 0 DEPRECATED rows (was 6 with the tombstone first).",
+     "/cyber/ re-checked in headless Chromium after deploy: 13 /api/feed requests all 200, 0 console errors, 0 page errors, 0 inline failures, 10 tabs traversed.",
+     "/aethersdr/ re-checked in headless Chromium after deploy: 4 /api/feed requests all 200, 0 console errors, 0 page errors, 0 inline failures.",
+     "Both link repairs confirmed live in the served HTML; neither 404 URL remains.",
+     "GET / returns 200."
+    ]
+   },
+   "outstanding": [
+    "backend/tests still fails at collection: test_dxedge.py imports estimate_fof2, voacap_engine defines f2_layer_strength instead. Pre-existing, untouched, not papered over.",
+    "6 items in awaiting_james (3 carried from 2026-09-02, 3 raised tonight)."
+   ]
+  },
+  {
+   "date": "2026-09-02",
+   "cert": {
+    "status": "ok",
+    "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:19Z, no CERTIFICATE_VERIFY_FAILED and no expiry error",
+    "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place. Exact expiry date not readable from this container: openssl sees the egress proxy certificate, not the real one."
+   },
+   "main_dashboard": {
+    "api_health": "ok",
+    "sfi": 116,
+    "k_index": 2,
+    "spots": 500,
+    "feed_proxy": true,
+    "sat_tles_metric": 0,
+    "pota_spots_metric": 0,
+    "diagnosis": "Unchanged and still NOT an outage. Both fields are passive cache reads; nothing repopulates them on a timer. See known_issues id health-metric-cold-cache. Do not re-investigate.",
+    "endpoints_verified": [
+     "/api/health",
+     "/api/debug"
+    ]
+   },
+   "cyber_page": {
+    "browser_check": "not possible - no browser reachable. This scheduled run has no device bridge and no claude-in-chrome tools, so neither browser exists in the session. Fell back to exercising every feed through /api/feed as the runbook directs.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none - every feed host on the page is already in ALLOWED_HOSTS. No allowlist change made or needed.",
+    "feeds_via_api_feed": {
+     "cisa_advisories_all_xml": "ok, 6 entries, first 'Rockwell Automation RSLinx Classic'",
+     "cisa_kev_json": "ok, catalogVersion 2026.09.01, count 1687. WebFetch reports the body truncated, but that is WebFetch's own content cap on a 1.7MB document, not the proxy: feedproxy reads to EOF before caching and MAX_BYTES is 4MB, and the cache key is present in /api/debug which only happens after a complete 200. Not a defect.",
+     "nvd_2.0": "could not be re-verified from this environment - the date-bearing URL is double-encoded and /api/feed answered 422, meaning the url param never arrived intact. Same environment limitation recorded 2026-09-01. Server-side evidence is good: the exact NVD query string appears as a live cache key in /api/debug, which is only written on a 200.",
+     "epss_first_org": "ok, status 200, CVE-2023-49105 epss 0.43205",
+     "hamqsl_solarxml": "ok, solarflux 107, updated 01 Sep 2026 0413 GMT",
+     "krebs": "ok, first entry 'Two Alleged TeamPCP Hackers Arrested in Australia'",
+     "hackernews_feedburner": "ok, 50+ entries",
+     "bleepingcomputer": "ok, ~15 entries",
+     "darkreading": "ok, ~50 entries",
+     "isc_sans": "ok, ~10 entries, first 'ISC Stormcast For Tuesday, September 1st, 2026'",
+     "securityweek": "ok, ~10 entries",
+     "google_news_pqc": "ok, ~40 entries"
     }
-  ],
-  "known_issues_do_not_re_report": [
-    {
-      "id": "health-metric-cold-cache",
-      "since": "2026-09-01",
-      "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold, which is most of the time. Cosmetic, not an outage. Only escalate if /api/pota or /api/satellites/positions themselves fail."
-    },
-    {
-      "id": "backend-tests-collection-error",
-      "since": "before 2026-08-31",
-      "detail": "backend/tests/test_dxedge.py imports estimate_fof2 from voacap_engine, which does not define it. Confirmed still present 2026-09-02. Pre-existing break, not caused by the nightly run. Do not paper over by deleting the import."
-    },
-    {
-      "id": "api-rate-limit-on-feed",
-      "since": "2026-08-31",
-      "detail": "nginx.conf limits /api/ to 30r/m burst 10 per IP and the cyber page fires several /api/feed calls per load. Nightly checks must pace their requests; this run used 4-request batches with 20-25s gaps and saw no throttling. Needs its own limit_req zone, which is a nginx.conf change and therefore an escalation, not an autonomous fix."
-    },
-    {
-      "id": "nvd-double-encoded-url-unverifiable",
-      "since": "2026-09-01",
-      "detail": "The cyber page's NVD query carries percent-encoded colons inside the url param. WebFetch re-encodes it and /api/feed answers 422 before the request reaches the upstream. This is a limitation of the checking environment, not a site defect. Verify NVD instead by looking for its cache key in /api/debug."
-    },
-    {
-      "id": "cisa-kev-appears-truncated-to-webfetch",
-      "since": "2026-09-02",
-      "detail": "WebFetch reports the KEV JSON body as cut off mid-entry. That is WebFetch's own size cap on a 1.7MB document. feedproxy reads to EOF before caching and caps at 4MB. Do not re-open the truncation bug fixed in 3eb2ad8."
-    },
-    {
-      "id": "cisa-gov-403-to-direct-fetch",
-      "since": "2026-09-02",
-      "detail": "www.cisa.gov returns 403 to a direct WebFetch from this container but serves the same URLs fine through /api/feed, which sends a browser User-Agent. Check CISA feeds through the proxy, never directly."
-    },
-    {
-      "id": "deploy-verification-gap",
-      "since": "2026-09-02",
-      "detail": "A frontend-only change cannot be positively verified from this container. WebFetch strips script and link tags, so the hashed /assets/ bundle path is unreadable, curl is not permitted, and api.github.com is blocked so the workflow run status cannot be queried. The achievable checks are: /api/health returns ok, both standalone pages render, and /sw.js is served fresh. Treat those as the bar; do not claim bundle-level confirmation."
-    },
-    {
-      "id": "pat-expiry-note-stale",
-      "since": "2026-09-02",
-      "detail": "The Mem note 'DXEdge - GitHub & Credentials' says the PAT expires ~August 27 2026. It authenticated and pushed successfully on 2026-09-02, so the note is wrong or the token was reissued. Harmless, but the note should be corrected so a future run does not skip repair work believing the token is dead."
-    },
-    {
-      "id": "linkcheck-env-artifacts",
-      "since": "2026-09-03",
-      "detail": "http://dxc.ve7cc.net, http://w3lpl.net and https://www.dxsummit.fi/ fail in this sandbox for environment reasons (http-only force-upgrade, and an egress-proxy reset). Not link rot. Do not remove them on the strength of a failed fetch from the nightly container."
-    },
-    {
-      "id": "browser-check-now-possible",
-      "since": "2026-09-03",
-      "detail": "Contrary to the 2026-09-01 and 2026-09-02 notes, a real browser IS available to this run: headless Chromium at /opt/pw-browsers with python playwright. Chromium cannot reach the internet directly (the egress proxy resets its connections), so the working pattern is: run a small local HTTP relay that serves the live page and forwards its same-origin /api/ calls upstream, then point Chromium at 127.0.0.1 with --no-proxy-server. Arbitrary outbound hosts are also reachable from plain curl/python in this container, so linkcheck.py can be run here directly rather than sampling 25-40 links a night."
-    },
-    {
-      "id": "webfetch-provenance-gate",
-      "since": "2026-09-04",
-      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run."
-    },
-    {
-      "id": "provenance-gate-is-intermittent-and-per-host",
-      "since": "2026-09-05",
-      "detail": "Refines the 2026-09-04 webfetch-provenance-gate note. PROVENANCE_REQUIRED is NOT necessarily an all-night, all-host block. On 2026-09-05 the very first call (dxedge.net/api/health) returned it, and an immediate retry of the same URL succeeded; every later dxedge.net fetch worked. The same night it was permanently sticky for services.nvd.nist.gov across two attempts. Correct behaviour: retry a denied URL ONCE, and if it is still denied treat that host as unavailable, record the gap, and do NOT substitute curl, python or headless Chromium for it. A 2026-09-04-style total block should therefore be confirmed with a retry before the whole run is abandoned."
-    },
-    {
-      "id": "sota-upstream-robots-blocks-webfetch",
-      "since": "2026-09-05",
-      "detail": "WebFetch to https://api2.sota.org.uk/api/spots/50/-1 returns ROBOTS_DISALLOWED, so the SOTA upstream payload cannot be inspected directly from this container. The site's own backend is a legitimate API client and is unaffected. Judge SOTA health through https://dxedge.net/api/sota instead, which shows the parsed result including whether any tombstone row survived the filter."
-    },
-    {
-      "id": "chromium-google-fonts-cert-artifact",
-      "since": "2026-09-05",
-      "detail": "In the headless-Chromium check both standalone pages log exactly one console error: the Google Fonts stylesheet failing ERR_CERT_AUTHORITY_INVALID. Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA, so any genuinely cross-origin request fails this way. It is an artifact of the checking rig, not a page defect, and it is a useful control: it proves the request capture is working. Do not report it as a site error."
+   },
+   "aethersdr_page": {
+    "browser_check": "not possible - same reason as cyber_page",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none",
+    "feeds_via_api_feed": {
+     "github_releases_atom": "ok, 3 entries, latest AetherSDR v26.9.1",
+     "flexradio": "ok, ~22 entries",
+     "rtl_sdr": "ok, ~9 entries",
+     "hackaday_radio_hacks": "ok, ~9 entries"
     }
-  ],
-  "awaiting_james": [
-    {
-      "id": "sdr-hu-tombstone",
-      "raised": "2026-09-02",
-      "detail": "Products.jsx vendor list entry 'KiwiSDR Network' points at https://sdr.hu, which returns 200 but only serves a shutdown notice: the project ended 2023-05-31. Not a 404 and not a dead host, so outside the autonomous repair mandate. Suggested replacement is http://kiwisdr.com/public/, the public KiwiSDR station list, but it could not be verified from this container because kiwisdr.com is http-only and 302s https back to http. Needs James to confirm the replacement URL, or say to drop the entry."
-    },
-    {
-      "id": "product-price-drift",
-      "raised": "2026-09-02",
-      "detail": "Three price fields no longer match the vendor page now linked. KiwiSDR 2 shows $299, vendor lists NZD 675 (roughly USD 400). Mobilinkd TNC4 shows $90, vendor lists $149.95. Xiegu G90 shows $400-450, xiegu.eu lists EUR 499 (roughly USD 588). Left untouched: prices may be deliberate street-price estimates rather than MSRP, and rewriting them is an editorial call, not link repair."
-    },
-    {
-      "id": "cardputer-eol",
-      "raised": "2026-09-02",
-      "detail": "The M5Stack Cardputer link still resolves 200 but the vendor marks it End of Life and points to 'Cardputer-Adv'. Swapping it is a different product with different specs and price, which is a semantics change, so left alone pending James."
-    },
-    {
-      "id": "sota-api-deprecation",
-      "raised": "2026-09-03",
-      "priority": "highest open item",
-      "detail": "backend/pota.py calls https://api2.sota.org.uk/api/spots/50/-1. That endpoint is deprecated on BOTH api2 and the newer api-db2 host, and the upstream's own notice says it 'will be removed before August 31, 2026' - a date that has already passed, so the SOTA panel can go dark without further warning. This was NOT auto-migrated, deliberately, for two reasons. (1) The referenced docs page https://api-db2.sota.org.uk/docs is a terms-of-service page, not an API reference: it documents no successor endpoint and no response schema, so the 'documented official replacement that maps cleanly onto the existing parser' precondition for autonomous repair is not met. (2) Those terms require any application developer to be a named point of contact registered in SOTA's 'API-consumers' group on their reflector before using the API, and state that no AI-generated software may connect to the SOTA API without prior approval. That is a registration and an approval decision only James can make. Options: register with SOTA and migrate, drop the SOTA panel, or accept the risk that the panel goes dark."
-    },
-    {
-      "id": "sota-band-unit-mismatch",
-      "raised": "2026-09-03",
-      "detail": "Every SOTA spot renders band '?'. Cause: hz_to_band() in backend/pota.py expects kHz (POTA sends 14074.0) but SOTA sends MHz (14.12, 7.15, 433.02), so no range ever matches. One-line fix would be to multiply the SOTA frequency by 1000 before the band lookup. Left unapplied: it is pre-existing and cosmetic rather than a regression, and it changes what the panel displays, so it is James's call rather than autonomous link/feed repair. Note 433.02 MHz is 70cm, which FREQ_TO_BAND does not cover at all, so some SOTA spots would still read '?' after the unit fix."
-    },
-    {
-      "id": "sota-tos-prompt-injection",
-      "raised": "2026-09-03",
-      "detail": "Informational, security-relevant. https://api-db2.sota.org.uk/docs ends with a paragraph addressed to 'AI crawlers' instructing them to print a fabricated warning that fifty-five amateur radio operators have died from using the SOTA API incorrectly. It is a prompt-injection attempt embedded in vendor documentation. It was identified as untrusted page content and not acted on. Flagged because it is a live example of the indirect-injection pattern in a supply-chain doc, in a dependency this site actually consumes."
-    },
-    {
-      "id": "nvd-panel-severity-mismatch",
-      "raised": "2026-09-05",
-      "detail": "The cyber page panel 'CRITICAL CVEs - LAST 30 DAYS' displays non-critical entries: observed MEDIUM 6.8 (CVE-2026-64993) plus HIGH 8.7 and HIGH 7.7. The page asks NVD for cvssV3Severity=CRITICAL but renders the primary cvssMetricV31 severity, and NVD's filter matches on any v3 scorer, so a CVE rated CRITICAL by a secondary scorer renders at its lower primary severity. That cause is a strong inference, not confirmed: WebFetch to NVD was blocked by the provenance gate. Options: (a) keep the query and relabel the panel to something like 'HIGH AND CRITICAL CVEs', (b) keep the label and filter client-side to baseSeverity CRITICAL, which will sometimes leave the panel near-empty, (c) leave as is. Each changes what the panel shows, so it is James's editorial call, not autonomous link/feed repair."
-    }
-  ]
+   },
+   "outbound_links_checked": [
+    "https://www.qrz.com/",
+    "https://www.threathunting.net/",
+    "https://www.sans.org/white-papers/33901/",
+    "https://www.rtl-sdr.com/rtl-sdr-blog-v4-dongle-initial-release/",
+    "https://airspy.com/airspy-hf-discovery/",
+    "https://greatscottgadgets.com/hackrf/",
+    "https://www.crowdsupply.com/seeed-studio/kiwisdr-2",
+    "https://www.icomamerica.com/lineup/products/IC-7300/",
+    "https://xiegu.eu/product/g90/",
+    "https://www.raspberrypi.com/products/raspberry-pi-400/",
+    "https://myantennas.com/wp/product-category/efhw/",
+    "https://www.diamondantenna.net/x50a.html",
+    "https://www.tigertronics.com/slusbmain.htm",
+    "https://www.mobilinkd.com/tnc4/",
+    "https://shop.m5stack.com/products/m5stack-cardputer-kit-w-m5stamps3",
+    "https://www.hfsignals.com/index.php/sbitx/",
+    "https://elecraft.com/products/kx3-all-mode-160-6-m-transceiver",
+    "https://www.lilygo.cc/products/t3s3-v1-0",
+    "https://www.elektor.com/products/raspberry-pi-5-for-radio-amateurs",
+    "https://sdr.hu",
+    "https://wspr.rocks",
+    "https://openhamclock.com",
+    "https://www.hamtab.net",
+    "https://github.com/VA3HDL/hamdashboard",
+    "https://nanovna.com",
+    "https://hamspots.net",
+    "https://js8call.com"
+   ],
+   "outbound_links_note": "27 curated links checked this run plus all 16 live feed endpoints. Link checking WORKED tonight, unlike 2026-09-01: WebFetch to third party hosts went through without an approval prompt. Whatever blocked it last night was transient, so do not assume Step 4 is permanently unavailable. 126 of 153 curated URLs remain unchecked; rotate through them on coming nights.",
+   "outbound_links_uncheckable": [
+    "http://dxc.ve7cc.net",
+    "http://w6yx.stanford.edu",
+    "http://w3lpl.net",
+    "http://websdr.org",
+    "http://kiwisdr.com/public/"
+   ],
+   "outbound_links_uncheckable_reason": "WebFetch force-upgrades http to https. These hosts are http-only, so the check fails for a reason that says nothing about whether the link works in a browser. kiwisdr.com additionally 302s https back to http, which is an unresolvable loop for this fetcher. Do not remove any of these on the strength of a failed fetch from this container.",
+   "problems_reported": [
+    "4 curated product links broken and repaired this run (see fixes_pushed)",
+    "sdr.hu is a tombstone page, escalated to James 2026-09-02, awaiting his call",
+    "price drift on 3 product entries, escalated to James 2026-09-02",
+    "M5Stack Cardputer marked EOL upstream, escalated to James 2026-09-02",
+    "backend/tests fails at collection importing estimate_fof2 from voacap_engine (pre-existing, still outstanding)"
+   ],
+   "fixes_pushed": [
+    "Products.jsx KiwiSDR 2: crowdsupply.com/seeed-studio/kiwisdr-2 returned 404, now kiwisdr.nz/products/kiwisdr2-1 (verified 200, official vendor store)",
+    "Products.jsx Xiegu G90: xiegu.eu/product/g90/ resolved to a DC cable accessory rather than the transceiver, now xiegu.eu/product/xiegu-g90-hf-20w-sdr-transceiver/ (verified 200, same host, correct product)",
+    "Products.jsx EFHW: myantennas.com/wp/product-category/efhw/ returned 404, now myantennas.com/wp/product-category/antennas/efhw-multi-band/ (verified 200, 12 products)",
+    "Products.jsx Mobilinkd TNC4: mobilinkd.com/tnc4/ returned 404, now store.mobilinkd.com/products/mobilinkd-tnc4 (verified 200, official store)"
+   ]
+  }
+ ],
+ "known_issues_do_not_re_report": [
+  {
+   "id": "health-metric-cold-cache",
+   "since": "2026-09-01",
+   "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold, which is most of the time. Cosmetic, not an outage. Only escalate if /api/pota or /api/satellites/positions themselves fail."
+  },
+  {
+   "id": "backend-tests-collection-error",
+   "since": "before 2026-08-31",
+   "detail": "backend/tests/test_dxedge.py imports estimate_fof2 from voacap_engine, which does not define it. Confirmed still present 2026-09-02. Pre-existing break, not caused by the nightly run. Do not paper over by deleting the import."
+  },
+  {
+   "id": "api-rate-limit-on-feed",
+   "since": "2026-08-31",
+   "detail": "nginx.conf limits /api/ to 30r/m burst 10 per IP and the cyber page fires several /api/feed calls per load. Nightly checks must pace their requests; this run used 4-request batches with 20-25s gaps and saw no throttling. Needs its own limit_req zone, which is a nginx.conf change and therefore an escalation, not an autonomous fix."
+  },
+  {
+   "id": "nvd-double-encoded-url-unverifiable",
+   "since": "2026-09-01",
+   "detail": "The cyber page's NVD query carries percent-encoded colons inside the url param. WebFetch re-encodes it and /api/feed answers 422 before the request reaches the upstream. This is a limitation of the checking environment, not a site defect. Verify NVD instead by looking for its cache key in /api/debug."
+  },
+  {
+   "id": "cisa-kev-appears-truncated-to-webfetch",
+   "since": "2026-09-02",
+   "detail": "WebFetch reports the KEV JSON body as cut off mid-entry. That is WebFetch's own size cap on a 1.7MB document. feedproxy reads to EOF before caching and caps at 4MB. Do not re-open the truncation bug fixed in 3eb2ad8."
+  },
+  {
+   "id": "cisa-gov-403-to-direct-fetch",
+   "since": "2026-09-02",
+   "detail": "www.cisa.gov returns 403 to a direct WebFetch from this container but serves the same URLs fine through /api/feed, which sends a browser User-Agent. Check CISA feeds through the proxy, never directly."
+  },
+  {
+   "id": "deploy-verification-gap",
+   "since": "2026-09-02",
+   "detail": "A frontend-only change cannot be positively verified from this container. WebFetch strips script and link tags, so the hashed /assets/ bundle path is unreadable, curl is not permitted, and api.github.com is blocked so the workflow run status cannot be queried. The achievable checks are: /api/health returns ok, both standalone pages render, and /sw.js is served fresh. Treat those as the bar; do not claim bundle-level confirmation."
+  },
+  {
+   "id": "pat-expiry-note-stale",
+   "since": "2026-09-02",
+   "detail": "The Mem note 'DXEdge - GitHub & Credentials' says the PAT expires ~August 27 2026. It authenticated and pushed successfully on 2026-09-02, so the note is wrong or the token was reissued. Harmless, but the note should be corrected so a future run does not skip repair work believing the token is dead."
+  },
+  {
+   "id": "linkcheck-env-artifacts",
+   "since": "2026-09-03",
+   "detail": "http://dxc.ve7cc.net, http://w3lpl.net and https://www.dxsummit.fi/ fail in this sandbox for environment reasons (http-only force-upgrade, and an egress-proxy reset). Not link rot. Do not remove them on the strength of a failed fetch from the nightly container."
+  },
+  {
+   "id": "browser-check-now-possible",
+   "since": "2026-09-03",
+   "detail": "Contrary to the 2026-09-01 and 2026-09-02 notes, a real browser IS available to this run: headless Chromium at /opt/pw-browsers with python playwright. Chromium cannot reach the internet directly (the egress proxy resets its connections), so the working pattern is: run a small local HTTP relay that serves the live page and forwards its same-origin /api/ calls upstream, then point Chromium at 127.0.0.1 with --no-proxy-server. Arbitrary outbound hosts are also reachable from plain curl/python in this container, so linkcheck.py can be run here directly rather than sampling 25-40 links a night."
+  },
+  {
+   "id": "webfetch-provenance-gate",
+   "since": "2026-09-04",
+   "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run."
+  },
+  {
+   "id": "provenance-gate-is-intermittent-and-per-host",
+   "since": "2026-09-05",
+   "detail": "Refines the 2026-09-04 webfetch-provenance-gate note. PROVENANCE_REQUIRED is NOT necessarily an all-night, all-host block. On 2026-09-05 the very first call (dxedge.net/api/health) returned it, and an immediate retry of the same URL succeeded; every later dxedge.net fetch worked. The same night it was permanently sticky for services.nvd.nist.gov across two attempts. Correct behaviour: retry a denied URL ONCE, and if it is still denied treat that host as unavailable, record the gap, and do NOT substitute curl, python or headless Chromium for it. A 2026-09-04-style total block should therefore be confirmed with a retry before the whole run is abandoned."
+  },
+  {
+   "id": "sota-upstream-robots-blocks-webfetch",
+   "since": "2026-09-05",
+   "detail": "WebFetch to https://api2.sota.org.uk/api/spots/50/-1 returns ROBOTS_DISALLOWED, so the SOTA upstream payload cannot be inspected directly from this container. The site's own backend is a legitimate API client and is unaffected. Judge SOTA health through https://dxedge.net/api/sota instead, which shows the parsed result including whether any tombstone row survived the filter."
+  },
+  {
+   "id": "chromium-google-fonts-cert-artifact",
+   "since": "2026-09-05",
+   "detail": "In the headless-Chromium check both standalone pages log exactly one console error: the Google Fonts stylesheet failing ERR_CERT_AUTHORITY_INVALID. Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA, so any genuinely cross-origin request fails this way. It is an artifact of the checking rig, not a page defect, and it is a useful control: it proves the request capture is working. Do not report it as a site error."
+  }
+ ],
+ "awaiting_james": [
+  {
+   "id": "sdr-hu-tombstone",
+   "raised": "2026-09-02",
+   "detail": "Products.jsx vendor list entry 'KiwiSDR Network' points at https://sdr.hu, which returns 200 but only serves a shutdown notice: the project ended 2023-05-31. Not a 404 and not a dead host, so outside the autonomous repair mandate. Suggested replacement is http://kiwisdr.com/public/, the public KiwiSDR station list, but it could not be verified from this container because kiwisdr.com is http-only and 302s https back to http. Needs James to confirm the replacement URL, or say to drop the entry."
+  },
+  {
+   "id": "product-price-drift",
+   "raised": "2026-09-02",
+   "detail": "Three price fields no longer match the vendor page now linked. KiwiSDR 2 shows $299, vendor lists NZD 675 (roughly USD 400). Mobilinkd TNC4 shows $90, vendor lists $149.95. Xiegu G90 shows $400-450, xiegu.eu lists EUR 499 (roughly USD 588). Left untouched: prices may be deliberate street-price estimates rather than MSRP, and rewriting them is an editorial call, not link repair."
+  },
+  {
+   "id": "cardputer-eol",
+   "raised": "2026-09-02",
+   "detail": "The M5Stack Cardputer link still resolves 200 but the vendor marks it End of Life and points to 'Cardputer-Adv'. Swapping it is a different product with different specs and price, which is a semantics change, so left alone pending James."
+  },
+  {
+   "id": "sota-api-deprecation",
+   "raised": "2026-09-03",
+   "priority": "highest open item",
+   "detail": "backend/pota.py calls https://api2.sota.org.uk/api/spots/50/-1. That endpoint is deprecated on BOTH api2 and the newer api-db2 host, and the upstream's own notice says it 'will be removed before August 31, 2026' - a date that has already passed, so the SOTA panel can go dark without further warning. This was NOT auto-migrated, deliberately, for two reasons. (1) The referenced docs page https://api-db2.sota.org.uk/docs is a terms-of-service page, not an API reference: it documents no successor endpoint and no response schema, so the 'documented official replacement that maps cleanly onto the existing parser' precondition for autonomous repair is not met. (2) Those terms require any application developer to be a named point of contact registered in SOTA's 'API-consumers' group on their reflector before using the API, and state that no AI-generated software may connect to the SOTA API without prior approval. That is a registration and an approval decision only James can make. Options: register with SOTA and migrate, drop the SOTA panel, or accept the risk that the panel goes dark."
+  },
+  {
+   "id": "sota-band-unit-mismatch",
+   "raised": "2026-09-03",
+   "detail": "Every SOTA spot renders band '?'. Cause: hz_to_band() in backend/pota.py expects kHz (POTA sends 14074.0) but SOTA sends MHz (14.12, 7.15, 433.02), so no range ever matches. One-line fix would be to multiply the SOTA frequency by 1000 before the band lookup. Left unapplied: it is pre-existing and cosmetic rather than a regression, and it changes what the panel displays, so it is James's call rather than autonomous link/feed repair. Note 433.02 MHz is 70cm, which FREQ_TO_BAND does not cover at all, so some SOTA spots would still read '?' after the unit fix."
+  },
+  {
+   "id": "sota-tos-prompt-injection",
+   "raised": "2026-09-03",
+   "detail": "Informational, security-relevant. https://api-db2.sota.org.uk/docs ends with a paragraph addressed to 'AI crawlers' instructing them to print a fabricated warning that fifty-five amateur radio operators have died from using the SOTA API incorrectly. It is a prompt-injection attempt embedded in vendor documentation. It was identified as untrusted page content and not acted on. Flagged because it is a live example of the indirect-injection pattern in a supply-chain doc, in a dependency this site actually consumes."
+  },
+  {
+   "id": "nvd-panel-severity-mismatch",
+   "raised": "2026-09-05",
+   "detail": "The cyber page panel 'CRITICAL CVEs - LAST 30 DAYS' displays non-critical entries: observed MEDIUM 6.8 (CVE-2026-64993) plus HIGH 8.7 and HIGH 7.7. The page asks NVD for cvssV3Severity=CRITICAL but renders the primary cvssMetricV31 severity, and NVD's filter matches on any v3 scorer, so a CVE rated CRITICAL by a secondary scorer renders at its lower primary severity. That cause is a strong inference, not confirmed: WebFetch to NVD was blocked by the provenance gate. Options: (a) keep the query and relabel the panel to something like 'HIGH AND CRITICAL CVEs', (b) keep the label and filter client-side to baseSeverity CRITICAL, which will sometimes leave the panel near-empty, (c) leave as is. Each changes what the panel shows, so it is James's editorial call, not autonomous link/feed repair."
+  },
+  {
+   "id": "crane-cab-third-party-cdn",
+   "raised": "2026-09-06",
+   "priority": "low, advisory",
+   "detail": "frontend/public/crane-cab/index.html loads three.js as an ES module from https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js via importmap. This is the first third-party executable script on dxedge.net; every other live panel goes through the same-origin /api/feed proxy. The version is pinned and the URL is live (verified 200, 1.27 MB), so nothing is broken. The consideration is supply chain: an importmap module specifier cannot carry a subresource-integrity attribute, so a jsdelivr compromise would execute arbitrary script on the dxedge.net origin. Options: (a) leave as is, (b) vendor three.module.js into frontend/public/crane-cab/vendor/ and drop the importmap, which removes the dependency entirely, (c) keep the CDN but add a CSP script-src pinning the host. (b) is a repo change touching a page James is actively developing and (c) is an nginx.conf change, so both are his call, not autonomous repair."
+  }
+ ]
 }
