@@ -16,8 +16,15 @@ fresh session doesn't have to reverse-engineer it from git history.
   files yet; data/radio.js gained guide nodes, the truckUnload script and
   allStopClear; the reply strip has an ack countdown bar and there is a plain
   end-of-lift card. The Phase 2 test load is gone from pendulum.init(). Built and
-  verified headlessly 2026-09-06 (33/33 checks) in an attended Cowork session per
-  AUTOMATION.md and deployed the same session, sw.js v15 -> v16.
+  verified headlessly 2026-09-06 in an attended Cowork session per AUTOMATION.md,
+  sw.js v15 -> v16. An adversarial review pass the same session found and fixed
+  two soft-locks (a refused unhook, an answered ALL STOP), two lifts that could
+  not be won (mission 1 was a deterministic instant fail; the landing guide
+  handed over at 2.5x the scored tolerance), and nine smaller defects; the
+  harness is now 47 checks. Also fixed the reason deploys were invisible to
+  returning visitors: nginx served /sw.js and the whole unhashed /crane-cab/
+  tree as immutable for a year, and the service worker was cache-first over the
+  top of it.
   Previous: **2B (review fixes + reach)** — data/crane.js is the single
   crane spec (jib length, trolley stop, speeds, load chart); Reach gauge and deck rings
   (amber = chart limit for the load on the hook, grey = trolley stop); pendulum plane
