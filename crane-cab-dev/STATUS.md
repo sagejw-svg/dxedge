@@ -21,7 +21,13 @@ fresh session doesn't have to reverse-engineer it from git history.
   two soft-locks (a refused unhook, an answered ALL STOP), two lifts that could
   not be won (mission 1 was a deterministic instant fail; the landing guide
   handed over at 2.5x the scored tolerance), and nine smaller defects; the
-  harness is now 47 checks. Also fixed the reason deploys were invisible to
+  harness is now 47 checks. A second review pass the same day fixed nine more
+  (mission 1 unwinnable two ways, the hook-window trap, replayed alarms, a
+  postponable ALL STOP, an unguarded E-stop) and a rendering pass opened up the
+  cab: the glass floor had an opaque slab under it and the console sat dead
+  ahead, so straight down was black. Verification is now an 18-check headless
+  suite over the real modules plus a 5-check browser smoke test. Also fixed the
+  reason deploys were invisible to
   returning visitors: nginx served /sw.js and the whole unhashed /crane-cab/
   tree as immutable for a year, and the service worker was cache-first over the
   top of it.
