@@ -32,8 +32,6 @@ import Invaders from './components/Invaders'
 import CraneCab from './components/CraneCab'
 
 const TABS = [
-  // Crane Cab
-  { id: 'cranecab', label: 'Crane Cab' },
   // Propagation & operating
   { id: 'bands',    label: 'Bands' },
   { id: 'spots',    label: 'DX Spots' },
@@ -52,6 +50,8 @@ const TABS = [
   { id: 'alerts',   label: 'Alerts' },
   // Resources
   { id: 'morse',    label: 'Morse' },
+  // Games
+  { id: 'cranecab', label: 'Crane Cab' },
   { id: 'invaders', label: 'Invaders' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
@@ -63,12 +63,6 @@ const TABS = [
 ]
 
 const TAB_GROUPS = [
-  {
-    label: 'Crane Cab',
-    tabs: [
-      { id: 'cranecab', label: 'Crane Cab', icon: '🏗' },
-    ],
-  },
   {
     label: 'Propagation',
     tabs: [
@@ -100,6 +94,7 @@ const TAB_GROUPS = [
   {
     label: 'Games',
     tabs: [
+      { id: 'cranecab', label: 'Crane Cab', icon: '🏗' },
       { id: 'invaders', label: 'Invaders',  icon: '👾' },
     ],
   },
