@@ -81,8 +81,19 @@ jobs:
               docker compose up -d
             else
               echo "[$(date)] Frontend-only - restarting nginx" >> $LOG
-              docker compose restart nginx
             fi
+            # nginx.conf is a bind mount and nginx reads it once, at start.
+            # `docker compose up -d` leaves a service whose definition has not
+            # changed exactly where it is, so the backend branch above used to
+            # deploy a new nginx.conf to disk and keep serving the old one -
+            # which is why the cache headers on /sw.js stayed wrong through a
+            # deploy that reported success. Restart it either way; it is cheap.
+            docker compose restart nginx
+            sleep 2
+            docker compose exec -T nginx nginx -t >> $LOG 2>&1 || {
+              echo "[$(date)] ERROR: nginx rejected its config" >> $LOG
+              exit 1
+            }
             # Verify the backend container actually restarted onto the new
             # image. Without this the deploy can "succeed" while the old
             # container keeps running, which is exactly what happened on
@@ -103,6 +114,21 @@ jobs:
             # within 30 days of it. Never fails the deploy: it always exits 0.
             bash scripts/cert_repair.sh || true
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete: $(git rev-parse --short HEAD)" >> $LOG
+
+      - name: Verify cache headers on the files that carry a deploy
+        run: |
+          sleep 3
+          # /sw.js and the unhashed /crane-cab/ tree must never come back
+          # immutable: those are the files a deploy has to be able to replace.
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js; do
+            CC=$(curl -sI "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
+            echo "$U -> $CC"
+            if echo "$CC" | grep -qi 'immutable'; then
+              echo "ERROR: $U is served immutable. Returning visitors will not"
+              echo "see this deploy. nginx is running a stale config."
+              exit 1
+            fi
+          done
 
       - name: Verify feed proxy is live
         run: |
