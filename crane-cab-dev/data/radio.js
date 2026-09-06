@@ -15,9 +15,12 @@
 //   onTimeout 'repeat'          first lapse re-sends at urgency + 1, second lapse
 //                               logs a radio fault and re-sends again.
 //             'fault'           logs the fault on the first lapse, then re-sends.
-//             'ignoredAllStop'  emits radio.ignoredAllStop and stops the script.
+//             'ignoredAllStop'  the node's timeout becomes an absolute deadline
+//                               that runs whatever the director is doing, and
+//                               emits radio.ignoredAllStop when it expires.
 //                               Only the allStop node uses it; missions.js fails
-//                               the lift on that event. (PHASE 3 addition.)
+//                               the lift on that event. Deliberately not
+//                               postponable by a reply or a say again.
 //   waitFor   bus event that must fire before this node advances. The gate is
 //             satisfied by the event OR by the equivalent condition already being
 //             true when the gate is reached (hook.tight = line tension at 95% of
@@ -31,16 +34,21 @@
 //   urgency   0 calm, 1 firm, 2 shouting. Guide HOLD and ALL STOP raise it.
 //   action    'hook' | 'unhook' | null. Ground-controlled rigging. radio.js emits
 //             hook.attach / hook.release; only missions.js touches state.load.
-//             A node with action 'hook' has no ack timer: it waits for
-//             hook.attached, and on hook.notReady it re-sends with the
-//             not-ready caption and tries again 4 s later.
+//             A node with action 'hook' or 'unhook' has no ack timer: it waits
+//             for hook.attached / hook.released, and on hook.notReady or
+//             hook.notReleased it re-sends with the matching caption and tries
+//             again 4 s later. Without that wait the script ran on past a
+//             refused unhook and the lift could never be won or lost.
 //
 // GUIDE NODE (ground talks the hook onto a spot, no reply expected):
 //   { id, guide: 'pickup' | 'landing', tol, next }
 //   guide     which mission position to steer to. radio.js reads
 //             state.mission.pickupPos / landingPos, never the mission data.
-//   tol       metres. Inside 3x tol ground says HOLD once. The node advances
-//             when the hook is inside tol and sway is under 2 deg.
+//   tol       metres. A landing guide clamps this to the mission's own scoring
+//             tolerance, so ground never stops calling corrections while the
+//             load is still short of what the lift is graded on. Inside 3x tol
+//             ground says HOLD once. The node advances when the load is inside
+//             tol and the swing is both small and slow.
 //   Guide calls are sent every 3 s, expect no reply and never fault.
 //
 // Every script must include sayAgain, allStop and allStopClear.
@@ -57,7 +65,7 @@ export const SCRIPTS = {
       toLanding: { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
       hold:      { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
       downEasy:  { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.slack', next: 'good', urgency: 0 },
-      good:      { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      good:      { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:  { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 
       sayAgain:  { id: 'sayAgain', say: 'SAY_AGAIN', caption: 'Say again, you doubled me.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 },
@@ -79,7 +87,7 @@ export const SCRIPTS = {
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
       hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
       downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.slack', next: 'good', urgency: 0 },
-      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 
       sayAgain:   { id: 'sayAgain', say: 'SAY_AGAIN', caption: 'Say again, you doubled me.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 },
@@ -101,3 +109,6 @@ export const GUIDE_CALLS = {
 
 // Caption used when ground calls for the hook and the hook is not on the load.
 export const NOT_READY_CAPTION = 'Bring the hook over the load first.';
+
+// Caption used when ground calls the unhook and the load is not resting slack.
+export const NOT_SLACK_CAPTION = 'Set it down and give me slack first.';

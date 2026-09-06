@@ -30,6 +30,7 @@ const parts = {};
 let hangingLoad = null;
 const pickupProps = new Map();     // mission id -> [meshes]
 const landedCrates = new Map();    // mission id -> mesh
+let landingPad = null;             // the spot the active lift is scored against
 
 // ---------- Procedural textures ----------
 
@@ -428,6 +429,26 @@ export function init(ctx, canvas) {
   consoleBox.position.set(0.75, 0.65, 0);
   cabGroup.add(consoleBox);
 
+  // Landing pad. Ground calls the load onto a spot the player otherwise cannot
+  // see: the console has no distance-to-landing readout, so without this the
+  // last position information is a radio call. Sized to the mission tolerance
+  // in update(), because that is the circle the lift is graded on.
+  landingPad = new THREE.Group();
+  const padRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.92, 1, 48),
+    new THREE.MeshBasicMaterial({ color: 0xe0a83a, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+  );
+  padRing.rotation.x = -Math.PI / 2;
+  landingPad.add(padRing);
+  const padFill = new THREE.Mesh(
+    new THREE.CircleGeometry(0.92, 32),
+    new THREE.MeshBasicMaterial({ color: 0xe0a83a, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+  );
+  padFill.rotation.x = -Math.PI / 2;
+  landingPad.add(padFill);
+  landingPad.visible = false;
+  scene.add(landingPad);
+
   window.addEventListener('resize', resize);
   resize();
 }
@@ -486,6 +507,15 @@ export function update(ctx) {
     const lifted = load.attached || !!m.landedAt;
     for (let i = 0; i < active.length; i += 1) active[i].visible = !lifted;
   }
+  if (m.landingPos && m.id !== null && !m.landedAt) {
+    const tol = m.landingTol > 0 ? m.landingTol : 0.5;
+    landingPad.position.set(m.landingPos[0], m.landingPos[1] + 0.02, m.landingPos[2]);
+    landingPad.scale.setScalar(tol);
+    landingPad.visible = true;
+  } else {
+    landingPad.visible = false;
+  }
+
   const landed = landedCrates.get(m.id);
   if (landed) {
     if (m.landedAt && !load.attached) {

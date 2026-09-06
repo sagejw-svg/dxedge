@@ -75,7 +75,7 @@ export function createState() {
     // them without importing data/missions.js for the active lift.
     mission: {
       id: null, elapsed: 0, result: null, failReason: null,
-      pickupPos: null, landingPos: null,
+      pickupPos: null, landingPos: null, landingTol: 0,
       hooked: false, everHooked: false,
       maxCapacityPct: 0, maxSway: 0, hadCollision: false,
       landedAt: null

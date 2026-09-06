@@ -16,9 +16,9 @@
 // alone. Audio never blocks the radio script and never throws: if the context
 // cannot be created the whole module goes quiet and the game plays on.
 //
-// This module talks to the radio director only through the bus (radio.say,
-// radio.doubled) and reports clip lengths back the same way, so no system
-// imports another.
+// This module listens to the radio director on the bus (radio.say,
+// radio.doubled) and never talks back, so no system imports another and nothing
+// audio does can reach state.
 
 let ac = null;
 let master = null;
@@ -47,6 +47,12 @@ export function init(ctx) {
   ctx.bus.on('radio.say', (p) => { if (p && p.key) playRadio(ctx, p.key); });
   ctx.bus.on('radio.doubled', () => doubleBurst());
 }
+
+// Everything below reads state and nothing writes it, directly or through the
+// bus. An earlier version reported clip lengths back to the director, which set
+// a radio timer from an audio callback - a state write with audio as its cause,
+// which is exactly what hard rule 1 forbids. Fitting a call to its clip is a
+// problem for whenever clips actually exist.
 
 function makeNoiseBuffer() {
   const len = Math.floor(ac.sampleRate * 2);
@@ -273,7 +279,6 @@ function startClip(ctx, key, buf) {
     src.buffer = buf;
     src.connect(radioIn);
     src.start();
-    if (ctx && ctx.bus) ctx.bus.emit('radio.clipLength', { key, seconds: buf.duration });
   } catch { /* ignore */ }
 }
 
@@ -281,10 +286,15 @@ export function update(ctx, dt) {
   if (!ac || !master) return;
   const { state } = ctx;
   const muted = !!state.settings.mute;
+  // The tick only runs while playing, so crane velocities and the radio tx state
+  // freeze at whatever they were. Driving the beds from frozen values left the
+  // hoist motor droning under the pause card and the transmit hiss running under
+  // the end card. Nothing is moving and nobody is talking, so nothing sounds.
+  const live = state.phase === 'playing';
 
   try {
     // --- radio squelch, driven by the director's tx state ---
-    const tx = state.radio.tx;
+    const tx = live ? state.radio.tx : 'idle';
     if (tx !== prevTx) {
       if (tx === 'groundTx') {
         burst(0.01, 0.5);                                  // squelch open
@@ -298,15 +308,15 @@ export function update(ctx, dt) {
     }
 
     // --- machine bed ---
-    const lineSpeed = Math.min(1, Math.abs(state.crane.lineVel) / 1.5);
+    const lineSpeed = live ? Math.min(1, Math.abs(state.crane.lineVel) / 1.5) : 0;
     hoistOsc.frequency.setTargetAtTime(200 + 400 * lineSpeed, ac.currentTime, 0.05);
     hoistGain.gain.setTargetAtTime(muted ? 0 : 0.5 * lineSpeed, ac.currentTime, 0.06);
 
-    const slewSpeed = Math.min(1, Math.abs(state.crane.slewVel) / 0.12);
+    const slewSpeed = live ? Math.min(1, Math.abs(state.crane.slewVel) / 0.12) : 0;
     slewOsc.frequency.setTargetAtTime(700 + 500 * slewSpeed, ac.currentTime, 0.05);
     slewGain.gain.setTargetAtTime(muted ? 0 : 0.18 * slewSpeed, ac.currentTime, 0.06);
 
-    buses.ambience.gain.setTargetAtTime(muted ? 0 : AMBIENCE_GAIN, ac.currentTime, 0.1);
+    buses.ambience.gain.setTargetAtTime(muted || !live ? 0 : AMBIENCE_GAIN, ac.currentTime, 0.1);
 
     // --- alarms. Ticks are a square wave cut from the clock, not a timer. ---
     const s = state.sensors;
@@ -314,10 +324,10 @@ export function update(ctx, dt) {
     const tick2 = Math.sin(t * Math.PI * 2 * 2) > 0 ? 1 : 0;
     const tick6 = Math.sin(t * Math.PI * 2 * 6) > 0 ? 1 : 0;
 
-    const preAlarm = s.capacityPct >= 90 && !s.lmiLock ? tick2 : 0;
+    const preAlarm = live && s.capacityPct >= 90 && !s.lmiLock ? tick2 : 0;
     lmiGain.gain.setTargetAtTime(preAlarm * 0.5, t, 0.005);
-    lockGain.gain.setTargetAtTime(s.lmiLock ? 0.5 : 0, t, 0.01);
-    a2bGain.gain.setTargetAtTime(s.a2b ? tick6 * 0.6 : 0, t, 0.004);
+    lockGain.gain.setTargetAtTime(live && s.lmiLock ? 0.5 : 0, t, 0.01);
+    a2bGain.gain.setTargetAtTime(live && s.a2b ? tick6 * 0.6 : 0, t, 0.004);
   } catch { /* audio is never allowed to break the frame */ }
 }
 

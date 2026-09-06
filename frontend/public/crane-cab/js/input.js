@@ -7,7 +7,8 @@
 // Phone (Phase 5): left stick slew + trolley, right stick hoist, PTT, E-stop, micro, look-drag.
 //
 // Rules: intent axes are -1..1 with no inertia (crane.js adds inertia).
-// reply is a one-shot: set on key down, cleared in endTick.
+// reply is a one-shot: set on key down, cleared in endTick. It is only accepted
+// while phase is 'playing', because endTick only runs inside a tick.
 
 const pressed = new Set();
 
@@ -33,6 +34,7 @@ function isTypingTarget(e) {
 export function init(ctx) {
   // Reply strip buttons are an input device. ui.js renders them with data-index.
   document.getElementById('r-replies').addEventListener('click', (e) => {
+    if (ctx.state.phase !== 'playing') return;
     const b = e.target.closest('button[data-index]');
     if (b) ctx.state.intent.reply = Number(b.dataset.index);
   });
@@ -47,8 +49,13 @@ export function init(ctx) {
     const k = e.key;
     const digit = /^[1-8]$/.test(k) ? Number(k) - 1 : null;
     if (digit !== null) {
-      ctx.state.intent.reply = digit;
       e.preventDefault();
+      // reply is one-shot and is only cleared by endTick, which only runs while
+      // the sim ticks. A digit pressed on the title, pause or end card used to
+      // sit in the intent and double ground's first call of the next lift.
+      // Key auto-repeat is one press held, not many presses.
+      if (e.repeat || ctx.state.phase !== 'playing') return;
+      ctx.state.intent.reply = digit;
       return;
     }
 

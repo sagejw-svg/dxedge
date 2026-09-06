@@ -26,6 +26,7 @@ const NEAR_HEIGHT = 3.0;     // m, load bottom above the landing, for load.near
 const LEAVE_FACTOR = 1.5;    // zone events re-arm once the load is this far back out
 const HOIST_UP_VEL = -0.05;  // m/s of rope coming in that counts as hoisting up
 const CAP_LIMIT = 90;        // percent of rated the lift must stay under to score
+const START_LINE = 30;       // m of rope every lift begins with, the state.js default
 const CLEAR_PICKUP = 0.3;    // m the load must rise off its pickup surface before
                              // deck collisions start counting against the lift
 
@@ -33,7 +34,7 @@ let mission = null;
 let resolved = false;
 let nearEmitted = false;
 let zoneEmitted = false;
-let checkPassed = false;     // the operator has answered the radio check
+let hookCalled = false;      // ground has called for the hook
 let releasedDown = false;    // the load was set down and unhooked
 let collisionArmed = false;  // see armCollision() below
 
@@ -63,7 +64,11 @@ export function init(ctx) {
   bus.on('hook.attach', () => onAttach(ctx));
   bus.on('hook.release', () => onRelease(ctx));
 
-  bus.on('radio.reply', () => { checkPassed = true; });
+  // Arms when ground actually calls for the hook. Arming on the radio check made
+  // every legal upward correction of an empty hook a lost lift, and made mission
+  // 1 an instant fail: it starts from wherever the last lift left the rope, and
+  // its load sits on a truck bed, so reaching it means hoisting up.
+  bus.on('hook.attach', () => { hookCalled = true; });
 
   bus.on('alarm.a2b', () => fail(ctx, 'anti-two-block'));
   bus.on('lmi.lock', () => fail(ctx, 'LMI lockout'));
@@ -91,12 +96,19 @@ export function start(ctx, id) {
   m.failReason = null;
   m.pickupPos = [...found.pickup.pos];
   m.landingPos = [...found.landing.pos];
+  m.landingTol = found.landing.tol;
   m.hooked = false;
   m.everHooked = false;
   m.maxCapacityPct = 0;
   m.maxSway = 0;
   m.hadCollision = false;
   m.landedAt = null;
+
+  // Reset the rope. Without this a new lift inherits the last one's line, and a
+  // lift whose load sits higher than the last landing cannot be reached without
+  // hoisting up, which the rule above then fails.
+  state.crane.line = START_LINE;
+  state.crane.lineVel = 0;
 
   const load = state.load;
   load.attached = false;
@@ -109,7 +121,7 @@ export function start(ctx, id) {
   resolved = false;
   nearEmitted = false;
   zoneEmitted = false;
-  checkPassed = false;
+  hookCalled = false;
   releasedDown = false;
   collisionArmed = false;
 
@@ -156,7 +168,12 @@ function onAttach(ctx) {
 function onRelease(ctx) {
   const { state, bus } = ctx;
   if (!mission || resolved || !state.load.attached) return;
-  if (!state.load.onSurface || !state.sensors.slack) return;
+  // Refusing silently let the script finish with the load still hanging and
+  // neither a win nor a fail ever evaluated. Ground needs to hear the no.
+  if (!state.load.onSurface || !state.sensors.slack) {
+    bus.emit('hook.notReleased', { onSurface: state.load.onSurface, slack: state.sensors.slack });
+    return;
+  }
 
   const centre = loadCentre(state);
   state.load.attached = false;
@@ -219,9 +236,10 @@ export function update(ctx, dt) {
   }
   if (collisionArmed && state.sensors.collision) m.hadCollision = true;
 
-  // Hoisting up with nothing on the hook, once ground has been answered, is the
-  // classic way to two-block an empty block or snatch a load that is not rigged.
-  if (checkPassed && !m.hooked && !releasedDown && state.crane.lineVel < HOIST_UP_VEL) {
+  // Hoisting up once ground has called for the hook, with nothing on it, is the
+  // classic way to snatch a load that is not rigged. Before that call, moving the
+  // empty block up is just flying the hook.
+  if (hookCalled && !m.hooked && !releasedDown && state.crane.lineVel < HOIST_UP_VEL) {
     fail(ctx, 'hoist before on the hook');
     return;
   }
