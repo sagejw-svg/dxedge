@@ -25,10 +25,12 @@ const NEAR_DIST = 2.0;       // m, horizontal, for load.near
 const NEAR_HEIGHT = 3.0;     // m, load bottom above the landing, for load.near
 const LEAVE_FACTOR = 1.5;    // zone events re-arm once the load is this far back out
 const HOIST_UP_VEL = -0.05;  // m/s of rope coming in that counts as hoisting up
+const HOIST_UP_ALLOWANCE = 2.0;  // m of rope an unhooked block may take back in
 const CAP_LIMIT = 90;        // percent of rated the lift must stay under to score
 const START_LINE = 30;       // m of rope every lift begins with, the state.js default
 const CLEAR_PICKUP = 0.3;    // m the load must rise off its pickup surface before
                              // deck collisions start counting against the lift
+const CLEAR_PICKUP_H = 2.0;  // or this far sideways from the pickup, whichever first
 
 let mission = null;
 let resolved = false;
@@ -36,7 +38,8 @@ let nearEmitted = false;
 let zoneEmitted = false;
 let hookCalled = false;      // ground has called for the hook
 let releasedDown = false;    // the load was set down and unhooked
-let collisionArmed = false;  // see armCollision() below
+let collisionArmed = false;  // see the arming rule in update()
+let hoistedUp = 0;           // m of rope taken in while unhooked, since the hook call
 
 function hookWorld(state) {
   // Where the hook block actually is, swing included. The guide calls in
@@ -72,9 +75,15 @@ export function init(ctx) {
 
   bus.on('alarm.a2b', () => fail(ctx, 'anti-two-block'));
   bus.on('lmi.lock', () => fail(ctx, 'LMI lockout'));
+  // sensors.js emits the raw contact. This is the only place that knows whether
+  // it counts, so it is also the only place that may tell anyone else: radio.js
+  // raises its ALL STOP on collision.counted, never on the raw event. Without
+  // that split, mission 1 hooking on to its own truck bed raised an alarm for a
+  // contact this module had already decided to ignore, and failed the lift.
   bus.on('collision', () => {
-    if (!collisionArmed) return;
-    if (mission) state.mission.hadCollision = true;
+    if (!collisionArmed || !mission) return;
+    state.mission.hadCollision = true;
+    bus.emit('collision.counted', {});
     fail(ctx, 'collision');
   });
   bus.on('radio.ignoredAllStop', () => fail(ctx, 'ignored all stop'));
@@ -124,6 +133,7 @@ export function start(ctx, id) {
   hookCalled = false;
   releasedDown = false;
   collisionArmed = false;
+  hoistedUp = 0;
 
   bus.emit('lift.start', { id });
   bus.emit('radio.start', { script: found.script });
@@ -139,7 +149,11 @@ export function nextMissionId(ctx) {
 
 function onAttach(ctx) {
   const { state, bus } = ctx;
-  if (!mission || resolved || state.load.attached) return;
+  if (!mission || resolved) return;
+  // Every hook.attach gets an answer. Returning silently because the load was
+  // already on the hook left radio.js waiting in hookWait for a reply that
+  // could never arrive, with no way for the player to break out.
+  if (state.load.attached) { bus.emit('hook.attached', { id: mission.id }); return; }
 
   const p = state.mission.pickupPos;
   const hook = hookWorld(state);
@@ -167,7 +181,10 @@ function onAttach(ctx) {
 
 function onRelease(ctx) {
   const { state, bus } = ctx;
-  if (!mission || resolved || !state.load.attached) return;
+  if (!mission || resolved) return;
+  // Same rule as onAttach: never leave the call unanswered. Nothing on the hook
+  // already satisfies an unhook.
+  if (!state.load.attached) { bus.emit('hook.released', { id: mission.id }); return; }
   // Refusing silently let the script finish with the load still hanging and
   // neither a win nor a fail ever evaluated. Ground needs to hear the no.
   if (!state.load.onSurface || !state.sensors.slack) {
@@ -230,18 +247,28 @@ export function update(ctx, dt) {
   // rests on the truck bed, which is also its only deck volume. So collisions
   // only count once the load has actually been picked clear of its pickup
   // surface. Nothing else changes: swing back into the truck later and it hits.
-  if (!collisionArmed && state.load.attached &&
-      loadBottomY(state) > m.pickupPos[1] + CLEAR_PICKUP) {
-    collisionArmed = true;
+  if (!collisionArmed && state.load.attached) {
+    const lifted = loadBottomY(state) > m.pickupPos[1] + CLEAR_PICKUP;
+    // Or carried clear sideways. Height alone let a load dragged through the
+    // truck at bed level count as still sitting on it for the whole lift.
+    const centreNow = loadCentre(state);
+    const away = Math.hypot(centreNow.x - m.pickupPos[0], centreNow.z - m.pickupPos[2]);
+    if (lifted || away > CLEAR_PICKUP_H) collisionArmed = true;
   }
   if (collisionArmed && state.sensors.collision) m.hadCollision = true;
 
-  // Hoisting up once ground has called for the hook, with nothing on it, is the
-  // classic way to snatch a load that is not rigged. Before that call, moving the
-  // empty block up is just flying the hook.
+  // Hauling away once ground has called for the hook, with nothing on it, is the
+  // classic way to snatch a load that is not rigged. But an operator who has
+  // lowered a metre past the block's window has to take some rope back in to
+  // correct, and failing that made overshooting the window unrecoverable: the
+  // only input that fixed it was the one that ended the lift. So it is a budget,
+  // not a tripwire. Small corrections are free; hauling up is not.
   if (hookCalled && !m.hooked && !releasedDown && state.crane.lineVel < HOIST_UP_VEL) {
-    fail(ctx, 'hoist before on the hook');
-    return;
+    hoistedUp += -state.crane.lineVel * dt;
+    if (hoistedUp > HOIST_UP_ALLOWANCE) {
+      fail(ctx, 'hoist before on the hook');
+      return;
+    }
   }
 
   const landing = m.landingPos;

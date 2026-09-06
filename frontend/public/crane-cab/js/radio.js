@@ -32,7 +32,10 @@
 // content, not a readout, and the alternative was splitting one sentence across
 // two modules.
 
-import { SCRIPTS, GUIDE_CALLS, NOT_READY_CAPTION, NOT_SLACK_CAPTION } from '../data/radio.js';
+import {
+  SCRIPTS, GUIDE_CALLS, NOT_READY_CAPTION, NOT_SLACK_CAPTION,
+  TOO_HIGH_CAPTION, TOO_LOW_CAPTION
+} from '../data/radio.js';
 
 const DEFAULT_TX = 1.6;                      // s of ground transmission with no clip
 const PLAYER_TX = 0.8;                       // s the operator's answer is on the air
@@ -66,17 +69,19 @@ let hookResult = null;    // null | 'attached' | 'notReady'
 let hookRetry = 0;
 let pendingAction = null; // this node's hook / unhook, fired when the call ends
 let unhookResult = null;  // null | 'released' | 'refused'
+let hookHint = NOT_READY_CAPTION;
 let unhookRetry = 0;
 let holdSaid = false;     // guide: HOLD is said once per approach
 let inAllStop = false;
-// ALL STOP is the one deadline a reply may not postpone. It runs on its own
-// timer, outside the mode machine, so answering "Stopped" or asking for a say
-// again cannot hold the lift open indefinitely while the load swings. It starts
-// when ground stops shouting, not when it starts: the operator gets the whole
-// window to reach the mushroom, and a say again eats into it rather than
-// resetting it.
-let hardDeadline = 0;
-let hardPending = 0;
+// ALL STOP is the one deadline nothing may postpone, so it belongs to the
+// interrupt rather than to whichever node happens to be current. Hanging it off
+// the node let a double carry the script out of allStop before the timer was
+// even armed, and the RETURN then re-armed it: tapping a reply once per call
+// postponed the deadline forever with the load still swinging.
+// It covers the call plus the window, so the operator gets the whole window to
+// reach the mushroom after ground stops shouting.
+let allStopTimer = 0;
+const ALL_STOP_WINDOW = 1.5;   // s to reach the E-stop after the call ends
 
 const WAIT_EVENTS = [
   'hook.tight', 'load.slack', 'sway.settled', 'load.inZone', 'load.near', 'estop'
@@ -90,9 +95,20 @@ export function init(ctx) {
 
   WAIT_EVENTS.forEach((name) => bus.on(name, () => { seen.add(name); }));
 
-  bus.on('collision', () => interrupt(ctx));
+  // NOT the raw 'collision' from sensors.js. A load resting on the thing it is
+  // being picked from shares a face with that deck volume, so the raw event
+  // fires the moment mission 1 hooks on. missions.js is the one that knows
+  // whether a contact counts, and says so with collision.counted.
+  bus.on('collision.counted', () => interrupt(ctx));
   bus.on('hook.attached', () => { hookResult = 'attached'; });
-  bus.on('hook.notReady', () => { hookResult = 'notReady'; });
+  bus.on('hook.notReady', (p) => {
+    hookResult = 'notReady';
+    // Say which way. dh is the horizontal miss, dy the block against the load
+    // top: positive is high, negative is past it with slack rope out.
+    if (p && p.dh > 1.0) hookHint = NOT_READY_CAPTION;
+    else if (p && p.dy > 0) hookHint = TOO_HIGH_CAPTION;
+    else hookHint = TOO_LOW_CAPTION;
+  });
   bus.on('hook.released', () => { unhookResult = 'released'; });
   bus.on('hook.notReleased', () => { unhookResult = 'refused'; });
 }
@@ -140,8 +156,7 @@ function stopScript(ctx) {
   r.ackTimeout = 0;
   r.playerTimer = 0;
   r.guideTimer = 0;
-  hardDeadline = 0;
-  hardPending = 0;
+  allStopTimer = 0;
 }
 
 function enterNode(ctx, id) {
@@ -180,12 +195,12 @@ function enterNode(ctx, id) {
   unhookRetry = 0;
   pendingAction = node.action || null;
   inAllStop = id === 'allStop' || id === 'allStopClear';
+  if (id === 'allStopClear') allStopTimer = 0;   // the mushroom is down, stand down the clock
   // A node entered mid ack window inherited the old countdown, which left the
   // bar drawn under a call that has no reply window.
   r.ackTimer = 0;
   r.ackTimeout = 0;
-  hardDeadline = 0;
-  hardPending = node.onTimeout === 'ignoredAllStop' ? (node.timeout || 0) : 0;
+
 
   if (node.guide) {
     mode = 'guide';
@@ -255,6 +270,19 @@ function fault(ctx, why) {
   ctx.bus.emit('radio.fault', { node: r.node, why: why || 'timeout' });
 }
 
+// allStop, allStopClear and sayAgain are handlers, not places in the script. If
+// one lands on the return stack a later RETURN replays it: ground raising an
+// ALL STOP over a dead still load, then failing the lift for not answering an
+// alarm that was a recording of an old one.
+const HANDLER_NODES = ['allStop', 'allStopClear', 'sayAgain'];
+const isHandler = (id) => HANDLER_NODES.includes(id);
+
+function pushReturn(r) {
+  if (isHandler(r.node) || r.node === null) return;
+  returnStack.push(r.node);
+  r.prevNode = r.node;
+}
+
 function double(ctx) {
   const { state, bus } = ctx;
   const r = state.radio;
@@ -267,17 +295,19 @@ function double(ctx) {
   garbleTimer = GARBLE_TIME;
   fault(ctx, 'doubled');
   bus.emit('radio.doubled', { node: r.node });
-  returnStack.push(r.node);
-  r.prevNode = r.node;
+  pushReturn(r);
   enterNode(ctx, 'sayAgain');
 }
 
 function interrupt(ctx) {
   const r = ctx.state.radio;
-  if (!script || mode === 'off' || mode === 'done' || inAllStop) return;
-  if (!script.nodes.allStop) return;
-  returnStack.push(r.node);
-  r.prevNode = r.node;
+  if (!script || mode === 'off' || mode === 'done') return;
+  if (allStopTimer > 0 || inAllStop) return;      // one ALL STOP at a time
+  const all = script.nodes.allStop;
+  if (!all) return;
+  // The clock starts here and runs whatever happens to the script afterwards.
+  allStopTimer = DEFAULT_TX + (all.timeout || ALL_STOP_WINDOW);
+  pushReturn(r);
   enterNode(ctx, 'allStop');
 }
 
@@ -448,25 +478,19 @@ export function update(ctx, dt) {
     return;
   }
 
-  // An ALL STOP clears the instant the E-stop goes down, even mid transmission.
-  // Making the operator wait for ground to stop talking before the mushroom
-  // counted was both wrong and, with a 1.6 s call against a 1.5 s window,
-  // impossible.
-  if ((hardDeadline > 0 || hardPending > 0) && node && gateSatisfied(ctx)) {
-    hardDeadline = 0;
-    hardPending = 0;
-    advance(ctx);
-    setTx(ctx);
-    return;
-  }
-
-  // The deadline itself is absolute. It used to live in the ack window, so
-  // answering "Stopped" or asking for a say again moved the node out of that
-  // window and the lift hung there forever with the load swinging.
-  if (hardDeadline > 0) {
-    hardDeadline -= dt;
-    if (hardDeadline <= 0) {
-      hardDeadline = 0;
+  // The ALL STOP clock. It is checked against the E-stop itself, not against
+  // whatever node.waitFor happens to be, because a double can carry the script
+  // to sayAgain (waitFor null) and a null gate reads as satisfied.
+  if (allStopTimer > 0) {
+    if (state.intent.estop) {
+      allStopTimer = 0;
+      enterNode(ctx, 'allStopClear');
+      setTx(ctx);
+      return;
+    }
+    allStopTimer -= dt;
+    if (allStopTimer <= 0) {
+      allStopTimer = 0;
       ctx.bus.emit('radio.ignoredAllStop', { node: r.node });
       mode = 'done';
       setTx(ctx);
@@ -484,8 +508,14 @@ export function update(ctx, dt) {
   // Half duplex. Talking over ground garbles both ways.
   const transmitting = mode === 'groundTx' || mode === 'guideTx';
   if (transmitting) {
+    // Only a key that maps to a button on the strip is the operator talking.
+    // Keys 1-8 always set intent.reply, but the strip never holds more than
+    // four, so pressing 6 during a call used to log a fault for a button that
+    // was not on screen.
     const pttDouble = state.intent.ptt && !pttLatched;
-    if (pttDouble || state.intent.reply !== null) {
+    const spoke = state.intent.reply !== null &&
+      state.intent.reply >= 0 && state.intent.reply < r.replies.length;
+    if (pttDouble || spoke) {
       if (pttDouble) pttLatched = true;
       double(ctx);
       setTx(ctx);
@@ -500,7 +530,6 @@ export function update(ctx, dt) {
       if (unhookRetry > 0) unhookRetry -= dt;
       if (r.groundTimer <= 0) {
         r.groundTimer = 0;
-        if (hardPending > 0) { hardDeadline = hardPending; hardPending = 0; }
         fireAction(ctx);
         if (node.timeout !== null && node.timeout !== undefined) {
           mode = 'ack';
@@ -567,7 +596,7 @@ export function update(ctx, dt) {
       if (hookResult === 'notReady') {
         hookResult = null;
         hookRetry = HOOK_RETRY;
-        sayNode(ctx, 1, NOT_READY_CAPTION);
+        sayNode(ctx, 1, hookHint);
         break;
       }
       if (hookRetry > 0) {

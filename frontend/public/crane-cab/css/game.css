@@ -10,13 +10,13 @@
   --panel: #262d31;
   --glass: #0e1416;
   --lamp: #e0a83a;
-  --lamp-dim: #6b5220;
+  --lamp-dim: #7d6026;   /* an unlit lamp should be dim, but still legible */
   --ok: #6fbf73;
   --warn: #e0a83a;
   --alarm: #d9482b;
   --text: #c9cfd2;
   --text-dim: #7d878c;
-  --console-h: 148px;
+  --console-h: calc(148px + env(safe-area-inset-bottom));
   font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
@@ -162,6 +162,14 @@ html, body {
   min-height: 2.6em;
 }
 .radio .caption.garbled { color: var(--text-dim); letter-spacing: 0.1em; }
+/* The radio head is a fixed-height grid track. A four line call used to grow
+   past it and paint over the reply strip. */
+.radio .caption {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
 
 /* Ack countdown. A thin bar under the caption that empties over node.timeout. */
 .radio .ackbar {
@@ -195,6 +203,13 @@ html, body {
   cursor: pointer;
 }
 .radio .replies button:focus-visible { outline: 2px solid var(--lamp); }
+
+/* Touch. Phase 5 is the phone pass, but 24px targets are half the iOS minimum
+   and it is cheaper to size them now than to retrofit around a layout. */
+@media (pointer: coarse) {
+  .radio .replies button { min-height: 44px; padding: 10px 12px; }
+  #btn-help { width: 44px; height: 44px; }
+}
 
 /* Title and pause cards */
 .card {
@@ -321,7 +336,7 @@ html, body {
 
 /* Phone: stack the console, shrink type. Touch sticks arrive in Phase 5. */
 @media (max-width: 720px) {
-  :root { --console-h: 196px; }
+  :root { --console-h: calc(196px + env(safe-area-inset-bottom)); }
   #console { grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 8px; }
   .cluster { grid-template-columns: repeat(4, 1fr); grid-template-rows: auto auto auto; }
   .gauge .value { font-size: 17px; }
@@ -361,4 +376,18 @@ html, body {
 
 @media (max-width: 560px) {
   #endcard .stats { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* Landscape phone. The existing breakpoint keys on width, so an 844x390 iPhone
+   held the way this game will actually be played is above 720px and got the
+   desktop console: 148px of dock out of 390px of screen. */
+@media (max-height: 480px) {
+  :root { --console-h: calc(112px + env(safe-area-inset-bottom)); }
+  #console { padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); gap: 10px; }
+  .cluster { gap: 4px; }
+  .gauge { padding: 3px 5px; }
+  .gauge .value { font-size: 15px; }
+  .gauge .label { font-size: 9px; }
+  .lamp { padding: 2px 0; font-size: 9px; }
+  .radio .caption { font-size: 13px; min-height: 2em; -webkit-line-clamp: 2; }
 }

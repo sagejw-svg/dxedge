@@ -21,7 +21,7 @@ import { MISSIONS } from '../data/missions.js';
 import { CRANE } from '../data/crane.js';
 
 let renderer, scene, camera;
-let trolley, ropeGeom, hook, sheave;
+let trolley, hook, sheave;
 const parts = {};
 
 // PHASE 3. 8a: the box that hangs under the hook block while a load is attached.
@@ -30,7 +30,17 @@ const parts = {};
 let hangingLoad = null;
 const pickupProps = new Map();     // mission id -> [meshes]
 const landedCrates = new Map();    // mission id -> mesh
+const deckVolumes = new Map();     // mission id -> [meshes] for the collision boxes
+const crateTextures = new Map();   // hue -> texture, so one crate is one texture
 let landingPad = null;             // the spot the active lift is scored against
+let padRing = null;                // recoloured when the load is inside tolerance
+let landingMark = null;            // fixed-size approach ring, ticks and beacon
+const PAD_AMBER = 0xe0a83a;
+const PAD_GREEN = 0x6fbf73;
+let loadShadow = null;             // the ground shadow of whatever is on the hook
+let ropeMesh = null;               // a drawn rope, not a one pixel line
+const UP = new THREE.Vector3(0, 1, 0);
+let MAX_ANISO = 1;   // set once the renderer exists, read by the textures
 
 // ---------- Procedural textures ----------
 
@@ -98,7 +108,12 @@ function deckTexture() {
     ctx.strokeRect(s * 0.06, s * 0.06, s * 0.88, s * 0.88);
   });
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(30, 30);
+  tex.repeat.set(100, 100);          // same 20 m per tile across the larger deck
+  // The deck is the worst case for aliasing: a tiling texture seen at a grazing
+  // angle from 42 m up. Anisotropy is the one line that fixes the shimmer across
+  // the whole middle distance. Capped at 4 rather than the maximum, because 16
+  // is not free on a phone.
+  tex.anisotropy = MAX_ANISO;
   return tex;
 }
 
@@ -140,6 +155,18 @@ function grandstandTexture() {
 
 const CRATE_HUES = ['#8a6a3e', '#6f7b63', '#5a6b7a', '#7a5a4a'];
 
+// Which crate hue belongs to a mission id, matching the order buildPickupProps
+// walked the mission list in.
+function missionIndex(id) {
+  const i = MISSIONS.findIndex((m) => m.id === id);
+  return i < 0 ? 0 : i;
+}
+
+function crateTextureFor(hue) {
+  if (!crateTextures.has(hue)) crateTextures.set(hue, crateTexture(hue));
+  return crateTextures.get(hue);
+}
+
 function buildPickupProps(scene) {
   MISSIONS.forEach((m, i) => {
     const [sx, sy, sz] = m.load.size;
@@ -148,7 +175,7 @@ function buildPickupProps(scene) {
 
     const crate = new THREE.Mesh(
       new THREE.BoxGeometry(sx, sy, sz),
-      new THREE.MeshLambertMaterial({ map: crateTexture(CRATE_HUES[i % CRATE_HUES.length]) })
+      new THREE.MeshLambertMaterial({ map: crateTextureFor(CRATE_HUES[i % CRATE_HUES.length]) })
     );
     crate.position.set(px, py + sy / 2, pz);
     scene.add(crate);
@@ -179,11 +206,34 @@ function buildPickupProps(scene) {
 
     pickupProps.set(m.id, group);
 
+    // The mission's collision volumes. sensors.js fails the lift on these and
+    // nothing drew them: mission 1's load sat on a truck bed that did not exist,
+    // mission 2 lands on a scaffold made of nothing, and mission 3 is a shaft cut
+    // into a deck drawn as an unbroken plane. A player cannot avoid what they
+    // cannot see.
+    const vols = [];
+    (m.deck || []).forEach((d) => {
+      const size = [d.max[0] - d.min[0], d.max[1] - d.min[1], d.max[2] - d.min[2]];
+      const vol = new THREE.Mesh(
+        new THREE.BoxGeometry(size[0], size[1], size[2]),
+        new THREE.MeshLambertMaterial({ map: steelTexture({ base: '#6a6f73' }) })
+      );
+      vol.position.set(
+        (d.min[0] + d.max[0]) / 2,
+        (d.min[1] + d.max[1]) / 2,
+        (d.min[2] + d.max[2]) / 2
+      );
+      vol.visible = false;
+      scene.add(vol);
+      vols.push(vol);
+    });
+    deckVolumes.set(m.id, vols);
+
     // The crate this load becomes once it has been set down. Hidden until the
     // mission reports where the release happened.
     const landed = new THREE.Mesh(
       new THREE.BoxGeometry(sx, sy, sz),
-      new THREE.MeshLambertMaterial({ map: crateTexture(CRATE_HUES[i % CRATE_HUES.length]) })
+      new THREE.MeshLambertMaterial({ map: crateTextureFor(CRATE_HUES[i % CRATE_HUES.length]) })
     );
     landed.visible = false;
     scene.add(landed);
@@ -269,22 +319,32 @@ export function init(ctx, canvas) {
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Without tone mapping the sunlit yellow steel clips to a flat block of colour
+  // and loses all its form. ACES costs a few instructions per pixel and is the
+  // difference between painted steel in sun and a yellow cutout.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.45;
+  MAX_ANISO = Math.min(4, renderer.capabilities.getMaxAnisotropy());
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x8ea3b4);           // hazy morning
-  scene.fog = new THREE.Fog(0x8ea3b4, 120, 900);
+  // Exponential, and dense enough to actually reach the working volume. The old
+  // linear fog started at 120 m, which is beyond the whole crane: it did nothing
+  // where the player looks, while the deck's hard rectangular edge stayed
+  // plainly visible at 300 m and gave the world away as a square.
+  scene.fog = new THREE.FogExp2(0x8ea3b4, 0.0022);
 
-  camera = new THREE.PerspectiveCamera(70, 1, 0.1, 2000);
+  camera = new THREE.PerspectiveCamera(70, 1, 0.15, 1500);
 
   // Light: one sun, one sky fill. Cheap and enough for now.
-  const sun = new THREE.DirectionalLight(0xfff1dc, 1.6);
+  const sun = new THREE.DirectionalLight(0xfff1dc, 1.45);
   sun.position.set(80, 140, 60);
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight(0xbfd0e0, 0x3a3a34, 0.7));
+  scene.add(new THREE.HemisphereLight(0xbfd0e0, 0x4a4a44, 0.75));
 
   // Deck. Textured concrete/asphalt with a grid overlay so height and radius read at a glance.
   const deck = new THREE.Mesh(
-    new THREE.PlaneGeometry(600, 600),
+    new THREE.PlaneGeometry(2000, 2000),
     new THREE.MeshLambertMaterial({ map: deckTexture() })
   );
   deck.rotation.x = -Math.PI / 2;
@@ -338,9 +398,31 @@ export function init(ctx, canvas) {
   sheave.rotation.z = Math.PI / 2;
   slewGroup.add(sheave);
 
-  ropeGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-  const rope = new THREE.Line(ropeGeom, new THREE.LineBasicMaterial({ color: 0x111111 }));
-  slewGroup.add(rope);
+  // The rope. A THREE.Line is one pixel wide on every WebGL platform no matter
+  // what linewidth says, so thirty metres of hoist rope came out as a hairline
+  // that all but vanished against the deck at the exact moment - a delicate set
+  // down - when the operator most needs to see it. A thin lit cylinder is the
+  // same single draw call and actually reads.
+  ropeMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 1, 6, 1, true),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a2a })
+  );
+  slewGroup.add(ropeMesh);
+
+  // The ground shadow of whatever is on the hook. Static props already had a
+  // shadow decal and the one thing the player is actually flying did not, which
+  // left height almost unreadable from 42 m up. It spreads and fades with
+  // height, so the gap between load and shadow reads as altitude and the offset
+  // between them reads as swing.
+  loadShadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false
+    })
+  );
+  loadShadow.rotation.x = -Math.PI / 2;
+  loadShadow.visible = false;
+  slewGroup.add(loadShadow);
 
   // Hook block (mass at the bottom of the rope) plus an open hook arc below it.
   const hookGroup = new THREE.Group();
@@ -362,7 +444,7 @@ export function init(ctx, canvas) {
   // Its top face sits at the hook block bottom, which is the hook group origin.
   hangingLoad = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshLambertMaterial({ map: crateTexture(CRATE_HUES[0]) })
+    new THREE.MeshLambertMaterial({ map: crateTextureFor(CRATE_HUES[0]) })
   );
   hangingLoad.visible = false;
   hookGroup.add(hangingLoad);
@@ -398,8 +480,17 @@ export function init(ctx, canvas) {
   );
   floorGlass.rotation.x = -Math.PI / 2;
   floorGlass.position.set(0.3, -0.01, 0);
+  floorGlass.material.depthWrite = false;
   cabGroup.add(floorGlass);
-  bar(1.6, 0.06, 2.1, 0.3, -0.02, 0);     // floor edge frame around the glass
+
+  // An actual frame, four bars around the perimeter. What was here was a solid
+  // 1.6 x 2.1 slab sitting 10 mm under the glass, so the pane you look through
+  // to watch the load had an opaque floor behind it: from the seat, straight
+  // down was black. Looking down at the load is the entire job.
+  bar(1.6, 0.06, 0.09, 0.3, -0.02, -1.005);
+  bar(1.6, 0.06, 0.09, 0.3, -0.02, 1.005);
+  bar(0.09, 0.06, 2.1, -0.455, -0.02, 0);
+  bar(0.09, 0.06, 2.1, 1.055, -0.02, 0);
 
   // Seat, roughly under and behind the camera eye point.
   const seatMat = new THREE.MeshLambertMaterial({ color: 0x2f2f2f });
@@ -412,7 +503,7 @@ export function init(ctx, canvas) {
 
   // Console box under the glass, ahead of the camera. A couple of faint
   // canvas-drawn indicator lights, generic, no branding.
-  const consoleTex = canvasTexture(64, (c2, s) => {
+  const consoleTex = canvasTexture(256, (c2, s) => {
     c2.fillStyle = '#141414';
     c2.fillRect(0, 0, s, s);
     c2.fillStyle = '#3fae55';
@@ -423,31 +514,99 @@ export function init(ctx, canvas) {
     c2.fillRect(s * 0.68, s * 0.4, s * 0.15, s * 0.15);
   });
   const consoleBox = new THREE.Mesh(
-    new THREE.BoxGeometry(0.55, 0.5, 1.5),
+    new THREE.BoxGeometry(0.5, 0.36, 0.85),
     new THREE.MeshLambertMaterial({ map: consoleTex })
   );
-  consoleBox.position.set(0.75, 0.65, 0);
+  // Off to the operator's right, on the armrest line, not straight ahead. Dead
+  // centre it filled the whole forward-and-down view: with the floor opened up
+  // above, this is the other half of being able to see the load.
+  consoleBox.position.set(0.55, 0.55, 0.62);
   cabGroup.add(consoleBox);
+
+  // The roof plate blocks the sun completely, so everything in here was an
+  // unlit surface: a black box with the console lamps invisible inside it.
+  const cabLamp = new THREE.PointLight(0xffd9a0, 0.45, 4.5);
+  cabLamp.position.set(0.3, 1.9, 0);
+  cabGroup.add(cabLamp);
 
   // Landing pad. Ground calls the load onto a spot the player otherwise cannot
   // see: the console has no distance-to-landing readout, so without this the
   // last position information is a radio call. Sized to the mission tolerance
   // in update(), because that is the circle the lift is graded on.
+  // The landing. Everything here is built once and only moved and scaled later.
+  //
+  // Three problems with drawing only a tolerance-sized ring: it is 0.3 to 0.4 m
+  // across, which is a handful of pixels at fifty metres of slant range; the
+  // load itself completely covers it on the way down; and sitting flat on the
+  // deck at the same height as the grid it z-fought both the grid and its own
+  // fill. So: the honest tolerance ring stays, at true size, and everything else
+  // is there to let the player find it and judge the approach.
   landingPad = new THREE.Group();
-  const padRing = new THREE.Mesh(
+
+  padRing = new THREE.Mesh(
     new THREE.RingGeometry(0.92, 1, 48),
-    new THREE.MeshBasicMaterial({ color: 0xe0a83a, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({
+      color: PAD_AMBER, transparent: true, opacity: 0.9,
+      side: THREE.DoubleSide, depthWrite: false
+    })
   );
   padRing.rotation.x = -Math.PI / 2;
   landingPad.add(padRing);
+
   const padFill = new THREE.Mesh(
     new THREE.CircleGeometry(0.92, 32),
-    new THREE.MeshBasicMaterial({ color: 0xe0a83a, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({
+      color: PAD_AMBER, transparent: true, opacity: 0.18,
+      side: THREE.DoubleSide, depthWrite: false
+    })
   );
   padFill.rotation.x = -Math.PI / 2;
+  padFill.position.y = -0.008;      // below the ring, so the two never z-fight
   landingPad.add(padFill);
   landingPad.visible = false;
   scene.add(landingPad);
+
+  // A fixed-size approach mark around it, in world metres rather than tolerances,
+  // so the spot can be found from across the site. Not scaled with the pad.
+  landingMark = new THREE.Group();
+  const approach = new THREE.Mesh(
+    new THREE.RingGeometry(3.4, 3.6, 48),
+    new THREE.MeshBasicMaterial({
+      color: PAD_AMBER, transparent: true, opacity: 0.4,
+      side: THREE.DoubleSide, depthWrite: false
+    })
+  );
+  approach.rotation.x = -Math.PI / 2;
+  landingMark.add(approach);
+
+  // Four ticks pointing in at the centre. These stay visible when the load is
+  // directly over the pad and hiding it.
+  const tickMat = new THREE.MeshBasicMaterial({
+    color: PAD_AMBER, transparent: true, opacity: 0.55, depthWrite: false
+  });
+  for (let i = 0; i < 4; i += 1) {
+    const a = (i / 4) * Math.PI * 2;
+    const tick = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.16), tickMat);
+    tick.rotation.x = -Math.PI / 2;
+    tick.rotation.z = -a;
+    tick.position.set(Math.cos(a) * 4.5, 0, Math.sin(a) * 4.5);
+    landingMark.add(tick);
+  }
+
+  // A soft column over the spot, so it can be seen over the load and from the
+  // far side of the slew circle.
+  const beacon = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.5, 9, 12, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: PAD_AMBER, transparent: true, opacity: 0.10,
+      side: THREE.DoubleSide, depthWrite: false
+    })
+  );
+  beacon.position.y = 4.5;
+  landingMark.add(beacon);
+
+  landingMark.visible = false;
+  scene.add(landingMark);
 
   window.addEventListener('resize', resize);
   resize();
@@ -461,6 +620,9 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
+const SHEAVE_DROP = 0.45;   // the rope leaves the sheave, not the middle of the trolley
+const ropeTop = new THREE.Vector3();
+const ropeVec = new THREE.Vector3();
 const eye = new THREE.Vector3();
 const dir = new THREE.Vector3();
 const target = new THREE.Vector3();
@@ -474,28 +636,60 @@ export function update(ctx) {
   setRingRadius(parts.loadRing, state.sensors.maxLoadRadius || CRANE.maxRadius);
 
   const topY = c.cabHeight + CRANE.hookDrop;
-  trolley.position.set(c.radius, topY, 0);
-  sheave.position.set(c.radius, topY - 0.5, 0);
+  trolley.position.set(c.radius, topY + 0.4, 0);
+  sheave.position.set(c.radius, topY - SHEAVE_DROP, 0);
   const hookY = topY - c.line;
   hook.position.set(
     c.radius + Math.sin(state.load.swing.y) * c.line,
     hookY,
     Math.sin(state.load.swing.x) * c.line
   );
-  const pos = ropeGeom.attributes.position;
-  pos.setXYZ(0, c.radius, topY, 0);
-  pos.setXYZ(1, hook.position.x, hookY, hook.position.z);
-  pos.needsUpdate = true;
+  // The hook block hangs plumb below the rope, so it leans with the swing. Left
+  // axis aligned it read as broken: the rope leaned and the block did not.
+  hook.rotation.z = state.load.swing.y;
+  hook.rotation.x = -state.load.swing.x;
+
+  // Rope from the sheave to the hook, as a scaled and aimed cylinder.
+  ropeTop.set(c.radius, topY - SHEAVE_DROP, 0);
+  ropeVec.subVectors(hook.position, ropeTop);
+  const ropeLen = ropeVec.length();
+  if (ropeLen > 0.01) {
+    ropeMesh.position.copy(ropeTop).addScaledVector(ropeVec, 0.5);
+    ropeMesh.scale.set(1, ropeLen, 1);
+    ropeVec.multiplyScalar(1 / ropeLen);
+    ropeMesh.quaternion.setFromUnitVectors(UP, ropeVec);
+    ropeMesh.visible = true;
+  } else {
+    ropeMesh.visible = false;
+  }
 
   // PHASE 3 item 8a. The hanging load.
   const load = state.load;
   if (load.attached) {
     const [sx, sy, sz] = load.size;
+    // Same hue as the crate that was sitting at this mission's pickup. It used
+    // to be hardcoded to the first hue, so on mission 1 you hooked a green crate
+    // and a brown one came up on the rope.
+    const wantHue = CRATE_HUES[missionIndex(state.mission.id) % CRATE_HUES.length];
+    if (hangingLoad.userData.hue !== wantHue) {
+      hangingLoad.material.map = crateTextureFor(wantHue);
+      hangingLoad.material.needsUpdate = true;
+      hangingLoad.userData.hue = wantHue;
+    }
     hangingLoad.scale.set(sx || 1, sy || 1, sz || 1);
     hangingLoad.position.y = -(sy || 1) / 2;
     hangingLoad.visible = true;
+
+    // Shadow on the deck. Spreads and fades with height above it.
+    const bottom = Math.max(0, hookY - (sy || 1));
+    const spread = 1 + bottom * 0.035;
+    loadShadow.position.set(hook.position.x, 0.04, hook.position.z);
+    loadShadow.scale.setScalar(Math.max(sx || 1, sz || 1) * 0.6 * spread);
+    loadShadow.material.opacity = 0.32 / spread;
+    loadShadow.visible = true;
   } else {
     hangingLoad.visible = false;
+    loadShadow.visible = false;
   }
 
   // PHASE 3 item 8b. The active mission's deck dressing follows the load: the
@@ -509,12 +703,40 @@ export function update(ctx) {
   }
   if (m.landingPos && m.id !== null && !m.landedAt) {
     const tol = m.landingTol > 0 ? m.landingTol : 0.5;
-    landingPad.position.set(m.landingPos[0], m.landingPos[1] + 0.02, m.landingPos[2]);
+    // 0.05 clears the grid, which sits at 0.02. At 0.02 the pad, the grid and
+    // the pad's own fill were three coplanar surfaces on the most important
+    // object on screen, and all three shimmered.
+    landingPad.position.set(m.landingPos[0], m.landingPos[1] + 0.05, m.landingPos[2]);
     landingPad.scale.setScalar(tol);
     landingPad.visible = true;
+    landingMark.position.set(m.landingPos[0], m.landingPos[1] + 0.035, m.landingPos[2]);
+    landingMark.visible = true;
+
+    // Green once the load is actually inside the tolerance it is graded on.
+    // This is the question the operator is asking on the way down, and until now
+    // nothing on screen or on the console answered it.
+    let over = false;
+    if (load.attached) {
+      // hook.position is in the jib frame; slewGroup is rotated by -slew, so a
+      // local point lands in the world as (x cos - z sin, x sin + z cos). Same
+      // transform sensors.js uses for the load AABB.
+      const cs = Math.cos(c.slew);
+      const sn = Math.sin(c.slew);
+      const worldX = hook.position.x * cs - hook.position.z * sn;
+      const worldZ = hook.position.x * sn + hook.position.z * cs;
+      over = Math.hypot(worldX - m.landingPos[0], worldZ - m.landingPos[2]) < tol;
+    }
+    padRing.material.color.setHex(over ? PAD_GREEN : PAD_AMBER);
   } else {
     landingPad.visible = false;
+    landingMark.visible = false;
   }
+
+  // The active mission's collision volumes, and only that mission's.
+  deckVolumes.forEach((vols, id) => {
+    const show = id === m.id;
+    for (let i = 0; i < vols.length; i += 1) vols[i].visible = show;
+  });
 
   const landed = landedCrates.get(m.id);
   if (landed) {

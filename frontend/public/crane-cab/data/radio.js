@@ -107,8 +107,13 @@ export const GUIDE_CALLS = {
   hold:       { say: 'HOLD', caption: 'Hold, hold, hold.' }
 };
 
-// Caption used when ground calls for the hook and the hook is not on the load.
+// Captions used when ground calls for the hook and the block is not on the load.
+// One per reason, because "bring the hook over the load" told an operator whose
+// block was three metres too low nothing about which way to go, and the only
+// correction available to them failed the lift.
 export const NOT_READY_CAPTION = 'Bring the hook over the load first.';
+export const TOO_HIGH_CAPTION = 'Come down on it, you are high.';
+export const TOO_LOW_CAPTION = 'Take up your slack, you are past it.';
 
 // Caption used when ground calls the unhook and the load is not resting slack.
 export const NOT_SLACK_CAPTION = 'Set it down and give me slack first.';

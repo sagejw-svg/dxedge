@@ -7,10 +7,11 @@ let el = {};
 
 export function init(ctx) {
   el = {
-    load: $('g-load'), rated: $('g-rated'), capfill: $('g-capfill'), cappct: $('g-cappct'),
+    load: $('g-load'), rated: $('g-rated'),
+    loadUnit: $('g-load-label'), ratedUnit: $('g-rated-label'), capfill: $('g-capfill'), cappct: $('g-cappct'),
     radius: $('g-radius'), height: $('g-height'), heading: $('g-heading'), wind: $('g-wind'),
     reach: $('g-reach'), reachfill: $('g-reachfill'),
-    a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
+    estop: $('l-estop'), a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
     channel: $('r-channel'), ptt: $('r-ptt'), caption: $('r-caption'), replies: $('r-replies'),
     ackbar: $('r-ackbar'), ackfill: $('r-ackfill'),
     ecTitle: $('ec-title'), ecTime: $('ec-time'), ecSway: $('ec-sway'),
@@ -32,9 +33,16 @@ function fmtLen(m, units) {
 }
 // PHASE 2B fix: the old imperial branch divided pounds by 1000 (kips) and labelled it "t".
 // US cab displays read in pounds. Metric reads kg under a tonne, tonnes above.
+// Digits only. The unit goes in the gauge label instead: "4,409 lb" at 22px
+// tabular does not fit the cluster column at any realistic desktop width, and
+// .gauge .value clips with no ellipsis, so the operator was reading "4,40".
 function fmtMass(kg, units) {
-  if (units === 'imperial') return `${Math.round(kg * 2.20462).toLocaleString('en-US')} lb`;
-  return kg < 1000 ? `${Math.round(kg)} kg` : `${(kg / 1000).toFixed(2)} t`;
+  if (units === 'imperial') return Math.round(kg * 2.20462).toLocaleString('en-US');
+  return kg < 1000 ? String(Math.round(kg)) : (kg / 1000).toFixed(2);
+}
+function massUnit(units, kg) {
+  if (units === 'imperial') return 'lb';
+  return kg < 1000 ? 'kg' : 't';
 }
 function fmtLenShort(m, units) {
   return units === 'imperial' ? `${Math.round(m * 3.28084)}` : `${m.toFixed(1)}`;
@@ -54,6 +62,8 @@ export function update(ctx) {
 
   el.load.textContent = fmtMass(s.actualLoad, u);
   el.rated.textContent = fmtMass(s.ratedLoad, u);
+  el.loadUnit.textContent = `Load (${massUnit(u, s.actualLoad)})`;
+  el.ratedUnit.textContent = `Rated (${massUnit(u, s.ratedLoad)})`;
   el.cappct.textContent = `${Math.round(s.capacityPct)}%`;
   el.capfill.style.width = `${Math.min(100, s.capacityPct)}%`;
   el.capfill.className = 'fill' + (s.capacityPct >= 90 ? ' alarm' : s.capacityPct >= 70 ? ' warn' : '');
@@ -66,6 +76,9 @@ export function update(ctx) {
   el.heading.textContent = String(Math.round(s.heading)).padStart(3, '0') + '\u00B0';
   el.wind.textContent = fmtWind(s.wind, u);
 
+  // E-stop first: while it is latched nothing else on the console explains why
+  // the crane will not move.
+  el.estop.classList.toggle('on', state.crane.estopped);
   el.a2b.classList.toggle('on', s.a2b);
   el.slack.classList.toggle('on', s.slack);
   el.slack.classList.toggle('ok', s.slack);

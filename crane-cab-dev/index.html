@@ -26,11 +26,11 @@
       <div class="cluster">
         <div class="gauge" data-gauge="load">
           <span class="value" id="g-load">0</span>
-          <span class="label">Load</span>
+          <span class="label" id="g-load-label">Load</span>
         </div>
         <div class="gauge" data-gauge="rated">
           <span class="value" id="g-rated">0</span>
-          <span class="label">Rated</span>
+          <span class="label" id="g-rated-label">Rated</span>
         </div>
         <div class="gauge capacity" data-gauge="capacity">
           <div class="bar"><div class="fill" id="g-capfill"></div></div>
@@ -59,6 +59,7 @@
           <span class="label">Wind</span>
         </div>
         <div class="lamps">
+          <span class="lamp" id="l-estop">E-Stop</span>
           <span class="lamp" id="l-a2b">A2B</span>
           <span class="lamp" id="l-slack">Slack</span>
           <span class="lamp" id="l-lmi">LMI</span>

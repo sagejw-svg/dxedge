@@ -67,15 +67,20 @@ export function init(ctx) {
     ];
     if (ownedCodes.includes(code)) e.preventDefault();
 
+    // Both of these are latching toggles, and both used to latch from the title,
+    // pause and end cards, where the controls list advertises them. A mushroom
+    // pressed on the title card dogs the whole first lift with nothing on screen
+    // to say why.
+    const playing = ctx.state.phase === 'playing';
     if (code === 'Space') {
-      if (!estopKeyWasDown) {
+      if (!estopKeyWasDown && playing) {
         ctx.state.intent.estop = !ctx.state.intent.estop;
       }
       estopKeyWasDown = true;
       return;
     }
     if (code === 'KeyB') {
-      if (!brakeKeyWasDown) {
+      if (!brakeKeyWasDown && playing) {
         ctx.state.intent.brake = !ctx.state.intent.brake;
       }
       brakeKeyWasDown = true;
