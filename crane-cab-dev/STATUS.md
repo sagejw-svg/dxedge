@@ -64,9 +64,16 @@ fresh session doesn't have to reverse-engineer it from git history.
 - Next phase: **4 (M2/M3 + scoring)** — scaffold and blind shaft missions, the
   scaffold and blindShaft radio scripts, scoring.js (grade, landing error,
   achievements), save.js persistence, and the full after-action card that
-  replaces the plain Phase 3 end-of-lift card. No prompt doc exists yet; draft
-  docs/PHASE-4-PROMPT.md from the Notion Architecture section first, per
-  AUTOMATION.md step 2.
+  replaces the plain Phase 3 end-of-lift card, plus the hook cam and mission 2's
+  gusts. Prompt is docs/PHASE-4-PROMPT.md, drafted 2026-09-06 from the Notion
+  Architecture section, Design Prompt, Gauges section and Backlog, because unlike
+  2B and 3 there is no Notion child page for it - the page never uses the words
+  "Phase 4". **Six things Phase 4 needs are not specified anywhere on that page
+  and the prompt marks each INVENTED with its reasoning: the grading rubric, all
+  ten achievement definitions, the craneCab_hi shape, the after-action card
+  layout, the landing error overlay and the gust model. Worth James reading
+  those six before the build starts, because they are design decisions, not
+  implementation details.**
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main
