@@ -1,18 +1,264 @@
-// PHASE 3 (missions 0, 1) and PHASE 4 (2, 3). Owns state.mission. Data in data/missions.js.
-// start(ctx, id): load mission, place load at pickup, set wind, hookCam flag, start script.
-// update: elapsed += dt. Evaluate every tick:
-//   win  = load in landing zone (within tol) AND slack AND unhooked AND capacityPct < 90 AND no collision
-//   fail = a2b OR lmiLock OR collision OR hoist-up before hook.tight was allowed OR ALL STOP ignored
-// Emit lift.win / lift.fail once with { reason }. Set phase to 'afteraction' via bus consumer in main.
+// PHASE 3 (missions 0, 1) and PHASE 4 (2, 3). Owns state.mission and the one
+// thing nothing else may write: state.load.attached.
+//
+// start(ctx, id) loads the mission, resets the load to detached with the
+// mission's mass and size, copies the pickup and landing positions into
+// state.mission so radio.js and render.js never import the mission data, and
+// asks the radio director for the mission's script.
+//
+// Rigging is ground controlled. radio.js emits hook.attach and hook.release;
+// this module decides whether the hook is actually on the load and answers with
+// hook.attached / hook.notReady / hook.released. There is no grab key.
+//
+// Win  = the load was set down inside the landing tolerance, slack, released,
+//        after having been hooked, under 90 percent capacity, no collision.
+// Fail = A2B, LMI lockout, collision, hoisting up before the load is on the
+//        hook (once the script has passed its radio check), or an ignored ALL
+//        STOP. Exactly one of lift.win / lift.fail is emitted per lift.
 
-export function init(ctx) {}
+import { MISSIONS } from '../data/missions.js';
+import { CRANE } from '../data/crane.js';
+
+const HOOK_H_TOL = 1.0;      // m, horizontal hook to load
+const HOOK_V_TOL = 0.6;      // m, hook block bottom against the load top
+const NEAR_DIST = 2.0;       // m, horizontal, for load.near
+const NEAR_HEIGHT = 3.0;     // m, load bottom above the landing, for load.near
+const LEAVE_FACTOR = 1.5;    // zone events re-arm once the load is this far back out
+const HOIST_UP_VEL = -0.05;  // m/s of rope coming in that counts as hoisting up
+const CAP_LIMIT = 90;        // percent of rated the lift must stay under to score
+const CLEAR_PICKUP = 0.3;    // m the load must rise off its pickup surface before
+                             // deck collisions start counting against the lift
+
+let mission = null;
+let resolved = false;
+let nearEmitted = false;
+let zoneEmitted = false;
+let checkPassed = false;     // the operator has answered the radio check
+let releasedDown = false;    // the load was set down and unhooked
+let collisionArmed = false;  // see armCollision() below
+
+function hookWorld(state) {
+  // Where the hook block actually is, swing included. The guide calls in
+  // radio.js deliberately ignore swing; hooking on does not get to.
+  const c = state.crane;
+  const jibX = c.radius + Math.sin(state.load.swing.y) * c.line;
+  const jibZ = Math.sin(state.load.swing.x) * c.line;
+  const cos = Math.cos(c.slew);
+  const sin = Math.sin(c.slew);
+  return { x: jibX * cos - jibZ * sin, z: jibX * sin + jibZ * cos };
+}
+
+function hookBottomY(state) {
+  return state.crane.cabHeight + CRANE.hookDrop - state.crane.line;
+}
+
+function loadBottomY(state) {
+  const h = state.load.attached ? (state.load.size[1] || 0) : 0;
+  return hookBottomY(state) - h;
+}
+
+export function init(ctx) {
+  const { state, bus } = ctx;
+
+  bus.on('hook.attach', () => onAttach(ctx));
+  bus.on('hook.release', () => onRelease(ctx));
+
+  bus.on('radio.reply', () => { checkPassed = true; });
+
+  bus.on('alarm.a2b', () => fail(ctx, 'anti-two-block'));
+  bus.on('lmi.lock', () => fail(ctx, 'LMI lockout'));
+  bus.on('collision', () => {
+    if (!collisionArmed) return;
+    if (mission) state.mission.hadCollision = true;
+    fail(ctx, 'collision');
+  });
+  bus.on('radio.ignoredAllStop', () => fail(ctx, 'ignored all stop'));
+}
 
 export function start(ctx, id) {
-  ctx.state.mission.id = id;
-  ctx.state.mission.elapsed = 0;
-  ctx.state.mission.result = null;
+  const { state, bus } = ctx;
+  const found = MISSIONS.find((m) => m.id === id);
+  if (!found) {
+    console.warn(`missions: no mission ${id}`);
+    return;
+  }
+  mission = found;
+
+  const m = state.mission;
+  m.id = id;
+  m.elapsed = 0;
+  m.result = null;
+  m.failReason = null;
+  m.pickupPos = [...found.pickup.pos];
+  m.landingPos = [...found.landing.pos];
+  m.hooked = false;
+  m.everHooked = false;
+  m.maxCapacityPct = 0;
+  m.maxSway = 0;
+  m.hadCollision = false;
+  m.landedAt = null;
+
+  const load = state.load;
+  load.attached = false;
+  load.mass = found.load.mass;
+  load.size = [...found.load.size];
+  load.swing.x = 0; load.swing.y = 0; load.swing.vx = 0; load.swing.vy = 0;
+  load.onSurface = false;
+  load.tension = 0;
+
+  resolved = false;
+  nearEmitted = false;
+  zoneEmitted = false;
+  checkPassed = false;
+  releasedDown = false;
+  collisionArmed = false;
+
+  bus.emit('lift.start', { id });
+  bus.emit('radio.start', { script: found.script });
+}
+
+// Which lift the end-of-lift card starts next. Phase 4 replaces this with the
+// real mission flow; for now a win steps 0 -> 1 -> 0 and a fail retries.
+export function nextMissionId(ctx) {
+  const m = ctx.state.mission;
+  if (m.result !== 'win') return m.id === null ? 0 : m.id;
+  return m.id === 0 ? 1 : 0;
+}
+
+function onAttach(ctx) {
+  const { state, bus } = ctx;
+  if (!mission || resolved || state.load.attached) return;
+
+  const p = state.mission.pickupPos;
+  const hook = hookWorld(state);
+  const dh = Math.hypot(hook.x - p[0], hook.z - p[2]);
+  const loadTop = p[1] + (mission.load.size[1] || 0);
+  const dy = hookBottomY(state) - loadTop;
+
+  // Above the load top by no more than HOOK_V_TOL is the phase prompt's window.
+  // The same slop is allowed below it, because rope paid out past first contact
+  // is what a real hook-up looks like and is what leaves the line slack for the
+  // "up easy" that follows.
+  if (dh > HOOK_H_TOL || dy > HOOK_V_TOL || dy < -HOOK_V_TOL) {
+    bus.emit('hook.notReady', { dh, dy });
+    return;
+  }
+
+  const load = state.load;
+  load.attached = true;
+  load.mass = mission.load.mass;
+  load.size = [...mission.load.size];
+  state.mission.hooked = true;
+  state.mission.everHooked = true;
+  bus.emit('hook.attached', { id: mission.id });
+}
+
+function onRelease(ctx) {
+  const { state, bus } = ctx;
+  if (!mission || resolved || !state.load.attached) return;
+  if (!state.load.onSurface || !state.sensors.slack) return;
+
+  const centre = loadCentre(state);
+  state.load.attached = false;
+  state.mission.hooked = false;
+  state.mission.landedAt = [centre.x, state.mission.landingPos[1], centre.z];
+  releasedDown = true;
+  bus.emit('hook.released', { id: mission.id });
+}
+
+// Where the load itself is, hook plus swing offset.
+function loadCentre(state) {
+  const c = state.crane;
+  const jibX = c.radius + Math.sin(state.load.swing.y) * c.line;
+  const jibZ = Math.sin(state.load.swing.x) * c.line;
+  const cos = Math.cos(c.slew);
+  const sin = Math.sin(c.slew);
+  return { x: jibX * cos - jibZ * sin, z: jibX * sin + jibZ * cos };
+}
+
+function win(ctx) {
+  const { state, bus } = ctx;
+  if (resolved) return;
+  resolved = true;
+  state.mission.result = 'win';
+  state.mission.failReason = null;
+  bus.emit('lift.win', { id: state.mission.id, time: state.mission.elapsed });
+  bus.emit('radio.stop', {});
+}
+
+function fail(ctx, reason) {
+  const { state, bus } = ctx;
+  if (!mission || resolved) return;
+  resolved = true;
+  state.mission.result = 'fail';
+  state.mission.failReason = reason;
+  bus.emit('lift.fail', { id: state.mission.id, reason, time: state.mission.elapsed });
+  bus.emit('radio.stop', {});
 }
 
 export function update(ctx, dt) {
-  if (ctx.state.mission.id !== null) ctx.state.mission.elapsed += dt;
+  const { state, bus } = ctx;
+  if (!mission || state.mission.id === null) return;
+
+  const m = state.mission;
+  m.elapsed += dt;
+
+  if (resolved) return;
+
+  if (state.sensors.capacityPct > m.maxCapacityPct) m.maxCapacityPct = state.sensors.capacityPct;
+  if (state.sensors.swayAngle > m.maxSway) m.maxSway = state.sensors.swayAngle;
+
+  // A load sitting on the thing it is picked from shares a face with that deck
+  // volume, and an AABB test counts a shared face as a hit - mission 1's load
+  // rests on the truck bed, which is also its only deck volume. So collisions
+  // only count once the load has actually been picked clear of its pickup
+  // surface. Nothing else changes: swing back into the truck later and it hits.
+  if (!collisionArmed && state.load.attached &&
+      loadBottomY(state) > m.pickupPos[1] + CLEAR_PICKUP) {
+    collisionArmed = true;
+  }
+  if (collisionArmed && state.sensors.collision) m.hadCollision = true;
+
+  // Hoisting up with nothing on the hook, once ground has been answered, is the
+  // classic way to two-block an empty block or snatch a load that is not rigged.
+  if (checkPassed && !m.hooked && !releasedDown && state.crane.lineVel < HOIST_UP_VEL) {
+    fail(ctx, 'hoist before on the hook');
+    return;
+  }
+
+  const landing = m.landingPos;
+  const centre = loadCentre(state);
+  const d = Math.hypot(centre.x - landing[0], centre.z - landing[2]);
+  const aboveLanding = loadBottomY(state) - landing[1];
+  const tol = mission.landing.tol;
+
+  if (!nearEmitted && d < NEAR_DIST && aboveLanding <= NEAR_HEIGHT) {
+    nearEmitted = true;
+    bus.emit('load.near', { d });
+  } else if (nearEmitted && (d > NEAR_DIST * LEAVE_FACTOR || aboveLanding > NEAR_HEIGHT * LEAVE_FACTOR)) {
+    nearEmitted = false;
+  }
+
+  const inZone = d < tol;
+  if (!zoneEmitted && inZone) {
+    zoneEmitted = true;
+    bus.emit('load.inZone', { d });
+  } else if (zoneEmitted && d > tol * LEAVE_FACTOR) {
+    zoneEmitted = false;
+  }
+
+  // The win is read one tick after the release: unhooking clears load.attached,
+  // which clears onSurface and sensors.slack with it, so the slack that the
+  // release already required is latched in releasedDown rather than re-read.
+  if (releasedDown && m.everHooked) {
+    if (inZone && m.maxCapacityPct < CAP_LIMIT && !m.hadCollision) {
+      win(ctx);
+    } else if (!inZone) {
+      // Set down somewhere else. Without this the lift never resolves and the
+      // end-of-lift card never appears. Added in Phase 3, flagged in the report.
+      fail(ctx, 'set down outside the zone');
+    } else {
+      fail(ctx, m.hadCollision ? 'collision' : 'over 90 percent of rated');
+    }
+  }
 }

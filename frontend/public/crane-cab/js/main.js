@@ -50,6 +50,23 @@ document.getElementById('btn-start').addEventListener('click', () => {
   missions.start(ctx, 0);     // Phase 3 gives this a real script
 });
 
+// PHASE 3 item 6, the only change this phase makes in this file. A finished lift
+// parks the sim in 'afteraction' and puts the end-of-lift card up; the card's one
+// button starts the next lift (missions.js decides which) and hands control back.
+const endcard = document.getElementById('endcard');
+function showEndcard() {
+  setPhase('afteraction');
+  endcard.hidden = false;
+}
+bus.on('lift.win', showEndcard);
+bus.on('lift.fail', showEndcard);
+
+document.getElementById('btn-endcard').addEventListener('click', () => {
+  endcard.hidden = true;
+  missions.start(ctx, missions.nextMissionId(ctx));
+  setPhase('playing');
+});
+
 document.getElementById('btn-resume').addEventListener('click', () => {
   document.getElementById('pause').hidden = true;
   setPhase('playing');

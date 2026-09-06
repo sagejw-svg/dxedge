@@ -73,6 +73,8 @@
           <span class="ptt" id="r-ptt"></span>
         </div>
         <div class="caption" id="r-caption" aria-live="polite"></div>
+        <!-- Ack countdown. Empties over the current node's timeout. Phase 3. -->
+        <div class="ackbar" id="r-ackbar" hidden><div class="fill" id="r-ackfill"></div></div>
         <div class="replies" id="r-replies"></div>
       </div>
     </section>
@@ -100,6 +102,18 @@
     <div id="pause" class="card" hidden>
       <h2>Paused</h2>
       <button id="btn-resume" type="button">Back to the seat</button>
+    </div>
+
+    <!-- End-of-lift card. Phase 3 keeps it plain; Phase 4 replaces it with the
+         full after-action card (grade, achievements, landing error). -->
+    <div id="endcard" class="card" hidden>
+      <h2 id="ec-title">Lift complete</h2>
+      <dl class="stats" aria-label="Lift result">
+        <div><dt>Time</dt><dd id="ec-time">0:00</dd></div>
+        <div><dt>Max sway</dt><dd id="ec-sway">0.0&deg;</dd></div>
+        <div><dt>Radio faults</dt><dd id="ec-faults">0</dd></div>
+      </dl>
+      <button id="btn-endcard" type="button">Next lift</button>
     </div>
 
     <!-- Small corner button to bring the controls list back up during play.

@@ -12,6 +12,9 @@ export function init(ctx) {
     reach: $('g-reach'), reachfill: $('g-reachfill'),
     a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
     channel: $('r-channel'), ptt: $('r-ptt'), caption: $('r-caption'), replies: $('r-replies'),
+    ackbar: $('r-ackbar'), ackfill: $('r-ackfill'),
+    ecTitle: $('ec-title'), ecTime: $('ec-time'), ecSway: $('ec-sway'),
+    ecFaults: $('ec-faults'), ecButton: $('btn-endcard'),
     debug: $('debug')
   };
 
@@ -38,6 +41,10 @@ function fmtLenShort(m, units) {
 }
 function fmtWind(mps, units) {
   return units === 'imperial' ? `${Math.round(mps * 2.23694)} mph` : `${Math.round(mps * 3.6)} km/h`;
+}
+function fmtClock(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 export function update(ctx) {
@@ -71,6 +78,13 @@ export function update(ctx) {
   if (el.caption.textContent !== state.radio.caption) el.caption.textContent = state.radio.caption;
   el.caption.classList.toggle('garbled', state.radio.garbled);
 
+  // Ack countdown. Only shown while a node's reply window is actually running.
+  const ackOn = state.radio.ackTimeout > 0 && state.radio.ackTimer > 0;
+  el.ackbar.hidden = !ackOn;
+  if (ackOn) {
+    el.ackfill.style.width = `${Math.max(0, Math.min(100, (state.radio.ackTimer / state.radio.ackTimeout) * 100))}%`;
+  }
+
   // Reply strip. Rebuild only when labels change. Phase 3 wires clicks to intent.reply.
   const labels = state.radio.replies.join('|');
   if (el.replies.dataset.labels !== labels) {
@@ -82,6 +96,17 @@ export function update(ctx) {
       b.dataset.index = String(i);   // input.js delegates clicks to intent.reply
       return b;
     }));
+  }
+
+  // End-of-lift card. main.js decides when it is on screen; this only fills it.
+  if (state.phase === 'afteraction' && state.mission.result) {
+    const won = state.mission.result === 'win';
+    el.ecTitle.textContent = won ? 'Lift complete' : `Lift failed: ${state.mission.failReason || 'unknown'}`;
+    el.ecTitle.classList.toggle('failed', !won);
+    el.ecTime.textContent = fmtClock(state.mission.elapsed);
+    el.ecSway.textContent = `${((state.mission.maxSway * 180) / Math.PI).toFixed(1)}\u00B0`;
+    el.ecFaults.textContent = String(state.radio.faults);
+    el.ecButton.textContent = won ? 'Next lift' : 'Try again';
   }
 
   if (state.debug.show) {

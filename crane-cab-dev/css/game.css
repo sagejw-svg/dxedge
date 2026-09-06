@@ -163,6 +163,21 @@ html, body {
 }
 .radio .caption.garbled { color: var(--text-dim); letter-spacing: 0.1em; }
 
+/* Ack countdown. A thin bar under the caption that empties over node.timeout. */
+.radio .ackbar {
+  height: 3px;
+  background: #1b2427;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.radio .ackbar[hidden] { display: none; }
+.radio .ackbar .fill {
+  height: 100%;
+  width: 100%;
+  background: var(--lamp);
+  transition: width 80ms linear;
+}
+
 .radio .replies {
   display: flex;
   flex-wrap: wrap;
@@ -316,4 +331,34 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .gauge.capacity .fill { transition: none; }
+}
+
+/* End-of-lift card. Plain by design; Phase 4 replaces it. */
+#endcard .stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  gap: 14px;
+  margin: 8px 0 22px;
+}
+#endcard .stats > div {
+  background: var(--glass);
+  border: 1px solid #0a0f11;
+  border-radius: 3px;
+  padding: 10px 8px;
+}
+#endcard .stats dt {
+  color: var(--text-dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+#endcard .stats dd {
+  margin: 4px 0 0;
+  color: var(--lamp);
+  font-size: 20px;
+}
+#endcard h2.failed { color: var(--alarm); }
+
+@media (max-width: 560px) {
+  #endcard .stats { grid-template-columns: 1fr; gap: 8px; }
 }

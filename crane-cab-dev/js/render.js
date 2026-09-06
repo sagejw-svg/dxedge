@@ -5,12 +5,12 @@
 // runtime (no image files, no CDN beyond the Three.js import already in
 // index.html) so this stays a dependency-free static folder.
 //
-// The pickup props below are a visual preview only: static crates placed at
-// every mission's pickup.pos so the deck doesn't look empty. They are not
-// hookable yet. Real attach/pendulum physics is Phase 2 (pendulum.js,
-// sensors.js) and mission loading is Phase 3/4 (missions.js); until that's
-// wired, every mission's prop is shown at once rather than just the active
-// one.
+// The pickup props are a visual preview: static crates placed at every mission's
+// pickup.pos so the deck doesn't look empty. PHASE 3 makes the active mission's
+// prop honest - it is hidden once that load is on the hook or has been set down
+// somewhere else, and a crate appears wherever the load was released. The other
+// missions' props are still all shown at once; Phase 4's mission flow decides
+// which deck dressing belongs on screen.
 //
 // The backdrop is an original, generic tiered bowl with light towers. It is
 // deliberately not a depiction of any real, trademarked venue (hard rule 7:
@@ -23,6 +23,13 @@ import { CRANE } from '../data/crane.js';
 let renderer, scene, camera;
 let trolley, ropeGeom, hook, sheave;
 const parts = {};
+
+// PHASE 3. 8a: the box that hangs under the hook block while a load is attached.
+// 8b: per-mission pickup props, so the active one can be hidden, plus one crate
+// per mission parked at whatever spot its load was released on.
+let hangingLoad = null;
+const pickupProps = new Map();     // mission id -> [meshes]
+const landedCrates = new Map();    // mission id -> mesh
 
 // ---------- Procedural textures ----------
 
@@ -136,6 +143,7 @@ function buildPickupProps(scene) {
   MISSIONS.forEach((m, i) => {
     const [sx, sy, sz] = m.load.size;
     const [px, py, pz] = m.pickup.pos;
+    const group = [];
 
     const crate = new THREE.Mesh(
       new THREE.BoxGeometry(sx, sy, sz),
@@ -143,6 +151,7 @@ function buildPickupProps(scene) {
     );
     crate.position.set(px, py + sy / 2, pz);
     scene.add(crate);
+    group.push(crate);
 
     // Rigging strap: a flattened ring resting on top, hinting the load can
     // be hooked once Phase 2 wires real pickup.
@@ -153,6 +162,7 @@ function buildPickupProps(scene) {
     strap.rotation.x = Math.PI / 2;
     strap.position.set(px, py + sy + 0.03, pz);
     scene.add(strap);
+    group.push(strap);
 
     // Soft ground shadow decal for props sitting on the deck.
     if (py <= 0.05) {
@@ -163,7 +173,20 @@ function buildPickupProps(scene) {
       shadow.rotation.x = -Math.PI / 2;
       shadow.position.set(px, 0.015, pz);
       scene.add(shadow);
+      group.push(shadow);
     }
+
+    pickupProps.set(m.id, group);
+
+    // The crate this load becomes once it has been set down. Hidden until the
+    // mission reports where the release happened.
+    const landed = new THREE.Mesh(
+      new THREE.BoxGeometry(sx, sy, sz),
+      new THREE.MeshLambertMaterial({ map: crateTexture(CRATE_HUES[i % CRATE_HUES.length]) })
+    );
+    landed.visible = false;
+    scene.add(landed);
+    landedCrates.set(m.id, landed);
   });
 }
 
@@ -333,6 +356,16 @@ export function init(ctx, canvas) {
   hookArc.position.y = -0.15;
   hookGroup.add(hookArc);
 
+  // PHASE 3 item 8a. A unit box scaled to load.size, hung as a child of the hook
+  // group so it tracks the hook exactly (including swing) with no extra maths.
+  // Its top face sits at the hook block bottom, which is the hook group origin.
+  hangingLoad = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshLambertMaterial({ map: crateTexture(CRATE_HUES[0]) })
+  );
+  hangingLoad.visible = false;
+  hookGroup.add(hangingLoad);
+
   // Cab shell. Camera sits inside. Fuller enclosure: pillars, header, roof
   // plate, a glass floor pane, a seat, and a console box.
   const cabGroup = new THREE.Group();
@@ -432,6 +465,38 @@ export function update(ctx) {
   pos.setXYZ(0, c.radius, topY, 0);
   pos.setXYZ(1, hook.position.x, hookY, hook.position.z);
   pos.needsUpdate = true;
+
+  // PHASE 3 item 8a. The hanging load.
+  const load = state.load;
+  if (load.attached) {
+    const [sx, sy, sz] = load.size;
+    hangingLoad.scale.set(sx || 1, sy || 1, sz || 1);
+    hangingLoad.position.y = -(sy || 1) / 2;
+    hangingLoad.visible = true;
+  } else {
+    hangingLoad.visible = false;
+  }
+
+  // PHASE 3 item 8b. The active mission's deck dressing follows the load: the
+  // preview crate at the pickup goes away once the load is off it, and a crate
+  // appears wherever the load was set down. Read only, no state is written.
+  const m = state.mission;
+  const active = pickupProps.get(m.id);
+  if (active) {
+    const lifted = load.attached || !!m.landedAt;
+    for (let i = 0; i < active.length; i += 1) active[i].visible = !lifted;
+  }
+  const landed = landedCrates.get(m.id);
+  if (landed) {
+    if (m.landedAt && !load.attached) {
+      const [sx, sy, sz] = load.size;
+      landed.scale.set(sx || 1, sy || 1, sz || 1);
+      landed.position.set(m.landedAt[0], m.landedAt[1] + (sy || 1) / 2, m.landedAt[2]);
+      landed.visible = true;
+    } else {
+      landed.visible = false;
+    }
+  }
 
   // Camera: eye height in the seat, looks out along the jib. Look-around
   // deltas are applied to state.look by crane.js; this only reads it.

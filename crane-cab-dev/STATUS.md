@@ -7,7 +7,18 @@ fresh session doesn't have to reverse-engineer it from git history.
 
 ## Current state
 
-- Last completed phase: **2B (review fixes + reach)** — data/crane.js is the single
+- Last completed phase: **3 (Radio + missions 0/1)** — the radio is the core loop.
+  radio.js runs call and guide nodes with an ack window, faults, half-duplex
+  doubling, an ALL STOP interrupt and ground-controlled hook / unhook;
+  missions.js owns `load.attached`, the pickup and landing geometry and the win
+  and fail rules; audio.js has the three procedural buses (radio squelch and
+  static, hoist and slew machine bed, LMI / A2B / lockout alarms) with no clip
+  files yet; data/radio.js gained guide nodes, the truckUnload script and
+  allStopClear; the reply strip has an ack countdown bar and there is a plain
+  end-of-lift card. The Phase 2 test load is gone from pendulum.init(). Built and
+  verified headlessly 2026-09-06 (33/33 checks) in an attended Cowork session per
+  AUTOMATION.md and deployed the same session, sw.js v15 -> v16.
+  Previous: **2B (review fixes + reach)** — data/crane.js is the single
   crane spec (jib length, trolley stop, speeds, load chart); Reach gauge and deck rings
   (amber = chart limit for the load on the hook, grey = trolley stop); pendulum plane
   now fixed in the world while the jib slews; wind has a world direction per mission;
@@ -31,10 +42,12 @@ fresh session doesn't have to reverse-engineer it from git history.
   /heading, render.js, plus procedural textures, preview crates, stadium
   backdrop, title-card controls reference, and the reopenable help button)
   shipped 2026-09-05; see the Notion Changelog for its tuning numbers.
-- Next phase: **3 (Radio + missions 0/1)** — prompt is docs/PHASE-3-PROMPT.md.
-  Covers audio.js buses, radio.js director, reply strip, doubling, ack
-  timer, and missions 0/1 as data. This is also where the Phase 2 test
-  load gets replaced by a real radio-driven pickup.
+- Next phase: **4 (M2/M3 + scoring)** — scaffold and blind shaft missions, the
+  scaffold and blindShaft radio scripts, scoring.js (grade, landing error,
+  achievements), save.js persistence, and the full after-action card that
+  replaces the plain Phase 3 end-of-lift card. No prompt doc exists yet; draft
+  docs/PHASE-4-PROMPT.md from the Notion Architecture section first, per
+  AUTOMATION.md step 2.
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main

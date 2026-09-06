@@ -10,7 +10,9 @@ export const MISSIONS = [
     name: 'Radio check',
     tutorial: true,
     load: { mass: 900, size: [1.2, 1.0, 1.2] },
-    pickup: { pos: [22, 0, 0] },
+    // PHASE 3: moved from [22, 0, 0] so the guide node has a real correction to
+    // call from the starting trolley position (radius 20, slew 0).
+    pickup: { pos: [22, 0, 6] },
     landing: { pos: [22, 0, 12], tol: 0.4 },
     wind: { base: 2, gust: 0, dir: 270 },
     hookCam: true,

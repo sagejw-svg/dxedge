@@ -6,20 +6,12 @@
 // Emits: hook.tight (tension rises from 0), load.slack (load rests, tension ~0), sway.settled
 // (|swing| below 0.5 deg for 1.5 s). Sets load.onSurface, load.tension.
 // Hook / unhook is ground-controlled by radio.js via bus, never by a grab key.
+// PHASE 3: init() leaves the hook empty. missions.js owns load.attached.
 
 import { CRANE } from '../data/crane.js';
 import { MISSIONS } from '../data/missions.js';
 
 const G = 9.81;
-
-// --- PHASE 2 TESTING DEFAULT -------------------------------------------------
-// radio.js does not exist yet, so nothing can call a real ground-controlled
-// pickup. init() hangs this fixed load on the hook, already attached, purely so
-// the swing can be seen and tuned this phase. Mass and size sit inside the range
-// the real missions use (900-1800 kg in data/missions.js).
-// PHASE 3 DELETES THIS: the load comes off the mission definition and
-// attached / detached is driven by the radio director, never from here.
-const TEST_LOAD = { mass: 1500, size: [1.8, 1.2, 1.8] };
 
 // The small-angle model stays honest well below this; clamp rather than let a
 // slammed control drive the linearisation somewhere it does not belong.
@@ -64,21 +56,19 @@ function clamp(v, lo, hi) {
 export function init(ctx) {
   const load = ctx.state.load;
 
-  // PHASE 2 TESTING DEFAULT - see the note on TEST_LOAD above. Phase 3 replaces
-  // this whole block with a radio-driven pickup off the mission definition.
-  load.attached = true;
-  load.mass = TEST_LOAD.mass;
-  load.size = [...TEST_LOAD.size];
+  // PHASE 3: nothing is on the hook at boot. missions.js places the load and the
+  // radio director is the only thing that hooks it on. The Phase 2 test load that
+  // used to hang here is gone.
   load.swing.x = 0;
   load.swing.y = 0;
   load.swing.vx = 0;
   load.swing.vy = 0;
   load.onSurface = false;
-  load.tension = load.mass * G;
+  load.tension = 0;
 
   prevSlewVel = ctx.state.crane.slewVel;
   prevRadiusVel = ctx.state.crane.radiusVel;
-  wasTight = true;
+  wasTight = false;
   wasSlack = false;
   settledFor = 0;
   settledEmitted = false;

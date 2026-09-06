@@ -53,17 +53,33 @@ export function createState() {
     },
 
     // Radio director. radio.js owns this.
+    // PHASE 3 additive fields: prevNode, repeats, groundTimer, playerTimer,
+    // guideTimer, ackTimeout. Timers are seconds remaining, counted down by
+    // radio.js. ackTimeout is the node's full ack window so ui.js can draw the
+    // countdown bar without importing the script data.
     radio: {
       channel: 'TC-1 GROUND',
-      script: null, node: null,
+      script: null, node: null, prevNode: null,
       tx: 'idle',            // idle | groundTx | playerTx
       caption: '', garbled: false,
       replies: [],           // visible reply labels, max 4
-      pttLed: false, faults: 0, ackTimer: 0
+      pttLed: false, faults: 0,
+      repeats: 0,
+      groundTimer: 0, ackTimer: 0, ackTimeout: 0, playerTimer: 0, guideTimer: 0
     },
 
     // missions.js owns this.
-    mission: { id: null, elapsed: 0, result: null, failReason: null },
+    // PHASE 3 additive fields: pickupPos, landingPos, hooked, everHooked,
+    // maxCapacityPct, maxSway, hadCollision, landedAt. Positions are copied out
+    // of the mission definition at start() so radio.js and render.js can read
+    // them without importing data/missions.js for the active lift.
+    mission: {
+      id: null, elapsed: 0, result: null, failReason: null,
+      pickupPos: null, landingPos: null,
+      hooked: false, everHooked: false,
+      maxCapacityPct: 0, maxSway: 0, hadCollision: false,
+      landedAt: null
+    },
 
     // scoring.js owns this. after-action card reads it.
     scoring: {
