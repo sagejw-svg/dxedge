@@ -120,8 +120,15 @@ jobs:
           sleep 3
           # /sw.js and the unhashed /crane-cab/ tree must never come back
           # immutable: those are the files a deploy has to be able to replace.
+          # GET, not HEAD: these paths proxy to the backend, which answers 405
+          # to HEAD, and a 405 carries no cache-control at all - the check would
+          # pass by finding nothing.
           for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js; do
-            CC=$(curl -sI "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
+            CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
+            if [ -z "$CC" ]; then
+              echo "ERROR: $U returned no cache-control header at all."
+              exit 1
+            fi
             echo "$U -> $CC"
             if echo "$CC" | grep -qi 'immutable'; then
               echo "ERROR: $U is served immutable. Returning visitors will not"
