@@ -50,11 +50,38 @@ document.getElementById('btn-resume').addEventListener('click', () => {
   setPhase('playing');
 });
 
+// Help card: recall the controls list without restarting. Only the sim
+// (not any other state) is paused while it's open, and only resumed on
+// close if opening help was what paused it (so it behaves if it's ever
+// reachable while already paused for another reason).
+function openHelp() {
+  const help = document.getElementById('help');
+  if (state.phase === 'playing') {
+    help.dataset.resume = '1';
+    setPhase('paused');
+  }
+  help.hidden = false;
+}
+function closeHelp() {
+  const help = document.getElementById('help');
+  help.hidden = true;
+  if (help.dataset.resume === '1') {
+    delete help.dataset.resume;
+    setPhase('playing');
+  }
+}
+document.getElementById('btn-help').addEventListener('click', openHelp);
+document.getElementById('btn-help-close').addEventListener('click', closeHelp);
+
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && state.phase === 'playing') {
+  if (e.key !== 'Escape') return;
+  const help = document.getElementById('help');
+  if (!help.hidden) {
+    closeHelp();
+  } else if (state.phase === 'playing') {
     document.getElementById('pause').hidden = false;
     setPhase('paused');
-  } else if (e.key === 'Escape' && state.phase === 'paused') {
+  } else if (state.phase === 'paused') {
     document.getElementById('pause').hidden = true;
     setPhase('playing');
   }

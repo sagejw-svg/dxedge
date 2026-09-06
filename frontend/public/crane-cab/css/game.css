@@ -266,6 +266,28 @@ html, body {
 }
 .card button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
+/* Small corner button that reopens the controls list during play. Sits
+   below the title/pause cards in stacking order, above the console. */
+#btn-help {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--lamp);
+  background: var(--glass);
+  border: 1px solid #0a0f11;
+  cursor: pointer;
+}
+#btn-help:focus-visible { outline: 2px solid var(--lamp); }
+
+#help button { margin-top: 8px; }
+
 /* Debug overlay */
 #debug {
   position: absolute;
