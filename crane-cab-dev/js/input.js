@@ -16,6 +16,7 @@ const pressed = new Set();
 // so a held key doesn't spam the toggle every frame.
 let estopKeyWasDown = false;
 let brakeKeyWasDown = false;
+let camKeyWasDown = false;
 
 // Mouse-drag look accumulator. Filled by pointer events, flushed into
 // intent.look once per tick in update(), then cleared by main.js's endTick.
@@ -90,6 +91,12 @@ export function init(ctx) {
       ctx.state.intent.ptt = true;
       return;
     }
+    if (code === 'KeyC') {
+      // A latching toggle like the brake, and phase guarded for the same reason.
+      if (!camKeyWasDown && playing) ctx.state.intent.hookCam = !ctx.state.intent.hookCam;
+      camKeyWasDown = true;
+      return;
+    }
 
     pressed.add(code);
   });
@@ -98,6 +105,7 @@ export function init(ctx) {
     const code = e.code;
     if (code === 'Space') { estopKeyWasDown = false; return; }
     if (code === 'KeyB') { brakeKeyWasDown = false; return; }
+    if (code === 'KeyC') { camKeyWasDown = false; return; }
     if (code === 'KeyT') { ctx.state.intent.ptt = false; return; }
     pressed.delete(code);
   });
@@ -107,6 +115,7 @@ export function init(ctx) {
     pressed.clear();
     estopKeyWasDown = false;
     brakeKeyWasDown = false;
+    camKeyWasDown = false;
     ctx.state.intent.ptt = false;
   });
 

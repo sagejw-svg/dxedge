@@ -1,20 +1,137 @@
-// PHASE 4. localStorage. Keys are locked: craneCab_hi, craneCab_ach, plus craneCab_settings.
-// Every value is JSON with a v field. Migrate on version bump. Never throw on bad JSON.
+// PHASE 4. localStorage. Keys are locked by the Notion Locked decisions:
+// craneCab_hi, craneCab_ach, plus craneCab_settings. Every value is JSON with a
+// v field and migrates on bump.
+//
+// Nothing here may throw and nothing here may trust what it reads. A hand-edited
+// key, a truncated write, a value from a future version, an array where an object
+// belongs: every one of those degrades to the default for that key and leaves the
+// rest alone. The game booting is worth more than any saved record.
+//
+// It listens for what to persist rather than being called by other systems, so
+// nothing imports it but main.js.
 
 const KEYS = { hi: 'craneCab_hi', ach: 'craneCab_ach', settings: 'craneCab_settings' };
+const V = 1;
 
-function read(key, fallback) {
+function read(key) {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (parsed.v !== V) return null;              // a future or older shape: ignore, do not crash
+    return parsed.data;
+  } catch { return null; }
+}
+
+function write(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ v: V, data })); } catch { /* full or blocked */ }
+}
+
+const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+
+// A best is only a best if every field survives inspection.
+function cleanBest(rec) {
+  if (!rec || typeof rec !== 'object' || Array.isArray(rec)) return null;
+  const elapsed = num(rec.elapsed);
+  if (elapsed === null || elapsed < 0) return null;
+  return {
+    elapsed,
+    grade: typeof rec.grade === 'string' ? rec.grade.slice(0, 2) : null,
+    landingError: num(rec.landingError),
+    maxSway: num(rec.maxSway)
+  };
 }
 
 export function load(ctx) {
-  const s = read(KEYS.settings, null);
-  if (s && s.v === 1) Object.assign(ctx.state.settings, s.data);
+  const { state } = ctx;
+
+  const s = read(KEYS.settings);
+  if (s && typeof s === 'object') {
+    if (typeof s.units === 'string') state.settings.units = s.units === 'metric' ? 'metric' : 'imperial';
+    if (typeof s.mute === 'boolean') state.settings.mute = s.mute;
+    const sens = num(s.sensitivity);
+    if (sens !== null) state.settings.sensitivity = Math.min(3, Math.max(0.1, sens));
+    const damp = num(s.damping);
+    if (damp !== null) state.settings.damping = Math.min(1, Math.max(0, damp));
+  }
+
+  const ach = read(KEYS.ach) || {};
+  const out = {};
+  if (ach && typeof ach === 'object' && !Array.isArray(ach)) {
+    Object.keys(ach.awards && typeof ach.awards === 'object' ? ach.awards : {}).forEach((k) => {
+      const when = ach.awards[k];
+      if (typeof when === 'string') out[k] = when;
+    });
+    state.progress.hooks = Math.max(0, num(ach.hooks) || 0);
+    const f = num(ach.furthest);
+    state.progress.furthest = f === null ? 0 : Math.min(3, Math.max(0, Math.round(f)));
+  }
+  state.progress.achievements = out;
+
+  const hi = read(KEYS.hi) || {};
+  const best = {};
+  if (hi && typeof hi === 'object' && !Array.isArray(hi)) {
+    Object.keys(hi).forEach((k) => {
+      const id = Number(k);
+      if (!Number.isInteger(id)) return;
+      const rec = cleanBest(hi[k]);
+      if (rec) best[id] = rec;
+    });
+  }
+  state.progress.best = best;
+
+  state.mission.furthest = state.progress.furthest;
+}
+
+export function init(ctx) {
+  const { state, bus } = ctx;
+
+  bus.on('achievement.earned', (p) => {
+    if (!p || typeof p.name !== 'string') return;
+    if (state.progress.achievements[p.name]) return;
+    state.progress.achievements[p.name] = new Date().toISOString().slice(0, 10);
+    persistAch(state);
+  });
+
+  bus.on('lift.hooked.count', (p) => {
+    const n = p && num(p.hooks);
+    if (n === null) return;
+    state.progress.hooks = n;
+    persistAch(state);
+  });
+
+  bus.on('lift.best', (p) => {
+    if (!p || !Number.isInteger(p.id)) return;
+    const rec = cleanBest(p.record);
+    if (!rec) return;
+    state.progress.best[p.id] = rec;
+    write(KEYS.hi, state.progress.best);
+  });
+
+  bus.on('mission.furthest', (p) => {
+    const n = p && num(p.id);
+    if (n === null) return;
+    if (n <= state.progress.furthest) return;
+    state.progress.furthest = Math.min(3, Math.round(n));
+    state.mission.furthest = state.progress.furthest;
+    persistAch(state);
+  });
+
+  bus.on('settings.changed', () => saveSettings(ctx));
+}
+
+function persistAch(state) {
+  write(KEYS.ach, {
+    awards: state.progress.achievements,
+    hooks: state.progress.hooks,
+    furthest: state.progress.furthest
+  });
 }
 
 export function saveSettings(ctx) {
-  try { localStorage.setItem(KEYS.settings, JSON.stringify({ v: 1, data: ctx.state.settings })); } catch {}
+  write(KEYS.settings, ctx.state.settings);
 }
+
+// Test seam. The suite has no localStorage, so it drives these directly.
+export const _keys = KEYS;

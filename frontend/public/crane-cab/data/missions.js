@@ -3,6 +3,9 @@
 // wind.dir is the compass direction the wind blows FROM in degrees, 0 = site north,
 // the same convention as the slew heading gauge.
 // Adding a mission = adding an object here. missions.js does the rest.
+// deck volumes are solid: the load may rest on a volume's top face but may not
+// pass through it. An optional hole { min:[x,z], max:[x,z], floor } opens the
+// deck over that footprint, which is what makes a below-deck landing possible.
 
 export const MISSIONS = [
   {
@@ -54,6 +57,11 @@ export const MISSIONS = [
     load: { mass: 1100, size: [1.4, 1.4, 1.4] },
     pickup: { pos: [24, 0, 16] },
     landing: { pos: [36, -9, 4], tol: 0.3 },
+    // The deck is open here, so the floor under this footprint is the shaft
+    // bottom rather than deck level. Without it the load rests on the deck at
+    // y 0, the shaft is unreachable, and because the win only measures
+    // horizontal distance the lift could be won by hovering over the hole.
+    hole: { min: [33.5, 1.5], max: [38.5, 6.5], floor: -9 },
     wind: { base: 3, gust: 0, dir: 240 },
     hookCam: false,
     script: 'blindShaft',

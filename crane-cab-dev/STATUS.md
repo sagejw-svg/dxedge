@@ -7,73 +7,29 @@ fresh session doesn't have to reverse-engineer it from git history.
 
 ## Current state
 
-- Last completed phase: **3 (Radio + missions 0/1)** — the radio is the core loop.
-  radio.js runs call and guide nodes with an ack window, faults, half-duplex
-  doubling, an ALL STOP interrupt and ground-controlled hook / unhook;
-  missions.js owns `load.attached`, the pickup and landing geometry and the win
-  and fail rules; audio.js has the three procedural buses (radio squelch and
-  static, hoist and slew machine bed, LMI / A2B / lockout alarms) with no clip
-  files yet; data/radio.js gained guide nodes, the truckUnload script and
-  allStopClear; the reply strip has an ack countdown bar and there is a plain
-  end-of-lift card. The Phase 2 test load is gone from pendulum.init(). Built and
-  verified headlessly 2026-09-06 in an attended Cowork session per AUTOMATION.md,
-  sw.js v15 -> v16. An adversarial review pass the same session found and fixed
-  two soft-locks (a refused unhook, an answered ALL STOP), two lifts that could
-  not be won (mission 1 was a deterministic instant fail; the landing guide
-  handed over at 2.5x the scored tolerance), and nine smaller defects; the
-  harness is now 47 checks. A second review pass the same day fixed nine more
-  (mission 1 unwinnable two ways, the hook-window trap, replayed alarms, a
-  postponable ALL STOP, an unguarded E-stop) and a rendering pass opened up the
-  cab: the glass floor had an opaque slab under it and the console sat dead
-  ahead, so straight down was black. Verification is now an 18-check headless
-  suite over the real modules plus a 5-check browser smoke test. A third pass
-  fixed six more, two of them introduced by the second: an unbalanced RETURN
-  could end the script outright and leave the lift with no way to be won or
-  lost, and mission 1 latched a silent collision on the truck bed it was picked
-  from and failed a flawless lift at the set-down. The suite is now committed
-  as `test/` (24 logic checks with no browser, plus a browser smoke test and a
-  console layout sweep) and AUTOMATION.md step 3 runs it first. Also fixed the
-  reason deploys were invisible to
-  returning visitors: nginx served /sw.js and the whole unhashed /crane-cab/
-  tree as immutable for a year, and the service worker was cache-first over the
-  top of it.
-  Previous: **2B (review fixes + reach)** — data/crane.js is the single
-  crane spec (jib length, trolley stop, speeds, load chart); Reach gauge and deck rings
-  (amber = chart limit for the load on the hook, grey = trolley stop); pendulum plane
-  now fixed in the world while the jib slews; wind has a world direction per mission;
-  damping retuned (0.05 base + 0.3 x slider); predictive A2B on stopping distance; LMI
-  approach caps trolley-out to range I above 90% and brakes at lock; imperial mass in
-  pounds; `?debug` URL flag exposes window.__cab for harness verification. Built and
-  verified headlessly in chat 2026-09-05, delivered as a patch for James to push.
-  Previous: **2 (Physics + sensors)** — pendulum.js (two
-  small-angle DOF, damping, deck contact, wind lean) and the remaining
-  sensors.js fields (actualLoad, ratedLoad, capacityPct, lmiLock, a2b,
-  slack, collision, swayAngle) done per docs/PHASE-2-PROMPT.md. A fixed
-  1500 kg test load is hung pre-attached in pendulum.init() as a Phase 2
-  testing default; Phase 3 replaces it with a real radio-driven pickup.
-  Shipped 2026-09-06 (commit c5f68d5) from an interactive session after
-  two nightly runs built and verified it but were blocked on push by the
-  sandbox's git proxy authorization check — see the Notion Changelog for
-  the full blocker/resolution writeup and the four items needing James's
-  own play-test judgment (sway damping decay, control feel at 1500 kg,
-  A2B margin, whether LMI lockout should also brake the trolley).
-  Phase 1 (Cab + crane — input.js, crane.js, sensors.js radius/hookHeight
-  /heading, render.js, plus procedural textures, preview crates, stadium
-  backdrop, title-card controls reference, and the reopenable help button)
-  shipped 2026-09-05; see the Notion Changelog for its tuning numbers.
-- Next phase: **4 (M2/M3 + scoring)** — scaffold and blind shaft missions, the
-  scaffold and blindShaft radio scripts, scoring.js (grade, landing error,
-  achievements), save.js persistence, and the full after-action card that
-  replaces the plain Phase 3 end-of-lift card, plus the hook cam and mission 2's
-  gusts. Prompt is docs/PHASE-4-PROMPT.md, drafted 2026-09-06 from the Notion
-  Architecture section, Design Prompt, Gauges section and Backlog, because unlike
-  2B and 3 there is no Notion child page for it - the page never uses the words
-  "Phase 4". **Six things Phase 4 needs are not specified anywhere on that page
-  and the prompt marks each INVENTED with its reasoning: the grading rubric, all
-  ten achievement definitions, the craneCab_hi shape, the after-action card
-  layout, the landing error overlay and the gust model. Worth James reading
-  those six before the build starts, because they are design decisions, not
-  implementation details.**
+- Last completed phase: **4 (M2/M3 + scoring)** - the phase table's own done
+  condition, "refresh keeps progress", is met and checked. scoring.js grades a
+  lift on a demerit count and says which line cost the letter; save.js persists
+  achievements, personal bests, a hooks counter and the furthest mission through
+  validated localStorage that degrades to defaults on any garbage; the mission
+  flow is 0-1-2-3 with a fail retrying; the after-action card shows time, sway,
+  faults, landing error, grade and a to-scale footprint-against-pad plan view;
+  the hook cam works on C and is refused with a visible reason on the blind
+  shaft; mission 2's anemometer gusts. **The real work was underneath: the world
+  had exactly one floor, at y 0, so mission 2's load fell through the scaffold
+  (colliding on the way) and mission 3 could never reach the shaft at -9 while
+  being winnable by hovering over the hole at deck level. Both missions were
+  unplayable and had been since the data was written in Phase 0.** state.mission
+  .surfaceY now carries what is under the load, support is directional so a
+  volume's top only holds a load arriving from above, pendulum clamps the load at
+  what it rests on (state.load.bottomY), and resting on a volume is no longer
+  counted as colliding with it. Verified by an autopilot that flies each of the
+  four missions on the radio alone; test/regress.mjs is 40 checks.
+- Next phase: **5 (Phone + pause)** - touch sticks, pause menu, settings and the
+  controls card, per the Notion phase table. No prompt doc yet; draft
+  docs/PHASE-5-PROMPT.md first, per AUTOMATION.md step 2. Note that save.js now
+  has a settings.changed event and nothing emits it: Phase 5 owns the settings UI
+  and should wire it.
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main

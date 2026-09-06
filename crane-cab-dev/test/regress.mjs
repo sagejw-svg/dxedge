@@ -297,31 +297,30 @@ async function tPhantomKey() {
     sim.state.radio.faults === 0 && node(sim.state) === 'check' && !sim.state.radio.garbled,
     `faults ${sim.state.radio.faults} node ${node(sim.state)} garbled ${sim.state.radio.garbled}`);
 }
-
-// A real collision must still end the lift, and must be announced.
+// A real collision must still end the lift, and must be announced. Setting a
+// load back down on the truck is no longer one: standing on something is not
+// colliding with it. Driving it into the side of the scaffold is.
 async function tRealCollisionStillCounts() {
-  const sim = await startMission(1);
-  answer(sim);
-  until(sim, atNode('watchTruck'), 10);
-  answer(sim);
-  const p = polarOf(m1.pickup.pos);
-  park(sim, { slew: p.slew, radius: p.radius });
-  until(sim, atNode('onHook'), 16);
-  park(sim, { slew: p.slew, radius: p.radius, line: 41.0 });
-  until(sim, (s) => s.load.attached, 16);
-  // Lift it clear so collisions start counting, then put it back in the truck.
-  park(sim, { slew: p.slew, radius: p.radius, line: 38 });
-  until(sim, () => false, 1);
-  park(sim, { slew: p.slew, radius: p.radius, line: 41.4 });
-  const ended = until(sim, (s) => s.mission.result !== null, 10);
+  const m2 = MISSIONS[2];
+  const sim = await startMission(2);
+  const p = polarOf(m2.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius, line: 43.8 - (m2.pickup.pos[1] + m2.load.size[1]) });
+  sim.bus.emit('hook.attach', {});
+  until(sim, (s) => s.load.attached, 4);
+  park(sim, { slew: p.slew, radius: p.radius, line: 36 });      // lift clear, collisions arm
+  until(sim, () => false, 1.5);
+  const cleanSoFar = sim.state.mission.result === null;
+  const scaff = polarOf([40, 0, -4]);
+  const ended = until(sim, (s) => s.mission.result !== null, 12, () => {
+    // bottom at 5 m: inside the scaffold volume (0..12), nowhere near its top
+    park(sim, { slew: scaff.slew, radius: scaff.radius, line: 43.8 - (5 + m2.load.size[1]) });
+  });
   const counted = sim.log.filter((e) => e.name === 'collision.counted').length;
-  rec('a real collision still fails the lift and is announced',
-    ended && sim.state.mission.failReason === 'collision' && counted > 0,
+  rec('driving the load into the side of the scaffold fails the lift',
+    cleanSoFar && ended && sim.state.mission.failReason === 'collision' && counted > 0,
     `result ${sim.state.mission.result} reason ${sim.state.mission.failReason} counted ${counted}`);
 }
 
-
-// The exact sequence that used to end the script and leave the lift unwinnable:
 // alarm, talk over it, let the say again return, THEN hit the mushroom.
 async function tReturnCannotKillRadio() {
   const sim = await startMission(0);
@@ -433,13 +432,287 @@ async function tEmptyBlockAccel() {
     `mission 0 started ${loaded.toFixed(4)} vs no mission ${empty.toFixed(4)}`);
 }
 
+
+// ------------------------------------------------- phase 4: more than one floor
+
+// Landing on a deck volume is not colliding with it.
+async function tRestingIsNotColliding() {
+  const m2 = MISSIONS[2];
+  const sim = await startMission(2);
+  const p = polarOf(m2.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius, line: 43.8 - (m2.pickup.pos[1] + m2.load.size[1]) });
+  sim.bus.emit('hook.attach', {});
+  until(sim, (s) => s.load.attached, 4);
+  const l = polarOf(m2.landing.pos);
+  park(sim, { slew: l.slew, radius: l.radius, line: 26 });       // high and clear
+  until(sim, () => false, 1.5);
+  // Set it on the scaffold roof and keep paying rope out well past contact.
+  until(sim, (s) => s.sensors.slack || s.mission.result !== null, 14, (s) => {
+    park(sim, { slew: l.slew, radius: l.radius, line: Math.min(33, s.crane.line + 0.05) });
+  });
+  const s = sim.state;
+  rec('a load set down on the scaffold rests on it and does not collide with it',
+    s.sensors.slack && s.mission.result === null &&
+    Math.abs(s.load.bottomY - m2.landing.pos[1]) < 0.4,
+    `slack ${s.sensors.slack} result ${s.mission.result} reason ${s.mission.failReason} bottom ${s.load.bottomY.toFixed(2)} want ${m2.landing.pos[1]}`);
+}
+
+// The shaft is reachable, and cannot be faked from deck level.
+async function tShaftReachable() {
+  const m3 = MISSIONS[3];
+  const sim = await startMission(3);
+  const p = polarOf(m3.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius, line: 43.8 - (m3.pickup.pos[1] + m3.load.size[1]) });
+  sim.bus.emit('hook.attach', {});
+  until(sim, (s) => s.load.attached, 4);
+  const l = polarOf(m3.landing.pos);
+  // Hover over the mouth at deck level. Horizontally this is the zone.
+  park(sim, { slew: l.slew, radius: l.radius, line: 43.8 - (0 + m3.load.size[1]) });
+  until(sim, () => false, 1.5);
+  const fakedAtDeck = sim.log.filter((e) => e.name === 'load.inZone').length;
+  // Now actually go down the hole.
+  until(sim, (s) => s.sensors.slack || s.mission.result !== null, 25, (s) => {
+    park(sim, { slew: l.slew, radius: l.radius, line: Math.min(53, s.crane.line + 0.05) });
+  });
+  const s = sim.state;
+  const reached = sim.log.filter((e) => e.name === 'load.inZone').length;
+  rec('the shaft cannot be claimed from deck level, and can be reached',
+    fakedAtDeck === 0 && reached > 0 && s.mission.result === null &&
+    Math.abs(s.load.bottomY - m3.landing.pos[1]) < 0.4,
+    `inZone at deck ${fakedAtDeck}, after descent ${reached}, bottom ${s.load.bottomY.toFixed(2)} want ${m3.landing.pos[1]}, result ${s.mission.result}`);
+}
+
+// A load flown past a volume at mid height must not be teleported onto its roof.
+async function tNoTeleportOntoRoof() {
+  const m2 = MISSIONS[2];
+  const sim = await startMission(2);
+  const p = polarOf(m2.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius, line: 43.8 - (m2.pickup.pos[1] + m2.load.size[1]) });
+  sim.bus.emit('hook.attach', {});
+  until(sim, (s) => s.load.attached, 4);
+  park(sim, { slew: p.slew, radius: p.radius, line: 36 });
+  until(sim, () => false, 1);
+  const scaff = polarOf([40, 0, -4]);
+  let lifted = false;
+  until(sim, (s) => s.mission.result !== null, 6, (s) => {
+    park(sim, { slew: scaff.slew, radius: scaff.radius, line: 43.8 - (5 + m2.load.size[1]) });
+    if (s.load.bottomY > 8) lifted = true;
+  });
+  rec('a load at mid height over the scaffold is not lifted onto its roof',
+    !lifted, `load bottom ended at ${sim.state.load.bottomY.toFixed(2)}, wanted about 5`);
+}
+
+
+// An autopilot that flies any mission the way ground calls it: answer every
+// call, follow every guide, hook when told, lower when told. It knows nothing
+// mission-specific beyond the data, so a mission it cannot fly is a real
+// finding about that mission and not about the test.
+async function flyMission(id, budget = 240) {
+  const m = MISSIONS.find((x) => x.id === id);
+  const sim = await startMission(id);
+  const pick = polarOf(m.pickup.pos);
+  const land = polarOf(m.landing.pos);
+  const TOP = 43.8;                                   // cabHeight + hookDrop
+  const hookLine = TOP - (m.pickup.pos[1] + m.load.size[1]) + 0.05;
+  const restLine = TOP - (m.landing.pos[1] + m.load.size[1]) + 0.30;
+  const flyLine = Math.max(6, TOP - (Math.max(m.landing.pos[1], m.pickup.pos[1]) + m.load.size[1]) - 5);
+  let answered = null;
+  let descending = false;
+
+  until(sim, (s) => s.mission.result !== null, budget, (s) => {
+    const n = s.radio.node;
+    const nd = n ? null : null;
+    // Answer each call once, as soon as its window opens.
+    if (s.radio.ackTimer > 0 && answered !== n) { s.intent.reply = 0; answered = n; }
+    if (n === 'toLanding' || descending) descending = descending || n !== 'toLanding';
+    const guide = n && (n === 'toPickup' || n === 'toLanding');
+    const target = n === 'toLanding' ? land : pick;
+    if (!s.load.attached) {
+      // Get over the pickup, then put the block in the hook window.
+      park(sim, { slew: pick.slew, radius: pick.radius });
+      if (n === 'onHook') park(sim, { slew: pick.slew, radius: pick.radius, line: hookLine });
+      return;
+    }
+    if (n === 'toPickup' || n === 'onHook' || n === 'upEasy') {
+      park(sim, { slew: pick.slew, radius: pick.radius, line: Math.min(s.crane.line, flyLine) });
+      return;
+    }
+    // Attached and past the pickup: fly to the landing, then lower onto it.
+    if (n === 'toLanding') {
+      park(sim, { slew: land.slew, radius: land.radius, line: Math.min(s.crane.line, flyLine) });
+      return;
+    }
+    park(sim, {
+      slew: land.slew, radius: land.radius,
+      line: Math.min(restLine, s.crane.line + 0.05)
+    });
+  });
+  return sim;
+}
+
+async function tFlyScaffold() {
+  const sim = await flyMission(2);
+  const s = sim.state;
+  rec('mission 2, the scaffold landing, can be flown to a win',
+    s.mission.result === 'win',
+    `result ${s.mission.result} reason ${s.mission.failReason} node ${s.radio.node} bottom ${s.load.bottomY.toFixed(2)} faults ${s.radio.faults}`);
+}
+
+async function tFlyBlindShaft() {
+  const sim = await flyMission(3);
+  const s = sim.state;
+  rec('mission 3, the blind shaft, can be flown to a win',
+    s.mission.result === 'win',
+    `result ${s.mission.result} reason ${s.mission.failReason} node ${s.radio.node} bottom ${s.load.bottomY.toFixed(2)} faults ${s.radio.faults}`);
+}
+
+async function tFlyTruck() {
+  const sim = await flyMission(1);
+  const s = sim.state;
+  rec('mission 1, the truck unload, can be flown to a win',
+    s.mission.result === 'win',
+    `result ${s.mission.result} reason ${s.mission.failReason} node ${s.radio.node} faults ${s.radio.faults}`);
+}
+
+
+// ------------------------------------------------------ phase 4: score and save
+
+async function tGradeRubric() {
+  // A clean flight of mission 0 should be an A; the scorer is fed the scruffy
+  // case directly, because manufacturing three demerits by flying is slow.
+  const sim = await flyMission(0);
+  const clean = sim.state.scoring.grade;
+  const scruffy = await startMission(0);
+  scruffy.state.scoring.maxSway = 7 * Math.PI / 180;      // swinging hard: 2
+  scruffy.state.scoring.radioFaults = 1;                  // a radio fault:  1
+  scruffy.state.mission.maxCapacityPct = 95;              // over ninety:    1
+  scruffy.state.mission.landedAt = [0, 0, 0];
+  scruffy.state.mission.landingPos = [0, 0, 0];
+  scruffy.state.mission.landingTol = 0.4;
+  scruffy.state.mission.result = 'win';
+  scruffy.bus.emit('lift.win', { id: 0 });
+  rec('a clean lift grades A and a scruffy one grades D',
+    clean === 'A' && scruffy.state.scoring.grade === 'D',
+    `clean ${clean}, scruffy ${scruffy.state.scoring.grade} from ${JSON.stringify(scruffy.state.scoring.demerits.map((d) => d.why))}`);
+  rec('the card can say what cost the grade',
+    sim.state.scoring.demerits.length === 0 && scruffy.state.scoring.demerits.length === 3,
+    `clean ${sim.state.scoring.demerits.length} lines, scruffy ${scruffy.state.scoring.demerits.length}`);
+}
+
+async function tFlowAndResume() {
+  const sim = await flyMission(0);
+  const afterWin = sim.modules.missions.nextMissionId(sim.ctx);
+  const f = await startMission(2);
+  f.state.mission.result = 'fail';
+  const afterFail = f.modules.missions.nextMissionId(f.ctx);
+  const last = await startMission(3);
+  last.state.mission.result = 'win';
+  const afterLast = last.modules.missions.nextMissionId(last.ctx);
+  rec('the flow is 0 to 3, a fail retries, and the last mission does not run off the end',
+    afterWin === 1 && afterFail === 2 && afterLast === 3,
+    `after win on 0 -> ${afterWin}, after fail on 2 -> ${afterFail}, after win on 3 -> ${afterLast}`);
+}
+
+async function tRefreshKeepsProgress() {
+  // The phase table's own done condition. Win a lift, then boot a fresh sim
+  // against the same storage, which is exactly what a refresh is.
+  globalThis.localStorage && globalThis.localStorage.clear();
+  const first = await flyMission(1);
+  const earned = [...(first.state.scoring.earned || [])];
+  const wonAt = first.state.scoring.elapsed;
+
+  const second = await makeSim();
+  const p = second.state.progress;
+  rec('a refresh keeps achievements, the best and the furthest mission',
+    earned.length > 0 && Object.keys(p.achievements).length === earned.length &&
+    p.best[1] && Math.abs(p.best[1].elapsed - wonAt) < 0.01 && p.furthest >= 1,
+    `earned ${JSON.stringify(earned)}, restored ${JSON.stringify(Object.keys(p.achievements))}, best ${JSON.stringify(p.best[1])}, furthest ${p.furthest}`);
+  rec('and it resumes at the furthest mission reached',
+    second.modules.missions.firstUnfinished(second.ctx) === p.furthest,
+    `resume at ${second.modules.missions.firstUnfinished(second.ctx)}, furthest ${p.furthest}`);
+}
+
+async function tAchievementOnce() {
+  globalThis.localStorage && globalThis.localStorage.clear();
+  const a = await flyMission(0);
+  const firstRun = [...(a.state.scoring.earned || [])];
+  const b = await flyMission(0);
+  const secondRun = [...(b.state.scoring.earned || [])];
+  rec('an achievement is awarded once and never again',
+    firstRun.includes('Radio Check') && !secondRun.includes('Radio Check'),
+    `first ${JSON.stringify(firstRun)}, second ${JSON.stringify(secondRun)}`);
+  rec('and the hooks counter survives a reload',
+    b.state.progress.hooks >= 2, `hooks ${b.state.progress.hooks}`);
+}
+
+async function tSaveSurvivesGarbage() {
+  const junk = [
+    ['no v', '{"data":{"0":{"elapsed":5}}}'],
+    ['wrong v', '{"v":99,"data":{"0":{"elapsed":5}}}'],
+    ['truncated', '{"v":1,"data":{"0":{"elap'],
+    ['null', 'null'],
+    ['an array', '[1,2,3]'],
+    ['NaN time', '{"v":1,"data":{"0":{"elapsed":null}}}'],
+    ['not an object', '"hello"'],
+    ['bad key', '{"v":1,"data":{"banana":{"elapsed":5}}}']
+  ];
+  let survived = 0;
+  for (const [label, raw] of junk) {
+    globalThis.localStorage.clear();
+    globalThis.localStorage.setItem('craneCab_hi', raw);
+    globalThis.localStorage.setItem('craneCab_ach', raw);
+    globalThis.localStorage.setItem('craneCab_settings', raw);
+    try {
+      const sim = await makeSim();
+      const p = sim.state.progress;
+      const ok = p && typeof p.best === 'object' && typeof p.achievements === 'object' &&
+        Object.keys(p.best).length === 0 && sim.state.settings.units === 'imperial';
+      if (ok) survived += 1; else console.log(`   ${label} loaded something it should not have`);
+    } catch (e) { console.log(`   ${label} threw: ${e.message}`); }
+  }
+  globalThis.localStorage.clear();
+  rec('every shape of garbage in localStorage degrades to the defaults',
+    survived === junk.length, `${survived} of ${junk.length} handled`);
+}
+
+
+async function tGusts() {
+  const gusty = await startMission(2);      // the only mission with a gust
+  const steady = await startMission(1);
+  const gs = [];
+  const ss = [];
+  until(gusty, () => false, 0.05);      // one tick, so sensors has run once
+  until(steady, () => false, 0.05);
+  until(gusty, () => false, 30, (s) => gs.push(s.sensors.wind));
+  until(steady, () => false, 30, (s) => ss.push(s.sensors.wind));
+  const spread = (a) => Math.max(...a) - Math.min(...a);
+  const m2 = MISSIONS[2];
+  rec('the gusty mission moves the anemometer and the steady ones do not',
+    spread(gs) > 1.0 && spread(gs) <= m2.wind.gust + 0.01 && spread(ss) < 0.001 &&
+    Math.min(...gs) >= m2.wind.base - 0.01,
+    `mission 2 wind ${Math.min(...gs).toFixed(2)}..${Math.max(...gs).toFixed(2)} m/s (base ${m2.wind.base}, gust ${m2.wind.gust}), mission 1 spread ${spread(ss).toFixed(4)}`);
+
+  // Deterministic: a retry is the same weather, not a different mission.
+  const again = await startMission(2);
+  const rs = [];
+  until(again, () => false, 0.05);
+  until(again, () => false, 10, (s) => rs.push(s.sensors.wind));
+  const same = rs.every((v, i) => Math.abs(v - gs[i]) < 1e-9);
+  rec('and the same mission blows the same way on a retry',
+    same, same ? 'identical' : 'diverged');
+}
+
 // ---------------------------------------------------------------- run
 
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
   tReturnCannotKillRadio, tMission1NoSilentCollision, tHoistBudgetResets,
-  tGuideSayAgainFree, tEmptyBlockAccel];
+  tGuideSayAgainFree, tEmptyBlockAccel,
+  tRestingIsNotColliding, tShaftReachable, tNoTeleportOntoRoof,
+  tFlyTruck, tFlyScaffold, tFlyBlindShaft,
+  tGradeRubric, tFlowAndResume, tRefreshKeepsProgress, tAchievementOnce,
+  tSaveSurvivesGarbage, tGusts];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

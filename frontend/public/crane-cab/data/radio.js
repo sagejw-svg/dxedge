@@ -94,8 +94,55 @@ export const SCRIPTS = {
       allStop:    { id: 'allStop', say: 'ALL_STOP', caption: 'ALL STOP. ALL STOP.', expect: ['Stopped'], timeout: 1.5, onTimeout: 'ignoredAllStop', waitFor: 'estop', next: 'allStopClear', urgency: 2 },
       allStopClear: { id: 'allStopClear', say: 'ALL_STOP_CLEAR', caption: 'All stop received. Recover easy.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 }
     }
+  },
+
+  // Mission 2. The pad is up on the scaffold, twelve metres off the deck, so the
+  // set-down is at height and the operator cannot see the surface from the seat.
+  scaffold: {
+    start: 'check',
+    nodes: {
+      check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
+      brief:      { id: 'brief', say: 'SCAFFOLD_BRIEF', caption: 'Landing is up on the scaffold deck, twelve metres. Keep it high.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
+      onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy. Well above the deck before you come round.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
+      toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
+      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastFoot', urgency: 0 },
+      lastFoot:   { id: 'lastFoot', say: 'LAST_FOOT', caption: 'Last foot. Micro.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
+      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
+
+      sayAgain:   { id: 'sayAgain', say: 'SAY_AGAIN', caption: 'Say again, you doubled me.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 },
+      allStop:    { id: 'allStop', say: 'ALL_STOP', caption: 'ALL STOP. ALL STOP.', expect: ['Stopped'], timeout: 1.5, onTimeout: 'ignoredAllStop', waitFor: 'estop', next: 'allStopClear', urgency: 2 },
+      allStopClear: { id: 'allStopClear', say: 'ALL_STOP_CLEAR', caption: 'All stop received. Recover easy.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 }
+    }
+  },
+
+  // Mission 3. Down a shaft, nine metres below the deck, with the hook cam off.
+  // The operator genuinely cannot see the load once it is in the hole, so ground
+  // talks the whole descent and this script is deliberately wordier than the
+  // others rather than shorter.
+  blindShaft: {
+    start: 'check',
+    nodes: {
+      check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
+      brief:      { id: 'brief', say: 'SHAFT_BRIEF', caption: 'Blind pick. Shaft is nine metres deep, five across. My eyes only.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
+      onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
+      toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'centred' },
+      centred:    { id: 'centred', say: 'CENTRED', caption: 'You are over the hole. Do not let it swing in there.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastMetre', urgency: 0 },
+      lastMetre:  { id: 'lastMetre', say: 'LAST_METRE', caption: 'Two metres. Micro from here.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
+      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
+
+      sayAgain:   { id: 'sayAgain', say: 'SAY_AGAIN', caption: 'Say again, you doubled me.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 },
+      allStop:    { id: 'allStop', say: 'ALL_STOP', caption: 'ALL STOP. ALL STOP.', expect: ['Stopped'], timeout: 1.5, onTimeout: 'ignoredAllStop', waitFor: 'estop', next: 'allStopClear', urgency: 2 },
+      allStopClear: { id: 'allStopClear', say: 'ALL_STOP_CLEAR', caption: 'All stop received. Recover easy.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 }
+    }
   }
-  // scaffold, blindShaft: Phase 4. Same node shapes.
 };
 
 // Guide call captions and clip keys. radio.js picks one of these per correction.

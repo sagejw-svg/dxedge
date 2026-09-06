@@ -21,6 +21,7 @@ import { MISSIONS } from '../data/missions.js';
 import { CRANE } from '../data/crane.js';
 
 let renderer, scene, camera;
+let hookCam = null;            // looks straight down from the block
 let trolley, hook, sheave;
 const parts = {};
 
@@ -232,6 +233,25 @@ function buildPickupProps(scene) {
       vols.push(vol);
     });
     deckVolumes.set(m.id, vols);
+
+    // A hole in the deck. The deck is one plane, so the opening is painted on
+    // rather than cut: the load genuinely disappears into it, which is the whole
+    // point of a blind pick.
+    if (m.hole) {
+      const hw = m.hole.max[0] - m.hole.min[0];
+      const hd = m.hole.max[1] - m.hole.min[1];
+      const mouth = new THREE.Mesh(
+        new THREE.PlaneGeometry(hw, hd),
+        new THREE.MeshBasicMaterial({ color: 0x07090a })
+      );
+      mouth.rotation.x = -Math.PI / 2;
+      mouth.position.set(
+        (m.hole.min[0] + m.hole.max[0]) / 2, 0.03, (m.hole.min[1] + m.hole.max[1]) / 2
+      );
+      mouth.visible = false;
+      scene.add(mouth);
+      vols.push(mouth);
+    }
 
     // The crate this load becomes once it has been set down. Hidden until the
     // mission reports where the release happened.
@@ -634,8 +654,23 @@ export function init(ctx, canvas) {
   landingMark.visible = false;
   scene.add(landingMark);
 
+  // Hook cam. A second camera looking straight down from the block, drawn into a
+  // corner viewport. Cheaper than a render target and it is one extra scene
+  // traversal, which is why it is off by default and forced off on the blind
+  // shaft: the whole point of that mission is not having it.
+  hookCam = new THREE.PerspectiveCamera(58, 1, 0.3, 400);
+  scene.add(hookCam);
+
   window.addEventListener('resize', resize);
   resize();
+}
+
+// Whether the inset is up: the operator asked for it and the mission allows it.
+// Read from state, like everything else in here.
+function hookCamWanted(state) {
+  if (!state.intent.hookCam) return false;
+  const m = MISSIONS.find((x) => x.id === state.mission.id);
+  return !m || m.hookCam !== false;
 }
 
 function resize() {
@@ -703,7 +738,10 @@ export function update(ctx, dt) {
       hangingLoad.userData.hue = wantHue;
     }
     hangingLoad.scale.set(sx || 1, sy || 1, sz || 1);
-    hangingLoad.position.y = -(sy || 1) / 2;
+    // pendulum.js clamps the load at whatever it is resting on, so read that
+    // rather than hanging the box a fixed distance under the block. This is what
+    // stops a landed crate sinking into the deck as the rope keeps paying out.
+    hangingLoad.position.y = (load.bottomY + (sy || 1) / 2) - hookY;
     hangingLoad.visible = true;
 
     // Touchdown edge. render.js keeps its own memory of the last frame, which is
@@ -712,7 +750,7 @@ export function update(ctx, dt) {
     wasOnSurface = load.onSurface;
 
     // Shadow on the deck. Spreads and fades with height above it.
-    const bottom = Math.max(0, hookY - (sy || 1));
+    const bottom = Math.max(0, load.bottomY);
     const spread = 1 + bottom * 0.035;
     loadShadow.position.set(hook.position.x, 0.04, hook.position.z);
     loadShadow.scale.setScalar(Math.max(sx || 1, sz || 1) * 0.6 * spread);
@@ -811,4 +849,29 @@ export function update(ctx, dt) {
   camera.lookAt(target);
 
   renderer.render(scene, camera);
+
+  // The inset, last, over the top of the main view.
+  if (state.mission.id !== null && hookCamWanted(state)) {
+    const w = renderer.domElement.width;
+    const h = renderer.domElement.height;
+    const size = Math.round(Math.min(w, h) * 0.26);
+    const pad = Math.round(size * 0.09);
+    // Top left. WebGL viewport coordinates start at the bottom, and the console
+    // dock covers the bottom 148 css pixels, so a bottom-left inset was drawn
+    // underneath it and could not be seen at all.
+    const vy = h - size - pad;
+    hangingLoad.visible = false;              // looking down through it is useless
+    hookCam.position.set(hook.position.x, hookY - 0.35, hook.position.z);
+    parts.slewGroup.localToWorld(hookCam.position);
+    hookCam.up.set(Math.cos(-c.slew), 0, -Math.sin(-c.slew));
+    hookCam.lookAt(hookCam.position.x, hookCam.position.y - 10, hookCam.position.z);
+    renderer.clearDepth();
+    renderer.setScissorTest(true);
+    renderer.setScissor(pad, vy, size, size);
+    renderer.setViewport(pad, vy, size, size);
+    renderer.render(scene, hookCam);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, w, h);
+    hangingLoad.visible = load.attached;
+  }
 }

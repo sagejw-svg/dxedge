@@ -20,6 +20,7 @@ export function createState() {
       brake: false,   // slew brake toggle
       estop: false,   // mushroom E-stop, dogs everything
       ptt: false,
+      hookCam: false, // C. render.js shows the inset; missions may forbid it
       reply: null,    // 0..7 or null, one-shot, cleared by radio.js
       look: { dx: 0, dy: 0 } // drag look-around delta this frame
     },
@@ -40,7 +41,11 @@ export function createState() {
     load: {
       attached: false, mass: 0, size: [1, 1, 1],
       swing: { x: 0, y: 0, vx: 0, vy: 0 }, // tangential / radial angles, rad
-      onSurface: false, tension: 0
+      onSurface: false, tension: 0,
+      // PHASE 4. Where the load's underside actually is, clamped at whatever it
+      // is resting on. pendulum.js owns it; sensors, missions and render read it
+      // instead of deriving a position from the rope length.
+      bottomY: 0
     },
 
     // Derived readings. sensors.js owns this. ui.js displays it.
@@ -78,14 +83,29 @@ export function createState() {
       pickupPos: null, landingPos: null, landingTol: 0,
       hooked: false, everHooked: false,
       maxCapacityPct: 0, maxSway: 0, hadCollision: false,
-      landedAt: null
+      landedAt: null,
+      // PHASE 4. The height of whatever is under the load right now: the deck,
+      // the top of a deck volume it is over, or a shaft floor. pendulum.js reads
+      // it for contact, one tick stale, the same way it already reads
+      // sensors.wind. Before this the world had exactly one floor, at y 0, so
+      // the scaffold could not be landed on and the shaft could not be entered.
+      surfaceY: 0,
+      near: false, inZone: false,   // live, so radio.js can gate on them
+      furthest: 0          // furthest mission reached, restored from save
     },
 
     // scoring.js owns this. after-action card reads it.
     scoring: {
       maxSway: 0, collisions: 0, twoBlocks: 0,
-      radioFaults: 0, landingError: null, grade: null
+      radioFaults: 0, landingError: null, grade: null,
+      // PHASE 4 additive: elapsed at resolution, the lines that cost the grade,
+      // achievements unlocked this lift, and whether it beat the stored best.
+      elapsed: 0, demerits: [], earned: [], personalBest: false
     },
+
+    // PHASE 4. What survives a refresh. save.js loads and persists it; scoring
+    // and missions read it. New top-level field, declared per hard rule 6.
+    progress: { achievements: {}, best: {}, hooks: 0, furthest: 0 },
 
     // save.js loads and persists this.
     settings: { sensitivity: 1, damping: 0.5, units: 'imperial', mute: false },

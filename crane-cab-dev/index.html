@@ -60,6 +60,7 @@
         </div>
         <div class="lamps">
           <span class="lamp" id="l-estop">E-Stop</span>
+          <span class="lamp" id="l-cam">Cam</span>
           <span class="lamp" id="l-a2b">A2B</span>
           <span class="lamp" id="l-slack">Slack</span>
           <span class="lamp" id="l-lmi">LMI</span>
@@ -91,6 +92,7 @@
         <div><dt><kbd>Shift</kbd><kbd>Ctrl</kbd></dt><dd>Range II / Micro</dd></div>
         <div><dt><kbd>Space</kbd></dt><dd>E-stop (press again to clear)</dd></div>
         <div><dt><kbd>B</kbd></dt><dd>Slew brake (toggle)</dd></div>
+        <div><dt><kbd>C</kbd></dt><dd>Hook cam (off on the shaft job)</dd></div>
         <div><dt>Drag</dt><dd>Look around</dd></div>
         <div><dt><kbd>F3</kbd></dt><dd>Debug overlay</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
@@ -109,11 +111,20 @@
          full after-action card (grade, achievements, landing error). -->
     <div id="endcard" class="card" hidden>
       <h2 id="ec-title">Lift complete</h2>
+      <div class="ec-top">
+        <div class="ec-grade" id="ec-grade" hidden><span id="ec-grade-letter">A</span><small>grade</small></div>
+        <!-- Landing error, footprint against pad, drawn to scale by ui.js. -->
+        <svg class="ec-plan" id="ec-plan" viewBox="0 0 120 120" aria-label="Where the load was set down"></svg>
+      </div>
       <dl class="stats" aria-label="Lift result">
         <div><dt>Time</dt><dd id="ec-time">0:00</dd></div>
         <div><dt>Max sway</dt><dd id="ec-sway">0.0&deg;</dd></div>
         <div><dt>Radio faults</dt><dd id="ec-faults">0</dd></div>
+        <div><dt>Landing error</dt><dd id="ec-error">-</dd></div>
       </dl>
+      <p class="ec-why" id="ec-why"></p>
+      <p class="ec-earned" id="ec-earned"></p>
+      <p class="ec-best" id="ec-best"></p>
       <button id="btn-endcard" type="button">Next lift</button>
     </div>
 
@@ -134,6 +145,7 @@
         <div><dt><kbd>Shift</kbd><kbd>Ctrl</kbd></dt><dd>Range II / Micro</dd></div>
         <div><dt><kbd>Space</kbd></dt><dd>E-stop (press again to clear)</dd></div>
         <div><dt><kbd>B</kbd></dt><dd>Slew brake (toggle)</dd></div>
+        <div><dt><kbd>C</kbd></dt><dd>Hook cam (off on the shaft job)</dd></div>
         <div><dt>Drag</dt><dd>Look around</dd></div>
         <div><dt><kbd>F3</kbd></dt><dd>Debug overlay</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Close / pause</dd></div>

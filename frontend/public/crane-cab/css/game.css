@@ -126,6 +126,7 @@ html, body {
   border: 1px solid #0a0f11;
   border-radius: 3px;
 }
+.lamp.denied { color: var(--alarm); opacity: 0.85; }
 .lamp.on { color: #fff; background: var(--alarm); }
 .lamp.on.ok { background: #35602f; }
 
@@ -363,8 +364,8 @@ html, body {
 /* End-of-lift card. Plain by design; Phase 4 replaces it. */
 #endcard .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(90px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(82px, 1fr));
+  gap: 12px;
   margin: 8px 0 22px;
 }
 #endcard .stats > div {
@@ -403,4 +404,60 @@ html, body {
   .gauge .label { font-size: 9px; }
   .lamp { padding: 2px 0; font-size: 9px; }
   .radio .caption { font-size: 13px; min-height: 2em; -webkit-line-clamp: 2; }
+}
+
+/* After-action card, Phase 4. The grade and the plan view sit side by side above
+   the numbers, because the two questions after a lift are "how did I do" and
+   "where did it actually land". */
+#endcard .ec-top {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 6px;
+}
+#endcard .ec-grade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 88px;
+}
+#endcard .ec-grade[hidden] { display: none; }
+#endcard .ec-grade span {
+  font-size: 62px;
+  line-height: 1;
+  color: var(--lamp);
+  font-variant-numeric: tabular-nums;
+}
+#endcard .ec-grade small {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+#endcard .ec-plan {
+  width: 120px;
+  height: 120px;
+  background: var(--glass);
+  border: 1px solid #0a0f11;
+  border-radius: 3px;
+}
+#endcard .ec-plan[hidden] { display: none; }
+#endcard .ec-why,
+#endcard .ec-earned,
+#endcard .ec-best {
+  margin: 0 0 6px;
+  font-size: 13px;
+  max-width: 460px;
+}
+#endcard .ec-why { color: var(--text-dim); }
+#endcard .ec-earned { color: var(--ok); }
+#endcard .ec-best { color: var(--lamp); }
+#endcard .ec-why:empty,
+#endcard .ec-earned:empty,
+#endcard .ec-best:empty { display: none; }
+
+@media (max-width: 560px) {
+  #endcard .ec-top { flex-direction: column; gap: 10px; }
+  #endcard .ec-grade span { font-size: 46px; }
 }

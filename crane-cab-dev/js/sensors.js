@@ -48,12 +48,26 @@ function loadAABB(state) {
 
   const cx = jibX * cos - jibZ * sin;
   const cz = jibX * sin + jibZ * cos;
-  const cy = c.cabHeight + CRANE.hookDrop - c.line - sy / 2;
+  const cy = state.load.bottomY + sy / 2;
 
   return {
     min: [cx - sx / 2, cy - sy / 2, cz - sz / 2],
     max: [cx + sx / 2, cy + sy / 2, cz + sz / 2]
   };
+}
+
+// A load resting on a deck volume shares that volume's top face, and an AABB
+// test calls a shared face a hit. Standing on something is not colliding with
+// it: without this the scaffold landing fails the instant it succeeds, and the
+// truck pickup fails the instant the load is hooked.
+function restingOn(box, d) {
+  // Wide enough to cover the rope pay-out after touchdown: pendulum.js bleeds
+  // tension over TENSION_BLEED (0.15 m), so a fully slack load sits that far
+  // below the face it is resting on. Still far too small to hide a side impact.
+  const EPS = 0.35;
+  return box.min[1] >= d.max[1] - EPS && box.min[1] <= d.max[1] + EPS &&
+    box.max[0] > d.min[0] && box.min[0] < d.max[0] &&
+    box.max[2] > d.min[2] && box.min[2] < d.max[2];
 }
 
 function overlaps(a, b) {
@@ -117,7 +131,24 @@ export function update(ctx, dt) {
   // Steady wind off the current mission definition. No gust model yet - gusts
   // and any real wind behaviour wait for Phase 3/4, when missions.js drives this.
   const mission = currentMission(state);
-  s.wind = mission ? mission.wind.base : 0;
+  // PHASE 4 gusts. The Notion page says only "gusts on wind missions" and
+  // specifies no period, amplitude or shape, so this is invented and
+  // deliberately dull: two slow sines of incommensurate period, offset by the
+  // mission id so a retry is the same weather rather than a different mission.
+  // Mission 2 is the only one carrying a non-zero gust.
+  if (!mission) {
+    s.wind = 0;
+  } else {
+    const g = mission.wind.gust || 0;
+    if (g <= 0) {
+      s.wind = mission.wind.base;
+    } else {
+      const t = state.time.t;
+      const k = mission.id * 1.7;
+      const n = 0.5 + 0.5 * (0.62 * Math.sin(t * 0.62 + k) + 0.38 * Math.sin(t * 0.29 + k * 2.3));
+      s.wind = mission.wind.base + g * Math.max(0, Math.min(1, n));
+    }
+  }
 
   // --- Collision ---
   // Load AABB against the current mission's deck volumes.
@@ -126,6 +157,7 @@ export function update(ctx, dt) {
     const box = loadAABB(state);
     for (let i = 0; i < mission.deck.length; i += 1) {
       const d = mission.deck[i];
+      if (restingOn(box, d)) continue;
       if (overlaps(box, { min: d.min, max: d.max })) { hit = true; break; }
     }
   }

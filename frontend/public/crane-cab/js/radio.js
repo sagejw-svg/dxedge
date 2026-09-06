@@ -306,6 +306,7 @@ function interrupt(ctx) {
   if (!all) return;
   // The clock starts here and runs whatever happens to the script afterwards.
   allStopTimer = DEFAULT_TX + (all.timeout || ALL_STOP_WINDOW);
+  ctx.bus.emit('radio.allStop', {});
   enterNode(ctx, 'allStop');
 }
 
@@ -342,6 +343,10 @@ function levelTrue(ctx, ev) {
       return swaySettled(state, SETTLED_ANGLE, SETTLED_RATE);
     case 'estop':
       return state.intent.estop === true;
+    case 'load.near':
+      return state.mission.near === true;
+    case 'load.inZone':
+      return state.mission.inZone === true;
     default:
       return false;
   }

@@ -27,6 +27,8 @@ const LEAVE_FACTOR = 1.5;    // zone events re-arm once the load is this far bac
 const HOIST_UP_VEL = -0.05;  // m/s of rope coming in that counts as hoisting up
 const HOIST_UP_ALLOWANCE = 2.0;  // m of rope an unhooked block may take back in
 const CAP_LIMIT = 90;        // percent of rated the lift must stay under to score
+const LANDING_HEIGHT_TOL = 0.8;  // m the load bottom may sit off the landing height
+const SUPPORT_REACH = 0.25;      // m below a face the load may be and still land on it
 const START_LINE = 30;       // m of rope every lift begins with, the state.js default
 const CLEAR_PICKUP = 0.3;    // m the load must rise off its pickup surface before
                              // deck collisions start counting against the lift
@@ -40,6 +42,7 @@ let hookCalled = false;      // ground has called for the hook
 let releasedDown = false;    // the load was set down and unhooked
 let collisionArmed = false;  // see the arming rule in update()
 let hoistedUp = 0;           // m of rope taken in while unhooked, since the hook call
+let releasedInZone = false;  // was the load actually on the pad when it was let go
 
 function hookWorld(state) {
   // Where the hook block actually is, swing included. The guide calls in
@@ -57,8 +60,10 @@ function hookBottomY(state) {
 }
 
 function loadBottomY(state) {
-  const h = state.load.attached ? (state.load.size[1] || 0) : 0;
-  return hookBottomY(state) - h;
+  // pendulum.js clamps the attached load at whatever it is resting on, so this
+  // is where the load actually is, not where an unlimited rope would put it.
+  if (state.load.attached) return state.load.bottomY;
+  return hookBottomY(state);
 }
 
 export function init(ctx) {
@@ -139,17 +144,31 @@ export function start(ctx, id) {
   releasedDown = false;
   collisionArmed = false;
   hoistedUp = 0;
+  releasedInZone = false;
+
+  // Seed from above, so the pickup's own surface (a truck bed, say) counts.
+  m.surfaceY = surfaceUnder(m.pickupPos[0], m.pickupPos[2], m.pickupPos[1] + 10);
 
   bus.emit('lift.start', { id });
+  bus.emit('mission.furthest', { id });
   bus.emit('radio.start', { script: found.script });
 }
 
-// Which lift the end-of-lift card starts next. Phase 4 replaces this with the
-// real mission flow; for now a win steps 0 -> 1 -> 0 and a fail retries.
+// Which lift the end-of-lift card starts next: 0, 1, 2, 3 and then stop, with a
+// fail retrying the same one.
 export function nextMissionId(ctx) {
   const m = ctx.state.mission;
-  if (m.result !== 'win') return m.id === null ? 0 : m.id;
-  return m.id === 0 ? 1 : 0;
+  if (m.id === null) return firstUnfinished(ctx);
+  if (m.result !== 'win') return m.id;             // a fail retries the same lift
+  const next = m.id + 1;
+  return MISSIONS.some((x) => x.id === next) ? next : m.id;   // stop at the last
+}
+
+// Where a returning player picks up: the furthest they have reached, which
+// save.js restored before this ever runs.
+export function firstUnfinished(ctx) {
+  const f = ctx.state.progress ? ctx.state.progress.furthest : 0;
+  return MISSIONS.some((x) => x.id === f) ? f : 0;
 }
 
 function onAttach(ctx) {
@@ -198,11 +217,45 @@ function onRelease(ctx) {
   }
 
   const centre = loadCentre(state);
+  const land = state.mission.landingPos;
+  // Latch where it was set down, while the load is still on the hook. After the
+  // release the load is gone and loadBottomY reverts to the hook block, a whole
+  // load-height higher, which read as "set down outside the zone" on a lift that
+  // had just been placed perfectly.
+  releasedInZone = Math.hypot(centre.x - land[0], centre.z - land[2]) < mission.landing.tol &&
+    Math.abs(state.load.bottomY - land[1]) < LANDING_HEIGHT_TOL;
   state.load.attached = false;
   state.mission.hooked = false;
-  state.mission.landedAt = [centre.x, state.mission.landingPos[1], centre.z];
+  state.mission.landedAt = [centre.x, land[1], centre.z];
   releasedDown = true;
   bus.emit('hook.released', { id: mission.id });
+}
+
+// What the load would land on at this spot. The deck is 0; a deck volume the
+// load is over holds it up at that volume's top face; a hole opens the deck and
+// drops the floor to the shaft bottom. Sampled at the load centre, which is
+// enough for the shapes v0.1 uses - none of them has an edge a load can straddle
+// in a way that matters.
+function surfaceUnder(x, z, bottomY) {
+  if (!mission) return 0;
+  let y = 0;
+  const h = mission.hole;
+  if (h && x >= h.min[0] && x <= h.max[0] && z >= h.min[1] && z <= h.max[1]) {
+    y = h.floor;
+  }
+  const deck = mission.deck || [];
+  for (let i = 0; i < deck.length; i += 1) {
+    const d = deck[i];
+    if (x < d.min[0] || x > d.max[0] || z < d.min[2] || z > d.max[2]) continue;
+    // Support is directional. A volume's top face only holds the load up if the
+    // load is arriving on top of it: a load already below that height is beside
+    // or inside the volume, which is a collision, not a landing. Without this a
+    // load flown past the scaffold at mid height would be teleported onto its
+    // roof the moment it crossed the footprint.
+    if (bottomY < d.max[1] - SUPPORT_REACH) continue;
+    if (d.max[1] > y) y = d.max[1];
+  }
+  return y;
 }
 
 // Where the load itself is, hook plus swing offset.
@@ -241,6 +294,10 @@ export function update(ctx, dt) {
 
   const m = state.mission;
   m.elapsed += dt;
+
+  // Publish first, so it is as fresh as the tick order allows.
+  const here = loadCentre(state);
+  m.surfaceY = surfaceUnder(here.x, here.z, loadBottomY(state));
 
   if (resolved) return;
 
@@ -299,7 +356,16 @@ export function update(ctx, dt) {
     nearEmitted = false;
   }
 
-  const inZone = d < tol;
+  // Height matters as much as position now. A blind shaft lift could otherwise
+  // be won by hovering over the mouth of the hole at deck level, because the
+  // zone test is horizontal only.
+  const atHeight = Math.abs(loadBottomY(state) - landing[1]) < LANDING_HEIGHT_TOL;
+  const inZone = d < tol && atHeight;
+  // Published so radio.js can satisfy a waitFor whose event fired before the
+  // node that waits on it was entered. Without a level to fall back on, a script
+  // that descends faster than it talks waits forever for an edge already gone.
+  m.near = d < NEAR_DIST && aboveLanding <= NEAR_HEIGHT;
+  m.inZone = inZone;
   if (!zoneEmitted && inZone) {
     zoneEmitted = true;
     bus.emit('load.inZone', { d });
@@ -311,9 +377,9 @@ export function update(ctx, dt) {
   // which clears onSurface and sensors.slack with it, so the slack that the
   // release already required is latched in releasedDown rather than re-read.
   if (releasedDown && m.everHooked) {
-    if (inZone && m.maxCapacityPct < CAP_LIMIT && !m.hadCollision) {
+    if (releasedInZone && m.maxCapacityPct < CAP_LIMIT && !m.hadCollision) {
       win(ctx);
-    } else if (!inZone) {
+    } else if (!releasedInZone) {
       // Set down somewhere else. Without this the lift never resolves and the
       // end-of-lift card never appears. Added in Phase 3, flagged in the report.
       fail(ctx, 'set down outside the zone');

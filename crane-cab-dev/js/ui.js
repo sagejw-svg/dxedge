@@ -2,6 +2,8 @@
 // (the one exception is debug.show, toggled by F3, which is UI-owned).
 // Unit conversion for display lives here and only here.
 
+import { MISSIONS } from '../data/missions.js';
+
 const $ = (id) => document.getElementById(id);
 let el = {};
 
@@ -13,11 +15,13 @@ export function init(ctx) {
     heightUnit: $('g-height-label'), windUnit: $('g-wind-label'), capfill: $('g-capfill'), cappct: $('g-cappct'),
     radius: $('g-radius'), height: $('g-height'), heading: $('g-heading'), wind: $('g-wind'),
     reach: $('g-reach'), reachfill: $('g-reachfill'),
-    estop: $('l-estop'), a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
+    estop: $('l-estop'), cam: $('l-cam'), a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
     channel: $('r-channel'), ptt: $('r-ptt'), caption: $('r-caption'), replies: $('r-replies'),
     ackbar: $('r-ackbar'), ackfill: $('r-ackfill'),
     ecTitle: $('ec-title'), ecTime: $('ec-time'), ecSway: $('ec-sway'),
-    ecFaults: $('ec-faults'), ecButton: $('btn-endcard'),
+    ecFaults: $('ec-faults'), ecButton: $('btn-endcard'), ecError: $('ec-error'),
+    ecGrade: $('ec-grade'), ecGradeLetter: $('ec-grade-letter'), ecPlan: $('ec-plan'),
+    ecWhy: $('ec-why'), ecEarned: $('ec-earned'), ecBest: $('ec-best'),
     debug: $('debug')
   };
 
@@ -57,6 +61,90 @@ function fmtClock(seconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// The after-action card. main.js hands over the object scoring.js produced; this
+// renders it and does no arithmetic of its own beyond unit conversion, which is
+// the one thing that does belong here.
+export function showAfterAction(ctx, a) {
+  const u = ctx.state.settings.units;
+  el.ecTitle.textContent = a.won ? 'Lift complete' : `Lift failed: ${a.reason || 'unknown'}`;
+  el.ecTitle.classList.toggle('failed', !a.won);
+  el.ecTime.textContent = fmtClock(a.elapsed);
+  el.ecSway.textContent = `${((a.maxSway * 180) / Math.PI).toFixed(1)}\u00B0`;
+  el.ecFaults.textContent = String(a.radioFaults);
+  el.ecError.textContent = a.landingError === null || a.landingError === undefined
+    ? '-'
+    : (u === 'imperial'
+      ? `${(a.landingError * 3.28084).toFixed(1)} ft`
+      : `${a.landingError.toFixed(2)} m`);
+
+  el.ecGrade.hidden = !a.won || !a.grade;
+  if (a.grade) el.ecGradeLetter.textContent = a.grade;
+
+  el.ecWhy.textContent = !a.won ? ''
+    : a.demerits.length === 0
+      ? 'Nothing to pick at. Clean lift.'
+      : `Cost you the grade: ${a.demerits.map((d) => d.why).join(', ')}.`;
+
+  el.ecEarned.textContent = a.earned && a.earned.length
+    ? `Unlocked: ${a.earned.join(', ')}.` : '';
+
+  el.ecBest.textContent = !a.won ? ''
+    : a.personalBest ? 'Personal best for this lift.'
+      : a.best ? `Your best here: ${fmtClock(a.best.elapsed)}, grade ${a.best.grade || '-'}.` : '';
+
+  drawPlan(a, u);
+  el.ecButton.textContent = a.won ? 'Next lift' : 'Try again';
+}
+
+// Where it actually landed, against the circle it was graded on. The Backlog
+// asks for a footprint-versus-pad overlay; this is it, drawn to scale, with the
+// view sized to whichever is bigger so a wild miss still fits on the card.
+function drawPlan(a, units) {
+  const plan = el.ecPlan;
+  while (plan.firstChild) plan.removeChild(plan.firstChild);
+  if (!a.landedAt || !a.landingPos || !a.landingTol) { plan.setAttribute('hidden', ''); return; }
+  plan.removeAttribute('hidden');
+
+  const dx = a.landedAt[0] - a.landingPos[0];
+  const dz = a.landedAt[2] - a.landingPos[2];
+  const err = Math.hypot(dx, dz);
+  // Metres shown across half the box. Has to hold the pad, the miss and the load
+  // itself: a 1.8 m crate on a 0.3 m pad drew a footprint wider than the card.
+  const [lx, , lz] = a.loadSize || [1, 1, 1];
+  const half = Math.max(a.landingTol * 2.2, err * 1.6, Math.max(lx, lz) * 0.85, 0.6);
+  const S = 60 / half;                                          // pixels per metre
+  const ns = 'http://www.w3.org/2000/svg';
+  const add = (tag, attrs) => {
+    const n = document.createElementNS(ns, tag);
+    Object.keys(attrs).forEach((k) => n.setAttribute(k, attrs[k]));
+    plan.appendChild(n);
+    return n;
+  };
+
+  add('circle', { cx: 60, cy: 60, r: a.landingTol * S, fill: 'none', stroke: '#e0a83a', 'stroke-width': 1.5 });
+  add('circle', { cx: 60, cy: 60, r: 1.5, fill: '#e0a83a' });
+
+  const sx = lx;
+  const sz = lz;
+  const hit = err <= a.landingTol;
+  add('rect', {
+    x: 60 + dx * S - (sx * S) / 2,
+    y: 60 + dz * S - (sz * S) / 2,
+    width: sx * S, height: sz * S,
+    fill: hit ? '#6fbf7333' : '#d9482b33',
+    stroke: hit ? '#6fbf73' : '#d9482b', 'stroke-width': 1.2
+  });
+  if (err > 0.02) {
+    add('line', {
+      x1: 60, y1: 60, x2: 60 + dx * S, y2: 60 + dz * S,
+      stroke: '#7d878c', 'stroke-width': 1, 'stroke-dasharray': '2 2'
+    });
+  }
+  const label = units === 'imperial' ? `${(err * 3.28084).toFixed(1)} ft` : `${err.toFixed(2)} m`;
+  const t = add('text', { x: 60, y: 114, fill: '#7d878c', 'font-size': 9, 'text-anchor': 'middle' });
+  t.textContent = label;
+}
+
 export function update(ctx) {
   const { state } = ctx;
   const s = state.sensors;
@@ -92,6 +180,16 @@ export function update(ctx) {
   // E-stop first: while it is latched nothing else on the console explains why
   // the crane will not move.
   el.estop.classList.toggle('on', state.crane.estopped);
+
+  // Hook cam lamp. render.js makes the same allowed/wanted decision from the
+  // same state; ui does not reach across to tell it, because systems do not
+  // import each other.
+  const mission = MISSIONS.find((m) => m.id === state.mission.id);
+  const camAllowed = !mission || mission.hookCam !== false;
+  const camWanted = !!state.intent.hookCam;
+  el.cam.classList.toggle('on', camAllowed && camWanted);
+  el.cam.classList.toggle('denied', camWanted && !camAllowed);
+  el.cam.textContent = camWanted && !camAllowed ? 'Cam off' : 'Cam';
   el.a2b.classList.toggle('on', s.a2b);
   el.slack.classList.toggle('on', s.slack);
   el.slack.classList.toggle('ok', s.slack);
@@ -124,16 +222,6 @@ export function update(ctx) {
     }));
   }
 
-  // End-of-lift card. main.js decides when it is on screen; this only fills it.
-  if (state.phase === 'afteraction' && state.mission.result) {
-    const won = state.mission.result === 'win';
-    el.ecTitle.textContent = won ? 'Lift complete' : `Lift failed: ${state.mission.failReason || 'unknown'}`;
-    el.ecTitle.classList.toggle('failed', !won);
-    el.ecTime.textContent = fmtClock(state.mission.elapsed);
-    el.ecSway.textContent = `${((state.mission.maxSway * 180) / Math.PI).toFixed(1)}\u00B0`;
-    el.ecFaults.textContent = String(state.radio.faults);
-    el.ecButton.textContent = won ? 'Next lift' : 'Try again';
-  }
 
   if (state.debug.show) {
     const c = state.crane;

@@ -7,6 +7,7 @@
 // (|swing| below 0.5 deg for 1.5 s). Sets load.onSurface, load.tension.
 // Hook / unhook is ground-controlled by radio.js via bus, never by a grab key.
 // PHASE 3: init() leaves the hook empty. missions.js owns load.attached.
+// PHASE 4: contact is against state.mission.surfaceY, not a hard-coded deck at 0.
 
 import { CRANE } from '../data/crane.js';
 import { MISSIONS } from '../data/missions.js';
@@ -123,11 +124,21 @@ export function update(ctx, dt) {
   const loadHeight = load.attached ? (load.size[1] || 0) : 0;
   const bottomY = hookY - loadHeight;
 
+  // What the load would land on here. missions.js publishes it; 0 is the deck,
+  // and it is one tick stale, which at the fastest hoist is about 12 mm.
+  const surfaceY = state.mission.surfaceY || 0;
+
+  // Where the load actually ends up. Rope paid out past contact does not push a
+  // load through the deck, so the load stops at the surface and the slack goes
+  // into the rope. Everything downstream reads load.bottomY rather than deriving
+  // it from the line, which is what used to sink a landed crate into the deck.
+  load.bottomY = load.attached ? Math.max(bottomY, surfaceY) : bottomY;
+
   let tensionFraction;
-  if (load.attached && bottomY <= 0) {
+  if (load.attached && bottomY <= surfaceY) {
     load.onSurface = true;
     // Rope keeps paying out after touchdown; tension bleeds off across TENSION_BLEED.
-    tensionFraction = clamp(1 - (-bottomY) / TENSION_BLEED, 0, 1);
+    tensionFraction = clamp(1 - (surfaceY - bottomY) / TENSION_BLEED, 0, 1);
   } else {
     load.onSurface = false;
     tensionFraction = load.attached ? 1 : 0;

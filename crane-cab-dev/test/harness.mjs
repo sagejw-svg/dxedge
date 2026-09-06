@@ -14,10 +14,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const load = (p) => import(pathToFileURL(join(ROOT, p)).href);
 
 export async function makeSim() {
-  const [stateM, eventsM, crane, pendulum, sensors, missions, radio, scoring] = await Promise.all([
-    load('js/state.js'), load('js/events.js'), load('js/crane.js'), load('js/pendulum.js'),
-    load('js/sensors.js'), load('js/missions.js'), load('js/radio.js'), load('js/scoring.js')
-  ]);
+  const [stateM, eventsM, crane, pendulum, sensors, missions, radio, scoring, save] =
+    await Promise.all([
+      load('js/state.js'), load('js/events.js'), load('js/crane.js'), load('js/pendulum.js'),
+      load('js/sensors.js'), load('js/missions.js'), load('js/radio.js'), load('js/scoring.js'),
+      load('js/save.js')
+    ]);
 
   const state = stateM.createState();
   const bus = eventsM.createBus(state);
@@ -26,7 +28,23 @@ export async function makeSim() {
   const origEmit = bus.emit;
   bus.emit = (name, payload) => { log.push({ t: +state.time.t.toFixed(3), name, payload, node: state.radio.node }); return origEmit(name, payload); };
 
-  crane.init(ctx); pendulum.init(ctx); sensors.init(ctx); missions.init(ctx); radio.init(ctx); scoring.init(ctx);
+  // save.js needs somewhere to write. Node has no localStorage, so give it one
+  // that behaves like the real thing, including the quota errors and the garbage
+  // a hand-edited key can contain. `store` lets a test inspect and poison it.
+  if (typeof globalThis.localStorage === 'undefined') {
+    const mem = new Map();
+    globalThis.localStorage = {
+      getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+      setItem: (k, v) => { mem.set(k, String(v)); },
+      removeItem: (k) => { mem.delete(k); },
+      clear: () => mem.clear(),
+      _mem: mem
+    };
+  }
+
+  save.load(ctx);
+  crane.init(ctx); pendulum.init(ctx); sensors.init(ctx); missions.init(ctx);
+  radio.init(ctx); scoring.init(ctx); save.init(ctx);
 
   // main.js item 6 equivalent
   bus.on('lift.win', () => { state.phase = 'afteraction'; });
@@ -55,7 +73,8 @@ export async function makeSim() {
     }
     return true;
   }
-  return { ctx, state, bus, log, tick, run, modules: { crane, pendulum, sensors, missions, radio }, STEP };
+  return { ctx, state, bus, log, tick, run, modules: { crane, pendulum, sensors, missions, radio, scoring, save },
+    store: globalThis.localStorage, STEP };
 }
 
 // --- simple autopilots -------------------------------------------------

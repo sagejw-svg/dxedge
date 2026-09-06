@@ -26,6 +26,7 @@ const ctx = { state, bus };
 if (new URLSearchParams(location.search).has('debug')) window.__cab = ctx;
 
 save.load(ctx);
+save.init(ctx);
 input.init(ctx);
 crane.init(ctx);
 pendulum.init(ctx);
@@ -47,7 +48,8 @@ document.getElementById('btn-start').addEventListener('click', () => {
   audio.unlock(ctx);          // first tap unlocks Web Audio
   document.getElementById('title').hidden = true;
   setPhase('playing');
-  missions.start(ctx, 0);     // Phase 3 gives this a real script
+  // Resume where they got to. save.js restored that before any of this ran.
+  missions.start(ctx, missions.firstUnfinished(ctx));
 });
 
 // PHASE 3 item 6, the only change this phase makes in this file. A finished lift
@@ -55,6 +57,9 @@ document.getElementById('btn-start').addEventListener('click', () => {
 // button starts the next lift (missions.js decides which) and hands control back.
 const endcard = document.getElementById('endcard');
 function showEndcard() {
+  // main.js is the wiring layer, so it is the one place allowed to take the
+  // object scoring.js built and hand it to ui.js. Neither imports the other.
+  ui.showAfterAction(ctx, scoring.afterAction(ctx));
   setPhase('afteraction');
   endcard.hidden = false;
 }
