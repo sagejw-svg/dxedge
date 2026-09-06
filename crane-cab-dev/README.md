@@ -16,6 +16,11 @@ Open http://localhost:8080. Press F3 for the debug overlay, Escape to pause.
 
 Upload this folder to dxedge.org as `/` or `/crane/`. Nothing to build. Three.js loads from jsdelivr.
 
+## Test
+
+    node test/regress.mjs     # logic, no browser, seconds
+    bash test/run.sh          # that plus a browser smoke test
+
 ## Layout
 
     index.html         entry, import map, console DOM

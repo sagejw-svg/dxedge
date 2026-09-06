@@ -44,6 +44,24 @@ review and revert than a big diff.
 
 ## 3. Verify — do not skip this, do not just eyeball the code
 
+**Run the suite first. It is committed, it needs nothing but node, and every
+check in it is a bug that was once live:**
+
+```
+node test/regress.mjs        # 24 checks, no browser, a few seconds
+bash test/run.sh             # the above plus the browser smoke test
+```
+
+If anything in `test/regress.mjs` fails, stop. Do not deploy, and do not
+"fix" the test to make it pass without understanding which real behaviour
+changed. When a phase adds behaviour, add checks for it there; when a bug is
+found and fixed, add the check that would have caught it. That file is the
+cheapest thing in this project and it has already caught regressions that a
+careful read of the diff did not.
+
+Then do the browser pass below as well - the suite has no DOM, so it cannot
+see rendering, layout or input.
+
 This is a static ES-module site, so `file://` will not work (CORS blocks
 the module imports). Serve it and drive a real browser against it:
 

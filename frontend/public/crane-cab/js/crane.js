@@ -1,6 +1,6 @@
 // PHASE 1. Crane kinematics. Owns state.crane.
 // slew, radius, line each have velocity, an accel cap, and a max speed per range.
-// Load mass (state.load.mass) scales slew and trolley accel down.
+// Load mass scales slew and trolley accel down, but only while it is attached.
 // E-stop: zero all velocities immediately, set crane.estopped, emit 'estop'.
 // Slew brake: holds slew, ignores slew intent while on.
 // Clamp radius to [minRadius, jibLength - 1], line to [minLine, maxLine].
@@ -81,7 +81,12 @@ export function update(ctx, dt) {
   wasEstopped = false;
 
   const range = RANGE_SPEED.slew[intent.range] !== undefined ? intent.range : 'I';
-  const massFactor = 1 / (1 + (state.load.mass || 0) / 2000);
+  // Only what is actually hanging on the rope slows the machine down.
+  // missions.start sets load.mass from the mission while attached is still
+  // false, so an empty block was being flown at 53-69% of its real response -
+  // and the two missions felt different before either had a load on.
+  const carried = state.load.attached ? (state.load.mass || 0) : 0;
+  const massFactor = 1 / (1 + carried / 2000);
 
   // --- Slew ---
   let slewIntent = c.brakeOn ? 0 : intent.slew;

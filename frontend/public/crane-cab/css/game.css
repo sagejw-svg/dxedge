@@ -75,9 +75,10 @@ html, body {
   min-width: 0;
 }
 
+.gauge .label { white-space: nowrap; }
 .gauge .value {
   color: var(--lamp);
-  font-size: 22px;
+  font-size: clamp(15px, 1.55vw, 22px);
   line-height: 1.1;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -107,7 +108,7 @@ html, body {
 .gauge.capacity .fill.warn { background: var(--warn); }
 .gauge.capacity .fill.alarm { background: var(--alarm); }
 
-.gauge.capacity .value { font-size: 14px; }
+.gauge.capacity .value { font-size: clamp(12px, 1.05vw, 14px); }
 
 .lamps {
   grid-column: 1 / -1;
@@ -334,6 +335,17 @@ html, body {
 }
 #debug[hidden] { display: none; }
 
+/* Narrow desktop and small windows. Eight gauges across 60% of a 1100px window
+   leaves ~75px a column, which clipped "100 / 138" and half the labels. Two rows
+   of four is the same information with room to read it. Not on a short screen:
+   a landscape phone is wide and 390px tall, where a second row of gauges is
+   exactly what does not fit. */
+@media (min-width: 721px) and (max-width: 1200px) and (min-height: 481px) {
+  :root { --console-h: calc(190px + env(safe-area-inset-bottom)); }
+  .cluster { grid-template-columns: repeat(4, 1fr); grid-template-rows: auto auto auto; }
+  .gauge .value { font-size: 19px; }
+}
+
 /* Phone: stack the console, shrink type. Touch sticks arrive in Phase 5. */
 @media (max-width: 720px) {
   :root { --console-h: calc(196px + env(safe-area-inset-bottom)); }
@@ -386,7 +398,8 @@ html, body {
   #console { padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); gap: 10px; }
   .cluster { gap: 4px; }
   .gauge { padding: 3px 5px; }
-  .gauge .value { font-size: 15px; }
+  .gauge .label { white-space: nowrap; }
+.gauge .value { font-size: 15px; }
   .gauge .label { font-size: 9px; }
   .lamp { padding: 2px 0; font-size: 9px; }
   .radio .caption { font-size: 13px; min-height: 2em; -webkit-line-clamp: 2; }

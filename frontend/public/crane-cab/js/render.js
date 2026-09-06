@@ -39,6 +39,10 @@ const PAD_AMBER = 0xe0a83a;
 const PAD_GREEN = 0x6fbf73;
 let loadShadow = null;             // the ground shadow of whatever is on the hook
 let ropeMesh = null;               // a drawn rope, not a one pixel line
+let contactRing = null;            // expanding ring on touchdown
+let contactT = 0;                  // seconds left of the touchdown flash
+let wasOnSurface = false;          // render-local edge memory, not a state write
+const CONTACT_TIME = 0.45;
 const UP = new THREE.Vector3(0, 1, 0);
 let MAX_ANISO = 1;   // set once the renderer exists, read by the textures
 
@@ -352,6 +356,14 @@ export function init(ctx, canvas) {
   const grid = new THREE.GridHelper(600, 60, 0x6a6a62, 0x585850);
   grid.position.y = 0.02;
   scene.add(grid);
+  // A one metre grid over the working circle. The ten metre grid reads gross
+  // position well and tells you nothing about the last few metres, which is
+  // exactly where the lift is won or lost.
+  const fineGrid = new THREE.GridHelper(80, 80, 0x63635c, 0x5a5a54);
+  fineGrid.position.y = 0.024;
+  fineGrid.material.transparent = true;
+  fineGrid.material.opacity = 0.4;
+  scene.add(fineGrid);
 
   buildStadiumBackdrop(scene);
   buildPickupProps(scene);
@@ -423,6 +435,20 @@ export function init(ctx, canvas) {
   loadShadow.rotation.x = -Math.PI / 2;
   loadShadow.visible = false;
   slewGroup.add(loadShadow);
+
+  // Touchdown. Until now the only sign the load had landed was a lamp on the
+  // console, which is not where the operator is looking at the moment it
+  // matters. A ring that expands and fades out from the load's footprint puts
+  // the news where the eyes already are.
+  contactRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.86, 1, 40),
+    new THREE.MeshBasicMaterial({
+      color: 0xe8e2d2, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false
+    })
+  );
+  contactRing.rotation.x = -Math.PI / 2;
+  contactRing.visible = false;
+  slewGroup.add(contactRing);
 
   // Hook block (mass at the bottom of the rope) plus an open hook arc below it.
   const hookGroup = new THREE.Group();
@@ -627,7 +653,7 @@ const eye = new THREE.Vector3();
 const dir = new THREE.Vector3();
 const target = new THREE.Vector3();
 
-export function update(ctx) {
+export function update(ctx, dt) {
   const { state } = ctx;
   const c = state.crane;
 
@@ -680,6 +706,11 @@ export function update(ctx) {
     hangingLoad.position.y = -(sy || 1) / 2;
     hangingLoad.visible = true;
 
+    // Touchdown edge. render.js keeps its own memory of the last frame, which is
+    // reading state, not writing it.
+    if (load.onSurface && !wasOnSurface) contactT = CONTACT_TIME;
+    wasOnSurface = load.onSurface;
+
     // Shadow on the deck. Spreads and fades with height above it.
     const bottom = Math.max(0, hookY - (sy || 1));
     const spread = 1 + bottom * 0.035;
@@ -690,6 +721,20 @@ export function update(ctx) {
   } else {
     hangingLoad.visible = false;
     loadShadow.visible = false;
+    wasOnSurface = false;
+  }
+
+  if (contactT > 0) {
+    contactT = Math.max(0, contactT - dt);
+    const k = 1 - contactT / CONTACT_TIME;                 // 0 at the touch, 1 at the end
+    const [sx, , sz] = load.size;
+    const foot = Math.max(sx || 1, sz || 1) * 0.55;
+    contactRing.position.set(hook.position.x, 0.06, hook.position.z);
+    contactRing.scale.setScalar(foot * (0.6 + k * 1.6));
+    contactRing.material.opacity = 0.5 * (1 - k);
+    contactRing.visible = true;
+  } else if (contactRing.visible) {
+    contactRing.visible = false;
   }
 
   // PHASE 3 item 8b. The active mission's deck dressing follows the load: the

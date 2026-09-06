@@ -80,6 +80,11 @@ export function init(ctx) {
   // raises its ALL STOP on collision.counted, never on the raw event. Without
   // that split, mission 1 hooking on to its own truck bed raised an alarm for a
   // contact this module had already decided to ignore, and failed the lift.
+  // The rising edge, and only the rising edge. Reading the level in update()
+  // meant that when arming flipped while the load was still resting on the deck
+  // volume it was picked from, hadCollision latched silently: no event, no
+  // alarm, nothing on screen, and a flawless lift failed "collision" minutes
+  // later at the set-down.
   bus.on('collision', () => {
     if (!collisionArmed || !mission) return;
     state.mission.hadCollision = true;
@@ -247,15 +252,16 @@ export function update(ctx, dt) {
   // rests on the truck bed, which is also its only deck volume. So collisions
   // only count once the load has actually been picked clear of its pickup
   // surface. Nothing else changes: swing back into the truck later and it hits.
-  if (!collisionArmed && state.load.attached) {
+  // Collisions start counting once the load is clear of what it was picked from,
+  // by height or by carrying it away. The !sensors.collision term matters: arming
+  // while the boxes are still touching turns the contact the load started in
+  // into a hit it never made.
+  if (!collisionArmed && state.load.attached && !state.sensors.collision) {
     const lifted = loadBottomY(state) > m.pickupPos[1] + CLEAR_PICKUP;
-    // Or carried clear sideways. Height alone let a load dragged through the
-    // truck at bed level count as still sitting on it for the whole lift.
     const centreNow = loadCentre(state);
     const away = Math.hypot(centreNow.x - m.pickupPos[0], centreNow.z - m.pickupPos[2]);
     if (lifted || away > CLEAR_PICKUP_H) collisionArmed = true;
   }
-  if (collisionArmed && state.sensors.collision) m.hadCollision = true;
 
   // Hauling away once ground has called for the hook, with nothing on it, is the
   // classic way to snatch a load that is not rigged. But an operator who has
@@ -263,11 +269,20 @@ export function update(ctx, dt) {
   // correct, and failing that made overshooting the window unrecoverable: the
   // only input that fixed it was the one that ended the lift. So it is a budget,
   // not a tripwire. Small corrections are free; hauling up is not.
-  if (hookCalled && !m.hooked && !releasedDown && state.crane.lineVel < HOIST_UP_VEL) {
-    hoistedUp += -state.crane.lineVel * dt;
-    if (hoistedUp > HOIST_UP_ALLOWANCE) {
-      fail(ctx, 'hoist before on the hook');
-      return;
+  if (hookCalled && !m.hooked && !releasedDown) {
+    if (state.crane.lineVel < HOIST_UP_VEL) {
+      hoistedUp += -state.crane.lineVel * dt;
+      if (hoistedUp > HOIST_UP_ALLOWANCE) {
+        fail(ctx, 'hoist before on the hook');
+        return;
+      }
+    } else if (state.crane.lineVel > -HOIST_UP_VEL) {
+      // Paying rope back out is the opposite of snatching, so it clears the
+      // budget. Without this the allowance was a per-lift lifetime total, and
+      // two corrections of the size ground itself asks for spent it: the player
+      // was failed for snatching an unrigged load while doing what they were
+      // told, with the block two metres off the deck.
+      hoistedUp = 0;
     }
   }
 

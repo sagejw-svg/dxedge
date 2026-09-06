@@ -26,7 +26,13 @@ fresh session doesn't have to reverse-engineer it from git history.
   postponable ALL STOP, an unguarded E-stop) and a rendering pass opened up the
   cab: the glass floor had an opaque slab under it and the console sat dead
   ahead, so straight down was black. Verification is now an 18-check headless
-  suite over the real modules plus a 5-check browser smoke test. Also fixed the
+  suite over the real modules plus a 5-check browser smoke test. A third pass
+  fixed six more, two of them introduced by the second: an unbalanced RETURN
+  could end the script outright and leave the lift with no way to be won or
+  lost, and mission 1 latched a silent collision on the truck bed it was picked
+  from and failed a flawless lift at the set-down. The suite is now committed
+  as `test/` (24 logic checks with no browser, plus a browser smoke test and a
+  console layout sweep) and AUTOMATION.md step 3 runs it first. Also fixed the
   reason deploys were invisible to
   returning visitors: nginx served /sw.js and the whole unhashed /crane-cab/
   tree as immutable for a year, and the service worker was cache-first over the

@@ -8,7 +8,9 @@ let el = {};
 export function init(ctx) {
   el = {
     load: $('g-load'), rated: $('g-rated'),
-    loadUnit: $('g-load-label'), ratedUnit: $('g-rated-label'), capfill: $('g-capfill'), cappct: $('g-cappct'),
+    loadUnit: $('g-load-label'), ratedUnit: $('g-rated-label'),
+    radiusUnit: $('g-radius-label'), reachUnit: $('g-reach-label'),
+    heightUnit: $('g-height-label'), windUnit: $('g-wind-label'), capfill: $('g-capfill'), cappct: $('g-cappct'),
     radius: $('g-radius'), height: $('g-height'), heading: $('g-heading'), wind: $('g-wind'),
     reach: $('g-reach'), reachfill: $('g-reachfill'),
     estop: $('l-estop'), a2b: $('l-a2b'), slack: $('l-slack'), lmi: $('l-lmi'), brake: $('l-brake'),
@@ -47,8 +49,8 @@ function massUnit(units, kg) {
 function fmtLenShort(m, units) {
   return units === 'imperial' ? `${Math.round(m * 3.28084)}` : `${m.toFixed(1)}`;
 }
-function fmtWind(mps, units) {
-  return units === 'imperial' ? `${Math.round(mps * 2.23694)} mph` : `${Math.round(mps * 3.6)} km/h`;
+function fmtWindShort(mps, units) {
+  return String(Math.round(units === 'imperial' ? mps * 2.23694 : mps * 3.6));
 }
 function fmtClock(seconds) {
   const s = Math.max(0, Math.floor(seconds));
@@ -62,19 +64,30 @@ export function update(ctx) {
 
   el.load.textContent = fmtMass(s.actualLoad, u);
   el.rated.textContent = fmtMass(s.ratedLoad, u);
-  el.loadUnit.textContent = `Load (${massUnit(u, s.actualLoad)})`;
-  el.ratedUnit.textContent = `Rated (${massUnit(u, s.ratedLoad)})`;
+  // Units live in the labels. Every value in the cluster is digits, because
+  // .gauge .value clips with no ellipsis and the column is ~90px: "98 / 138 ft"
+  // and "17 ft" were both being cut off on any screen under 1366px.
+  const lenU = u === 'imperial' ? 'ft' : 'm';
+  el.loadUnit.textContent = `Load ${massUnit(u, s.actualLoad)}`;
+  el.ratedUnit.textContent = `Rated ${massUnit(u, s.ratedLoad)}`;
+  el.radiusUnit.textContent = `Radius ${lenU}`;
+  el.reachUnit.textContent = `Reach ${lenU}`;
+  el.heightUnit.textContent = `Hook ht ${lenU}`;
+  el.windUnit.textContent = u === 'imperial' ? 'Wind mph' : 'Wind km/h';
   el.cappct.textContent = `${Math.round(s.capacityPct)}%`;
   el.capfill.style.width = `${Math.min(100, s.capacityPct)}%`;
   el.capfill.className = 'fill' + (s.capacityPct >= 90 ? ' alarm' : s.capacityPct >= 70 ? ' warn' : '');
-  el.radius.textContent = fmtLen(s.radius, u);
-  // Reach: where the trolley is against how far this load may go. Same colour bands as capacity.
-  el.reach.textContent = `${fmtLenShort(s.radius, u)} / ${fmtLen(s.maxLoadRadius, u)}`;
+  el.radius.textContent = fmtLenShort(s.radius, u);
+  // Reach: how far out this load may go before the chart says no. The bar shows
+  // how close the trolley is to it and the Radius gauge right next door already
+  // reads the current radius, so printing both here was duplicated information
+  // in the one string too long for the column.
+  el.reach.textContent = fmtLenShort(s.maxLoadRadius, u);
   el.reachfill.style.width = `${Math.min(100, s.reachPct)}%`;
   el.reachfill.className = 'fill' + (s.reachPct >= 90 ? ' alarm' : s.reachPct >= 70 ? ' warn' : '');
-  el.height.textContent = fmtLen(s.hookHeight, u);
+  el.height.textContent = fmtLenShort(s.hookHeight, u);
   el.heading.textContent = String(Math.round(s.heading)).padStart(3, '0') + '\u00B0';
-  el.wind.textContent = fmtWind(s.wind, u);
+  el.wind.textContent = fmtWindShort(s.wind, u);
 
   // E-stop first: while it is latched nothing else on the console explains why
   // the crane will not move.

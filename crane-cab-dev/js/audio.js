@@ -3,7 +3,8 @@
 // Three buses into master:
 //   ambience  wind bed. Muted by settings.mute.
 //   machine   hoist motor pitch follows crane.lineVel, slew whine follows
-//             slewVel. A bed, not an effect. Muted by settings.mute.
+//             slewVel, plus contact thuds on touchdown, line tight and
+//             collision. A bed, not an effect. Muted by settings.mute.
 //   radio     bandpass 300-3000 Hz, light waveshaper drive, squelch click on
 //             transmit, static bed while ground is on the air, squelch tail on
 //             release, louder static on a double.
@@ -46,6 +47,12 @@ export function init(ctx) {
   ctxRef = ctx;
   ctx.bus.on('radio.say', (p) => { if (p && p.key) playRadio(ctx, p.key); });
   ctx.bus.on('radio.doubled', () => doubleBurst());
+  // The set-down. pendulum.js has emitted these since Phase 2 and nothing has
+  // ever listened: putting a load down, the single most delicate thing the
+  // operator does, made no sound at all.
+  ctx.bus.on('load.slack', () => thud(70, 0.45, 0.5));
+  ctx.bus.on('hook.tight', () => thud(120, 0.16, 0.16));
+  ctx.bus.on('collision', () => thud(52, 0.7, 0.85));
 }
 
 // Everything below reads state and nothing writes it, directly or through the
@@ -236,6 +243,40 @@ function tone(freq, seconds, level) {
     osc.start(now);
     osc.stop(now + seconds + 0.02);
   } catch { /* ignore */ }
+}
+
+// A low body-felt knock on the machine bus. Pitch drops as it decays, which is
+// what a mass settling onto a deck sounds like from up in the cab.
+function thud(freq, seconds, level) {
+  if (!ac || !buses.machine) return;
+  try {
+    const now = ac.currentTime;
+    const osc = ac.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.55, now + seconds);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(level, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+    osc.connect(g);
+    g.connect(buses.machine);
+    osc.start(now);
+    osc.stop(now + seconds + 0.02);
+
+    // A little grit on top so it reads as contact, not a tone.
+    const n = ac.createBufferSource();
+    n.buffer = noiseBuf;
+    const nf = ac.createBiquadFilter();
+    nf.type = 'lowpass';
+    nf.frequency.value = 320;
+    const ng = ac.createGain();
+    ng.gain.setValueAtTime(level * 0.6, now);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + seconds * 0.5);
+    n.connect(nf); nf.connect(ng); ng.connect(buses.machine);
+    n.start(now);
+    n.stop(now + seconds);
+  } catch { /* audio never breaks the frame */ }
 }
 
 function doubleBurst() {

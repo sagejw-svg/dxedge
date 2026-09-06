@@ -61,7 +61,14 @@ let script = null;        // the SCRIPTS entry being run
 let node = null;          // the current node object
 let mode = 'off';         // off | groundTx | ack | playerTx | wait | hookWait | guide | guideTx | done
 let seen = new Set();     // waitFor events heard since this node was entered
-let returnStack = [];     // node ids to come back to after sayAgain / allStop
+// Where RETURN goes. This used to be a stack, which is how the radio came to be
+// killable: handler nodes were kept off it but still popped on the way out, so a
+// double during an ALL STOP left the stack one short and the next RETURN popped
+// empty, ended the script and left the lift with no way to be won or lost.
+// There is nothing a stack was buying. The lift only ever has one place to come
+// back to - the script node it was interrupted on - and while an alarm is still
+// live the answer is the alarm itself.
+let lastScriptNode = null;
 let garbleTimer = 0;
 let swayArmed = true;     // ALL STOP on sway is edge triggered
 let pttLatched = false;   // a held PTT may only double once
@@ -127,7 +134,7 @@ function startScript(ctx, name) {
   r.script = name;
   r.faults = 0;
   r.prevNode = null;
-  returnStack = [];
+  lastScriptNode = null;
   swayArmed = true;
   pttLatched = false;
   inAllStop = false;
@@ -142,7 +149,7 @@ function stopScript(ctx) {
   node = null;
   mode = 'off';
   seen.clear();
-  returnStack = [];
+  lastScriptNode = null;
   r.script = null;
   r.node = null;
   r.prevNode = null;
@@ -164,8 +171,7 @@ function enterNode(ctx, id) {
   const r = state.radio;
 
   if (id === 'RETURN') {
-    id = returnStack.pop() || null;
-    r.prevNode = returnStack.length ? returnStack[returnStack.length - 1] : null;
+    id = allStopTimer > 0 ? 'allStop' : lastScriptNode;
   }
   if (id === null || id === undefined) {
     node = null;
@@ -186,6 +192,8 @@ function enterNode(ctx, id) {
 
   node = found;
   r.node = id;
+  if (!isHandler(id)) lastScriptNode = id;
+  r.prevNode = lastScriptNode;
   r.repeats = 0;
   seen.clear();
   holdSaid = false;
@@ -270,18 +278,10 @@ function fault(ctx, why) {
   ctx.bus.emit('radio.fault', { node: r.node, why: why || 'timeout' });
 }
 
-// allStop, allStopClear and sayAgain are handlers, not places in the script. If
-// one lands on the return stack a later RETURN replays it: ground raising an
-// ALL STOP over a dead still load, then failing the lift for not answering an
-// alarm that was a recording of an old one.
+// allStop, allStopClear and sayAgain are handlers, not places in the script, so
+// they are never what RETURN comes back to.
 const HANDLER_NODES = ['allStop', 'allStopClear', 'sayAgain'];
 const isHandler = (id) => HANDLER_NODES.includes(id);
-
-function pushReturn(r) {
-  if (isHandler(r.node) || r.node === null) return;
-  returnStack.push(r.node);
-  r.prevNode = r.node;
-}
 
 function double(ctx) {
   const { state, bus } = ctx;
@@ -295,7 +295,6 @@ function double(ctx) {
   garbleTimer = GARBLE_TIME;
   fault(ctx, 'doubled');
   bus.emit('radio.doubled', { node: r.node });
-  pushReturn(r);
   enterNode(ctx, 'sayAgain');
 }
 
@@ -307,7 +306,6 @@ function interrupt(ctx) {
   if (!all) return;
   // The clock starts here and runs whatever happens to the script afterwards.
   allStopTimer = DEFAULT_TX + (all.timeout || ALL_STOP_WINDOW);
-  pushReturn(r);
   enterNode(ctx, 'allStop');
 }
 
@@ -515,6 +513,15 @@ export function update(ctx, dt) {
     const pttDouble = state.intent.ptt && !pttLatched;
     const spoke = state.intent.reply !== null &&
       state.intent.reply >= 0 && state.intent.reply < r.replies.length;
+    // A guide call carries a single Say again button and the data contract says
+    // guide calls never fault. Pressing it while the call was still on the air
+    // was costing a fault, and the call is on the air for more than half of
+    // every cycle.
+    if (mode === 'guideTx' && spoke && r.replies[state.intent.reply] === 'Say again') {
+      repeatGuide(ctx);
+      setTx(ctx);
+      return;
+    }
     if (pttDouble || spoke) {
       if (pttDouble) pttLatched = true;
       double(ctx);
