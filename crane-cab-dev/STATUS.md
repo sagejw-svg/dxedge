@@ -7,23 +7,26 @@ fresh session doesn't have to reverse-engineer it from git history.
 
 ## Current state
 
-- Last completed phase: **1 (Cab + crane)** — input.js, crane.js, sensors.js
-  (radius/hookHeight/heading only), render.js done per docs/PHASE-1-PROMPT.md.
-  Plus, ahead of the numbered plan at James's request: procedural canvas
-  textures (steel/deck/crate/grandstand, no image files), decorative
-  preview crates at every mission's pickup point, and a generic tiered
-  stadium backdrop with light towers. See the Notion Changelog for tuning
-  numbers and the two deviations (I/micro slew and trolley speeds are
-  extrapolated, not given explicitly; a mouselook Y-axis sign bug was
-  found and fixed during verification).
-  Also shipped two small follow-ups at James's request: a controls
-  reference on the title card, and a corner "?" button that reopens it
-  during play without restarting (pauses the sim while open).
-- Next phase: **2 (Physics + sensors)** — prompt already written:
-  `docs/PHASE-2-PROMPT.md`. Covers pendulum.js, plus sensors.js's
-  remaining fields (actualLoad, ratedLoad, capacityPct, lmiLock, a2b,
-  slack, collision, wind, swayAngle). Real hook-to-load attach and pickup
-  physics land here; the crates placed in Phase 1 are visual-only until then.
+- Last completed phase: **2 (Physics + sensors)** — pendulum.js (two
+  small-angle DOF, damping, deck contact, wind lean) and the remaining
+  sensors.js fields (actualLoad, ratedLoad, capacityPct, lmiLock, a2b,
+  slack, collision, swayAngle) done per docs/PHASE-2-PROMPT.md. A fixed
+  1500 kg test load is hung pre-attached in pendulum.init() as a Phase 2
+  testing default; Phase 3 replaces it with a real radio-driven pickup.
+  Shipped 2026-09-06 (commit c5f68d5) from an interactive session after
+  two nightly runs built and verified it but were blocked on push by the
+  sandbox's git proxy authorization check — see the Notion Changelog for
+  the full blocker/resolution writeup and the four items needing James's
+  own play-test judgment (sway damping decay, control feel at 1500 kg,
+  A2B margin, whether LMI lockout should also brake the trolley).
+  Phase 1 (Cab + crane — input.js, crane.js, sensors.js radius/hookHeight
+  /heading, render.js, plus procedural textures, preview crates, stadium
+  backdrop, title-card controls reference, and the reopenable help button)
+  shipped 2026-09-05; see the Notion Changelog for its tuning numbers.
+- Next phase: **3 (Radio + missions 0/1)** — no prompt doc written yet.
+  Covers audio.js buses, radio.js director, reply strip, doubling, ack
+  timer, and missions 0/1 as data. This is also where the Phase 2 test
+  load gets replaced by a real radio-driven pickup.
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main
