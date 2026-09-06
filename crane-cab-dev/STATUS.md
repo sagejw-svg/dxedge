@@ -16,7 +16,11 @@ fresh session doesn't have to reverse-engineer it from git history.
   numbers and the two deviations (I/micro slew and trolley speeds are
   extrapolated, not given explicitly; a mouselook Y-axis sign bug was
   found and fixed during verification).
-- Next phase: **2 (Physics + sensors)** — pendulum.js, plus sensors.js's
+  Also shipped two small follow-ups at James's request: a controls
+  reference on the title card, and a corner "?" button that reopens it
+  during play without restarting (pauses the sim while open).
+- Next phase: **2 (Physics + sensors)** — prompt already written:
+  `docs/PHASE-2-PROMPT.md`. Covers pendulum.js, plus sensors.js's
   remaining fields (actualLoad, ratedLoad, capacityPct, lmiLock, a2b,
   slack, collision, wind, swayAngle). Real hook-to-load attach and pickup
   physics land here; the crates placed in Phase 1 are visual-only until then.
