@@ -61,7 +61,19 @@
    "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py does not define it. Pre-existing, not papered over.",
    "new_finding": "none requiring a notification. The only new observation is the crane-cab third-party CDN dependency, logged as a low-priority advisory rather than pushed.",
    "repairs_made": "none - nothing was broken",
-   "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied."
+   "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied.",
+   "commits_pushed": "30b7180 (state file only)",
+   "deploy_result": {
+    "status": "success, verified",
+    "commit": "30b7180ea4995b82172c1dd61a8abc070ae6c9ab",
+    "verified_at": "2026-09-06T04:26Z",
+    "checks": [
+     "/api/health returns status ok with a fresh timestamp (04:24:59Z). No stale-timestamp recurrence.",
+     "/cyber/ re-checked in headless Chromium after deploy: 10 requests, all 200 except the known Google Fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, CISA KEV content rendering.",
+     "/aethersdr/ re-checked after deploy: 6 requests, all 200 except the same fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, AetherSDR release list rendering.",
+     "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
+    ]
+   }
   },
   {
    "date": "2026-09-05",
