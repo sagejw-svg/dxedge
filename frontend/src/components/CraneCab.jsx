@@ -1,8 +1,11 @@
 /* ------------------------------------------------------------------ *
- * Crane Cab - Phase 0
+ * Crane Cab
  * A self-contained Three.js browser game that ships unchanged at
  * /crane-cab/index.html. This component is only the DXEdge shell
  * around it, the same way the Invaders and Morse tabs wrap their tools.
+ * Deliberately does not name a build phase: the game ships on its own
+ * cadence out of crane-cab-dev/ and this blurb should not need a commit
+ * every time it moves.
  * ------------------------------------------------------------------ */
 
 const mono  = { fontFamily: 'var(--font-mono)' }
@@ -16,8 +19,9 @@ export default function CraneCab() {
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
           You are in the seat of a flat-top tower crane. Ground talks first, keep the load quiet.
           Entertainment only, not operator training. Generic crane, no manufacturer names or logos.
-          This is an early Phase 0 build, so the console gauges are still placeholders. Full screen
-          version at <a href="/crane-cab/">dxedge.net/crane-cab</a>.
+          Ground works you onto the load over the radio and calls the hook, you never grab it
+          yourself, and the console reads live off the sim. Full screen version at{' '}
+          <a href="/crane-cab/">dxedge.net/crane-cab</a>.
         </p>
       </div>
 
