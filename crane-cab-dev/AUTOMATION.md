@@ -120,9 +120,16 @@ not this file, not `STATUS.md`) from `crane-cab-dev/` into
 
 ```
 cp crane-cab-dev/index.html frontend/public/crane-cab/
-cp -r crane-cab-dev/css crane-cab-dev/js crane-cab-dev/data frontend/public/crane-cab/
-# audio/ too, once it has files in it
+cp -r crane-cab-dev/css crane-cab-dev/js crane-cab-dev/data crane-cab-dev/audio \
+      frontend/public/crane-cab/
 ```
+
+`tools/` does not ship. `audio/` does: those are the ground crew's voice
+clips, and `data/clips.js` holds their lengths, which is what `radio.js`
+sizes a transmission from. Re-record a line with `tools/voice.py` and that
+table is rewritten from the encoded files, so the two can never drift; a
+clip added to the tables in that script and never rendered fails
+`test/regress.mjs` rather than a lift.
 
 Bump `frontend/public/sw.js`'s `CACHE_NAME` by one (e.g. `dxedge-v10` ->
 `dxedge-v11`) so returning visitors actually get the new build instead of

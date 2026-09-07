@@ -211,7 +211,7 @@ export function update(ctx) {
   el.channel.textContent = state.radio.channel;
   el.ptt.classList.toggle('on', state.radio.pttLed);
   if (el.caption.textContent !== state.radio.caption) el.caption.textContent = state.radio.caption;
-  el.caption.classList.toggle('garbled', state.radio.garbled);
+  el.caption.classList.toggle('answered', state.radio.answered !== null);
 
   // Ack countdown. Only shown while a node's reply window is actually running.
   const ackOn = state.radio.ackTimeout > 0 && state.radio.ackTimer > 0;
@@ -231,6 +231,13 @@ export function update(ctx) {
       b.dataset.index = String(i);   // input.js delegates clicks to intent.reply
       return b;
     }));
+  }
+  // Full duplex: an answer given over the top of ground is held until the call
+  // ends, so the button that was pressed stays lit until it lands. Without this
+  // the press vanished with no acknowledgement and read as a dropped input.
+  const held = state.radio.answered;
+  for (const b of el.replies.children) {
+    b.classList.toggle('banked', held !== null && b.textContent.endsWith(held));
   }
 
 

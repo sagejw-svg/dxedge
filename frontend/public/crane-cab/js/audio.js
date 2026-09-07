@@ -7,18 +7,21 @@
 //             collision. A bed, not an effect. Muted by settings.mute.
 //   radio     bandpass 300-3000 Hz, light waveshaper drive, squelch click on
 //             transmit, static bed while ground is on the air, squelch tail on
-//             release, louder static on a double.
+//             release, a heterodyne beat while both stations are keyed.
 // Alarms sit on their own gain straight into master, because mute quiets cab
 // flavour only: LMI lockout and A2B still sound. Pitches are deliberately
 // different from each other (Notion "Cab alarms" section).
 //
-// Phase 3 ships procedural sound only. No files exist yet, so playRadio() tries
-// audio/<key>.ogg once per key, caches the miss, and falls back to the squelch
-// alone. Audio never blocks the radio script and never throws: if the context
-// cannot be created the whole module goes quiet and the game plays on.
+// The ground crew's calls are recordings, in audio/<KEY>.ogg, rendered dry on
+// purpose: they arrive with no radio colour on them and pick it up here, from
+// the same bandpass and drive as everything else on this bus, so a call and the
+// squelch that opens it sound like one radio. playRadio() fetches each key once,
+// caches the miss, and falls back to the squelch and the caption alone. Audio
+// never blocks the radio script and never throws: if the context cannot be
+// created the whole module goes quiet and the game plays on.
 //
 // This module listens to the radio director on the bus (radio.say,
-// radio.doubled) and never talks back, so no system imports another and nothing
+// radio.overlap) and never talks back, so no system imports another and nothing
 // audio does can reach state.
 
 let ac = null;
@@ -39,14 +42,17 @@ let ctxRef = null;
 const clips = new Map();     // key -> AudioBuffer | null (null = known missing)
 
 const RADIO_STATIC_GAIN = 0.032;   // about -30 dB
-const DOUBLE_STATIC_GAIN = 0.12;
+const OVERLAP_GAIN = 0.05;         // the beat note two open carriers make
+// Ground says the same words louder, not different words, so urgency is a level
+// and a little more drive rather than three recordings of every line.
+const URGENCY_GAIN = [1.0, 1.25, 1.6];
 const MACHINE_GAIN = 0.05;         // bed, kept well under the radio
 const AMBIENCE_GAIN = 0.02;
 
 export function init(ctx) {
   ctxRef = ctx;
-  ctx.bus.on('radio.say', (p) => { if (p && p.key) playRadio(ctx, p.key); });
-  ctx.bus.on('radio.doubled', () => doubleBurst());
+  ctx.bus.on('radio.say', (p) => { if (p && p.key) playRadio(ctx, p.key, p.urgency || 0); });
+  ctx.bus.on('radio.overlap', () => heterodyne());
   // The set-down. pendulum.js has emitted these since Phase 2 and nothing has
   // ever listened: putting a load down, the single most delicate thing the
   // operator does, made no sound at all.
@@ -283,29 +289,37 @@ function thud(freq, seconds, level) {
   } catch { /* audio never breaks the frame */ }
 }
 
-function doubleBurst() {
-  if (!ac || !staticGain) return;
+// Two carriers open at once. On a full duplex set that is not a fault and does
+// not garble anyone, so this is a short beat note under the call rather than the
+// wall of static a half duplex double used to raise: the operator hears that
+// they are on the air over the top of ground, and ground keeps talking.
+function heterodyne() {
+  if (!ac || !radioIn) return;
   try {
     const now = ac.currentTime;
-    staticGain.gain.cancelScheduledValues(now);
-    staticGain.gain.setValueAtTime(DOUBLE_STATIC_GAIN, now);
-    staticGain.gain.setValueAtTime(DOUBLE_STATIC_GAIN, now + 1.2);
-    // Back to the transmit bed, not to silence. Ground answers a double with its
-    // own "say again", so r.tx never leaves groundTx and the transition below
-    // never runs; ramping to zero left the static bed dead under two seconds of
-    // live transmission. Leaving groundTx still closes the squelch normally.
-    staticGain.gain.linearRampToValueAtTime(RADIO_STATIC_GAIN, now + 1.26);
+    const osc = ac.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1180, now);
+    osc.frequency.exponentialRampToValueAtTime(760, now + 0.22);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(OVERLAP_GAIN, now + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+    osc.connect(g); g.connect(radioIn);
+    osc.start(now); osc.stop(now + 0.26);
   } catch { /* ignore */ }
 }
 
 // Try audio/<key>.ogg once per key. A miss is cached so a script that repeats a
-// call does not repeat the 404. Success reports the clip length back on the bus
-// so the director can stretch the transmission to fit it.
-export function playRadio(ctx, key) {
+// call does not repeat the 404, and a key with no file falls back to the caption
+// and the squelch, which is how the whole radio worked before there were voices.
+// The director does not wait on any of this: it sizes the call from the length
+// in data/clips.js, which was measured off these same files at build time.
+export function playRadio(ctx, key, urgency) {
   if (!key || !ac) return;
   if (clips.has(key)) {
     const buf = clips.get(key);
-    if (buf) startClip(ctx, key, buf);
+    if (buf) startClip(ctx, buf, urgency);
     return;
   }
   clips.set(key, null);                 // pessimistic: never fetch the same key twice
@@ -317,16 +331,23 @@ export function playRadio(ctx, key) {
     .then((data) => ac.decodeAudioData(data))
     .then((buf) => {
       clips.set(key, buf);
-      startClip(ctx, key, buf);
+      startClip(ctx, buf, urgency);
     })
     .catch(() => { /* caption only, exactly as designed */ });
 }
 
-function startClip(ctx, key, buf) {
+// Urgency is a level, not a different take. Every clip was normalised to the
+// same RMS at build time so this is the only thing separating a calm call from a
+// shouted one, and the gain is well under what the waveshaper on this bus will
+// take before it turns to mush.
+function startClip(ctx, buf, urgency) {
   try {
     const src = ac.createBufferSource();
     src.buffer = buf;
-    src.connect(radioIn);
+    const g = ac.createGain();
+    g.gain.value = URGENCY_GAIN[Math.max(0, Math.min(URGENCY_GAIN.length - 1, urgency | 0))];
+    src.connect(g);
+    g.connect(radioIn);
     src.start();
   } catch { /* ignore */ }
 }

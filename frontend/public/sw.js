@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v25'
+const CACHE_NAME = 'dxedge-v26'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -52,6 +52,15 @@ self.addEventListener('fetch', (event) => {
   // Network-first for anything whose URL outlives its content. The cache is
   // still written, so it stays the offline fallback, but a reachable network
   // always wins and a deploy lands on the next load.
+  //
+  // That includes /crane-cab/audio/, the ground crew's voice clips, and it is
+  // meant to. They look like immutable assets - a hundred small files that
+  // rarely change - and moving them to the cache-first branch below would save a
+  // few kilobytes a load. It would also mean a re-recorded line never reaching
+  // anyone who had visited before, unless whoever re-recorded it remembered to
+  // bump CACHE_NAME. That manual step is exactly what put a year-old build in
+  // front of real people last time. The clips are ~10 KB each and only the ones
+  // a lift actually uses are ever fetched. Leave them here.
   const mutable = request.mode === 'navigate' ||
     url.pathname === '/' ||
     url.pathname.startsWith('/crane-cab/') ||

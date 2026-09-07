@@ -19,9 +19,16 @@
 //   guide     between guide calls. guideTimer counts down to the next one.
 //   guideTx   a guide call is on the air.
 //
-// Half duplex: any player transmission on top of a ground transmission is a
-// double. Both go garbled, a fault is logged, and the script detours through
-// sayAgain and comes back to the same call.
+// Full duplex. Ground and the cab are on separate paths, so an answer given
+// while ground is still talking reaches ground intact: it is banked and applied
+// the instant the call ends, and it is never a fault. Ground is not cut off
+// mid-word for it either, which matters now that the calls are recorded speech
+// rather than a caption - clipping "Blind pick, shaft is nine metres deep" in
+// half is worse radio than letting the sentence finish under the answer.
+// state.radio.answered carries the banked label so the strip can show it landed.
+//
+// Transmission length comes from data/clips.js, the real length of the real
+// recording, and falls back to DEFAULT_TX for a key with no clip.
 //
 // Interrupts: a collision, or sway over 10 degrees, jumps to allStop with the
 // current node pushed on the return stack. E-stop inside the window clears it.
@@ -34,15 +41,16 @@
 
 import {
   SCRIPTS, GUIDE_CALLS,
-  NOT_READY_CAPTION, NOT_SLACK_CAPTION, TOO_HIGH_CAPTION, TOO_LOW_CAPTION,
-  SAY_AGAIN_LABEL, SPOKEN_ONES, SPOKEN_TENS, SPOKEN_HUNDRED, SPOKEN_FEET, SPOKEN_METRES
+  NOT_READY_HINT, NOT_SLACK_HINT, TOO_HIGH_HINT, TOO_LOW_HINT,
+  SAY_AGAIN_LABEL, DISTANCE_BUCKETS, DISTANCE_FAR
 } from '../data/radio.js';
+import { CLIP_SECONDS } from '../data/clips.js';
 
 const DEFAULT_TX = 1.6;                      // s of ground transmission with no clip
+const CLIP_TAIL = 0.25;                      // s of dead air ground leaves before it unkeys
 const PLAYER_TX = 0.8;                       // s the operator's answer is on the air
-const GUIDE_PERIOD = 3.0;                    // s between guide calls
+const GUIDE_PERIOD = 3.0;                    // s between guide calls, or the call, whichever is longer
 const RETRY_FLOOR = 1e-6;                    // a retry timer never reaches zero mid call
-const GARBLE_TIME = 1.2;                     // s the caption stays garbled after a double
 const HOOK_RETRY = 4.0;                      // s before ground calls for the hook again
 const HOLD_FACTOR = 3;                       // inside this many tolerances, say HOLD
 const GUIDE_SETTLE = (2 * Math.PI) / 180;    // rad of sway allowed to leave a guide node
@@ -71,14 +79,14 @@ let seen = new Set();     // waitFor events heard since this node was entered
 // back to - the script node it was interrupted on - and while an alarm is still
 // live the answer is the alarm itself.
 let lastScriptNode = null;
-let garbleTimer = 0;
 let swayArmed = true;     // ALL STOP on sway is edge triggered
-let pttLatched = false;   // a held PTT may only double once
+let micLatched = false;   // a held PTT counts as one press, not one per frame
+let banked = null;        // an answer given while ground was still talking
 let hookResult = null;    // null | 'attached' | 'notReady'
 let hookRetry = 0;
 let pendingAction = null; // this node's hook / unhook, fired when the call ends
 let unhookResult = null;  // null | 'released' | 'refused'
-let hookHint = NOT_READY_CAPTION;
+let hookHint = NOT_READY_HINT;
 let unhookRetry = 0;
 let holdSaid = false;     // guide: HOLD is said once per approach
 let inAllStop = false;
@@ -114,9 +122,9 @@ export function init(ctx) {
     hookResult = 'notReady';
     // Say which way. dh is the horizontal miss, dy the block against the load
     // top: positive is high, negative is past it with slack rope out.
-    if (p && p.dh > 1.0) hookHint = NOT_READY_CAPTION;
-    else if (p && p.dy > 0) hookHint = TOO_HIGH_CAPTION;
-    else hookHint = TOO_LOW_CAPTION;
+    if (p && p.dh > 1.0) hookHint = NOT_READY_HINT;
+    else if (p && p.dy > 0) hookHint = TOO_HIGH_HINT;
+    else hookHint = TOO_LOW_HINT;
   });
   bus.on('hook.released', () => { unhookResult = 'released'; });
   bus.on('hook.notReleased', () => { unhookResult = 'refused'; });
@@ -140,14 +148,15 @@ function startScript(ctx, name) {
   lastScriptNode = null;
   swayArmed = true;
   // A mic that is already keyed when the lift starts counts as already used, not
-  // as the operator talking over ground's first word. Holding T on the end card
+  // as the operator keying over ground's first word. Holding T on the end card
   // and clicking through to the next lift used to replace the radio check with
   // "Say again, you doubled me." and start the operator a fault down before they
-  // had touched a control. It has to be released and pressed again.
-  pttLatched = !!ctx.state.intent.ptt;
+  // had touched a control. Full duplex retired the fault, but a mic that keys
+  // itself is still wrong, so it still has to be released and pressed again.
+  micLatched = !!ctx.state.intent.ptt;
+  banked = null;
+  r.answered = null;
   inAllStop = false;
-  garbleTimer = 0;
-  r.garbled = false;
   enterNode(ctx, script.start);
 }
 
@@ -164,7 +173,7 @@ function stopScript(ctx) {
   r.prevNode = null;
   r.caption = '';
   r.replies = [];
-  r.garbled = false;
+  r.answered = null;
   r.tx = 'idle';
   r.pttLed = false;
   r.groundTimer = 0;
@@ -172,6 +181,7 @@ function stopScript(ctx) {
   r.ackTimeout = 0;
   r.playerTimer = 0;
   r.guideTimer = 0;
+  banked = null;
   allStopTimer = 0;
 }
 
@@ -241,9 +251,18 @@ function fireAction(ctx) {
   if (which === 'unhook') ctx.bus.emit('hook.release', {});
 }
 
+// How long a call is on the air. The recording's own length plus the beat ground
+// leaves before it unkeys, or DEFAULT_TX for a key with no clip, which is what
+// every call used to get whether it needed 0.6 s or 4.
+function txLength(key) {
+  const clip = key ? CLIP_SECONDS[key] : 0;
+  return clip ? clip + CLIP_TAIL : DEFAULT_TX;
+}
+
 // Put the current node's call on the air. urgencyBump raises the read urgency
-// when ground has to say it again.
-function sayNode(ctx, urgencyBump, captionOverride, isRepeat) {
+// when ground has to say it again. `hint` replaces both the caption and the clip
+// for the rigging re-calls, which say something the node itself does not.
+function sayNode(ctx, urgencyBump, hint, isRepeat) {
   const { state, bus } = ctx;
   const r = state.radio;
   // A repeat asked for from a gate the operator is already standing in. When the
@@ -253,11 +272,14 @@ function sayNode(ctx, urgencyBump, captionOverride, isRepeat) {
   // node turned into a fault generator: one every 4.6 s for as long as the gate
   // stayed shut, while the operator did exactly what ground had asked.
   repeating = !!isRepeat;
+  const key = (hint && hint.say) || node.say || null;
   mode = 'groundTx';
-  r.groundTimer = DEFAULT_TX;
-  r.caption = captionOverride || node.caption || '';
+  r.groundTimer = txLength(key);
+  r.caption = (hint && hint.caption) || node.caption || '';
   r.replies = replyLabels(node);
-  if (node.say) bus.emit('radio.say', { key: node.say, urgency: (node.urgency || 0) + (urgencyBump || 0) });
+  r.answered = null;
+  banked = null;
+  if (key) bus.emit('radio.say', { key, urgency: (node.urgency || 0) + (urgencyBump || 0) });
 }
 
 function replyLabels(n) {
@@ -287,7 +309,7 @@ function advance(ctx) {
   enterNode(ctx, node.next === undefined ? null : node.next);
 }
 
-// ---------- faults, doubles, interrupts ----------
+// ---------- faults, overlap, interrupts ----------
 
 function fault(ctx, why) {
   const r = ctx.state.radio;
@@ -295,31 +317,17 @@ function fault(ctx, why) {
   ctx.bus.emit('radio.fault', { node: r.node, why: why || 'timeout' });
 }
 
-// allStop, allStopClear and sayAgain are handlers, not places in the script, so
-// they are never what RETURN comes back to.
-const HANDLER_NODES = ['allStop', 'allStopClear', 'sayAgain'];
+// allStop and allStopClear are handlers, not places in the script, so they are
+// never what RETURN comes back to.
+const HANDLER_NODES = ['allStop', 'allStopClear'];
 const isHandler = (id) => HANDLER_NODES.includes(id);
 
-function double(ctx) {
-  const { state, bus } = ctx;
-  const r = state.radio;
-  // Talking over the "say again" is still a double in real life, but treating it
-  // as one here recurses: sayAgain's own strip is a single Say again button, so
-  // one more press pushes another return and another fault, and a held key ran
-  // that up without limit. Ground just keeps talking instead.
-  if (r.node === 'sayAgain') return;
-  r.garbled = true;
-  garbleTimer = GARBLE_TIME;
-  // Ground's sign off asks nothing and waits for nothing, and the lift is already
-  // won by the time it goes out. Charging a fault for keying the mic over "Good
-  // lift, standing by" cost a grade letter on a finished lift, for saying copy.
-  if (node && node.next === null && !(node.expect && node.expect.length)) {
-    ctx.bus.emit('radio.doubled', { node: r.node });
-    return;
-  }
-  fault(ctx, 'doubled');
-  bus.emit('radio.doubled', { node: r.node });
-  enterNode(ctx, 'sayAgain');
+// Both stations on the air at once. On a full duplex set that is not an error
+// and costs nothing: it is announced only so audio.js can put the two carriers
+// against each other and the operator can hear that they are talking over the
+// top of ground.
+function overlap(ctx) {
+  ctx.bus.emit('radio.overlap', { node: ctx.state.radio.node });
 }
 
 function interrupt(ctx) {
@@ -329,7 +337,7 @@ function interrupt(ctx) {
   const all = script.nodes.allStop;
   if (!all) return;
   // The clock starts here and runs whatever happens to the script afterwards.
-  allStopTimer = DEFAULT_TX + (all.timeout || ALL_STOP_WINDOW);
+  allStopTimer = txLength(all.say) + (all.timeout || ALL_STOP_WINDOW);
   ctx.bus.emit('radio.allStop', {});
   enterNode(ctx, 'allStop');
 }
@@ -443,27 +451,22 @@ function guideInfo(ctx) {
 }
 
 
-function words(n) {
-  n = Math.round(n);
-  if (n < 0) return words(-n);
-  if (n < 20) return SPOKEN_ONES[n];
-  if (n < 100) {
-    const rest = n % 10;
-    return SPOKEN_TENS[Math.floor(n / 10)] + (rest ? `-${SPOKEN_ONES[rest]}` : '');
+// Which bucket ground calls this error as. Buckets run smallest first, so the
+// answer is the last one the distance clears; past the top of the list a number
+// stops being useful and ground says "keep coming" instead. Returns the words
+// for the caption and the tag that names the clip, together, because they have
+// to agree: the operator reads the caption while hearing the recording.
+function distanceBucket(metres, units) {
+  const table = DISTANCE_BUCKETS[units === 'imperial' ? 'imperial' : 'metric'];
+  let pick = null;
+  for (const b of table) {
+    if (metres >= b.value) pick = b; else break;
   }
-  const rest = n % 100;
-  return `${SPOKEN_ONES[Math.floor(n / 100)]} ${SPOKEN_HUNDRED}${rest ? ` ${words(rest)}` : ''}`;
-}
-
-// Spoken distance for a guide call. Imperial rounds to 5 ft, metric to 2 m,
-// because ground does not call a correction to the inch.
-function spokenDistance(metres, units) {
-  if (units === 'imperial') {
-    const ft = Math.max(5, Math.round((metres * 3.28084) / 5) * 5);
-    return `${words(ft)} ${SPOKEN_FEET}`;
+  if (!pick) return table[0];
+  if (pick === table[table.length - 1] && metres >= table[table.length - 1].value * 1.5) {
+    return DISTANCE_FAR;
   }
-  const m = Math.max(2, Math.round(metres / 2) * 2);
-  return `${words(m)} ${SPOKEN_METRES}`;
+  return pick;
 }
 
 function sayGuide(ctx, call, distance, urgency) {
@@ -471,16 +474,21 @@ function sayGuide(ctx, call, distance, urgency) {
   const r = state.radio;
   lastGuide = { call, distance, urgency };
   let caption = call.caption;
-  if (distance !== null && distance > SAY_DISTANCE_OVER) {
-    caption += `, ${spokenDistance(distance, state.settings.units)}.`;
+  let key = call.say;
+  if (call.distance && distance !== null && distance > SAY_DISTANCE_OVER) {
+    const b = distanceBucket(distance, state.settings.units);
+    caption += `, ${b.words}.`;
+    key = `${call.say}_${b.tag}`;
   } else if (!caption.endsWith('.')) {
     caption += '.';
   }
   mode = 'guideTx';
-  r.groundTimer = DEFAULT_TX;
+  r.groundTimer = txLength(key);
   r.caption = caption;
   r.replies = [SAY_AGAIN_LABEL];
-  bus.emit('radio.say', { key: call.say, urgency: urgency || 0 });
+  r.answered = null;
+  banked = null;
+  bus.emit('radio.say', { key, urgency: urgency || 0 });
 }
 
 // ---------- main loop ----------
@@ -489,12 +497,7 @@ export function update(ctx, dt) {
   const { state } = ctx;
   const r = state.radio;
 
-  if (garbleTimer > 0) {
-    garbleTimer -= dt;
-    if (garbleTimer <= 0) r.garbled = false;
-  }
-
-  if (!state.intent.ptt) pttLatched = false;
+  if (!state.intent.ptt) micLatched = false;
 
   if (!script || mode === 'off' || mode === 'done') {
     setTx(ctx);
@@ -502,8 +505,8 @@ export function update(ctx, dt) {
   }
 
   // The ALL STOP clock. It is checked against the E-stop itself, not against
-  // whatever node.waitFor happens to be, because a double can carry the script
-  // to sayAgain (waitFor null) and a null gate reads as satisfied.
+  // whatever node.waitFor happens to be: a "say again" on the alarm re-sends the
+  // call, and nothing about the operator asking for it again may buy them time.
   if (allStopTimer > 0) {
     if (state.intent.estop) {
       allStopTimer = 0;
@@ -528,30 +531,33 @@ export function update(ctx, dt) {
     swayArmed = true;
   }
 
-  // Half duplex. Talking over ground garbles both ways.
+  // Full duplex. The operator may answer over the top of ground, and nothing
+  // about doing so is a fault: the answer is banked and lands the moment the
+  // call ends, and ground finishes its sentence underneath it.
   const transmitting = mode === 'groundTx' || mode === 'guideTx';
   if (transmitting) {
     // Only a key that maps to a button on the strip is the operator talking.
     // Keys 1-8 always set intent.reply, but the strip never holds more than
-    // four, so pressing 6 during a call used to log a fault for a button that
-    // was not on screen.
-    const pttDouble = state.intent.ptt && !pttLatched;
+    // four, so pressing 6 during a call is a key with nothing behind it.
     const spoke = state.intent.reply !== null &&
       state.intent.reply >= 0 && state.intent.reply < r.replies.length;
-    // A guide call carries a single Say again button and the data contract says
-    // guide calls never fault. Pressing it while the call was still on the air
-    // was costing a fault, and the call is on the air for more than half of
-    // every cycle.
-    if (mode === 'guideTx' && spoke && r.replies[state.intent.reply] === SAY_AGAIN_LABEL) {
-      repeatGuide(ctx);
-      setTx(ctx);
-      return;
-    }
-    if (pttDouble || spoke) {
-      if (pttDouble) pttLatched = true;
-      double(ctx);
-      setTx(ctx);
-      return;
+    const label = spoke ? r.replies[state.intent.reply] : null;
+    if (state.intent.ptt && !micLatched) { micLatched = true; overlap(ctx); }
+    if (spoke) {
+      overlap(ctx);
+      if (label === SAY_AGAIN_LABEL) {
+        // Ground heard it and starts the call over, from the top.
+        if (mode === 'guideTx') repeatGuide(ctx);
+        else sayNode(ctx, 0, null, repeating);
+        setTx(ctx);
+        return;
+      }
+      // Bank it. A node with no reply window has nothing to bank it against, so
+      // the press is just the operator talking and the script is unmoved.
+      if (mode === 'groundTx' && node.timeout !== null && node.timeout !== undefined) {
+        banked = label;
+        r.answered = label;
+      }
     }
   }
 
@@ -572,6 +578,24 @@ export function update(ctx, dt) {
         const wasRepeat = repeating;
         repeating = false;
         fireAction(ctx);
+        // An answer given while ground was still talking lands here, with the
+        // reply window never opening. That is the whole of what full duplex buys
+        // the operator: say "moving" the instant you know, not after sitting
+        // through the rest of the call waiting for a window to open.
+        if (!wasRepeat && banked !== null &&
+            node.timeout !== null && node.timeout !== undefined) {
+          const label = banked;
+          banked = null;
+          r.answered = null;
+          r.ackTimer = 0;
+          r.ackTimeout = 0;
+          ctx.bus.emit('radio.reply', { label, node: r.node });
+          mode = 'playerTx';
+          r.playerTimer = PLAYER_TX;
+          break;
+        }
+        banked = null;
+        r.answered = null;
         if (!wasRepeat && node.timeout !== null && node.timeout !== undefined) {
           mode = 'ack';
           r.ackTimer = node.timeout;
@@ -653,7 +677,7 @@ export function update(ctx, dt) {
       if (unhookResult === 'refused') {
         unhookResult = null;
         unhookRetry = HOOK_RETRY;
-        sayNode(ctx, 1, NOT_SLACK_CAPTION, true);
+        sayNode(ctx, 1, NOT_SLACK_HINT, true);
         break;
       }
       if (unhookRetry > 0) {

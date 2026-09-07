@@ -275,6 +275,92 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
   await p.close();
 }
 
+// 11. The ground crew has a voice now, and nothing in the DOM-free suite can
+//     prove it: that suite has no fetch, no AudioContext and no decoder. This
+//     watches the whole path in a real browser - the file comes back, the
+//     browser decodes it, a source node is started on the radio bus - and
+//     checks the decoded length against the number data/clips.js told the
+//     director to size the transmission from. A clip that is re-encoded without
+//     regenerating that table would pass every other check and then get cut off
+//     mid-word in the cab.
+{
+  const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+  p.__err = [];
+  p.on('pageerror', (e) => p.__err.push(String(e)));
+  await p.addInitScript(() => {
+    // Installed before the game runs, because the context is built on the first
+    // gesture and there is no way to reach into it afterwards.
+    window.__audio = { decoded: [], started: 0, failed: [] };
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const realDecode = AC.prototype.decodeAudioData;
+    AC.prototype.decodeAudioData = function (data, ...rest) {
+      const out = realDecode.call(this, data, ...rest);
+      if (out && out.then) {
+        out.then((buf) => window.__audio.decoded.push(buf.duration))
+           .catch((e) => window.__audio.failed.push(String(e)));
+      }
+      return out;
+    };
+    const realStart = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...a) {
+      if (this.buffer && this.buffer.duration > 0.3) window.__audio.started += 1;
+      return realStart.apply(this, a);
+    };
+  });
+  const fetched = [];
+  p.on('response', (r) => { if (/\/audio\/.*\.ogg$/.test(r.url())) fetched.push([r.url().split('/').pop(), r.status()]); });
+  await p.goto(process.env.PAGE || 'http://127.0.0.1:8080/index.html?debug', { waitUntil: 'load' });
+  await p.waitForFunction(() => !!window.__cab, null, { timeout: 20000 });
+  await p.click('#btn-start');
+  await sleep(4000);                      // through ground's first call
+  const a = await p.evaluate(() => window.__audio);
+  const table = await p.evaluate(async () => (await import('./data/clips.js')).CLIP_SECONDS);
+  const check = fetched.find(([f]) => f === 'RADIO_CHECK.ogg');
+  // The decoded length has to be the one the director sized the call from. OGG
+  // granule position is exact, so this is a tight bound, not a fuzzy one.
+  const want = table.RADIO_CHECK;
+  const got = a.decoded.length ? a.decoded[0] : null;
+  rec('the ground crew is audible, and as long as the timing table says',
+    !!check && check[1] === 200 && a.started > 0 && a.failed.length === 0 &&
+    got !== null && Math.abs(got - want) < 0.05 && p.__err.length === 0,
+    `fetched ${JSON.stringify(check)} started ${a.started} decoded ${got} want ${want} ` +
+    `failed ${JSON.stringify(a.failed)} errors ${JSON.stringify(p.__err)}`);
+  await p.close();
+}
+
+// 12. Full duplex, in the seat. Answering over the top of ground used to garble
+//     both stations and cost a fault; now the button lights, the answer waits
+//     for the call to finish, and it lands.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(400);                        // ground is mid radio check
+  await p.keyboard.press('1');             // Copy, over the top of it
+  const during = await p.evaluate(() => ({
+    answered: window.__cab.state.radio.answered,
+    lit: !!document.querySelector('#r-replies button.banked'),
+    talking: window.__cab.state.radio.groundTimer > 0,
+    node: window.__cab.state.radio.node
+  }));
+  // Waited on, not slept through: headless software rendering runs the clock at
+  // roughly half real time and a fixed sleep here is a flake waiting to happen.
+  let landed = true;
+  await p.waitForFunction(() => window.__cab.state.radio.node !== 'check', null, { timeout: 15000 })
+    .catch(() => { landed = false; });
+  const after = await p.evaluate(() => ({
+    node: window.__cab.state.radio.node,
+    faults: window.__cab.state.radio.faults,
+    answered: window.__cab.state.radio.answered,
+    replied: window.__cab.state.radio.node
+  }));
+  rec('an answer over the top of ground lights the button, waits, then lands',
+    during.answered === 'Copy' && during.lit && during.talking && during.node === 'check' &&
+    landed && after.node !== 'check' && after.faults === 0 && after.answered === null,
+    `during ${JSON.stringify(during)} after ${JSON.stringify(after)} landed ${landed}`);
+  await p.close();
+}
+
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);

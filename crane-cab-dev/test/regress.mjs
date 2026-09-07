@@ -14,7 +14,7 @@ const rec = (name, ok, detail) => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  :: ${detail}` : ''}`);
 };
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -211,14 +211,24 @@ async function tHoistCorrection() {
   until(sim, atNode('onHook'), 14);
   park(sim, { slew: p.slew, radius: p.radius, line: 44.2 });   // 1.4 m past it
   until(sim, () => false, 2);
-  // Take a little rope back in, the way anyone would.
-  until(sim, (s) => s.crane.line < 43.0 || s.mission.result !== null, 12,
+  // Take a little rope back in, the way anyone would, stopping short of the hook
+  // window itself: the window is line 42.2 to 43.4 here, ground re-calls for the
+  // hook every few seconds while it waits, and a block corrected up into the
+  // window gets picked up by one of those retries. That is the system working,
+  // and it is not what this check is about, so the correction stops at 43.6.
+  until(sim, (s) => s.crane.line < 43.6 || s.mission.result !== null, 12,
     (s) => { s.intent.hoist = 1; s.intent.range = 'I'; });
   sim.state.intent.hoist = 0;
   const corrected = sim.state.mission.result;
   rec('a small correction upward with an empty block is allowed',
     corrected === null, `result ${corrected} line ${sim.state.crane.line.toFixed(2)}`);
-  // Hauling away is still a fail.
+  // Hauling away is still a fail. Trolley the block clear of the load first, so
+  // that the haul cannot pass through the hook window on its way up and get
+  // rigged by a retry: with the block three metres off, nothing can attach, and
+  // what is left is exactly the hoist budget this check is here for.
+  until(sim, (s) => Math.abs(s.crane.radius - (p.radius + 3)) < 0.05, 20,
+    (s) => { s.intent.trolley = s.crane.radius < p.radius + 3 ? 1 : -1; s.intent.range = 'I'; });
+  sim.state.intent.trolley = 0;
   until(sim, (s) => s.mission.result !== null, 20,
     (s) => { s.intent.hoist = 1; s.intent.range = 'II'; });
   rec('hauling the empty block away still fails the lift',
@@ -248,9 +258,10 @@ async function tNoReplayedAlarm() {
   rig(sim);
   sim.state.load.swing.x = 0.2;                       // 11.5 deg
   until(sim, atNode('allStop'), 8);
-  // Talk over the ALL STOP, then E-stop out of it.
+  // Answer the ALL STOP over the top of the call - full duplex, so it is heard
+  // and banked, not garbled - then E-stop out of it.
   until(sim, () => false, 0.2, (s) => { s.intent.reply = 0; });
-  until(sim, atNode('sayAgain'), 4);
+  until(sim, () => false, 1.5);
   sim.state.intent.estop = true;
   until(sim, atNode('allStopClear'), 8);
   sim.state.intent.estop = false;
@@ -335,7 +346,9 @@ async function tRealCollisionStillCounts() {
     `result ${sim.state.mission.result} reason ${sim.state.mission.failReason} counted ${counted}`);
 }
 
-// alarm, talk over it, let the say again return, THEN hit the mushroom.
+// Alarm, answer it, let the RETURN out of allStopClear run, THEN hit the
+// mushroom. RETURN is the one thing in the director that can leave it with no
+// node, and the alarm is the only path that uses it.
 async function tReturnCannotKillRadio() {
   const sim = await startMission(0);
   answer(sim);
@@ -346,14 +359,17 @@ async function tReturnCannotKillRadio() {
   rig(sim);
   sim.state.load.swing.x = 0.2;
   until(sim, atNode('allStop'), 8);
-  until(sim, () => false, 0.2, (s) => { s.intent.reply = 0; });   // double on the alarm
-  until(sim, atNode('sayAgain'), 4);
-  until(sim, (s) => node(s) !== 'sayAgain', 6);                   // let its RETURN run
-  sim.state.intent.estop = true;                                  // now the mushroom
+  until(sim, () => false, 0.2, (s) => { s.intent.reply = 0; });   // answer over the alarm
+  sim.state.intent.estop = true;
+  until(sim, atNode('allStopClear'), 6);
+  until(sim, (s) => node(s) !== 'allStopClear', 8);               // let its RETURN run
+  sim.state.intent.estop = false;
+  until(sim, () => false, 0.5);
+  sim.state.intent.estop = true;                                  // the mushroom again
   until(sim, () => false, 4);
   const s = sim.state;
   const alive = s.radio.node !== null && s.radio.script !== null;
-  rec('the mushroom after a doubled alarm does not kill the radio',
+  rec('the mushroom after a RETURN out of the alarm does not kill the radio',
     alive, `node ${s.radio.node} script ${s.radio.script} result ${s.mission.result}`);
   // and the lift must still be able to end
   sim.state.intent.estop = false;
@@ -1575,6 +1591,143 @@ async function tServiceWorkerReachesTheNetwork() {
 
 // ---------------------------------------------------------------- run
 
+// ---------- the voice ----------
+
+// Every clip key the data can produce has to exist as a file, and every file has
+// to have a length in data/clips.js, because radio.js sizes a transmission from
+// that table. A key with no file degrades to a caption and a flat 1.6 s, which
+// is survivable and silent; a file with no length is a call that gets cut off
+// mid-word, which is not. The guide keys are generated by combining a direction
+// with a bucket tag, so they are the ones that can go missing without anyone
+// noticing until a lift is running.
+async function tEveryClipExists() {
+  const { CLIP_SECONDS } = await import(pathToFileURL(join(HERE, '..', 'data/clips.js')).href);
+  const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
+  const wanted = new Set();
+  for (const script of Object.values(R.SCRIPTS)) {
+    for (const n of Object.values(script.nodes)) if (n.say) wanted.add(n.say);
+  }
+  for (const hint of [R.NOT_READY_HINT, R.TOO_HIGH_HINT, R.TOO_LOW_HINT, R.NOT_SLACK_HINT]) {
+    wanted.add(hint.say);
+  }
+  for (const call of Object.values(R.GUIDE_CALLS)) {
+    wanted.add(call.say);
+    if (!call.distance) continue;
+    for (const units of ['imperial', 'metric']) {
+      for (const b of R.DISTANCE_BUCKETS[units]) wanted.add(`${call.say}_${b.tag}`);
+    }
+    wanted.add(`${call.say}_${R.DISTANCE_FAR.tag}`);
+  }
+  const dir = join(HERE, '..', 'audio');
+  const onDisk = new Set(readdirSync(dir).filter((f) => f.endsWith('.ogg'))
+    .map((f) => f.slice(0, -4)));
+  const noFile = [...wanted].filter((k) => !onDisk.has(k));
+  const noLength = [...onDisk].filter((k) => !(k in CLIP_SECONDS));
+  const noAudio = Object.keys(CLIP_SECONDS).filter((k) => !onDisk.has(k));
+  // And the other direction. A clip nobody can ask for is a line that was cut
+  // from the script and left in the folder: dead weight in the repo and in the
+  // mirror, and a reader's first guess that the radio still says it.
+  const unwanted = [...onDisk].filter((k) => !wanted.has(k));
+  rec('every clip the radio can ask for is on disk, with a length beside it, and nothing else is',
+    noFile.length === 0 && noLength.length === 0 && noAudio.length === 0 && unwanted.length === 0,
+    `${wanted.size} keys wanted, ${onDisk.size} files; missing files ${JSON.stringify(noFile)}, ` +
+    `missing lengths ${JSON.stringify(noLength)}, orphan lengths ${JSON.stringify(noAudio)}, ` +
+    `clips nothing asks for ${JSON.stringify(unwanted)}`);
+  // And no clip may be silent or absurdly long: a zero would make a call land in
+  // the same tick it went out, and thirty seconds would hang the script.
+  const odd = Object.entries(CLIP_SECONDS).filter(([, v]) => !(v > 0.3 && v < 8));
+  rec('no clip is empty or runs away with the script',
+    odd.length === 0, `out of range ${JSON.stringify(odd)}`);
+}
+
+// A call used to be on the air for a flat 1.6 s whatever it said. With voices
+// that is both too long for "Up easy." and half of what the shaft brief needs,
+// and the second half of the brief was simply cut off.
+async function tTransmissionMatchesTheClip() {
+  const { CLIP_SECONDS } = await import(pathToFileURL(join(HERE, '..', 'data/clips.js')).href);
+  const sim = await startMission(3);                       // blindShaft: the long brief
+  until(sim, (s) => s.radio.tx === 'groundTx', 4);
+  const shortCall = sim.state.radio.groundTimer;           // RADIO_CHECK
+  answer(sim);
+  until(sim, atNode('brief'), 8);
+  until(sim, (s) => s.radio.tx === 'groundTx' && s.radio.caption.startsWith('Blind pick'), 8);
+  const longCall = sim.state.radio.groundTimer;
+  // Each within a tick of its clip plus the unkey beat, and the brief has to be
+  // materially longer than the check rather than both landing on 1.6.
+  const wantShort = CLIP_SECONDS.RADIO_CHECK + 0.25;
+  const wantLong = CLIP_SECONDS.SHAFT_BRIEF + 0.25;
+  rec('a call is as long as the recording, not a flat second and a half',
+    Math.abs(shortCall - wantShort) < 0.05 && Math.abs(longCall - wantLong) < 0.05 &&
+    longCall > shortCall + 1.5,
+    `check ${shortCall.toFixed(2)} want ${wantShort.toFixed(2)}, ` +
+    `brief ${longCall.toFixed(2)} want ${wantLong.toFixed(2)}`);
+}
+
+// Full duplex. Answering over the top of ground is the point: the answer is
+// heard, it lands the moment the call ends, and it costs nothing. Under half
+// duplex this exact input garbled both stations, logged a fault and sent the
+// script off to sayAgain.
+async function tAnswerOverGroundIsFree() {
+  const sim = await startMission(0);
+  // Press Copy while ground is still saying the radio check.
+  until(sim, (s) => s.radio.tx === 'groundTx', 4);
+  const early = sim.state.radio.groundTimer;
+  until(sim, () => false, 0.15, (s) => { s.intent.reply = 0; });
+  const banked = sim.state.radio.answered;
+  const stillTalking = sim.state.radio.groundTimer > 0 && node(sim.state) === 'check';
+  // It lands when the call ends, and the reply window never has to open.
+  const replied = until(sim, () => sim.log.some((e) => e.name === 'radio.reply'), 4);
+  const moved = until(sim, (s) => node(s) !== 'check', 6);
+  rec('an answer given over ground is heard, lands when the call ends, and is not a fault',
+    early > 0.5 && banked === 'Copy' && stillTalking && replied && moved &&
+    sim.state.radio.faults === 0,
+    `banked ${banked} talking ${stillTalking} replied ${replied} moved ${moved} ` +
+    `faults ${sim.state.radio.faults} node ${node(sim.state)}`);
+}
+
+// And the mic itself. Keying over ground used to be a fault on its own, with no
+// button pressed at all.
+async function tKeyingOverGroundIsFree() {
+  const sim = await startMission(0);
+  until(sim, (s) => s.radio.tx === 'groundTx', 4);
+  until(sim, () => false, 1.0, (s) => { s.intent.ptt = true; });
+  sim.state.intent.ptt = false;
+  const overlaps = sim.log.filter((e) => e.name === 'radio.overlap').length;
+  rec('keying the mic over ground is heard on both sets and costs nothing',
+    sim.state.radio.faults === 0 && node(sim.state) === 'check' && overlaps > 0,
+    `faults ${sim.state.radio.faults} node ${node(sim.state)} overlaps ${overlaps}`);
+}
+
+// A guide call says how far, and the clip has to be the one that says that far.
+// The caption and the recording are built from the same bucket for exactly this
+// reason: the operator reads one while hearing the other.
+async function tGuideDistanceMatchesItsClip() {
+  const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
+  const sim = await startMission(0);
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  park(sim, { slew: p.slew, radius: 8 });                  // a long way in from the mark
+  until(sim, atNode('toPickup'), 8);
+  const said = [];
+  until(sim, () => said.length >= 3, 20, (s) => {
+    park(sim, { slew: p.slew, radius: 8 });
+    const last = sim.log.filter((e) => e.name === 'radio.say').pop();
+    if (last && (!said.length || said[said.length - 1] !== last.payload.key)) {
+      said.push(last.payload.key);
+    }
+  });
+  const cap = sim.state.radio.caption;
+  const key = said[said.length - 1] || '';
+  // The tag on the key has to be a real bucket, and its words have to be the
+  // ones in the caption the operator is reading.
+  const tag = key.split('_').pop();
+  const all = [...R.DISTANCE_BUCKETS.imperial, ...R.DISTANCE_BUCKETS.metric, R.DISTANCE_FAR];
+  const bucket = all.find((b) => b.tag === tag);
+  rec('a guide call plays the clip that says the distance its caption says',
+    !!bucket && cap.includes(bucket.words),
+    `key ${key} tag ${tag} caption "${cap}"`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -1594,7 +1747,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tHookRetryIsNeverLost, tCorruptAwardStaysAwarded, tBuildStampIsStampable,
   tPendulumPeriod, tCentrifugalLean, tCoriolis, tRopeCoupling, tSwingDecay,
   tSwingKeepsItsPlane, tLeanIsNotSway, tLoadRisesAtTheEndsOfItsArc,
-  tServiceWorkerReachesTheNetwork];
+  tServiceWorkerReachesTheNetwork,
+  tEveryClipExists, tTransmissionMatchesTheClip, tAnswerOverGroundIsFree,
+  tKeyingOverGroundIsFree, tGuideDistanceMatchesItsClip];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

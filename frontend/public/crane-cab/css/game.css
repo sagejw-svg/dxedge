@@ -163,7 +163,11 @@ html, body {
   line-height: 1.3;
   min-height: 2.6em;
 }
-.radio .caption.garbled { color: var(--text-dim); letter-spacing: 0.1em; }
+/* Full duplex: ground is still talking under the operator's answer, so the
+   caption stays legible and only softens, and the answer that is waiting to
+   land stays lit on the strip. */
+.radio .caption.answered { opacity: 0.75; }
+.radio .replies button.banked { border-color: var(--lamp); color: var(--lamp); }
 /* The radio head is a fixed-height grid track. A four line call used to grow
    past it and paint over the reply strip. */
 .radio .caption {

@@ -62,11 +62,16 @@ export function createState() {
     // guideTimer, ackTimeout. Timers are seconds remaining, counted down by
     // radio.js. ackTimeout is the node's full ack window so ui.js can draw the
     // countdown bar without importing the script data.
+    // FULL DUPLEX shape change, declared under hard rule 6: `garbled` is gone
+    // and `answered` replaces it. Nothing garbles any more, because nothing
+    // doubles; what the strip needs to show instead is the answer the operator
+    // gave while ground was still talking, which is held until the call ends.
+    // null when no answer is banked, otherwise the reply label.
     radio: {
       channel: 'TC-1 GROUND',
       script: null, node: null, prevNode: null,
       tx: 'idle',            // idle | groundTx | playerTx
-      caption: '', garbled: false,
+      caption: '', answered: null,
       replies: [],           // visible reply labels, max 4
       pttLed: false, faults: 0,
       repeats: 0,

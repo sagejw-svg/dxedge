@@ -19,7 +19,24 @@ fresh session doesn't have to reverse-engineer it from git history.
   STOP and failed the lift in about ten seconds. It also closed the most common
   hang in the game: a hook retry that expired inside a transmission was lost,
   stranding a quarter of all fuzzed lifts at "on the hook" with no way out.
-  test/regress.mjs is now 76 checks and test/smoke.mjs 12.
+  test/regress.mjs is now 85 checks and test/smoke.mjs 14.
+- **The radio talks, and it is full duplex.** Ground had a script, a caption and
+  a squelch and no voice; it now has 111 recorded lines in `audio/`, one voice,
+  rendered by `tools/voice.py` from an ElevenLabs voice built for the part
+  ("Crane Cab Ground - TC-1 Banksman", voice_id gMNW3FZDVpJ5Afeq0XIK). The clips
+  are dry: `js/audio.js` already bandpasses the radio bus 300-3000 Hz, so
+  anything pre-filtered would be filtered twice. `data/clips.js` holds their
+  measured lengths and `radio.js` sizes each transmission from that instead of
+  the flat 1.6 s every call used to get, which was a second of dead air after
+  "Up easy." and cut the blind shaft brief off mid-sentence. Guide calls carry
+  their distance in the recording, so the caption and the voice can never
+  disagree: the direction key picks up the bucket's tag (SWING_LEFT + F25).
+  Half duplex is gone with the doubling it existed for - an answer given over
+  the top of ground is banked, lights its button, and lands the moment the call
+  ends, at no cost. `state.radio.garbled` is replaced by `state.radio.answered`
+  (hard rule 6, declared in state.js), the `sayAgain` node is deleted from every
+  script, and `radio.doubled` is now `radio.overlap`, a beat note rather than a
+  fault.
 - Phase 4 itself: the phase table's own done
   condition, "refresh keeps progress", is met and checked. scoring.js grades a
   lift on a demerit count and says which line cost the letter; save.js persists

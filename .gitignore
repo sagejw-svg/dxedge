@@ -9,3 +9,10 @@ __pycache__/
 **/*.pyo
 frontend/node_modules/
 frontend/dist/
+
+# Crane Cab local test rig: a copy of index.html with a local three.js import
+# map, so test/smoke.mjs can run where the CDN is blocked. Generated, never
+# committed - the real index.html loads three from the CDN.
+crane-cab-dev/.localtest/
+crane-cab-dev/index.local.html
+crane-cab-dev/node_modules

@@ -8,6 +8,9 @@ phases: the Crane Cab page in James's Notion (Design Prompt, Architecture and bu
 1. render.js and audio.js read state and never write it.
 2. Systems communicate through ctx.bus events, never by importing each other.
 3. Missions and radio scripts are data in data/. New content never goes in js/.
+   That includes what ground says and how long it takes to say it: the lines are
+   in data/radio.js, the clip lengths in data/clips.js, and the recordings in
+   audio/, rendered by tools/voice.py.
 4. The tick order in main.js is fixed: input, crane, pendulum, sensors, missions, radio, scoring.
 5. No dependencies beyond Three.js from the CDN. No bundler. One static folder.
 6. Do not change the shape of state.js without saying so explicitly in your report.
