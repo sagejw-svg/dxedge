@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Morse Invaders. Characters fall in CW; copy them before they reach the noise floor. Koch progression from two letters to full callsigns. Runs entirely in your browser.">
+<title>DX//EDGE &middot; MORSE INVADERS</title>
+<link rel="canonical" href="https://dxedge.net/morse-invaders/">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080808; --bg1:#0e0e0e; --bg2:#141414; --border:#1e1e1e;
+    --text:#e0e0e0; --muted:#888; --dim:#444;
+    --green:#00ff9d; --teal:#7affb2; --yellow:#ffd600; --blue:#7a9fff; --red:#ff6b6b;
+    --mono:'SF Mono','Fira Code','Consolas',monospace;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);
+            overflow:hidden;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+  #wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        flex-direction:column;gap:6px;padding:4px}
+  #stage{position:relative;width:480px;height:640px;flex:none}
+  canvas{display:block;width:100%;height:100%;background:#000;touch-action:none;outline:none;
+         -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  canvas:focus-visible{outline:1px solid var(--dim)}
+
+  /* --- overlay menus (title, pause, game over) --- */
+  #ui{position:absolute;inset:0;overflow:auto;background:rgba(8,8,8,.88);display:none;
+      -webkit-overflow-scrolling:touch}
+  #ui.show{display:block}
+  .panel{max-width:400px;margin:0 auto;padding:22px 18px 28px}
+  .view{display:none}
+  .view.show{display:block}
+  h1{font-size:26px;letter-spacing:6px;font-weight:700;color:var(--green);text-align:center;line-height:1.1}
+  h2{font-size:18px;letter-spacing:4px;font-weight:700;color:var(--green);text-align:center;margin-bottom:10px}
+  .strip{display:flex;justify-content:center;gap:5px;margin:10px 0 14px;height:8px}
+  .strip i{display:block;height:8px;background:var(--green);border-radius:1px;opacity:.85}
+  .strip i.dit{width:8px}.strip i.dah{width:24px}.strip i.gap{width:8px;background:none}
+  .tag{color:var(--muted);font-size:12px;text-align:center;line-height:1.6;margin-bottom:12px}
+  .best{color:var(--dim);font-size:11px;text-align:center;letter-spacing:1px;margin-bottom:12px;min-height:14px}
+  .btn{display:block;width:100%;padding:11px 12px;font-family:var(--mono);font-size:14px;letter-spacing:2px;
+       background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;
+       text-transform:uppercase}
+  .btn:hover{border-color:var(--dim)}
+  .btn.primary{background:rgba(0,255,157,.10);border-color:var(--green);color:var(--green)}
+  .btn.primary:hover{background:rgba(0,255,157,.18)}
+  .btn:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+  .btn+.btn{margin-top:8px}
+  .sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+  .lbl{font-size:10px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .row+.row{margin-top:8px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{font-family:var(--mono);font-size:11px;padding:7px 11px;background:var(--bg1);color:var(--muted);
+              border:0;border-right:1px solid var(--border);cursor:pointer;letter-spacing:1px}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:rgba(0,255,157,.10);color:var(--green)}
+  .seg button:focus-visible{outline:1px solid var(--green);outline-offset:-1px}
+  .sq{font-family:var(--mono);font-size:15px;width:36px;height:32px;background:var(--bg1);color:var(--text);
+      border:1px solid var(--border);border-radius:5px;cursor:pointer;line-height:1}
+  .sq:hover{border-color:var(--dim)}
+  .sq:disabled{color:var(--dim);cursor:default}
+  .pool{font-size:15px;letter-spacing:5px;color:var(--text);word-break:break-all;line-height:1.7;
+        padding:8px 10px;background:var(--bg1);border:1px solid var(--border);border-radius:6px;min-height:40px}
+  .pool b{color:var(--green);font-weight:700}
+  .cnt{font-size:11px;color:var(--muted);min-width:64px;text-align:center}
+  .nxt{font-size:11px;color:var(--dim);margin-left:auto}
+  .grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
+  .grid button{font-family:var(--mono);font-size:12px;height:32px;background:var(--bg1);color:var(--dim);
+               border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:0}
+  .grid button.on{color:var(--green);border-color:var(--green);background:rgba(0,255,157,.08)}
+  .grid button.pro{font-size:10px;letter-spacing:0}
+  .grid button:focus-visible{outline:1px solid var(--green)}
+  .sl{display:block;margin-top:10px}
+  .sl .t{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px}
+  .sl .t b{color:var(--green);font-weight:400}
+  .sl input{width:100%;accent-color:var(--green)}
+  .chk{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.5;
+       margin-top:9px;cursor:pointer}
+  .chk input{accent-color:var(--green);margin-top:3px;flex:none}
+  .hint{color:var(--dim);font-size:11px;line-height:1.7;text-align:center;margin-top:16px}
+  .hint kbd{color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:0 5px;font-family:var(--mono)}
+  .stat{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:5px 0;
+        border-bottom:1px solid var(--border)}
+  .stat b{color:var(--text);font-weight:400}
+  .stat.hi b{color:var(--green)}
+  .miss{font-size:12px;color:var(--muted);line-height:1.8;margin:10px 0 14px}
+  .miss span{color:var(--red);margin-right:10px;white-space:nowrap}
+  #note{color:var(--yellow);font-size:11px;text-align:center;min-height:14px;margin-top:8px}
+
+  /* --- on-screen keys for phones --- */
+  #keys{display:none;flex-wrap:wrap;justify-content:center;gap:5px;width:480px;max-width:100%;flex:none}
+  #keys.show{display:flex}
+  #keys button{font-family:var(--mono);font-size:15px;font-weight:700;min-width:38px;height:38px;padding:0 6px;
+               background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px;
+               cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+  #keys button.pro{font-size:11px;letter-spacing:0}
+  #keys button.ctl{color:var(--muted);font-size:13px;min-width:48px}
+  #keys button:active{background:rgba(0,255,157,.14);border-color:var(--green);color:var(--green)}
+
+  #foot{font-size:9px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;flex:none;
+        white-space:nowrap;overflow:hidden;max-width:100%}
+  #foot.hide{display:none}
+  /* a short wide window (a phone on its side) puts the keys beside the stage instead of under it */
+  #wrap.land{flex-direction:row;gap:10px}
+  #wrap.land #keys{width:auto;max-width:42%;align-content:center}
+  #wrap.land #foot{display:none}
+  #foot a{color:var(--dim);text-decoration:none}
+  #foot a:hover{color:var(--muted)}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="c" tabindex="0" aria-label="Morse Invaders game"></canvas>
+    <div id="ui" class="show">
+      <div class="panel">
+
+        <div id="vTitle" class="view show">
+          <h1>MORSE<br>INVADERS</h1>
+          <div class="strip" aria-hidden="true">
+            <i class="dah"></i><i class="dah"></i><i class="gap"></i>
+            <i class="dah"></i><i class="dah"></i><i class="dah"></i><i class="gap"></i>
+            <i class="dit"></i><i class="dah"></i><i class="dit"></i><i class="gap"></i>
+            <i class="dit"></i><i class="dit"></i><i class="dit"></i><i class="gap"></i>
+            <i class="dit"></i>
+          </div>
+          <p class="tag">Each one that falls is sent in code once.<br>Type it before it reaches the noise floor.</p>
+          <div class="best" id="best"></div>
+          <button class="btn primary" id="start">Start</button>
+          <div id="note"></div>
+
+          <div class="sec">
+            <div class="lbl">Practice set</div>
+            <div class="row">
+              <div class="seg" id="modeSeg">
+                <button data-v="koch" class="on">Koch order</button>
+                <button data-v="custom">My own set</button>
+              </div>
+            </div>
+            <div id="kochBox">
+              <div class="pool" id="poolChars" style="margin-top:10px"></div>
+              <div class="row" style="margin-top:8px">
+                <button class="sq" id="kMinus" aria-label="Drop the last character">&minus;</button>
+                <span class="cnt" id="kCount">2 of 40</span>
+                <button class="sq" id="kPlus" aria-label="Add the next character">+</button>
+                <span class="nxt" id="kNext"></span>
+              </div>
+            </div>
+            <div id="customBox" style="display:none;margin-top:10px">
+              <div class="grid" id="grid"></div>
+              <div class="hint" style="margin-top:8px;text-align:left">Pick at least two. Waves get faster but the set stays yours.</div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="lbl">Sound</div>
+            <label class="sl"><span class="t"><span>Character speed</span><b id="wpmV"></b></span>
+              <input type="range" id="wpm" min="5" max="30" step="1"></label>
+            <label class="sl"><span class="t"><span>Spacing between characters</span><b id="effV"></b></span>
+              <input type="range" id="eff" min="4" max="30" step="1"></label>
+            <label class="sl"><span class="t"><span>Volume</span><b id="volV"></b></span>
+              <input type="range" id="vol" min="0" max="100" step="5"></label>
+            <div class="row" style="margin-top:10px">
+              <button class="btn" id="test" style="width:auto;padding:8px 14px;font-size:11px">Test tone</button>
+              <button class="btn" id="mute" style="width:auto;padding:8px 14px;font-size:11px">Sound on</button>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="lbl">Rules</div>
+            <label class="chk"><input type="checkbox" id="wheels"><span>Show a character on screen until you have copied it four times, then go by ear</span></label>
+            <label class="chk"><input type="checkbox" id="grow"><span>Add the next Koch character after every wave</span></label>
+            <label class="chk"><input type="checkbox" id="ramp"><span>Speed up one wpm after every wave</span></label>
+            <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:110px">Callsigns</span>
+              <div class="seg" id="callsSeg">
+                <button data-v="auto">auto</button><button data-v="on">on</button><button data-v="off">off</button>
+              </div></div>
+            <div class="hint" style="text-align:left;margin-top:4px">Auto brings in callsigns once your set has ten characters. Groups of two and three start at six.</div>
+            <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:110px">On-screen keys</span>
+              <div class="seg" id="keysSeg">
+                <button data-v="auto">auto</button><button data-v="on">on</button><button data-v="off">off</button>
+              </div></div>
+          </div>
+
+          <p class="hint">Type what you hear. <kbd>Space</kbd> replays the lowest one, once. <kbd>Esc</kbd> pauses.
+            <kbd>]</kbd> and <kbd>[</kbd> change the set mid-game. Progress stays on this device.</p>
+        </div>
+
+        <div id="vPause" class="view">
+          <h2>PAUSED</h2>
+          <button class="btn primary" id="resume">Resume</button>
+          <div class="sec">
+            <label class="sl"><span class="t"><span>Character speed</span><b id="wpmPV"></b></span>
+              <input type="range" id="wpmP" min="5" max="30" step="1"></label>
+            <div class="row" style="margin-top:12px" id="poolRowP">
+              <button class="sq" id="kMinusP" aria-label="Drop the last character">&minus;</button>
+              <span class="cnt" id="kCountP"></span>
+              <button class="sq" id="kPlusP" aria-label="Add the next character">+</button>
+            </div>
+            <div class="pool" id="poolCharsP" style="margin-top:8px"></div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn" id="muteP" style="width:auto;padding:8px 14px;font-size:11px">Sound on</button>
+            </div>
+          </div>
+          <div class="sec"><button class="btn" id="quit">Quit to menu</button></div>
+        </div>
+
+        <div id="vOver" class="view">
+          <h2>QRT</h2>
+          <p class="tag" id="overLine"></p>
+          <div id="overStats"></div>
+          <div class="miss" id="overMiss"></div>
+          <button class="btn primary" id="again">Play again</button>
+          <button class="btn" id="menu">Change settings</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <div id="keys"></div>
+  <div id="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; space replays &middot; esc pauses</div>
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------------ *
+ * Morse Invaders v0.1
+ * Characters fall like invaders. Each is sent in CW once as it appears;
+ * type it to blast it. Groups arrive when the set reaches six characters,
+ * callsigns at ten. Teaches copy, not sending.
+ *
+ * The CW engine is the one the Morse trainer uses, imported from
+ * /morse/core.js, so there is exactly one synthesizer on the site and the
+ * iOS audio fixes it carries apply here too. Nothing else is shared with
+ * the trainer: this page is a standalone canvas game with no backend.
+ * ------------------------------------------------------------------ */
+import {
+  MORSE, PROSIGN_KEYS, KOCH_ORDER, LETTERS, DIGITS, PUNCT, PROSIGNS, CWPlayer,
+  ditSeconds, farnsworthGaps, codeMs, pickChar, applyResult,
+  acquireWakeLock, releaseWakeLock,
+} from '/morse/core.js'
+
+const W = 480, H = 640
+const HUD_H = 40, BAR_H = 24, TOP = HUD_H + BAR_H
+const FLOOR = H - 96
+const MAX_ON = 5          // most glyphs falling at once
+const TX_GAP = 450        // silence after each send, ms
+const KNOWN_AT = 4        // correct copies before a character goes audio-only
+const REPLAY_FREE = 1     // free replays per glyph
+const STARTER_DIGITS = ['0', '5', '9']   // the first digits in Koch order, for callsigns before any digit is learned
+
+const KEY = {
+  wpm: 'dxMorseInvaders_wpm', koch: 'dxMorseInvaders_koch',
+  hi: 'dxMorseInvaders_hi', hiStreak: 'dxMorseInvaders_hiStreak',
+  settings: 'dxMorseInvaders_settings', stats: 'dxMorseInvaders_stats',
+}
+const C = {
+  bg: '#000', bg1: '#0e0e0e', border: '#1e1e1e', text: '#e0e0e0', muted: '#888', dim: '#444',
+  green: '#00ff9d', teal: '#7affb2', yellow: '#ffd600', blue: '#7a9fff', red: '#ff6b6b',
+}
+const FONT = "'SF Mono','Fira Code','Consolas',monospace"
+const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+const COARSE  = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+
+/* Prefix blocks with letters only, so a callsign can be built from whatever
+ * letters are in the practice set. Calls are generated from these, never
+ * from a list of real operators. */
+const PREFIX_BLOCKS = [
+  'K','W','N','AA','AB','AC','AD','AE','AF','AG','AI','AJ','AK','AL',
+  'KA','KB','KC','KD','KE','KF','KG','KI','KJ','KK','KM','KN','KO','KR','KS','KT','KU','KV','KW','KX','KY','KZ',
+  'WA','WB','WD','WE','WF','WG','WI','WJ','WK','WM','WN','WO','WQ','WR','WS','WT','WU','WV','WW','WX','WY','WZ',
+  'NA','NB','NC','ND','NE','NF','NG','NI','NJ','NK','NM','NN','NO','NP','NQ','NR','NS','NT','NU','NV','NW','NX','NY','NZ',
+  'VE','VA','VO','VY','G','GM','GW','GI','GD','GJ','GU','EI','F','DL','DJ','DK','DC','DF','DG','DH','DO',
+  'EA','EB','EC','ED','CT','I','IK','IZ','IW','IU','PA','PD','PE','PI','ON','OT','LX','OE','OK','OL','OM',
+  'SP','SQ','SO','HA','HG','YO','LZ','SV','YU','YT','OZ','SM','SA','SB','SE','SF','SG','SI','SK','SL',
+  'LA','LB','OH','OG','ES','YL','LY','UA','UB','UC','UD','UE','UF','UG','UI','R','RA','RC','RD','RK','RL',
+  'RM','RN','RO','RT','RU','RV','RW','RX','RZ','UR','UT','US','UX','EW','EU','EV','ER','TA','TB','TC',
+  'JA','JE','JF','JG','JH','JI','JJ','JK','JL','JM','JN','JO','JP','JQ','JR','JS','HL','DS','BY','BG','BD',
+  'BA','BH','BV','VU','HS','VK','ZL','PY','PU','PP','LU','LW','CE','CA','CX','ZS','ZR','XE','HK','HC','YV',
+  'OA','CP','ZP','VP','VR','ZB','TF','OX','OY','JW','JX','TK','IS','HB','HV','EK','EX','EY','EZ','UN','AP',
+  'YB','YC','DU','DV','DW','DX','DY','DZ','XW','XU','XV','XZ','JT',
+]
+
+/* --- storage -------------------------------------------------------- */
+function lsGet(k) { try { return localStorage.getItem(k) } catch { return null } }
+function lsSet(k, v) { try { localStorage.setItem(k, String(v)) } catch { /* private mode: nothing persists */ } }
+function loadJSON(k, fallback) { try { const v = JSON.parse(lsGet(k)); return v && typeof v === 'object' ? v : fallback } catch { return fallback } }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+function int(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0 }
+function rnd(n) { return Math.floor(Math.random() * n) }
+/* Zero is shown slashed, the way operators write it, so it can never be read as the letter O. */
+function label(tok) { return tok === '0' ? '\u00d8' : tok }
+
+const DEF = {
+  effWpm: 0,          // 0 = no extra spacing, characters and words at the same speed
+  volume: 30,
+  mute: false,
+  mode: 'koch',       // 'koch' | 'custom'
+  custom: ['K', 'M', 'R', 'S', 'U', 'A'],
+  wheels: true,       // show a character until it has been copied KNOWN_AT times
+  grow: true,         // add the next Koch character after each wave
+  ramp: false,        // +1 wpm after each wave
+  calls: 'auto',      // 'auto' | 'on' | 'off'
+  keys: 'auto',       // on-screen keys: 'auto' | 'on' | 'off'
+}
+let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
+if (!Array.isArray(S.custom) || S.custom.length < 2) S.custom = [...DEF.custom]
+let baseWpm   = clamp(int(lsGet(KEY.wpm)) || 12, 5, 30)
+let kochCount = clamp(int(lsGet(KEY.koch)) || 2, 2, KOCH_ORDER.length)
+let stats     = loadJSON(KEY.stats, {})
+let hi        = int(lsGet(KEY.hi))
+let hiStreak  = int(lsGet(KEY.hiStreak))
+
+function saveSettings() { lsSet(KEY.settings, JSON.stringify(S)) }
+function saveStats()    { lsSet(KEY.stats, JSON.stringify(stats)) }
+
+/* --- the practice set ------------------------------------------------ */
+function poolTokens() {
+  return S.mode === 'koch' ? KOCH_ORDER.slice(0, kochCount) : S.custom
+}
+function known(tok) { return (stats[tok] && stats[tok].correct) || 0 }
+/* A character outside the set is always shown: the player was never asked to learn it. */
+function tokVisible(tok, pool) { return !pool.includes(tok) || (S.wheels && known(tok) < KNOWN_AT) }
+function callsOn(pool) { return S.calls === 'on' || (S.calls === 'auto' && pool.length >= 10) }
+function poolDigits(pool) { return pool.filter(t => DIGITS.includes(t)) }
+
+/* --- audio ------------------------------------------------------------ */
+const player = new CWPlayer({ toneHz: 570, charWpm: baseWpm, effWpm: baseWpm, volume: S.volume / 100 })
+function curWpm() { return G && G.phase !== 'over' ? G.wpm : baseWpm }
+function effWpm() { const w = curWpm(); return S.effWpm > 0 ? Math.min(S.effWpm, w) : w }
+function syncPlayer() { player.set({ charWpm: curWpm(), effWpm: effWpm(), volume: S.volume / 100 }) }
+
+/* How long a token list takes to send, mirroring CWPlayer.playTokens. */
+function tokensMs(tokens) {
+  const wpm = curWpm()
+  const { charGapMs } = farnsworthGaps(wpm, effWpm())
+  let ms = 0
+  tokens.forEach((t, i) => {
+    ms += codeMs(MORSE[t] || '.', wpm)
+    if (i < tokens.length - 1) ms += charGapMs
+  })
+  return ms
+}
+/* Key-down intervals in ms from the start of a send, so a glyph can flash with the tone. */
+function buildSegs(tokens) {
+  const wpm = curWpm()
+  const dit = ditSeconds(wpm) * 1000
+  const { charGapMs } = farnsworthGaps(wpm, effWpm())
+  const segs = []
+  let t = 0
+  tokens.forEach((tok, i) => {
+    for (const el of (MORSE[tok] || '.')) {
+      const dur = (el === '-' ? 3 : 1) * dit
+      segs.push([t, t + dur])
+      t += dur + dit
+    }
+    t -= dit
+    if (i < tokens.length - 1) t += charGapMs
+  })
+  return segs
+}
+function keyedAt(segs, ms) {
+  for (const [a, b] of segs) { if (ms >= a && ms < b) return true; if (ms < a) return false }
+  return false
+}
+/* Send one glyph. Even muted, the timing is computed so the game keeps its pace. */
+function txSend(g) {
+  const tokens = g.tokens
+  const ms = Math.max(1, tokensMs(tokens))
+  if (!S.mute && player.ready) {
+    if (tokens.length === 1) player.play(MORSE[tokens[0]]); else player.playTokens(tokens)
+  }
+  const lead = tokens.length === 1 ? 60 : 150
+  g.tx = { start: G.t + lead, segs: buildSegs(tokens), end: G.t + lead + ms }
+  G.tx.busy = G.t + lead + ms + TX_GAP
+  if (g.state === 'floor') g.until = G.t + lead + ms + 2600
+  return ms
+}
+
+/* --- game state -------------------------------------------------------- */
+let G = null
+let gid = 0
+
+function newGame() {
+  G = {
+    t: 0, phase: 'play', paused: false, wave: 0, left: 0, spawnedThisWave: 0,
+    glyphs: [], lock: null, lives: 3, streak: 0, bestStreak: 0, copied: 0,
+    wpm: baseWpm, nextSpawn: 0, fallMs: 7500, spawnEvery: 1900,
+    tx: { busy: 0, queue: [] }, fx: [], floats: [], inter: null, beam: null, shake: 0,
+    run: { hit: {}, miss: {} }, lastTok: null, dieAt: 0, noAudio: false,
+  }
+  syncPlayer()
+  startWave()
+}
+
+function startWave() {
+  G.wave++
+  G.left = Math.min(22, 8 + 2 * (G.wave - 1))
+  G.spawnedThisWave = 0
+  G.phase = 'play'
+  G.inter = null
+  G.lock = null
+  G.nextSpawn = G.t + 900
+  G.fallMs = Math.max(3200, 7500 * Math.pow(0.93, G.wave - 1))
+  G.spawnEvery = Math.max(1100, 1900 * Math.pow(0.95, G.wave - 1))
+  G.tx.busy = G.t
+  G.tx.queue = []
+}
+
+function chooseKind(pool) {
+  const n = pool.length
+  if (G.wave === 1 && G.spawnedThisWave < 3) return 'char'   // a gentle opening
+  const ease = Math.min(1, 0.5 + G.wave * 0.25)
+  const pCall = (callsOn(pool) ? 0.35 : 0) * ease
+  const pG3 = (n >= 8 ? 0.18 : 0) * ease
+  const pG2 = (n >= 6 ? 0.25 : 0) * ease
+  const r = Math.random()
+  if (r < pCall) return 'call'
+  if (r < pCall + pG3) return 'group3'
+  if (r < pCall + pG3 + pG2) return 'group2'
+  return 'char'
+}
+
+function pickFrom(pool, last) {
+  return pickChar(pool, stats, pool.length > 3 ? last : null)
+}
+
+function makeCall(pool) {
+  const letters = pool.filter(t => LETTERS.includes(t))
+  const digits = poolDigits(pool)
+  const set = new Set(letters)
+  let prefixes = PREFIX_BLOCKS.filter(p => [...p].every(c => set.has(c)))
+  if (!prefixes.length) prefixes = letters.filter(c => c !== 'Q')
+  if (!prefixes.length) prefixes = ['K']
+  const p = prefixes[rnd(prefixes.length)]
+  const d = digits.length ? digits[rnd(digits.length)] : STARTER_DIGITS[rnd(STARTER_DIGITS.length)]
+  const r = Math.random()
+  const n = r < 0.2 ? 1 : r < 0.6 ? 2 : 3
+  const sufPool = letters.length ? letters : ['K']
+  const suf = []
+  let last = p[p.length - 1]
+  for (let i = 0; i < n; i++) { const c = pickFrom(sufPool, last); suf.push(c); last = c }
+  return [...p.split(''), d, ...suf]
+}
+
+function makeTokens(kind, pool) {
+  if (kind === 'call') return makeCall(pool)
+  const n = kind === 'group3' ? 3 : kind === 'group2' ? 2 : 1
+  const out = []
+  let last = G.lastTok
+  for (let i = 0; i < n; i++) { const c = pickFrom(pool, last); out.push(c); last = c }
+  return out
+}
+
+function pickX(w) {
+  const lo = 24 + w / 2, hi = W - 24 - w / 2
+  const recent = G.glyphs.filter(g => g.state === 'fall' && g.y < TOP + 140).map(g => g.x)
+  let best = lo + Math.random() * (hi - lo), bestD = -1
+  for (let i = 0; i < 8; i++) {
+    const x = lo + Math.random() * (hi - lo)
+    const d = recent.length ? Math.min(...recent.map(r => Math.abs(r - x))) : 1e9
+    if (d > bestD) { bestD = d; best = x }
+  }
+  return best
+}
+
+function spawnGlyph() {
+  const pool = poolTokens()
+  const kind = chooseKind(pool)
+  const tokens = makeTokens(kind, pool)
+  const w = 16 + tokens.length * 20
+  const y0 = TOP - 18
+  const g = {
+    id: ++gid, kind, tokens, typed: 0, x: pickX(w), y: y0, w, h: 30,
+    vy: (FLOOR - y0) / G.fallMs * 1000, born: G.t, state: 'fall',
+    replays: 0, resent: false, tx: null, flash: 0, wob: Math.random() * 6.28,
+    vis: tokens.map(t => tokVisible(t, pool)), until: 0,
+  }
+  G.glyphs.push(g)
+  G.left--
+  G.spawnedThisWave++
+  G.lastTok = tokens[tokens.length - 1]
+  txSend(g)
+}
+
+function lowestFalling() {
+  let best = null
+  for (const g of G.glyphs) if (g.state === 'fall' && (!best || g.y > best.y)) best = g
+  return best
+}
+
+function record(tok, ok, rtMs) {
+  stats[tok] = applyResult(stats[tok], ok, rtMs)
+  const bag = ok ? G.run.hit : G.run.miss
+  bag[tok] = (bag[tok] || 0) + 1
+}
+
+function loseLife(g) {
+  G.lives--
+  G.streak = 0
+  record(g.tokens[g.typed], false, 0)
+  if (!REDUCED) G.shake = 260
+  if (G.lives <= 0) { G.phase = 'dying'; G.dieAt = G.t + 1500 }
+}
+
+function resend(g) {
+  if (g.resent) return
+  g.resent = true
+  G.tx.queue.unshift(g)
+}
+
+function wrongKey() {
+  const g = G.lock || lowestFalling()
+  if (!g) return
+  g.flash = 520
+  g.typed = 0
+  G.lock = null
+  loseLife(g)
+  resend(g)
+}
+
+function floorHit(g) {
+  g.state = 'floor'
+  g.y = FLOOR - g.h / 2
+  g.flash = 640
+  g.vis = g.vis.map(() => true)   // what you missed is what you most need to see
+  g.typed = 0
+  if (G.lock === g) G.lock = null
+  loseLife(g)
+  g.until = G.t + 4200
+  resend(g)
+}
+
+function hit(g) {
+  g.state = 'hit'
+  g.until = G.t + 420
+  G.lock = null
+  G.streak++
+  G.bestStreak = Math.max(G.bestStreak, G.streak)
+  G.copied += g.tokens.length
+  G.beam = { x: g.x, y: g.y, until: G.t + 170 }
+  const col = glyphColor(g)
+  if (!REDUCED) {
+    for (let i = 0; i < 16; i++) {
+      const a = Math.random() * 6.28, sp = 60 + Math.random() * 160
+      G.fx.push({ x: g.x, y: g.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, ttl: 520, life: 520, col })
+    }
+  }
+  const text = g.tokens.length === 1 ? `${label(g.tokens[0])}   ${MORSE[g.tokens[0]]}` : g.tokens.map(label).join('')
+  G.floats.push({ x: g.x, y: g.y - 14, text, ttl: 1500, life: 1500, col })
+}
+
+function advance(g, tok) {
+  record(tok, true, g.tx ? Math.max(0, G.t - g.tx.start) : 0)
+  g.typed++
+  if (g.typed >= g.tokens.length) hit(g); else G.lock = g
+}
+
+function onKey(tok) {
+  if (!G || G.paused) return
+  if (G.phase === 'inter') { player.stop(); startWave(); return }
+  if (G.phase !== 'play') return
+  let g = G.lock
+  if (g && g.state !== 'fall') { g = null; G.lock = null }
+  if (g) { if (g.tokens[g.typed] === tok) advance(g, tok); else wrongKey(); return }
+  const c = G.glyphs.filter(x => x.state === 'fall' && x.tokens[x.typed] === tok).sort((a, b) => b.y - a.y)[0]
+  if (c) { advance(c, tok); return }
+  const f = G.glyphs.filter(x => x.state === 'floor' && x.tokens[x.typed] === tok).sort((a, b) => b.y - a.y)[0]
+  if (f) { f.typed++; if (f.typed >= f.tokens.length) { f.state = 'gone'; G.floats.push({ x: f.x, y: f.y - 14, text: f.tokens.map(label).join(''), ttl: 900, life: 900, col: C.muted }) } return }
+  if (G.glyphs.some(x => x.state === 'fall')) wrongKey()
+}
+
+function replay() {
+  if (!G || G.paused) return
+  if (G.phase === 'inter' && G.inter && G.inter.tok) { G.inter.plays = Math.max(0, G.inter.plays - 1); G.inter.nextAt = G.t; return }
+  if (G.phase !== 'play') return
+  const g = G.lock || lowestFalling()
+  if (!g || g.replays >= REPLAY_FREE) return
+  g.replays++
+  G.tx.queue.unshift(g)
+}
+
+function waveClear() {
+  let newTok = null
+  if (S.mode === 'koch' && S.grow && kochCount < KOCH_ORDER.length) {
+    kochCount++
+    lsSet(KEY.koch, kochCount)
+    newTok = KOCH_ORDER[kochCount - 1]
+    renderKeys()
+  }
+  if (S.ramp && G.wpm < 30) { G.wpm++; syncPlayer() }
+  G.phase = 'inter'
+  G.lock = null
+  G.inter = { wave: G.wave, tok: newTok, plays: 0, nextAt: G.t + 700, until: newTok ? Infinity : G.t + 1600, segs: null, at: 0, ms: 0 }
+  saveStats()
+}
+
+function finishGame() {
+  G.phase = 'over'
+  player.stop()
+  releaseWakeLock()
+  if (G.copied > hi) { hi = G.copied; lsSet(KEY.hi, hi) }
+  if (G.bestStreak > hiStreak) { hiStreak = G.bestStreak; lsSet(KEY.hiStreak, hiStreak) }
+  saveStats()
+  showOver()
+}
+
+function update(dt) {
+  G.t += dt
+  if (G.phase === 'play' || G.phase === 'dying') {
+    if (G.phase === 'play') {
+      if (G.t >= G.tx.busy && G.tx.queue.length) {
+        const g = G.tx.queue.shift()
+        if (g.state === 'fall' || g.state === 'floor') txSend(g)
+      }
+      const falling = G.glyphs.filter(g => g.state === 'fall').length
+      if (G.left > 0 && G.t >= G.nextSpawn && G.t >= G.tx.busy && !G.tx.queue.length && falling < MAX_ON) {
+        spawnGlyph()
+        G.nextSpawn = G.t + G.spawnEvery
+      }
+    }
+    for (const g of G.glyphs) {
+      if (g.state === 'fall' && G.phase === 'play') {
+        g.y += g.vy * dt / 1000
+        g.x += Math.sin((G.t - g.born) / 900 + g.wob) * 0.12 * dt / 16
+        if (g.y >= FLOOR - g.h / 2) floorHit(g)
+      } else if ((g.state === 'floor' || g.state === 'hit') && G.t >= g.until) {
+        g.state = 'gone'
+      }
+      if (g.flash > 0) g.flash -= dt
+    }
+    G.glyphs = G.glyphs.filter(g => g.state !== 'gone')
+    if (G.lock && G.lock.state !== 'fall') G.lock = null
+    if (G.phase === 'play' && G.left === 0 && !G.glyphs.some(g => g.state === 'fall' || g.state === 'floor')) waveClear()
+    if (G.phase === 'dying' && G.t >= G.dieAt) finishGame()
+  } else if (G.phase === 'inter') {
+    const I = G.inter
+    if (I.tok) {
+      if (I.plays < 2 && G.t >= I.nextAt) {
+        const ms = tokensMs([I.tok])
+        if (!S.mute && player.ready) player.play(MORSE[I.tok])
+        I.plays++
+        I.at = G.t + 60
+        I.ms = ms
+        I.segs = buildSegs([I.tok])
+        I.nextAt = G.t + 60 + ms + 700
+      }
+      if (I.plays >= 2 && G.t >= I.nextAt + 300) startWave()
+    } else if (G.t >= I.until) {
+      startWave()
+    }
+  }
+  for (const p of G.fx) { p.x += p.vx * dt / 1000; p.y += p.vy * dt / 1000; p.vy += 220 * dt / 1000; p.ttl -= dt }
+  G.fx = G.fx.filter(p => p.ttl > 0)
+  for (const f of G.floats) { f.ttl -= dt; f.y -= 18 * dt / 1000 }
+  G.floats = G.floats.filter(f => f.ttl > 0)
+  if (G.shake > 0) G.shake -= dt
+  if (G.beam && G.t > G.beam.until) G.beam = null
+}
+
+/* --- drawing ------------------------------------------------------------ */
+const canvas = document.getElementById('c')
+const ctx = canvas.getContext('2d')
+let dpr = 1
+function setupCanvas() {
+  dpr = Math.min(2, window.devicePixelRatio || 1)
+  canvas.width = W * dpr
+  canvas.height = H * dpr
+}
+setupCanvas()
+
+function rgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`
+}
+function glyphColor(g) { return g.kind === 'char' ? C.green : g.kind === 'call' ? C.yellow : C.teal }
+function text(s, x, y, size, col, align = 'left', weight = '') {
+  ctx.font = `${weight} ${size}px ${FONT}`.trim()
+  ctx.fillStyle = col
+  ctx.textAlign = align
+  ctx.textBaseline = 'middle'
+  ctx.fillText(s, x, y)
+}
+
+/* faint drifting dots so motion has a reference; static under reduced motion */
+const DOTS = Array.from({ length: 60 }, () => ({ x: Math.random() * W, y: TOP + Math.random() * (FLOOR - TOP), s: 0.4 + Math.random() * 1.2 }))
+/* attract-mode code bars behind the title */
+const ATTRACT = Array.from({ length: 10 }, (_, i) => ({
+  x: 30 + i * 46, y: Math.random() * H, code: MORSE[KOCH_ORDER[rnd(KOCH_ORDER.length)]], v: 14 + Math.random() * 22, a: 0.10 + Math.random() * 0.14,
+}))
+
+const hot = []   // canvas hit regions: { x, y, w, h, act }
+
+function drawAntenna(x, y, lit) {
+  ctx.strokeStyle = lit ? C.green : C.dim
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(x, y + 7); ctx.lineTo(x, y - 6)
+  ctx.moveTo(x - 4, y - 3); ctx.lineTo(x, y - 6); ctx.lineTo(x + 4, y - 3)
+  ctx.moveTo(x - 4, y + 7); ctx.lineTo(x + 4, y + 7)
+  ctx.stroke()
+}
+
+function drawHud() {
+  hot.length = 0
+  ctx.fillStyle = C.bg1
+  ctx.fillRect(0, 0, W, TOP)
+  ctx.fillStyle = C.border
+  ctx.fillRect(0, HUD_H - 1, W, 1)
+  ctx.fillRect(0, TOP - 1, W, 1)
+  for (let i = 0; i < 3; i++) drawAntenna(16 + i * 16, 20, i < G.lives)
+  text(`WAVE ${G.wave}`, 72, 20, 12, C.muted)
+  text(`${G.wpm} WPM`, 150, 20, 12, G.noAudio ? C.red : C.muted)
+  hot.push({ x: 140, y: 6, w: 80, h: 28, act: 'pause' })
+  text(`${G.streak} STREAK`, W - 110, 20, 12, G.streak >= 10 ? C.green : C.muted, 'right')
+  text(`${G.copied} COPIED`, W - 12, 20, 12, C.text, 'right')
+
+  const pool = poolTokens()
+  const kochMode = S.mode === 'koch'
+  let shown = pool
+  let prefix = ''
+  if (pool.length > 14) { shown = pool.slice(pool.length - 13); prefix = `+${pool.length - 13} ` }
+  ctx.font = `11px ${FONT}`
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  let x = 12
+  if (prefix) { ctx.fillStyle = C.dim; ctx.fillText(prefix, x, HUD_H + BAR_H / 2); x += ctx.measureText(prefix).width }
+  shown.forEach((t, i) => {
+    const newest = kochMode && i === shown.length - 1
+    ctx.fillStyle = newest ? C.green : (known(t) >= KNOWN_AT || !S.wheels ? C.muted : C.dim)
+    ctx.fillText(label(t), x, HUD_H + BAR_H / 2)
+    x += ctx.measureText(label(t)).width + 9
+  })
+  if (kochMode) {
+    const bx = W - 62
+    for (const [dx, lab, act] of [[0, '\u2212', 'kminus'], [30, '+', 'kplus']]) {
+      ctx.strokeStyle = C.border
+      ctx.strokeRect(bx + dx + 0.5, HUD_H + 3.5, 24, 17)
+      text(lab, bx + dx + 12, HUD_H + 12, 13, C.muted, 'center')
+      hot.push({ x: bx + dx, y: HUD_H, w: 26, h: BAR_H, act })
+    }
+  }
+}
+
+function drawGlyph(g) {
+  const col = glyphColor(g)
+  const flashing = g.flash > 0 && Math.floor(g.flash / 90) % 2 === 0
+  const sending = g.tx && G.t >= g.tx.start - 60 && G.t <= g.tx.end + 80
+  const keyed = sending && S.wheels && G.t >= g.tx.start && keyedAt(g.tx.segs, G.t - g.tx.start)
+  const locked = G.lock === g
+  ctx.save()
+  ctx.translate(g.x, g.y)
+  const w = g.w, h = g.h
+  ctx.beginPath()
+  ctx.moveTo(-w / 2 + 6, -h / 2); ctx.lineTo(w / 2 - 6, -h / 2); ctx.lineTo(w / 2, 0)
+  ctx.lineTo(w / 2 - 6, h / 2); ctx.lineTo(-w / 2 + 6, h / 2); ctx.lineTo(-w / 2, 0); ctx.closePath()
+  const stroke = flashing ? C.red : g.state === 'floor' ? C.red : col
+  ctx.fillStyle = flashing ? rgba(C.red, 0.28) : keyed ? rgba(col, 0.38) : rgba(col, 0.10)
+  if (keyed && !REDUCED) { ctx.shadowColor = col; ctx.shadowBlur = 14 }
+  ctx.fill()
+  ctx.shadowBlur = 0
+  ctx.strokeStyle = stroke
+  ctx.lineWidth = locked ? 2 : 1.2
+  ctx.stroke()
+  const n = g.tokens.length
+  const slot = 20
+  const x0 = -(n - 1) * slot / 2
+  g.tokens.forEach((tok, i) => {
+    const done = i < g.typed
+    const show = done || g.vis[i]
+    if (show) {
+      const size = tok.length > 1 ? 11 : PUNCT.includes(tok) ? 22 : 16
+      text(label(tok), x0 + i * slot, 1, size, done ? C.green : C.text, 'center', 'bold')
+    } else {
+      /* a hollow ring for a character you have to copy by ear, so it can never
+       * be mistaken for a period or a prosign that is actually being shown */
+      ctx.strokeStyle = C.dim
+      ctx.lineWidth = 1.2
+      ctx.beginPath(); ctx.arc(x0 + i * slot, 0, 4, 0, 6.29); ctx.stroke()
+    }
+    if (!done && i === g.typed && n > 1) { ctx.fillStyle = stroke; ctx.fillRect(x0 + i * slot - 6, h / 2 - 4, 12, 1.5) }
+  })
+  if (sending && !keyed) {
+    const on = Math.floor(G.t / 160) % 2 === 0
+    ctx.fillStyle = on ? col : rgba(col, 0.3)
+    ctx.beginPath(); ctx.arc(w / 2 - 4, -h / 2 + 5, 2, 0, 6.29); ctx.fill()
+  }
+  ctx.restore()
+}
+
+function drawStation() {
+  const x = W / 2
+  ctx.strokeStyle = C.dim
+  ctx.setLineDash([4, 6])
+  ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(0, FLOOR + 0.5); ctx.lineTo(W, FLOOR + 0.5); ctx.stroke()
+  ctx.setLineDash([])
+  text('NOISE FLOOR', 12, FLOOR + 12, 9, C.dim)
+  ctx.strokeStyle = C.muted
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(x, H - 30); ctx.lineTo(x, FLOOR + 14)
+  ctx.moveTo(x - 10, FLOOR + 24); ctx.lineTo(x + 10, FLOOR + 24)
+  ctx.moveTo(x - 7, FLOOR + 36); ctx.lineTo(x + 7, FLOOR + 36)
+  ctx.moveTo(x - 6, FLOOR + 14); ctx.lineTo(x, FLOOR + 8); ctx.lineTo(x + 6, FLOOR + 14)
+  ctx.stroke()
+  ctx.fillStyle = C.bg1
+  ctx.strokeStyle = C.border
+  ctx.lineWidth = 1
+  ctx.fillRect(x - 22, H - 30, 44, 16)
+  ctx.strokeRect(x - 21.5, H - 29.5, 43, 15)
+  ctx.fillStyle = G.beam || (G.t % 1400 < 700) ? C.green : rgba(C.green, 0.3)
+  ctx.fillRect(x - 17, H - 24, 4, 4)
+  if (G.beam) {
+    ctx.strokeStyle = C.green
+    ctx.lineWidth = 2
+    if (!REDUCED) { ctx.shadowColor = C.green; ctx.shadowBlur = 10 }
+    ctx.beginPath(); ctx.moveTo(x, FLOOR + 8); ctx.lineTo(G.beam.x, G.beam.y); ctx.stroke()
+    ctx.shadowBlur = 0
+  }
+}
+
+function drawCodeBars(code, cx, y, col, litIndex) {
+  const unit = 9, gap = 5
+  let wsum = 0
+  for (const el of code) wsum += (el === '-' ? 3 * unit : unit) + gap
+  let x = cx - (wsum - gap) / 2
+  ;[...code].forEach((el, i) => {
+    const w = el === '-' ? 3 * unit : unit
+    ctx.fillStyle = i === litIndex ? C.text : rgba(col, 0.75)
+    ctx.fillRect(x, y - unit / 2, w, unit)
+    x += w + gap
+  })
+}
+
+function drawInter() {
+  const I = G.inter
+  ctx.fillStyle = 'rgba(0,0,0,.72)'
+  ctx.fillRect(0, TOP, W, FLOOR - TOP)
+  const cy = (TOP + FLOOR) / 2
+  if (!I.tok) {
+    text(`WAVE ${I.wave} CLEAR`, W / 2, cy, 22, C.green, 'center', 'bold')
+    return
+  }
+  text(`WAVE ${I.wave} CLEAR`, W / 2, cy - 92, 16, C.green, 'center', 'bold')
+  text('NEW CHARACTER', W / 2, cy - 56, 10, C.dim, 'center')
+  let lit = -1
+  if (I.segs && G.t >= I.at) {
+    const ms = G.t - I.at
+    for (let i = 0; i < I.segs.length; i++) if (ms >= I.segs[i][0] && ms < I.segs[i][1]) lit = i
+  }
+  text(label(I.tok), W / 2, cy - 6, I.tok.length > 1 ? 44 : 66, lit >= 0 ? C.text : C.green, 'center', 'bold')
+  drawCodeBars(MORSE[I.tok], W / 2, cy + 44, C.green, lit)
+  text('any key to continue', W / 2, cy + 88, 10, C.dim, 'center')
+}
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.fillStyle = C.bg
+  ctx.fillRect(0, 0, W, H)
+  if (!G) { drawAttract(); return }
+  if (G.shake > 0) {
+    const s = Math.min(3, G.shake / 90)
+    ctx.translate((Math.random() - 0.5) * s * 2, (Math.random() - 0.5) * s * 2)
+  }
+  ctx.fillStyle = C.dim
+  for (const d of DOTS) {
+    if (!REDUCED && G.phase === 'play') { d.y += 0.18 * d.s; if (d.y > FLOOR) d.y = TOP }
+    ctx.globalAlpha = 0.35
+    ctx.fillRect(d.x, d.y, d.s, d.s)
+  }
+  ctx.globalAlpha = 1
+  drawStation()
+  for (const g of G.glyphs) if (g.state !== 'hit') drawGlyph(g)
+  for (const p of G.fx) {
+    ctx.globalAlpha = Math.max(0, p.ttl / p.life)
+    ctx.fillStyle = p.col
+    ctx.fillRect(p.x, p.y, 3, 3)
+  }
+  ctx.globalAlpha = 1
+  for (const f of G.floats) {
+    ctx.globalAlpha = Math.min(1, f.ttl / (f.life * 0.5))
+    text(f.text, f.x, f.y, 13, f.col, 'center', 'bold')
+  }
+  ctx.globalAlpha = 1
+  if (G.phase === 'inter') drawInter()
+  if (G.phase === 'dying' || G.phase === 'over') {
+    ctx.fillStyle = 'rgba(0,0,0,.45)'
+    ctx.fillRect(0, TOP, W, FLOOR - TOP)
+    text('QRT', W / 2, (TOP + FLOOR) / 2, 34, C.red, 'center', 'bold')
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  drawHud()
+}
+
+function drawAttract() {
+  for (const a of ATTRACT) {
+    if (!REDUCED) { a.y += a.v / 60; if (a.y > H + 40) { a.y = -40; a.code = MORSE[KOCH_ORDER[rnd(KOCH_ORDER.length)]] } }
+    ctx.globalAlpha = a.a
+    let y = a.y
+    for (const el of a.code) {
+      const len = el === '-' ? 24 : 8
+      ctx.fillStyle = C.green
+      ctx.fillRect(a.x - 3, y, 6, len)
+      y += len + 8
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
+/* --- main loop ------------------------------------------------------------- */
+let last = 0
+function frame(now) {
+  const dt = Math.min(50, now - (last || now))
+  last = now
+  if (G && !G.paused) update(dt)
+  draw()
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+
+/* --- overlay / UI ----------------------------------------------------------- */
+const $ = id => document.getElementById(id)
+const ui = $('ui'), keysEl = $('keys')
+
+function showView(name) {
+  for (const v of ['vTitle', 'vPause', 'vOver']) $(v).classList.toggle('show', v === name)
+  ui.classList.toggle('show', !!name)
+  if (name) ui.scrollTop = 0
+}
+
+function poolHtml() {
+  const pool = poolTokens()
+  return pool.map((t, i) => (S.mode === 'koch' && i === pool.length - 1) ? `<b>${label(t)}</b>` : label(t)).join(' ')
+}
+
+function syncUI() {
+  const pool = poolTokens()
+  $('poolChars').innerHTML = poolHtml()
+  $('poolCharsP').innerHTML = poolHtml()
+  $('kCount').textContent = `${kochCount} of ${KOCH_ORDER.length}`
+  $('kCountP').textContent = `${kochCount} of ${KOCH_ORDER.length}`
+  $('kNext').textContent = kochCount < KOCH_ORDER.length ? `next: ${label(KOCH_ORDER[kochCount])}` : `all ${KOCH_ORDER.length} in play`
+  $('kMinus').disabled = $('kMinusP').disabled = kochCount <= 2
+  $('kPlus').disabled = $('kPlusP').disabled = kochCount >= KOCH_ORDER.length
+  $('kochBox').style.display = S.mode === 'koch' ? '' : 'none'
+  $('customBox').style.display = S.mode === 'custom' ? '' : 'none'
+  $('poolRowP').style.display = S.mode === 'koch' ? '' : 'none'
+  for (const b of $('modeSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.mode)
+  for (const b of $('callsSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.calls)
+  for (const b of $('keysSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.keys)
+  for (const b of $('grid').querySelectorAll('button')) b.classList.toggle('on', S.custom.includes(b.dataset.t))
+  $('wpm').value = baseWpm; $('wpmV').textContent = `${baseWpm} wpm`
+  $('wpmP').value = G ? G.wpm : baseWpm; $('wpmPV').textContent = `${G ? G.wpm : baseWpm} wpm`
+  $('eff').max = baseWpm
+  $('eff').value = S.effWpm > 0 ? Math.min(S.effWpm, baseWpm) : baseWpm
+  $('effV').textContent = S.effWpm > 0 && S.effWpm < baseWpm ? `${Math.min(S.effWpm, baseWpm)} wpm overall` : 'none'
+  $('vol').value = S.volume; $('volV').textContent = `${S.volume}%`
+  $('mute').textContent = $('muteP').textContent = S.mute ? 'Sound off' : 'Sound on'
+  $('wheels').checked = S.wheels
+  $('grow').checked = S.grow
+  $('ramp').checked = S.ramp
+  $('best').textContent = hi ? `best: ${hi} copied \u00b7 longest streak ${hiStreak}` : 'no run yet on this device'
+  renderKeys()
+  syncPlayer()
+}
+
+/* the custom-set grid */
+(function buildGrid() {
+  const grid = $('grid')
+  const all = [...LETTERS, ...DIGITS, ...PUNCT, ...PROSIGNS]
+  for (const t of all) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.dataset.t = t
+    b.textContent = label(t)
+    if (t.length > 1) b.className = 'pro'
+    b.addEventListener('click', () => {
+      const i = S.custom.indexOf(t)
+      if (i >= 0) { if (S.custom.length > 2) S.custom.splice(i, 1) } else S.custom.push(t)
+      saveSettings(); syncUI()
+    })
+    grid.appendChild(b)
+  }
+})()
+
+function keysVisible() { return S.keys === 'on' || (S.keys === 'auto' && COARSE) }
+function renderKeys() {
+  const show = keysVisible()
+  keysEl.classList.toggle('show', show)
+  if (!show) { keysEl.innerHTML = ''; layout(); return }
+  const pool = poolTokens()
+  const toks = [...pool]
+  if (callsOn(pool) && !poolDigits(pool).length) for (const d of STARTER_DIGITS) if (!toks.includes(d)) toks.push(d)
+  const frag = document.createDocumentFragment()
+  for (const t of toks) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = label(t)
+    b.dataset.tok = t
+    if (t.length > 1) b.className = 'pro'
+    frag.appendChild(b)
+  }
+  for (const [lab, act] of [['\u21bb', 'replay'], ['\u2016', 'pause']]) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = lab
+    b.dataset.act = act
+    b.className = 'ctl'
+    b.setAttribute('aria-label', act)
+    frag.appendChild(b)
+  }
+  keysEl.replaceChildren(frag)
+  layout()
+}
+keysEl.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button')
+  if (!b) return
+  e.preventDefault()
+  if (b.dataset.tok) onKey(b.dataset.tok)
+  else if (b.dataset.act === 'replay') replay()
+  else if (b.dataset.act === 'pause') togglePause()
+})
+
+/* fit the stage to the window, leaving room for the key row and footer */
+const wrap = $('wrap'), stage = $('stage'), foot = $('foot')
+function layout() {
+  const keys = keysEl.classList.contains('show')
+  const land = window.innerWidth > window.innerHeight * 1.25 && window.innerHeight < 560
+  wrap.classList.toggle('land', land)
+  foot.classList.toggle('hide', land || window.innerHeight < 520)
+  const fh = foot.classList.contains('hide') ? 0 : foot.offsetHeight + 6
+  let availW = wrap.clientWidth - 8, availH = wrap.clientHeight - 8 - fh
+  if (keys) { if (land) availW -= keysEl.offsetWidth + 10; else availH -= keysEl.offsetHeight + 6 }
+  const s = Math.max(0.3, Math.min(availW / W, availH / H))
+  stage.style.width = `${Math.floor(W * s)}px`
+  stage.style.height = `${Math.floor(H * s)}px`
+}
+window.addEventListener('resize', layout)
+if (window.ResizeObserver) new ResizeObserver(layout).observe(wrap)
+layout()
+
+/* --- game flow ---------------------------------------------------------------- */
+let starting = false
+async function startGame() {
+  if (starting || (G && (G.phase === 'play' || G.phase === 'inter' || G.phase === 'dying'))) return
+  starting = true
+  const ok = await player.prime()
+  starting = false
+  if (!ok) $('note').textContent = 'Audio did not start. Tap Test tone, then Start again. The game runs anyway.'
+  else $('note').textContent = ''
+  acquireWakeLock()
+  newGame()
+  G.noAudio = !ok
+  showView(null)
+  canvas.focus({ preventScroll: true })
+  renderKeys()
+}
+
+function togglePause() {
+  if (!G || G.phase === 'over') return
+  if (G.paused) resumeGame(); else pauseGame()
+}
+function pauseGame() {
+  if (!G || G.paused || G.phase === 'over') return
+  G.paused = true
+  player.stop()
+  saveStats()
+  syncUI()
+  showView('vPause')
+}
+function resumeGame() {
+  if (!G || !G.paused) return
+  G.paused = false
+  showView(null)
+  canvas.focus({ preventScroll: true })
+  /* whatever was sounding got cut: send the lowest one again so the player is not guessing */
+  if (G.phase === 'play') {
+    const g = G.lock || lowestFalling()
+    G.tx.queue = G.tx.queue.filter(x => x !== g)
+    if (g) G.tx.queue.unshift(g)
+    G.tx.busy = G.t
+  } else if (G.phase === 'inter' && G.inter && G.inter.tok) {
+    G.inter.plays = Math.max(0, G.inter.plays - 1); G.inter.nextAt = G.t
+  }
+}
+function quitGame() {
+  if (!G) return
+  player.stop()
+  releaseWakeLock()
+  if (G.phase !== 'over') { G.paused = false; finishGame() }
+  G = null
+  syncUI()
+  showView('vTitle')
+}
+
+function showOver() {
+  const chars = G.copied === 1 ? 'character' : 'characters'
+  const waves = G.wave === 1 ? 'wave' : 'waves'
+  $('overLine').textContent = `You copied ${G.copied} ${chars} over ${G.wave} ${waves}.`
+  const rows = [
+    ['Longest streak', G.bestStreak],
+    ['Best on this device', hi, G.copied >= hi && G.copied > 0],
+    ['Best streak here', hiStreak, G.bestStreak >= hiStreak && G.bestStreak > 0],
+    ['Speed', `${G.wpm} wpm`],
+    ['Set', S.mode === 'koch' ? `Koch ${kochCount}` : `${S.custom.length} of your own`],
+  ]
+  $('overStats').innerHTML = rows.map(([k, v, hiRow]) => `<div class="stat${hiRow ? ' hi' : ''}"><span>${k}</span><b>${v}${hiRow ? ' \u2605' : ''}</b></div>`).join('')
+  const missed = Object.entries(G.run.miss).sort((a, b) => b[1] - a[1]).slice(0, 6)
+  $('overMiss').innerHTML = missed.length
+    ? 'Watch for: ' + missed.map(([t, n]) => `<span>${label(t)} ${MORSE[t]} \u00d7${n}</span>`).join('')
+    : 'Nothing missed. Add a character.'
+  showView('vOver')
+}
+
+/* --- controls ---------------------------------------------------------------------- */
+function setKoch(n) {
+  kochCount = clamp(n, 2, KOCH_ORDER.length)
+  lsSet(KEY.koch, kochCount)
+  syncUI()
+}
+function setWpm(v) {
+  baseWpm = clamp(v, 5, 30)
+  lsSet(KEY.wpm, baseWpm)
+  if (G && G.phase !== 'over') G.wpm = baseWpm
+  if (S.effWpm > baseWpm) S.effWpm = 0
+  syncUI()
+}
+$('start').addEventListener('click', startGame)
+$('again').addEventListener('click', () => { G = null; startGame() })
+$('menu').addEventListener('click', () => { G = null; syncUI(); showView('vTitle') })
+$('resume').addEventListener('click', resumeGame)
+$('quit').addEventListener('click', quitGame)
+$('kMinus').addEventListener('click', () => setKoch(kochCount - 1))
+$('kPlus').addEventListener('click', () => setKoch(kochCount + 1))
+$('kMinusP').addEventListener('click', () => setKoch(kochCount - 1))
+$('kPlusP').addEventListener('click', () => setKoch(kochCount + 1))
+$('wpm').addEventListener('input', e => setWpm(int(e.target.value)))
+$('wpmP').addEventListener('input', e => setWpm(int(e.target.value)))
+$('eff').addEventListener('input', e => { const v = int(e.target.value); S.effWpm = v >= baseWpm ? 0 : v; saveSettings(); syncUI() })
+$('vol').addEventListener('input', e => { S.volume = int(e.target.value); saveSettings(); syncUI() })
+$('test').addEventListener('click', async () => { const ok = await player.prime(); if (ok) player.testTone(300); $('note').textContent = ok ? '' : 'No audio context. Check the phone is not in silent mode and try again.' })
+for (const id of ['mute', 'muteP']) $(id).addEventListener('click', () => { S.mute = !S.mute; if (S.mute) player.stop(); saveSettings(); syncUI() })
+$('wheels').addEventListener('change', e => { S.wheels = e.target.checked; saveSettings() })
+$('grow').addEventListener('change', e => { S.grow = e.target.checked; saveSettings() })
+$('ramp').addEventListener('change', e => { S.ramp = e.target.checked; saveSettings() })
+$('modeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.mode = b.dataset.v; saveSettings(); syncUI() })
+$('callsSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.calls = b.dataset.v; saveSettings(); syncUI() })
+$('keysSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.keys = b.dataset.v; saveSettings(); syncUI() })
+
+/* canvas: focus for the keyboard, and the HUD's own buttons */
+canvas.addEventListener('pointerdown', e => {
+  canvas.focus({ preventScroll: true })
+  if (!G) return
+  const r = canvas.getBoundingClientRect()
+  const x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height
+  for (const h of hot) {
+    if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) {
+      if (h.act === 'kminus') setKoch(kochCount - 1)
+      else if (h.act === 'kplus') setKoch(kochCount + 1)
+      else if (h.act === 'pause') pauseGame()
+      return
+    }
+  }
+  if (G.noAudio && player.resume() && player.ready) G.noAudio = false
+})
+
+const KEY_TO_TOK = {}
+for (const c of [...LETTERS, ...DIGITS, ...PUNCT]) KEY_TO_TOK[c] = c
+for (const [name, k] of Object.entries(PROSIGN_KEYS)) KEY_TO_TOK[k] = name
+
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const tag = (e.target && e.target.tagName) || ''
+  const inControl = tag === 'INPUT' || tag === 'BUTTON' || tag === 'SELECT' || tag === 'TEXTAREA'
+  const k = e.key
+  if (k === 'Escape') {
+    e.preventDefault()
+    if (G && G.phase !== 'over') togglePause()
+    return
+  }
+  if (k === 'Enter') {
+    if (inControl) return           // the focused button handles its own Enter
+    e.preventDefault()
+    if (!G) startGame()
+    else if (G.phase === 'over') { G = null; startGame() }
+    else if (G.paused) resumeGame()
+    return
+  }
+  if (!G || G.paused || G.phase === 'over') return
+  if (inControl && tag !== 'BUTTON') return
+  if (k === ' ') { e.preventDefault(); replay(); return }
+  if (k === '`') { e.preventDefault(); S.mute = !S.mute; if (S.mute) player.stop(); saveSettings(); syncUI(); return }
+  if (k === ']') { e.preventDefault(); if (S.mode === 'koch') setKoch(kochCount + 1); return }
+  if (k === '[') { e.preventDefault(); if (S.mode === 'koch') setKoch(kochCount - 1); return }
+  const tok = KEY_TO_TOK[k.length === 1 ? k.toUpperCase() : k]
+  if (tok) { e.preventDefault(); onKey(tok) }
+})
+
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && !G.paused && G.phase !== 'over') pauseGame() })
+
+syncUI()
+
+/* --- test seam: lets a headless run drive the game without real time ------------- */
+window.__mi = {
+  get G() { return G },
+  get S() { return S },
+  get hi() { return hi },
+  get kochCount() { return kochCount },
+  stats: () => stats,
+  pool: poolTokens,
+  start: startGame,
+  key: onKey,
+  replay,
+  pause: pauseGame,
+  resume: resumeGame,
+  quit: quitGame,
+  setKoch,
+  setWpm,
+  tokensMs,
+  makeCall: () => makeCall(poolTokens()),
+  setSetting: (k, v) => { S[k] = v; saveSettings(); syncUI() },
+  step: ms => { for (let d = ms; d > 0; d -= 16) update(Math.min(16, d)) },
+  /* type every falling glyph's next expected token, lowest first */
+  copyAll: () => { for (const g of [...G.glyphs].filter(x => x.state === 'fall').sort((a, b) => b.y - a.y)) { while (g.state === 'fall') onKey(g.tokens[g.typed]) } },
+}
+</script>
+</body>
+</html>

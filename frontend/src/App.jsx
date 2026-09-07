@@ -29,6 +29,7 @@ import Satellites from './components/Satellites'
 import HourlySummary from './components/HourlySummary'
 import Morse from './components/Morse'
 import Invaders from './components/Invaders'
+import MorseInvaders from './components/MorseInvaders'
 import CraneCab from './components/CraneCab'
 
 const TABS = [
@@ -53,6 +54,7 @@ const TABS = [
   // Games
   { id: 'cranecab', label: 'Crane Cab' },
   { id: 'invaders', label: 'Invaders' },
+  { id: 'morseinv', label: 'Morse Invaders' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
@@ -96,6 +98,7 @@ const TAB_GROUPS = [
     tabs: [
       { id: 'cranecab', label: 'Crane Cab', icon: '🏗' },
       { id: 'invaders', label: 'Invaders',  icon: '👾' },
+      { id: 'morseinv', label: 'Morse Invaders', icon: '〰️' },
     ],
   },
   {
@@ -370,6 +373,7 @@ export default function App() {
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'morse'   && <Morse />}
           {tab === 'invaders' && <Invaders callsign={callsign} />}
+          {tab === 'morseinv' && <MorseInvaders />}
           {tab === 'cranecab' && <CraneCab />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
