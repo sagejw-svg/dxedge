@@ -52,7 +52,11 @@ export function init(ctx) {
   // operator does, made no sound at all.
   ctx.bus.on('load.slack', () => thud(70, 0.45, 0.5));
   ctx.bus.on('hook.tight', () => thud(120, 0.16, 0.16));
-  ctx.bus.on('collision', () => thud(52, 0.7, 0.85));
+  // collision.counted, not the raw contact. missions.js is the one that knows
+  // whether a contact counts, which is why it publishes both, and a load resting
+  // on the thing it was picked from used to fire a heavy impact sound with no
+  // alarm, no fail and nothing on screen to explain it.
+  ctx.bus.on('collision.counted', () => thud(52, 0.7, 0.85));
 }
 
 // Everything below reads state and nothing writes it, directly or through the
@@ -286,7 +290,11 @@ function doubleBurst() {
     staticGain.gain.cancelScheduledValues(now);
     staticGain.gain.setValueAtTime(DOUBLE_STATIC_GAIN, now);
     staticGain.gain.setValueAtTime(DOUBLE_STATIC_GAIN, now + 1.2);
-    staticGain.gain.linearRampToValueAtTime(0, now + 1.26);
+    // Back to the transmit bed, not to silence. Ground answers a double with its
+    // own "say again", so r.tx never leaves groundTx and the transition below
+    // never runs; ramping to zero left the static bed dead under two seconds of
+    // live transmission. Leaving groundTx still closes the squelch normally.
+    staticGain.gain.linearRampToValueAtTime(RADIO_STATIC_GAIN, now + 1.26);
   } catch { /* ignore */ }
 }
 

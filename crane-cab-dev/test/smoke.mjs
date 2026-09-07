@@ -20,8 +20,8 @@ const b = await chromium.launch({
     '--autoplay-policy=no-user-gesture-required']
 });
 
-async function page(vw = 1440, vh = 900) {
-  const p = await b.newPage({ viewport: { width: vw, height: vh } });
+async function page(vw = 1440, vh = 900, dsf = 1) {
+  const p = await b.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: dsf });
   p.__err = [];
   p.on('pageerror', (e) => p.__err.push(String(e)));
   p.on('console', (m) => {
@@ -106,6 +106,61 @@ async function page(vw = 1440, vh = 900) {
   });
   rec('the lamp row fits on an 844x390 landscape phone',
     fit.lampBottom <= fit.viewport, `lamps end at ${fit.lampBottom} of ${fit.viewport}`);
+  await p.close();
+}
+
+// 5. The hook camera inset on a display with a pixel ratio above 1. three
+//    multiplies setViewport and setScissor by the pixel ratio itself, so passing
+//    it the drawing buffer size double counted it: the inset was drawn entirely
+//    off screen and the main view was left scaled by the ratio and cropped to its
+//    lower left quarter for every frame after, until a window resize. Invisible
+//    on a 1x display, which is why it shipped. Every check above runs at 1x.
+{
+  const p = await page(1280, 800, 2);
+  await p.click('#btn-start');
+  await sleep(1500);
+  await p.keyboard.press('c');
+  await sleep(900);
+  const on = await p.evaluate(() => {
+    const c = document.querySelector('canvas');
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    const v = gl.getParameter(gl.VIEWPORT);
+    return { buf: [c.width, c.height], vp: [v[0], v[1], v[2], v[3]],
+      scissor: gl.getParameter(gl.SCISSOR_BOX), dpr: window.devicePixelRatio,
+      wanted: window.__cab.state.intent.hookCam };
+  });
+  // The last thing render.js does is restore the full view, so the live viewport
+  // has to be the whole drawing buffer, whatever the pixel ratio is.
+  const full = on.vp[0] === 0 && on.vp[1] === 0 &&
+    on.vp[2] === on.buf[0] && on.vp[3] === on.buf[1];
+  // And the inset itself has to have been inside the buffer, not past its top.
+  const insetOnScreen = on.scissor[1] >= 0 && on.scissor[1] + on.scissor[3] <= on.buf[1] &&
+    on.scissor[2] > 0;
+  rec('the hook cam inset stays on screen at devicePixelRatio 2 and leaves the main view alone',
+    on.dpr === 2 && on.wanted === true && full && insetOnScreen && p.__err.length === 0,
+    `dpr ${on.dpr} buffer ${on.buf} viewport ${on.vp} scissor ${on.scissor}`);
+  await p.close();
+}
+
+// 6. The mic must not be keyed from a card. A T held across the title or the end
+//    card used to arrive in the next lift already down, so ground's first word
+//    was doubled and the operator started a fault down without touching a
+//    control. Both halves matter: the phase guard, and ignoring auto repeat.
+{
+  const p = await page();
+  await p.keyboard.down('t');              // held on the title card
+  await p.click('#btn-start');
+  await sleep(2500);                       // through ground's first call
+  const st = await p.evaluate(() => ({
+    ptt: window.__cab.state.intent.ptt,
+    faults: window.__cab.state.radio.faults,
+    node: window.__cab.state.radio.node,
+    caption: window.__cab.state.radio.caption
+  }));
+  await p.keyboard.up('t');
+  rec('a mic held across the title card does not double ground\'s first call',
+    st.ptt === false && st.faults === 0 && st.node === 'check',
+    `ptt ${st.ptt} faults ${st.faults} node ${st.node} caption "${st.caption}"`);
   await p.close();
 }
 

@@ -33,13 +33,15 @@
 // two modules.
 
 import {
-  SCRIPTS, GUIDE_CALLS, NOT_READY_CAPTION, NOT_SLACK_CAPTION,
-  TOO_HIGH_CAPTION, TOO_LOW_CAPTION
+  SCRIPTS, GUIDE_CALLS,
+  NOT_READY_CAPTION, NOT_SLACK_CAPTION, TOO_HIGH_CAPTION, TOO_LOW_CAPTION,
+  SAY_AGAIN_LABEL, SPOKEN_ONES, SPOKEN_TENS, SPOKEN_HUNDRED, SPOKEN_FEET, SPOKEN_METRES
 } from '../data/radio.js';
 
 const DEFAULT_TX = 1.6;                      // s of ground transmission with no clip
 const PLAYER_TX = 0.8;                       // s the operator's answer is on the air
 const GUIDE_PERIOD = 3.0;                    // s between guide calls
+const RETRY_FLOOR = 1e-6;                    // a retry timer never reaches zero mid call
 const GARBLE_TIME = 1.2;                     // s the caption stays garbled after a double
 const HOOK_RETRY = 4.0;                      // s before ground calls for the hook again
 const HOLD_FACTOR = 3;                       // inside this many tolerances, say HOLD
@@ -123,6 +125,7 @@ export function init(ctx) {
 // ---------- script lifecycle ----------
 
 function startScript(ctx, name) {
+  repeating = false;
   const r = ctx.state.radio;
   const found = SCRIPTS[name];
   if (!found) {
@@ -136,7 +139,12 @@ function startScript(ctx, name) {
   r.prevNode = null;
   lastScriptNode = null;
   swayArmed = true;
-  pttLatched = false;
+  // A mic that is already keyed when the lift starts counts as already used, not
+  // as the operator talking over ground's first word. Holding T on the end card
+  // and clicking through to the next lift used to replace the radio check with
+  // "Say again, you doubled me." and start the operator a fault down before they
+  // had touched a control. It has to be released and pressed again.
+  pttLatched = !!ctx.state.intent.ptt;
   inAllStop = false;
   garbleTimer = 0;
   r.garbled = false;
@@ -144,6 +152,7 @@ function startScript(ctx, name) {
 }
 
 function stopScript(ctx) {
+  repeating = false;
   const r = ctx.state.radio;
   script = null;
   node = null;
@@ -214,7 +223,7 @@ function enterNode(ctx, id) {
     mode = 'guide';
     r.guideTimer = 0;          // first correction goes out immediately
     r.caption = '';
-    r.replies = ['Say again'];
+    r.replies = [SAY_AGAIN_LABEL];
     return;
   }
 
@@ -234,9 +243,16 @@ function fireAction(ctx) {
 
 // Put the current node's call on the air. urgencyBump raises the read urgency
 // when ground has to say it again.
-function sayNode(ctx, urgencyBump, captionOverride) {
+function sayNode(ctx, urgencyBump, captionOverride, isRepeat) {
   const { state, bus } = ctx;
   const r = state.radio;
+  // A repeat asked for from a gate the operator is already standing in. When the
+  // transmission ends it goes back to that gate. Without this, "Say again" inside
+  // a waitFor re-opened the reply window on a node that had already been
+  // answered, the window lapsed into a fault, the fault re-sent the call, and the
+  // node turned into a fault generator: one every 4.6 s for as long as the gate
+  // stayed shut, while the operator did exactly what ground had asked.
+  repeating = !!isRepeat;
   mode = 'groundTx';
   r.groundTimer = DEFAULT_TX;
   r.caption = captionOverride || node.caption || '';
@@ -246,7 +262,7 @@ function sayNode(ctx, urgencyBump, captionOverride) {
 
 function replyLabels(n) {
   const expect = (n && n.expect) || [];
-  return expect.slice(0, 3).concat(['Say again']);
+  return expect.slice(0, 3).concat([SAY_AGAIN_LABEL]);
 }
 
 // The reply strip is drawn in every mode, so its buttons have to mean something
@@ -256,9 +272,10 @@ function sayAgainPressed(ctx) {
   const r = ctx.state.radio;
   const pick = ctx.state.intent.reply;
   return pick !== null && pick >= 0 && pick < r.replies.length &&
-    r.replies[pick] === 'Say again';
+    r.replies[pick] === SAY_AGAIN_LABEL;
 }
 
+let repeating = false;  // the transmission on the air is a repeat from a gate
 let lastGuide = null;   // the guide call on the air, so it can be repeated
 
 function repeatGuide(ctx) {
@@ -293,6 +310,13 @@ function double(ctx) {
   if (r.node === 'sayAgain') return;
   r.garbled = true;
   garbleTimer = GARBLE_TIME;
+  // Ground's sign off asks nothing and waits for nothing, and the lift is already
+  // won by the time it goes out. Charging a fault for keying the mic over "Good
+  // lift, standing by" cost a grade letter on a finished lift, for saying copy.
+  if (node && node.next === null && !(node.expect && node.expect.length)) {
+    ctx.bus.emit('radio.doubled', { node: r.node });
+    return;
+  }
   fault(ctx, 'doubled');
   bus.emit('radio.doubled', { node: r.node });
   enterNode(ctx, 'sayAgain');
@@ -418,21 +442,17 @@ function guideInfo(ctx) {
   };
 }
 
-const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
-  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
-  'eighteen', 'nineteen'];
-const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
 
 function words(n) {
   n = Math.round(n);
   if (n < 0) return words(-n);
-  if (n < 20) return ONES[n];
+  if (n < 20) return SPOKEN_ONES[n];
   if (n < 100) {
     const rest = n % 10;
-    return TENS[Math.floor(n / 10)] + (rest ? `-${ONES[rest]}` : '');
+    return SPOKEN_TENS[Math.floor(n / 10)] + (rest ? `-${SPOKEN_ONES[rest]}` : '');
   }
   const rest = n % 100;
-  return `${ONES[Math.floor(n / 100)]} hundred${rest ? ` ${words(rest)}` : ''}`;
+  return `${SPOKEN_ONES[Math.floor(n / 100)]} ${SPOKEN_HUNDRED}${rest ? ` ${words(rest)}` : ''}`;
 }
 
 // Spoken distance for a guide call. Imperial rounds to 5 ft, metric to 2 m,
@@ -440,10 +460,10 @@ function words(n) {
 function spokenDistance(metres, units) {
   if (units === 'imperial') {
     const ft = Math.max(5, Math.round((metres * 3.28084) / 5) * 5);
-    return `${words(ft)} feet`;
+    return `${words(ft)} ${SPOKEN_FEET}`;
   }
   const m = Math.max(2, Math.round(metres / 2) * 2);
-  return `${words(m)} meters`;
+  return `${words(m)} ${SPOKEN_METRES}`;
 }
 
 function sayGuide(ctx, call, distance, urgency) {
@@ -459,7 +479,7 @@ function sayGuide(ctx, call, distance, urgency) {
   mode = 'guideTx';
   r.groundTimer = DEFAULT_TX;
   r.caption = caption;
-  r.replies = ['Say again'];
+  r.replies = [SAY_AGAIN_LABEL];
   bus.emit('radio.say', { key: call.say, urgency: urgency || 0 });
 }
 
@@ -502,7 +522,7 @@ export function update(ctx, dt) {
   }
 
   // Interrupts first: a collision arrives on the bus, sway is polled here.
-  if (state.sensors.swayAngle > SWAY_INTERRUPT) {
+  if (state.sensors.loadSway > SWAY_INTERRUPT) {
     if (swayArmed) { swayArmed = false; interrupt(ctx); }
   } else {
     swayArmed = true;
@@ -522,7 +542,7 @@ export function update(ctx, dt) {
     // guide calls never fault. Pressing it while the call was still on the air
     // was costing a fault, and the call is on the air for more than half of
     // every cycle.
-    if (mode === 'guideTx' && spoke && r.replies[state.intent.reply] === 'Say again') {
+    if (mode === 'guideTx' && spoke && r.replies[state.intent.reply] === SAY_AGAIN_LABEL) {
       repeatGuide(ctx);
       setTx(ctx);
       return;
@@ -538,12 +558,21 @@ export function update(ctx, dt) {
   switch (mode) {
     case 'groundTx': {
       r.groundTimer -= dt;
-      if (hookRetry > 0) hookRetry -= dt;        // the re-say is part of the four seconds
-      if (unhookRetry > 0) unhookRetry -= dt;
+      // The re-say is part of the four seconds, but the timer may not be allowed
+      // to reach zero in here: only the hookWait and unhookWait cases can fire
+      // the retry, and both are guarded on the timer still being positive. A
+      // retry that expired inside a transmission was simply lost, and the lift
+      // stranded at "on the hook" with nothing able to win or fail it. That was
+      // a quarter of all fuzzed runs, and by some distance the most common hang
+      // in the game.
+      if (hookRetry > 0) hookRetry = Math.max(RETRY_FLOOR, hookRetry - dt);
+      if (unhookRetry > 0) unhookRetry = Math.max(RETRY_FLOOR, unhookRetry - dt);
       if (r.groundTimer <= 0) {
         r.groundTimer = 0;
+        const wasRepeat = repeating;
+        repeating = false;
         fireAction(ctx);
-        if (node.timeout !== null && node.timeout !== undefined) {
+        if (!wasRepeat && node.timeout !== null && node.timeout !== undefined) {
           mode = 'ack';
           r.ackTimer = node.timeout;
           r.ackTimeout = node.timeout;
@@ -567,7 +596,7 @@ export function update(ctx, dt) {
       if (pick !== null && pick >= 0 && pick < r.replies.length) {
         const label = r.replies[pick];
         r.ackTimer = 0; r.ackTimeout = 0;
-        if (label === 'Say again') { sayNode(ctx, 0); break; }
+        if (label === SAY_AGAIN_LABEL) { sayNode(ctx, 0); break; }
         ctx.bus.emit('radio.reply', { label, node: r.node });
         mode = 'playerTx';
         r.playerTimer = PLAYER_TX;
@@ -599,7 +628,7 @@ export function update(ctx, dt) {
 
     case 'wait': {
       if (gateSatisfied(ctx)) { advance(ctx); break; }
-      if (sayAgainPressed(ctx)) sayNode(ctx, 0);
+      if (sayAgainPressed(ctx)) sayNode(ctx, 0, null, true);
       break;
     }
 
@@ -608,14 +637,14 @@ export function update(ctx, dt) {
       if (hookResult === 'notReady') {
         hookResult = null;
         hookRetry = HOOK_RETRY;
-        sayNode(ctx, 1, hookHint);
+        sayNode(ctx, 1, hookHint, true);
         break;
       }
       if (hookRetry > 0) {
         hookRetry -= dt;
         if (hookRetry <= 0) { hookRetry = 0; ctx.bus.emit('hook.attach', {}); }
       }
-      if (sayAgainPressed(ctx)) sayNode(ctx, 0);
+      if (sayAgainPressed(ctx)) sayNode(ctx, 0, null, true);
       break;
     }
 
@@ -624,14 +653,14 @@ export function update(ctx, dt) {
       if (unhookResult === 'refused') {
         unhookResult = null;
         unhookRetry = HOOK_RETRY;
-        sayNode(ctx, 1, NOT_SLACK_CAPTION);
+        sayNode(ctx, 1, NOT_SLACK_CAPTION, true);
         break;
       }
       if (unhookRetry > 0) {
         unhookRetry -= dt;
         if (unhookRetry <= 0) { unhookRetry = 0; ctx.bus.emit('hook.release', {}); }
       }
-      if (sayAgainPressed(ctx)) sayNode(ctx, 0);
+      if (sayAgainPressed(ctx)) sayNode(ctx, 0, null, true);
       break;
     }
 
@@ -640,7 +669,23 @@ export function update(ctx, dt) {
       if (!g) break;
       const tol = guideTolerance(ctx);
       if (g.dist <= tol && swaySettled(state, GUIDE_SETTLE, GUIDE_SETTLE_RATE)) { advance(ctx); break; }
-      if (g.dist > tol * HOLD_FACTOR) holdSaid = false;
+
+      // Two different quantities, and mixing them is what made ground unusable
+      // on a real approach. g.dist is where the load is, swing included, and it
+      // is the right thing to gate on: the lift does not go on until the load is
+      // over the mark and still. jibErr is where the jib is, and it is the only
+      // thing a correction can address, because "trolley out" moves the jib, not
+      // the swing.
+      //
+      // Holding and correcting used to be decided on g.dist, so once the jib was
+      // parked on the mark and only the swing was holding the gate shut, the
+      // swinging load crossed the hold band twice a period and ground alternated
+      // "Trolley out" and "Hold, hold, hold." every three seconds over an eight
+      // millimetre jib error, whipsawing anyone who obeyed into pumping the
+      // swing. Both now read jibErr, so ground says hold once and then lets the
+      // operator do exactly that.
+      const jibErr = Math.hypot(g.tangential, g.radial);
+      if (jibErr > tol * HOLD_FACTOR) holdSaid = false;
 
       if (sayAgainPressed(ctx)) { repeatGuide(ctx); break; }
 
@@ -648,11 +693,18 @@ export function update(ctx, dt) {
       if (r.guideTimer > 0) break;
       r.guideTimer = GUIDE_PERIOD;
 
-      if (g.dist <= tol * HOLD_FACTOR && !holdSaid) {
+      if (jibErr <= tol * HOLD_FACTOR && !holdSaid) {
         holdSaid = true;
         sayGuide(ctx, GUIDE_CALLS.hold, null, 1);
         break;
       }
+      // Off the air only when the jib is actually inside the gate and the wait is
+      // for the swing to die. Anywhere short of that, corrections keep coming:
+      // holding once and then going silent for the whole band out to three
+      // tolerances left the operator up to three tolerances short, told to hold,
+      // with no further word and no way for the node to advance. On the blind
+      // shaft, where the hook cam is refused, there was nothing to tell them.
+      if (jibErr <= tol) break;
       // Say the single largest correction, never two at once.
       if (Math.abs(g.tangential) >= Math.abs(g.radial)) {
         sayGuide(ctx, g.tangential > 0 ? GUIDE_CALLS.swingRight : GUIDE_CALLS.swingLeft,

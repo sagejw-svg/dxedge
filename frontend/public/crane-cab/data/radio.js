@@ -164,3 +164,18 @@ export const TOO_LOW_CAPTION = 'Take up your slack, you are past it.';
 
 // Caption used when ground calls the unhook and the load is not resting slack.
 export const NOT_SLACK_CAPTION = 'Set it down and give me slack first.';
+
+// Player facing wording that is not a script node. Hard rule 3 puts content in
+// data/, and these are content: the label on the button the operator presses,
+// and the vocabulary ground reads numbers out of. js/radio.js does the rounding
+// and the plumbing; the words are here.
+export const SAY_AGAIN_LABEL = 'Say again';
+export const SPOKEN_ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+  'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+  'eighteen', 'nineteen'];
+export const SPOKEN_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy',
+  'eighty', 'ninety'];
+export const SPOKEN_HUNDRED = 'hundred';
+export const SPOKEN_FEET = 'feet';
+export const SPOKEN_METRES = 'meters';
+

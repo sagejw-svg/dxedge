@@ -684,6 +684,7 @@ function resize() {
 const SHEAVE_DROP = 0.45;   // the rope leaves the sheave, not the middle of the trolley
 const ropeTop = new THREE.Vector3();
 const ropeVec = new THREE.Vector3();
+const viewSize = new THREE.Vector2();
 const eye = new THREE.Vector3();
 const dir = new THREE.Vector3();
 const target = new THREE.Vector3();
@@ -852,8 +853,14 @@ export function update(ctx, dt) {
 
   // The inset, last, over the top of the main view.
   if (state.mission.id !== null && hookCamWanted(state)) {
-    const w = renderer.domElement.width;
-    const h = renderer.domElement.height;
+    // getSize reports CSS pixels, which is what setViewport and setScissor take:
+    // three multiplies both by the pixel ratio itself. domElement.width is the
+    // drawing buffer, already multiplied, so using it put the inset off screen
+    // on any display with devicePixelRatio above 1 and left the main view
+    // scaled by the ratio for every frame afterwards.
+    renderer.getSize(viewSize);
+    const w = viewSize.x;
+    const h = viewSize.y;
     const size = Math.round(Math.min(w, h) * 0.26);
     const pad = Math.round(size * 0.09);
     // Top left. WebGL viewport coordinates start at the bottom, and the console

@@ -10,8 +10,15 @@
 // It listens for what to persist rather than being called by other systems, so
 // nothing imports it but main.js.
 
+import { MISSIONS } from '../data/missions.js';
+
 const KEYS = { hi: 'craneCab_hi', ach: 'craneCab_ach', settings: 'craneCab_settings' };
 const V = 1;
+// Derived, not written out. Two hardcoded 3s used to cap furthest at the last
+// mission that existed when this was written, one of them on the write path, so
+// adding a fifth mission would have silently pinned resume progress forever.
+const LAST_MISSION = MISSIONS.length - 1;
+const UNDATED = '?';         // an award whose stored date did not survive inspection
 
 function read(key) {
   try {
@@ -24,8 +31,17 @@ function read(key) {
   } catch { return null; }
 }
 
+// Returns whether it stuck. A refused write used to be swallowed whole while the
+// in-memory progress carried on as if it had worked, so in private browsing every
+// card claimed unlocks and a personal best and the whole run evaporated on
+// refresh with nothing anywhere having said so.
 function write(key, data) {
-  try { localStorage.setItem(key, JSON.stringify({ v: V, data })); } catch { /* full or blocked */ }
+  try {
+    localStorage.setItem(key, JSON.stringify({ v: V, data }));
+    return true;
+  } catch {
+    return false;                                 // full, blocked, or no storage
+  }
 }
 
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
@@ -59,13 +75,21 @@ export function load(ctx) {
   const ach = read(KEYS.ach) || {};
   const out = {};
   if (ach && typeof ach === 'object' && !Array.isArray(ach)) {
-    Object.keys(ach.awards && typeof ach.awards === 'object' ? ach.awards : {}).forEach((k) => {
-      const when = ach.awards[k];
-      if (typeof when === 'string') out[k] = when;
-    });
+    // A key that is present at all means the award was earned. Requiring the
+    // value to be a string meant a hand edited or truncated date handed the
+    // achievement back to be won a second time. The placeholder has to be
+    // truthy: both of the "never re-award" guards are truthiness tests, so an
+    // empty string would have left the same hole with more code around it.
+    const awards = ach.awards;
+    if (awards && typeof awards === 'object' && !Array.isArray(awards)) {
+      Object.keys(awards).forEach((k) => {
+        if (!k) return;
+        out[k] = typeof awards[k] === 'string' && awards[k] ? awards[k] : UNDATED;
+      });
+    }
     state.progress.hooks = Math.max(0, num(ach.hooks) || 0);
     const f = num(ach.furthest);
-    state.progress.furthest = f === null ? 0 : Math.min(3, Math.max(0, Math.round(f)));
+    state.progress.furthest = f === null ? 0 : Math.min(LAST_MISSION, Math.max(0, Math.round(f)));
   }
   state.progress.achievements = out;
 
@@ -81,7 +105,6 @@ export function load(ctx) {
   }
   state.progress.best = best;
 
-  state.mission.furthest = state.progress.furthest;
 }
 
 export function init(ctx) {
@@ -106,15 +129,14 @@ export function init(ctx) {
     const rec = cleanBest(p.record);
     if (!rec) return;
     state.progress.best[p.id] = rec;
-    write(KEYS.hi, state.progress.best);
+    if (!write(KEYS.hi, state.progress.best)) state.progress.savedOk = false;
   });
 
   bus.on('mission.furthest', (p) => {
     const n = p && num(p.id);
     if (n === null) return;
     if (n <= state.progress.furthest) return;
-    state.progress.furthest = Math.min(3, Math.round(n));
-    state.mission.furthest = state.progress.furthest;
+    state.progress.furthest = Math.min(LAST_MISSION, Math.round(n));
     persistAch(state);
   });
 
@@ -122,15 +144,16 @@ export function init(ctx) {
 }
 
 function persistAch(state) {
-  write(KEYS.ach, {
+  const ok = write(KEYS.ach, {
     awards: state.progress.achievements,
     hooks: state.progress.hooks,
     furthest: state.progress.furthest
   });
+  if (!ok) state.progress.savedOk = false;
 }
 
 export function saveSettings(ctx) {
-  write(KEYS.settings, ctx.state.settings);
+  if (!write(KEYS.settings, ctx.state.settings)) ctx.state.progress.savedOk = false;
 }
 
 // Test seam. The suite has no localStorage, so it drives these directly.

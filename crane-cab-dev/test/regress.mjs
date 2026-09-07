@@ -226,6 +226,16 @@ async function tHoistCorrection() {
     `result ${sim.state.mission.result} reason ${sim.state.mission.failReason}`);
 }
 
+// Rig a load onto the hook without flying the pickup. The sway interrupt and the
+// grade both read sensors.loadSway, which is zero while the block is empty, so a
+// swing test that never hooks on is testing nothing.
+function rig(sim, id) {
+  const m = MISSIONS[id === undefined ? sim.state.mission.id : id];
+  sim.state.load.attached = true;
+  sim.state.load.mass = m.load.mass;
+  sim.state.load.size = [...m.load.size];
+}
+
 // Handlers must never land on the return stack.
 async function tNoReplayedAlarm() {
   const sim = await startMission(0);
@@ -234,6 +244,7 @@ async function tNoReplayedAlarm() {
   park(sim, { slew: p.slew, radius: 18 });
   until(sim, atNode('toPickup'), 8);
   until(sim, () => false, 2);
+  rig(sim);
   sim.state.load.swing.x = 0.2;                       // 11.5 deg
   until(sim, atNode('allStop'), 8);
   // Talk over the ALL STOP, then E-stop out of it.
@@ -258,6 +269,7 @@ async function tAllStopNotPostponable() {
   park(sim, { slew: p.slew, radius: 18 });
   until(sim, atNode('toPickup'), 8);
   until(sim, () => false, 2);
+  rig(sim);
   sim.state.load.swing.x = 0.2;
   until(sim, atNode('allStop'), 8);
   // Hold the swing up and tap a reply every tick the strip will take one.
@@ -278,6 +290,7 @@ async function tAllStopCleared() {
   park(sim, { slew: p.slew, radius: 18 });
   until(sim, atNode('toPickup'), 8);
   until(sim, () => false, 2);
+  rig(sim);
   sim.state.load.swing.x = 0.2;
   until(sim, atNode('allStop'), 8);
   sim.state.intent.estop = true;
@@ -329,6 +342,7 @@ async function tReturnCannotKillRadio() {
   park(sim, { slew: p.slew, radius: 18 });
   until(sim, atNode('toPickup'), 8);
   until(sim, () => false, 2);
+  rig(sim);
   sim.state.load.swing.x = 0.2;
   until(sim, atNode('allStop'), 8);
   until(sim, () => false, 0.2, (s) => { s.intent.reply = 0; });   // double on the alarm
@@ -507,9 +521,10 @@ async function tNoTeleportOntoRoof() {
 // call, follow every guide, hook when told, lower when told. It knows nothing
 // mission-specific beyond the data, so a mission it cannot fly is a real
 // finding about that mission and not about the test.
-async function flyMission(id, budget = 240) {
+async function flyMission(id, budget = 240, opts = {}) {
   const m = MISSIONS.find((x) => x.id === id);
   const sim = await startMission(id);
+  let sayAgainSent = false;
   const pick = polarOf(m.pickup.pos);
   const land = polarOf(m.landing.pos);
   const TOP = 43.8;                                   // cabHeight + hookDrop
@@ -524,6 +539,15 @@ async function flyMission(id, budget = 240) {
     const nd = n ? null : null;
     // Answer each call once, as soon as its window opens.
     if (s.radio.ackTimer > 0 && answered !== n) { s.intent.reply = 0; answered = n; }
+    // Optionally press Say again once, from inside the named node's wait gate:
+    // after its window has closed, so this is the gate case and not the ack one.
+    else if (opts.sayAgainAt && !sayAgainSent && n === opts.sayAgainAt &&
+             s.radio.ackTimer === 0 && s.radio.tx === 'idle' && answered === n) {
+      const i = s.radio.replies.indexOf('Say again');
+      if (i >= 0) { s.intent.reply = i; sayAgainSent = true; }
+    }
+    // Key the mic over ground's sign off, which is what a player saying copy does.
+    if (opts.keyDuringSignOff && n === 'complete') { s.intent.ptt = true; s.intent.reply = 0; }
     if (n === 'toLanding' || descending) descending = descending || n !== 'toLanding';
     const guide = n && (n === 'toPickup' || n === 'toLanding');
     const target = n === 'toLanding' ? land : pick;
@@ -692,14 +716,515 @@ async function tGusts() {
     Math.min(...gs) >= m2.wind.base - 0.01,
     `mission 2 wind ${Math.min(...gs).toFixed(2)}..${Math.max(...gs).toFixed(2)} m/s (base ${m2.wind.base}, gust ${m2.wind.gust}), mission 1 spread ${spread(ss).toFixed(4)}`);
 
-  // Deterministic: a retry is the same weather, not a different mission.
-  const again = await startMission(2);
+  // Deterministic: a retry is the same weather, not a different mission. This has
+  // to be a retry inside a session that has already been running, which is what
+  // the end card's button does. Booting a fresh sim starts the clock at zero and
+  // proved nothing: the gust was seeded off session time, so the real retry was a
+  // different mission every attempt and the weather was re-rollable by failing.
   const rs = [];
-  until(again, () => false, 0.05);
-  until(again, () => false, 10, (s) => rs.push(s.sensors.wind));
+  gusty.modules.missions.start(gusty.ctx, 2);
+  gusty.state.phase = 'playing';
+  until(gusty, () => false, 0.05);
+  until(gusty, () => false, 30, (s) => rs.push(s.sensors.wind));
   const same = rs.every((v, i) => Math.abs(v - gs[i]) < 1e-9);
   rec('and the same mission blows the same way on a retry',
-    same, same ? 'identical' : 'diverged');
+    same, same ? `identical, ${rs.length} samples from t=${gusty.state.time.t.toFixed(1)}` : 'diverged');
+}
+
+
+// ------------------------------------------------ phase 4b: the fourth bug pass
+
+// Fly on the controls, not by teleporting. park() zeroes the swing every tick,
+// which is exactly why the suite could not see any of the next three.
+function flyControls(sim, seconds, per) {
+  return until(sim, () => false, seconds, per);
+}
+
+// An empty hook block swings: a pendulum's angle under a horizontal acceleration
+// does not care about mass, so slewing out at range II leans it seven to ten
+// degrees. Ground does not call ALL STOP on a block with nothing on it, and it
+// used to: the first thing a player did on every mission raised a phantom alarm
+// and failed the lift in about ten seconds.
+async function tEmptySwingIsNotAnAllStop() {
+  let worst = 0, failed = null, alarms = 0;
+  for (const id of [0, 1, 2, 3]) {
+    const sim = await startMission(id);
+    sim.bus.on('radio.allStop', () => { alarms += 1; });
+    // Trolley out first. The drive on the swing is radius times slew accel, so
+    // the block leans hardest at the trolley stop: this is what a player does in
+    // the first twenty seconds of every lift, and it used to raise the alarm.
+    flyControls(sim, 60, (s) => {
+      s.intent.range = 'II';
+      s.intent.trolley = s.crane.radius < 50 ? 1 : 0;
+      s.intent.slew = s.crane.radius < 50 ? 0 : 1;
+      if (s.sensors.swayAngle > worst) worst = s.sensors.swayAngle;
+    });
+    if (sim.state.mission.result !== null) failed = `${id}: ${sim.state.mission.failReason}`;
+  }
+  rec('slewing an empty block hard is not an ALL STOP and does not fail the lift',
+    alarms === 0 && failed === null && worst > 12 * Math.PI / 180,
+    `peak block sway ${(worst * 180 / Math.PI).toFixed(1)} deg, alarms ${alarms}, ${failed || 'no fails'}`);
+}
+
+// And the same swing must not be charged to the grade or eat the achievements.
+async function tEmptySwingIsNotCharged() {
+  const sim = await startMission(0);
+  let peak = 0;
+  flyControls(sim, 20, (s) => {
+    s.intent.range = 'II';
+    s.intent.slew = 1;
+    if (s.sensors.swayAngle > peak) peak = s.sensors.swayAngle;
+  });
+  const s = sim.state;
+  rec('an empty block swinging does not go on the operator\'s card',
+    peak > 3 * Math.PI / 180 && s.scoring.maxSway === 0 && s.mission.maxSway === 0,
+    `block peaked at ${(peak * 180 / Math.PI).toFixed(1)} deg, charged ${(s.scoring.maxSway * 180 / Math.PI).toFixed(2)} deg`);
+}
+
+// The rope has a stop. Holding "down" after touchdown is what "down easy"
+// invites, and the block and rope used to carry on through the landed load,
+// through the scaffold and twenty six metres under the deck, with the hook
+// height gauge negative the whole way.
+async function tRopeStops() {
+  const lows = [];
+  for (const id of [0, 1, 2, 3]) {
+    const sim = await startMission(id);
+    flyControls(sim, 90, (s) => { s.intent.range = 'II'; s.intent.hoist = -1; });
+    lows.push(+(43.8 - sim.state.crane.line).toFixed(2));
+  }
+  rec('paying rope out cannot drive the empty block through the deck',
+    lows.every((y) => y >= -0.01 && y <= 0.01),
+    `block bottom ended at ${JSON.stringify(lows)}, want 0`);
+}
+
+async function tRopeStopsOnALandedLoad() {
+  const m2 = MISSIONS[2];
+  const sim = await startMission(2);
+  const s = sim.state;
+  rig(sim, 2);
+  const land = polarOf(m2.landing.pos);
+  park(sim, { slew: land.slew, radius: land.radius, line: 43.8 - (12 + m2.load.size[1]) - 0.05 });
+  flyControls(sim, 60, (st) => { st.intent.range = 'II'; st.intent.hoist = -1; });
+  const blockBottom = 43.8 - s.crane.line;
+  rec('and it cannot drive the block down through a load that is already resting',
+    Math.abs(s.load.bottomY - 12) < 0.01 && blockBottom > 12 - 0.5,
+    `load bottom ${s.load.bottomY.toFixed(2)} (want 12), block bottom ${blockBottom.toFixed(2)}, hook gauge ${s.sensors.hookHeight.toFixed(2)}`);
+}
+
+// The top of every volume was soft: sensors excluded the collision over a wider
+// band than missions granted support over, leaving a strip that was neither
+// solid nor standable. A load could be trolleyed straight through a parapet.
+async function tNoSoftBandOnTop() {
+  const m2 = MISSIONS[2];
+  const roof = 12;
+  const rows = [];
+  for (const drop of [0.05, 0.15, 0.20, 0.30, 0.34]) {
+    const sim = await startMission(2);
+    const s = sim.state;
+    rig(sim, 2);
+    s.crane.slew = Math.atan2(-4, 40);
+    s.crane.radius = 33;
+    s.crane.line = 43.8 - ((roof - drop) + m2.load.size[1]);
+    let hit = false;
+    let climbed = false;
+    flyControls(sim, 0.05);                 // one tick, so bottomY is real and not the default
+    const from = s.load.bottomY;
+    sim.bus.on('collision', () => { hit = true; });
+    flyControls(sim, 40, (st) => {
+      st.intent.range = 'II';
+      st.intent.trolley = st.crane.radius < 47 ? 1 : 0;
+      if (st.load.bottomY > from + 0.02) climbed = true;
+    });
+    // Either it hit the scaffold or it was picked up onto the roof on the way
+    // across. What it may not do is sail through untouched at its own height.
+    rows.push({ drop, hit, landed: climbed, end: +s.load.bottomY.toFixed(2) });
+  }
+  const through = rows.filter((r) => !r.hit && !r.landed);
+  rec('the top of a deck volume is solid all the way up, with no soft band',
+    through.length === 0,
+    through.length ? `passed through at ${JSON.stringify(through)}` : rows.map((r) => `${r.drop}:${r.hit ? 'hit' : 'stood'}`).join(' '));
+}
+
+// A load whose centre clears a volume but whose body does not used to hang a
+// third of itself inside the parapet, reported as neither a collision nor a
+// landing, because the surface test sampled one point.
+async function tFootprintNotAPoint() {
+  const m2 = MISSIONS[2];
+  const sim = await startMission(2);
+  const s = sim.state;
+  rig(sim, 2);
+  // Centre just outside the scaffold's west face (x 37), body lapping over it.
+  const x = 37 - 0.4, z = -4;
+  s.crane.slew = Math.atan2(z, x);
+  s.crane.radius = Math.hypot(x, z);
+  s.crane.line = 43.8 - (11.8 + m2.load.size[1]);
+  let hit = false;
+  sim.bus.on('collision', () => { hit = true; });
+  flyControls(sim, 2);
+  rec('a load lapping a volume its centre misses is a collision, not a hover',
+    hit || Math.abs(s.load.bottomY - 12) < 0.01,
+    `centre x ${x}, bottom ${s.load.bottomY.toFixed(2)}, collision ${hit}`);
+}
+
+// The anti-snatch budget ratcheted: paying rope out cleared it outright, so haul
+// and jog took fifty four metres in with an empty hook and no fail.
+async function tHoistBudgetCannotRatchet() {
+  const sim = await startMission(0);
+  const s = sim.state;
+  sim.bus.emit('hook.attach', {});
+  flyControls(sim, 0.1);
+  const start = s.crane.line;
+  for (let c = 0; c < 20 && s.mission.result === null; c += 1) {
+    const up = s.crane.line - 1.4;
+    flyControls(sim, 20, (st) => { st.intent.range = 'II'; st.intent.hoist = st.crane.line > up ? 1 : 0; });
+    const down = s.crane.line + 0.1;
+    flyControls(sim, 10, (st) => { st.intent.range = 'micro'; st.intent.hoist = st.crane.line < down ? -1 : 0; });
+  }
+  rec('the hoist budget cannot be ratcheted by jogging back down',
+    s.mission.result === 'fail' && s.mission.failReason === 'hoist before on the hook' &&
+    start - s.crane.line < 4,
+    `hauled ${(start - s.crane.line).toFixed(2)} m before ${s.mission.failReason || 'nothing'}`);
+}
+
+// And it must not fail an honest correction. Releasing the control at the target
+// still coasts the drum most of a metre at range II, and charging that made the
+// real allowance about 1.06 m of a nominal 2.0.
+async function tHoistBudgetAllowsACorrection() {
+  const sim = await startMission(0);
+  const s = sim.state;
+  sim.bus.emit('hook.attach', {});
+  flyControls(sim, 0.1);
+  const target = s.crane.line - 1.5;
+  flyControls(sim, 30, (st) => { st.intent.range = 'II'; st.intent.hoist = st.crane.line > target ? 1 : 0; });
+  flyControls(sim, 5, (st) => { st.intent.hoist = 0; });
+  rec('and it still allows one honest metre and a half of correction',
+    s.mission.result === null,
+    `result ${s.mission.result} ${s.mission.failReason || ''}, moved ${(43.8 - s.crane.line).toFixed(2)}`);
+}
+
+// Say again is documented as never a fault. Inside a waitFor gate it used to
+// re-open the reply window on a node the operator had already answered, and the
+// lapsed window charged a fault and re-sent the call, forever.
+async function tSayAgainInAGateIsFree() {
+  const sim = await flyMission(0, 240, {
+    sayAgainAt: 'downEasy'
+  });
+  const s = sim.state;
+  rec('Say again inside a wait gate is free, and does not turn into a fault loop',
+    s.radio.faults === 0 && s.mission.result === 'win',
+    `faults ${s.radio.faults}, result ${s.mission.result} ${s.mission.failReason || ''}`);
+}
+
+// The unhook lands inside radio.update on one tick and missions.update runs
+// before radio.update on the next, so winning immediately stopped the script one
+// node short and "Good lift. Standing by." was never once spoken.
+async function tGroundSignsOff() {
+  const missing = [];
+  for (const id of [0, 1, 2, 3]) {
+    const sim = await flyMission(id);
+    const said = sim.log.some((e) => e.name === 'radio.say' && e.payload && e.payload.key === 'GOOD_LIFT');
+    if (sim.state.mission.result !== 'win' || !said) missing.push(id);
+  }
+  rec('ground gets its sign off in before the lift is over',
+    missing.length === 0, missing.length ? `no GOOD_LIFT on ${missing}` : 'all four');
+}
+
+// The guide gated on the load position, swing included, but corrected the jib.
+// Once the jib was parked and only the swing held the gate shut, the swinging
+// load crossed the hold band twice a period and ground alternated "Trolley out"
+// and "Hold, hold, hold." every three seconds over an eight millimetre error.
+async function tGuideDoesNotWhipsaw() {
+  const sim = await startMission(0);
+  const s = sim.state;
+  answer(sim);
+  until(sim, atNode('toPickup'), 8);
+  const p = polarOf(m0.pickup.pos);
+  const calls = [];
+  sim.bus.on('radio.say', (e) => { if (s.radio.node === 'toPickup') calls.push(e.key); });
+  // Jib exactly on the mark, load swinging enough to hold the gate shut.
+  flyControls(sim, 30, (st) => {
+    st.crane.slew = p.slew; st.crane.slewVel = 0;
+    st.crane.radius = p.radius; st.crane.radiusVel = 0;
+    st.load.swing.x = 0.05 * Math.sin(st.time.t * 2);
+    st.load.swing.vx = 0.10 * Math.cos(st.time.t * 2);
+  });
+  const corrections = calls.filter((k) => k && k !== 'HOLD');
+  rec('a guide with the jib on the mark says hold once and then stays off the air',
+    corrections.length === 0 && calls.filter((k) => k === 'HOLD').length <= 1,
+    `calls over 30 s ${JSON.stringify(calls)}`);
+}
+
+// The other half of that, and the half the first version of the fix broke. Being
+// quiet on the mark is right; being quiet while the operator is short of it is a
+// hang, because a guide node has no timeout and nothing else can advance it.
+async function tGuideKeepsTalkingWhenShort() {
+  const sim = await startMission(0);
+  const s = sim.state;
+  answer(sim);
+  until(sim, atNode('toPickup'), 8);
+  const p = polarOf(m0.pickup.pos);
+  const calls = [];
+  sim.bus.on('radio.say', (e) => { if (s.radio.node === 'toPickup') calls.push(e.key); });
+  // Two metres short of a one metre gate: well inside the old silent band.
+  flyControls(sim, 30, (st) => {
+    st.crane.slew = p.slew; st.crane.slewVel = 0;
+    st.crane.radius = p.radius - 2.0; st.crane.radiusVel = 0;
+    st.load.swing.x = 0; st.load.swing.y = 0; st.load.swing.vx = 0; st.load.swing.vy = 0;
+  });
+  const corrections = calls.filter((k) => k && k !== 'HOLD');
+  rec('and it keeps talking while the operator is still short of the mark',
+    corrections.length >= 5,
+    `${corrections.length} corrections in 30 s, calls ${JSON.stringify(calls.slice(0, 6))}`);
+}
+
+// A landed load nudged off the volume it is standing on and back onto it must
+// not become a collision. The rope stop parks the block so the load's unclamped
+// bottom sits its slack below the face; when that slack was wider than the
+// support band, leaving the footprint for one tick put the load in a state that
+// read as neither standing nor clear, and nothing could haul it back.
+async function tLandedLoadCanBeNudged() {
+  const m2 = MISSIONS[2];
+  const sim = await startMission(2);
+  const s = sim.state;
+  rig(sim, 2);
+  const land = polarOf(m2.landing.pos);
+  park(sim, { slew: land.slew, radius: land.radius, line: 43.8 - (12 + m2.load.size[1]) - 0.2 });
+  // Settle it onto the roof and pay out until the line reads slack.
+  flyControls(sim, 20, (st) => { st.intent.range = 'micro'; st.intent.hoist = -1; });
+  const settled = s.load.bottomY;
+  const wasSlack = s.sensors.slack;
+  let hit = false;
+  sim.bus.on('collision', () => { hit = true; });
+  // Trolley clear of the 6 m scaffold plan and back again, rope untouched. In
+  // towards the mast, because out past the chart is an LMI lockout, which is a
+  // different rule and not what this is testing.
+  const back = s.crane.radius;
+  flyControls(sim, 40, (st) => { st.intent.hoist = 0; st.intent.range = 'I'; st.intent.trolley = st.crane.radius > back - 8 ? -1 : 0; });
+  flyControls(sim, 40, (st) => { st.intent.hoist = 0; st.intent.range = 'I'; st.intent.trolley = st.crane.radius < back ? 1 : 0; });
+  rec('a load set down on a deck can be nudged off it and back without a collision',
+    Math.abs(settled - 12) < 0.01 && wasSlack && !hit && s.mission.result === null,
+    `settled ${settled.toFixed(3)} slack ${wasSlack}, collision ${hit}, result ${s.mission.result} ${s.mission.failReason || ''}`);
+}
+
+// Ground's sign off asks nothing and waits for nothing, and the lift is already
+// won when it goes out. Keying the mic over it used to cost a grade letter.
+async function tSignOffIsNotAFaultSurface() {
+  const quiet = await flyMission(0);
+  const noisy = await flyMission(0, 240, { keyDuringSignOff: true });
+  rec('saying copy over ground\'s sign off does not cost a grade',
+    quiet.state.mission.result === 'win' && noisy.state.mission.result === 'win' &&
+    noisy.state.radio.faults === 0 && noisy.state.scoring.grade === quiet.state.scoring.grade,
+    `quiet ${quiet.state.scoring.grade} faults ${quiet.state.radio.faults}, keyed ${noisy.state.scoring.grade} faults ${noisy.state.radio.faults}`);
+}
+
+// The retry that ground uses when the hook is not ready is decremented inside a
+// transmission but can only be fired outside one, so a retry that expired mid
+// call was lost and the lift stranded at "on the hook" with no way out. It was a
+// quarter of all fuzzed runs.
+async function tHookRetryIsNeverLost() {
+  const stranded = [];
+  for (const id of [0, 1, 2, 3]) {
+    const m = MISSIONS.find((x) => x.id === id);
+    const sim = await startMission(id);
+    const s = sim.state;
+    const pick = polarOf(m.pickup.pos);
+    // Sit at the pickup but a long way above the hook window, so every hook
+    // call comes back "not ready" and ground has to keep retrying.
+    park(sim, { slew: pick.slew, radius: pick.radius, line: 20 });
+    let calls = 0;
+    sim.bus.on('hook.attach', () => { calls += 1; });
+    until(sim, (st) => st.radio.node === 'onHook', 40, (st) => {
+      if (st.radio.ackTimer > 0) st.intent.reply = 0;
+    });
+    const seen = calls;
+    // Press Say again while the retry is running. That puts ground back on the
+    // air for its full transmission, and a retry with less than that left on it
+    // used to expire in there, where nothing can fire it.
+    // The retry is 4 s and a transmission is 1.6 s of it, so about a second and a
+    // half after ground stops talking there is less than one transmission left on
+    // the timer. Press Say again there and the whole remainder used to drain
+    // inside the re-say, where nothing can fire it.
+    let armed = false;
+    let since = 0;
+    let pressedAt = -1;
+    flyControls(sim, 90, (st) => {
+      if (st.radio.ackTimer > 0) st.intent.reply = 0;
+      park(sim, { slew: pick.slew, radius: pick.radius, line: 20 });
+      if (st.radio.tx === 'groundTx') { armed = true; since = 0; return; }
+      if (!armed) return;
+      since += sim.STEP;
+      if (since < 1.2) return;
+      const j = st.radio.replies ? st.radio.replies.indexOf('Say again') : -1;
+      if (j >= 0) { st.intent.reply = j; armed = false; if (pressedAt < 0) pressedAt = calls; }
+    });
+    calls -= pressedAt < 0 ? seen : pressedAt;
+    // Ground must still be trying: a stranded script stops calling entirely.
+    if (calls < 3) stranded.push(`${id}: ${calls} retries after a say again`);
+  }
+  rec('a hook retry that expires mid transmission is not lost',
+    stranded.length === 0, stranded.length ? stranded.join(', ') : 'ground kept retrying on all four');
+}
+
+// Both "never re-award" guards are truthiness tests, so a restored award needs a
+// truthy value even when its stored date did not survive inspection.
+async function tCorruptAwardStaysAwarded() {
+  globalThis.localStorage.clear();
+  globalThis.localStorage.setItem('craneCab_ach', JSON.stringify({
+    v: 1, data: { awards: { 'Radio Check': 1, 'Zero Swing': null, 'Chart Legal': '2026-01-01' }, hooks: 4, furthest: 1 }
+  }));
+  const sim = await flyMission(0);
+  const again = sim.state.scoring.earned || [];
+  globalThis.localStorage.clear();
+  rec('an award with a corrupted date is still an award, not one to win again',
+    !again.includes('Radio Check') && !again.includes('Zero Swing') && !again.includes('Chart Legal'),
+    `re-earned ${JSON.stringify(again)}`);
+}
+
+
+// A mic held across the end card used to arrive in the next lift already down,
+// so ground's first word was doubled and the operator started a fault down
+// before touching a control.
+async function tHeldMicIsNotADouble() {
+  const sim = await makeSim();
+  sim.state.phase = 'playing';
+  sim.state.intent.ptt = true;                 // held from the previous card
+  sim.modules.missions.start(sim.ctx, 0);
+  flyControls(sim, 3, (s) => { s.intent.ptt = true; });
+  rec('a mic already keyed when a lift starts is not a double',
+    sim.state.radio.faults === 0 && sim.state.radio.node === 'check',
+    `node ${sim.state.radio.node} faults ${sim.state.radio.faults} caption "${sim.state.radio.caption}"`);
+}
+
+// Every fail card used to congratulate the player on the achievements and the
+// personal best from the last lift they won, on every retry.
+async function tFailCardIsNotAReplay() {
+  globalThis.localStorage && globalThis.localStorage.clear();
+  const sim = await flyMission(1);
+  const won = sim.modules.scoring.afterAction(sim.ctx);
+  // Now fail the next lift outright.
+  sim.modules.missions.start(sim.ctx, 2);
+  sim.state.phase = 'playing';
+  rig(sim, 2);
+  sim.state.mission.everHooked = true;
+  sim.bus.emit('alarm.a2b', {});
+  sim.modules.missions.fail ? null : null;
+  sim.state.mission.result = 'fail';
+  sim.state.mission.failReason = 'anti-two-block';
+  sim.bus.emit('lift.fail', { id: 2 });
+  const lost = sim.modules.scoring.afterAction(sim.ctx);
+  rec('a fail card does not replay the last win\'s unlocks and personal best',
+    won.earned.length > 0 && lost.earned.length === 0 && lost.personalBest === false,
+    `won ${JSON.stringify(won.earned)}, then fail card ${JSON.stringify(lost.earned)} pb ${lost.personalBest}`);
+}
+
+// Two of the four demerit lines used to sit exactly on the fail thresholds, so
+// they could never fire on a lift that was still a win, and the letter moved
+// only on sway and radio faults.
+async function tGradeMovesInsideTheWin() {
+  async function graded(mut) {
+    const sim = await startMission(1);
+    const s = sim.state;
+    s.mission.landingTol = 0.35;
+    s.mission.landingPos = [0, 0, 0];
+    s.mission.landedAt = [0, 0, 0];
+    s.mission.result = 'win';
+    mut(s, sim);
+    sim.bus.emit('lift.win', { id: 1 });
+    return { grade: s.scoring.grade, why: s.scoring.demerits.map((d) => d.why) };
+  }
+  const clean = await graded(() => {});
+  const offMark = await graded((s) => { s.scoring.landingError = 0.30; });   // inside 0.35, still a win
+  const heavy = await graded((s) => { s.mission.maxCapacityPct = 88; });     // under 90, still a win
+  rec('the grade moves on things a winning lift can actually do',
+    clean.grade === 'A' && offMark.grade !== 'A' && heavy.grade !== 'A',
+    `clean ${clean.grade}, 0.30 m off a 0.35 m pad ${offMark.grade} ${JSON.stringify(offMark.why)}, 88 percent ${heavy.grade} ${JSON.stringify(heavy.why)}`);
+}
+
+// 'No Two-Block' was twoBlocks === 0 and 'Chart Legal' was maxCapacityPct < 90,
+// and both of those things fail the lift, so every winning lift had them for
+// free. What matters is not how many the tutorial hands out but whether they can
+// be missed at all by a lift that still wins.
+async function tAchievementsAreNotFree() {
+  async function earnedOn(mut) {
+    globalThis.localStorage && globalThis.localStorage.clear();
+    const sim = await startMission(1);
+    const s = sim.state;
+    s.mission.landingTol = 0.35;
+    s.mission.landingPos = [0, 0, 0];
+    s.mission.landedAt = [0, 0, 0];
+    s.mission.result = 'win';
+    mut(s);
+    sim.bus.emit('lift.win', { id: 1 });
+    return s.scoring.earned || [];
+  }
+  const roomy = await earnedOn((s) => { s.scoring.closestBlock = 8; s.mission.maxCapacityPct = 40; });
+  const tight = await earnedOn((s) => { s.scoring.closestBlock = 0.8; s.mission.maxCapacityPct = 88; });
+  rec('the two achievements that used to restate the win predicate can be missed',
+    roomy.includes('No Two-Block') && roomy.includes('Chart Legal') &&
+    !tight.includes('No Two-Block') && !tight.includes('Chart Legal'),
+    `roomy ${JSON.stringify(roomy)}, tight ${JSON.stringify(tight)}`);
+}
+
+// The mushroom is a toggle, and radio.js accepts the ALL STOP answer from the
+// level. An operator already stopped when ground called it got the credit from
+// ground and none from the card.
+async function tDogEverythingWithTheMushroomDown() {
+  const sim = await startMission(0);
+  const s = sim.state;
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  park(sim, { slew: p.slew, radius: 18 });
+  until(sim, atNode('toPickup'), 8);
+  rig(sim);
+  s.intent.estop = true;                        // already dogged
+  until(sim, () => false, 0.5);
+  s.load.swing.x = 0.2;
+  until(sim, atNode('allStop'), 8);
+  until(sim, () => false, 3);
+  s.mission.result = 'win';
+  s.scoring.landingError = 0;
+  sim.bus.emit('lift.win', { id: 0 });
+  rec('an ALL STOP answered by a mushroom that was already down still counts',
+    (sim.state.scoring.earned || []).includes('Dog Everything'),
+    `earned ${JSON.stringify(sim.state.scoring.earned)}`);
+}
+
+// The hooks counter counted completed lifts, so every load rigged and then blown
+// counted for nothing and "Hundred Hooks" wanted a hundred wins.
+async function tHooksCountRigs() {
+  globalThis.localStorage && globalThis.localStorage.clear();
+  const sim = await startMission(1);
+  const s = sim.state;
+  const p = polarOf(MISSIONS[1].pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius, line: 43.8 - (1.3 + MISSIONS[1].load.size[1]) + 0.05 });
+  sim.bus.emit('hook.attach', {});
+  until(sim, () => false, 0.2);
+  const hooked = s.load.attached;
+  s.mission.result = 'fail';
+  s.mission.failReason = 'anti-two-block';
+  sim.bus.emit('lift.fail', { id: 1 });
+  rec('a load rigged and then blown still counts as a hook',
+    hooked && s.progress.hooks === 1, `attached ${hooked}, hooks ${s.progress.hooks}`);
+}
+
+// A refused write used to be swallowed while the in-memory progress carried on,
+// so private browsing got a card full of unlocks and a run that vanished.
+async function tBlockedStorageSaysSo() {
+  const real = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: () => null,
+    setItem: () => { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; },
+    removeItem: () => {}, clear: () => {}
+  };
+  let card = null;
+  try {
+    const sim = await flyMission(0);
+    card = sim.modules.scoring.afterAction(sim.ctx);
+  } finally {
+    globalThis.localStorage = real;
+  }
+  rec('a browser that refuses to save says so on the card',
+    card && card.savedOk === false, `savedOk ${card && card.savedOk}`);
 }
 
 // ---------------------------------------------------------------- run
@@ -712,7 +1237,15 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tRestingIsNotColliding, tShaftReachable, tNoTeleportOntoRoof,
   tFlyTruck, tFlyScaffold, tFlyBlindShaft,
   tGradeRubric, tFlowAndResume, tRefreshKeepsProgress, tAchievementOnce,
-  tSaveSurvivesGarbage, tGusts];
+  tSaveSurvivesGarbage, tGusts,
+  tEmptySwingIsNotAnAllStop, tEmptySwingIsNotCharged,
+  tRopeStops, tRopeStopsOnALandedLoad, tNoSoftBandOnTop, tFootprintNotAPoint,
+  tHoistBudgetCannotRatchet, tHoistBudgetAllowsACorrection,
+  tSayAgainInAGateIsFree, tGroundSignsOff, tGuideDoesNotWhipsaw, tHeldMicIsNotADouble,
+  tFailCardIsNotAReplay, tGradeMovesInsideTheWin, tAchievementsAreNotFree,
+  tDogEverythingWithTheMushroomDown, tHooksCountRigs, tBlockedStorageSaysSo,
+  tGuideKeepsTalkingWhenShort, tLandedLoadCanBeNudged, tSignOffIsNotAFaultSurface,
+  tHookRetryIsNeverLost, tCorruptAwardStaysAwarded];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

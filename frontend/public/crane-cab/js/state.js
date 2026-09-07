@@ -53,7 +53,7 @@ export function createState() {
       radius: 0, hookHeight: 0, heading: 0,
       actualLoad: 0, ratedLoad: 0, capacityPct: 0,
       lmiLock: false, a2b: false, slack: false, collision: false,
-      wind: 0, swayAngle: 0,
+      wind: 0, swayAngle: 0, loadSway: 0,
       maxLoadRadius: 0, reachPct: 0  // Phase 2B: how far out this load may go
     },
 
@@ -90,8 +90,10 @@ export function createState() {
       // sensors.wind. Before this the world had exactly one floor, at y 0, so
       // the scaffold could not be landed on and the shaft could not be entered.
       surfaceY: 0,
-      near: false, inZone: false,   // live, so radio.js can gate on them
-      furthest: 0          // furthest mission reached, restored from save
+      near: false, inZone: false    // live, so radio.js can gate on them
+      // PHASE 4B: mission.furthest is gone. save.js wrote it, nothing read it,
+      // and missions.firstUnfinished has always read progress.furthest instead.
+      // Two names for one number in two systems' namespaces is how they drift.
     },
 
     // scoring.js owns this. after-action card reads it.
@@ -100,12 +102,17 @@ export function createState() {
       radioFaults: 0, landingError: null, grade: null,
       // PHASE 4 additive: elapsed at resolution, the lines that cost the grade,
       // achievements unlocked this lift, and whether it beat the stored best.
-      elapsed: 0, demerits: [], earned: [], personalBest: false
+      elapsed: 0, demerits: [], earned: [], personalBest: false,
+      // PHASE 4B additive: least rope left above the two-block stop this lift.
+      closestBlock: Infinity
     },
 
     // PHASE 4. What survives a refresh. save.js loads and persists it; scoring
     // and missions read it. New top-level field, declared per hard rule 6.
-    progress: { achievements: {}, best: {}, hooks: 0, furthest: 0 },
+    // savedOk goes false the first time a write is refused (private browsing, a
+    // full quota) so the card can say the run is not being kept, instead of
+    // promising unlocks and personal bests that vanish on refresh.
+    progress: { achievements: {}, best: {}, hooks: 0, furthest: 0, savedOk: true },
 
     // save.js loads and persists this.
     settings: { sensitivity: 1, damping: 0.5, units: 'imperial', mute: false },

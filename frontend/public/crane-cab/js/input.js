@@ -88,7 +88,13 @@ export function init(ctx) {
       return;
     }
     if (code === 'KeyT') {
-      ctx.state.intent.ptt = true;
+      // Phase guarded like the latching toggles above: the mic has no business
+      // being keyed on the title, pause or end card. e.repeat matters as much as
+      // the guard. A T held across the end card is blocked on its first keydown,
+      // but the browser keeps sending auto repeats, and the first one after the
+      // next lift starts would key the mic about thirty milliseconds in, on top
+      // of ground's first word. A held key is one press, not many.
+      if (playing && !e.repeat) ctx.state.intent.ptt = true;
       return;
     }
     if (code === 'KeyC') {
@@ -117,6 +123,9 @@ export function init(ctx) {
     brakeKeyWasDown = false;
     camKeyWasDown = false;
     ctx.state.intent.ptt = false;
+    // The pointerup that would have ended a look-drag goes to whatever took the
+    // focus, so alt-tabbing with the button down left the view dragging.
+    dragging = false;
   });
 
   // Mouse-drag look. Left button drag only, so it doesn't fight the reply

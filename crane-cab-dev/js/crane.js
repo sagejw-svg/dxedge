@@ -4,6 +4,8 @@
 // E-stop: zero all velocities immediately, set crane.estopped, emit 'estop'.
 // Slew brake: holds slew, ignores slew intent while on.
 // Clamp radius to [minRadius, jibLength - 1], line to [minLine, maxLine].
+// PHASE 4B: and a rope stop, so paying out cannot drive the block through the
+// deck or through a load that is already sitting on something.
 // LMI lockout (state.sensors.lmiLock) blocks hoist-up and trolley-out only.
 // A2B (state.sensors.a2b) blocks hoist-up only.
 //
@@ -22,6 +24,7 @@
 // locked, trolley-out brakes at 2x accel instead of coasting on the normal ramp.
 
 import { CRANE } from '../data/crane.js';
+import { SUPPORT_REACH } from '../data/missions.js';
 
 const RANGE_SPEED = {
   slew: CRANE.slew.max,
@@ -48,6 +51,33 @@ function approach(current, target, maxDelta) {
   if (current < target) return Math.min(current + maxDelta, target);
   if (current > target) return Math.max(current - maxDelta, target);
   return current;
+}
+
+// How much rope can be out before the thing on the hook is on the ground. Reads
+// state.mission.surfaceY, which missions.js publishes one tick stale: at the
+// fastest hoist that is 12 mm.
+// Derived, so it cannot drift away from the band missions.js grants support over
+// and sensors.js suppresses the collision over. A load standing on a face has its
+// unclamped bottom this far below that face, and if that ever fell outside
+// SUPPORT_REACH, trolleying a landed load off the volume and back on would leave
+// it in a collision nothing could resolve. It also has to be more than the 0.15 m
+// pendulum.js bleeds tension over, or the line would never read slack and the
+// load could never be unhooked. 0.7 of 0.25 is 0.175, which is both.
+const ROPE_SLACK = SUPPORT_REACH * 0.7;  // m of pay-out allowed after contact
+
+function ropeStop(state) {
+  const c = state.crane;
+  if (state.mission.id === null) return c.maxLine;
+  const surfaceY = state.mission.surfaceY || 0;
+  // hookBottomY is cabHeight + hookDrop - line, so what hangs below the block is
+  // the load's height while one is rigged and nothing while the block is empty.
+  // An empty block gets no slack allowance: there is nothing to unhook, so it
+  // stops on the surface rather than a third of a metre inside it.
+  if (!state.load.attached) {
+    return Math.min(c.maxLine, Math.max(c.minLine, c.cabHeight + CRANE.hookDrop - surfaceY));
+  }
+  const out = c.cabHeight + CRANE.hookDrop - surfaceY - (state.load.size[1] || 0) + ROPE_SLACK;
+  return Math.min(c.maxLine, Math.max(c.minLine, out));
 }
 
 function clampVel(pos, vel, min, max) {
@@ -127,9 +157,28 @@ export function update(ctx, dt) {
   const lineMin = c.minLine;
   const lineMax = c.maxLine;
   c.lineVel = clampVel(c.line, c.lineVel, lineMin, lineMax);
+  const lineWas = c.line;
   c.line += c.lineVel * dt;
   if (c.line < lineMin) { c.line = lineMin; c.lineVel = 0; }
   if (c.line > lineMax) { c.line = lineMax; c.lineVel = 0; }
+
+  // The rope stop. Paying out past the point where whatever hangs on the hook is
+  // sitting on something just piles rope on the deck. Without this the block and
+  // the rope carried on down through a landed load, through the scaffold and 26 m
+  // under the deck, with the hook height gauge reading negative all the way, and
+  // holding "down" after touchdown is exactly what "down easy" invites.
+  //
+  // ROPE_SLACK is what is left to pay out after contact. See its definition for
+  // the two numbers it has to sit between.
+  //
+  // Only ever a limit on paying out. If the surface rises under a swinging block
+  // the stop moves up, and hauling the line in to meet it would snatch the load
+  // off the deck, so a line already past the stop is left where it is.
+  const stop = ropeStop(state);
+  if (c.line > stop && c.lineVel > 0) {
+    c.line = Math.max(stop, lineWas);
+    c.lineVel = 0;
+  }
 
   // --- Look-around --- intent.look.{dx,dy} is a one-shot per-tick delta
   // from input.js (mouse drag), cleared in endTick. Integrated here, read

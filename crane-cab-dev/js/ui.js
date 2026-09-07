@@ -85,12 +85,17 @@ export function showAfterAction(ctx, a) {
       ? 'Nothing to pick at. Clean lift.'
       : `Cost you the grade: ${a.demerits.map((d) => d.why).join(', ')}.`;
 
-  el.ecEarned.textContent = a.earned && a.earned.length
+  // Guarded on the win like the two lines around it. Nothing is unlocked by a
+  // lift that ended in a fail, and this line used to be the only one on the card
+  // without the guard.
+  el.ecEarned.textContent = a.won && a.earned && a.earned.length
     ? `Unlocked: ${a.earned.join(', ')}.` : '';
 
-  el.ecBest.textContent = !a.won ? ''
-    : a.personalBest ? 'Personal best for this lift.'
-      : a.best ? `Your best here: ${fmtClock(a.best.elapsed)}, grade ${a.best.grade || '-'}.` : '';
+  el.ecBest.textContent = !a.savedOk
+    ? 'This browser is not keeping saved progress, so none of this is being kept.'
+    : !a.won ? ''
+      : a.personalBest ? 'Personal best for this lift.'
+        : a.best ? `Your best here: ${fmtClock(a.best.elapsed)}, grade ${a.best.grade || '-'}.` : '';
 
   drawPlan(a, u);
   el.ecButton.textContent = a.won ? 'Next lift' : 'Try again';

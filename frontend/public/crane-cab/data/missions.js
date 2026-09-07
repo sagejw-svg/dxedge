@@ -7,6 +7,18 @@
 // pass through it. An optional hole { min:[x,z], max:[x,z], floor } opens the
 // deck over that footprint, which is what makes a below-deck landing possible.
 
+// How far below a volume's top face the load may be and still be standing on it
+// rather than buried in it. It has to be one number, not two: missions.js grants
+// support inside this band and sensors.js suppresses the collision inside the
+// same band, and when the two disagreed there was a strip on top of every volume
+// that was neither solid nor supporting, wide enough to trolley a load straight
+// through a parapet. Big enough to cover a few ticks of the fastest hoist and
+// float noise on a shared face, and wider than the rope slack crane.js allows
+// after touchdown (see ropeStop): a load standing on a face sits its slack below
+// it, and if that put it outside this band, nudging a landed load off the volume
+// and back on turned into a collision it could never recover from.
+export const SUPPORT_REACH = 0.25;   // m
+
 export const MISSIONS = [
   {
     id: 0,

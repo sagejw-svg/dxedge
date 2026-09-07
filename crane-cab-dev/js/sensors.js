@@ -7,11 +7,13 @@
 // a2b when line <= minLine + 0.5, emit alarm.a2b on rising edge
 // slack mirrors load.onSurface with near-zero tension
 // collision: AABB of the load vs mission deck volumes, emit collision on rising edge
-// swayAngle = hypot(load.swing.x, load.swing.y)
+// swayAngle = hypot(load.swing.x, load.swing.y), whatever is on the rope
+// loadSway = swayAngle while a load is attached, otherwise 0. Everything that
+//   judges a lift reads this one; the gauge reads swayAngle.
 //
 // PHASE 1 filled radius, hookHeight and heading. PHASE 2 fills the rest.
 
-import { MISSIONS } from '../data/missions.js';
+import { MISSIONS, SUPPORT_REACH } from '../data/missions.js';
 import { CRANE, ratedAtRadius, maxRadiusForLoad } from '../data/crane.js';
 
 const G = 9.81;
@@ -60,14 +62,18 @@ function loadAABB(state) {
 // test calls a shared face a hit. Standing on something is not colliding with
 // it: without this the scaffold landing fails the instant it succeeds, and the
 // truck pickup fails the instant the load is hooked.
+// The band is SUPPORT_REACH, the same number missions.js grants support over, so
+// that "standing on it" and "not colliding with it" are the same set. It used to
+// be 0.35 here against 0.25 there, which left a tenth of a metre on top of every
+// volume where nothing collided and nothing held the load up. The rope pay-out
+// this was once widened for cannot reach below the face any more: pendulum.js
+// clamps load.bottomY at the surface and crane.js stops the rope there.
+// Horizontal overlap is inclusive, matching overlaps() below, so a shared face is
+// never a hit on one test and a miss on the other.
 function restingOn(box, d) {
-  // Wide enough to cover the rope pay-out after touchdown: pendulum.js bleeds
-  // tension over TENSION_BLEED (0.15 m), so a fully slack load sits that far
-  // below the face it is resting on. Still far too small to hide a side impact.
-  const EPS = 0.35;
-  return box.min[1] >= d.max[1] - EPS && box.min[1] <= d.max[1] + EPS &&
-    box.max[0] > d.min[0] && box.min[0] < d.max[0] &&
-    box.max[2] > d.min[2] && box.min[2] < d.max[2];
+  return box.min[1] >= d.max[1] - SUPPORT_REACH && box.min[1] <= d.max[1] + SUPPORT_REACH &&
+    box.max[0] >= d.min[0] && box.min[0] <= d.max[0] &&
+    box.max[2] >= d.min[2] && box.min[2] <= d.max[2];
 }
 
 function overlaps(a, b) {
@@ -143,7 +149,12 @@ export function update(ctx, dt) {
     if (g <= 0) {
       s.wind = mission.wind.base;
     } else {
-      const t = state.time.t;
+      // Time since this lift started, not session time. Seeding off state.time.t
+      // meant a retry began at whatever phase the clock happened to be at, so
+      // mission 2 was a different difficulty every attempt and the weather was
+      // re-rollable by failing on purpose. The comment above always claimed
+      // otherwise; now it is true.
+      const t = state.mission.elapsed;
       const k = mission.id * 1.7;
       const n = 0.5 + 0.5 * (0.62 * Math.sin(t * 0.62 + k) + 0.38 * Math.sin(t * 0.29 + k * 2.3));
       s.wind = mission.wind.base + g * Math.max(0, Math.min(1, n));
@@ -166,4 +177,12 @@ export function update(ctx, dt) {
   wasCollision = hit;
 
   s.swayAngle = Math.hypot(load.swing.x, load.swing.y);
+  // The empty hook block swings too, and a pendulum's angle under a horizontal
+  // acceleration does not care about mass: tan(angle) = a / g. Slewing an empty
+  // block out at range II leans it seven to ten degrees, which is real and worth
+  // showing on the gauge. It is not a load swinging, so the things that judge a
+  // lift read loadSway instead: ground does not call ALL STOP on an empty block,
+  // and the after-action card does not charge the operator for a swing that
+  // happened before anything was rigged.
+  s.loadSway = load.attached ? s.swayAngle : 0;
 }

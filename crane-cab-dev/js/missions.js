@@ -16,7 +16,7 @@
 //        hook (once the script has passed its radio check), or an ignored ALL
 //        STOP. Exactly one of lift.win / lift.fail is emitted per lift.
 
-import { MISSIONS } from '../data/missions.js';
+import { MISSIONS, SUPPORT_REACH } from '../data/missions.js';
 import { CRANE } from '../data/crane.js';
 
 const HOOK_H_TOL = 1.0;      // m, horizontal hook to load
@@ -24,15 +24,14 @@ const HOOK_V_TOL = 0.6;      // m, hook block bottom against the load top
 const NEAR_DIST = 2.0;       // m, horizontal, for load.near
 const NEAR_HEIGHT = 3.0;     // m, load bottom above the landing, for load.near
 const LEAVE_FACTOR = 1.5;    // zone events re-arm once the load is this far back out
-const HOIST_UP_VEL = -0.05;  // m/s of rope coming in that counts as hoisting up
-const HOIST_UP_ALLOWANCE = 2.0;  // m of rope an unhooked block may take back in
+const HOIST_UP_ALLOWANCE = 2.0;  // m the unhooked block may rise above its low point
 const CAP_LIMIT = 90;        // percent of rated the lift must stay under to score
 const LANDING_HEIGHT_TOL = 0.8;  // m the load bottom may sit off the landing height
-const SUPPORT_REACH = 0.25;      // m below a face the load may be and still land on it
 const START_LINE = 30;       // m of rope every lift begins with, the state.js default
 const CLEAR_PICKUP = 0.3;    // m the load must rise off its pickup surface before
                              // deck collisions start counting against the lift
 const CLEAR_PICKUP_H = 2.0;  // or this far sideways from the pickup, whichever first
+const SIGN_OFF_GRACE = 2.5;  // s a won lift stays open for ground's last call
 
 let mission = null;
 let resolved = false;
@@ -41,8 +40,10 @@ let zoneEmitted = false;
 let hookCalled = false;      // ground has called for the hook
 let releasedDown = false;    // the load was set down and unhooked
 let collisionArmed = false;  // see the arming rule in update()
-let hoistedUp = 0;           // m of rope taken in while unhooked, since the hook call
+let blockLow = null;         // lowest the empty block has been since the hook call
 let releasedInZone = false;  // was the load actually on the pad when it was let go
+let signOff = -1;            // s left for ground to sign off, once the win is earned
+let signedOff = false;       // the script reached its last node
 
 function hookWorld(state) {
   // Where the hook block actually is, swing included. The guide calls in
@@ -77,6 +78,7 @@ export function init(ctx) {
   // 1 an instant fail: it starts from wherever the last lift left the rope, and
   // its load sits on a truck bed, so reaching it means hoisting up.
   bus.on('hook.attach', () => { hookCalled = true; });
+  bus.on('radio.complete', () => { signedOff = true; });
 
   bus.on('alarm.a2b', () => fail(ctx, 'anti-two-block'));
   bus.on('lmi.lock', () => fail(ctx, 'LMI lockout'));
@@ -143,11 +145,16 @@ export function start(ctx, id) {
   hookCalled = false;
   releasedDown = false;
   collisionArmed = false;
-  hoistedUp = 0;
+  blockLow = null;
   releasedInZone = false;
+  signOff = -1;
+  signedOff = false;
 
   // Seed from above, so the pickup's own surface (a truck bed, say) counts.
-  m.surfaceY = surfaceUnder(m.pickupPos[0], m.pickupPos[2], m.pickupPos[1] + 10);
+  m.surfaceY = surfaceUnder(
+    planAt(m.pickupPos[0], m.pickupPos[2], mission.load.size[0], mission.load.size[2]),
+    m.pickupPos[1] + 10
+  );
 
   bus.emit('lift.start', { id });
   bus.emit('mission.furthest', { id });
@@ -226,7 +233,11 @@ function onRelease(ctx) {
     Math.abs(state.load.bottomY - land[1]) < LANDING_HEIGHT_TOL;
   state.load.attached = false;
   state.mission.hooked = false;
-  state.mission.landedAt = [centre.x, land[1], centre.z];
+  // Where the load actually is, not the altitude it was supposed to be put at.
+  // render.js draws the landed crate here, so using land[1] left every failed
+  // set-down floating twelve metres over bare ground on the scaffold mission and
+  // buried nine metres under the deck on the shaft.
+  state.mission.landedAt = [centre.x, state.load.bottomY, centre.z];
   releasedDown = true;
   bus.emit('hook.released', { id: mission.id });
 }
@@ -236,17 +247,25 @@ function onRelease(ctx) {
 // drops the floor to the shaft bottom. Sampled at the load centre, which is
 // enough for the shapes v0.1 uses - none of them has an edge a load can straddle
 // in a way that matters.
-function surfaceUnder(x, z, bottomY) {
+// fp is the load's plan footprint, not a point. A point sample let a load whose
+// centre cleared a volume hang a third of itself inside it, reported neither as a
+// collision nor as landed, and let a load half over an opening drop through it.
+function surfaceUnder(fp, bottomY) {
   if (!mission) return 0;
   let y = 0;
   const h = mission.hole;
-  if (h && x >= h.min[0] && x <= h.max[0] && z >= h.min[1] && z <= h.max[1]) {
+  // The deck opens only where the whole footprint is inside the opening. A load
+  // lapping the edge sits on the deck; it does not fall down the shaft.
+  if (h && fp.minX >= h.min[0] && fp.maxX <= h.max[0] &&
+      fp.minZ >= h.min[1] && fp.maxZ <= h.max[1]) {
     y = h.floor;
   }
   const deck = mission.deck || [];
   for (let i = 0; i < deck.length; i += 1) {
     const d = deck[i];
-    if (x < d.min[0] || x > d.max[0] || z < d.min[2] || z > d.max[2]) continue;
+    // Inclusive, matching the overlap test in sensors.js.
+    if (fp.maxX < d.min[0] || fp.minX > d.max[0] ||
+        fp.maxZ < d.min[2] || fp.minZ > d.max[2]) continue;
     // Support is directional. A volume's top face only holds the load up if the
     // load is arriving on top of it: a load already below that height is beside
     // or inside the volume, which is a collision, not a landing. Without this a
@@ -259,6 +278,22 @@ function surfaceUnder(x, z, bottomY) {
 }
 
 // Where the load itself is, hook plus swing offset.
+// The plan footprint of whatever is on the hook. The load box is treated as
+// axis aligned, the same conservative reading sensors.js uses for its collision
+// AABB, so the two tests see the same shape.
+const BLOCK_PLAN = 0.5;          // m, the hook block's own plan size
+
+function loadFootprint(state) {
+  const c = loadCentre(state);
+  const sx = state.load.attached ? (state.load.size[0] || 0) : BLOCK_PLAN;
+  const sz = state.load.attached ? (state.load.size[2] || 0) : BLOCK_PLAN;
+  return { minX: c.x - sx / 2, maxX: c.x + sx / 2, minZ: c.z - sz / 2, maxZ: c.z + sz / 2 };
+}
+
+function planAt(x, z, sx, sz) {
+  return { minX: x - sx / 2, maxX: x + sx / 2, minZ: z - sz / 2, maxZ: z + sz / 2 };
+}
+
 function loadCentre(state) {
   const c = state.crane;
   const jibX = c.radius + Math.sin(state.load.swing.y) * c.line;
@@ -296,13 +331,12 @@ export function update(ctx, dt) {
   m.elapsed += dt;
 
   // Publish first, so it is as fresh as the tick order allows.
-  const here = loadCentre(state);
-  m.surfaceY = surfaceUnder(here.x, here.z, loadBottomY(state));
+  m.surfaceY = surfaceUnder(loadFootprint(state), loadBottomY(state));
 
   if (resolved) return;
 
   if (state.sensors.capacityPct > m.maxCapacityPct) m.maxCapacityPct = state.sensors.capacityPct;
-  if (state.sensors.swayAngle > m.maxSway) m.maxSway = state.sensors.swayAngle;
+  if (state.sensors.loadSway > m.maxSway) m.maxSway = state.sensors.loadSway;
 
   // A load sitting on the thing it is picked from shares a face with that deck
   // volume, and an AABB test counts a shared face as a hit - mission 1's load
@@ -327,19 +361,28 @@ export function update(ctx, dt) {
   // only input that fixed it was the one that ended the lift. So it is a budget,
   // not a tripwire. Small corrections are free; hauling up is not.
   if (hookCalled && !m.hooked && !releasedDown) {
-    if (state.crane.lineVel < HOIST_UP_VEL) {
-      hoistedUp += -state.crane.lineVel * dt;
-      if (hoistedUp > HOIST_UP_ALLOWANCE) {
-        fail(ctx, 'hoist before on the hook');
-        return;
-      }
-    } else if (state.crane.lineVel > -HOIST_UP_VEL) {
-      // Paying rope back out is the opposite of snatching, so it clears the
-      // budget. Without this the allowance was a per-lift lifetime total, and
-      // two corrections of the size ground itself asks for spent it: the player
-      // was failed for snatching an unrigged load while doing what they were
-      // told, with the block two metres off the deck.
-      hoistedUp = 0;
+    // Measured as height gained above the lowest the block has been since the
+    // call, not as rope integrated while the drum happens to be turning the
+    // right way. Two things were wrong with integrating.
+    //
+    // It ratcheted: paying out cleared the budget outright, so haul 1.5 m, jog
+    // down 0.1 m, repeat, and 54 m of rope came in with an empty hook and no
+    // fail. A reference that only ever moves down cannot be reset that way.
+    //
+    // And it was far tighter than 2.0 m looked. Releasing the control at the
+    // target still coasts the drum to a stop, and every centimetre of that was
+    // charged, so the real allowance at range II was 2.0 - v^2/2a, about 1.06 m:
+    // one honest correction of an overshoot ended the lift.
+    // Judged only while the operator is actually asking for up. Releasing the
+    // control at the target still coasts the drum most of a metre at range II,
+    // and charging that made the honest correction the thing that ended the
+    // lift. The coast does not move the low water mark either, so it cannot be
+    // used to buy more budget.
+    const blockY = hookBottomY(state);
+    if (blockLow === null || blockY < blockLow) blockLow = blockY;
+    if (state.intent.hoist > 0 && blockY - blockLow > HOIST_UP_ALLOWANCE) {
+      fail(ctx, 'hoist before on the hook');
+      return;
     }
   }
 
@@ -378,7 +421,16 @@ export function update(ctx, dt) {
   // release already required is latched in releasedDown rather than re-read.
   if (releasedDown && m.everHooked) {
     if (releasedInZone && m.maxCapacityPct < CAP_LIMIT && !m.hadCollision) {
-      win(ctx);
+      // Let ground sign off first. The unhook lands inside radio.update on one
+      // tick, and missions.update runs before radio.update on the next, so
+      // winning the instant the load was let go stopped the script one node
+      // short every time: "Good lift. Standing by." was written into all four
+      // scripts and never once spoken. The grace is a backstop for a lift that
+      // ends with no script running, or a script that cannot reach its last
+      // node; whichever comes first ends the lift.
+      if (signOff < 0) signOff = SIGN_OFF_GRACE;
+      signOff -= dt;
+      if (signedOff || signOff <= 0) win(ctx);
     } else if (!releasedInZone) {
       // Set down somewhere else. Without this the lift never resolves and the
       // end-of-lift card never appears. Added in Phase 3, flagged in the report.

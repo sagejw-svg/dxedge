@@ -7,7 +7,20 @@ fresh session doesn't have to reverse-engineer it from git history.
 
 ## Current state
 
-- Last completed phase: **4 (M2/M3 + scoring)** - the phase table's own done
+- Last completed phase: **4 (M2/M3 + scoring)**, plus a fourth bug and
+  improvement pass on top of it (Changelog entry "Phase 4B"). That pass fixed
+  two things that made the game unplayable on real hardware and real controls.
+  The hook camera inset passed drawing buffer pixels to setViewport and
+  setScissor, which three multiplies by the pixel ratio itself, so on any Retina
+  or scaled display the inset was drawn off screen AND the whole main view was
+  left scaled and cropped until a window resize. And sensors.js published one
+  sway angle for the empty hook block and for a load alike, so slewing out at
+  range II, the first thing a player does on every mission, raised a phantom ALL
+  STOP and failed the lift in about ten seconds. It also closed the most common
+  hang in the game: a hook retry that expired inside a transmission was lost,
+  stranding a quarter of all fuzzed lifts at "on the hook" with no way out.
+  test/regress.mjs is now 63 checks and test/smoke.mjs 7.
+- Phase 4 itself: the phase table's own done
   condition, "refresh keeps progress", is met and checked. scoring.js grades a
   lift on a demerit count and says which line cost the letter; save.js persists
   achievements, personal bests, a hooks counter and the furthest mission through
@@ -24,7 +37,10 @@ fresh session doesn't have to reverse-engineer it from git history.
   volume's top only holds a load arriving from above, pendulum clamps the load at
   what it rests on (state.load.bottomY), and resting on a volume is no longer
   counted as colliding with it. Verified by an autopilot that flies each of the
-  four missions on the radio alone; test/regress.mjs is 40 checks.
+  four missions on the radio alone.
+- Not yet live. Two commits sit unpushed on main (Phase 4, Phase 4B): the
+  sandbox cannot push, so they reach James as a patch. Live is still service
+  worker v18; the tree is v20.
 - Next phase: **5 (Phone + pause)** - touch sticks, pause menu, settings and the
   controls card, per the Notion phase table. No prompt doc yet; draft
   docs/PHASE-5-PROMPT.md first, per AUTOMATION.md step 2. Note that save.js now
