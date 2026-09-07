@@ -19,7 +19,7 @@ fresh session doesn't have to reverse-engineer it from git history.
   STOP and failed the lift in about ten seconds. It also closed the most common
   hang in the game: a hook retry that expired inside a transmission was lost,
   stranding a quarter of all fuzzed lifts at "on the hook" with no way out.
-  test/regress.mjs is now 63 checks and test/smoke.mjs 7.
+  test/regress.mjs is now 65 checks and test/smoke.mjs 12.
 - Phase 4 itself: the phase table's own done
   condition, "refresh keeps progress", is met and checked. scoring.js grades a
   lift on a demerit count and says which line cost the letter; save.js persists
@@ -38,9 +38,20 @@ fresh session doesn't have to reverse-engineer it from git history.
   what it rests on (state.load.bottomY), and resting on a volume is no longer
   counted as colliding with it. Verified by an autopilot that flies each of the
   four missions on the radio alone.
-- Not yet live. Two commits sit unpushed on main (Phase 4, Phase 4B): the
-  sandbox cannot push, so they reach James as a patch. Live is still service
-  worker v18; the tree is v20.
+- Phase 4 and 4B are live as of Sep 7 2026 (commit ab52d9c). A build stamp
+  followed (aaaf5ce): data/build.js carries a sha and a date, the deploy stamps
+  it into the published mirror only, and the title card shows it bottom right.
+  Never commit a stamped build.js; the committed value stays sha: 'dev'.
+- A graphics pass followed that. The view had no shadows and flat lighting, so a
+  twelve metre scaffold seen from a forty two metre cab was a slightly different
+  shade of grey on a flat plane and mission 2 looked like it had no scaffold at
+  all. There is now a sun that casts, a gradient sky, lattice for the jib,
+  counter jib and mast, a counterweight, painted site markings, and a clustered
+  yard of containers and material stacks outside the trolley stop. Deck volumes
+  get their own value plus hazard-striped edge protection on anything tall
+  enough to be a working level. Shadows drop themselves, one way, if the frame
+  rate sits under 20 for six seconds; test/smoke.mjs watches that happen on the
+  software renderer.
 - Next phase: **5 (Phone + pause)** - touch sticks, pause menu, settings and the
   controls card, per the Notion phase table. No prompt doc yet; draft
   docs/PHASE-5-PROMPT.md first, per AUTOMATION.md step 2. Note that save.js now
