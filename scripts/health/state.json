@@ -59,8 +59,19 @@
    "new_finding": "none. No new defect on any surface and no new escalation.",
    "repairs_made": "none - nothing was broken",
    "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied.",
-   "commits_pushed": "PENDING - state file only",
-   "deploy_result": "state-file-only commit; no deploy verification needed beyond the post-push health check recorded below"
+   "commits_pushed": "894cfbb (state file only)",
+   "deploy_result": {
+    "status": "success, verified",
+    "commit": "894cfbb",
+    "verified_at": "2026-09-07T04:24Z",
+    "checks": [
+     "/api/health returns status ok with a fresh timestamp (04:23:19Z). No stale-timestamp recurrence.",
+     "Post-deploy /api/health read sat_tles 9, which is the cold-cache counter warming exactly as characterised on 2026-09-05. Further confirmation that health-metric-cold-cache stays closed.",
+     "/cyber/ re-checked in headless Chromium after deploy: 10 requests, 8 /api/feed, all 200 except the known Google Fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, CISA KEV content rendering.",
+     "/aethersdr/ re-checked after deploy: 7 requests, 5 /api/feed, all 200 except the same fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, AetherSDR v26.9.2 release list rendering.",
+     "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
+    ]
+   }
   },
   {
    "date": "2026-09-06",
