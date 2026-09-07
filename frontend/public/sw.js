@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v23'
+const CACHE_NAME = 'dxedge-v24'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -58,8 +58,19 @@ self.addEventListener('fetch', (event) => {
     (!isVersionedAsset(url) && url.pathname.endsWith('.js'))
 
   if (mutable) {
+    // cache: 'reload' is the whole point. A bare fetch() inside a service worker
+    // still goes through the browser's own HTTP cache, so "network first" was
+    // network first only for URLs the HTTP cache had nothing fresh for. Every
+    // client that visited while nginx was still marking these paths
+    // `max-age=31536000, immutable` has entries that stay fresh until 2027, and
+    // for those clients this fetch returned the year-old file without a single
+    // packet leaving the machine. The symptom was a current index.html running
+    // Phase 0 modules: 708 bytes of pendulum.js inside a page that had every
+    // later feature in its markup. curl could never see it, because curl has no
+    // HTTP cache. 'reload' bypasses that cache for the request and rewrites the
+    // stored entry with what the server actually has, so one visit repairs it.
     event.respondWith(
-      fetch(request).then(response => {
+      fetch(request.url, { cache: 'reload', credentials: 'same-origin' }).then(response => {
         if (response.ok) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then(cache => cache.put(request, clone))

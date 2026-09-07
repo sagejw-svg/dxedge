@@ -1538,6 +1538,41 @@ async function tLoadRisesAtTheEndsOfItsArc() {
     `sheave to hook ${drawn.toFixed(6)} m against ${s.crane.line} m paid out, at ${(Math.abs(s.load.swing.x) * 180 / Math.PI).toFixed(2)} deg`);
 }
 
+
+// The cache poisoning that cost two rounds of "it still looks like the old
+// version". A bare fetch() inside a service worker goes through the browser's own
+// HTTP cache, so the network-first strategy was network-first only for URLs the
+// HTTP cache had nothing fresh for. Clients that visited while nginx was marking
+// this folder immutable for a year had entries that stay fresh until 2027, and
+// for them the "network" fetch never left the machine: a current index.html
+// running Phase 0 modules, 708 bytes of pendulum.js under a page with every later
+// feature in its markup. No amount of curl could see it, because curl has no HTTP
+// cache, so this is a source check rather than a behaviour one.
+async function tServiceWorkerReachesTheNetwork() {
+  const sw = readFileSync(join(HERE, '..', '..', 'frontend/public/sw.js'), 'utf8');
+  // The later 'Cache-first' comment, not the explanatory one above isVersionedAsset.
+  const mutableBranch = sw.slice(sw.indexOf('if (mutable)'), sw.indexOf('// Cache-first for content-hashed'));
+  rec('the service worker bypasses the HTTP cache on the network-first path',
+    mutableBranch.includes("cache: 'reload'") && !/fetch\(request\)\s*\.then/.test(mutableBranch),
+    mutableBranch.includes("cache: 'reload'")
+      ? 'reload mode present on the mutable branch'
+      : 'the mutable branch fetches without a cache mode, which is not network first');
+
+  // And the page can repair itself even with no service worker running at all.
+  const main = readFileSync(join(HERE, '..', 'js/main.js'), 'utf8');
+  rec('and the page checks its own build against the server and reloads once if they differ',
+    main.includes('healStaleCache') && main.includes("cache: 'reload'") &&
+    main.includes('sessionStorage') && main.includes('location.reload'),
+    `self-heal ${main.includes('healStaleCache')}, cache bypass ${main.includes("cache: 'reload'")}, one-shot guard ${main.includes('sessionStorage')}`);
+
+  // The nginx side of it, which is what stopped new visitors being poisoned.
+  const nginx = readFileSync(join(HERE, '..', '..', 'nginx/nginx.conf'), 'utf8');
+  const craneBlock = nginx.slice(nginx.indexOf('location ^~ /crane-cab/'));
+  rec('and nginx does not hand out an immutable year on this folder',
+    craneBlock.includes('no-cache') && !craneBlock.slice(0, 400).includes('immutable'),
+    craneBlock.split('\n').slice(0, 6).map((l) => l.trim()).filter(Boolean).join(' | '));
+}
+
 // ---------------------------------------------------------------- run
 
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
@@ -1558,7 +1593,8 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tGuideKeepsTalkingWhenShort, tLandedLoadCanBeNudged, tSignOffIsNotAFaultSurface,
   tHookRetryIsNeverLost, tCorruptAwardStaysAwarded, tBuildStampIsStampable,
   tPendulumPeriod, tCentrifugalLean, tCoriolis, tRopeCoupling, tSwingDecay,
-  tSwingKeepsItsPlane, tLeanIsNotSway, tLoadRisesAtTheEndsOfItsArc];
+  tSwingKeepsItsPlane, tLeanIsNotSway, tLoadRisesAtTheEndsOfItsArc,
+  tServiceWorkerReachesTheNetwork];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

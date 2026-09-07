@@ -25,6 +25,55 @@ const ctx = { state, bus };
 // harness page. Never exposed on a normal load.
 if (new URLSearchParams(location.search).has('debug')) window.__cab = ctx;
 
+// Stale cache self-heal.
+//
+// A browser that visited while nginx was still marking this folder
+// `max-age=31536000, immutable` holds entries that stay fresh until 2027, and
+// nothing about a later deploy makes it ask again. That produced a genuinely
+// confusing failure: a current index.html, with every later feature in its
+// markup, running the Phase 0 modules underneath it, because only the navigation
+// was being revalidated and the module URLs were not. The operator sees a game
+// that is several builds old and the server logs show a healthy deploy. It cost
+// two rounds of "it still looks like the old version" to find, and curl could
+// never have found it, because curl has no HTTP cache.
+//
+// So the page checks itself. data/build.js is under a kilobyte; fetching it once
+// the normal way and once bypassing the HTTP cache says whether what this page
+// loaded is what the server is serving. If they disagree, every module URL is
+// re-fetched with the cache bypassed, which rewrites the poisoned entries, and
+// the page reloads into them.
+//
+// sessionStorage guards it to one reload per tab, so a server genuinely serving
+// something inconsistent gets one retry and then is left alone rather than
+// spinning. The service worker was fixed to bypass the HTTP cache too, and
+// between them a client repairs itself on the next visit either way; this half
+// is what covers a client whose service worker is not running at all.
+const HEAL_KEY = 'craneCab_healedOnce';
+async function healStaleCache() {
+  try {
+    if (sessionStorage.getItem(HEAL_KEY)) return;
+    const url = new URL('../data/build.js', import.meta.url).href;
+    const [mine, live] = await Promise.all([
+      fetch(url).then((r) => r.text()),
+      fetch(url, { cache: 'reload' }).then((r) => r.text())
+    ]);
+    if (mine === live) return;
+    sessionStorage.setItem(HEAL_KEY, '1');
+    const base = new URL('.', import.meta.url).href;
+    const files = [
+      '../index.html', '../css/game.css',
+      'main.js', 'state.js', 'events.js', 'input.js', 'crane.js', 'pendulum.js',
+      'sensors.js', 'missions.js', 'radio.js', 'scoring.js', 'save.js', 'audio.js',
+      'render.js', 'ui.js',
+      '../data/missions.js', '../data/crane.js', '../data/radio.js', '../data/build.js'
+    ];
+    await Promise.all(files.map((f) =>
+      fetch(new URL(f, base).href, { cache: 'reload' }).catch(() => null)));
+    location.reload();
+  } catch { /* a self-heal that throws is worse than one that does not run */ }
+}
+healStaleCache();
+
 save.load(ctx);
 save.init(ctx);
 input.init(ctx);
