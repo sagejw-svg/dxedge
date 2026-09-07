@@ -30,6 +30,7 @@ import HourlySummary from './components/HourlySummary'
 import Morse from './components/Morse'
 import Invaders from './components/Invaders'
 import MorseInvaders from './components/MorseInvaders'
+import Skip from './components/Skip'
 import CraneCab from './components/CraneCab'
 
 const TABS = [
@@ -55,6 +56,7 @@ const TABS = [
   { id: 'cranecab', label: 'Crane Cab' },
   { id: 'invaders', label: 'Invaders' },
   { id: 'morseinv', label: 'Morse Invaders' },
+  { id: 'skip', label: 'Skip' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
@@ -99,6 +101,7 @@ const TAB_GROUPS = [
       { id: 'cranecab', label: 'Crane Cab', icon: '🏗' },
       { id: 'invaders', label: 'Invaders',  icon: '👾' },
       { id: 'morseinv', label: 'Morse Invaders', icon: '〰️' },
+      { id: 'skip', label: 'Skip', icon: '🌅' },
     ],
   },
   {
@@ -374,6 +377,7 @@ export default function App() {
           {tab === 'morse'   && <Morse />}
           {tab === 'invaders' && <Invaders callsign={callsign} />}
           {tab === 'morseinv' && <MorseInvaders />}
+          {tab === 'skip' && <Skip />}
           {tab === 'cranecab' && <CraneCab />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}

@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Skip: a propagation game. A DX target appears at a real distance and bearing, the terminator sits somewhere along the path, and today's solar flux sets the ionosphere. Pick a band and a takeoff angle and watch the hops.">
+<title>DX//EDGE &middot; SKIP</title>
+<link rel="canonical" href="https://dxedge.net/skip/">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080808; --bg1:#0e0e0e; --bg2:#141414; --border:#1e1e1e;
+    --text:#e0e0e0; --muted:#888; --dim:#444;
+    --green:#00ff9d; --teal:#7affb2; --yellow:#ffd600; --blue:#7a9fff; --red:#ff6b6b;
+    --mono:'SF Mono','Fira Code','Consolas',monospace;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);
+            overflow:hidden;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+  #wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        flex-direction:column;gap:6px;padding:4px}
+  #stage{position:relative;width:480px;height:440px;flex:none}
+  canvas{display:block;width:100%;height:100%;background:#000;touch-action:none;outline:none;
+         -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+  /* --- controls under the stage --- */
+  #ctl{width:480px;max-width:100%;flex:none;display:flex;flex-direction:column;gap:6px}
+  #ctl.hide{visibility:hidden}
+  .bands{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
+  .bands button{font-family:var(--mono);font-size:12px;height:34px;background:var(--bg1);color:var(--muted);
+                border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:0}
+  .bands button.on{color:var(--green);border-color:var(--green);background:rgba(0,255,157,.08)}
+  .bands button:focus-visible{outline:1px solid var(--green)}
+  .ang{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted)}
+  .ang b{color:var(--green);font-weight:400;min-width:34px;display:inline-block}
+  .ang input{flex:1;accent-color:var(--green);min-width:80px}
+  .ang .info{color:var(--dim);white-space:nowrap}
+  .act{display:flex;gap:6px}
+  .btn{display:block;width:100%;padding:11px 12px;font-family:var(--mono);font-size:14px;letter-spacing:2px;
+       background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;
+       text-transform:uppercase;touch-action:manipulation}
+  .btn:hover{border-color:var(--dim)}
+  .btn.primary{background:rgba(0,255,157,.10);border-color:var(--green);color:var(--green)}
+  .btn.primary:hover{background:rgba(0,255,157,.18)}
+  .btn.primary:disabled{opacity:.45;cursor:default}
+  .btn:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+  .act .btn.pass{flex:0 0 120px}
+
+  /* --- overlay menus --- */
+  #ui{position:absolute;inset:0;overflow:auto;background:rgba(8,8,8,.90);display:none;-webkit-overflow-scrolling:touch}
+  #ui.show{display:block}
+  .panel{max-width:400px;margin:0 auto;padding:22px 18px 28px}
+  .view{display:none}.view.show{display:block}
+  h1{font-size:34px;letter-spacing:12px;font-weight:700;color:var(--green);text-align:center;line-height:1}
+  h2{font-size:18px;letter-spacing:4px;font-weight:700;color:var(--green);text-align:center;margin-bottom:10px}
+  .tag{color:var(--muted);font-size:12px;text-align:center;line-height:1.6;margin:12px 0}
+  .best{color:var(--dim);font-size:11px;text-align:center;letter-spacing:1px;margin-bottom:12px;min-height:14px}
+  .sun{font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px}
+  .sun b{color:var(--yellow);font-weight:400}
+  .sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+  .lbl{font-size:10px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .row+.row{margin-top:8px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{font-family:var(--mono);font-size:11px;padding:7px 10px;background:var(--bg1);color:var(--muted);
+              border:0;border-right:1px solid var(--border);cursor:pointer;letter-spacing:1px}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:rgba(0,255,157,.10);color:var(--green)}
+  input.txt{font-family:var(--mono);font-size:14px;letter-spacing:2px;text-transform:uppercase;width:110px;
+            padding:7px 9px;background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:5px}
+  input.txt:focus{outline:1px solid var(--green)}
+  .chk{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.5;margin-top:9px;cursor:pointer}
+  .chk input{accent-color:var(--green);margin-top:3px;flex:none}
+  .hint{color:var(--dim);font-size:11px;line-height:1.7;text-align:center;margin-top:16px}
+  .hint kbd{color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:0 5px;font-family:var(--mono)}
+  .stat{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border)}
+  .stat b{color:var(--text);font-weight:400}
+  .stat.hi b{color:var(--green)}
+  .worked{font-size:12px;color:var(--muted);line-height:1.8;margin:10px 0 14px}
+  .worked span{color:var(--green);margin-right:10px;white-space:nowrap}
+  .why{font-size:11px;color:var(--dim);line-height:1.7;margin-bottom:12px}
+  .why span{color:var(--muted)}
+  #note{color:var(--yellow);font-size:11px;text-align:center;min-height:14px;margin-top:8px}
+  .btn+.btn{margin-top:8px}
+
+  #foot{font-size:9px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;flex:none;white-space:nowrap;overflow:hidden;max-width:100%}
+  #foot a{color:var(--dim);text-decoration:none}
+  #foot.hide{display:none}
+  /* phone on its side: controls beside the stage */
+  #wrap.land{flex-direction:row;gap:10px}
+  #wrap.land #ctl{width:auto;flex:1 1 260px;max-width:300px}
+  #wrap.land .bands{grid-template-columns:repeat(3,1fr)}
+  #wrap.land #foot{display:none}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="c" tabindex="0" aria-label="Skip propagation game"></canvas>
+    <div id="ui" class="show">
+      <div class="panel">
+
+        <div id="vTitle" class="view show">
+          <h1>SKIP</h1>
+          <p class="tag">Pick the band. Pick the angle. Work the DX.<br>The sun is today's, the terminator is real,<br>and the round is one full day.</p>
+          <div class="sun" id="sunLine"></div>
+          <div class="best" id="best"></div>
+          <button class="btn primary" id="start">Start</button>
+          <div id="note"></div>
+
+          <div class="sec">
+            <div class="lbl">Your station</div>
+            <div class="row"><span style="font-size:12px;color:var(--muted)">Grid</span>
+              <input class="txt" id="grid" maxlength="6" spellcheck="false" autocomplete="off" aria-label="Maidenhead grid">
+              <span id="gridInfo" style="font-size:11px;color:var(--dim)"></span></div>
+          </div>
+
+          <div class="sec">
+            <div class="lbl">The sun</div>
+            <div class="row"><div class="seg" id="sunSeg">
+              <button data-v="today">today</button><button data-v="quiet">quiet</button>
+              <button data-v="active">active</button><button data-v="storm">storm</button></div></div>
+            <div class="hint" style="text-align:left;margin-top:8px">Today reads SFI and K off dxedge.net. Quiet is SFI 70, active is SFI 190, storm is SFI 120 with K 6.</div>
+          </div>
+
+          <div class="sec">
+            <div class="lbl">Round</div>
+            <div class="row"><span style="font-size:12px;color:var(--muted);min-width:110px">Length</span>
+              <div class="seg" id="lenSeg"><button data-v="2">2 min</button><button data-v="3">3 min</button><button data-v="5">5 min</button></div></div>
+            <label class="chk"><input type="checkbox" id="mufDots"><span>Mark the F layer where your band and angle get through (green) and where they don't (red)</span></label>
+          </div>
+
+          <p class="hint">Keys <kbd>1</kbd> to <kbd>9</kbd> pick 160 m to 10 m. <kbd>&larr;</kbd> <kbd>&rarr;</kbd> change the angle (hold shift for 5&deg;).
+            <kbd>Space</kbd> keys. <kbd>P</kbd> passes. <kbd>Esc</kbd> pauses.<br>Nothing here is VOACAP. One F layer, a D layer by day, a cartoon that is right about the big things.</p>
+        </div>
+
+        <div id="vPause" class="view">
+          <h2>PAUSED</h2>
+          <button class="btn primary" id="resume">Resume</button>
+          <div class="sec"><button class="btn" id="quit">Quit to menu</button></div>
+        </div>
+
+        <div id="vOver" class="view">
+          <h2>CLOSED</h2>
+          <p class="tag" id="overLine"></p>
+          <div id="overStats"></div>
+          <div class="worked" id="overWorked"></div>
+          <div class="why" id="overWhy"></div>
+          <button class="btn primary" id="again">Play again</button>
+          <button class="btn" id="menu">Change settings</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="ctl" class="hide">
+    <div class="bands" id="bands"></div>
+    <div class="ang">
+      <span style="white-space:nowrap">Takeoff <b id="angV">12&deg;</b></span>
+      <input type="range" id="ang" min="3" max="60" step="1" aria-label="Takeoff angle">
+      <span class="info" id="angInfo"></span>
+    </div>
+    <div class="act">
+      <button class="btn primary" id="key">Key</button>
+      <button class="btn pass" id="pass">Pass</button>
+    </div>
+  </div>
+  <div id="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; not to scale &middot; not voacap</div>
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------------ *
+ * Skip v0.1
+ * A propagation game. A DX target appears at its real distance and
+ * bearing from your grid. The screen is a side view of the great-circle
+ * path with the F layer above it and the day/night terminator where it
+ * really is for the sim clock. Pick a band and a takeoff angle, key, and
+ * watch the hops land, fall short, punch through the layer, or get eaten
+ * by the D layer on the daylit side. The verdict tells you why.
+ *
+ * The ionosphere here is a cartoon with the right shape: one F layer at
+ * 300 km whose critical frequency follows solar flux and local sun, MUF
+ * from the oblique-incidence secant factor, D-layer absorption that goes
+ * with cos(zenith) and 1/f^2, K index thinning the auroral zone. It is
+ * meant to be right about the big things (low angle, long hop; band is a
+ * MUF question; 40 m dies at noon; grayline works), not to be VOACAP.
+ * ------------------------------------------------------------------ */
+
+const W = 480, H = 440
+const HUD_H = 36
+const DIA_TOP = 44, GROUND_Y = 276, LAYER_PX = 108, ARC_R = 1700
+const X0 = 40, X1 = W - 40
+const VERDICT_Y = 300, CARD_Y = 372
+const R_EARTH = 6371, H_LAYER = 300
+const D2R = Math.PI / 180, R2D = 180 / Math.PI
+const SPREAD_DEG = 3            // a real antenna radiates over a fan of angles, so a hop lands over a range
+const TARGET_SECS = 22          // real seconds before a DX station QRTs
+const ATTEMPT_SECS = 1.35       // ray animation
+const KEY = { hi: 'dxSkip_hi', hiToday: 'dxSkip_hiToday', settings: 'dxSkip_settings' }
+const C = {
+  bg: '#000', bg1: '#0e0e0e', border: '#1e1e1e', text: '#e0e0e0', muted: '#888', dim: '#444',
+  green: '#00ff9d', teal: '#7affb2', yellow: '#ffd600', blue: '#7a9fff', red: '#ff6b6b', orange: '#ff9a3c',
+}
+const FONT = "'SF Mono','Fira Code','Consolas',monospace"
+const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const BANDS = [
+  { m: 160, f: 1.85 }, { m: 80, f: 3.55 }, { m: 40, f: 7.03 }, { m: 30, f: 10.12 }, { m: 20, f: 14.05 },
+  { m: 17, f: 18.08 }, { m: 15, f: 21.05 }, { m: 12, f: 24.9 }, { m: 10, f: 28.1 },
+]
+
+/* DXCC entities with an approximate point each, written from memory: good to a
+ * few hundred km, which is all a hop model this coarse can use. Rarity 0 common,
+ * 1 semi-rare, 2 rare (worth 1, 2, 3 points). */
+const ENTITIES = [
+  ['VE','Canada',45.4,-75.7,0],['XE','Mexico',19.4,-99.1,0],['KL7','Alaska',61.2,-149.9,0],['KH6','Hawaii',21.3,-157.8,0],
+  ['KP4','Puerto Rico',18.4,-66.1,0],['VP9','Bermuda',32.3,-64.8,1],['TI','Costa Rica',9.9,-84.1,0],['HR','Honduras',14.1,-87.2,1],
+  ['TG','Guatemala',14.6,-90.5,1],['YN','Nicaragua',12.1,-86.3,1],['HP','Panama',9.0,-79.5,1],['CO','Cuba',23.1,-82.4,0],
+  ['HI','Dominican Rep.',18.5,-69.9,0],['6Y','Jamaica',18.0,-76.8,1],['P4','Aruba',12.5,-70.0,0],['PJ2','Curacao',12.2,-69.0,0],
+  ['V3','Belize',17.5,-88.2,1],['FM','Martinique',14.6,-61.0,1],['8P','Barbados',13.1,-59.6,1],['9Y','Trinidad',10.7,-61.5,1],
+  ['ZF','Cayman Is.',19.3,-81.4,0],['OX','Greenland',64.2,-51.7,1],['TF','Iceland',64.1,-21.9,0],['FP','St Pierre',46.8,-56.2,2],
+  ['PY','Brazil',-15.8,-47.9,0],['LU','Argentina',-34.6,-58.4,0],['CE','Chile',-33.4,-70.6,0],['CX','Uruguay',-34.9,-56.2,0],
+  ['OA','Peru',-12.0,-77.0,1],['HK','Colombia',4.7,-74.1,0],['YV','Venezuela',10.5,-66.9,0],['HC','Ecuador',-0.2,-78.5,1],
+  ['CP','Bolivia',-16.5,-68.1,1],['ZP','Paraguay',-25.3,-57.6,1],['PZ','Suriname',5.9,-55.2,1],['8R','Guyana',6.8,-58.2,2],
+  ['FY','French Guiana',4.9,-52.3,1],['HC8','Galapagos',-0.7,-90.3,1],['CE0Y','Easter Is.',-27.1,-109.4,2],['VP8','Falkland Is.',-51.7,-57.9,1],
+  ['PY0F','Fernando de Noronha',-3.9,-32.4,1],['VP8/G','South Georgia',-54.3,-36.5,2],['CE9','Antarctica',-77.8,166.7,1],
+  ['G','England',51.5,-0.1,0],['GM','Scotland',55.9,-3.2,0],['EI','Ireland',53.3,-6.3,0],['F','France',48.9,2.3,0],
+  ['DL','Germany',52.5,13.4,0],['EA','Spain',40.4,-3.7,0],['CT','Portugal',38.7,-9.1,0],['I','Italy',41.9,12.5,0],
+  ['PA','Netherlands',52.4,4.9,0],['ON','Belgium',50.8,4.4,0],['HB9','Switzerland',46.9,7.4,0],['OE','Austria',48.2,16.4,0],
+  ['OK','Czechia',50.1,14.4,0],['SP','Poland',52.2,21.0,0],['HA','Hungary',47.5,19.0,0],['YO','Romania',44.4,26.1,0],
+  ['LZ','Bulgaria',42.7,23.3,0],['SV','Greece',38.0,23.7,0],['9A','Croatia',45.8,16.0,0],['S5','Slovenia',46.1,14.5,0],
+  ['YU','Serbia',44.8,20.5,0],['OZ','Denmark',55.7,12.6,0],['SM','Sweden',59.3,18.1,0],['LA','Norway',59.9,10.8,0],
+  ['OH','Finland',60.2,24.9,0],['ES','Estonia',59.4,24.8,0],['YL','Latvia',56.9,24.1,0],['LY','Lithuania',54.7,25.3,0],
+  ['UA','European Russia',55.8,37.6,0],['UR','Ukraine',50.5,30.5,0],['EW','Belarus',53.9,27.6,0],['TA','Turkey',39.9,32.9,0],
+  ['4X','Israel',31.8,35.2,0],['5B','Cyprus',35.2,33.4,0],['9H','Malta',35.9,14.5,1],['EA8','Canary Is.',28.1,-15.4,0],
+  ['CU','Azores',37.7,-25.7,1],['CT3','Madeira',32.7,-16.9,1],['JW','Svalbard',78.2,15.6,1],['OY','Faroe Is.',62.0,-6.8,1],
+  ['ZB2','Gibraltar',36.1,-5.4,1],['LX','Luxembourg',49.6,6.1,1],['TK','Corsica',42.0,9.0,1],['IS0','Sardinia',39.2,9.1,1],
+  ['OH0','Aland Is.',60.1,19.9,1],['UA2','Kaliningrad',54.7,20.5,1],['3A','Monaco',43.7,7.4,2],['HV','Vatican',41.9,12.45,2],
+  ['ZS','South Africa',-33.9,18.4,0],['5N','Nigeria',9.1,7.4,1],['CN','Morocco',33.6,-7.6,0],['7X','Algeria',36.8,3.1,1],
+  ['3V','Tunisia',36.8,10.2,1],['SU','Egypt',30.0,31.2,1],['ST','Sudan',15.6,32.5,2],['ET','Ethiopia',9.0,38.7,2],
+  ['5Z','Kenya',-1.3,36.8,1],['5H','Tanzania',-6.8,39.3,1],['9J','Zambia',-15.4,28.3,1],['Z2','Zimbabwe',-17.8,31.0,1],
+  ['A2','Botswana',-24.7,25.9,1],['V5','Namibia',-22.6,17.1,1],['D2','Angola',-8.8,13.2,2],['9Q','DR Congo',-4.3,15.3,2],
+  ['TR','Gabon',0.4,9.5,2],['TU','Ivory Coast',5.3,-4.0,1],['9G','Ghana',5.6,-0.2,1],['6W','Senegal',14.7,-17.4,1],
+  ['D4','Cape Verde',14.9,-23.5,1],['3B8','Mauritius',-20.2,57.5,1],['FR','Reunion',-21.1,55.5,1],['5R','Madagascar',-18.9,47.5,1],
+  ['S9','Sao Tome',0.3,6.7,2],['ZD7','St Helena',-15.9,-5.7,2],['ZD8','Ascension',-7.9,-14.4,1],['3Y/B','Bouvet',-54.4,3.4,2],
+  ['FT/Z','Kerguelen',-49.3,69.3,2],['TZ','Mali',12.6,-8.0,2],['5T','Mauritania',18.1,-15.9,2],['XT','Burkina Faso',12.4,-1.5,2],
+  ['TJ','Cameroon',3.9,11.5,2],['C9','Mozambique',-25.9,32.6,1],['7Q','Malawi',-14.0,33.8,2],['ZD9','Tristan da Cunha',-37.1,-12.3,2],
+  ['E3','Eritrea',15.3,38.9,2],['T5','Somalia',2.0,45.3,2],['3DA','Eswatini',-26.3,31.1,2],['C5','The Gambia',13.5,-16.6,2],
+  ['JA','Japan',35.7,139.7,0],['HL','South Korea',37.6,127.0,0],['BY','China',39.9,116.4,0],['BV','Taiwan',25.0,121.5,0],
+  ['VR','Hong Kong',22.3,114.2,1],['VU','India',28.6,77.2,0],['HS','Thailand',13.8,100.5,0],['9M2','West Malaysia',3.1,101.7,1],
+  ['9V','Singapore',1.3,103.8,1],['YB','Indonesia',-6.2,106.8,0],['DU','Philippines',14.6,121.0,0],['3W','Vietnam',21.0,105.8,1],
+  ['XW','Laos',17.9,102.6,2],['XU','Cambodia',11.6,104.9,2],['XZ','Myanmar',16.9,96.2,2],['JT','Mongolia',47.9,106.9,1],
+  ['UA9','Asiatic Russia',55.0,82.9,0],['UA0','Far East Russia',43.1,131.9,1],['AP','Pakistan',33.7,73.0,1],['4S','Sri Lanka',6.9,79.9,1],
+  ['S2','Bangladesh',23.8,90.4,2],['9N','Nepal',27.7,85.3,2],['A5','Bhutan',27.5,89.6,2],['8Q','Maldives',4.2,73.5,1],
+  ['UN','Kazakhstan',51.2,71.4,1],['UK','Uzbekistan',41.3,69.3,1],['EX','Kyrgyzstan',42.9,74.6,1],['EY','Tajikistan',38.6,68.8,2],
+  ['EZ','Turkmenistan',37.9,58.4,2],['YA','Afghanistan',34.5,69.2,2],['EP','Iran',35.7,51.4,1],['YI','Iraq',33.3,44.4,2],
+  ['HZ','Saudi Arabia',24.7,46.7,1],['A4','Oman',23.6,58.4,1],['A6','UAE',24.5,54.4,0],['A7','Qatar',25.3,51.5,1],
+  ['A9','Bahrain',26.2,50.6,1],['9K','Kuwait',29.4,48.0,1],['7O','Yemen',15.4,44.2,2],['OD','Lebanon',33.9,35.5,1],
+  ['JY','Jordan',31.9,35.9,1],['4L','Georgia',41.7,44.8,1],['EK','Armenia',40.2,44.5,1],['4J','Azerbaijan',40.4,49.9,1],
+  ['P5','North Korea',39.0,125.8,2],['VU4','Andaman Is.',11.7,92.7,2],['9M6','East Malaysia',6.0,116.1,1],['V85','Brunei',4.9,114.9,1],
+  ['4W','Timor-Leste',-8.6,125.6,2],['JD1/O','Ogasawara',27.1,142.2,1],['XX9','Macao',22.2,113.5,2],['BS7','Scarborough Reef',15.1,117.8,2],
+  ['VK','Australia',-33.9,151.2,0],['ZL','New Zealand',-41.3,174.8,0],['P2','Papua New Guinea',-9.4,147.2,1],['H4','Solomon Is.',-9.4,160.0,1],
+  ['YJ','Vanuatu',-17.7,168.3,1],['3D2','Fiji',-18.1,178.4,1],['A3','Tonga',-21.1,-175.2,1],['5W','Samoa',-13.8,-171.8,1],
+  ['KH8','American Samoa',-14.3,-170.7,1],['T2','Tuvalu',-8.5,179.2,2],['T30','West Kiribati',1.4,173.0,2],['T32','East Kiribati',1.9,-157.4,2],
+  ['V6','Micronesia',6.9,158.2,1],['V7','Marshall Is.',7.1,171.4,1],['T8','Palau',7.5,134.6,1],['KH2','Guam',13.5,144.8,0],
+  ['KH0','Mariana Is.',15.2,145.7,1],['C2','Nauru',-0.5,166.9,2],['E51/S','South Cook Is.',-21.2,-159.8,1],['FO','French Polynesia',-17.5,-149.6,1],
+  ['FK','New Caledonia',-22.3,166.4,1],['FW','Wallis and Futuna',-13.3,-176.2,2],['VP6','Pitcairn',-25.1,-130.1,2],['VK9L','Lord Howe',-31.5,159.1,2],
+  ['VK9N','Norfolk Is.',-29.0,168.0,1],['VK9X','Christmas Is.',-10.5,105.6,2],['VK9C','Cocos Keeling',-12.2,96.8,2],['ZL7','Chatham Is.',-44.0,-176.5,1],
+  ['ZL8','Kermadec',-29.3,-177.9,2],['KH1','Baker and Howland',0.2,-176.5,2],['KH3','Johnston Atoll',16.7,-169.5,2],['KH4','Midway',28.2,-177.4,2],
+  ['KH5','Palmyra',5.9,-162.1,2],['KH9','Wake Is.',19.3,166.6,2],['FO/C','Clipperton',10.3,-109.2,2],['FO/M','Marquesas',-9.0,-139.5,2],
+  ['FO/A','Austral Is.',-23.4,-149.5,2],['E51/N','North Cook Is.',-10.4,-161.0,2],['ZK3','Tokelau',-9.2,-171.8,2],['T31','Central Kiribati',-3.9,-159.4,2],
+  ['VK0M','Macquarie',-54.6,158.9,2],['VK0H','Heard Is.',-53.1,73.5,2],['3D2/R','Rotuma',-12.5,177.1,2],['VP8/O','South Orkney',-60.7,-45.6,2],
+]
+
+/* --- small helpers ------------------------------------------------ */
+function lsGet(k) { try { return localStorage.getItem(k) } catch { return null } }
+function lsSet(k, v) { try { localStorage.setItem(k, String(v)) } catch { /* private mode */ } }
+function loadJSON(k, fb) { try { const v = JSON.parse(lsGet(k)); return v && typeof v === 'object' ? v : fb } catch { return fb } }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+function int(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0 }
+function rnd(n) { return Math.floor(Math.random() * n) }
+function smoothstep(a, b, x) { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t) }
+function fmtKm(km) { return Math.round(km).toLocaleString('en-US') + ' km' }
+function fmtClock(h) { const hh = Math.floor(((h % 24) + 24) % 24), mm = Math.floor((h * 60) % 60); return `${String(hh).padStart(2, '0')}${String(mm).padStart(2, '0')}z` }
+function todayKey() { const d = new Date(); return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}` }
+
+/* --- geography ------------------------------------------------------ */
+function gridToLatLon(g) {
+  g = (g || '').toUpperCase()
+  if (!/^[A-R]{2}[0-9]{2}([A-X]{2})?$/.test(g)) return null
+  let lon = (g.charCodeAt(0) - 65) * 20 - 180, lat = (g.charCodeAt(1) - 65) * 10 - 90
+  lon += int(g[2]) * 2; lat += int(g[3])
+  if (g.length === 6) { lon += (g.charCodeAt(4) - 65) * (2 / 24) + 1 / 24; lat += (g.charCodeAt(5) - 65) * (1 / 24) + 1 / 48 }
+  else { lon += 1; lat += 0.5 }
+  return { lat, lon }
+}
+function gcDist(a, b) {
+  const p1 = a.lat * D2R, p2 = b.lat * D2R, dl = (b.lon - a.lon) * D2R
+  const h = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2
+  return 2 * R_EARTH * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+function gcBearing(a, b) {
+  const p1 = a.lat * D2R, p2 = b.lat * D2R, dl = (b.lon - a.lon) * D2R
+  const y = Math.sin(dl) * Math.cos(p2), x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)
+  return ((Math.atan2(y, x) * R2D) + 360) % 360
+}
+/* point a fraction of the way along the great circle from a to b; fractions past 1 keep going round */
+function gcPoint(a, b, frac) {
+  const p1 = a.lat * D2R, l1 = a.lon * D2R, p2 = b.lat * D2R, l2 = b.lon * D2R
+  const d = gcDist(a, b) / R_EARTH
+  if (d < 1e-6) return { lat: a.lat, lon: a.lon }
+  const A = Math.sin((1 - frac) * d) / Math.sin(d), B = Math.sin(frac * d) / Math.sin(d)
+  const x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2)
+  const y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2)
+  const z = A * Math.sin(p1) + B * Math.sin(p2)
+  return { lat: Math.atan2(z, Math.sqrt(x * x + y * y)) * R2D, lon: Math.atan2(y, x) * R2D }
+}
+
+/* --- the sun ---------------------------------------------------------- */
+function declination(date) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0)
+  const N = (date.getTime() - start) / 86400000
+  return 23.44 * Math.sin(2 * Math.PI * (284 + N) / 365) * D2R
+}
+/* cosine of the solar zenith angle: 1 is sun overhead, 0 is the terminator, negative is night */
+function cosZenith(lat, lon, utcHours, decl) {
+  const Hh = (15 * (utcHours - 12) + lon) * D2R
+  return Math.sin(lat * D2R) * Math.sin(decl) + Math.cos(lat * D2R) * Math.cos(decl) * Math.cos(Hh)
+}
+
+/* --- the ionosphere, as a cartoon ------------------------------------------- */
+function hopLen(thetaDeg, h = H_LAYER) {
+  const t = thetaDeg * D2R
+  return 2 * R_EARTH * (Math.acos(R_EARTH * Math.cos(t) / (R_EARTH + h)) - t)
+}
+function mufFactor(thetaDeg, h = H_LAYER) {
+  const sinPhi = R_EARTH * Math.cos(thetaDeg * D2R) / (R_EARTH + h)
+  return 1 / Math.sqrt(1 - sinPhi * sinPhi)
+}
+/* takeoff angle whose hop is a given length, by bisection */
+function angleForHop(km) {
+  if (km >= hopLen(0)) return 0
+  let lo = 0, hi = 89
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (hopLen(mid) > km) lo = mid; else hi = mid }
+  return (lo + hi) / 2
+}
+/* F2 critical frequency, MHz */
+function foF2(cosZ, lat, sfi, k) {
+  const sf = clamp((sfi - 70) / 130, 0, 1.2)
+  const fDay = 6 + 7 * sf, fNight = 3.2 + 2.8 * sf
+  const s = smoothstep(-0.25, 0.55, cosZ)           // the F layer lingers well past sunset
+  let f = fNight + (fDay - fNight) * s
+  f *= 1 - 0.22 * (Math.abs(lat) / 90) ** 2         // thinner toward the poles
+  f *= 1 + 0.15 * Math.max(0, 1 - Math.abs(lat) / 30) // and fatter in the tropics: the equatorial anomaly, roughly
+  if (Math.abs(lat) > 55) f *= 1 - 0.06 * k          // geomagnetic activity hits the auroral zone first
+  return f
+}
+/* the low bands pay per hop even in the dark: ground and residual losses that 160 m
+ * feels and 10 m barely notices */
+function lowBandDb(fMHz) { return 30 / fMHz }
+/* D-layer absorption for one pass, dB: with the sun, against the square of the frequency */
+function absorptionDb(cosZ, fMHz, lat, k, flare) {
+  let a = 1000 * Math.max(0, cosZ) / (fMHz * fMHz)
+  if (flare) a *= 6
+  if (Math.abs(lat) > 58 && k >= 3) a += 2 * k
+  return a
+}
+const GROUND_DB = 5   // ground bounce plus a little spreading per extra hop
+function sUnits(lossDb) { return clamp(9 - (lossDb - 12) / 6, 0, 9.9) }
+
+/* Run one attempt. Returns hops for drawing and a verdict with the reason.
+ * Order of judgement: does the ray come back down at all (MUF), does it come
+ * down where the target is (skip zone), and only then is it loud enough. */
+function simulate({ f, theta, D, qth, tgt, utc, decl, sfi, k, flare }) {
+  const d = hopLen(theta), dLo = hopLen(Math.min(85, theta + SPREAD_DEG)), dHi = hopLen(Math.max(0, theta - SPREAD_DEG))
+  const M = mufFactor(theta)
+  let cover = 0
+  for (let n = 1; n <= 14; n++) if (D >= n * dLo - 1 && D <= n * dHi + 1) { cover = n; break }
+  const hopKm = cover ? D / cover : d
+  const hops = []
+  let loss = 0, absorbed = 0, ground = 0, low = 0, s = 0, n = 0
+  while (n < 14) {
+    n++
+    const apexS = s + hopKm / 2
+    const p = gcPoint(qth, tgt, apexS / D)
+    const cz = cosZenith(p.lat, p.lon, utc, decl)
+    const muf = foF2(cz, p.lat, sfi, k) * M
+    const hop = { n, start: s, apex: apexS, land: s + hopKm, muf, cosZ: cz, lat: p.lat, escaped: f > muf, absorb: 0 }
+    hops.push(hop)
+    if (hop.escaped) return { hops, verdict: 'muf', hop, mufLow: foF2(cz, p.lat, sfi, k) * mufFactor(3), loss }
+    const a = absorptionDb(cz, f, p.lat, k, flare), l = lowBandDb(f)
+    hop.absorb = a
+    absorbed += a; low += l; loss += a + l
+    s += hopKm
+    if (cover ? n === cover : s > D) break
+    ground += GROUND_DB; loss += GROUND_DB
+  }
+  if (!cover) return { hops, verdict: 'skip', loss, d, dLo, dHi }
+  const S = sUnits(loss)
+  return { hops, verdict: S >= 2 ? 'worked' : 'weak', loss, absorbed, ground, low, S, n: cover }
+}
+
+/* --- persistent settings ------------------------------------------------------- */
+const params = new URLSearchParams(location.search)
+const DEF = { grid: 'DM12', sun: 'today', len: 3, mufDots: true, band: 4, angle: 12 }
+let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
+const paramGrid = params.get('grid')
+if (paramGrid && gridToLatLon(paramGrid)) S.grid = paramGrid.toUpperCase()
+if (!gridToLatLon(S.grid)) S.grid = DEF.grid
+S.band = clamp(int(S.band), 0, BANDS.length - 1)
+S.angle = clamp(int(S.angle) || 12, 3, 60)
+function saveSettings() { lsSet(KEY.settings, JSON.stringify(S)) }
+let hi = int(lsGet(KEY.hi))
+let hiToday = loadJSON(KEY.hiToday, { date: '', score: 0 })
+if (hiToday.date !== todayKey()) hiToday = { date: todayKey(), score: 0 }
+
+/* live conditions off the site's own health endpoint; canned sets for practice */
+const live = { sfi: 120, k: 2, ok: false, tried: false }
+async function fetchSun() {
+  live.tried = true
+  try {
+    const r = await fetch('/api/health', { cache: 'no-store' })
+    const j = await r.json()
+    if (Number.isFinite(j.sfi) && Number.isFinite(j.k_index)) { live.sfi = Math.round(j.sfi); live.k = Math.round(j.k_index); live.ok = true }
+  } catch { /* offline or standalone: defaults stand */ }
+  syncUI()
+}
+function sunFor(mode) {
+  if (mode === 'quiet') return { sfi: 70, k: 1, label: 'quiet sun' }
+  if (mode === 'active') return { sfi: 190, k: 2, label: 'active sun' }
+  if (mode === 'storm') return { sfi: 120, k: 6, label: 'geomagnetic storm' }
+  return { sfi: live.sfi, k: live.k, label: live.ok ? 'live from dxedge.net' : 'default, live feed unreachable' }
+}
+
+/* --- game state ------------------------------------------------------------------- */
+let G = null
+function newGame() {
+  const qth = gridToLatLon(S.grid)
+  const sun = sunFor(S.sun)
+  const now = new Date()
+  const secs = S.len * 60
+  G = {
+    t: 0, phase: 'play', paused: false, roundMs: secs * 1000,
+    qth, sfi: sun.sfi, k: sun.k, sunLabel: sun.label,
+    utc0: now.getUTCHours() + now.getUTCMinutes() / 60, decl: declination(now),
+    simRate: 86400 / secs,                 // one round is one full day
+    score: 0, worked: [], tally: { worked: 0, skip: 0, muf: 0, weak: 0 },
+    target: null, targetUntil: 0, used: new Set(), attempt: null, verdict: null, verdictLines: [],
+    flareAt: Math.random() < 0.6 ? 20000 + Math.random() * (secs * 1000 - 40000) : Infinity, flareMs: 12000,
+    streak: 0,
+  }
+  nextTarget()
+}
+function simUtc() { return G.utc0 + (G.t / 1000) * G.simRate / 3600 }
+function flareOn() { return G.t >= G.flareAt && G.t < G.flareAt + G.flareMs }
+
+function nextTarget() {
+  const cands = ENTITIES.filter(e => !G.used.has(e[0]) && gcDist(G.qth, { lat: e[2], lon: e[3] }) > 500)
+  if (!cands.length) { G.used.clear(); return nextTarget() }
+  const weights = cands.map(e => [3, 2, 1][e[4]])
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
+  let e = cands[0]
+  for (let i = 0; i < cands.length; i++) { r -= weights[i]; if (r <= 0) { e = cands[i]; break } }
+  const tgt = { lat: e[2], lon: e[3] }
+  G.target = { prefix: e[0], name: e[1], ll: tgt, rarity: e[4], dist: gcDist(G.qth, tgt), bearing: gcBearing(G.qth, tgt), tries: 0 }
+  G.used.add(e[0])
+  G.targetUntil = G.t + TARGET_SECS * 1000
+  G.attempt = null
+  G.verdict = null
+  G.verdictLines = []
+}
+
+function pass() {
+  if (!G || G.paused || G.phase !== 'play' || (G.attempt && !G.attempt.done)) return
+  G.streak = 0
+  nextTarget()
+}
+
+function keyIt() {
+  if (!G || G.paused || G.phase !== 'play' || (G.attempt && !G.attempt.done) || G.target.worked) return
+  const band = BANDS[S.band]
+  const T = G.target
+  const res = simulate({ f: band.f, theta: S.angle, D: T.dist, qth: G.qth, tgt: T.ll, utc: simUtc(), decl: G.decl, sfi: G.sfi, k: G.k, flare: flareOn() })
+  T.tries++
+  G.attempt = { res, start: G.t, band, theta: S.angle, done: false }
+  G.verdict = null
+  G.verdictLines = []
+}
+
+function finishAttempt() {
+  const A = G.attempt
+  const res = A.res
+  A.done = true
+  G.tally[res.verdict]++
+  G.verdict = res.verdict
+  G.verdictLines = wrap(verdictText(res, A), W - 32, 12)
+  if (res.verdict === 'worked') {
+    const pts = [1, 2, 3][G.target.rarity]
+    G.score += pts
+    G.streak++
+    G.worked.push({ prefix: G.target.prefix, band: A.band.m, S: res.S })
+    G.targetUntil = G.t + 1600     // a moment to read it, then the next one calls
+    G.target.worked = true
+  } else {
+    G.streak = 0
+  }
+}
+
+function verdictText(res, A) {
+  const T = G.target, band = A.band
+  if (res.verdict === 'worked') {
+    const hopsWord = res.n === 1 ? 'one hop' : `${res.n} hops`
+    const bits = [`Worked ${T.prefix} on ${band.m} m, ${hopsWord}, S${Math.floor(res.S)}.`]
+    const czQ = cosZenith(G.qth.lat, G.qth.lon, simUtc(), G.decl), czT = cosZenith(T.ll.lat, T.ll.lon, simUtc(), G.decl)
+    if (Math.abs(czQ) < 0.12 || Math.abs(czT) < 0.12) bits.push('Grayline shot.')
+    if (T.dist > 12000) bits.push('Long haul.')
+    if (res.absorbed > 18) bits.push(`The D layer still took ${Math.round(res.absorbed)} dB on the daylit hops.`)
+    return bits.join(' ')
+  }
+  if (res.verdict === 'skip') {
+    const last = res.hops[res.hops.length - 1]
+    const prev = res.hops[res.hops.length - 2]
+    const over = last.land - T.dist
+    const short = prev ? T.dist - prev.land : null
+    const hopsTry = prev ? [res.hops.length - 1, res.hops.length] : [1]
+    let best = null
+    for (const n of hopsTry) {
+      const a = angleForHop(T.dist / n)
+      if (a >= 1 && a <= 60 && (!best || Math.abs(a - A.theta) < Math.abs(best.a - A.theta))) best = { a, n }
+    }
+    let where = short === null
+      ? `Too close: even one hop at ${A.theta}\u00b0 carries ${fmtKm(last.land)}, ${fmtKm(over)} past it.`
+      : `In the skip zone: hop ${last.n} came down ${fmtKm(over)} past it and hop ${prev.n} fell ${fmtKm(short)} short.`
+    const fix = best ? ` ${best.n === 1 ? 'One hop' : best.n + ' hops'} of ${fmtKm(T.dist / best.n)} lands there at about ${Math.round(best.a)}\u00b0.` : ''
+    return where + fix
+  }
+  if (res.verdict === 'muf') {
+    const h = res.hop
+    const side = h.cosZ > 0.1 ? 'daylit' : h.cosZ < -0.1 ? 'night' : 'twilight'
+    let txt = `Hop ${h.n} went through the F layer over the ${side} side: the MUF there is ${h.muf.toFixed(1)} MHz at ${A.theta}\u00b0 and ${band.m} m is ${band.f}.`
+    if (res.mufLow > band.f) txt += ` Flatten the angle: at 3\u00b0 the MUF there is ${res.mufLow.toFixed(1)}.`
+    else txt += ` No angle gets ${band.m} m through there now. Drop a band or wait for the sun.`
+    return txt
+  }
+  if (res.verdict === 'weak') {
+    const dayHops = res.hops.filter(h => h.cosZ > 0).length
+    const S = `S${Math.floor(res.S)}`
+    if (res.absorbed >= res.low && res.absorbed >= res.ground && res.absorbed > 10)
+      return `It arrived, but at ${S}: the D layer took ${Math.round(res.absorbed)} dB across ${dayHops} daylit hop${dayHops === 1 ? '' : 's'}. ${band.m} m wants darkness on the path. Go up in frequency by day, or wait for the terminator.`
+    if (res.low >= res.ground && res.low > 10)
+      return `It arrived, but at ${S}: ${res.hops.length} hops on ${band.m} m cost ${Math.round(res.low)} dB before the sun even had a say. The low bands pay per hop. Try a higher band, or take the ${S} and call it DX.`
+    return `It arrived, but at ${S}: ${res.hops.length} hops at ${A.theta}\u00b0 is a lot of ground bounces. Flatten the angle for fewer, longer hops.`
+  }
+  return ''
+}
+
+function endRound() {
+  G.phase = 'over'
+  if (G.score > hi) { hi = G.score; lsSet(KEY.hi, hi) }
+  if (G.score > hiToday.score) { hiToday = { date: todayKey(), score: G.score }; lsSet(KEY.hiToday, JSON.stringify(hiToday)) }
+  showOver()
+}
+
+function update(dt) {
+  G.t += dt
+  if (G.phase !== 'play') return
+  if (G.attempt && !G.attempt.done && G.t - G.attempt.start >= ATTEMPT_SECS * 1000) finishAttempt()
+  if (G.attempt && G.attempt.done && G.target.worked && G.t >= G.targetUntil) nextTarget()
+  else if (!G.target.worked && G.t >= G.targetUntil && !(G.attempt && !G.attempt.done)) {
+    G.streak = 0
+    nextTarget()
+  }
+  if (G.t >= G.roundMs) endRound()
+}
+
+/* --- drawing -------------------------------------------------------------------------- */
+const canvas = document.getElementById('c')
+const ctx = canvas.getContext('2d')
+let dpr = 1
+function setupCanvas() { dpr = Math.min(2, window.devicePixelRatio || 1); canvas.width = W * dpr; canvas.height = H * dpr }
+setupCanvas()
+function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})` }
+function text(s, x, y, size, col, align = 'left', weight = '') {
+  ctx.font = `${weight} ${size}px ${FONT}`.trim(); ctx.fillStyle = col; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y)
+}
+function wrap(str, maxW, size) {
+  ctx.font = `${size}px ${FONT}`
+  const words = str.split(' '), lines = []
+  let cur = ''
+  for (const w of words) {
+    const t = cur ? cur + ' ' + w : w
+    if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w } else cur = t
+  }
+  if (cur) lines.push(cur)
+  return lines
+}
+
+/* the path is drawn along a gently curved ground so the picture reads as a planet;
+ * heights are wildly exaggerated on purpose and the footer says so */
+const ARC_CY = GROUND_Y + ARC_R
+function groundY(x) { return ARC_CY - Math.sqrt(ARC_R * ARC_R - (x - W / 2) ** 2) }
+function layerY(x) { const r = ARC_R + LAYER_PX; return ARC_CY - Math.sqrt(r * r - (x - W / 2) ** 2) }
+/* ground distance to screen x: the target sits at 88% of the drawn path */
+function kmPerPx() { return (G.target.dist / 0.88) / (X1 - X0) }
+function xOf(km) { return X0 + km / kmPerPx() }
+function kmOf(x) { return (x - X0) * kmPerPx() }
+
+function drawSky() {
+  const utc = simUtc(), T = G.target, flare = flareOn()
+  const top = DIA_TOP
+  for (let x = X0 - 24; x <= X1 + 24; x += 4) {
+    const p = gcPoint(G.qth, T.ll, kmOf(x) / T.dist)
+    const cz = cosZenith(p.lat, p.lon, utc, G.decl)
+    const gy = groundY(x)
+    let col
+    if (cz > 0.04) col = flare ? `rgba(255,120,60,${0.10 + 0.20 * cz})` : `rgba(255,190,90,${0.06 + 0.16 * cz})`
+    else if (cz > -0.12) col = `rgba(255,140,90,${0.05 + 0.5 * (cz + 0.12)})`
+    else col = `rgba(60,90,220,${0.035 + 0.03 * Math.min(1, -cz)})`
+    const grad = ctx.createLinearGradient(0, top, 0, gy)
+    grad.addColorStop(0, 'rgba(0,0,0,0)')
+    grad.addColorStop(1, col)
+    ctx.fillStyle = grad
+    ctx.fillRect(x, top, 4, gy - top)
+  }
+  /* terminator lines where the sun crosses the horizon along the path */
+  let prev = null
+  for (let x = X0 - 24; x <= X1 + 24; x += 2) {
+    const p = gcPoint(G.qth, T.ll, kmOf(x) / T.dist)
+    const cz = cosZenith(p.lat, p.lon, utc, G.decl)
+    if (prev !== null && (prev > 0) !== (cz > 0)) {
+      ctx.strokeStyle = rgba(C.orange, 0.55)
+      ctx.setLineDash([3, 5]); ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(x + 0.5, top); ctx.lineTo(x + 0.5, groundY(x)); ctx.stroke()
+      ctx.setLineDash([])
+      text(prev > 0 ? 'SUNSET' : 'SUNRISE', x, top + 6, 8, rgba(C.orange, 0.8), 'center')
+    }
+    prev = cz
+  }
+  /* the sun over the brightest ground point, if any of the path is in daylight */
+  let bestX = null, bestCz = 0.04
+  for (let x = X0; x <= X1; x += 6) {
+    const p = gcPoint(G.qth, T.ll, kmOf(x) / T.dist)
+    const cz = cosZenith(p.lat, p.lon, utc, G.decl)
+    if (cz > bestCz) { bestCz = cz; bestX = x }
+  }
+  if (bestX !== null) {
+    ctx.fillStyle = flare ? C.red : C.yellow
+    ctx.beginPath(); ctx.arc(bestX, top + 12, 5, 0, 6.29); ctx.fill()
+    if (flare) text('FLARE', bestX, top + 26, 8, C.red, 'center', 'bold')
+  }
+}
+
+function drawLayer() {
+  ctx.strokeStyle = rgba(C.teal, 0.35)
+  ctx.setLineDash([6, 6]); ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let x = X0 - 24; x <= X1 + 24; x += 8) { const y = layerY(x); if (x === X0 - 24) ctx.moveTo(x, y); else ctx.lineTo(x, y) }
+  ctx.stroke(); ctx.setLineDash([])
+  text('F LAYER', X1 + 24, layerY(X1 + 24) - 9, 8, rgba(C.teal, 0.6), 'right')
+  if (S.mufDots) {
+    const f = BANDS[S.band].f, M = mufFactor(S.angle), utc = simUtc()
+    for (let x = X0; x <= X1 + 16; x += 10) {
+      const p = gcPoint(G.qth, G.target.ll, kmOf(x) / G.target.dist)
+      const cz = cosZenith(p.lat, p.lon, utc, G.decl)
+      const open = f <= foF2(cz, p.lat, G.sfi, G.k) * M
+      ctx.fillStyle = open ? rgba(C.green, 0.9) : rgba(C.red, 0.55)
+      ctx.fillRect(x - 1.5, layerY(x) - 1.5, 3, 3)
+    }
+  }
+}
+
+function drawGround() {
+  ctx.fillStyle = C.bg1
+  ctx.beginPath()
+  ctx.moveTo(0, H)
+  for (let x = 0; x <= W; x += 8) ctx.lineTo(x, groundY(x))
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill()
+  ctx.strokeStyle = C.dim; ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let x = 0; x <= W; x += 8) { const y = groundY(x) + 0.5; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y) }
+  ctx.stroke()
+}
+
+function drawTower(x, col, labelTop, labelBottom) {
+  const y = groundY(x)
+  ctx.strokeStyle = col; ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(x, y); ctx.lineTo(x, y - 16)
+  ctx.moveTo(x - 5, y - 11); ctx.lineTo(x, y - 16); ctx.lineTo(x + 5, y - 11)
+  ctx.stroke()
+  if (labelTop) text(labelTop, x, y - 26, 9, col, 'center', 'bold')
+  if (labelBottom) text(labelBottom, x, y + 10, 8, C.dim, 'center')
+}
+
+function drawRay() {
+  const A = G.attempt
+  if (!A) return
+  const res = A.res
+  const pts = [[X0, groundY(X0)]]
+  for (const h of res.hops) {
+    const xa = xOf(h.apex)
+    if (h.escaped) { pts.push([xa, layerY(xa)]); const xe = xa + (xa - pts[pts.length - 2][0]) * 1.4; pts.push([xe, layerY(xa) - LAYER_PX * 0.9]); break }
+    pts.push([xa, layerY(xa)])
+    pts.push([xOf(h.land), groundY(xOf(h.land))])
+  }
+  let total = 0
+  const seg = []
+  for (let i = 1; i < pts.length; i++) { const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(L); total += L }
+  const prog = A.done ? 1 : Math.min(1, (G.t - A.start) / (ATTEMPT_SECS * 1000))
+  let remain = prog * total
+  const col = res.verdict === 'worked' ? C.green : res.verdict === 'muf' ? C.blue : res.verdict === 'skip' ? C.yellow : C.red
+  ctx.strokeStyle = A.done ? col : C.text
+  ctx.lineWidth = 1.6
+  if (!REDUCED) { ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 8 }
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1])
+  for (let i = 1; i < pts.length && remain > 0; i++) {
+    const L = seg[i - 1]
+    if (remain >= L) { ctx.lineTo(pts[i][0], pts[i][1]); remain -= L }
+    else { const f = remain / L; ctx.lineTo(pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f); remain = 0 }
+  }
+  ctx.stroke(); ctx.shadowBlur = 0
+  if (A.done) {
+    for (const h of res.hops) {
+      if (h.escaped) continue
+      const x = xOf(h.land), y = groundY(x)
+      ctx.strokeStyle = rgba(col, 0.8); ctx.lineWidth = 1
+      ctx.beginPath(); ctx.arc(x, y, 5, Math.PI, 2 * Math.PI); ctx.stroke()
+      if (h.absorb > 6) text(`-${Math.round(h.absorb)} dB`, xOf(h.apex), layerY(xOf(h.apex)) + 22, 8, rgba(C.red, 0.85), 'center')
+    }
+    if (res.verdict === 'muf') { const h = res.hop; text(`MUF ${h.muf.toFixed(1)}`, xOf(h.apex), layerY(xOf(h.apex)) - 12, 8, C.blue, 'center') }
+  }
+}
+
+function drawHud() {
+  ctx.fillStyle = C.bg1; ctx.fillRect(0, 0, W, HUD_H)
+  ctx.fillStyle = C.border; ctx.fillRect(0, HUD_H - 1, W, 1)
+  text(`${G.score} PTS`, 12, 18, 12, C.text, 'left', 'bold')
+  text(`${G.worked.length} DX`, 84, 18, 12, C.muted)
+  text(fmtClock(simUtc()), W / 2, 18, 13, C.green, 'center', 'bold')
+  const left = Math.max(0, G.roundMs - G.t) / 1000
+  text(`${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, W / 2 + 54, 18, 11, left < 20 ? C.red : C.dim, 'left')
+  text(`SFI ${G.sfi} K${G.k}`, W - 12, 18, 11, flareOn() ? C.red : C.yellow, 'right')
+}
+
+function drawCard() {
+  const T = G.target
+  const left = Math.max(0, G.targetUntil - G.t) / (TARGET_SECS * 1000)
+  const rar = ['', 'semi-rare', 'rare'][T.rarity]
+  text(`${T.prefix}  ${T.name.toUpperCase()}`, 16, CARD_Y + 14, 15, T.worked ? C.green : C.text, 'left', 'bold')
+  text(`${fmtKm(T.dist)}  \u00b7  ${Math.round(T.bearing)}\u00b0${rar ? '  \u00b7  ' + rar : ''}`, 16, CARD_Y + 36, 11, C.muted)
+  text(`${[1, 2, 3][T.rarity]} pt${T.rarity ? 's' : ''}`, W - 16, CARD_Y + 14, 11, C.dim, 'right')
+  if (!T.worked) {
+    ctx.fillStyle = C.border; ctx.fillRect(16, CARD_Y + 50, W - 32, 3)
+    ctx.fillStyle = left < 0.25 ? C.red : C.dim; ctx.fillRect(16, CARD_Y + 50, (W - 32) * left, 3)
+    text(T.tries ? `${T.tries} call${T.tries === 1 ? '' : 's'}` : 'calling CQ', W - 16, CARD_Y + 36, 10, C.dim, 'right')
+  }
+}
+
+function drawVerdict() {
+  if (G.attempt && !G.attempt.done) { text('. . .', 16, VERDICT_Y + 10, 12, C.dim); return }
+  if (!G.verdict) {
+    text(`${BANDS[S.band].m} m at ${S.angle}\u00b0: one hop \u2248 ${fmtKm(hopLen(S.angle))}, MUF factor \u00d7${mufFactor(S.angle).toFixed(1)}`, 16, VERDICT_Y + 10, 11, C.dim)
+    return
+  }
+  const col = G.verdict === 'worked' ? C.green : G.verdict === 'muf' ? C.blue : G.verdict === 'skip' ? C.yellow : C.red
+  G.verdictLines.slice(0, 4).forEach((l, i) => text(l, 16, VERDICT_Y + 10 + i * 16, 12, i === 0 ? col : C.text))
+}
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H)
+  if (!G) { drawAttract(); return }
+  drawSky()
+  drawGround()
+  drawLayer()
+  drawTower(X0, C.green, 'QTH', S.grid)
+  drawTower(xOf(G.target.dist), G.target.worked ? C.green : C.yellow, G.target.prefix, null)
+  drawRay()
+  ctx.fillStyle = C.border; ctx.fillRect(0, VERDICT_Y - 6, W, 1)
+  drawVerdict()
+  ctx.fillStyle = C.border; ctx.fillRect(0, CARD_Y - 6, W, 1)
+  drawCard()
+  drawHud()
+  if (G.phase === 'over') { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, HUD_H, W, H - HUD_H) }
+}
+
+/* title screen: the same sky and ground, and one lazy three-hop ray crossing it */
+const ATT = { t: 0 }
+function drawAttract() {
+  ATT.t += REDUCED ? 0 : 1 / 60
+  for (let x = 0; x <= W; x += 4) {
+    const cz = Math.cos((x / W) * Math.PI * 1.4 - 0.4 + ATT.t * 0.12)
+    const gy = groundY(x)
+    const col = cz > 0 ? `rgba(255,190,90,${0.04 + 0.10 * cz})` : `rgba(60,90,220,${0.03 - 0.02 * cz})`
+    const grad = ctx.createLinearGradient(0, DIA_TOP, 0, gy); grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, col)
+    ctx.fillStyle = grad; ctx.fillRect(x, DIA_TOP, 4, gy - DIA_TOP)
+  }
+  drawGround()
+  ctx.strokeStyle = rgba(C.teal, 0.3); ctx.setLineDash([6, 6]); ctx.lineWidth = 1
+  ctx.beginPath(); for (let x = 0; x <= W; x += 8) { const y = layerY(x); if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y) } ctx.stroke(); ctx.setLineDash([])
+  const hop = (X1 - X0) / 3
+  const pts = [[X0, groundY(X0)]]
+  for (let i = 0; i < 3; i++) { const xa = X0 + hop * (i + 0.5), xl = X0 + hop * (i + 1); pts.push([xa, layerY(xa)]); pts.push([xl, groundY(xl)]) }
+  let remain = ((ATT.t * 0.22) % 1.3) * (X1 - X0) * 1.25
+  ctx.strokeStyle = rgba(C.green, 0.55); ctx.lineWidth = 1.4
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1])
+  for (let i = 1; i < pts.length && remain > 0; i++) {
+    const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])
+    if (remain >= L) { ctx.lineTo(pts[i][0], pts[i][1]); remain -= L }
+    else { const f = remain / L; ctx.lineTo(pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f); remain = 0 }
+  }
+  ctx.stroke()
+}
+
+let last = 0
+function frame(now) {
+  const dt = Math.min(50, now - (last || now)); last = now
+  if (G && !G.paused) update(dt)
+  draw()
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+
+/* --- UI ------------------------------------------------------------------------------- */
+const $ = id => document.getElementById(id)
+const ui = $('ui'), ctl = $('ctl'), wrapEl = $('wrap'), stage = $('stage'), foot = $('foot')
+function showView(name) {
+  for (const v of ['vTitle', 'vPause', 'vOver']) $(v).classList.toggle('show', v === name)
+  ui.classList.toggle('show', !!name)
+  ctl.classList.toggle('hide', !!name)
+  if (name) ui.scrollTop = 0
+}
+
+;(function buildBands() {
+  const box = $('bands')
+  BANDS.forEach((b, i) => {
+    const btn = document.createElement('button')
+    btn.type = 'button'; btn.textContent = `${b.m}`; btn.dataset.i = i
+    btn.setAttribute('aria-label', `${b.m} metres`)
+    btn.addEventListener('click', () => setBand(i))
+    box.appendChild(btn)
+  })
+})()
+
+function setBand(i) { S.band = clamp(i, 0, BANDS.length - 1); saveSettings(); syncUI() }
+function setAngle(a) { S.angle = clamp(Math.round(a), 3, 60); saveSettings(); syncUI() }
+
+function syncUI() {
+  for (const b of $('bands').querySelectorAll('button')) b.classList.toggle('on', int(b.dataset.i) === S.band)
+  $('ang').value = S.angle
+  $('angV').innerHTML = `${S.angle}&deg;`
+  $('angInfo').textContent = `hop \u2248 ${fmtKm(hopLen(S.angle))} \u00b7 MUF \u00d7${mufFactor(S.angle).toFixed(1)}`
+  $('grid').value = S.grid
+  const ll = gridToLatLon(S.grid)
+  $('gridInfo').textContent = ll ? `${ll.lat.toFixed(1)}\u00b0, ${ll.lon.toFixed(1)}\u00b0` : 'not a grid'
+  for (const b of $('sunSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.sun)
+  for (const b of $('lenSeg').querySelectorAll('button')) b.classList.toggle('on', int(b.dataset.v) === S.len)
+  $('mufDots').checked = !!S.mufDots
+  const sun = sunFor(S.sun)
+  $('sunLine').innerHTML = `SFI <b>${sun.sfi}</b> &middot; K <b>${sun.k}</b> &middot; ${sun.label}${S.sun === 'today' && !live.tried ? ' (reading)' : ''}`
+  $('best').textContent = hi ? `best: ${hi} pts all time \u00b7 ${hiToday.score} today` : 'no round yet on this device'
+  $('key').disabled = !!(G && G.attempt && !G.attempt.done)
+}
+
+function layout() {
+  const land = window.innerWidth > window.innerHeight * 1.3 && window.innerHeight < 620
+  wrapEl.classList.toggle('land', land)
+  foot.classList.toggle('hide', land || window.innerHeight < 560)
+  const fh = foot.classList.contains('hide') ? 0 : foot.offsetHeight + 6
+  let availW = wrapEl.clientWidth - 8, availH = wrapEl.clientHeight - 8 - fh
+  if (land) availW -= Math.min(300, Math.max(260, wrapEl.clientWidth * 0.35)) + 10; else availH -= ctl.offsetHeight + 6
+  const s = Math.max(0.3, Math.min(availW / W, availH / H))
+  stage.style.width = `${Math.floor(W * s)}px`
+  stage.style.height = `${Math.floor(H * s)}px`
+}
+window.addEventListener('resize', layout)
+if (window.ResizeObserver) new ResizeObserver(layout).observe(wrapEl)
+
+/* --- flow ------------------------------------------------------------------------------- */
+function startGame() {
+  if (G && (G.phase === 'play')) return
+  if (!gridToLatLon(S.grid)) { $('note').textContent = 'That grid does not parse. Four or six characters, like DM12 or DM12jv.'; return }
+  $('note').textContent = ''
+  newGame()
+  showView(null)
+  canvas.focus({ preventScroll: true })
+  syncUI()
+}
+function pauseGame() { if (!G || G.paused || G.phase !== 'play') return; G.paused = true; showView('vPause') }
+function resumeGame() { if (!G || !G.paused) return; G.paused = false; showView(null); canvas.focus({ preventScroll: true }) }
+function togglePause() { if (!G || G.phase !== 'play') return; if (G.paused) resumeGame(); else pauseGame() }
+function quitGame() { if (!G) return; G.paused = false; if (G.phase !== 'over') endRound(); G = null; syncUI(); showView('vTitle') }
+
+function showOver() {
+  const dx = G.worked.length
+  $('overLine').textContent = `${G.score} point${G.score === 1 ? '' : 's'}, ${dx} entit${dx === 1 ? 'y' : 'ies'} worked over one day. Sun: SFI ${G.sfi}, K ${G.k}, ${G.sunLabel}.`
+  const rows = [
+    ['Best all time', hi, G.score >= hi && G.score > 0],
+    ['Best today', hiToday.score, G.score >= hiToday.score && G.score > 0],
+    ['Calls made', Object.values(G.tally).reduce((a, b) => a + b, 0)],
+  ]
+  $('overStats').innerHTML = rows.map(([k, v, star]) => `<div class="stat${star ? ' hi' : ''}"><span>${k}</span><b>${v}${star ? ' \u2605' : ''}</b></div>`).join('')
+  $('overWorked').innerHTML = dx ? 'Worked: ' + G.worked.map(w => `<span>${w.prefix} ${w.band}m S${Math.floor(w.S)}</span>`).join('') : 'Nothing worked. Flatten the angle, and watch where the sun is.'
+  const t = G.tally
+  $('overWhy').innerHTML = `Why calls failed: <span>skip zone ${t.skip}</span> \u00b7 <span>through the layer ${t.muf}</span> \u00b7 <span>too weak ${t.weak}</span>`
+  showView('vOver')
+}
+
+$('start').addEventListener('click', startGame)
+$('again').addEventListener('click', () => { G = null; startGame() })
+$('menu').addEventListener('click', () => { G = null; syncUI(); showView('vTitle') })
+$('resume').addEventListener('click', resumeGame)
+$('quit').addEventListener('click', quitGame)
+$('key').addEventListener('click', keyIt)
+$('pass').addEventListener('click', pass)
+$('ang').addEventListener('input', e => setAngle(int(e.target.value)))
+$('grid').addEventListener('input', e => { const v = e.target.value.toUpperCase(); if (gridToLatLon(v)) { S.grid = v; saveSettings() } $('gridInfo').textContent = gridToLatLon(v) ? `${gridToLatLon(v).lat.toFixed(1)}\u00b0, ${gridToLatLon(v).lon.toFixed(1)}\u00b0` : 'not a grid' })
+$('sunSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.sun = b.dataset.v; saveSettings(); syncUI() })
+$('lenSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.len = int(b.dataset.v); saveSettings(); syncUI() })
+$('mufDots').addEventListener('change', e => { S.mufDots = e.target.checked; saveSettings() })
+canvas.addEventListener('pointerdown', () => canvas.focus({ preventScroll: true }))
+
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const tag = (e.target && e.target.tagName) || ''
+  const inText = tag === 'INPUT' && e.target.type === 'text'
+  if (inText) return
+  const inControl = tag === 'INPUT' || tag === 'BUTTON'
+  const k = e.key
+  if (k === 'Escape') { e.preventDefault(); if (G && G.phase === 'play') togglePause(); return }
+  if (k === 'Enter') {
+    if (inControl) return
+    e.preventDefault()
+    if (!G) startGame(); else if (G.phase === 'over') { G = null; startGame() } else if (G.paused) resumeGame(); else keyIt()
+    return
+  }
+  if (!G || G.paused || G.phase !== 'play') return
+  if (k === ' ') { e.preventDefault(); keyIt(); return }
+  if (k === 'p' || k === 'P') { e.preventDefault(); pass(); return }
+  if (k >= '1' && k <= '9') { e.preventDefault(); setBand(int(k) - 1); return }
+  if (k === 'ArrowLeft' || k === 'ArrowDown') { e.preventDefault(); setAngle(S.angle - (e.shiftKey ? 5 : 1)); return }
+  if (k === 'ArrowRight' || k === 'ArrowUp') { e.preventDefault(); setAngle(S.angle + (e.shiftKey ? 5 : 1)); return }
+})
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && !G.paused && G.phase === 'play') pauseGame() })
+
+syncUI()
+layout()
+fetchSun()
+
+/* --- test seam ------------------------------------------------------------------------------ */
+window.__skip = {
+  get G() { return G }, get S() { return S }, get hi() { return hi }, get live() { return live },
+  model: { hopLen, mufFactor, angleForHop, foF2, absorptionDb, cosZenith, declination, gcDist, gcBearing, gcPoint, gridToLatLon, simulate, sUnits },
+  ENTITIES, BANDS,
+  start: startGame, key: keyIt, pass, pause: pauseGame, resume: resumeGame, quit: quitGame,
+  setBand, setAngle, setSetting: (k, v) => { S[k] = v; saveSettings(); syncUI() },
+  setSun: (sfi, k) => { if (G) { G.sfi = sfi; G.k = k } },
+  setUtc: h => { if (G) G.utc0 = h - (G.t / 1000) * G.simRate / 3600 },
+  setTarget: prefix => { if (!G) return; const e = ENTITIES.find(x => x[0] === prefix); if (!e) return; const ll = { lat: e[2], lon: e[3] }; G.target = { prefix: e[0], name: e[1], ll, rarity: e[4], dist: gcDist(G.qth, ll), bearing: gcBearing(G.qth, ll), tries: 0 }; G.targetUntil = G.t + TARGET_SECS * 1000; G.attempt = null; G.verdict = null; G.verdictLines = [] },
+  step: ms => { for (let d = ms; d > 0; d -= 16) update(Math.min(16, d)) },
+  finish: () => { if (G && G.attempt && !G.attempt.done) finishAttempt() },
+}
+</script>
+</body>
+</html>
