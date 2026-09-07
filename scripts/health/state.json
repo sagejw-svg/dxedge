@@ -1,9 +1,67 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-09-06T04:20:00Z",
+ "last_run": "2026-09-07T04:20:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
+  {
+   "date": "2026-09-07",
+   "run_outcome": "COMPLETE - all three mandated surfaces plus the crane-cab page verified live in headless Chromium. Nothing broken, nothing repaired, no notification sent.",
+   "cert": {
+    "status": "ok",
+    "evidence": "https://dxedge.net/api/health and /api/debug fetched cleanly over TLS at 04:10Z with cache-busting params. No CERTIFICATE_VERIFY_FAILED, no expiry error. Chromium loaded all four surfaces through the relay with no TLS error on the upstream leg.",
+    "notes": "Exact expiry still unreadable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
+    "consecutive_failures": 0
+   },
+   "main_dashboard": {
+    "api_health": "ok",
+    "sfi": 116,
+    "k_index": 2,
+    "a_index": 7,
+    "ssn": 76,
+    "spots": 500,
+    "feed_proxy": true,
+    "cold_cache_zeros": "Seen again (sat_tles 0 / pota_spots 0 at 04:10Z) and again NOT investigated: known issue health-metric-cold-cache is closed. The escalation condition was checked instead and both underlying endpoints are healthy.",
+    "health_timestamp_freshness": "fresh (04:10:23Z at 04:10Z). No stale-timestamp recurrence.",
+    "browser_check": "DONE. Headless Chromium at /opt/pw-browsers/chromium-1194 via local relay. 8 requests, ALL HTTP 200, zero page errors. Renders live data: solar indices SFI 116 / K 2 / A 7 / SSN 76, 48h SFI history through Sep 7, 24h propagation matrix, band table, world clocks, nav with Crane Cab now under GAMES. Only console noise was 3 ws://127.0.0.1/ws/spots handshake failures, the relay not proxying WebSockets, NOT a site defect.",
+    "endpoints_verified": [
+     "/api/health",
+     "/api/debug",
+     "/api/pota",
+     "/api/satellites/positions",
+     "/api/sota"
+    ],
+    "pota_note": "/api/pota returned 6 spots with bands resolving correctly (20m 14290.0 and 14074.0, 40m 7042.0). Healthy. Count is lower than the 22-23 seen on 09-05/09-06 but that is ordinary overnight POTA activity, not a fault: the parser, the band mapping and the upstream all work.",
+    "satellites_note": "/api/satellites/positions returned the same 9 positions (AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3). Healthy.",
+    "sota_note": "/api/sota returned 5 spots and 0 DEPRECATED rows, so the 09-03 tombstone filter still holds and the deprecated api2 endpoint is STILL answering, seven days past its stated removal date. All 5 spots are BX2AKP on one summit and all render band '?', the known sota-band-unit-mismatch item awaiting James. One spot again carries frequency 0.0, the known empty-frequency shape, not a new tombstone."
+   },
+   "cyber_page": {
+    "browser_check": "DONE. 10 requests (8 /api/feed plus document and assets), ALL HTTP 200. Zero page errors, zero inline 'failed:' panels, nothing pending past 15s.",
+    "renders_live_data": "Confirmed by reading rendered text: CISA KEV 1695 total with entries added 2026-09-04, NVD CVE cards, EPSS percentages, Claude AI-security briefing card.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Zero allorigins requests in the browser; the only two tree-wide grep hits remain explanatory comments in backend/main.py:688 and backend/feedproxy.py:3.",
+    "cross_origin_requests": "Exactly one, not a feed: the Google Fonts stylesheet, ERR_CERT_AUTHORITY_INVALID. Known issue chromium-google-fonts-cert-artifact, and a useful control proving request capture works.",
+    "allowlist_gaps": "none. No feedproxy allowlist change made or needed. backend/feedproxy.py unchanged since d055aed 2026-09-01.",
+    "nvd_severity_mismatch": "Still visible and unchanged: the 'CRITICAL CVES - LAST 30 DAYS' panel rendered HIGH 8.4 alongside CRITICAL. Already an open awaiting_james item raised 2026-09-05. NOT re-reported.",
+    "rate_limiting": "None observed. Page loads spaced 20-28s apart per known issue api-rate-limit-on-feed."
+   },
+   "aethersdr_page": {
+    "browser_check": "DONE. 7 requests (5 /api/feed plus document and assets), ALL HTTP 200. Zero page errors, zero inline failures, nothing pending.",
+    "renders_live_data": "Confirmed: GitHub releases atom now through AetherSDR v26.9.2 (6h ago), a new release since the 09-06 run, plus Hackaday, RTL-SDR and FlexRadio items. Feed is live and current.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none",
+    "cross_origin_requests": "Same single Google Fonts artifact as the cyber page."
+   },
+   "crane_cab_page_review": "Re-reviewed because James pushed 13 commits to it since the last run (868dbcc through 7cb11c2: Phase 3 radio director, procedural audio, second and third bug passes, and a test suite now committed at crane-cab-dev/test/). Checked specifically for a feed added the wrong way. Result: still NO outbound feed. One new fetch() appeared at frontend/public/crane-cab/js/audio.js:304, and it is same-origin relative ('audio/<key>.ogg') with a documented caption-only fallback on miss, so it has no feedproxy or allowlist implication. No XMLHttpRequest, no WebSocket, no /api/ call. Browser load: 20 requests, all 200 except the pinned three.js CDN, which fails only with the known Chromium cert artifact; HUD and title card render, zero page errors. The crane-cab-third-party-cdn advisory from 09-06 is unchanged and was not re-reported.",
+   "james_commits_reviewed": "James also changed nginx/nginx.conf and .github/workflows/deploy.yml in commits 0f66175, d1a1118 and e044807 (stop caching deploy-carrying files, restart nginx, fail the run on wrong cache headers). These are his own changes to files this routine may not touch autonomously. Noted, not modified. The site is serving correctly after them.",
+   "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule. Re-confirmed no new outbound links: all four linkcheck.py source files are unchanged since that sweep (Credits.jsx 2026-05-31, Products.jsx 2026-09-02, both standalone pages 2026-09-03 in 49e82d2), and crane-cab still carries no curated outbound links.",
+   "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py still has zero definitions of it. Pre-existing, not papered over. Note James committed a NEW test suite this week at crane-cab-dev/test/ (node, separate from pytest), which does not affect this break.",
+   "new_finding": "none. No new defect on any surface and no new escalation.",
+   "repairs_made": "none - nothing was broken",
+   "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied.",
+   "commits_pushed": "PENDING - state file only",
+   "deploy_result": "state-file-only commit; no deploy verification needed beyond the post-push health check recorded below"
+  },
   {
    "date": "2026-09-06",
    "run_outcome": "COMPLETE - all three mandated surfaces plus the new crane-cab page verified live in a real browser. Nothing broken, nothing repaired, no new escalation raised to a notification.",
