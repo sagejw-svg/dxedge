@@ -164,6 +164,20 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
   await p.close();
 }
 
+// 7. The title card has to say which build it is. This is the whole point of the
+//    stamp: a cached copy and a fresh one look identical until you read it.
+{
+  const p = await page();
+  const stamp = await p.evaluate(() => {
+    const e = document.getElementById('build-stamp');
+    return { text: e ? e.textContent.trim() : null, visible: !!(e && e.offsetParent !== null) };
+  });
+  rec('the title card says which build it is',
+    stamp.text && stamp.text.length > 0 && stamp.visible,
+    `reads "${stamp.text}", visible ${stamp.visible}`);
+  await p.close();
+}
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);

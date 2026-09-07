@@ -14,6 +14,7 @@ const rec = (name, ok, detail) => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  :: ${detail}` : ''}`);
 };
 
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -1227,6 +1228,36 @@ async function tBlockedStorageSaysSo() {
     card && card.savedOk === false, `savedOk ${card && card.savedOk}`);
 }
 
+
+// The deploy workflow rewrites data/build.js in the published mirror with a sed
+// that matches these two strings literally. If a field is renamed or the quoting
+// changes, the stamp silently stops applying and every deploy ships claiming to
+// be a dev build. The workflow step fails loudly on a miss; this fails earlier.
+async function tBuildStampIsStampable() {
+  const src = readFileSync(join(HERE, '..', 'data/build.js'), 'utf8');
+  const wf = readFileSync(join(HERE, '..', '..', '.github/workflows/deploy.yml'), 'utf8');
+  const hasPlaceholders = src.includes("sha: 'dev'") && src.includes("date: ''");
+  // The exact patterns the workflow greps for, as it writes them.
+  const wfMatches = wf.includes("s/sha: 'dev'/sha: '$SHA'/") && wf.includes("s/date: ''/date: '$DATE'/");
+  const mod = await import(pathToFileURL(join(HERE, '..', 'data/build.js')).href);
+  const devLabel = mod.buildLabel();
+  const stamped = { ...mod.BUILD };
+  rec('the build stamp placeholders are exactly what the deploy rewrites',
+    hasPlaceholders && wfMatches && devLabel === 'dev build',
+    `placeholders ${hasPlaceholders}, workflow patterns ${wfMatches}, unstamped label "${devLabel}", BUILD ${JSON.stringify(stamped)}`);
+
+  // And the stamped form has to read as a build, not as an empty string.
+  const stampedSrc = src
+    .replace("sha: 'dev'", "sha: 'abc1234'")
+    .replace("date: ''", "date: '2026-09-07'");
+  const dataUrl = `data:text/javascript;base64,${Buffer.from(stampedSrc).toString('base64')}`;
+  const stampedMod = await import(dataUrl);
+  const label = stampedMod.buildLabel();
+  rec('and a stamped build says which commit it is',
+    label.includes('abc1234') && label.includes('2026-09-07'),
+    `stamped label "${label}"`);
+}
+
 // ---------------------------------------------------------------- run
 
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
@@ -1245,7 +1276,7 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tFailCardIsNotAReplay, tGradeMovesInsideTheWin, tAchievementsAreNotFree,
   tDogEverythingWithTheMushroomDown, tHooksCountRigs, tBlockedStorageSaysSo,
   tGuideKeepsTalkingWhenShort, tLandedLoadCanBeNudged, tSignOffIsNotAFaultSurface,
-  tHookRetryIsNeverLost, tCorruptAwardStaysAwarded];
+  tHookRetryIsNeverLost, tCorruptAwardStaysAwarded, tBuildStampIsStampable];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

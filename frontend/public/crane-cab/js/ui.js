@@ -3,6 +3,7 @@
 // Unit conversion for display lives here and only here.
 
 import { MISSIONS } from '../data/missions.js';
+import { buildLabel } from '../data/build.js';
 
 const $ = (id) => document.getElementById(id);
 let el = {};
@@ -22,8 +23,13 @@ export function init(ctx) {
     ecFaults: $('ec-faults'), ecButton: $('btn-endcard'), ecError: $('ec-error'),
     ecGrade: $('ec-grade'), ecGradeLetter: $('ec-grade-letter'), ecPlan: $('ec-plan'),
     ecWhy: $('ec-why'), ecEarned: $('ec-earned'), ecBest: $('ec-best'),
-    debug: $('debug')
+    debug: $('debug'),
+    build: $('build-stamp')
   };
+
+  // Written once. It never changes while the page is open, and it is the fastest
+  // way to tell a cached copy from a fresh one without reading the gauges.
+  if (el.build) el.build.textContent = buildLabel();
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'F3') {
@@ -231,10 +237,11 @@ export function update(ctx) {
   if (state.debug.show) {
     const c = state.crane;
     el.debug.textContent =
-`fps ${state.time.fps}  t ${state.time.t.toFixed(1)}  phase ${state.phase}
+`${buildLabel()}
+fps ${state.time.fps}  t ${state.time.t.toFixed(1)}  phase ${state.phase}
 slew ${(c.slew * 180 / Math.PI).toFixed(1)}deg  vel ${c.slewVel.toFixed(3)}
 radius ${c.radius.toFixed(2)}  line ${c.line.toFixed(2)}  reach ${s.maxLoadRadius.toFixed(2)} (${s.reachPct.toFixed(0)}%)
-sway ${(s.swayAngle * 180 / Math.PI).toFixed(2)}deg  lmi ${s.capacityPct.toFixed(0)}%
+sway ${(s.swayAngle * 180 / Math.PI).toFixed(2)}deg (load ${(s.loadSway * 180 / Math.PI).toFixed(2)}deg)  lmi ${s.capacityPct.toFixed(0)}%
 a2b ${s.a2b} slack ${s.slack} lock ${s.lmiLock} hit ${s.collision}
 radio ${state.radio.script ?? '-'} / ${state.radio.node ?? '-'}  tx ${state.radio.tx}  faults ${state.radio.faults}
 intent slew ${state.intent.slew} trolley ${state.intent.trolley} hoist ${state.intent.hoist} ${state.intent.range}

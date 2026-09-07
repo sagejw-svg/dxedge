@@ -298,6 +298,26 @@ html, body {
 }
 .card button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
+/* Which build this is. Deliberately the quietest thing on the card: it is there
+   to be found when you go looking, not to be read every time.
+
+   Out of the flow, pinned to the card's own bottom corner. In the flow it added a
+   line under the button, and on an 844x390 landscape phone the title card already
+   overflows, so the one line that answers "is this current" was the one line
+   below the fold. .card is position:absolute inset:0, so this anchors to the
+   stage rather than to the overflowing content. Bottom right rather than left: the
+   left corner is where the E-Stop lamp sits, and the stamp covered its label. */
+.card .build {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
 /* Small corner button that reopens the controls list during play. Sits
    below the title/pause cards in stacking order, above the console. */
 #btn-help {

@@ -48,9 +48,17 @@ review and revert than a big diff.
 check in it is a bug that was once live:**
 
 ```
-node test/regress.mjs        # 24 checks, no browser, a few seconds
+node test/regress.mjs        # 65 checks, no browser, a few seconds
 bash test/run.sh             # the above plus the browser smoke test
 ```
+
+`test/run.sh` skips the browser half when playwright is not importable from
+the repo, and says so. Do not read that SKIP as a pass. If the sandbox has a
+global playwright, symlink it in for the run, and if index.html's CDN import
+of three.js is blocked, take the copy the smoke test's header describes and
+point `PAGE` at a local-import-map copy of index.html. The browser half is
+where render.js, ui.js and the console layout are covered, and it is the only
+place a device-pixel-ratio bug can be seen at all.
 
 If anything in `test/regress.mjs` fails, stop. Do not deploy, and do not
 "fix" the test to make it pass without understanding which real behaviour
@@ -99,6 +107,12 @@ truly cannot get it working, do not deploy — commit nothing, push nothing,
 and say so plainly in the notification with what broke and what you tried.
 
 ## 4. Deploy
+
+The published build carries the commit it was built from: the deploy workflow
+rewrites `data/build.js` in the mirror only, and the title card shows it in the
+bottom right. Never commit a stamped `build.js` back into the repo; the
+committed value stays `sha: 'dev'`. If the placeholder strings there ever
+change, `test/regress.mjs` fails before the deploy does.
 
 Copy the runtime files only (not `CLAUDE.md`, not `docs/`, not `.claude/`,
 not this file, not `STATUS.md`) from `crane-cab-dev/` into

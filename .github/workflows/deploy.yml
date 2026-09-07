@@ -28,6 +28,24 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
 
+      # Stamp the Crane Cab build with the commit it was built from, so a player
+      # can tell a cached copy from a fresh one by reading the title card instead
+      # of diffing the gauges. Only the published mirror is touched, never
+      # crane-cab-dev/, so the repo copy stays at 'dev' and never churns.
+      # The sed patterns are guarded by a check in crane-cab-dev/test/regress.mjs;
+      # if they stop matching, this step fails the deploy rather than shipping a
+      # build that quietly claims to be 'dev'.
+      - name: Stamp the Crane Cab build
+        run: |
+          set -euo pipefail
+          F=frontend/public/crane-cab/data/build.js
+          SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y-%m-%d)
+          sed -i "s/sha: 'dev'/sha: '$SHA'/; s/date: ''/date: '$DATE'/" "$F"
+          grep -q "sha: '$SHA'" "$F" || { echo "build stamp did not apply to $F"; exit 1; }
+          grep -q "date: '$DATE'" "$F" || { echo "build date did not apply to $F"; exit 1; }
+          echo "stamped $SHA $DATE"
+
       - name: Build frontend
         run: npm run build --prefix frontend
         env:
