@@ -1,8 +1,45 @@
 // PHASE 2. Load as a pendulum on line length L. Owns state.load.
-// Two small-angle DOF: swing.x tangential (from slew accel), swing.y radial (from trolley accel).
-// theta'' = -(g/L) theta - damping theta' + drive / L
-//   drive: trolley accel for radial, radius * slew accel for tangential, plus wind force / mass.
-// Damping around 0.02/s plus settings.damping assist (0 = raw, 1 = heavy).
+// Two DOF: swing.x tangential (across the jib, the direction the trolley sweeps as
+// the house slews), swing.y radial (along the jib).
+//
+// PHASE 4C: the full equation, rather than the small-angle one driven only by the
+// two accelerations a control input produces directly. Per axis:
+//
+//   theta'' = -(g/L) sin(theta) - (2 Ldot / L) theta' - damping theta'
+//             - (a_pivot / L) cos(theta) + (a_wind / L) cos(theta)
+//
+// with the pivot's acceleration taken in full, in the rotating jib frame, as the
+// polar acceleration of a point at radius r turning at rate Omega:
+//
+//   radial      a_r = rddot - r Omega^2            <- centrifugal
+//   tangential  a_t = r Omegadot + 2 rdot Omega    <- Euler and Coriolis
+//
+// The two right-hand terms were previously omitted as "not the full rotating
+// frame equations", and they are the ones an operator actually feels: slewing at
+// range II at 50 m holds the load about four degrees out from plumb the whole
+// time it is turning, and it swings back in when the slew stops. Nothing in the
+// old model did that, so a constant slew produced no lean at all.
+//
+// 2 Ldot / L is the rope length coupling. Angular momentum about the pivot goes
+// as L^2 theta', so hauling in on a swinging load feeds it: shortening the rope
+// grows the swing (amplitude goes as L^-3/4), paying out kills it. This is why
+// "up easy" is said the way it is, and it was missing entirely.
+//
+// The sin and cos keep it honest past the small-angle range instead of stopping
+// being true somewhere around fifteen degrees.
+//
+// The rope drops L cos(tilt), not L, so the load rises at the ends of its arc and
+// the drawn rope is as long as the rope actually is. Hanging the hook a whole
+// line length down while also offsetting it sideways by L sin(tilt) drew a rope
+// six percent long at the top of the range and held the load at one height right
+// across an arc. At the sub-degree swing a landing is made at the correction is
+// under a millimetre, so nothing about touchdown moved.
+//
+// Damping acts on how fast the load is moving through the world, not through the
+// turning frame, which is the difference between the swing plane staying where
+// the world put it and quietly being dragged round with the house.
+//
+// Damping around 0.05/s plus settings.damping assist (0 = raw, 1 = heavy).
 // Emits: hook.tight (tension rises from 0), load.slack (load rests, tension ~0), sway.settled
 // (|swing| below 0.5 deg for 1.5 s). Sets load.onSurface, load.tension.
 // Hook / unhook is ground-controlled by radio.js via bus, never by a grab key.
@@ -14,14 +51,18 @@ import { MISSIONS } from '../data/missions.js';
 
 const G = 9.81;
 
-// The small-angle model stays honest well below this; clamp rather than let a
-// slammed control drive the linearisation somewhere it does not belong.
-const MAX_SWING = 0.35;            // rad, ~20 deg
+// A last-resort guard, not a modelling limit. The equation is exact in the angle
+// now, so this is only here to stop a pathological input running the state away;
+// ground raises ALL STOP at ten degrees, so a lift is long over before it bites.
+const MAX_SWING = 0.60;            // rad, ~34 deg
 
 // An E-stop zeroes crane velocities in a single tick, which as a raw finite
-// difference reads as several hundred m/s^2. Clamp the pivot drive so a stop
-// does not fire the load out of the model.
-const DRIVE_ACCEL_CLAMP = 3.0;     // m/s^2
+// difference reads as several hundred m/s^2 or rad/s^2. Only the finite
+// differences are clamped. The centrifugal and Coriolis terms are built from
+// velocities, which cannot spike like that, so clamping them would only make
+// them wrong.
+const DRIVE_ACCEL_CLAMP = 3.0;     // m/s^2, on rddot
+const SLEW_ACCEL_CLAMP = 0.5;      // rad/s^2, on Omegadot (the drive is r times this)
 
 // PHASE 2B retune. Amplitude decays as exp(-damping * t / 2), so 0.20/s (the default
 // 0.5 slider) takes a 4 deg swing to 0.1 deg in about 37 s. A real crane rings for a
@@ -54,6 +95,32 @@ function clamp(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
+// The vertical fraction of the rope. The hook sits at (L sin(radial), -L cos(tilt),
+// L sin(tangential)) from the sheave, so the drop is what is left of the length
+// once the two sideways offsets are taken out of it.
+//
+// Deliberately a local function rather than a published state field. It is a pure
+// function of the swing, and storing it made it something that could be stale:
+// anything that moves the rope without running a tick leaves the stored drop
+// describing the previous rope. sensors.js, missions.js and render.js each keep
+// their own copy of these three lines, the same way they already each keep their
+// own copy of the horizontal offset, because a shared one would mean a system
+// importing another system.
+function tiltCos(swing) {
+  const sx = Math.sin(swing.x);
+  const sy = Math.sin(swing.y);
+  return Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+}
+
+// The pendulum plane is fixed in the world, not in the jib frame, and until now
+// that was handled by rotating the stored swing vector by the frame's own turn
+// each tick. That is only half right. Rotating (angle, rate) by Omega dt supplies
+// one Coriolis term where the rotating frame has two, and supplies no centrifugal
+// term on the swing's own offset at all, because that is second order in the
+// step. It showed up as a steady centrifugal lean about two percent under the
+// closed form. The frame terms are written out explicitly in update() instead,
+// which is the standard rotating-frame pendulum and is exactly right.
+
 export function init(ctx) {
   const load = ctx.state.load;
 
@@ -83,44 +150,44 @@ export function update(ctx, dt) {
 
   // Pivot acceleration this tick, as a finite difference of the crane's own
   // velocities. crane.js has already run (fixed tick order), so these are current.
-  const slewAccel = dt > 0 ? (c.slewVel - prevSlewVel) / dt : 0;
-  const radiusAccel = dt > 0 ? (c.radiusVel - prevRadiusVel) / dt : 0;
+  const slewAccel = clamp(dt > 0 ? (c.slewVel - prevSlewVel) / dt : 0,
+    -SLEW_ACCEL_CLAMP, SLEW_ACCEL_CLAMP);
+  const radiusAccel = clamp(dt > 0 ? (c.radiusVel - prevRadiusVel) / dt : 0,
+    -DRIVE_ACCEL_CLAMP, DRIVE_ACCEL_CLAMP);
   prevSlewVel = c.slewVel;
   prevRadiusVel = c.radiusVel;
 
-  // PHASE 2B: the pendulum plane is fixed in the world, not in the jib frame. The jib
-  // turned by slewVel * dt this tick, so every world-fixed vector appears turned the
-  // other way in jib coordinates. Rotate the swing angle and velocity vectors to match
-  // before integrating. Without this a radial swing reads as radial again after a
-  // 90 degree slew, which is not what a hanging load does.
-  // Sign: render.js rotates the jib group by -slew about y, and swing.y maps to local
-  // +x (along the jib) while swing.x maps to local +z (across it). A world-fixed vector
-  // therefore transforms by R_y(+a) in local coordinates: radial' = radial cos a +
-  // tangential sin a, tangential' = tangential cos a - radial sin a. Verified in a
-  // headless run: after a 45 degree slew a free swing has x and y in anti-phase.
-  {
-    const a = c.slewVel * dt;
-    if (a !== 0) {
-      const cs = Math.cos(a), sn = Math.sin(a);
-      let x = swing.x, y = swing.y;
-      swing.x = x * cs - y * sn;
-      swing.y = x * sn + y * cs;
-      x = swing.vx; y = swing.vy;
-      swing.vx = x * cs - y * sn;
-      swing.vy = x * sn + y * cs;
-    }
-  }
-
-  // Tangential drive is the linear accel of the trolley as the house slews.
-  // Coriolis (2 * radiusVel * slewVel) and centripetal (radius * slewVel^2) are
-  // deliberately omitted - the header specifies a small-angle two-DOF model driven
-  // by pivot acceleration, not the full rotating-frame equations.
-  const driveTangential = clamp(c.radius * slewAccel, -DRIVE_ACCEL_CLAMP, DRIVE_ACCEL_CLAMP);
-  const driveRadial = clamp(radiusAccel, -DRIVE_ACCEL_CLAMP, DRIVE_ACCEL_CLAMP);
+  // The pivot's acceleration, in full, in the jib frame. This is just the polar
+  // acceleration of a point at radius r turning at rate Omega, which is what the
+  // sheave is:
+  //
+  //   a_r = rddot - r Omega^2          out along the jib
+  //   a_t = r Omegadot + 2 rdot Omega  the way the trolley is sweeping
+  //
+  // Local +z is the direction of increasing slew (missions.loadCentre maps local
+  // (x, z) to world by a rotation of +slew), and swing.x is the angle in that
+  // direction, so a_t drives swing.x and a_r drives swing.y with no sign games.
+  //
+  // -r Omega^2 is the one that changes how the crane feels. Turning at range II
+  // at 50 m is 0.72 m/s^2 outward, which holds the load about four degrees off
+  // plumb for as long as the slew lasts and lets it go when the slew stops. The
+  // old model had no term that could do that: a constant slew rate produced no
+  // lean whatsoever, and all the swing came from the brief moments of Omegadot at
+  // the start and end of a turn.
+  const slewRate = c.slewVel;
+  const driveTangential = c.radius * slewAccel + 2 * c.radiusVel * slewRate;
+  const driveRadial = radiusAccel - c.radius * slewRate * slewRate;
 
   // --- Deck contact and line tension ---
   // Hook block height above the deck, then the bottom face of what hangs on it.
-  const hookY = c.cabHeight + CRANE.hookDrop - c.line;
+  // The rope drops L cos(tilt), not L. Treating the drop as the whole rope length
+  // while offsetting the hook sideways by L sin(tilt) makes the drawn rope longer
+  // than the rope is - six percent at the top of the model's range - and holds the
+  // load at a constant height right through an arc it should be rising and falling
+  // across. At the settled sub-degree swing a landing is made at, the correction
+  // is under a millimetre, so nothing about touchdown changes.
+  const drop = c.line * tiltCos(swing);
+  const hookY = c.cabHeight + CRANE.hookDrop - drop;
   const loadHeight = load.attached ? (load.size[1] || 0) : 0;
   const bottomY = hookY - loadHeight;
 
@@ -182,15 +249,54 @@ export function update(ctx, dt) {
     (state.settings.damping || 0) * DAMPING_ASSIST +
     (load.onSurface ? DECK_DAMPING : 0);
 
+  // Rope length coupling. Angular momentum about the pivot goes as L^2 theta',
+  // so the equation carries a -2 Ldot / L theta' term: paying out slows the
+  // swing, hauling in feeds it. c.lineVel is positive paying out, so hauling in
+  // makes `pump` positive and it adds energy, which is exactly what happens when
+  // you take a swinging load up and exactly why ground says "up easy". At 1.5 m/s
+  // on 10 m of rope it is +0.30/s against about 0.20/s of damping, so range II
+  // near the deck genuinely loses the argument.
+  const pump = -2 * (c.lineVel || 0) / L;
+
   // A pivot accelerating one way leaves the load behind, so the drive enters
   // with a negative sign. Wind pushes the load the way it blows, so it does not.
-  const accelX = -gOverL * swing.x - damping * swing.vx - driveTangential / L + windTangential / L;
-  const accelY = -gOverL * swing.y - damping * swing.vy - driveRadial / L + windRadial / L;
+  // Both are horizontal, so they act on the load through cos(theta), while
+  // gravity's restoring torque goes as sin(theta).
+  const sinX = Math.sin(swing.x);
+  const cosX = Math.cos(swing.x);
+  const sinY = Math.sin(swing.y);
+  const cosY = Math.cos(swing.y);
 
+  // The rotating frame's own terms, on the swing itself rather than on the pivot.
+  // The load sits at radius r + L sin(radial) turning at Omega, so it carries its
+  // own centrifugal force; and it is moving in a turning frame, so it carries
+  // Coriolis and, while the slew is changing, Euler. Writing these out is what
+  // makes a free swing hold a fixed plane in the world while the house turns
+  // under it, and it is the same set of terms as a Foucault pendulum.
+  const frameY = slewRate * slewRate * sinY + 2 * slewRate * swing.vx + slewAccel * sinX;
+  const frameX = slewRate * slewRate * sinX - 2 * slewRate * swing.vy - slewAccel * sinY;
+
+  // Damping is rope and air drag, and both act on how fast the load is moving
+  // through the world, not on how fast it is moving relative to a frame that is
+  // itself turning. The difference is Omega cross s, and leaving it out let the
+  // damping quietly rotate the swing plane with the house instead of leaving it
+  // where the world put it.
+  const dragX = swing.vx + slewRate * sinY;
+  const dragY = swing.vy - slewRate * sinX;
+
+  const accelX = -gOverL * sinX + pump * swing.vx - damping * dragX
+    + (windTangential - driveTangential) * cosX / L + frameX;
+  const accelY = -gOverL * sinY + pump * swing.vy - damping * dragY
+    + (windRadial - driveRadial) * cosY / L + frameY;
+
+  // Semi-implicit Euler: velocity first, then position. It is symplectic, which
+  // is why a free swing here holds its amplitude for minutes instead of quietly
+  // gaining or losing energy the way explicit Euler would.
   swing.vx += accelX * dt;
   swing.vy += accelY * dt;
   swing.x += swing.vx * dt;
   swing.y += swing.vy * dt;
+
 
   if (swing.x > MAX_SWING) { swing.x = MAX_SWING; if (swing.vx > 0) swing.vx = 0; }
   if (swing.x < -MAX_SWING) { swing.x = -MAX_SWING; if (swing.vx < 0) swing.vx = 0; }

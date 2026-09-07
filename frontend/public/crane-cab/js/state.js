@@ -53,7 +53,7 @@ export function createState() {
       radius: 0, hookHeight: 0, heading: 0,
       actualLoad: 0, ratedLoad: 0, capacityPct: 0,
       lmiLock: false, a2b: false, slack: false, collision: false,
-      wind: 0, swayAngle: 0, loadSway: 0,
+      wind: 0, swayAngle: 0, loadSway: 0, swayAmplitude: 0,
       maxLoadRadius: 0, reachPct: 0  // Phase 2B: how far out this load may go
     },
 

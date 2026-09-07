@@ -126,7 +126,7 @@ export function update(ctx) {
   const { state } = ctx;
   if (state.mission.id === null || state.mission.result !== null) return;
   const sc = state.scoring;
-  if (state.sensors.loadSway > sc.maxSway) sc.maxSway = state.sensors.loadSway;
+  if (state.sensors.swayAmplitude > sc.maxSway) sc.maxSway = state.sensors.swayAmplitude;
   // Rope left above the two-block stop, at its worst. "No Two-Block" asks for
   // headroom rather than for not having failed.
   const head = state.crane.line - state.crane.minLine;

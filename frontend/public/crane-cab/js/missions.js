@@ -56,8 +56,19 @@ function hookWorld(state) {
   return { x: jibX * cos - jibZ * sin, z: jibX * sin + jibZ * cos };
 }
 
+
+// The vertical part of the rope, L cos(tilt). The hook hangs this far below the
+// sheave, not a whole line length: it is offset sideways by L sin of each swing
+// angle, and what is left over is the drop. Same three lines as pendulum.js,
+// which owns the model; a shared copy would be one system importing another.
+function ropeDrop(state) {
+  const sx = Math.sin(state.load.swing.x);
+  const sy = Math.sin(state.load.swing.y);
+  return state.crane.line * Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+}
+
 function hookBottomY(state) {
-  return state.crane.cabHeight + CRANE.hookDrop - state.crane.line;
+  return state.crane.cabHeight + CRANE.hookDrop - ropeDrop(state);
 }
 
 function loadBottomY(state) {
@@ -336,7 +347,7 @@ export function update(ctx, dt) {
   if (resolved) return;
 
   if (state.sensors.capacityPct > m.maxCapacityPct) m.maxCapacityPct = state.sensors.capacityPct;
-  if (state.sensors.loadSway > m.maxSway) m.maxSway = state.sensors.loadSway;
+  if (state.sensors.swayAmplitude > m.maxSway) m.maxSway = state.sensors.swayAmplitude;
 
   // A load sitting on the thing it is picked from shares a face with that deck
   // volume, and an AABB test counts a shared face as a hit - mission 1's load

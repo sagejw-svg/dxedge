@@ -19,7 +19,7 @@ fresh session doesn't have to reverse-engineer it from git history.
   STOP and failed the lift in about ten seconds. It also closed the most common
   hang in the game: a hook retry that expired inside a transmission was lost,
   stranding a quarter of all fuzzed lifts at "on the hook" with no way out.
-  test/regress.mjs is now 65 checks and test/smoke.mjs 12.
+  test/regress.mjs is now 76 checks and test/smoke.mjs 12.
 - Phase 4 itself: the phase table's own done
   condition, "refresh keeps progress", is met and checked. scoring.js grades a
   lift on a demerit count and says which line cost the letter; save.js persists
@@ -52,6 +52,17 @@ fresh session doesn't have to reverse-engineer it from git history.
   enough to be a working level. Shadows drop themselves, one way, if the frame
   rate sits under 20 for six seconds; test/smoke.mjs watches that happen on the
   software renderer.
+- Then the pendulum, which was a small-angle model driven only by the two
+  accelerations a control produces directly. It now carries the full rotating
+  frame (centrifugal, Coriolis and Euler, on the pivot and on the swing itself),
+  the rope length coupling that makes hauling in feed a swing, sin and cos
+  instead of the linearisation, damping on the world velocity rather than the
+  rotating-frame velocity, and a rope that drops L cos(tilt) so the load rises at
+  the ends of its arc. Checked against closed forms rather than against
+  yesterday's behaviour: period, centrifugal lean, Coriolis, the L^-3/4 amplitude
+  law, the damping envelope, and that a free swing keeps its plane in the world.
+  Because a steady lean is not a swing, sensors.swayAmplitude separates the
+  oscillation from the lean and that is what the grade reads.
 - Next phase: **5 (Phone + pause)** - touch sticks, pause menu, settings and the
   controls card, per the Notion phase table. No prompt doc yet; draft
   docs/PHASE-5-PROMPT.md first, per AUTOMATION.md step 2. Note that save.js now

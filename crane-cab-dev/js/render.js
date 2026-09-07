@@ -1189,6 +1189,17 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
+
+// The vertical part of the rope, L cos(tilt). The hook hangs this far below the
+// sheave, not a whole line length: it is offset sideways by L sin of each swing
+// angle, and what is left over is the drop. Same three lines as pendulum.js,
+// which owns the model; a shared copy would be one system importing another.
+function ropeDrop(state) {
+  const sx = Math.sin(state.load.swing.x);
+  const sy = Math.sin(state.load.swing.y);
+  return state.crane.line * Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+}
+
 const SHEAVE_DROP = 0.45;   // the rope leaves the sheave, not the middle of the trolley
 const ropeTop = new THREE.Vector3();
 const ropeVec = new THREE.Vector3();
@@ -1208,7 +1219,10 @@ export function update(ctx, dt) {
   const topY = c.cabHeight + CRANE.hookDrop;
   trolley.position.set(c.radius, topY + 0.4, 0);
   sheave.position.set(c.radius, topY - SHEAVE_DROP, 0);
-  const hookY = topY - c.line;
+  // The drop is the vertical part of the rope, L cos(tilt). Hanging the hook a
+  // whole line length down while also offsetting it sideways drew a rope longer
+  // than the rope is, and held the load at one height right through an arc.
+  const hookY = topY - ropeDrop(state);
   hook.position.set(
     c.radius + Math.sin(state.load.swing.y) * c.line,
     hookY,

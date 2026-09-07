@@ -1258,6 +1258,286 @@ async function tBuildStampIsStampable() {
     `stamped label "${label}"`);
 }
 
+
+// -------------------------------------------------- phase 4c: pendulum physics
+//
+// These check the model against closed-form answers rather than against
+// yesterday's behaviour. A pendulum has a period, a load being turned in a
+// circle has a lean, and a rope being hauled in on a swinging load feeds it; all
+// three are arithmetic, and if the sim disagrees with the arithmetic the sim is
+// wrong. Tolerances are loose enough to absorb the damping the model carries and
+// tight enough that a sign error or a missing term cannot hide.
+
+// No mission running: these are physics benches, not lifts. Starting a mission
+// puts the radio director and the fail conditions in the loop, and four minutes
+// of slewing in a circle is a lift that ends badly, which stops the clock in the
+// middle of the measurement. It also removes the mission's wind, which is a real
+// force and the wrong one to have in a bench.
+async function pendulumRig({ line = 30, radius = 20, damping = 0 } = {}) {
+  const sim = await makeSim();
+  const s = sim.state;
+  s.phase = 'playing';
+  s.settings.damping = damping;
+  const m = MISSIONS[0];
+  s.load.attached = true; s.load.mass = m.load.mass; s.load.size = [...m.load.size];
+  s.crane.line = line; s.crane.lineVel = 0;
+  s.crane.radius = radius; s.crane.radiusVel = 0;
+  s.crane.slew = 0; s.crane.slewVel = 0;
+  return sim;
+}
+const swingAmp = (sim, secs, pick) => {
+  let a = 0;
+  until(sim, () => false, secs, (s) => { a = Math.max(a, Math.abs(pick(s))); });
+  return a;
+};
+const GRAV = 9.81;
+
+async function tPendulumPeriod() {
+  const rows = [];
+  for (const L of [10, 25, 40]) {
+    const sim = await pendulumRig({ line: L });
+    const s = sim.state;
+    s.load.swing.x = 0.05;
+    const ts = [];
+    let last = s.load.swing.x;
+    let t = 0;
+    const want = 2 * Math.PI * Math.sqrt(L / GRAV);
+    until(sim, () => ts.length > 7, want * 9, () => {
+      t += sim.STEP;
+      if (last > 0 && s.load.swing.x <= 0) ts.push(t);
+      last = s.load.swing.x;
+    });
+    const got = (ts[6] - ts[0]) / 6;
+    rows.push({ L, got, want, err: Math.abs(got - want) / want });
+  }
+  rec('a free swing has the period gravity says it should',
+    rows.every((r) => r.err < 0.01),
+    rows.map((r) => `L=${r.L}: ${r.got.toFixed(2)}s vs ${r.want.toFixed(2)}s (${(r.err * 100).toFixed(2)}%)`).join(', '));
+}
+
+// Turning holds the load out from plumb for as long as the turn lasts. The old
+// model had no term that could do this: a constant slew rate produced no lean at
+// all, and every bit of swing came from the moments the slew rate was changing.
+async function tCentrifugalLean() {
+  const rows = [];
+  for (const [r, range] of [[50, 'II'], [30, 'II'], [50, 'I']]) {
+    const sim = await pendulumRig({ radius: r, damping: 1 });
+    const s = sim.state;
+    until(sim, () => false, 260, (st) => { st.intent.slew = 1; st.intent.range = range; });
+    const om = s.crane.slewVel;
+    const L = s.crane.line;
+    // The load rides at radius r + L sin(theta), so the closed form is implicit.
+    let th = 0;
+    for (let k = 0; k < 60; k += 1) th = Math.atan((om * om * (r + L * Math.sin(th))) / GRAV);
+    rows.push({ r, range, got: s.load.swing.y, want: th, err: Math.abs(s.load.swing.y - th) / th });
+  }
+  rec('slewing holds the load out from plumb by as much as the arithmetic says',
+    rows.every((x) => x.err < 0.02 && x.got > 0),
+    rows.map((x) => `r=${x.r} ${x.range}: ${(x.got * 180 / Math.PI).toFixed(3)} vs ${(x.want * 180 / Math.PI).toFixed(3)} deg`).join(', '));
+
+  // And it is a lean, not a swing: it goes away when the slew stops.
+  const sim = await pendulumRig({ radius: 50, damping: 1 });
+  const s = sim.state;
+  until(sim, () => false, 200, (st) => { st.intent.slew = 1; st.intent.range = 'II'; });
+  const held = s.load.swing.y;
+  until(sim, () => false, 60, (st) => { st.intent.slew = 0; });
+  rec('and lets it go again when the slew stops',
+    held > 0.05 && Math.abs(s.load.swing.y) < held * 0.1,
+    `${(held * 180 / Math.PI).toFixed(2)} deg while turning, ${(s.load.swing.y * 180 / Math.PI).toFixed(3)} deg a minute after stopping`);
+}
+
+// Trolleying out while the house turns throws the load behind the sweep. Sign
+// first, magnitude second: a Coriolis term with the sign wrong would swing the
+// load the wrong way round the jib and look like nothing in particular.
+async function tCoriolis() {
+  const spin = (trolley) => (st) => { st.intent.slew = 1; st.intent.range = 'II'; st.intent.trolley = trolley; };
+  const still = await pendulumRig({ radius: 20, damping: 1 });
+  until(still, () => false, 26, spin(0));
+  const moving = await pendulumRig({ radius: 20, damping: 1 });
+  until(moving, () => false, 26, spin(1));
+  const om = moving.state.crane.slewVel;
+  const rdot = moving.state.crane.radiusVel;
+  const L = moving.state.crane.line;
+  const got = moving.state.load.swing.x - still.state.load.swing.x;
+  // Steady state of the tangential equation, keeping the terms that survive:
+  //   s_x (g/L - Omega^2) = -c Omega s_y - 2 rdot Omega / L
+  // The first right-hand term is drag on the radial offset being carried round,
+  // which the bare 2 rdot Omega / g form leaves out; the two runs sit at
+  // different radii and so at different leans, so it does not cancel between
+  // them. c is BASE_DAMPING plus the assist at settings.damping 1.
+  const c = 0.05 + 0.3;
+  const dLean = moving.state.load.swing.y - still.state.load.swing.y;
+  const want = (-c * om * dLean - (2 * rdot * om) / L) / (GRAV / L - om * om);
+  rec('trolleying out while slewing throws the load behind the sweep',
+    rdot > 0.5 && got < 0 && Math.abs(got - want) / Math.abs(want) < 0.08,
+    `${(got * 180 / Math.PI).toFixed(3)} deg against ${(want * 180 / Math.PI).toFixed(3)} deg from the steady state, at rdot ${rdot.toFixed(2)} Omega ${om.toFixed(3)}`);
+}
+
+// Angular momentum about the pivot goes as L^2 theta-dot, so shortening the rope
+// on a swinging load feeds it and paying out kills it. Amplitude follows L^-3/4.
+// Measured against an identical run that does not touch the hoist, so the
+// damping is common to both and cancels.
+async function tRopeCoupling() {
+  async function run(dir, move) {
+    const sim = await pendulumRig({ line: dir === 'up' ? 40 : 15, damping: 0 });
+    const s = sim.state;
+    s.load.swing.x = 0.05;
+    until(sim, () => false, 6);
+    const L0 = s.crane.line;
+    const a0 = swingAmp(sim, 22, (st) => st.load.swing.x);
+    const target = dir === 'up' ? L0 / 2 : L0 * 2;
+    until(sim, () => false, 40, (st) => {
+      st.intent.range = 'I';
+      st.intent.hoist = !move ? 0
+        : (dir === 'up' ? (st.crane.line > target ? 1 : 0) : (st.crane.line < target ? -1 : 0));
+    });
+    const a1 = swingAmp(sim, 22, (st) => st.load.swing.x);
+    return { L0, L1: s.crane.line, ratio: a1 / a0 };
+  }
+  const out = [];
+  for (const dir of ['up', 'down']) {
+    const moved = await run(dir, true);
+    const held = await run(dir, false);
+    const got = moved.ratio / held.ratio;
+    const want = Math.pow(moved.L1 / moved.L0, -0.75);
+    out.push({ dir, got, want, ok: Math.abs(got - want) / want < 0.25 });
+  }
+  rec('hauling in on a swinging load feeds it, and paying out kills it',
+    out.every((x) => x.ok) && out[0].got > 1.3 && out[1].got < 0.8,
+    out.map((x) => `${x.dir}: ${x.got.toFixed(3)}x against holding, L^-3/4 says ${x.want.toFixed(3)}`).join(', '));
+}
+
+// The integrator must not quietly make or destroy energy. Semi-implicit Euler is
+// symplectic, so the only thing taking amplitude out should be the damping, at
+// the rate the damping says.
+async function tSwingDecay() {
+  const sim = await pendulumRig({ damping: 0 });
+  const s = sim.state;
+  s.load.swing.x = 0.06;
+  const a0 = swingAmp(sim, 11, (st) => st.load.swing.x);
+  until(sim, () => false, 44);
+  const a1 = swingAmp(sim, 11, (st) => st.load.swing.x);
+  const want = Math.exp((-0.05 * 55) / 2);        // BASE_DAMPING, envelope exp(-c t / 2)
+  rec('a free swing loses amplitude at the rate the damping says, and no faster',
+    Math.abs(a1 / a0 - want) / want < 0.05,
+    `${(a0 * 180 / Math.PI).toFixed(3)} to ${(a1 * 180 / Math.PI).toFixed(3)} deg, ratio ${(a1 / a0).toFixed(4)} against ${want.toFixed(4)}`);
+}
+
+// The pendulum plane is fixed in the world, not in the jib. Turn the house under
+// a swinging load and the swing must keep pointing the same way across the site.
+// Run it at the mast centre, where there is no centrifugal lean to confuse the
+// bearing: the crane cannot really put the trolley there, so the stop is moved
+// for the test rather than the physics being asked to do something it does not.
+async function tSwingKeepsItsPlane() {
+  const sim = await pendulumRig({ radius: 0, damping: 0 });
+  const s = sim.state;
+  s.crane.minRadius = 0;
+  s.crane.radius = 0;
+  s.load.swing.y = 0.14;
+  const bearing = () => {
+    const cs = Math.cos(s.crane.slew);
+    const sn = Math.sin(s.crane.slew);
+    const jx = Math.sin(s.load.swing.y);
+    const jz = Math.sin(s.load.swing.x);
+    return Math.atan2(jx * sn + jz * cs, jx * cs - jz * sn);
+  };
+  const seen = [];
+  for (let k = 0; k < 12; k += 1) {
+    until(sim, () => false, 4, (st) => { st.intent.slew = 1; st.intent.range = 'II'; st.crane.minRadius = 0; });
+    if (Math.hypot(s.load.swing.x, s.load.swing.y) > 0.05) seen.push(bearing());
+  }
+  const wrap = (a) => {
+    const b = Math.atan2(Math.sin(a), Math.cos(a));
+    return Math.min(Math.abs(b), Math.PI - Math.abs(b));
+  };
+  const drift = seen.map((a) => wrap(a - seen[0]));
+  const worst = Math.max(...drift);
+  rec('the swing keeps its plane in the world while the house turns under it',
+    seen.length >= 5 && worst < 3 * Math.PI / 180,
+    `slewed ${(s.crane.slew * 180 / Math.PI).toFixed(0)} deg over ${seen.length} samples, worst bearing drift ${(worst * 180 / Math.PI).toFixed(2)} deg`);
+}
+
+
+// A load being turned in a circle hangs out from plumb for as long as the turn
+// lasts. That is a lean, not a swing, and the grade must not charge for it: since
+// the model gained the rotating frame terms, slewing at range II at forty metres
+// holds three and a half degrees, which is over the demerit threshold and would
+// have cost a letter for flying the crane at the speed the crane has.
+async function tLeanIsNotSway() {
+  const sim = await pendulumRig({ radius: 45, damping: 1 });
+  const s = sim.state;
+  let peakAngle = 0;
+  let peakAmp = 0;
+  until(sim, () => false, 200, (st) => {
+    st.intent.slew = 1; st.intent.range = 'II';
+    peakAngle = Math.max(peakAngle, st.sensors.loadSway);
+    peakAmp = Math.max(peakAmp, st.sensors.swayAmplitude);
+  });
+  const settledAngle = s.sensors.loadSway;
+  const DEGS = 180 / Math.PI;
+  // The lean is real and reads on the gauge; the oscillation estimate ignores it
+  // once the transient into the lean has died.
+  let lateAmp = 0;
+  until(sim, () => false, 60, (st) => {
+    st.intent.slew = 1; st.intent.range = 'II';
+    lateAmp = Math.max(lateAmp, st.sensors.swayAmplitude);
+  });
+  rec('a steady lean while slewing is not scored as a swing',
+    settledAngle > 3.0 / DEGS && lateAmp < 0.4 / DEGS && peakAmp > lateAmp,
+    `holding ${(settledAngle * DEGS).toFixed(2)} deg of lean, oscillation reads ${(lateAmp * DEGS).toFixed(3)} deg once settled (transient peaked at ${(peakAmp * DEGS).toFixed(2)})`);
+
+  // But a real swing still reads at its full amplitude.
+  // Started at the bottom of its arc, where the whole amplitude is in the rate,
+  // so this measures the estimator and not how much the damping took out of the
+  // swing on the way down to the first crossing.
+  const free = await pendulumRig({ damping: 0 });
+  const L = free.state.crane.line;
+  free.state.load.swing.x = 0;
+  free.state.load.swing.vx = 0.07 * Math.sqrt(GRAV / L);
+  let amp = 0;
+  until(free, () => false, 30, (st) => { amp = Math.max(amp, st.sensors.swayAmplitude); });
+  rec('and a real swing still reads at its full amplitude',
+    Math.abs(amp - 0.07) / 0.07 < 0.02,
+    `a ${(0.07 * DEGS).toFixed(2)} deg swing reads ${(amp * DEGS).toFixed(2)} deg`);
+}
+
+
+// The rope drops L cos(tilt), not L. The hook used to be hung a whole line length
+// down while also being offset sideways by L sin(tilt), which drew a rope longer
+// than the rope is and held the load at one height right across an arc it should
+// be rising and falling through.
+async function tLoadRisesAtTheEndsOfItsArc() {
+  const sim = await pendulumRig({ line: 30, damping: 0 });
+  const s = sim.state;
+  const A = 0.25;                       // rad, big enough to measure
+  s.load.swing.x = 0;
+  s.load.swing.vx = A * Math.sqrt(GRAV / s.crane.line);
+  until(sim, () => false, 0.05);        // one tick, so bottomY is real and not the default
+  let lo = Infinity;
+  let hi = -Infinity;
+  let peakSwing = 0;
+  until(sim, () => false, 24, (st) => {
+    lo = Math.min(lo, st.load.bottomY);
+    hi = Math.max(hi, st.load.bottomY);
+    peakSwing = Math.max(peakSwing, Math.abs(st.load.swing.x));
+  });
+  // Bottom of the arc to the ends of it: L (1 - cos A), using the amplitude the
+  // swing actually reached rather than the one it was launched with.
+  const want = s.crane.line * (1 - Math.cos(peakSwing));
+  const got = hi - lo;
+  rec('a swinging load rises at the ends of its arc, by L (1 - cos A)',
+    Math.abs(got - want) / want < 0.05 && got > 0.5,
+    `${got.toFixed(3)} m of rise against ${want.toFixed(3)} m, at ${(peakSwing * 180 / Math.PI).toFixed(1)} deg on ${s.crane.line} m of rope`);
+
+  // And the rope drawn is the rope paid out, not longer.
+  const drop = s.crane.line * Math.sqrt(1 - Math.sin(s.load.swing.x) ** 2 - Math.sin(s.load.swing.y) ** 2);
+  const across = s.crane.line * Math.hypot(Math.sin(s.load.swing.x), Math.sin(s.load.swing.y));
+  const drawn = Math.hypot(drop, across);
+  rec('and the rope is as long as the rope, whatever the swing',
+    Math.abs(drawn - s.crane.line) < 1e-9,
+    `sheave to hook ${drawn.toFixed(6)} m against ${s.crane.line} m paid out, at ${(Math.abs(s.load.swing.x) * 180 / Math.PI).toFixed(2)} deg`);
+}
+
 // ---------------------------------------------------------------- run
 
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
@@ -1276,7 +1556,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tFailCardIsNotAReplay, tGradeMovesInsideTheWin, tAchievementsAreNotFree,
   tDogEverythingWithTheMushroomDown, tHooksCountRigs, tBlockedStorageSaysSo,
   tGuideKeepsTalkingWhenShort, tLandedLoadCanBeNudged, tSignOffIsNotAFaultSurface,
-  tHookRetryIsNeverLost, tCorruptAwardStaysAwarded, tBuildStampIsStampable];
+  tHookRetryIsNeverLost, tCorruptAwardStaysAwarded, tBuildStampIsStampable,
+  tPendulumPeriod, tCentrifugalLean, tCoriolis, tRopeCoupling, tSwingDecay,
+  tSwingKeepsItsPlane, tLeanIsNotSway, tLoadRisesAtTheEndsOfItsArc];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

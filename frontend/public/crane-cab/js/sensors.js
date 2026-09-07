@@ -8,8 +8,10 @@
 // slack mirrors load.onSurface with near-zero tension
 // collision: AABB of the load vs mission deck volumes, emit collision on rising edge
 // swayAngle = hypot(load.swing.x, load.swing.y), whatever is on the rope
-// loadSway = swayAngle while a load is attached, otherwise 0. Everything that
-//   judges a lift reads this one; the gauge reads swayAngle.
+// loadSway = swayAngle while a load is attached, otherwise 0. The gauge reads
+//   swayAngle; ground's ALL STOP reads loadSway.
+// swayAmplitude = the oscillating part of it, |swing rate| * sqrt(L/g), which a
+//   steady lean does not contribute to. What the lift is scored on.
 //
 // PHASE 1 filled radius, hookHeight and heading. PHASE 2 fills the rest.
 
@@ -38,6 +40,17 @@ function currentMission(state) {
 // and +z across it; render.js rotates that group by -slew, so this matches what
 // is drawn. Load yaw is ignored (the box is treated as axis-aligned), which is
 // the conservative reading for a proximity check.
+
+// The vertical part of the rope, L cos(tilt). The hook hangs this far below the
+// sheave, not a whole line length: it is offset sideways by L sin of each swing
+// angle, and what is left over is the drop. Same three lines as pendulum.js,
+// which owns the model; a shared copy would be one system importing another.
+function ropeDrop(state) {
+  const sx = Math.sin(state.load.swing.x);
+  const sy = Math.sin(state.load.swing.y);
+  return state.crane.line * Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+}
+
 function loadAABB(state) {
   const c = state.crane;
   const load = state.load;
@@ -99,7 +112,10 @@ export function update(ctx, dt) {
   s.radius = c.radius;
 
   const loadHalfHeight = load.attached ? (load.size[1] || 0) / 2 : 0;
-  s.hookHeight = c.cabHeight + CRANE.hookDrop - c.line - loadHalfHeight;
+  // The drop, not the line: at the ends of an arc the hook is measurably higher
+  // than the rope is long, and the gauge is the operator's only altitude read on
+  // the blind shaft.
+  s.hookHeight = c.cabHeight + CRANE.hookDrop - ropeDrop(state) - loadHalfHeight;
 
   let deg = (c.slew * 180) / Math.PI;
   deg = deg % 360;
@@ -185,4 +201,19 @@ export function update(ctx, dt) {
   // and the after-action card does not charge the operator for a swing that
   // happened before anything was rigged.
   s.loadSway = load.attached ? s.swayAngle : 0;
+
+  // The oscillation, as distinct from the lean, and the one the operator is
+  // actually judged on. Since PHASE 4C the model holds a load out from plumb for
+  // as long as the house is turning: at range II at 40 m that is three and a half
+  // degrees, steady, for the whole slew. It is not a swinging load and charging
+  // an operator a grade letter for it would be charging them for slewing.
+  //
+  // At the bottom of a swing the whole amplitude is in the rate, and for a free
+  // swing |thetadot| / omega is exactly the amplitude, with omega = sqrt(g/L). A
+  // steady lean has no rate at all, so it contributes nothing. Taken as a maximum
+  // over a lift this reads the true swing amplitude and ignores the lean, which
+  // is why the thresholds calibrated against the raw angle still mean what they
+  // meant.
+  const rate = Math.hypot(load.swing.vx, load.swing.vy);
+  s.swayAmplitude = load.attached ? rate * Math.sqrt(Math.max(c.line, 0.5) / G) : 0;
 }
