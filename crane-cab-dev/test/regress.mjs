@@ -1633,6 +1633,18 @@ async function tEveryClipExists() {
     `${wanted.size} keys wanted, ${onDisk.size} files; missing files ${JSON.stringify(noFile)}, ` +
     `missing lengths ${JSON.stringify(noLength)}, orphan lengths ${JSON.stringify(noAudio)}, ` +
     `clips nothing asks for ${JSON.stringify(unwanted)}`);
+  // And the server has to name them as audio. python:3.12-slim ships no
+  // /etc/mime.types, so Python's built-in table is all the backend has, and it
+  // has no .ogg; Starlette then labels every clip "text/plain". decodeAudioData
+  // ignores the label, which is exactly why this went out unnoticed, but an
+  // <audio> element or a CDN would not.
+  const backend = readFileSync(join(HERE, '..', '..', 'backend/main.py'), 'utf8');
+  rec('the server calls the voice clips audio',
+    /mimetypes\.add_type/.test(backend) && backend.includes('"audio/ogg"') &&
+    backend.includes('".ogg"'),
+    backend.includes('mimetypes.add_type') ? 'audio/ogg registered for .ogg'
+      : 'no mimetypes.add_type in backend/main.py: OGG will go out as text/plain');
+
   // And no clip may be silent or absurdly long: a zero would make a call land in
   // the same tick it went out, and thirty seconds would hang the script.
   const odd = Object.entries(CLIP_SECONDS).filter(([, v]) => !(v > 0.3 && v < 8));

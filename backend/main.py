@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import asyncio
+import mimetypes
 import logging
 from contextlib import asynccontextmanager
 
@@ -447,6 +448,21 @@ async def health():
 
 
 # Serve React static assets
+# Starlette's FileResponse falls back to "text/plain" whenever mimetypes cannot
+# name a file, and python:3.12-slim ships no /etc/mime.types, so the interpreter
+# is working from Python's small built-in table alone. That table has no .ogg,
+# .oga, .opus, .woff2 or .webp, which meant the Crane Cab voice clips - 110 OGG
+# files - went out to every browser labelled as plain text. decodeAudioData
+# ignores the label and plays them anyway, which is why nothing looked broken,
+# but an <audio> element, a byte-range request or a CDN in front of this would
+# all take the label at its word. Registering them here fixes it for every
+# static file this app serves, not just the clips.
+for _ext, _type in (
+    (".ogg", "audio/ogg"), (".oga", "audio/ogg"), (".opus", "audio/ogg"),
+    (".woff2", "font/woff2"), (".webp", "image/webp"),
+):
+    mimetypes.add_type(_type, _ext)
+
 app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="assets")
 
 
