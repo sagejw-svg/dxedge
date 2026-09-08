@@ -1,9 +1,59 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-09-07T04:20:00Z",
+ "last_run": "2026-09-08T04:30:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
+  {
+   "date": "2026-09-08",
+   "run_outcome": "BLOCKED - no live verification performed. WebFetch returned PROVENANCE_REQUIRED on every URL attempted (dxedge.net/api/health twice, /api/debug twice, and the example.com control), so not one live check in Steps 1-3 could be run. This is the second occurrence of the 2026-09-04 all-host pattern. Static and repo-level checks WERE completed and are all clean. Nothing repaired, nothing pushed except this state file. James notified.",
+   "verification_gap": {
+    "cause": "WebFetch provenance gate, all hosts. 5 calls across 3 dxedge.net URLs plus https://example.com/ as a control, all error_type PROVENANCE_REQUIRED, 'permission request was not answered in time'. An unattended run cannot clear an interactive approval gate.",
+    "retry_performed": "Yes. Per known issue provenance-gate-is-intermittent-and-per-host, /api/health was retried and denied again, and /api/debug was retried and denied again. The example.com control confirms the block is all-host, not per-host, so the run was correctly treated as blocked rather than abandoned on a single denial.",
+    "browser_fallback": "NOT attempted, deliberately. No browser MCP tool exists in this session: no mcp__claude-in-chrome__*, no mcp__remote-devices__* (this scheduled run has no link to James's computer). The only remaining option was the 2026-09-03 headless-Chromium-plus-local-relay rig, whose relay leg is python doing the outbound HTTPS. Standing up that rig tonight would be substituting python and Chromium for a fetch the environment had just denied, which known issue webfetch-provenance-gate explicitly forbids. On 09-05 through 09-07 Chromium was legitimate because WebFetch was working and Chromium was the mandated tool for a job WebFetch cannot do at all. Tonight it would have been a workaround. Not run.",
+    "consequence": "Unverified tonight: TLS certificate status, /api/health, /api/debug, all backend feed counts, all upstream endpoints, both standalone pages in a browser, and every /api/feed request. Nothing below should be read as a live-site claim."
+   },
+   "cert": {
+    "status": "unverified",
+    "evidence": "None obtainable. The cert is judged by the WebFetch error, and WebFetch never reached the origin: PROVENANCE_REQUIRED is an approval-gate error raised before the request, not a TLS error. No CERTIFICATE_VERIFY_FAILED and no expiry error was seen, but neither was a clean fetch.",
+    "consecutive_failures": 0,
+    "counter_rationale": "Deliberately NOT incremented. The 3-strike escalation counts consecutive renewal failures, and an environment gate is not a renewal failure. Incrementing on a blind night would walk the counter to a false escalation while the cert is very likely fine. Last positive confirmation 2026-09-07 04:10Z; renewal has run unattended via /etc/cron.d/dxedge-certbot since 2026-08-31."
+   },
+   "main_dashboard": {
+    "api_health": "unverified - see verification_gap",
+    "browser_check": "NOT DONE - see verification_gap",
+    "feeds": "unverified. sat_tles and pota_spots could not be read; note that per known issue health-metric-cold-cache a 0 on those two is cosmetic anyway and only /api/pota or /api/satellites/positions failing would matter.",
+    "static_review": "Clean. No frontend or backend change since the 09-07 run touches the dashboard's data path: the 18 new commits are all games work (crane-cab, morse-invaders, skip) plus deploy.yml."
+   },
+   "cyber_page": {
+    "browser_check": "NOT DONE - see verification_gap",
+    "static_review": "Clean. Source unchanged since 49e82d2 on 2026-09-03.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Tree-wide grep. The only two hits remain the explanatory comments in backend/main.py:704 and backend/feedproxy.py:3. Neither standalone page references it.",
+    "allowlist_gaps": "none. Every feed URL in the page was extracted and its host checked against ALLOWED_HOSTS in backend/feedproxy.py: www.cisa.gov, services.nvd.nist.gov, api.first.org, www.hamqsl.com, krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com, news.google.com. All 11 present. No allowlist change made or needed. feedproxy.py unchanged since d055aed 2026-09-01.",
+    "nvd_severity_mismatch": "Not re-checkable tonight. Remains an open awaiting_james item from 2026-09-05. NOT re-reported."
+   },
+   "aethersdr_page": {
+    "browser_check": "NOT DONE - see verification_gap",
+    "static_review": "Clean. Source unchanged since 49e82d2 on 2026-09-03.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none. Feed hosts extracted and checked: github.com, www.flexradio.com, www.rtl-sdr.com, hackaday.com. All 4 present in ALLOWED_HOSTS."
+   },
+   "new_surfaces_reviewed": "TWO new standalone pages landed this week and were audited statically for the 'feed added the wrong way' condition. frontend/public/morse-invaders/index.html (commits be7689f, 2ca59b8, cefa92b): zero fetch(), zero XMLHttpRequest, zero WebSocket, zero external script or link hosts. Wholly self-contained. frontend/public/skip/index.html (commit 7748040): exactly one network call, a same-origin fetch('/api/health') at line 424. No external hosts. Neither page has any feedproxy or allowlist implication and neither touches allorigins. Nothing to fix. Both also have committed pytest-style checks at scripts/test_morse_invaders.py and scripts/test_skip.py.",
+   "crane_cab_page_review": "Static only tonight. 5 new commits (0463413 through 0d65dd5: Phase 4 missions and scoring, procedural audio, four bug passes). Re-audited for outbound requests: still exactly one external host in the whole directory, the pinned https://cdn.jsdelivr.net/npm/three@0.160.0 importmap entry already tracked as advisory crane-cab-third-party-cdn. No new feed, no /api/ call, no allowlist implication.",
+   "james_commits_reviewed": "18 commits since 894cfbb. All James's own games work except 2df1166 (2026-09-08), which changes .github/workflows/deploy.yml to fetch-and-reset on the droplet instead of git pull. deploy.yml is on this routine's do-not-touch list, so it was noted and not modified. Its effect could not be observed tonight because no live check was possible.",
+   "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule. Re-confirmed no new curated outbound links: Credits.jsx unchanged since 2026-05-31, Products.jsx since 2026-09-02, both standalone pages since 2026-09-03, and the three new game pages carry zero outbound links between them.",
+   "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py still defines it zero times. Pre-existing, not papered over. Outstanding.",
+   "pat_status": "Working. Authenticated to origin over HTTPS with the header method and read refs/heads/main successfully. Known issue pat-expiry-note-stale still stands: the Mem note claims expiry ~2026-08-27 and the token has now outlived that by 12 days. The note is wrong and should be corrected.",
+   "new_finding": "The verification gap itself, and it is now a pattern rather than a one-off: 2 of the last 5 nights (09-04 and 09-08) produced zero live checks. This is the finding James needs to act on.",
+   "repairs_made": "none. Nothing repairable was found in the static review, and nothing live could be inspected.",
+   "notification": "SENT. PushNotification plus an email to sagejw@gmail.com, because a blind run is a failure of the routine's one job and needs a setup change only James can make. No previously reported open item was re-reported.",
+   "commits_pushed": "state file only",
+   "deploy_result": {
+    "status": "n/a - no code change pushed, so no deploy to verify",
+    "note": "The state-file-only commit does touch the repo and will trigger deploy.yml as every push to main does, but it changes nothing the site serves and no post-deploy verification was possible tonight."
+   }
+  },
   {
    "date": "2026-09-07",
    "run_outcome": "COMPLETE - all three mandated surfaces plus the crane-cab page verified live in headless Chromium. Nothing broken, nothing repaired, no notification sent.",
@@ -508,7 +558,7 @@
   {
    "id": "webfetch-provenance-gate",
    "since": "2026-09-04",
-   "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run."
+   "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08."
   },
   {
    "id": "provenance-gate-is-intermittent-and-per-host",
@@ -568,6 +618,12 @@
    "raised": "2026-09-06",
    "priority": "low, advisory",
    "detail": "frontend/public/crane-cab/index.html loads three.js as an ES module from https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js via importmap. This is the first third-party executable script on dxedge.net; every other live panel goes through the same-origin /api/feed proxy. The version is pinned and the URL is live (verified 200, 1.27 MB), so nothing is broken. The consideration is supply chain: an importmap module specifier cannot carry a subresource-integrity attribute, so a jsdelivr compromise would execute arbitrary script on the dxedge.net origin. Options: (a) leave as is, (b) vendor three.module.js into frontend/public/crane-cab/vendor/ and drop the importmap, which removes the dependency entirely, (c) keep the CDN but add a CSP script-src pinning the host. (b) is a repo change touching a page James is actively developing and (c) is an nginx.conf change, so both are his call, not autonomous repair."
+  },
+  {
+   "id": "webfetch-permission-at-setup",
+   "raised": "2026-09-08",
+   "priority": "highest open item - blocks the routine itself",
+   "detail": "The nightly run has no way to clear WebFetch's PROVENANCE_REQUIRED approval gate, because it runs unattended at 9 PM PT with nobody to answer the prompt. It blocked the entire run on 2026-09-04 and again on 2026-09-08: no cert check, no /api/health, no feed checks, no browser check on either standalone page. Static repo checks still run and were clean both nights, but a static check cannot see an expired certificate or a dead feed, which is most of what this routine exists to catch. Options: (a) grant this scheduled task standing fetch permission for dxedge.net and the upstream feed hosts at setup time, which is the clean fix; (b) re-create the scheduled task from the Claude desktop app so it is linked to a computer and can use a real browser, which also restores the Step 3 browser check on its own terms; (c) accept that roughly one night in three is blind. Recommend (a), and (b) as well if the browser check matters. No workaround exists inside the run: substituting curl, python or the headless-Chromium relay for a denied fetch is what known issue webfetch-provenance-gate forbids, and the routine honoured that on both blind nights."
   }
  ]
 }
