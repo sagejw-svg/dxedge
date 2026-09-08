@@ -67,6 +67,11 @@ def main():
         ok(abs(pg.evaluate('__mi.tokensMs(["K","M"])') - 1900) < 1, 'KM at 12 wpm with no extra spacing is 1900 ms')
         pg.evaluate('__mi.setWpm(15)')
         ok(pg.evaluate('localStorage.getItem("dxMorseInvaders_wpm")') == '15', 'wpm persists under the planned key')
+        ok(pg.evaluate('__mi.toneHz') == 570 and pg.inner_text('#toneV') == '570 Hz', 'tone defaults to 570 Hz')
+        pg.evaluate('(() => { const e = document.getElementById("tone"); e.value = 700; e.dispatchEvent(new Event("input")) })()')
+        ok(pg.evaluate('__mi.toneHz') == 700 and pg.evaluate('JSON.parse(localStorage.getItem("dxMorseInvaders_settings")).toneHz') == 700, 'tone slider reaches the engine and persists')
+        ok(pg.evaluate('document.getElementById("toneP").value') == '700', 'pause menu tone slider mirrors it')
+        pg.evaluate('__mi.setSetting("toneHz", 570)')
         pg.evaluate('__mi.setWpm(12)')
 
         pg.click('#start')

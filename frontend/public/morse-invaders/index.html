@@ -160,6 +160,8 @@
               <input type="range" id="wpm" min="5" max="30" step="1"></label>
             <label class="sl"><span class="t"><span>Spacing between characters</span><b id="effV"></b></span>
               <input type="range" id="eff" min="4" max="30" step="1"></label>
+            <label class="sl"><span class="t"><span>Tone</span><b id="toneV"></b></span>
+              <input type="range" id="tone" min="300" max="1000" step="10"></label>
             <label class="sl"><span class="t"><span>Volume</span><b id="volV"></b></span>
               <input type="range" id="vol" min="0" max="100" step="5"></label>
             <div class="row" style="margin-top:10px">
@@ -194,6 +196,8 @@
           <div class="sec">
             <label class="sl"><span class="t"><span>Character speed</span><b id="wpmPV"></b></span>
               <input type="range" id="wpmP" min="5" max="30" step="1"></label>
+            <label class="sl"><span class="t"><span>Tone</span><b id="tonePV"></b></span>
+              <input type="range" id="toneP" min="300" max="1000" step="10"></label>
             <div class="row" style="margin-top:12px" id="poolRowP">
               <button class="sq" id="kMinusP" aria-label="Drop the last character">&minus;</button>
               <span class="cnt" id="kCountP"></span>
@@ -294,6 +298,7 @@ function label(tok) { return tok === '0' ? '\u00d8' : tok }
 
 const DEF = {
   effWpm: 0,          // 0 = no extra spacing, characters and words at the same speed
+  toneHz: 570,        // the trainer's default too; James's pitch
   volume: 30,
   mute: false,
   mode: 'koch',       // 'koch' | 'custom'
@@ -306,6 +311,7 @@ const DEF = {
 }
 let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
 if (!Array.isArray(S.custom) || S.custom.length < 2) S.custom = [...DEF.custom]
+S.toneHz = clamp(int(S.toneHz) || DEF.toneHz, 300, 1000)
 let baseWpm   = clamp(int(lsGet(KEY.wpm)) || 12, 5, 30)
 let kochCount = clamp(int(lsGet(KEY.koch)) || 2, 2, KOCH_ORDER.length)
 let stats     = loadJSON(KEY.stats, {})
@@ -326,10 +332,10 @@ function callsOn(pool) { return S.calls === 'on' || (S.calls === 'auto' && pool.
 function poolDigits(pool) { return pool.filter(t => DIGITS.includes(t)) }
 
 /* --- audio ------------------------------------------------------------ */
-const player = new CWPlayer({ toneHz: 570, charWpm: baseWpm, effWpm: baseWpm, volume: S.volume / 100 })
+const player = new CWPlayer({ toneHz: S.toneHz, charWpm: baseWpm, effWpm: baseWpm, volume: S.volume / 100 })
 function curWpm() { return G && G.phase !== 'over' ? G.wpm : baseWpm }
 function effWpm() { const w = curWpm(); return S.effWpm > 0 ? Math.min(S.effWpm, w) : w }
-function syncPlayer() { player.set({ charWpm: curWpm(), effWpm: effWpm(), volume: S.volume / 100 }) }
+function syncPlayer() { player.set({ charWpm: curWpm(), effWpm: effWpm(), volume: S.volume / 100, toneHz: S.toneHz }) }
 
 /* How long a token list takes to send, mirroring CWPlayer.playTokens. */
 function tokensMs(tokens) {
@@ -957,6 +963,7 @@ function syncUI() {
   $('eff').value = S.effWpm > 0 ? Math.min(S.effWpm, baseWpm) : baseWpm
   $('effV').textContent = S.effWpm > 0 && S.effWpm < baseWpm ? `${Math.min(S.effWpm, baseWpm)} wpm overall` : 'none'
   $('vol').value = S.volume; $('volV').textContent = `${S.volume}%`
+  $('tone').value = $('toneP').value = S.toneHz; $('toneV').textContent = $('tonePV').textContent = `${S.toneHz} Hz`
   $('mute').textContent = $('muteP').textContent = S.mute ? 'Sound off' : 'Sound on'
   $('wheels').checked = S.wheels
   $('grow').checked = S.grow
@@ -1140,7 +1147,8 @@ $('wpm').addEventListener('input', e => setWpm(int(e.target.value)))
 $('wpmP').addEventListener('input', e => setWpm(int(e.target.value)))
 $('eff').addEventListener('input', e => { const v = int(e.target.value); S.effWpm = v >= baseWpm ? 0 : v; saveSettings(); syncUI() })
 $('vol').addEventListener('input', e => { S.volume = int(e.target.value); saveSettings(); syncUI() })
-$('test').addEventListener('click', async () => { const ok = await player.prime(); if (ok) player.testTone(300); $('note').textContent = ok ? '' : 'No audio context. Check the phone is not in silent mode and try again.' })
+for (const id of ['tone', 'toneP']) $(id).addEventListener('input', e => { S.toneHz = clamp(int(e.target.value), 300, 1000); saveSettings(); syncUI() })
+$('test').addEventListener('click', async () => { const ok = await player.prime(); if (ok) player.testTone(300); $('note').textContent = ok ? `sent ${S.toneHz} Hz at ${S.volume}%` : 'No audio context. Check the phone is not in silent mode and try again.' })
 for (const id of ['mute', 'muteP']) $(id).addEventListener('click', () => { S.mute = !S.mute; if (S.mute) player.stop(); saveSettings(); syncUI() })
 $('wheels').addEventListener('change', e => { S.wheels = e.target.checked; saveSettings() })
 $('grow').addEventListener('change', e => { S.grow = e.target.checked; saveSettings() })
@@ -1208,6 +1216,7 @@ window.__mi = {
   get S() { return S },
   get hi() { return hi },
   get kochCount() { return kochCount },
+  get toneHz() { return player.toneHz },
   stats: () => stats,
   pool: poolTokens,
   start: startGame,
