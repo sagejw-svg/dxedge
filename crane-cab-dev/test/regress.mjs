@@ -1929,6 +1929,48 @@ async function tSayAgainStillWorksAfterTheCap() {
     `${before} calls before, ${sim.log.filter((e) => e.name === 'radio.say').length} after asking`);
 }
 
+// Ground is standing next to the load. "Bring the hook over the load first" was
+// the one call that named a problem and withheld the answer, from the only man
+// on site who could see it. He gives the correction now, in the same words and
+// the same recording as a guide call, because it is the same instruction.
+async function tTheHookCallSaysWhichWay() {
+  const sim = await startMission(0);
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius });
+  until(sim, atNode('onHook'), 14);
+
+  const cases = [
+    ['block inboard of the load', { slew: p.slew, radius: p.radius - 12 }, /Trolley out/i],
+    ['block outboard of the load', { slew: p.slew, radius: p.radius + 12 }, /Trolley in/i],
+    ['jib swung past it', { slew: p.slew + 0.35, radius: p.radius }, /Swing left/i],
+    ['jib swung short of it', { slew: p.slew - 0.35, radius: p.radius }, /Swing right/i]
+  ];
+  const wrong = [];
+  for (const [label, parkTo, want] of cases) {
+    park(sim, parkTo);
+    sim.bus.emit('hook.attach', {});
+    until(sim, () => false, 2.5);
+    const cap = sim.state.radio.caption || '';
+    if (!want.test(cap)) wrong.push(`${label}: "${cap}"`);
+  }
+  rec('ground says which way to bring the hook, not just that it is not there',
+    wrong.length === 0, wrong.length ? JSON.stringify(wrong, null, 1)
+      : 'all four misses named the correction the operator has a control for');
+
+  // And it carries a distance, from the same buckets the guide calls use, so the
+  // clip that plays is one that exists.
+  const { CLIP_SECONDS } = await import(pathToFileURL(join(HERE, '..', 'data/clips.js')).href);
+  park(sim, { slew: p.slew, radius: p.radius - 12 });
+  sim.bus.emit('hook.attach', {});
+  until(sim, () => false, 2.5);
+  const said = sim.log.filter((e) => e.name === 'radio.say').map((e) => e.payload.key);
+  const directed = said.filter((k) => /^(SWING|TROLLEY)_/.test(k));
+  rec('and every hook correction it plays is a clip that exists',
+    directed.length > 0 && directed.every((k) => k in CLIP_SECONDS),
+    `played ${JSON.stringify([...new Set(directed)])}`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -1953,7 +1995,8 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tKeyingOverGroundIsFree, tGuideDistanceMatchesItsClip,
   tGroundKeepsOneSetOfUnits, tCloseInCallSaysTheRealDistance,
   tGroundSaysItAtMostTwiceMore, tACappedCallStillOpensItsGate, tTheAlarmIsNotCapped,
-  tTheHookRetryOutlivesTheVoice, tSayAgainStillWorksAfterTheCap];
+  tTheHookRetryOutlivesTheVoice, tSayAgainStillWorksAfterTheCap,
+  tTheHookCallSaysWhichWay];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

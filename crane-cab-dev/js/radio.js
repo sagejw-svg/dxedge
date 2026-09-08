@@ -128,8 +128,23 @@ export function init(ctx) {
     hookResult = 'notReady';
     // Say which way. dh is the horizontal miss, dy the block against the load
     // top: positive is high, negative is past it with slack rope out.
-    if (p && p.dh > 1.0) hookHint = NOT_READY_HINT;
-    else if (p && p.dy > 0) hookHint = TOO_HIGH_HINT;
+    //
+    // Horizontally, ground now gives the correction rather than the complaint.
+    // "Bring the hook over the load first" is the one call on the radio that
+    // named a problem and withheld the answer, from the man standing next to the
+    // load who could see it. It goes out as a swing or trolley call with the
+    // distance in it, in the same words and the same recording the guide uses,
+    // because it is the same instruction. NOT_READY_HINT survives only for a
+    // mission with no pickup position to point at.
+    if (p && p.dh > 1.0) {
+      const at = p.at;
+      hookHint = at
+        ? (() => {
+            const { call, distance } = correctionFor(ctx.state, polarErrorTo(ctx.state, at));
+            return callAsHint(ctx.state, call, distance);
+          })()
+        : NOT_READY_HINT;
+    } else if (p && p.dy > 0) hookHint = TOO_HIGH_HINT;
     else hookHint = TOO_LOW_HINT;
   });
   bus.on('hook.released', () => { unhookResult = 'released'; });
@@ -443,6 +458,42 @@ function guideTolerance(ctx) {
 // guide used to accept, and it is the load, not the trolley, that has to end up
 // on the pad. Ground calls what it sees hanging, and the settle test below keeps
 // the corrections from chasing a swing.
+// Where a spot is, in the only terms the operator has controls for: metres of
+// slew arc and metres of trolley travel. Shared by the guide calls and by
+// ground's call for the hook, because "over the load" and "on the mark" are the
+// same problem and he should say them the same way.
+function polarErrorTo(state, target) {
+  const c = state.crane;
+  const targetRadius = Math.hypot(target[0], target[2]);
+  const dAngle = wrapPi(Math.atan2(target[2], target[0]) - c.slew);
+  return { tangential: dAngle * c.radius, radial: targetRadius - c.radius };
+}
+
+// The single largest correction, as a call. Ground never says two at once.
+function correctionFor(state, err) {
+  const swing = Math.abs(err.tangential) >= Math.abs(err.radial);
+  const call = swing
+    ? (err.tangential > 0 ? GUIDE_CALLS.swingRight : GUIDE_CALLS.swingLeft)
+    : (err.radial > 0 ? GUIDE_CALLS.trolleyOut : GUIDE_CALLS.trolleyIn);
+  return { call, distance: Math.abs(swing ? err.tangential : err.radial) };
+}
+
+// A guide call rendered to the clip key and caption it will go out as. sayGuide
+// does this inline for the guide nodes; the hook call needs the same thing as a
+// { say, caption } hint it can hand to sayNode.
+function callAsHint(state, call, distance) {
+  let caption = call.caption;
+  let key = call.say;
+  if (call.distance && distance !== null && distance > SAY_DISTANCE_OVER) {
+    const b = distanceBucket(distance, state.settings.units);
+    caption += `, ${b.words}.`;
+    key = `${call.say}_${b.tag}`;
+  } else if (!caption.endsWith('.')) {
+    caption += '.';
+  }
+  return { say: key, caption };
+}
+
 function guideInfo(ctx) {
   const { state } = ctx;
   const c = state.crane;
@@ -459,12 +510,10 @@ function guideInfo(ctx) {
   const hookX = jibX * cos - jibZ * sin;
   const hookZ = jibX * sin + jibZ * cos;
 
-  const targetRadius = Math.hypot(tx, tz);
-  const dAngle = wrapPi(Math.atan2(tz, tx) - c.slew);
-
+  const err = polarErrorTo(state, target);
   return {
-    tangential: dAngle * c.radius,
-    radial: targetRadius - c.radius,
+    tangential: err.tangential,
+    radial: err.radial,
     dist: Math.hypot(tx - hookX, tz - hookZ)
   };
 }

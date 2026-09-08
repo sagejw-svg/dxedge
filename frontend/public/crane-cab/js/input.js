@@ -22,10 +22,15 @@ let camKeyWasDown = false;
 // intent.look once per tick in update(), then cleared by main.js's endTick.
 let lookAccumDx = 0;
 let lookAccumDy = 0;
+let lookKeyWasDown = false;
+let homeKeyWasDown = false;
 let dragging = false;
 
 // Mouse sensitivity, radians per pixel of drag.
 const LOOK_SENS = 0.0035;
+// Pixels-equivalent per tick for an arrow key, so a held arrow sweeps the head
+// at about a radian a second, close to the pace of a comfortable drag.
+const LOOK_KEY_STEP = 2.4;
 
 function isTypingTarget(e) {
   const t = e.target;
@@ -64,7 +69,8 @@ export function init(ctx) {
     const ownedCodes = [
       'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyR', 'KeyF',
       'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight',
-      'KeyT', 'KeyH', 'KeyB', 'KeyC', 'Space'
+      'KeyT', 'KeyH', 'KeyB', 'KeyC', 'Space',
+      'KeyV', 'KeyZ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'
     ];
     if (ownedCodes.includes(code)) e.preventDefault();
 
@@ -103,12 +109,27 @@ export function init(ctx) {
       camKeyWasDown = true;
       return;
     }
+    // The head. V keeps the eyes on the load, Z puts them back down the jib.
+    // Both latch like the brake so a held key is one press, and both are phase
+    // guarded so neither fires from a card.
+    if (code === 'KeyV') {
+      if (!lookKeyWasDown && playing) ctx.state.intent.lookAtLoad = true;
+      lookKeyWasDown = true;
+      return;
+    }
+    if (code === 'KeyZ') {
+      if (!homeKeyWasDown && playing) ctx.state.intent.lookAhead = true;
+      homeKeyWasDown = true;
+      return;
+    }
 
     pressed.add(code);
   });
 
   window.addEventListener('keyup', (e) => {
     const code = e.code;
+    if (code === 'KeyV') { lookKeyWasDown = false; return; }
+    if (code === 'KeyZ') { homeKeyWasDown = false; return; }
     if (code === 'Space') { estopKeyWasDown = false; return; }
     if (code === 'KeyB') { brakeKeyWasDown = false; return; }
     if (code === 'KeyC') { camKeyWasDown = false; return; }
@@ -167,6 +188,15 @@ export function update(ctx, dt) {
 
   // Standard (non-inverted) mouselook: dragging down should pitch the
   // camera down, so screen-down (positive movementY) must decrease pitch.
+  // The arrow keys are the same head movement as a drag, in fixed steps, for
+  // anyone without a mouse to drag with and for fine adjustment with one.
+  // Feeding them through the same accumulator means one sensitivity and one
+  // clamp serve both, and holding an arrow while dragging simply adds.
+  if (pressed.has('ArrowLeft')) lookAccumDx -= LOOK_KEY_STEP;
+  if (pressed.has('ArrowRight')) lookAccumDx += LOOK_KEY_STEP;
+  if (pressed.has('ArrowUp')) lookAccumDy -= LOOK_KEY_STEP;
+  if (pressed.has('ArrowDown')) lookAccumDy += LOOK_KEY_STEP;
+
   intent.look.dx = lookAccumDx * LOOK_SENS;
   intent.look.dy = -lookAccumDy * LOOK_SENS;
   lookAccumDx = 0;
@@ -178,4 +208,6 @@ export function endTick(ctx) {
   ctx.state.intent.reply = null;
   ctx.state.intent.look.dx = 0;
   ctx.state.intent.look.dy = 0;
+  ctx.state.intent.lookAhead = false;
+  ctx.state.intent.lookAtLoad = false;
 }

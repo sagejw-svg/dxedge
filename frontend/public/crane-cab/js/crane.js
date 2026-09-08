@@ -40,10 +40,20 @@ const ACCEL = {
 
 const LMI_BRAKE_FACTOR = 2.0;    // trolley-out decel multiplier while locked
 
-const LOOK_PITCH_MIN = -1.2;
+// Straight down is -pi/2. The cab has a glass floor built into it precisely so
+// the operator can look through it at the load, and the old -1.2 stopped the
+// head 21 degrees short of ever using it: a block at 5 m radius on 20 m of rope
+// sits at -76 degrees, below anything the neck could reach.
+const LOOK_PITCH_MIN = -1.50;
 const LOOK_PITCH_MAX = 0.6;
 const LOOK_YAW_MIN = -1.4;
 const LOOK_YAW_MAX = 1.4;
+const LOOK_HOME_PITCH = -0.35;   // the seated default, matching state.js
+// The eye, in the cab, in the slewed frame: cabGroup sits at (1.6, cabHeight,
+// 1.9) and render.js puts the eye at (0.2, 1.35, 0) inside it.
+const EYE_X = 1.8;
+const EYE_Y = 1.35;
+const EYE_Z = 1.9;
 
 let wasEstopped = false;
 
@@ -180,9 +190,55 @@ export function update(ctx, dt) {
     c.lineVel = 0;
   }
 
-  // --- Look-around --- intent.look.{dx,dy} is a one-shot per-tick delta
-  // from input.js (mouse drag), cleared in endTick. Integrated here, read
-  // only in render.js.
-  state.look.yaw = Math.min(LOOK_YAW_MAX, Math.max(LOOK_YAW_MIN, state.look.yaw + intent.look.dx));
-  state.look.pitch = Math.min(LOOK_PITCH_MAX, Math.max(LOOK_PITCH_MIN, state.look.pitch + intent.look.dy));
+  // --- Look-around --- intent.look.{dx,dy} is a one-shot per-tick delta from
+  // input.js (mouse drag or the arrow keys), cleared in endTick. Integrated
+  // here, read only in render.js.
+  //
+  // Any deliberate head movement drops the tracking, the way looking somewhere
+  // else does. Otherwise the head fought the hand.
+  const look = state.look;
+  // input.js asks; crane.js owns state.look, so the flip happens here.
+  if (intent.lookAtLoad) look.tracking = !look.tracking;
+  if (intent.lookAhead) {
+    look.tracking = false;
+    look.yaw = 0;
+    look.pitch = LOOK_HOME_PITCH;
+  }
+  if (intent.look.dx || intent.look.dy) look.tracking = false;
+
+  if (look.tracking) {
+    aimAtLoad(state);
+  } else {
+    look.yaw = Math.min(LOOK_YAW_MAX, Math.max(LOOK_YAW_MIN, look.yaw + intent.look.dx));
+    look.pitch = Math.min(LOOK_PITCH_MAX, Math.max(LOOK_PITCH_MIN, look.pitch + intent.look.dy));
+  }
+}
+
+// Put the head on the hook block. Everything here is in the slewed frame, which
+// is the frame state.look is already expressed in, so nothing needs to know the
+// crane's bearing: the jib runs along +x, the block hangs off it, and the eye is
+// in the cab beside the mast.
+//
+// The block's position is the same three lines render.js draws it from, and the
+// drop is L cos(tilt) for the same reason it is there: hanging it a whole line
+// length down while also offsetting it sideways would put it below where it is.
+function aimAtLoad(state) {
+  const c = state.crane;
+  const sx = Math.sin(state.load.swing.x);
+  const sy = Math.sin(state.load.swing.y);
+  const drop = c.line * Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+
+  const forward = (c.radius + sy * c.line) - EYE_X;
+  const lateral = (sx * c.line) - EYE_Z;
+  const below = (c.cabHeight + EYE_Y) - (c.cabHeight + CRANE.hookDrop - drop);
+  const flat = Math.hypot(forward, lateral);
+
+  // render.js turns yaw into a direction as (cos p cos y, sin p, -cos p sin y),
+  // so a positive yaw swings the head toward -z and reaching +z takes a negative
+  // one. Verified in the browser rather than reasoned about: smoke.mjs checks the
+  // camera's own forward vector actually points at the block.
+  const yaw = -Math.atan2(lateral, Math.max(0.001, forward));
+  const pitch = -Math.atan2(below, Math.max(0.001, flat));
+  state.look.yaw = Math.min(LOOK_YAW_MAX, Math.max(LOOK_YAW_MIN, yaw));
+  state.look.pitch = Math.min(LOOK_PITCH_MAX, Math.max(LOOK_PITCH_MIN, pitch));
 }

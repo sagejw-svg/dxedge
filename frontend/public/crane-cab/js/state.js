@@ -22,7 +22,9 @@ export function createState() {
       ptt: false,
       hookCam: false, // C. render.js shows the inset; missions may forbid it
       reply: null,    // 0..7 or null, one-shot, cleared by radio.js
-      look: { dx: 0, dy: 0 } // drag look-around delta this frame
+      look: { dx: 0, dy: 0 }, // drag or arrow-key look delta this frame
+      lookAtLoad: false,      // V, a latching toggle: keep the head on the load
+      lookAhead: false        // Z, a one-shot: put the head back down the jib
     },
 
     // Crane kinematics. crane.js owns this.
@@ -122,8 +124,14 @@ export function createState() {
     // save.js loads and persists this.
     settings: { sensitivity: 1, damping: 0.5, units: 'imperial', mute: false },
 
-    // Camera look-around. render.js reads, input.js writes via intent.look.
-    look: { yaw: 0, pitch: -0.35 },
+    // Camera look-around. render.js reads, crane.js integrates it from
+    // intent.look. yaw and pitch are relative to the jib, not to the world, so
+    // the head stays where it was put while the crane slews under it.
+    // HEAD shape change, declared under hard rule 6: `tracking` is new. While it
+    // is on, crane.js aims the head at the hook block every tick instead of
+    // integrating the drag, which is the operator leaning over the glass floor
+    // and keeping his eyes on the load rather than on the jib.
+    look: { yaw: 0, pitch: -0.35, tracking: false },
 
     debug: { show: false, events: [] }
   };

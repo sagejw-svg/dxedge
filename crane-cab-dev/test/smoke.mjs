@@ -377,7 +377,9 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
     })));
   const covers = (rows) => {
     const t = rows.join(' | ');
-    return /1.*4.*Answer ground/i.test(t) && /\bT\b.*mic/i.test(t) && /\bH\b.*Horn/i.test(t);
+    return /1.*4.*Answer ground/i.test(t) && /\bT\b.*mic/i.test(t) && /\bH\b.*Horn/i.test(t) &&
+      /\bV\b.*Eyes on the load/i.test(t) && /\bZ\b.*Head forward/i.test(t) &&
+      /Move your head/i.test(t);
   };
   rec('the controls card says how to answer the radio, on the title and the help card',
     lists.length === 2 && lists.every(covers),
@@ -415,6 +417,83 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
   rec('a clip the deploy missed is reported, and the lift plays on without it',
     warned && st.phase === 'playing' && st.caption.length > 0 && p.__err.length === 0,
     `warned ${warned} phase ${st.phase} caption "${st.caption}" errors ${JSON.stringify(p.__err)}`);
+  await p.close();
+}
+
+
+// 15. The head. Two things nothing DOM-free can check: that "eyes on the load"
+//     actually points the camera at the load, and that the head can now reach
+//     through the glass floor the cab has been carrying since the graphics pass.
+//     The yaw sign was reasoned about, and a sign reasoned about is exactly what
+//     comes out backwards, so this measures the camera's own forward vector
+//     against the block's own world position rather than re-deriving either.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(600);
+  const results = await p.evaluate(async () => {
+    const m = await import('./js/render.js');
+    const cab = window.__cab;
+    const out = [];
+    // Close in, far out, and swung off the jib axis both ways.
+    const cases = [
+      { radius: 6, line: 20, sx: 0, sy: 0 },
+      { radius: 40, line: 30, sx: 0, sy: 0 },
+      { radius: 20, line: 25, sx: 0.18, sy: 0 },
+      { radius: 20, line: 25, sx: -0.18, sy: 0 },
+      { radius: 20, line: 25, sx: 0, sy: 0.15 }
+    ];
+    cab.state.look.tracking = true;
+    for (const c of cases) {
+      cab.state.crane.radius = c.radius;
+      cab.state.crane.line = c.line;
+      cab.state.load.swing.x = c.sx;
+      cab.state.load.swing.y = c.sy;
+      await new Promise((r) => setTimeout(r, 300));   // let the tick aim and the frame draw
+      const eye = m._eye();
+      const hook = m._hookWorld();
+      if (!hook) { out.push({ c, error: 'no hook' }); continue; }
+      const to = [hook[0] - eye.pos[0], hook[1] - eye.pos[1], hook[2] - eye.pos[2]];
+      const len = Math.hypot(...to);
+      const dot = (to[0] * eye.dir[0] + to[1] * eye.dir[1] + to[2] * eye.dir[2]) / len;
+      out.push({ c, offBy: +(Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI).toFixed(2),
+        pitch: +cab.state.look.pitch.toFixed(3) });
+    }
+    return out;
+  });
+  const worst = Math.max(...results.map((r) => r.offBy ?? 999));
+  rec('eyes on the load actually points the head at the load',
+    results.every((r) => typeof r.offBy === 'number') && worst < 6,
+    `worst miss ${worst} deg across ${results.length} attitudes: ` +
+    JSON.stringify(results.map((r) => `r${r.c.radius} sx${r.c.sx}: ${r.offBy} deg`)));
+  // And the close-in case has to be steeper than the old limit could reach, or
+  // the glass floor is still decorative.
+  const closeIn = results[0];
+  rec('and the head can look through the glass floor, which it could not before',
+    closeIn.pitch < -1.2,
+    `pitch at 6 m radius on 20 m of rope: ${closeIn.pitch} rad (old floor was -1.2)`);
+  await p.close();
+}
+
+
+// 16. Every row added to the controls list pushes "Take the seat" further down
+//     a landscape phone, and once it leaves the screen the game cannot be
+//     started at all. The head controls tipped it over and the only symptom was
+//     a click timing out three checks earlier, which says nothing about why.
+{
+  const p = await b.newPage({ viewport: { width: 844, height: 390 } });
+  await p.goto(process.env.PAGE || 'http://127.0.0.1:8080/index.html?debug', { waitUntil: 'load' });
+  await p.waitForFunction(() => !!window.__cab, null, { timeout: 20000 });
+  const seen = await p.evaluate(() => {
+    const b = document.getElementById('btn-start');
+    const r = b.getBoundingClientRect();
+    return { top: Math.round(r.top), bottom: Math.round(r.bottom), h: window.innerHeight,
+      // What the browser would actually hit at the button's centre.
+      hit: (document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) || {}).id || null };
+  });
+  rec('the start button is on screen and clickable on a landscape phone',
+    seen.top >= 0 && seen.bottom <= seen.h && seen.hit === 'btn-start',
+    `button at ${seen.top}-${seen.bottom} of ${seen.h}, point hits "${seen.hit}"`);
   await p.close();
 }
 

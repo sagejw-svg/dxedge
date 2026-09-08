@@ -208,7 +208,11 @@ function onAttach(ctx) {
   // is what a real hook-up looks like and is what leaves the line slack for the
   // "up easy" that follows.
   if (dh > HOOK_H_TOL || dy > HOOK_V_TOL || dy < -HOOK_V_TOL) {
-    bus.emit('hook.notReady', { dh, dy });
+    // The load's own position rides along, not just the distance to it. Ground
+    // is standing next to the load and can see exactly which way the block has
+    // to come; telling the operator only that it is "not over the load" made him
+    // the one man on site who could see the problem and not say what it was.
+    bus.emit('hook.notReady', { dh, dy, at: [p[0], p[1], p[2]] });
     return;
   }
 

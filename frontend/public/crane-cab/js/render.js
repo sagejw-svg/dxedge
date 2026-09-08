@@ -1152,6 +1152,14 @@ export function init(ctx, canvas) {
 export function _scene() { return scene; }
 export function _renderer() { return renderer; }
 export function _shadowsOn() { return !shadowsDropped; }
+// Where the head is pointed and where the block actually is, as plain numbers,
+// so smoke.mjs can measure one against the other instead of re-deriving either.
+export function _eye() {
+  const d = new THREE.Vector3();
+  camera.getWorldDirection(d);
+  return { pos: camera.position.toArray(), dir: d.toArray() };
+}
+export function _hookWorld() { return hook ? hook.getWorldPosition(new THREE.Vector3()).toArray() : null; }
 
 // Shadows are the most expensive thing here and the easiest to do without. The
 // scene is small - about 45 draw calls and 6000 triangles - so geometry is not
