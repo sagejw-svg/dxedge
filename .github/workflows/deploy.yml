@@ -92,7 +92,15 @@ jobs:
             cd /opt/dxedge
             LOG=/var/log/dxedge_deploy.log
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Actions deploy starting" >> $LOG
-            git pull origin main
+            # fetch + reset rather than pull: a pull needs the droplet's branch to
+            # fast-forward, and it stopped doing that after main was rewritten on
+            # Sep 7 2026 (author identity fix). Every deploy since exited 128 here,
+            # before the nginx restart, the backend rebuild and the verify steps,
+            # while the scp step above kept landing the frontend, so the site looked
+            # fine and the runs were red. The droplet is a deploy target, not a
+            # working copy: whatever origin/main is, is what it should be.
+            git fetch origin main
+            git reset --hard origin/main
             if [ "$BACKEND_CHANGED" = "true" ]; then
               echo "[$(date)] Backend changed - rebuilding container" >> $LOG
               docker compose build backend
