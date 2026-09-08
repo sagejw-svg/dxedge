@@ -93,21 +93,29 @@ def main():
         st = pg.evaluate('({copied:__mi.G.copied, streak:__mi.G.streak, states:__mi.G.glyphs.map(g=>g.state)})')
         ok(st == {'copied': 1, 'streak': 1, 'states': ['hit']}, f'right key destroys it {st}')
 
-        pg.evaluate('__mi.step(2500); __mi.step(8000)')
+        pg.evaluate('__mi.step(3000); __mi.step(10000)')
         st = pg.evaluate('({lives:__mi.G.lives, floor:__mi.G.glyphs.filter(g=>g.state==="floor").map(g=>[g.vis, g.resent])})')
         ok(st['lives'] <= 1 and st['floor'] and all(all(v) and r for v, r in st['floor']), f'a glyph reaching the floor costs a life, is revealed and re-sent {st}')
 
-        ok(play_wave(pg) < 600 and pg.evaluate('__mi.G.phase') == 'inter', 'perfect copy clears wave 1')
+        lives_before = pg.evaluate('__mi.G.lives')
+        ok(play_wave(pg) < 600 and pg.evaluate('__mi.G.phase') == 'inter', 'copying the rest clears wave 1')
+        inter = pg.evaluate('({tok:__mi.G.inter.tok, held:__mi.G.inter.held, acc:__mi.G.inter.acc, koch:__mi.kochCount, lives:__mi.G.lives})')
+        ok(inter['tok'] is None and inter['held'] and inter['acc'] < 0.9 and inter['koch'] == 2, f'a wave with mistakes holds the set at K M {inter}')
+        ok(inter['lives'] == min(3, lives_before + 1), 'a cleared wave gives a life back')
+        pg.evaluate('__mi.step(3000)')
+        st = pg.evaluate('({phase:__mi.G.phase, wave:__mi.G.wave})')
+        ok(st == {'phase': 'play', 'wave': 2}, f'held interstitial moves on by itself {st}')
+
+        ok(play_wave(pg) < 600 and pg.evaluate('__mi.G.phase') == 'inter', 'perfect copy clears wave 2')
         inter = pg.evaluate('({tok:__mi.G.inter.tok, koch:__mi.kochCount, pool:__mi.pool()})')
-        ok(inter == {'tok': 'R', 'koch': 3, 'pool': ['K', 'M', 'R']}, f'wave clear adds the next Koch character {inter}')
+        ok(inter == {'tok': 'R', 'koch': 3, 'pool': ['K', 'M', 'R']}, f'a wave at 90 percent or better adds the next Koch character {inter}')
         ok(pg.evaluate('localStorage.getItem("dxMorseInvaders_koch")') == '3', 'koch count persists under the planned key')
         pg.evaluate('__mi.step(6000)')
         st = pg.evaluate('({phase:__mi.G.phase, wave:__mi.G.wave})')
-        ok(st == {'phase': 'play', 'wave': 2}, f'interstitial plays the new character and moves on {st}')
+        ok(st == {'phase': 'play', 'wave': 3}, f'interstitial plays the new character and moves on {st}')
 
         kinds = set()
-        lives = pg.evaluate('__mi.G.lives')
-        for _ in range(2, 12):
+        for _ in range(3, 12):
             steps = 0
             while pg.evaluate('__mi.G.phase') == 'play' and steps < 600:
                 kinds |= set(pg.evaluate('__mi.G.glyphs.map(g=>g.kind)'))
@@ -115,15 +123,23 @@ def main():
                 steps += 1
             ok(pg.evaluate('__mi.G.phase') == 'inter', 'each wave clears')
             pg.evaluate('__mi.key("K")')
-        ok(pg.evaluate('__mi.G.lives') == lives, 'perfect copy never loses a life')
-        ok(pg.evaluate('__mi.kochCount') == 13, 'pool grew one character per wave')
-        ok({'char', 'group2', 'group3', 'call'} <= kinds, f'groups and callsigns arrive as the set grows {kinds}')
-
+        ok(pg.evaluate('__mi.G.lives') == 3, 'perfect copy never loses a life')
+        ok(pg.evaluate('__mi.kochCount') == 12, 'pool grew one character per clean wave')
+        ok({'char', 'group2', 'group3'} <= kinds, f'groups arrive as the set grows {kinds}')
+        ok('call' not in kinds, 'no callsigns while the set has no digit: nothing falls that is not in the set')
+        ok(pg.evaluate('__mi.callsOn()') is False, 'auto callsigns are off at Koch 12')
+        pg.evaluate('__mi.setSetting("calls", "on")')
         pool = set(pg.evaluate('__mi.pool()'))
         for c in pg.evaluate('Array.from({length:40}, () => __mi.makeCall())'):
             ok(all(t in pool for t in c if t.isalpha()), f'callsign letters come from the set {c}')
             d = [t for t in c if t.isdigit()]
-            ok(len(d) == 1 and d[0] in ('0', '5', '9'), f'one starter digit while the set has none {c}')
+            ok(len(d) == 1 and d[0] in ('0', '5', '9'), f'forced callsigns use one starter digit while the set has none {c}')
+        pg.evaluate('__mi.setSetting("calls", "auto")')
+        saved = pg.evaluate('__mi.kochCount')
+        pg.evaluate('__mi.setKoch(18)')
+        ok(pg.evaluate('__mi.callsOn()') is True and '0' in pg.evaluate('__mi.pool()'), 'auto callsigns arrive once 0 joins the set at Koch 18')
+        ok(all(c[[i for i, t in enumerate(c) if t.isdigit()][0]] == '0' for c in pg.evaluate('Array.from({length:20}, () => __mi.makeCall())')), 'and their digit is the one in the set')
+        pg.evaluate(f'__mi.setKoch({saved})')
 
         known = pg.evaluate('(() => { const s = __mi.stats(); return Object.fromEntries(Object.entries(s).map(([k,v]) => [k, v.correct])) })()')
         pg.evaluate('__mi.step(1200)')
@@ -170,7 +186,7 @@ def main():
 
         pg.reload()
         pg.wait_for_function('window.__mi')
-        ok(pg.evaluate('__mi.kochCount') == 13 and pg.evaluate('__mi.hi') > 0, 'progress survives a reload')
+        ok(pg.evaluate('__mi.kochCount') == 12 and pg.evaluate('__mi.hi') > 0, 'progress survives a reload')
         pg.close()
 
         ctx = b.new_context(viewport={'width': 390, 'height': 700}, device_scale_factor=2, has_touch=True, is_mobile=True)

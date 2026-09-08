@@ -173,13 +173,21 @@
           <div class="sec">
             <div class="lbl">Rules</div>
             <label class="chk"><input type="checkbox" id="wheels"><span>Show a character on screen until you have copied it four times, then go by ear</span></label>
-            <label class="chk"><input type="checkbox" id="grow"><span>Add the next Koch character after every wave</span></label>
+            <label class="chk"><input type="checkbox" id="grow"><span>Add the next Koch character when a wave is cleared at 90% or better</span></label>
             <label class="chk"><input type="checkbox" id="ramp"><span>Speed up one wpm after every wave</span></label>
+            <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:110px">Pace</span>
+              <div class="seg" id="paceSeg">
+                <button data-v="relaxed">relaxed</button><button data-v="normal">normal</button><button data-v="brisk">brisk</button>
+              </div></div>
+            <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:110px">Groups</span>
+              <div class="seg" id="groupsSeg">
+                <button data-v="auto">auto</button><button data-v="off">off</button>
+              </div></div>
             <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:110px">Callsigns</span>
               <div class="seg" id="callsSeg">
                 <button data-v="auto">auto</button><button data-v="on">on</button><button data-v="off">off</button>
               </div></div>
-            <div class="hint" style="text-align:left;margin-top:4px">Auto brings in callsigns once your set has ten characters. Groups of two and three start at six.</div>
+            <div class="hint" style="text-align:left;margin-top:4px">Nothing falls that is not in your set. Groups of two start at six characters, three at eight. Auto callsigns wait for ten letters and a number (0 is the 18th Koch character); on forces them now with the numbers shown until you learn them.</div>
             <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:110px">On-screen keys</span>
               <div class="seg" id="keysSeg">
                 <button data-v="auto">auto</button><button data-v="on">on</button><button data-v="off">off</button>
@@ -248,7 +256,14 @@ import {
 const W = 480, H = 640
 const HUD_H = 40, BAR_H = 24, TOP = HUD_H + BAR_H
 const FLOOR = H - 96
-const MAX_ON = 5          // most glyphs falling at once
+const MAX_ON = 4          // most glyphs falling at once
+const GROW_AT = 0.9       // Koch: the next character comes when a wave is cleared at 90 percent
+/* how fast things fall and how often they come; every wave tightens a little toward a floor */
+const PACE = {
+  relaxed: { fall: 11000, spawn: 3400, floorFall: 6000, floorSpawn: 2200, ramp: 0.98 },
+  normal:  { fall: 9000,  spawn: 3000, floorFall: 4500, floorSpawn: 1600, ramp: 0.96 },
+  brisk:   { fall: 6500,  spawn: 2000, floorFall: 3200, floorSpawn: 1100, ramp: 0.94 },
+}
 const TX_GAP = 450        // silence after each send, ms
 const KNOWN_AT = 4        // correct copies before a character goes audio-only
 const REPLAY_FREE = 1     // free replays per glyph
@@ -306,12 +321,15 @@ const DEF = {
   wheels: true,       // show a character until it has been copied KNOWN_AT times
   grow: true,         // add the next Koch character after each wave
   ramp: false,        // +1 wpm after each wave
+  pace: 'normal',     // 'relaxed' | 'normal' | 'brisk'
+  groups: 'auto',     // 'auto' | 'off'
   calls: 'auto',      // 'auto' | 'on' | 'off'
   keys: 'auto',       // on-screen keys: 'auto' | 'on' | 'off'
 }
 let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
 if (!Array.isArray(S.custom) || S.custom.length < 2) S.custom = [...DEF.custom]
 S.toneHz = clamp(int(S.toneHz) || DEF.toneHz, 300, 1000)
+if (!PACE[S.pace]) S.pace = 'normal'
 let baseWpm   = clamp(int(lsGet(KEY.wpm)) || 12, 5, 30)
 let kochCount = clamp(int(lsGet(KEY.koch)) || 2, 2, KOCH_ORDER.length)
 let stats     = loadJSON(KEY.stats, {})
@@ -328,7 +346,14 @@ function poolTokens() {
 function known(tok) { return (stats[tok] && stats[tok].correct) || 0 }
 /* A character outside the set is always shown: the player was never asked to learn it. */
 function tokVisible(tok, pool) { return !pool.includes(tok) || (S.wheels && known(tok) < KNOWN_AT) }
-function callsOn(pool) { return S.calls === 'on' || (S.calls === 'auto' && pool.length >= 10) }
+/* Auto callsigns wait until the set has ten letters and at least one digit, so nothing
+ * outside the set ever falls unless the player forces callsigns on. */
+function callsOn(pool) {
+  if (S.calls === 'on') return true
+  if (S.calls !== 'auto') return false
+  return pool.filter(t => LETTERS.includes(t)).length >= 10 && poolDigits(pool).length > 0
+}
+function groupsOn() { return S.groups !== 'off' }
 function poolDigits(pool) { return pool.filter(t => DIGITS.includes(t)) }
 
 /* --- audio ------------------------------------------------------------ */
@@ -394,7 +419,7 @@ function newGame() {
     glyphs: [], lock: null, lives: 3, streak: 0, bestStreak: 0, copied: 0,
     wpm: baseWpm, nextSpawn: 0, fallMs: 7500, spawnEvery: 1900,
     tx: { busy: 0, queue: [] }, fx: [], floats: [], inter: null, beam: null, shake: 0,
-    run: { hit: {}, miss: {} }, lastTok: null, dieAt: 0, noAudio: false,
+    run: { hit: {}, miss: {} }, lastTok: null, dieAt: 0, noAudio: false, waveHits: 0, waveMiss: 0,
   }
   syncPlayer()
   startWave()
@@ -402,14 +427,17 @@ function newGame() {
 
 function startWave() {
   G.wave++
-  G.left = Math.min(22, 8 + 2 * (G.wave - 1))
+  G.left = Math.min(18, 7 + G.wave)
   G.spawnedThisWave = 0
   G.phase = 'play'
   G.inter = null
   G.lock = null
   G.nextSpawn = G.t + 900
-  G.fallMs = Math.max(3200, 7500 * Math.pow(0.93, G.wave - 1))
-  G.spawnEvery = Math.max(1100, 1900 * Math.pow(0.95, G.wave - 1))
+  const P = PACE[S.pace] || PACE.normal
+  G.fallMs = Math.max(P.floorFall, P.fall * Math.pow(P.ramp, G.wave - 1))
+  G.spawnEvery = Math.max(P.floorSpawn, P.spawn * Math.pow(P.ramp, G.wave - 1))
+  G.waveHits = 0
+  G.waveMiss = 0
   G.tx.busy = G.t
   G.tx.queue = []
 }
@@ -418,9 +446,9 @@ function chooseKind(pool) {
   const n = pool.length
   if (G.wave === 1 && G.spawnedThisWave < 3) return 'char'   // a gentle opening
   const ease = Math.min(1, 0.5 + G.wave * 0.25)
-  const pCall = (callsOn(pool) ? 0.35 : 0) * ease
-  const pG3 = (n >= 8 ? 0.18 : 0) * ease
-  const pG2 = (n >= 6 ? 0.25 : 0) * ease
+  const pCall = (callsOn(pool) ? 0.25 : 0) * ease
+  const pG3 = (groupsOn() && n >= 8 ? 0.10 : 0) * ease
+  const pG2 = (groupsOn() && n >= 6 ? 0.15 : 0) * ease
   const r = Math.random()
   if (r < pCall) return 'call'
   if (r < pCall + pG3) return 'group3'
@@ -498,6 +526,7 @@ function lowestFalling() {
 
 function record(tok, ok, rtMs) {
   stats[tok] = applyResult(stats[tok], ok, rtMs)
+  if (ok) G.waveHits++; else G.waveMiss++
   const bag = ok ? G.run.hit : G.run.miss
   bag[tok] = (bag[tok] || 0) + 1
 }
@@ -588,17 +617,24 @@ function replay() {
 }
 
 function waveClear() {
-  let newTok = null
+  const tries = G.waveHits + G.waveMiss
+  const acc = tries ? G.waveHits / tries : 1
+  let newTok = null, held = false
   if (S.mode === 'koch' && S.grow && kochCount < KOCH_ORDER.length) {
-    kochCount++
-    lsSet(KEY.koch, kochCount)
-    newTok = KOCH_ORDER[kochCount - 1]
-    renderKeys()
+    if (acc >= GROW_AT) {
+      kochCount++
+      lsSet(KEY.koch, kochCount)
+      newTok = KOCH_ORDER[kochCount - 1]
+      renderKeys()
+    } else {
+      held = true
+    }
   }
   if (S.ramp && G.wpm < 30) { G.wpm++; syncPlayer() }
+  G.lives = Math.min(3, G.lives + 1)   // a cleared wave earns a life back
   G.phase = 'inter'
   G.lock = null
-  G.inter = { wave: G.wave, tok: newTok, plays: 0, nextAt: G.t + 700, until: newTok ? Infinity : G.t + 1600, segs: null, at: 0, ms: 0 }
+  G.inter = { wave: G.wave, tok: newTok, acc, held, plays: 0, nextAt: G.t + 700, until: newTok ? Infinity : G.t + (held ? 2600 : 1800), segs: null, at: 0, ms: 0 }
   saveStats()
 }
 
@@ -845,11 +881,14 @@ function drawInter() {
   ctx.fillStyle = 'rgba(0,0,0,.72)'
   ctx.fillRect(0, TOP, W, FLOOR - TOP)
   const cy = (TOP + FLOOR) / 2
+  const accTxt = `${Math.round(I.acc * 100)}% copied`
   if (!I.tok) {
-    text(`WAVE ${I.wave} CLEAR`, W / 2, cy, 22, C.green, 'center', 'bold')
+    text(`WAVE ${I.wave} CLEAR`, W / 2, cy - 22, 22, C.green, 'center', 'bold')
+    text(accTxt, W / 2, cy + 8, 12, C.muted, 'center')
+    if (I.held) text(`stay on these until ${Math.round(GROW_AT * 100)}%`, W / 2, cy + 30, 11, C.yellow, 'center')
     return
   }
-  text(`WAVE ${I.wave} CLEAR`, W / 2, cy - 92, 16, C.green, 'center', 'bold')
+  text(`WAVE ${I.wave} CLEAR  \u00b7  ${accTxt}`, W / 2, cy - 92, 14, C.green, 'center', 'bold')
   text('NEW CHARACTER', W / 2, cy - 56, 10, C.dim, 'center')
   let lit = -1
   if (I.segs && G.t >= I.at) {
@@ -955,6 +994,8 @@ function syncUI() {
   $('poolRowP').style.display = S.mode === 'koch' ? '' : 'none'
   for (const b of $('modeSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.mode)
   for (const b of $('callsSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.calls)
+  for (const b of $('paceSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.pace)
+  for (const b of $('groupsSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.groups)
   for (const b of $('keysSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.keys)
   for (const b of $('grid').querySelectorAll('button')) b.classList.toggle('on', S.custom.includes(b.dataset.t))
   $('wpm').value = baseWpm; $('wpmV').textContent = `${baseWpm} wpm`
@@ -1155,6 +1196,8 @@ $('grow').addEventListener('change', e => { S.grow = e.target.checked; saveSetti
 $('ramp').addEventListener('change', e => { S.ramp = e.target.checked; saveSettings() })
 $('modeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.mode = b.dataset.v; saveSettings(); syncUI() })
 $('callsSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.calls = b.dataset.v; saveSettings(); syncUI() })
+$('paceSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.pace = b.dataset.v; saveSettings(); syncUI() })
+$('groupsSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.groups = b.dataset.v; saveSettings(); syncUI() })
 $('keysSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.keys = b.dataset.v; saveSettings(); syncUI() })
 
 /* canvas: focus for the keyboard, and the HUD's own buttons */
@@ -1229,6 +1272,7 @@ window.__mi = {
   setWpm,
   tokensMs,
   makeCall: () => makeCall(poolTokens()),
+  callsOn: () => callsOn(poolTokens()),
   setSetting: (k, v) => { S[k] = v; saveSettings(); syncUI() },
   step: ms => { for (let d = ms; d > 0; d -= 16) update(Math.min(16, d)) },
   /* type every falling glyph's next expected token, lowest first */
