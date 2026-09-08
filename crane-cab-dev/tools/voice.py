@@ -119,8 +119,18 @@ WORDS = {5:'five', 10:'ten', 15:'fifteen', 20:'twenty', 25:'twenty five', 30:'th
          40:'forty', 50:'fifty', 75:'seventy five', 100:'one hundred',
          2:'two', 3:'three', 6:'six', 8:'eight'}
 
+# The blind descent. Ground is the only pair of eyes on a load going down a
+# nine metre hole with the hook cam refused, and he used to say "down easy" once
+# and then nothing for six of those metres. These are the countdown, on the same
+# buckets and in the same words as the horizontal corrections so the two never
+# sound like different men. TOGO_, not DOWN_, because DOWN_EASY already exists
+# and a prefix that matches two unrelated things is a grep that lies.
 def build():
     out = dict(PHRASES)
+    for n in FEET:
+        out[f'TOGO_F{n}'] = (f'{WORDS[n].capitalize()} feet to go.', '')
+    for n in METRES:
+        out[f'TOGO_M{n}'] = (f'{WORDS[n].capitalize()} meters to go.', '')
     for dkey, dtext in DIRECTIONS.items():
         out[dkey] = (dtext + '.', '')
         out[dkey + '_ON'] = (dtext + ', keep coming.', '')

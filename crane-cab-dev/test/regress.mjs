@@ -1614,6 +1614,16 @@ async function tEveryClipExists() {
   for (const hint of [R.NOT_READY_HINT, R.TOO_HIGH_HINT, R.TOO_LOW_HINT, R.NOT_SLACK_HINT]) {
     wanted.add(hint.say);
   }
+  // A node the operator cannot see the bottom of gets a depth countdown, which
+  // is one clip per bucket per unit system, plus the plumb warning it swaps in.
+  const anyDescent = Object.values(R.SCRIPTS)
+    .some((sc) => Object.values(sc.nodes).some((n) => n.descend));
+  if (anyDescent) {
+    for (const units of ['imperial', 'metric']) {
+      for (const b of R.DISTANCE_BUCKETS[units]) wanted.add(`TOGO_${b.tag}`);
+    }
+    wanted.add('CENTRED');
+  }
   for (const call of Object.values(R.GUIDE_CALLS)) {
     wanted.add(call.say);
     if (!call.distance) continue;
@@ -1971,6 +1981,94 @@ async function tTheHookCallSaysWhichWay() {
     `played ${JSON.stringify([...new Set(directed)])}`);
 }
 
+// ---------- how often ground talks ----------
+
+// One rate for everything meant a call every 3 s, each running about 2 of them,
+// so ground was on the air two thirds of every cycle telling an operator forty
+// metres out something he could not act on yet. The pace now follows how much
+// room is left.
+async function tGroundTalksLessWhenThereIsRoom() {
+  const count = async (radius) => {
+    const sim = await startMission(0);
+    answer(sim);
+    const p = polarOf(m0.pickup.pos);
+    park(sim, { slew: p.slew, radius });
+    until(sim, atNode('toPickup'), 8);
+    const before = sim.log.filter((e) => e.name === 'radio.say').length;
+    until(sim, () => false, 30, () => park(sim, { slew: p.slew, radius }));
+    return sim.log.filter((e) => e.name === 'radio.say').length - before;
+  };
+  const far = await count(8);      // a long way in from the mark
+  const near = await count(20);    // just short of it
+  rec('ground talks less when the operator has room, and more as it closes',
+    far < near && far <= 6 && near >= far + 2,
+    `${far} calls in 30 s a long way out, ${near} close in`);
+}
+
+// And he does not say the identical sentence twice running. Same direction, same
+// bucket, is the same words; the operator heard them and nothing has changed.
+async function tGroundDoesNotRepeatTheSameCall() {
+  const sim = await startMission(0);
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  park(sim, { slew: p.slew, radius: 8 });
+  until(sim, atNode('toPickup'), 8);
+  const before = sim.log.filter((e) => e.name === 'radio.say').length;
+  // Park still, so the correction never changes. Worst case for repetition.
+  until(sim, () => false, 40, () => park(sim, { slew: p.slew, radius: 8 }));
+  const calls = sim.log.filter((e) => e.name === 'radio.say').slice(before);
+  const keys = calls.map((e) => e.payload.key);
+  // Every call here is the same key by construction, so counting list positions
+  // proves nothing: what matters is the wall clock between them. Parked at this
+  // error the cadence alone would put a call out roughly every 5 s, so a gap
+  // that never drops near that is the holdoff doing its job.
+  const gaps = calls.slice(1).map((e, i) => +(e.t - calls[i].t).toFixed(2));
+  const tightest = gaps.length ? Math.min(...gaps) : Infinity;
+  rec('ground does not say the same correction on consecutive breaths',
+    keys.length > 1 && new Set(keys).size === 1 && tightest >= 8,
+    `${keys.length} calls parked still over 40 s, all "${keys[0]}", gaps ${JSON.stringify(gaps)}`);
+}
+
+// The blind shaft. Nine metres into a hole with the hook cam refused, and ground
+// used to say "down easy, keep her plumb" and then nothing at all until the last
+// three metres. He was the only one who could see it.
+async function tGroundTalksTheBlindLoadDown() {
+  const m3 = MISSIONS[3];
+  const sim = await startMission(3);
+  answer(sim);
+  const pk = polarOf(m3.pickup.pos);
+  park(sim, { slew: pk.slew, radius: pk.radius });
+  until(sim, atNode('onHook'), 16);
+  rig(sim, 3);
+  until(sim, (s) => s.load.attached, 6);
+  until(sim, atNode('upEasy'), 10);
+  park(sim, { slew: pk.slew, radius: pk.radius, line: 30 });
+  const ld = polarOf(m3.landing.pos);
+  until(sim, atNode('toLanding'), 20);
+  until(sim, (s) => ['centred', 'downEasy'].includes(node(s)), 60,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+  until(sim, atNode('downEasy'), 30,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+
+  const before = sim.log.filter((e) => e.name === 'radio.say').length;
+  // Lower it the way a person lowers it, on the control, not by teleport.
+  until(sim, (s) => node(s) !== 'downEasy' || s.mission.result !== null, 90,
+    (s) => { s.intent.hoist = -1; s.intent.range = 'I'; });
+  const said = sim.log.filter((e) => e.name === 'radio.say').slice(before)
+    .map((e) => e.payload.key);
+  const counted = said.filter((k) => k.startsWith('TOGO_'));
+  // Monotonic: a countdown that goes back up is worse than no countdown.
+  const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
+  const order = new Map(R.DISTANCE_BUCKETS.imperial.map((b, i) => [`TOGO_${b.tag}`, i]));
+  let descending = true;
+  for (let i = 1; i < counted.length; i += 1) {
+    if ((order.get(counted[i]) ?? -1) >= (order.get(counted[i - 1]) ?? -1)) descending = false;
+  }
+  rec('ground counts a blind load down instead of watching it in silence',
+    counted.length >= 2 && descending,
+    `during the descent he said ${JSON.stringify(said)}`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -1996,7 +2094,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tGroundKeepsOneSetOfUnits, tCloseInCallSaysTheRealDistance,
   tGroundSaysItAtMostTwiceMore, tACappedCallStillOpensItsGate, tTheAlarmIsNotCapped,
   tTheHookRetryOutlivesTheVoice, tSayAgainStillWorksAfterTheCap,
-  tTheHookCallSaysWhichWay];
+  tTheHookCallSaysWhichWay,
+  tGroundTalksLessWhenThereIsRoom, tGroundDoesNotRepeatTheSameCall,
+  tGroundTalksTheBlindLoadDown];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

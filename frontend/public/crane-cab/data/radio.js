@@ -51,6 +51,14 @@
 //   next      node id. null = script complete. 'RETURN' = go back to the node the
 //             script was interrupted on (allStopClear uses this).
 //   urgency   0 calm, 1 firm, 2 shouting. Guide HOLD and ALL STOP raise it.
+//   descend   true on a set-down the operator cannot see from the seat: the
+//             scaffold deck twelve metres up, and the shaft nine metres down
+//             with the hook cam refused. While the node waits on its gate,
+//             ground counts the remaining drop down (TOGO_F20, "Twenty feet to
+//             go.") on a cadence that tightens as it closes, and warns instead
+//             if the load starts to swing. It is not the repeat machinery and is
+//             not capped by it: a countdown that changes is new information
+//             every time, which is the opposite of repeating yourself.
 //   action    'hook' | 'unhook' | null. Ground-controlled rigging. radio.js emits
 //             hook.attach / hook.release; only missions.js touches state.load.
 //             A node with action 'hook' or 'unhook' has no ack timer: it waits
@@ -133,7 +141,7 @@ export const SCRIPTS = {
       upEasy:     { id: 'upEasy', say: 'UP_EASY_HIGH', caption: 'Up easy. Well above the deck before you come round.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
       hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_DECK', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_DECK', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0, descend: true },
       lastCall:   { id: 'lastCall',
                     say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
                     caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },
@@ -164,7 +172,7 @@ export const SCRIPTS = {
       upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'centred' },
       centred:    { id: 'centred', say: 'CENTRED', caption: 'You are over the hole. Do not let it swing in there.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0, descend: true },
       lastCall:   { id: 'lastCall',
                     say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
                     caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },

@@ -49,7 +49,30 @@ import { CLIP_SECONDS } from '../data/clips.js';
 const DEFAULT_TX = 1.6;                      // s of ground transmission with no clip
 const CLIP_TAIL = 0.25;                      // s of dead air ground leaves before it unkeys
 const PLAYER_TX = 0.8;                       // s the operator's answer is on the air
-const GUIDE_PERIOD = 3.0;                    // s between guide calls, or the call, whichever is longer
+// Ground talked at one rate whatever was happening: a call every 3 s, and the
+// call itself runs about 2 of them, so he was on the air two thirds of every
+// cycle saying the same thing to an operator forty metres out who could do
+// nothing about it yet. He now spaces them by how much room is left. Far out,
+// where the correction is obvious and will not change for twenty seconds, he
+// says it and lets you fly; on the mark, where a foot matters, he is quick.
+const GUIDE_PERIOD_NEAR = 2.2;               // s between calls once it is close
+const GUIDE_PERIOD_FAR = 7.0;                // s between calls a long way out
+const GUIDE_FAR_ERR = 25;                    // m of error that counts as a long way out
+// And he does not say the identical call twice running. If the correction has
+// not changed - same direction, same bucket - there is nothing new to tell you,
+// so it waits for the beat after. A changed call always goes out on time.
+const GUIDE_SAME_HOLDOFF = 2;
+// A set-down the operator cannot see. On the blind shaft the load goes nine
+// metres into a hole with the hook cam refused, and ground used to say "down
+// easy, keep her plumb" once and then nothing at all until the last three
+// metres: six metres of a blind descent in silence, from the only man who could
+// see it. A node marked `descend` gets a depth countdown on the way down, on the
+// same tightening cadence as the guide calls, and a plumb warning if it starts
+// to swing in there.
+const DESCENT_PERIOD_NEAR = 2.4;             // s between calls in the last few feet
+const DESCENT_PERIOD_FAR = 6.0;              // s between calls at the top of the descent
+const DESCENT_FAR_DROP = 9;                  // m of remaining drop that counts as the top
+const DESCENT_SWAY = (2.5 * Math.PI) / 180;  // rad of load sway that earns a plumb warning
 const RETRY_FLOOR = 1e-6;                    // a retry timer never reaches zero mid call
 const HOOK_RETRY = 4.0;                      // s before ground calls for the hook again
 // How many times ground will say the same thing again before he stops. He is a
@@ -95,6 +118,10 @@ let unhookResult = null;  // null | 'released' | 'refused'
 let hookHint = NOT_READY_HINT;
 let unhookRetry = 0;
 let holdSaid = false;     // guide: HOLD is said once per approach
+let lastGuideKey = null;  // the clip the last guide call went out as
+let sameCallBeats = 0;    // beats the correction has been the same one
+let descentTimer = 0;     // s to the next depth callout on a blind set-down
+let lastDepthKey = null;  // the depth clip last called, so it is not repeated
 let inAllStop = false;
 // ALL STOP is the one deadline nothing may postpone, so it belongs to the
 // interrupt rather than to whichever node happens to be current. Hanging it off
@@ -237,6 +264,10 @@ function enterNode(ctx, id) {
   r.repeats = 0;
   seen.clear();
   holdSaid = false;
+  lastGuideKey = null;
+  sameCallBeats = 0;
+  descentTimer = 0;
+  lastDepthKey = null;
   hookResult = null;
   hookRetry = 0;
   unhookResult = null;
@@ -559,6 +590,32 @@ function sayGuide(ctx, call, distance, urgency) {
   bus.emit('radio.say', { key, urgency: urgency || 0 });
 }
 
+// How long to wait before the next guide call. Near the mark that is quick, a
+// long way out it is not: the two are blended on how far the jib still has to
+// travel, so the pace tightens as the operator closes rather than stepping.
+function guidePeriod(err, tol) {
+  const span = Math.max(0.001, GUIDE_FAR_ERR - tol);
+  const t = Math.min(1, Math.max(0, (err - tol) / span));
+  return GUIDE_PERIOD_NEAR + (GUIDE_PERIOD_FAR - GUIDE_PERIOD_NEAR) * t;
+}
+
+// How far the load still has to fall to reach what it is being set down on.
+// sensors.hookHeight is the bottom of the load, which is the face that lands.
+function dropRemaining(state) {
+  const landing = state.mission.landingPos;
+  if (!landing) return null;
+  return state.sensors.hookHeight - landing[1];
+}
+
+// The countdown call for a remaining drop, as a clip key and a caption. Same
+// buckets and the same words as a horizontal correction, so the two never sound
+// like different men reading off different tapes.
+function depthCall(state, drop) {
+  const b = distanceBucket(drop, state.settings.units);
+  if (b === DISTANCE_FAR) return null;      // too far out for a number to help
+  return { say: `TOGO_${b.tag}`, caption: `${b.words[0].toUpperCase()}${b.words.slice(1)} to go.` };
+}
+
 // ---------- main loop ----------
 
 export function update(ctx, dt) {
@@ -720,7 +777,12 @@ export function update(ctx, dt) {
 
     case 'wait': {
       if (gateSatisfied(ctx)) { advance(ctx); break; }
-      if (sayAgainPressed(ctx)) sayNode(ctx, 0, null, true);
+      if (sayAgainPressed(ctx)) { sayNode(ctx, 0, null, true); break; }
+      // A set-down the operator cannot see. Ground talks the load down instead
+      // of standing there watching it. This is not the repeat machinery and is
+      // not capped by it: a countdown is new information every time it changes,
+      // which is the opposite of repeating yourself.
+      if (node.descend) descend(ctx, dt);
       break;
     }
 
@@ -793,10 +855,12 @@ export function update(ctx, dt) {
 
       r.guideTimer -= dt;
       if (r.guideTimer > 0) break;
-      r.guideTimer = GUIDE_PERIOD;
+      r.guideTimer = guidePeriod(jibErr, tol);
 
       if (jibErr <= tol * HOLD_FACTOR && !holdSaid) {
         holdSaid = true;
+        lastGuideKey = null;
+        sameCallBeats = 0;
         sayGuide(ctx, GUIDE_CALLS.hold, null, 1);
         break;
       }
@@ -808,13 +872,19 @@ export function update(ctx, dt) {
       // shaft, where the hook cam is refused, there was nothing to tell them.
       if (jibErr <= tol) break;
       // Say the single largest correction, never two at once.
-      if (Math.abs(g.tangential) >= Math.abs(g.radial)) {
-        sayGuide(ctx, g.tangential > 0 ? GUIDE_CALLS.swingRight : GUIDE_CALLS.swingLeft,
-          Math.abs(g.tangential), 0);
-      } else {
-        sayGuide(ctx, g.radial > 0 ? GUIDE_CALLS.trolleyOut : GUIDE_CALLS.trolleyIn,
-          Math.abs(g.radial), 0);
+      const { call, distance } = correctionFor(state, g);
+      // What that call will actually go out as, so an unchanged one can be
+      // recognised before it is said rather than after. Same direction and same
+      // bucket is the same sentence, and saying it again tells the operator
+      // nothing he did not hear ten seconds ago.
+      const key = callAsHint(state, call, distance).say;
+      if (key === lastGuideKey) {
+        sameCallBeats += 1;
+        if (sameCallBeats < GUIDE_SAME_HOLDOFF) break;
       }
+      sameCallBeats = 0;
+      lastGuideKey = key;
+      sayGuide(ctx, call, distance, 0);
       break;
     }
 
@@ -830,6 +900,34 @@ export function update(ctx, dt) {
   }
 
   setTx(ctx);
+}
+
+// Talk a blind load down. Called every tick from the wait gate of a node marked
+// `descend`, and it says one of two things: how far there is to go, or, if the
+// load has started to swing where it cannot afford to, to get it plumb.
+function descend(ctx, dt) {
+  const { state } = ctx;
+  const drop = dropRemaining(state);
+  if (drop === null || drop <= 0) return;
+
+  descentTimer -= dt;
+  if (descentTimer > 0) return;
+
+  // Same shape as the guide cadence: sparse at the top, quick at the bottom.
+  const t = Math.min(1, Math.max(0, drop / DESCENT_FAR_DROP));
+  descentTimer = DESCENT_PERIOD_NEAR + (DESCENT_PERIOD_FAR - DESCENT_PERIOD_NEAR) * t;
+
+  // A load swinging into the side of a shaft is worth more than a number.
+  if (state.sensors.loadSway > DESCENT_SWAY) {
+    lastDepthKey = null;
+    sayNode(ctx, 1, { say: 'CENTRED', caption: 'Keep her plumb. Do not let it swing in there.' }, true);
+    return;
+  }
+
+  const call = depthCall(state, drop);
+  if (!call || call.say === lastDepthKey) return;   // nothing new to say yet
+  lastDepthKey = call.say;
+  sayNode(ctx, 0, call, true);
 }
 
 function onTimeout(ctx) {
