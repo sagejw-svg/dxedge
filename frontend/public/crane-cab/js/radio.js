@@ -251,6 +251,18 @@ function fireAction(ctx) {
   if (which === 'unhook') ctx.bus.emit('hook.release', {});
 }
 
+// A node field that states a distance is a { imperial, metric } pair. Anything
+// else is used as it stands, so only the handful of lines carrying a number pay
+// for this. state.settings.units is the same setting the gauges read, which is
+// the whole point: the voice, the caption and the readout agree or the operator
+// stops believing any of them.
+function inUnits(value, units) {
+  if (value && typeof value === 'object' && ('imperial' in value || 'metric' in value)) {
+    return units === 'imperial' ? value.imperial : value.metric;
+  }
+  return value;
+}
+
 // How long a call is on the air. The recording's own length plus the beat ground
 // leaves before it unkeys, or DEFAULT_TX for a key with no clip, which is what
 // every call used to get whether it needed 0.6 s or 4.
@@ -272,10 +284,11 @@ function sayNode(ctx, urgencyBump, hint, isRepeat) {
   // node turned into a fault generator: one every 4.6 s for as long as the gate
   // stayed shut, while the operator did exactly what ground had asked.
   repeating = !!isRepeat;
-  const key = (hint && hint.say) || node.say || null;
+  const units = state.settings.units;
+  const key = inUnits((hint && hint.say) || node.say || null, units);
   mode = 'groundTx';
   r.groundTimer = txLength(key);
-  r.caption = (hint && hint.caption) || node.caption || '';
+  r.caption = inUnits((hint && hint.caption) || node.caption || '', units);
   r.replies = replyLabels(node);
   r.answered = null;
   banked = null;

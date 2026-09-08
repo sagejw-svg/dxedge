@@ -5,6 +5,12 @@
 // CALL NODE (ground says something, the operator answers):
 //   { id, say, caption, expect, timeout, onTimeout, waitFor, next, urgency, action }
 //   say       clip key, audio/<say>.ogg, recorded in the ground crew voice.
+//             A line that states a distance carries { imperial, metric } here
+//             and in `caption`, and radio.js resolves the pair against
+//             settings.units. Ground is one man on one site: he cannot say
+//             "twelve metres" in the brief and "twenty five feet" in a guide
+//             call thirty seconds later, which is what he did before the pairs
+//             existed, out loud, with the gauges reading feet.
 //             null = caption only. radio.js emits radio.say {key, urgency};
 //             audio.js is what actually plays it. data/clips.js holds how long
 //             every clip runs and is what sizes the transmission, so a node
@@ -112,14 +118,21 @@ export const SCRIPTS = {
     start: 'check',
     nodes: {
       check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
-      brief:      { id: 'brief', say: 'SCAFFOLD_BRIEF', caption: 'Landing is up on the scaffold deck, twelve metres. Keep it high.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      brief:      { id: 'brief',
+                    say: { imperial: 'SCAFFOLD_BRIEF_FT', metric: 'SCAFFOLD_BRIEF_M' },
+                    caption: { imperial: 'Landing is up on the scaffold deck, forty feet. Keep it high.',
+                               metric: 'Landing is up on the scaffold deck, twelve meters. Keep it high.' },
+                    expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
       toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
       onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
       upEasy:     { id: 'upEasy', say: 'UP_EASY_HIGH', caption: 'Up easy. Well above the deck before you come round.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
       hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_DECK', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastFoot', urgency: 0 },
-      lastFoot:   { id: 'lastFoot', say: 'LAST_FOOT', caption: 'Last foot. Micro.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_DECK', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0 },
+      lastCall:   { id: 'lastCall',
+                    say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
+                    caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },
+                    expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
       good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 
@@ -136,14 +149,21 @@ export const SCRIPTS = {
     start: 'check',
     nodes: {
       check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
-      brief:      { id: 'brief', say: 'SHAFT_BRIEF', caption: 'Blind pick. Shaft is nine metres deep, five across. My eyes only.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      brief:      { id: 'brief',
+                    say: { imperial: 'SHAFT_BRIEF_FT', metric: 'SHAFT_BRIEF_M' },
+                    caption: { imperial: 'Blind pick. Shaft is thirty feet deep, sixteen across. My eyes only.',
+                               metric: 'Blind pick. Shaft is nine meters deep, five across. My eyes only.' },
+                    expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
       toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
       onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
       upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'centred' },
       centred:    { id: 'centred', say: 'CENTRED', caption: 'You are over the hole. Do not let it swing in there.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastMetre', urgency: 0 },
-      lastMetre:  { id: 'lastMetre', say: 'LAST_METRE', caption: 'Two metres. Micro from here.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0 },
+      lastCall:   { id: 'lastCall',
+                    say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
+                    caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },
+                    expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
       good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 

@@ -68,8 +68,16 @@ VOICE_BRIEF = (
 PHRASES = {
   'RADIO_CHECK':     ('Tee Cee One, radio check.', ''),
   'WATCH_TRUCK':     ('Watch the truck cab. Swing right first.', ''),
-  'SCAFFOLD_BRIEF':  ('Landing is up on the scaffold deck, twelve metres. Keep it high.', ''),
-  'SHAFT_BRIEF':     ('Blind pick. Shaft is nine metres deep, five across. My eyes only.', ''),
+  # Anything with a distance in it exists twice, once per unit system. The
+  # operator's gauges, the guide calls and the briefs all have to agree: a
+  # banksman who says "twelve metres" and then "twenty five feet" on the same
+  # lift is two different people, and a real operator hears it immediately.
+  # Numbers are the true site geometry, rounded the way a banksman rounds:
+  # landing 12 m = 39.4 ft, shaft 9 m deep by 5 across = 29.5 by 16.4 ft.
+  'SCAFFOLD_BRIEF_FT': ('Landing is up on the scaffold deck, forty feet. Keep it high.', ''),
+  'SCAFFOLD_BRIEF_M':  ('Landing is up on the scaffold deck, twelve meters. Keep it high.', ''),
+  'SHAFT_BRIEF_FT':    ('Blind pick. Shaft is thirty feet deep, sixteen across. My eyes only.', ''),
+  'SHAFT_BRIEF_M':     ('Blind pick. Shaft is nine meters deep, five across. My eyes only.', ''),
   'ON_THE_HOOK':     ('On the hook.', ''),
   'UP_EASY':         ('Up easy.', ''),
   'UP_EASY_HIGH':    ('Up easy. Well above the deck before you come round.', ''),
@@ -77,8 +85,13 @@ PHRASES = {
   'DOWN_EASY':       ('Down easy.', ''),
   'DOWN_EASY_DECK':  ('Down easy onto the deck.', ''),
   'DOWN_EASY_PLUMB': ('Down easy. Keep her plumb.', ''),
-  'LAST_FOOT':       ('Last foot. Micro.', '[firm]'),
-  'LAST_METRE':      ('Two metres. Micro from here.', '[firm]'),
+  # Fires on load.near, which missions.js sets at NEAR_HEIGHT = 3.0 m above the
+  # landing. It used to say "Last foot" on the scaffold and "Two metres" down
+  # the shaft, for the same 3 m. "Last foot" is a real call with a real meaning
+  # - micro speed, hands near the load - and hearing it ten feet up is how an
+  # operator learns not to trust the voice.
+  'LAST_CALL_FT':      ('Ten feet. Micro from here.', '[firm]'),
+  'LAST_CALL_M':       ('Three meters. Micro from here.', '[firm]'),
   'CENTRED':         ('You are over the hole. Do not let it swing in there.', '[firm]'),
   'THATS_GOOD':      ("That's good. Unhooking.", ''),
   'GOOD_LIFT':       ('Good lift. Standing by.', ''),

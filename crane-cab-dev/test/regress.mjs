@@ -1604,8 +1604,12 @@ async function tEveryClipExists() {
   const { CLIP_SECONDS } = await import(pathToFileURL(join(HERE, '..', 'data/clips.js')).href);
   const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
   const wanted = new Set();
+  const bothUnits = (v) => (v && typeof v === 'object' && ('imperial' in v || 'metric' in v))
+    ? [v.imperial, v.metric] : [v];
   for (const script of Object.values(R.SCRIPTS)) {
-    for (const n of Object.values(script.nodes)) if (n.say) wanted.add(n.say);
+    for (const n of Object.values(script.nodes)) {
+      for (const k of bothUnits(n.say)) if (k) wanted.add(k);
+    }
   }
   for (const hint of [R.NOT_READY_HINT, R.TOO_HIGH_HINT, R.TOO_LOW_HINT, R.NOT_SLACK_HINT]) {
     wanted.add(hint.say);
@@ -1667,7 +1671,7 @@ async function tTransmissionMatchesTheClip() {
   // Each within a tick of its clip plus the unkey beat, and the brief has to be
   // materially longer than the check rather than both landing on 1.6.
   const wantShort = CLIP_SECONDS.RADIO_CHECK + 0.25;
-  const wantLong = CLIP_SECONDS.SHAFT_BRIEF + 0.25;
+  const wantLong = CLIP_SECONDS.SHAFT_BRIEF_FT + 0.25;   // default units are imperial
   rec('a call is as long as the recording, not a flat second and a half',
     Math.abs(shortCall - wantShort) < 0.05 && Math.abs(longCall - wantLong) < 0.05 &&
     longCall > shortCall + 1.5,
@@ -1740,6 +1744,73 @@ async function tGuideDistanceMatchesItsClip() {
     `key ${key} tag ${tag} caption "${cap}"`);
 }
 
+// One banksman, one site, one set of units. The briefs used to be hardcoded
+// metric while the default is imperial and every guide call says feet, so on
+// mission 2 ground said "twelve metres" and then "trolley out, twenty five
+// feet" half a minute later, in the same voice. This walks every line the
+// player can hear or read, in both unit settings, and fails on any that carries
+// the wrong system's words.
+async function tGroundKeepsOneSetOfUnits() {
+  const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
+  const IMPERIAL = /\b(feet|foot|inch|inches|yard)\b/i;
+  const METRIC = /\b(met(re|er)s?|centimet|kilomet)\b/i;
+  const pick = (v, u) => (v && typeof v === 'object' && ('imperial' in v || 'metric' in v))
+    ? (u === 'imperial' ? v.imperial : v.metric) : v;
+
+  const bad = [];
+  for (const units of ['imperial', 'metric']) {
+    const wrong = units === 'imperial' ? METRIC : IMPERIAL;
+    for (const [name, script] of Object.entries(R.SCRIPTS)) {
+      for (const n of Object.values(script.nodes)) {
+        const cap = pick(n.caption, units);
+        if (typeof cap === 'string' && wrong.test(cap)) bad.push(`${units} ${name}.${n.id}: "${cap}"`);
+      }
+    }
+    // Guide distances come from the bucket table, which is picked by unit too.
+    for (const b of R.DISTANCE_BUCKETS[units === 'imperial' ? 'imperial' : 'metric']) {
+      if (wrong.test(b.words)) bad.push(`${units} bucket: "${b.words}"`);
+    }
+    for (const h of [R.NOT_READY_HINT, R.TOO_HIGH_HINT, R.TOO_LOW_HINT, R.NOT_SLACK_HINT]) {
+      if (wrong.test(h.caption)) bad.push(`${units} hint: "${h.caption}"`);
+    }
+  }
+  rec('ground never mixes feet and metres on one lift',
+    bad.length === 0, bad.length ? JSON.stringify(bad, null, 1) : 'both unit settings are internally consistent');
+}
+
+// And the distance a call states has to be the distance it fires at. "Last
+// foot. Micro." went out on load.near, which missions.js sets three metres -
+// nearly ten feet - above the landing. On a real site that call means micro
+// speed with hands near the load, and being nine feet out is how an operator
+// learns the voice is decorative.
+async function tCloseInCallSaysTheRealDistance() {
+  const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
+  const src = readFileSync(join(HERE, '..', 'js/missions.js'), 'utf8');
+  const near = Number((src.match(/const NEAR_HEIGHT = ([\d.]+)/) || [])[1]);
+  const ft = near * 3.28084;
+  const say = (u) => {
+    const n = R.SCRIPTS.scaffold.nodes.lastCall;
+    return u === 'imperial' ? n.caption.imperial : n.caption.metric;
+  };
+  // Ground speaks numbers, he does not read digits out.
+  const WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+                  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20 };
+  const spoken = (text, unit) => {
+    const m = text.match(new RegExp(`(\\w+)\\s+${unit}`, 'i'));
+    return m ? WORDS[m[1].toLowerCase()] : NaN;
+  };
+  const statedFt = spoken(say('imperial'), '(?:feet|foot)');
+  const statedM = spoken(say('metric'), 'met');
+  rec('the close-in call states the height it actually fires at',
+    Number.isFinite(near) && Math.abs(statedFt - ft) <= 1.5 && Math.abs(statedM - near) <= 0.5,
+    `fires at ${near} m (${ft.toFixed(1)} ft); says ${statedFt} ft / ${statedM} m`);
+  // Both scripts fire it on the same event, so they must make the same call.
+  rec('and both jobs make the same call at the same point',
+    JSON.stringify(R.SCRIPTS.scaffold.nodes.lastCall.caption) ===
+    JSON.stringify(R.SCRIPTS.blindShaft.nodes.lastCall.caption),
+    `scaffold ${JSON.stringify(R.SCRIPTS.scaffold.nodes.lastCall.caption)} vs shaft ${JSON.stringify(R.SCRIPTS.blindShaft.nodes.lastCall.caption)}`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -1761,7 +1832,8 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tSwingKeepsItsPlane, tLeanIsNotSway, tLoadRisesAtTheEndsOfItsArc,
   tServiceWorkerReachesTheNetwork,
   tEveryClipExists, tTransmissionMatchesTheClip, tAnswerOverGroundIsFree,
-  tKeyingOverGroundIsFree, tGuideDistanceMatchesItsClip];
+  tKeyingOverGroundIsFree, tGuideDistanceMatchesItsClip,
+  tGroundKeepsOneSetOfUnits, tCloseInCallSaysTheRealDistance];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

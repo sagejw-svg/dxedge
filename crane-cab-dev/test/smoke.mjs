@@ -361,6 +361,31 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
 }
 
 
+// 13. The radio leads every lift, and the controls card never mentioned it. A
+//     new operator could see the numbered reply buttons and guess, but T and H
+//     were undiscoverable, and sitting through ground's calls with no idea how
+//     to answer costs faults for nothing. Both copies of the list have to carry
+//     it, since the help card is what you reach for mid-lift.
+{
+  const p = await page();
+  // dt and dd concatenate with nothing between them in textContent, so read the
+  // key and its label separately - "T" and "Key the mic", not "TKey the mic".
+  const lists = await p.evaluate(() => [...document.querySelectorAll('dl.controls')].map(
+    (dl) => [...dl.querySelectorAll('div')].map((d) => {
+      const dt = d.querySelector('dt'), dd = d.querySelector('dd');
+      return `${dt ? dt.textContent.trim() : ''} = ${dd ? dd.textContent.trim() : ''}`;
+    })));
+  const covers = (rows) => {
+    const t = rows.join(' | ');
+    return /1.*4.*Answer ground/i.test(t) && /\bT\b.*mic/i.test(t) && /\bH\b.*Horn/i.test(t);
+  };
+  rec('the controls card says how to answer the radio, on the title and the help card',
+    lists.length === 2 && lists.every(covers),
+    `${lists.length} lists; covered ${JSON.stringify(lists.map(covers))}`);
+  await p.close();
+}
+
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);
