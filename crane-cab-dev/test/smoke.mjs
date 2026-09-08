@@ -386,6 +386,39 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
 }
 
 
+// 14. A clip that never reached the server is the one failure mode nothing else
+//     here can see: the SPA catch-all answers a missing /crane-cab/audio/*.ogg
+//     with 200 text/html, res.ok is true, and the HTML used to run straight into
+//     decodeAudioData and be swallowed into a call that is mute with a clean
+//     console. This serves the page with one clip missing and checks the game
+//     says so and keeps playing.
+{
+  const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+  p.__err = [];
+  p.__warn = [];
+  p.on('pageerror', (e) => p.__err.push(String(e)));
+  p.on('console', (m) => { if (m.type() === 'warning') p.__warn.push(m.text()); });
+  // Answer this one clip the way a missing file is really answered.
+  await p.route('**/audio/RADIO_CHECK.ogg', (route) => route.fulfill({
+    status: 200, contentType: 'text/html; charset=utf-8', body: '<!DOCTYPE html><html></html>'
+  }));
+  await p.goto(process.env.PAGE || 'http://127.0.0.1:8080/index.html?debug', { waitUntil: 'load' });
+  await p.waitForFunction(() => !!window.__cab, null, { timeout: 20000 });
+  await p.click('#btn-start');
+  await sleep(3500);
+  const st = await p.evaluate(() => ({
+    node: window.__cab.state.radio.node,
+    caption: window.__cab.state.radio.caption,
+    phase: window.__cab.state.phase
+  }));
+  const warned = p.__warn.some((w) => /radio clip unavailable/i.test(w));
+  rec('a clip the deploy missed is reported, and the lift plays on without it',
+    warned && st.phase === 'playing' && st.caption.length > 0 && p.__err.length === 0,
+    `warned ${warned} phase ${st.phase} caption "${st.caption}" errors ${JSON.stringify(p.__err)}`);
+  await p.close();
+}
+
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);

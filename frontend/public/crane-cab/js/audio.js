@@ -325,7 +325,17 @@ export function playRadio(ctx, key, urgency) {
   clips.set(key, null);                 // pessimistic: never fetch the same key twice
   fetch(`audio/${key}.ogg`)
     .then((res) => {
-      if (!res.ok) throw new Error(`no clip ${key}`);
+      // res.ok is not enough. A clip that never reached the server comes back
+      // from the SPA catch-all as 200 text/html, so the only thing separating a
+      // deployed clip from a missing one is the content type. Without this the
+      // HTML reaches decodeAudioData, throws, and is swallowed by the catch
+      // below into a call that is silently mute with nothing in the console -
+      // the same shape of failure as the stale service worker, and just as
+      // invisible to curl.
+      const type = res.headers.get('content-type') || '';
+      if (!res.ok || !/ogg|audio/i.test(type)) {
+        throw new Error(`no clip ${key}: ${res.status} ${type}`);
+      }
       return res.arrayBuffer();
     })
     .then((data) => ac.decodeAudioData(data))
@@ -333,7 +343,11 @@ export function playRadio(ctx, key, urgency) {
       clips.set(key, buf);
       startClip(ctx, buf, urgency);
     })
-    .catch(() => { /* caption only, exactly as designed */ });
+    .catch((err) => {
+      // Caption only, exactly as designed - the lift plays on without the voice.
+      // But say so once, because a mute ground crew is otherwise indetectable.
+      try { console.warn('[cab] radio clip unavailable, caption only:', err.message); } catch { /* ignore */ }
+    });
 }
 
 // Urgency is a level, not a different take. Every clip was normalised to the
