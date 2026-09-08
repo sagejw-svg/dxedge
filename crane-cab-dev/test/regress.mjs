@@ -1811,6 +1811,124 @@ async function tCloseInCallSaysTheRealDistance() {
     `scaffold ${JSON.stringify(R.SCRIPTS.scaffold.nodes.lastCall.caption)} vs shaft ${JSON.stringify(R.SCRIPTS.blindShaft.nodes.lastCall.caption)}`);
 }
 
+// ---------- ground stops repeating himself ----------
+
+// He used to re-send an unanswered call forever, once every few seconds, with a
+// fault each time. Now he says it at most twice more and then lets the gate
+// decide. The count is what matters and so is what happens after: a call that
+// stops has to leave the script somewhere it can still finish from.
+async function tGroundSaysItAtMostTwiceMore() {
+  const sim = await startMission(0);           // check: onTimeout 'repeat', no gate
+  const said = () => sim.log.filter((e) => e.name === 'radio.say' &&
+    e.payload && e.payload.key === 'RADIO_CHECK').length;
+  // Never touch a control or a reply. Ground gets the whole ack window each time.
+  until(sim, (s) => s.radio.node !== 'check', 40);
+  const total = said();
+  const gaveUp = sim.log.filter((e) => e.name === 'radio.gaveUp').length;
+  rec('ground says a call three times at most, then stops',
+    total <= 3 && total >= 1 && gaveUp === 1,
+    `RADIO_CHECK went out ${total} times, gaveUp fired ${gaveUp}`);
+  // And the script is not stranded on the node he gave up on.
+  rec('and the lift moves on rather than stalling on the call he dropped',
+    node(sim.state) !== 'check' && sim.state.radio.script !== null,
+    `node ${node(sim.state)} script ${sim.state.radio.script}`);
+  // The faults stop with the transmissions instead of accruing forever.
+  const before = sim.state.radio.faults;
+  until(sim, () => false, 15);
+  rec('and the faults stop when the transmissions do',
+    sim.state.radio.faults === before,
+    `faults ${before} then ${sim.state.radio.faults} fifteen seconds later`);
+}
+
+// A gated call is the case that must not hang. Ground stops asking, but the node
+// still waits for the thing the operator was told to do, and doing it late still
+// works.
+async function tACappedCallStillOpensItsGate() {
+  const sim = await startMission(0);
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius });
+  until(sim, atNode('onHook'), 14);
+  rig(sim);
+  until(sim, atNode('upEasy'), 10);            // waitFor 'hook.tight', onTimeout 'fault'
+  // Sit on our hands well past the cap, then fly the rest of the lift.
+  until(sim, () => false, 20);
+  const saidUp = sim.log.filter((e) => e.name === 'radio.say' &&
+    e.payload && /UP_EASY/.test(e.payload.key)).length;
+  const gaveUp = sim.log.some((e) => e.name === 'radio.gaveUp');
+  // The gate is the point, and it is a level, not an edge. Ground stops asking
+  // after the cap and drops to the gate; the gate reads the rope as already
+  // tight and the script carries on by itself. That is the no-strand property:
+  // giving up on a call never leaves the lift sitting on it.
+  rec('a call ground gave up on does not strand the lift',
+    saidUp <= 3 && gaveUp && node(sim.state) !== 'upEasy' &&
+    sim.state.radio.script !== null && sim.state.mission.result === null,
+    `up easy went out ${saidUp} times, gaveUp ${gaveUp}, script moved on to ` +
+    `${node(sim.state)} with the lift still live (${sim.state.mission.result})`);
+}
+
+// The alarm is the exemption. Capping it would mean ground going quiet with the
+// load swinging, which is the one place repetition is the point.
+async function tTheAlarmIsNotCapped() {
+  const sim = await startMission(0);
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  park(sim, { slew: p.slew, radius: 18 });
+  until(sim, atNode('toPickup'), 8);
+  until(sim, () => false, 2);
+  rig(sim);
+  sim.state.load.swing.x = 0.2;
+  until(sim, atNode('allStop'), 8);
+  const gaveUpOnAlarm = sim.log.some((e) => e.name === 'radio.gaveUp' && e.node === 'allStop');
+  // It ends on its own deadline, not by being capped.
+  const ended = until(sim, (s) => s.mission.result !== null ||
+    sim.log.some((x) => x.name === 'radio.ignoredAllStop'), 12);
+  rec('the ALL STOP is never capped, it runs to its own deadline',
+    !gaveUpOnAlarm && ended,
+    `gaveUp on allStop ${gaveUpOnAlarm}, reached its deadline ${ended}`);
+}
+
+// Capping the voice must not cap the retry. Ground calling for the hook is how
+// the load actually gets rigged, and dropping that is how the lift used to
+// strand at "on the hook" with nothing able to win or fail it.
+async function tTheHookRetryOutlivesTheVoice() {
+  const sim = await startMission(0);
+  answer(sim);
+  const p = polarOf(m0.pickup.pos);
+  // Over the load but a metre and a half below the hook window (exact line here
+  // is 42.8, the window is 42.2 to 43.4), so every retry answers notReady and
+  // ground has something to keep saying.
+  park(sim, { slew: p.slew, radius: p.radius });
+  until(sim, atNode('onHook'), 14);
+  park(sim, { slew: p.slew, radius: p.radius, line: 44.2 });
+  const hookKeys = ['ON_THE_HOOK', 'NOT_READY', 'TOO_HIGH', 'TOO_LOW'];
+  const spokenNow = () => sim.log.filter((e) => e.name === 'radio.say' &&
+    e.payload && hookKeys.includes(e.payload.key)).length;
+  until(sim, () => false, 25, () => park(sim, { slew: p.slew, radius: p.radius, line: 44.2 }));
+  const spoken = spokenNow();
+  const stillHinting = (sim.state.radio.caption || '').length > 0;
+  // Now correct into the window. Only a retry that is still running can rig it.
+  const rigged = until(sim, (s) => s.load.attached, 20,
+    () => park(sim, { slew: p.slew, radius: p.radius, line: 42.8 }));
+  rec('ground stops saying it but never stops trying the hook',
+    spoken <= 3 && stillHinting && rigged && spokenNow() <= 3,
+    `spoke ${spoken} times over 25 s, caption "${sim.state.radio.caption}", rigged after going quiet: ${rigged}`);
+}
+
+// Say again is the operator's own escape valve and the cap must not close it.
+async function tSayAgainStillWorksAfterTheCap() {
+  const sim = await startMission(0);
+  until(sim, (s) => s.radio.node !== 'check', 40);   // let him give up
+  const before = sim.log.filter((e) => e.name === 'radio.say').length;
+  until(sim, () => false, 6, (s) => {
+    const i = s.radio.replies ? s.radio.replies.indexOf('Say again') : -1;
+    if (i >= 0 && s.time.frame % 240 === 0) s.intent.reply = i;
+  });
+  rec('Say again still brings the call back after ground has given up on it',
+    sim.log.filter((e) => e.name === 'radio.say').length > before,
+    `${before} calls before, ${sim.log.filter((e) => e.name === 'radio.say').length} after asking`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -1833,7 +1951,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tServiceWorkerReachesTheNetwork,
   tEveryClipExists, tTransmissionMatchesTheClip, tAnswerOverGroundIsFree,
   tKeyingOverGroundIsFree, tGuideDistanceMatchesItsClip,
-  tGroundKeepsOneSetOfUnits, tCloseInCallSaysTheRealDistance];
+  tGroundKeepsOneSetOfUnits, tCloseInCallSaysTheRealDistance,
+  tGroundSaysItAtMostTwiceMore, tACappedCallStillOpensItsGate, tTheAlarmIsNotCapped,
+  tTheHookRetryOutlivesTheVoice, tSayAgainStillWorksAfterTheCap];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

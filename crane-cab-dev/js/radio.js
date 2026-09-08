@@ -52,6 +52,12 @@ const PLAYER_TX = 0.8;                       // s the operator's answer is on th
 const GUIDE_PERIOD = 3.0;                    // s between guide calls, or the call, whichever is longer
 const RETRY_FLOOR = 1e-6;                    // a retry timer never reaches zero mid call
 const HOOK_RETRY = 4.0;                      // s before ground calls for the hook again
+// How many times ground will say the same thing again before he stops. He is a
+// man on a radio, not a klaxon: three transmissions of one call is a lot, and
+// past that he was just filling the cab while the operator worked. Stopping is
+// safe because every node either has a gate that the operator's own hands open
+// or no gate at all, and Say again brings the call straight back.
+const MAX_REPEATS = 2;
 const HOLD_FACTOR = 3;                       // inside this many tolerances, say HOLD
 const GUIDE_SETTLE = (2 * Math.PI) / 180;    // rad of sway allowed to leave a guide node
 const SWAY_INTERRUPT = (10 * Math.PI) / 180; // rad of sway that triggers ALL STOP
@@ -674,7 +680,14 @@ export function update(ctx, dt) {
       if (hookResult === 'notReady') {
         hookResult = null;
         hookRetry = HOOK_RETRY;
-        sayNode(ctx, 1, hookHint, true);
+        // The retry itself is never capped - it is what eventually rigs the load
+        // and dropping it is how the lift used to strand at "on the hook" with
+        // nothing able to win or fail it. Only the voice stops. The hint stays on
+        // the caption and keeps updating, so an operator who is still hunting for
+        // the window can read which way to go without being told every 4 s.
+        r.repeats += 1;
+        if (r.repeats <= MAX_REPEATS) sayNode(ctx, 1, hookHint, true);
+        else r.caption = hookHint.caption;
         break;
       }
       if (hookRetry > 0) {
@@ -690,7 +703,10 @@ export function update(ctx, dt) {
       if (unhookResult === 'refused') {
         unhookResult = null;
         unhookRetry = HOOK_RETRY;
-        sayNode(ctx, 1, NOT_SLACK_HINT, true);
+        // Same as the hook: the retry keeps running, only the voice stops.
+        r.repeats += 1;
+        if (r.repeats <= MAX_REPEATS) sayNode(ctx, 1, NOT_SLACK_HINT, true);
+        else r.caption = NOT_SLACK_HINT.caption;
         break;
       }
       if (unhookRetry > 0) {
@@ -772,9 +788,22 @@ function onTimeout(ctx) {
   r.repeats += 1;
 
   if (node.onTimeout === 'ignoredAllStop') {
-    // The hard deadline above owns this; the ack window just keeps repeating the
-    // call until it fires, so the caption stays on screen.
+    // The one call that is not capped. The hard deadline above owns this and it
+    // is measured in seconds, so it cannot run long; and an alarm that stops
+    // shouting while the load is still swinging is not an alarm. The ack window
+    // keeps repeating until the deadline fires, so the caption stays on screen.
     sayNode(ctx, 1);
+    return;
+  }
+  // Said enough. Ground stops asking and lets the gate decide, rather than
+  // standing there repeating himself into a cab that is clearly busy. Nothing
+  // hangs: a node with no gate advances from here, and a node with one waits for
+  // the thing the operator was told to do. Faults stop with the transmissions,
+  // so an unanswered call now costs a bounded number rather than one every few
+  // seconds for as long as the operator ignores it.
+  if (r.repeats > MAX_REPEATS) {
+    ctx.bus.emit('radio.gaveUp', { node: r.node, said: r.repeats });
+    toGate(ctx);
     return;
   }
   if (node.onTimeout === 'fault') {

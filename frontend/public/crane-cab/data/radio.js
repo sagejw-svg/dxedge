@@ -29,6 +29,11 @@
 //   onTimeout 'repeat'          first lapse re-sends at urgency + 1, second lapse
 //                               logs a radio fault and re-sends again.
 //             'fault'           logs the fault on the first lapse, then re-sends.
+//             Both are capped: ground re-sends a call at most twice, then emits
+//             radio.gaveUp and drops to the node's gate rather than repeating
+//             himself indefinitely at an operator who is plainly busy. Faults
+//             stop with the transmissions. 'ignoredAllStop' is exempt, because
+//             an alarm that goes quiet with the load still swinging is not one.
 //             'ignoredAllStop'  the node's timeout becomes an absolute deadline
 //                               that runs whatever the director is doing, and
 //                               emits radio.ignoredAllStop when it expires.

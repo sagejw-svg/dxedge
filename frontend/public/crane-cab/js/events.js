@@ -1,7 +1,7 @@
 // Tiny pub/sub. Systems talk through this, never by direct call.
 // Event names (keep this list current):
 //   hook.tight, load.slack, load.inZone, sway.settled, alarm.a2b, lmi.lock,
-//   collision, estop, radio.reply, radio.overlap, lift.win, lift.fail,
+//   collision, estop, radio.reply, radio.overlap, radio.gaveUp, lift.win, lift.fail,
 //   phase.change
 
 export function createBus(state) {
