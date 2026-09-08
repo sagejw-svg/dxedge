@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Spot Chaser: real stations spotted on the air right now, sent in CW, SSB phonetics or PSK31. Tune them in on a waterfall, copy the call, and see the entity, distance, bearing and whether the path is actually open from your grid.">
+<title>DX//EDGE &middot; SPOT CHASER</title>
+<link rel="canonical" href="https://dxedge.net/spot-chaser/">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080808; --bg1:#0e0e0e; --bg2:#141414; --border:#1e1e1e;
+    --text:#e0e0e0; --muted:#888; --dim:#444;
+    --green:#00ff9d; --teal:#7affb2; --yellow:#ffd600; --blue:#7a9fff; --red:#ff6b6b; --orange:#ff9a3c;
+    --mono:'SF Mono','Fira Code','Consolas',monospace;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);
+            overflow:hidden;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+  #wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        flex-direction:column;gap:6px;padding:4px}
+  #stage{position:relative;width:480px;height:430px;flex:none}
+  canvas{display:block;width:100%;height:100%;background:#000;touch-action:none;outline:none;
+         -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+  #ctl{width:480px;max-width:100%;flex:none;display:flex;flex-direction:column;gap:6px}
+  #ctl.hide{visibility:hidden}
+  .tune{display:flex;align-items:center;gap:8px}
+  .tune input[type=range]{flex:1;accent-color:var(--green);min-width:60px}
+  .step{font-family:var(--mono);font-size:15px;width:34px;height:32px;background:var(--bg1);color:var(--muted);
+        border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:0;flex:none;touch-action:manipulation}
+  .step:hover{border-color:var(--dim)}
+  .entry{display:flex;gap:6px}
+  input.call{flex:1;min-width:0;font-family:var(--mono);font-size:17px;letter-spacing:3px;text-transform:uppercase;
+             padding:9px 11px;background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px}
+  input.call:focus{outline:1px solid var(--green)}
+  .btn{display:block;width:100%;padding:11px 12px;font-family:var(--mono);font-size:14px;letter-spacing:2px;
+       background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;
+       text-transform:uppercase;touch-action:manipulation}
+  .btn:hover{border-color:var(--dim)}
+  .btn.primary{background:rgba(0,255,157,.10);border-color:var(--green);color:var(--green)}
+  .btn.primary:hover{background:rgba(0,255,157,.18)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+  .entry .btn{width:auto;flex:0 0 96px;padding:9px 6px;font-size:12px}
+  .btn+.btn{margin-top:8px}
+
+  #ui{position:absolute;inset:0;overflow:auto;background:rgba(8,8,8,.90);display:none;-webkit-overflow-scrolling:touch}
+  #ui.show{display:block}
+  .panel{max-width:404px;margin:0 auto;padding:20px 18px 28px}
+  .view{display:none}.view.show{display:block}
+  h1{font-size:27px;letter-spacing:8px;font-weight:700;color:var(--green);text-align:center;line-height:1.1}
+  h2{font-size:18px;letter-spacing:4px;font-weight:700;color:var(--green);text-align:center;margin-bottom:10px}
+  .tag{color:var(--muted);font-size:12px;text-align:center;line-height:1.65;margin:12px 0}
+  .best{color:var(--dim);font-size:11px;text-align:center;letter-spacing:1px;margin-bottom:12px;min-height:14px}
+  .sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+  .lbl{font-size:10px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .row+.row{margin-top:8px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-wrap:wrap}
+  .seg button{font-family:var(--mono);font-size:11px;padding:7px 10px;background:var(--bg1);color:var(--muted);
+              border:0;border-right:1px solid var(--border);cursor:pointer;letter-spacing:1px}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:rgba(0,255,157,.10);color:var(--green)}
+  input.txt{font-family:var(--mono);font-size:14px;letter-spacing:2px;text-transform:uppercase;width:104px;
+            padding:7px 9px;background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:5px}
+  input.txt:focus{outline:1px solid var(--green)}
+  .sl{display:block;margin-top:10px}
+  .sl .t{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px}
+  .sl .t b{color:var(--green);font-weight:400}
+  .sl input{width:100%;accent-color:var(--green)}
+  .hint{color:var(--dim);font-size:11px;line-height:1.7;text-align:center;margin-top:14px}
+  .hint kbd{color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:0 5px;font-family:var(--mono)}
+  .stat{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border)}
+  .stat b{color:var(--text);font-weight:400}
+  .stat.hi b{color:var(--green)}
+  .log{font-size:12px;line-height:1.9;margin:10px 0 14px;color:var(--muted)}
+  .log div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding:2px 0}
+  .log b{color:var(--green);font-weight:400}
+  .log i{font-style:normal;color:var(--red)}
+  #note{color:var(--yellow);font-size:11px;text-align:center;min-height:14px;margin-top:8px;line-height:1.6}
+  #feed{color:var(--dim);font-size:11px;text-align:center;margin-top:8px;line-height:1.6}
+
+  #foot{font-size:9px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;flex:none;white-space:nowrap;overflow:hidden;max-width:100%}
+  #foot a{color:var(--dim);text-decoration:none}
+  #foot.hide{display:none}
+  #wrap.land{flex-direction:row;gap:10px}
+  #wrap.land #ctl{width:auto;flex:1 1 250px;max-width:290px}
+  #wrap.land #foot{display:none}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="c" tabindex="0" aria-label="Spot Chaser receiver"></canvas>
+    <div id="ui" class="show">
+      <div class="panel">
+
+        <div id="vTitle" class="view show">
+          <h1>SPOT<br>CHASER</h1>
+          <p class="tag">Stations spotted on the air right now.<br>Tune one in, copy the call, work it.</p>
+          <div class="best" id="best"></div>
+          <button class="btn primary" id="start">Start</button>
+          <div id="note"></div>
+          <div id="feed"></div>
+
+          <div class="sec">
+            <div class="lbl">Mode</div>
+            <div class="row"><div class="seg" id="modeSeg">
+              <button data-v="cw">CW</button><button data-v="ssb">SSB</button>
+              <button data-v="psk31">PSK31</button><button data-v="mixed">as spotted</button>
+            </div></div>
+            <div class="hint" style="text-align:left;margin-top:8px" id="modeHint"></div>
+          </div>
+
+          <div class="sec">
+            <div class="lbl">Your station</div>
+            <div class="row"><span style="font-size:12px;color:var(--muted)">Grid</span>
+              <input class="txt" id="grid" maxlength="6" spellcheck="false" autocomplete="off" aria-label="Maidenhead grid">
+              <span id="gridInfo" style="font-size:11px;color:var(--dim)"></span></div>
+            <label class="sl"><span class="t"><span>CW sidetone, the pitch you net to</span><b id="toneV"></b></span>
+              <input type="range" id="tone" min="300" max="1000" step="10"></label>
+            <label class="sl"><span class="t"><span>CW speed</span><b id="wpmV"></b></span>
+              <input type="range" id="wpm" min="10" max="35" step="1"></label>
+            <label class="sl"><span class="t"><span>Volume</span><b id="volV"></b></span>
+              <input type="range" id="vol" min="0" max="100" step="5"></label>
+            <div class="row" style="margin-top:10px">
+              <button class="btn" id="test" style="width:auto;padding:8px 14px;font-size:11px">Test tone</button>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="lbl">Round</div>
+            <div class="row"><span style="font-size:12px;color:var(--muted);min-width:96px">Stations</span>
+              <div class="seg" id="lenSeg"><button data-v="5">5</button><button data-v="10">10</button><button data-v="20">20</button></div></div>
+            <div class="row" style="margin-top:12px"><span style="font-size:12px;color:var(--muted);min-width:96px">Noise</span>
+              <div class="seg" id="qrnSeg"><button data-v="quiet">quiet</button><button data-v="real">as the path gives it</button></div></div>
+            <div class="hint" style="text-align:left;margin-top:8px">Quiet keeps every station loud. The other way runs the path model from your grid: a station the model says is marginal really does arrive weak, and a dead band really is empty.</div>
+          </div>
+
+          <p class="hint"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> tune, hold shift for 10 Hz steps, click the waterfall to net.
+            <kbd>R</kbd> repeats, <kbd>Enter</kbd> logs, <kbd>P</kbd> passes, <kbd>Esc</kbd> pauses.<br>
+            Callsigns and frequencies are live from the DX cluster, POTA and SOTA feeds this site already carries. The signals are synthesized here; nothing is transmitted.</p>
+        </div>
+
+        <div id="vPause" class="view">
+          <h2>PAUSED</h2>
+          <button class="btn primary" id="resume">Resume</button>
+          <div class="sec"><button class="btn" id="quit">Quit to menu</button></div>
+        </div>
+
+        <div id="vOver" class="view">
+          <h2>QRT</h2>
+          <p class="tag" id="overLine"></p>
+          <div id="overStats"></div>
+          <div class="log" id="overLog"></div>
+          <button class="btn primary" id="again">Chase more</button>
+          <button class="btn" id="menu">Change settings</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="ctl" class="hide">
+    <div class="tune">
+      <button class="step" id="down" aria-label="Tune down">&lsaquo;</button>
+      <input type="range" id="dial" aria-label="Dial">
+      <button class="step" id="up" aria-label="Tune up">&rsaquo;</button>
+    </div>
+    <div class="entry">
+      <input class="call" id="callIn" placeholder="his call" spellcheck="false" autocomplete="off"
+             autocapitalize="characters" aria-label="The callsign you copied">
+      <button class="btn primary" id="log">Log it</button>
+    </div>
+    <div class="entry">
+      <button class="btn" id="again2" style="flex:1">Repeat</button>
+      <button class="btn" id="pass" style="flex:0 0 96px">Pass</button>
+    </div>
+  </div>
+  <div id="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; live spots &middot; synthesized signals</div>
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------------ *
+ * Spot Chaser v0.1
+ *
+ * Real stations, spotted on the air within the last few minutes, pulled
+ * from the DX cluster, POTA and SOTA feeds this site already runs. Each
+ * one is re-created here as a signal: its call in CW, in SSB phonetics,
+ * or in real BPSK31. It sits a few hundred Hz off the spotted frequency
+ * the way spots always are, so you tune it in before you can copy it,
+ * and the tuning is mode-appropriate:
+ *
+ *   CW     the beat note moves with the dial; net it to your sidetone
+ *   SSB    mistuning shifts every voice frequency, so it sounds wrong
+ *   PSK31  the trace must sit under the decoder marker within a few Hz
+ *
+ * How loud it arrives is not a difficulty knob: it comes from the same
+ * propagation cartoon Skip uses, run from your grid to that entity on
+ * that band at this hour. A path the model calls marginal is genuinely
+ * hard to copy, and a dead band is silent.
+ *
+ * Nothing is transmitted. Every signal here is synthesized in the
+ * browser and never leaves it.
+ * ------------------------------------------------------------------ */
+
+import { MORSE } from '/morse/core.js'
+import {
+  gridToLatLon, gcDist, gcBearing, declination, locateCall, bestPath, cosZenith,
+} from '/lib/propagation.js'
+
+const W = 480, H = 430
+const HUD_H = 34
+const FALL_TOP = HUD_H + 14, FALL_H = 158          // waterfall
+const METER_Y = FALL_TOP + FALL_H + 8
+const COPY_Y = METER_Y + 74
+const INFO_Y = COPY_Y + 36
+const SPAN_HZ = 3000                                // waterfall spans 0..3000 Hz of the receiver passband
+const DIAL_SPAN = 2000                              // the dial can move +/- 2 kHz around the spot
+const PSK_CENTER = 1000                             // where a PSK31 decoder listens in the passband
+const SSB_CENTER = 0                                // SSB is tuned when the shift is zero
+const CW_NET_HZ = 25, SSB_NET_HZ = 45, PSK_NET_HZ = 8
+const STATION_SECS = 75                             // how long a station stays on frequency
+const KEY = { hi: 'dxSpotChaser_hi', worked: 'dxSpotChaser_worked', settings: 'dxSpotChaser_settings' }
+const C = {
+  bg: '#000', bg1: '#0e0e0e', border: '#1e1e1e', text: '#e0e0e0', muted: '#888', dim: '#444',
+  green: '#00ff9d', teal: '#7affb2', yellow: '#ffd600', blue: '#7a9fff', red: '#ff6b6b', orange: '#ff9a3c',
+}
+const FONT = "'SF Mono','Fira Code','Consolas',monospace"
+const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const PHONETIC = {
+  A: 'Alfa', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot', G: 'Golf', H: 'Hotel',
+  I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima', M: 'Mike', N: 'November', O: 'Oscar', P: 'Papa',
+  Q: 'Quebec', R: 'Romeo', S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey', X: 'X-ray',
+  Y: 'Yankee', Z: 'Zulu', 0: 'Zero', 1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five',
+  6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine', '/': 'Stroke',
+}
+const CLIP_FILE = t => (t === '/' ? '_SLASH' : t)
+
+/* PSK31 varicode for everything a callsign and a CQ need. Codes are sent left
+ * bit first, a 0 is a phase reversal and a 1 is steady carrier, and at least
+ * two zeros separate characters. Table from the ARRL PSK31 specification. */
+const VARICODE = {
+  ' ': '1', '/': '110101111',
+  0: '10110111', 1: '10111101', 2: '11101101', 3: '11111111', 4: '101110111',
+  5: '101011011', 6: '101101011', 7: '110101101', 8: '110101011', 9: '110110111',
+  A: '1111101', B: '11101011', C: '10101101', D: '10110101', E: '1110111', F: '11011011',
+  G: '11111101', H: '101010101', I: '1111111', J: '111111101', K: '101111101', L: '11010111',
+  M: '10111011', N: '11011101', O: '10101011', P: '11010101', Q: '111011101', R: '10101111',
+  S: '1101111', T: '1101101', U: '101010111', V: '110110101', W: '101011101', X: '101110101',
+  Y: '101111011', Z: '1010101101',
+}
+
+const BAND_MHZ = { '160m': 1.85, '80m': 3.55, '60m': 5.35, '40m': 7.05, '30m': 10.12, '20m': 14.1,
+                   '17m': 18.1, '15m': 21.1, '12m': 24.9, '10m': 28.2, '6m': 50.1 }
+
+/* --- small helpers ---------------------------------------------------- */
+function lsGet(k) { try { return localStorage.getItem(k) } catch { return null } }
+function lsSet(k, v) { try { localStorage.setItem(k, String(v)) } catch { /* private mode */ } }
+function loadJSON(k, fb) { try { const v = JSON.parse(lsGet(k)); return v && typeof v === 'object' ? v : fb } catch { return fb } }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+function int(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0 }
+function rnd(n) { return Math.floor(Math.random() * n) }
+function fmtKm(km) { return Math.round(km).toLocaleString('en-US') + ' km' }
+function fmtFreq(khz) {
+  const mhz = Math.floor(khz / 1000)
+  const rest = khz - mhz * 1000
+  return `${mhz}.${rest.toFixed(2).padStart(6, '0')}`
+}
+function utcHours() { const d = new Date(); return d.getUTCHours() + d.getUTCMinutes() / 60 }
+
+/* --- settings --------------------------------------------------------- */
+const params = new URLSearchParams(location.search)
+const DEF = { grid: 'DM12', mode: 'cw', len: 10, qrn: 'real', toneHz: 570, wpm: 18, volume: 40 }
+let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
+const pGrid = params.get('grid')
+if (pGrid && gridToLatLon(pGrid)) S.grid = pGrid.toUpperCase()
+if (!gridToLatLon(S.grid)) S.grid = DEF.grid
+S.toneHz = clamp(int(S.toneHz) || DEF.toneHz, 300, 1000)
+S.wpm = clamp(int(S.wpm) || DEF.wpm, 10, 35)
+S.volume = clamp(int(S.volume), 0, 100)
+if (!['cw', 'ssb', 'psk31', 'mixed'].includes(S.mode)) S.mode = 'cw'
+function saveSettings() { lsSet(KEY.settings, JSON.stringify(S)) }
+let hi = int(lsGet(KEY.hi))
+let workedAll = loadJSON(KEY.worked, {})
+
+/* --- the spot feeds ---------------------------------------------------- */
+const feed = { spots: [], tried: false, ok: false, note: '', at: 0, inflight: null }
+
+function normMode(m) {
+  const s = String(m || '').toUpperCase()
+  if (/^(CW)$/.test(s)) return 'cw'
+  if (/^(SSB|USB|LSB|PHONE|AM|FM)$/.test(s)) return 'ssb'
+  if (/PSK/.test(s)) return 'psk31'
+  return 'data'         // FT8, FT4, RTTY and friends: real spots, but not copyable by ear
+}
+function bandFor(spot) {
+  if (spot.band && BAND_MHZ[spot.band]) return spot.band
+  const khz = spot.khz
+  for (const [b, mhz] of Object.entries(BAND_MHZ)) if (Math.abs(khz / 1000 - mhz) < 0.45) return b
+  return null
+}
+
+function loadSpots() {
+  /* Hold the promise: Start can be pressed while the first load is still in
+   * flight, and a race there would look to the operator like a dead band. */
+  if (feed.inflight) return feed.inflight
+  feed.inflight = fetchSpots().finally(() => { feed.inflight = null })
+  return feed.inflight
+}
+
+async function fetchSpots() {
+  feed.tried = true
+  const out = []
+  const seen = new Set()
+  const add = (call, khz, mode, source, extra) => {
+    const c = String(call || '').toUpperCase().trim()
+    if (!c || !/^[A-Z0-9/]{3,12}$/.test(c) || seen.has(c)) return
+    const f = Number(khz)
+    if (!Number.isFinite(f) || f < 1000 || f > 60000) return
+    seen.add(c)
+    out.push({ call: c, khz: f, mode: normMode(mode), rawMode: String(mode || '').toUpperCase(), source, ...extra })
+  }
+  const jobs = [
+    fetch('/api/spots?limit=200').then(r => r.json()).then(d => {
+      for (const s of d.spots || []) add(s.callsign, s.freq, s.mode, 'cluster', { dxcc: s.dxcc, spotter: s.spotter, comment: s.comment })
+    }),
+    fetch('/api/pota').then(r => r.json()).then(d => {
+      for (const s of d.spots || []) add(s.callsign, s.freq, s.mode, 'POTA', { park: s.park_ref, place: s.park_name })
+    }),
+    fetch('/api/sota').then(r => r.json()).then(d => {
+      /* SOTA reports MHz where POTA reports kHz */
+      for (const s of d.spots || []) add(s.callsign, Number(s.freq) < 1000 ? Number(s.freq) * 1000 : s.freq, s.mode, 'SOTA', { park: s.summit_ref, place: s.summit_name })
+    }),
+  ]
+  const res = await Promise.allSettled(jobs)
+  feed.ok = res.some(r => r.status === 'fulfilled') && out.length > 0
+  feed.spots = out
+  feed.at = Date.now()
+  const failed = res.filter(r => r.status === 'rejected').length
+  feed.note = feed.ok
+    ? `${out.length} stations spotted in the last few minutes${failed ? `, ${failed} feed${failed > 1 ? 's' : ''} down` : ''}`
+    : 'the spot feeds are not answering'
+  syncUI()
+  return feed.ok
+}
+
+/* Spots the chosen mode can actually use. */
+function playable(mode) {
+  const ok = feed.spots.filter(s => s.mode !== 'data' || mode === 'psk31')
+  if (mode === 'mixed') return ok.filter(s => s.mode === 'cw' || s.mode === 'ssb')
+  if (mode === 'psk31') return ok            // PSK31 spots are rare, so any real call is fair game
+  return ok.filter(s => s.mode === mode)
+}
+
+/* --- audio ------------------------------------------------------------- *
+ * One receiver: a mode-specific source, a bandpass standing in for the IF
+ * filter, and a noise floor mixed in ahead of the filter the way a real
+ * receiver does it, so narrowing the filter really does dig the signal out.
+ */
+const A = {
+  ctx: null, master: null, bus: null, filter: null, analyser: null,
+  sigGain: null, noiseGain: null, noiseSrc: null, bins: null, unsupported: false,
+}
+let clips = {}          // token -> { buf, analytic } for SSB phonetics
+
+function resume() {
+  if (A.unsupported) return null
+  if (!A.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext
+    if (!AC) { A.unsupported = true; return null }
+    /* iOS puts plain Web Audio on the ringer channel, where the silent switch
+     * kills it; declaring a playback session moves it to the media channel. */
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback' } catch { /* older iOS */ }
+    A.ctx = new AC()
+    buildGraph()
+  }
+  if (A.ctx.state === 'suspended') A.ctx.resume()
+  return A.ctx
+}
+async function prime() {
+  const ctx = resume()
+  if (!ctx) return null
+  for (let i = 0; i < 3 && ctx.state !== 'running'; i++) {
+    try { await ctx.resume() } catch { /* retry */ }
+    if (ctx.state !== 'running') await new Promise(r => setTimeout(r, 60))
+  }
+  return ctx.state === 'running' ? ctx : null
+}
+
+function buildGraph() {
+  const ctx = A.ctx
+  A.master = ctx.createGain(); A.master.gain.value = S.volume / 100
+  A.analyser = ctx.createAnalyser(); A.analyser.fftSize = 8192; A.analyser.smoothingTimeConstant = 0.35
+  A.bins = new Uint8Array(A.analyser.frequencyBinCount)
+  A.filter = ctx.createBiquadFilter(); A.filter.type = 'bandpass'; A.filter.frequency.value = 800; A.filter.Q.value = 1.2
+  A.bus = ctx.createGain(); A.bus.gain.value = 1
+  A.sigGain = ctx.createGain(); A.sigGain.gain.value = 0.7
+  A.noiseGain = ctx.createGain(); A.noiseGain.gain.value = 0.08
+  /* the analyser is tapped ahead of the filter, the way a panadapter is: the
+   * filter is what you hear, the waterfall is what is there to be found */
+  A.bus.connect(A.analyser)
+  A.bus.connect(A.filter); A.filter.connect(A.master); A.master.connect(ctx.destination)
+  A.sigGain.connect(A.bus); A.noiseGain.connect(A.bus)
+  /* band noise: white through a gentle lowpass, looped */
+  const n = ctx.sampleRate * 3
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate)
+  const d = buf.getChannelData(0)
+  let last = 0
+  for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; last = 0.75 * last + 0.25 * w; d[i] = last * 1.6 }
+  A.noiseSrc = ctx.createBufferSource(); A.noiseSrc.buffer = buf; A.noiseSrc.loop = true
+  A.noiseSrc.connect(A.noiseGain); A.noiseSrc.start()
+}
+
+/* Set the IF filter for the mode: CW narrow around the sidetone, SSB wide
+ * enough for speech, PSK31 narrow around the decoder marker. */
+function setFilter(mode) {
+  if (!A.filter) return
+  if (mode === 'cw') { A.filter.frequency.value = S.toneHz; A.filter.Q.value = 3.2 }
+  else if (mode === 'psk31') { A.filter.frequency.value = PSK_CENTER; A.filter.Q.value = 2.4 }
+  else { A.filter.frequency.value = 1200; A.filter.Q.value = 0.8 }
+}
+
+/* --- FFT, for the Hilbert transform the SSB shifter needs ---------------- */
+function fft(re, im, inverse) {
+  const n = re.length
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1
+    for (; j & bit; bit >>= 1) j ^= bit
+    j ^= bit
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]];[im[i], im[j]] = [im[j], im[i]] }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (inverse ? 2 : -2) * Math.PI / len
+    const wr = Math.cos(ang), wi = Math.sin(ang)
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0
+      for (let k = 0; k < len / 2; k++) {
+        const ur = re[i + k], ui = im[i + k]
+        const vr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci
+        const vi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr
+        re[i + k] = ur + vr; im[i + k] = ui + vi
+        re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi
+        const ncr = cr * wr - ci * wi
+        ci = cr * wi + ci * wr; cr = ncr
+      }
+    }
+  }
+  if (inverse) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n }
+}
+
+/* The analytic signal of a real clip: zero the negative frequencies, double
+ * the positive ones. Multiplying that by a complex exponential shifts every
+ * frequency by the same number of Hz, which is exactly what a mistuned SSB
+ * receiver does to a voice, and is why an off-frequency station sounds
+ * wrong rather than merely quiet. */
+function analytic(ctx, buf) {
+  const src = buf.getChannelData(0)
+  let n = 1
+  while (n < src.length) n <<= 1
+  const re = new Float64Array(n), im = new Float64Array(n)
+  re.set(src)
+  fft(re, im, false)
+  const half = n >> 1
+  for (let i = 1; i < half; i++) { re[i] *= 2; im[i] *= 2 }
+  for (let i = half + 1; i < n; i++) { re[i] = 0; im[i] = 0 }
+  fft(re, im, true)
+  const out = ctx.createBuffer(2, src.length, buf.sampleRate)
+  const I = out.getChannelData(0), Q = out.getChannelData(1)
+  for (let i = 0; i < src.length; i++) { I[i] = re[i]; Q[i] = im[i] }
+  return out
+}
+
+async function loadClips() {
+  const ctx = resume()
+  if (!ctx || Object.keys(clips).length) return
+  const toks = Object.keys(PHONETIC)
+  await Promise.all(toks.map(async t => {
+    try {
+      const r = await fetch(`/spot-chaser/audio/${CLIP_FILE(t)}.ogg`)
+      if (!r.ok) return
+      const type = (r.headers.get('content-type') || '')
+      /* The SPA catch-all answers a missing file with index.html and a 200,
+       * so a clip that failed to deploy would decode as HTML and throw. */
+      if (!/audio|ogg|octet/.test(type)) return
+      const buf = await ctx.decodeAudioData(await r.arrayBuffer())
+      clips[t] = { buf, iq: analytic(ctx, buf) }
+    } catch { /* a missing clip just means that letter is silent */ }
+  }))
+}
+
+/* Two oscillators 90 degrees apart, built as periodic waves because an
+ * OscillatorNode has no phase control. */
+function quadOscs(ctx, hz) {
+  const cos = ctx.createPeriodicWave(new Float32Array([0, 1]), new Float32Array([0, 0]), { disableNormalization: true })
+  const sin = ctx.createPeriodicWave(new Float32Array([0, 0]), new Float32Array([0, 1]), { disableNormalization: true })
+  const oc = ctx.createOscillator(), os = ctx.createOscillator()
+  oc.setPeriodicWave(cos); os.setPeriodicWave(sin)
+  oc.frequency.value = hz; os.frequency.value = hz
+  return [oc, os]
+}
+
+/* --- the transmission -------------------------------------------------- */
+let TX = null    // { stop() } for whatever is currently sounding
+
+function stopTx() { if (TX) { try { TX.stop() } catch { /* already gone */ } TX = null } }
+
+/* CW: one oscillator whose frequency follows the dial live, keyed with a
+ * shaped envelope. The pitch you hear is the difference between the station
+ * and your dial, which is the whole point of netting. */
+function sendCW(text, audioHz, ctx = A.ctx, dest = A.sigGain) {
+  const dit = 1.2 / S.wpm
+  const osc = ctx.createOscillator()
+  const g = ctx.createGain()
+  osc.frequency.value = Math.max(1, audioHz)
+  g.gain.value = 0
+  osc.connect(g); g.connect(dest)
+  let t = ctx.currentTime + 0.08
+  const rise = 0.005
+  for (const ch of text.toUpperCase()) {
+    if (ch === ' ') { t += dit * 7; continue }
+    const code = MORSE[ch]
+    if (!code) { t += dit * 3; continue }
+    for (const el of code) {
+      const len = (el === '-' ? 3 : 1) * dit
+      g.gain.setValueAtTime(0, t)
+      g.gain.linearRampToValueAtTime(1, t + rise)
+      g.gain.setValueAtTime(1, t + len - rise)
+      g.gain.linearRampToValueAtTime(0, t + len)
+      t += len + dit
+    }
+    t += dit * 2
+  }
+  osc.start(); osc.stop(t + 0.05)
+  return { osc, endsAt: t, stop: () => { try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.value = 0; osc.stop() } catch { /* done */ } },
+           setFreq: hz => { try { osc.frequency.setTargetAtTime(Math.max(1, hz), ctx.currentTime, 0.01) } catch { /* done */ } } }
+}
+
+/* SSB: the phonetic clips, each shifted by the tuning error. */
+function sendSSB(text, shiftHz, ctx = A.ctx, dest = A.sigGain) {
+  /* out = I*cos(2*pi*f*t) - Q*sin(2*pi*f*t) shifts every frequency up by f;
+   * flipping the sign of the Q branch shifts down by the same amount. That is
+   * done with a gain of -1 or +1 rather than a negative oscillator frequency,
+   * because a negative frequency is silently clamped to zero in at least one
+   * browser and the voice then comes out untouched. */
+  const [oc, os] = quadOscs(ctx, Math.abs(shiftHz))
+  const gi = ctx.createGain(), gq = ctx.createGain(), out = ctx.createGain()
+  const qSign = ctx.createGain()
+  qSign.gain.value = shiftHz < 0 ? 1 : -1
+  gi.gain.value = 0; gq.gain.value = 0
+  oc.connect(gi.gain); os.connect(gq.gain)
+  qSign.connect(gq)
+  gi.connect(out); gq.connect(out); out.connect(dest)
+  oc.start(); os.start()
+  const srcs = []
+  let t = ctx.currentTime + 0.1
+  for (const ch of text.toUpperCase()) {
+    const clip = clips[ch]
+    if (!clip) { t += 0.18; continue }
+    const sp = ctx.createBufferSource()
+    sp.buffer = clip.iq
+    const split = ctx.createChannelSplitter(2)
+    sp.connect(split)
+    split.connect(gi, 0)
+    split.connect(qSign, 1)
+    sp.start(t)
+    srcs.push(sp)
+    t += clip.buf.duration + 0.07
+  }
+  return {
+    endsAt: t,
+    stop: () => { for (const sp of srcs) { try { sp.stop() } catch { /* done */ } } try { oc.stop(); os.stop() } catch { /* done */ } },
+    setFreq: hz => {
+      try {
+        const now = ctx.currentTime
+        oc.frequency.setTargetAtTime(Math.abs(hz), now, 0.01)
+        os.frequency.setTargetAtTime(Math.abs(hz), now, 0.01)
+        qSign.gain.setTargetAtTime(hz < 0 ? 1 : -1, now, 0.01)
+      } catch { /* done */ }
+    },
+  }
+}
+
+/* PSK31: real BPSK at 31.25 baud. A 0 bit reverses the carrier phase and the
+ * envelope dips through the reversal, which is what keeps the signal 31 Hz
+ * wide. Built at baseband and multiplied up to wherever the dial puts it, so
+ * the trace slides across the waterfall as you tune. */
+function varicodeBits(text) {
+  let bits = '00000000000000000000'                 // preamble: idle reversals
+  for (const ch of text.toUpperCase()) {
+    const code = VARICODE[ch]
+    if (!code) continue
+    bits += code + '00'
+  }
+  return bits + '111111111111'                      // postamble: steady carrier
+}
+function pskBaseband(ctx, text) {
+  const baud = 31.25
+  const sr = ctx.sampleRate
+  const spb = Math.round(sr / baud)
+  const bits = varicodeBits(text)
+  const buf = ctx.createBuffer(1, spb * bits.length, sr)
+  const d = buf.getChannelData(0)
+  let phase = 1
+  for (let b = 0; b < bits.length; b++) {
+    const reverse = bits[b] === '0'
+    for (let i = 0; i < spb; i++) {
+      /* a reversal swings from +1 to -1 along a cosine, so the envelope dips to
+       * zero as the phase turns over: that shaping is what keeps BPSK31 to
+       * about 31 Hz wide instead of splattering */
+      d[b * spb + i] = reverse ? phase * Math.cos(Math.PI * i / spb) : phase
+    }
+    if (reverse) phase = -phase
+  }
+  return { buf, bits, seconds: bits.length / baud }
+}
+function sendPSK(text, audioHz, ctx = A.ctx, dest = A.sigGain) {
+  const { buf, seconds } = pskBaseband(ctx, text)
+  const sp = ctx.createBufferSource(); sp.buffer = buf
+  const [oc] = quadOscs(ctx, audioHz)
+  const g = ctx.createGain(); g.gain.value = 0
+  sp.connect(g); oc.connect(g.gain); g.connect(dest)
+  const t = ctx.currentTime + 0.08
+  oc.start(); sp.start(t)
+  return { endsAt: t + seconds, stop: () => { try { sp.stop(); oc.stop() } catch { /* done */ } },
+           setFreq: hz => { try { oc.frequency.setTargetAtTime(Math.max(1, hz), ctx.currentTime, 0.01) } catch { /* done */ } } }
+}
+
+/* --- game state --------------------------------------------------------- */
+let G = null
+
+function txText(st) {
+  const c = st.spot.call
+  if (st.mode === 'cw') return `CQ CQ DE ${c} ${c} K`
+  if (st.mode === 'psk31') return `CQ CQ DE ${c} ${c} PSE K`
+  return c   /* phonetics: the call, twice, is handled by repeating */
+}
+function phoneticOf(call) {
+  return [...call].map(ch => PHONETIC[ch] || ch).join(' ')
+}
+
+function newGame() {
+  const qth = gridToLatLon(S.grid)
+  G = {
+    qth, decl: declination(new Date()), score: 0, worked: [], log: [], n: 0, total: S.len,
+    st: null, phase: 'play', paused: false, t: 0, used: new Set(),
+    fall: [],                                  // waterfall rows, newest first
+    sfi: 116, k: 2,
+  }
+  fetch('/api/health').then(r => r.json()).then(j => {
+    if (Number.isFinite(j.sfi)) G.sfi = Math.round(j.sfi)
+    if (Number.isFinite(j.k_index)) G.k = Math.round(j.k_index)
+  }).catch(() => { /* defaults stand */ })
+  nextStation()
+}
+
+function pathFor(spot, loc) {
+  const band = bandFor(spot)
+  const f = band ? BAND_MHZ[band] : spot.khz / 1000
+  const tgt = { lat: loc.lat, lon: loc.lon }
+  const D = gcDist(G.qth, tgt)
+  const r = bestPath({ f, D, qth: G.qth, tgt, utc: utcHours(), decl: G.decl, sfi: G.sfi, k: G.k, flare: false })
+  return { band, f, D, bearing: gcBearing(G.qth, tgt), res: r, S: r.verdict === 'worked' || r.verdict === 'weak' ? r.S : 0 }
+}
+
+function nextStation() {
+  stopTx()
+  const pool = playable(S.mode).filter(s => !G.used.has(s.call))
+  if (!pool.length || G.n >= G.total) { endGame(); return }
+  /* Scouting, not drilling: when the noise floor is the real one, weight the
+   * draw toward stations the model says are actually workable from here now.
+   * A dead path still turns up sometimes, and the reveal says why it was hard. */
+  let spot = pool[rnd(pool.length)]
+  if (S.qrn === 'real') {
+    const sample = []
+    for (let i = 0; i < Math.min(24, pool.length); i++) {
+      const c = pool[rnd(pool.length)]
+      const l = locateCall(c.call, c.dxcc)
+      sample.push({ c, s: l ? pathFor(c, l).S : 0 })
+    }
+    const open = sample.filter(x => x.s >= 2)
+    if (open.length) spot = open[rnd(open.length)].c
+  }
+  G.used.add(spot.call)
+  G.n++
+  const loc = locateCall(spot.call, spot.dxcc)
+  const mode = S.mode === 'mixed' ? (spot.mode === 'ssb' ? 'ssb' : 'cw') : S.mode
+  const path = loc ? pathFor(spot, loc) : null
+  /* the spot's frequency is close but not exact, the way spots always are */
+  const offKhz = (Math.random() * 1.2 - 0.6)
+  const st = {
+    spot, mode, loc, path,
+    trueKhz: spot.khz + offKhz,
+    dial: spot.khz,                  // you start where the cluster said
+    target: mode === 'cw' ? S.toneHz : mode === 'psk31' ? PSK_CENTER : SSB_CENTER,
+    /* where the energy sits on the waterfall when the station is netted: a
+     * shifted voice is still a voice, so its blob centres near 900 Hz */
+    clickTarget: mode === 'cw' ? S.toneHz : mode === 'psk31' ? PSK_CENTER : 900,
+    tol: mode === 'cw' ? CW_NET_HZ : mode === 'psk31' ? PSK_NET_HZ : SSB_NET_HZ,
+    until: G.t + STATION_SECS * 1000,
+    tries: 0, netted: false, bestErr: 9999, done: false, result: null, nextTx: 0, txEnds: 0,
+  }
+  G.st = st
+  setFilter(mode)
+  applySignalLevel()
+  syncDial()
+  const input = $('callIn')
+  input.value = ''
+  input.focus({ preventScroll: true })
+}
+
+/* Audio offset of the station in the receiver passband, from the dial. */
+function audioHz() {
+  const st = G.st
+  return (st.trueKhz - st.dial) * 1000
+}
+function tuningErr() {
+  const st = G.st
+  return audioHz() - st.target
+}
+
+/* How loud the station is: the path model decides, unless noise is set quiet.
+ * Out of the passband it fades the way a filter fades it. */
+function applySignalLevel() {
+  if (!A.ctx || !G || !G.st) return
+  const st = G.st
+  let s = 9
+  if (S.qrn === 'real' && st.path) s = clamp(st.path.S, 0, 9)
+  const sig = 0.10 + 0.75 * (s / 9)
+  const noise = S.qrn === 'real' ? 0.10 : 0.03
+  A.sigGain.gain.setTargetAtTime(sig, A.ctx.currentTime, 0.05)
+  A.noiseGain.gain.setTargetAtTime(noise, A.ctx.currentTime, 0.05)
+}
+
+function retune() {
+  if (!G || !G.st || !A.ctx) return
+  const st = G.st
+  const hz = audioHz()
+  const err = Math.abs(tuningErr())
+  if (err < st.bestErr) st.bestErr = err
+  if (err <= st.tol) st.netted = true
+  if (TX && TX.setFreq) TX.setFreq(hz)
+  syncDial()
+}
+
+function startTx() {
+  if (!A.ctx || !G || !G.st || G.paused) return
+  stopTx()
+  const st = G.st
+  const hz = audioHz()
+  if (st.mode === 'cw') TX = sendCW(txText(st), hz)
+  else if (st.mode === 'psk31') TX = sendPSK(txText(st), hz)
+  else TX = sendSSB(st.spot.call + st.spot.call, hz)
+  st.txEnds = G.t + (TX.endsAt - A.ctx.currentTime) * 1000
+  st.nextTx = st.txEnds + 2200
+}
+
+function score(st, correct) {
+  if (!correct) return 0
+  const rar = st.loc ? [10, 16, 24][st.loc.rarity] : 10
+  const netBonus = st.bestErr <= st.tol ? 6 : st.bestErr <= st.tol * 3 ? 3 : 0
+  const modeBonus = st.mode === 'psk31' ? 2 : st.mode === 'ssb' ? 0 : 2
+  const fresh = st.loc && !workedAll[st.loc.name] ? 8 : 0
+  return rar + netBonus + modeBonus + fresh
+}
+
+function logIt() {
+  if (!G || G.paused || !G.st || G.st.done) return
+  const st = G.st
+  const typed = ($('callIn').value || '').toUpperCase().replace(/\s+/g, '')
+  if (!typed) return
+  st.tries++
+  const correct = typed === st.spot.call
+  if (!correct && st.tries < 2) {
+    st.result = { wrong: typed }
+    $('callIn').value = ''
+    return
+  }
+  st.done = true
+  const pts = score(st, correct)
+  G.score += pts
+  st.result = { correct, typed, pts }
+  if (correct && st.loc) {
+    G.worked.push(st.loc.name)
+    workedAll[st.loc.name] = (workedAll[st.loc.name] || 0) + 1
+    lsSet(KEY.worked, JSON.stringify(workedAll))
+  }
+  G.log.push({ call: st.spot.call, correct, typed, mode: st.mode, entity: st.loc ? st.loc.name : '?', pts })
+  stopTx()
+  st.until = G.t + 3600     // a moment on the reveal, then the next one
+}
+
+function passIt() {
+  if (!G || G.paused || !G.st) return
+  const st = G.st
+  if (!st.done) {
+    st.done = true
+    st.result = { passed: true }
+    G.log.push({ call: st.spot.call, correct: false, typed: '', mode: st.mode, entity: st.loc ? st.loc.name : '?', pts: 0 })
+    stopTx()
+    st.until = G.t + 2600
+  } else {
+    st.until = G.t
+  }
+}
+
+function endGame() {
+  stopTx()
+  G.phase = 'over'
+  if (G.score > hi) { hi = G.score; lsSet(KEY.hi, hi) }
+  showOver()
+}
+
+function update(dt) {
+  G.t += dt
+  if (G.phase !== 'play') return
+  const st = G.st
+  if (!st) return
+  if (!st.done && A.ctx && G.t >= st.nextTx) startTx()
+  if (G.t >= st.until) {
+    if (!st.done) {
+      st.done = true
+      st.result = { timeout: true }
+      G.log.push({ call: st.spot.call, correct: false, typed: '', mode: st.mode, entity: st.loc ? st.loc.name : '?', pts: 0 })
+      stopTx()
+      st.until = G.t + 2600
+    } else {
+      if (G.n >= G.total) endGame(); else nextStation()
+    }
+  }
+  /* waterfall */
+  if (A.analyser) {
+    A.analyser.getByteFrequencyData(A.bins)
+    const nyq = A.ctx.sampleRate / 2
+    const cols = 120
+    const raw = new Float32Array(cols)
+    for (let i = 0; i < cols; i++) {
+      const hz = (i / cols) * SPAN_HZ
+      const b = Math.round(hz / nyq * A.bins.length)
+      let m = 0
+      for (let j = Math.max(0, b - 1); j <= Math.min(A.bins.length - 1, b + 1); j++) m = Math.max(m, A.bins[j])
+      raw[i] = m
+    }
+    const sorted = Array.from(raw).sort((a, b) => a - b)
+    const floorDb = sorted[Math.floor(cols * 0.55)]
+    const row = new Uint8Array(cols)
+    for (let i = 0; i < cols; i++) row[i] = clamp(Math.round((raw[i] - floorDb) * 4.5), 0, 255)
+    G.fall.unshift(row)
+    if (G.fall.length > FALL_H) G.fall.length = FALL_H
+  }
+}
+
+/* --- drawing ------------------------------------------------------------ */
+const canvas = document.getElementById('c')
+const ctx2 = canvas.getContext('2d')
+let dpr = 1
+function setupCanvas() { dpr = Math.min(2, window.devicePixelRatio || 1); canvas.width = W * dpr; canvas.height = H * dpr }
+setupCanvas()
+function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})` }
+function text(s, x, y, size, col, align = 'left', weight = '') {
+  ctx2.font = `${weight} ${size}px ${FONT}`.trim(); ctx2.fillStyle = col; ctx2.textAlign = align; ctx2.textBaseline = 'middle'; ctx2.fillText(s, x, y)
+}
+function wrapText(str, maxW, size) {
+  ctx2.font = `${size}px ${FONT}`
+  const words = String(str).split(' '), lines = []
+  let cur = ''
+  for (const w of words) {
+    const t = cur ? cur + ' ' + w : w
+    if (ctx2.measureText(t).width > maxW && cur) { lines.push(cur); cur = w } else cur = t
+  }
+  if (cur) lines.push(cur)
+  return lines
+}
+const xOfHz = hz => 16 + (hz / SPAN_HZ) * (W - 32)
+const hzOfX = x => clamp((x - 16) / (W - 32) * SPAN_HZ, 0, SPAN_HZ)
+
+function drawWaterfall() {
+  const st = G.st
+  ctx2.fillStyle = '#050505'
+  ctx2.fillRect(16, FALL_TOP, W - 32, FALL_H)
+  const cols = 120, cw = (W - 32) / cols
+  for (let r = 0; r < G.fall.length; r++) {
+    const row = G.fall[r]
+    for (let i = 0; i < cols; i++) {
+      const v = row[i]
+      if (v < 18) continue
+      const a = Math.min(1, (v - 18) / 120)
+      ctx2.fillStyle = v > 170 ? rgba(C.text, a) : v > 90 ? rgba(C.green, a) : rgba(C.teal, a * 0.55)
+      ctx2.fillRect(16 + i * cw, FALL_TOP + r, cw + 0.6, 1)
+    }
+  }
+  /* the marker you are tuning to */
+  const near = Math.abs(tuningErr()) <= st.tol
+  const mx = xOfHz(st.clickTarget)
+  ctx2.strokeStyle = near ? C.green : C.yellow
+  ctx2.setLineDash([3, 4]); ctx2.lineWidth = 1
+  ctx2.beginPath(); ctx2.moveTo(mx + 0.5, FALL_TOP); ctx2.lineTo(mx + 0.5, FALL_TOP + FALL_H); ctx2.stroke()
+  ctx2.setLineDash([])
+  const lab = st.mode === 'cw' ? `${S.toneHz} Hz` : st.mode === 'psk31' ? 'decoder' : 'voice'
+  text(lab, mx + 4, FALL_TOP + 8, 9, near ? C.green : C.yellow)
+  if (st.mode === 'ssb') {
+    ctx2.strokeStyle = rgba(C.dim, 0.8)
+    ctx2.strokeRect(xOfHz(300) + 0.5, FALL_TOP + 0.5, xOfHz(2700) - xOfHz(300), FALL_H - 1)
+  }
+  ctx2.strokeStyle = C.border
+  ctx2.strokeRect(16.5, FALL_TOP + 0.5, W - 33, FALL_H - 1)
+  for (let hz = 500; hz < SPAN_HZ; hz += 500) {
+    const x = xOfHz(hz)
+    ctx2.fillStyle = rgba(C.dim, 0.5)
+    ctx2.fillRect(x, FALL_TOP + FALL_H - 4, 1, 4)
+    text(`${hz / 1000}k`, x, FALL_TOP + FALL_H - 10, 8, rgba(C.dim, 0.9), 'center')
+  }
+}
+
+function drawMeter() {
+  const st = G.st
+  const err = tuningErr()
+  const y = METER_Y + 16
+  text('TUNING', 16, y - 12, 9, C.dim)
+  const x0 = 16, x1 = W - 16, cx = (x0 + x1) / 2
+  ctx2.fillStyle = C.bg1; ctx2.fillRect(x0, y, x1 - x0, 12)
+  ctx2.strokeStyle = C.border; ctx2.strokeRect(x0 + 0.5, y + 0.5, x1 - x0 - 1, 11)
+  const span = st.mode === 'psk31' ? 120 : 400
+  const tolPx = (st.tol / span) * (x1 - x0) / 2
+  ctx2.fillStyle = rgba(C.green, 0.16)
+  ctx2.fillRect(cx - tolPx, y, tolPx * 2, 12)
+  const px = clamp(cx + (err / span) * (x1 - x0) / 2, x0, x1)
+  ctx2.fillStyle = Math.abs(err) <= st.tol ? C.green : Math.abs(err) < st.tol * 4 ? C.yellow : C.red
+  ctx2.fillRect(px - 1.5, y - 3, 3, 18)
+  const off = Math.round(err)
+  text(Math.abs(err) <= st.tol ? 'netted' : `${off > 0 ? '+' : ''}${off} Hz`, cx, y + 30, 11,
+       Math.abs(err) <= st.tol ? C.green : C.muted, 'center')
+  text(`${fmtFreq(st.dial)} MHz`, x0, y + 30, 12, C.text)
+  const right = st.mode === 'cw' ? `${S.wpm} wpm` : st.mode.toUpperCase()
+  text(S.qrn === 'real' && st.path ? `S${Math.floor(clamp(st.path.S, 0, 9))}  ${right}` : right, x1, y + 30, 11, C.muted, 'right')
+}
+
+function drawCopy() {
+  const st = G.st
+  const spot = st.spot
+  const src = spot.source === 'cluster' ? `cluster via ${spot.spotter || 'dx'}` : `${spot.source} ${spot.park || ''}`
+  const spotted = spot.rawMode || spot.mode.toUpperCase()
+  const line = spot.mode === st.mode
+    ? `spotted on ${spotted} at ${fmtFreq(spot.khz)}`
+    : `spotted on ${spotted} at ${fmtFreq(spot.khz)}, sent here in ${st.mode.toUpperCase()}`
+  text(line, 16, COPY_Y, 11, C.muted)
+  text(src.trim(), W - 16, COPY_Y, 10, C.dim, 'right')
+  const left = Math.max(0, st.until - G.t) / 1000
+  if (!st.done) {
+    ctx2.fillStyle = C.border; ctx2.fillRect(16, COPY_Y + 12, W - 32, 3)
+    const frac = clamp(left / STATION_SECS, 0, 1)
+    ctx2.fillStyle = frac < 0.2 ? C.red : C.dim
+    ctx2.fillRect(16, COPY_Y + 12, (W - 32) * frac, 3)
+  }
+}
+
+function drawInfo() {
+  const st = G.st
+  const y = INFO_Y
+  if (!st.done) {
+    if (st.result && st.result.wrong) {
+      text(`${st.result.wrong} is not what he sent. One more try.`, 16, y + 10, 12, C.yellow)
+    } else if (st.mode === 'ssb') {
+      text('Phonetics. Tune until the voice sounds natural, then copy.', 16, y + 10, 11, C.dim)
+    } else if (st.mode === 'psk31') {
+      text('Put the trace under the decoder marker, within a few Hz.', 16, y + 10, 11, C.dim)
+    } else {
+      text(`Net the note to ${S.toneHz} Hz, then copy the call.`, 16, y + 10, 11, C.dim)
+    }
+    return
+  }
+  const r = st.result || {}
+  const head = r.correct ? `${st.spot.call} worked  +${r.pts}` : r.passed ? `${st.spot.call}  passed` : r.timeout ? `${st.spot.call}  gone` : `${st.spot.call}  missed`
+  text(head, 16, y + 10, 15, r.correct ? C.green : C.red, 'left', 'bold')
+  const L = st.loc, P = st.path
+  if (L && P) {
+    text(`${L.name}${L.area ? ` (${L.area} land)` : ''}  ${fmtKm(P.D)}  ${Math.round(P.bearing)}\u00b0`, 16, y + 32, 12, C.text)
+    const v = P.res
+    let line
+    if (v.verdict === 'skip') line = `The model puts ${P.band || 'that band'} in the skip zone from you right now.`
+    else if (v.verdict === 'muf') line = `${P.band || 'That band'} is above the MUF on that path now: the model says it goes straight through.`
+    else line = `${P.band || 'That band'} is open that way: ${v.hops.length} hop${v.hops.length === 1 ? '' : 's'} at ${v.theta}\u00b0, about S${Math.floor(v.S)}.`
+    const czHere = cosZenith(G.qth.lat, G.qth.lon, utcHours(), G.decl)
+    const czThere = cosZenith(L.lat, L.lon, utcHours(), G.decl)
+    if (Math.abs(czHere) < 0.12 || Math.abs(czThere) < 0.12) line += ' Grayline.'
+    wrapText(line, W - 32, 11).slice(0, 2).forEach((l, i) => text(l, 16, y + 52 + i * 15, 11, C.muted))
+  } else {
+    text('That prefix is not in the table here, so no path for it.', 16, y + 32, 11, C.muted)
+  }
+  if (st.mode === 'ssb' && st.result && !st.result.correct) {
+    text(phoneticOf(st.spot.call), 16, y + 84, 11, C.dim)
+  }
+}
+
+function drawHud() {
+  ctx2.fillStyle = C.bg1; ctx2.fillRect(0, 0, W, HUD_H)
+  ctx2.fillStyle = C.border; ctx2.fillRect(0, HUD_H - 1, W, 1)
+  text(`${G.score} PTS`, 12, 17, 12, C.text, 'left', 'bold')
+  text(`${G.worked.length} WORKED`, 84, 17, 11, C.muted)
+  text(`${G.n} / ${G.total}`, W / 2, 17, 11, C.dim, 'center')
+  text(`SFI ${G.sfi} K${G.k}`, W - 12, 17, 11, C.yellow, 'right')
+}
+
+function draw() {
+  ctx2.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx2.fillStyle = C.bg; ctx2.fillRect(0, 0, W, H)
+  if (!G || !G.st) { drawAttract(); return }
+  drawWaterfall()
+  drawMeter()
+  ctx2.fillStyle = C.border; ctx2.fillRect(0, COPY_Y - 12, W, 1)
+  drawCopy()
+  ctx2.fillStyle = C.border; ctx2.fillRect(0, INFO_Y - 8, W, 1)
+  drawInfo()
+  drawHud()
+}
+
+const ATT = { t: 0 }
+function drawAttract() {
+  ATT.t += REDUCED ? 0 : 1 / 60
+  ctx2.fillStyle = '#050505'
+  ctx2.fillRect(16, FALL_TOP, W - 32, FALL_H)
+  /* a quiet band with a couple of signals drifting through it */
+  for (let r = 0; r < FALL_H; r += 1) {
+    const t = ATT.t - r / 60
+    for (const [base, drift, w] of [[900, 40, 1.5], [1600, 90, 3], [2300, 20, 1]]) {
+      const hz = base + Math.sin(t * 0.3 + base) * drift
+      const x = xOfHz(hz)
+      ctx2.fillStyle = rgba(C.green, 0.5 - r / FALL_H * 0.45)
+      ctx2.fillRect(x, FALL_TOP + r, w, 1)
+    }
+    if (r % 3 === 0) {
+      ctx2.fillStyle = rgba(C.teal, 0.05)
+      ctx2.fillRect(16, FALL_TOP + r, W - 32, 1)
+    }
+  }
+  ctx2.strokeStyle = C.border
+  ctx2.strokeRect(16.5, FALL_TOP + 0.5, W - 33, FALL_H - 1)
+}
+
+let last = 0
+function frame(now) {
+  const dt = Math.min(50, now - (last || now)); last = now
+  if (G && !G.paused) update(dt)
+  draw()
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+
+/* --- UI ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id)
+const ui = $('ui'), ctl = $('ctl'), wrapEl = $('wrap'), stage = $('stage'), foot = $('foot')
+function showView(name) {
+  for (const v of ['vTitle', 'vPause', 'vOver']) $(v).classList.toggle('show', v === name)
+  ui.classList.toggle('show', !!name)
+  ctl.classList.toggle('hide', !!name)
+  if (name) ui.scrollTop = 0
+}
+
+const MODE_HINT = {
+  cw: 'The beat note moves with the dial. Net it to your sidetone and the filter brings it up out of the noise.',
+  ssb: 'Real phonetics. Mistuning shifts every frequency in the voice, so an off-frequency station sounds wrong rather than quiet.',
+  psk31: 'Real BPSK31, 31.25 baud, ARRL varicode. Put the trace under the marker within a few Hz. Point a decoder at your speaker and it will print the call.',
+  mixed: 'Whatever the spot itself says: a CW spot arrives in CW, a phone spot in phonetics.',
+}
+
+function syncUI() {
+  for (const b of $('modeSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.mode)
+  for (const b of $('lenSeg').querySelectorAll('button')) b.classList.toggle('on', int(b.dataset.v) === S.len)
+  for (const b of $('qrnSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === S.qrn)
+  $('modeHint').textContent = MODE_HINT[S.mode]
+  $('grid').value = S.grid
+  const ll = gridToLatLon(S.grid)
+  $('gridInfo').textContent = ll ? `${ll.lat.toFixed(1)}\u00b0, ${ll.lon.toFixed(1)}\u00b0` : 'not a grid'
+  $('tone').value = S.toneHz; $('toneV').textContent = `${S.toneHz} Hz`
+  $('wpm').value = S.wpm; $('wpmV').textContent = `${S.wpm} wpm`
+  $('vol').value = S.volume; $('volV').textContent = `${S.volume}%`
+  const n = Object.keys(workedAll).length
+  $('best').textContent = hi ? `best: ${hi} pts \u00b7 ${n} entit${n === 1 ? 'y' : 'ies'} worked here` : 'nothing worked on this device yet'
+  const avail = feed.tried ? playable(S.mode).length : 0
+  $('feed').textContent = !feed.tried ? 'reading the spot feeds...'
+    : !feed.ok ? feed.note
+    : `${feed.note}, ${avail} of them for ${S.mode === 'mixed' ? 'this mode' : S.mode.toUpperCase()}`
+  if (A.master && A.ctx) A.master.gain.setTargetAtTime(S.volume / 100, A.ctx.currentTime, 0.02)
+}
+
+function syncDial() {
+  const st = G && G.st
+  if (!st) return
+  const d = $('dial')
+  d.min = String(Math.round((st.spot.khz * 1000 - DIAL_SPAN)))
+  d.max = String(Math.round((st.spot.khz * 1000 + DIAL_SPAN)))
+  d.step = '2'
+  d.value = String(Math.round(st.dial * 1000))
+}
+function setDialHz(hz) {
+  const st = G && G.st
+  if (!st) return
+  const lo = st.spot.khz * 1000 - DIAL_SPAN, hiHz = st.spot.khz * 1000 + DIAL_SPAN
+  st.dial = clamp(hz, lo, hiHz) / 1000
+  retune()
+}
+function st_dialHz() { return G.st.dial * 1000 }
+
+function layout() {
+  const land = window.innerWidth > window.innerHeight * 1.3 && window.innerHeight < 620
+  wrapEl.classList.toggle('land', land)
+  foot.classList.toggle('hide', land || window.innerHeight < 560)
+  const fh = foot.classList.contains('hide') ? 0 : foot.offsetHeight + 6
+  let availW = wrapEl.clientWidth - 8, availH = wrapEl.clientHeight - 8 - fh
+  if (land) availW -= Math.min(290, Math.max(250, wrapEl.clientWidth * 0.34)) + 10
+  else availH -= ctl.offsetHeight + 6
+  const s = Math.max(0.3, Math.min(availW / W, availH / H))
+  stage.style.width = `${Math.floor(W * s)}px`
+  stage.style.height = `${Math.floor(H * s)}px`
+}
+window.addEventListener('resize', layout)
+if (window.ResizeObserver) new ResizeObserver(layout).observe(wrapEl)
+
+/* --- flow ----------------------------------------------------------------- */
+let starting = false
+async function startGame() {
+  if (starting || (G && G.phase === 'play')) return
+  if (!gridToLatLon(S.grid)) { $('note').textContent = 'That grid does not parse. Four or six characters, like DM12 or DM12jv.'; return }
+  starting = true
+  const ctx = await prime()
+  if (ctx) await loadClips()
+  if (feed.inflight || !feed.at || Date.now() - feed.at > 240000) await loadSpots()
+  starting = false
+  if (!feed.ok) { $('note').textContent = 'No spots came back, so there is nobody to chase. Try again in a moment.'; return }
+  if (!playable(S.mode).length) {
+    $('note').textContent = `Nothing is spotted in ${S.mode.toUpperCase()} right now. Try another mode, or "as spotted".`
+    return
+  }
+  $('note').textContent = ctx ? '' : 'Audio did not start. Tap Test tone, then Start again.'
+  newGame()
+  showView(null)
+  $('callIn').focus({ preventScroll: true })
+  syncUI()
+}
+function pauseGame() { if (!G || G.paused || G.phase !== 'play') return; G.paused = true; stopTx(); showView('vPause') }
+function resumeGame() { if (!G || !G.paused) return; G.paused = false; showView(null); if (G.st && !G.st.done) G.st.nextTx = G.t; $('callIn').focus({ preventScroll: true }) }
+function quitGame() { if (!G) return; stopTx(); G.paused = false; if (G.phase !== 'over') endGame(); G = null; syncUI(); showView('vTitle') }
+
+function showOver() {
+  const w = G.worked.length
+  $('overLine').textContent = `${G.score} point${G.score === 1 ? '' : 's'} from ${G.log.length} station${G.log.length === 1 ? '' : 's'}, ${w} worked.`
+  const rows = [
+    ['Best on this device', hi, G.score >= hi && G.score > 0],
+    ['Entities worked here', Object.keys(workedAll).length],
+    ['Sun', `SFI ${G.sfi} K${G.k}`],
+  ]
+  $('overStats').innerHTML = rows.map(([k, v, star]) => `<div class="stat${star ? ' hi' : ''}"><span>${k}</span><b>${v}${star ? ' \u2605' : ''}</b></div>`).join('')
+  $('overLog').innerHTML = G.log.map(e =>
+    `<div><span>${e.correct ? '<b>' + e.call + '</b>' : '<i>' + e.call + '</i>'} ${e.mode.toUpperCase()}</span><span>${e.entity}${e.pts ? ' +' + e.pts : ''}</span></div>`).join('')
+  showView('vOver')
+}
+
+$('start').addEventListener('click', startGame)
+$('again').addEventListener('click', () => { G = null; startGame() })
+$('menu').addEventListener('click', () => { G = null; syncUI(); showView('vTitle') })
+$('resume').addEventListener('click', resumeGame)
+$('quit').addEventListener('click', quitGame)
+$('log').addEventListener('click', logIt)
+$('pass').addEventListener('click', passIt)
+$('again2').addEventListener('click', () => { if (G && G.st && !G.st.done) { stopTx(); G.st.nextTx = G.t } })
+$('down').addEventListener('click', () => setDialHz(st_dialHz() - 10))
+$('up').addEventListener('click', () => setDialHz(st_dialHz() + 10))
+$('dial').addEventListener('input', e => setDialHz(int(e.target.value)))
+$('callIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); logIt() } })
+$('modeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.mode = b.dataset.v; saveSettings(); syncUI() })
+$('lenSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.len = int(b.dataset.v); saveSettings(); syncUI() })
+$('qrnSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.qrn = b.dataset.v; saveSettings(); syncUI() })
+$('grid').addEventListener('input', e => { const v = e.target.value.toUpperCase(); if (gridToLatLon(v)) { S.grid = v; saveSettings() } syncUI() })
+$('tone').addEventListener('input', e => { S.toneHz = clamp(int(e.target.value), 300, 1000); saveSettings(); syncUI(); if (G && G.st && G.st.mode === 'cw') { G.st.target = S.toneHz; setFilter('cw'); retune() } })
+$('wpm').addEventListener('input', e => { S.wpm = clamp(int(e.target.value), 10, 35); saveSettings(); syncUI() })
+$('vol').addEventListener('input', e => { S.volume = int(e.target.value); saveSettings(); syncUI() })
+$('test').addEventListener('click', async () => {
+  const ctx = await prime()
+  if (!ctx) { $('note').textContent = 'No audio context. Check the phone is not on silent and try again.'; return }
+  const o = ctx.createOscillator(), g = ctx.createGain()
+  o.frequency.value = S.toneHz; g.gain.value = 0
+  o.connect(g); g.connect(A.master)
+  const t = ctx.currentTime
+  g.gain.linearRampToValueAtTime(0.5, t + 0.01); g.gain.setValueAtTime(0.5, t + 0.28); g.gain.linearRampToValueAtTime(0, t + 0.3)
+  o.start(t); o.stop(t + 0.32)
+  $('note').textContent = `sent ${S.toneHz} Hz at ${S.volume}%`
+})
+
+/* Click the waterfall to net: whatever you clicked moves to the marker. */
+canvas.addEventListener('pointerdown', e => {
+  if (!G || !G.st || G.paused) return
+  const r = canvas.getBoundingClientRect()
+  const x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height
+  if (y < FALL_TOP || y > FALL_TOP + FALL_H) return
+  const clicked = hzOfX(x)
+  const st = G.st
+  setDialHz(st_dialHz() + (clicked - st.clickTarget))
+})
+
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const tag = (e.target && e.target.tagName) || ''
+  const typing = tag === 'INPUT' && e.target.type === 'text'
+  if (e.key === 'Escape') { e.preventDefault(); if (G && G.phase === 'play') { G.paused ? resumeGame() : pauseGame() } return }
+  if (e.key === 'Enter' && !typing) {
+    e.preventDefault()
+    if (!G) startGame(); else if (G.phase === 'over') { G = null; startGame() } else if (G.paused) resumeGame(); else logIt()
+    return
+  }
+  if (!G || G.paused || G.phase !== 'play' || !G.st) return
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setDialHz(st_dialHz() - (e.shiftKey ? 10 : 2)); return }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setDialHz(st_dialHz() + (e.shiftKey ? 10 : 2)); return }
+  if (typing) return
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); if (!G.st.done) { stopTx(); G.st.nextTx = G.t } return }
+  if (e.key === 'p' || e.key === 'P') { e.preventDefault(); passIt() }
+})
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && !G.paused && G.phase === 'play') pauseGame() })
+
+syncUI()
+layout()
+loadSpots()
+
+/* --- test seam ------------------------------------------------------------ */
+window.__sc = {
+  get G() { return G }, get S() { return S }, get feed() { return feed }, get hi() { return hi },
+  get clips() { return Object.keys(clips).length },
+  audioHz, tuningErr, varicodeBits, playable, normMode, bandFor,
+  start: startGame, log: logIt, pass: passIt, pause: pauseGame, resume: resumeGame, quit: quitGame,
+  setDialHz, dialHz: () => st_dialHz(), setSetting: (k, v) => { S[k] = v; saveSettings(); syncUI() },
+  type: v => { $('callIn').value = v },
+  net: () => { const st = G.st; setDialHz((st.trueKhz * 1000) - st.target) },
+  loadSpots,
+  step: ms => { for (let d = ms; d > 0; d -= 16) update(Math.min(16, d)) },
+  /* Render a transmission through an offline context so a test can decode or
+   * measure the actual samples instead of taking the graph on faith. */
+  renderTx: async (mode, text, hz, seconds) => {
+    const ctx = A.ctx || resume()
+    const off = new OfflineAudioContext(1, Math.ceil(ctx.sampleRate * seconds), ctx.sampleRate)
+    const dest = off.createGain(); dest.gain.value = 1; dest.connect(off.destination)
+    if (mode === 'cw') sendCW(text, hz, off, dest)
+    else if (mode === 'psk31') sendPSK(text, hz, off, dest)
+    else sendSSB(text, hz, off, dest)
+    const buf = await off.startRendering()
+    return Array.from(buf.getChannelData(0))
+  },
+  sampleRate: () => (A.ctx || resume()).sampleRate,
+  loadClips: async () => { await prime(); await loadClips(); return Object.keys(clips).length },
+  seedSpots: list => { feed.spots = list.map(s => ({ ...s, mode: normMode(s.rawMode || s.mode) })); feed.tried = true; feed.ok = true; feed.at = Date.now(); syncUI() },
+}
+</script>
+</body>
+</html>
