@@ -76,8 +76,8 @@ PHRASES = {
   # landing 12 m = 39.4 ft, shaft 9 m deep by 5 across = 29.5 by 16.4 ft.
   'SCAFFOLD_BRIEF_FT': ('Landing is up on the scaffold deck, forty feet. Keep it high.', ''),
   'SCAFFOLD_BRIEF_M':  ('Landing is up on the scaffold deck, twelve meters. Keep it high.', ''),
-  'SHAFT_BRIEF_FT':    ('Blind pick. Shaft is thirty feet deep, sixteen across. My eyes only.', ''),
-  'SHAFT_BRIEF_M':     ('Blind pick. Shaft is nine meters deep, five across. My eyes only.', ''),
+  'SHAFT_BRIEF_FT':    ("Blind set-down. Shaft is thirty feet deep, sixteen across. You're blind on this one, I'm your eyes.", ''),
+  'SHAFT_BRIEF_M':     ("Blind set-down. Shaft is nine meters deep, five across. You're blind on this one, I'm your eyes.", ''),
   'ON_THE_HOOK':     ('On the hook.', ''),
   'UP_EASY':         ('Up easy.', ''),
   'UP_EASY_HIGH':    ('Up easy. Well above the deck before you come round.', ''),
@@ -95,19 +95,53 @@ PHRASES = {
   'CENTRED':         ('You are over the hole. Do not let it swing in there.', '[firm]'),
   # Jacob's jobs, missions 4 to 6. Same rounding rule as above: 47 m = 154 ft,
   # 4 m slot = 13.1 ft, 6 m stack = 19.7 ft, 38 m core = 124.7 ft.
-  'RANGE_BRIEF_FT':  ('Setting down at a hundred and fifty feet of radius. Watch your chart on the way out.', ''),
-  'RANGE_BRIEF_M':   ('Setting down at forty seven meters of radius. Watch your chart on the way out.', ''),
-  'WATCH_CHART':     ('Trolley out steady. A swing out there reads on the chart.', ''),
-  'STACKS_BRIEF_FT': ('Slot between the form stacks, thirteen feet wide, twenty feet tall. Straight down the middle.', ''),
-  'STACKS_BRIEF_M':  ('Slot between the form stacks, four meters wide, six tall. Straight down the middle.', ''),
+  'RANGE_BRIEF_FT':  ("You're going out to a hundred and fifty foot to set down. Watch your chart on the way out.", ''),
+  'RANGE_BRIEF_M':   ("You're going out to forty seven meters to set down. Watch your chart on the way out.", ''),
+  'WATCH_CHART':     ('Trolley out steady, and watch your radius.', ''),
+  'STACKS_BRIEF_FT': ("Stacks are twenty foot, slot's thirteen wide. Straight down the middle. My man's on a tagline at the open end.", ''),
+  'STACKS_BRIEF_M':  ("Stacks are six meters, slot's four wide. Straight down the middle. My man's on a tagline at the open end.", ''),
   'CENTRED_SLOT':    ('You are over the slot. Let her die before you come down.', '[firm]'),
   'CORE_BRIEF_FT':   ('Core is up a hundred and twenty five feet, right across your road. Do not try to go over her.', '[firm]'),
   'CORE_BRIEF_M':    ('Core is up thirty eight meters, right across your road. Do not try to go over her.', '[firm]'),
   'ROUND_THE_BACK':  ('Come inside her, or take her round the back. Your call.', ''),
+
+  # The weight, said before he goes anywhere near the load. Every real pick opens
+  # with the rigger telling the operator what is on the hook, and this deck did
+  # not have it: the operator could not know what he was lifting until it was
+  # already on his rope, because js/ui.js fills the Load gauge from the tension
+  # and there is no tension until it is attached. On the one job that is ABOUT
+  # the chart he was told the radius and never the weight.
+  'WEIGHT_CHECK_FT':     ("Load's two thousand pound. Two-leg chain.", ''),
+  'WEIGHT_CHECK_M':      ("Load's nine hundred kilos. Two-leg chain.", ''),
+  'WEIGHT_TRUCK_FT':     ("Beam's five thousand five hundred pound, two-leg chain.", ''),
+  'WEIGHT_TRUCK_M':      ("Beam's two and a half tonne, two-leg chain.", ''),
+  'WEIGHT_SCAFFOLD_FT':  ("Pallet's forty three hundred pound, four-leg.", ''),
+  'WEIGHT_SCAFFOLD_M':   ("Pallet's nineteen fifty kilos, four-leg.", ''),
+  'WEIGHT_SHAFT_FT':     ('Cage is thirty seven fifty pound, four-leg.', ''),
+  'WEIGHT_SHAFT_M':      ('Cage is seventeen hundred kilos, four-leg.', ''),
+  'WEIGHT_RANGE_FT':     ("Crate's four thousand pound. That's eighty percent of your chart at the set-down.", ''),
+  'WEIGHT_RANGE_M':      ("Crate's eighteen fifty kilos. That's eighty percent of your chart at the set-down.", ''),
+  'WEIGHT_STACKS_FT':    ("Bundle's forty five hundred pound, four-leg.", ''),
+  'WEIGHT_STACKS_M':     ("Bundle's two tonne, four-leg.", ''),
+  'WEIGHT_CORE_FT':      ("Panel's five thousand five hundred pound, four-leg.", ''),
+  'WEIGHT_CORE_M':       ("Panel's two and a half tonne, four-leg.", ''),
+
+  # The trial lift. Every pick on every site goes: take up the slack, hold it a
+  # few inches off, look at the slings and the balance, then take it away. The
+  # deck went straight from "up easy" to a guide call, and the absence of that
+  # pause is loud to anyone who has done it.
+  'TRIAL_LIFT':      ('Hold her there. Checking your rigging.', '[firm]'),
+  'FLYING_LEVEL':    ("She's flying level. Take her away.", ''),
+  # And the call that actually releases him at the end. He used to be told the
+  # load was unhooked and never that the men were out from under it.
+  'SLINGS_CLEAR':    ("Slings are off, hook's clear, men are clear.", ''),
+  # The function stop, which is the third element of a voice signal and was
+  # missing from every call in the deck.
+  'DOWN_STOP':       ('Hold. Down stop.', '[firm]'),
   'THATS_GOOD':      ("That's good. Unhooking.", ''),
   'GOOD_LIFT':       ('Good lift. Standing by.', ''),
   'ALL_STOP':        ('ALL STOP. ALL STOP.', '[shouting]'),
-  'ALL_STOP_CLEAR':  ('All stop received. Recover easy.', '[firm]'),
+  'ALL_STOP_CLEAR':  ('Good stop. Stand by.', '[firm]'),
   'NOT_READY':       ('Bring the hook over the load first.', ''),
   'TOO_HIGH':        ('Come down on it, you are high.', ''),
   'TOO_LOW':         ('Take up your slack, you are past it.', ''),
@@ -136,8 +170,19 @@ WORDS = {5:'five', 10:'ten', 15:'fifteen', 20:'twenty', 25:'twenty five', 30:'th
 # buckets and in the same words as the horizontal corrections so the two never
 # sound like different men. TOGO_, not DOWN_, because DOWN_EASY already exists
 # and a prefix that matches two unrelated things is a grep that lies.
+# The last few feet, which is where the countdown matters most and where it used
+# to stop: the buckets bottomed out at five feet, and below that ground had
+# nothing left to say. These are TOGO_ only. A horizontal correction never
+# carries a number under three metres, so "swing left, one foot" would be a dead
+# clip; a load three feet off the bottom of a shaft is a live one.
+CLOSE = {'F1': 'One foot to go.', 'F2': 'Two feet to go.', 'F3': 'Three feet to go.',
+         'M05': 'Half a meter to go.', 'M1': 'One meter to go.'}
+
+
 def build():
     out = dict(PHRASES)
+    for tag, text in CLOSE.items():
+        out[f'TOGO_{tag}'] = (text, '')
     for n in FEET:
         out[f'TOGO_F{n}'] = (f'{WORDS[n].capitalize()} feet to go.', '')
     for n in METRES:

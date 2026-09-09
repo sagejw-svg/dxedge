@@ -22,15 +22,37 @@ export const CRANE = {
   a2bMargin: 0.5,         // m of rope above minLine that A2B keeps in hand after the hoist has stopped
   lmi: { preAlarmPct: 90, lockPct: 100 },
 
-  // Generic load chart, not any manufacturer's data. Capacity falls off with radius.
-  // Linear between points, flat outside the ends.
+  // Generic load chart, not any manufacturer's data. Capacity falls off with
+  // radius. Linear between points, flat outside the ends.
+  //
+  // Reshaped, because the first version was not shaped like a crane's chart.
+  // Multiply the old points out into load moment and it read 60, 80, 78, 76, 70,
+  // 66 t.m: the moment ROSE from 10 m to 20 m. No tower crane does that, and an
+  // operator reads it in one glance. A real chart has a flat capacity plateau
+  // near the mast, set by the reeving and the winch pull rather than by the
+  // structure, and past the plateau the moment falls the whole way out, because
+  // the jib's own weight moment grows as you go.
+  //
+  // These points hold the crane's full six tonnes out to 21 m and fall
+  // monotonically after it, 126 t.m at the plateau to 102 at the tip:
+  //
+  //   21 m 6000  126 t.m     40 m 2800  112 t.m
+  //   25 m 4900  122 t.m     45 m 2400  108 t.m
+  //   30 m 3950  118 t.m     50 m 2100  105 t.m
+  //   35 m 3300  115 t.m     55 m 1850  102 t.m
+  //
+  // Still generic and still nobody's data, but the right shape, and it puts the
+  // tip capacity where a six tonne flat-top of this size actually sits instead of
+  // at 1200 kg, which is light for the class.
   loadChart: [
-    { r: 10, kg: 6000 },
-    { r: 20, kg: 4000 },
-    { r: 30, kg: 2600 },
-    { r: 40, kg: 1900 },
-    { r: 50, kg: 1400 },
-    { r: 55, kg: 1200 }
+    { r: 21, kg: 6000 },
+    { r: 25, kg: 4900 },
+    { r: 30, kg: 3950 },
+    { r: 35, kg: 3300 },
+    { r: 40, kg: 2800 },
+    { r: 45, kg: 2400 },
+    { r: 50, kg: 2100 },
+    { r: 55, kg: 1850 }
   ]
 };
 

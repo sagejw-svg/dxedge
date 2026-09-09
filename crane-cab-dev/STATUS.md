@@ -108,6 +108,54 @@ fresh session doesn't have to reverse-engineer it from git history.
     whole board, folded shut, with what was just unlocked marked in place.
     `state.mission.par` is new (hard rule 6, declared in state.js).
   - Suite is 112 headless checks and 24 browser checks.
+- **Second Jacob round.** Two review agents were run over the build, one against
+  real tower crane practice and one adversarially over the previous commit. What
+  came out of it and shipped:
+  - The fault caption the last round added printed `[object Object]` on five of
+    the seven jobs: half the nodes carry their caption as an { imperial, metric }
+    pair and an object is truthy, so it won a `||` chain ahead of the resolved
+    one. `inUnits` now, not the raw field.
+  - `ackBy` no longer closes the reply window early. Closing it the instant the
+    level went true made "Stopped" unpressable on `hold`, whose predecessor
+    leaves the crane stopped by construction. Being acted on now only means the
+    lapse costs nothing.
+  - "Heard You" was free (the say-again count was read off a reply event that is
+    emitted past the say-again branch, so it was always zero) and "Hands On" was
+    impossible (it counted the briefing calls, which have no lever answer). Both
+    fixed; both verified earnable by a flight.
+  - The ALL STOP wanted the mushroom inside 1.5 s or the lift was lost. It is
+    3 s now and either answer counts: the mushroom, or hands off the levers and
+    kept off for the length of the alarm. Judged on the levers, not the
+    velocities, so the machine's own coasting is not held against the operator.
+  - Ground called the operator straight through the core on mission 6. wrapPi
+    always answers with the shorter arc and the shorter arc goes through a
+    building. He now samples the arc against the structure's footprint and calls
+    the operator inside the near face instead. `state.mission.obstruction` is new
+    (hard rule 6, declared in state.js).
+  - The anti-two-block and the LMI cut-out no longer lose the lift, and neither
+    does 91 percent of rated. Those are the machine's own protection working. A
+    lift is lost by sitting at or above rated for two seconds, or by hitting
+    something; the limits cost a letter each and say so on the card.
+  - Rope tension is dynamic: m g cos(theta) + m a + m L omega^2. It was m g and
+    nothing else, so the LMI could not be provoked and "watch your chart" was
+    advice about a needle that does not move. Mission 4 now reaches 90 percent.
+  - The load chart was reshaped. The old points had the load MOMENT rising from
+    10 m to 20 m, which no crane's chart does. It is a flat 6 t plateau to 21 m
+    and monotonic after it, 126 t.m to 102 at the tip. Mission masses moved with
+    it.
+  - Radio content: ground says the weight before the operator goes near the load
+    (every real pick opens with it and this deck never had it), holds the load a
+    few inches off for a trial lift, counts a blind set-down all the way to the
+    deck instead of stopping at ten feet, calls the function stop, and tells the
+    operator the men are clear before he is released. Thirty one new or
+    re-recorded clips, 164 in all.
+  - New: `test/pilot.mjs` and `test/fly.mjs`, a pilot that flies with the
+    controls and obeys ground's calls, distances included, with no teleporting.
+    `test/regress.mjs`'s flyMission park()s the crane onto its marks, so it can
+    neither hit anything nor be misdirected, which is how mission 6 shipped with
+    a guide that pointed into a building. Run `node test/fly.mjs` before a deploy
+    that touches the missions or the guide. All seven jobs fly to a win.
+  - Suite is 113 headless checks, 24 browser checks, 7 flown jobs.
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main

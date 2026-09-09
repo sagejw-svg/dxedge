@@ -39,7 +39,7 @@ export const MISSIONS = [
   {
     id: 1,
     name: 'Truck unload',
-    load: { mass: 1800, size: [2.4, 1.2, 1.2] },
+    load: { mass: 2500, size: [2.4, 1.2, 1.2] },
     pickup: { pos: [30, 1.3, -6] },
     landing: { pos: [18, 0, 14], tol: 0.35 },
     wind: { base: 4, gust: 0, dir: 250 },
@@ -54,7 +54,7 @@ export const MISSIONS = [
   {
     id: 2,
     name: 'Scaffold landing',
-    load: { mass: 1400, size: [1.8, 1.0, 1.8] },
+    load: { mass: 1950, size: [1.8, 1.0, 1.8] },
     pickup: { pos: [28, 0, 10] },
     landing: { pos: [40, 12, -4], tol: 0.3 },
     wind: { base: 6, gust: 3, dir: 300 },
@@ -64,12 +64,12 @@ export const MISSIONS = [
       { name: 'scaffold', min: [37, 0, -7], max: [43, 12, -1] }
     ],
     achievements: ['Scaffold Kiss'],
-    par: 190
+    par: 200
   },
   {
     id: 3,
     name: 'Blind shaft',
-    load: { mass: 1100, size: [1.4, 1.4, 1.4] },
+    load: { mass: 1700, size: [1.4, 1.4, 1.4] },
     pickup: { pos: [24, 0, 16] },
     landing: { pos: [36, -9, 4], tol: 0.3 },
     // The deck is open here, so the floor under this footprint is the shaft
@@ -101,7 +101,7 @@ export const MISSIONS = [
     // dynamic reading past seventy five. Nothing here is close to the 100 percent
     // lockout, on purpose. This is the lift that teaches the operator to watch
     // the gauge, not the lift that fails him for it.
-    load: { mass: 1000, size: [1.6, 1.0, 1.6] },
+    load: { mass: 1850, size: [1.6, 1.0, 1.6] },
     pickup: { pos: [14, 0.9, -18] },
     landing: { pos: [44, 0, 16], tol: 0.35 },
     wind: { base: 7, gust: 3, dir: 220 },
@@ -111,7 +111,7 @@ export const MISSIONS = [
       { name: 'pipe rack', min: [11, 0, -21], max: [17, 0.9, -15] }
     ],
     achievements: ['Out At Range'],
-    par: 190
+    par: 240
   },
   {
     id: 5,
@@ -121,7 +121,7 @@ export const MISSIONS = [
     // error in the trolley is forgiving and an error in the slew is not, which
     // makes this the slew job. At 34 m of radius, 1.3 m is 2.2 degrees of slew
     // and about the same of swing, so it has to go in dead plumb.
-    load: { mass: 1500, size: [1.4, 1.2, 1.4] },
+    load: { mass: 2050, size: [1.4, 1.2, 1.4] },
     pickup: { pos: [20, 0, 18] },
     landing: { pos: [34, 0, 0], tol: 0.3 },
     wind: { base: 5, gust: 2, dir: 90 },
@@ -132,7 +132,7 @@ export const MISSIONS = [
       { name: 'stack south', min: [30, 0, 2], max: [38, 6, 6] }
     ],
     achievements: ['Threading It'],
-    par: 200
+    par: 210
   },
   {
     id: 6,
@@ -144,7 +144,7 @@ export const MISSIONS = [
     // inside it and slew across close in, or take the whole load the long way
     // round the back of the site. Ground briefs the long way, because that is
     // what a banksman who cannot see the far side of the core would say.
-    load: { mass: 1600, size: [2.0, 1.0, 1.4] },
+    load: { mass: 2500, size: [2.0, 1.0, 1.4] },
     pickup: { pos: [12, 0, 28] },
     landing: { pos: [14, 0, -26], tol: 0.35 },
     wind: { base: 5, gust: 2, dir: 200 },
@@ -153,7 +153,14 @@ export const MISSIONS = [
     deck: [
       { name: 'core', min: [24, 0, -8], max: [36, 38, 8] }
     ],
+    // What the guide has to route around: the core's own footprint in plan, plus
+    // the clearance a banksman would want, which here covers the load's half
+    // diagonal of 1.22 m and leaves most of a metre on top. radio.js samples the
+    // arc against this and calls the operator inside the near face rather than
+    // talking him through a building, which is what it did before this existed.
+    // The long way round is still open; ground just says which he would rather.
+    obstruction: { min: [24, -8], max: [36, 8], clear: 2.0 },
     achievements: ['Round The Core'],
-    par: 240
+    par: 270
   }
 ];

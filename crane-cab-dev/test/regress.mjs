@@ -42,8 +42,30 @@ function until(sim, pred, seconds = 30, perTick = null) {
 const node = (s) => s.radio.node;
 const atNode = (id) => (s) => s.radio.node === id;
 
-// Answer the current call as soon as its window opens.
-function answer(sim, idx = 0, seconds = 20) {
+// Ground's opening calls: the radio check, the briefing, the weight, and any
+// job-specific word before the operator goes anywhere near the load.
+const BRIEFING = ['check', 'brief', 'weight', 'watchTruck', 'route', 'watchChart'];
+
+// Answer the current call as soon as its window opens. Standing on a briefing
+// node it answers the whole opening exchange rather than one call of it: thirty
+// two checks here begin by getting a lift under way, none of them are about the
+// briefing, and spelling out one answer() per call meant that adding a call to
+// the deck - which is content, and is meant to be cheap - broke all thirty two.
+function answer(sim, idx = 0, seconds = 30) {
+  if (!BRIEFING.includes(sim.state.radio.node)) return answerOnce(sim, idx, seconds);
+  const done = new Set();
+  let any = false;
+  until(sim, (s) => !BRIEFING.includes(s.radio.node), seconds, (s) => {
+    if (s.radio.ackTimer > 0 && !done.has(s.radio.node)) {
+      s.intent.reply = idx;
+      done.add(s.radio.node);
+      any = true;
+    }
+  });
+  return any;
+}
+
+function answerOnce(sim, idx = 0, seconds = 20) {
   let sent = false;
   return until(sim, (s) => sent && s.radio.ackTimer === 0, seconds, (s) => {
     if (!sent && s.radio.ackTimer > 0) { s.intent.reply = idx; sent = true; }
@@ -299,11 +321,17 @@ async function tAllStopNotPostponable() {
   until(sim, atNode('toPickup'), 8);
   until(sim, () => false, 2);
   rig(sim);
+  // Flying before the alarm and still flying through it. That is what ignoring
+  // an ALL STOP is: since the alarm can now be answered by putting the controls
+  // to neutral as well as by the mushroom, a crane that was already stopped when
+  // it was called has answered it on the first tick, and this check is about the
+  // operator who does neither.
+  const fly = (s) => { s.intent.slew = 1; s.intent.range = 'II'; };
   sim.state.load.swing.x = 0.2;
-  until(sim, atNode('allStop'), 8);
-  // Hold the swing up and tap a reply every tick the strip will take one.
+  until(sim, atNode('allStop'), 8, fly);
   const failed = until(sim, (s) => s.mission.result !== null, 25, (s) => {
     s.load.swing.x = 0.2;
+    fly(s);
     if (s.radio.tx === 'groundTx') s.intent.reply = 0;
   });
   rec('talking over ALL STOP does not postpone it',
@@ -630,6 +658,57 @@ async function tFlyBlindShaft() {
 // The mission list and the achievement list are two files that have to agree.
 // A job naming an award that does not exist, or an award gated on a mission id
 // that is not on the board, is dead content nobody can earn and nothing catches.
+// Mission 6 shipped with a guide that called the operator straight through a
+// thirty eight metre building: wrapPi always answers with the shorter arc and the
+// shorter arc goes through the core, so ground said swing left, and swing left,
+// and anyone who flew exactly what the radio said lost the lift on a collision.
+// The suite could not see it, because flyMission park()s the slew across in one
+// tick and never occupies the space the core is in. This walks the guide's own
+// correction around the whole circle instead.
+async function tGroundNeverCallsYouIntoABuilding() {
+  const sim = await startMission(6);
+  const m6 = MISSIONS[6];
+  const ob = m6.obstruction;
+  const bad = [];
+  // Every place the load could be on the way over: a ring of bearings at each of
+  // a range of radii, asking ground for the correction he would give from there.
+  for (let deg = -180; deg < 180; deg += 5) {
+    for (let radius = 12; radius <= 46; radius += 2) {
+      park(sim, { slew: (deg * Math.PI) / 180, radius });
+      // Ground's own words, through his own code path.
+      const hint = sim.modules.radio._guideHint(sim.ctx, m6.landing.pos);
+      if (!hint) continue;
+      // Walk the arc he just called, at the radius the load is hanging at, and
+      // see whether it ends up inside the core's footprint. A call with a number
+      // on it is walked that far; "keep coming" is walked to the mark, because
+      // that is what it means and ground will speak again before then. Never
+      // past the mark: nothing here is testing overshoot.
+      const step = hint.axis === 'slew' ? hint.sign * (1 * Math.PI) / 180 : 0;
+      if (!step) continue;
+      const here = (deg * Math.PI) / 180;
+      const toMark = Math.atan2(m6.landing.pos[2], m6.landing.pos[0]);
+      // How far it is to the mark going the way ground just pointed.
+      let toGo = (toMark - here) * hint.sign;
+      while (toGo < 0) toGo += Math.PI * 2;
+      const called = hint.metres !== null ? hint.metres / Math.max(1, radius) : Infinity;
+      const arc = Math.min(toGo, called);
+      const n = Math.max(1, Math.round(arc / Math.abs(step)));
+      for (let i = 1; i <= n; i += 1) {
+        const a = here + step * i;
+        const x = Math.cos(a) * radius;
+        const z = Math.sin(a) * radius;
+        if (x >= ob.min[0] && x <= ob.max[0] && z >= ob.min[1] && z <= ob.max[1]) {
+          bad.push(`from ${deg} deg at ${radius} m ground called ${hint.key}, which runs into the core`);
+          break;
+        }
+      }
+    }
+  }
+  rec('ground never calls the operator into the one thing he cannot fly through',
+    bad.length === 0,
+    bad.length ? `${bad.length} bad calls, first: ${bad[0]}` : 'swept the whole site, every call clear');
+}
+
 async function tTheBoardAgreesWithItself() {
   const A = (await import(pathToFileURL(join(HERE, '..', 'data/achievements.js')).href)).ACHIEVEMENTS;
   const names = new Set(A.map((a) => a.name));
@@ -1224,7 +1303,11 @@ async function tGradeMovesInsideTheWin() {
   }
   const clean = await graded(() => {});
   const offMark = await graded((s) => { s.scoring.landingError = 0.30; });   // inside 0.35, still a win
-  const heavy = await graded((s) => { s.mission.maxCapacityPct = 88; });     // under 90, still a win
+  // Inside the pre-alarm band and nowhere near rated, so still a win. The
+  // demerit bands moved out to where the machine's own alarms are (90 and 100)
+  // when working in the nineties stopped being a lost lift, so this number moved
+  // with them; the check is unchanged, that a winning lift can still be marked.
+  const heavy = await graded((s) => { s.mission.maxCapacityPct = 95; });
   rec('the grade moves on things a winning lift can actually do',
     clean.grade === 'A' && offMark.grade !== 'A' && heavy.grade !== 'A',
     `clean ${clean.grade}, 0.30 m off a 0.35 m pad ${offMark.grade} ${JSON.stringify(offMark.why)}, 88 percent ${heavy.grade} ${JSON.stringify(heavy.why)}`);
@@ -1706,9 +1789,10 @@ async function tEveryClipExists() {
     .some((sc) => Object.values(sc.nodes).some((n) => n.descend));
   if (anyDescent) {
     for (const units of ['imperial', 'metric']) {
-      for (const b of R.DISTANCE_BUCKETS[units]) wanted.add(`TOGO_${b.tag}`);
+      for (const b of R.DEPTH_BUCKETS[units]) wanted.add(`TOGO_${b.tag}`);
     }
     wanted.add(R.PLUMB_HINT.say);
+    wanted.add(R.DOWN_STOP.say);
   }
   for (const call of Object.values(R.GUIDE_CALLS)) {
     wanted.add(call.say);
@@ -1760,9 +1844,10 @@ async function tTransmissionMatchesTheClip() {
   const sim = await startMission(3);                       // blindShaft: the long brief
   until(sim, (s) => s.radio.tx === 'groundTx', 4);
   const shortCall = sim.state.radio.groundTimer;           // RADIO_CHECK
-  answer(sim);
+  answerOnce(sim);                                         // just the check
   until(sim, atNode('brief'), 8);
-  until(sim, (s) => s.radio.tx === 'groundTx' && s.radio.caption.startsWith('Blind pick'), 8);
+  until(sim, (s) => s.radio.tx === 'groundTx' &&
+    s.radio.caption.startsWith('Blind set-down'), 8);
   const longCall = sim.state.radio.groundTimer;
   // Each within a tick of its clip plus the unkey beat, and the brief has to be
   // materially longer than the check rather than both landing on 1.6.
@@ -1928,12 +2013,17 @@ async function tGroundSaysItAtMostTwiceMore() {
   rec('and the lift moves on rather than stalling on the call he dropped',
     node(sim.state) !== 'check' && sim.state.radio.script !== null,
     `node ${node(sim.state)} script ${sim.state.radio.script}`);
-  // The faults stop with the transmissions instead of accruing forever.
-  const before = sim.state.radio.faults;
+  // The faults stop with the transmissions instead of accruing forever. Counted
+  // per node, not in total: an operator who says nothing at all now moves on to
+  // the next call in the briefing, and that call earning its own fault fifteen
+  // seconds later is the script working, not this one still going.
+  const faultsOnCheck = () => sim.log.filter((e) => e.name === 'radio.fault' &&
+    e.payload && e.payload.node === 'check').length;
+  const before = faultsOnCheck();
   until(sim, () => false, 15);
   rec('and the faults stop when the transmissions do',
-    sim.state.radio.faults === before,
-    `faults ${before} then ${sim.state.radio.faults} fifteen seconds later`);
+    faultsOnCheck() === before,
+    `faults on the radio check ${before} then ${faultsOnCheck()} fifteen seconds later`);
 }
 
 // A gated call is the case that must not hang. Ground stops asking, but the node
@@ -1976,9 +2066,11 @@ async function tTheAlarmIsNotCapped() {
   sim.state.load.swing.x = 0.2;
   until(sim, atNode('allStop'), 8);
   const gaveUpOnAlarm = sim.log.some((e) => e.name === 'radio.gaveUp' && e.node === 'allStop');
-  // It ends on its own deadline, not by being capped.
+  // It ends on its own deadline, not by being capped. Keep flying, or stopping
+  // the levers would answer the alarm and there would be no deadline to reach.
   const ended = until(sim, (s) => s.mission.result !== null ||
-    sim.log.some((x) => x.name === 'radio.ignoredAllStop'), 12);
+    sim.log.some((x) => x.name === 'radio.ignoredAllStop'), 12,
+    (s) => { s.intent.slew = 1; s.intent.range = 'II'; });
   rec('the ALL STOP is never capped, it runs to its own deadline',
     !gaveUpOnAlarm && ended,
     `gaveUp on allStop ${gaveUpOnAlarm}, reached its deadline ${ended}`);
@@ -2492,7 +2584,7 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReturnCannotKillRadio, tMission1NoSilentCollision, tHoistBudgetResets,
   tGuideSayAgainFree, tEmptyBlockAccel,
   tRestingIsNotColliding, tShaftReachable, tNoTeleportOntoRoof,
-  tFlyTruck, tFlyScaffold, tFlyBlindShaft, tEveryJobCanBeFlown, tTheBoardAgreesWithItself,
+  tFlyTruck, tFlyScaffold, tFlyBlindShaft, tEveryJobCanBeFlown, tTheBoardAgreesWithItself, tGroundNeverCallsYouIntoABuilding,
   tGradeRubric, tFlowAndResume, tRefreshKeepsProgress, tAchievementOnce,
   tSaveSurvivesGarbage, tGusts,
   tEmptySwingIsNotAnAllStop, tEmptySwingIsNotCharged,

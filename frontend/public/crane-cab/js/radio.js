@@ -42,7 +42,8 @@
 import {
   SCRIPTS, GUIDE_CALLS,
   NOT_READY_HINT, NOT_SLACK_HINT, TOO_HIGH_HINT, TOO_LOW_HINT,
-  SAY_AGAIN_LABEL, DISTANCE_BUCKETS, DISTANCE_FAR, PLUMB_HINT, DEPTH_CAPTION
+  SAY_AGAIN_LABEL, DISTANCE_BUCKETS, DEPTH_BUCKETS, DISTANCE_FAR, PLUMB_HINT,
+  DEPTH_CAPTION, DOWN_STOP
 } from '../data/radio.js';
 import { CLIP_SECONDS } from '../data/clips.js';
 
@@ -73,6 +74,7 @@ const DESCENT_PERIOD_NEAR = 2.4;             // s between calls in the last few 
 const DESCENT_PERIOD_FAR = 6.0;              // s between calls at the top of the descent
 const DESCENT_FAR_DROP = 9;                  // m of remaining drop that counts as the top
 const DESCENT_SWAY = (2.5 * Math.PI) / 180;  // rad of load sway that earns a plumb warning
+const DOWN_STOP_AT = 0.20;                   // m of remaining drop at which ground calls the stop
 const RETRY_FLOOR = 1e-6;                    // a retry timer never reaches zero mid call
 const HOOK_RETRY = 4.0;                      // s before ground calls for the hook again
 // How many times ground will say the same thing again before he stops. He is a
@@ -91,6 +93,7 @@ const HOLD_FACTOR = 3;                       // inside this many tolerances, say
 const GUIDE_SETTLE = (2 * Math.PI) / 180;    // rad of sway allowed to leave a guide node
 const SWAY_INTERRUPT = (10 * Math.PI) / 180; // rad of sway that triggers ALL STOP
 const SAY_DISTANCE_OVER = 3.0;               // m, below this a guide call carries no distance
+const OBSTRUCTION_MARGIN = 0.5;              // m inside the clear radius ground asks him to come
 const G = 9.81;
 
 // Level equivalents for the waitFor gate. See the data/radio.js header.
@@ -117,6 +120,8 @@ let lastScriptNode = null;
 let swayArmed = true;     // ALL STOP on sway is edge triggered
 let micLatched = false;   // a held PTT counts as one press, not one per frame
 let banked = null;        // an answer given while ground was still talking
+let acted = false;        // this node's call was answered with the levers
+let replied = false;      // and this one, that it was answered with a button
 let hookResult = null;    // null | 'attached' | 'notReady'
 let hookRetry = 0;
 let pendingAction = null; // this node's hook / unhook, fired when the call ends
@@ -128,6 +133,7 @@ let lastGuideKey = null;  // the clip the last guide call went out as
 let sameCallBeats = 0;    // beats the correction has been the same one
 let descentTimer = 0;     // s to the next depth callout on a blind set-down
 let lastDepthKey = null;  // the depth clip last called, so it is not repeated
+let stopSaid = false;     // the function stop has gone out on this node
 let inAllStop = false;
 // ALL STOP is the one deadline nothing may postpone, so it belongs to the
 // interrupt rather than to whichever node happens to be current. Hanging it off
@@ -137,7 +143,23 @@ let inAllStop = false;
 // It covers the call plus the window, so the operator gets the whole window to
 // reach the mushroom after ground stops shouting.
 let allStopTimer = 0;
-const ALL_STOP_WINDOW = 1.5;   // s to reach the E-stop after the call ends
+// Whether the operator kept flying after the alarm. An ALL STOP answered by
+// putting the controls to neutral has to mean neutral and STAY neutral until
+// ground stands the alarm down, or it is answered by a crane that happened to be
+// between moves when it was called, which is no answer at all: the sway that
+// raises the alarm usually peaks just after the operator stops, so the machine is
+// nearly always still on the tick it fires.
+let allStopMoved = false;
+// s to answer an ALL STOP after the call ends. It was 1.5, which is not a
+// reaction time, it is a trap: both hands are on levers and the mushroom is a
+// deliberate two-motion reach. And the answer was the mushroom alone. On site
+// "all stop" means bring every motion to a stop - controls to neutral - and an
+// operator does not slam the emergency stop because the banksman called stop; on
+// a real machine that dumps power and drops the brakes hard, which with a heavy
+// load already swinging makes the swing worse and leaves him a reset to do. He
+// hits it for a man under the load. So either answer counts now: the mushroom, or
+// all three axes stopped.
+const ALL_STOP_WINDOW = 3.0;
 
 const WAIT_EVENTS = [
   'hook.tight', 'load.slack', 'sway.settled', 'load.inZone', 'load.near', 'estop'
@@ -274,6 +296,8 @@ function enterNode(ctx, id) {
   sameCallBeats = 0;
   descentTimer = 0;
   lastDepthKey = null;
+  acted = false;
+  replied = false;
   hookResult = null;
   hookRetry = 0;
   unhookResult = null;
@@ -364,8 +388,20 @@ function replyLabels(n) {
 function sayAgainPressed(ctx) {
   const r = ctx.state.radio;
   const pick = ctx.state.intent.reply;
-  return pick !== null && pick >= 0 && pick < r.replies.length &&
+  const yes = pick !== null && pick >= 0 && pick < r.replies.length &&
     r.replies[pick] === SAY_AGAIN_LABEL;
+  if (yes) askedAgain(ctx);
+  return yes;
+}
+
+// Every route to "say that again" ends here. Say again is free and always will
+// be - it is the one button an operator must never hesitate over - but it is
+// also the one thing an award for running a tidy channel should be counting, and
+// nothing counted it: the reply event that scoring.js was watching for is emitted
+// after the say-again branch returns, so "Heard You" was really only asking for
+// no radio faults and came free with them.
+function askedAgain(ctx) {
+  ctx.bus.emit('radio.sayAgain', { node: ctx.state.radio.node });
 }
 
 let repeating = false;  // the transmission on the air is a repeat from a gate
@@ -390,9 +426,13 @@ function fault(ctx, why) {
   // marked down and nothing about what for, which is the one thing he needs to
   // know to not do it again. It is read off the node ground is standing on, so
   // the wording still lives in data/ with the rest of the script.
+  // inUnits, not the raw field. Half the nodes in the deck carry their caption
+  // as an { imperial, metric } pair, and an object is truthy, so it won that ||
+  // chain and the card printed "no answer to [object Object]" on five of the
+  // seven jobs. r.caption is already resolved, and is the right fallback.
   ctx.bus.emit('radio.fault', {
     node: r.node,
-    caption: (node && node.caption) || r.caption || '',
+    caption: inUnits(node && node.caption, ctx.state.settings.units) || r.caption || '',
     why: why || 'timeout'
   });
 }
@@ -418,6 +458,7 @@ function interrupt(ctx) {
   if (!all) return;
   // The clock starts here and runs whatever happens to the script afterwards.
   allStopTimer = txLength(all.say) + (all.timeout || ALL_STOP_WINDOW);
+  allStopMoved = false;
   ctx.bus.emit('radio.allStop', {});
   enterNode(ctx, 'allStop');
 }
@@ -435,9 +476,17 @@ function gateSatisfied(ctx) {
 // every zero crossing, so a load swinging two degrees reads as dead still twice
 // a period, which is how ground came to call "that's good" mid swing and the
 // load landed a metre off the pad.
+// swayAmplitude, not swayAngle. A steady wind holds the load at a constant lean
+// off plumb, and a leaning load is not a swinging one: it is hanging exactly as
+// still as the wind will let it. Reading the raw angle here made the gate on
+// mission 4, seven metres a second of base wind and a gust on top at 47 m of
+// radius, unsatisfiable at gust peak - the operator sat with the levers still and
+// a dead load and the script would not move until the wind happened to drop.
+// sensors.js already separates the two and scoring.js already reads the right
+// one; this was the last place still asking the wrong question.
 function swaySettled(state, angleLimit, rateLimit) {
   const sw = state.load.swing;
-  return state.sensors.swayAngle < angleLimit &&
+  return state.sensors.swayAmplitude < angleLimit &&
     Math.hypot(sw.vx, sw.vy) < rateLimit;
 }
 
@@ -521,6 +570,47 @@ function guideTolerance(ctx) {
 // slew arc and metres of trolley travel. Shared by the guide calls and by
 // ground's call for the hook, because "over the load" and "on the mark" are the
 // same problem and he should say them the same way.
+// Would swinging `delta` from `from` carry the load through the one thing on
+// this site it cannot go through. Sampled rather than solved: sixty five points
+// along the arc, at the radius the load is actually hanging at, each tested
+// against the structure's own footprint grown by a clearance. Sampling costs
+// nothing at guide cadence and is impossible to get subtly wrong.
+//
+// The footprint and not a sector of bearings. A box subtends a wide angle close
+// in and a narrow one far out, so a fixed sector called the arc blocked at radii
+// where the load would pass a clear metre outside the face - and since the
+// correction for a blocked arc is "trolley in", ground then talked the operator
+// in, decided the arc was clear, talked him back out, and sat there doing that
+// for the rest of the lift.
+function arcIsBlocked(state, from, delta) {
+  const ob = state.mission.obstruction;
+  if (!ob) return false;
+  const c = state.crane;
+  const hang = c.hangRadius !== undefined ? c.hangRadius : c.radius;
+  const steps = 64;
+  for (let i = 0; i <= steps; i += 1) {
+    const a = from + (delta * i) / steps;
+    if (pointIsBlocked(ob, Math.cos(a) * hang, Math.sin(a) * hang)) return true;
+  }
+  return false;
+}
+
+function pointIsBlocked(ob, x, z) {
+  const c = ob.clear || 0;
+  return x >= ob.min[0] - c && x <= ob.max[0] + c &&
+    z >= ob.min[1] - c && z <= ob.max[1] + c;
+}
+
+// The largest radius at which the whole circle is clear of the structure: the
+// mast's distance to the nearest corner of the grown footprint. Inside this the
+// operator can swing anywhere he likes, which is the point of going in.
+function radiusInsideOf(ob) {
+  const c = ob.clear || 0;
+  const nx = Math.max(ob.min[0] - c, Math.min(0, ob.max[0] + c));
+  const nz = Math.max(ob.min[1] - c, Math.min(0, ob.max[1] + c));
+  return Math.hypot(nx, nz);
+}
+
 function polarErrorTo(state, target) {
   const c = state.crane;
   const hang = c.hangRadius !== undefined ? c.hangRadius : c.radius;
@@ -528,11 +618,33 @@ function polarErrorTo(state, target) {
   const dAngle = wrapPi(Math.atan2(target[2], target[0]) - c.slew);
   // Measured from where the rope hangs, so "trolley in two feet" is two feet of
   // load rather than two feet of trolley. Under load those differ by the bend.
+  // The geometry stays honest whatever is in the way: what changes when the arc
+  // is blocked is what ground SAYS, in correctionFor, not where the mark is.
   return { tangential: dAngle * hang, radial: targetRadius - hang };
 }
 
 // The single largest correction, as a call. Ground never says two at once.
 function correctionFor(state, err) {
+  const c = state.crane;
+  const hang = c.hangRadius !== undefined ? c.hangRadius : c.radius;
+  // Nothing gets swung through a building. On the core job the short arc between
+  // the two pads runs straight through thirty eight metres of concrete, and
+  // wrapPi always answers with the short arc, so ground called swing left, and
+  // swing left, and swing left, and an operator who flew exactly what the radio
+  // said lost the lift on a collision at seventeen degrees.
+  //
+  // The way past it is in, not round. Going round is two hundred and thirty
+  // degrees of slew with a load on, across the whole site; coming inside the
+  // near face is a few metres of trolley and then the same short arc, and it
+  // keeps the load close to the mast where the man on the ground can see it,
+  // which is what he is worried about in the first place. So ground calls the
+  // trolley until the operator is inside, and picks the swing back up there. The
+  // long way round is still open to anyone who wants it; ground just says which
+  // one he would rather.
+  if (arcIsBlocked(state, c.slew, hang > 0 ? err.tangential / hang : 0)) {
+    const inside = radiusInsideOf(state.mission.obstruction) - OBSTRUCTION_MARGIN;
+    return { call: GUIDE_CALLS.trolleyIn, distance: Math.max(0, hang - inside) };
+  }
   const swing = Math.abs(err.tangential) >= Math.abs(err.radial);
   const call = swing
     ? (err.tangential > 0 ? GUIDE_CALLS.swingRight : GUIDE_CALLS.swingLeft)
@@ -587,8 +699,8 @@ function guideInfo(ctx) {
 // stops being useful and ground says "keep coming" instead. Returns the words
 // for the caption and the tag that names the clip, together, because they have
 // to agree: the operator reads the caption while hearing the recording.
-function distanceBucket(metres, units) {
-  const table = DISTANCE_BUCKETS[units === 'imperial' ? 'imperial' : 'metric'];
+function distanceBucket(metres, units, tables) {
+  const table = (tables || DISTANCE_BUCKETS)[units === 'imperial' ? 'imperial' : 'metric'];
   let pick = null;
   for (const b of table) {
     if (metres >= b.value) pick = b; else break;
@@ -649,7 +761,9 @@ function dropRemaining(state) {
 // buckets and the same words as a horizontal correction, so the two never sound
 // like different men reading off different tapes.
 function depthCall(state, drop) {
-  const b = distanceBucket(drop, state.settings.units);
+  // The countdown's own table, which has a small end the guide's does not. See
+  // DEPTH_BUCKETS in data/radio.js.
+  const b = distanceBucket(drop, state.settings.units, DEPTH_BUCKETS);
   if (b === DISTANCE_FAR) return null;      // too far out for a number to help
   const words = `${b.words[0].toUpperCase()}${b.words.slice(1)}`;
   return { say: `TOGO_${b.tag}`, caption: DEPTH_CAPTION.replace('{n}', words) };
@@ -672,17 +786,39 @@ export function update(ctx, dt) {
   // whatever node.waitFor happens to be: a "say again" on the alarm re-sends the
   // call, and nothing about the operator asking for it again may buy them time.
   if (allStopTimer > 0) {
+    // The mushroom is the fast answer and stands the alarm down on the spot.
     if (state.intent.estop) {
       allStopTimer = 0;
+      ctx.bus.emit('radio.allStopAnswered', { how: 'estop' });
       enterNode(ctx, 'allStopClear');
       setTx(ctx);
       return;
     }
+    // Otherwise it is answered by taking the hands off, and that means keeping
+    // them off until ground stands the alarm down.
+    //
+    // The test is the levers, not the velocities. A crane at full range II slew
+    // takes two seconds to come to a stand however fast the operator reacts, so
+    // reading the velocities marked him down for the machine's own coasting, and
+    // "ignored" would have meant "did not stop instantly". And it does not start
+    // until ground has finished saying it: a man cannot answer a call he has not
+    // heard the end of.
+    if (allStopTimer <= (node && node.timeout ? node.timeout : ALL_STOP_WINDOW)) {
+      if (state.intent.slew || state.intent.trolley || state.intent.hoist) {
+        allStopMoved = true;
+      }
+    }
     allStopTimer -= dt;
     if (allStopTimer <= 0) {
       allStopTimer = 0;
-      ctx.bus.emit('radio.ignoredAllStop', { node: r.node });
-      mode = 'done';
+      if (allStopMoved) {
+        ctx.bus.emit('radio.ignoredAllStop', { node: r.node });
+        mode = 'done';
+        setTx(ctx);
+        return;
+      }
+      ctx.bus.emit('radio.allStopAnswered', { how: 'levers' });
+      enterNode(ctx, 'allStopClear');
       setTx(ctx);
       return;
     }
@@ -711,6 +847,7 @@ export function update(ctx, dt) {
       overlap(ctx);
       if (label === SAY_AGAIN_LABEL) {
         // Ground heard it and starts the call over, from the top.
+        askedAgain(ctx);
         if (mode === 'guideTx') repeatGuide(ctx);
         else sayNode(ctx, 0, null, repeating);
         setTx(ctx);
@@ -748,15 +885,19 @@ export function update(ctx, dt) {
         // through the rest of the call waiting for a window to open.
         // Voiced back whether or not this was a say-again. A reply banked over a
         // repeat used to be dropped on the floor: the operator heard himself say
-        // nothing, and the strip forgot he had answered at all.
-        if (banked !== null &&
+        // nothing, and the strip forgot he had answered at all. It is still only
+        // ever one answer per node: banking a second one over a re-say used to
+        // emit radio.reply twice for the same call, which inflated the count the
+        // radio-conduct awards are judged on.
+        if (banked !== null && !replied &&
             node.timeout !== null && node.timeout !== undefined) {
           const label = banked;
           banked = null;
+          replied = true;
           r.answered = null;
           r.ackTimer = 0;
           r.ackTimeout = 0;
-          ctx.bus.emit('radio.reply', { label, node: r.node });
+          ctx.bus.emit('radio.reply', { label, node: r.node, movement: !!node.ackBy });
           mode = 'playerTx';
           r.playerTimer = PLAYER_TX;
           break;
@@ -787,8 +928,9 @@ export function update(ctx, dt) {
       if (pick !== null && pick >= 0 && pick < r.replies.length) {
         const label = r.replies[pick];
         r.ackTimer = 0; r.ackTimeout = 0;
-        if (label === SAY_AGAIN_LABEL) { sayNode(ctx, 0); break; }
-        ctx.bus.emit('radio.reply', { label, node: r.node });
+        if (label === SAY_AGAIN_LABEL) { askedAgain(ctx); sayNode(ctx, 0); break; }
+        replied = true;
+        ctx.bus.emit('radio.reply', { label, node: r.node, movement: !!node.ackBy });
         mode = 'playerTx';
         r.playerTimer = PLAYER_TX;
         break;
@@ -811,13 +953,22 @@ export function update(ctx, dt) {
       // arrived, and on a blind set-down that is nine metres and the better part
       // of ten seconds away against a three second window. The operator did
       // everything he was told and the card called it a radio fault.
-      if (node.ackBy && levelTrue(ctx, node.ackBy)) {
-        r.ackTimer = 0; r.ackTimeout = 0;
-        r.answered = (node.expect && node.expect[0]) || null;
+      //
+      // Noted, not acted on: the window stays open for its full length. Closing
+      // it the instant the level went true made "Stopped" unpressable on `hold`,
+      // whose ackBy is levers.still and whose predecessor leaves the crane
+      // stopped by construction - the window opened and shut inside one tick,
+      // which is the same bug the comment above this block says was fixed for the
+      // reply case. All being acted buys is that the lapse costs nothing.
+      if (!acted && node.ackBy && levelTrue(ctx, node.ackBy)) {
+        acted = true;
+        if (r.answered === null) r.answered = (node.expect && node.expect[0]) || null;
         ctx.bus.emit('radio.acted', { node: r.node, by: node.ackBy });
-        toGate(ctx);
-        break;
       }
+      // A blind set-down starts its countdown the moment the load starts down,
+      // not three seconds later when the reply window happens to lapse. Ground
+      // can see it moving; he would not stand there waiting for the clock.
+      if (acted && node.descend) descend(ctx, dt);
 
       if (r.ackTimer <= 0) {
         r.ackTimer = 0; r.ackTimeout = 0;
@@ -965,7 +1116,20 @@ export function update(ctx, dt) {
 function descend(ctx, dt) {
   const { state } = ctx;
   const drop = dropRemaining(state);
-  if (drop === null || drop <= 0) return;
+  if (drop === null) return;
+  // The function stop. A voice signal is three parts - function and direction,
+  // distance, then the function stop - and the deck had the first two and never
+  // the third: ground counted a load down and then just stopped talking, which
+  // leaves the operator guessing whether it is on the deck or whether ground has
+  // gone off the air. Said once, on the way through zero.
+  if (drop <= DOWN_STOP_AT) {
+    if (!stopSaid) {
+      stopSaid = true;
+      sayNode(ctx, 1, DOWN_STOP, true);
+    }
+    return;
+  }
+  if (drop <= 0) return;
 
   descentTimer -= dt;
   if (descentTimer > 0) return;
@@ -990,6 +1154,13 @@ function descend(ctx, dt) {
 function onTimeout(ctx) {
   const r = ctx.state.radio;
   r.repeats += 1;
+
+  // He did what he was told. Ground has his answer and there is nothing to
+  // repeat, so the node drops to its gate exactly as an answered one does.
+  if (acted && node.onTimeout !== 'ignoredAllStop') {
+    toGate(ctx);
+    return;
+  }
 
   if (node.onTimeout === 'ignoredAllStop') {
     // The one call that is not capped. The hard deadline above owns this and it
@@ -1022,6 +1193,25 @@ function onTimeout(ctx) {
   }
   // No timeout policy: treat the lapse as silence and carry on.
   toGate(ctx);
+}
+
+// Test seam. What ground would say from where the crane is standing right now,
+// as the clip key plus the axis, direction and distance it means. The suite uses
+// it to walk every correction the guide can give and check none of them runs the
+// load into a structure; nothing in the game calls it.
+export function _guideHint(ctx, target) {
+  const { state } = ctx;
+  const err = polarErrorTo(state, target);
+  const { call, distance } = correctionFor(state, err);
+  const hint = callAsHint(state, call, distance);
+  const axis = call === GUIDE_CALLS.swingLeft || call === GUIDE_CALLS.swingRight
+    ? 'slew'
+    : (call === GUIDE_CALLS.trolleyIn || call === GUIDE_CALLS.trolleyOut ? 'trolley' : null);
+  const sign = (call === GUIDE_CALLS.swingRight || call === GUIDE_CALLS.trolleyOut) ? 1 : -1;
+  const tag = String(hint.say || '').split('_').pop();
+  const units = state.settings.units;
+  const bucket = (DISTANCE_BUCKETS[units] || []).find((b) => b.tag === tag);
+  return { key: hint.say, axis, sign, metres: bucket ? bucket.value : null };
 }
 
 // tx and the PTT lamp are derived, so nothing else has to remember to clear them.

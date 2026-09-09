@@ -33,8 +33,14 @@ const SWAY_BAD = 6 * DEG;
 // 0.35 m pad graded A with "Nothing to pick at."
 const LANDING_LOOSE = 0.5;       // of the mission tolerance, one demerit past this
 const LANDING_SLOPPY = 0.8;      // two past this
-const CAP_WATCH = 75;            // percent of rated, one demerit past this
-const CAP_HEAVY = 85;            // two past this
+// Percent of rated. These used to be 75 and 85, which called an ordinary working
+// pick "heavy on the chart" and marked it down twice; the machine itself does not
+// say a word until 90. They now sit where the crane's own alarms do: a letter for
+// working in the pre-alarm band, two for going over rated at all. Sitting over
+// rated is a lost lift and never reaches this, so the two-cost line is for the
+// gust or the snatch that put the needle over for a moment.
+const CAP_WATCH = 90;
+const CAP_HEAVY = 100;
 const GRADES = ['A', 'B', 'C', 'D'];
 
 let allStopsAnswered = 0;   // ALL STOPs this lift that the operator actually answered
@@ -51,6 +57,7 @@ let faultCalls = [];
 let actedCalls = 0;
 let repliesGiven = 0;
 let sayAgains = 0;
+let movementReplies = 0;   // of those, the ones a lever could have answered
 
 export function init(ctx) {
   const { state, bus } = ctx;
@@ -79,6 +86,7 @@ export function init(ctx) {
     actedCalls = 0;
     repliesGiven = 0;
     sayAgains = 0;
+    movementReplies = 0;
   });
 
   bus.on('collision.counted', () => { sc.collisions += 1; });
@@ -94,9 +102,17 @@ export function init(ctx) {
   });
   bus.on('alarm.a2b', () => { sc.twoBlocks += 1; });
   bus.on('radio.acted', () => { actedCalls += 1; });
+  // radio.js announces a say-again in its own right. Reading it off the label of
+  // a radio.reply never worked: that event is emitted past the say-again branch,
+  // so the label it carries is never 'Say again'.
+  bus.on('radio.sayAgain', () => { sayAgains += 1; });
+  // Split by what kind of call it was. "Hands On" asks whether the operator
+  // worked the MOVEMENT calls with the levers, and every script opens with a
+  // radio check and a briefing that have no lever answer available, so counting
+  // every button press made it impossible to earn on all seven jobs.
   bus.on('radio.reply', (p) => {
-    if (p && p.label === 'Say again') sayAgains += 1;
-    else repliesGiven += 1;
+    repliesGiven += 1;
+    if (p && p.movement) movementReplies += 1;
   });
   bus.on('radio.fault', (p) => {
     sc.radioFaults += 1;
@@ -116,6 +132,9 @@ export function init(ctx) {
     allStopOpen = true;
   });
   bus.on('estop', () => { if (allStopOpen) { allStopsAnswered += 1; allStopOpen = false; } });
+  // Freezing the levers for the length of the alarm is the other answer, and the
+  // one a real operator gives. radio.js announces both the same way.
+  bus.on('radio.allStopAnswered', () => { if (allStopOpen) { allStopsAnswered += 1; allStopOpen = false; } });
   bus.on('radio.ignoredAllStop', () => { allStopOpen = false; });
 
   bus.on('hook.released', () => {
@@ -173,8 +192,12 @@ function resolve(ctx, won, payload) {
   else if (sc.radioFaults >= 1) {
     demerits.push({ cost: 1, why: faultCalls.length ? `no answer to "${faultCalls[0]}"` : 'a radio fault' });
   }
-  if (m.maxCapacityPct >= CAP_HEAVY) demerits.push({ cost: 2, why: 'heavy on the chart' });
+  if (m.maxCapacityPct >= CAP_HEAVY) demerits.push({ cost: 2, why: 'over the chart' });
   else if (m.maxCapacityPct >= CAP_WATCH) demerits.push({ cost: 1, why: 'high on the chart' });
+  // Both of these used to lose the lift outright. They are the machine's own
+  // protection working, so they cost a letter and say what happened.
+  if (m.touchedLimit) demerits.push({ cost: 1, why: 'the hoist limit stopped you' });
+  if (m.lmiCutOut) demerits.push({ cost: 1, why: 'the LMI cut you out' });
 
   const total = demerits.reduce((a, d) => a + d.cost, 0);
   sc.grade = GRADES[Math.min(GRADES.length - 1, total)];
@@ -201,6 +224,7 @@ function resolve(ctx, won, payload) {
     actedCalls,
     repliesGiven,
     sayAgains,
+    movementReplies,
     missionsWon,
     missionCount: MISSIONS.length,
     hooksEver

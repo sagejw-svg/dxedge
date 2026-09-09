@@ -86,6 +86,10 @@ const DRAG_COEFF = 1.2;            // flat-ish box
 
 let prevSlewVel = 0;
 let prevPivotVel = 0;
+// Last tick's rope speed, for the vertical acceleration of the load. See the
+// tension block: the rope is rigid here, so the load's vertical acceleration is
+// exactly minus the rate of change of line speed.
+let prevLineVel = 0;
 let wasTight = false;
 let wasSlack = false;
 let settledFor = 0;
@@ -136,6 +140,7 @@ export function init(ctx) {
 
   prevSlewVel = ctx.state.crane.slewVel;
   prevPivotVel = ctx.state.crane.radiusVel + (ctx.state.crane.deflectionVel || 0);
+  prevLineVel = ctx.state.crane.lineVel;
   wasTight = false;
   wasSlack = false;
   settledFor = 0;
@@ -232,7 +237,35 @@ export function update(ctx, dt) {
     load.restJibZ = null;
     tensionFraction = load.attached ? 1 : 0;
   }
-  load.tension = load.attached ? load.mass * G * tensionFraction : 0;
+  // Dynamic tension. This was m*g and nothing else, which meant the load gauge
+  // walked from zero to the static weight the instant the rig came tight and then
+  // sat there for the whole lift: the LMI could not be provoked, its pre-alarm
+  // never chirped, and "watch your chart" was advice about a needle that does not
+  // move. What a real LMI reads is the rope, and the rope carries three things.
+  //
+  //   m g cos(theta)   the weight, less what the tilt takes out of it
+  //   m a              the load's own vertical acceleration, which on a rigid
+  //                    rope is minus the rate of change of line speed: start the
+  //                    hoist hard and the needle jumps, and that jump is why
+  //                    "up easy" is a call
+  //   m L omega^2      the centripetal pull of a load going round an arc. A big
+  //                    swing costs real capacity, which is the other half of why
+  //                    ground keeps asking for it plumb.
+  //
+  // Clamped either side because a range change steps the commanded speed and the
+  // difference of two velocities across one tick is noisy; nothing here should be
+  // able to spike the needle on a gear change.
+  const lineAccel = dt > 0 ? (c.lineVel - prevLineVel) / dt : 0;
+  prevLineVel = c.lineVel;
+  const aVert = clamp(-lineAccel, -0.4 * G, 0.4 * G);
+  const sw = load.swing;
+  const omega2 = sw.vx * sw.vx + sw.vy * sw.vy;
+  const cosTilt = Math.sqrt(Math.max(0,
+    1 - Math.sin(sw.x) * Math.sin(sw.x) - Math.sin(sw.y) * Math.sin(sw.y)));
+  const perKg = G * cosTilt + aVert + c.line * omega2;
+  load.tension = load.attached
+    ? Math.max(0, load.mass * tensionFraction * perKg)
+    : 0;
 
   const tight = load.attached && tensionFraction >= TIGHT_FRACTION;
   if (tight && !wasTight) bus.emit('hook.tight', {});

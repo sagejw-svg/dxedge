@@ -106,12 +106,26 @@ export function createState() {
     mission: {
       id: null, elapsed: 0, result: null, failReason: null,
       pickupPos: null, landingPos: null, landingTol: 0,
+      // OBSTRUCTION shape change, declared under hard rule 6. The sector of slew
+      // and the band of radius a mission's one un-flyable structure occupies,
+      // copied from data/missions.js. radio.js reads it so the guide routes the
+      // operator around it instead of straight through it. null on a clear site.
+      obstruction: null,
       // PAR shape change, declared under hard rule 6. Seconds the job is
       // expected to take, copied from data/missions.js by missions.js and read
       // by scoring.js for the "On The Clock" award. 0 means the job has no par.
       par: 0,
       hooked: false, everHooked: false,
       maxCapacityPct: 0, maxSway: 0, hadCollision: false,
+      // OVERLOAD shape change, declared under hard rule 6. What the lift did to
+      // the machine, as three latches missions.js sets and scoring.js reads.
+      // overloaded is the only one that loses the lift: it means the needle sat
+      // at or above rated for CAP_OVER_FOR seconds, rather than touching it for
+      // a tick. touchedLimit is the anti-two-block having stopped the hoist and
+      // lmiCutOut the overload cut-out having stopped the trolley; both are the
+      // machine's own protection working, so both cost a letter and neither is a
+      // lost lift.
+      overloaded: false, touchedLimit: false, lmiCutOut: false,
       landedAt: null,
       // PHASE 4. The height of whatever is under the load right now: the deck,
       // the top of a deck volume it is over, or a shaft floor. pendulum.js reads

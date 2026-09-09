@@ -25,19 +25,33 @@ const NEAR_DIST = 2.0;       // m, horizontal, for load.near
 const NEAR_HEIGHT = 3.0;     // m, load bottom above the landing, for load.near
 const LEAVE_FACTOR = 1.5;    // zone events re-arm once the load is this far back out
 const HOIST_UP_ALLOWANCE = 2.0;  // m the unhooked block may rise above its low point
-const CAP_LIMIT = 90;        // percent of rated the lift must stay under to score
+// Percent of rated the lift must stay under, and how long over it is allowed to
+// go before it is a lost lift. It used to be a flat 90 with no clock, so 91 -
+// which is a legal, ordinary, everyday working condition on a real crane, one
+// the machine itself only pre-alarms at - lost the lift outright, and a lift
+// could be lost by a single tick of overshoot on a gust. Cranes work in the
+// nineties. What they do not do is sit above rated.
+const CAP_LIMIT = 100;
+const CAP_OVER_FOR = 2.0;    // s above rated before the lift is lost
 const LANDING_HEIGHT_TOL = 0.8;  // m the load bottom may sit off the landing height
 const START_LINE = 30;       // m of rope every lift begins with, the state.js default
 const CLEAR_PICKUP = 0.3;    // m the load must rise off its pickup surface before
                              // deck collisions start counting against the lift
 const CLEAR_PICKUP_H = 2.0;  // or this far sideways from the pickup, whichever first
-const SIGN_OFF_GRACE = 2.5;  // s a won lift stays open for ground's last call
+// s a won lift stays open for ground's last call. It was 2.5, which fitted the
+// two calls that used to end a lift; there are three now, because the operator is
+// told the men are clear of the load before he is told it was a good lift, and
+// that is the call that actually releases him to move. The grace is a backstop
+// for a lift with no script left to run, not a budget for the script, so it only
+// has to be longer than the tail ground has to say.
+const SIGN_OFF_GRACE = 8.0;
 
 let mission = null;
 let resolved = false;
 let nearEmitted = false;
 let zoneEmitted = false;
-let hookCalled = false;      // ground has called for the hook
+let hookCalled = false;   // ground has called for the hook
+let overFor = 0;          // s the needle has been at or above rated
 let releasedDown = false;    // the load was set down and unhooked
 let collisionArmed = false;  // see the arming rule in update()
 let blockLow = null;         // lowest the empty block has been since the hook call
@@ -100,8 +114,18 @@ export function init(ctx) {
   bus.on('hook.attach', () => { hookCalled = true; });
   bus.on('radio.complete', () => { signedOff = true; });
 
-  bus.on('alarm.a2b', () => fail(ctx, 'anti-two-block'));
-  bus.on('lmi.lock', () => fail(ctx, 'LMI lockout'));
+  // Neither of these loses the lift any more. The anti-two-block is the upper
+  // hoist limit doing its job - sensors.js even makes it predictive, so the block
+  // decelerates and stops clear of the sheave - and failing an operator for
+  // reaching a limit switch is failing a driver for touching the rev limiter. On
+  // a tower crane you hoist to the upper limit routinely; the reason you never
+  // two-block is that the limit is there. The LMI cut-out is the same argument:
+  // the machine refusing to trolley further out is the machine protecting itself,
+  // and the answer is to trolley in and carry on, not to lose the load. Both now
+  // cost a letter on the card instead, in scoring.js, and the lift is lost only
+  // by sitting above rated (see CAP_OVER_FOR) or by hitting something.
+  bus.on('alarm.a2b', () => { state.mission.touchedLimit = true; });
+  bus.on('lmi.lock', () => { state.mission.lmiCutOut = true; });
   // sensors.js emits the raw contact. This is the only place that knows whether
   // it counts, so it is also the only place that may tell anyone else: radio.js
   // raises its ALL STOP on collision.counted, never on the raw event. Without
@@ -139,9 +163,14 @@ export function start(ctx, id) {
   m.landingPos = [...found.landing.pos];
   m.landingTol = found.landing.tol;
   m.par = found.par || 0;
+  m.obstruction = found.obstruction || null;
   m.hooked = false;
   m.everHooked = false;
   m.maxCapacityPct = 0;
+  m.overloaded = false;
+  m.touchedLimit = false;
+  m.lmiCutOut = false;
+  overFor = 0;
   m.maxSway = 0;
   m.hadCollision = false;
   m.landedAt = null;
@@ -370,6 +399,14 @@ export function update(ctx, dt) {
   if (resolved) return;
 
   if (state.sensors.capacityPct > m.maxCapacityPct) m.maxCapacityPct = state.sensors.capacityPct;
+  // Time above rated, not an instant above it. A gust or a snatch can put the
+  // needle over 100 for a tick; holding it there is the thing that loses cranes.
+  if (state.sensors.capacityPct >= CAP_LIMIT) {
+    overFor += dt;
+    if (overFor >= CAP_OVER_FOR) m.overloaded = true;
+  } else {
+    overFor = 0;
+  }
   if (state.sensors.swayAmplitude > m.maxSway) m.maxSway = state.sensors.swayAmplitude;
 
   // A load sitting on the thing it is picked from shares a face with that deck
@@ -454,7 +491,7 @@ export function update(ctx, dt) {
   // which clears onSurface and sensors.slack with it, so the slack that the
   // release already required is latched in releasedDown rather than re-read.
   if (releasedDown && m.everHooked) {
-    if (releasedInZone && m.maxCapacityPct < CAP_LIMIT && !m.hadCollision) {
+    if (releasedInZone && !m.overloaded && !m.hadCollision) {
       // Let ground sign off first. The unhook lands inside radio.update on one
       // tick, and missions.update runs before radio.update on the next, so
       // winning the instant the load was let go stopped the script one node
@@ -470,7 +507,7 @@ export function update(ctx, dt) {
       // end-of-lift card never appears. Added in Phase 3, flagged in the report.
       fail(ctx, 'set down outside the zone');
     } else {
-      fail(ctx, m.hadCollision ? 'collision' : 'over 90 percent of rated');
+      fail(ctx, m.hadCollision ? 'collision' : 'held it over the chart');
     }
   }
 }

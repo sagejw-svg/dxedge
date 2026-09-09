@@ -21,7 +21,7 @@
 // free and a player's first finished flight unlocked half the board.
 
 const DEG = Math.PI / 180;
-const CHART_CLEAR = 75;    // percent of rated "Chart Legal" asks you to stay under
+const CHART_CLEAR = 85;    // percent of rated "Chart Legal" asks you to stay under
 const BLOCK_CLEAR = 1.5;   // m of rope above the two-block stop "No Two-Block" wants
 const PLUMB_SHARE = 1 / 3; // of the mission tolerance "Dead Plumb" asks for
 
@@ -40,20 +40,20 @@ export const ACHIEVEMENTS = [
   { name: 'Dead Plumb', how: 'Set a load down inside a third of the tolerance.',
     when: (r) => r.landingError !== null && r.landingTol > 0 &&
       r.landingError <= r.landingTol * PLUMB_SHARE },
-  { name: 'No Two-Block', how: 'Win with a metre and a half of rope still above the stop.',
+  { name: 'No Two-Block', how: 'Win without ever needing the upper hoist limit.',
     when: (r) => r.closestBlock >= BLOCK_CLEAR },
-  { name: 'Chart Legal', how: 'Win without going past seventy five percent of rated.',
+  { name: 'Chart Legal', how: 'Win without ever getting near the pre-alarm.',
     when: (r) => r.maxCapacityPct < CHART_CLEAR },
   { name: 'On The Clock', how: 'Beat the par time for the job.',
     when: (r) => r.par > 0 && r.elapsed > 0 && r.elapsed <= r.par },
 
   // Radio.
-  { name: 'Dog Everything', how: 'Answer an ALL STOP with the mushroom.', when: (r) => r.allStopsAnswered > 0 },
+  { name: 'Dog Everything', how: 'Answer an ALL STOP: everything stopped, and kept stopped.', when: (r) => r.allStopsAnswered > 0 },
   { name: 'Clean Sheet', how: 'Grade A with no radio faults.', when: (r) => r.grade === 'A' && r.radioFaults === 0 },
   // The one that teaches what ackBy is for: ground called the move, the load
   // moved, and nobody took a hand off the levers to press a button about it.
   { name: 'Hands On', how: 'Answer every movement call with the levers, not the button.',
-    when: (r) => r.actedCalls >= 2 && r.repliesGiven === 0 && r.radioFaults === 0 },
+    when: (r) => r.actedCalls >= 2 && r.movementReplies === 0 && r.radioFaults === 0 },
   { name: 'Heard You', how: 'Win a lift without once asking ground to say again.',
     when: (r) => r.sayAgains === 0 && r.radioFaults === 0 },
 
