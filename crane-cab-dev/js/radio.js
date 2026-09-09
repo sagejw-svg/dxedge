@@ -81,6 +81,12 @@ const HOOK_RETRY = 4.0;                      // s before ground calls for the ho
 // safe because every node either has a gate that the operator's own hands open
 // or no gate at all, and Say again brings the call straight back.
 const MAX_REPEATS = 2;
+// What counts as answering a call by doing the thing. m/s of rope, and the
+// stillness a stop call is asking for. Deliberately low: the ack is credited
+// for starting, not for finishing.
+const ACT_LINE_VEL = 0.05;
+const ACT_STILL_VEL = 0.05;
+const ACT_STILL_SLEW = 0.006;
 const HOLD_FACTOR = 3;                       // inside this many tolerances, say HOLD
 const GUIDE_SETTLE = (2 * Math.PI) / 180;    // rad of sway allowed to leave a guide node
 const SWAY_INTERRUPT = (10 * Math.PI) / 180; // rad of sway that triggers ALL STOP
@@ -379,7 +385,16 @@ function advance(ctx) {
 function fault(ctx, why) {
   const r = ctx.state.radio;
   r.faults += 1;
-  ctx.bus.emit('radio.fault', { node: r.node, why: why || 'timeout' });
+  // The caption travels with the fault so the after-action card can say which
+  // call went unanswered. "1 radio fault" on its own tells an operator he was
+  // marked down and nothing about what for, which is the one thing he needs to
+  // know to not do it again. It is read off the node ground is standing on, so
+  // the wording still lives in data/ with the rest of the script.
+  ctx.bus.emit('radio.fault', {
+    node: r.node,
+    caption: (node && node.caption) || r.caption || '',
+    why: why || 'timeout'
+  });
 }
 
 // allStop and allStopClear are handlers, not places in the script, so they are
@@ -444,6 +459,19 @@ function levelTrue(ctx, ev) {
       return state.mission.near === true;
     case 'load.inZone':
       return state.mission.inZone === true;
+    // The three ways an operator answers a call with his hands instead of his
+    // mouth. line is rope paid out below the trolley, so it grows on the way
+    // down. The thresholds are a nudge of the lever, not a committed move: the
+    // question these answer is "did he act on what he was told", not "is he
+    // there yet", which is what waitFor is for.
+    case 'hoist.lowering':
+      return state.crane.lineVel > ACT_LINE_VEL;
+    case 'hoist.raising':
+      return state.crane.lineVel < -ACT_LINE_VEL;
+    case 'levers.still':
+      return Math.abs(state.crane.slewVel) < ACT_STILL_SLEW &&
+        Math.abs(state.crane.radiusVel) < ACT_STILL_VEL &&
+        Math.abs(state.crane.lineVel) < ACT_STILL_VEL;
     default:
       return false;
   }
@@ -718,7 +746,10 @@ export function update(ctx, dt) {
         // reply window never opening. That is the whole of what full duplex buys
         // the operator: say "moving" the instant you know, not after sitting
         // through the rest of the call waiting for a window to open.
-        if (!wasRepeat && banked !== null &&
+        // Voiced back whether or not this was a say-again. A reply banked over a
+        // repeat used to be dropped on the floor: the operator heard himself say
+        // nothing, and the strip forgot he had answered at all.
+        if (banked !== null &&
             node.timeout !== null && node.timeout !== undefined) {
           const label = banked;
           banked = null;
@@ -770,6 +801,21 @@ export function update(ctx, dt) {
           (node.onTimeout === 'ignoredAllStop' && levelTrue(ctx, node.waitFor)))) {
         r.ackTimer = 0; r.ackTimeout = 0;
         advance(ctx);
+        break;
+      }
+
+      // Answering with the levers. In the cab, "down easy" is acknowledged by
+      // the load starting down: the signalman is watching it, and on a voice
+      // signal he is listening for the move as much as for the word. The gate
+      // above cannot do this job, because a gate asks whether the load has
+      // arrived, and on a blind set-down that is nine metres and the better part
+      // of ten seconds away against a three second window. The operator did
+      // everything he was told and the card called it a radio fault.
+      if (node.ackBy && levelTrue(ctx, node.ackBy)) {
+        r.ackTimer = 0; r.ackTimeout = 0;
+        r.answered = (node.expect && node.expect[0]) || null;
+        ctx.bus.emit('radio.acted', { node: r.node, by: node.ackBy });
+        toGate(ctx);
         break;
       }
 

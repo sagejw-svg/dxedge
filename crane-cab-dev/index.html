@@ -98,7 +98,7 @@
         <div><dt><kbd>C</kbd></dt><dd>Hook cam (off on the shaft job)</dd></div>
         <div><dt>Drag</dt><dt><kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd></dt><dd>Move your head</dd></div>
         <div><dt><kbd>V</kbd></dt><dd>Eyes on the load</dd></div>
-        <div><dt><kbd>Z</kbd></dt><dd>Head forward</dd></div>
+        <div><dt><kbd>Z</kbd></dt><dd>Eyes front</dd></div>
         <div><dt><kbd>F3</kbd></dt><dd>Debug overlay</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
       </dl>
@@ -134,6 +134,13 @@
       <p class="ec-why" id="ec-why"></p>
       <p class="ec-earned" id="ec-earned"></p>
       <p class="ec-best" id="ec-best"></p>
+      <!-- The board. Folded shut by default, because the card's job is to tell
+           you about the lift you just flew; it is one click away for the player
+           who wants to know what is left to chase. ui.js fills both parts. -->
+      <details class="ec-board" id="ec-board">
+        <summary id="ec-board-count">Board</summary>
+        <ul id="ec-board-list"></ul>
+      </details>
       <button id="btn-endcard" type="button">Next lift</button>
     </div>
 
@@ -160,7 +167,7 @@
         <div><dt><kbd>C</kbd></dt><dd>Hook cam (off on the shaft job)</dd></div>
         <div><dt>Drag</dt><dt><kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd></dt><dd>Move your head</dd></div>
         <div><dt><kbd>V</kbd></dt><dd>Eyes on the load</dd></div>
-        <div><dt><kbd>Z</kbd></dt><dd>Head forward</dd></div>
+        <div><dt><kbd>Z</kbd></dt><dd>Eyes front</dd></div>
         <div><dt><kbd>F3</kbd></dt><dd>Debug overlay</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Close / pause</dd></div>
       </dl>

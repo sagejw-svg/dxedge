@@ -33,7 +33,8 @@ export const MISSIONS = [
     hookCam: true,
     script: 'radioCheck',
     deck: [],
-    achievements: ['Radio Check']
+    achievements: ['Radio Check'],
+    par: 130
   },
   {
     id: 1,
@@ -47,7 +48,8 @@ export const MISSIONS = [
     deck: [
       { name: 'truck bed', min: [26, 0, -8], max: [34, 1.3, -4] }
     ],
-    achievements: ['First Hook']
+    achievements: ['First Hook'],
+    par: 160
   },
   {
     id: 2,
@@ -61,7 +63,8 @@ export const MISSIONS = [
     deck: [
       { name: 'scaffold', min: [37, 0, -7], max: [43, 12, -1] }
     ],
-    achievements: ['Scaffold Kiss']
+    achievements: ['Scaffold Kiss'],
+    par: 190
   },
   {
     id: 3,
@@ -83,6 +86,74 @@ export const MISSIONS = [
       { name: 'shaft wall e', min: [38.5, -10, 1], max: [39, 2, 7] },
       { name: 'shaft wall w', min: [33, -10, 1], max: [33.5, 2, 7] }
     ],
-    achievements: ['Blind Trust']
+    achievements: ['Blind Trust'],
+    par: 210
+  },
+  {
+    // Jacob's jobs. Three lifts past the shaft, added after he play-tested the
+    // first four. Each one asks for a different thing: the chart, precision, and
+    // a route. None of them is a harder version of an earlier one.
+    id: 4,
+    name: 'Out at range',
+    // Light on the ground and heavy at the end of the jib. The whole job is the
+    // load chart: 1000 kg is 28 percent of rated where it is picked up and 64
+    // percent where it is set down, and a sloppy swing on the way out pushes the
+    // dynamic reading past seventy five. Nothing here is close to the 100 percent
+    // lockout, on purpose. This is the lift that teaches the operator to watch
+    // the gauge, not the lift that fails him for it.
+    load: { mass: 1000, size: [1.6, 1.0, 1.6] },
+    pickup: { pos: [14, 0.9, -18] },
+    landing: { pos: [44, 0, 16], tol: 0.35 },
+    wind: { base: 7, gust: 3, dir: 220 },
+    hookCam: true,
+    script: 'atRange',
+    deck: [
+      { name: 'pipe rack', min: [11, 0, -21], max: [17, 0.9, -15] }
+    ],
+    achievements: ['Out At Range'],
+    par: 190
+  },
+  {
+    id: 5,
+    name: 'Between the stacks',
+    // A four metre slot between two six metre stacks of forms, with the load
+    // 1.4 m across: 1.3 m of air on each side. The slot runs radially, so an
+    // error in the trolley is forgiving and an error in the slew is not, which
+    // makes this the slew job. At 34 m of radius, 1.3 m is 2.2 degrees of slew
+    // and about the same of swing, so it has to go in dead plumb.
+    load: { mass: 1500, size: [1.4, 1.2, 1.4] },
+    pickup: { pos: [20, 0, 18] },
+    landing: { pos: [34, 0, 0], tol: 0.3 },
+    wind: { base: 5, gust: 2, dir: 90 },
+    hookCam: true,
+    script: 'stacks',
+    deck: [
+      { name: 'stack north', min: [30, 0, -6], max: [38, 6, -2] },
+      { name: 'stack south', min: [30, 0, 2], max: [38, 6, 6] }
+    ],
+    achievements: ['Threading It'],
+    par: 200
+  },
+  {
+    id: 6,
+    name: 'Round the core',
+    // The lift and shaft core has climbed to 38 m, four metres under the cab and
+    // well over anything the block can clear with rope to spare. It sits square
+    // across the short arc between the two pads, from 24 m of radius out to 36.
+    // There are two honest ways past it and the operator picks one: trolley
+    // inside it and slew across close in, or take the whole load the long way
+    // round the back of the site. Ground briefs the long way, because that is
+    // what a banksman who cannot see the far side of the core would say.
+    load: { mass: 1600, size: [2.0, 1.0, 1.4] },
+    pickup: { pos: [12, 0, 28] },
+    landing: { pos: [14, 0, -26], tol: 0.35 },
+    wind: { base: 5, gust: 2, dir: 200 },
+    hookCam: true,
+    script: 'core',
+    deck: [
+      { name: 'core', min: [24, 0, -8], max: [36, 38, 8] }
+    ],
+    achievements: ['Round The Core'],
+    par: 240
   }
 ];

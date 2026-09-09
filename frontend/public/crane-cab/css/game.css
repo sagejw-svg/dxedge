@@ -504,7 +504,45 @@ html, body {
 #endcard .ec-earned:empty,
 #endcard .ec-best:empty { display: none; }
 
+/* The board. Scrolls inside itself rather than growing the card, so opening it
+   on a short screen cannot push the button off the bottom the way the controls
+   list once did. */
+#endcard .ec-board {
+  margin: 2px 0 10px;
+  font-size: 13px;
+  max-width: 460px;
+  width: 100%;
+}
+#endcard .ec-board summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  padding: 2px 0;
+}
+#endcard .ec-board ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 2px 0 0;
+  max-height: 168px;
+  overflow-y: auto;
+}
+#endcard .ec-board li {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+#endcard .ec-board li b {
+  flex: 0 0 132px;
+  font-weight: 600;
+}
+#endcard .ec-board li span { color: var(--text-dim); }
+#endcard .ec-board li.got b { color: var(--ok); }
+#endcard .ec-board li.locked b { color: var(--text-dim); }
+#endcard .ec-board li.fresh { background: rgba(120, 220, 140, 0.10); }
+
 @media (max-width: 560px) {
   #endcard .ec-top { flex-direction: column; gap: 10px; }
   #endcard .ec-grade span { font-size: 46px; }
+  #endcard .ec-board li { flex-direction: column; gap: 1px; }
+  #endcard .ec-board li b { flex: none; }
 }

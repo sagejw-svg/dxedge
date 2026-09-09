@@ -21,6 +21,10 @@ import { pathToFileURL } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MISSIONS = (await import(pathToFileURL(join(HERE, '..', 'data/missions.js')).href)).MISSIONS;
 const m0 = MISSIONS[0];
+// Every job on the board, so a mission added to data/missions.js is swept by the
+// checks that walk all of them instead of quietly skipping the new ones.
+const ALL_IDS = MISSIONS.map((m) => m.id);
+const LOADED_IDS = ALL_IDS.filter((id) => id !== 0);
 const m1 = MISSIONS[1];
 
 // Tick until pred() or the budget runs out. perTick runs before each tick, which
@@ -620,6 +624,57 @@ async function tFlyBlindShaft() {
     `result ${s.mission.result} reason ${s.mission.failReason} node ${s.radio.node} bottom ${s.load.bottomY.toFixed(2)} faults ${s.radio.faults}`);
 }
 
+// Every job on the board, flown to the end. The three named checks above stay,
+// because when one of them breaks the name says which job; this one is the net
+// that catches a mission added to data/ and never flown.
+// The mission list and the achievement list are two files that have to agree.
+// A job naming an award that does not exist, or an award gated on a mission id
+// that is not on the board, is dead content nobody can earn and nothing catches.
+async function tTheBoardAgreesWithItself() {
+  const A = (await import(pathToFileURL(join(HERE, '..', 'data/achievements.js')).href)).ACHIEVEMENTS;
+  const names = new Set(A.map((a) => a.name));
+  const bad = [];
+  for (const m of MISSIONS) {
+    for (const n of m.achievements || []) {
+      if (!names.has(n)) bad.push(`mission ${m.id} names "${n}", which no achievement has`);
+    }
+  }
+  // Every award that turns on a mission id has to name one that exists, and
+  // every job has to be worth exactly one of them.
+  const ids = new Set(ALL_IDS);
+  for (const id of ids) {
+    const forThis = A.filter((a) => ALL_IDS.every((other) => {
+      const rec = { missionId: other, grade: 'D', maxSway: 9, radioFaults: 9, twoBlocks: 9,
+        maxCapacityPct: 999, landingError: 999, landingTol: 0.3, elapsed: 1e6, par: 0,
+        closestBlock: 0, allStopsAnswered: 0, actedCalls: 0, repliesGiven: 9, sayAgains: 9,
+        missionsWon: 0, missionCount: 999, hooksEver: 0 };
+      return a.when(rec) === (other === id);
+    }));
+    if (forThis.length !== 1) {
+      bad.push(`mission ${id} is worth ${forThis.length} of its own awards: ${JSON.stringify(forThis.map((a) => a.name))}`);
+    }
+  }
+  const noHow = A.filter((a) => !a.how || !/[.!]$/.test(a.how)).map((a) => a.name);
+  if (noHow.length) bad.push(`no board line for ${JSON.stringify(noHow)}`);
+  rec('the mission list and the achievement list agree',
+    bad.length === 0, bad.length ? JSON.stringify(bad, null, 1) : `${A.length} awards, ${MISSIONS.length} jobs`);
+}
+
+async function tEveryJobCanBeFlown() {
+  const bad = [];
+  for (const id of ALL_IDS) {
+    const sim = await flyMission(id, 300);
+    const st = sim.state;
+    if (st.mission.result !== 'win') {
+      bad.push(`mission ${id} (${MISSIONS.find((m) => m.id === id).name}): ` +
+        `${st.mission.result || 'never resolved'}${st.mission.failReason ? ` - ${st.mission.failReason}` : ''}` +
+        ` at node ${st.radio.node}`);
+    }
+  }
+  rec('every job on the board can be flown to a win',
+    bad.length === 0, bad.length ? JSON.stringify(bad, null, 1) : `${ALL_IDS.length} jobs, all won`);
+}
+
 async function tFlyTruck() {
   const sim = await flyMission(1);
   const s = sim.state;
@@ -654,17 +709,22 @@ async function tGradeRubric() {
 }
 
 async function tFlowAndResume() {
+  // Read the end of the board off the data, not off a number typed in here. This
+  // check used to hardcode 3 as the last mission and was the single thing that
+  // failed the day the board grew, which is a test asserting its own age rather
+  // than the behaviour it is named for.
+  const lastId = MISSIONS[MISSIONS.length - 1].id;
   const sim = await flyMission(0);
   const afterWin = sim.modules.missions.nextMissionId(sim.ctx);
   const f = await startMission(2);
   f.state.mission.result = 'fail';
   const afterFail = f.modules.missions.nextMissionId(f.ctx);
-  const last = await startMission(3);
+  const last = await startMission(lastId);
   last.state.mission.result = 'win';
   const afterLast = last.modules.missions.nextMissionId(last.ctx);
-  rec('the flow is 0 to 3, a fail retries, and the last mission does not run off the end',
-    afterWin === 1 && afterFail === 2 && afterLast === 3,
-    `after win on 0 -> ${afterWin}, after fail on 2 -> ${afterFail}, after win on 3 -> ${afterLast}`);
+  rec('the flow runs the board in order, a fail retries, and the last one does not run off the end',
+    afterWin === 1 && afterFail === 2 && afterLast === lastId,
+    `after win on 0 -> ${afterWin}, after fail on 2 -> ${afterFail}, after win on ${lastId} -> ${afterLast}`);
 }
 
 async function tRefreshKeepsProgress() {
@@ -777,7 +837,7 @@ function flyControls(sim, seconds, per) {
 // and failed the lift in about ten seconds.
 async function tEmptySwingIsNotAnAllStop() {
   let worst = 0, failed = null, alarms = 0;
-  for (const id of [0, 1, 2, 3]) {
+  for (const id of ALL_IDS) {
     const sim = await startMission(id);
     sim.bus.on('radio.allStop', () => { alarms += 1; });
     // Trolley out first. The drive on the swing is radius times slew accel, so
@@ -817,7 +877,7 @@ async function tEmptySwingIsNotCharged() {
 // height gauge negative the whole way.
 async function tRopeStops() {
   const lows = [];
-  for (const id of [0, 1, 2, 3]) {
+  for (const id of ALL_IDS) {
     const sim = await startMission(id);
     flyControls(sim, 90, (s) => { s.intent.range = 'II'; s.intent.hoist = -1; });
     lows.push(+(43.8 - sim.state.crane.line).toFixed(2));
@@ -950,7 +1010,7 @@ async function tSayAgainInAGateIsFree() {
 // node short and "Good lift. Standing by." was never once spoken.
 async function tGroundSignsOff() {
   const missing = [];
-  for (const id of [0, 1, 2, 3]) {
+  for (const id of ALL_IDS) {
     const sim = await flyMission(id);
     const said = sim.log.some((e) => e.name === 'radio.say' && e.payload && e.payload.key === 'GOOD_LIFT');
     if (sim.state.mission.result !== 'win' || !said) missing.push(id);
@@ -1053,7 +1113,7 @@ async function tSignOffIsNotAFaultSurface() {
 // quarter of all fuzzed runs.
 async function tHookRetryIsNeverLost() {
   const stranded = [];
-  for (const id of [0, 1, 2, 3]) {
+  for (const id of ALL_IDS) {
     const m = MISSIONS.find((x) => x.id === id);
     const sim = await startMission(id);
     const s = sim.state;
@@ -2188,7 +2248,7 @@ async function tTrolleyingInHoldsTheLoadStill() {
 // account for it.
 async function tTheJudgedLoadIsTheDrawnLoad() {
   const bad = [];
-  for (const id of [1, 2, 3]) {
+  for (const id of LOADED_IDS) {
     const sim = await startMission(id);
     const m = MISSIONS[id];
     const ld = polarOf(m.landing.pos);
@@ -2209,7 +2269,7 @@ async function tTheJudgedLoadIsTheDrawnLoad() {
   }
   rec('the load the game scores is the load it draws, bend included',
     bad.length === 0, bad.length ? JSON.stringify(bad, null, 1)
-      : 'all three loaded missions judge the load where the bent jib actually holds it');
+      : `all ${LOADED_IDS.length} loaded missions judge the load where the bent jib actually holds it`);
 }
 
 // And a lift lined up by eye has to score. This is the failure an operator could
@@ -2220,7 +2280,7 @@ async function tTheJudgedLoadIsTheDrawnLoad() {
 // with missions.js still judging the load in the wrong place.
 async function tFlyingByEyeLandsInTheZone() {
   const bad = [];
-  for (const id of [1, 2, 3]) {
+  for (const id of LOADED_IDS) {
     const m = MISSIONS[id];
     const sim = await startMission(id);
     const pk = polarOf(m.pickup.pos);
@@ -2263,7 +2323,7 @@ async function tFlyingByEyeLandsInTheZone() {
   }
   rec('a load lined up by eye is scored inside the tolerance, not outside it',
     bad.length === 0, bad.length ? JSON.stringify(bad, null, 1)
-      : 'all three loaded missions score a by-eye landing as a win, inside tolerance');
+      : `all ${LOADED_IDS.length} loaded missions score a by-eye landing as a win, inside tolerance`);
 }
 
 // The blind countdown has to be counting down to the face that lands. It was
@@ -2315,13 +2375,124 @@ async function tTheCountdownMeasuresToTheBottomOfTheLoad() {
       JSON.stringify(calls.map((cc) => `${cc.key}@${cc.trueDrop.toFixed(2)}m`)));
 }
 
+
+// Jacob's father took a C on the blind shaft with a radio fault against him and
+// said, correctly, that he had done nothing wrong: he was on the levers putting
+// a load into a hole he could not see. The fault came from the reply window on
+// "Down easy. Keep her plumb." lapsing after three seconds. Its gate is
+// load.near, which on that job is nine metres of descent away, so the window
+// could only ever be closed by taking a hand off the levers mid blind set-down
+// and pressing a button. In the cab the load starting down IS the answer, and
+// ackBy is that: the levers close the window.
+async function tMovingIsAnAnswer() {
+  const sim = await startMission(3);
+  const m3 = MISSIONS[3];
+  answer(sim);
+  const pk = polarOf(m3.pickup.pos);
+  park(sim, { slew: pk.slew, radius: pk.radius });
+  until(sim, atNode('onHook'), 16);
+  rig(sim, 3);
+  until(sim, (s) => s.load.attached, 6);
+  until(sim, atNode('upEasy'), 10);
+
+  // Up easy, answered with the hoist and not a word. Its gate is hook.tight,
+  // which needs the rope to take the weight, and that is not instant either.
+  const faultsBeforeUp = sim.state.radio.faults;
+  until(sim, (s) => node(s) !== 'upEasy', 12, (s) => { s.intent.hoist = 1; s.intent.range = 'I'; });
+  const faultsAfterUp = sim.state.radio.faults;
+
+  park(sim, { slew: pk.slew, radius: pk.radius, line: 30 });
+  const ld = polarOf(m3.landing.pos);
+  until(sim, atNode('toLanding'), 20);
+  until(sim, (s) => ['centred', 'downEasy'].includes(node(s)), 60,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+  until(sim, atNode('downEasy'), 30,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+
+  // Down easy, answered the same way: hands on the levers, nothing said.
+  const faultsBeforeDown = sim.state.radio.faults;
+  until(sim, (s) => node(s) !== 'downEasy' || s.mission.result !== null, 40,
+    (s) => { s.intent.hoist = -1; s.intent.range = 'I'; });
+  const faultsAfterDown = sim.state.radio.faults;
+
+  rec('an operator who does what he is told is not marked down for not saying so',
+    faultsAfterUp === faultsBeforeUp && faultsAfterDown === faultsBeforeDown,
+    `up easy ${faultsBeforeUp} -> ${faultsAfterUp}, down easy ${faultsBeforeDown} -> ${faultsAfterDown} faults`);
+}
+
+// The other half of the same fix. Doing nothing at all still costs, but ground
+// says it again first: one lapse is a repeat, the second is the fault. A single
+// missed beat while you find the lever is not a grade.
+async function tSittingOnYourHandsIsWarnedFirst() {
+  const sim = await startMission(3);
+  const m3 = MISSIONS[3];
+  answer(sim);
+  const pk = polarOf(m3.pickup.pos);
+  park(sim, { slew: pk.slew, radius: pk.radius });
+  until(sim, atNode('onHook'), 16);
+  rig(sim, 3);
+  until(sim, (s) => s.load.attached, 6);
+  until(sim, atNode('upEasy'), 10);
+  park(sim, { slew: pk.slew, radius: pk.radius, line: 30 });
+  const ld = polarOf(m3.landing.pos);
+  until(sim, atNode('toLanding'), 20);
+  until(sim, (s) => ['centred', 'downEasy'].includes(node(s)), 60,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+  until(sim, atNode('downEasy'), 30,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+
+  // Hands off the levers, high above a hole nine metres deep, so neither the
+  // gate nor the ackBy can close the window. Freezing the crane every tick keeps
+  // lineVel at zero, which is what "did nothing" means here.
+  const base = sim.state.radio.faults;
+  const says = () => sim.log.filter((e) => e.name === 'radio.say' &&
+    String(e.payload.key).startsWith('DOWN_EASY')).length;
+  const seq = [];
+  let last = says();
+  until(sim, (s) => node(s) !== 'downEasy' || s.mission.result !== null, 25, (s) => {
+    park(sim, { slew: ld.slew, radius: ld.radius, line: 30 });
+    const n = says();
+    if (n !== last) { last = n; seq.push({ said: n, faults: s.radio.faults - base }); }
+  });
+  // The first re-say is a warning and carries no fault. The second one does.
+  const warn = seq[0];
+  const bite = seq[1];
+  rec('a movement call is said again before it is a fault',
+    !!warn && warn.faults === 0 && !!bite && bite.faults === 1,
+    `faults at each re-say: ${JSON.stringify(seq)}`);
+}
+
+// "1 radio fault" told the operator he had been marked down and nothing about
+// what for. Ground knows which call he was standing on when the window lapsed,
+// so the card says it.
+async function tTheCardNamesTheCallYouMissed() {
+  const sim = await startMission(0);
+  // Let the radio check lapse with nothing pressed until it costs a fault.
+  until(sim, (s) => s.scoring.radioFaults >= 1, 30);
+  const faultEvents = sim.log.filter((e) => e.name === 'radio.fault');
+  const carried = faultEvents.length > 0 &&
+    faultEvents[0].payload.caption === 'TC-1, radio check.';
+
+  // Win the lift from here the way tGradeRubric does, so the card is built by
+  // the real scorer off the real fault rather than a hand-set counter.
+  sim.state.mission.landedAt = [0, 0, 0];
+  sim.state.mission.landingPos = [0, 0, 0];
+  sim.state.mission.landingTol = 0.4;
+  sim.state.mission.result = 'win';
+  sim.bus.emit('lift.win', { id: 0 });
+  const why = (sim.state.scoring.demerits || []).map((d) => d.why);
+  rec('the card says which call went unanswered, not just that one did',
+    carried && why.includes('no answer to "TC-1, radio check."'),
+    `caption on the event ${JSON.stringify(faultEvents[0] && faultEvents[0].payload.caption)}; card said ${JSON.stringify(why)}`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
   tReturnCannotKillRadio, tMission1NoSilentCollision, tHoistBudgetResets,
   tGuideSayAgainFree, tEmptyBlockAccel,
   tRestingIsNotColliding, tShaftReachable, tNoTeleportOntoRoof,
-  tFlyTruck, tFlyScaffold, tFlyBlindShaft,
+  tFlyTruck, tFlyScaffold, tFlyBlindShaft, tEveryJobCanBeFlown, tTheBoardAgreesWithItself,
   tGradeRubric, tFlowAndResume, tRefreshKeepsProgress, tAchievementOnce,
   tSaveSurvivesGarbage, tGusts,
   tEmptySwingIsNotAnAllStop, tEmptySwingIsNotCharged,
@@ -2346,7 +2517,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tAHeavyLoadPullsTheCraneOutToIt, tDeflectionFollowsTheLoad,
   tTrolleyingInHoldsTheLoadStill,
   tTheJudgedLoadIsTheDrawnLoad, tFlyingByEyeLandsInTheZone,
-  tTheCountdownMeasuresToTheBottomOfTheLoad];
+  tTheCountdownMeasuresToTheBottomOfTheLoad,
+  tMovingIsAnAnswer, tSittingOnYourHandsIsWarnedFirst,
+  tTheCardNamesTheCallYouMissed];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

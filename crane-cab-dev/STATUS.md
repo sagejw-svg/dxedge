@@ -85,6 +85,29 @@ fresh session doesn't have to reverse-engineer it from git history.
   docs/PHASE-5-PROMPT.md first, per AUTOMATION.md step 2. Note that save.js now
   has a settings.changed event and nothing emits it: Phase 5 owns the settings UI
   and should wire it.
+- **Jacob's round.** James's son operates cranes for a living and play-tested
+  the build. Three things came out of it and all three shipped:
+  - He took a radio fault on the blind shaft for something he had not done
+    wrong. Ground calls "down easy", the reply window is three seconds, and its
+    gate (`load.near`) is nine metres of descent away, so the only way to close
+    the window was to take a hand off the levers mid blind set-down and press a
+    button. Nodes now carry `ackBy`: the load starting down IS the answer, which
+    is how a real operator acknowledges a movement call. `upEasy`, `hold` and
+    `downEasy` also drop from `onTimeout: 'fault'` to `'repeat'`, so ground says
+    it again before it costs anything, and the fault carries the node's caption
+    so the card says "no answer to ..." instead of "a radio fault".
+  - Z stopped working after an alt-tab and the head stayed leaned out over the
+    glass for the rest of the session. `window.blur` cleared the three key
+    latches that existed when it was written and not the two the head controls
+    added. It is one `latched` Set now, cleared wholesale, plus a
+    `visibilitychange` handler for the focus changes blur does not reach.
+  - Three more jobs on the board (4 Out at range, 5 Between the stacks,
+    6 Round the core) with their own scripts and nine new voice clips, and the
+    achievement table moved from `js/scoring.js` to `data/achievements.js`
+    (hard rule 3) and grew from 10 to 19. The after-action card now shows the
+    whole board, folded shut, with what was just unlocked marked in place.
+    `state.mission.par` is new (hard rule 6, declared in state.js).
+  - Suite is 112 headless checks and 24 browser checks.
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main

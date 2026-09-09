@@ -26,6 +26,16 @@
 //             garbled and nothing is a fault for being said early.
 //   timeout   seconds after ground finishes before onTimeout runs. null = no ack
 //             window at all, the node goes straight to its waitFor gate.
+//   ackBy     a level, checked every tick of the reply window, that closes the
+//             window as an answer without a word being said. This is how a real
+//             operator answers a movement call: ground says "down easy", the
+//             load starts down, and ground has his answer. Distinct from waitFor,
+//             which asks whether the load has arrived. On a blind set-down the
+//             gate is nine metres and the better part of ten seconds away against
+//             a three second window, so before this existed the only way to keep
+//             a clean card on the shaft job was to take a hand off the levers
+//             mid descent and press a button. Levels: 'hoist.raising',
+//             'hoist.lowering', 'levers.still'.
 //   onTimeout 'repeat'          first lapse re-sends at urgency + 1, second lapse
 //                               logs a radio fault and re-sends again.
 //             'fault'           logs the fault on the first lapse, then re-sends.
@@ -92,10 +102,10 @@ export const SCRIPTS = {
       check:     { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
       toPickup:  { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
       onHook:    { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
-      upEasy:    { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
+      upEasy:    { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'toLanding', urgency: 0 },
       toLanding: { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
-      hold:      { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:  { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.slack', next: 'good', urgency: 0 },
+      hold:      { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'repeat', waitFor: 'sway.settled', ackBy: 'levers.still', next: 'downEasy', urgency: 1 },
+      downEasy:  { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', ackBy: 'hoist.lowering', next: 'good', urgency: 0 },
       good:      { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:  { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 
@@ -113,10 +123,10 @@ export const SCRIPTS = {
       watchTruck: { id: 'watchTruck', say: 'WATCH_TRUCK', caption: 'Watch the truck cab. Swing right first.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
       toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
       onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
-      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
-      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.slack', next: 'good', urgency: 0 },
+      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'repeat', waitFor: 'sway.settled', ackBy: 'levers.still', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', ackBy: 'hoist.lowering', next: 'good', urgency: 0 },
       good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 
@@ -138,10 +148,10 @@ export const SCRIPTS = {
                     expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
       toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
       onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
-      upEasy:     { id: 'upEasy', say: 'UP_EASY_HIGH', caption: 'Up easy. Well above the deck before you come round.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY_HIGH', caption: 'Up easy. Well above the deck before you come round.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
-      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'fault', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_DECK', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0, descend: true },
+      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'repeat', waitFor: 'sway.settled', ackBy: 'levers.still', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_DECK', caption: 'Down easy onto the deck.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.near', ackBy: 'hoist.lowering', next: 'lastCall', urgency: 0, descend: true },
       lastCall:   { id: 'lastCall',
                     say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
                     caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },
@@ -169,14 +179,106 @@ export const SCRIPTS = {
                     expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
       toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
       onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
-      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'hook.tight', next: 'toLanding', urgency: 0 },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'toLanding', urgency: 0 },
       toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'centred' },
       centred:    { id: 'centred', say: 'CENTRED', caption: 'You are over the hole. Do not let it swing in there.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'sway.settled', next: 'downEasy', urgency: 1 },
-      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'fault', waitFor: 'load.near', next: 'lastCall', urgency: 0, descend: true },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.near', ackBy: 'hoist.lowering', next: 'lastCall', urgency: 0, descend: true },
       lastCall:   { id: 'lastCall',
                     say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
                     caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },
                     expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
+      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
+
+      allStop:    { id: 'allStop', say: 'ALL_STOP', caption: 'ALL STOP. ALL STOP.', expect: ['Stopped'], timeout: 1.5, onTimeout: 'ignoredAllStop', waitFor: 'estop', next: 'allStopClear', urgency: 2 },
+      allStopClear: { id: 'allStopClear', say: 'ALL_STOP_CLEAR', caption: 'All stop received. Recover easy.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 }
+    }
+  },
+
+  // Mission 4. Light on the ground, heavy at the fly. The pick is at 23 m of
+  // radius and the set-down at 47, and the same crate goes from a quarter of
+  // rated to two thirds of it on the way out. Ground says so before the hook
+  // goes on, because on a real site that is the conversation you have at the
+  // pre-lift briefing and not one you want to be having at 47 m.
+  atRange: {
+    start: 'check',
+    nodes: {
+      check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
+      brief:      { id: 'brief',
+                    say: { imperial: 'RANGE_BRIEF_FT', metric: 'RANGE_BRIEF_M' },
+                    caption: { imperial: 'Setting down at a hundred and fifty feet of radius. Watch your chart on the way out.',
+                               metric: 'Setting down at forty seven meters of radius. Watch your chart on the way out.' },
+                    expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
+      onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'watchChart', urgency: 0 },
+      watchChart: { id: 'watchChart', say: 'WATCH_CHART', caption: 'Trolley out steady. A swing out there reads on the chart.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toLanding', urgency: 0 },
+      toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
+      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'repeat', waitFor: 'sway.settled', ackBy: 'levers.still', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', ackBy: 'hoist.lowering', next: 'good', urgency: 0 },
+      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
+
+      allStop:    { id: 'allStop', say: 'ALL_STOP', caption: 'ALL STOP. ALL STOP.', expect: ['Stopped'], timeout: 1.5, onTimeout: 'ignoredAllStop', waitFor: 'estop', next: 'allStopClear', urgency: 2 },
+      allStopClear: { id: 'allStopClear', say: 'ALL_STOP_CLEAR', caption: 'All stop received. Recover easy.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 }
+    }
+  },
+
+  // Mission 5. Into a four metre slot between two six metre stacks of forms,
+  // with a crate 1.4 m across. The slot runs radially, so the trolley is the
+  // forgiving axis and the slew is not. Ground holds it at the top of the slot
+  // and will not take it down until it is dead still, because at 34 m of radius
+  // two degrees of swing is the width of the air on either side.
+  stacks: {
+    start: 'check',
+    nodes: {
+      check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
+      brief:      { id: 'brief',
+                    say: { imperial: 'STACKS_BRIEF_FT', metric: 'STACKS_BRIEF_M' },
+                    caption: { imperial: 'Slot between the form stacks, thirteen feet wide, twenty feet tall. Straight down the middle.',
+                               metric: 'Slot between the form stacks, four meters wide, six tall. Straight down the middle.' },
+                    expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
+      onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY_HIGH', caption: 'Up easy. Well above the deck before you come round.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'toLanding', urgency: 0 },
+      toLanding:  { id: 'toLanding', guide: 'landing', tol: 0.8, next: 'centred' },
+      centred:    { id: 'centred', say: 'CENTRED_SLOT', caption: 'You are over the slot. Let her die before you come down.', expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'sway.settled', ackBy: 'levers.still', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.near', ackBy: 'hoist.lowering', next: 'lastCall', urgency: 0, descend: true },
+      lastCall:   { id: 'lastCall',
+                    say: { imperial: 'LAST_CALL_FT', metric: 'LAST_CALL_M' },
+                    caption: { imperial: 'Ten feet. Micro from here.', metric: 'Three meters. Micro from here.' },
+                    expect: ['Copy'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', next: 'good', urgency: 1 },
+      good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
+      complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
+
+      allStop:    { id: 'allStop', say: 'ALL_STOP', caption: 'ALL STOP. ALL STOP.', expect: ['Stopped'], timeout: 1.5, onTimeout: 'ignoredAllStop', waitFor: 'estop', next: 'allStopClear', urgency: 2 },
+      allStopClear: { id: 'allStopClear', say: 'ALL_STOP_CLEAR', caption: 'All stop received. Recover easy.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: 'RETURN', urgency: 1 }
+    }
+  },
+
+  // Mission 6. The core has climbed to 38 m and sits square across the short arc
+  // between the two pads, from 24 m of radius out to 36. Going over the top of it
+  // is the one route ground rules out: it needs the block up near the two-block
+  // stop with a load on, for no good reason. Everything else is the operator's
+  // call, and ground says so rather than pretending there is one answer. This is
+  // the only script whose guide will point straight through an obstruction, which
+  // is exactly what a banksman on the far side of a core does.
+  core: {
+    start: 'check',
+    nodes: {
+      check:      { id: 'check', say: 'RADIO_CHECK', caption: 'TC-1, radio check.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'brief', urgency: 0 },
+      brief:      { id: 'brief',
+                    say: { imperial: 'CORE_BRIEF_FT', metric: 'CORE_BRIEF_M' },
+                    caption: { imperial: 'Core is up a hundred and twenty five feet, right across your road. Do not try to go over her.',
+                               metric: 'Core is up thirty eight meters, right across your road. Do not try to go over her.' },
+                    expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'route', urgency: 0 },
+      route:      { id: 'route', say: 'ROUND_THE_BACK', caption: 'Come inside her, or take her round the back. Your call.', expect: ['Copy'], timeout: 4, onTimeout: 'repeat', waitFor: null, next: 'toPickup', urgency: 0 },
+      toPickup:   { id: 'toPickup', guide: 'pickup', tol: 1.0, next: 'onHook' },
+      onHook:     { id: 'onHook', say: 'ON_THE_HOOK', caption: 'On the hook.', expect: ['Hooked'], timeout: null, onTimeout: null, waitFor: null, next: 'upEasy', urgency: 0, action: 'hook' },
+      upEasy:     { id: 'upEasy', say: 'UP_EASY', caption: 'Up easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'hook.tight', ackBy: 'hoist.raising', next: 'toLanding', urgency: 0 },
+      toLanding:  { id: 'toLanding', guide: 'landing', tol: 1.0, next: 'hold' },
+      hold:       { id: 'hold', say: 'HOLD', caption: 'Hold, hold, hold.', expect: ['Stopped'], timeout: 2, onTimeout: 'repeat', waitFor: 'sway.settled', ackBy: 'levers.still', next: 'downEasy', urgency: 1 },
+      downEasy:   { id: 'downEasy', say: 'DOWN_EASY', caption: 'Down easy.', expect: ['Moving'], timeout: 3, onTimeout: 'repeat', waitFor: 'load.slack', ackBy: 'hoist.lowering', next: 'good', urgency: 0 },
       good:       { id: 'good', say: 'THATS_GOOD', caption: "That's good. Unhooking.", expect: ['Copy'], timeout: null, onTimeout: null, waitFor: null, next: 'complete', urgency: 0, action: 'unhook' },
       complete:   { id: 'complete', say: 'GOOD_LIFT', caption: 'Good lift. Standing by.', expect: [], timeout: null, onTimeout: null, waitFor: null, next: null, urgency: 0 },
 

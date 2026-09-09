@@ -15,6 +15,12 @@
 //   Floor at D. A collision, a two-block, an LMI lockout or an ignored ALL STOP
 //   is a fail, not a grade, so none of them appears here.
 
+// Hard rule 3: the achievement names, wording and conditions are content and
+// live in data/. This file only walks the list.
+import { ACHIEVEMENTS } from '../data/achievements.js';
+// Data, not a system: how many jobs there are to win, for "Every Job".
+import { MISSIONS } from '../data/missions.js';
+
 const DEG = Math.PI / 180;
 const SWAY_OK = 3 * DEG;
 const SWAY_BAD = 6 * DEG;
@@ -29,32 +35,22 @@ const LANDING_LOOSE = 0.5;       // of the mission tolerance, one demerit past t
 const LANDING_SLOPPY = 0.8;      // two past this
 const CAP_WATCH = 75;            // percent of rated, one demerit past this
 const CAP_HEAVY = 85;            // two past this
-const CHART_CLEAR = 75;          // percent of rated "Chart Legal" asks you to stay under
-const BLOCK_CLEAR = 1.5;         // m of rope above the two-block stop "No Two-Block" wants
 const GRADES = ['A', 'B', 'C', 'D'];
-
-// Achievement conditions. The ten names are from the Notion Design Prompt; the
-// conditions are invented, because the page names them and defines none.
-const ACHIEVEMENTS = [
-  { name: 'Radio Check', when: (r) => r.missionId === 0 },
-  { name: 'First Hook', when: (r) => r.missionId === 1 },
-  { name: 'Scaffold Kiss', when: (r) => r.missionId === 2 },
-  { name: 'Blind Trust', when: (r) => r.missionId === 3 },
-  { name: 'Zero Swing', when: (r) => r.maxSway < 1 * DEG },
-  // Both of these used to restate the win predicate: a two-block and going over
-  // ninety percent each fail the lift, so every winning lift had them for free,
-  // and the first flight a player ever finished unlocked five of the ten. They
-  // now ask for real headroom rather than for not having failed.
-  { name: 'No Two-Block', when: (r) => r.closestBlock >= BLOCK_CLEAR },
-  { name: 'Chart Legal', when: (r) => r.maxCapacityPct < CHART_CLEAR },
-  { name: 'Dog Everything', when: (r) => r.allStopsAnswered > 0 },
-  { name: 'Clean Sheet', when: (r) => r.grade === 'A' && r.radioFaults === 0 },
-  { name: 'Hundred Hooks', when: (r) => r.hooksEver >= 100 }
-];
 
 let allStopsAnswered = 0;   // ALL STOPs this lift that the operator actually answered
 let allStopOpen = false;
 let hookedThisLift = false; // one rig per lift, and it counts even if the lift fails
+// The calls that went unanswered, in the order they lapsed, so the card can name
+// the one that cost the grade instead of saying "a radio fault" and leaving the
+// operator to guess which of a dozen calls it meant.
+let faultCalls = [];
+// Radio conduct this lift, for the achievements that ask how the operator ran
+// the channel rather than how he flew. actedCalls is answers given with the
+// levers, repliesGiven answers given with a button, sayAgains times ground was
+// asked to repeat himself.
+let actedCalls = 0;
+let repliesGiven = 0;
+let sayAgains = 0;
 
 export function init(ctx) {
   const { state, bus } = ctx;
@@ -79,6 +75,10 @@ export function init(ctx) {
     allStopsAnswered = 0;
     allStopOpen = false;
     hookedThisLift = false;
+    faultCalls = [];
+    actedCalls = 0;
+    repliesGiven = 0;
+    sayAgains = 0;
   });
 
   bus.on('collision.counted', () => { sc.collisions += 1; });
@@ -93,7 +93,16 @@ export function init(ctx) {
     bus.emit('lift.hooked.count', { hooks: (state.progress.hooks || 0) + 1 });
   });
   bus.on('alarm.a2b', () => { sc.twoBlocks += 1; });
-  bus.on('radio.fault', () => { sc.radioFaults += 1; });
+  bus.on('radio.acted', () => { actedCalls += 1; });
+  bus.on('radio.reply', (p) => {
+    if (p && p.label === 'Say again') sayAgains += 1;
+    else repliesGiven += 1;
+  });
+  bus.on('radio.fault', (p) => {
+    sc.radioFaults += 1;
+    const call = shortCall(p && p.caption);
+    if (call) faultCalls.push(call);
+  });
 
   // An ALL STOP that the operator answered with the mushroom, which is the one
   // thing "Dog Everything" can reasonably mean.
@@ -120,6 +129,14 @@ export function init(ctx) {
 
   bus.on('lift.win', (p) => resolve(ctx, true, p));
   bus.on('lift.fail', (p) => resolve(ctx, false, p));
+}
+
+// The first sentence of a call, which is the part that names it. Captions run to
+// two sentences on the briefing nodes and the whole thing would not fit the card.
+function shortCall(caption) {
+  if (!caption) return '';
+  const first = String(caption).split(/(?<=[.?!])\s+/)[0] || String(caption);
+  return first.length > 44 ? `${first.slice(0, 41).trimEnd()}...` : first;
 }
 
 export function update(ctx) {
@@ -153,7 +170,9 @@ function resolve(ctx, won, payload) {
   if (sc.maxSway > SWAY_BAD) demerits.push({ cost: 2, why: 'swinging hard' });
   else if (sc.maxSway > SWAY_OK) demerits.push({ cost: 1, why: 'swinging' });
   if (sc.radioFaults >= 3) demerits.push({ cost: 2, why: 'radio discipline' });
-  else if (sc.radioFaults >= 1) demerits.push({ cost: 1, why: 'a radio fault' });
+  else if (sc.radioFaults >= 1) {
+    demerits.push({ cost: 1, why: faultCalls.length ? `no answer to "${faultCalls[0]}"` : 'a radio fault' });
+  }
   if (m.maxCapacityPct >= CAP_HEAVY) demerits.push({ cost: 2, why: 'heavy on the chart' });
   else if (m.maxCapacityPct >= CAP_WATCH) demerits.push({ cost: 1, why: 'high on the chart' });
 
@@ -163,6 +182,9 @@ function resolve(ctx, won, payload) {
 
   // Achievements. The record is everything a condition may look at.
   const hooksEver = state.progress.hooks || 0;
+  // A best is only ever written on a win, so counting them counts lifts won.
+  const missionsWon = Object.keys(state.progress.best || {}).length +
+    (state.progress.best && state.progress.best[m.id] ? 0 : 1);
   const record = {
     closestBlock: Number.isFinite(sc.closestBlock) ? sc.closestBlock : Infinity,
     missionId: m.id,
@@ -172,8 +194,15 @@ function resolve(ctx, won, payload) {
     twoBlocks: sc.twoBlocks,
     maxCapacityPct: m.maxCapacityPct,
     landingError: sc.landingError,
+    landingTol: tol,
     elapsed: sc.elapsed,
+    par: m.par || 0,
     allStopsAnswered,
+    actedCalls,
+    repliesGiven,
+    sayAgains,
+    missionsWon,
+    missionCount: MISSIONS.length,
     hooksEver
   };
 
@@ -214,6 +243,14 @@ export function afterAction(ctx) {
     earned: sc.earned || [],
     personalBest: !!sc.personalBest,
     savedOk: state.progress.savedOk !== false,
-    best: state.progress.best[m.id] || null
+    best: state.progress.best[m.id] || null,
+    // The whole board, in data order, with what is on it. ui.js renders and does
+    // no arithmetic of its own, so the counting happens here.
+    board: ACHIEVEMENTS.map((a) => ({
+      name: a.name,
+      how: a.how || '',
+      got: !!state.progress.achievements[a.name],
+      fresh: (sc.earned || []).includes(a.name)
+    }))
   };
 }

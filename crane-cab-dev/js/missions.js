@@ -138,6 +138,7 @@ export function start(ctx, id) {
   m.pickupPos = [...found.pickup.pos];
   m.landingPos = [...found.landing.pos];
   m.landingTol = found.landing.tol;
+  m.par = found.par || 0;
   m.hooked = false;
   m.everHooked = false;
   m.maxCapacityPct = 0;

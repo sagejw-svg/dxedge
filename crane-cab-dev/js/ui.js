@@ -23,6 +23,7 @@ export function init(ctx) {
     ecFaults: $('ec-faults'), ecButton: $('btn-endcard'), ecError: $('ec-error'),
     ecGrade: $('ec-grade'), ecGradeLetter: $('ec-grade-letter'), ecPlan: $('ec-plan'),
     ecWhy: $('ec-why'), ecEarned: $('ec-earned'), ecBest: $('ec-best'),
+    ecBoard: $('ec-board'), ecBoardCount: $('ec-board-count'), ecBoardList: $('ec-board-list'),
     debug: $('debug'),
     build: $('build-stamp')
   };
@@ -104,7 +105,35 @@ export function showAfterAction(ctx, a) {
         : a.best ? `Your best here: ${fmtClock(a.best.elapsed)}, grade ${a.best.grade || '-'}.` : '';
 
   drawPlan(a, u);
+  drawBoard(a);
   el.ecButton.textContent = a.won ? 'Next lift' : 'Try again';
+}
+
+// The board. Rebuilt every card rather than diffed, because it is twenty rows
+// once and the card is not a hot path. What was unlocked on this lift is marked,
+// so the player can see the new one in its place among the rest rather than only
+// as a name in a sentence above.
+function drawBoard(a) {
+  const board = a.board || [];
+  if (!el.ecBoard) return;
+  el.ecBoard.hidden = board.length === 0;
+  if (!board.length) return;
+  const got = board.filter((b) => b.got).length;
+  el.ecBoardCount.textContent = `Board: ${got} of ${board.length}`;
+  const list = el.ecBoardList;
+  while (list.firstChild) list.removeChild(list.firstChild);
+  for (let i = 0; i < board.length; i += 1) {
+    const b = board[i];
+    const li = document.createElement('li');
+    li.className = `${b.got ? 'got' : 'locked'}${b.fresh ? ' fresh' : ''}`;
+    const name = document.createElement('b');
+    name.textContent = b.name;
+    const how = document.createElement('span');
+    how.textContent = b.how;
+    li.appendChild(name);
+    li.appendChild(how);
+    list.appendChild(li);
+  }
 }
 
 // Where it actually landed, against the circle it was graded on. The Backlog

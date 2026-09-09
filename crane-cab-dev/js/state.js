@@ -106,6 +106,10 @@ export function createState() {
     mission: {
       id: null, elapsed: 0, result: null, failReason: null,
       pickupPos: null, landingPos: null, landingTol: 0,
+      // PAR shape change, declared under hard rule 6. Seconds the job is
+      // expected to take, copied from data/missions.js by missions.js and read
+      // by scoring.js for the "On The Clock" award. 0 means the job has no par.
+      par: 0,
       hooked: false, everHooked: false,
       maxCapacityPct: 0, maxSway: 0, hadCollision: false,
       landedAt: null,

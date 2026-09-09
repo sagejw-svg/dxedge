@@ -12,18 +12,27 @@
 
 const pressed = new Set();
 
-// E-stop and brake are sticky toggles. Track the previous physical key state
-// so a held key doesn't spam the toggle every frame.
-let estopKeyWasDown = false;
-let brakeKeyWasDown = false;
-let camKeyWasDown = false;
+// The sticky toggles - E-stop, brake, hook cam, and the two head keys - fire on
+// the edge, not the level, so a held key is one press rather than one per frame.
+// This used to be one boolean per key, and adding V and Z I updated the keydown,
+// the keyup and the controls card but forgot the blur handler, which reset only
+// the three booleans that existed when it was written. Alt-tab with Z held and
+// the keyup went to the other window: the latch stayed down and Z was dead for
+// the rest of the session, with the head stuck wherever it was leaning. One set
+// that blur can clear wholesale cannot be forgotten by the next key I add.
+const latched = new Set();
+
+// Fires the first time a key goes down and not again until it comes back up.
+function edge(code) {
+  if (latched.has(code)) return false;
+  latched.add(code);
+  return true;
+}
 
 // Mouse-drag look accumulator. Filled by pointer events, flushed into
 // intent.look once per tick in update(), then cleared by main.js's endTick.
 let lookAccumDx = 0;
 let lookAccumDy = 0;
-let lookKeyWasDown = false;
-let homeKeyWasDown = false;
 let dragging = false;
 
 // Mouse sensitivity, radians per pixel of drag.
@@ -80,17 +89,13 @@ export function init(ctx) {
     // to say why.
     const playing = ctx.state.phase === 'playing';
     if (code === 'Space') {
-      if (!estopKeyWasDown && playing) {
-        ctx.state.intent.estop = !ctx.state.intent.estop;
-      }
-      estopKeyWasDown = true;
+      const first = edge(code);
+      if (first && playing) ctx.state.intent.estop = !ctx.state.intent.estop;
       return;
     }
     if (code === 'KeyB') {
-      if (!brakeKeyWasDown && playing) {
-        ctx.state.intent.brake = !ctx.state.intent.brake;
-      }
-      brakeKeyWasDown = true;
+      const first = edge(code);
+      if (first && playing) ctx.state.intent.brake = !ctx.state.intent.brake;
       return;
     }
     if (code === 'KeyT') {
@@ -105,21 +110,19 @@ export function init(ctx) {
     }
     if (code === 'KeyC') {
       // A latching toggle like the brake, and phase guarded for the same reason.
-      if (!camKeyWasDown && playing) ctx.state.intent.hookCam = !ctx.state.intent.hookCam;
-      camKeyWasDown = true;
+      const first = edge(code);
+      if (first && playing) ctx.state.intent.hookCam = !ctx.state.intent.hookCam;
       return;
     }
     // The head. V keeps the eyes on the load, Z puts them back down the jib.
     // Both latch like the brake so a held key is one press, and both are phase
     // guarded so neither fires from a card.
     if (code === 'KeyV') {
-      if (!lookKeyWasDown && playing) ctx.state.intent.lookAtLoad = true;
-      lookKeyWasDown = true;
+      if (edge(code) && playing) ctx.state.intent.lookAtLoad = true;
       return;
     }
     if (code === 'KeyZ') {
-      if (!homeKeyWasDown && playing) ctx.state.intent.lookAhead = true;
-      homeKeyWasDown = true;
+      if (edge(code) && playing) ctx.state.intent.lookAhead = true;
       return;
     }
 
@@ -128,25 +131,29 @@ export function init(ctx) {
 
   window.addEventListener('keyup', (e) => {
     const code = e.code;
-    if (code === 'KeyV') { lookKeyWasDown = false; return; }
-    if (code === 'KeyZ') { homeKeyWasDown = false; return; }
-    if (code === 'Space') { estopKeyWasDown = false; return; }
-    if (code === 'KeyB') { brakeKeyWasDown = false; return; }
-    if (code === 'KeyC') { camKeyWasDown = false; return; }
+    latched.delete(code);
+    if (code === 'KeyV' || code === 'KeyZ' || code === 'Space' ||
+        code === 'KeyB' || code === 'KeyC') return;
     if (code === 'KeyT') { ctx.state.intent.ptt = false; return; }
     pressed.delete(code);
   });
 
   // Lose key state on blur so a key doesn't get stuck "held" after alt-tab.
-  window.addEventListener('blur', () => {
+  const forgetKeys = () => {
     pressed.clear();
-    estopKeyWasDown = false;
-    brakeKeyWasDown = false;
-    camKeyWasDown = false;
+    latched.clear();
     ctx.state.intent.ptt = false;
     // The pointerup that would have ended a look-drag goes to whatever took the
     // focus, so alt-tabbing with the button down left the view dragging.
     dragging = false;
+  };
+  // Blur covers alt-tab and clicking another window. visibilitychange covers the
+  // cases blur does not always reach: switching tabs, and the OS screenshot and
+  // search overlays, which is how a key gets held across a focus change without
+  // the operator ever meaning to hold it.
+  window.addEventListener('blur', forgetKeys);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') forgetKeys();
   });
 
   // Mouse-drag look. Left button drag only, so it doesn't fight the reply

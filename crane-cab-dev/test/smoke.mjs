@@ -378,7 +378,7 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
   const covers = (rows) => {
     const t = rows.join(' | ');
     return /1.*4.*Answer ground/i.test(t) && /\bT\b.*mic/i.test(t) && /\bH\b.*Horn/i.test(t) &&
-      /\bV\b.*Eyes on the load/i.test(t) && /\bZ\b.*Head forward/i.test(t) &&
+      /\bV\b.*Eyes on the load/i.test(t) && /\bZ\b.*Eyes front/i.test(t) &&
       /Move your head/i.test(t);
   };
   rec('the controls card says how to answer the radio, on the title and the help card',
@@ -641,6 +641,80 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
     `${out.blocked.length} of ${out.n} sight lines blocked` +
     `${out.blocked.length ? ': ' + JSON.stringify(out.blocked.slice(0, 5)) : ''}; ` +
     `seated lean ${out.seated.toFixed(3)} m`);
+  await p.close();
+}
+
+
+// 21. James alt-tabbed out of the game with a key down and Z stopped working
+//     for the rest of the session: the head stayed leaned out over the glass and
+//     nothing brought it back. The keyup that would have unlatched Z went to
+//     whatever took the focus. blur cleared the three latches that existed when
+//     it was written and not the two added with the head controls, which is the
+//     failure mode of one boolean per key. Now it is one set, cleared wholesale.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(1200);
+  const look = () => p.evaluate(() => ({
+    pitch: +window.__cab.state.look.pitch.toFixed(3),
+    tracking: window.__cab.state.look.tracking
+  }));
+
+  // Alt-tab away with Z held. The keyup never arrives.
+  await p.keyboard.down('z');
+  await p.evaluate(() => window.dispatchEvent(new Event('blur')));
+  // Look down over the sill again, the way you would for a tight pick.
+  await p.keyboard.down('ArrowDown'); await sleep(900); await p.keyboard.up('ArrowDown');
+  const leaned = await look();
+  await p.keyboard.press('z'); await sleep(250);
+  const afterZ = await look();
+
+  // Same trap for V, which latches the same way. V is a toggle, so the proof is
+  // that the press after the blur still flips it, not which way it lands: the
+  // keydown before the blur has already flipped it once.
+  await p.keyboard.down('v');
+  await p.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await sleep(120);
+  const beforeV = await look();
+  await p.keyboard.press('v'); await sleep(250);
+  const afterV = await look();
+
+  rec('a key held across an alt-tab does not kill the head controls',
+    leaned.pitch < -0.6 && Math.abs(afterZ.pitch + 0.35) < 0.01 &&
+    afterV.tracking !== beforeV.tracking,
+    `leaned to ${leaned.pitch}, Z brought it back to ${afterZ.pitch}, ` +
+    `V after its own blur ${beforeV.tracking} -> ${afterV.tracking}`);
+  await p.close();
+}
+
+// 22. The board on the after-action card. It is the one part of the card built
+//     from a list rather than a number, so it is the one that can render empty
+//     and still look fine.
+{
+  const p = await page();
+  await p.evaluate(() => {
+    const cab = window.__cab;
+    cab.state.mission.result = 'win';
+    cab.state.mission.landedAt = [22, 0, 12];
+    cab.state.mission.landingPos = [22, 0, 12];
+    cab.state.mission.landingTol = 0.4;
+    cab.bus.emit('lift.win', { id: 0 });
+  });
+  await sleep(300);
+  const board = await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#ec-board-list li')];
+    return {
+      rows: rows.length,
+      count: (document.getElementById('ec-board-count') || {}).textContent || '',
+      named: rows.every((li) => (li.querySelector('b') || {}).textContent),
+      described: rows.every((li) => (li.querySelector('span') || {}).textContent),
+      fresh: rows.filter((li) => li.classList.contains('fresh')).length
+    };
+  });
+  rec('the after-action card shows the whole board, with what was just unlocked',
+    board.rows >= 15 && board.named && board.described &&
+    /Board: \d+ of \d+/.test(board.count) && board.fresh >= 1,
+    `${board.rows} rows, summary "${board.count}", ${board.fresh} marked new`);
   await p.close();
 }
 
