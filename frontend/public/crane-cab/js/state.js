@@ -149,7 +149,13 @@ export function createState() {
     // is on, crane.js aims the head at the hook block every tick instead of
     // integrating the drag, which is the operator leaning over the glass floor
     // and keeping his eyes on the load rather than on the jib.
-    look: { yaw: 0, pitch: -0.35, tracking: false },
+    // LEAN shape change, declared under hard rule 6: leanX and leanY are metres
+    // the eye moves forward and down out of the seat, derived from pitch by
+    // crane.js. An operator looking steeply down does not do it with his back
+    // against the seat: he leans out over the glass. Without it the front bar of
+    // the floor frame sits square across the line to the load through a whole
+    // band of pitch, and there is nothing the player can do about it.
+    look: { yaw: 0, pitch: -0.35, tracking: false, leanX: 0, leanY: 0 },
 
     debug: { show: false, events: [] }
   };

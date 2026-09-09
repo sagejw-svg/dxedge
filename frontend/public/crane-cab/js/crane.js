@@ -71,6 +71,18 @@ const EYE_X = 1.8;
 const EYE_Y = 1.35;
 const EYE_Z = 1.9;
 
+// Leaning out of the seat. The cab has a glass floor to look at the load through
+// and a frame around it, and the frame's front bar sits on the line of sight
+// through a band of pitch either side of 57 degrees down - which is exactly
+// where a close pick is. A head fixed in the seat cannot get past it, so the
+// operator leans, forward and down, the way anyone does to see over a sill.
+// Tied to pitch rather than to a key: you cannot look steeply down without
+// leaning, so there is nothing extra to learn.
+const LEAN_START = 0.35;         // rad below level before he starts to lean
+const LEAN_FULL = 1.10;          // rad below level by which he is right out over the glass
+const LEAN_FORWARD = 0.95;       // m the eye travels forward, out past the floor frame
+const LEAN_DOWN = 0.34;          // m it drops as he comes out of the seat
+
 let wasEstopped = false;
 
 function approach(current, target, maxDelta) {
@@ -238,6 +250,13 @@ export function update(ctx, dt) {
   }
   if (intent.look.dx || intent.look.dy) look.tracking = false;
 
+  // How far out of the seat he is, from where he is looking. Computed before the
+  // aim so both agree on where the eye is; it lags the pitch by one tick, which
+  // at 1/120 s is nothing against a head.
+  const lean = Math.min(1, Math.max(0, (-look.pitch - LEAN_START) / (LEAN_FULL - LEAN_START)));
+  look.leanX = LEAN_FORWARD * lean;
+  look.leanY = -LEAN_DOWN * lean;
+
   if (look.tracking) {
     aimAtLoad(state);
   } else {
@@ -260,9 +279,12 @@ function aimAtLoad(state) {
   const sy = Math.sin(state.load.swing.y);
   const drop = c.line * Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
 
-  const forward = (c.radius + sy * c.line) - EYE_X;
+  // From where the eye actually is, lean included, or the head aims at the load
+  // from a seat it is no longer sitting in.
+  const forward = (c.hangRadius !== undefined ? c.hangRadius : c.radius) + sy * c.line
+    - (EYE_X + state.look.leanX);
   const lateral = (sx * c.line) - EYE_Z;
-  const below = (c.cabHeight + EYE_Y) - (c.cabHeight + CRANE.hookDrop - drop);
+  const below = (c.cabHeight + EYE_Y + state.look.leanY) - (c.cabHeight + CRANE.hookDrop - drop);
   const flat = Math.hypot(forward, lateral);
 
   // render.js turns yaw into a direction as (cos p cos y, sin p, -cos p sin y),

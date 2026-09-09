@@ -584,6 +584,67 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
 }
 
 
+// 19. The operator has to be able to SEE the load. The cab has a glass floor for
+//     exactly that and a frame around it, and the frame's front bar sat square
+//     across the line of sight through a band of pitch either side of 57 degrees
+//     down - which is where a close pick is. A head bolted to the seat could not
+//     get past it and the player had no move available. Leaning fixed that band
+//     and moved the problem to the steep end until the lean went out past the
+//     frame, which is why this sweeps the whole trolley range and both a short
+//     and a long rope rather than checking the one angle that prompted it.
+//
+//     Raycast, not a screenshot: "is anything solid between the eye and the
+//     load" is the actual question, and a picture cannot answer it without a
+//     human looking at it.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(700);
+  const out = await p.evaluate(async () => {
+    const m = await import('./js/render.js');
+    const THREE = await import('three');
+    const cab = window.__cab;
+    const blocked = [];
+    let n = 0;
+    // Step 3, not 6: the band that was blocked is narrow (it sat near r=11 and
+    // r=26 on a long rope) and a coarser sweep stepped straight over it, so the
+    // check passed with the lean removed.
+    for (let r = 5; r <= 54; r += 3) {
+      for (const line of [12, 38]) {
+        cab.state.crane.radius = r; cab.state.crane.line = line; cab.state.crane.slew = 0;
+        cab.state.load.swing.x = 0.09; cab.state.load.swing.y = 0;
+        cab.state.look.tracking = true;                    // eyes on the load
+        await new Promise((z) => setTimeout(z, 60));
+        n += 1;
+        const eye = m._eye();
+        const hook = m._hookWorld();
+        const from = new THREE.Vector3(...eye.pos);
+        const to = new THREE.Vector3(...hook);
+        const hits = new THREE.Raycaster(from, to.clone().sub(from).normalize(), 0.01,
+          Math.max(0.5, from.distanceTo(to) - 1))
+          .intersectObjects(m._scene().children, true)
+          // Cab furniture only, and the glass floor is glass: you can see through it.
+          .filter((h) => h.object.type === 'Mesh' && h.object.visible &&
+            h.distance < 6 && h.object.material.opacity !== 0.12);
+        if (hits.length) blocked.push(`r=${r} line=${line} pitch ${(cab.state.look.pitch * 180 / Math.PI).toFixed(0)}`);
+      }
+    }
+    // And leaning is for looking down, not something he does in the seat.
+    cab.state.look.tracking = false;
+    cab.state.look.pitch = 0;
+    await new Promise((z) => setTimeout(z, 200));
+    const seated = cab.state.look.leanX;
+    return { n, blocked, seated };
+  });
+  rec('nothing in the cab stands between the operator and the load',
+    out.blocked.length === 0 && out.seated === 0,
+    `${out.blocked.length} of ${out.n} sight lines blocked` +
+    `${out.blocked.length ? ': ' + JSON.stringify(out.blocked.slice(0, 5)) : ''}; ` +
+    `seated lean ${out.seated.toFixed(3)} m`);
+  await p.close();
+}
+
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);

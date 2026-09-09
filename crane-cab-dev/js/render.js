@@ -1379,7 +1379,10 @@ export function update(ctx, dt) {
 
   // Camera: eye height in the seat, looks out along the jib. Look-around
   // deltas are applied to state.look by crane.js; this only reads it.
-  eye.set(0.2, 1.35, 0);
+  // Out of the seat by however far crane.js says he is leaning. The seat is at
+  // 0.2; leaning takes him forward over the glass floor and down, which is the
+  // only way past the floor frame's front bar on a close pick.
+  eye.set(0.2 + state.look.leanX, 1.35 + state.look.leanY, 0);
   parts.cabGroup.localToWorld(eye);
   camera.position.copy(eye);
   const yaw = -c.slew + state.look.yaw;
