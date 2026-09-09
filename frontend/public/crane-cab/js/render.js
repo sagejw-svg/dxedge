@@ -1231,10 +1231,13 @@ export function update(ctx, dt) {
   // the load it is holding. The droop is the sag that goes with the lean, kept
   // proportional so the two move together; on a 55 m jib it is under a degree
   // and reads as weight rather than as damage.
-  const bend = c.deflection || 0;
-  const droop = bend * 2.2;
-  const topY = c.cabHeight + CRANE.hookDrop - droop;
-  const jibR = c.radius + bend;
+  // The lean only. A vertical sag was drawn here too, and it took the trolley
+  // below its own rails and buried the hook block inside the load, because the
+  // jib lattice, the rails and the crate's own height do not sag with it. The
+  // horizontal lean is the part the operator feels and the part the physics
+  // models; on a 55 m jib the real sag is under a degree and reads as nothing.
+  const jibR = c.hangRadius !== undefined ? c.hangRadius : c.radius;
+  const topY = c.cabHeight + CRANE.hookDrop;
   trolley.position.set(jibR, topY + 0.4, 0);
   sheave.position.set(jibR, topY - SHEAVE_DROP, 0);
   // The drop is the vertical part of the rope, L cos(tilt). Hanging the hook a

@@ -47,9 +47,22 @@ function answer(sim, idx = 0, seconds = 20) {
 }
 
 // Park the crane exactly, without touching velocities (no pendulum kick).
+// A teleport has to leave the crane self-consistent. hangRadius is derived from
+// radius and is only recomputed inside crane.update, so writing radius here and
+// not it left every consumer reading last tick's position: ground gave a stale
+// correction and the landing zone judged the load where it used to be.
+// `radius` is where the LOAD should go, not where the trolley should sit. Under
+// load the crane bends out toward it and the rope hangs past the trolley, so a
+// harness that parked the trolley on the mark put the load a third of a metre
+// outboard of it - which is exactly the mistake a player makes flying by the
+// gauge instead of by eye, and not what these tests mean to exercise.
 function park(sim, { radius, slew, line }) {
   const c = sim.state.crane;
-  if (radius !== undefined) { c.radius = radius; c.radiusVel = 0; }
+  if (radius !== undefined) {
+    c.radius = radius - (c.deflection || 0);
+    c.radiusVel = 0;
+  }
+  c.hangRadius = c.radius + (c.deflection || 0);
   if (slew !== undefined) { c.slew = slew; c.slewVel = 0; }
   if (line !== undefined) { c.line = line; c.lineVel = 0; }
   const sw = sim.state.load.swing;
@@ -1635,7 +1648,7 @@ async function tEveryClipExists() {
     for (const units of ['imperial', 'metric']) {
       for (const b of R.DISTANCE_BUCKETS[units]) wanted.add(`TOGO_${b.tag}`);
     }
-    wanted.add('CENTRED');
+    wanted.add(R.PLUMB_HINT.say);
   }
   for (const call of Object.values(R.GUIDE_CALLS)) {
     wanted.add(call.say);
@@ -2165,6 +2178,143 @@ async function tTrolleyingInHoldsTheLoadStill() {
     `(peak swing ${held.peak.toFixed(2)} deg)`);
 }
 
+// The load hangs past the trolley under load, and every system that JUDGES it
+// has to agree with the one that DRAWS it. They did not: pendulum and render
+// used the bent radius, while the landing zone, the hook window, the radius
+// gauge and ground's own corrections all used the trolley's. On the scaffold the
+// gap was 0.33 m against a 0.30 m tolerance, so there was no position where a
+// lift looked centred and scored centred - it could land with the pad ring green
+// and be failed for setting down outside the zone, with nothing on screen to
+// account for it.
+async function tTheJudgedLoadIsTheDrawnLoad() {
+  const bad = [];
+  for (const id of [1, 2, 3]) {
+    const sim = await startMission(id);
+    const m = MISSIONS[id];
+    const ld = polarOf(m.landing.pos);
+    park(sim, { slew: ld.slew, radius: ld.radius });
+    until(sim, atNode('onHook'), 16);
+    rig(sim, id);
+    until(sim, () => false, 25);                 // let the structure take up
+    const c = sim.state.crane;
+    // Where the physics hangs it, which is what render.js draws.
+    const drawn = c.hangRadius + Math.sin(sim.state.load.swing.y) * c.line;
+    // Where the game judges it: sensors publishes the operator's own radius
+    // read, and the landing zone is scored on the same geometry.
+    const judged = sim.state.sensors.radius + Math.sin(sim.state.load.swing.y) * c.line;
+    if (Math.abs(drawn - judged) > 0.02) {
+      bad.push(`mission ${id}: drawn ${drawn.toFixed(3)} judged ${judged.toFixed(3)} ` +
+        `(bend ${c.deflection.toFixed(3)}, tol ${m.landing.tol})`);
+    }
+  }
+  rec('the load the game scores is the load it draws, bend included',
+    bad.length === 0, bad.length ? JSON.stringify(bad, null, 1)
+      : 'all three loaded missions judge the load where the bent jib actually holds it');
+}
+
+// And a lift lined up by eye has to score. This is the failure an operator could
+// not have accounted for: fly by eye, land with the pad ring green, and be told
+// you set down outside the zone. Read from the game's own verdict - the result
+// and scoring.landingError - not from this file's arithmetic, because checking
+// my own sum against my own sum is how the first version of this check passed
+// with missions.js still judging the load in the wrong place.
+async function tFlyingByEyeLandsInTheZone() {
+  const bad = [];
+  for (const id of [1, 2, 3]) {
+    const m = MISSIONS[id];
+    const sim = await startMission(id);
+    const pk = polarOf(m.pickup.pos);
+    const ld = polarOf(m.landing.pos);
+    park(sim, { slew: pk.slew, radius: pk.radius });
+    until(sim, atNode('onHook'), 16);
+    rig(sim, id);
+    until(sim, () => false, 4);
+    // Line the DRAWN load up on the mark, the way an operator judging by eye
+    // would: swing and trolley until where the rope hangs is over the landing.
+    until(sim, (s) => Math.abs(s.crane.hangRadius - ld.radius) < 0.005, 60, (s) => {
+      s.crane.slew = ld.slew; s.crane.slewVel = 0;
+      const err = ld.radius - s.crane.hangRadius;
+      s.intent.trolley = Math.max(-1, Math.min(1, err * 4));
+    });
+    sim.state.intent.trolley = 0;
+    until(sim, () => false, 12);                     // let the swing die
+    // Now set it down, holding that line.
+    until(sim, (s) => s.sensors.slack || s.mission.result !== null, 90, (s) => {
+      s.intent.hoist = -1; s.intent.range = 'I';
+      s.crane.slew = ld.slew; s.crane.slewVel = 0;
+    });
+    sim.state.intent.hoist = 0;
+    until(sim, () => false, 4);
+    // landedAt is latched on the release, not on touchdown, so ask ground for
+    // the unhook the way the script would.
+    sim.bus.emit('hook.release', {});
+    until(sim, (s) => !s.load.attached || s.mission.result !== null, 12);
+    // mission.landedAt is missions.js's own record of where the load came down,
+    // written from its own loadCentre. Reading it rather than recomputing the
+    // position here is the point: it is the number the score and the after-action
+    // plan view are built from, so if it disagrees with the screen this fails.
+    const at = sim.state.mission.landedAt;
+    const err = at === null || at === undefined ? null
+      : Math.hypot(at[0] - m.landing.pos[0], at[2] - m.landing.pos[2]);
+    if (err === null || err > m.landing.tol) {
+      bad.push(`mission ${id}: the game recorded the set-down ` +
+        `${err === null ? 'nowhere' : err.toFixed(3) + ' m'} off a ${m.landing.tol} m tolerance`);
+    }
+  }
+  rec('a load lined up by eye is scored inside the tolerance, not outside it',
+    bad.length === 0, bad.length ? JSON.stringify(bad, null, 1)
+      : 'all three loaded missions score a by-eye landing as a win, inside tolerance');
+}
+
+// The blind countdown has to be counting down to the face that lands. It was
+// reading sensors.hookHeight, which is the load's centre, so it promised half a
+// load height more room than there was - the wrong direction to be wrong in on
+// the one lift where ground is the only pair of eyes.
+async function tTheCountdownMeasuresToTheBottomOfTheLoad() {
+  const R = await import(pathToFileURL(join(HERE, '..', 'data/radio.js')).href);
+  const buckets = new Map(R.DISTANCE_BUCKETS.imperial.map((b) => [`TOGO_${b.tag}`, b.value]));
+  const m3 = MISSIONS[3];
+  const sim = await startMission(3);
+  answer(sim);
+  const pk = polarOf(m3.pickup.pos);
+  park(sim, { slew: pk.slew, radius: pk.radius });
+  until(sim, atNode('onHook'), 16);
+  rig(sim, 3);
+  until(sim, (s) => s.load.attached, 6);
+  until(sim, atNode('upEasy'), 10);
+  park(sim, { slew: pk.slew, radius: pk.radius, line: 30 });
+  const ld = polarOf(m3.landing.pos);
+  until(sim, atNode('toLanding'), 20);
+  until(sim, (s) => ['centred', 'downEasy'].includes(node(s)), 60,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+  until(sim, atNode('downEasy'), 30,
+    () => park(sim, { slew: ld.slew, radius: ld.radius, line: 30 }));
+
+  // Pair every countdown call with the load's own bottom face at the instant it
+  // went out. Watching only the tail of the log catches almost nothing, because
+  // a tick emits plenty after a say; count them instead.
+  const calls = [];
+  let seen = sim.log.filter((e) => e.name === 'radio.say' && buckets.has(e.payload.key)).length;
+  until(sim, (s) => node(s) !== 'downEasy' || s.mission.result !== null, 90, (s) => {
+    s.intent.hoist = -1; s.intent.range = 'I';
+    const now = sim.log.filter((e) => e.name === 'radio.say' && buckets.has(e.payload.key));
+    if (now.length > seen) {
+      seen = now.length;
+      calls.push({ key: now[now.length - 1].payload.key, trueDrop: s.load.bottomY - m3.landing.pos[1] });
+    }
+  });
+  // Ground rounds down to a bucket, so he understates by up to the gap to the
+  // next one. He must never overstate: saying there is more room than there is,
+  // on the one lift where he is the only pair of eyes, is the unsafe direction.
+  const wrong = calls.filter((cc) => buckets.get(cc.key) > cc.trueDrop + 0.05)
+    .map((cc) => `${cc.key} said ${buckets.get(cc.key).toFixed(2)} m with ${cc.trueDrop.toFixed(2)} m left`);
+  rec('the blind countdown never promises more room than the load has',
+    calls.length >= 2 && wrong.length === 0,
+    wrong.length ? JSON.stringify(wrong) :
+      `${calls.length} calls, each at or under the true drop: ` +
+      JSON.stringify(calls.map((cc) => `${cc.key}@${cc.trueDrop.toFixed(2)}m`)));
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -2194,7 +2344,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tGroundTalksLessWhenThereIsRoom, tGroundDoesNotRepeatTheSameCall,
   tGroundTalksTheBlindLoadDown,
   tAHeavyLoadPullsTheCraneOutToIt, tDeflectionFollowsTheLoad,
-  tTrolleyingInHoldsTheLoadStill];
+  tTrolleyingInHoldsTheLoadStill,
+  tTheJudgedLoadIsTheDrawnLoad, tFlyingByEyeLandsInTheZone,
+  tTheCountdownMeasuresToTheBottomOfTheLoad];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }

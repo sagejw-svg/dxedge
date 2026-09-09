@@ -154,7 +154,7 @@ export function update(ctx, dt) {
   // makes a heavy load swing out from under the operator as it breaks the
   // ground, with no special case anywhere for liftoff: the pivot simply moves
   // out as the weight comes on, and the rotating-frame terms below do the rest.
-  const pivotRadius = c.radius + (c.deflection || 0);
+  const pivotRadius = c.hangRadius !== undefined ? c.hangRadius : c.radius;
   const pivotRadiusVel = c.radiusVel + (c.deflectionVel || 0);
 
   // Pivot acceleration this tick, as a finite difference of the crane's own
@@ -216,11 +216,20 @@ export function update(ctx, dt) {
 
   let tensionFraction;
   if (load.attached && bottomY <= surfaceY) {
+    // Latch where it came to rest, once, in the jib frame. Everything that asks
+    // where the load is reads this while it is down, so the crate stays on the
+    // pad while the crane springs back from under it.
+    if (!load.onSurface) {
+      load.restJibX = pivotRadius + Math.sin(swing.y) * c.line;
+      load.restJibZ = Math.sin(swing.x) * c.line;
+    }
     load.onSurface = true;
     // Rope keeps paying out after touchdown; tension bleeds off across TENSION_BLEED.
     tensionFraction = clamp(1 - (surfaceY - bottomY) / TENSION_BLEED, 0, 1);
   } else {
     load.onSurface = false;
+    load.restJibX = null;
+    load.restJibZ = null;
     tensionFraction = load.attached ? 1 : 0;
   }
   load.tension = load.attached ? load.mass * G * tensionFraction : 0;

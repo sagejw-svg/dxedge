@@ -38,6 +38,11 @@ export function createState() {
       // really carrying; pendulum.js hangs the load from the deflected point and
       // render.js draws it there. Metres and metres per second, always >= 0.
       deflection: 0, deflectionVel: 0,
+      // radius + deflection, published once so every system that asks "where is
+      // the load" gets the same answer. Adding the two by hand at each call site
+      // is how the drawn load and the scored load came to be a third of a
+      // landing tolerance apart.
+      hangRadius: 20,
       line: 30, lineVel: 0,          // rope paid out below trolley, m
       jibLength: CRANE.jibLength, minRadius: CRANE.minRadius,
       maxRadius: CRANE.maxRadius,    // trolley stop; data/crane.js is the one place to change it
@@ -51,6 +56,12 @@ export function createState() {
       attached: false, mass: 0, size: [1, 1, 1],
       swing: { x: 0, y: 0, vx: 0, vy: 0 }, // tangential / radial angles, rad
       onSurface: false, tension: 0,
+      // RESTING shape change, declared under hard rule 6. Where the load came to
+      // rest, in the jib frame, latched by pendulum.js the tick it settles and
+      // cleared when it lifts again. null while it is in the air. A load on the
+      // ground stays where it was put: the crane straightening as the weight
+      // comes off it must not walk the crate across the pad.
+      restJibX: null, restJibZ: null,
       // PHASE 4. Where the load's underside actually is, clamped at whatever it
       // is resting on. pendulum.js owns it; sensors, missions and render read it
       // instead of deriving a position from the rope length.

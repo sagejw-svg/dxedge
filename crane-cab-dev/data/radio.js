@@ -257,3 +257,14 @@ export const DISTANCE_BUCKETS = {
 
 // Past the last bucket the number stops helping. Ground says this instead.
 export const DISTANCE_FAR = { words: 'keep coming', tag: 'ON' };
+
+// Said on a set-down the operator cannot see, in place of a number, when the
+// load starts to swing where it cannot afford to. It has to work over a hole in
+// the ground AND over a scaffold deck twelve metres up, so it says nothing about
+// which: the recording that used to be used here is CENTRED, "You are over the
+// hole", which on mission 2 described a hole that does not exist.
+export const PLUMB_HINT = { say: 'DOWN_EASY_PLUMB', caption: 'Down easy. Keep her plumb.' };
+
+// The countdown line. {n} is the bucket's own words, so the number and the units
+// come from the same table the horizontal corrections use.
+export const DEPTH_CAPTION = '{n} to go.';

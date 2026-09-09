@@ -218,6 +218,9 @@ export function update(ctx, dt) {
   const wasDeflection = c.deflection;
   c.deflection += (target - c.deflection) * (1 - Math.exp(-dt / DEFLECTION_TAU));
   c.deflectionVel = dt > 0 ? (c.deflection - wasDeflection) / dt : 0;
+  // The single published answer to "how far out is the rope hanging". Everything
+  // downstream reads this, never radius + deflection spelled out again.
+  c.hangRadius = c.radius + c.deflection;
 
   // --- Look-around --- intent.look.{dx,dy} is a one-shot per-tick delta from
   // input.js (mouse drag or the arrow keys), cleared in endTick. Integrated

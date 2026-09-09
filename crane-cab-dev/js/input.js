@@ -186,6 +186,12 @@ export function update(ctx, dt) {
   const ctrl = pressed.has('ControlLeft') || pressed.has('ControlRight');
   intent.range = ctrl ? 'micro' : (shift ? 'II' : 'I');
 
+  // Standard (non-inverted) mouselook on BOTH axes. Pitch was already right and
+  // yaw was not: dragging right, or holding the right arrow, turned the head
+  // left, so the two axes contradicted each other and the arrow keys added
+  // yesterday made it undeniable. One negation fixes drag and keys together,
+  // since both feed this accumulator, and it puts the head the same way round as
+  // the V key's own tracking, which was already correct and used to fight it.
   // Standard (non-inverted) mouselook: dragging down should pitch the
   // camera down, so screen-down (positive movementY) must decrease pitch.
   // The arrow keys are the same head movement as a drag, in fixed steps, for
@@ -197,7 +203,7 @@ export function update(ctx, dt) {
   if (pressed.has('ArrowUp')) lookAccumDy -= LOOK_KEY_STEP;
   if (pressed.has('ArrowDown')) lookAccumDy += LOOK_KEY_STEP;
 
-  intent.look.dx = lookAccumDx * LOOK_SENS;
+  intent.look.dx = -lookAccumDx * LOOK_SENS;
   intent.look.dy = -lookAccumDy * LOOK_SENS;
   lookAccumDx = 0;
   lookAccumDy = 0;

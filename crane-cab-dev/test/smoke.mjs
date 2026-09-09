@@ -543,6 +543,47 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
 }
 
 
+// 18. Which way the head turns. Pitch followed FPS convention and yaw followed
+//     drag-the-map, so dragging right turned the view left while dragging down
+//     turned it down: the two axes contradicted each other, and the arrow keys
+//     made it the first thing a new player would notice.
+//
+//     Asserted against the world rather than a cross product, because a cross
+//     product has a handedness convention to get wrong and this one got it
+//     wrong first time round. With the house parked at slew 0 the jib runs along
+//     world +x and the seat looks down it, so the operator's right hand points
+//     at +z: turning the head right has to raise the view direction's z.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(600);
+  await p.evaluate(() => {
+    const s = window.__cab.state;
+    s.crane.slew = 0; s.crane.slewVel = 0;
+    s.look.yaw = 0; s.look.pitch = 0; s.look.tracking = false;
+  });
+  await sleep(200);
+  const dirAfter = async (key) => {
+    await p.evaluate(() => { window.__cab.state.look.yaw = 0; window.__cab.state.look.pitch = 0; });
+    await sleep(150);
+    await p.keyboard.down(key);
+    await sleep(700);
+    await p.keyboard.up(key);
+    await sleep(150);
+    return p.evaluate(async () => (await import('./js/render.js'))._eye().dir);
+  };
+  const right = await dirAfter('ArrowRight');
+  const left = await dirAfter('ArrowLeft');
+  const down = await dirAfter('ArrowDown');
+  const up = await dirAfter('ArrowUp');
+  rec('the arrow keys turn the head the way they point, on both axes',
+    right[2] > 0.05 && left[2] < -0.05 && down[1] < -0.05 && up[1] > 0.05,
+    `right z ${right[2].toFixed(3)} (want > 0), left z ${left[2].toFixed(3)} (want < 0), ` +
+    `down y ${down[1].toFixed(3)} (want < 0), up y ${up[1].toFixed(3)} (want > 0)`);
+  await p.close();
+}
+
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);

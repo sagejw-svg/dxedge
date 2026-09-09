@@ -42,7 +42,7 @@
 import {
   SCRIPTS, GUIDE_CALLS,
   NOT_READY_HINT, NOT_SLACK_HINT, TOO_HIGH_HINT, TOO_LOW_HINT,
-  SAY_AGAIN_LABEL, DISTANCE_BUCKETS, DISTANCE_FAR
+  SAY_AGAIN_LABEL, DISTANCE_BUCKETS, DISTANCE_FAR, PLUMB_HINT, DEPTH_CAPTION
 } from '../data/radio.js';
 import { CLIP_SECONDS } from '../data/clips.js';
 
@@ -495,9 +495,12 @@ function guideTolerance(ctx) {
 // same problem and he should say them the same way.
 function polarErrorTo(state, target) {
   const c = state.crane;
+  const hang = c.hangRadius !== undefined ? c.hangRadius : c.radius;
   const targetRadius = Math.hypot(target[0], target[2]);
   const dAngle = wrapPi(Math.atan2(target[2], target[0]) - c.slew);
-  return { tangential: dAngle * c.radius, radial: targetRadius - c.radius };
+  // Measured from where the rope hangs, so "trolley in two feet" is two feet of
+  // load rather than two feet of trolley. Under load those differ by the bend.
+  return { tangential: dAngle * hang, radial: targetRadius - hang };
 }
 
 // The single largest correction, as a call. Ground never says two at once.
@@ -534,7 +537,8 @@ function guideInfo(ctx) {
   const tx = target[0];
   const tz = target[2];
 
-  const jibX = c.radius + Math.sin(state.load.swing.y) * c.line;
+  const jibX = (c.hangRadius !== undefined ? c.hangRadius : c.radius) +
+    Math.sin(state.load.swing.y) * c.line;
   const jibZ = Math.sin(state.load.swing.x) * c.line;
   const cos = Math.cos(c.slew);
   const sin = Math.sin(c.slew);
@@ -600,11 +604,17 @@ function guidePeriod(err, tol) {
 }
 
 // How far the load still has to fall to reach what it is being set down on.
-// sensors.hookHeight is the bottom of the load, which is the face that lands.
+// sensors.hookHeight is the load's CENTRE, not its bottom: sensors.js subtracts
+// half the load height from the block, and its own header says so. Counting down
+// to the centre told the operator he had half a load height more room than he
+// had, which is the wrong direction to be wrong in on a blind set-down - it was
+// 0.70 m out on the shaft and 0.50 m on the scaffold.
 function dropRemaining(state) {
   const landing = state.mission.landingPos;
   if (!landing) return null;
-  return state.sensors.hookHeight - landing[1];
+  const load = state.load;
+  const halfHeight = load.attached ? (load.size[1] || 0) / 2 : 0;
+  return (state.sensors.hookHeight - halfHeight) - landing[1];
 }
 
 // The countdown call for a remaining drop, as a clip key and a caption. Same
@@ -613,7 +623,8 @@ function dropRemaining(state) {
 function depthCall(state, drop) {
   const b = distanceBucket(drop, state.settings.units);
   if (b === DISTANCE_FAR) return null;      // too far out for a number to help
-  return { say: `TOGO_${b.tag}`, caption: `${b.words[0].toUpperCase()}${b.words.slice(1)} to go.` };
+  const words = `${b.words[0].toUpperCase()}${b.words.slice(1)}`;
+  return { say: `TOGO_${b.tag}`, caption: DEPTH_CAPTION.replace('{n}', words) };
 }
 
 // ---------- main loop ----------
@@ -920,7 +931,7 @@ function descend(ctx, dt) {
   // A load swinging into the side of a shaft is worth more than a number.
   if (state.sensors.loadSway > DESCENT_SWAY) {
     lastDepthKey = null;
-    sayNode(ctx, 1, { say: 'CENTRED', caption: 'Keep her plumb. Do not let it swing in there.' }, true);
+    sayNode(ctx, 1, PLUMB_HINT, true);
     return;
   }
 

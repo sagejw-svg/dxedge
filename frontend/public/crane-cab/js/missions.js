@@ -49,8 +49,17 @@ function hookWorld(state) {
   // Where the hook block actually is, swing included. The guide calls in
   // radio.js deliberately ignore swing; hooking on does not get to.
   const c = state.crane;
-  const jibX = c.radius + Math.sin(state.load.swing.y) * c.line;
-  const jibZ = Math.sin(state.load.swing.x) * c.line;
+  // hangRadius, not radius: under load the crane bends out toward the load and
+  // the rope hangs past the trolley. Judging the landing on the trolley's own
+  // radius put the scored position up to a whole landing tolerance from the one
+  // on screen, so a lift could look centred, ring green, and score outside.
+  // A landed load stays where it was put; pendulum.js latches that spot the tick
+  // it settles. Only a load in the air is derived from the crane.
+  const rest = state.load.restJibX !== null && state.load.restJibX !== undefined;
+  const jibX = rest ? state.load.restJibX
+    : (c.hangRadius !== undefined ? c.hangRadius : c.radius) +
+      Math.sin(state.load.swing.y) * c.line;
+  const jibZ = rest ? state.load.restJibZ : Math.sin(state.load.swing.x) * c.line;
   const cos = Math.cos(c.slew);
   const sin = Math.sin(c.slew);
   return { x: jibX * cos - jibZ * sin, z: jibX * sin + jibZ * cos };
@@ -311,8 +320,17 @@ function planAt(x, z, sx, sz) {
 
 function loadCentre(state) {
   const c = state.crane;
-  const jibX = c.radius + Math.sin(state.load.swing.y) * c.line;
-  const jibZ = Math.sin(state.load.swing.x) * c.line;
+  // hangRadius, not radius: under load the crane bends out toward the load and
+  // the rope hangs past the trolley. Judging the landing on the trolley's own
+  // radius put the scored position up to a whole landing tolerance from the one
+  // on screen, so a lift could look centred, ring green, and score outside.
+  // A landed load stays where it was put; pendulum.js latches that spot the tick
+  // it settles. Only a load in the air is derived from the crane.
+  const rest = state.load.restJibX !== null && state.load.restJibX !== undefined;
+  const jibX = rest ? state.load.restJibX
+    : (c.hangRadius !== undefined ? c.hangRadius : c.radius) +
+      Math.sin(state.load.swing.y) * c.line;
+  const jibZ = rest ? state.load.restJibZ : Math.sin(state.load.swing.x) * c.line;
   const cos = Math.cos(c.slew);
   const sin = Math.sin(c.slew);
   return { x: jibX * cos - jibZ * sin, z: jibX * sin + jibZ * cos };

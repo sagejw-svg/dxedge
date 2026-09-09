@@ -56,7 +56,8 @@ function loadAABB(state) {
   const load = state.load;
   const [sx, sy, sz] = load.size;
 
-  const jibX = c.radius + Math.sin(load.swing.y) * c.line;
+  const jibX = (c.hangRadius !== undefined ? c.hangRadius : c.radius) +
+    Math.sin(load.swing.y) * c.line;
   const jibZ = Math.sin(load.swing.x) * c.line;
   const cos = Math.cos(c.slew);
   const sin = Math.sin(c.slew);
@@ -109,7 +110,12 @@ export function update(ctx, dt) {
   const s = state.sensors;
   const load = state.load;
 
-  s.radius = c.radius;
+  // Where the rope is, not where the trolley is: the gauge is the operator's
+  // read on his own position and it has to agree with what he can see. The LMI
+  // below deliberately keeps the trolley's radius, because a load chart is a
+  // function of trolley position and feeding the deflected radius back into the
+  // chart that produced the deflection would be a loop.
+  s.radius = c.hangRadius !== undefined ? c.hangRadius : c.radius;
 
   const loadHalfHeight = load.attached ? (load.size[1] || 0) / 2 : 0;
   // The drop, not the line: at the ends of an arc the hook is measurably higher
