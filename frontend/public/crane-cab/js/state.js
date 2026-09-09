@@ -31,6 +31,13 @@ export function createState() {
     crane: {
       slew: 0, slewVel: 0,           // rad, rad/s
       radius: 20, radiusVel: 0,      // trolley distance from mast, m
+      // DEFLECTION shape change, declared under hard rule 6. The load bends the
+      // jib down and the mast forward toward it, so the rope hangs from further
+      // out than the trolley is: the radius the load actually swings on is
+      // radius + deflection. crane.js computes both from the tension the rope is
+      // really carrying; pendulum.js hangs the load from the deflected point and
+      // render.js draws it there. Metres and metres per second, always >= 0.
+      deflection: 0, deflectionVel: 0,
       line: 30, lineVel: 0,          // rope paid out below trolley, m
       jibLength: CRANE.jibLength, minRadius: CRANE.minRadius,
       maxRadius: CRANE.maxRadius,    // trolley stop; data/crane.js is the one place to change it

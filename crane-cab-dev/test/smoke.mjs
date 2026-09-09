@@ -498,6 +498,51 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
 }
 
 
+// 17. The crane bends toward a heavy load, and the rope has to be drawn where
+//     the physics hangs it. pendulum.js hangs the load from radius + deflection;
+//     if render kept using the trolley's own radius the rope would be visibly
+//     beside the load it is holding, which is the sort of thing that reads as a
+//     bug rather than as weight.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(600);
+  const seen = await p.evaluate(async () => {
+    const m = await import('./js/render.js');
+    const cab = window.__cab;
+    cab.state.crane.radius = 30;
+    cab.state.crane.line = 20;
+    cab.state.load.swing.x = 0; cab.state.load.swing.y = 0;
+    cab.state.load.attached = true;
+    cab.state.load.mass = 1800;
+    await new Promise((r) => setTimeout(r, 1500));   // let the structure take up
+    // Read the state in the same breath as the drawn position: the attach sets
+    // the load swinging, so comparing a drawn hook against a settled hang point
+    // would be comparing two different instants.
+    const hook = m._hookWorld();
+    const c = cab.state.crane;
+    const sw = cab.state.load.swing;
+    return {
+      deflection: c.deflection, radius: c.radius, line: c.line,
+      swingY: sw.y, swingX: sw.x,
+      drawn: [hook[0], hook[2]]
+    };
+  });
+  // Where the physics says the load hangs, in the jib frame: the bent jib's
+  // radius, plus the swing off it.
+  const alongJib = seen.radius + seen.deflection + Math.sin(seen.swingY) * seen.line;
+  const acrossJib = Math.sin(seen.swingX) * seen.line;
+  const wantR = Math.hypot(alongJib, acrossJib);
+  const drawnR = Math.hypot(seen.drawn[0], seen.drawn[1]);
+  rec('the rope is drawn from where the bent jib actually holds it',
+    seen.deflection > 0.15 && Math.abs(drawnR - wantR) < 0.03,
+    `trolley ${seen.radius}, bend ${seen.deflection.toFixed(3)}, swing ` +
+    `${(seen.swingY * 180 / Math.PI).toFixed(2)} deg; hook drawn at ${drawnR.toFixed(3)}, ` +
+    `physics hangs it at ${wantR.toFixed(3)}`);
+  await p.close();
+}
+
+
 await b.close();
 const bad = results.filter((r) => !r).length;
 console.log(`\n${results.length - bad}/${results.length} checks passed`);

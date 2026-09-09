@@ -1224,15 +1224,25 @@ export function update(ctx, dt) {
 
   setRingRadius(parts.loadRing, state.sensors.maxLoadRadius || CRANE.maxRadius);
 
-  const topY = c.cabHeight + CRANE.hookDrop;
-  trolley.position.set(c.radius, topY + 0.4, 0);
-  sheave.position.set(c.radius, topY - SHEAVE_DROP, 0);
+  // The load bends the jib down and the mast forward toward it, so everything
+  // that hangs off the jib sits a little further out and a little lower than the
+  // trolley was commanded to. pendulum.js already hangs the load from that
+  // deflected point; drawing it anywhere else would put the rope visibly beside
+  // the load it is holding. The droop is the sag that goes with the lean, kept
+  // proportional so the two move together; on a 55 m jib it is under a degree
+  // and reads as weight rather than as damage.
+  const bend = c.deflection || 0;
+  const droop = bend * 2.2;
+  const topY = c.cabHeight + CRANE.hookDrop - droop;
+  const jibR = c.radius + bend;
+  trolley.position.set(jibR, topY + 0.4, 0);
+  sheave.position.set(jibR, topY - SHEAVE_DROP, 0);
   // The drop is the vertical part of the rope, L cos(tilt). Hanging the hook a
   // whole line length down while also offsetting it sideways drew a rope longer
   // than the rope is, and held the load at one height right through an arc.
   const hookY = topY - ropeDrop(state);
   hook.position.set(
-    c.radius + Math.sin(state.load.swing.y) * c.line,
+    jibR + Math.sin(state.load.swing.y) * c.line,
     hookY,
     Math.sin(state.load.swing.x) * c.line
   );
@@ -1242,7 +1252,7 @@ export function update(ctx, dt) {
   hook.rotation.x = -state.load.swing.x;
 
   // Rope from the sheave to the hook, as a scaled and aimed cylinder.
-  ropeTop.set(c.radius, topY - SHEAVE_DROP, 0);
+  ropeTop.set(jibR, topY - SHEAVE_DROP, 0);
   ropeVec.subVectors(hook.position, ropeTop);
   const ropeLen = ropeVec.length();
   if (ropeLen > 0.01) {

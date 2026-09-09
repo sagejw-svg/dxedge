@@ -23,7 +23,7 @@
 // at or above the pre-alarm percent, trolley-out is capped to range I speed; while
 // locked, trolley-out brakes at 2x accel instead of coasting on the normal ramp.
 
-import { CRANE } from '../data/crane.js';
+import { CRANE, ratedAtRadius } from '../data/crane.js';
 import { SUPPORT_REACH } from '../data/missions.js';
 
 const RANGE_SPEED = {
@@ -49,6 +49,22 @@ const LOOK_PITCH_MAX = 0.6;
 const LOOK_YAW_MIN = -1.4;
 const LOOK_YAW_MAX = 1.4;
 const LOOK_HOME_PITCH = -0.35;   // the seated default, matching state.js
+
+// Structural deflection. A load bends the jib downward and, on a tower crane,
+// bends the mast forward toward the load, so the point the rope hangs from is
+// further out than the trolley is and the radius grows as the weight comes on.
+// The operator feels it as the load swinging out from under him at the moment it
+// breaks the ground, and the trained answer on a saddle jib is to trolley in
+// while taking the weight, holding the radius where it was.
+//
+// Scaled off the load chart rather than any maker's deflection figures, which
+// hard rule 7 would not allow anyway: a load chart is a curve of constant design
+// moment, so tension as a fraction of what is rated at this radius is a fair
+// stand-in for fraction of design moment, which is what actually sets how far a
+// structure bends. Tuned for feel, like the chart itself.
+const G = 9.81;
+const MAX_DEFLECTION = 0.45;     // m the radius grows at the rated load
+const DEFLECTION_TAU = 0.35;     // s for the structure to take up; it is stiff, not instant
 // The eye, in the cab, in the slewed frame: cabGroup sits at (1.6, cabHeight,
 // 1.9) and render.js puts the eye at (0.2, 1.35, 0) inside it.
 const EYE_X = 1.8;
@@ -189,6 +205,19 @@ export function update(ctx, dt) {
     c.line = Math.max(stop, lineWas);
     c.lineVel = 0;
   }
+
+  // --- Structural deflection ---
+  // Driven by the tension the rope is actually carrying, not by whether a load
+  // is attached, so it comes on as the weight transfers rather than stepping the
+  // instant the shackle closes. load.tension is a tick old here, which is the
+  // same one-tick staleness pendulum.js already accepts for sensors.wind, and at
+  // 1/120 s it is nothing against a 0.35 s time constant.
+  const rated = ratedAtRadius(c.radius);
+  const moment = rated > 0 ? (state.load.tension || 0) / (rated * G) : 0;
+  const target = MAX_DEFLECTION * Math.min(1.5, Math.max(0, moment));
+  const wasDeflection = c.deflection;
+  c.deflection += (target - c.deflection) * (1 - Math.exp(-dt / DEFLECTION_TAU));
+  c.deflectionVel = dt > 0 ? (c.deflection - wasDeflection) / dt : 0;
 
   // --- Look-around --- intent.look.{dx,dy} is a one-shot per-tick delta from
   // input.js (mouse drag or the arrow keys), cleared in endTick. Integrated

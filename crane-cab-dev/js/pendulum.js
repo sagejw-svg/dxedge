@@ -85,7 +85,7 @@ const AIR_DENSITY = 1.225;         // kg/m^3
 const DRAG_COEFF = 1.2;            // flat-ish box
 
 let prevSlewVel = 0;
-let prevRadiusVel = 0;
+let prevPivotVel = 0;
 let wasTight = false;
 let wasSlack = false;
 let settledFor = 0;
@@ -135,7 +135,7 @@ export function init(ctx) {
   load.tension = 0;
 
   prevSlewVel = ctx.state.crane.slewVel;
-  prevRadiusVel = ctx.state.crane.radiusVel;
+  prevPivotVel = ctx.state.crane.radiusVel + (ctx.state.crane.deflectionVel || 0);
   wasTight = false;
   wasSlack = false;
   settledFor = 0;
@@ -148,14 +148,27 @@ export function update(ctx, dt) {
   const load = state.load;
   const swing = load.swing;
 
+  // The rope hangs from where the jib actually is, not where the trolley is
+  // commanded to be. Under load the structure bends out toward the load, and
+  // that deflected point is the pendulum's pivot. Feeding it in here is what
+  // makes a heavy load swing out from under the operator as it breaks the
+  // ground, with no special case anywhere for liftoff: the pivot simply moves
+  // out as the weight comes on, and the rotating-frame terms below do the rest.
+  const pivotRadius = c.radius + (c.deflection || 0);
+  const pivotRadiusVel = c.radiusVel + (c.deflectionVel || 0);
+
   // Pivot acceleration this tick, as a finite difference of the crane's own
-  // velocities. crane.js has already run (fixed tick order), so these are current.
+  // velocities. crane.js has already run (fixed tick order), so these are
+  // current. The difference is taken on the pivot's velocity, not the trolley's,
+  // because the structure taking up its deflection accelerates the rope's top
+  // end exactly as a trolley movement would, and that acceleration is the whole
+  // of the liftoff kick.
   const slewAccel = clamp(dt > 0 ? (c.slewVel - prevSlewVel) / dt : 0,
     -SLEW_ACCEL_CLAMP, SLEW_ACCEL_CLAMP);
-  const radiusAccel = clamp(dt > 0 ? (c.radiusVel - prevRadiusVel) / dt : 0,
+  const radiusAccel = clamp(dt > 0 ? (pivotRadiusVel - prevPivotVel) / dt : 0,
     -DRIVE_ACCEL_CLAMP, DRIVE_ACCEL_CLAMP);
   prevSlewVel = c.slewVel;
-  prevRadiusVel = c.radiusVel;
+  prevPivotVel = pivotRadiusVel;
 
   // The pivot's acceleration, in full, in the jib frame. This is just the polar
   // acceleration of a point at radius r turning at rate Omega, which is what the
@@ -175,8 +188,8 @@ export function update(ctx, dt) {
   // lean whatsoever, and all the swing came from the brief moments of Omegadot at
   // the start and end of a turn.
   const slewRate = c.slewVel;
-  const driveTangential = c.radius * slewAccel + 2 * c.radiusVel * slewRate;
-  const driveRadial = radiusAccel - c.radius * slewRate * slewRate;
+  const driveTangential = pivotRadius * slewAccel + 2 * pivotRadiusVel * slewRate;
+  const driveRadial = radiusAccel - pivotRadius * slewRate * slewRate;
 
   // --- Deck contact and line tension ---
   // Hook block height above the deck, then the bottom face of what hangs on it.

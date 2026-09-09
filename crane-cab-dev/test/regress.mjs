@@ -1457,10 +1457,23 @@ async function tSwingKeepsItsPlane() {
     const jz = Math.sin(s.load.swing.x);
     return Math.atan2(jx * sn + jz * cs, jx * cs - jz * sn);
   };
+  // Sample each window at the swing's own peak, not at whatever phase a fixed
+  // four seconds happens to land on. The bearing of a swing plane is only well
+  // defined when the swing is large, and |swing| passes through zero twice a
+  // period, so sampling on the clock made whether a window counted at all a
+  // matter of phase: a change elsewhere that shifted the period slightly could
+  // drop the sample count under the minimum while the drift it is measuring was
+  // an order of magnitude inside tolerance.
   const seen = [];
   for (let k = 0; k < 12; k += 1) {
-    until(sim, () => false, 4, (st) => { st.intent.slew = 1; st.intent.range = 'II'; st.crane.minRadius = 0; });
-    if (Math.hypot(s.load.swing.x, s.load.swing.y) > 0.05) seen.push(bearing());
+    let bestAmp = 0;
+    let bestBearing = null;
+    until(sim, () => false, 4, (st) => {
+      st.intent.slew = 1; st.intent.range = 'II'; st.crane.minRadius = 0;
+      const amp = Math.hypot(st.load.swing.x, st.load.swing.y);
+      if (amp > bestAmp) { bestAmp = amp; bestBearing = bearing(); }
+    });
+    if (bestAmp > 0.05) seen.push(bestBearing);
   }
   const wrap = (a) => {
     const b = Math.atan2(Math.sin(a), Math.cos(a));
@@ -2069,6 +2082,89 @@ async function tGroundTalksTheBlindLoadDown() {
     `during the descent he said ${JSON.stringify(said)}`);
 }
 
+// ---------- the crane leans toward the load ----------
+
+// A load bends the jib down and the mast forward toward it, so the rope hangs
+// from further out than the trolley sits. The game had a rigid crane: the load
+// hung exactly under the trolley however heavy it was, and picking a heavy one
+// off the deck cost nothing. Real operators pick with the hook plumb over the
+// load and then trolley in while taking the weight, holding the radius where it
+// was, because otherwise the load swings out from under them as it breaks free.
+async function tAHeavyLoadPullsTheCraneOutToIt() {
+  const sim = await startMission(1);
+  const p = polarOf(m1.pickup.pos);
+  park(sim, { slew: p.slew, radius: p.radius });
+  until(sim, atNode('onHook'), 16);
+  const restingRadius = sim.state.crane.radius;
+  rig(sim, 1);
+  // Let the structure take up and the swing it causes die away.
+  until(sim, () => false, 30);
+  const c = sim.state.crane;
+  // Where the load actually hangs, in the jib frame: the trolley plus however
+  // far the crane has bent out toward it.
+  const hangRadius = c.radius + c.deflection;
+  rec('a heavy load bends the crane out toward it, so the rope hangs past the trolley',
+    c.deflection > 0.15 && c.deflection < 0.6 &&
+    Math.abs(c.radius - restingRadius) < 0.01 && hangRadius > restingRadius + 0.15,
+    `trolley still at ${c.radius.toFixed(2)} m, crane bent ${c.deflection.toFixed(3)} m, ` +
+    `so the load hangs at ${hangRadius.toFixed(2)} m`);
+}
+
+// And it scales with what is on the hook. An empty block barely moves it.
+async function tDeflectionFollowsTheLoad() {
+  const settle = async (id) => {
+    const sim = await startMission(id);
+    const m = MISSIONS[id];
+    const p = polarOf(m.pickup.pos);
+    park(sim, { slew: p.slew, radius: 30 });      // same radius for all three
+    until(sim, atNode('onHook'), 16);
+    rig(sim, id);
+    until(sim, () => false, 25);
+    return { mass: m.load.mass, d: sim.state.crane.deflection };
+  };
+  const empty = await startMission(0);
+  until(empty, () => false, 6);
+  const heavy = await settle(1);      // 1800 kg
+  const light = await settle(3);      // 1100 kg
+  rec('the crane bends by how much is on the hook, and not at all with an empty block',
+    empty.state.crane.deflection < 0.001 && light.d > 0.05 && heavy.d > light.d * 1.3,
+    `empty block ${empty.state.crane.deflection.toFixed(4)} m, ` +
+    `${light.mass} kg ${light.d.toFixed(3)} m, ${heavy.mass} kg ${heavy.d.toFixed(3)} m`);
+}
+
+// The operator's answer to it. Taking the weight walks the load outward; a
+// trolley-in of the same size while the weight comes on holds it where it was.
+async function tTrolleyingInHoldsTheLoadStill() {
+  const pick = async (compensate) => {
+    const sim = await startMission(1);
+    const p = polarOf(m1.pickup.pos);
+    park(sim, { slew: p.slew, radius: p.radius });
+    until(sim, atNode('onHook'), 16);
+    rig(sim, 1);
+    const before = sim.state.crane.radius + sim.state.crane.deflection;
+    let peak = 0;
+    // The structure takes up over about a third of a second; ride it out either
+    // way and let the swing settle so the comparison is of where it ended up.
+    until(sim, () => false, 30, (st) => {
+      if (compensate) {
+        const want = before - (st.crane.radius + st.crane.deflection);
+        st.intent.trolley = Math.max(-1, Math.min(1, want * 6));
+      }
+      peak = Math.max(peak, Math.hypot(st.load.swing.x, st.load.swing.y));
+    });
+    sim.state.intent.trolley = 0;
+    const after = sim.state.crane.radius + sim.state.crane.deflection;
+    return { drift: after - before, peak: peak * 180 / Math.PI };
+  };
+  const loose = await pick(false);
+  const held = await pick(true);
+  rec('the load walks out when the weight comes on, and trolleying in holds it',
+    loose.drift > 0.15 && Math.abs(held.drift) < loose.drift * 0.4,
+    `left alone the hang point walked out ${loose.drift.toFixed(3)} m (peak swing ` +
+    `${loose.peak.toFixed(2)} deg); trolleying in held it to ${held.drift.toFixed(3)} m ` +
+    `(peak swing ${held.peak.toFixed(2)} deg)`);
+}
+
 const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tReHookAnswered, tHoistCorrection, tNoReplayedAlarm, tAllStopNotPostponable,
   tAllStopCleared, tPhantomKey, tRealCollisionStillCounts,
@@ -2096,7 +2192,9 @@ const all = [tBoot, tTimeouts, tGuideAndHook, tFullLift, tTruckHookNoAlarm,
   tTheHookRetryOutlivesTheVoice, tSayAgainStillWorksAfterTheCap,
   tTheHookCallSaysWhichWay,
   tGroundTalksLessWhenThereIsRoom, tGroundDoesNotRepeatTheSameCall,
-  tGroundTalksTheBlindLoadDown];
+  tGroundTalksTheBlindLoadDown,
+  tAHeavyLoadPullsTheCraneOutToIt, tDeflectionFollowsTheLoad,
+  tTrolleyingInHoldsTheLoadStill];
 
 for (const t of all) {
   try { await t(); } catch (e) { rec(`${t.name} (crashed)`, false, String(e).split('\n')[0]); }
