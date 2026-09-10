@@ -156,6 +156,26 @@ fresh session doesn't have to reverse-engineer it from git history.
     a guide that pointed into a building. Run `node test/fly.mjs` before a deploy
     that touches the missions or the guide. All seven jobs fly to a win.
   - Suite is 113 headless checks, 24 browser checks, 7 flown jobs.
+- **The cab has its own gauges.** Everything the screen console shows is now also
+  drawn in the world, on two instrument panels render.js builds into the cab, and
+  G hides the screen console so the operator flies on them alone. Saved with the
+  other settings.
+  - Two panels, because a cab has two. The gauges are on the right hand console
+    at armrest height, which is where you look DOWN for a number; the radio head
+    is on the front window frame in the sight line, which is where you must not
+    have to look for a call. One panel meant the only way to read a caption with
+    the HUD off was a thirty five degree glance away from the load, mid lift.
+  - Both are canvases used as textures, on MeshBasicMaterial so a backlit display
+    is not lit by the cab lamp, redrawn at 12 Hz and only when a change signature
+    moves. Measured: a moving crane uploads about two textures a second, a still
+    one uploads none. Cost is 4 draw calls and 28 triangles against a budget of
+    90 and 40000.
+  - New `data/units.js`. CLAUDE.md puts unit conversion in ui.js, which was right
+    while the gauges existed once; the alternative to this file was two copies of
+    the same arithmetic in two modules that may not import each other, which is
+    how a cab comes to disagree with its own HUD about what is on the hook.
+  - `state.settings.hud` is new (hard rule 6, declared in state.js).
+  - Suite is 113 headless checks and 30 browser checks.
 - Live at: https://dxedge.net/crane-cab (standalone) and as the first tab
   group on https://dxedge.net/
 - Repo: sagejw-svg/dxedge, branch main

@@ -158,7 +158,13 @@ export function createState() {
     progress: { achievements: {}, best: {}, hooks: 0, furthest: 0, savedOk: true },
 
     // save.js loads and persists this.
-    settings: { sensitivity: 1, damping: 0.5, units: 'imperial', mute: false },
+    // HUD shape change, declared under hard rule 6. `hud` is whether the screen
+    // console is drawn at all. The gauges now exist twice: on the DOM dock at the
+    // bottom of the screen, and on a real instrument panel on the cab's right
+    // console that render.js draws in the world. Turning the dock off leaves the
+    // operator flying on the cab's own gauges, which is the point of it. Saved
+    // with the rest of the settings, so it survives a refresh.
+    settings: { sensitivity: 1, damping: 0.5, units: 'imperial', mute: false, hud: true },
 
     // Camera look-around. render.js reads, crane.js integrates it from
     // intent.look. yaw and pitch are relative to the jib, not to the world, so

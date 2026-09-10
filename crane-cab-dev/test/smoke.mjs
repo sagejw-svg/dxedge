@@ -265,13 +265,22 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
     const m = await import('./js/render.js');
     return { on: m._shadowsOn(), fps: window.__cab.state.time.fps, mapOn: m._renderer().shadowMap.enabled };
   });
-  await sleep(4000);
+  await sleep(3000);
   const early = await state();
-  await sleep(9000);
-  const late = await state();
+  // Polled to a budget rather than sampled at one instant. How long thirteen
+  // seconds of wall clock is worth in frames depends on how loaded this machine
+  // happens to be when this check runs, and the thing being asserted is that the
+  // guard fires at all, not that it fires on a particular second.
+  let late = early;
+  const until = Date.now() + 25000;
+  while (Date.now() < until) {
+    await sleep(1500);
+    late = await state();
+    if (!late.on) break;
+  }
   rec('the shadow pass gives up on a renderer that cannot afford it',
     early.on === true && late.on === false && late.mapOn === false && late.fps < 20,
-    `at 4 s shadows ${early.on} (${early.fps} fps), at 13 s shadows ${late.on} (${late.fps} fps)`);
+    `at 3 s shadows ${early.on} (${early.fps} fps), then ${late.on} (${late.fps} fps)`);
   await p.close();
 }
 
@@ -379,6 +388,7 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
     const t = rows.join(' | ');
     return /1.*4.*Answer ground/i.test(t) && /\bT\b.*mic/i.test(t) && /\bH\b.*Horn/i.test(t) &&
       /\bV\b.*Eyes on the load/i.test(t) && /\bZ\b.*Eyes front/i.test(t) &&
+      /\bG\b.*console/i.test(t) &&
       /Move your head/i.test(t);
   };
   rec('the controls card says how to answer the radio, on the title and the help card',
@@ -715,6 +725,148 @@ async function page(vw = 1440, vh = 900, dsf = 1) {
     board.rows >= 15 && board.named && board.described &&
     /Board: \d+ of \d+/.test(board.count) && board.fresh >= 1,
     `${board.rows} rows, summary "${board.count}", ${board.fresh} marked new`);
+  await p.close();
+}
+
+
+// 23. The cab has its own gauges now: everything the screen console shows, drawn
+//     on two panels in the world, so that hiding the console is putting your eyes
+//     in the cab rather than turning the instruments off. Nothing in the DOM-free
+//     suite can see them, and nothing about them is state - they are pixels on a
+//     canvas - so this reads the canvases.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(1500);
+  const shot = () => p.evaluate(async () => {
+    const m = await import('./js/render.js');
+    const read = (c) => {
+      if (!c) return null;
+      const g = c.getContext('2d');
+      const d = g.getImageData(0, 0, c.width, c.height).data;
+      let sum = 0;
+      let lit = 0;
+      // Every 401st pixel, which is a prime stride so it does not land on a grid.
+      for (let i = 0; i < d.length; i += 401 * 4) {
+        const v = d[i] + d[i + 1] + d[i + 2];
+        sum += v;
+        if (v > 240) lit += 1;
+      }
+      return { w: c.width, h: c.height, sum, lit };
+    };
+    return { dash: read(m._dashCanvas()), head: read(m._headCanvas()) };
+  });
+  const first = await shot();
+  const drawn = !!first.dash && !!first.head && first.dash.lit > 30 && first.head.lit > 5;
+  rec('the cab has its own gauges, drawn and lit',
+    drawn && first.dash.w === 1024 && first.head.w === 640,
+    `dash ${JSON.stringify(first.dash)} head ${JSON.stringify(first.head)}`);
+
+  // Ink on a canvas is not an instrument. The panels have to be in the scene,
+  // switched on, facing the seat and inside the frame - and a canvas check alone
+  // passes with all four of those broken, including the exact failure mountPanel
+  // was written to fix, which was a panel turned round showing its own back.
+  const placed = await p.evaluate(async () => {
+    const m = await import('./js/render.js');
+    const THREE = await import('three');
+    const cam = m._camera ? m._camera() : null;
+    const groups = m._panelMeshes();
+    const out = {};
+    for (const key of ['dash', 'head']) {
+      const grp = groups[key];
+      if (!grp) { out[key] = null; continue; }
+      let shown = true;
+      grp.traverseAncestors((a) => { if (a.visible === false) shown = false; });
+      const pos = grp.getWorldPosition(new THREE.Vector3());
+      // The face's own +z in world space, against the direction to the eye.
+      const normal = new THREE.Vector3(0, 0, 1)
+        .applyQuaternion(grp.getWorldQuaternion(new THREE.Quaternion()));
+      const toEye = cam.getWorldPosition(new THREE.Vector3()).sub(pos).normalize();
+      const ndc = pos.clone().project(cam);
+      out[key] = {
+        shown: shown && grp.visible,
+        facing: +normal.dot(toEye).toFixed(3),
+        onScreen: Math.abs(ndc.x) < 1 && Math.abs(ndc.y) < 1 && ndc.z < 1,
+        dist: +pos.distanceTo(cam.getWorldPosition(new THREE.Vector3())).toFixed(2)
+      };
+    }
+    return out;
+  });
+  const ok = (v) => v && v.shown && v.facing > 0.8 && v.onScreen && v.dist > 0.2 && v.dist < 3;
+  rec('and they are mounted in the cab, facing the seat, and in the frame',
+    ok(placed.dash) && ok(placed.head), JSON.stringify(placed));
+
+  // They follow the crane. Put a load on the hook and the panel has to change.
+  await p.evaluate(() => {
+    const st = window.__cab.state;
+    st.load.attached = true;
+    st.load.mass = 2400;
+    st.crane.radius = 44;
+  });
+  await sleep(700);
+  const moved = await shot();
+  rec('and they change when the crane does',
+    moved.dash.sum !== first.dash.sum,
+    `pixel sum ${first.dash.sum} then ${moved.dash.sum}`);
+
+  // And they stop when it does. The panel is a megabyte of texture and redrawing
+  // it every frame while nothing changes is the reason for the change gate. The
+  // sim is paused for this rather than merely left alone: a load on the hook is
+  // never still - it swings, the hook height moves with it, the ack window is
+  // counting down - and every one of those is a redraw the gate SHOULD let
+  // through.
+  await p.evaluate(() => { window.__cab.state.phase = 'paused'; });
+  await sleep(1200);
+  const a = await shot();
+  await sleep(1200);
+  const bq = await shot();
+  rec('and a still cab does not redraw its panels',
+    a.dash.sum === bq.dash.sum,
+    `paused, two seconds apart: ${a.dash.sum} then ${bq.dash.sum}`);
+  await p.close();
+}
+
+// 24. G hides the screen console. The `hidden` attribute alone did nothing here,
+//     because #console sets display in the stylesheet and the more specific rule
+//     wins, so the dock stayed on screen with its own state saying it was off.
+{
+  const p = await page();
+  await p.click('#btn-start');
+  await sleep(1200);
+  const dock = () => p.evaluate(() => {
+    const el = document.getElementById('console');
+    return {
+      hud: window.__cab.state.settings.hud,
+      hidden: el.hidden,
+      shown: el.getBoundingClientRect().height > 0
+    };
+  });
+  const on = await dock();
+  await p.keyboard.press('g');
+  await sleep(400);
+  const off = await dock();
+  await p.keyboard.press('g');
+  await sleep(400);
+  const back = await dock();
+  rec('G hides the screen console, and really hides it',
+    on.shown === true && off.hud === false && off.shown === false && back.shown === true,
+    `on ${JSON.stringify(on)} off ${JSON.stringify(off)} back ${JSON.stringify(back)}`);
+
+  // The cab's own panels are what is left, so they have to keep working with the
+  // console gone.
+  await p.keyboard.press('g');
+  await sleep(600);
+  const live = await p.evaluate(async () => {
+    const m = await import('./js/render.js');
+    const c = m._dashCanvas();
+    const g = c.getContext('2d');
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let lit = 0;
+    for (let i = 0; i < d.length; i += 401 * 4) if (d[i] + d[i + 1] + d[i + 2] > 240) lit += 1;
+    return { hud: window.__cab.state.settings.hud, lit };
+  });
+  rec('and the cab gauges are still lit with the console gone',
+    live.hud === false && live.lit > 30, `hud ${live.hud}, ${live.lit} lit samples`);
   await p.close();
 }
 

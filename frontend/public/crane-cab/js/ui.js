@@ -1,9 +1,18 @@
-// Console gauges, captions, cards, debug overlay. READ state, never write it
-// (the one exception is debug.show, toggled by F3, which is UI-owned).
+// Console gauges, captions, cards, debug overlay. READ state, never write it.
+// Two exceptions, both display choices that touch no simulation state and are
+// owned here for that reason: debug.show, toggled by F3, and settings.hud,
+// toggled by G. hud hides the screen console; the same gauges are drawn on the
+// cab's own instrument panels by render.js, so hiding it puts the operator's
+// eyes in the cab rather than taking his instruments away.
 // Unit conversion for display lives here and only here.
 
 import { MISSIONS } from '../data/missions.js';
 import { buildLabel } from '../data/build.js';
+// Reading a number out to the operator is shared with render.js, which draws the
+// same gauges on the cab's own instrument panel. See data/units.js.
+import {
+  fmtMass, massUnit, fmtLenShort, fmtWindShort, fmtClock
+} from '../data/units.js';
 
 const $ = (id) => document.getElementById(id);
 let el = {};
@@ -37,35 +46,42 @@ export function init(ctx) {
       e.preventDefault();
       ctx.state.debug.show = !ctx.state.debug.show;
       el.debug.hidden = !ctx.state.debug.show;
+      return;
+    }
+    // G hides the screen console. Every gauge on it is also on the cab's own
+    // instrument panel, on the right hand console where an operator's gauges
+    // actually are, so turning this off is not turning the instruments off: it is
+    // putting your eyes where they would be. Owned here for the same reason F3 is
+    // - it is a display choice, it touches no simulation state, and input.js
+    // deals in intents rather than in what is on the screen. Guarded on the phase
+    // so it cannot be pressed from a card, and saved with the other settings.
+    if (e.code === 'KeyG' && !e.repeat && !isTypingTarget(e) &&
+        ctx.state.phase === 'playing') {
+      e.preventDefault();
+      ctx.state.settings.hud = !ctx.state.settings.hud;
+      applyHud(ctx.state);
+      ctx.bus.emit('settings.changed', { hud: ctx.state.settings.hud });
     }
   });
+
+  applyHud(ctx.state);
 }
 
-function fmtLen(m, units) {
-  return units === 'imperial' ? `${Math.round(m * 3.28084)} ft` : `${m.toFixed(1)} m`;
+// The screen console, shown or not. Kept off aria-hidden as well as hidden so a
+// screen reader is not still reading gauges nobody can see.
+function applyHud(state) {
+  const dock = document.getElementById('console');
+  if (!dock) return;
+  const on = state.settings.hud !== false;
+  dock.hidden = !on;
+  dock.setAttribute('aria-hidden', on ? 'false' : 'true');
 }
-// PHASE 2B fix: the old imperial branch divided pounds by 1000 (kips) and labelled it "t".
-// US cab displays read in pounds. Metric reads kg under a tonne, tonnes above.
-// Digits only. The unit goes in the gauge label instead: "4,409 lb" at 22px
-// tabular does not fit the cluster column at any realistic desktop width, and
-// .gauge .value clips with no ellipsis, so the operator was reading "4,40".
-function fmtMass(kg, units) {
-  if (units === 'imperial') return Math.round(kg * 2.20462).toLocaleString('en-US');
-  return kg < 1000 ? String(Math.round(kg)) : (kg / 1000).toFixed(2);
-}
-function massUnit(units, kg) {
-  if (units === 'imperial') return 'lb';
-  return kg < 1000 ? 'kg' : 't';
-}
-function fmtLenShort(m, units) {
-  return units === 'imperial' ? `${Math.round(m * 3.28084)}` : `${m.toFixed(1)}`;
-}
-function fmtWindShort(mps, units) {
-  return String(Math.round(units === 'imperial' ? mps * 2.23694 : mps * 3.6));
-}
-function fmtClock(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+// Typing into a field is not a game key. input.js has its own copy of this for
+// the same reason the two modules do not import each other.
+function isTypingTarget(e) {
+  const t = e.target;
+  return !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable));
 }
 
 // The after-action card. main.js hands over the object scoring.js produced; this

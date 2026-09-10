@@ -15,4 +15,8 @@ frontend/dist/
 # committed - the real index.html loads three from the CDN.
 crane-cab-dev/.localtest/
 crane-cab-dev/index.local.html
+# The local-import copy the browser smoke test actually uses. test/smoke.mjs's
+# header says to make one when the three.js CDN is blocked; it points at
+# .localtest/, which is ignored, so a committed copy would be broken in a clone.
+crane-cab-dev/local.html
 crane-cab-dev/node_modules

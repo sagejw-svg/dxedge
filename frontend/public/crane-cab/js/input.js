@@ -3,6 +3,8 @@
 //
 // Desktop map: A/D slew, W/S trolley, R/F hoist, Shift range II, Ctrl micro,
 //   T PTT (hold), H horn, B slew brake, C hook cam, Space E-stop, 1-8 reply,
+//   V eyes on the load, Z eyes front. G is ui.js's (it hides the screen console,
+//   which is a display choice and touches no simulation state), as F3 is.
 //   mouse drag = look. Escape and F3 are handled in main.js / ui.js.
 // Phone (Phase 5): left stick slew + trolley, right stick hoist, PTT, E-stop, micro, look-drag.
 //

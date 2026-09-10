@@ -19,6 +19,12 @@
 import * as THREE from 'three';
 import { MISSIONS } from '../data/missions.js';
 import { CRANE } from '../data/crane.js';
+// The cab's own gauges read the same numbers out the same way the screen console
+// does. Shared, rather than a second copy of the arithmetic in a module ui.js is
+// forbidden from importing. See data/units.js.
+import {
+  fmtMass, massUnit, lenUnit, windUnit, fmtLenShort, fmtWindShort
+} from '../data/units.js';
 
 let renderer, scene, camera;
 let hookCam = null;            // looks straight down from the block
@@ -1043,6 +1049,33 @@ export function init(ctx, canvas) {
   consoleBox.position.set(0.55, 0.55, 0.62);
   cabGroup.add(consoleBox);
 
+  // The cab's own instruments. See the "cab gauges" block lower down for what is
+  // drawn on them and why there are two.
+  dash = makePanel(DASH_W, DASH_H);
+  head = makePanel(HEAD_W, HEAD_H);
+
+  // Gauges on the right hand console, canted at the seat, on a short stalk so
+  // they read as mounted rather than floating.
+  // Both positions are worked from where they land in the seated view rather
+  // than from where they would sit on a real console, because a panel is only an
+  // instrument if it is on the screen. From the eye, forward is +x and the
+  // operator's right is +z, and the seated pitch is 20 degrees down. The first
+  // pass had the gauges 51 degrees off the centre line, which showed a sliver at
+  // the very edge, and the radio head 48 off and 15 above the horizon, which was
+  // off the screen entirely.
+  parts.dashGroup = mountPanel(cabGroup, dash, 0.80, 0.90, 0.26, DASH_FACE_W, DASH_FACE_H);
+  const stalk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.018, 0.022, 0.20, 8),
+    new THREE.MeshLambertMaterial({ color: 0x0f1416 })
+  );
+  stalk.position.set(0.80, 0.76, 0.26);
+  cabGroup.add(stalk);
+
+  // Radio head on the front right window frame, at eye level and in the sight
+  // line. A caption you have to look away from the load to read is not a radio,
+  // it is a subtitle.
+  parts.headGroup = mountPanel(cabGroup, head, 0.95, 1.40, 0.38, HEAD_FACE_W, HEAD_FACE_H);
+
   // The roof plate blocks the sun completely, so everything in here was an
   // unlit surface: a black box with the console lamps invisible inside it.
   const cabLamp = new THREE.PointLight(0xffd9a0, 0.45, 4.5);
@@ -1149,6 +1182,434 @@ export function init(ctx, canvas) {
 // the shadow pass has casters in it, that nothing transparent throws a shadow,
 // and that the frame rate guard below actually fires on a slow renderer.
 // Reading the scene is not writing state, so hard rule 1 is intact.
+// ---------------------------------------------------------------- cab gauges
+//
+// The cab's own instruments. Everything the screen console shows, shown again
+// where an operator's gauges actually are, so that turning the screen console
+// off (G) puts your eyes in the cab rather than taking your instruments away.
+//
+// Two panels, because a cab has two. The gauges live on the right hand console
+// at armrest height, which is where you look DOWN for a number; the radio head
+// is up on the front pillar in the sight line, which is where you must not have
+// to look for a call. One panel on the console meant that with the HUD off the
+// only way to read a caption was a thirty five degree glance away from the load,
+// mid lift, which is the opposite of what a radio is for.
+//
+// Drawn to canvases and used as textures rather than built out of meshes: these
+// are mostly numbers and text, a canvas draws those crisply at any size for one
+// draw call, and thirty little meshes with their own materials would cost thirty.
+// Both are MeshBasicMaterial on purpose - a backlit display is not lit by the cab
+// lamp, it IS a light - which also keeps them readable inside a cab whose roof
+// plate blocks the sun completely.
+//
+// Redrawn at PANEL_HZ, and only when something on them has actually changed. A
+// texture upload every frame is real money on software rendering, which is what
+// the browser smoke test runs on.
+
+// Where the eye sits in the cab group's own space, seated and not leaning. Both
+// panels are aimed at this and update() puts the camera here; three places, one
+// pair of numbers.
+const EYE_LOCAL = new THREE.Vector3(0.2, 1.35, 0);
+const PANEL_HZ = 12;
+
+// Lit faces in metres, and their canvases. The aspects have to match or the
+// panel stretches: 0.46 x 0.345 is 4:3 and so is 1024 x 768; 0.30 x 0.15 is 2:1
+// and so is 640 x 320.
+const DASH_FACE_W = 0.40;
+const DASH_FACE_H = 0.30;
+const DASH_W = 1024;
+const DASH_H = 768;
+const HEAD_FACE_W = 0.30;
+const HEAD_FACE_H = 0.15;
+const HEAD_W = 640;
+const HEAD_H = 320;
+
+const P = {
+  face: '#11171a', panel: '#1a2226', edge: '#2c363b', ink: '#c9cfd2', dim: '#7d878c',
+  ok: '#6fbf73', warn: '#e0a83a', alarm: '#d9482b', well: '#0b1012', off: '#161c1f'
+};
+const FONT = '"Segoe UI", system-ui, sans-serif';
+
+let dash = null;    // { canvas, ctx, tex, key } for the console gauges
+let head = null;    // and for the radio head on the pillar
+let panelTimer = 0; // s until either may redraw
+
+function makePanel(w, h) {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const g = canvas.getContext('2d');
+  g.fillStyle = P.face;
+  g.fillRect(0, 0, w, h);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return { canvas, ctx: g, tex, key: '' };
+}
+
+// A lit face on a dark bezel, aimed at the seat.
+//
+// Object3D.lookAt takes a WORLD point, and EYE_LOCAL is in the cab group's own
+// space: passing it straight in aimed the first panel at a spot on the ground
+// beside the mast, forty two metres below the cab, and since a plane is single
+// sided what you saw from the seat was the back of it, a black slab across the
+// right of the windscreen. Both the eye and the panels live in this group, so
+// their relationship is fixed and the orientation is solved once, here, in local
+// coordinates. The argument order is three's own for a non-camera: target first,
+// so the object's +z ends up pointing at it.
+function mountPanel(parent, panel, x, y, z, fw, fh) {
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+  parent.add(group);
+  // The case sits BEHIND the glass, not around it. A raised rim looks right from
+  // straight on and is wrong the rest of the time: a rim standing a centimetre
+  // proud of the face occludes several centimetres of it at the sixty degree
+  // angle this is actually read at, which cut the bottom row of lamps off. The
+  // frame around the display is drawn into the canvas instead, where nothing can
+  // stand in front of it.
+  const backing = new THREE.Mesh(
+    new THREE.BoxGeometry(fw + 0.03, fh + 0.03, 0.03),
+    new THREE.MeshLambertMaterial({ color: 0x0f1416 })
+  );
+  backing.position.z = -0.016;
+  group.add(backing);
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(fw, fh),
+    new THREE.MeshBasicMaterial({ map: panel.tex })
+  );
+  face.position.z = 0.001;
+  group.add(face);
+  const aim = new THREE.Matrix4().lookAt(EYE_LOCAL, group.position, group.up);
+  group.quaternion.setFromRotationMatrix(aim);
+  return group;
+}
+
+// The case, drawn rather than modelled. See mountPanel.
+function frameEdge(g, w, h) {
+  g.strokeStyle = '#05080a';
+  g.lineWidth = 12;
+  g.strokeRect(6, 6, w - 12, h - 12);
+  g.strokeStyle = P.edge;
+  g.lineWidth = 2;
+  g.strokeRect(13, 13, w - 26, h - 26);
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+function box(g, x, y, w, h, r = 10) {
+  g.fillStyle = P.panel;
+  roundRect(g, x, y, w, h, r);
+  g.fill();
+  g.strokeStyle = P.edge;
+  g.lineWidth = 2;
+  g.stroke();
+}
+
+
+
+// A lamp lens. Lit ones get a halo, because a flat rectangle of colour in the
+// corner of the eye is not what a lamp coming on looks like.
+function lamp(g, x, y, w, h, text, on, colour) {
+  const c = on ? (colour || P.warn) : P.edge;
+  if (on) {
+    const glow = g.createRadialGradient(x + w / 2, y + h / 2, 2, x + w / 2, y + h / 2, w * 0.9);
+    glow.addColorStop(0, `${c}55`);
+    glow.addColorStop(1, `${c}00`);
+    g.fillStyle = glow;
+    g.fillRect(x - w * 0.4, y - h * 0.8, w * 1.8, h * 2.6);
+  }
+  g.fillStyle = on ? c : P.off;
+  roundRect(g, x, y, w, h, 8);
+  g.fill();
+  g.strokeStyle = on ? c : P.edge;
+  g.lineWidth = 2;
+  g.stroke();
+  g.fillStyle = on ? '#0d1113' : P.dim;
+  g.font = `700 ${Math.round(h * 0.42)}px ${FONT}`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(text, x + w / 2, y + h / 2 + 1);
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+}
+
+function wrapLine(g, text, maxWidth, maxLines) {
+  const words = String(text || '').split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (g.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines) return lines;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, maxLines);
+}
+
+// The same allowed / wanted decision ui.js makes, from the same state. Neither
+// module tells the other; they both read the mission.
+function camAllowed(state) {
+  const m = MISSIONS.find((x) => x.id === state.mission.id);
+  return !m || m.hookCam !== false;
+}
+
+// ---- the console gauges ----
+//
+// Laid out by what an operator reads most, not by what fits: the load and how
+// much of the chart it is using take the top third and the biggest digits on the
+// panel, the two position numbers he flies on take the middle, and slew, wind
+// and reach - the ones he checks rather than watches - share one strip. The
+// first pass gave all eight equal boxes, which at 380 screen pixels made every
+// one of them equally hard to read.
+function drawDash(state) {
+  const g = dash.ctx;
+  const s = state.sensors;
+  const u = state.settings.units;
+  const W = DASH_W;
+  const M = 18;
+  const GAP = 16;
+  const inner = W - M * 2;
+
+  g.fillStyle = P.face;
+  g.fillRect(0, 0, W, DASH_H);
+  frameEdge(g, W, DASH_H);
+
+  // --- what is on the hook, against what the chart allows there --------------
+  const b1 = 220;
+  box(g, M, M, inner, b1);
+  g.textBaseline = 'alphabetic';
+  g.textAlign = 'left';
+  g.fillStyle = P.dim;
+  g.font = `600 30px ${FONT}`;
+  g.fillText(`LOAD ${massUnit(u, s.actualLoad)}`, M + 20, M + 44);
+  g.textAlign = 'right';
+  g.fillText('CAPACITY', W - M - 20, M + 44);
+
+  g.textAlign = 'left';
+  g.fillStyle = s.capacityPct >= 90 ? P.alarm : s.capacityPct >= 70 ? P.warn : P.ink;
+  g.font = `600 96px ${FONT}`;
+  g.fillText(fmtMass(s.actualLoad, u), M + 20, M + 130);
+  g.textAlign = 'right';
+  g.fillText(`${Math.round(s.capacityPct)}%`, W - M - 20, M + 130);
+
+  g.font = `600 26px ${FONT}`;
+  g.fillStyle = P.dim;
+  g.fillText(`of ${fmtMass(s.ratedLoad, u)} rated`, W - M - 20, M + 166);
+  g.textAlign = 'left';
+
+  // The bar under them both, full width, with the pre-alarm marked where it is
+  // rather than left to be remembered.
+  const barX = M + 20;
+  const barW = inner - 40;
+  const barY = M + 182;
+  const barH = 26;
+  g.fillStyle = P.well;
+  roundRect(g, barX, barY, barW, barH, 6);
+  g.fill();
+  const fill = Math.max(0, Math.min(1, s.capacityPct / 100));
+  if (fill > 0) {
+    g.fillStyle = s.capacityPct >= 90 ? P.alarm : s.capacityPct >= 70 ? P.warn : P.ok;
+    roundRect(g, barX, barY, Math.max(barH, barW * fill), barH, 6);
+    g.fill();
+  }
+  g.strokeStyle = 'rgba(224,168,58,0.65)';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(barX + barW * 0.9, barY - 5);
+  g.lineTo(barX + barW * 0.9, barY + barH + 5);
+  g.stroke();
+
+  // --- where the hook is ----------------------------------------------------
+  const b2y = M + b1 + GAP;
+  const b2h = 160;
+  const halfW = (inner - GAP) / 2;
+  const big = (x, label, value) => {
+    box(g, x, b2y, halfW, b2h);
+    g.textAlign = 'left';
+    g.fillStyle = P.dim;
+    g.font = `600 30px ${FONT}`;
+    g.fillText(label, x + 20, b2y + 44);
+    g.fillStyle = P.ink;
+    g.font = `600 92px ${FONT}`;
+    g.fillText(value, x + 20, b2y + b2h - 22);
+  };
+  big(M, `RADIUS ${lenUnit(u)}`, fmtLenShort(s.radius, u));
+  big(M + halfW + GAP, `HOOK HT ${lenUnit(u)}`, fmtLenShort(s.hookHeight, u));
+
+  // --- the ones he checks rather than watches -------------------------------
+  const b3y = b2y + b2h + GAP;
+  const b3h = 80;
+  const strip = [
+    ['SLEW', `${String(Math.round(s.heading)).padStart(3, '0')}°`, P.ink],
+    [`WIND ${windUnit(u)}`, fmtWindShort(s.wind, u), P.ink],
+    [`REACH ${lenUnit(u)}`, `${fmtLenShort(s.maxLoadRadius, u)}  ${Math.round(s.reachPct)}%`,
+      s.reachPct >= 90 ? P.alarm : s.reachPct >= 70 ? P.warn : P.ink]
+  ];
+  const cell = (inner - GAP * 2) / 3;
+  strip.forEach(([label, value, colour], i) => {
+    const x = M + i * (cell + GAP);
+    box(g, x, b3y, cell, b3h, 8);
+    g.textAlign = 'left';
+    g.fillStyle = P.dim;
+    g.font = `600 23px ${FONT}`;
+    g.fillText(label, x + 16, b3y + 30);
+    g.fillStyle = colour;
+    g.font = `600 36px ${FONT}`;
+    g.fillText(value, x + 16, b3y + 68);
+  });
+
+  // --- lamps, two rows of three so each lens reads from the seat ------------
+  const lampY = b3y + b3h + GAP + 8;
+  g.strokeStyle = P.edge;
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(M, lampY - 12);
+  g.lineTo(W - M, lampY - 12);
+  g.stroke();
+  const lampW = (inner - GAP * 2) / 3;
+  const lampH = (DASH_H - lampY - M - GAP - 10) / 2;
+  const wantCam = !!state.intent.hookCam;
+  const okCam = camAllowed(state);
+  const lamps = [
+    ['E-STOP', state.crane.estopped, P.alarm],
+    [wantCam && !okCam ? 'CAM OFF' : 'CAM', okCam && wantCam, P.ok],
+    ['A2B', s.a2b, P.alarm],
+    ['SLACK', s.slack, P.ok],
+    ['LMI', s.lmiLock, P.alarm],
+    ['BRAKE', state.crane.brakeOn, P.ok]
+  ];
+  lamps.forEach(([text, on, colour], i) => {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    lamp(g, M + col * (lampW + GAP), lampY + row * (lampH + GAP), lampW, lampH, text, on, colour);
+  });
+
+  dash.tex.needsUpdate = true;
+}
+
+// ---- the radio head ----
+function drawHead(state) {
+  const g = head.ctx;
+  const r = state.radio;
+  const W = HEAD_W;
+  const H = HEAD_H;
+  const M = 14;
+
+  g.fillStyle = P.face;
+  g.fillRect(0, 0, W, H);
+  frameEdge(g, W, H);
+  box(g, M, M, W - M * 2, H - M * 2, 12);
+
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = P.dim;
+  g.font = `700 22px ${FONT}`;
+  g.fillText(r.channel || 'TC-1 GROUND', M + 16, M + 32);
+  // The one thing on either panel that is about the operator and not the crane.
+  lamp(g, W - M - 82, M + 10, 66, 30, 'PTT', r.tx === 'playerTx' || r.pttLed, P.alarm);
+
+  g.font = `600 30px ${FONT}`;
+  g.fillStyle = r.tx === 'groundTx' ? P.warn : P.ink;
+  const lines = wrapLine(g, r.caption || '', W - M * 2 - 32, 3);
+  lines.forEach((line, i) => g.fillText(line, M + 16, M + 76 + i * 36));
+
+  // The numbered keys, which with the screen console off are written down here
+  // and nowhere else.
+  if (r.replies && r.replies.length) {
+    const live = r.ackTimer > 0;
+    let x = M + 16;
+    g.font = `600 21px ${FONT}`;
+    for (let i = 0; i < r.replies.length; i += 1) {
+      const text = `${i + 1} ${r.replies[i]}`;
+      const w = g.measureText(text).width + 22;
+      if (x + w > W - M - 16) break;
+      g.fillStyle = live ? '#243033' : P.off;
+      roundRect(g, x, H - M - 62, w, 32, 7);
+      g.fill();
+      g.strokeStyle = live ? P.edge : '#20282c';
+      g.lineWidth = 2;
+      g.stroke();
+      g.fillStyle = live ? P.ink : P.dim;
+      g.fillText(text, x + 11, H - M - 40);
+      x += w + 8;
+    }
+  }
+
+  // The ack countdown, emptying, in the same place the screen console draws it.
+  const bw = W - M * 2 - 32;
+  g.fillStyle = P.well;
+  g.fillRect(M + 16, H - M - 22, bw, 7);
+  if (r.ackTimeout > 0) {
+    const frac = Math.max(0, Math.min(1, r.ackTimer / r.ackTimeout));
+    g.fillStyle = frac < 0.34 ? P.alarm : P.warn;
+    g.fillRect(M + 16, H - M - 22, bw * frac, 7);
+  }
+
+  head.tex.needsUpdate = true;
+}
+
+// What is on each panel right now, as a string. Comparing it against the last
+// one is what keeps a still cab from re-uploading a megabyte of texture twelve
+// times a second while nothing moves.
+function dashSignature(state) {
+  const s = state.sensors;
+  return [
+    Math.round(s.actualLoad), Math.round(s.ratedLoad), Math.round(s.capacityPct),
+    Math.round(s.reachPct), Math.round(s.maxLoadRadius * 10),
+    Math.round(s.radius * 10), Math.round(s.hookHeight * 10),
+    Math.round(s.heading), Math.round(s.wind * 10),
+    s.a2b, s.slack, s.lmiLock, state.crane.estopped, state.crane.brakeOn,
+    state.intent.hookCam, state.mission.id, state.settings.units
+  ].join(',');
+}
+
+function headSignature(state) {
+  const r = state.radio;
+  return [
+    r.channel, r.caption, r.tx, r.pttLed, (r.replies || []).join('|'),
+    r.ackTimeout > 0 ? Math.round((r.ackTimer / r.ackTimeout) * 20) : -1
+  ].join(',');
+}
+
+// dt is the frame's own length, the same number main.js hands every read-only
+// system. An accumulator rather than a deadline against a clock: render.update
+// is given a delta, not a wall time, and there is no clock here that runs while
+// the sim is paused.
+function updatePanels(ctx, dt) {
+  if (!dash || !head) return;
+  const state = ctx.state;
+  // Nothing to read on the title card, and drawing it there costs two texture
+  // uploads before the first frame anyone sees.
+  if (state.mission.id === null && state.phase !== 'playing') return;
+  panelTimer -= dt;
+  if (panelTimer > 0) return;
+  panelTimer = 1 / PANEL_HZ;
+  const dk = dashSignature(state);
+  if (dk !== dash.key) { dash.key = dk; drawDash(state); }
+  const hk = headSignature(state);
+  if (hk !== head.key) { head.key = hk; drawHead(state); }
+}
+
+// Test seams. The suite reads the panels rather than the numbers behind them,
+// because the whole point of them is that they are legible in the world.
+export function _dashCanvas() { return dash ? dash.canvas : null; }
+export function _headCanvas() { return head ? head.canvas : null; }
+export function _panelMeshes() { return { dash: parts.dashGroup, head: parts.headGroup }; }
+export function _camera() { return camera; }
+
 export function _scene() { return scene; }
 export function _renderer() { return renderer; }
 export function _shadowsOn() { return !shadowsDropped; }
@@ -1382,7 +1843,7 @@ export function update(ctx, dt) {
   // Out of the seat by however far crane.js says he is leaning. The seat is at
   // 0.2; leaning takes him forward over the glass floor and down, which is the
   // only way past the floor frame's front bar on a close pick.
-  eye.set(0.2 + state.look.leanX, 1.35 + state.look.leanY, 0);
+  eye.set(EYE_LOCAL.x + state.look.leanX, EYE_LOCAL.y + state.look.leanY, EYE_LOCAL.z);
   parts.cabGroup.localToWorld(eye);
   camera.position.copy(eye);
   const yaw = -c.slew + state.look.yaw;
@@ -1400,10 +1861,25 @@ export function update(ctx, dt) {
   // average, so a single slow frame cannot trip it.
   if (!shadowsDropped && state.phase === 'playing') {
     const fps = state.time.fps;
+    // Charged in frame deltas, deliberately. It is tempting to charge 1/fps
+    // instead, on the grounds that main.js caps `elapsed` at 0.25 so a very slow
+    // renderer under-reports its own frame length - but main.js computes fps
+    // from that same capped number, so 1/fps is capped at 0.25 too and buys
+    // nothing, and adding it once per FRAME rather than once per second charges
+    // seconds that did not happen. state.time.fps is a rolling half-second
+    // average, so two stalled frames make it read 4 for the rest of that window;
+    // on a 60 fps machine that is thirty frames each charged a quarter of a
+    // second, seven and a half seconds against a six second budget in half a
+    // second of real time, and dropShadows is one way for the session. Measured
+    // on a desktop-speed page, not reasoned about.
     if (fps > 0 && fps < SHADOW_MIN_FPS) lowFpsFor += dt;
     else lowFpsFor = 0;
     if (lowFpsFor >= SHADOW_LOW_FOR) dropShadows();
   }
+
+  // The cab's own gauges, before the frame goes out. Throttled and change-gated
+  // inside; see updateDash.
+  updatePanels(ctx, dt);
 
   renderer.render(scene, camera);
 

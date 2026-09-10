@@ -66,6 +66,7 @@ export function load(ctx) {
   if (s && typeof s === 'object') {
     if (typeof s.units === 'string') state.settings.units = s.units === 'metric' ? 'metric' : 'imperial';
     if (typeof s.mute === 'boolean') state.settings.mute = s.mute;
+    if (typeof s.hud === 'boolean') state.settings.hud = s.hud;
     const sens = num(s.sensitivity);
     if (sens !== null) state.settings.sensitivity = Math.min(3, Math.max(0.1, sens));
     const damp = num(s.damping);

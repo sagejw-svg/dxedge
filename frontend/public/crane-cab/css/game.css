@@ -57,6 +57,13 @@ html, body {
   gap: 14px;
 }
 
+/* G hides the screen console, and the gauges carry on being readable on the
+   cab's own panels. The `hidden` attribute alone does nothing here: it is
+   `display: none` from the UA stylesheet, and the rule above sets display, so
+   the more specific one wins and the dock stayed on screen with its own state
+   saying it was off. */
+#console[hidden] { display: none; }
+
 .cluster {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -255,17 +262,6 @@ html, body {
 .card .fine { color: var(--text-dim); font-size: 13px; }
 
 /* Key settings list on the title card. */
-/* Three columns where the screen is wide and short, which is every phone held
-   sideways: the same list in fewer rows, so the button stays in view. */
-@media (min-width: 700px) and (max-height: 520px) {
-  .card .controls {
-    grid-template-columns: repeat(3, minmax(150px, 1fr)) !important;
-    max-width: 56em;
-    gap: 3px 18px;
-  }
-  .card .intro { display: none; }
-  .card h1 { margin-bottom: 6px; }
-}
 .card .controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(190px, 1fr));
@@ -280,6 +276,40 @@ html, body {
   width: 100%;
   max-width: 34em;
   text-align: left;
+}
+
+/* These two sat ABOVE the rule they override, and only the one declaration
+   carrying !important was winning: max-width and gap lost to the base rule at
+   equal specificity, so the four column list was laid out into a 34em box and
+   overflowed it by a hundred and sixty pixels. It only looked right because the
+   card is wider than the list's box and the spill lands in the card's padding.
+   Order matters at equal specificity, so they live here now. */
+/* Three columns where the screen is wide and short, which is every phone held
+   sideways: the same list in fewer rows, so the button stays in view. */
+@media (min-width: 700px) and (max-height: 520px) {
+  .card .controls {
+    grid-template-columns: repeat(3, minmax(150px, 1fr)) !important;
+    max-width: 56em;
+    gap: 3px 18px;
+  }
+  .card .intro { display: none; }
+  .card h1 { margin-bottom: 6px; }
+}
+
+/* Four columns below 420px of height. Sixteen rows in three columns is six rows
+   of list, and on an 844x390 phone that put "Take the seat" fifteen pixels below
+   the bottom of the screen. Every key the game has is on this list and it only
+   ever gets longer, so the breakpoint gets a column rather than the list losing
+   a row. */
+@media (min-width: 760px) and (max-height: 420px) {
+  .card .controls {
+    grid-template-columns: repeat(4, minmax(132px, 1fr)) !important;
+    max-width: 68em;
+    gap: 2px 14px;
+    font-size: 13px;
+  }
+  .card .fine { display: none; }
+  .card h1 { font-size: 26px; margin-bottom: 4px; }
 }
 .card .controls > div {
   display: flex;
