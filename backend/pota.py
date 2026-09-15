@@ -63,6 +63,16 @@ async def fetch_pota() -> list[dict]:
         return []
 
 
+def _upper(v) -> str:
+    """Upper-cased text for an upstream field that may be absent, null or non-string.
+
+    dict.get(k, "") returns None when the key is PRESENT with a JSON null, so the
+    default never fires and str(None) yields "None". Normalising here is what the
+    tombstone filter below relies on; see the 2026-09-15 note in its docstring.
+    """
+    return ("" if v is None else str(v)).strip().upper()
+
+
 def _is_sota_tombstone(s: dict) -> bool:
     """True for the synthetic row api2.sota.org.uk prepends to every spots response.
 
@@ -71,6 +81,15 @@ def _is_sota_tombstone(s: dict) -> bool:
     notice in `comments`. It has no frequency, so it parsed as a freq-0.0 spot
     and rendered as the top row of the activations panel. It is a notice, not a
     spot, so it is dropped here.
+
+    2026-09-15: the sentinel's shape drifted and this filter stopped matching, so
+    the notice reached the panel again as a spot reading "DEPRECATED" on 0.0. The
+    spotter field `callsign` is now JSON null rather than the literal
+    "DEPRECATED", and the old first clause compared str(None) == "None". The
+    positive signal is therefore taken from `activatorCallsign`, which the
+    upstream still sets to "DEPRECATED", and the two supporting fields are
+    matched permissively through _upper() so a further null/empty drift on either
+    one does not unmask the row again.
 
     This filter is NOT the migration. /api/spots/50/-1 is deprecated on both
     api2 and api-db2 and the upstream's stated removal date has already passed;
@@ -81,9 +100,9 @@ def _is_sota_tombstone(s: dict) -> bool:
     """
     sentinel = {"DEPRECATED", ""}
     return (
-        str(s.get("callsign", "")).upper() == "DEPRECATED"
-        and str(s.get("activatorCallsign", "")).upper() in sentinel
-        and str(s.get("summitCode", "")).upper() in sentinel
+        _upper(s.get("activatorCallsign")) == "DEPRECATED"
+        and _upper(s.get("summitCode")) in sentinel
+        and _upper(s.get("callsign")) in sentinel
     )
 
 
