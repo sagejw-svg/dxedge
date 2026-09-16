@@ -1,55 +1,90 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-16T04:30:00Z",
+  "last_run": "2026-09-16T05:10:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
     {
       "date": "2026-09-16",
-      "run_outcome": "BLOCKED - no live verification performed. Fifth blind night (09-04, 09-08, 09-09, 09-14, 09-16) and the second in three nights, immediately after a full green run on 09-15. WebFetch returned PROVENANCE_REQUIRED on every URL attempted, so no check in Steps 1-3 could be run; Step 4 was not due. Static and repo-level checks WERE completed and are all clean. Nothing repaired. Nothing pushed except this state file. James notified by push notification about the recurrence and the worsening frequency; no email, since nothing was fixed.",
-      "verification_gap": {
-        "cause": "WebFetch provenance gate, all hosts. 5 calls, all error_type PROVENANCE_REQUIRED 'permission request was not answered in time': https://dxedge.net/api/health?cb=20260916a twice, https://dxedge.net/api/health (bare, exactly as written in the runbook, in case the gate keys on provenance of the literal URL string) once, https://api.pota.app/spot/activator as the off-site control once, and https://dxedge.net/api/health?nonce=0916r2 fired late in the run in case the gate cleared mid-session as it did on 09-05 and 09-10. An unattended run cannot clear an interactive approval gate.",
-        "retry_performed": "Yes, and in three forms: same URL twice up front, a bare-URL variant, and a late-run retry with a fresh nonce. Denied every time. The api.pota.app control denial confirms the gate is all-host rather than dxedge-specific, so the run was correctly treated as blocked rather than abandoned on one denial, per known issue provenance-gate-is-intermittent-and-per-host.",
-        "browser_fallback": "NOT attempted, deliberately, same reasoning as 09-08, 09-09 and 09-14. No browser MCP tool exists in this session: no mcp__claude-in-chrome__* and no mcp__remote-devices__* at all, since this scheduled run has no link to James's computer. The only remaining option was the 2026-09-03 headless-Chromium-plus-local-relay rig, whose relay leg is python performing the outbound HTTPS. Standing that up tonight would substitute python and Chromium for a fetch the environment had just refused, which is what known issue webfetch-provenance-gate forbids. Chromium is legitimate only on nights when WebFetch works and Chromium is doing the job WebFetch cannot do at all, namely executing JavaScript.",
-        "consequence": "Unverified tonight: TLS certificate status, /api/health, /api/debug, all backend feed counts, every upstream endpoint, both standalone pages in a browser, and every /api/feed request. Nothing below should be read as a live-site claim."
+      "run_outcome": "FULL RUN, all three surfaces green, after an unusual two-phase night. The run opened BLOCKED: five WebFetch calls all returned PROVENANCE_REQUIRED, including an off-site control, so the static checks were completed, a blind-night state file was written and pushed (c5be537), and James was notified by push naming the decision. James then granted access mid-session, WebFetch began working on the first retry, and every live check in Steps 1-3 was executed. Nothing was broken. Nothing was repaired. This entry replaces the blind-night entry originally committed in c5be537.",
+      "gate_event": {
+        "summary": "The provenance gate cleared mid-session for the first time by direct human action rather than by chance retry. Prior clears (09-05, 09-10) happened on an immediate retry with no intervention; tonight the gate was total and sticky across five calls spanning the whole first phase of the run, and only lifted once James granted access.",
+        "denied_calls": "https://dxedge.net/api/health?cb=20260916a twice, https://dxedge.net/api/health bare once, https://api.pota.app/spot/activator as the off-site control once, https://dxedge.net/api/health?nonce=0916r2 late in the run once. All error_type PROVENANCE_REQUIRED.",
+        "first_success": "https://dxedge.net/api/health?nonce=0916live1 immediately after access was granted. Every subsequent fetch and every relay leg worked with no further denial.",
+        "lesson": "A blind night is not necessarily a lost night if James is reachable. The escalation push is worth sending early rather than at the end of the run, because a granted permission converts the whole run from blind to full."
       },
       "cert": {
-        "status": "unverified",
-        "evidence": "None obtainable. The cert is judged by the WebFetch error, and WebFetch never reached the origin: PROVENANCE_REQUIRED is an approval-gate error raised before the request, not a TLS error. No CERTIFICATE_VERIFY_FAILED and no expiry error was seen, but that is absence of evidence, not evidence of health.",
+        "status": "ok",
+        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 05:01:17Z, plus /api/debug, /api/pota, /api/sota, /api/satellites/positions and every relay fetch across three browser page loads. No CERTIFICATE_VERIFY_FAILED and no expiry error anywhere in the run.",
         "consecutive_failures": 0,
-        "counter_rationale": "Deliberately NOT incremented, same as 09-08, 09-09 and 09-14. The 3-strike escalation counts consecutive renewal failures, and an environment gate is not a renewal failure. Incrementing on a blind night would march the run toward a false escalation on no evidence. Last positive confirmation 2026-09-15 04:27Z, one day stale. scripts/cert_repair.sh and /etc/cron.d/dxedge-certbot were untouched and are presumed still in place; no deploy has run since 09-15 because no functional commit has landed."
+        "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place and working. Exact expiry date still not readable from this container: openssl sees the egress proxy certificate, not the real one."
       },
       "main_dashboard": {
-        "api_health": "unverified",
-        "feed_proxy": "unverified live; static check clean",
-        "static_findings": "Zero commits since the 09-15 run, so tree HEAD was still 34ac8dc (the 09-15 state commit) and every backend and frontend source file is byte-identical to the night it was last verified green. That includes 11a2c50, the SOTA tombstone fix, which was confirmed live post-deploy on 09-15. No new feed, no new endpoint, no new upstream. Nothing in the repo can have regressed since 09-15 without a commit.",
-        "sota_status": "The SOTA endpoint going dark remains the highest open item and is unchanged. Escalated in full on 09-15 by push and email; deliberately NOT re-reported tonight, and not re-checkable in any case."
+        "api_health": "ok",
+        "sfi": 116,
+        "k_index": 2,
+        "spots": 500,
+        "feed_proxy": true,
+        "sat_tles_metric": "0 at first read, 9 once the cache was warm",
+        "pota_spots_metric": "0 at first read, 9 once the cache was warm",
+        "cold_cache_diagnosis": "Reconfirmed for the fifth night running, exactly as proven on 09-10. Calling /api/pota and /api/satellites/positions warmed both caches and a later /api/health returned sat_tles 9 and pota_spots 9. Passive cache reads, not an outage. Not reported.",
+        "endpoints_verified": [
+          "/api/health (ok, 05:01:17Z)",
+          "/api/debug (ok, 27 cache keys, dist_exists true, world_json 44937 bytes)",
+          "/api/pota (9 live spots, all timestamped 2026-09-16 04:35-05:00)",
+          "/api/sota (empty, {\"spots\":[]}, correct post-fix behaviour, see sota_status)",
+          "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
+          "/api/dashboard",
+          "/api/recommendation",
+          "/api/solar/history",
+          "/api/voacap/summary"
+        ],
+        "browser_check": "DONE. Headless Chromium via the local relay. Title 'DXEdge - Propagation & DX Intelligence', 1902 body chars, 7 responses all 200, zero failed requests, zero panel errors, zero panels left loading, nothing pending at 22s. The four ws://127.0.0.1:8899/ws/spots console errors are the known rig artifact: the relay proxies GET only and cannot service a WebSocket upgrade. The 127.0.0.1 host in those URLs confirms it is the relay and not the site.",
+        "sota_status": "/api/sota returns {\"spots\":[]}. The 11a2c50 tombstone fix is holding: the deprecation sentinel is still being dropped rather than rendered as a fake spot. The endpoint remains dark, which is the highest open awaiting_james item, escalated in full on 09-15 and deliberately NOT re-reported tonight.",
+        "band_question_marks": "Two of tonight's 9 POTA spots render band '?': JF1AWC/1 on 430030.0 kHz and JA1BJT on 430050.1 kHz, both 70cm. This is the existing sota-band-unit-mismatch item, whose 09-10 update already records that FREQ_TO_BAND covers only 160m through 6m and so misses 70cm. Existing item, NOT re-reported."
       },
       "cyber_page": {
-        "browser_check": "NOT DONE. See verification_gap.",
+        "browser_check": "DONE. Headless Chromium via the local relay. Title 'DX//EDGE \u00b7 CYBER', 6268 body chars, zero '<name> failed:' panel lines, zero panels left on 'loading...', 8 same-origin /api/feed requests all 200, none pending at 20s, zero failed requests, zero console errors. Cleanest cyber run on record alongside 09-15: the usual Google Fonts rig artifact did not fire, fonts.googleapis.com and fonts.gstatic.com both returned 200.",
         "allorigins_regression": false,
-        "allorigins_evidence": "Tree-wide grep across html, js, jsx, py and json. Only two hits remain outside this state file's own history, and both are explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Neither page references allorigins in code.",
-        "feed_routing_static_check": "All six feed fetches go through the same-origin proxy: const PROXY = '/api/feed?url=' at line 349, then PROXY + encodeURIComponent(...) at lines 556, 586, 618, 639, 690 and 715. The only bare fetch( in the file is line 374, inside getCached(), which receives the already-built proxy URL. No direct cross-origin fetch() call exists.",
-        "allowlist_gaps": "none. All 11 proxied hosts resolved from source (including the two variable-driven ones, the NVD template at line 586 and the seven-entry news tab list at lines 733-741) and every one is present in ALLOWED_HOSTS: www.cisa.gov, services.nvd.nist.gov, api.first.org, www.hamqsl.com, krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com, news.google.com. No allowlist change made, needed, or proposed.",
-        "nvd_severity_mismatch": "Not re-checkable tonight. Remains an open awaiting_james item from 2026-09-05. NOT re-reported."
+        "allorigins_evidence": "Tree-wide grep across html, js, jsx, py and json. Only two hits remain outside this state file's own history, and both are explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win.",
+        "feed_routing_static_check": "All six feed fetches go through const PROXY = '/api/feed?url=' at line 349, used at lines 556, 586, 618, 639, 690 and 715. The only bare fetch( is line 374, inside getCached(), which receives the already-built proxy URL. Confirmed live: the only off-relay requests the page made were the three Google Fonts assets.",
+        "allowlist_gaps": "none. All 11 proxied hosts present in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
+        "feeds_observed_live_in_browser": [
+          "cisa known_exploited_vulnerabilities.json 200",
+          "cisa cybersecurity-advisories/all.xml 200",
+          "securityweek.com/feed 200",
+          "hamqsl.com/solarxml.php 200",
+          "krebsonsecurity.com/feed 200",
+          "api.first.org EPSS batch 1 200",
+          "api.first.org EPSS batch 2 200",
+          "services.nvd.nist.gov cves/2.0 CRITICAL 200 (the double-encoded query, fired by the real page)"
+        ],
+        "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
       },
       "aethersdr_page": {
-        "browser_check": "NOT DONE. See verification_gap.",
+        "browser_check": "DONE. Title 'DX//EDGE \u00b7 AETHERSDR', 4146 body chars, zero panel error lines, zero panels left loading, 9 responses all 200, none pending at 20s, zero failed requests, zero console errors.",
         "allorigins_regression": false,
-        "feed_routing_static_check": "Both feed fetch paths go through const PROXY = '/api/feed?url=' at line 348, used at lines 432 and 457. The only bare fetch( is line 373 inside getCached(). No direct cross-origin fetch() call exists.",
-        "allowlist_gaps": "none. All 4 proxied hosts resolved from the feed list at lines 449-452 and the releases URL at line 430: github.com, www.flexradio.com, www.rtl-sdr.com, hackaday.com. All present in ALLOWED_HOSTS."
+        "feed_routing_static_check": "Both feed fetch paths go through const PROXY = '/api/feed?url=' at line 348, used at lines 432 and 457. The only bare fetch( is line 373 inside getCached(). Confirmed live: only off-relay requests were the three Google Fonts assets.",
+        "allowlist_gaps": "none. github.com, www.flexradio.com, www.rtl-sdr.com and hackaday.com all present in ALLOWED_HOSTS.",
+        "feeds_observed_live_in_browser": [
+          "github.com/aethersdr/AetherSDR/releases.atom 200",
+          "hackaday.com/category/radio-hacks/feed 200",
+          "flexradio.com/feed 200",
+          "rtl-sdr.com/feed 200"
+        ],
+        "duplicate_request_note": "The double request for the releases atom recurred (recorded 09-10, 09-12, 09-15; absent 09-13). Second is served from the feedproxy cache. Harmless."
       },
-      "allowlist_audit_note": "ALLOWED_HOSTS holds exactly 15 entries and the two pages proxy exactly 15 distinct hosts, 11 plus 4, with a perfect one-to-one match. No unused entry and no gap. backend/feedproxy.py unchanged since d055aed 2026-09-01.",
-      "rig_note": "Two fresh gotchas for whoever writes the next static allowlist check, both of which produced a false alarm tonight. (1) Do not locate ALLOWED_HOSTS by splitting the source on the first occurrence of the string: feedproxy.py's module docstring names 'evil-cisa.gov' and 'cisa.gov.attacker.net' at lines 11-13 as examples of what must NOT pass a suffix match, and a naive split returns those two as the allowlist. Anchor on 'ALLOWED_HOSTS = frozenset({' instead. (2) Do not harvest feed hosts with a broad https?:// regex over the page source. Both standalone pages embed a large curated directory of ordinary outbound <a href> links plus Google Fonts, none of which touch the proxy; a broad sweep reported 29 and 18 hosts with 18 and 13 phantom 'gaps'. Resolve only the URLs that actually reach PROXY + encodeURIComponent.",
-      "new_surfaces_reviewed": "None. Zero commits since the 09-15 run, so no new standalone page, no new outbound link, no new third-party host and no new /api/feed bypass is possible.",
-      "outbound_links_checked": "NONE. Not due: the 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule, so tonight was the last night before the sweep comes due. Confirmed no new curated links exist, on a FULL unshallowed clone per the 09-15 clone_depth_gotcha: Credits.jsx 5eaeddc 2026-05-31, Products.jsx e655d14 2026-09-02, both standalone pages 49e82d2 2026-09-03. Next sweep due 2026-09-17. Note for that run: the sweep is outbound fetching of third-party hosts, so it can only be done on a night when WebFetch is working. If 09-17 is also gated, the sweep slips and should be recorded as overdue rather than skipped.",
+      "allowlist_audit_note": "ALLOWED_HOSTS holds exactly 15 entries and the two pages proxy exactly 15 distinct hosts, 11 plus 4, a perfect one-to-one match. No unused entry and no gap. backend/feedproxy.py unchanged since d055aed 2026-09-01. Confirmed live: across three browser loads the only off-relay requests any page made were Google Fonts stylesheet and woff2 assets, which are static <link> resources and never touch the proxy.",
+      "rig_note": "Two fresh gotchas for whoever writes the next static allowlist check, both of which produced a false alarm tonight before the live check cleared them. (1) Do not locate ALLOWED_HOSTS by splitting the source on the first occurrence of the string: feedproxy.py's module docstring names 'evil-cisa.gov' and 'cisa.gov.attacker.net' at lines 11-13 as examples of what must NOT pass a suffix match, and a naive split returns those two as the allowlist. Anchor on 'ALLOWED_HOSTS = frozenset({' instead. (2) Do not harvest feed hosts with a broad https?:// regex over the page source. Both standalone pages embed a large curated directory of ordinary outbound <a href> links plus Google Fonts, none of which touch the proxy; a broad sweep reported 29 and 18 hosts with 18 and 13 phantom 'gaps'. Resolve only the URLs that actually reach PROXY + encodeURIComponent. Also reconfirmed the 09-13 teardown note: kill the relay by exact argv match from /proc, not with pkill -f, which matches the killing shell's own command line.",
+      "new_surfaces_reviewed": "None. Zero commits landed between the 09-15 run and the start of tonight's, so tree HEAD was still 34ac8dc. No new standalone page, no new outbound link, no new third-party host, no new /api/feed bypass.",
+      "outbound_links_checked": "NONE, correctly skipped, and this was a judgement call worth recording. The 2026-09-03 sweep covered all 156 curated URLs and the 14-day rotation makes them eligible on 2026-09-17, so tonight at 13 days every URL was still inside the window and zero were due. WebFetch was working by the end of the run, so a sweep was physically possible, and it was still skipped because the rotation rule is the rule. Confirmed no new curated links exist, on a FULL unshallowed clone per the 09-15 clone_depth_gotcha: Credits.jsx 5eaeddc 2026-05-31, Products.jsx e655d14 2026-09-02, both standalone pages 49e82d2 2026-09-03. Next sweep due 2026-09-17 and it is now the oldest outstanding routine item.",
       "backend_tests": "Still broken at collection, unchanged and still pre-existing. backend/tests/test_dxedge.py imports estimate_fof2 from voacap_engine at line 64 and uses it at lines 92, 96 and 98; voacap_engine.py defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and has zero definitions of estimate_fof2. Not touched, not papered over, reported as outstanding.",
-      "pat_status": "Retrieved from Mem and verified with git push --dry-run over HTTPS using the extraHeader auth pattern: 'Everything up-to-date', exit 0. Push access is live. The Mem note's 'expires ~August 27 2026' line is still wrong, now by 20 days; see known_issues pat-expiry-note-stale.",
-      "new_finding": "One, and it is about the rig rather than the site: the provenance gate recurred one night after a full green run, which is a new shape. Until now the blind nights came in isolated singles (09-04) or consecutive pairs (09-08 and 09-09), and 09-14 was followed by a clean 09-15. Tonight breaks the hope that a green night predicts the next one. Five of the last thirteen nights have been fully blind, close to one in three, and the routine cannot be relied on to observe the site on any given night.",
-      "repairs_made": "none. Nothing could be observed to be broken, and nothing in the repo needed repair.",
-      "notification": "PushNotification SENT, one line, naming the decision: grant this scheduled task standing fetch permission for dxedge.net and its upstreams. No email, per the Step 6 rule that email is for nights with fixes. The open awaiting_james items were all escalated previously and were NOT re-reported, including the SOTA outage escalated last night. The last escalation of this same gate was 2026-09-14, two nights ago; tonight's ping reports the recurrence-after-green and the one-night-in-three rate rather than restating the original finding.",
-      "commits_pushed": "state file only",
-      "deploy_result": "A state-file-only commit under scripts/health/ touches neither frontend nor backend, so no functional deploy risk. Post-push /api/health could not be confirmed, for the same provenance reason as the rest of the run."
+      "pat_status": "Retrieved from Mem, verified with git push --dry-run ('Everything up-to-date', exit 0) and used to push c5be537 and this entry. Push access live. The Mem note's 'expires ~August 27 2026' line is still wrong, now by 20 days; see known_issues pat-expiry-note-stale.",
+      "new_finding": "None about the site. All three surfaces green, every feed 200, cert clean. The finding is about the rig and it is a good one: the provenance gate can be cleared by James granting access mid-run, which converted tonight from the fifth blind night into a full run. See gate_event.",
+      "repairs_made": "none. Nothing on any of the three surfaces was broken.",
+      "notification": "PushNotification SENT early, during the blocked phase, naming the decision: grant this scheduled task standing fetch permission. James acted on it and access was granted mid-session. No second notification and no email sent: once the run completed, nothing was broken and nothing was fixed, so the quiet-night rule applies, and James was present and reading the session. The open awaiting_james items were all escalated previously and were NOT re-reported, including the SOTA outage escalated on 09-15.",
+      "commits_pushed": "c5be537 (blind-night state, superseded mid-run) plus this corrected full-run entry. No functional code change.",
+      "deploy_result": "State-file-only commits under scripts/health/ touch neither frontend nor backend, so no functional deploy risk. /api/health confirmed ok at 05:01:17Z and again through the relay at 05:02:29Z, and all three surfaces rendered clean in Chromium after the first push."
     },
     {
       "date": "2026-09-15",
@@ -681,7 +716,7 @@
     {
       "id": "webfetch-provenance-gate",
       "since": "2026-09-04",
-      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16)."
+      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it."
     },
     {
       "id": "provenance-gate-is-intermittent-and-per-host",
