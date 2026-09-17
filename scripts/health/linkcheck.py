@@ -48,12 +48,14 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 
-# The four files with outbound links, repo-relative.
+# The files with outbound links, repo-relative.
 SOURCE_FILES = [
     "frontend/src/components/Credits.jsx",
     "frontend/src/components/Products.jsx",
     "frontend/public/cyber/index.html",
     "frontend/public/aethersdr/index.html",
+    # The emulator catalogue: ~150 emulator pages plus their source repos.
+    "frontend/public/emulators/emulators.json",
 ]
 
 URL_RE = re.compile(r"https?://[^\s\"'<>()\\\]\}]+")

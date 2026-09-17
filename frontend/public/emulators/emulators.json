@@ -1,0 +1,5529 @@
+{
+ "generated": "2026-09-17",
+ "categories": {
+  "calc": "Calculators & slide rules",
+  "pocket": "Pocket computers & handhelds",
+  "home": "Home computers",
+  "pc": "PCs, Macs & workstations",
+  "mini": "Mainframes, minis & front panels",
+  "cpu": "CPU & assembly simulators",
+  "micro": "Microcontrollers & electronics",
+  "cipher": "Cipher machines & curiosities"
+ },
+ "count": 151,
+ "emulators": [
+  {
+   "id": "8bitworkshop",
+   "name": "8bitworkshop",
+   "url": "https://8bitworkshop.com/",
+   "cat": "cpu",
+   "systems": [
+    "6502",
+    "Z80",
+    "6809",
+    "Atari 2600",
+    "Apple II",
+    "NES",
+    "VIC-20",
+    "ZX Spectrum",
+    "Verilog FPGA",
+    "Williams arcade"
+   ],
+   "blurb": "A browser IDE that compiles C, assembly and Verilog and runs the result instantly on emulated 8-bit computers, consoles and a Verilog simulator.",
+   "why": "Write a 6809 or Z80 program and see it running on the emulated target with a debugger, or simulate Verilog hardware without a toolchain.",
+   "can": [
+    "compile C and assembly in browser",
+    "many 8-bit targets",
+    "Verilog simulation",
+    "debugger and disassembler",
+    "share projects by link"
+   ],
+   "repo": "https://github.com/sehugg/8bitworkshop",
+   "stars": 585,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "Pick a platform and example; builds and runs at once.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "cpu",
+    "6502",
+    "z80",
+    "6809",
+    "verilog",
+    "ide"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "a2-apple",
+   "name": "a2 (Apple ][+)",
+   "url": "https://porkrind.org/a2/",
+   "cat": "home",
+   "systems": [
+    "Apple II+"
+   ],
+   "blurb": "David Caldwell's compact WebGL-accelerated Apple ][+ emulator.",
+   "why": "A quick no-frills II+ with joystick mode, useful when you just want a plain Apple II without extras.",
+   "can": [
+    "boots to BASIC",
+    "load disk images",
+    "WebGL rendering",
+    "joystick mode"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Bare page with few instructions.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1979,
+   "tags": [
+    "apple",
+    "apple-ii",
+    "6502",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "altair-8800-simulator-s2js",
+   "name": "Altair 8800 Simulator (s2js)",
+   "url": "https://s2js.com/altair/",
+   "cat": "mini",
+   "systems": [
+    "MITS Altair 8800",
+    "Intel 8080"
+   ],
+   "blurb": "A JavaScript Altair 8800 with clicking switches, fan noise, a 2 MHz 8080 and a simulated ASR-33 teletype that loads the original 1975 Microsoft BASIC from paper tape.",
+   "why": "The closest browser experience to bootstrapping a real Altair: toggle in the bootloader, load BASIC at 110 baud and hear the teletype.",
+   "can": [
+    "front panel switches",
+    "load paper tape",
+    "simulated ASR-33 with sound",
+    "runs original Altair BASIC",
+    "binary and Intel HEX loader"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Runs instantly; the guided tutorial walks you through toggling and loading BASIC.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "microcomputer",
+    "altair",
+    "8080",
+    "front-panel",
+    "s-100"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "apple-1js",
+   "name": "Apple 1js",
+   "url": "https://www.scullinsteel.com/apple1/",
+   "cat": "home",
+   "systems": [
+    "Apple I"
+   ],
+   "blurb": "Will Scullin's JavaScript emulation of the 1976 Apple I with the Woz Monitor and Integer BASIC.",
+   "why": "Type into the Woz Monitor exactly as Wozniak intended; a lovely minimal demonstration of where personal computing started.",
+   "can": [
+    "boots to Woz Monitor",
+    "load Integer BASIC",
+    "paste in hex or BASIC programs",
+    "runs at accurate speed"
+   ],
+   "repo": "https://github.com/whscullin/apple1js",
+   "stars": 44,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Boots to the monitor prompt; you need to know a couple of monitor commands.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1976,
+   "tags": [
+    "apple",
+    "apple-i",
+    "6502",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "apple-js-apple-jse",
+   "name": "Apple ][js / Apple //jse",
+   "url": "https://www.scullinsteel.com/apple2/",
+   "cat": "home",
+   "systems": [
+    "Apple II",
+    "Apple II+",
+    "Apple IIe"
+   ],
+   "blurb": "Will Scullin's long-established Apple II emulator in TypeScript with colour graphics, sound, disk drives and a built-in disk catalogue; the /apple//e page is the IIe version.",
+   "why": "Boots to Applesoft BASIC with a menu of public-domain and freely licensed disks, works well on phones and tablets, and has a companion IIe build at scullinsteel.com/apple//e.",
+   "can": [
+    "boots to Applesoft BASIC",
+    "built-in disk library",
+    "load .dsk/.do/.po/.woz/.2mg",
+    "save state",
+    "mobile keyboard support"
+   ],
+   "repo": "https://github.com/whscullin/apple2js",
+   "stars": 507,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Just loads to the BASIC prompt with a disk menu.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "apple",
+    "apple-ii",
+    "6502",
+    "8-bit",
+    "basic"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "apple2ts",
+   "name": "Apple2TS",
+   "url": "https://apple2ts.com/",
+   "cat": "home",
+   "systems": [
+    "Apple IIe",
+    "Apple II+"
+   ],
+   "blurb": "Chris Torrence's TypeScript Apple IIe emulator with a debugger, Mockingboard sound, joystick and built-in sample disks.",
+   "why": "Modern, actively developed, and includes a very good debugger and disassembler, so it is useful for learning 6502 assembly as well as running old disks.",
+   "can": [
+    "boots to Applesoft BASIC",
+    "built-in sample disks",
+    "load .dsk/.woz/.hdv images",
+    "save state",
+    "assembly debugger",
+    "gamepad support"
+   ],
+   "repo": "https://github.com/ct6502/apple2ts",
+   "stars": 101,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Boots immediately with a clear toolbar.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "apple",
+    "apple-ii",
+    "6502",
+    "8-bit",
+    "basic",
+    "debugger"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "archimedes-live",
+   "name": "Archimedes Live!",
+   "url": "https://archi.medes.live/",
+   "cat": "home",
+   "systems": [
+    "Acorn Archimedes A3000/A5000 (RISC OS 2/3)"
+   ],
+   "blurb": "Paul Stone's WebAssembly port of Arculator that boots RISC OS in the browser with a library of games and demos.",
+   "why": "The first ARM-based desktop computer, complete with the RISC OS desktop and !Edit/!Draw, runnable with a click; a must for anyone interested in ARM history.",
+   "can": [
+    "boots to RISC OS desktop",
+    "built-in software library",
+    "drag in disc images or archives",
+    "select machine and RAM size"
+   ],
+   "repo": "https://github.com/pdjstone/archimedes-live",
+   "stars": 23,
+   "license": "unknown (Arculator core GPL-2.0)",
+   "ease": 5,
+   "ease_note": "Boots to the RISC OS desktop with a software menu.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1987,
+   "tags": [
+    "acorn",
+    "archimedes",
+    "arm",
+    "risc-os",
+    "32-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "armlite",
+   "name": "ARMlite",
+   "url": "https://peterhigginson.co.uk/ARMlite/",
+   "cat": "cpu",
+   "systems": [
+    "ARM (simplified)"
+   ],
+   "blurb": "Peter Higginson's browser simulator for a simplified ARM assembly language with a memory-mapped pixel display, aimed at schools.",
+   "why": "A friendly step up from Little Man Computer into real-looking ARM code, with visual output and single-stepping.",
+   "can": [
+    "ARM-style assembler",
+    "single step",
+    "pixel display and I/O",
+    "register view",
+    "sample programs"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 5,
+   "ease_note": "Load a sample and press run.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1985,
+   "tags": [
+    "cpu",
+    "arm",
+    "assembly",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "asm80-online-ide-and-emulators",
+   "name": "ASM80 online IDE and emulators",
+   "url": "https://www.asm80.com/",
+   "cat": "cpu",
+   "systems": [
+    "Intel 8080",
+    "8008",
+    "Z80",
+    "6502",
+    "65816",
+    "6800",
+    "6809",
+    "CDP1802",
+    "KIM-1",
+    "ZX Spectrum",
+    "CP/M",
+    "TEC-1",
+    "PMI-80"
+   ],
+   "blurb": "A browser IDE with assemblers for eight 8-bit CPUs and built-in emulators for several single-board and hobby machines.",
+   "why": "Assemble 6809, Z80, 8080 or 1802 code and run it on an emulated KIM-1, CP/M or SBC target without leaving the browser.",
+   "can": [
+    "multi-CPU assembler",
+    "emulated SBC targets",
+    "debugger",
+    "share projects",
+    "export HEX"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 3,
+   "ease_note": "Free but a full IDE; you need to pick a target and know its conventions.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1976,
+   "tags": [
+    "cpu",
+    "assembler",
+    "z80",
+    "6809",
+    "8080",
+    "ide"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "atarionline-jsa8e",
+   "name": "AtariOnline (jsA8E)",
+   "url": "https://eahumada.github.io/AtariOnline/",
+   "cat": "home",
+   "systems": [
+    "Atari 800XL"
+   ],
+   "blurb": "A hosted version of the jsA8E Atari 800XL emulator with ready-made pages for Atari BASIC, Logo, Assembler Editor, MAC/65 and FastBasic.",
+   "why": "Lets you program a real Atari 8-bit in the browser with the classic development tools already mounted; ideal for retro coding sessions.",
+   "can": [
+    "boots to Atari BASIC",
+    "MAC/65 and Assembler Editor pages",
+    "FastBasic demos",
+    "load .atr disk images via URL"
+   ],
+   "repo": "https://github.com/eahumada/AtariOnline",
+   "stars": 5,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Pick a page and it boots; no sound in the emulator core.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "atari",
+    "atari-8bit",
+    "6502",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "ben-eater-s-8-bit-computer-simulation",
+   "name": "Ben Eater's 8-bit Computer Simulation",
+   "url": "https://bobkuczewski.github.io/SimulationOfBenEater8Bit/",
+   "cat": "cpu",
+   "systems": [
+    "SAP-1 style 8-bit breadboard computer"
+   ],
+   "blurb": "A browser simulation of Ben Eater's famous breadboard 8-bit computer with hex program entry, an assembler and example programs.",
+   "why": "Try the Fibonacci and multiplication programs from the video series before (or instead of) building the 44 breadboards.",
+   "can": [
+    "assembler for the 8-bit ISA",
+    "run and reset",
+    "debug mode",
+    "example programs",
+    "memory display"
+   ],
+   "repo": "https://github.com/bobkuczewski/SimulationOfBenEater8Bit",
+   "stars": 0,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Pick an example and press Run.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2017,
+   "tags": [
+    "cpu",
+    "ben-eater",
+    "breadboard",
+    "sap-1",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "bk-0010-0011m-online-emulator-bkmacro",
+   "name": "BK-0010/0011M Online Emulator (BkMacro)",
+   "url": "https://ufasoft.com/bkmacro/online/",
+   "cat": "home",
+   "systems": [
+    "Elektronika BK-0010-01",
+    "Elektronika BK-0011M"
+   ],
+   "blurb": "Ufasoft's HTML5 emulator of the Soviet PDP-11-compatible BK-0010 and BK-0011M home computers.",
+   "why": "The BK was the USSR's most popular home computer and runs a 16-bit PDP-11 instruction set; drop in a .bin or disk image and it runs.",
+   "can": [
+    "boots to Focal/BASIC ROM",
+    "drop .cod/.bin/.bkd/.img files",
+    "BK-0011M mode",
+    "runs in plain JavaScript"
+   ],
+   "repo": "https://github.com/ufasoft/bkmacro",
+   "stars": 2,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Boots on load but the page is Russian/English mixed and assumes you know the machine.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1985,
+   "tags": [
+    "soviet",
+    "elektronika",
+    "bk-0010",
+    "pdp-11",
+    "16-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "bullgammator-bull-gamma-3",
+   "name": "BullGammaTor (Bull Gamma 3)",
+   "url": "https://www.aconit.org/histoire/Gamma-3/Simulateur/",
+   "cat": "mini",
+   "systems": [
+    "Bull Gamma 3 ET"
+   ],
+   "blurb": "An Angular/JavaScript emulator of the French 1952 Bull Gamma 3 tube calculator with drum extension, backed by the ACONIT computing-history association.",
+   "why": "A rare chance to program a first-generation European machine with its plugboard-era instruction set (French UI).",
+   "can": [
+    "run Gamma 3 instruction set",
+    "drum memory extension",
+    "sample programs",
+    "French-language interface"
+   ],
+   "repo": "https://github.com/lutrampal/bullgammator",
+   "stars": 2,
+   "license": "GPL",
+   "ease": 2,
+   "ease_note": "French interface and unusual machine; needs the ACONIT documentation.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1952,
+   "tags": [
+    "vacuum-tube",
+    "bull",
+    "french",
+    "first-generation"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "c64-javascript-emulator-tanja-s-c64",
+   "name": "C64 JavaScript Emulator (Tanja's C64)",
+   "url": "https://c64emulator.111mb.de/index.php?site=pp_javascript&lang=en&group=c64",
+   "cat": "home",
+   "systems": [
+    "Commodore 64"
+   ],
+   "blurb": "A WebAssembly cross-compile of Thomas Hochgoetz's C++ C64 emulator with keyboard, touch and gamepad input.",
+   "why": "A long-running independent C64 emulator that runs in the browser with no setup; handy as a second opinion when a program misbehaves elsewhere.",
+   "can": [
+    "boots to BASIC",
+    "load .d64/.prg files",
+    "gamepad and touchscreen input",
+    "runs at accurate speed"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (free for non-commercial use)",
+   "ease": 4,
+   "ease_note": "Starts immediately; site navigation is slightly cluttered.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "commodore",
+    "c64",
+    "8-bit",
+    "wasm"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "circuitlab",
+   "name": "CircuitLab",
+   "url": "https://www.circuitlab.com/editor/",
+   "cat": "micro",
+   "systems": [
+    "analog and digital circuits (SPICE-like)"
+   ],
+   "blurb": "A browser schematic editor and SPICE-style simulator with DC, transient and frequency-domain analysis and Bode plots.",
+   "why": "Closer to LTspice than the animated sims: proper AC sweeps and plots for filter and amplifier design, straight from a schematic.",
+   "can": [
+    "schematic capture",
+    "DC, transient, AC analysis",
+    "Bode plots",
+    "export images",
+    "share circuits by link"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 3,
+   "ease_note": "Editor opens freely but saving and extended use need an account or subscription.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "electronics",
+    "circuit-simulator",
+    "spice",
+    "analog"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "circuitverse",
+   "name": "CircuitVerse",
+   "url": "https://circuitverse.org/simulator",
+   "cat": "micro",
+   "systems": [
+    "digital logic circuits"
+   ],
+   "blurb": "An open-source online digital logic simulator with gates, flip-flops, ALUs, displays and sub-circuits, plus Verilog export.",
+   "why": "Build and share digital designs (counters, decoders, a small CPU) with a friendly editor; free and open source.",
+   "can": [
+    "drag-and-drop gates",
+    "sub-circuits",
+    "timing diagrams",
+    "Verilog export",
+    "share and embed circuits"
+   ],
+   "repo": "https://github.com/CircuitVerse/CircuitVerse",
+   "stars": 1300,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Simulator opens without login; save requires an account.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "logic",
+    "digital",
+    "circuit-simulator",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "cloudpilotemu-palm-os",
+   "name": "CloudpilotEmu (Palm OS)",
+   "url": "https://cloudpilot-emu.github.io/app",
+   "cat": "pocket",
+   "systems": [
+    "Palm Pilot",
+    "Palm III",
+    "Palm V",
+    "Palm m500 series",
+    "Handspring Visor",
+    "Sony CLIE",
+    "Palm Tungsten E2"
+   ],
+   "blurb": "A web-based Palm OS emulator derived from POSE that supports more than 30 Palm, Sony and Handera devices, running entirely client-side.",
+   "why": "Install PRC apps, use HotSync-free file import and keep continuous state saves in your browser; requires a ROM image dumped from your own device.",
+   "can": [
+    "30+ device profiles",
+    "load your own ROM",
+    "install PRC/PDB files",
+    "continuous state save",
+    "installable PWA",
+    "strictly client-side"
+   ],
+   "repo": "https://github.com/cloudpilot-emu/cloudpilot-emu",
+   "stars": 313,
+   "license": "GPL-3.0",
+   "ease": 2,
+   "ease_note": "Works well once you supply a Palm ROM; nothing runs without one.",
+   "needs_files": true,
+   "offline": true,
+   "year": 1996,
+   "tags": [
+    "palm",
+    "palmos",
+    "pda",
+    "handheld",
+    "pose"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "cloudt-trs-80-model-100",
+   "name": "CloudT (TRS-80 Model 100)",
+   "url": "https://bitchin100.com/CloudT/",
+   "cat": "pocket",
+   "systems": [
+    "TRS-80 Model 100"
+   ],
+   "blurb": "The Bitchin100 community's Model 100 emulator running as a browser progressive web app.",
+   "why": "The Model 100 was the classic field notebook for hams and journalists; CloudT gives you its BASIC, TEXT and TELCOM menu on any device, even offline.",
+   "can": [
+    "boots to Model 100 main menu",
+    "BASIC and TEXT editor",
+    "works offline as PWA"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots to the familiar menu; documentation lives on the Bitchin100 wiki.",
+   "needs_files": false,
+   "offline": true,
+   "year": 1983,
+   "tags": [
+    "tandy",
+    "trs-80",
+    "model-100",
+    "8085",
+    "portable"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "compiler-explorer-godbolt",
+   "name": "Compiler Explorer (godbolt)",
+   "url": "https://godbolt.org/",
+   "cat": "cpu",
+   "systems": [
+    "x86-64",
+    "ARM",
+    "RISC-V",
+    "MIPS",
+    "AVR",
+    "6502 and many others"
+   ],
+   "blurb": "Matt Godbolt's site that compiles source code with hundreds of compilers and shows the generated assembly, with an execution option.",
+   "why": "Not an emulator of a machine, but the fastest way to see what real compilers emit for AVR, ARM or RISC-V, and to run the output.",
+   "can": [
+    "compile for many architectures",
+    "view assembly side by side",
+    "execute output",
+    "share by link",
+    "compare compilers"
+   ],
+   "repo": "https://github.com/compiler-explorer/compiler-explorer",
+   "stars": 19000,
+   "license": "BSD-2-Clause",
+   "ease": 5,
+   "ease_note": "Type code, pick a compiler, done.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "cpu",
+    "compiler",
+    "assembly",
+    "tool"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "contraltojs-xerox-alto-emulator",
+   "name": "ContrAltoJS Xerox Alto Emulator",
+   "url": "https://archives.loomcom.com/contraltojs/",
+   "cat": "pc",
+   "systems": [
+    "Xerox Alto"
+   ],
+   "blurb": "A JavaScript port of the Living Computer Museum's ContrAlto emulator that runs original Xerox Alto disk images, including Smalltalk-76 and games, in the browser.",
+   "why": "See the 1973 machine that invented the GUI and the mouse-driven desktop, and even play networked Alto games via WebRTC.",
+   "can": [
+    "runs original Alto disk images",
+    "Smalltalk-76",
+    "mouse and keyboard",
+    "networked games between instances",
+    "selectable disk packs"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Choose a disk and boot; Alto Executive commands take a little learning.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1973,
+   "tags": [
+    "workstation",
+    "xerox",
+    "alto",
+    "gui"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "cpcbox",
+   "name": "CPCBox",
+   "url": "https://www.cpcbox.com/",
+   "cat": "home",
+   "systems": [
+    "Amstrad CPC 464",
+    "Amstrad CPC 664",
+    "Amstrad CPC 6128"
+   ],
+   "blurb": "The classic JavaScript Amstrad CPC emulator CPCBox, hosted with a selection of demos and games.",
+   "why": "Boots to Locomotive BASIC on any of the three CPC models and remains one of the best-known browser CPCs.",
+   "can": [
+    "boots to Locomotive BASIC",
+    "select 464/664/6128",
+    "load .dsk and .cdt images",
+    "built-in demos"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Official CPCBox site; it shows a short bot check before the emulator loads.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1984,
+   "tags": [
+    "amstrad",
+    "cpc",
+    "z80",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "likely"
+  },
+  {
+   "id": "cpulator",
+   "name": "CPUlator",
+   "url": "https://cpulator.01xz.net/",
+   "cat": "cpu",
+   "systems": [
+    "ARMv7",
+    "MIPS32",
+    "RISC-V RV32",
+    "Nios II"
+   ],
+   "blurb": "A full-system educational CPU simulator with assembler, debugger and memory-mapped I/O devices for ARM, MIPS, RISC-V and Nios II.",
+   "why": "Arguably the best free debugger for learning assembly: breakpoints, watchpoints, reverse stepping and calling-convention checks, all in a tab.",
+   "can": [
+    "assemble and run",
+    "single step and reverse step",
+    "breakpoints and watchpoints",
+    "simulated I/O devices",
+    "load ELF files"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 4,
+   "ease_note": "Choose an architecture, paste code, compile and run; lots of panels but well labelled.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2010,
+   "tags": [
+    "cpu",
+    "arm",
+    "mips",
+    "risc-v",
+    "assembly",
+    "debugger"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "curta-simulator-in-svg-robert-cailliau",
+   "name": "CURTA simulator in SVG (Robert Cailliau)",
+   "url": "https://www.sliderulemuseum.com/VirtualSR/Curta_Simulator.shtml",
+   "cat": "calc",
+   "systems": [
+    "Curta Type II"
+   ],
+   "blurb": "Robert Cailliau's plug-in-free SVG/JavaScript simulation of the Curta Type II mechanical calculator, with draggable sliders, crank and carriage.",
+   "why": "Operate a Curta exactly as you would the real thing (including ten's-complement subtraction and shifted multiplication) without paying collector prices.",
+   "can": [
+    "11-digit input sliders",
+    "crank and carriage shift",
+    "addition, subtraction, multiplication, division",
+    "front and top views",
+    "legend overlay"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Works instantly, but you need to know the Curta procedure to compute.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1948,
+   "tags": [
+    "curta",
+    "mechanical",
+    "calculator"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "curtagl-3d-curta-calculator-jon-millen",
+   "name": "CurtaGL 3D Curta calculator (Jon Millen)",
+   "url": "http://jonmillen.com/CurtaGL/",
+   "cat": "calc",
+   "systems": [
+    "Curta Type I"
+   ],
+   "blurb": "A Blender-modelled, Unity-built WebGL Curta Type I you can turn, set and clear with mouse or touch.",
+   "why": "A polished 3D interactive Curta based on the VCalc.net plans, good for demonstrating how the machine is operated.",
+   "can": [
+    "3D rotatable model",
+    "setting sliders",
+    "crank and clearing lever",
+    "carriage movement",
+    "touch controls"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Unity WebGL build is heavy and served over plain HTTP.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1948,
+   "tags": [
+    "curta",
+    "mechanical",
+    "calculator",
+    "3d"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "derek-s-virtual-slide-rule-gallery",
+   "name": "Derek's Virtual Slide Rule Gallery",
+   "url": "http://www.antiquark.com/sliderule/sim/",
+   "cat": "calc",
+   "systems": [
+    "Pickett N909-ES",
+    "Pickett N3-T",
+    "Pickett N904-T",
+    "Pickett N525-ES",
+    "Pickett N4-ES",
+    "Pickett 160-ES",
+    "Pickett N600-ES"
+   ],
+   "blurb": "Derek Ross's classic JavaScript simulations of seven Pickett slide rules, draggable with the mouse, plus a calculations-by-example tutorial.",
+   "why": "The original web slide rules, ideal for learning C/D/A/B scale technique on the same models that flew on Apollo (N600-ES).",
+   "can": [
+    "drag slide and cursor",
+    "seven Pickett models",
+    "tutorial by example",
+    "downloadable for offline use"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Pick a rule and drag; mouse only, no touch support.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "slide-rule",
+    "pickett",
+    "analog",
+    "calculator"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "digitaljs-online",
+   "name": "DigitalJS Online",
+   "url": "https://digitaljs.tilk.eu/",
+   "cat": "micro",
+   "systems": [
+    "digital logic / Verilog (Yosys)"
+   ],
+   "blurb": "A web front end that synthesises your Verilog (via Yosys) and simulates the resulting netlist interactively with clickable inputs and waveforms.",
+   "why": "Write SystemVerilog, click Synthesize and poke the gate-level schematic; a great bridge between HDL and logic sims.",
+   "can": [
+    "Verilog synthesis to schematic",
+    "interactive simulation",
+    "waveform view",
+    "example designs",
+    "open-source engine"
+   ],
+   "repo": "https://github.com/tilk/digitaljs",
+   "stars": 772,
+   "license": "BSD-2-Clause",
+   "ease": 4,
+   "ease_note": "Paste Verilog and press Synthesize (synthesis runs on the server, simulation in browser).",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "logic",
+    "verilog",
+    "fpga",
+    "hdl"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "dosbox-in-the-browser-retro-game-coders",
+   "name": "DOSBox in the browser (Retro Game Coders)",
+   "url": "https://chips.retrogamecoders.com/dosbox/",
+   "cat": "pc",
+   "systems": [
+    "IBM PC compatible (DOSBox)",
+    "MS-DOS"
+   ],
+   "blurb": "A minimal js-dos page that boots straight to a DOS C:\\ prompt so you can try DOS commands without setting anything up.",
+   "why": "The simplest possible 'DOS prompt in a tab' for demonstrating DOS to newcomers.",
+   "can": [
+    "boots to DOS prompt",
+    "full screen mode",
+    "runs DOSBox in WebAssembly"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "GPL-2.0",
+   "ease": 5,
+   "ease_note": "Loads directly to C:\\.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "ibm-pc",
+    "dos",
+    "dosbox",
+    "x86"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "easy-6502",
+   "name": "Easy 6502",
+   "url": "https://skilldrick.github.io/easy6502/",
+   "cat": "cpu",
+   "systems": [
+    "MOS 6502"
+   ],
+   "blurb": "Nick Morgan's interactive 6502 assembly tutorial with an embedded assembler, simulator, debugger and a tiny pixel display.",
+   "why": "The gentlest introduction to 6502 assembly anywhere; ends with a working Snake game you can single-step.",
+   "can": [
+    "assemble in browser",
+    "single step",
+    "memory monitor",
+    "pixel display",
+    "progressive tutorial"
+   ],
+   "repo": "https://github.com/skilldrick/easy6502",
+   "stars": 1400,
+   "license": "CC-BY-4.0",
+   "ease": 5,
+   "ease_note": "Click Assemble then Run in the first example; nothing to configure.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "cpu",
+    "6502",
+    "assembly",
+    "tutorial"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "elkjs",
+   "name": "ElkJS",
+   "url": "https://elkjs.azurewebsites.net/",
+   "cat": "home",
+   "systems": [
+    "Acorn Electron"
+   ],
+   "blurb": "Darren Coles's JavaScript Acorn Electron emulator ported from Elkulator with a UEF file browser.",
+   "why": "A dedicated Electron with Plus 1/Plus 3 style expansion options; boots to BBC BASIC so you can type in listings from old magazines.",
+   "can": [
+    "boots to BBC BASIC",
+    "load .uef tapes and zips",
+    "keyboard mapping options"
+   ],
+   "repo": "https://github.com/dmcoles/elkjs",
+   "stars": 28,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots to BASIC; you supply your own tape images.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "acorn",
+    "electron",
+    "6502",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "emulator-of-russian-calculators-elektronika-mk-6",
+   "name": "Emulator of Russian calculators (Elektronika MK-61 and friends)",
+   "url": "https://mk-61.moy.su/emulator.html",
+   "cat": "calc",
+   "systems": [
+    "Elektronika MK-61",
+    "Elektronika B3-34",
+    "Elektronika MK-54",
+    "Elektronika MK-56",
+    "Felix-M",
+    "NL-10M slide rule"
+   ],
+   "blurb": "A browser emulator of the Soviet Elektronika programmable calculator family (MK-61, B3-34, MK-54, MK-56) plus a Felix arithmometer and Russian slide rule and abacus, with register and program views.",
+   "why": "The MK-61 has a cult following for its undocumented 'eggog' behaviour and games; this page lets you enter and run those programs with visible stack and program counter.",
+   "can": [
+    "MK-61/B3-34 programming",
+    "register and stack display",
+    "several Soviet models",
+    "mechanical Felix-M and abacus"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Interface is in Russian but the calculator keys are self-explanatory.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "calculator",
+    "elektronika",
+    "mk-61",
+    "soviet",
+    "programmable"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "estyjs",
+   "name": "EstyJS",
+   "url": "https://estyjs.azurewebsites.net/",
+   "cat": "home",
+   "systems": [
+    "Atari ST"
+   ],
+   "blurb": "Darren Coles's Atari ST emulator in JavaScript, shipping with EmuTOS so it boots to the GEM desktop.",
+   "why": "A pure JavaScript ST that needs no TOS ROM from you; a quick way to see GEM and try ST software.",
+   "can": [
+    "boots to GEM desktop with EmuTOS",
+    "load .st disk images",
+    "selectable demo software",
+    "mouse and keyboard emulation"
+   ],
+   "repo": "https://github.com/dmcoles/estyjs",
+   "stars": 47,
+   "license": "GPL-2.0",
+   "ease": 4,
+   "ease_note": "Boots on load; you provide disk images for anything beyond the bundled demos.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1985,
+   "tags": [
+    "atari",
+    "atari-st",
+    "68000",
+    "16-bit",
+    "gem"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "everycircuit",
+   "name": "EveryCircuit",
+   "url": "https://everycircuit.com/app",
+   "cat": "micro",
+   "systems": [
+    "analog and digital circuits"
+   ],
+   "blurb": "A polished, animated circuit simulator with real-time oscilloscope traces and a large community library of shared circuits.",
+   "why": "Beautiful animation of voltages and currents makes it a good teaching tool; the community circuits cover oscillators, amplifiers and radio front ends.",
+   "can": [
+    "animated real-time simulation",
+    "oscilloscope and probes",
+    "community circuit library",
+    "mobile apps"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 3,
+   "ease_note": "Free tier is limited and you must create an account; needs WebGL.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "electronics",
+    "circuit-simulator",
+    "analog"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "falstad-circuitjs",
+   "name": "Falstad CircuitJS",
+   "url": "https://www.falstad.com/circuit/circuitjs.html",
+   "cat": "micro",
+   "systems": [
+    "analog and digital circuits"
+   ],
+   "blurb": "Paul Falstad's animated circuit simulator, now in JavaScript, showing current flow and voltages in real time with a huge library of example circuits.",
+   "why": "The hobbyist favourite for understanding oscillators, filters, mixers and amplifiers visually; includes RF-relevant examples like Colpitts and Hartley oscillators and a scope.",
+   "can": [
+    "animated current flow",
+    "oscilloscope views",
+    "hundreds of example circuits",
+    "import/export circuit text",
+    "share circuits by link"
+   ],
+   "repo": "https://github.com/pfalstad/circuitjs1",
+   "stars": 2300,
+   "license": "GPL-2.0",
+   "ease": 5,
+   "ease_note": "Opens with a running LRC circuit; menus are simple.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "electronics",
+    "circuit-simulator",
+    "analog",
+    "spice-like"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "firebird-webassembly-ti-nspire-emulator",
+   "name": "Firebird (WebAssembly) TI-Nspire emulator",
+   "url": "https://nspire-emus.github.io/firebird/wasm/",
+   "cat": "calc",
+   "systems": [
+    "TI-Nspire",
+    "TI-Nspire CAS",
+    "TI-Nspire CX",
+    "TI-Nspire CX CAS"
+   ],
+   "blurb": "The Qt-based Firebird TI-Nspire ARM emulator compiled to WebAssembly and hosted on GitHub Pages.",
+   "why": "The only way to run a full TI-Nspire in a browser, useful for testing Lua or Ndless programs; requires boot1/boot2 and OS files dumped from your own calculator.",
+   "can": [
+    "full Nspire ARM emulation",
+    "load your own boot and flash images",
+    "GDB/debugger features from Firebird",
+    "open source"
+   ],
+   "repo": "https://github.com/nspire-emus/firebird",
+   "stars": 835,
+   "license": "GPL-3.0",
+   "ease": 1,
+   "ease_note": "Needs you to assemble a flash image from your own calculator's boot files and OS before anything runs.",
+   "needs_files": true,
+   "offline": false,
+   "year": 2007,
+   "tags": [
+    "calculator",
+    "ti",
+    "nspire",
+    "arm",
+    "graphing"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "free42-web-hp-42s-simulator",
+   "name": "Free42 Web (HP-42S simulator)",
+   "url": "https://files.connorcode.com/Sites/free42-web/index.html",
+   "cat": "calc",
+   "systems": [
+    "HP-42S"
+   ],
+   "blurb": "A web shell around Thomas Okken's Free42, the widely used HP-42S re-implementation, compiled to run in the browser.",
+   "why": "Gives you the full Free42 HP-42S engine (the same core as the SwissMicros DM42) with program execution, state management and mobile support, no download needed.",
+   "can": [
+    "full HP-42S function set",
+    "keystroke programming",
+    "state management",
+    "mobile support",
+    "open source shell"
+   ],
+   "repo": "https://github.com/connorslade/free42-web",
+   "stars": 0,
+   "license": "unknown (Free42 core is GPL-2.0)",
+   "ease": 4,
+   "ease_note": "Loads to a working calculator; larger WASM download on first visit.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1988,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-42s",
+    "free42",
+    "programmable"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "gale-galaksija-emulator",
+   "name": "GALe - Galaksija Emulator",
+   "url": "https://galaksija.net/",
+   "cat": "home",
+   "systems": [
+    "Galaksija"
+   ],
+   "blurb": "A browser emulator of the Yugoslav Galaksija, a Z80 kit computer published in a magazine in 1983, with touch keyboard and a menu of programs.",
+   "why": "Another magazine-published home-built computer, with its own BASIC; the site includes selectable games and a touch keyboard.",
+   "can": [
+    "boots to Galaksija BASIC",
+    "built-in program menu",
+    "touch keyboard"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots on load with visible program buttons.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "galaksija",
+    "yugoslavia",
+    "z80",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "homebrew-hub-gbdev-play-game-boy-homebrew-in-the",
+   "name": "Homebrew Hub (gbdev) - play Game Boy homebrew in the browser",
+   "url": "https://hh.gbdev.io/",
+   "cat": "pocket",
+   "systems": [
+    "Game Boy",
+    "Game Boy Color",
+    "Game Boy Advance",
+    "NES"
+   ],
+   "blurb": "gbdev's curated archive of over 1,500 community-made Game Boy, GBC, GBA and NES homebrew games and demos, each playable in-page through WebAssembly builds of binjgb, binjnes and mGBA.",
+   "why": "All content is legal homebrew and demoscene work submitted by its authors, so you can browse, rate and play without ever touching a commercial ROM.",
+   "can": [
+    "1,500+ homebrew titles",
+    "play in page via WASM emulators",
+    "tags and ratings",
+    "open database and source",
+    "no ROMs to supply"
+   ],
+   "repo": "https://github.com/gbdev/homebrewhub",
+   "stars": 57,
+   "license": "GPL-3.0",
+   "ease": 5,
+   "ease_note": "Click a game, press play.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1989,
+   "tags": [
+    "game-boy",
+    "homebrew",
+    "handheld",
+    "gba",
+    "nes"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "hp-15c-simulator-by-greg-hewgill-web",
+   "name": "HP-15C simulator by Greg Hewgill (web)",
+   "url": "https://hp15c.com/web/hp15c.html",
+   "cat": "calc",
+   "systems": [
+    "HP-15C"
+   ],
+   "blurb": "A browser build of Greg Hewgill's well-known HP-15C simulator, showing the full stack, storage registers and program mode.",
+   "why": "Faithful HP-15C behaviour including complex numbers, matrices and keystroke programs, with source on GitHub; a PWA front end of the same core lives at elf.org/hp15c.",
+   "can": [
+    "full HP-15C function set",
+    "program mode",
+    "stack and register display",
+    "open source"
+   ],
+   "repo": "https://github.com/ghewgill/hp15c",
+   "stars": 64,
+   "license": "zlib-style",
+   "ease": 5,
+   "ease_note": "Calculator loads immediately, keyboard usable.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-15c",
+    "programmable"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "hp-35-microcode-emulator-by-ashley-feniello",
+   "name": "HP-35 microcode emulator by Ashley Feniello",
+   "url": "https://ashleyf.github.io/HP35/",
+   "cat": "calc",
+   "systems": [
+    "HP-35"
+   ],
+   "blurb": "A bug-compatible JavaScript emulator that runs the actual HP-35 ROM microcode rather than mimicking its behaviour.",
+   "why": "Reproduces the real firmware, including the famous early ROM bugs, so it behaves exactly like the original hardware.",
+   "can": [
+    "runs original ROM microcode",
+    "bug-compatible with early units",
+    "mobile-friendly layout",
+    "open source"
+   ],
+   "repo": "https://github.com/ashleyf/HP35",
+   "stars": 15,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Loads directly as a calculator on screen.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1972,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-35",
+    "microcode"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "hp-35-simulator-by-neil-fraser",
+   "name": "HP-35 simulator by Neil Fraser",
+   "url": "https://neil.fraser.name/software/hp-35/",
+   "cat": "calc",
+   "systems": [
+    "HP-35"
+   ],
+   "blurb": "A live JavaScript simulation of the original 1972 HP-35 scientific RPN calculator, written to fill the gap in the HP Museum's simulator list.",
+   "why": "Quick, faithful way to try classic HP RPN including the HP-35's original CHS quirk; source and graphics are downloadable as a ZIP.",
+   "can": [
+    "click-to-operate keys",
+    "RPN entry",
+    "reproduces original HP-35 quirks",
+    "downloadable source"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Page loads with a working calculator; just click the keys.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1972,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-35"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "hp25u-hp21u-hp29u-microcode-emulators-sydney-smi",
+   "name": "HP25u / HP21u / HP29u microcode emulators (Sydney-Smith)",
+   "url": "https://www.sydneysmith.com/products/hp25u/run/index.html",
+   "cat": "calc",
+   "systems": [
+    "HP-25",
+    "HP-21",
+    "HP-29C",
+    "HP-55"
+   ],
+   "blurb": "Browser microcode emulators for the HP Woodstock-series HP-21, HP-25 and HP-29C (plus an HP-55u), derived from the author's HP67u engine.",
+   "why": "Runs the real 1970s HP firmware in JavaScript, so program timing and edge cases match the physical calculators; sibling pages exist for hp21u, hp29u and hp55u.",
+   "can": [
+    "runs original ROM microcode",
+    "program mode",
+    "mobile-sized layout",
+    "offline-capable app cache"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (free to use)",
+   "ease": 5,
+   "ease_note": "Direct link opens the working calculator.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-25",
+    "microcode"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "hp67-emulator-by-greg-sydney-smith",
+   "name": "HP67 Emulator by Greg Sydney-Smith",
+   "url": "https://www.sydneysmith.com/wordpress/hp67/",
+   "cat": "calc",
+   "systems": [
+    "HP-67"
+   ],
+   "blurb": "An HTML5 JavaScript emulator of the card-programmable HP-67 that is functionally equivalent to the original, with a state inspector and program control.",
+   "why": "Lets you write and run HP-67 keystroke programs in the browser and peek at internal state; a microcode-based hp67u variant is also offered for purists.",
+   "can": [
+    "keystroke programming",
+    "card-style program save",
+    "state inspection",
+    "flag tests",
+    "installable HTML5 app"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (free to use)",
+   "ease": 4,
+   "ease_note": "Click the run link on the page; calculator appears immediately.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1976,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-67",
+    "programmable"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "ibm-system-360-model-50-microcode-simulator",
+   "name": "IBM System/360 Model 50 microcode simulator",
+   "url": "https://static.righto.com/360/",
+   "cat": "mini",
+   "systems": [
+    "IBM System/360 Model 50"
+   ],
+   "blurb": "Ken Shirriff's browser simulator that executes the Model 50's actual microcode and drives an accurate, zoomable console with lights and roller displays.",
+   "why": "Unique view inside a 1964 mainframe: step through individual microinstructions and watch registers, local store and console lights change.",
+   "can": [
+    "executes real microcode",
+    "single step microinstructions",
+    "zoomable console lights",
+    "roller display knobs",
+    "register and core memory view"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Press Run or Step; understanding what you see needs the accompanying blog post.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1965,
+   "tags": [
+    "mainframe",
+    "ibm",
+    "system-360",
+    "microcode"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "infinite-mac",
+   "name": "Infinite Mac",
+   "url": "https://infinitemac.org/",
+   "cat": "pc",
+   "systems": [
+    "Macintosh 128K/Plus/II (System 1-7)",
+    "Mac OS 8/9 (PowerPC)",
+    "Mac OS X 10.0-10.4",
+    "NeXTSTEP/OPENSTEP"
+   ],
+   "blurb": "Mihai Parparita's site that boots every classic Mac OS from System 1.0 through Mac OS X 10.4, plus NeXTSTEP, using Mini vMac, Basilisk II, SheepShaver, DingusPPC, Previous and PearPC compiled to WebAssembly.",
+   "why": "The one-stop shop for the whole Apple/NeXT lineage: pre-loaded with period software, instant to start, and you can drag your own files or disk images in.",
+   "can": [
+    "boots pre-configured OS images",
+    "built-in software library per era",
+    "drag-and-drop your own files",
+    "NeXTSTEP and OPENSTEP machines",
+    "PowerPC Mac OS 9 and OS X",
+    "custom machine configuration"
+   ],
+   "repo": "https://github.com/mihaip/infinite-mac",
+   "stars": 1600,
+   "license": "Apache-2.0",
+   "ease": 5,
+   "ease_note": "Pick a year/OS and it boots to the desktop.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1984,
+   "tags": [
+    "apple",
+    "macintosh",
+    "68k",
+    "powerpc",
+    "next",
+    "multi-system"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "intel-4004-emulator-e4004",
+   "name": "Intel 4004 emulator (e4004)",
+   "url": "http://e4004.szyc.org/",
+   "cat": "cpu",
+   "systems": [
+    "Intel 4004 (MCS-4)"
+   ],
+   "blurb": "A JavaScript emulator, assembler and disassembler for the Intel 4004, the first commercial microprocessor, modelled on the virtual 6502 GUI.",
+   "why": "Write 4-bit code for the 1971 chip that started it all and step through its registers and stack.",
+   "can": [
+    "assembler and disassembler",
+    "single step",
+    "register view",
+    "ROM/RAM inspection"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Simple form-based interface; assembler syntax documented on page.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1971,
+   "tags": [
+    "cpu",
+    "4004",
+    "intel",
+    "4-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "isrm-virtual-slide-rule-simulators",
+   "name": "ISRM Virtual Slide Rule Simulators",
+   "url": "https://www.sliderulemuseum.com/VirtualSR.shtml",
+   "cat": "calc",
+   "systems": [
+    "Aristo Multilog 970",
+    "Aristo Scholar 903",
+    "Hemmi 266",
+    "Pickett N909-ES",
+    "Curta Model II"
+   ],
+   "blurb": "The International Slide Rule Museum's gallery of JavaScript slide rule and calculator simulators, including Aristo rules with numeric cursor readout and the Curta simulator.",
+   "why": "A single curated hub gathering Derek Ross's, Robert Wolf's and other simulators, with the Hemmi 266 electronics rule and MilDot Master among the oddities.",
+   "can": [
+    "many slide rule models",
+    "numeric cursor readout on Aristo rules",
+    "links to Curta simulator",
+    "mouse drag operation"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Index page of simulators; no touch-device support on the older ones.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "slide-rule",
+    "analog",
+    "museum",
+    "calculator"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jape-javascript-psion-emulator-organiser-ii",
+   "name": "Jape - Javascript Psion Emulator (Organiser II)",
+   "url": "https://www.jaapsch.net/psion/jape/jape.htm",
+   "cat": "pocket",
+   "systems": [
+    "Psion Organiser II CM",
+    "Psion Organiser II XP",
+    "Psion Organiser II LZ",
+    "Psion Organiser II LZ64"
+   ],
+   "blurb": "Jaap Scherphuis' pure-JavaScript emulator of almost every Psion Organiser II model, with datapak/rampak support and snapshots.",
+   "why": "Program in OPL on the 1986 Organiser II in your browser, load OPK pack images and save SNA snapshots; the whole thing is downloadable as a zip.",
+   "can": [
+    "multiple Organiser II models",
+    "datapak/rampak/flashpak emulation",
+    "load OPK pack images",
+    "save and load snapshots",
+    "set clock",
+    "downloadable for offline use"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Pick a model from a drop-down and it boots; packs are optional.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1986,
+   "tags": [
+    "psion",
+    "organiser",
+    "opl",
+    "pda",
+    "handheld"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "javascript-nascom-2-emulator",
+   "name": "JavaScript Nascom 2 Emulator",
+   "url": "https://tommythorn.github.io/jsnascom/",
+   "cat": "home",
+   "systems": [
+    "Nascom 2"
+   ],
+   "blurb": "Tommy Thorn's browser emulator of the British Nascom 2 kit computer with NAS-SYS 3 monitor and tape loading.",
+   "why": "The Nascom was a classic 1979 Z80 kit sold to hobbyists; this runs it with NAS-SYS and lets you load .nas files.",
+   "can": [
+    "boots to NAS-SYS monitor",
+    "load .nas and tape files",
+    "on-screen keyboard"
+   ],
+   "repo": "https://github.com/tommythorn/jsnascom",
+   "stars": 1,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Boots to the monitor prompt; you need to know NAS-SYS commands.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1979,
+   "tags": [
+    "nascom",
+    "z80",
+    "kit",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "javascript-pdp-11-70-emulator-paul-nankervis",
+   "name": "JavaScript PDP 11/70 Emulator (Paul Nankervis)",
+   "url": "https://skn.noip.me/pdp11/pdp11.html",
+   "cat": "mini",
+   "systems": [
+    "DEC PDP-11/70",
+    "DEC PDP-11/45"
+   ],
+   "blurb": "A PDP-11/70 emulator in JavaScript that boots real operating systems such as Unix V5, 2.11BSD, RSTS/E, RSX-11M and RT-11 from disk images.",
+   "why": "Log in to a genuine 1970s Unix or DEC operating system in seconds and see a working front panel with address and data lights.",
+   "can": [
+    "boots Unix and DEC operating systems",
+    "front panel lights",
+    "multiple disk images",
+    "terminal console",
+    "selectable CPU model"
+   ],
+   "repo": "https://github.com/paulnank/pdp11-js",
+   "stars": 68,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Choose an OS from the boot menu; some OSes need knowledge of their login and commands.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "minicomputer",
+    "dec",
+    "pdp-11",
+    "unix"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jp-48g-rpn-calculator-hp-48g-clone-by-josh-poley",
+   "name": "JP 48G RPN calculator (HP-48G clone) by Josh Poley",
+   "url": "http://www.poleyland.com/hp48/index.html",
+   "cat": "calc",
+   "systems": [
+    "HP-48G"
+   ],
+   "blurb": "A workalike RPN calculator written in JavaScript that mimics the HP-48G's stack, directories, angle/base modes and key layout.",
+   "why": "Lightweight alternative to a full Saturn emulator when you just want 48-style stack RPN with directories and modes in a browser tab.",
+   "can": [
+    "HP-48 style stack",
+    "angle and base modes",
+    "directory display",
+    "keyboard input"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (free to use)",
+   "ease": 5,
+   "ease_note": "Page is the calculator; no setup.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1993,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-48",
+    "workalike"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jrpn-jovial-rpn-hp-16c-hp-15c-simulator",
+   "name": "JRPN (Jovial RPN) HP-16C / HP-15C simulator",
+   "url": "https://jrpn.jovial.com/",
+   "cat": "calc",
+   "systems": [
+    "HP-16C",
+    "HP-15C"
+   ],
+   "blurb": "A Flutter-built simulator of the HP-16C Computer Scientist and HP-15C that runs in the browser as well as on desktop and mobile.",
+   "why": "Scalable vector UI, shareable calculator states encoded in the URL, and readable program import/export make it ideal for programmers who want a real 16C for bit twiddling.",
+   "can": [
+    "HP-16C integer/bit operations",
+    "HP-15C scientific mode",
+    "save state in URL",
+    "program import/export",
+    "internals visualiser",
+    "open source"
+   ],
+   "repo": "https://github.com/zathras/jrpn",
+   "stars": 121,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "Landing page links to the web app for each model.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-16c",
+    "hp-15c",
+    "programmer"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "js-mocha",
+   "name": "JS Mocha",
+   "url": "https://www.haplessgenius.com/mocha/",
+   "cat": "home",
+   "systems": [
+    "Tandy Color Computer 2"
+   ],
+   "blurb": "Brad Grier's GWT port of his Mocha CoCo 2 emulator with a handful of his own 1980s Sandhill Colorsoft programs bundled.",
+   "why": "A quick CoCo 2 that comes with legitimately licensed home-grown software and can mount cassettes or disks from a URL.",
+   "can": [
+    "boots to Extended Color BASIC",
+    "bundled period programs",
+    "load .cas/.bin/.dsk files",
+    "autoload via URL parameters"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots on load; simple menus.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "tandy",
+    "coco",
+    "6809",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "js-dos-dos-zone-studio",
+   "name": "js-dos (DOS.Zone Studio)",
+   "url": "https://dos.zone/studio/",
+   "cat": "pc",
+   "systems": [
+    "IBM PC compatible (DOSBox)",
+    "MS-DOS",
+    "Windows 9x"
+   ],
+   "blurb": "The js-dos DOSBox/DOSBox-X port to WebAssembly with a Studio page where you upload your own DOS program bundle and run it in the browser.",
+   "why": "The de-facto standard for running DOS software on the web; Studio lets you package your own legally owned programs without writing code.",
+   "can": [
+    "upload your own DOS programs",
+    "DOSBox and DOSBox-X cores",
+    "3dfx and IPX networking",
+    "save game state to browser",
+    "embed in your own site"
+   ],
+   "repo": "https://github.com/caiiiycuk/js-dos",
+   "stars": 1300,
+   "license": "GPL-2.0",
+   "ease": 2,
+   "ease_note": "You must bring a zip of a DOS program and answer a few packaging questions.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "ibm-pc",
+    "dos",
+    "dosbox",
+    "x86",
+    "wasm"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "js99-er",
+   "name": "JS99'er",
+   "url": "https://js99er.net/",
+   "cat": "home",
+   "systems": [
+    "TI-99/4A"
+   ],
+   "blurb": "Rasmus Moustgaard's TI-99/4A emulator with a built-in software library, speech synthesis, disk and cassette support.",
+   "why": "The best TI-99/4A on the web, boots to TI BASIC with Extended BASIC and a catalogue of freely distributable cartridges available from a menu.",
+   "can": [
+    "boots to TI BASIC",
+    "built-in software library",
+    "load .rpk/.bin cartridges and .dsk",
+    "speech synthesizer emulation",
+    "save state",
+    "debugger"
+   ],
+   "repo": "https://github.com/Rasmus-M/js99er-angular",
+   "stars": 51,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Boots to the TI title screen with a software dropdown.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "texas-instruments",
+    "ti-99",
+    "tms9900",
+    "16-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "likely"
+  },
+  {
+   "id": "jsbeeb",
+   "name": "jsbeeb",
+   "url": "https://bbc.xania.org/",
+   "cat": "home",
+   "systems": [
+    "BBC Micro Model B",
+    "BBC Master 128"
+   ],
+   "blurb": "Matt Godbolt's cycle-accurate BBC Micro emulator with a large disc and tape catalogue, debugger and save states.",
+   "why": "Boots straight into Elite, has a searchable library of freely available discs, and its debugger is superb for learning 6502; the canonical BBC Micro on the web.",
+   "can": [
+    "boots to BBC BASIC (or Elite)",
+    "built-in disc/tape catalogue",
+    "load .ssd/.dsd/.uef",
+    "save state",
+    "debugger and disassembler",
+    "Google Drive disc storage"
+   ],
+   "repo": "https://github.com/mattgodbolt/jsbeeb",
+   "stars": 391,
+   "license": "GPL-3.0",
+   "ease": 5,
+   "ease_note": "Boots immediately; menu bar makes loading discs obvious.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "acorn",
+    "bbc-micro",
+    "6502",
+    "8-bit",
+    "basic"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jsbeeb-acorn-atom-edition",
+   "name": "jsbeeb Acorn Atom edition",
+   "url": "https://atom.commandercoder.com/?model=atom",
+   "cat": "home",
+   "systems": [
+    "Acorn Atom",
+    "BBC Micro"
+   ],
+   "blurb": "A fork of jsbeeb that adds the Acorn Atom, Acorn's 1980 predecessor to the BBC Micro.",
+   "why": "Try Atom BASIC and its built-in assembler in a browser; the Atom is otherwise hard to find emulated online.",
+   "can": [
+    "boots to Atom BASIC",
+    "switch to BBC models",
+    "load Atom tapes/discs",
+    "debugger"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "Boots directly; same UI as jsbeeb.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1980,
+   "tags": [
+    "acorn",
+    "atom",
+    "6502",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jsemu48-online-hp-48gx-emulator",
+   "name": "jsEmu48 online HP-48GX emulator",
+   "url": "https://www.jmapp.com/jsemu48/",
+   "cat": "calc",
+   "systems": [
+    "HP-48G",
+    "HP-48GX"
+   ],
+   "blurb": "An Emscripten port of Daniel Nilsson's HPEMU by Julien Meyer, billed as the first HP48G(X) emulator to run online, bundled with a game so it works out of the box.",
+   "why": "Run real HP-48 Saturn code in the browser: push your own .var or .lib objects onto the stack at boot, remap keys and download snapshots for one-click replay.",
+   "can": [
+    "runs HP-48 ROM in browser",
+    "load your own HP-48 objects",
+    "keyboard mapping",
+    "save snapshot",
+    "hpcalc.org URL loading"
+   ],
+   "repo": "https://github.com/brizzly/jsEmu48",
+   "stars": 14,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Starts running the bundled game immediately; loading your own files is optional.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1993,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-48",
+    "saturn"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jslinux",
+   "name": "JSLinux",
+   "url": "https://bellard.org/jslinux/",
+   "cat": "pc",
+   "systems": [
+    "x86 PC",
+    "RISC-V 64"
+   ],
+   "blurb": "Fabrice Bellard's TinyEMU-based emulator that boots Linux (and Windows 2000) on x86 and RISC-V machines in a browser tab.",
+   "why": "Boot a full Linux with networking and a shell in seconds, or a 64-bit RISC-V system to try the architecture.",
+   "can": [
+    "boots Linux",
+    "RISC-V 64-bit system",
+    "Windows 2000 image",
+    "text and graphical modes",
+    "upload and download files"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Click a machine link and it boots to a shell.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "x86",
+    "risc-v",
+    "linux",
+    "virtual-machine"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jsspeccy-3",
+   "name": "JSSpeccy 3",
+   "url": "https://jsspeccy.zxdemo.org/",
+   "cat": "home",
+   "systems": [
+    "ZX Spectrum 48K",
+    "ZX Spectrum 128K",
+    "Pentagon 128"
+   ],
+   "blurb": "Matt Westcott's third-generation ZX Spectrum emulator, rewritten in WebAssembly for accuracy and speed.",
+   "why": "Accurate enough for demoscene timing tricks and trivially embeddable; the reference browser Spectrum from a well-known Spectrum demo coder.",
+   "can": [
+    "boots to Sinclair BASIC",
+    "load .tap/.tzx/.z80/.sna/.szx",
+    "128K and Pentagon models",
+    "runs at accurate speed",
+    "embeddable in your own page"
+   ],
+   "repo": "https://github.com/gasman/jsspeccy3",
+   "stars": 160,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "Boots to BASIC; loading software means opening your own files.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "sinclair",
+    "zx-spectrum",
+    "z80",
+    "8-bit",
+    "wasm"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jstified-cemetech-ti-83-ti-84-emulator",
+   "name": "jsTIfied (Cemetech) TI-83+/TI-84+ emulator",
+   "url": "https://www.cemetech.net/projects/jstified/",
+   "cat": "calc",
+   "systems": [
+    "TI-73",
+    "TI-81",
+    "TI-82",
+    "TI-83",
+    "TI-83+",
+    "TI-83+SE",
+    "TI-84+",
+    "TI-84+SE"
+   ],
+   "blurb": "Cemetech's in-browser Z80 TI graphing calculator emulator, integrated with the SourceCoder TI-BASIC editor.",
+   "why": "Lets you test TI-BASIC and assembly programs from your own calculator's ROM image entirely in the browser, with everything stored locally.",
+   "can": [
+    "load your own ROM image",
+    "upload/download calculator files",
+    "TI-BASIC editing via SourceCoder",
+    "screenshots",
+    "state kept in browser"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 2,
+   "ease_note": "You must dump a ROM from a calculator you own before it will run.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1999,
+   "tags": [
+    "calculator",
+    "ti",
+    "ti-83",
+    "ti-84",
+    "z80",
+    "graphing"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jtyone-online-zx81-emulator",
+   "name": "JtyOne Online ZX81 Emulator",
+   "url": "https://www.zx81stuff.org.uk/zx81/jtyone.html",
+   "cat": "home",
+   "systems": [
+    "Sinclair ZX81",
+    "Sinclair ZX80",
+    "Timex Sinclair 1000"
+   ],
+   "blurb": "Simon Holdsworth's JavaScript port of the EightyOne emulator, hosted with the ZX81 Stuff software archive so programs load by name.",
+   "why": "Boots to a blank ZX81 for typing in programs and can load hundreds of archived .p files directly, including hi-res graphics titles that need accurate timing.",
+   "can": [
+    "boots to ZX81 BASIC",
+    "LOAD programs by name from the archive",
+    "ZX80 mode",
+    "touchscreen keyboard",
+    "speed control"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Boots instantly; type LOAD \"name\" to run archive programs.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "sinclair",
+    "zx81",
+    "zx80",
+    "timex",
+    "z80",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "jupiter-ace-emulator",
+   "name": "Jupiter Ace Emulator",
+   "url": "https://jupiteraceemulator.com/",
+   "cat": "home",
+   "systems": [
+    "Jupiter Ace"
+   ],
+   "blurb": "A browser emulator for the Forth-based Jupiter Ace with TAP/TZX loading, keyboard modes, speed control and beeper sound.",
+   "why": "The only home computer that booted into Forth instead of BASIC; this site pairs the emulator with reference documentation.",
+   "can": [
+    "boots to Forth",
+    "load .tap/.tzx",
+    "speed control",
+    "beeper sound"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots to Forth; Forth itself is the learning curve.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "jupiter-ace",
+    "forth",
+    "z80",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "lisagui",
+   "name": "LisaGUI",
+   "url": "https://lisagui.com/",
+   "cat": "pc",
+   "systems": [
+    "Apple Lisa (Lisa Office System)"
+   ],
+   "blurb": "A faithful browser recreation of the Apple Lisa Office System desktop written from scratch in JavaScript; not a CPU emulator but a working reimplementation of the Lisa user interface.",
+   "why": "There is no working Lisa emulator in a browser yet, and this is the closest thing: the real Lisa desktop metaphor, LisaWrite-style apps and quirks, running instantly.",
+   "can": [
+    "boots to Lisa Office System desktop",
+    "working desktop and document metaphors",
+    "period-accurate UI behaviour"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 5,
+   "ease_note": "Opens straight to the desktop.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "apple",
+    "lisa",
+    "gui",
+    "recreation"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "little-man-computer",
+   "name": "Little Man Computer",
+   "url": "https://peterhigginson.co.uk/lmc/",
+   "cat": "cpu",
+   "systems": [
+    "Little Man Computer"
+   ],
+   "blurb": "An animated browser implementation of the classic Little Man Computer teaching model with a von Neumann visualisation.",
+   "why": "The standard model used in schools to explain fetch-decode-execute; watch the 'little man' move data between mailboxes.",
+   "can": [
+    "assemble LMC code",
+    "animated fetch-execute",
+    "single step",
+    "adjustable speed"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 5,
+   "ease_note": "Click and it runs an example.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1965,
+   "tags": [
+    "cpu",
+    "education",
+    "von-neumann"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "logicemu",
+   "name": "LogicEmu",
+   "url": "https://lodev.org/logicemu/",
+   "cat": "micro",
+   "systems": [
+    "digital logic circuits"
+   ],
+   "blurb": "Lode Vandevenne's ASCII-art-based logic simulator with built-in circuits ranging from gates to a working 8-bit CPU and a 16-bit computer.",
+   "why": "Runs entirely locally with no server, includes remarkable prebuilt CPUs and a relay-logic mode, and circuits are just text you can edit.",
+   "can": [
+    "prebuilt CPU circuits",
+    "edit circuits as text",
+    "electron-level or fast simulation",
+    "flip-flops, ROM, displays",
+    "works offline (local, no server)"
+   ],
+   "repo": "https://github.com/lvandeve/logicemu",
+   "stars": 118,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Browse the dropdown of circuits; editing needs the ASCII syntax.",
+   "needs_files": false,
+   "offline": true,
+   "year": null,
+   "tags": [
+    "logic",
+    "digital",
+    "cpu-design",
+    "ascii"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "marie-js",
+   "name": "MARIE.js",
+   "url": "https://marie-js.github.io/MARIE.js/",
+   "cat": "cpu",
+   "systems": [
+    "MARIE architecture"
+   ],
+   "blurb": "A JavaScript simulator for the MARIE educational computer architecture from Null and Lobur's textbook, with datapath visualisation.",
+   "why": "Runs the textbook exercises with a live datapath view and stepping, no Java required unlike the original MarieSim.",
+   "can": [
+    "assemble MARIE code",
+    "single step",
+    "datapath animation",
+    "memory and register view"
+   ],
+   "repo": "https://github.com/MARIE-js/MARIE.js",
+   "stars": 173,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Obvious editor and run controls.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "cpu",
+    "education",
+    "marie"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "micro-bit-python-editor-with-simulator",
+   "name": "micro:bit Python Editor (with simulator)",
+   "url": "https://python.microbit.org/v/3",
+   "cat": "micro",
+   "systems": [
+    "BBC micro:bit V2"
+   ],
+   "blurb": "The official micro:bit Python editor with a built-in simulator that runs the real MicroPython firmware and lets you press buttons, tilt and use sensors.",
+   "why": "Runs actual micro:bit firmware compiled to WebAssembly, so code behaves exactly as on the board.",
+   "can": [
+    "runs real MicroPython firmware",
+    "LED matrix and buttons",
+    "accelerometer and sensor inputs",
+    "radio and sound simulation",
+    "download hex for real board"
+   ],
+   "repo": "https://github.com/microbit-foundation/python-editor-v3",
+   "stars": 78,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Open, type Python, press play on the simulator.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2020,
+   "tags": [
+    "microcontroller",
+    "microbit",
+    "micropython",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "micropython-on-unicorn-pyboard-simulator",
+   "name": "MicroPython on Unicorn (pyboard simulator)",
+   "url": "https://micropython.org/unicorn/",
+   "cat": "micro",
+   "systems": [
+    "MicroPython pyboard"
+   ],
+   "blurb": "The official MicroPython site's in-browser pyboard simulator, running MicroPython on an emulated ARM Cortex-M via the Unicorn engine with virtual LEDs, servo, ADC and I2C LCD.",
+   "why": "Try MicroPython hardware scripts (pyb module, LEDs, servo) with no board, choosing RAM, stack and clock speed to see how constraints bite.",
+   "can": [
+    "run MicroPython scripts",
+    "virtual LEDs, servo, ADC and LCD",
+    "adjustable RAM/stack/clock",
+    "official micropython.org host"
+   ],
+   "repo": "https://github.com/micropython/micropython",
+   "stars": 22100,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Click Run on the sample script; older page but still functional.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2014,
+   "tags": [
+    "micropython",
+    "python",
+    "repl",
+    "pyboard",
+    "embedded"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "mmbasic-anywhere-web-picomite-picocalc-emulator",
+   "name": "MMBasic Anywhere Web (PicoMite / PicoCalc emulator)",
+   "url": "https://jvanderberg.github.io/PicoMiteAllVersions/",
+   "cat": "pocket",
+   "systems": [
+    "PicoMite MMBasic",
+    "PicoCalc"
+   ],
+   "blurb": "A WebAssembly port of the PicoMite MMBasic interpreter and its bytecode VM that runs PicoCalc-style BASIC programs in the browser with a virtual SD card and built-in editor.",
+   "why": "Lets you write and test MMBasic programs for the ClockworkPi PicoCalc without flashing hardware or swapping SD cards, with a fast edit-run loop and PicoCalc-like screen sizes.",
+   "can": [
+    "built-in code editor",
+    "virtual SD card with drag-and-drop files",
+    "selectable screen resolutions",
+    "persistent IndexedDB storage",
+    "installable PWA",
+    "load your own programs"
+   ],
+   "repo": "https://github.com/jvanderberg/PicoMiteAllVersions",
+   "stars": 3,
+   "license": "MMBasic custom license (attribution)",
+   "ease": 5,
+   "ease_note": "Open the page, type BASIC or drop a .bas file, press run.",
+   "needs_files": false,
+   "offline": true,
+   "year": 2025,
+   "tags": [
+    "basic",
+    "picocalc",
+    "picomite",
+    "mmbasic",
+    "pocket-computer"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "moonjs-apollo-guidance-computer",
+   "name": "Moonjs Apollo Guidance Computer",
+   "url": "https://svtsim.com/moonjs/agc.html",
+   "cat": "mini",
+   "systems": [
+    "Apollo Guidance Computer (Block II)",
+    "DSKY"
+   ],
+   "blurb": "An Emscripten port of Virtual AGC running the real Colossus 249 flight software from Apollo 9 behind a clickable DSKY.",
+   "why": "Enter Verb/Noun commands exactly as the astronauts did and watch the actual flight code respond; no install of Virtual AGC required.",
+   "can": [
+    "real Colossus 249 software",
+    "DSKY keypad and lamps",
+    "verb/noun commands",
+    "lamp test and program selection"
+   ],
+   "repo": "https://github.com/siravan/moonjs",
+   "stars": 64,
+   "license": "GPL-2.0",
+   "ease": 4,
+   "ease_note": "Click and it runs; you need a cheat sheet of verbs and nouns, which the page provides.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1966,
+   "tags": [
+    "aerospace",
+    "agc",
+    "apollo",
+    "dsky"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "my-trs-80",
+   "name": "My TRS-80",
+   "url": "https://www.my-trs-80.com/",
+   "cat": "home",
+   "systems": [
+    "TRS-80 Model I",
+    "TRS-80 Model III"
+   ],
+   "blurb": "Lawrence Kesteloot's web app that hosts a virtual TRS-80 with a personal library of cassettes and floppy images.",
+   "why": "Beyond emulation it keeps your program library in the browser and can decode real cassette audio; part of an open TypeScript TRS-80 toolkit.",
+   "can": [
+    "boots to Level II BASIC",
+    "personal cassette/disk library",
+    "load .cas/.wav/.dmk/.jv3",
+    "Model I and III"
+   ],
+   "repo": "https://github.com/lkesteloot/trs80",
+   "stars": 71,
+   "license": "MIT",
+   "ease": 3,
+   "ease_note": "Full-featured app with a library concept that takes a minute to understand.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "tandy",
+    "trs-80",
+    "z80",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "likely"
+  },
+  {
+   "id": "mz-700-full-javascript-emulator",
+   "name": "MZ-700 Full JavaScript Emulator",
+   "url": "https://takamin.github.io/mz700-js/emu",
+   "cat": "home",
+   "systems": [
+    "Sharp MZ-700"
+   ],
+   "blurb": "Takamin's HTML5 emulator of the Sharp MZ-700 'clean computer' with its monitor ROM and cassette loading.",
+   "why": "A rarely emulated Japanese 8-bit that shipped with only a monitor; you load BASIC from tape just as owners did.",
+   "can": [
+    "boots to MZ monitor",
+    "load .mzt tape files",
+    "Z80 debugger",
+    "keyboard emulation"
+   ],
+   "repo": "https://github.com/takamin/mz700-js",
+   "stars": 27,
+   "license": "MIT",
+   "ease": 3,
+   "ease_note": "Boots to the monitor; you need an MZT of BASIC to do much.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "sharp",
+    "mz-700",
+    "z80",
+    "japan",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "nand2tetris-web-ide",
+   "name": "Nand2Tetris Web IDE",
+   "url": "https://nand2tetris.github.io/web-ide/",
+   "cat": "cpu",
+   "systems": [
+    "Hack computer"
+   ],
+   "blurb": "The official browser IDE for the Nand2Tetris course: hardware simulator, Hack CPU emulator, VM emulator and assembler.",
+   "why": "Build a computer from NAND gates upward and run your own CPU, entirely in the browser with no Java tools.",
+   "can": [
+    "HDL hardware simulator",
+    "Hack CPU emulator",
+    "VM emulator",
+    "assembler",
+    "test scripts"
+   ],
+   "repo": "https://github.com/nand2tetris/web-ide",
+   "stars": 215,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Multiple tools; follow the course to make sense of them.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "cpu",
+    "hack",
+    "nand2tetris",
+    "hdl",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "nandgame",
+   "name": "NandGame",
+   "url": "https://nandgame.com/",
+   "cat": "cpu",
+   "systems": [
+    "NAND-based computer (game)"
+   ],
+   "blurb": "A puzzle game where you build a working computer from a single NAND gate, through ALU, memory and CPU, to programming it.",
+   "why": "The Turing Complete style experience free in a browser; each level is a live logic simulation you wire yourself.",
+   "can": [
+    "interactive logic simulation",
+    "build ALU and CPU",
+    "progress saved locally",
+    "assembly and software levels"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 5,
+   "ease_note": "Drag components and connect; guided by levels.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "logic",
+    "game",
+    "cpu-design",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "nanowasp-microbee",
+   "name": "NanoWasp (MicroBee)",
+   "url": "http://nanowasp.org/",
+   "cat": "home",
+   "systems": [
+    "Applied Technology MicroBee"
+   ],
+   "blurb": "A JavaScript emulator of the Australian MicroBee with BASIC in ROM.",
+   "why": "The MicroBee was Australia's school computer and a kit-built favourite; NanoWasp boots it to BASIC in any browser.",
+   "can": [
+    "boots to MicroBASIC",
+    "load tape files",
+    "runs in plain JavaScript"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots on load; note the site is plain http.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "microbee",
+    "australia",
+    "z80",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "nova-emulator-in-browser-novajs",
+   "name": "Nova Emulator in Browser (NovaJS)",
+   "url": "http://www.novasareforever.org/emulators/nova-emulator",
+   "cat": "mini",
+   "systems": [
+    "Data General Nova",
+    "Nova 3",
+    "Nova 4"
+   ],
+   "blurb": "A browser-based Data General Nova emulator with front panel, teletype, disk and tape peripherals, and preloaded diagnostics, DOS and Spacewar.",
+   "why": "The Nova is rarely emulated online; this one lets you flip the switches and boot period operating systems from a real DG software collection.",
+   "can": [
+    "front panel switches",
+    "ASR-33 teletype",
+    "disk and tape peripherals",
+    "preloaded OS and diagnostics",
+    "load/save .ABS binaries"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Dropdowns preload software, but the front panel and DG console conventions need the manual.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1969,
+   "tags": [
+    "minicomputer",
+    "data-general",
+    "nova",
+    "front-panel"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "octalgia-vic-20",
+   "name": "Octalgia VIC-20",
+   "url": "https://www.mdawson.net/vic20chrome/vic20.php",
+   "cat": "home",
+   "systems": [
+    "Commodore VIC-20"
+   ],
+   "blurb": "Matt Dawson's browser VIC-20 emulator, originally a Chrome app and now a plain web app.",
+   "why": "One of the few dedicated VIC-20 emulators on the web, useful for trying the 3.5K BASIC that so many people started on.",
+   "can": [
+    "boots to BASIC",
+    "load .prg files",
+    "joystick support"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Page is a JavaScript app that boots on load; verified only from search results and page metadata.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1980,
+   "tags": [
+    "commodore",
+    "vic-20",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "likely"
+  },
+  {
+   "id": "olivetti-programma-101-emulator",
+   "name": "Olivetti Programma 101 emulator",
+   "url": "https://biged.github.io/P101/p101viewport.html",
+   "cat": "calc",
+   "systems": [
+    "Olivetti Programma 101"
+   ],
+   "blurb": "A JavaScript/jQuery emulator of the 1965 Olivetti Programma 101, often called the first commercial programmable desktop computer, with key sounds and example programs.",
+   "why": "Experience the magnetic-card programmable that predates pocket calculators, with sample programs for loops, jumps and Pythagoras.",
+   "can": [
+    "P101 keyboard and printer output",
+    "load/save programs",
+    "example programs",
+    "key click sound",
+    "open source"
+   ],
+   "repo": "https://github.com/Fabioamd87/P101",
+   "stars": 2,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Loads immediately; you need the manual to make sense of the key codes.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1965,
+   "tags": [
+    "calculator",
+    "olivetti",
+    "programmable",
+    "vintage"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "online-kim-1-emulator",
+   "name": "Online KIM-1 emulator",
+   "url": "https://maksimkorzh.github.io/KIM-1/",
+   "cat": "mini",
+   "systems": [
+    "MOS KIM-1",
+    "MOS 6502"
+   ],
+   "blurb": "A JavaScript KIM-1 single-board computer with hex keypad, six-digit LED display and an integrated 6502 assembler.",
+   "why": "Learn 6502 machine language the 1976 way by keying hex into a KIM-1 monitor, without buying a board.",
+   "can": [
+    "hex keypad",
+    "LED display",
+    "built-in 6502 assembler",
+    "mobile and retro-styled variants",
+    "serial teleprinter routines"
+   ],
+   "repo": "https://github.com/maksimKorzh/KIM-1",
+   "stars": 20,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Works at once but you need to know the KIM monitor keys.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1976,
+   "tags": [
+    "single-board",
+    "kim-1",
+    "6502",
+    "hex-keypad"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "oricutron-js",
+   "name": "Oricutron.js",
+   "url": "https://torguet.net/oric/",
+   "cat": "home",
+   "systems": [
+    "Oric-1",
+    "Oric Atmos"
+   ],
+   "blurb": "Patrice Torguet's Emscripten build of the Oricutron emulator with a launcher for running Oric tapes and disks from a web page.",
+   "why": "The main Oric emulator, running in the browser and used by the Oric community to publish games and demos online.",
+   "can": [
+    "boots to Oric BASIC",
+    "load .tap and .dsk files",
+    "launcher for hosting your own titles"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "GPL-2.0",
+   "ease": 3,
+   "ease_note": "Launcher page is aimed at people who want to host Oric software; the emulator itself boots fine.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "oric",
+    "6502",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "orion-128-online-emulator",
+   "name": "Orion-128 Online Emulator",
+   "url": "https://zvzd3d.ru/Orion128/Orion128Main.html",
+   "cat": "home",
+   "systems": [
+    "Orion-128"
+   ],
+   "blurb": "A WebAssembly emulator of the Orion-128, a Soviet hobbyist 8080 computer, with games and programs preloaded on virtual quasi-disks.",
+   "why": "Preserves a large collection of 1990s Orion software and runs it with one click.",
+   "can": [
+    "boots with preloaded quasi-disks",
+    "built-in games and applications",
+    "runs in WebAssembly"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Works immediately but all text is Russian.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1990,
+   "tags": [
+    "soviet",
+    "orion-128",
+    "8080",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pce-js",
+   "name": "PCE.js",
+   "url": "https://jamesfriend.com.au/pce-js/",
+   "cat": "pc",
+   "systems": [
+    "Macintosh Plus (System 6/7)",
+    "IBM PC (DOS, Windows 3.0)",
+    "Atari ST"
+   ],
+   "blurb": "James Friend's Emscripten port of Hampa Hug's PCE emulator with pre-loaded demos of System 7 on a Mac Plus, DOS games, Windows 3.0 and an Atari ST.",
+   "why": "The original 'System 7 in your browser' demo, still working; one click gets you MacPaint or an Atari ST desktop.",
+   "can": [
+    "boots pre-loaded Mac System 6/7",
+    "IBM PC with DOS and Windows 3.0 demo",
+    "Atari ST demo",
+    "bundled classic apps and games"
+   ],
+   "repo": "https://github.com/jsdf/pce",
+   "stars": 919,
+   "license": "GPL-2.0",
+   "ease": 5,
+   "ease_note": "Click a demo and it boots.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1986,
+   "tags": [
+    "apple",
+    "macintosh",
+    "68k",
+    "ibm-pc",
+    "atari-st",
+    "multi-system"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pcjs-machines",
+   "name": "PCjs Machines",
+   "url": "https://www.pcjs.org/",
+   "cat": "pc",
+   "systems": [
+    "IBM PC 5150/XT/AT",
+    "COMPAQ DeskPro 386",
+    "PC DOS and MS-DOS",
+    "Windows 1.0-3.1 and 95",
+    "OS/2 1.x",
+    "Ohio Scientific C1P",
+    "DEC PDP-10/PDP-11",
+    "DEC VT100",
+    "Space Invaders arcade"
+   ],
+   "blurb": "Jeff Parsons's JavaScript machine emulators with hundreds of pre-configured IBM PC compatibles, original OS disk images and a historical software archive.",
+   "why": "Boot Windows 1.01 on a 1985 IBM PC AT, or Windows 95 on a DeskPro 386, with documentation and archived disks all on one open-source site; also hosts the only browser Ohio Scientific C1P.",
+   "can": [
+    "boots pre-configured DOS, Windows and OS/2 machines",
+    "Windows 1.01 through Windows 95",
+    "PDP-11 front panel with RT-11 and PDP-10",
+    "VT100 terminal and OSI Challenger 1P",
+    "built-in software archive",
+    "save machine state and debugger"
+   ],
+   "repo": "https://github.com/jeffpar/pcjs",
+   "stars": 1200,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Each machine page boots itself but the site is huge and takes some browsing.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "ibm-pc",
+    "x86",
+    "dos",
+    "windows",
+    "ohio-scientific",
+    "multi-system",
+    "pc",
+    "dec",
+    "pdp-11",
+    "pdp-10",
+    "vt100",
+    "minicomputer"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pcjs-ti-55-scientific-calculator",
+   "name": "PCjs TI-55 Scientific Calculator",
+   "url": "https://www.pcjs.org/machines/ti/ti55/",
+   "cat": "calc",
+   "systems": [
+    "TI-55",
+    "TI-42 MBA"
+   ],
+   "blurb": "PCjs emulation of the TI-55 scientific programmable running the original ROM, with a sibling page for the TI-42 MBA.",
+   "why": "See how TI's late-1970s TMS-1500 scientific calculators actually behaved, with ROM dumps and manuals linked alongside.",
+   "can": [
+    "runs original ROM",
+    "optional diagnostics",
+    "linked owner's manual",
+    "open source"
+   ],
+   "repo": "https://github.com/jeffpar/pcjs",
+   "stars": 1200,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Live on the page; no setup.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "calculator",
+    "ti",
+    "ti-55",
+    "pcjs"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pcjs-ti-57-programmable-calculator",
+   "name": "PCjs TI-57 Programmable Calculator",
+   "url": "https://www.pcjs.org/machines/ti/ti57/",
+   "cat": "calc",
+   "systems": [
+    "TI-57"
+   ],
+   "blurb": "Jeff Parsons' PCjs emulation of the 1977 TI-57 running the original TMS-1500 ROM at the speed of the real device.",
+   "why": "One of the most faithful TI-57 emulations available, with ROM documentation, patents and the author's 1978-79 programs to try.",
+   "can": [
+    "runs original ROM",
+    "cycle-accurate speed",
+    "optional diagnostics build",
+    "works on phone and tablet",
+    "open source"
+   ],
+   "repo": "https://github.com/jeffpar/pcjs",
+   "stars": 1200,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Calculator is live on the page; press the power button and go.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "calculator",
+    "ti",
+    "ti-57",
+    "programmable",
+    "pcjs"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pdp-11-emulator-running-unix-v6-aiju",
+   "name": "PDP-11 emulator running UNIX V6 (aiju)",
+   "url": "http://pdp11.aiju.de/",
+   "cat": "mini",
+   "systems": [
+    "DEC PDP-11/40"
+   ],
+   "blurb": "A minimal JavaScript PDP-11 emulator that loads a Sixth Edition Unix kernel and gives you a teletype-style shell.",
+   "why": "The quickest way to poke at original 1975 Unix (ed, cc, the classic kernel) with zero setup.",
+   "can": [
+    "boots UNIX V6",
+    "teletype console",
+    "runs C compiler",
+    "simulated disk activity"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Press run and type unix at the @ prompt; then you need Unix V6 knowledge.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1973,
+   "tags": [
+    "minicomputer",
+    "dec",
+    "pdp-11",
+    "unix"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pet-2001-emulator-mass-werk",
+   "name": "PET 2001 Emulator (mass:werk)",
+   "url": "https://www.masswerk.at/pet/",
+   "cat": "home",
+   "systems": [
+    "Commodore PET 2001"
+   ],
+   "blurb": "Norbert Landsteiner's cycle-accurate Commodore PET 2001 emulator with multiple ROM revisions, a debugger and a 6502 disassembler.",
+   "why": "The definitive in-browser PET, with the chiclet keyboard artwork, period-correct ROMs and the ability to load BASIC source or assembler code directly; nothing is sent to a server.",
+   "can": [
+    "boots to BASIC",
+    "drag in .prg/.d64/.tap/BASIC source",
+    "built-in debugger and disassembler",
+    "select ROM version and RAM size",
+    "runs at accurate speed"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (free, source viewable)",
+   "ease": 5,
+   "ease_note": "Boots to READY instantly with a clear on-screen keyboard.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "commodore",
+    "pet",
+    "8-bit",
+    "basic",
+    "6502"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "philips-p2000t-web-player",
+   "name": "Philips P2000T Web Player",
+   "url": "https://p2000t.github.io/",
+   "cat": "home",
+   "systems": [
+    "Philips P2000T"
+   ],
+   "blurb": "A browser build (RetroArch web player with the M2000 core) of the Dutch Philips P2000T Teletext-based home computer.",
+   "why": "The only easy way to try the P2000T's Teletext display and BASIC, maintained by the P2000T preservation project.",
+   "can": [
+    "boots to BASIC",
+    "load cassette images",
+    "Teletext display emulation"
+   ],
+   "repo": "https://github.com/p2000t/p2000t.github.io",
+   "stars": 0,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots on load with key mapping shown.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1980,
+   "tags": [
+    "philips",
+    "p2000t",
+    "z80",
+    "netherlands",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "picsimlab-online",
+   "name": "PICSimLab Online",
+   "url": "https://lcgamboa.github.io/",
+   "cat": "micro",
+   "systems": [
+    "Arduino Uno (ATmega328P)",
+    "PIC16/PIC18",
+    "ESP32",
+    "STM32 boards"
+   ],
+   "blurb": "The WebAssembly build of PICSimLab, a real-time board-level simulator for PIC, AVR, ESP32 and STM32 development boards with virtual peripherals.",
+   "why": "Simulate a PIC or ATmega board with LCDs, keypads and serial devices in the browser using the same engine as the desktop tool.",
+   "can": [
+    "load compiled HEX firmware",
+    "virtual LCD, keypad, serial",
+    "oscilloscope",
+    "multiple board types"
+   ],
+   "repo": "https://github.com/lcgamboa/picsimlab",
+   "stars": 660,
+   "license": "GPL-2.0",
+   "ease": 2,
+   "ease_note": "You generally need to compile firmware elsewhere and load the HEX; UI is the desktop app in a canvas.",
+   "needs_files": true,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "microcontroller",
+    "pic",
+    "avr",
+    "esp32",
+    "stm32"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "pockemul-online",
+   "name": "PockEmul Online",
+   "url": "https://pockemul.com/OL/pockemul.html",
+   "cat": "pocket",
+   "systems": [
+    "Sharp PC-1211",
+    "Sharp PC-1251",
+    "Sharp PC-1500",
+    "Sharp PC-1600",
+    "Sharp PC-E500",
+    "Sharp PC-G850",
+    "Casio PB-100",
+    "Casio PB-1000",
+    "Casio FX-890P",
+    "TI-74",
+    "TI-95",
+    "TI CC-40",
+    "HP-71B",
+    "Canon X-07"
+   ],
+   "blurb": "The browser build of PockEmul, the long-running multi-machine emulator of 1980s pocket computers from Sharp, Casio, TI, HP, Canon and others, including printers and interfaces.",
+   "why": "The broadest pocket-computer coverage anywhere: Sharp PC-12xx/1500 (Tandy PC-1/PC-2 equivalents), Casio PB series, TI-74 and more, with peripherals you can plug together on screen.",
+   "can": [
+    "dozens of pocket computer models",
+    "BASIC programming",
+    "connect virtual printers and interfaces",
+    "save sessions",
+    "runs in browser without install"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 3,
+   "ease_note": "Large Qt/WebAssembly app; takes a moment to load and the workbench UI has a learning curve.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1980,
+   "tags": [
+    "pocket-computer",
+    "sharp",
+    "casio",
+    "tandy",
+    "basic",
+    "ti-74"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "polymac-hp-classic-microcode-emulators",
+   "name": "PolyMac HP Classic microcode emulators",
+   "url": "https://torotrak.wordpress.com/hp-classic/",
+   "cat": "calc",
+   "systems": [
+    "HP-35",
+    "HP-45",
+    "HP-55",
+    "HP-65",
+    "HP-70",
+    "HP-80"
+   ],
+   "blurb": "A family of JavaScript microcode-level emulators (based on Feniello's HP-35 work and Jacques Laporte's research) for the whole HP Classic series of 1972-1975, hosted on the EPFL PolyMac site.",
+   "why": "The only browser place to run the card-programmable HP-65 and the HP-55/HP-80 at microcode level, freed from the old Java applets.",
+   "can": [
+    "runs original ROM microcode",
+    "six HP Classic models",
+    "key click sound",
+    "works on phones",
+    "links to handbooks and disassemblers"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Landing page links to each model; each emulator then loads instantly.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1972,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-65",
+    "hp-45",
+    "microcode"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "projectabe-arduboy-emulator-and-ide",
+   "name": "ProjectABE - Arduboy emulator and IDE",
+   "url": "https://felipemanga.github.io/ProjectABE/",
+   "cat": "pocket",
+   "systems": [
+    "Arduboy"
+   ],
+   "blurb": "Felipe Manga's HTML5 Arduboy emulator with a built-in game list, an Ace-based IDE and drag-and-drop loading of .hex/.arduboy files.",
+   "why": "Pick an open-source Arduboy game from the built-in repository and play it immediately, or write and debug your own Arduboy sketch in the browser; also the engine behind arduboy.com/emulator.",
+   "can": [
+    "built-in library of open-source games",
+    "drag-and-drop .hex/.arduboy",
+    "in-browser code editor",
+    "debugger",
+    "GIF recording"
+   ],
+   "repo": "https://github.com/felipemanga/ProjectABE",
+   "stars": 145,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Choose a game from the list and it runs; the repo is archived but the page still works.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2015,
+   "tags": [
+    "arduboy",
+    "handheld",
+    "homebrew",
+    "avr",
+    "games"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "qaop-js",
+   "name": "Qaop/JS",
+   "url": "https://torinak.com/qaop/",
+   "cat": "home",
+   "systems": [
+    "ZX Spectrum 48K",
+    "ZX Spectrum 128K"
+   ],
+   "blurb": "Jan Bobrowski's minimalist ZX Spectrum emulator in JavaScript with an optional CRT filter and full-screen mode.",
+   "why": "Very lightweight and fast, loads from URL parameters, and is a favourite for embedding single Spectrum programs on a web page.",
+   "can": [
+    "boots to Sinclair BASIC",
+    "load .tap/.tzx/.z80/.sna via URL or file",
+    "CRT shader effect",
+    "keyboard and Kempston joystick"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots to BASIC; controls are keyboard-driven with a help overlay.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "sinclair",
+    "zx-spectrum",
+    "z80",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "qpc1-live-sinclair-ql-smsq-e",
+   "name": "QPC1 Live (Sinclair QL SMSQ/E)",
+   "url": "https://www.kilgus.net/qpc/live/",
+   "cat": "home",
+   "systems": [
+    "Sinclair QL (SMSQ/E)"
+   ],
+   "blurb": "Marcel Kilgus's QPC1 QL emulator running under DOSBox in the browser, preloaded with a QXL.WIN demo containing sample QL software.",
+   "why": "The quickest way to see the QL's SuperBASIC and Pointer Environment without installing anything; it is the official author's own live page.",
+   "can": [
+    "boots to SMSQ/E SuperBASIC",
+    "sample software in QXL.WIN",
+    "mouse and keyboard capture"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (freeware)",
+   "ease": 3,
+   "ease_note": "Boots automatically but keyboard/mouse capture is quirky and there is no help text.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1984,
+   "tags": [
+    "sinclair",
+    "ql",
+    "68008",
+    "smsq/e"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "radio-86rk-emulator-rk86-ru",
+   "name": "Radio-86RK Emulator (rk86.ru)",
+   "url": "https://rk86.ru/",
+   "cat": "home",
+   "systems": [
+    "Radio-86RK"
+   ],
+   "blurb": "Alexander Demin's JavaScript emulator of the Radio-86RK, the 8080-based home computer published as a build-it-yourself project in the Soviet 'Radio' magazine.",
+   "why": "A ham-radio-magazine computer you can try in a tab; it boots to the monitor and includes a library of period programs.",
+   "can": [
+    "boots to monitor",
+    "built-in program library",
+    "load .rk tape files",
+    "8080 debugger"
+   ],
+   "repo": "https://github.com/begoon/rk86-js",
+   "stars": 28,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Russian-language UI with many programs; the monitor needs some knowledge.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1986,
+   "tags": [
+    "soviet",
+    "radio-86rk",
+    "8080",
+    "8-bit",
+    "ham-radio"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "likely"
+  },
+  {
+   "id": "retro-1620-ibm-1620-emulator",
+   "name": "retro-1620 IBM 1620 Emulator",
+   "url": "https://www.phkimpel.us/IBM-1620/webUI/1620.html",
+   "cat": "mini",
+   "systems": [
+    "IBM 1620 Model 2"
+   ],
+   "blurb": "A browser emulator of the IBM 1620 'CADET' decimal scientific computer with control panel, typewriter and peripherals.",
+   "why": "Run 1960s FORTRAN and SPS on the machine many engineers first learned on, straight from a web page.",
+   "can": [
+    "control panel lights and switches",
+    "console typewriter",
+    "card and paper tape devices",
+    "period software library"
+   ],
+   "repo": "https://github.com/pkimpel/retro-1620",
+   "stars": 4,
+   "license": "MIT",
+   "ease": 2,
+   "ease_note": "Operating procedures follow the real machine; wiki reading required.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1959,
+   "tags": [
+    "ibm",
+    "1620",
+    "decimal",
+    "transistor"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "retro-b5500-burroughs-b5500-emulator",
+   "name": "retro-B5500 Burroughs B5500 Emulator",
+   "url": "https://www.phkimpel.us/B5500/webUI/B5500Console.html",
+   "cat": "mini",
+   "systems": [
+    "Burroughs B5500"
+   ],
+   "blurb": "A JavaScript emulator of the stack-architecture Burroughs B5500 that boots the MCP operating system and runs Algol and COBOL.",
+   "why": "Experience the machine that pioneered descriptors, virtual memory and Algol-in-the-OS; requires loading a system tape image from the project site.",
+   "can": [
+    "boots MCP",
+    "operator SPO console",
+    "card reader and printer",
+    "Algol 60 compiler",
+    "multiple tape and disk units"
+   ],
+   "repo": "https://github.com/pkimpel/retro-b5500",
+   "stars": 81,
+   "license": "MIT",
+   "ease": 1,
+   "ease_note": "You must download and mount system tape images and follow the wiki cold-start procedure.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1964,
+   "tags": [
+    "mainframe",
+    "burroughs",
+    "algol",
+    "stack-machine"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "retro-g15-bendix-g-15-emulator",
+   "name": "retro-g15 Bendix G-15 Emulator",
+   "url": "https://www.phkimpel.us/Bendix-G15/webUI/G15.html",
+   "cat": "mini",
+   "systems": [
+    "Bendix G-15D"
+   ],
+   "blurb": "Paul Kimpel's JavaScript emulator of the 1956 Bendix G-15 drum computer with its control panel, typewriter and paper tape.",
+   "why": "The G-15 was the closest thing to a 1950s personal computer; this emulator runs its original software from the hosting site's library.",
+   "can": [
+    "control panel",
+    "typewriter and paper tape",
+    "load period software",
+    "drum memory timing"
+   ],
+   "repo": "https://github.com/pkimpel/retro-g15",
+   "stars": 38,
+   "license": "MIT",
+   "ease": 2,
+   "ease_note": "You must read the Getting Started wiki to load tapes and operate the panel.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1956,
+   "tags": [
+    "vacuum-tube",
+    "bendix",
+    "drum-memory",
+    "first-generation"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "retro-lgp21-lgp-21-emulator",
+   "name": "retro-lgp21 LGP-21 Emulator",
+   "url": "https://www.phkimpel.us/LGP-21/webUI/LGP21.html",
+   "cat": "mini",
+   "systems": [
+    "General Precision LGP-21",
+    "LGP-30 (compatible)"
+   ],
+   "blurb": "A browser emulator of the LGP-21, the transistorised successor to the LGP-30 drum computer, with control panel and register scope display.",
+   "why": "The nearest web option to Mel's famous LGP-30: drum-timed instructions, a 31-instruction set and a tiny console you can actually run.",
+   "can": [
+    "control panel",
+    "oscilloscope register display",
+    "typewriter and tape",
+    "drum timing emulation"
+   ],
+   "repo": "https://github.com/pkimpel/retro-lgp21",
+   "stars": 6,
+   "license": "MIT",
+   "ease": 2,
+   "ease_note": "Requires reading the wiki to load and start programs.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1963,
+   "tags": [
+    "drum-memory",
+    "lgp-30",
+    "lgp-21",
+    "transistor"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "ripes",
+   "name": "Ripes",
+   "url": "https://ripes.me/",
+   "cat": "cpu",
+   "systems": [
+    "RISC-V RV32/RV64"
+   ],
+   "blurb": "The WebAssembly build of Ripes, a visual RISC-V processor simulator with single-cycle and pipelined models, cache simulation and C compilation.",
+   "why": "Interactive processor diagrams plus a cache simulator make it the most complete visual RISC-V tool that runs in a browser.",
+   "can": [
+    "visual pipeline datapath",
+    "cache simulation",
+    "assemble and run",
+    "memory-mapped I/O peripherals",
+    "works offline as WASM app"
+   ],
+   "repo": "https://github.com/mortbopet/Ripes",
+   "stars": 3300,
+   "license": "MIT",
+   "ease": 4,
+   "ease_note": "Large WASM download then a desktop-style UI.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2010,
+   "tags": [
+    "cpu",
+    "risc-v",
+    "pipeline",
+    "cache"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "runcpm-wasm",
+   "name": "RunCPM (wasm)",
+   "url": "https://cpm.retrogamecoders.com/",
+   "cat": "home",
+   "systems": [
+    "CP/M 2.2 (Z80)"
+   ],
+   "blurb": "Chris Garrett's Emscripten port of RunCPM that drops you at a CP/M 2.2 prompt with Rogue, editors, compilers and BASIC pre-installed on virtual drives.",
+   "why": "CP/M without disk images or hardware: the operating system Kaypro, Osborne and Altair users ran, ready to use with a C compiler and MBASIC.",
+   "can": [
+    "boots to CP/M A> prompt",
+    "pre-installed BASIC, editors, compilers and Rogue",
+    "host-folder style drives",
+    "runs in WebAssembly"
+   ],
+   "repo": "https://github.com/omiq/runcpm-wasm",
+   "stars": 1,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Loads straight to A>; DIR shows what is available.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1979,
+   "tags": [
+    "cp/m",
+    "z80",
+    "8-bit",
+    "kaypro",
+    "osborne"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "samcoupeweb",
+   "name": "SamCoupeWeb",
+   "url": "https://anomixer.github.io/SamCoupeWeb/",
+   "cat": "home",
+   "systems": [
+    "SAM Coupé"
+   ],
+   "blurb": "A web-native port of Simon Owen's SimCoupe emulating the SAM Coupé, the 1989 'super Spectrum'.",
+   "why": "Full SAM emulation with SAA1099 and optional SID sound, disk and tape support, in a modern single-page app.",
+   "can": [
+    "boots to SAM BASIC",
+    "load .dsk/.mgt/.sad and tapes",
+    "256K/512K memory options",
+    "joystick support",
+    "recording options"
+   ],
+   "repo": "https://github.com/anomixer/SamCoupeWeb",
+   "stars": 0,
+   "license": "GPL-2.0",
+   "ease": 4,
+   "ease_note": "Boots directly; settings panel is dense.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1989,
+   "tags": [
+    "sam-coupe",
+    "mgt",
+    "z80",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "scripted-amiga-emulator-sae",
+   "name": "Scripted Amiga Emulator (SAE)",
+   "url": "https://scriptedamigaemulator.net/",
+   "cat": "home",
+   "systems": [
+    "Amiga 500",
+    "Amiga 1000",
+    "Amiga 1200",
+    "Amiga 3000/4000"
+   ],
+   "blurb": "A pure JavaScript Amiga emulator based on WinUAE supporting OCS/ECS/AGA chipsets and 68000-68030 CPUs.",
+   "why": "Runs Workbench-era software and demos without any Kickstart ROM thanks to the bundled AROS replacement ROM; a good way to show what an Amiga could do.",
+   "can": [
+    "boots with AROS Kickstart replacement",
+    "load .adf floppy images",
+    "select Amiga model and chipset",
+    "joystick and mouse emulation"
+   ],
+   "repo": "https://github.com/naTmeg/ScriptedAmigaEmulator",
+   "stars": 352,
+   "license": "GPL (version unverified)",
+   "ease": 3,
+   "ease_note": "Needs a fast machine and you must pick a config before starting; no built-in software library.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1985,
+   "tags": [
+    "commodore",
+    "amiga",
+    "16-bit",
+    "68000"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "sim-8800-altair-front-panel-simulator",
+   "name": "Sim-8800 Altair Front Panel Simulator",
+   "url": "https://wixette.github.io/8800-simulator/",
+   "cat": "mini",
+   "systems": [
+    "MITS Altair 8800",
+    "Intel 8080"
+   ],
+   "blurb": "A clean, mobile-friendly Altair 8800 front panel simulator with a debugger tab and Altair BASIC 3.2 preloaded.",
+   "why": "Ideal for teaching front-panel operation on a phone or tablet; the debugger view shows registers and memory alongside the switches.",
+   "can": [
+    "front panel switches",
+    "debugger and memory view",
+    "touch support",
+    "Altair BASIC preloaded",
+    "tutorial program"
+   ],
+   "repo": "https://github.com/wixette/8800-simulator",
+   "stars": 93,
+   "license": "Apache-2.0",
+   "ease": 5,
+   "ease_note": "Open and start flipping switches; tutorial included.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "microcomputer",
+    "altair",
+    "8080",
+    "front-panel"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "sim8085",
+   "name": "Sim8085",
+   "url": "https://www.sim8085.com/",
+   "cat": "cpu",
+   "systems": [
+    "Intel 8085"
+   ],
+   "blurb": "A modern web-based 8085 microprocessor simulator with editor, assembler, register and flag view and stepping.",
+   "why": "Popular with students; assembles and runs classic 8085 lab programs with a clean UI.",
+   "can": [
+    "assemble in browser",
+    "single step",
+    "register and flag display",
+    "memory editor",
+    "breakpoints"
+   ],
+   "repo": "https://github.com/debjitbis08/sim8085",
+   "stars": 135,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Type, assemble, run; very obvious UI.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1976,
+   "tags": [
+    "cpu",
+    "8085",
+    "intel",
+    "assembly"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "simelf-cosmac-elf-simulator",
+   "name": "SimElf++ COSMAC Elf Simulator",
+   "url": "https://www.donnelly-house.net/programming/cdp1802/simelf/",
+   "cat": "mini",
+   "systems": [
+    "COSMAC Elf",
+    "RCA CDP1802"
+   ],
+   "blurb": "A JavaScript simulation of the 1976 Popular Electronics COSMAC Elf with toggle switches, hex display, memory dump, disassembler and a retro terminal.",
+   "why": "Toggle in 1802 machine code exactly like the magazine article, or load Intel HEX files and adjust the clock; great for the RCA 1802 fan community.",
+   "can": [
+    "toggle switches and LEDs",
+    "hex keyboard entry",
+    "memory dump and disassembler",
+    "load HEX/Intel/decimal files",
+    "adjustable clock"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "Loads instantly; Elf load/run switch semantics need the original instructions.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1976,
+   "tags": [
+    "microcomputer",
+    "cosmac",
+    "1802",
+    "front-panel"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "sinclair-cambridge-programmable-emulator-caffnib",
+   "name": "Sinclair Cambridge Programmable emulator (caffnib)",
+   "url": "https://www.caffnib.co.uk/calculators/sinclair_prog.html",
+   "cat": "calc",
+   "systems": [
+    "Sinclair Cambridge Programmable"
+   ],
+   "blurb": "A quick JavaScript model of the 1977 Sinclair Cambridge Programmable with its 36-step program memory and example programs.",
+   "why": "One of the few places to try Sinclair's tiny programmable, complete with a debug mode that caps runaway loops.",
+   "can": [
+    "36-step programming",
+    "example programs",
+    "debug mode",
+    "source viewable"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Works immediately but the author warns it is lightly tested.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "calculator",
+    "sinclair",
+    "programmable"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "sinclair-scientific-simulator-by-ken-shirriff",
+   "name": "Sinclair Scientific simulator by Ken Shirriff",
+   "url": "https://static.righto.com/calculator/sinclair_scientific_simulator.html",
+   "cat": "calc",
+   "systems": [
+    "Sinclair Scientific"
+   ],
+   "blurb": "A register-level simulator that runs the actual 1974 Sinclair Scientific code recovered by photographing the TMS0805 die, with live view of the A, B and C registers.",
+   "why": "Watch how Clive Sinclair squeezed scientific functions into a four-function chip: step through the algorithm at slow speed and see the registers change.",
+   "can": [
+    "runs recovered original ROM code",
+    "register and flag visualisation",
+    "speed control",
+    "RPN entry",
+    "open source"
+   ],
+   "repo": "https://github.com/shirriff/TICalculatorJSSimulator",
+   "stars": 32,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Simulator is embedded in the article; click keys to use.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1974,
+   "tags": [
+    "calculator",
+    "sinclair",
+    "rpn",
+    "reverse-engineering"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "slide-rule-simulator-collection-dr-robert-p-wolf",
+   "name": "Slide Rule Simulator Collection (Dr. Robert P. Wolf)",
+   "url": "https://sliderules.lovett.com/new_wolf_simulators/webSimulator/index.html",
+   "cat": "calc",
+   "systems": [
+    "Aristo",
+    "Faber-Castell 2/83N",
+    "K&E Decilon",
+    "Nestler 23R",
+    "Post Versalog II",
+    "Pickett N600",
+    "Breitling Navitimer"
+   ],
+   "blurb": "A React-based collection of 50-plus slide rule replicas from 15 manufacturers whose scales are drawn programmatically from reverse-engineered equations rather than images.",
+   "why": "The most complete and precise slide rule simulator set online, with zoom, digital readouts, built-in tutorials and a training game; the code is on GitHub and works offline once downloaded.",
+   "can": [
+    "50+ models",
+    "zoom with scroll wheel",
+    "digital cursor readout",
+    "interactive tutorials",
+    "training game",
+    "open source"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Choose a model from the index; controls are explained per rule.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "slide-rule",
+    "analog",
+    "calculator",
+    "aristo",
+    "faber-castell"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "socdp-8-pdp-8-in-the-browser",
+   "name": "SoCDP-8 (PDP-8 in the browser)",
+   "url": "https://pdp8.app/",
+   "cat": "mini",
+   "systems": [
+    "DEC PDP-8/I"
+   ],
+   "blurb": "An in-browser PDP-8 emulator with a working front panel, built-in assembler and peripherals, from the SoCDP8 FPGA project.",
+   "why": "Toggle programs in on the blinkenlights panel or assemble short programs without owning a PiDP-8; a very approachable way into PDP-8 machine language.",
+   "can": [
+    "front panel switches and lights",
+    "built-in assembler",
+    "load paper tape images",
+    "single step",
+    "runs OS/8-era software"
+   ],
+   "repo": "https://github.com/fpw/SoCDP8",
+   "stars": 29,
+   "license": "AGPL-3.0",
+   "ease": 4,
+   "ease_note": "Needs JavaScript; pick a machine and go, but front-panel operation takes some reading.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1968,
+   "tags": [
+    "minicomputer",
+    "dec",
+    "pdp-8",
+    "front-panel"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "spacewar-on-a-virtual-pdp-1",
+   "name": "Spacewar! on a virtual PDP-1",
+   "url": "https://www.masswerk.at/spacewar/",
+   "cat": "mini",
+   "systems": [
+    "DEC PDP-1"
+   ],
+   "blurb": "Norbert Landsteiner's JavaScript PDP-1 emulator running the original 1962 Spacewar! code with a CRT-style display.",
+   "why": "Play the first video game on the actual machine code it ran on, with sense switches and multiple historical versions; a great demo of a 1959 minicomputer.",
+   "can": [
+    "runs original PDP-1 code",
+    "keyboard, gamepad and touch controls",
+    "sense switch options",
+    "multiple historical game versions",
+    "adjustable emulation speed"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Loads and runs the game immediately; controls shown on page.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1959,
+   "tags": [
+    "minicomputer",
+    "dec",
+    "pdp-1",
+    "game"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "stendec-web-rpn-calculators-hp-11c-12c-16c-style",
+   "name": "STENDEC web RPN calculators (HP-11C/12C/16C style)",
+   "url": "https://stendec.io/ctb/scientific/",
+   "cat": "calc",
+   "systems": [
+    "HP-11C",
+    "HP-12C Platinum",
+    "HP-16C"
+   ],
+   "blurb": "Elvis Pfützenreuter's family of RPN calculators modelled on the HP Voyager series, with scientific, financial and programmer variants running directly in the browser.",
+   "why": "Handy workalikes with keyboard shortcuts when you just want Voyager-style RPN in a tab; companion mobile apps exist.",
+   "can": [
+    "RPN entry",
+    "scientific/financial/programmer variants",
+    "keyboard shortcuts",
+    "memory registers"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary (free to use)",
+   "ease": 5,
+   "ease_note": "Opens straight to a working calculator.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-11c",
+    "hp-12c",
+    "hp-16c"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "the-antikythera-mechanism-thomas-weibel",
+   "name": "The Antikythera Mechanism (Thomas Weibel)",
+   "url": "https://www.thomasweibel.ch/antikythera/",
+   "cat": "cipher",
+   "systems": [
+    "Antikythera mechanism"
+   ],
+   "blurb": "An interactive 3D web reconstruction of the Antikythera mechanism that animates the gearing at one year per minute and crossfades to the original fragment.",
+   "why": "Watch the world's oldest known analog computer's gear train turn and compare it with the corroded artefact.",
+   "can": [
+    "3D zoom and pan",
+    "animated gear train",
+    "crossfade artefact vs reconstruction",
+    "downloadable models"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Loads a large 3D model; then just drag and zoom.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "mechanical",
+    "antikythera",
+    "analog-computer",
+    "ancient"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "the-emulator-framework-emf",
+   "name": "The Emulator Framework (EMF)",
+   "url": "https://em.ulat.es/",
+   "cat": "home",
+   "systems": [
+    "Sinclair ZX80",
+    "Sinclair ZX81",
+    "ZX Spectrum",
+    "Jupiter Ace",
+    "TRS-80",
+    "Dragon 32",
+    "COSMAC VIP"
+   ],
+   "blurb": "Steven Goodwin's JavaScript emulator framework with playable machine pages for several Z80, 6809 and CHIP-8 systems.",
+   "why": "A single site to compare early British micros side by side, including the rarely emulated Jupiter Ace and Dragon 32.",
+   "can": [
+    "boots each machine to its ROM/BASIC",
+    "Jupiter Ace Forth",
+    "Dragon 32 and TRS-80 pages",
+    "runs in plain JavaScript"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Machines boot but the UI is sparse and some pages are marked work-in-progress.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1980,
+   "tags": [
+    "sinclair",
+    "jupiter-ace",
+    "dragon",
+    "trs-80",
+    "multi-system",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "ti-59-web-simulator-st3ph-x",
+   "name": "TI-59 web simulator (ST3PH-X)",
+   "url": "https://st3ph-x.github.io/ti-59/",
+   "cat": "calc",
+   "systems": [
+    "TI-59"
+   ],
+   "blurb": "A vanilla-JavaScript recreation of the TI-59's gold-key interface with 100 registers and a linear 960-step program mode.",
+   "why": "Good for the look and feel of the classic TI-59 and simple keystroke programs, though it deliberately omits branching and loops so it is not a full emulator.",
+   "can": [
+    "TI-59 keyboard layout",
+    "100 memory registers",
+    "linear program playback",
+    "scientific functions",
+    "open source"
+   ],
+   "repo": "https://github.com/ST3PH-X/ti-59",
+   "stars": 0,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Loads as a ready-to-use calculator.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1977,
+   "tags": [
+    "calculator",
+    "ti",
+    "ti-59",
+    "programmable",
+    "workalike"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "ti-89-ti-92-voyage-200-javascript-emulator-ti-pl",
+   "name": "TI-89 / TI-92+ / Voyage 200 JavaScript emulator (TI-Planet fork)",
+   "url": "https://tiplanet.org/emu68k_fork/",
+   "cat": "calc",
+   "systems": [
+    "TI-89",
+    "TI-89 Titanium",
+    "TI-92 Plus",
+    "Voyage 200"
+   ],
+   "blurb": "Patrick Davidson's canvas-based 68k TI emulator, extended by Lionel Debroux and hosted on TI-Planet, pre-loaded with the open-source PedroM OS and several games.",
+   "why": "Runs without any TI ROM thanks to PedroM, so you can try 68k calculator games and assembly programs immediately; you may also load your own OS image.",
+   "can": [
+    "ships with PedroM open-source OS",
+    "pre-loaded games",
+    "optional own ROM/OS loading",
+    "keyboard mapping",
+    "speed and zoom controls"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Boots straight into PedroM; some compatibility limits with commercial OS software.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1998,
+   "tags": [
+    "calculator",
+    "ti",
+    "ti-89",
+    "ti-92",
+    "68k",
+    "graphing"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "tinkercad-circuits",
+   "name": "Tinkercad Circuits",
+   "url": "https://www.tinkercad.com/circuits",
+   "cat": "micro",
+   "systems": [
+    "Arduino Uno",
+    "ATtiny85",
+    "micro:bit",
+    "breadboard components"
+   ],
+   "blurb": "Autodesk's beginner-friendly breadboard and Arduino simulator with drag-and-drop parts, code blocks and a virtual multimeter and oscilloscope.",
+   "why": "The easiest way for a newcomer to wire a breadboard and see an Arduino sketch run, with realistic-looking parts.",
+   "can": [
+    "breadboard wiring",
+    "Arduino code simulation",
+    "block coding",
+    "virtual multimeter and scope",
+    "share designs"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 3,
+   "ease_note": "Requires a free Autodesk account before you can simulate.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2005,
+   "tags": [
+    "microcontroller",
+    "arduino",
+    "breadboard",
+    "electronics",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "tiny-emulators-floooh-chips",
+   "name": "Tiny Emulators (floooh chips)",
+   "url": "https://floooh.github.io/tiny8bit/",
+   "cat": "home",
+   "systems": [
+    "Commodore 64",
+    "VIC-20",
+    "ZX Spectrum 48/128",
+    "Amstrad CPC 464/6128",
+    "Acorn Atom",
+    "KC85/2/3/4",
+    "Z1013",
+    "Z9001/KC87"
+   ],
+   "blurb": "Andre Weissflog's cycle-stepped 'chips' emulators compiled to WebAssembly, covering Western and East German 8-bit machines from one page.",
+   "why": "Extremely accurate, tiny, fast and open source, with a built-in debugger UI; it is also the only easy place to try the East German Robotron KC85 family in a browser.",
+   "can": [
+    "boots to BASIC",
+    "load .prg/.tap/.sna/.z80 via URL or drop",
+    "built-in debugger and memory view",
+    "runs at accurate speed",
+    "covers East German KC85/Z1013"
+   ],
+   "repo": "https://github.com/floooh/chips-test",
+   "stars": 471,
+   "license": "zlib",
+   "ease": 4,
+   "ease_note": "Pick a machine and it boots; loading your own files is by drag-and-drop or URL parameters.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "commodore",
+    "sinclair",
+    "amstrad",
+    "acorn",
+    "robotron",
+    "8-bit",
+    "wasm",
+    "multi-system"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "trs-80-model-iii-emulator-trsjs",
+   "name": "TRS-80 Model III Emulator (trsjs)",
+   "url": "http://trsjs.48k.ca/",
+   "cat": "home",
+   "systems": [
+    "TRS-80 Model III"
+   ],
+   "blurb": "A JavaScript port of the trs80gp core emulating a TRS-80 Model III with BASIC and TRSDOS 1.3 built in.",
+   "why": "Click Run and you are at the Model III BASIC prompt or a TRSDOS disk system; no files needed.",
+   "can": [
+    "boots to Model III BASIC",
+    "built-in TRSDOS 1.3",
+    "runs in plain JavaScript"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 5,
+   "ease_note": "One Run button and you are in BASIC.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1980,
+   "tags": [
+    "tandy",
+    "trs-80",
+    "z80",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "tsrun-timex-sinclair-2068",
+   "name": "TSRun (Timex Sinclair 2068)",
+   "url": "https://josef-jelinek.github.io/TSRun/",
+   "cat": "home",
+   "systems": [
+    "Timex Sinclair 2068"
+   ],
+   "blurb": "A browser emulator dedicated to the American Timex Sinclair 2068 with tape, cartridge and ROM slots and an archive browser.",
+   "why": "The only dedicated TS2068 emulator on the web; it lets US Spectrum fans try the Timex-specific video modes and cartridges.",
+   "can": [
+    "boots to TS2068 BASIC",
+    "load .tap/.tzx tapes",
+    "load .dck cartridges",
+    "swap HOME/EXROM ROMs",
+    "archive browser"
+   ],
+   "repo": "https://github.com/josef-jelinek/TSRun",
+   "stars": 0,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Vendored ROMs are provided but the UI expects you to understand ROM0/ROM1 slots.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "timex",
+    "sinclair",
+    "ts2068",
+    "z80",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "turing-machine-simulator-morphett-info",
+   "name": "Turing machine simulator (morphett.info)",
+   "url": "https://morphett.info/turing/turing.html",
+   "cat": "cpu",
+   "systems": [
+    "Turing machine"
+   ],
+   "blurb": "Anthony Morphett's classic text-based Turing machine simulator with a simple rule syntax, tape display and example programs.",
+   "why": "Minimal and fast: paste a rule table, set the tape and step; ideal for exercises.",
+   "can": [
+    "rule-table programs",
+    "step and run",
+    "tape editing",
+    "example programs",
+    "save/load machines"
+   ],
+   "repo": "https://github.com/awmorp/turing",
+   "stars": 90,
+   "license": "Unlicense",
+   "ease": 5,
+   "ease_note": "Load an example and press Run.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1936,
+   "tags": [
+    "turing-machine",
+    "theory",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "turing-machine-visualization-turingmachine-io",
+   "name": "Turing machine visualization (turingmachine.io)",
+   "url": "https://turingmachine.io/",
+   "cat": "cpu",
+   "systems": [
+    "Turing machine"
+   ],
+   "blurb": "An animated Turing machine simulator where machines are written in a small YAML syntax and the state diagram highlights as it runs.",
+   "why": "The nicest visual explanation of Turing machines; edit the YAML and watch the tape and state graph update.",
+   "can": [
+    "YAML machine definitions",
+    "animated state diagram",
+    "step and run",
+    "example machines",
+    "share by link"
+   ],
+   "repo": "https://github.com/aepsilon/turing-machine-viz",
+   "stars": 287,
+   "license": "BSD-3-Clause",
+   "ease": 5,
+   "ease_note": "Examples load instantly; syntax is documented on page.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1936,
+   "tags": [
+    "turing-machine",
+    "theory",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "uk101-emulator-in-javascript",
+   "name": "UK101 Emulator in JavaScript",
+   "url": "http://www.avoncliff.com/uk101/",
+   "cat": "home",
+   "systems": [
+    "Compukit UK101"
+   ],
+   "blurb": "David Stevenson's JavaScript emulator of the Compukit UK101, the British Ohio Scientific Superboard clone, with CEGmon or monUK01 monitors and tape editor.",
+   "why": "Another Practical Electronics kit computer, boots to Microsoft BASIC-in-ROM with a virtual cassette recorder.",
+   "can": [
+    "boots to BASIC",
+    "choose CEGmon or monUK01 monitor",
+    "virtual tape recorder with slots",
+    "load files by drop"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Old-style page (plain http) but boots immediately.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1979,
+   "tags": [
+    "uk101",
+    "compukit",
+    "6502",
+    "kit",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "universal-enigma-daniel-palloks",
+   "name": "Universal Enigma (Daniel Palloks)",
+   "url": "https://people.physik.hu-berlin.de/~palloks/js/enigma/enigma-u_v262_en.html",
+   "cat": "cipher",
+   "systems": [
+    "Enigma I",
+    "M3",
+    "M4",
+    "D",
+    "K",
+    "G",
+    "T",
+    "Swiss-K",
+    "Railway",
+    "Norenigma",
+    "Sonder"
+   ],
+   "blurb": "A long-running HTML/JavaScript Enigma simulator that models essentially every historical Enigma variant with correct rotor wirings and a signal-path monitor.",
+   "why": "If you need a specific model (Abwehr G-312, Tirpitz, Uhr) or want to see the signal path through the wheels, this is the reference-grade choice.",
+   "can": [
+    "all major Enigma models",
+    "plugboard and Uhr",
+    "ring and rotor settings",
+    "signal path monitor",
+    "batch encipher text"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Dense but clear form UI; loads instantly.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1932,
+   "tags": [
+    "cipher-machine",
+    "enigma",
+    "cryptography"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "v86-copy-sh",
+   "name": "v86 (copy.sh)",
+   "url": "https://copy.sh/v86/",
+   "cat": "pc",
+   "systems": [
+    "IBM PC compatible (x86)",
+    "MS-DOS/FreeDOS",
+    "Windows 1.01-98",
+    "Linux",
+    "x86 PC (Pentium-class)"
+   ],
+   "blurb": "Fabian Hemmer's x86 PC emulator in WebAssembly with one-click profiles for FreeDOS, Windows 1.01, 3.1, 95, 98, Linux and more.",
+   "why": "The fastest way to boot Windows 95 or 98 in a browser tab, and you can upload your own floppy, CD or hard disk images.",
+   "can": [
+    "boots Linux, FreeDOS, Windows 1.01-98 profiles",
+    "load your own disk or ISO images",
+    "save and restore state",
+    "networking via WebSocket relay",
+    "serial console",
+    "runs at near-native speed"
+   ],
+   "repo": "https://github.com/copy/v86",
+   "stars": 23500,
+   "license": "BSD-2-Clause",
+   "ease": 4,
+   "ease_note": "Pick a profile and press Start; some profiles are large downloads.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "ibm-pc",
+    "x86",
+    "dos",
+    "windows",
+    "wasm",
+    "multi-system",
+    "pc",
+    "linux",
+    "virtual-machine"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "vamigaweb",
+   "name": "vAmigaWeb",
+   "url": "https://vamigaweb.github.io/",
+   "cat": "home",
+   "systems": [
+    "Amiga 500",
+    "Amiga 1000",
+    "Amiga 2000"
+   ],
+   "blurb": "A cycle-exact port of the vAmiga emulator to WebAssembly with a mobile-friendly UI and a live memory activity visualiser.",
+   "why": "Probably the most accurate Amiga in a browser today, and it installs as a PWA so it keeps working offline; free AROS Kickstart can be installed with one click.",
+   "can": [
+    "install free AROS Kickstart in-app",
+    "load .adf/.dms/.exe",
+    "save snapshots",
+    "works offline as PWA",
+    "touch controls",
+    "live RAM access visualiser"
+   ],
+   "repo": "https://github.com/vAmigaWeb/vAmigaWeb",
+   "stars": 90,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "First run asks you to install a Kickstart (free AROS offered); after that it is one click.",
+   "needs_files": false,
+   "offline": true,
+   "year": 1985,
+   "tags": [
+    "commodore",
+    "amiga",
+    "16-bit",
+    "pwa",
+    "wasm"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "vc64web",
+   "name": "vc64web",
+   "url": "https://vc64web.github.io/",
+   "cat": "home",
+   "systems": [
+    "Commodore 64"
+   ],
+   "blurb": "A cycle-exact VirtualC64 core compiled to WebAssembly with a touch-friendly UI, designed to work on phones, tablets and desktops.",
+   "why": "Very accurate C64 emulation that installs as a PWA, so it works offline and on an iPad. Drag in a .d64 or just type BASIC.",
+   "can": [
+    "boots to BASIC",
+    "load .d64/.g64/.prg/.crt",
+    "save/load snapshots",
+    "works offline as PWA",
+    "virtual keyboard and joystick",
+    "open-source ROM replacements available"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "GPL-3.0",
+   "ease": 5,
+   "ease_note": "Loads straight to the READY prompt; big obvious controls.",
+   "needs_files": false,
+   "offline": true,
+   "year": 1982,
+   "tags": [
+    "commodore",
+    "c64",
+    "8-bit",
+    "pwa",
+    "wasm"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "vector06js",
+   "name": "vector06js",
+   "url": "https://svofski.github.io/vector06js/",
+   "cat": "home",
+   "systems": [
+    "Vector-06C"
+   ],
+   "blurb": "Viacheslav Slavinsky's JavaScript emulator of the Soviet Vector-06C, an 8080-based colour home computer.",
+   "why": "Runs ROM and floppy images of a distinctive Soviet machine with a custom video system; from the author of much Vector-06C hardware work.",
+   "can": [
+    "load .rom and .fdd images",
+    "boot floppy images via standard boot ROM",
+    "keyboard mapping",
+    "audio"
+   ],
+   "repo": "https://github.com/svofski/vector06js",
+   "stars": 18,
+   "license": "BSD-2-Clause",
+   "ease": 3,
+   "ease_note": "Boots but you need Vector-06C ROM or FDD images for real use.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1987,
+   "tags": [
+    "soviet",
+    "vector-06c",
+    "8080",
+    "8-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "velxio-raspberry-pi-simulator",
+   "name": "Velxio Raspberry Pi Simulator",
+   "url": "https://velxio.dev/raspberry-pi-simulator/",
+   "cat": "micro",
+   "systems": [
+    "Raspberry Pi 3 (ARM Cortex-A53)",
+    "Arduino",
+    "ESP32"
+   ],
+   "blurb": "A browser Raspberry Pi simulator that runs Python GPIO code by default and can boot a QEMU-emulated Linux guest with a terminal.",
+   "why": "Test RPi.GPIO / gpiozero scripts against virtual sensors, or get a Linux shell on an emulated Pi without flashing an SD card.",
+   "can": [
+    "Python with RPi.GPIO in browser",
+    "boots Alpine Linux via QEMU",
+    "GPIO, I2C, UART peripherals",
+    "multi-board canvas"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "AGPL-3.0",
+   "ease": 3,
+   "ease_note": "Free tier limits Linux sessions to short trials and needs an account.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2016,
+   "tags": [
+    "raspberry-pi",
+    "linux",
+    "gpio",
+    "microcontroller"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "venus-risc-v-simulator",
+   "name": "Venus RISC-V simulator",
+   "url": "https://venus.cs61c.org/",
+   "cat": "cpu",
+   "systems": [
+    "RISC-V RV32"
+   ],
+   "blurb": "UC Berkeley's browser RISC-V assembler and simulator used in CS61C, with registers, memory and ecall-based I/O.",
+   "why": "Lightweight and fast for testing RISC-V assembly snippets, with a simple editor/simulator split.",
+   "can": [
+    "assemble RISC-V",
+    "single step",
+    "register and memory view",
+    "breakpoints",
+    "ecall I/O"
+   ],
+   "repo": "https://github.com/ThaumicMekanism/venus",
+   "stars": 163,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Editor tab then Simulator tab; very simple.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2010,
+   "tags": [
+    "cpu",
+    "risc-v",
+    "assembly",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "vice-js-vice-janicek-co",
+   "name": "VICE.js (vice.janicek.co)",
+   "url": "https://vice.janicek.co/c64/",
+   "cat": "home",
+   "systems": [
+    "Commodore 64",
+    "Commodore 128"
+   ],
+   "blurb": "An Emscripten port of the VICE x64/x128 emulators with a searchable library of thousands of public demos and games, plus shareable program links.",
+   "why": "The most faithful C64/C128 emulation you can get without installing anything, straight from the VICE codebase. Great for showing off demoscene work or trying BASIC on a real-feeling C64.",
+   "can": [
+    "boots to BASIC",
+    "load .d64/.prg/.t64 images",
+    "5000+ built-in demos and games",
+    "share a program as a link",
+    "C128 mode"
+   ],
+   "repo": "https://github.com/rjanicek/vice.js",
+   "stars": 166,
+   "license": "GPL-2.0",
+   "ease": 4,
+   "ease_note": "Click a machine and it boots; the UI is a bit dated but obvious.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "commodore",
+    "c64",
+    "c128",
+    "8-bit",
+    "basic",
+    "vice"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-6502-mass-werk",
+   "name": "virtual 6502 (mass:werk)",
+   "url": "https://www.masswerk.at/6502/",
+   "cat": "cpu",
+   "systems": [
+    "MOS 6502"
+   ],
+   "blurb": "A 6502 emulator, assembler and disassembler suite with a register-level debugger from Norbert Landsteiner.",
+   "why": "A no-frills workbench for testing 6502 routines with cycle-by-cycle stepping and a full assembler in one tab.",
+   "can": [
+    "assembler and disassembler",
+    "single step",
+    "register and memory view",
+    "load and dump hex"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Straightforward form UI; enter code and step.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "cpu",
+    "6502",
+    "assembler",
+    "debugger"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-colossus",
+   "name": "Virtual Colossus",
+   "url": "https://virtualcolossus.co.uk/",
+   "cat": "cipher",
+   "systems": [
+    "Colossus Mk 2"
+   ],
+   "blurb": "Martin Gillow's 3D WebGL simulation of the Bletchley Park Colossus codebreaking computer, with switches, plugs and paper tape you can operate.",
+   "why": "Follow the tutorial to break a real Lorenz-enciphered message the way Bletchley did in 1944; a 2D version exists for slower machines.",
+   "can": [
+    "set switches and plug panels",
+    "run paper tape loop",
+    "break Lorenz wheel settings tutorial",
+    "3D or 2D view",
+    "touch support"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Runs in any WebGL browser, but doing anything meaningful requires the tutorial.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1944,
+   "tags": [
+    "codebreaking",
+    "colossus",
+    "bletchley",
+    "vacuum-tube"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-enigma",
+   "name": "Virtual Enigma",
+   "url": "https://enigma.virtualcolossus.co.uk/",
+   "cat": "cipher",
+   "systems": [
+    "Enigma I",
+    "Enigma M3",
+    "Enigma M4"
+   ],
+   "blurb": "A 3D browser Enigma machine simulation from the Virtual Colossus project where you open the lid, set rotors and plug the Steckerbrett.",
+   "why": "Visually the most faithful web Enigma, complete with rotor swapping and lamp board; pairs with the Virtual Bombe.",
+   "can": [
+    "swap and set rotors",
+    "plugboard",
+    "lamp board output",
+    "3D interactive view",
+    "touch support"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Click keys and it lights lamps; rotor setup is intuitive.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1932,
+   "tags": [
+    "cipher-machine",
+    "enigma",
+    "electromechanical"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-flossie-ict-1301",
+   "name": "Virtual Flossie (ICT 1301)",
+   "url": "https://ict1301.virtualcolossus.co.uk/",
+   "cat": "mini",
+   "systems": [
+    "ICT 1301"
+   ],
+   "blurb": "A 3D simulation of 'Flossie', the surviving ICT 1301 transistor mainframe from 1962, with its console, drum and card equipment.",
+   "why": "A rare second-generation British business computer you can actually operate; Sterling arithmetic in hardware.",
+   "can": [
+    "3D console operation",
+    "run 1960s programs",
+    "punched card and drum simulation",
+    "hardware documentation"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "CC-BY-4.0",
+   "ease": 3,
+   "ease_note": "Needs WebGL and some reading of the operating guide.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1962,
+   "tags": [
+    "mainframe",
+    "ict",
+    "transistor",
+    "british"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-lorenz-sz40-42",
+   "name": "Virtual Lorenz SZ40/42",
+   "url": "https://lorenz.virtualcolossus.co.uk/",
+   "cat": "cipher",
+   "systems": [
+    "Lorenz SZ40/42 cipher machine"
+   ],
+   "blurb": "A 3D browser simulation of the German Lorenz teleprinter cipher attachment that Colossus was built to break.",
+   "why": "Encipher your own Baudot messages on the 'Tunny' machine and then take them to Virtual Colossus to break them.",
+   "can": [
+    "set 12 wheel pins and positions",
+    "encipher and decipher text",
+    "3D interactive view",
+    "pairs with Virtual Colossus"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Type and it enciphers; wheel setting takes a little reading.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1941,
+   "tags": [
+    "cipher-machine",
+    "lorenz",
+    "bletchley",
+    "teleprinter"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-pilot-ace",
+   "name": "Virtual Pilot ACE",
+   "url": "https://pilotace.virtualcolossus.co.uk/",
+   "cat": "mini",
+   "systems": [
+    "NPL Pilot ACE"
+   ],
+   "blurb": "A 3D browser simulation of the Pilot ACE, the early British stored-program computer designed from Alan Turing's ACE proposal.",
+   "why": "One of the very few ways to program a mercury-delay-line machine of 1950 and see its control panel and card equipment in action.",
+   "can": [
+    "3D console interaction",
+    "enter and run 1950s programs",
+    "documentation on hardware",
+    "touch support"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "CC-BY-4.0",
+   "ease": 3,
+   "ease_note": "Needs WebGL and the documentation to program it.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1950,
+   "tags": [
+    "early-computer",
+    "turing",
+    "delay-line",
+    "british"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-turing-welchman-bombe",
+   "name": "Virtual Turing-Welchman Bombe",
+   "url": "https://bombe.virtualcolossus.co.uk/",
+   "cat": "cipher",
+   "systems": [
+    "Turing-Welchman Bombe"
+   ],
+   "blurb": "A three.js 3D simulation of the electromechanical Bombe used at Bletchley Park to find Enigma settings.",
+   "why": "Set up a menu from a crib and watch the drums spin to a stop, the way WWII Wrens did; excellent for understanding how Enigma was actually broken.",
+   "can": [
+    "load drums and plug up a menu",
+    "run to stops",
+    "checking machine",
+    "tutorial and history pages"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "CC-BY-4.0",
+   "ease": 3,
+   "ease_note": "Needs WebGL and the tutorial to make sense of it.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1940,
+   "tags": [
+    "codebreaking",
+    "bombe",
+    "enigma",
+    "bletchley",
+    "electromechanical"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "virtual-univac-i",
+   "name": "Virtual UNIVAC I",
+   "url": "https://www.masswerk.at/virtualunivac/",
+   "cat": "mini",
+   "systems": [
+    "UNIVAC I"
+   ],
+   "blurb": "Norbert Landsteiner's JavaScript simulation of the UNIVAC I with its supervisory control console, tape servos and Excess-3 arithmetic.",
+   "why": "The first commercial US computer, operable from a console that looks like the original; good for understanding 1951 mercury-delay-line-era programming.",
+   "can": [
+    "console keyboard",
+    "tape servo simulation",
+    "memory inspection",
+    "enter and run programs"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Works instantly but the operating procedure is unfamiliar; read the instructions.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1951,
+   "tags": [
+    "mainframe",
+    "univac",
+    "vacuum-tube",
+    "first-generation"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "visual-6502-and-visual-6800-z80-arm1",
+   "name": "Visual 6502 (and Visual 6800 / Z80 / ARM1)",
+   "url": "http://www.visual6502.org/JSSim/",
+   "cat": "cpu",
+   "systems": [
+    "MOS 6502",
+    "Motorola 6800",
+    "Zilog Z80",
+    "ARM1"
+   ],
+   "blurb": "Transistor-level JavaScript simulations built from die photographs, letting you watch the 6502 (and sibling chips) execute one half-clock at a time.",
+   "why": "See exactly which transistors switch as an instruction executes; the definitive tool for understanding the real silicon of the 6502 and ARM1.",
+   "can": [
+    "transistor-level simulation",
+    "single half-cycle step",
+    "chip die view",
+    "trace registers and buses",
+    "load your own code"
+   ],
+   "repo": "https://github.com/trebonian/visual6502",
+   "stars": 1100,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Use the http URL (the https certificate is broken); the expert view is dense and slow.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1975,
+   "tags": [
+    "cpu",
+    "6502",
+    "transistor-level",
+    "arm",
+    "z80"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "wavedrom-editor",
+   "name": "WaveDrom Editor",
+   "url": "https://wavedrom.com/editor.html",
+   "cat": "micro",
+   "systems": [
+    "digital timing diagrams"
+   ],
+   "blurb": "A live editor that renders digital timing diagrams, register layouts and bit fields from a compact JSON description.",
+   "why": "The standard way to draw clean SPI/I2C/UART timing diagrams for documentation; edits render instantly and export to SVG/PNG.",
+   "can": [
+    "timing diagrams from JSON",
+    "register and bitfield diagrams",
+    "export SVG and PNG",
+    "share by URL"
+   ],
+   "repo": "https://github.com/wavedrom/wavedrom",
+   "stars": 3500,
+   "license": "MIT",
+   "ease": 5,
+   "ease_note": "Edit the JSON and the diagram updates live.",
+   "needs_files": false,
+   "offline": false,
+   "year": null,
+   "tags": [
+    "logic",
+    "timing-diagram",
+    "documentation",
+    "tool"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "web-analytical-engine-emulator",
+   "name": "Web Analytical Engine Emulator",
+   "url": "https://www.fourmilab.ch/babbage/emulator.html",
+   "cat": "cipher",
+   "systems": [
+    "Babbage Analytical Engine"
+   ],
+   "blurb": "John Walker's JavaScript emulator of Babbage's never-built Analytical Engine, programmed with punched-card text and showing the Mill, Store, printer and curve plotter.",
+   "why": "Write card programs for the 1837 mechanical computer and get timing estimates of how long the brass machine would have taken.",
+   "can": [
+    "punched card programs",
+    "mill and store display",
+    "printer output",
+    "curve drawing apparatus",
+    "timing statistics"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "Sample programs are provided, but the card language needs the docs.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1837,
+   "tags": [
+    "mechanical",
+    "babbage",
+    "analytical-engine",
+    "victorian"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "web-hp-12c-emulator",
+   "name": "Web HP-12C emulator",
+   "url": "https://br-info.github.io/hp-12c/",
+   "cat": "calc",
+   "systems": [
+    "HP-12C"
+   ],
+   "blurb": "A JavaScript HP-12C financial calculator emulator hosted on GitHub Pages, adapted for individual non-profit use.",
+   "why": "A no-frills way to run classic HP-12C RPN financial calculations (TVM, NPV, IRR) without installing anything.",
+   "can": [
+    "RPN financial functions",
+    "keystroke programming",
+    "browser only, no install"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 5,
+   "ease_note": "Page is the calculator itself.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1981,
+   "tags": [
+    "calculator",
+    "rpn",
+    "hp",
+    "hp-12c",
+    "financial"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "webmsx",
+   "name": "WebMSX",
+   "url": "https://webmsx.org/",
+   "cat": "home",
+   "systems": [
+    "MSX",
+    "MSX2",
+    "MSX2+",
+    "MSX Turbo R"
+   ],
+   "blurb": "Paulo Peccin's complete MSX family emulator in JavaScript, boots to MSX BASIC and loads ROMs, disks and cassettes by drag-and-drop or URL.",
+   "why": "The reference MSX emulator for the web: accurate, supports every generation up to Turbo R, and can be embedded with a single script tag.",
+   "can": [
+    "boots to MSX BASIC",
+    "load .rom/.dsk/.cas via drag or URL",
+    "save state",
+    "MSX2+/Turbo R",
+    "gamepad and touch support",
+    "embeddable"
+   ],
+   "repo": "https://github.com/ppeccin/webmsx",
+   "stars": 477,
+   "license": "AGPL-3.0",
+   "ease": 5,
+   "ease_note": "Boots to BASIC with a clear bottom toolbar.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1983,
+   "tags": [
+    "msx",
+    "z80",
+    "8-bit",
+    "basic",
+    "japan"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "webnp2-pc-98",
+   "name": "WebNP2 (PC-98)",
+   "url": "https://uraraworks.github.io/WebNP2/",
+   "cat": "home",
+   "systems": [
+    "NEC PC-9801/9821"
+   ],
+   "blurb": "URARA-works' web player for the Neko Project II kai PC-98 emulator, with a library UI for your own disk images and a ROM-less boot mode.",
+   "why": "Japan's dominant 1980s-90s PC architecture in a browser; it can boot without proprietary BIOS thanks to NP2kai's compatible routines.",
+   "can": [
+    "ROM-less boot",
+    "load .d88/.fdi/.hdi images",
+    "in-browser disk library",
+    "keyboard and mouse emulation"
+   ],
+   "repo": "https://github.com/uraraworks/WebNP2",
+   "stars": 5,
+   "license": "unknown (NP2kai core BSD)",
+   "ease": 2,
+   "ease_note": "Japanese-language UI and you must supply disk images to do anything.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "nec",
+    "pc-98",
+    "x86",
+    "japan"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "webrisc-v",
+   "name": "WebRISC-V",
+   "url": "https://webriscv.dii.unisi.it/",
+   "cat": "cpu",
+   "systems": [
+    "RISC-V RV64 pipelined datapath"
+   ],
+   "blurb": "A University of Siena web simulator showing a pipelined RISC-V datapath executing your assembly, with hazards and forwarding visualised.",
+   "why": "See the classic five-stage pipeline diagram come alive cycle by cycle for RISC-V code.",
+   "can": [
+    "pipeline datapath animation",
+    "single cycle step",
+    "hazard visualisation",
+    "RISC-V assembler",
+    "register and memory view"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 4,
+   "ease_note": "Paste code and step; diagram is dense but clear.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2010,
+   "tags": [
+    "cpu",
+    "risc-v",
+    "pipeline",
+    "education"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "webx68k",
+   "name": "WebX68k",
+   "url": "https://uraraworks.github.io/WebX68k/",
+   "cat": "home",
+   "systems": [
+    "Sharp X68000"
+   ],
+   "blurb": "URARA-works' web player for the px68k libretro core emulating Sharp's 68000-based X68000.",
+   "why": "The only in-browser X68000; if you own the IPLROM/CGROM files you can run Human68k and the machine's famous arcade-quality software.",
+   "can": [
+    "load IPLROM/CGROM from your files",
+    "mount .dim/.xdf floppies and HDD images",
+    "settings stored in browser",
+    "full screen"
+   ],
+   "repo": "https://github.com/uraraworks/WebX68k",
+   "stars": 23,
+   "license": "GPL-2.0 (px68k core)",
+   "ease": 1,
+   "ease_note": "Requires you to supply system ROMs and disk images; Japanese UI.",
+   "needs_files": true,
+   "offline": false,
+   "year": 1987,
+   "tags": [
+    "sharp",
+    "x68000",
+    "68000",
+    "japan",
+    "16-bit"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "windemu-psion-series-5mx-in-the-browser",
+   "name": "WindEmu - Psion Series 5mx in the browser",
+   "url": "https://wuffs.org/WindEmu/index.html",
+   "cat": "pocket",
+   "systems": [
+    "Psion Series 5mx"
+   ],
+   "blurb": "Ash Wolf's (Ninji) experimental EPOC32 emulator for the Psion Series 5mx, compiled with Emscripten so the ARM-based palmtop boots in a browser tab.",
+   "why": "A rare chance to see EPOC R5 running in a browser with LCD, keyboard and touch panel emulated; still experimental (no sound).",
+   "can": [
+    "boots EPOC R5",
+    "keyboard and touch input",
+    "LCD greyscale display",
+    "open source core"
+   ],
+   "repo": "https://github.com/Treeki/WindEmu",
+   "stars": 97,
+   "license": "MPL-2.0",
+   "ease": 4,
+   "ease_note": "Just wait for the ~10 MB download and it boots; experimental so expect rough edges.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1999,
+   "tags": [
+    "psion",
+    "epoc",
+    "series-5",
+    "pda",
+    "arm"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "wokwi",
+   "name": "Wokwi",
+   "url": "https://wokwi.com/",
+   "cat": "micro",
+   "systems": [
+    "Arduino Uno/Mega/Nano",
+    "ESP32",
+    "Raspberry Pi Pico RP2040",
+    "STM32",
+    "ATtiny",
+    "displays and sensors"
+   ],
+   "blurb": "A browser electronics and microcontroller simulator that runs real Arduino, ESP32 and Pico firmware against virtual sensors, displays and even Wi-Fi.",
+   "why": "Prototype a ham shack gadget (OLED, rotary encoder, MQTT logger) with real compiled firmware before touching hardware; huge project gallery.",
+   "can": [
+    "compile and run Arduino/ESP32 code",
+    "virtual sensors and displays",
+    "ESP32 Wi-Fi simulation",
+    "MicroPython on ESP32/Pico",
+    "share projects by link",
+    "logic analyzer export",
+    "MicroPython REPL on Pico and ESP32"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": "proprietary",
+   "ease": 5,
+   "ease_note": "Open an example and press play; no login needed to run.",
+   "needs_files": false,
+   "offline": false,
+   "year": 2005,
+   "tags": [
+    "microcontroller",
+    "arduino",
+    "esp32",
+    "rp2040",
+    "electronics"
+   ],
+   "pick": true,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "xroar-online",
+   "name": "XRoar Online",
+   "url": "https://www.6809.org.uk/xroar/online/",
+   "cat": "home",
+   "systems": [
+    "Dragon 32/64",
+    "Tandy Color Computer 1/2/3",
+    "Tandy MC-10"
+   ],
+   "blurb": "Ciaran Anscomb's XRoar emulator compiled to WebAssembly by its author, with load, run and type-in helpers.",
+   "why": "The definitive Dragon/CoCo emulator, official and maintained; boots to Microsoft Extended Color BASIC and accepts cassettes, cartridges and disks.",
+   "can": [
+    "boots to BASIC",
+    "load .cas/.wav/.dsk/.rom",
+    "type-in program helper",
+    "save snapshots",
+    "multiple Dragon and CoCo models"
+   ],
+   "repo": "https://www.6809.org.uk/git/xroar.git/",
+   "stars": null,
+   "license": "GPL-3.0",
+   "ease": 4,
+   "ease_note": "Boots to BASIC; loading software needs your own files.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1982,
+   "tags": [
+    "dragon",
+    "tandy",
+    "coco",
+    "6809",
+    "8-bit",
+    "basic"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  },
+  {
+   "id": "yacs-2-0-yet-another-curta-simulator-x3d-webgl",
+   "name": "YACS 2.0 - Yet Another Curta Simulator (X3D/WebGL)",
+   "url": "https://satadorus.eu/x_ite/yacs_2_0/yacs_2_0.html",
+   "cat": "calc",
+   "systems": [
+    "Curta Type I"
+   ],
+   "blurb": "A hand-modelled 3D Curta simulator rendered with the X_ITE WebGL viewer, with sound, exploded view and a worked multiplication example.",
+   "why": "The most visual Curta on the web: rotate and zoom the machine, watch the mechanism in exploded view and hear the crank.",
+   "can": [
+    "3D rotate/pan/zoom",
+    "crank, sliders and carriage",
+    "add and subtract modes",
+    "sound effects",
+    "exploded view",
+    "worked tutorial"
+   ],
+   "repo": null,
+   "stars": null,
+   "license": null,
+   "ease": 3,
+   "ease_note": "WebGL scene takes a moment to load and the 3D controls need some practice.",
+   "needs_files": false,
+   "offline": false,
+   "year": 1948,
+   "tags": [
+    "curta",
+    "mechanical",
+    "calculator",
+    "3d"
+   ],
+   "pick": false,
+   "checked": "2026-09-17",
+   "confidence": "verified"
+  }
+ ]
+}

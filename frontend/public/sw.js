@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v40'
+const CACHE_NAME = 'dxedge-v41'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -64,6 +64,7 @@ self.addEventListener('fetch', (event) => {
   const mutable = request.mode === 'navigate' ||
     url.pathname === '/' ||
     url.pathname.startsWith('/crane-cab/') ||
+    url.pathname.startsWith('/emulators/') ||
     (!isVersionedAsset(url) && url.pathname.endsWith('.js'))
 
   if (mutable) {

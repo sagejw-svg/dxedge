@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Emulators - DXEdge</title>
+<meta name="description" content="A curated, link-checked catalogue of computers, calculators, minis, CPUs and electronics you can run in a browser tab. Sort by GitHub stars, ease of use, era or name.">
+<style>
+  :root {
+    --bg: #080808; --bg1: #0e0e0e; --bg2: #141414; --border: #1e1e1e; --border2: #2a2a2a;
+    --text: #d8d8d8; --muted: #888; --dim: #444; --green: #00ff9d; --amber: #ffb347; --red: #ff5c5c;
+    --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 18px 16px 48px; }
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  .label { font-size: 9px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
+  h1 { font-size: 22px; margin: 6px 0 4px; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
+  h1 span { color: var(--green); }
+  .intro { color: var(--muted); max-width: 760px; margin: 0 0 14px; }
+  .stats { color: var(--dim); font-size: 11px; margin-bottom: 18px; }
+  .stats b { color: var(--green); font-weight: 600; }
+
+  .why { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 22px; }
+  .why div { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--bg1); }
+  .why h3 { margin: 0 0 4px; font-size: 11px; color: var(--green); letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+  .why p { margin: 0; color: var(--muted); font-size: 12px; }
+
+  .controls { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row + .row { margin-top: 8px; }
+  input[type=search], select {
+    background: var(--bg1); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
+    padding: 7px 10px; font-family: var(--font-mono); font-size: 12px; outline: none;
+  }
+  input[type=search] { flex: 1 1 220px; min-width: 160px; }
+  input[type=search]:focus, select:focus { border-color: var(--green); }
+  select { cursor: pointer; }
+  .chip {
+    border: 1px solid var(--border2); background: var(--bg1); color: var(--muted); border-radius: 999px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: var(--font-mono); user-select: none; white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--green); color: var(--text); }
+  .chip.on { border-color: var(--green); color: var(--green); background: rgba(0,255,157,0.06); }
+  .chip small { color: var(--dim); margin-left: 4px; }
+  .count { color: var(--dim); font-size: 11px; margin-left: auto; white-space: nowrap; }
+  .count b { color: var(--text); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--border); border-radius: 8px; background: var(--bg1); padding: 12px 13px 10px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .card:hover { border-color: var(--border2); }
+  .card.pick { border-color: rgba(0,255,157,0.35); }
+  .card .top { display: flex; gap: 8px; align-items: flex-start; }
+  .card h2 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.35; flex: 1; }
+  .card h2 a { color: #fff; }
+  .card h2 a:hover { color: var(--green); text-decoration: none; }
+  .cat { font-size: 9px; color: var(--dim); letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; margin-top: 3px; }
+  .pickmark { color: var(--green); font-size: 10px; letter-spacing: 1px; margin-right: 6px; }
+  .systems { color: var(--muted); font-size: 11px; }
+  .systems span { color: var(--dim); }
+  .blurb { margin: 0; color: var(--text); font-size: 12px; }
+  .whyt { margin: 0; color: var(--muted); font-size: 12px; }
+  .whyt::before { content: 'why  '; color: var(--dim); letter-spacing: 1px; font-size: 9px; text-transform: uppercase; }
+  .can { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+  .can span { border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 10px; color: var(--muted); }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); font-size: 10px; color: var(--dim); }
+  .meta .ease { color: var(--green); letter-spacing: 1px; cursor: help; }
+  .meta .ease i { font-style: normal; color: var(--dim); }
+  .meta .warn { color: var(--amber); }
+  .meta .ok { color: var(--green); }
+  .meta .links { margin-left: auto; display: flex; gap: 10px; }
+  .meta .links a.open { color: var(--green); border: 1px solid rgba(0,255,157,0.4); border-radius: 4px; padding: 2px 8px; }
+  .meta .links a.open:hover { background: rgba(0,255,157,0.08); text-decoration: none; }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; grid-column: 1 / -1; }
+  .foot { margin-top: 30px; color: var(--dim); font-size: 11px; max-width: 800px; }
+  .foot p { margin: 0 0 8px; }
+  .foot b { color: var(--muted); font-weight: 600; }
+  @media (max-width: 520px) {
+    body { padding: 12px 10px 40px; }
+    .grid { grid-template-columns: 1fr; }
+    .count { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="label">dxedge / emulators</div>
+  <h1>Old iron, <span>new tab</span></h1>
+  <p class="intro">
+    A curated catalogue of computers, calculators, minicomputers, CPUs and electronics that run entirely inside your
+    browser. Nothing to install, nothing to flash, nothing that can hurt your machine. Every link was opened and checked,
+    and the catalogue is swept for link rot weekly.
+  </p>
+  <div class="stats" id="stats">loading...</div>
+
+  <div class="why">
+    <div><h3>Try before you buy</h3><p>Curious what a PicoCalc, an HP-15C or a PDP-11 actually feels like? Run the real firmware for ten minutes first. Most of these use the original ROMs or bug-for-bug reimplementations.</p></div>
+    <div><h3>Learn the machine</h3><p>Front panels, monitors, BASIC prompts and assembly debuggers with single step. The best way to understand a CPU is to watch it execute, and most of these will let you.</p></div>
+    <div><h3>Nothing to break</h3><p>It all runs client side in WebAssembly or JavaScript. Close the tab and it is gone. Several install as offline apps on a phone, which makes a fine pocket computer in its own right.</p></div>
+    <div><h3>Legal by design</h3><p>Only sites that ship their own free or licensed software, or expect you to bring files you already own. No ROM archives, no console cores that need copyrighted games.</p></div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <input type="search" id="q" placeholder="search  (name, system, tag, e.g. rpn, 6502, amiga)" autocomplete="off">
+      <select id="sort" title="Sort order">
+        <option value="pick">Picks first, then GitHub stars</option>
+        <option value="stars">GitHub stars (popularity)</option>
+        <option value="ease">Ease of use</option>
+        <option value="name">Name A to Z</option>
+        <option value="old">Era, oldest hardware first</option>
+        <option value="new">Era, newest hardware first</option>
+      </select>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="row" id="cats"></div>
+    <div class="row" id="flags">
+      <span class="chip" data-flag="nofiles">no files needed</span>
+      <span class="chip" data-flag="open">open source</span>
+      <span class="chip" data-flag="offline">works offline</span>
+      <span class="chip" data-flag="easy">easy (4+)</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="foot">
+    <p><b>How to read the badges.</b> Stars are a snapshot of GitHub stars for the emulator's own repository, a rough popularity signal that only exists for open source projects; the rest sort to the bottom of that order. Ease of use is our 1 to 5 rating, where 5 means click and it runs with an obvious interface and 1 means you must bring your own ROMs or disk images and read a manual first. Hover the dots for the reason.</p>
+    <p><b>Something missing or broken?</b> Use the Feedback tab on DXEdge. The catalogue lives in a plain JSON file at <a href="emulators.json">/emulators/emulators.json</a> if you want to see the raw data.</p>
+    <p><b>Picks</b> are the ones we would open first in each category. Consoles that need copyrighted game files are deliberately left out.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const state = { q: '', cat: 'all', sort: 'pick', flags: new Set() };
+  let DATA = null, CATS = {};
+
+  // Restore state from the URL hash so a filtered view can be shared.
+  try {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (h.get('q')) state.q = h.get('q');
+    if (h.get('cat')) state.cat = h.get('cat');
+    if (h.get('sort')) state.sort = h.get('sort');
+    if (h.get('f')) h.get('f').split(',').filter(Boolean).forEach(f => state.flags.add(f));
+  } catch (e) {}
+
+  function syncHash() {
+    const p = new URLSearchParams();
+    if (state.q) p.set('q', state.q);
+    if (state.cat !== 'all') p.set('cat', state.cat);
+    if (state.sort !== 'pick') p.set('sort', state.sort);
+    if (state.flags.size) p.set('f', [...state.flags].join(','));
+    const s = p.toString();
+    history.replaceState(null, '', s ? '#' + s : location.pathname);
+  }
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtStars(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n); }
+
+  function matches(e) {
+    if (state.cat !== 'all' && e.cat !== state.cat) return false;
+    if (state.flags.has('nofiles') && e.needs_files) return false;
+    if (state.flags.has('open') && !e.repo) return false;
+    if (state.flags.has('offline') && !e.offline) return false;
+    if (state.flags.has('easy') && e.ease < 4) return false;
+    if (state.q) {
+      const q = state.q.toLowerCase();
+      const hay = [e.name, e.blurb, e.why, ...e.systems, ...e.tags, ...e.can, CATS[e.cat] || ''].join(' ').toLowerCase();
+      if (!q.split(/\s+/).every(w => hay.includes(w))) return false;
+    }
+    return true;
+  }
+
+  const SORTS = {
+    pick:  (a, b) => (b.pick - a.pick) || ((b.stars || -1) - (a.stars || -1)) || a.name.localeCompare(b.name),
+    stars: (a, b) => ((b.stars ?? -1) - (a.stars ?? -1)) || a.name.localeCompare(b.name),
+    ease:  (a, b) => (b.ease - a.ease) || ((b.stars || -1) - (a.stars || -1)) || a.name.localeCompare(b.name),
+    name:  (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    old:   (a, b) => ((a.year ?? 9999) - (b.year ?? 9999)) || a.name.localeCompare(b.name),
+    new:   (a, b) => ((b.year ?? -1) - (a.year ?? -1)) || a.name.localeCompare(b.name),
+  };
+
+  function card(e) {
+    const dots = '●'.repeat(e.ease) + '<i>' + '●'.repeat(5 - e.ease) + '</i>';
+    const meta = [];
+    meta.push(`<span class="ease" title="${esc(e.ease_note)}">${dots}</span>`);
+    if (e.stars != null) meta.push(`<span title="GitHub stars">★ ${fmtStars(e.stars)}</span>`);
+    if (e.year) meta.push(`<span>${e.year}</span>`);
+    if (e.license) meta.push(`<span title="License">${esc(e.license)}</span>`);
+    if (e.needs_files) meta.push(`<span class="warn" title="You must supply ROMs or disk images">bring your own files</span>`);
+    if (e.offline) meta.push(`<span class="ok" title="Installs as an app or runs without a connection">offline</span>`);
+    const links = [`<a class="open" href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">open ↗</a>`];
+    if (e.repo) links.push(`<a href="${esc(e.repo)}" target="_blank" rel="noopener noreferrer" title="Source code">source</a>`);
+    return `<article class="card${e.pick ? ' pick' : ''}" data-id="${esc(e.id)}">
+      <div class="top">
+        <h2>${e.pick ? '<span class="pickmark" title="A DXEdge pick">PICK</span>' : ''}<a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.name)}</a></h2>
+        <span class="cat">${esc(CATS[e.cat] || e.cat)}</span>
+      </div>
+      <div class="systems"><span>emulates </span>${esc(e.systems.join(', '))}</div>
+      <p class="blurb">${esc(e.blurb)}</p>
+      <p class="whyt">${esc(e.why)}</p>
+      <div class="can">${e.can.map(c => `<span>${esc(c)}</span>`).join('')}</div>
+      <div class="meta">${meta.join('')}<span class="links">${links.join('')}</span></div>
+    </article>`;
+  }
+
+  function render() {
+    if (!DATA) return;
+    const list = DATA.emulators.filter(matches).sort(SORTS[state.sort] || SORTS.pick);
+    $('#grid').innerHTML = list.length ? list.map(card).join('') : '<div class="empty">nothing matches. clear a filter or two.</div>';
+    $('#count').innerHTML = `<b>${list.length}</b> of ${DATA.emulators.length}`;
+    document.querySelectorAll('#cats .chip').forEach(c => c.classList.toggle('on', c.dataset.cat === state.cat));
+    document.querySelectorAll('#flags .chip').forEach(c => c.classList.toggle('on', state.flags.has(c.dataset.flag)));
+    syncHash();
+    window.__emu.visible = list.map(e => e.id);
+  }
+
+  function buildCats() {
+    const counts = {};
+    DATA.emulators.forEach(e => { counts[e.cat] = (counts[e.cat] || 0) + 1; });
+    const chips = [`<span class="chip" data-cat="all">all<small>${DATA.emulators.length}</small></span>`];
+    for (const [k, label] of Object.entries(CATS)) {
+      chips.push(`<span class="chip" data-cat="${k}">${esc(label.toLowerCase())}<small>${counts[k] || 0}</small></span>`);
+    }
+    $('#cats').innerHTML = chips.join('');
+    $('#cats').addEventListener('click', ev => {
+      const c = ev.target.closest('.chip'); if (!c) return;
+      state.cat = c.dataset.cat; render();
+    });
+  }
+
+  $('#q').value = state.q;
+  $('#sort').value = state.sort;
+  $('#q').addEventListener('input', ev => { state.q = ev.target.value.trim(); render(); });
+  $('#sort').addEventListener('change', ev => { state.sort = ev.target.value; render(); });
+  $('#flags').addEventListener('click', ev => {
+    const c = ev.target.closest('.chip'); if (!c) return;
+    const f = c.dataset.flag;
+    state.flags.has(f) ? state.flags.delete(f) : state.flags.add(f);
+    render();
+  });
+
+  // Test hook for the headless suite (scripts/test_emulators.py), same pattern as the games.
+  window.__emu = {
+    ready: false, visible: [],
+    set(patch) { Object.assign(state, patch); if (patch.flags) state.flags = new Set(patch.flags); $('#q').value = state.q; $('#sort').value = state.sort; render(); },
+    data: () => DATA,
+  };
+
+  fetch('emulators.json', { cache: 'no-cache' })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(d => {
+      DATA = d; CATS = d.categories || {};
+      const stars = d.emulators.filter(e => e.stars != null).length;
+      $('#stats').innerHTML = `<b>${d.emulators.length}</b> emulators in <b>${Object.keys(CATS).length}</b> categories, ` +
+        `<b>${d.emulators.filter(e => !e.needs_files).length}</b> run with nothing but a click, ` +
+        `<b>${stars}</b> open source with star counts. links checked ${esc(d.generated)}.`;
+      buildCats(); render();
+      window.__emu.ready = true;
+    })
+    .catch(err => {
+      $('#stats').textContent = 'could not load emulators.json: ' + err.message;
+      $('#grid').innerHTML = '<div class="empty">catalogue failed to load. reload the page.</div>';
+    });
+})();
+</script>
+</body>
+</html>
