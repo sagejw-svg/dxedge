@@ -1,9 +1,69 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-16T05:10:00Z",
+  "last_run": "2026-09-17T04:25:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
+    {
+      "date": "2026-09-17",
+      "run_outcome": "FULL RUN, all three surfaces green, and the 14-day outbound link sweep came due and was executed in full. One PROVENANCE_REQUIRED denial on the very first WebFetch call, cleared on immediate retry; every fetch afterwards worked first try. Nothing was broken. Nothing was repaired. Quiet night: no email and no push sent.",
+      "gate_event": {
+        "summary": "The gate fired once and cleared on retry, matching the 2026-09-05 intermittent-and-per-host pattern rather than the 09-04/09-08/09-14/09-16 total-block pattern.",
+        "denied_calls": "https://dxedge.net/api/health?cb=20260917a once, error_type PROVENANCE_REQUIRED.",
+        "first_success": "The identical URL on the immediate retry. /api/debug and every later fetch worked with no denial.",
+        "lesson": "The mid-session grant James made on 2026-09-16 did NOT eliminate the gate: it still fired tonight on the first call. It did not stick as a total block either. So the grant, if standing, is not sufficient on its own, and the retry-once rule remains the operative defence. The awaiting_james item webfetch-permission-at-setup stays open but was NOT re-reported tonight, because a single retry-cleared denial is not a blind night."
+      },
+      "cert": {
+        "status": "ok",
+        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:13:46Z and again at 04:20:08Z, plus /api/debug, /api/pota, /api/sota, /api/satellites/positions, and every relay leg across four browser page loads. No CERTIFICATE_VERIFY_FAILED and no expiry error anywhere in the run.",
+        "consecutive_failures": 0,
+        "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place and working. Exact expiry date still not readable from this container: openssl sees the egress proxy certificate, not the real one."
+      },
+      "main_dashboard": {
+        "api_health": "ok",
+        "sfi": 116,
+        "k_index": 2,
+        "spots": 500,
+        "feed_proxy": true,
+        "sat_tles_metric": "0 at first read, 9 once the cache was warm",
+        "pota_spots_metric": "0 at first read, 13 once the cache was warm",
+        "cold_cache_diagnosis": "Reconfirmed for the sixth night running. Calling /api/pota and /api/satellites/positions warmed both caches and a later /api/health returned sat_tles 9 and pota_spots 13. Passive cache reads, not an outage. Not reported.",
+        "endpoints_verified": [
+          "/api/health (ok, 04:13:46Z and warm re-read 04:20:08Z)",
+          "/api/debug (ok, 27 cache keys, dist_exists true, world_json 44937 bytes)",
+          "/api/pota (13 live spots, newest 2026-09-17 03:57 UTC)",
+          "/api/sota (empty, {\"spots\":[]}, correct post-fix behaviour, see sota_status)",
+          "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
+          "/api/dashboard?grid=CM95",
+          "/api/recommendation?grid=CM95",
+          "/api/voacap/summary?grid=CM95",
+          "/api/solar/history?hours=48"
+        ],
+        "browser_check": "DONE. Headless Chromium via the local relay, 28s dwell. Title 'DXEdge - Propagation & DX Intelligence', 1902 body chars, 7 responses all 200, zero failed requests, zero panel errors, zero panels left loading. The six ws://127.0.0.1:8899/ws/spots console errors are the known rig artifact: the relay proxies GET only and cannot service a WebSocket upgrade. Not a site defect.",
+        "sota_status": "Still dark, zero spots, unchanged since the upstream removal confirmed 2026-09-15. Already escalated as the highest open awaiting_james item on 09-15 and deliberately NOT re-reported tonight."
+      },
+      "cyber_page": {
+        "result": "GREEN on the authoritative second load. Title 'DX//EDGE - CYBER', 6134 body chars, zero .feed-error elements, zero 'loading' placeholders, zero failed requests, zero console errors, nothing pending at 25s. All eight /api/feed calls returned 200: hamqsl solarxml, securityweek, CISA advisories XML, Krebs, CISA KEV JSON, NVD, and both EPSS batches.",
+        "transient_504": "On the FIRST load of the night one of the two EPSS calls (api.first.org, the CVE-2026-58704 batch) returned 504 Gateway Timeout and logged one console error. It did not reproduce on the second load 45s later, the page rendered no inline error for it either time, and the same CVE list fetched directly from api.first.org returned 200 in 0.5s on two consecutive tries. Diagnosis: a cold feedproxy cache key racing a slow first upstream call, not an outage and not a defect. Recorded, not reported. Watch for it recurring.",
+        "allorigins_check": "CLEAN. grep across frontend/ and backend/ finds 'allorigins' only in two explanatory comments (backend/main.py:704 and the feedproxy.py docstring). No live request to allorigins.win on either page load. No regression.",
+        "google_fonts": "NEW, and it contradicts known issue chromium-google-fonts-cert-artifact: tonight the Google Fonts stylesheet and both woff2 files returned 200 in Chromium on all four page loads, where every prior night they failed ERR_CERT_AUTHORITY_INVALID. The cross-origin control therefore did NOT fire tonight. The request capture was still proven working by the relay legs themselves. Environment change, not a site change."
+      },
+      "aethersdr_page": {
+        "result": "GREEN. Title 'DX//EDGE - AETHERSDR', 4191 body chars, zero .feed-error elements, zero 'loading' placeholders, zero failed requests, zero console errors, nothing pending at 22s. All five /api/feed calls returned 200: Hackaday radio-hacks, RTL-SDR, FlexRadio, and the AetherSDR releases atom (fetched twice by the page, both 200).",
+        "allorigins_check": "CLEAN, same grep and same live capture as the cyber page."
+      },
+      "allowlist_audit_note": "Audited backend/feedproxy.py ALLOWED_HOSTS against every host both standalone pages actually fetch. Exact match on all of them, no 403 'host not in the feed allowlist' anywhere in the run, and no host was added or proposed. The allowlist is unchanged at 15 entries.",
+      "rig_note": "The headless-Chromium relay rig is not committed to the repo and was rebuilt from the 2026-09-03 known-issue description. It works: a ThreadingHTTPServer on 127.0.0.1:8899 forwards GET to https://dxedge.net and Chromium runs against it with --no-proxy-server. Worth considering committing it under scripts/health/ so future runs do not rebuild it, but that is a repo addition outside the four repair categories, so it was not done autonomously.",
+      "new_surfaces_reviewed": "None new. /crane-cab/ remains the most recently added page (f384bba) and its advisory item crane-cab-third-party-cdn is still open and was not re-reported.",
+      "outbound_links_checked": "FULL SWEEP DONE. This was the night it came due: the last full sweep was 2026-09-03 and the 14-day rotation made every URL eligible on 2026-09-17. Ran scripts/health/linkcheck.py directly in this container against all four curated sources. 156 URLs: 126 ok, 26 blocked, 4 broken. ZERO genuine link rot. All four 'broken' results are accounted for: http://dxc.ve7cc.net 503, http://w3lpl.net 503 and https://www.dxsummit.fi/ connection-reset are the three known linkcheck-env-artifacts and were NOT removed; the fourth, https://www.hamqsl.com/solarxml.php 307, is new but is a throttle response, see known issue hamqsl-307-under-concurrent-sweep. The 26 'blocked' are the usual GitHub 403 bot-wall and MITRE ATLAS client-rendered 404 set. Nothing removed, nothing rewritten. Next sweep due 2026-10-01.",
+      "backend_tests": "Still broken at collection, unchanged and still pre-existing. backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine and uses it at lines 92, 96 and 98; voacap_engine.py defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and contains zero occurrences of estimate_fof2. Not touched, not papered over. Reported as outstanding. Note pytest is not installed in this container, so the confirmation tonight was by direct source inspection rather than a collection run.",
+      "pat_status": "Retrieved from Mem and verified with git push --dry-run ('Everything up-to-date', exit 0), then used to push this entry. Push access live. The Mem note's 'expires ~August 27 2026' line is still wrong, now by 21 days; see known_issues pat-expiry-note-stale.",
+      "new_finding": "None affecting the site. Two environment observations worth carrying forward: the Google Fonts cross-origin control stopped failing in Chromium, and hamqsl answers 307 with no Location header when hit inside a concurrent sweep.",
+      "repairs_made": "NONE. Nothing was broken.",
+      "notification": "NONE SENT, quiet-night rule. Nothing was broken and nothing was fixed. All nine open awaiting_james items were escalated on earlier nights and were deliberately NOT re-reported, including the SOTA outage (09-15) and webfetch-permission-at-setup (09-14).",
+      "commits_pushed": "State file only.",
+      "deploy_result": "A state-file-only commit touches nothing the frontend build or the backend container consumes. Deploy will run as usual on push and was not separately gated on."
+    },
     {
       "date": "2026-09-16",
       "run_outcome": "FULL RUN, all three surfaces green, after an unusual two-phase night. The run opened BLOCKED: five WebFetch calls all returned PROVENANCE_REQUIRED, including an off-site control, so the static checks were completed, a blind-night state file was written and pushed (c5be537), and James was notified by push naming the decision. James then granted access mid-session, WebFetch began working on the first retry, and every live check in Steps 1-3 was executed. Nothing was broken. Nothing was repaired. This entry replaces the blind-night entry originally committed in c5be537.",
@@ -589,84 +649,13 @@
           "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
         ]
       }
-    },
-    {
-      "date": "2026-09-06",
-      "run_outcome": "COMPLETE - all three mandated surfaces plus the new crane-cab page verified live in a real browser. Nothing broken, nothing repaired, no new escalation raised to a notification.",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health and /api/debug fetched cleanly over TLS at 04:10Z with cache-busting params. No CERTIFICATE_VERIFY_FAILED, no expiry error. Chromium loaded all four surfaces through the relay with no TLS error on the upstream leg.",
-        "notes": "Exact expiry still unreadable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
-        "consecutive_failures": 0
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "a_index": 7,
-        "ssn": 76,
-        "spots": 500,
-        "feed_proxy": true,
-        "cold_cache_zeros": "Reproduced and re-confirmed closed. /api/health read sat_tles 0 / pota_spots 0 at 04:10Z; after /api/pota and /api/satellites/positions were fetched, /api/health at 04:13Z read sat_tles 9 / pota_spots 23. Passive cache reads, exactly as characterised on 2026-09-05. Do not investigate again.",
-        "health_timestamp_freshness": "fresh (04:10:23Z at 04:10Z, 04:13:03Z at 04:13Z). No stale-timestamp recurrence.",
-        "browser_check": "DONE. Headless Chromium via local relay. 7 requests (4 API, 2 hashed assets, 1 document), all HTTP 200. Zero page errors. Renders live data: solar indices, 48h SFI history through Sep 6, 24h propagation matrix, band table, world clocks. Only console noise was 4 ws://127.0.0.1/ws/spots handshake failures, the relay not proxying WebSockets, NOT a site defect. Same artifact as 09-03 and 09-05.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug",
-          "/api/pota",
-          "/api/satellites/positions",
-          "/api/sota",
-          "/api/dashboard",
-          "/api/recommendation",
-          "/api/solar/history",
-          "/api/voacap/summary"
-        ],
-        "pota_note": "/api/pota returned 22 spots with bands resolving correctly (20m, 40m). Healthy.",
-        "satellites_note": "/api/satellites/positions returned 9 positions (AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3). Healthy.",
-        "sota_note": "/api/sota returned 5 spots and 0 DEPRECATED rows, so the 09-03 tombstone filter still holds and the deprecated api2 endpoint is still answering despite its removal date having passed. All 5 render band '?', which is the known sota-band-unit-mismatch item awaiting James. One spot (VK2PJC) carries frequency 0.0, the same empty-frequency shape noted on 09-05, not a new tombstone."
-      },
-      "cyber_page": {
-        "browser_check": "DONE. Headless Chromium via local relay, tab controls traversed. 14 requests (13 /api/feed plus the document), ALL HTTP 200. Zero page errors, zero inline 'failed:' panels, nothing pending past 15s.",
-        "renders_live_data": "Confirmed by reading rendered text: CISA KEV 1695 total with entries added 2026-09-04, NVD CVE cards, EPSS percentages, CSPM briefing card.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Zero allorigins requests in the browser; the only two tree-wide grep hits remain explanatory comments in backend/main.py:688 and backend/feedproxy.py:3.",
-        "cross_origin_requests": "Exactly one, not a feed: the Google Fonts stylesheet, ERR_CONNECTION_RESET. Environment artifact per known issue chromium-google-fonts-cert-artifact (reset rather than cert error this run; same cause, Chromium runs --no-proxy-server).",
-        "allowlist_gaps": "none. No feedproxy allowlist change made or needed. backend/feedproxy.py unchanged since d055aed 2026-09-01.",
-        "nvd_severity_mismatch": "Still visible and unchanged: the 'CRITICAL CVES - LAST 30 DAYS' panel rendered HIGH 7.7, HIGH 8.4, HIGH 8.8 alongside CRITICAL 9.9. Already an open awaiting_james item raised 2026-09-05. NOT re-reported.",
-        "rate_limiting": "None observed. Page loads spaced 25-30s apart per known issue api-rate-limit-on-feed."
-      },
-      "aethersdr_page": {
-        "browser_check": "DONE. 5 requests (4 /api/feed plus the document), ALL HTTP 200. Zero page errors, zero inline failures, nothing pending.",
-        "renders_live_data": "Confirmed: GitHub releases through AetherSDR v26.9.1 (7d ago), plus Hackaday, RTL-SDR and FlexRadio items 2 to 6 days old.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none",
-        "cross_origin_requests": "Same single Google Fonts artifact as the cyber page."
-      },
-      "crane_cab_page_review": "frontend/public/crane-cab/ is new since the last run (James's commits 09e58a0, 25321f1, 7a1815d, 47fb886, c289cb1, 8957ec7, c5f68d5, d16ca2f, plus a duplicate dev copy at crane-cab-dev/ and a new top-nav item via CraneCab.jsx and App.jsx). Reviewed because a new page is exactly where a feed can be added the wrong way. Result: NO feed, no fetch(), no XMLHttpRequest, no WebSocket, no /api/ call of any kind, so no feedproxy allowlist implication and nothing to add to linkcheck.py. Browser load: 17 local assets plus the document, all HTTP 200, zero page errors, HUD and title card render. The page has exactly one third-party dependency, an importmap pointing 'three' at https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js. That URL was verified reachable and 200 (1.27 MB) from this container, so the dependency is live. It could not be exercised inside Chromium because the browser runs --no-proxy-server and cannot reach any external host, the same artifact as Google Fonts, so the 3D scene itself is unverified. Version is pinned, which is good; raised as a low-priority advisory in awaiting_james because an importmap module cannot carry subresource integrity and this is the site's first third-party executable script.",
-      "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 run swept all 156 curated URLs, which covers every one of them until 2026-09-17 under the 14-day rotation rule. Confirmed no new outbound links: linkcheck.py's four source files are all unchanged since that sweep (Credits.jsx last touched 2026-05-31, Products.jsx 2026-09-02, both standalone pages 2026-09-03), and the only new page, crane-cab, has no curated outbound links.",
-      "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py does not define it. Pre-existing, not papered over.",
-      "new_finding": "none requiring a notification. The only new observation is the crane-cab third-party CDN dependency, logged as a low-priority advisory rather than pushed.",
-      "repairs_made": "none - nothing was broken",
-      "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied.",
-      "commits_pushed": "30b7180 (state file only)",
-      "deploy_result": {
-        "status": "success, verified",
-        "commit": "30b7180ea4995b82172c1dd61a8abc070ae6c9ab",
-        "verified_at": "2026-09-06T04:26Z",
-        "checks": [
-          "/api/health returns status ok with a fresh timestamp (04:24:59Z). No stale-timestamp recurrence.",
-          "/cyber/ re-checked in headless Chromium after deploy: 10 requests, all 200 except the known Google Fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, CISA KEV content rendering.",
-          "/aethersdr/ re-checked after deploy: 6 requests, all 200 except the same fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, AetherSDR release list rendering.",
-          "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
-        ]
-      }
     }
   ],
   "known_issues_do_not_re_report": [
     {
       "id": "health-metric-cold-cache",
       "since": "2026-09-01",
-      "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold, which is most of the time. Cosmetic, not an outage. Only escalate if /api/pota or /api/satellites/positions themselves fail."
+      "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold, which is most of the time. Cosmetic, not an outage. Only escalate if /api/pota or /api/satellites/positions themselves fail. Reconfirmed 2026-09-17: 0/0 cold, 9/13 warm."
     },
     {
       "id": "backend-tests-collection-error",
@@ -716,7 +705,7 @@
     {
       "id": "webfetch-provenance-gate",
       "since": "2026-09-04",
-      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it."
+      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it. 2026-09-17: fired ONCE on the first call of the night (dxedge.net/api/health?cb=20260917a) and cleared on the immediate retry; every subsequent fetch worked first try. Important read: the mid-session grant James made on 09-16 did not stop the gate firing, but nor did it stick. That is the 09-05 intermittent pattern, not the total-block pattern, so it was handled by the retry-once rule and NOT escalated."
     },
     {
       "id": "provenance-gate-is-intermittent-and-per-host",
@@ -731,7 +720,7 @@
     {
       "id": "chromium-google-fonts-cert-artifact",
       "since": "2026-09-05",
-      "detail": "In the headless-Chromium check both standalone pages log exactly one console error: the Google Fonts stylesheet failing ERR_CERT_AUTHORITY_INVALID. Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA, so any genuinely cross-origin request fails this way. It is an artifact of the checking rig, not a page defect, and it is a useful control: it proves the request capture is working. Do not report it as a site error."
+      "detail": "In the headless-Chromium check both standalone pages log exactly one console error: the Google Fonts stylesheet failing ERR_CERT_AUTHORITY_INVALID. Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA, so any genuinely cross-origin request fails this way. It is an artifact of the checking rig, not a page defect, and it is a useful control: it proves the request capture is working. Do not report it as a site error. SUPERSEDED-FOR-NOW 2026-09-17: the Google Fonts requests returned 200 in Chromium on all four page loads tonight, so this control did NOT fire. Do not treat its absence as a broken capture rig, and do not treat its return as a site defect either. It tracks the sandbox egress proxy, not dxedge.net."
     },
     {
       "id": "webfetch-response-cache-crosses-nights",
@@ -747,6 +736,16 @@
       "id": "shallow-clone-breaks-file-history",
       "since": "2026-09-15",
       "detail": "Cloning with --depth N makes `git log -1 -- <file>` report the shallow boundary commit for every file, which reads as though the curated-link sources were edited recently. Always `git fetch --unshallow` (or clone full) before deciding whether new outbound links exist."
+    },
+    {
+      "id": "hamqsl-307-under-concurrent-sweep",
+      "since": "2026-09-17",
+      "detail": "scripts/health/linkcheck.py reported https://www.hamqsl.com/solarxml.php as broken with HTTP 307. It is not rot. Fetched on its own immediately afterwards the same URL returns 200 with current XML (solar flux 100, updated 17 Sep 2026 0417 GMT), and the site's own /api/feed served it 200 on both browser loads. The 307 carries no Location header, which is a throttle signature rather than a redirect, and it appears because the sweep hits ~150 URLs concurrently. www.hamqsl.com/solar.html answers the same way. Do not act on a hamqsl 307 from the sweep; confirm it with a single isolated fetch first."
+    },
+    {
+      "id": "epss-cold-cache-504",
+      "since": "2026-09-17",
+      "detail": "One of the cyber page's two api.first.org EPSS calls returned 504 Gateway Timeout on the first page load of the night and 200 on a reload 45 seconds later, with the upstream itself answering in 0.5s when fetched directly. Reading: a cold feedproxy cache key racing a first upstream call past nginx's gateway timeout. The page renders no inline error for it and the panel filled normally. Treat a single non-reproducing 504 on a cold feed key as noise; only report it if it reproduces on a warm reload or appears as a .feed-error on the page."
     }
   ],
   "awaiting_james": [
@@ -804,10 +803,11 @@
     }
   ],
   "outbound_links": {
-    "last_full_sweep": "2026-09-03",
+    "last_full_sweep": "2026-09-17",
     "urls_covered": 156,
-    "next_due": "2026-09-17",
+    "next_due": "2026-10-01",
     "rotation_days": 14,
+    "last_sweep_result": "126 ok, 26 blocked, 4 broken, zero genuine rot. Nothing removed or rewritten.",
     "note": "Kept at top level because the runs array is trimmed to the last 10 nights and the sweep record would otherwise age out of the file."
   }
 }
