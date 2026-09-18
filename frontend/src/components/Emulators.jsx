@@ -3,7 +3,8 @@
  * A curated, link-checked catalogue of browser-hosted emulators:
  * pocket computers and calculators, home computers, PCs and Macs,
  * mainframes and minis, CPU simulators, microcontroller and circuit
- * sims, cipher machines. The page itself is self-contained at
+ * sims, cipher machines, fractals, Fourier and DSP tools, cellular
+ * automata and physics simulations. The page itself is self-contained at
  * /emulators/index.html and reads /emulators/emulators.json; this
  * component is only the DXEdge shell around it, like CraneCab.jsx.
  * ------------------------------------------------------------------ */
@@ -17,8 +18,9 @@ export default function Emulators() {
       <div style={{ marginBottom: 16 }}>
         <div style={{ ...label, marginBottom: 8 }}>emulators</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
-          Computers, calculators, minis, CPUs and circuits that run entirely in a browser tab: real
-          firmware, nothing to install, nothing to break. Every link is opened and checked, and the
+          Computers, calculators, minis, CPUs and circuits that run entirely in a browser tab, plus
+          fractal generators, Fourier and signal tools, cellular automata and physics sims: real
+          firmware and real math, nothing to install, nothing to break. Every link is opened and checked, and the
           catalogue is swept for link rot weekly. Sort by GitHub stars, ease of use or era, filter by
           category, and each one opens in a new tab. Full page version at{' '}
           <a href="/emulators/">dxedge.net/emulators</a>.

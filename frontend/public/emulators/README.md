@@ -28,5 +28,8 @@ Append an object to `emulators` in `emulators.json`:
 | `pick` | true for the handful shown first |
 | `checked`, `confidence` | date the link was opened and `verified` or `likely` |
 
+Categories: the eight machine categories plus fractals, Fourier/waves/signals, cellular automata and
+chaos, and physics and science sims (keys in `categories`).
+
 Rules: no game console cores that need copyrighted ROMs, no ROM archives, no Java or Flash.
 The weekly link-rot job (`scripts/health/linkcheck.py`) sweeps every URL in this file.

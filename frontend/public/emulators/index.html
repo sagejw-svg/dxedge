@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#080808">
 <title>Emulators - DXEdge</title>
-<meta name="description" content="A curated, link-checked catalogue of computers, calculators, minis, CPUs and electronics you can run in a browser tab. Sort by GitHub stars, ease of use, era or name.">
+<meta name="description" content="A curated, link-checked catalogue of computers, calculators, minis, CPUs, circuits, fractal generators, Fourier and signal tools, cellular automata and physics sims you can run in a browser tab. Sort by GitHub stars, ease of use, era or name.">
 <style>
   :root {
     --bg: #080808; --bg1: #0e0e0e; --bg2: #141414; --border: #1e1e1e; --border2: #2a2a2a;
@@ -51,14 +51,14 @@
   .count b { color: var(--text); font-weight: 600; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
-  .card { border: 1px solid var(--border); border-radius: 8px; background: var(--bg1); padding: 12px 13px 10px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .card { border: 1px solid var(--border); border-radius: 8px; background: var(--bg1); padding: 12px 13px 10px; display: flex; flex-direction: column; gap: 6px; position: relative; min-width: 0; overflow-wrap: anywhere; }
   .card:hover { border-color: var(--border2); }
   .card.pick { border-color: rgba(0,255,157,0.35); }
   .card .top { display: flex; gap: 8px; align-items: flex-start; }
-  .card h2 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.35; flex: 1; }
+  .card h2 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.35; flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .card h2 a { color: #fff; }
   .card h2 a:hover { color: var(--green); text-decoration: none; }
-  .cat { font-size: 9px; color: var(--dim); letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; margin-top: 3px; }
+  .cat { font-size: 9px; color: var(--dim); letter-spacing: 1.5px; text-transform: uppercase; text-align: right; max-width: 42%; margin-top: 3px; }
   .pickmark { color: var(--green); font-size: 10px; letter-spacing: 1px; margin-right: 6px; }
   .systems { color: var(--muted); font-size: 11px; }
   .systems span { color: var(--dim); }
@@ -81,7 +81,7 @@
   .foot b { color: var(--muted); font-weight: 600; }
   @media (max-width: 520px) {
     body { padding: 12px 10px 40px; }
-    .grid { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: minmax(0, 1fr); }
     .count { margin-left: 0; width: 100%; }
   }
 </style>
@@ -91,8 +91,8 @@
   <div class="label">dxedge / emulators</div>
   <h1>Old iron, <span>new tab</span></h1>
   <p class="intro">
-    A curated catalogue of computers, calculators, minicomputers, CPUs and electronics that run entirely inside your
-    browser. Nothing to install, nothing to flash, nothing that can hurt your machine. Every link was opened and checked,
+    A curated catalogue of computers, calculators, minicomputers, CPUs, circuits, fractals, signal and physics
+    simulations that run entirely inside your browser. Nothing to install, nothing to flash, nothing that can hurt your machine. Every link was opened and checked,
     and the catalogue is swept for link rot weekly.
   </p>
   <div class="stats" id="stats">loading...</div>
@@ -101,12 +101,13 @@
     <div><h3>Try before you buy</h3><p>Curious what a PicoCalc, an HP-15C or a PDP-11 actually feels like? Run the real firmware for ten minutes first. Most of these use the original ROMs or bug-for-bug reimplementations.</p></div>
     <div><h3>Learn the machine</h3><p>Front panels, monitors, BASIC prompts and assembly debuggers with single step. The best way to understand a CPU is to watch it execute, and most of these will let you.</p></div>
     <div><h3>Nothing to break</h3><p>It all runs client side in WebAssembly or JavaScript. Close the tab and it is gone. Several install as offline apps on a phone, which makes a fine pocket computer in its own right.</p></div>
+    <div><h3>See the math move</h3><p>Fractal zoomers, Fourier epicycles, filter designers, antenna patterns, Game of Life and physics labs. The fastest way to build intuition for a spectrum display or an SWR curve is to drag a slider and watch.</p></div>
     <div><h3>Legal by design</h3><p>Only sites that ship their own free or licensed software, or expect you to bring files you already own. No ROM archives, no console cores that need copyrighted games.</p></div>
   </div>
 
   <div class="controls">
     <div class="row">
-      <input type="search" id="q" placeholder="search  (name, system, tag, e.g. rpn, 6502, amiga)" autocomplete="off">
+      <input type="search" id="q" placeholder="search  (name, system, tag, e.g. rpn, 6502, mandelbrot, antenna)" autocomplete="off">
       <select id="sort" title="Sort order">
         <option value="pick">Picks first, then GitHub stars</option>
         <option value="stars">GitHub stars (popularity)</option>
