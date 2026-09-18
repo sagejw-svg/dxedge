@@ -1,9 +1,68 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-17T04:25:00Z",
+  "last_run": "2026-09-18T04:55:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
+    {
+      "date": "2026-09-18",
+      "run_outcome": "PARTIAL - cert, /api/health, /api/pota and all three browser surfaces verified green. /api/debug, /api/sota and /api/satellites/positions were denied by the WebFetch provenance gate after two attempts each and were NOT substituted. Nothing broken on any verified surface, nothing repaired, 0 code changes. Escalation push sent early per the 09-16 lesson; email sent.",
+      "cert": {
+        "status": "ok",
+        "evidence": "https://dxedge.net/api/health?cb=20260918run1 fetched cleanly over TLS at 04:14Z. No CERTIFICATE_VERIFY_FAILED, no expiry error. Re-confirmed from python at 04:41Z (HTTP 200) and through the Chromium relay on three page loads with no TLS error on the upstream leg.",
+        "notes": "Exact expiry still unreadable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
+        "consecutive_failures": 0
+      },
+      "main_dashboard": {
+        "api_health": "ok",
+        "sfi": 116,
+        "k_index": 2,
+        "spots": 500,
+        "feed_proxy": true,
+        "health_timestamp_freshness": "fresh (04:14:25Z at 04:14Z, and 04:41:33Z on the 04:41Z re-fetch).",
+        "cold_cache_zeros": "sat_tles 0 / pota_spots 0 seen again. NOT investigated: known issue health-metric-cold-cache is closed. The escalation condition was checked as far as the gate allowed: /api/pota is healthy. /api/satellites/positions could not be checked tonight.",
+        "pota_note": "/api/pota returned 8 spots, current to 04:30Z (PA4PA NL-0219, KM4KDF US-0682, RI1FJZ RU-0061, VE3JLN CA-0323, JI1AKO/2 JP-0016). Parser, band mapping and upstream all working. One spot at 433120 kHz renders band '?', the known sota-band-unit-mismatch 70cm gap awaiting James. Healthy.",
+        "sota_note": "NOT CHECKED. /api/sota?nonce=0918a returned PROVENANCE_REQUIRED on both attempts. Per known issue provenance-gate-is-intermittent-and-per-host the endpoint is recorded as unavailable to this run and was deliberately NOT re-fetched through python or the Chromium relay, which would have routed around the permission decision. SOTA status therefore carries over unverified from 09-17. This is the highest open item regardless (awaiting_james sota-api-deprecation).",
+        "satellites_note": "NOT CHECKED. /api/satellites/positions?nonce=0918a returned PROVENANCE_REQUIRED on both attempts. Same handling as SOTA: recorded as a gap, not substituted.",
+        "api_debug": "NOT CHECKED. Denied on both attempts (cb=20260918run1 and cb=20260918b).",
+        "browser_check": "NOT DONE for the main dashboard, deliberately. The dashboard calls /api/sota and /api/satellites/positions on load, so loading it through the python relay would have fetched exactly the two endpoints the gate had just denied. Skipped to honour the no-substitution rule. The three surfaces that were browser-checked do not call any denied endpoint.",
+        "endpoints_verified": [
+          "/api/health",
+          "/api/pota"
+        ]
+      },
+      "cyber_page": {
+        "browser_check": "DONE. Headless Chromium 1194 via local relay on port 8099. 12 requests, ALL HTTP 200, zero console messages, zero page errors, zero .feed-error nodes, nothing pending past 12s.",
+        "renders_live_data": "Confirmed from rendered text: CISA KEV 1713 total with entries added 2026-09-16, NVD CVE cards, EPSS percentages, HF propagation panel live from hamqsl (SFI 97 / K 1 / A 9 / SSN 11), Krebs item 1d old.",
+        "kev_total_trend": "1713, up from 1695 on 09-07. Feed is advancing, not frozen.",
+        "allorigins_regression": false,
+        "allorigins_evidence": "Tree-wide grep across html, js, jsx, py and json. Only two source hits remain outside this state file's own history and both are explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win.",
+        "allowlist_gaps": "none. No 403 'host not in the feed allowlist' on any feed. backend/feedproxy.py unchanged since d055aed 2026-09-01. No allowlist change made or needed.",
+        "epss_504_recurrence": "Did NOT recur. Both api.first.org EPSS calls returned 200 on the single load tonight. Known issue epss-cold-cache-504 stands as noise.",
+        "google_fonts_control": "Both Google Fonts requests returned 200, same as 09-17. The chromium-google-fonts-cert-artifact control did not fire; capture rig confirmed working by the 12 captured requests instead.",
+        "nvd_severity_mismatch": "Still visible and unchanged: the 'CRITICAL CVES - LAST 30 DAYS' panel rendered HIGH 8.1, HIGH 8.9 and HIGH 7.7 alongside CRITICAL 9.8 entries. Open awaiting_james item from 2026-09-05. NOT re-reported.",
+        "rate_limiting": "None observed. Page loads spaced 20-25s apart per known issue api-rate-limit-on-feed."
+      },
+      "aethersdr_page": {
+        "browser_check": "DONE. Relay on port 8100. 9 requests, ALL HTTP 200, zero console messages, zero page errors, zero inline failures.",
+        "renders_live_data": "Confirmed: GitHub releases atom current through AetherSDR v26.9.3 (4d ago) plus a 2d-old test build, Hackaday 14h ago, RTL-SDR 1d ago, FlexRadio items. Feed is live and current.",
+        "allorigins_regression": false,
+        "allowlist_gaps": "none",
+        "new_finding": "The ABOUT panel carries a hardcoded version string 'v26.6.3' at frontend/public/aethersdr/index.html:167 while the page's own live releases feed shows v26.9.3. Three minor versions of drift. NOT fixed autonomously: a hand-maintained version label is outside the four repair categories in the runbook and is James's own project metadata. Raised as awaiting_james item aethersdr-about-version-drift."
+      },
+      "emulators_page": {
+        "why_checked": "New surface. Commit f114106 landed 2026-09-16 23:54 PT, about 30 minutes after the 09-17 run wrote its state, so this routine had never seen it live. Authored by a separate Claude session (Fable 5.1), not by this routine.",
+        "browser_check": "DONE. Relay on port 8101. 2 requests, both HTTP 200 (document and emulators.json), zero console messages, zero page errors. 151 entries render, 8 categories, filter and sort UI present.",
+        "deploy_confirmed": "Yes. /emulators/ is served live, so the f114106 deploy completed.",
+        "feed_hygiene": "CLEAN. The page's only fetch() is same-origin relative ('emulators.json', cache no-cache). No /api/feed call, no outbound feed, no allorigins, no XHR, no WebSocket, no third-party script. So it has no feedproxy or allowlist implication at all.",
+        "sw_note": "sw.js CACHE_NAME went v40 -> v41 and /emulators/ was added to the network-first paths in the same commit. Not independently verified tonight."
+      },
+      "outbound_links_checked": "Sampled 40 of the 228 URLs in the NEW frontend/public/emulators/emulators.json, chosen at random with seed 918. The 156-URL curated sweep was correctly SKIPPED: it ran 2026-09-17 and holds until 2026-10-01 under the 14-day rule, and all four of its source files are unchanged since (Credits.jsx 2026-05-31, Products.jsx 2026-09-02, both standalone pages 2026-09-03). Sample result: 26 clean 200, 0 redirects, 14 non-200, ZERO genuine rot. All 14 are environment artifacts: 12 github.com repo pages returning 403 (github.com is demonstrably alive, its releases.atom served 200 through /api/feed on the same run) and 2 http-only hosts returning 503 (pdp11.aiju.de, trsjs.48k.ca). The github 403s and both 503s were re-fetched in isolation with a browser User-Agent, 6s apart, and reproduced, so they are a container-level block rather than sweep concurrency. Nothing removed, nothing rewritten.",
+      "backend_tests": "Confirmed STILL BROKEN at collection, unchanged. backend/tests/test_dxedge.py:64 imports estimate_fof2 from backend/voacap_engine.py, which defines f2_layer_strength but no estimate_fof2. Pre-existing, not caused by this run, not papered over. Reported as outstanding.",
+      "repairs_made": "NONE. Zero code changes tonight beyond this state file. No link rot found, no /api/feed bypass, no allowlist gap, no deprecated endpoint with a clean documented replacement.",
+      "commit": "state file only",
+      "notification": "PushNotification sent EARLY in the run (before the browser checks) per the 09-16 lesson, naming the standing fetch-permission decision. Email sent to sagejw@gmail.com: 0 fixes, 3 items needing James."
+    },
     {
       "date": "2026-09-17",
       "run_outcome": "FULL RUN, all three surfaces green, and the 14-day outbound link sweep came due and was executed in full. One PROVENANCE_REQUIRED denial on the very first WebFetch call, cleared on immediate retry; every fetch afterwards worked first try. Nothing was broken. Nothing was repaired. Quiet night: no email and no push sent.",
@@ -580,75 +639,6 @@
         "status": "n/a - no code change pushed, so no deploy to verify",
         "note": "The state-file-only commit does touch the repo and will trigger deploy.yml as every push to main does, but it changes nothing the site serves and no post-deploy verification was possible tonight."
       }
-    },
-    {
-      "date": "2026-09-07",
-      "run_outcome": "COMPLETE - all three mandated surfaces plus the crane-cab page verified live in headless Chromium. Nothing broken, nothing repaired, no notification sent.",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health and /api/debug fetched cleanly over TLS at 04:10Z with cache-busting params. No CERTIFICATE_VERIFY_FAILED, no expiry error. Chromium loaded all four surfaces through the relay with no TLS error on the upstream leg.",
-        "notes": "Exact expiry still unreadable from this container: openssl sees the egress proxy certificate. Unchanged since 2026-09-02.",
-        "consecutive_failures": 0
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "a_index": 7,
-        "ssn": 76,
-        "spots": 500,
-        "feed_proxy": true,
-        "cold_cache_zeros": "Seen again (sat_tles 0 / pota_spots 0 at 04:10Z) and again NOT investigated: known issue health-metric-cold-cache is closed. The escalation condition was checked instead and both underlying endpoints are healthy.",
-        "health_timestamp_freshness": "fresh (04:10:23Z at 04:10Z). No stale-timestamp recurrence.",
-        "browser_check": "DONE. Headless Chromium at /opt/pw-browsers/chromium-1194 via local relay. 8 requests, ALL HTTP 200, zero page errors. Renders live data: solar indices SFI 116 / K 2 / A 7 / SSN 76, 48h SFI history through Sep 7, 24h propagation matrix, band table, world clocks, nav with Crane Cab now under GAMES. Only console noise was 3 ws://127.0.0.1/ws/spots handshake failures, the relay not proxying WebSockets, NOT a site defect.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug",
-          "/api/pota",
-          "/api/satellites/positions",
-          "/api/sota"
-        ],
-        "pota_note": "/api/pota returned 6 spots with bands resolving correctly (20m 14290.0 and 14074.0, 40m 7042.0). Healthy. Count is lower than the 22-23 seen on 09-05/09-06 but that is ordinary overnight POTA activity, not a fault: the parser, the band mapping and the upstream all work.",
-        "satellites_note": "/api/satellites/positions returned the same 9 positions (AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3). Healthy.",
-        "sota_note": "/api/sota returned 5 spots and 0 DEPRECATED rows, so the 09-03 tombstone filter still holds and the deprecated api2 endpoint is STILL answering, seven days past its stated removal date. All 5 spots are BX2AKP on one summit and all render band '?', the known sota-band-unit-mismatch item awaiting James. One spot again carries frequency 0.0, the known empty-frequency shape, not a new tombstone."
-      },
-      "cyber_page": {
-        "browser_check": "DONE. 10 requests (8 /api/feed plus document and assets), ALL HTTP 200. Zero page errors, zero inline 'failed:' panels, nothing pending past 15s.",
-        "renders_live_data": "Confirmed by reading rendered text: CISA KEV 1695 total with entries added 2026-09-04, NVD CVE cards, EPSS percentages, Claude AI-security briefing card.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Zero allorigins requests in the browser; the only two tree-wide grep hits remain explanatory comments in backend/main.py:688 and backend/feedproxy.py:3.",
-        "cross_origin_requests": "Exactly one, not a feed: the Google Fonts stylesheet, ERR_CERT_AUTHORITY_INVALID. Known issue chromium-google-fonts-cert-artifact, and a useful control proving request capture works.",
-        "allowlist_gaps": "none. No feedproxy allowlist change made or needed. backend/feedproxy.py unchanged since d055aed 2026-09-01.",
-        "nvd_severity_mismatch": "Still visible and unchanged: the 'CRITICAL CVES - LAST 30 DAYS' panel rendered HIGH 8.4 alongside CRITICAL. Already an open awaiting_james item raised 2026-09-05. NOT re-reported.",
-        "rate_limiting": "None observed. Page loads spaced 20-28s apart per known issue api-rate-limit-on-feed."
-      },
-      "aethersdr_page": {
-        "browser_check": "DONE. 7 requests (5 /api/feed plus document and assets), ALL HTTP 200. Zero page errors, zero inline failures, nothing pending.",
-        "renders_live_data": "Confirmed: GitHub releases atom now through AetherSDR v26.9.2 (6h ago), a new release since the 09-06 run, plus Hackaday, RTL-SDR and FlexRadio items. Feed is live and current.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none",
-        "cross_origin_requests": "Same single Google Fonts artifact as the cyber page."
-      },
-      "crane_cab_page_review": "Re-reviewed because James pushed 13 commits to it since the last run (868dbcc through 7cb11c2: Phase 3 radio director, procedural audio, second and third bug passes, and a test suite now committed at crane-cab-dev/test/). Checked specifically for a feed added the wrong way. Result: still NO outbound feed. One new fetch() appeared at frontend/public/crane-cab/js/audio.js:304, and it is same-origin relative ('audio/<key>.ogg') with a documented caption-only fallback on miss, so it has no feedproxy or allowlist implication. No XMLHttpRequest, no WebSocket, no /api/ call. Browser load: 20 requests, all 200 except the pinned three.js CDN, which fails only with the known Chromium cert artifact; HUD and title card render, zero page errors. The crane-cab-third-party-cdn advisory from 09-06 is unchanged and was not re-reported.",
-      "james_commits_reviewed": "James also changed nginx/nginx.conf and .github/workflows/deploy.yml in commits 0f66175, d1a1118 and e044807 (stop caching deploy-carrying files, restart nginx, fail the run on wrong cache headers). These are his own changes to files this routine may not touch autonomously. Noted, not modified. The site is serving correctly after them.",
-      "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule. Re-confirmed no new outbound links: all four linkcheck.py source files are unchanged since that sweep (Credits.jsx 2026-05-31, Products.jsx 2026-09-02, both standalone pages 2026-09-03 in 49e82d2), and crane-cab still carries no curated outbound links.",
-      "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py still has zero definitions of it. Pre-existing, not papered over. Note James committed a NEW test suite this week at crane-cab-dev/test/ (node, separate from pytest), which does not affect this break.",
-      "new_finding": "none. No new defect on any surface and no new escalation.",
-      "repairs_made": "none - nothing was broken",
-      "notification": "none sent. Nothing broken, nothing fixed, and every open item was already reported on an earlier night, so the quiet-night rule applied.",
-      "commits_pushed": "894cfbb (state file only)",
-      "deploy_result": {
-        "status": "success, verified",
-        "commit": "894cfbb",
-        "verified_at": "2026-09-07T04:24Z",
-        "checks": [
-          "/api/health returns status ok with a fresh timestamp (04:23:19Z). No stale-timestamp recurrence.",
-          "Post-deploy /api/health read sat_tles 9, which is the cold-cache counter warming exactly as characterised on 2026-09-05. Further confirmation that health-metric-cold-cache stays closed.",
-          "/cyber/ re-checked in headless Chromium after deploy: 10 requests, 8 /api/feed, all 200 except the known Google Fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, CISA KEV content rendering.",
-          "/aethersdr/ re-checked after deploy: 7 requests, 5 /api/feed, all 200 except the same fonts artifact, 0 page errors, 0 inline failures, 0 allorigins, AetherSDR v26.9.2 release list rendering.",
-          "Deploy-verification bar per known issue deploy-verification-gap was met; no bundle-level claim is made."
-        ]
-      }
     }
   ],
   "known_issues_do_not_re_report": [
@@ -695,7 +685,7 @@
     {
       "id": "linkcheck-env-artifacts",
       "since": "2026-09-03",
-      "detail": "http://dxc.ve7cc.net, http://w3lpl.net and https://www.dxsummit.fi/ fail in this sandbox for environment reasons (http-only force-upgrade, and an egress-proxy reset). Not link rot. Do not remove them on the strength of a failed fetch from the nightly container."
+      "detail": "http://dxc.ve7cc.net, http://w3lpl.net and https://www.dxsummit.fi/ fail in this sandbox for environment reasons (http-only force-upgrade, and an egress-proxy reset). Not link rot. Do not remove them on the strength of a failed fetch from the nightly container. EXTENDED 2026-09-18 by the emulators sample: github.com REPO PAGES return 403 to this container even isolated and with a browser User-Agent, 12 for 12 in the sample, while github.com/<org>/<repo>/releases.atom served 200 through /api/feed on the same run. So a github.com 403 in a sweep is an environment artifact, never rot. Same for http-only hosts answering 503: pdp11.aiju.de and trsjs.48k.ca both reproduced 503 in isolation yet were verified 200 with a browser UA on 2026-09-17 by the session that authored the catalogue. Do not remove a link on the strength of either signature."
     },
     {
       "id": "browser-check-now-possible",
@@ -705,7 +695,7 @@
     {
       "id": "webfetch-provenance-gate",
       "since": "2026-09-04",
-      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it. 2026-09-17: fired ONCE on the first call of the night (dxedge.net/api/health?cb=20260917a) and cleared on the immediate retry; every subsequent fetch worked first try. Important read: the mid-session grant James made on 09-16 did not stop the gate firing, but nor did it stick. That is the 09-05 intermittent pattern, not the total-block pattern, so it was handled by the retry-once rule and NOT escalated."
+      "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it. 2026-09-17: fired ONCE on the first call of the night (dxedge.net/api/health?cb=20260917a) and cleared on the immediate retry; every subsequent fetch worked first try. Important read: the mid-session grant James made on 09-16 did not stop the gate firing, but nor did it stick. That is the 09-05 intermittent pattern, not the total-block pattern, so it was handled by the retry-once rule and NOT escalated. 2026-09-18: PARTIAL gate, a new pattern. /api/health and /cyber/ answered first try and /api/pota answered on its retry, while /api/debug, /api/sota, /api/satellites/positions and two http-only emulator hosts were denied on BOTH attempts each. So it is neither the all-host total block nor a single first-call hiccup: it denied roughly half the calls, per URL, all night, and the denials were sticky. Handling: retry-once applied, denied endpoints recorded as gaps, no substitution via python or the Chromium relay, and the main-dashboard browser load skipped because it would have re-fetched the two denied endpoints. Escalation push sent early; James had not granted access by the end of the run. 6 of the last 15 nights degraded (09-04, 09-08, 09-09, 09-14, 09-16, 09-18)."
     },
     {
       "id": "provenance-gate-is-intermittent-and-per-host",
@@ -746,6 +736,11 @@
       "id": "epss-cold-cache-504",
       "since": "2026-09-17",
       "detail": "One of the cyber page's two api.first.org EPSS calls returned 504 Gateway Timeout on the first page load of the night and 200 on a reload 45 seconds later, with the upstream itself answering in 0.5s when fetched directly. Reading: a cold feedproxy cache key racing a first upstream call past nginx's gateway timeout. The page renders no inline error for it and the panel filled normally. Treat a single non-reproducing 504 on a cold feed key as noise; only report it if it reproduces on a warm reload or appears as a .feed-error on the page."
+    },
+    {
+      "id": "emulators-page-has-no-feed-surface",
+      "since": "2026-09-18",
+      "detail": "frontend/public/emulators/index.html is a new surface as of commit f114106 but it is NOT a feed page. Its only fetch() is same-origin relative to emulators.json. It cannot produce an allorigins regression, a feedproxy 403 or a 502, so the Step 3 feed questions do not apply to it. Check it for render and for link rot in emulators.json (228 URLs, now swept by linkcheck.py), nothing more."
     }
   ],
   "awaiting_james": [
@@ -798,8 +793,14 @@
       "id": "webfetch-permission-at-setup",
       "raised": "2026-09-08",
       "priority": "highest open item - blocks the routine itself",
-      "detail": "The nightly run has no way to clear WebFetch's PROVENANCE_REQUIRED approval gate, because it runs unattended at 9 PM PT with nobody to answer the prompt. It blocked the entire run on 2026-09-04 and again on 2026-09-08: no cert check, no /api/health, no feed checks, no browser check on either standalone page. Static repo checks still run and were clean both nights, but a static check cannot see an expired certificate or a dead feed, which is most of what this routine exists to catch. Options: (a) grant this scheduled task standing fetch permission for dxedge.net and the upstream feed hosts at setup time, which is the clean fix; (b) re-create the scheduled task from the Claude desktop app so it is linked to a computer and can use a real browser, which also restores the Step 3 browser check on its own terms; (c) accept that roughly one night in three is blind. Recommend (a), and (b) as well if the browser check matters. No workaround exists inside the run: substituting curl, python or the headless-Chromium relay for a denied fetch is what known issue webfetch-provenance-gate forbids, and the routine honoured that on both blind nights. RECURRED 2026-09-14 after three consecutive clean nights (09-10, 09-12, 09-13), which rules out the reading that the gate was a settled early-September glitch. Four fully blind nights out of the last eleven. Re-pinged by push notification on 09-14; recommendation unchanged, option (a).",
-      "last_reported": "2026-09-14"
+      "detail": "The nightly run has no way to clear WebFetch's PROVENANCE_REQUIRED approval gate, because it runs unattended at 9 PM PT with nobody to answer the prompt. It blocked the entire run on 2026-09-04 and again on 2026-09-08: no cert check, no /api/health, no feed checks, no browser check on either standalone page. Static repo checks still run and were clean both nights, but a static check cannot see an expired certificate or a dead feed, which is most of what this routine exists to catch. Options: (a) grant this scheduled task standing fetch permission for dxedge.net and the upstream feed hosts at setup time, which is the clean fix; (b) re-create the scheduled task from the Claude desktop app so it is linked to a computer and can use a real browser, which also restores the Step 3 browser check on its own terms; (c) accept that roughly one night in three is blind. Recommend (a), and (b) as well if the browser check matters. No workaround exists inside the run: substituting curl, python or the headless-Chromium relay for a denied fetch is what known issue webfetch-provenance-gate forbids, and the routine honoured that on both blind nights. RECURRED 2026-09-14 after three consecutive clean nights (09-10, 09-12, 09-13), which rules out the reading that the gate was a settled early-September glitch. Four fully blind nights out of the last eleven. Re-pinged by push notification on 09-14; recommendation unchanged, option (a). RECURRED 2026-09-18 in a new PARTIAL form: about half of all WebFetch calls were denied, per URL and stickily across both attempts, which cost the SOTA check, the satellite check, /api/debug and the main-dashboard browser load, while the cyber, aethersdr and emulators surfaces were fully verified. A partial gate is worse than a total one for triage, because the run looks healthy while the least-verifiable endpoint on the site, SOTA, is exactly what goes unchecked. Recommendation unchanged, option (a). The push went out early this time per the 09-16 lesson and was not answered within the run.",
+      "last_reported": "2026-09-18"
+    },
+    {
+      "id": "aethersdr-about-version-drift",
+      "raised": "2026-09-18",
+      "priority": "low, cosmetic",
+      "detail": "frontend/public/aethersdr/index.html:167 hardcodes <span class=\"ver\" id=\"aboutVersion\">v26.6.3</span> in the ABOUT panel, while the same page's live GitHub releases feed renders v26.9.3 as the latest release, 4 days old. The label is three minor versions stale and the two numbers sit on screen together. NOT fixed autonomously: a hand-maintained version label is not link rot, not a redirect, not a deprecated endpoint and not an /api/feed bypass, so it falls outside the four repair categories, and it is James's own project metadata. Options: (a) tell the nightly run it may keep this string in step with the releases feed, (b) have the page read the version from the releases atom it already fetches, which removes the drift permanently, (c) leave it and update by hand at release time."
     }
   ],
   "outbound_links": {
@@ -808,6 +809,14 @@
     "next_due": "2026-10-01",
     "rotation_days": 14,
     "last_sweep_result": "126 ok, 26 blocked, 4 broken, zero genuine rot. Nothing removed or rewritten.",
-    "note": "Kept at top level because the runs array is trimmed to the last 10 nights and the sweep record would otherwise age out of the file."
+    "note": "Kept at top level because the runs array is trimmed to the last 10 nights and the sweep record would otherwise age out of the file. The emulators catalogue is tracked separately in emulators_catalogue for the same reason.",
+    "emulators_catalogue": {
+      "source": "frontend/public/emulators/emulators.json",
+      "url_count": 228,
+      "added_by_commit": "f114106 (2026-09-16 23:54 PT, separate Claude session)",
+      "authoring_session_check": "2026-09-17, browser user agent, 150 of 151 entry URLs answered 200; cpcbox.com sits behind a bot check",
+      "nightly_sample_2026_09_18": "40 of 228 sampled (seed 918): 26 clean 200, 14 environment artifacts (12 github.com repo-page 403s, 2 http-only 503s), zero genuine rot",
+      "next_due": "2026-10-01, folded into the curated sweep now that linkcheck.py includes this file"
+    }
   }
 }
