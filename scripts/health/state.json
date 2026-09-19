@@ -1,9 +1,59 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-18T04:55:00Z",
+  "last_run": "2026-09-19T04:30:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
+    {
+      "date": "2026-09-19",
+      "run_outcome": "FULL RUN. All four live surfaces checked in headless Chromium. Everything green. Zero repairs, zero code pushed except this state file. One open item materially advanced: the AetherSDR ABOUT version label was diagnosed from 'stale hand-maintained label' to a confirmed one-line bug in loadReleases(), with a validated fix held for James.",
+      "environment": {
+        "webfetch": "Working. No PROVENANCE_REQUIRED on any call tonight. Both /api/health and /api/debug answered first try with a cache-busting param.",
+        "browser": "Headless Chromium plus local relay rig per known issue browser-check-now-possible. Worked on all four page loads.",
+        "relay_caveat": "The relay does not implement WebSocket upgrade, so the main dashboard logs 4 console errors for ws://.../ws/spots handshake against a plain 200. Rig artifact, not a site defect. Judge dashboard sockets some other way or teach the relay to upgrade.",
+        "timing_caveat": "Per-request ms through the relay is unreliable: several cyber feeds reported ~14047ms, exactly the script's wait window, meaning the response events landed at teardown. Judge feeds on status code, not on relay timing.",
+        "google_fonts_control": "FIRED tonight on both standalone pages: one console error each, ERR_CERT_AUTHORITY_INVALID on fonts.googleapis.com. Per known issue chromium-google-fonts-cert-artifact this is the checking rig, not the site, and its presence confirms the capture is working."
+      },
+      "cert": {
+        "status": "ok",
+        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:08Z with a cache-busting param, and every subsequent relay fetch of the site succeeded. No CERTIFICATE_VERIFY_FAILED, no expiry error.",
+        "consecutive_failures": 0,
+        "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot evidently still working. Exact expiry date still not readable from this container: openssl and python both see the egress proxy certificate, not the real one."
+      },
+      "main_dashboard": {
+        "api_health": "ok. status ok, sfi 116, k_index 2, spots 500, feed_proxy true, version 2.0.",
+        "browser_check": "CLEAN. 8 requests, all 200: /, /api/dashboard?grid=CM95, /api/recommendation, /api/solar/history?hours=48, /api/voacap/summary, the hashed CSS and JS bundles, favicon. Zero non-200, zero pending, zero rendered error strings.",
+        "sat_tles_pota_spots": "Both read 0 in /api/health again, and both are FINE. Confirmed directly this run: /api/pota returned a full live spot list (W6K US-7689, 7L4SCQ/1 JP-1321, K5AWJ US-0556, timestamps current to 04:12Z) and /api/satellites/positions returned live positions for AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2 and more. This is the cold-cache cosmetic artifact, reconfirmed for the third time. Do not chase it again.",
+        "sota": "Panel is dark and correctly so. /api/sota returns {\"spots\":[]}. The api2.sota.org.uk upstream now returns ONLY the deprecation tombstone row and zero real spots. The null-safe filter in backend/pota.py strips it cleanly, so no DEPRECATED row reaches the UI. Already tracked under awaiting_james sota-api-deprecation; not re-reported tonight."
+      },
+      "cyber_page": {
+        "browser_check": "CLEAN. 10 requests. All 8 /api/feed calls returned 200: both api.first.org EPSS queries, krebsonsecurity, services.nvd.nist.gov, both www.cisa.gov feeds (advisories xml and the KEV json), www.hamqsl.com/solarxml.php, www.securityweek.com. Zero non-200, zero pending, zero .feed-error nodes, zero 'failed:' strings in the rendered text, zero loading placeholders left.",
+        "epss_504": "Did NOT recur. Both EPSS calls served from a warm cache at 0ms. The 2026-09-17 cold-cache 504 remains a one-off.",
+        "allorigins_regression": false,
+        "allorigins_evidence": "Tree-wide grep. Only two source hits remain, both explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win.",
+        "allowlist_gaps": "none. Every feed host the page requests is present in ALLOWED_HOSTS: api.first.org, krebsonsecurity.com, services.nvd.nist.gov, www.cisa.gov, www.hamqsl.com, www.securityweek.com. No 403 'host not in the feed allowlist' seen. No allowlist change made or needed."
+      },
+      "aethersdr_page": {
+        "browser_check": "CLEAN. 6 requests. All 4 /api/feed calls returned 200: github.com/aethersdr/AetherSDR/releases.atom, hackaday.com/category/radio-hacks/feed/, www.flexradio.com/feed/, www.rtl-sdr.com/feed/. Zero non-200, zero pending, zero rendered error strings.",
+        "allorigins_regression": false,
+        "allowlist_gaps": "none. github.com, hackaday.com, www.flexradio.com, www.rtl-sdr.com all present in ALLOWED_HOSTS.",
+        "version_label_root_cause": "SOLVED tonight, and it is a real bug rather than the stale hand-maintained label described on 2026-09-18. index.html:437 sets the ABOUT version from items[0] of the releases atom feed only: `const m = newest.title.match(/v?(\\d+\\.\\d+\\.\\d+[\\w.-]*)/); if (m) ...`. Tonight the newest atom entry is 'Test build for #5713 - Windows CW sidetone (not a release)', which contains no semver, so m is null, the assignment is skipped and the label silently falls back to the hardcoded v26.6.3 at line 167. The real latest release, v26.9.3, is the SECOND entry and renders correctly in the releases list right below the stale label. Verified in the browser: aboutVersion reads 'v26.6.3' while the feed list reads v26.9.3 then v26.9.2. So the label breaks whenever a non-release tag sits at the top of the feed, which is exactly when it is most visible.",
+        "version_label_proposed_fix": "Scan the entries for the first title that yields a semver match instead of reading items[0] alone. Validated offline against tonight's three live titles: current logic yields no match and keeps v26.6.3, proposed logic yields v26.9.3 from the second entry. Roughly: `const m = items.map(i => i.title.match(/v?(\\d+\\.\\d+\\.\\d+[\\w.-]*)/)).find(Boolean);`. NOT APPLIED. It is display logic on James's own project metadata and falls outside the four autonomous repair categories (link rot, permanent redirects, deprecated feed endpoints, /api/feed bypass). Held for James as a yes/no."
+      },
+      "emulators_page": {
+        "browser_check": "CLEAN. Renders 345 entries, 180679 chars of body text, zero requests non-200, zero console messages of any kind, zero page errors. The 7 'loading' substrings in the body text are prose inside entry blurbs, not unresolved placeholders; this page has no feeds.",
+        "feed_hygiene": "Still no feed surface. Only fetch() is same-origin relative to emulators.json, per known issue emulators-page-has-no-feed-surface."
+      },
+      "outbound_links": {
+        "curated_sweep": "NOT DUE. Last full sweep 2026-09-17 covering 156 URLs, rotation 14 days, next due 2026-10-01. Skipped per the 14-day rule rather than re-burned.",
+        "new_link_sample": "RAN, because commit 372dff9 took the emulators catalogue from 151 to 345 entries and the 194 new URLs had never been checked by a nightly run. Sampled 45 of the 194 new entries (seed 919, browser user agent, 5-way concurrency) across all four new categories. 42 of 45 returned 200. The 3 non-200s are all previously documented bot checks, not rot: alpertron.com.ar/ULAM.HTM (202 interstitial), golly.sourceforge.io/webapp/golly.html (403), markimicrowave.com LC filter tool (403). Zero genuine rot. Nothing removed, nothing rewritten.",
+        "metadata_nit": "Minor and cosmetic. Commit 372dff9's message says the four bot-checked entries are 'marked accordingly', but only Golly carries confidence 'likely' with an explanatory ease_note. Alpertron and Marki Microwave are both marked confidence 'verified' with no mention of the bot check. Catalogue metadata accuracy, not link rot, so left alone."
+      },
+      "backend_tests": "Still broken at collection, unchanged. backend/tests/test_dxedge.py imports estimate_fof2 from voacap_engine, which does not define it. Pre-existing, not caused by this run, not papered over.",
+      "repairs": "NONE. Nothing met the autonomous repair bar tonight: no link rot, no permanent redirects, no newly deprecated feed endpoint with a documented clean-mapping replacement, and no /api/feed bypass.",
+      "pushed": "scripts/health/state.json only.",
+      "james_notified": "Yes, PushNotification, one decision: whether to apply the validated AetherSDR version-label fix."
+    },
     {
       "date": "2026-09-18",
       "run_outcome": "PARTIAL - cert, /api/health, /api/pota and all three browser surfaces verified green. /api/debug, /api/sota and /api/satellites/positions were denied by the WebFetch provenance gate after two attempts each and were NOT substituted. Nothing broken on any verified surface, nothing repaired, 0 code changes. Escalation push sent early per the 09-16 lesson; email sent.",
@@ -590,56 +640,6 @@
         "status": "n/a - no code change pushed, so no deploy to verify",
         "note": "The state-file-only commit does touch the repo and will trigger deploy.yml as every push to main does, but it changes nothing the site serves and no post-deploy verification was possible tonight."
       }
-    },
-    {
-      "date": "2026-09-08",
-      "run_outcome": "BLOCKED - no live verification performed. WebFetch returned PROVENANCE_REQUIRED on every URL attempted (dxedge.net/api/health twice, /api/debug twice, and the example.com control), so not one live check in Steps 1-3 could be run. This is the second occurrence of the 2026-09-04 all-host pattern. Static and repo-level checks WERE completed and are all clean. Nothing repaired, nothing pushed except this state file. James notified.",
-      "verification_gap": {
-        "cause": "WebFetch provenance gate, all hosts. 5 calls across 3 dxedge.net URLs plus https://example.com/ as a control, all error_type PROVENANCE_REQUIRED, 'permission request was not answered in time'. An unattended run cannot clear an interactive approval gate.",
-        "retry_performed": "Yes. Per known issue provenance-gate-is-intermittent-and-per-host, /api/health was retried and denied again, and /api/debug was retried and denied again. The example.com control confirms the block is all-host, not per-host, so the run was correctly treated as blocked rather than abandoned on a single denial.",
-        "browser_fallback": "NOT attempted, deliberately. No browser MCP tool exists in this session: no mcp__claude-in-chrome__*, no mcp__remote-devices__* (this scheduled run has no link to James's computer). The only remaining option was the 2026-09-03 headless-Chromium-plus-local-relay rig, whose relay leg is python doing the outbound HTTPS. Standing up that rig tonight would be substituting python and Chromium for a fetch the environment had just denied, which known issue webfetch-provenance-gate explicitly forbids. On 09-05 through 09-07 Chromium was legitimate because WebFetch was working and Chromium was the mandated tool for a job WebFetch cannot do at all. Tonight it would have been a workaround. Not run.",
-        "consequence": "Unverified tonight: TLS certificate status, /api/health, /api/debug, all backend feed counts, all upstream endpoints, both standalone pages in a browser, and every /api/feed request. Nothing below should be read as a live-site claim."
-      },
-      "cert": {
-        "status": "unverified",
-        "evidence": "None obtainable. The cert is judged by the WebFetch error, and WebFetch never reached the origin: PROVENANCE_REQUIRED is an approval-gate error raised before the request, not a TLS error. No CERTIFICATE_VERIFY_FAILED and no expiry error was seen, but neither was a clean fetch.",
-        "consecutive_failures": 0,
-        "counter_rationale": "Deliberately NOT incremented. The 3-strike escalation counts consecutive renewal failures, and an environment gate is not a renewal failure. Incrementing on a blind night would walk the counter to a false escalation while the cert is very likely fine. Last positive confirmation 2026-09-07 04:10Z; renewal has run unattended via /etc/cron.d/dxedge-certbot since 2026-08-31."
-      },
-      "main_dashboard": {
-        "api_health": "unverified - see verification_gap",
-        "browser_check": "NOT DONE - see verification_gap",
-        "feeds": "unverified. sat_tles and pota_spots could not be read; note that per known issue health-metric-cold-cache a 0 on those two is cosmetic anyway and only /api/pota or /api/satellites/positions failing would matter.",
-        "static_review": "Clean. No frontend or backend change since the 09-07 run touches the dashboard's data path: the 18 new commits are all games work (crane-cab, morse-invaders, skip) plus deploy.yml."
-      },
-      "cyber_page": {
-        "browser_check": "NOT DONE - see verification_gap",
-        "static_review": "Clean. Source unchanged since 49e82d2 on 2026-09-03.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Tree-wide grep. The only two hits remain the explanatory comments in backend/main.py:704 and backend/feedproxy.py:3. Neither standalone page references it.",
-        "allowlist_gaps": "none. Every feed URL in the page was extracted and its host checked against ALLOWED_HOSTS in backend/feedproxy.py: www.cisa.gov, services.nvd.nist.gov, api.first.org, www.hamqsl.com, krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com, news.google.com. All 11 present. No allowlist change made or needed. feedproxy.py unchanged since d055aed 2026-09-01.",
-        "nvd_severity_mismatch": "Not re-checkable tonight. Remains an open awaiting_james item from 2026-09-05. NOT re-reported."
-      },
-      "aethersdr_page": {
-        "browser_check": "NOT DONE - see verification_gap",
-        "static_review": "Clean. Source unchanged since 49e82d2 on 2026-09-03.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none. Feed hosts extracted and checked: github.com, www.flexradio.com, www.rtl-sdr.com, hackaday.com. All 4 present in ALLOWED_HOSTS."
-      },
-      "new_surfaces_reviewed": "TWO new standalone pages landed this week and were audited statically for the 'feed added the wrong way' condition. frontend/public/morse-invaders/index.html (commits be7689f, 2ca59b8, cefa92b): zero fetch(), zero XMLHttpRequest, zero WebSocket, zero external script or link hosts. Wholly self-contained. frontend/public/skip/index.html (commit 7748040): exactly one network call, a same-origin fetch('/api/health') at line 424. No external hosts. Neither page has any feedproxy or allowlist implication and neither touches allorigins. Nothing to fix. Both also have committed pytest-style checks at scripts/test_morse_invaders.py and scripts/test_skip.py.",
-      "crane_cab_page_review": "Static only tonight. 5 new commits (0463413 through 0d65dd5: Phase 4 missions and scoring, procedural audio, four bug passes). Re-audited for outbound requests: still exactly one external host in the whole directory, the pinned https://cdn.jsdelivr.net/npm/three@0.160.0 importmap entry already tracked as advisory crane-cab-third-party-cdn. No new feed, no /api/ call, no allowlist implication.",
-      "james_commits_reviewed": "18 commits since 894cfbb. All James's own games work except 2df1166 (2026-09-08), which changes .github/workflows/deploy.yml to fetch-and-reset on the droplet instead of git pull. deploy.yml is on this routine's do-not-touch list, so it was noted and not modified. Its effect could not be observed tonight because no live check was possible.",
-      "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule. Re-confirmed no new curated outbound links: Credits.jsx unchanged since 2026-05-31, Products.jsx since 2026-09-02, both standalone pages since 2026-09-03, and the three new game pages carry zero outbound links between them.",
-      "backend_tests": "Still broken, unchanged and untouched. backend/tests/test_dxedge.py lines 64, 92, 96, 98 use estimate_fof2; backend/voacap_engine.py still defines it zero times. Pre-existing, not papered over. Outstanding.",
-      "pat_status": "Working. Authenticated to origin over HTTPS with the header method and read refs/heads/main successfully. Known issue pat-expiry-note-stale still stands: the Mem note claims expiry ~2026-08-27 and the token has now outlived that by 12 days. The note is wrong and should be corrected.",
-      "new_finding": "The verification gap itself, and it is now a pattern rather than a one-off: 2 of the last 5 nights (09-04 and 09-08) produced zero live checks. This is the finding James needs to act on.",
-      "repairs_made": "none. Nothing repairable was found in the static review, and nothing live could be inspected.",
-      "notification": "SENT. PushNotification plus an email to sagejw@gmail.com, because a blind run is a failure of the routine's one job and needs a setup change only James can make. No previously reported open item was re-reported.",
-      "commits_pushed": "state file only",
-      "deploy_result": {
-        "status": "n/a - no code change pushed, so no deploy to verify",
-        "note": "The state-file-only commit does touch the repo and will trigger deploy.yml as every push to main does, but it changes nothing the site serves and no post-deploy verification was possible tonight."
-      }
     }
   ],
   "known_issues_do_not_re_report": [
@@ -800,8 +800,9 @@
     {
       "id": "aethersdr-about-version-drift",
       "raised": "2026-09-18",
-      "priority": "low, cosmetic",
-      "detail": "frontend/public/aethersdr/index.html:167 hardcodes <span class=\"ver\" id=\"aboutVersion\">v26.6.3</span> in the ABOUT panel, while the same page's live GitHub releases feed renders v26.9.3 as the latest release, 4 days old. The label is three minor versions stale and the two numbers sit on screen together. NOT fixed autonomously: a hand-maintained version label is not link rot, not a redirect, not a deprecated endpoint and not an /api/feed bypass, so it falls outside the four repair categories, and it is James's own project metadata. Options: (a) tell the nightly run it may keep this string in step with the releases feed, (b) have the page read the version from the releases atom it already fetches, which removes the drift permanently, (c) leave it and update by hand at release time."
+      "priority": "low, cosmetic - but now a confirmed bug with a validated fix, not an editorial call",
+      "detail": "frontend/public/aethersdr/index.html:167 hardcodes <span class=\"ver\" id=\"aboutVersion\">v26.6.3</span> in the ABOUT panel, while the same page's live GitHub releases feed renders v26.9.3 as the latest release, 4 days old. The label is three minor versions stale and the two numbers sit on screen together. NOT fixed autonomously: a hand-maintained version label is not link rot, not a redirect, not a deprecated endpoint and not an /api/feed bypass, so it falls outside the four repair categories, and it is James's own project metadata. Options: (a) tell the nightly run it may keep this string in step with the releases feed, (b) have the page read the version from the releases atom it already fetches, which removes the drift permanently, (c) leave it and update by hand at release time.",
+      "update_2026_09_19": "ROOT CAUSE FOUND, and it reframes this item. This is not a hand-maintained label that drifted; the page already tries to set it from the live feed and the code has a bug. index.html:437 reads the version from items[0] of the releases atom feed only. Tonight items[0] is 'Test build for #5713 - Windows CW sidetone (not a release)', which carries no semver, so the regex returns null, the assignment is skipped, and the label falls back to the hardcoded v26.6.3 at line 167 while the releases list immediately below shows v26.9.3. Fix is one line: take the first entry whose title yields a semver match rather than items[0]. Validated offline against tonight's live titles. Held because display logic on James's project metadata is outside the four autonomous repair categories. Decision needed: apply it, or leave it."
     }
   ],
   "outbound_links": {
@@ -813,11 +814,13 @@
     "note": "Kept at top level because the runs array is trimmed to the last 10 nights and the sweep record would otherwise age out of the file. The emulators catalogue is tracked separately in emulators_catalogue for the same reason.",
     "emulators_catalogue": {
       "source": "frontend/public/emulators/emulators.json",
-      "url_count": 228,
+      "url_count": 345,
       "added_by_commit": "f114106 (2026-09-16 23:54 PT, separate Claude session)",
       "authoring_session_check": "2026-09-17, browser user agent, 150 of 151 entry URLs answered 200; cpcbox.com sits behind a bot check",
       "nightly_sample_2026_09_18": "40 of 228 sampled (seed 918): 26 clean 200, 14 environment artifacts (12 github.com repo-page 403s, 2 http-only 503s), zero genuine rot",
-      "next_due": "2026-10-01, folded into the curated sweep now that linkcheck.py includes this file"
+      "next_due": "2026-10-01, folded into the curated sweep now that linkcheck.py includes this file",
+      "grew_by_commit": "372dff9 (2026-09-17 23:01 PT, separate Claude session): 151 -> 345, adding fractal/signal/automata/physics",
+      "nightly_sample_2026_09_19": "45 of the 194 NEW entries sampled (seed 919, browser UA): 42 clean 200, 3 documented bot checks (alpertron 202, Golly 403, Marki Microwave 403), zero genuine rot."
     }
   }
 }
