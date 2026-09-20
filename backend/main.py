@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import JSONResponse
-from ratelimit import lotw_limiter, api_limiter, compute_limiter
+from fastapi.responses import JSONResponse, Response
+from ratelimit import lotw_limiter, api_limiter, compute_limiter, stat_limiter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -22,6 +22,8 @@ from feedproxy import fetch_feed, FeedProxyError
 from satellites import fetch_tles, current_positions, predict_passes, grid_to_latlon as sat_grid_to_latlon
 from alerts import run_alert_loop
 from database import save_subscription, delete_subscription
+from usage import (init_usage_db, record as usage_record, summary as usage_summary,
+                   prune_and_rollup as usage_prune)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -71,7 +73,9 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(psk_poller.run()),
     ]
     init_db()
+    init_usage_db()
     asyncio.create_task(run_alert_loop())
+    asyncio.create_task(_usage_maintenance())
     logger.info("DXEdge pollers started")
     # Register graceful shutdown handler
     import signal
@@ -740,6 +744,75 @@ async def debug_state():
         },
         "cache_keys": cache.keys(),
     }
+
+async def _usage_maintenance():
+    """Roll yesterday's raw events into the daily table and drop anything past
+    the retention window. Hourly is plenty; the work is trivial and running it
+    more than once a day costs nothing and survives restarts at odd times."""
+    while True:
+        try:
+            await asyncio.to_thread(usage_prune)
+        except Exception as e:
+            logger.warning(f"usage maintenance failed: {e}")
+        await asyncio.sleep(3600)
+
+
+def _opted_out(request: Request) -> bool:
+    """Do Not Track and Global Privacy Control, honoured at write time."""
+    if request.headers.get("DNT") == "1":
+        return True
+    if request.headers.get("Sec-GPC") == "1":
+        return True
+    return False
+
+
+@app.post("/api/stat")
+async def post_stat(request: Request):
+    """Usage beacon. Always answers 204 so a blocked, opted-out or malformed
+    beacon is indistinguishable from an accepted one and never shows the
+    visitor an error. Nothing here is required for the site to work."""
+    if _opted_out(request):
+        return Response(status_code=204)
+
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    ok, _ = stat_limiter.is_allowed(ip)
+    if not ok:
+        return Response(status_code=204)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return Response(status_code=204)
+    if not isinstance(body, dict):
+        return Response(status_code=204)
+
+    events = body.get("e")
+    session = body.get("s")
+    if not isinstance(events, list) or not isinstance(session, str):
+        return Response(status_code=204)
+
+    ua = request.headers.get("user-agent", "")
+    try:
+        await asyncio.to_thread(usage_record, events, session, ip, ua)
+    except Exception as e:
+        logger.warning(f"usage record failed: {e}")
+    return Response(status_code=204)
+
+
+@app.get("/api/stats/summary")
+async def get_stats_summary(request: Request, days: int = Query(30, ge=1, le=365)):
+    """Aggregates for the Stats tab. Counts only, no per-visitor rows, so this
+    stays readable without exposing anything about an individual."""
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    ok, retry = api_limiter.is_allowed(ip)
+    if not ok:
+        raise HTTPException(429, f"Rate limit exceeded. Retry in {retry}s")
+    try:
+        return await asyncio.to_thread(usage_summary, days)
+    except Exception as e:
+        logger.warning(f"usage summary failed: {e}")
+        raise HTTPException(503, "Stats unavailable")
+
 
 # Serve React frontend - try real file first, fall back to index.html for SPA routing
 @app.get("/{full_path:path}")

@@ -44,6 +44,7 @@
   </div>
   <div id="foot" class="hide">dx//edge &middot; <a href="/">dxedge.net</a> &middot; m mutes &middot; p pauses</div>
 </div>
+<script src="/lib/stat.js"></script>
 <script>
 (function () {
 'use strict';
@@ -496,8 +497,10 @@ function workDX(d) {
   pops.push({ x: d.x, y: d.y - 10, text: 'WORKED ' + d.call + ' \u00b7 ' + name, c: col, t: 0, life: 1.6 });
   SFX.worked();
   const n = worked.size;
-  if (n >= 100 && milestone < 100) { milestone = 100; msg = 'DXCC!'; msgT = 2; }
-  else if (n >= HONOR_ROLL && milestone < HONOR_ROLL) { milestone = HONOR_ROLL; msg = 'HONOR ROLL'; msgT = 3; }
+  if (n >= 100 && milestone < 100) { milestone = 100; msg = 'DXCC!'; msgT = 2;
+    try { window.dxstat && window.dxstat.milestone('invaders', 'DXCC 100'); } catch (e) {} }
+  else if (n >= HONOR_ROLL && milestone < HONOR_ROLL) { milestone = HONOR_ROLL; msg = 'HONOR ROLL'; msgT = 3;
+    try { window.dxstat && window.dxstat.milestone('invaders', 'Honor Roll'); } catch (e) {} }
   if (n > hi) { hi = n; hiCall = call; try { localStorage.setItem(HI_KEY, String(hi)); localStorage.setItem(HI_CALL_KEY, call); } catch (e) {} }
 }
 
@@ -513,10 +516,12 @@ function hitShip() {
 
 function gameOver(why) {
   state = 'over'; msg = why; msgT = 0; SFX.over();
+  try { window.dxstat && window.dxstat.gameEnd('invaders', worked.size); } catch (e) {}
   bullets = []; ebullets = []; dxs = [];
 }
 
-function start() { reset(); state = 'play'; paused = false; }
+function start() { reset(); state = 'play'; paused = false;
+  try { window.dxstat && window.dxstat.game('invaders'); } catch (e) {} }
 
 /* --- input --- */
 const cv = document.getElementById('c');

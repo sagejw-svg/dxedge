@@ -182,6 +182,7 @@
   <div id="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; live spots &middot; synthesized signals</div>
 </div>
 
+<script src="/lib/stat.js"></script>
 <script type="module">
 /* ------------------------------------------------------------------ *
  * Spot Chaser v0.1
@@ -810,6 +811,7 @@ function passIt() {
 function endGame() {
   stopTx()
   G.phase = 'over'
+  try { window.dxstat && window.dxstat.gameEnd('spot-chaser', G.score) } catch (e) {}
   if (G.score > hi) { hi = G.score; lsSet(KEY.hi, hi) }
   showOver()
 }
@@ -1122,6 +1124,7 @@ if (window.ResizeObserver) new ResizeObserver(layout).observe(wrapEl)
 /* --- flow ----------------------------------------------------------------- */
 let starting = false
 async function startGame() {
+  try { window.dxstat && window.dxstat.game('spot-chaser') } catch (e) {}
   if (starting || (G && G.phase === 'play')) return
   if (!gridToLatLon(S.grid)) { $('note').textContent = 'That grid does not parse. Four or six characters, like DM12 or DM12jv.'; return }
   starting = true

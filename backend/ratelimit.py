@@ -56,3 +56,9 @@ api_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 # Compute-heavy endpoints - 10 req/min/IP
 compute_limiter = RateLimiter(max_requests=10, window_seconds=60)
+
+# Usage beacon - 120 req/min/IP. Higher than the general API on purpose: a
+# beacon fires on tab switches and on pagehide, so an active session is
+# chatty by design, and it must never compete with the real API for the
+# same budget. Still capped so a loop cannot flood the events table.
+stat_limiter = RateLimiter(max_requests=120, window_seconds=60)

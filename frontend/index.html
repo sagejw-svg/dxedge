@@ -29,6 +29,11 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Usage beacon. Loaded ahead of the app so a session is opened even if
+         the bundle fails, and shared with the standalone game pages so a game
+         in an iframe reports as part of the same session. No cookies; see
+         frontend/public/lib/stat.js. -->
+    <script src="/lib/stat.js"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

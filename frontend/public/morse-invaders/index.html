@@ -235,6 +235,7 @@
   <div id="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; space replays &middot; esc pauses</div>
 </div>
 
+<script src="/lib/stat.js"></script>
 <script type="module">
 /* ------------------------------------------------------------------ *
  * Morse Invaders v0.1
@@ -640,6 +641,10 @@ function waveClear() {
 
 function finishGame() {
   G.phase = 'over'
+  try {
+    window.dxstat && window.dxstat.gameEnd('morse-invaders', G.copied)
+    window.dxstat && window.dxstat.milestone('morse-invaders', 'wpm ' + Math.round(curWpm()))
+  } catch (e) {}
   player.stop()
   releaseWakeLock()
   if (G.copied > hi) { hi = G.copied; lsSet(KEY.hi, hi) }
@@ -1092,6 +1097,7 @@ layout()
 /* --- game flow ---------------------------------------------------------------- */
 let starting = false
 async function startGame() {
+  try { window.dxstat && window.dxstat.game('morse-invaders') } catch (e) {}
   if (starting || (G && (G.phase === 'play' || G.phase === 'inter' || G.phase === 'dying'))) return
   starting = true
   const ok = await player.prime()

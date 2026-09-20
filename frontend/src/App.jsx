@@ -34,6 +34,7 @@ import Skip from './components/Skip'
 import SpotChaser from './components/SpotChaser'
 import CraneCab from './components/CraneCab'
 import Emulators from './components/Emulators'
+import Stats from './components/Stats'
 
 const TABS = [
   // Propagation & operating
@@ -69,6 +70,7 @@ const TABS = [
   { id: 'feedback', label: 'Feedback' },
   { id: 'support',  label: 'Support' },
   { id: 'credits',  label: 'Credits' },
+  { id: 'stats',    label: 'Stats' },
 ]
 
 const TAB_GROUPS = [
@@ -126,6 +128,7 @@ const TAB_GROUPS = [
       { id: 'feedback', label: 'Feedback',  icon: '💬' },
       { id: 'support',  label: 'Support',   icon: '❤️' },
       { id: 'credits',  label: 'Credits',   icon: '📜' },
+      { id: 'stats',    label: 'Stats',     icon: '📈', admin: true },
     ],
   },
 ]
@@ -191,6 +194,25 @@ function useLiveSpots(onSpot) {
 
 export default function App() {
   const [tab, setTab] = useState('bands')
+
+  // The Stats tab is James's, not a site feature, so it is hidden unless this
+  // browser has been let in with ?stats=1 (and ?stats=0 puts it away again).
+  // Nothing is protected by this: /api/stats/summary returns aggregate counts
+  // only, so the flag is about keeping the nav clean, not about secrecy.
+  const [showStats, setShowStats] = useState(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('stats')
+      if (q === '1') localStorage.setItem('dxedge_show_stats', '1')
+      if (q === '0') localStorage.removeItem('dxedge_show_stats')
+      return localStorage.getItem('dxedge_show_stats') === '1'
+    } catch (e) { return false }
+  })
+
+  // Report tab opens. Wrapped because instrumentation must never be able to
+  // take the dashboard down with it.
+  useEffect(() => {
+    try { window.dxstat?.tab(tab) } catch (e) {}
+  }, [tab])
   const [solar, setSolar] = useState(null)
   const [spots, setSpots] = useState([])
   const [pskSpots, setPskSpots] = useState([])
@@ -346,7 +368,7 @@ export default function App() {
                   </span>
                   <div style={{ display: 'flex', gap: 3, background: 'var(--bg1)',
                     border: '1px solid var(--border)', borderRadius: 7, padding: '3px' }}>
-                    {group.tabs.map(t => {
+                    {group.tabs.filter(t => !t.admin || showStats).map(t => {
                       const isActive = tab === t.id
                       return (
                         <button key={t.id} onClick={() => setTab(t.id)} title={t.label} style={{
@@ -384,6 +406,7 @@ export default function App() {
           {tab === 'feedback' && <Feedback />}
           {tab === 'support'  && <Support />}
           {tab === 'credits'  && <Credits />}
+          {tab === 'stats'    && <Stats />}
           {tab === 'windows' && <DXWindows grid={grid} />}
           {tab === 'lotw'    && <LoTW callsign={callsign} onSuccess={handleLoTWSuccess} matrixLoaded={!!matrix} />}
           {tab === 'morse'   && <Morse />}

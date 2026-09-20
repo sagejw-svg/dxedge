@@ -136,6 +136,7 @@
   </div>
 </div>
 
+<script src="/lib/stat.js"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
@@ -210,6 +211,17 @@
       <div class="meta">${meta.join('')}<span class="links">${links.join('')}</span></div>
     </article>`;
   }
+
+  // Which emulators people actually open. Delegated so it survives every
+  // re-render, and keyed on the card's slug rather than the URL.
+  document.addEventListener('click', function (ev) {
+    try {
+      const a = ev.target.closest && ev.target.closest('a[target="_blank"]');
+      if (!a) return;
+      const card = a.closest('article.card');
+      if (card && card.dataset.id) window.dxstat && window.dxstat.emulator(card.dataset.id);
+    } catch (e) {}
+  }, true);
 
   function render() {
     if (!DATA) return;

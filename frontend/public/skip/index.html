@@ -170,6 +170,7 @@
   <div id="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; not to scale &middot; not voacap</div>
 </div>
 
+<script src="/lib/stat.js"></script>
 <script type="module">
 import {
   R_EARTH, H_LAYER, D2R, R2D, SPREAD_DEG, GROUND_DB, ENTITIES,
@@ -389,6 +390,7 @@ function verdictText(res, A) {
 
 function endRound() {
   G.phase = 'over'
+  try { window.dxstat && window.dxstat.gameEnd('skip', G.score) } catch (e) {}
   if (G.score > hi) { hi = G.score; lsSet(KEY.hi, hi) }
   if (G.score > hiToday.score) { hiToday = { date: todayKey(), score: G.score }; lsSet(KEY.hiToday, JSON.stringify(hiToday)) }
   showOver()
@@ -711,6 +713,7 @@ if (window.ResizeObserver) new ResizeObserver(layout).observe(wrapEl)
 
 /* --- flow ------------------------------------------------------------------------------- */
 function startGame() {
+  try { window.dxstat && window.dxstat.game('skip') } catch (e) {}
   if (G && (G.phase === 'play')) return
   if (!gridToLatLon(S.grid)) { $('note').textContent = 'That grid does not parse. Four or six characters, like DM12 or DM12jv.'; return }
   $('note').textContent = ''
