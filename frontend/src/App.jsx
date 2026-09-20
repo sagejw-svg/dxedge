@@ -35,6 +35,7 @@ import SpotChaser from './components/SpotChaser'
 import CraneCab from './components/CraneCab'
 import Emulators from './components/Emulators'
 import Stats from './components/Stats'
+import Otr from './components/Otr'
 
 const TABS = [
   // Propagation & operating
@@ -63,6 +64,8 @@ const TABS = [
   { id: 'spotchase', label: 'Spot Chaser' },
   // Emulators
   { id: 'emulators', label: 'Emulators' },
+  // Radio
+  { id: 'otr',      label: 'OTR' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
@@ -116,6 +119,12 @@ const TAB_GROUPS = [
     label: 'Emulators',
     tabs: [
       { id: 'emulators', label: 'Emulators', icon: '🖥' },
+    ],
+  },
+  {
+    label: 'Radio',
+    tabs: [
+      { id: 'otr', label: 'Old Time Radio', icon: '📻' },
     ],
   },
   {
@@ -416,6 +425,7 @@ export default function App() {
           {tab === 'spotchase' && <SpotChaser />}
           {tab === 'cranecab' && <CraneCab />}
           {tab === 'emulators' && <Emulators />}
+          {tab === 'otr' && <Otr />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}
