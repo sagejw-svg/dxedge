@@ -38,7 +38,10 @@
 
   /* Visualizer */
   .viz-wrap { position: relative; width: 100%; aspect-ratio: 1/1; max-width: 220px; margin: 0 auto; }
-  canvas#viz { width: 100%; height: 100%; display: block; }
+  canvas#viz { width: 100%; height: 100%; display: block; cursor: pointer; }
+  .viz-mode { position:absolute; left:0; right:0; bottom:2px; text-align:center; font-size:9px; letter-spacing:2px;
+    text-transform:uppercase; color: var(--amber2); opacity:0; transition: opacity .5s; pointer-events:none; }
+  .viz-mode.show { opacity:.9; }
   .viz-idle { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     color: var(--dim); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; text-align:center; pointer-events:none; }
 
@@ -93,6 +96,24 @@
   .chip small { color: var(--dim); margin-left: 5px; }
   .chip.on small { color: var(--amber2); }
   .chip.custom { border-style: dashed; }
+
+  /* Station cards: live broadcast clock, each station always on air */
+  .chips.stations { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .station { border: 1px solid var(--border2); background: var(--bg1); border-radius: 10px; padding: 9px 12px 10px;
+    cursor: pointer; user-select: none; min-width: 0; transition: border-color .15s; }
+  .station:hover { border-color: var(--amber); }
+  .station.on { border-color: var(--amber); background: rgba(255,179,71,0.06); box-shadow: var(--glow); }
+  .station .st-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .station .st-name { color: var(--text); font-size: 13px; font-weight: 600; }
+  .station.on .st-name { color: var(--amber); }
+  .station .st-count { color: var(--dim); font-size: 10px; white-space: nowrap; }
+  .station .st-now { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; min-height: 2.9em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .station .st-now b { color: var(--amber2); font-weight: 500; }
+  .station .st-now .ad { color: var(--dim); }
+  .station .st-bar { height: 3px; border-radius: 2px; background: var(--bg3); margin-top: 7px; overflow: hidden; }
+  .station .st-bar i { display:block; height:100%; width:0%; background: var(--amber); opacity:.7; }
+  .station .st-left { font-size: 9px; color: var(--dim); margin-top: 3px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
   .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin: 14px 0 4px; }
   .toolbar .btn { padding: 7px 12px; }
@@ -169,6 +190,7 @@
       <div class="viz-wrap">
         <canvas id="viz"></canvas>
         <div class="viz-idle" id="vizIdle">tune in</div>
+        <div class="viz-mode" id="vizMode"></div>
       </div>
       <div class="np" id="np">
         <div class="onair"><span class="dot"></span><span id="onairText">off air</span></div>
@@ -199,15 +221,15 @@
 
   <div class="section-h">
     <div class="label">channels</div>
-    <span class="hint">nine curated stations, commercials optional</span>
+    <span class="hint">always on air: tune in to join the show in progress</span>
   </div>
-  <div class="chips" id="channelChips"><span class="loading">loading catalog...</span></div>
+  <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
 
   <div class="toolbar">
     <button class="btn" id="builderBtn">＋ Build a station</button>
     <button class="btn" id="searchBtn">🔍 Search episodes</button>
     <label class="toggle"><input type="checkbox" id="commToggle" checked> vintage commercials</label>
-    <label class="toggle"><input type="checkbox" id="shuffleToggle" checked> shuffle</label>
+    <label class="toggle"><input type="checkbox" id="shuffleToggle" checked> shuffle custom stations</label>
   </div>
 
   <!-- Station builder -->
@@ -266,25 +288,35 @@
     commercials: load('otr_comm', '1') === '1',
     shuffle: load('otr_shuf', '1') === '1',
     volume: parseFloat(load('otr_vol','0.9')),
-    programsSinceAd: 0
+    programsSinceAd: 0,
+    live: false,          // true while following a station's broadcast clock
+    schedAds: false,      // queue already contains scheduled commercials
+    pendingSeek: 0,       // seconds to jump into the first item (joining mid-show)
+    vizMode: parseInt(load('otr_viz','0'),10) || 0
   };
   function load(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
   function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
   function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},1900); }
   function fmt(s){ s=Math.max(0,Math.floor(s||0)); var m=Math.floor(s/60), ss=s%60; if(m>=60){var h=Math.floor(m/60); m=m%60; return h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');} return m+':'+String(ss).padStart(2,'0'); }
-  function shuffleArr(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function shuffleArr(a, rnd){ rnd=rnd||Math.random; for(var i=a.length-1;i>0;i--){ var j=Math.floor(rnd()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
   function epUrl(show, ep){ return CAT.prefix + show.ids[ep[3]] + '/' + ep[4]; }
   function summaryFor(showId, epIndex){ if(SUMMAP && SUMMAP[showId]) return SUMMAP[showId][epIndex] || ''; return ''; }
 
+  // Resolve data files against the player's directory so /otr (no slash), /otr/ and
+  // /otr/index.html all work. Relative fetches from /otr hit the SPA fallback.
+  var BASE = (function(){ var p=location.pathname; if(!/\/$/.test(p) && !/\.[a-z0-9]+$/i.test(p)) p+='/'; return p.replace(/[^\/]*$/,''); })();
+  function getJSON(name){ return fetch(BASE+name).then(function(r){ if(!r.ok) throw new Error(name+' HTTP '+r.status); return r.json(); }); }
+
   // ---- catalog load ----
-  fetch('catalog.json').then(function(r){ return r.json(); }).then(function(c){
+  getJSON('catalog.json').then(function(c){
     CAT = c;
     c.shows.forEach(function(s){ byId[s.id]=s; });
     c.channels.forEach(function(ch){ chanShows[ch] = c.shows.filter(function(s){ return s.ch.indexOf(ch)>=0; }); });
     adPool = byId['commercials'] || null;
     buildChannelChips();
+    renderStationNow(); setInterval(renderStationNow, 5000);
     buildShowGrid();
     renderSaved();
     renderFoot();
@@ -304,7 +336,7 @@
 
   function loadSearchIndex(){
     if(SEARCH) return Promise.resolve();
-    return fetch('search.json').then(function(r){ return r.json(); }).then(function(s){
+    return getJSON('search.json').then(function(s){
       SEARCH = s; SUMMAP = s; // s is {showId:[[epIndex,title,summary],...]} ; build epIndex->summary map
       SUMMAP = {};
       Object.keys(s).forEach(function(sid){
@@ -320,8 +352,10 @@
     var el = $('channelChips'); el.innerHTML='';
     CAT.channels.forEach(function(ch){
       var n = (chanShows[ch]||[]).length;
-      var c = document.createElement('div'); c.className='chip'; c.dataset.ch=ch;
-      c.innerHTML = titleCase(ch) + '<small>'+n+'</small>';
+      var c = document.createElement('div'); c.className='station'; c.dataset.ch=ch;
+      c.title = 'Tune in to '+titleCase(ch)+' ('+n+' shows in rotation)';
+      c.innerHTML = '<div class="st-head"><span class="st-name">'+titleCase(ch)+'</span><span class="st-count">'+n+' shows</span></div>'+
+        '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"></div>';
       c.onclick = function(){ startChannel(ch); };
       el.appendChild(c);
     });
@@ -329,7 +363,7 @@
   function titleCase(s){ return s.replace(/(^|[-\s])\w/g, function(m){ return m.toUpperCase(); }).replace(/-/g,' '); }
 
   function markActiveChip(){
-    document.querySelectorAll('#channelChips .chip').forEach(function(c){
+    document.querySelectorAll('#channelChips .station').forEach(function(c){
       c.classList.toggle('on', state.channel && c.dataset.ch===state.channel);
     });
     document.querySelectorAll('#savedRow .chip').forEach(function(c){ c.classList.remove('on'); });
@@ -338,10 +372,10 @@
   // ---- queue building ----
   // Even interleave across shows (like the original scheduler: highest remaining-proportion wins),
   // shuffled within each show, commercials inserted between programs.
-  function buildProgramOrder(shows){
+  function buildProgramOrder(shows, rnd){
     var lists = shows.map(function(s){
       var idx = s.eps.map(function(_,i){ return i; });
-      if(state.shuffle) shuffleArr(idx);
+      if(rnd) shuffleArr(idx, rnd); else if(state.shuffle) shuffleArr(idx);
       return { s:s, idx:idx, p:0, initial:idx.length };
     }).filter(function(x){ return x.initial>0; });
     var order = [];
@@ -361,12 +395,71 @@
     return order;
   }
 
+  // ---- broadcast clock ----
+  // Every channel runs a fixed, deterministic schedule (seeded shuffle + seeded commercial slots)
+  // that loops forever from a shared epoch. The same clock time gives every visitor the same show,
+  // so each station is "on air" even when nobody is listening. Durations come from the catalog.
+  var EPOCH = Date.UTC(2026,0,1)/1000, SCHED = {};
+  function hashStr(str){ var h=2166136261>>>0; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h; }
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function itemDur(it){ var s=byId[it.showId]; var e=s&&s.eps[it.epIndex]; return (e&&e[2]>0)?e[2]:1800; }
+  function buildSchedule(ch){
+    if(SCHED[ch]) return SCHED[ch];
+    var rnd = mulberry32(hashStr('otr-sched:'+ch));
+    var progs = buildProgramOrder(chanShows[ch]||[], rnd);
+    var items=[], since=0, gap=2+Math.floor(rnd()*2);
+    progs.forEach(function(p){
+      items.push(p); since++;
+      if(adPool && adPool.eps.length && since>=gap){
+        items.push({ showId:'commercials', epIndex:Math.floor(rnd()*adPool.eps.length), isAd:true });
+        since=0; gap=2+Math.floor(rnd()*2);
+      }
+    });
+    var starts=[], t=0; items.forEach(function(it){ starts.push(t); t+=itemDur(it); });
+    return (SCHED[ch] = { items:items, starts:starts, total:t });
+  }
+  function onAirNow(ch, nowSec){
+    var S=buildSchedule(ch); if(!S.items.length) return null;
+    var pos=(((nowSec-EPOCH)%S.total)+S.total)%S.total;
+    var lo=0, hi=S.starts.length-1;
+    while(lo<hi){ var mid=(lo+hi+1)>>1; if(S.starts[mid]<=pos) lo=mid; else hi=mid-1; }
+    return { idx:lo, item:S.items[lo], offset:pos-S.starts[lo], dur:itemDur(S.items[lo]), S:S };
+  }
+  function nextProgramAfter(S, idx){ for(var k=1;k<5;k++){ var it=S.items[(idx+k)%S.items.length]; if(!it.isAd) return it; } return null; }
+
+  function renderStationNow(){
+    if(!CAT || document.hidden) return;
+    var now=Date.now()/1000;
+    document.querySelectorAll('#channelChips .station').forEach(function(card){
+      var ch=card.dataset.ch, a=onAirNow(ch, now); if(!a) return;
+      var el=card.querySelector('.st-now'), html;
+      if(a.item.isAd){
+        var np=nextProgramAfter(a.S, a.idx), ns=np&&byId[np.showId];
+        html='<span class="ad">commercial break</span>'+(ns?' then <b>'+escapeHtml(ns.name)+'</b>':'');
+      } else {
+        var s=byId[a.item.showId], e=s.eps[a.item.epIndex];
+        html='<b>'+escapeHtml(s.name)+'</b> &middot; '+escapeHtml(e[0]);
+      }
+      if(el._h!==html){ el.innerHTML=html; el._h=html; }
+      card.querySelector('.st-bar i').style.width=(100*a.offset/a.dur).toFixed(1)+'%';
+      card.querySelector('.st-left').textContent=fmt(a.dur-a.offset)+' left';
+    });
+  }
+  document.addEventListener('visibilitychange', renderStationNow);
+
+  // Tune in: join the station's broadcast at the current clock position.
   function startChannel(ch){
-    var shows = (chanShows[ch]||[]).slice();
-    if(!shows.length){ toast('No shows on that channel'); return; }
+    if(!(chanShows[ch]||[]).length){ toast('No shows on that channel'); return; }
+    var a=onAirNow(ch, Date.now()/1000); if(!a){ toast('No shows on that channel'); return; }
+    var items=a.S.items, order=items.slice(a.idx).concat(items.slice(0,a.idx)), offset=a.offset;
+    if(!state.commercials){
+      if(order[0].isAd) offset=0;              // ad on air: start the next program from the top
+      order=order.filter(function(x){ return !x.isAd; });
+    }
     state.channel = ch; state.stationShowIds = null; state.stationLabel = titleCase(ch);
     save('otr_last', 'ch:'+ch);
-    setQueue(buildProgramOrder(shows));
+    setQueue(order); state.live=true; state.schedAds=true;
+    state.pendingSeek = offset>5 ? offset : 0;
     markActiveChip();
     playCurrent();
   }
@@ -379,10 +472,11 @@
     closePanel('builderPanel');
     playCurrent();
   }
-  function setQueue(order){ state.queue = order; state.qi = -1; state.history=[]; state.programsSinceAd=0; }
+  function setQueue(order){ state.queue = order; state.qi = -1; state.history=[]; state.programsSinceAd=0;
+    state.live=false; state.schedAds=false; state.pendingSeek=0; }
 
   function insertAdIfDue(){
-    if(!state.commercials || !adPool || !adPool.eps.length) return;
+    if(state.schedAds || !state.commercials || !adPool || !adPool.eps.length) return;
     state.programsSinceAd++;
     if(state.programsSinceAd >= (2 + Math.floor(Math.random()*2))){ // every 2-3 programs
       state.programsSinceAd = 0;
@@ -400,7 +494,7 @@
   }
 
   // ---- playback ----
-  var ac=null, srcNode=null, analyser=null, freq=null;
+  var ac=null, srcNode=null, analyser=null, freq=null, analyserT=null, tdata=null;
   function ensureAudioGraph(){
     if(ac) return;
     try{
@@ -409,6 +503,9 @@
       analyser = ac.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.82;
       freq = new Uint8Array(analyser.frequencyBinCount);
       srcNode.connect(analyser); analyser.connect(ac.destination);
+      // second tap for waveform-style visualizers (longer window, no smoothing)
+      analyserT = ac.createAnalyser(); analyserT.fftSize = 2048; tdata = new Uint8Array(analyserT.fftSize);
+      srcNode.connect(analyserT);
       startViz();
     }catch(e){ console.warn('audio graph failed (visualizer disabled)', e); }
   }
@@ -424,21 +521,39 @@
     while(!r && guard<50){ state.qi = (state.qi+1)%state.queue.length; item=currentItem(); r=resolve(item); guard++; }
     if(!r){ toast('Nothing to play'); return; }
     audio.src = r.url;
+    var seekTo = state.pendingSeek; state.pendingSeek = 0;
+    if(seekTo>0){
+      var seekSrc = audio.src;
+      audio.addEventListener('loadedmetadata', function onMeta(){
+        audio.removeEventListener('loadedmetadata', onMeta);
+        if(audio.src !== seekSrc) return;                              // user moved on before it loaded
+        var d=audio.duration;
+        if(isFinite(d) && d>0 && seekTo>=d-10){ next(true); return; } // catalog runtime longer than the file
+        try{ audio.currentTime = seekTo; }catch(e){}
+      });
+    }
     audio.play().then(function(){ setLive(true); }).catch(function(err){ setLive(false); /* autoplay blocked until gesture */ });
     renderNowPlaying();
   }
 
   function next(auto){
     if(!state.queue.length) return;
+    if(!auto && state.live){ state.live=false; }   // skipping takes you off the broadcast clock
     if(state.qi>=0) state.history.push(state.qi);
     if(!currentItem() || !currentItem().isAd) insertAdIfDue();
     state.qi = state.qi+1;
+    while(state.qi < state.queue.length && state.queue[state.qi].isAd && !state.commercials) state.qi++;
     if(state.qi >= state.queue.length){
-      // loop: rebuild a fresh order for variety
-      var shows = state.stationShowIds ? state.stationShowIds.map(function(i){return byId[i];}).filter(Boolean)
-                 : (chanShows[state.channel]||[]);
-      if(shows.length){ setQueue(buildProgramOrder(shows)); state.qi=0; }
-      else state.qi = 0;
+      if(state.channel && !state.stationShowIds){
+        // channel schedule wrapped: continue from the top of the same broadcast order
+        var wasLive=state.live, S=buildSchedule(state.channel);
+        setQueue(S.items.filter(function(x){ return state.commercials || !x.isAd; }));
+        state.schedAds=true; state.live=wasLive; state.qi=0;
+      } else {
+        var shows = (state.stationShowIds||[]).map(function(i){return byId[i];}).filter(Boolean);
+        if(shows.length){ setQueue(buildProgramOrder(shows)); state.qi=0; }
+        else state.qi = 0;
+      }
     }
     playCurrent();
   }
@@ -463,7 +578,7 @@
   $('vol').oninput = function(){ audio.volume = parseFloat(this.value); save('otr_vol', this.value); };
 
   audio.addEventListener('play', function(){ setPlaying(true); setLive(true); });
-  audio.addEventListener('pause', function(){ setPlaying(false); });
+  audio.addEventListener('pause', function(){ setPlaying(false); setLive(false); });
   audio.addEventListener('ended', function(){ next(true); });
   audio.addEventListener('error', function(){ if(state.queue.length){ /* bad file: skip on */ next(true); } });
   audio.addEventListener('timeupdate', function(){
@@ -476,7 +591,11 @@
   $('bar').onclick = function(ev){ var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) audio.currentTime = Math.max(0, Math.min(d, p*d)); };
 
   function setPlaying(p){ $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play'; }
-  function setLive(on){ $('np').classList.toggle('live', !!on); $('onairText').textContent = on ? (currentItem()&&currentItem().isAd?'commercial break':'on air') : (audio.paused?'paused':'off air'); }
+  function setLive(on){
+    $('np').classList.toggle('live', !!on);
+    var ad = currentItem()&&currentItem().isAd, where = state.channel ? ' · '+titleCase(state.channel)+(state.live?' live':' (skipped ahead)') : '';
+    $('onairText').textContent = on ? (ad?'commercial break':'on air')+where : (audio.paused?'paused':'off air');
+  }
 
   // ---- now playing render ----
   function renderNowPlaying(){
@@ -524,7 +643,7 @@
   $('selNone').onclick=function(){ document.querySelectorAll('#showGrid .showitem input').forEach(function(cb){ if(cb.checked){ cb.checked=false; cb.onchange(); } }); };
   $('playStation').onclick=function(){ var ids=Object.keys(selected); var nm=$('stationName').value.trim()||'Custom station'; startStation(ids, nm); };
   $('saveStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim()||('Station '+(getSaved().length+1)); var arr=getSaved(); arr.push({name:nm, shows:ids}); save('otr_stations', JSON.stringify(arr)); renderSaved(); toast('Saved "'+nm+'"'); };
-  $('shareStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim(); var url=location.origin+location.pathname+'?s='+encodeStation(ids)+(nm?('&n='+encodeURIComponent(nm)):''); $('shareUrl').value=url; $('shareBox').classList.add('open'); $('shareUrl').select(); };
+  $('shareStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim(); var url=location.origin+BASE+'?s='+encodeStation(ids)+(nm?('&n='+encodeURIComponent(nm)):''); $('shareUrl').value=url; $('shareBox').classList.add('open'); $('shareUrl').select(); };
   $('copyShare').onclick=function(){ var i=$('shareUrl'); i.select(); try{ navigator.clipboard.writeText(i.value); }catch(e){ document.execCommand('copy'); } toast('Link copied'); };
 
   function getSaved(){ try{ return JSON.parse(load('otr_stations','[]'))||[]; }catch(e){ return []; } }
@@ -603,22 +722,46 @@
   function sizeCanvas(){ var r=window.devicePixelRatio||1; var w=vizC.clientWidth, h=vizC.clientHeight; vizC.width=w*r; vizC.height=h*r; vctx.setTransform(r,0,0,r,0,0); }
   window.addEventListener('resize', sizeCanvas);
   function startViz(){ if(vizRAF) return; sizeCanvas(); drawViz(); }
+  // Click the visualizer to cycle modes. Mode is remembered on this device.
+  var VIZ_MODES = [
+    { name:'phonograph',   draw: vizPhonograph },
+    { name:'oscilloscope', draw: vizScope },
+    { name:'spectrum',     draw: vizBars },
+    { name:'vu meter',     draw: vizVU },
+    { name:'magic eye',    draw: vizEye }
+  ];
+  state.vizMode = ((state.vizMode % VIZ_MODES.length) + VIZ_MODES.length) % VIZ_MODES.length;
+  var vizModeT=null;
+  function flashVizMode(){ var m=$('vizMode'); m.textContent=VIZ_MODES[state.vizMode].name; m.classList.add('show'); clearTimeout(vizModeT); vizModeT=setTimeout(function(){ m.classList.remove('show'); },1400); }
+  function cycleViz(){ state.vizMode=(state.vizMode+1)%VIZ_MODES.length; save('otr_viz', String(state.vizMode)); peaks=null; vuVal=0; flashVizMode(); }
+  vizC.title='Click to change visualizer';
+  vizC.addEventListener('click', cycleViz);
+  vizC.setAttribute('tabindex','0'); vizC.setAttribute('role','button'); vizC.setAttribute('aria-label','Change visualizer');
+  vizC.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycleViz(); } });
+
+  function level(){ // 0..1 RMS from the waveform tap
+    if(!analyserT || audio.paused) return 0;
+    analyserT.getByteTimeDomainData(tdata); var sum=0;
+    for(var i=0;i<tdata.length;i++){ var v=(tdata[i]-128)/128; sum+=v*v; }
+    return Math.min(1, Math.sqrt(sum/tdata.length)*2.2);
+  }
   function drawViz(){
     vizRAF=requestAnimationFrame(drawViz);
-    var w=vizC.clientWidth, h=vizC.clientHeight, cx=w/2, cy=h/2, R=Math.min(w,h)/2-4;
-    vctx.clearRect(0,0,w,h);
-    var playing = analyser && !audio.paused;
+    var w=vizC.clientWidth, h=vizC.clientHeight; if(!w||!h) return;
+    var playing = !!analyser && !audio.paused;
     if(analyser) analyser.getByteFrequencyData(freq);
-    // rotating record base
+    VIZ_MODES[state.vizMode].draw(w, h, playing);
+  }
+
+  function vizPhonograph(w,h,playing){
+    var cx=w/2, cy=h/2, R=Math.min(w,h)/2-4;
+    vctx.clearRect(0,0,w,h);
     var spin = playing?0.010:0.0015; angle += spin;
     vctx.save(); vctx.translate(cx,cy); vctx.rotate(angle);
-    // grooves
     for(var g=0; g<7; g++){ var rr=R*(0.34+g*0.085); vctx.beginPath(); vctx.arc(0,0,rr,0,Math.PI*2); vctx.strokeStyle='rgba(255,179,71,'+(0.05+g*0.006)+')'; vctx.lineWidth=1; vctx.stroke(); }
-    // label
     vctx.beginPath(); vctx.arc(0,0,R*0.28,0,Math.PI*2); vctx.fillStyle='#140f06'; vctx.fill(); vctx.strokeStyle='rgba(255,179,71,0.35)'; vctx.lineWidth=1; vctx.stroke();
     vctx.beginPath(); vctx.arc(0,0,3,0,Math.PI*2); vctx.fillStyle='rgba(255,179,71,0.6)'; vctx.fill();
     vctx.restore();
-    // radial spectrum
     if(freq){
       var bins=freq.length, N=Math.min(64,bins);
       for(var i=0;i<N;i++){
@@ -631,9 +774,84 @@
         vctx.strokeStyle='rgba('+col+','+(0.35+v*0.6)+')'; vctx.lineWidth=2.2; vctx.lineCap='round'; vctx.stroke();
       }
     }
-    // outer ring
     vctx.beginPath(); vctx.arc(cx,cy,R,0,Math.PI*2); vctx.strokeStyle='rgba(255,179,71,'+(playing?0.5:0.18)+')'; vctx.lineWidth=1.5; vctx.stroke();
   }
+
+  // Green-phosphor oscilloscope with persistence trail and graticule
+  function vizScope(w,h,playing){
+    var pad=6, x0=pad, y0=pad, W=w-2*pad, H=h-2*pad;
+    vctx.fillStyle='rgba(4,10,7,0.35)'; vctx.fillRect(0,0,w,h);           // phosphor decay
+    vctx.strokeStyle='rgba(0,255,157,0.07)'; vctx.lineWidth=1;
+    for(var i=0;i<=8;i++){ var gx=x0+W*i/8, gy=y0+H*i/8; vctx.beginPath(); vctx.moveTo(gx,y0); vctx.lineTo(gx,y0+H); vctx.stroke(); vctx.beginPath(); vctx.moveTo(x0,gy); vctx.lineTo(x0+W,gy); vctx.stroke(); }
+    vctx.strokeStyle='rgba(0,255,157,0.18)'; vctx.strokeRect(x0+.5,y0+.5,W-1,H-1);
+    var cy=y0+H/2;
+    vctx.beginPath();
+    if(playing && analyserT){
+      analyserT.getByteTimeDomainData(tdata);
+      var start=0; for(var k=1;k<tdata.length/2;k++){ if(tdata[k-1]<128 && tdata[k]>=128){ start=k; break; } } // rising-edge trigger
+      var n=Math.min(1024, tdata.length-start);
+      for(var j=0;j<n;j++){ var x=x0+W*j/(n-1), y=cy+Math.max(-1,Math.min(1,((tdata[start+j]-128)/128)*2.2))*H*0.46; if(j) vctx.lineTo(x,y); else vctx.moveTo(x,y); }
+    } else { vctx.moveTo(x0,cy); vctx.lineTo(x0+W,cy); }
+    vctx.strokeStyle='rgba(120,255,200,0.95)'; vctx.lineWidth=1.6; vctx.shadowColor='#00ff9d'; vctx.shadowBlur=8; vctx.stroke(); vctx.shadowBlur=0;
+  }
+
+  // Amber spectrum bars with falling peak caps and a floor reflection
+  var peaks=null;
+  function vizBars(w,h,playing){
+    vctx.clearRect(0,0,w,h);
+    var N=24, gap=2, bw=(w-8-(N-1)*gap)/N, base=h*0.74, maxH=h*0.66;
+    if(!peaks || peaks.length!==N) peaks=new Array(N).fill(0);
+    for(var i=0;i<N;i++){
+      // log-ish bin mapping so voices spread across the bars
+      var b0=Math.floor(Math.pow(i/N,1.7)*(freq?freq.length*0.45:1)), b1=Math.max(b0+1, Math.floor(Math.pow((i+1)/N,1.7)*(freq?freq.length*0.45:1)));
+      var v=0; if(playing&&freq){ for(var b=b0;b<b1;b++) v=Math.max(v,freq[b]); v/=255; }
+      var bh=Math.max(2, v*maxH), x=4+i*(bw+gap);
+      var grad=vctx.createLinearGradient(0,base-maxH,0,base); grad.addColorStop(0,'#ffd08a'); grad.addColorStop(.5,'#ffb347'); grad.addColorStop(1,'#7a4a10');
+      vctx.fillStyle=grad; vctx.fillRect(x, base-bh, bw, bh);
+      vctx.fillStyle='rgba(255,179,71,0.10)'; vctx.fillRect(x, base+2, bw, bh*0.35);         // reflection
+      peaks[i]=Math.max(peaks[i]-maxH*0.012, bh);
+      vctx.fillStyle='rgba(255,230,190,0.9)'; vctx.fillRect(x, base-peaks[i]-3, bw, 2);
+    }
+    vctx.fillStyle='rgba(255,179,71,0.25)'; vctx.fillRect(4, base, w-8, 1);
+  }
+
+  // Backlit analog VU meter with needle ballistics
+  var vuVal=0;
+  function vizVU(w,h,playing){
+    vctx.clearRect(0,0,w,h);
+    var cx=w/2, cy=h*0.80, R=Math.min(w*0.46, h*0.62);
+    var face=vctx.createRadialGradient(cx,cy-R*0.4,R*0.1,cx,cy-R*0.3,R*1.25); face.addColorStop(0,'#3a2a10'); face.addColorStop(1,'#120c04');
+    vctx.fillStyle=face; vctx.beginPath(); vctx.roundRect ? vctx.roundRect(4,h*0.14,w-8,h*0.76,10) : vctx.rect(4,h*0.14,w-8,h*0.76); vctx.fill();
+    vctx.strokeStyle='rgba(255,179,71,0.3)'; vctx.lineWidth=1; vctx.stroke();
+    var a0=-Math.PI*0.80, a1=-Math.PI*0.20;
+    vctx.lineWidth=2; vctx.strokeStyle='rgba(255,208,138,0.7)'; vctx.beginPath(); vctx.arc(cx,cy,R*0.82,a0,a0+(a1-a0)*0.72); vctx.stroke();
+    vctx.strokeStyle='rgba(255,92,92,0.85)'; vctx.beginPath(); vctx.arc(cx,cy,R*0.82,a0+(a1-a0)*0.72,a1); vctx.stroke();
+    var labels=['-20','-10','-5','0','+3']; var pos=[0,0.3,0.5,0.72,1];
+    vctx.font='9px '+getComputedStyle(document.body).fontFamily; vctx.textAlign='center';
+    for(var i=0;i<pos.length;i++){ var a=a0+(a1-a0)*pos[i];
+      vctx.beginPath(); vctx.moveTo(cx+Math.cos(a)*R*0.78,cy+Math.sin(a)*R*0.78); vctx.lineTo(cx+Math.cos(a)*R*0.88,cy+Math.sin(a)*R*0.88); vctx.strokeStyle=pos[i]>=0.72?'#ff7a7a':'#ffd08a'; vctx.lineWidth=1.5; vctx.stroke();
+      vctx.fillStyle=pos[i]>=0.72?'#ff8a8a':'rgba(255,208,138,0.8)'; vctx.fillText(labels[i], cx+Math.cos(a)*R*0.99, cy+Math.sin(a)*R*0.99+3); }
+    vctx.fillStyle='rgba(255,208,138,0.6)'; vctx.font='bold 11px '+getComputedStyle(document.body).fontFamily; vctx.fillText('VU', cx, cy-R*0.32);
+    var target=level(); vuVal += (target-vuVal)*(target>vuVal?0.25:0.08);       // fast attack, slow release
+    var an=a0+(a1-a0)*Math.min(1,vuVal*1.15);
+    vctx.beginPath(); vctx.moveTo(cx,cy); vctx.lineTo(cx+Math.cos(an)*R*0.92, cy+Math.sin(an)*R*0.92); vctx.strokeStyle='#f4f0e8'; vctx.lineWidth=1.6; vctx.stroke();
+    vctx.beginPath(); vctx.arc(cx,cy,5,0,Math.PI*2); vctx.fillStyle='#222'; vctx.fill(); vctx.strokeStyle='rgba(255,179,71,0.5)'; vctx.stroke();
+  }
+
+  // 6E5-style "magic eye" tuning tube: the dark wedge closes as the signal gets louder
+  function vizEye(w,h,playing){
+    vctx.clearRect(0,0,w,h);
+    var cx=w/2, cy=h/2, R=Math.min(w,h)/2-10;
+    vctx.beginPath(); vctx.arc(cx,cy,R+6,0,Math.PI*2); vctx.fillStyle='#0b0b0b'; vctx.fill(); vctx.strokeStyle='#2a2a2a'; vctx.lineWidth=3; vctx.stroke();
+    var target=playing?level():0; vuVal += (target-vuVal)*(target>vuVal?0.3:0.06);
+    var half=(Math.PI*0.45)*(1-Math.min(1,vuVal*1.3))+0.03;     // shadow half-angle
+    var top=-Math.PI/2;
+    var glow=vctx.createRadialGradient(cx,cy,R*0.25,cx,cy,R); glow.addColorStop(0,'rgba(120,255,170,0.95)'); glow.addColorStop(0.7,'rgba(0,220,120,0.75)'); glow.addColorStop(1,'rgba(0,120,70,0.5)');
+    vctx.beginPath(); vctx.moveTo(cx,cy); vctx.arc(cx,cy,R,top+half,top-half+Math.PI*2); vctx.closePath();
+    vctx.fillStyle=glow; vctx.shadowColor='#00ff9d'; vctx.shadowBlur=playing?18:6; vctx.fill(); vctx.shadowBlur=0;
+    vctx.beginPath(); vctx.arc(cx,cy,R*0.26,0,Math.PI*2); vctx.fillStyle='#0d0d0d'; vctx.fill(); vctx.strokeStyle='rgba(0,255,157,0.25)'; vctx.lineWidth=1; vctx.stroke();
+  }
+  startViz();   // idle animation before first play; audio graph attaches on first tune-in
 
   // ---- headless test hook (see scripts/test_otr.py), mirrors window.__dx / __emu ----
   window.__otr = {
