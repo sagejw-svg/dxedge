@@ -26,6 +26,9 @@
   h1 span { color: var(--amber); }
   .intro { color: var(--muted); max-width: 720px; margin: 0 0 16px; font-size: 12px; }
   .intro a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--border2); }
+  .intro a.donate, .foot a.donate { color: var(--amber); text-decoration: none; border: 1px solid rgba(255,179,71,0.35);
+    border-radius: 999px; padding: 1px 9px; margin-left: 4px; white-space: nowrap; }
+  .intro a.donate:hover, .foot a.donate:hover { background: rgba(255,179,71,0.1); border-color: var(--amber); }
 
   /* Console */
   .console {
@@ -182,7 +185,8 @@
     Thousands of classic radio shows from the 1930s, 40s and 50s, streamed straight from the
     <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>.
     Pick a channel, build your own station, skip anything you like, and search episodes by plot.
-    Nothing is hosted here; audio plays direct from archive.org.
+    Nothing is hosted here; audio plays direct from archive.org, a nonprofit library that keeps all of this free.
+    <a class="donate" href="https://archive.org/donate" target="_blank" rel="noopener">♥ Donate to the Internet Archive</a>
   </p>
 
   <div class="console">
@@ -872,10 +876,11 @@
   };
 
   function renderFoot(){
-    $('foot').innerHTML = CAT.shows.length-1 + ' shows across ' + CAT.channels.length + ' channels &middot; audio streamed from the '+
+    $('foot').innerHTML = CAT.shows.filter(function(s){ return !s.adv; }).length + ' shows across ' + CAT.channels.length + ' channels &middot; audio streamed from the '+
       '<a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a><br>'+
       'Catalogue and episode summaries curated by <a href="https://oldtime.radio" target="_blank" rel="noopener">Rob Dawson / codebox</a> (MIT, <a href="https://github.com/codebox/old-time-radio" target="_blank" rel="noopener">source</a>). '+
-      'This is an independent fork on <a href="/">DXEdge</a>; the original station is live at <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.';
+      'This is an independent fork on <a href="/">DXEdge</a>; the original station is live at <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.<br>'+
+      'Enjoying the shows? <a class="donate" href="https://archive.org/donate" target="_blank" rel="noopener">♥ Donate to the Internet Archive</a>';
   }
 })();
 </script>
