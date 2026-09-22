@@ -211,8 +211,9 @@
         </div>
 
         <div class="transport">
+          <button class="btn icon" id="prevBtn" title="Previous (p)" disabled>⏮ Prev</button>
           <button class="btn play" id="playBtn" disabled>▶ Play</button>
-          <button class="btn icon" id="skipBtn" title="Skip to next" disabled>⏭ Skip</button>
+          <button class="btn icon" id="skipBtn" title="Skip to next (n)" disabled>⏭ Skip</button>
           <div class="vol">
             <span style="font-size:11px;color:var(--dim)">vol</span>
             <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9">
@@ -296,12 +297,25 @@
     live: false,          // true while following a station's broadcast clock
     schedAds: false,      // queue already contains scheduled commercials
     pendingSeek: 0,       // seconds to jump into the first item (joining mid-show)
-    vizMode: parseInt(load('otr_viz','0'),10) || 0
+    vizMode: parseInt(load('otr_viz','0'),10) || 0,
+    errCount: 0,          // consecutive playback failures (bug #2 limiter)
+    playWatch: null,      // stall watchdog timer (bug #3)
+    backoffTimer: null,   // retry-after-outage timer (bug #2)
+    gotPlaying: false,    // this track has actually started producing audio
+    awaitingGesture: false, // autoplay blocked, waiting for a user click
+    savedActive: -1       // index of the active saved station chip (bug #10)
   };
   function load(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
   function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
-  function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},1900); }
+  function toast(msg){ var t=$('toast'); t.style.pointerEvents='none'; t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},1900); }
+  function toastUndo(msg, onUndo){
+    var t=$('toast'); t.innerHTML=''; t.appendChild(document.createTextNode(msg+'  '));
+    var u=document.createElement('span'); u.textContent='Undo'; u.style.cssText='color:var(--green);cursor:pointer;text-decoration:underline';
+    u.onclick=function(){ t.classList.remove('show'); t.style.pointerEvents='none'; onUndo(); };
+    t.appendChild(u); t.style.pointerEvents='auto'; t.classList.add('show');
+    clearTimeout(t._t); t._t=setTimeout(function(){ t.classList.remove('show'); t.style.pointerEvents='none'; }, 6000);
+  }
   function fmt(s){ s=Math.max(0,Math.floor(s||0)); var m=Math.floor(s/60), ss=s%60; if(m>=60){var h=Math.floor(m/60); m=m%60; return h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');} return m+':'+String(ss).padStart(2,'0'); }
   function shuffleArr(a, rnd){ rnd=rnd||Math.random; for(var i=a.length-1;i>0;i--){ var j=Math.floor(rnd()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
@@ -331,6 +345,8 @@
     var params = new URLSearchParams(location.search);
     var s = params.get('s');
     if(s){ var ids = decodeStation(s); if(ids && ids.length){ startStation(ids, params.get('n')||'Shared station'); } }
+    else { var last = load('otr_last',''); if(/^ch:/.test(last)) cueChannel(last.slice(3)); }
+    initMediaSession();
     // lazy load search index
     loadSearchIndex();
   }).catch(function(e){
@@ -370,7 +386,7 @@
     document.querySelectorAll('#channelChips .station').forEach(function(c){
       c.classList.toggle('on', state.channel && c.dataset.ch===state.channel);
     });
-    document.querySelectorAll('#savedRow .chip').forEach(function(c){ c.classList.remove('on'); });
+    document.querySelectorAll('#savedRow .chip').forEach(function(c){ c.classList.toggle('on', parseInt(c.dataset.idx,10)===state.savedActive); });
   }
 
   // ---- queue building ----
@@ -461,17 +477,41 @@
       order=order.filter(function(x){ return !x.isAd; });
     }
     state.channel = ch; state.stationShowIds = null; state.stationLabel = titleCase(ch);
+    state.savedActive = -1;
     save('otr_last', 'ch:'+ch);
     setQueue(order); state.live=true; state.schedAds=true;
     state.pendingSeek = offset>5 ? offset : 0;
     markActiveChip();
     playCurrent();
   }
+
+  // Restore the last channel on load (bug #6): highlight it and preview what's on
+  // air now, without autoplaying. Pressing Play tunes in live from the current clock.
+  function cueChannel(ch){
+    if(!(chanShows[ch]||[]).length) return;
+    state.channel = ch; state.stationShowIds = null; state.stationLabel = titleCase(ch); state.savedActive = -1;
+    markActiveChip();
+    $('vizIdle').style.display='none';
+    $('playBtn').disabled=false;
+    var a = onAirNow(ch, Date.now()/1000);
+    if(a){ var r = resolve(a.item);
+      if(r){
+        $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
+        $('npEp').textContent = r.isAd ? 'Vintage advertisement' : r.title;
+        $('npDate').textContent = r.date || '';
+        var sum=$('npSummary'), more=$('npMore');
+        if(r.summary){ sum.textContent=r.summary; sum.style.display='block'; more.style.display=r.summary.length>210?'block':'none'; }
+        else { sum.style.display='none'; more.style.display='none'; }
+      }
+    }
+    setStatus('ready');
+  }
   function startStation(showIds, label){
     var shows = showIds.map(function(id){ return byId[id]; }).filter(Boolean);
     if(!shows.length){ toast('No valid shows in that station'); return; }
     state.channel = null; state.stationShowIds = showIds.slice(); state.stationLabel = label||'Custom station';
-    setQueue(buildProgramOrder(shows));
+    state.savedActive = -1;
+    setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds = true;
     markActiveChip();
     closePanel('builderPanel');
     playCurrent();
@@ -479,13 +519,25 @@
   function setQueue(order){ state.queue = order; state.qi = -1; state.history=[]; state.programsSinceAd=0;
     state.live=false; state.schedAds=false; state.pendingSeek=0; }
 
+  // Pre-interleave commercials into an on-demand order so "up next" is always accurate
+  // (bug #7: ads used to be spliced in at play time, after up-next had rendered).
+  function interleaveAds(order){
+    if(!(state.commercials && adPool && adPool.eps.length)) return order;
+    var out=[], since=0, gap=2+Math.floor(Math.random()*2);
+    order.forEach(function(p){
+      out.push(p); if(p.isAd) return; since++;
+      if(since>=gap){ out.push({ showId:'commercials', epIndex:Math.floor(Math.random()*adPool.eps.length), isAd:true }); since=0; gap=2+Math.floor(Math.random()*2); }
+    });
+    return out;
+  }
+  // Legacy dynamic splice, now unused because every queue is built with ads already
+  // interleaved (schedAds=true). Kept guarded as a no-op for safety.
   function insertAdIfDue(){
     if(state.schedAds || !state.commercials || !adPool || !adPool.eps.length) return;
     state.programsSinceAd++;
-    if(state.programsSinceAd >= (2 + Math.floor(Math.random()*2))){ // every 2-3 programs
+    if(state.programsSinceAd >= (2 + Math.floor(Math.random()*2))){
       state.programsSinceAd = 0;
       var ai = Math.floor(Math.random()*adPool.eps.length);
-      // splice an ad right after current position
       state.queue.splice(state.qi+1, 0, { showId:'commercials', epIndex:ai, isAd:true });
     }
   }
@@ -524,6 +576,8 @@
     var guard=0;
     while(!r && guard<50){ state.qi = (state.qi+1)%state.queue.length; item=currentItem(); r=resolve(item); guard++; }
     if(!r){ toast('Nothing to play'); return; }
+    clearWatch(); clearBackoff();
+    state.gotPlaying=false; state.awaitingGesture=false;
     audio.src = r.url;
     var seekTo = state.pendingSeek; state.pendingSeek = 0;
     if(seekTo>0){
@@ -536,15 +590,25 @@
         try{ audio.currentTime = seekTo; }catch(e){}
       });
     }
-    audio.play().then(function(){ setLive(true); }).catch(function(err){ setLive(false); /* autoplay blocked until gesture */ });
+    setStatus('tuning');
+    setMediaSession(r);
+    audio.play().catch(function(err){
+      if(err && err.name==='NotAllowedError'){ state.awaitingGesture=true; setPlaying(false); setStatus('ready'); }
+    });
+    // Stall watchdog (bug #3): if no audio actually starts within 18s and we are not
+    // simply waiting for a user gesture, skip on through the error limiter.
+    state.playWatch = setTimeout(function(){
+      if(!state.gotPlaying && !state.awaitingGesture && !audio.paused) onFail('stall');
+    }, 18000);
     renderNowPlaying();
   }
 
-  function next(auto){
+  function advance(opts){
+    opts = opts || {};
     if(!state.queue.length) return;
-    if(!auto && state.live){ state.live=false; }   // skipping takes you off the broadcast clock
-    if(state.qi>=0) state.history.push(state.qi);
-    if(!currentItem() || !currentItem().isAd) insertAdIfDue();
+    if(!opts.auto && state.live){ state.live=false; }   // skipping takes you off the broadcast clock
+    if(state.qi>=0){ state.history.push(state.qi); if(state.history.length>120) state.history.shift(); } // bug #2: cap history
+    if(!opts.onError){ if(!currentItem() || !currentItem().isAd) insertAdIfDue(); }
     state.qi = state.qi+1;
     while(state.qi < state.queue.length && state.queue[state.qi].isAd && !state.commercials) state.qi++;
     if(state.qi >= state.queue.length){
@@ -555,12 +619,13 @@
         state.schedAds=true; state.live=wasLive; state.qi=0;
       } else {
         var shows = (state.stationShowIds||[]).map(function(i){return byId[i];}).filter(Boolean);
-        if(shows.length){ setQueue(buildProgramOrder(shows)); state.qi=0; }
+        if(shows.length){ setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds=true; state.qi=0; }
         else state.qi = 0;
       }
     }
     playCurrent();
   }
+  function next(auto){ advance({ auto:auto }); }
   function prev(){
     if(audio.currentTime>3){ audio.currentTime=0; return; }
     if(state.history.length){ state.qi = state.history.pop(); playCurrent(); }
@@ -571,20 +636,25 @@
   $('playBtn').onclick = function(){
     ensureAudioGraph();
     if(ac && ac.state==='suspended') ac.resume();
-    if(!state.queue.length){ // nothing selected yet: start first channel
-      if(CAT && CAT.channels.length) startChannel(CAT.channels[0]);
+    state.awaitingGesture=false; clearBackoff();
+    if(!state.queue.length){ // nothing playing yet: tune the cued/last channel, else the first
+      if(state.channel) startChannel(state.channel);
+      else if(CAT && CAT.channels.length) startChannel(CAT.channels[0]);
       return;
     }
-    if(audio.paused){ audio.play().then(function(){setLive(true);}).catch(function(){}); }
+    if(audio.paused){ audio.play().catch(function(){}); }
     else { audio.pause(); }
   };
-  $('skipBtn').onclick = function(){ if(state.queue.length) next(false); };
+  $('skipBtn').onclick = function(){ if(state.queue.length){ state.errCount=0; next(false); } };
+  $('prevBtn').onclick = function(){ if(state.queue.length){ state.errCount=0; prev(); } };
   $('vol').oninput = function(){ audio.volume = parseFloat(this.value); save('otr_vol', this.value); };
 
-  audio.addEventListener('play', function(){ setPlaying(true); setLive(true); });
-  audio.addEventListener('pause', function(){ setPlaying(false); setLive(false); });
+  audio.addEventListener('playing', function(){ state.gotPlaying=true; state.errCount=0; state.awaitingGesture=false; clearWatch(); clearBackoff(); setPlaying(true); setStatus('playing'); });
+  audio.addEventListener('play', function(){ setPlaying(true); if(!state.gotPlaying) setStatus('tuning'); });
+  audio.addEventListener('waiting', function(){ if(state.gotPlaying) setStatus('buffering'); });
+  audio.addEventListener('pause', function(){ setPlaying(false); clearWatch(); if(!audio.ended) setStatus('paused'); });
   audio.addEventListener('ended', function(){ next(true); });
-  audio.addEventListener('error', function(){ if(state.queue.length){ /* bad file: skip on */ next(true); } });
+  audio.addEventListener('error', function(){ onFail('error'); });
   audio.addEventListener('timeupdate', function(){
     var d=audio.duration||currentDur()||0, c=audio.currentTime||0;
     $('fill').style.width = d? (100*c/d)+'%' : '0%';
@@ -594,18 +664,71 @@
   function currentDur(){ var it=currentItem(); if(it){ var s=byId[it.showId]; if(s&&s.eps[it.epIndex]) return s.eps[it.epIndex][2]; } return 0; }
   $('bar').onclick = function(ev){ var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) audio.currentTime = Math.max(0, Math.min(d, p*d)); };
 
+  function clearWatch(){ if(state.playWatch){ clearTimeout(state.playWatch); state.playWatch=null; } }
+  function clearBackoff(){ if(state.backoffTimer){ clearTimeout(state.backoffTimer); state.backoffTimer=null; } }
+
+  // Playback failure handling (bug #2): count consecutive failures, skip on, and after
+  // three in a row stop and retry in 30s instead of hammering a dead archive.org.
+  function onFail(kind){
+    clearWatch();
+    if(!state.queue.length) return;
+    state.errCount = (state.errCount||0) + 1;
+    if(state.errCount >= 3){
+      setPlaying(false); setStatus('error');
+      toast('archive.org not responding, retrying in 30s');
+      clearBackoff();
+      state.backoffTimer = setTimeout(function(){ state.errCount=0; playCurrent(); }, 30000);
+      return;
+    }
+    if(kind==='stall') toast('episode unavailable, skipping');
+    advance({ auto:true, onError:true });
+  }
+
   function setPlaying(p){ $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play'; }
-  function setLive(on){
-    $('np').classList.toggle('live', !!on);
-    var ad = currentItem()&&currentItem().isAd, where = state.channel ? ' · '+titleCase(state.channel)+(state.live?' live':' (skipped ahead)') : '';
-    $('onairText').textContent = on ? (ad?'commercial break':'on air')+where : (audio.paused?'paused':'off air');
+  function setStatus(kind){
+    var where = state.channel ? ' · '+titleCase(state.channel)+(state.live?' live':' (skipped ahead)')
+              : (state.stationLabel ? ' · '+state.stationLabel : '');
+    var ad = currentItem() && currentItem().isAd;
+    $('np').classList.toggle('live', kind==='playing');
+    var t;
+    if(kind==='playing') t = (ad?'commercial break':'on air') + where;
+    else if(kind==='tuning') t = 'tuning in...' + where;
+    else if(kind==='buffering') t = 'buffering...' + where;
+    else if(kind==='paused') t = 'paused';
+    else if(kind==='ready') t = 'ready - press play';
+    else if(kind==='error') t = 'archive.org not responding';
+    else t = 'off air';
+    $('onairText').textContent = t;
+    if('mediaSession' in navigator){ try{ navigator.mediaSession.playbackState = (kind==='playing'?'playing':'paused'); }catch(e){} }
+  }
+
+  // Media Session: lock-screen / headset / OS media-key controls (enhancement)
+  function setMediaSession(r){
+    if(!('mediaSession' in navigator)) return;
+    try{
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: r.isAd ? 'Commercial Break' : r.title,
+        artist: r.isAd ? 'Vintage advertisement' : r.show.name,
+        album: 'Old Time Radio' + (state.channel ? (' · '+titleCase(state.channel)) : (state.stationLabel ? (' · '+state.stationLabel) : ''))
+      });
+    }catch(e){}
+  }
+  function initMediaSession(){
+    if(!('mediaSession' in navigator)) return;
+    var ms=navigator.mediaSession;
+    try{
+      ms.setActionHandler('play', function(){ audio.play().catch(function(){}); });
+      ms.setActionHandler('pause', function(){ audio.pause(); });
+      ms.setActionHandler('nexttrack', function(){ if(state.queue.length){ state.errCount=0; next(false); } });
+      ms.setActionHandler('previoustrack', function(){ if(state.queue.length){ state.errCount=0; prev(); } });
+    }catch(e){}
   }
 
   // ---- now playing render ----
   function renderNowPlaying(){
     var it = currentItem(); if(!it){ return; }
     var r = resolve(it); if(!r) return;
-    $('playBtn').disabled=false; $('skipBtn').disabled=false;
+    $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false;
     $('vizIdle').style.display='none';
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
     $('npEp').textContent = r.isAd ? (r.title==='Commercial'?'Vintage advertisement':r.title) : r.title;
@@ -656,16 +779,33 @@
     if(!arr.length){ return; }
     var lab=document.createElement('div'); lab.className='label'; lab.style.width='100%'; lab.textContent='your stations'; row.appendChild(lab);
     arr.forEach(function(st, i){
-      var c=document.createElement('div'); c.className='chip custom';
-      c.innerHTML=escapeHtml(st.name)+'<small>'+st.shows.length+'</small> <span style="color:var(--dim);margin-left:6px" title="delete">✕</span>';
-      c.onclick=function(ev){ if(ev.target.getAttribute('title')==='delete'){ arr.splice(i,1); save('otr_stations',JSON.stringify(arr)); renderSaved(); return; } startStation(st.shows, st.name); };
+      var c=document.createElement('div'); c.className='chip custom'; c.dataset.idx=i;
+      c.innerHTML=escapeHtml(st.name)+'<small>'+st.shows.length+'</small> <span style="color:var(--dim);margin-left:6px" title="delete" aria-label="delete station">✕</span>';
+      c.onclick=function(ev){
+        if(ev.target.getAttribute('title')==='delete'){
+          ev.stopPropagation();
+          var cur=getSaved(), removed=cur[i]; if(!removed) return;
+          cur.splice(i,1); save('otr_stations',JSON.stringify(cur));
+          if(state.savedActive===i) state.savedActive=-1; else if(state.savedActive>i) state.savedActive--;
+          renderSaved();
+          toastUndo('Deleted "'+removed.name+'"', function(){ var a=getSaved(); a.splice(Math.min(i,a.length),0,removed); save('otr_stations',JSON.stringify(a)); renderSaved(); });
+          return;
+        }
+        startStation(st.shows, st.name); state.savedActive=i; markActiveChip();
+      };
       row.appendChild(c);
     });
+    markActiveChip();
   }
 
-  // station code: base64 of catalog indices (non-ad shows) csv
-  function encodeStation(ids){ var idxs=ids.map(function(id){ return CAT.shows.findIndex(function(s){return s.id===id;}); }).filter(function(i){return i>=0;}); return btoa(idxs.join(',')).replace(/=+$/,''); }
-  function decodeStation(code){ try{ var s=atob(code); return s.split(',').map(function(n){ var sh=CAT.shows[parseInt(n,10)]; return sh?sh.id:null; }).filter(Boolean); }catch(e){ return null; } }
+  // Station code: base64 of show-id slugs (bug #8). Old links used catalog array
+  // indices, which broke whenever the catalog was regenerated; decode still accepts
+  // an all-numeric token as a legacy index so previously shared links keep working.
+  function encodeStation(ids){ var keep=ids.filter(function(id){ return !!byId[id]; }); return btoa(keep.join(',')).replace(/=+$/,''); }
+  function decodeStation(code){ try{ var s=atob(code); return s.split(',').map(function(tok){ tok=tok.trim(); if(!tok) return null;
+    if(/^[0-9]+$/.test(tok)){ var sh=CAT.shows[parseInt(tok,10)]; return sh?sh.id:null; }   // legacy numeric code
+    return byId[tok] ? tok : null;                                                          // slug code
+  }).filter(Boolean); }catch(e){ return null; } }
 
   // ---- panels ----
   function openPanel(id){ closePanel('builderPanel'); closePanel('searchPanel'); $(id).classList.add('open'); $(id).scrollIntoView({behavior:'smooth',block:'nearest'}); }
@@ -678,20 +818,27 @@
   $('shuffleToggle').checked = state.shuffle; $('shuffleToggle').onchange=function(){ state.shuffle=this.checked; save('otr_shuf', this.checked?'1':'0'); };
 
   // ---- search ----
+  var STOP={the:1,a:1,an:1,and:1,or:1,of:1,to:1,'in':1,is:1,it:1,'for':1,on:1,with:1,at:1,by:1,as:1,that:1,this:1,'from':1};
   var searchTimer=null;
   $('searchInput').oninput=function(){ var q=this.value.trim(); clearTimeout(searchTimer); searchTimer=setTimeout(function(){ runSearch(q); }, 180); };
   function runSearch(q){
     var res=$('results'), note=$('searchNote');
     if(!SEARCH){ note.textContent='Loading search index...'; res.innerHTML=''; loadSearchIndex().then(function(){ runSearch(q); }); return; }
     if(q.length<2){ note.textContent='Type at least 2 characters.'; res.innerHTML=''; return; }
-    var terms=q.toLowerCase().split(/\s+/).filter(Boolean);
+    var raw=q.toLowerCase().split(/\s+/).filter(Boolean);
+    var terms=raw.filter(function(t){ return !STOP[t]; });
+    if(!terms.length) terms=raw;   // query was all stopwords: fall back to matching them (enhancement)
+    var reWord=terms.map(function(t){ return new RegExp('\\b'+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b'); });
     var hits=[];
     Object.keys(SEARCH).forEach(function(sid){
       var show=byId[sid]; if(!show) return; var sname=show.name.toLowerCase();
       SEARCH[sid].forEach(function(row){ // [epIndex,title,summary]
-        var hay=(row[1]+' '+row[2]+' '+sname).toLowerCase();
+        var tl=row[1].toLowerCase(), hay=(row[1]+' '+row[2]+' '+sname).toLowerCase();
         var score=0, ok=true;
-        for(var i=0;i<terms.length;i++){ var idx=hay.indexOf(terms[i]); if(idx<0){ ok=false; break; } score += (row[1].toLowerCase().indexOf(terms[i])>=0?3:1); }
+        for(var i=0;i<terms.length;i++){ if(hay.indexOf(terms[i])<0){ ok=false; break; }
+          score += (tl.indexOf(terms[i])>=0?3:1);        // title match beats summary-only
+          if(reWord[i].test(tl)) score+=2;               // whole-word title match ranks highest
+        }
         if(ok){ hits.push({sid:sid, epIndex:row[0], title:row[1], sum:row[2], show:show.name, score:score}); }
       });
     });
@@ -857,6 +1004,18 @@
   }
   startViz();   // idle animation before first play; audio graph attaches on first tune-in
 
+  // ---- keyboard shortcuts (enhancement) ----
+  document.addEventListener('keydown', function(e){
+    var el=document.activeElement, tag=el&&el.tagName;
+    if(tag==='INPUT'||tag==='TEXTAREA'||(el&&el.isContentEditable)) return;
+    if(el && el.id==='viz') return;                 // canvas handles its own Enter/Space (change mode)
+    if(e.key===' '||e.key==='Spacebar'){ e.preventDefault(); $('playBtn').click(); }
+    else if(e.key==='n'||e.key==='N'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; next(false); } }
+    else if(e.key==='p'||e.key==='P'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; prev(); } }
+    else if(e.key==='ArrowRight'){ if(audio.duration){ audio.currentTime=Math.min(audio.duration, audio.currentTime+15); } }
+    else if(e.key==='ArrowLeft'){ if(audio.duration){ audio.currentTime=Math.max(0, audio.currentTime-15); } }
+  });
+
   // ---- headless test hook (see scripts/test_otr.py), mirrors window.__dx / __emu ----
   window.__otr = {
     ready: function(){ return !!CAT; },
@@ -865,12 +1024,16 @@
     channels: function(){ return CAT ? CAT.channels : []; },
     startChannel: startChannel,
     startStation: startStation,
+    cueChannel: cueChannel,
     next: function(){ next(false); },
+    prev: function(){ prev(); },
+    simulateFail: function(){ onFail('error'); return state.errCount; },
     queueUrls: function(){ return state.queue.map(function(it){ var r=resolve(it); return r?r.url:null; }); },
     currentUrl: function(){ var it=currentItem(); var r=it&&resolve(it); return r?r.url:null; },
     currentInfo: function(){ var it=currentItem(); var r=it&&resolve(it); return r?{show:r.show.name,title:r.title,isAd:r.isAd,url:r.url}:null; },
     loadSearch: loadSearchIndex,
     search: function(q){ if(!SEARCH) return null; runSearch(q); return document.querySelectorAll('#results .result').length; },
+    searchResults: function(q){ if(!SEARCH) return null; runSearch(q); return Array.prototype.slice.call(document.querySelectorAll('#results .r-title')).slice(0,10).map(function(e){return e.textContent;}); },
     encodeStation: encodeStation,
     decodeStation: decodeStation
   };
