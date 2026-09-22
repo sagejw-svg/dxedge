@@ -23,7 +23,9 @@ export default function Otr() {
           Internet Archive. Pick one of nine channels, build your own station from any shows you like,
           skip anything, and search episodes by plot. Nothing is hosted on DXEdge; the audio plays
           direct from archive.org. Full page version at{' '}
-          <a href="/otr/">dxedge.net/otr</a>.
+          <a href="/otr/">dxedge.net/otr</a>. The original synchronized broadcast, where everyone
+          hears the same show at once, is still running at{' '}
+          <a href="https://oldtime.radio" target="_blank" rel="noopener noreferrer">oldtime.radio</a>.
         </p>
       </div>
 
@@ -40,7 +42,11 @@ export default function Otr() {
       </div>
 
       <div style={{ ...mono, fontSize: 10, color: 'var(--dim)', textAlign: 'center', margin: '9px 0 16px' }}>
-        catalogue forked from Rob Dawson / codebox (oldtime.radio, MIT) &middot; audio hosted by the Internet Archive
+        forked from{' '}
+        <a href="https://oldtime.radio" target="_blank" rel="noopener noreferrer">oldtime.radio</a>
+        {' '}by Rob Dawson / codebox (MIT, <a href="https://github.com/codebox/old-time-radio" target="_blank" rel="noopener noreferrer">source</a>)
+        {' '}&middot; audio hosted by the{' '}
+        <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener noreferrer">Internet Archive</a>
       </div>
     </div>
   )

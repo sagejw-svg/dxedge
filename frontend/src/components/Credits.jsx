@@ -207,6 +207,30 @@ const SOURCES = [
     ],
   },
   {
+    category: 'Old Time Radio',
+    items: [
+      {
+        name: 'Old Time Radio (oldtime.radio)',
+        url: 'https://oldtime.radio',
+        what: 'The original around-the-clock classic radio station that the DXEdge OTR tab is forked from',
+        note: 'By Rob Dawson (codebox). Channel catalogue and episode summaries used under the MIT licence.',
+        icon: '📻',
+      },
+      {
+        name: 'old-time-radio source (codebox)',
+        url: 'https://github.com/codebox/old-time-radio',
+        what: 'Open source code for oldtime.radio',
+        icon: '💾',
+      },
+      {
+        name: 'Internet Archive: Old Time Radio collection',
+        url: 'https://archive.org/details/oldtimeradio',
+        what: 'Hosts every episode the OTR tab plays; audio streams direct from archive.org',
+        icon: '🏛️',
+      },
+    ],
+  },
+  {
     category: 'Reference & Inspiration',
     items: [
       {

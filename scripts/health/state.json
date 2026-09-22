@@ -1,9 +1,53 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-22T04:20:00Z",
+  "last_run": "2026-09-22T05:20:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
+    {
+      "date": "2026-09-22-interactive",
+      "run_outcome": "FULL RUN, on demand with James present, about an hour after the blind 04:20Z nightly. WebFetch worked once James was there to approve it. All surfaces green. Zero repairs. One requested content change: oldtime.radio (the original OTR station) added to Credits and linked from the OTR tab and page.",
+      "environment": {
+        "webfetch": "Working with James present.",
+        "browser": "Headless Chromium plus local relay rig. Worked on all four page loads."
+      },
+      "cert": {
+        "status": "ok",
+        "evidence": "https://dxedge.net/api/health?cb=20260922live1 fetched cleanly over TLS at 05:07Z.",
+        "consecutive_failures": 0
+      },
+      "main_dashboard": {
+        "api_health": "ok. sfi 116, k 2, spots 500, feed_proxy true, version 2.0. This confirms the 2616852 usage-stats backend deploy is live.",
+        "api_debug": "Responding, 12 cache keys, filesystem ok.",
+        "sat_tles_pota_spots": "0/0 in /api/health, cold-cache cosmetic per known issue. /api/pota returned 28 live spots current to 05:07Z; /api/satellites/positions returned 9 satellites.",
+        "sota": "{\"spots\":[]}. Still dark, awaiting_james sota-api-deprecation. Not re-reported.",
+        "browser_check": "CLEAN. /, both hashed bundles, /lib/stat.js, /api/recommendation, /api/dashboard, /api/solar/history, /api/voacap/summary all 200. 3 ws/spots console errors are the known relay WebSocket artifact. /api/stat showed net::ERR_ABORTED in Chromium, but a direct POST to /api/stat returned 204, so this is sendBeacon reporting in headless Chromium, not a site fault. Note: that direct test POST recorded one synthetic pageview for path /healthcheck in the usage stats."
+      },
+      "cyber_page": {
+        "browser_check": "CLEAN. All 8 /api/feed calls 200 (KEV, NVD, hamqsl, CISA advisories, krebs, securityweek, 2x EPSS). Zero console errors, zero .feed-error nodes, zero 'failed:' strings, zero loading placeholders.",
+        "allorigins_regression": false,
+        "allowlist_gaps": "none"
+      },
+      "aethersdr_page": {
+        "browser_check": "CLEAN. All 4 /api/feed calls 200 (releases.atom, flexradio, rtl-sdr, hackaday). Zero console errors.",
+        "allorigins_regression": false,
+        "allowlist_gaps": "none",
+        "version_label_bug": "ABOUT label reads v26.9.4 tonight because the newest atom entry happens to be a real release. The items[0] bug is still latent and still held under awaiting_james aethersdr-about-version-drift."
+      },
+      "otr_page": {
+        "browser_check": "CLEAN. /otr/, catalog.json, search.json all 200, zero console or page errors. scripts/test_otr.py: all 13 checks pass. Deploy of 60594c2 confirmed live.",
+        "listed_on_dashboard": "Yes, as the 'Old Time Radio' tab under the 'Radio' tab group (App.jsx).",
+        "feed_surface": "None. Same category as the emulators page."
+      },
+      "content_change": {
+        "requested_by": "James, interactive",
+        "change": "Credits.jsx gains an 'Old Time Radio' category: oldtime.radio (Rob Dawson / codebox, MIT), github.com/codebox/old-time-radio, archive.org/details/oldtimeradio. Otr.jsx intro and footer now link oldtime.radio, the source repo and the Internet Archive. otr/index.html footer adds a source link and a pointer to the live original.",
+        "urls_verified": "oldtime.radio 200 (links to github.com/codebox/old-time-radio, MIT); github.com/codebox/old-time-radio 200 (homepage oldtime.radio, MIT). Note github.com/codebox/oldtime-radio is a 404, the repo name is hyphenated old-time-radio."
+      },
+      "outbound_links": "NOT DUE. Next full sweep 2026-10-01. The three new Credits URLs were verified tonight.",
+      "backend_tests": "Still broken at collection (estimate_fof2). Outstanding.",
+      "repairs_made": "NONE."
+    },
     {
       "date": "2026-09-22",
       "run_outcome": "BLIND NIGHT. WebFetch PROVENANCE_REQUIRED on every call: /api/health?cb=20260922a, retry /api/health?cb=20260922retry, and an https://example.com control. All-host pattern, confirmed with a retry per provenance-gate-is-intermittent-and-per-host. No live surface checked. Per standing rule no curl/python/Chromium substitution. Static checks completed and passed. Zero repairs. Push sent early. No 2026-09-21 run is recorded in this file, so the 09-21 night appears to have been skipped entirely.",
@@ -557,75 +601,6 @@
       "rig_note": "Fresh gotcha for whoever rebuilds the relay rig: do not tear it down with pkill -f \"relay.py 8899\" inside a compound shell command. The pattern matches the shell's own command line and the shell kills itself (exit 144), silently skipping everything after it. Kill it in its own call, or match on a pattern the caller does not contain.",
       "repairs_made": "none. Nothing on any of the three surfaces was broken.",
       "notification": "none sent. Quiet night: nothing broken, nothing fixed, and no decision pending that James has not already been asked about. The nine open awaiting_james items were all escalated previously and are NOT re-reported.",
-      "commits_pushed": "state file only",
-      "deploy_result": "A state-file-only commit under scripts/health/ touches neither frontend nor backend, so no functional deploy risk. /api/health reconfirmed ok after push."
-    },
-    {
-      "date": "2026-09-12",
-      "run_outcome": "FULL RUN, all three surfaces green. Cert clean, both health endpoints clean, every live feed 200 through the same-origin proxy, all three surfaces rendered in a real browser. Nothing was broken. Nothing was repaired. No email and no push notification sent, per the quiet-night rule. No new findings about the site and none about the checking rig. Only commit since the 09-10 run is f384bba (Crane Cab), reviewed and clean.",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:08Z and repeatedly thereafter, plus every relay fetch of the site. No CERTIFICATE_VERIFY_FAILED and no expiry error.",
-        "consecutive_failures": 0,
-        "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place and working. Exact expiry date still not readable from this container: openssl sees the egress proxy certificate, not the real one."
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "spots": 500,
-        "feed_proxy": true,
-        "sat_tles_metric": "0 at first read, 9 after /api/satellites/positions was called",
-        "pota_spots_metric": "0 at first read, 26 after /api/pota was called",
-        "cold_cache_diagnosis": "Reconfirmed for the second night running, exactly as proven on 09-10. Both fields are passive cache reads. Not an outage, not investigated further, not reported.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug",
-          "/api/pota (25 live spots, timestamps 2026-09-12)",
-          "/api/sota (5 live spots, timestamps 2026-09-12)",
-          "/api/satellites/positions (9 sats)",
-          "/api/recommendation",
-          "/api/dashboard",
-          "/api/solar/history",
-          "/api/voacap/summary"
-        ],
-        "browser_check": "DONE. Headless Chromium via the local relay. Title 'DXEdge - Propagation & DX Intelligence', 1902 body chars, 7 responses all 200, zero failed requests, zero panel errors. The four ws://127.0.0.1:8899/ws/spots console errors are the known rig artifact: the relay proxies GET only and cannot service a WebSocket upgrade. Not a site defect.",
-        "sota_note": "SOTA upstream api2.sota.org.uk is still serving despite its own removal-before-August-31-2026 notice. Band still renders '?'. Both are existing awaiting_james items (sota-api-deprecation, sota-band-unit-mismatch) and were deliberately NOT re-reported."
-      },
-      "cyber_page": {
-        "browser_check": "DONE. Headless Chromium via the local relay. Title 'DX//EDGE - CYBER', 6151 body chars, zero '<name> failed:' panel lines, zero panels left on 'loading...', 8 same-origin /api/feed requests all 200, none pending at 16s. The single console error is the Google Fonts ERR_CONNECTION_RESET rig artifact, which doubles as proof the request capture worked.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Tree-wide grep. Only two source hits remain, both explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Neither page references it. Browser capture recorded zero requests to allorigins.win.",
-        "allowlist_gaps": "none. Every host the page fetches is already in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
-        "feeds_observed_live_in_browser": [
-          "cisa known_exploited_vulnerabilities.json 200",
-          "cisa cybersecurity-advisories/all.xml 200",
-          "securityweek.com/feed 200",
-          "hamqsl.com/solarxml.php 200",
-          "krebsonsecurity.com/feed 200",
-          "api.first.org EPSS batch 1 200",
-          "api.first.org EPSS batch 2 200",
-          "services.nvd.nist.gov cves/2.0 CRITICAL 200 (the double-encoded query, fired by the real page)"
-        ]
-      },
-      "aethersdr_page": {
-        "browser_check": "DONE. Title 'DX//EDGE - AETHERSDR', 4095 body chars, zero panel error lines, zero panels left loading, 5 /api/feed requests all 200, none pending at 16s. Same Google Fonts rig artifact and nothing else.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none.",
-        "feeds_observed_live_in_browser": [
-          "hackaday.com/category/radio-hacks/feed 200",
-          "flexradio.com/feed 200",
-          "rtl-sdr.com/feed 200",
-          "github.com/aethersdr/AetherSDR/releases.atom 200 (requested twice, second served from feedproxy cache, harmless and already recorded 09-10)"
-        ]
-      },
-      "new_surfaces_reviewed": "No new standalone page since the 09-10 run. The single new commit f384bba adds in-world instrument panels to Crane Cab and touches frontend/public/sw.js. External-host footprint unchanged: cdn.jsdelivr.net for three.js only. sw.js contains zero external URLs. No new outbound link, no /api/feed bypass, no new third-party host. The jsdelivr supply-chain point remains the existing low-priority awaiting_james item crane-cab-third-party-cdn and was NOT re-reported.",
-      "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule. Verified no new curated links exist: 49e82d2 on 2026-09-03 is still the most recent commit touching any of linkcheck.py's four source files (Credits.jsx, Products.jsx, cyber/index.html, aethersdr/index.html), confirmed by git log. Next sweep due 2026-09-17.",
-      "backend_tests": "Still broken at collection, unchanged and still pre-existing. backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine; that module defines f2_layer_strength and has no estimate_fof2. Reported as outstanding, not touched, and deliberately not papered over by deleting the import.",
-      "pat_status": "Retrieved from Mem and used to clone and push successfully. The Mem note's 'expires ~August 27 2026' line is still wrong; see known_issues pat-expiry-note-stale.",
-      "new_finding": "None. No new site defect and no new rig defect. Every /api/ check this run carried a per-run nonce or came through the browser relay, per the 09-10 webfetch-response-cache-crosses-nights rule, so the readings are live rather than cache echoes.",
-      "repairs_made": "none. Nothing on any of the three surfaces was broken.",
-      "notification": "none sent. Quiet night: nothing broken, nothing fixed, and no decision pending that James has not already been asked about. The open awaiting_james items were all escalated previously and are NOT re-reported.",
       "commits_pushed": "state file only",
       "deploy_result": "A state-file-only commit under scripts/health/ touches neither frontend nor backend, so no functional deploy risk. /api/health reconfirmed ok after push."
     }
