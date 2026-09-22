@@ -1,9 +1,64 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-09-20T04:45:00Z",
+  "last_run": "2026-09-22T04:20:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
+    {
+      "date": "2026-09-22",
+      "run_outcome": "BLIND NIGHT. WebFetch PROVENANCE_REQUIRED on every call: /api/health?cb=20260922a, retry /api/health?cb=20260922retry, and an https://example.com control. All-host pattern, confirmed with a retry per provenance-gate-is-intermittent-and-per-host. No live surface checked. Per standing rule no curl/python/Chromium substitution. Static checks completed and passed. Zero repairs. Push sent early. No 2026-09-21 run is recorded in this file, so the 09-21 night appears to have been skipped entirely.",
+      "environment": {
+        "webfetch": "TOTAL BLOCK, 3 of 3 denied incl. example.com control.",
+        "browser": "NOT USED, same reasoning as 2026-09-20.",
+        "git": "Clone OK."
+      },
+      "cert": {
+        "status": "unknown",
+        "evidence": "WebFetch never reached the host; PROVENANCE_REQUIRED is a local permission denial, not a TLS result.",
+        "consecutive_failures": 0,
+        "counter_note": "Not incremented; unverifiable is not a renewal failure. Last positive confirmation 2026-09-19 04:08Z."
+      },
+      "main_dashboard": {
+        "api_health": "NOT CHECKED - gate.",
+        "api_debug": "NOT CHECKED - gate.",
+        "sota": "Carries over unverified: dark, upstream removed, awaiting_james sota-api-deprecation. Not re-reported.",
+        "endpoints_verified": []
+      },
+      "cyber_page": {
+        "browser_check": "NOT DONE - gate.",
+        "allorigins_regression": false,
+        "allorigins_evidence": "STATIC clean. Tree-wide grep: only comment hits at backend/main.py:708 and backend/feedproxy.py:3. PROXY '/api/feed?url=' at line 349, all 6 getCached call sites (556, 586, 618, 639, 690, 715) use it.",
+        "allowlist_gaps": "none. Page last changed 49e82d2 (2026-09-03), feedproxy.py last changed d055aed (2026-09-01), so the 2026-09-20 static host check still holds.",
+        "page_source_unchanged": true
+      },
+      "aethersdr_page": {
+        "browser_check": "NOT DONE - gate.",
+        "allorigins_regression": false,
+        "allorigins_evidence": "STATIC clean. PROXY at line 348, call sites 432 and 457.",
+        "allowlist_gaps": "none, unchanged since 2026-09-20 check.",
+        "page_source_unchanged": true,
+        "version_label_bug": "Unchanged, held under awaiting_james aethersdr-about-version-drift. Not re-reported."
+      },
+      "new_commit_review": {
+        "sha": "60594c2",
+        "subject": "Add Old Time Radio player at /otr",
+        "author": "Separate Claude session, not this routine.",
+        "scope": "New standalone frontend/public/otr/ (index.html, catalog.json, search.json), Otr.jsx shell, App.jsx route, sw.js bump, scripts/test_otr.py. Frontend only.",
+        "static_read": "Not a feed page. Only same-origin fetch() calls are catalog.json and search.json, both parse as valid JSON. External hosts referenced: archive.org (audio/metadata, CORS *) and oldtime.radio (attribution). No /api/feed bypass question arises because it uses no feed proxy by design, same category as emulators-page-has-no-feed-surface. No external script or stylesheet tags.",
+        "deploy_status": "UNVERIFIED - gate."
+      },
+      "prior_unverified": "2616852 usage-stats backend deploy is still unverified live (gate on 09-20 and 09-22, no 09-21 run).",
+      "outbound_links": "NOT DUE. Next full sweep 2026-10-01. No links checked tonight.",
+      "backend_tests": "Still broken at collection: test_dxedge.py:64 imports estimate_fof2, voacap_engine defines no such function. Pre-existing, outstanding.",
+      "repairs_made": "NONE.",
+      "problems_reported_tonight": [
+        "webfetch-permission-at-setup (routine could not run; same open decision)",
+        "deploy of 2616852 and 60594c2 unverified"
+      ],
+      "escalations_sent": [
+        "Push notification: blind night, fetch permission decision, unverified deploys."
+      ]
+    },
     {
       "date": "2026-09-20",
       "run_outcome": "BLIND NIGHT. The WebFetch provenance gate was total and sticky across the whole run: 5 denials spanning 35 minutes, on 2 hosts, including an example.com control and a late-run retry. No live surface could be checked. Per the standing rule the denied fetches were NOT substituted with python, curl or the headless-Chromium relay. Static repo checks were completed in full and all passed. Zero repairs. Escalation push sent early, at 04:12Z, per the 2026-09-16 lesson; James had not granted access by the end of the run. Email sent.",
@@ -571,78 +626,6 @@
       "new_finding": "None. No new site defect and no new rig defect. Every /api/ check this run carried a per-run nonce or came through the browser relay, per the 09-10 webfetch-response-cache-crosses-nights rule, so the readings are live rather than cache echoes.",
       "repairs_made": "none. Nothing on any of the three surfaces was broken.",
       "notification": "none sent. Quiet night: nothing broken, nothing fixed, and no decision pending that James has not already been asked about. The open awaiting_james items were all escalated previously and are NOT re-reported.",
-      "commits_pushed": "state file only",
-      "deploy_result": "A state-file-only commit under scripts/health/ touches neither frontend nor backend, so no functional deploy risk. /api/health reconfirmed ok after push."
-    },
-    {
-      "date": "2026-09-10",
-      "run_outcome": "FULL RUN, all surfaces green. The WebFetch provenance gate that blinded 09-08 and 09-09 appeared again on the first three calls of the night and cleared on a single retry, so every step in the runbook was executed live: cert, both health endpoints, all 16 feeds, all three surfaces in a real browser, and the backend spot/satellite endpoints. Nothing was broken. Nothing was repaired. No email and no push notification sent, per the quiet-night rule. One new methodology defect was found in the checking process itself, not the site: see known_issues webfetch-response-cache-crosses-nights.",
-      "cert": {
-        "status": "ok",
-        "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:19Z and repeatedly thereafter. No CERTIFICATE_VERIFY_FAILED, no expiry error.",
-        "consecutive_failures": 0,
-        "notes": "First positive cert confirmation since 2026-09-07; 09-08 and 09-09 were blind. cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place and evidently working. Exact expiry date still not readable from this container: openssl sees the egress proxy certificate, not the real one."
-      },
-      "main_dashboard": {
-        "api_health": "ok",
-        "sfi": 116,
-        "k_index": 2,
-        "spots": 500,
-        "feed_proxy": true,
-        "sat_tles_metric": "0 at first read, then 9 after /api/satellites/positions was called",
-        "pota_spots_metric": "0 at first read, then 6 after /api/pota was called",
-        "cold_cache_diagnosis_now_PROVEN": "The health-metric-cold-cache theory is no longer an inference. Calling /api/pota and /api/satellites/positions warmed both caches, and a subsequent /api/health in the same run returned sat_tles 9 and pota_spots 6 instead of 0. The two zero fields are passive cache reads, definitively not an outage. Do not investigate again.",
-        "endpoints_verified": [
-          "/api/health",
-          "/api/debug",
-          "/api/pota (6 live spots, timestamps 2026-09-10)",
-          "/api/sota (5 live spots)",
-          "/api/satellites/positions (9 sats)",
-          "/api/contests (45 entries)"
-        ],
-        "browser_check": "Rendered in headless Chromium via the local relay. Title correct, 7 responses, all 200, zero failed requests. The three ws://127.0.0.1:8899/ws/spots console errors are a rig artifact: the relay proxies GET only and cannot service a WebSocket upgrade. Not a site defect.",
-        "static_review": "Clean. The only two commits since the 09-09 run, 8ab9c82 and 50da8fe, are Crane Cab game work plus an sw.js cache bump v37 to v39. Nothing touches the backend, the dashboard data path, or either standalone page."
-      },
-      "cyber_page": {
-        "browser_check": "DONE. Headless Chromium via the local relay. Title \"DX//EDGE \u00b7 CYBER\", 6351 body chars, zero \"<name> failed:\" panel lines, zero panels left on \"loading...\", 8 same-origin /api/feed requests all 200, none pending at 14s. The single console error is the Google Fonts ERR_CONNECTION_RESET rig artifact, which doubles as proof the request capture worked.",
-        "allorigins_regression": false,
-        "allorigins_evidence": "Tree-wide grep. Only two hits remain, both explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Neither page references it.",
-        "allowlist_gaps": "none. Every host either page fetches is already in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
-        "feeds_via_api_feed": {
-          "cisa_advisories": "ok, 4 entries, first \"CISA Adds Four Known Exploited Vulnerabilities to Catalog\". Fresh: different from the 09-02 reading.",
-          "cisa_kev": "ok, catalogVersion 2026.09.09, dateReleased 2026-09-09T19:00:50Z, count 1703. Up from 1687 on 09-02, so the feed is genuinely advancing.",
-          "nvd_2.0": "ok, and verified LIVE for the first time. The browser fired the real double-encoded NVD query through /api/feed and it returned 200. This retires the nvd-double-encoded-url-unverifiable workaround for any night the browser rig runs.",
-          "epss_first_org": "ok, 200, CVE-2023-49105 epss 0.43205 date 2026-09-09. Two live multi-CVE EPSS queries also returned 200 in the browser load.",
-          "hamqsl_solarxml": "ok, solarflux 109, updated 10 Sep 2026 0425 GMT.",
-          "krebs": "ok, 5 items.",
-          "hackernews_feedburner": "ok, 50 items, first dated 2026-09-09.",
-          "bleepingcomputer": "ok, 16 items, first \"Cisco confirms CVE-2026-20079 Secure FMC flaw exploited in attacks\" 2026-09-09.",
-          "darkreading": "ok, 50 items, first 2026-09-09 21:19Z.",
-          "isc_sans": "ok, 3 items, first \"Scans for Proxmox Servers\" 2026-09-09 17:46Z.",
-          "securityweek": "ok, 10 items, first 2026-09-09 17:23Z.",
-          "google_news_pqc": "ok, 50 items, first 2026-09-09 15:40Z."
-        },
-        "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
-      },
-      "aethersdr_page": {
-        "browser_check": "DONE. Title \"DX//EDGE \u00b7 AETHERSDR\", 4009 body chars, zero panel error lines, zero panels left loading, 5 /api/feed requests all 200. Same Google Fonts rig artifact and nothing else.",
-        "allorigins_regression": false,
-        "allowlist_gaps": "none.",
-        "feeds_via_api_feed": {
-          "github_releases_atom": "ok, latest \"AetherSDR v26.9.2 - New receivers, multi-band skimming and station control\", updated 2026-09-06.",
-          "flexradio": "ok, 25 items. Newest vendor post is 2026-05-15; that is FlexRadio's own publishing cadence, not a stale feed.",
-          "rtl_sdr": "ok, 9 items, first 2026-09-10 02:37Z.",
-          "hackaday_radio_hacks": "ok, 9 items, first 2026-09-09 15:30Z."
-        },
-        "minor_observation": "The page requests github.com/aethersdr/AetherSDR/releases.atom twice on a single load. Harmless: the second is served from the server-side feedproxy cache. Not worth a change, recorded so a future run does not read it as a bug."
-      },
-      "new_surfaces_reviewed": "No new standalone page landed since the 09-09 run. Crane Cab gained content only. Its external-host footprint is unchanged: cdn.jsdelivr.net for three.js and the w3.org XML namespace string. No new third-party host, no new outbound link, no /api/feed bypass. The jsdelivr supply-chain consideration remains the existing low-priority awaiting_james item crane-cab-third-party-cdn, NOT re-reported.",
-      "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule. Verified no new curated links exist: all four linkcheck.py source files (Credits.jsx, Products.jsx, and both standalone pages) are byte-identical to the 09-03 sweep, confirmed by git diff.",
-      "backend_tests": "Still broken at collection, unchanged and still pre-existing. backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine; that module defines f2_layer_strength and has no estimate_fof2. Reported as outstanding, not touched, and deliberately not papered over by deleting the import.",
-      "pat_status": "Authenticated and pushed successfully. The Mem note's \"expires ~August 27 2026\" line is still wrong; see known_issues pat-expiry-note-stale.",
-      "new_finding": "One, and it is about the checking rig rather than dxedge.net. WebFetch returned bodies from the 2026-09-02 run for five /api/feed URLs fetched with identical URL strings, making krebs, hamqsl, isc.sans, bleepingcomputer and darkreading all look 8 to 10 days stale. Re-fetching the same URLs with a per-run nonce appended returned fresh content on every one, and the browser load confirmed it independently. See known_issues webfetch-response-cache-crosses-nights. Consequence worth knowing: any \"ok\" feed reading recorded on 09-05 through 09-07 that reused an earlier night's exact URL may have been a cache echo rather than a live confirmation. Tonight's readings are trustworthy because every one carried a nonce or came through the browser.",
-      "repairs_made": "none. Nothing on any of the three surfaces was broken.",
-      "notification": "none sent. Quiet night: nothing broken, nothing fixed, and no decision pending that James has not already been asked about. The two highest open items were both escalated previously and are NOT re-reported.",
       "commits_pushed": "state file only",
       "deploy_result": "A state-file-only commit under scripts/health/ touches neither frontend nor backend, so no functional deploy risk. /api/health reconfirmed ok after push."
     }
