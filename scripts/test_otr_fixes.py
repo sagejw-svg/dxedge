@@ -85,6 +85,24 @@ def main():
         u2 = pg.evaluate("window.__otr.currentUrl()")
         ck("keyboard 'n' skips", bool(u2) and u2!=u1, {"a":u1,"b":u2})
 
+        # Random 'Surprise me': random mode, cross-show queue
+        pg.evaluate("window.__otr.startRandom(null,'Surprise me')")
+        rnd = pg.evaluate("({rand: window.__otr.state.random, n: window.__otr.state.queue.length, multi: new Set(window.__otr.state.queue.filter(x=>!x.isAd).map(x=>x.showId)).size})")
+        ck("random: surprise-me sets random mode", rnd["rand"]==True and rnd["n"]>10, rnd)
+        ck("random: draws from many shows", rnd["multi"]>=5, rnd)
+        catr = pg.evaluate("""() => {
+            const ids = new Set(window.__otr.catalog().shows.filter(s=>s.ch.indexOf('future')>=0).map(s=>s.id));
+            window.__otr.startRandom([...ids],'Random: Future');
+            const q = window.__otr.state.queue.filter(x=>!x.isAd);
+            return { inScope: q.every(x=>ids.has(x.showId)), rand: window.__otr.state.random };
+        }""")
+        ck("random: by-category stays in scope", catr["inScope"] and catr["rand"], catr)
+
+        # per-show archive.org link renders for the current show
+        pg.evaluate("window.__otr.startRandom(null,'x')"); pg.wait_for_timeout(150)
+        arch = pg.evaluate("document.getElementById('npArchive').innerHTML")
+        ck("archive.org link on now playing", 'archive.org/details/' in arch, arch[:80])
+
         # iOS background-audio path (?ios=1): native playback, no Web Audio graph, viz locked
         pg.goto(f"http://127.0.0.1:{PORT}/index.html?ios=1")
         pg.wait_for_function("window.__otr && window.__otr.ready()", timeout=15000)

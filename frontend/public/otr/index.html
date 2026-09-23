@@ -64,6 +64,9 @@
   .np .summary.open { max-height: 40em; }
   .np .more { font-size: 10px; color: var(--dim); cursor: pointer; margin-top: 3px; display:none; }
   .np .more:hover { color: var(--green); }
+  .np-archive { font-size: 11px; margin-top: 7px; display:none; }
+  .np-archive a { color: var(--muted); text-decoration: none; }
+  .np-archive a:hover { color: var(--amber); text-decoration: underline; }
 
   /* Transport */
   .seek { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 10px; color: var(--dim); }
@@ -110,6 +113,9 @@
   .station .st-name { color: var(--text); font-size: 13px; font-weight: 600; }
   .station.on .st-name { color: var(--amber); }
   .station .st-count { color: var(--dim); font-size: 10px; white-space: nowrap; }
+  .station .st-actions { display:flex; align-items:center; gap:8px; }
+  .station .st-dice { font-size: 12px; cursor: pointer; opacity: .45; transition: opacity .15s, transform .15s; line-height:1; }
+  .station .st-dice:hover { opacity: 1; transform: scale(1.2) rotate(-12deg); }
   .station .st-now { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; min-height: 2.9em;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .station .st-now b { color: var(--amber2); font-weight: 500; }
@@ -151,6 +157,8 @@
   .showitem .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--text); }
   .showitem .ec { font-size: 9px; color: var(--dim); }
   .showitem .cat { font-size: 8px; color: var(--dim); letter-spacing:1px; text-transform:uppercase; }
+  .showitem .arch { color: var(--dim); text-decoration:none; font-size:12px; padding:0 2px; }
+  .showitem .arch:hover { color: var(--amber); }
 
   .builder-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
   .savedrow { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
@@ -203,6 +211,7 @@
         <div class="date" id="npDate"></div>
         <div class="summary" id="npSummary"></div>
         <div class="more" id="npMore">show more</div>
+        <div class="np-archive" id="npArchive"></div>
 
         <div class="seek">
           <span class="time" id="tCur">0:00</span>
@@ -233,6 +242,7 @@
   <div class="toolbar">
     <button class="btn" id="builderBtn">＋ Build a station</button>
     <button class="btn" id="searchBtn">🔍 Search episodes</button>
+    <button class="btn" id="randomBtn" title="Play a random episode from any show">🎲 Surprise me</button>
     <label class="toggle"><input type="checkbox" id="commToggle" checked> vintage commercials</label>
     <label class="toggle"><input type="checkbox" id="shuffleToggle" checked> shuffle custom stations</label>
   </div>
@@ -314,7 +324,8 @@
     backoffTimer: null,   // retry-after-outage timer (bug #2)
     gotPlaying: false,    // this track has actually started producing audio
     awaitingGesture: false, // autoplay blocked, waiting for a user click
-    savedActive: -1       // index of the active saved station chip (bug #10)
+    savedActive: -1,      // index of the active saved station chip (bug #10)
+    random: false         // "surprise me" random mode (keeps serving random picks)
   };
   function load(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
   function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
@@ -385,9 +396,16 @@
       var n = (chanShows[ch]||[]).length;
       var c = document.createElement('div'); c.className='station'; c.dataset.ch=ch;
       c.title = 'Tune in to '+titleCase(ch)+' ('+n+' shows in rotation)';
-      c.innerHTML = '<div class="st-head"><span class="st-name">'+titleCase(ch)+'</span><span class="st-count">'+n+' shows</span></div>'+
+      c.innerHTML = '<div class="st-head"><span class="st-name">'+titleCase(ch)+'</span>'+
+        '<span class="st-actions"><span class="st-dice" title="Random episode from this category">🎲</span>'+
+        '<span class="st-count">'+n+' shows</span></span></div>'+
         '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"></div>';
-      c.onclick = function(){ startChannel(ch); };
+      c.onclick = function(ev){
+        if(ev.target.classList.contains('st-dice')){ ev.stopPropagation();
+          ensureAudioGraph(); if(ac && ac.state==='suspended') ac.resume();
+          startRandom((chanShows[ch]||[]).map(function(s){return s.id;}), 'Random: '+titleCase(ch)); return; }
+        startChannel(ch);
+      };
       el.appendChild(c);
     });
   }
@@ -528,7 +546,27 @@
     playCurrent();
   }
   function setQueue(order){ state.queue = order; state.qi = -1; state.history=[]; state.programsSinceAd=0;
-    state.live=false; state.schedAds=false; state.pendingSeek=0; }
+    state.live=false; state.schedAds=false; state.pendingSeek=0; state.random=false; }
+
+  // Random ("surprise me"): pick episodes at random across a scope (all shows, or one
+  // channel). A separate mode from the broadcast clock - it plays on demand and keeps
+  // serving fresh random picks when the queue runs out.
+  function buildRandomOrder(showIds, n){
+    var shows=showIds.map(function(id){ return byId[id]; }).filter(function(s){ return s && s.eps.length; });
+    var order=[]; n=n||100; if(!shows.length) return order;
+    for(var i=0;i<n;i++){ var s=shows[Math.floor(Math.random()*shows.length)];
+      order.push({ showId:s.id, epIndex:Math.floor(Math.random()*s.eps.length), isAd:false }); }
+    return order;
+  }
+  function startRandom(scope, label){
+    var ids = (scope && scope.length) ? scope.slice() : CAT.shows.filter(function(s){ return !s.adv; }).map(function(s){ return s.id; });
+    if(!ids.length){ toast('Nothing to shuffle'); return; }
+    state.channel=null; state.stationShowIds=ids; state.stationLabel=label||'Surprise me'; state.savedActive=-1;
+    setQueue(interleaveAds(buildRandomOrder(ids))); state.schedAds=true; state.random=true;
+    markActiveChip(); closePanel('builderPanel'); closePanel('searchPanel');
+    playCurrent();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
 
   // Pre-interleave commercials into an on-demand order so "up next" is always accurate
   // (bug #7: ads used to be spliced in at play time, after up-next had rendered).
@@ -630,9 +668,14 @@
         setQueue(S.items.filter(function(x){ return state.commercials || !x.isAd; }));
         state.schedAds=true; state.live=wasLive; state.qi=0;
       } else {
-        var shows = (state.stationShowIds||[]).map(function(i){return byId[i];}).filter(Boolean);
-        if(shows.length){ setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds=true; state.qi=0; }
-        else state.qi = 0;
+        var ids = state.stationShowIds||[];
+        if(state.random){
+          setQueue(interleaveAds(buildRandomOrder(ids))); state.schedAds=true; state.random=true; state.qi=0;
+        } else {
+          var shows = ids.map(function(i){return byId[i];}).filter(Boolean);
+          if(shows.length){ setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds=true; state.qi=0; }
+          else state.qi = 0;
+        }
       }
     }
     playCurrent();
@@ -749,6 +792,11 @@
     if(r.summary){ sum.textContent = r.summary; sum.style.display='block';
       more.style.display = (r.summary.length>210)?'block':'none'; sum.classList.remove('open'); more.textContent='show more';
     } else { sum.textContent=''; sum.style.display='none'; more.style.display='none'; }
+    var arch=$('npArchive');
+    if(!r.isAd && r.show.ids && r.show.ids.length){
+      arch.innerHTML='▸ <a href="https://archive.org/details/'+encodeURIComponent(r.show.ids[0])+'" target="_blank" rel="noopener">all '+escapeHtml(r.show.name)+' episodes on archive.org</a>';
+      arch.style.display='block';
+    } else arch.style.display='none';
     // up next
     var nx = state.queue[state.qi+1];
     if(nx){ var nr=resolve(nx); $('upnext').innerHTML = nr ? ('<b>up next</b> &nbsp;'+ (nr.isAd?'Commercial':escapeHtml(nr.show.name)+' - '+escapeHtml(nr.title))) : ''; }
@@ -766,9 +814,11 @@
     shows.forEach(function(s){
       var d=document.createElement('label'); d.className='showitem'; d.dataset.id=s.id; d.dataset.name=s.name.toLowerCase();
       d.innerHTML = '<input type="checkbox"><span class="nm">'+escapeHtml(s.name)+'</span>'+
-        '<span class="cat">'+(s.ch[0]||'')+'</span><span class="ec">'+s.eps.length+'</span>';
+        '<span class="cat">'+(s.ch[0]||'')+'</span><span class="ec">'+s.eps.length+'</span>'+
+        (s.ids&&s.ids.length ? '<a class="arch" href="https://archive.org/details/'+encodeURIComponent(s.ids[0])+'" target="_blank" rel="noopener" title="All episodes on archive.org">↗</a>' : '');
       var cb=d.querySelector('input');
       cb.onchange=function(){ if(cb.checked) selected[s.id]=1; else delete selected[s.id]; d.classList.toggle('on',cb.checked); updateSelCount(); };
+      var al=d.querySelector('.arch'); if(al) al.onclick=function(e){ e.stopPropagation(); };
       g.appendChild(d);
     });
     updateSelCount();
@@ -824,6 +874,7 @@
   function closePanel(id){ $(id).classList.remove('open'); }
   $('builderBtn').onclick=function(){ var p=$('builderPanel'); if(p.classList.contains('open')) closePanel('builderPanel'); else openPanel('builderPanel'); };
   $('builderClose').onclick=function(){ closePanel('builderPanel'); };
+  $('randomBtn').onclick=function(){ ensureAudioGraph(); if(ac && ac.state==='suspended') ac.resume(); startRandom(null, 'Surprise me'); };
   $('searchBtn').onclick=function(){ var p=$('searchPanel'); if(p.classList.contains('open')){ closePanel('searchPanel'); } else { openPanel('searchPanel'); loadSearchIndex().then(function(){ $('searchInput').focus(); }); } };
   $('searchClose').onclick=function(){ closePanel('searchPanel'); };
   $('commToggle').checked = state.commercials; $('commToggle').onchange=function(){ state.commercials=this.checked; save('otr_comm', this.checked?'1':'0'); };
@@ -1042,6 +1093,7 @@
     channels: function(){ return CAT ? CAT.channels : []; },
     startChannel: startChannel,
     startStation: startStation,
+    startRandom: startRandom,
     cueChannel: cueChannel,
     next: function(){ next(false); },
     prev: function(){ prev(); },
