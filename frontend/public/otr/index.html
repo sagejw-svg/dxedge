@@ -284,6 +284,17 @@
   var $ = function(id){ return document.getElementById(id); };
   var audio = $('audio');
   var CAT = null, SEARCH = null, SUMMAP = null;
+
+  // iOS suspends an AudioContext when the tab is backgrounded or the screen locks, and
+  // routing playback through Web Audio (for the visualizer) makes the audio die with it.
+  // So on iOS we play the <audio> element natively - background and lock-screen keep
+  // working, with Media Session controls - and skip the analyser. ?ios=1 forces this path.
+  var IS_IOS = (function(){ try{
+    if(new URLSearchParams(location.search).get('ios')==='1') return true;
+    var ua=navigator.userAgent||'', p=navigator.platform||'';
+    return /iPhone|iPad|iPod/.test(ua) || /iP(hone|od|ad)/.test(p) || (/Mac/.test(p) && navigator.maxTouchPoints>1);
+  }catch(e){ return false; } })();
+  function initAudioSession(){ try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){} }
   var byId = {}, chanShows = {}, adPool = null;
 
   // ---- state ----
@@ -552,6 +563,7 @@
   // ---- playback ----
   var ac=null, srcNode=null, analyser=null, freq=null, analyserT=null, tdata=null;
   function ensureAudioGraph(){
+    if(IS_IOS){ initAudioSession(); if(!vizRAF) startViz(); return; } // native playback keeps audio alive when locked/backgrounded
     if(ac) return;
     try{
       ac = new (window.AudioContext||window.webkitAudioContext)();
@@ -882,10 +894,14 @@
     { name:'magic eye',    draw: vizEye }
   ];
   state.vizMode = ((state.vizMode % VIZ_MODES.length) + VIZ_MODES.length) % VIZ_MODES.length;
-  var vizModeT=null;
+  if(IS_IOS) state.vizMode=0;   // reactive modes need the Web Audio tap we skip on iOS; lock to the phonograph
+  var vizModeT=null, iosVizNoted=false;
   function flashVizMode(){ var m=$('vizMode'); m.textContent=VIZ_MODES[state.vizMode].name; m.classList.add('show'); clearTimeout(vizModeT); vizModeT=setTimeout(function(){ m.classList.remove('show'); },1400); }
-  function cycleViz(){ state.vizMode=(state.vizMode+1)%VIZ_MODES.length; save('otr_viz', String(state.vizMode)); peaks=null; vuVal=0; flashVizMode(); }
-  vizC.title='Click to change visualizer';
+  function cycleViz(){
+    if(IS_IOS){ if(!iosVizNoted){ iosVizNoted=true; toast('Visualizer is simplified on iPhone so audio keeps playing when locked'); } return; }
+    state.vizMode=(state.vizMode+1)%VIZ_MODES.length; save('otr_viz', String(state.vizMode)); peaks=null; vuVal=0; flashVizMode();
+  }
+  vizC.title = IS_IOS ? 'Old Time Radio' : 'Click to change visualizer';
   vizC.addEventListener('click', cycleViz);
   vizC.setAttribute('tabindex','0'); vizC.setAttribute('role','button'); vizC.setAttribute('aria-label','Change visualizer');
   vizC.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycleViz(); } });
@@ -899,7 +915,7 @@
   function drawViz(){
     vizRAF=requestAnimationFrame(drawViz);
     var w=vizC.clientWidth, h=vizC.clientHeight; if(!w||!h) return;
-    var playing = !!analyser && !audio.paused;
+    var playing = !audio.paused;                 // spins during native iOS playback too (no analyser there)
     if(analyser) analyser.getByteFrequencyData(freq);
     VIZ_MODES[state.vizMode].draw(w, h, playing);
   }
@@ -1020,6 +1036,8 @@
   window.__otr = {
     ready: function(){ return !!CAT; },
     state: state,
+    isIOS: function(){ return IS_IOS; },
+    webAudio: function(){ return !!ac; },
     catalog: function(){ return CAT; },
     channels: function(){ return CAT ? CAT.channels : []; },
     startChannel: startChannel,

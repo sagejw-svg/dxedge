@@ -85,6 +85,16 @@ def main():
         u2 = pg.evaluate("window.__otr.currentUrl()")
         ck("keyboard 'n' skips", bool(u2) and u2!=u1, {"a":u1,"b":u2})
 
+        # iOS background-audio path (?ios=1): native playback, no Web Audio graph, viz locked
+        pg.goto(f"http://127.0.0.1:{PORT}/index.html?ios=1")
+        pg.wait_for_function("window.__otr && window.__otr.ready()", timeout=15000)
+        ck("iOS: detected via ?ios=1", pg.evaluate("window.__otr.isIOS()")==True)
+        pg.evaluate("window.__otr.startChannel('future')"); pg.wait_for_timeout(300)
+        ios = pg.evaluate("({wa: window.__otr.webAudio(), src: !!document.getElementById('audio').src, viz: window.__otr.state.vizMode})")
+        ck("iOS: no Web Audio graph built (native playback survives lock)", ios["wa"]==False, ios)
+        ck("iOS: audio element has a source", ios["src"]==True, ios)
+        ck("iOS: visualizer locked to phonograph", ios["viz"]==0, ios)
+
         ck("no page errors", errs==[], errs[:3])
         b.close()
     httpd.shutdown()
