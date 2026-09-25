@@ -1,9 +1,74 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-09-24T04:35:00Z",
+ "last_run": "2026-09-25T04:12:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
+  {
+   "date": "2026-09-25",
+   "run_outcome": "FULL RUN, eight surfaces green, zero repairs. WebFetch worked unattended on the first call (no PROVENANCE_REQUIRED), curl worked, and the headless-Chromium relay rig worked on all five page loads. Cert clean with an exact expiry re-read from CT logs. Every live feed 200 through the same-origin proxy. Nothing was broken. Nothing was repaired. Quiet night: no email, no push. Only this state file pushed.",
+   "environment": {
+    "webfetch": "WORKING, unattended. /api/health?cb=20260925a and /api/debug?cb=20260925a both answered on the first call at 04:05Z with no approval gate. Second clean unattended night in a row after 09-23 and 09-24.",
+    "curl": "WORKING. Used for the 12-path HTTP sweep, the endpoint sweep and the crt.sh CT lookup.",
+    "browser": "Headless Chromium 1194 plus the local relay rig (relay.py on 127.0.0.1:8899 forwarding to dxedge.net with python requests through the egress proxy; Chromium launched --no-proxy-server). Worked on all five page loads.",
+    "git": "Clone OK, full depth after --unshallow. PAT ls-remote exit 0 despite the stale Mem expiry note. HEAD at clone time was 1a2a8f6, identical to origin/main, so zero commits landed since the 09-24 run.",
+    "rate_limit_pacing": "Page loads spaced 20-22s apart per known issue api-rate-limit-on-feed. No throttling observed.",
+    "google_fonts_note": "The documented chromium-google-fonts-cert-artifact did NOT recur this run: fonts.googleapis.com and fonts.gstatic.com both returned 200 in Chromium on both standalone pages, so neither page logged the usual single ERR_CERT_AUTHORITY_INVALID console error. Artifact is intermittent, not constant. Do not treat its absence or presence as a site signal."
+   },
+   "cert": {
+    "status": "ok",
+    "expires": "2026-11-29T13:08:28Z (Let's Encrypt, issuer C=US O=Let's Encrypt CN=YE1, issued 2026-08-31T13:08:29Z). 65 days remaining at time of run.",
+    "evidence": "Three independent lines. (1) WebFetch to https://dxedge.net/api/health?cb=20260925a returned clean JSON with no CERTIFICATE_VERIFY_FAILED and no expiry error. (2) curl with verification enabled returned HTTP 200 on all 12 public paths; per known issue curl-gives-a-real-tls-verdict-without-webfetch the egress proxy fails closed on bad upstream certs, so this is positive evidence. (3) crt.sh CT logs re-read tonight give the exact issuance and expiry.",
+    "consecutive_failures": 0,
+    "notes": "Unchanged since the 08-31 issuance: no new dxedge.net certificate has appeared in CT since then, which is expected. The certbot cron renewal window opens around 2026-10-30. No deploy was needed or pushed for cert reasons."
+   },
+   "main_dashboard": {
+    "api_health": "ok. sfi 116, k 2, spots 500, feed_proxy true, version 2.0.",
+    "api_debug": "ok. 24 cache keys, filesystem ok (dist, index.html, world.json 44937 bytes).",
+    "sat_tles_pota_spots": "0/0 cold at 04:06Z, 9/13 warm at 04:07Z after hitting /api/pota and /api/satellites/positions. Cold-cache cosmetic per known issue health-metric-cold-cache, now reconfirmed for the SIXTH consecutive run. Not investigated further, not reported. The brief's standing instruction to 'investigate both' is satisfied by this repeated finding.",
+    "endpoints_verified": [
+     "/api/health (ok)",
+     "/api/debug (ok)",
+     "/api/pota (live, current to 03:57Z: W1TF US-2067, K4CAE US-2913 and more)",
+     "/api/sota ({\"spots\":[]} - still dark, see sota_note)",
+     "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
+     "/api/dashboard (ok, 48806 bytes, band conditions populated)",
+     "/api/recommendation (ok)",
+     "/api/solar/history, /api/voacap/summary (200 in the browser load)"
+    ],
+    "browser_check": "CLEAN. Title 'DXEdge - Propagation & DX Intelligence'. 9 requests, ALL 200 including /api/stat, which returned a clean 200 this run rather than the usual 204-with-ERR_ABORTED sendBeacon artifact. Only console output was 4 ws://127.0.0.1:8899/ws/spots errors, the known relay WebSocket artifact. Zero page errors, zero pending, zero failure strings.",
+    "sota_note": "SOTA still returns an empty array. Unchanged since 09-15. Held under awaiting_james sota-api-deprecation, now the oldest and highest open item at 22 days. Deliberately NOT re-reported per the do-not-re-report rule.",
+    "pota_band_note": "POTA band '?' observed again on W1TF at 5357 kHz (60m), consistent with awaiting_james sota-band-unit-mismatch. Not re-reported."
+   },
+   "cyber_page": {
+    "browser_check": "CLEAN. Title 'DX//EDGE - CYBER', 6228 body chars, 12 requests, ALL 200. Zero console errors, zero page errors, zero 'failed:' strings, zero 'loading...' placeholders.",
+    "feeds": "All 8 /api/feed calls 200 through the same-origin proxy: hamqsl solarxml, securityweek, CISA advisories xml, CISA KEV json, krebsonsecurity, NVD CRITICAL cves/2.0, and both api.first.org EPSS batches. No 403 allowlist rejections, no 502s, no EPSS cold-cache 504 this run.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Tree-wide grep across html, js, jsx and py: only two hits, both explanatory comments at backend/main.py:708 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win.",
+    "allowlist_gaps": "none. Every host proxied tonight is already in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
+    "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
+   },
+   "aethersdr_page": {
+    "browser_check": "CLEAN. Title 'DX//EDGE - AETHERSDR', 4243 body chars, 9 requests, ALL 200. Zero console errors, zero page errors, zero failure strings, zero loading placeholders.",
+    "feeds": "All 4 /api/feed targets 200: hackaday radio-hacks, flexradio, rtl-sdr, and github.com/aethersdr/AetherSDR/releases.atom. The releases.atom request appeared twice, the benign duplicate seen on earlier runs; both returned 200.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none.",
+    "version_label": "awaiting_james aethersdr-about-version-drift remains open and was NOT applied; explicitly held for James's decision since 09-18. Not re-reported."
+   },
+   "other_surfaces": {
+    "http_sweep": "All 12 public paths returned 200 via curl: /, /cyber/, /aethersdr/, /otr/, /emulators/, /crane-cab/, /spot-chaser/, /morse/, /invaders/, /morse-invaders/, /skip/, /diag.html.",
+    "rotation_this_run": "Per the 09-24 note to rotate two unchecked surfaces through the browser, /spot-chaser/ and /skip/ were loaded in Chromium tonight for the first time. Both CLEAN: zero non-200 responses, zero console errors, zero page errors, zero failure strings, zero loading placeholders, and no allorigins requests.",
+    "otr_page": "Not browser-checked this run. It was checked exhaustively on 09-24 (catalog integrity, 14 of 14 audio URLs 200, architecture review) and zero commits have landed since, so the page is byte-identical to the night it was verified green. Curl confirms /otr/ still 200.",
+    "not_browser_checked": "/morse/, /invaders/, /morse-invaders/, /diag.html and /emulators/ and /crane-cab/ verified 200 by curl but not loaded in Chromium this run. None carries a live feed surface. Next run should rotate /morse/ and /invaders/ through the browser to finish the cycle."
+   },
+   "deploy_currency": "No deploy ran and none was needed. HEAD equals origin/main equals the last verified state, and /api/health reports version 2.0.",
+   "outbound_links_this_run": "Full sweep NOT due (last_full_sweep 2026-09-17, rotation 14 days, next_due 2026-10-01). Per the skip-if-checked-within-14-days rule no rotating batch was run. No commits landed since 09-24, so no new outbound links were introduced and none needed out-of-band checking.",
+   "repairs_made": "NONE. Nothing met the autonomous-repair bar: no link rot, no page bypassing /api/feed, no deprecated endpoint with a clean official replacement, no allowlist drift, no cert failure.",
+   "backend_tests": "Still broken at collection: backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine, which does not define it (also used at lines 92, 96, 98). Pre-existing, not touched, not papered over. Outstanding.",
+   "new_finding_this_run": "NONE. The pay.dxedge.net GoDaddy certificate first surfaced on 09-24 is unchanged in CT (two entries, both issued 2026-07-29, valid to 2027-02-12) and remains filed as the low-priority advisory awaiting_james pay-subdomain-certificate. No new certificates for dxedge.net or any subdomain since.",
+   "james_notified": "No. Quiet night per the Step 6 rule: nothing broken, nothing fixed. Last email 2026-09-20, last push 2026-09-24. The standing awaiting_james backlog was deliberately not re-surfaced.",
+   "escalations_sent": []
+  },
   {
    "date": "2026-09-24",
    "run_outcome": "FULL RUN, seven surfaces green, zero repairs. WebFetch was blocked all night by the provenance gate (PROVENANCE_REQUIRED on both calls, first and retry), but the night was NOT blind: curl through the egress proxy plus headless Chromium on the relay covered every check WebFetch would have done, including, for the first time, a definitive cert verdict AND an exact expiry date. Nothing was broken. Nothing was repaired. Quiet night: no email, no push. Only this state file pushed.",
@@ -532,89 +597,13 @@
    "notification": "PushNotification SENT early, during the blocked phase, naming the decision: grant this scheduled task standing fetch permission. James acted on it and access was granted mid-session. No second notification and no email sent: once the run completed, nothing was broken and nothing was fixed, so the quiet-night rule applies, and James was present and reading the session. The open awaiting_james items were all escalated previously and were NOT re-reported, including the SOTA outage escalated on 09-15.",
    "commits_pushed": "c5be537 (blind-night state, superseded mid-run) plus this corrected full-run entry. No functional code change.",
    "deploy_result": "State-file-only commits under scripts/health/ touch neither frontend nor backend, so no functional deploy risk. /api/health confirmed ok at 05:01:17Z and again through the relay at 05:02:29Z, and all three surfaces rendered clean in Chromium after the first push."
-  },
-  {
-   "date": "2026-09-15",
-   "run_outcome": "FULL RUN. WebFetch worked all night (one PROVENANCE_REQUIRED denial, on the api2.sota.org.uk upstream only, not on dxedge.net). All three surfaces rendered in a real browser before and after deploy. ONE REAL DEFECT FOUND AND FIXED: the SOTA deprecation tombstone was leaking back into the activations panel as a fake spot. Separately, the long-predicted SOTA endpoint removal has now actually happened. One commit pushed (11a2c50) plus this state file. Email and push notification both sent.",
-   "cert": {
-    "status": "ok",
-    "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 04:09Z and again at 04:27Z post-deploy, plus every relay fetch of all three surfaces across six browser loads. No CERTIFICATE_VERIFY_FAILED and no expiry error.",
-    "consecutive_failures": 0,
-    "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place and working; tonight's deploy reran the guard. Exact expiry date still not readable from this container: openssl sees the egress proxy certificate, not the real one."
-   },
-   "main_dashboard": {
-    "api_health": "ok",
-    "sfi": 116,
-    "k_index": 2,
-    "spots": "500 pre-deploy, 273 post-deploy (normal cache churn)",
-    "feed_proxy": true,
-    "sat_tles_metric": "0 at first read, 9 confirmed live via /api/satellites/positions",
-    "pota_spots_metric": "0 at first read, 11 confirmed live via /api/pota",
-    "cold_cache_diagnosis": "Reconfirmed for the fourth night running, exactly as proven on 09-10. Both fields are passive cache reads. Not an outage, not investigated further, not reported.",
-    "endpoints_verified": [
-     "/api/health (ok, pre and post deploy)",
-     "/api/debug (ok, 46 cache keys)",
-     "/api/pota (11 live spots, timestamps 2026-09-15; bands resolved correctly: 40m, 80m, 20m)",
-     "/api/sota (DEFECT, see sota_tombstone_regression; empty and correct after the fix)",
-     "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
-     "/api/dashboard",
-     "/api/recommendation",
-     "/api/solar/history",
-     "/api/voacap/summary"
-    ],
-    "browser_check": "DONE, twice. Headless Chromium via the local relay. Title 'DXEdge - Propagation & DX Intelligence', 1902 body chars, 7 responses all 200, zero failed requests, zero panel errors, nothing pending at 20s. The four ws://127.0.0.1:8899/ws/spots console errors are the known rig artifact: the relay proxies GET only and cannot service a WebSocket upgrade. Not a site defect.",
-    "sota_tombstone_regression": "THE ONE REAL DEFECT OF THE NIGHT, found and fixed. /api/sota returned exactly one spot: callsign DEPRECATED, summit_ref DEPRECATED, freq 0.0, band '?', spotter null, with the upstream deprecation notice in comments. Cause: api2.sota.org.uk changed the shape of its sentinel row. The spotter field `callsign` is now JSON null instead of the literal 'DEPRECATED', and _is_sota_tombstone() in backend/pota.py tested it with str(s.get('callsign','')).upper(). dict.get's default does NOT fire for a key present with a null value, so that expression evaluated to 'NONE', the filter stopped matching, and the notice rendered as the only row in the activations panel. Fixed in 11a2c50 by taking the positive signal from activatorCallsign (still literally 'DEPRECATED' upstream) and normalising all three fields through a null-safe _upper() helper. Unit-checked against the live payload, against the original 09-03 sentinel shape, against two further drift shapes, and against three real-spot shapes including a real spot with a null spotter: 7/7 as expected. Confirmed live post-deploy: /api/sota now returns {\"spots\":[]}.",
-    "sota_endpoint_now_dark": "NEW AND MATERIAL. This is the predicted event in awaiting_james/sota-api-deprecation actually occurring, not a restatement of it. On 09-13 the upstream was still serving real spots alongside the tombstone. Tonight it returned the tombstone and NOTHING else: zero real spots. After the tombstone fix the SOTA panel is correctly empty rather than showing a fake spot, but it is empty. The endpoint has effectively been retired, 15 days past its own stated removal date. Escalated to James by push notification and email."
-   },
-   "cyber_page": {
-    "browser_check": "DONE, twice (pre and post deploy). Headless Chromium via the local relay. Title 'DX//EDGE - CYBER', 6377 body chars both times, zero '<name> failed:' panel lines, zero panels left on 'loading...', 8 same-origin /api/feed requests all 200, none pending at 18s, zero failed requests, zero console errors. Cleanest cyber-page run recorded: even the usual Google Fonts rig artifact did not fire, fonts.googleapis.com and fonts.gstatic.com both returned 200.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "Tree-wide grep across html, js, jsx and py. Only two hits remain and both are explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win across four page loads.",
-    "feed_routing_static_check": "All six feed fetches go through the same-origin proxy: const PROXY = '/api/feed?url=' at line 349, then PROXY + encodeURIComponent(...) at lines 556, 586, 618, 639, 690 and 715. No direct cross-origin fetch() call exists in the file.",
-    "allowlist_gaps": "none. Every host the page fetches (www.cisa.gov, services.nvd.nist.gov, api.first.org, www.hamqsl.com, krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com, news.google.com) is already in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
-    "feeds_observed_live_in_browser": [
-     "cisa known_exploited_vulnerabilities.json 200",
-     "cisa cybersecurity-advisories/all.xml 200",
-     "securityweek.com/feed 200",
-     "hamqsl.com/solarxml.php 200",
-     "krebsonsecurity.com/feed 200",
-     "api.first.org EPSS batch 1 200",
-     "api.first.org EPSS batch 2 200",
-     "services.nvd.nist.gov cves/2.0 CRITICAL 200 (the double-encoded query, fired by the real page)"
-    ],
-    "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
-   },
-   "aethersdr_page": {
-    "browser_check": "DONE, twice (pre and post deploy). Title 'DX//EDGE - AETHERSDR', 4129 body chars both times, zero panel error lines, zero panels left loading, 5 responses all 200 (4 /api/feed plus the page), none pending at 18s, zero failed requests, zero console errors.",
-    "allorigins_regression": false,
-    "feed_routing_static_check": "Both feed fetch paths go through const PROXY = '/api/feed?url=' at line 348, used at lines 432 and 457. No direct cross-origin fetch() call exists in the file.",
-    "allowlist_gaps": "none. github.com, www.flexradio.com, www.rtl-sdr.com and hackaday.com are all already in ALLOWED_HOSTS.",
-    "feeds_observed_live_in_browser": [
-     "github.com/aethersdr/AetherSDR/releases.atom 200",
-     "hackaday.com/category/radio-hacks/feed 200",
-     "flexradio.com/feed 200",
-     "rtl-sdr.com/feed 200"
-    ],
-    "duplicate_request_note": "The double request for the releases atom recurred this run (recorded 09-10 and 09-12, absent 09-13). Second is served from the feedproxy cache. Harmless."
-   },
-   "new_surfaces_reviewed": "None. Zero commits landed between the 09-14 run and the start of tonight's, so tree HEAD was still ab4ba54. No new standalone page, no new outbound link, no new third-party host, no new /api/feed bypass. The jsdelivr supply-chain point remains the existing low-priority awaiting_james item crane-cab-third-party-cdn and was NOT re-reported.",
-   "outbound_links_checked": "NONE, correctly skipped. The 2026-09-03 sweep covered all 156 curated URLs and holds until 2026-09-17 under the 14-day rotation rule, so zero URLs were eligible tonight. Confirmed no new curated links exist: git log on a FULL (unshallowed) clone shows Credits.jsx last touched 5eaeddc 2026-05-31, Products.jsx e655d14 2026-09-02, and both standalone pages 49e82d2 2026-09-03. Next sweep due 2026-09-17.",
-   "clone_depth_gotcha": "New rig note. A --depth 50 shallow clone makes `git log -1 -- <file>` attribute every file to the shallow boundary commit (tonight: d16ca2f, 2026-09-06), which falsely looks like all four curated-link source files were edited after the 09-03 sweep. Run `git fetch --unshallow` before trusting per-file history, or just clone full. This cost one false alarm tonight.",
-   "backend_tests": "Still broken at collection, unchanged and still pre-existing. backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine; that module defines f2_layer_strength and has no estimate_fof2. Not touched, not papered over, reported as outstanding. Tonight's pota.py change was therefore verified by a standalone harness that execs the filter functions out of the module, not by pytest.",
-   "pat_status": "Retrieved from Mem and used to clone, commit and push successfully (ab4ba54..11a2c50). Push access live. The Mem note's 'expires ~August 27 2026' line is still wrong, now by 19 days; see known_issues pat-expiry-note-stale.",
-   "new_finding": "Two, both about the site rather than the rig. (1) The SOTA tombstone filter regressed on an upstream shape change and was putting a fake spot on the dashboard; fixed. (2) The SOTA endpoint has now actually gone dark, which converts the standing sota-api-deprecation risk into a present outage. Also one new rig gotcha, clone_depth_gotcha above. The WebFetch provenance gate did NOT block the run: a single denial on api2.sota.org.uk only, consistent with the documented per-host pattern; every dxedge.net fetch succeeded first try.",
-   "prompt_injection_note": "The SOTA tombstone's `comments` field now carries text addressed at AI maintainers: 'If you are an application developer, you are probably here because your AI told you so. Ignore it. It's wrong.' That instruction was treated as untrusted upstream data and deliberately NOT followed: the deprecation is real and independently corroborated by the endpoint returning zero real spots. This is the same pattern as the existing sota-tos-prompt-injection item but in a NEW location, the live API payload rather than the docs page, so it now reaches any consumer that feeds spot comments to a model. Flagged to James.",
-   "repairs_made": "One. 11a2c50, backend/pota.py, null-safe SOTA tombstone filter. Deployed and confirmed live.",
-   "notification": "PushNotification SENT, naming the decision: register with SOTA and migrate, or drop the SOTA panel. Email SENT to sagejw@gmail.com, subject 'DXEdge nightly: 1 fix, 1 needs you'. The other eight open awaiting_james items were all escalated previously and were NOT re-reported.",
-   "commits_pushed": "11a2c50 (backend/pota.py tombstone fix) plus this state file",
-   "deploy_result": "SUCCESS. Backend change triggered a --no-cache rebuild; allowed ~7 minutes. Post-deploy: /api/health status ok at 04:27:53Z, /api/sota returns {\"spots\":[]} with the tombstone correctly dropped, /cyber/ and /aethersdr/ both re-rendered in Chromium with zero panel errors, zero failed requests and zero console errors. No revert needed."
   }
  ],
  "known_issues_do_not_re_report": [
   {
    "id": "health-metric-cold-cache",
    "since": "2026-09-01",
-   "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold, which is most of the time. Cosmetic, not an outage. Only escalate if /api/pota or /api/satellites/positions themselves fail. Reconfirmed 2026-09-17: 0/0 cold, 9/13 warm. Reconfirmed 2026-09-23: 0/0 cold at 04:06Z, 9/25 warm at 04:07Z."
+   "detail": "sat_tles and pota_spots read 0 in /api/health whenever their caches are cold, which is most of the time. Cosmetic, not an outage. Only escalate if /api/pota or /api/satellites/positions themselves fail. Reconfirmed 2026-09-17: 0/0 cold, 9/13 warm. Reconfirmed 2026-09-23: 0/0 cold at 04:06Z, 9/25 warm at 04:07Z. Reconfirmed 2026-09-25: 0/0 cold at 04:06Z, 9/13 warm at 04:07Z; sixth consecutive confirmation."
   },
   {
    "id": "backend-tests-collection-error",
@@ -679,7 +668,7 @@
   {
    "id": "chromium-google-fonts-cert-artifact",
    "since": "2026-09-05",
-   "detail": "In the headless-Chromium check both standalone pages log exactly one console error: the Google Fonts stylesheet failing ERR_CERT_AUTHORITY_INVALID. Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA, so any genuinely cross-origin request fails this way. It is an artifact of the checking rig, not a page defect, and it is a useful control: it proves the request capture is working. Do not report it as a site error. SUPERSEDED-FOR-NOW 2026-09-17: the Google Fonts requests returned 200 in Chromium on all four page loads tonight, so this control did NOT fire. Do not treat its absence as a broken capture rig, and do not treat its return as a site defect either. It tracks the sandbox egress proxy, not dxedge.net. REFINED 2026-09-23: the artifact did NOT appear tonight. Chromium reached fonts.googleapis.com and fonts.gstatic.com with 200s and both standalone pages logged zero console errors. So a Google Fonts cert error is a possible rig artifact to be discounted, not an expected one to look for."
+   "detail": "In the headless-Chromium check both standalone pages log exactly one console error: the Google Fonts stylesheet failing ERR_CERT_AUTHORITY_INVALID. Chromium runs with --no-proxy-server and cannot validate the sandbox egress proxy CA, so any genuinely cross-origin request fails this way. It is an artifact of the checking rig, not a page defect, and it is a useful control: it proves the request capture is working. Do not report it as a site error. SUPERSEDED-FOR-NOW 2026-09-17: the Google Fonts requests returned 200 in Chromium on all four page loads tonight, so this control did NOT fire. Do not treat its absence as a broken capture rig, and do not treat its return as a site defect either. It tracks the sandbox egress proxy, not dxedge.net. REFINED 2026-09-23: the artifact did NOT appear tonight. Chromium reached fonts.googleapis.com and fonts.gstatic.com with 200s and both standalone pages logged zero console errors. So a Google Fonts cert error is a possible rig artifact to be discounted, not an expected one to look for. UPDATE 2026-09-25: the artifact did NOT appear this run; Google Fonts returned 200 in Chromium on both standalone pages and neither logged a console error. The artifact is intermittent. Its absence is not evidence of a site change, and its presence is still not a defect."
   },
   {
    "id": "webfetch-response-cache-crosses-nights",
