@@ -16,7 +16,7 @@ from lotw import query_lotw
 from cache import cache
 from voacap_engine import predict_path, REGIONS
 from database import init_db, load_solar_history, load_recent_spots
-from pota import fetch_pota, fetch_sota
+from pota import fetch_pota
 from contests import fetch_contests
 from feedproxy import fetch_feed, FeedProxyError
 from satellites import fetch_tles, current_positions, predict_passes, grid_to_latlon as sat_grid_to_latlon
@@ -562,25 +562,19 @@ async def get_sat_passes(
 async def get_contests():
     return {"contests": await fetch_contests()}
 
-# --- POTA / SOTA spots ---
+# --- POTA spots ---
 @app.get("/api/pota")
 async def get_pota():
     return {"spots": await fetch_pota()}
 
-@app.get("/api/sota")
-async def get_sota():
-    return {"spots": await fetch_sota()}
-
 @app.get("/api/activations")
 async def get_activations():
-    """Combined POTA + SOTA spots."""
-    pota, sota = await asyncio.gather(fetch_pota(), fetch_sota())
-    all_spots = pota + sota
-    all_spots.sort(key=lambda x: x.get("time_utc",""), reverse=True)
+    """Live POTA activator spots."""
+    pota = list(await fetch_pota())
+    pota.sort(key=lambda x: x.get("time_utc", ""), reverse=True)
     return {
         "pota": pota,
-        "sota": sota,
-        "total": len(all_spots),
+        "total": len(pota),
     }
 
 # --- Callsign spot lookup ---
