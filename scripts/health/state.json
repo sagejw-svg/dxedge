@@ -73,7 +73,10 @@
    "escalations_sent": [
     "dxsummit-unreachable (email only)",
     "fiiir-tls-failure (email only)"
-   ]
+   ],
+   "commit_pushed": "c24545e (Cyber page: fix three cisa.gov 404s; nightly health state for 2026-09-26). Parent d59e687.",
+   "deploy_result": "SUCCESS, and unusually fast. The change was live on /cyber/ within about 60 seconds of the push, which is expected for a frontend-only change: deploy.yml took the no-rebuild branch, so there was no --no-cache container build. Verified four ways. (1) The live /cyber/ was fetched and byte-compared against repo HEAD: identical apart from a trailing newline added by the curl capture, so the deployed file IS the committed file. This is the frontend/public/ byte-compare trick from the 09-24 run and it partly answers known issue deploy-verification-gap. (2) All three replacement cisa.gov URLs are present in the served HTML and none of the three 404 URLs remain. (3) /api/health returned status ok, version 2.0 after the deploy. (4) Both standalone pages were reloaded in Chromium post-deploy and both came back CLEAN: /cyber/ 12 requests all 200, /aethersdr/ 9 requests all 200, zero console errors, zero page errors, zero failure strings, zero loading placeholders on either. No revert was needed.",
+   "post_deploy_health": "ok. sfi 116, k 2, spots 500, sat_tles 9, feed_proxy true, version 2.0. pota_spots read 0 again on the post-deploy call, which is the cold-cache artifact recurring after the container restart, not a regression: /api/pota itself served live spots both before and after."
   },
   {
    "date": "2026-09-25",
