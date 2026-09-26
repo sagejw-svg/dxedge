@@ -26,14 +26,6 @@ const TOOLS = [
     icon: '📶',
   },
   {
-    id: 'dxsummit',
-    label: 'DX Summit',
-    url: 'https://www.dxsummit.fi',
-    embed: null,
-    description: 'Live DX cluster spots from worldwide sources.',
-    icon: '🔭',
-  },
-  {
     id: 'reversebeacon',
     label: 'Reverse Beacon',
     url: 'https://www.reversebeacon.net',

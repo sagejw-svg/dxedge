@@ -14,7 +14,7 @@
   "automata": "Cellular automata & chaos",
   "physics": "Physics & science sims"
  },
- "count": 345,
+ "count": 344,
  "emulators": [
   {
    "id": "8bitworkshop",
@@ -3036,44 +3036,6 @@
     "waves"
    ],
    "pick": true,
-   "checked": "2026-09-17",
-   "confidence": "verified"
-  },
-  {
-   "id": "fiiir-windowed-sinc-fir-filter-designer",
-   "name": "FIIIR! Windowed-Sinc FIR Filter Designer",
-   "url": "https://fiiir.com/",
-   "cat": "signal",
-   "systems": [
-    "FIR filter design",
-    "windowed sinc",
-    "moving average",
-    "single-pole IIR"
-   ],
-   "blurb": "Tom Roelandts' browser tool designs low/high/band-pass and band-reject windowed-sinc FIR filters and simple IIR filters, plotting the ideal and actual response.",
-   "why": "Produces filter taps you can paste into microcontroller or SDR code, with a live view of transition band and stopband.",
-   "can": [
-    "choose filter type and window",
-    "set cutoff and transition width",
-    "see the frequency response",
-    "download the coefficients",
-    "design moving-average filters"
-   ],
-   "repo": null,
-   "stars": null,
-   "license": null,
-   "ease": 5,
-   "ease_note": "Fill in a form and click Compute",
-   "needs_files": false,
-   "offline": false,
-   "year": 1965,
-   "tags": [
-    "design",
-    "dsp",
-    "filter",
-    "fir"
-   ],
-   "pick": false,
    "checked": "2026-09-17",
    "confidence": "verified"
   },
