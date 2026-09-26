@@ -1,9 +1,80 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-09-25T04:12:00Z",
+ "last_run": "2026-09-26T04:30:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
+  {
+   "date": "2026-09-26",
+   "run_outcome": "FULL RUN, five surfaces green in the browser plus a 12-path curl sweep, and THREE REAL LINK REPAIRS pushed. WebFetch hit PROVENANCE_REQUIRED on the first call and answered clean on the immediate retry. The repairs came from a source earlier runs had not been reading: the site's own published /health/linkcheck.json, regenerated 2026-09-21 from GitHub Actions with normal egress, which listed three cisa.gov 404s on the cyber page. All three were independently reconfirmed tonight through the site's own /api/feed, canonical replacements were found and verified 200, and the fix was pushed. See known issue published-linkcheck-json-is-the-fresher-source.",
+   "environment": {
+    "webfetch": "WORKING on retry. /api/health?cb=20260926a returned PROVENANCE_REQUIRED; ?cb=20260926b answered clean at 04:11Z, as did /api/debug. Lesson: always retry once with a new cache-buster before declaring a blind night.",
+    "curl": "WORKING. Used for the 12-path HTTP sweep, cache warming, the linkcheck.json read, and the independent re-test of every broken entry.",
+    "browser": "Headless Chromium 1194 plus the local relay rig rebuilt from scratch (relay.py on 127.0.0.1:8899 forwarding to dxedge.net with python requests through the egress proxy; Chromium launched --no-proxy-server). Worked on all five page loads.",
+    "git": "Clone OK (--depth 50). PAT ls-remote exit 0 despite the stale Mem expiry note. HEAD at clone time was d59e687, identical to origin/main, so zero commits had landed since the 09-25 run.",
+    "rate_limit_pacing": "Page loads spaced 20-22s apart and /api/feed probes 7s apart per known issue api-rate-limit-on-feed. No throttling observed.",
+    "google_fonts_note": "Fonts loaded 200 in Chromium on both standalone pages again; the chromium-google-fonts-cert-artifact did not recur. Not a site signal either way."
+   },
+   "cert": {
+    "status": "ok",
+    "expires": "2026-11-29T13:08:28Z (Let's Encrypt, issuer CN=YE1, issued 2026-08-31T13:08:29Z). 64 days remaining at time of run. Carried forward from the 09-24/09-25 CT reads; no new dxedge.net certificate expected before the certbot window opens around 2026-10-30.",
+    "evidence": "Two lines. (1) WebFetch to https://dxedge.net/api/health?cb=20260926b returned clean JSON with no CERTIFICATE_VERIFY_FAILED and no expiry error. (2) curl with verification enabled returned 200 on all 12 public paths and on every /api/feed probe; per known issue curl-gives-a-real-tls-verdict-without-webfetch the egress proxy fails closed on bad upstream certs, so a clean curl is positive evidence.",
+    "consecutive_failures": 0,
+    "notes": "No cert deploy was needed. The deploy that DID run tonight was for the link fix and reran cert_repair.sh as a side effect."
+   },
+   "main_dashboard": {
+    "api_health": "ok. sfi 116, k 2, spots 500, feed_proxy true, version 2.0.",
+    "api_debug": "ok. 11 cache keys at 04:11Z cold, filesystem ok (dist, index.html, world.json 44937 bytes).",
+    "sat_tles_pota_spots": "0/0 cold at 04:11Z, 9/18 warm at 04:12Z after hitting /api/pota and /api/satellites/positions. Cold-cache cosmetic per known issue health-metric-cold-cache, now reconfirmed for the SEVENTH consecutive run. Not investigated further, not reported. The brief's standing instruction to 'investigate both' is satisfied by this repeated finding.",
+    "endpoints_verified": [
+     "/api/health (ok)",
+     "/api/debug (ok)",
+     "/api/pota (live, current to 04:04Z: JA5SAN/P JP-1670, PA4PA NL-0219 and more)",
+     "/api/sota ({\"spots\":[]} - still dark, see sota_note)",
+     "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
+     "/api/recommendation (ok, 15m local / 80m JA)",
+     "/api/dashboard, /api/solar/history, /api/voacap/summary (200 in the browser load)"
+    ],
+    "browser_check": "CLEAN. Title 'DXEdge - Propagation & DX Intelligence', 1947 body chars, 9 requests, all 200 except the documented /api/stat 204 with net::ERR_ABORTED sendBeacon artifact. Only console output was 3 ws://127.0.0.1:8899/ws/spots relay artifacts. Zero page errors, zero pending, zero failure strings.",
+    "sota_note": "SOTA still returns an empty array. Unchanged since 09-15. Held under awaiting_james sota-api-deprecation, now the oldest and highest open item at 23 days. Deliberately NOT re-reported."
+   },
+   "cyber_page": {
+    "browser_check": "CLEAN. Title 'DX//EDGE - CYBER', 6171 body chars, 12 requests, ALL 200. Zero console errors, zero page errors, zero 'failed:' strings, zero 'loading...' placeholders, nothing pending at 18s.",
+    "feeds": "All 8 /api/feed calls 200 through the same-origin proxy: hamqsl solarxml, securityweek, CISA advisories all.xml, krebsonsecurity, CISA KEV json, NVD CRITICAL cves/2.0, and both api.first.org EPSS batches. No 403 allowlist rejections, no 502s, no EPSS cold-cache 504.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Tree-wide grep across html, js, jsx, py and json: only two source hits, both explanatory comments at backend/main.py:708 and backend/feedproxy.py:3. PROXY is '/api/feed?url=' at cyber/index.html:349 and all 6 getCached call sites (556, 586, 618, 639, 690, 715) pass PROXY + encodeURIComponent. Browser capture recorded zero requests to allorigins.win.",
+    "allowlist_gaps": "none. Every one of the 107 curated hosts the page proxies is already in ALLOWED_HOSTS. No allowlist change made, needed, or proposed. The three links repaired tonight are all on www.cisa.gov, already allowlisted, so the repair required no security-relevant change at all.",
+    "repairs_made_here": "THREE cisa.gov 404s fixed, all human-facing links rather than feeds, all verified before and after through the site's own /api/feed (which sends a browser UA and so is not subject to known issue cisa-gov-403-to-direct-fetch): (1) line 719 'open feed' fallback link https://www.cisa.gov/cybersecurity-advisories 404 -> https://www.cisa.gov/news-events/cybersecurity-advisories 200. Note the FEED itself at line 714, https://www.cisa.gov/cybersecurity-advisories/all.xml, still returns 200 and was deliberately left alone: CISA moved the HTML landing page but kept the feed path. (2) line 524 CSPM card https://www.cisa.gov/secure-cloud-business-applications-scuba 404 -> https://www.cisa.gov/resources-tools/services/secure-cloud-business-applications-scuba-project 200. An intermediate guess without the '-project' suffix also 404d and was discarded. (3) line 525 MFA card https://www.cisa.gov/sites/default/files/2023-02/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf 404 -> https://www.cisa.gov/sites/default/files/publications/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf 200, confirmed by a %PDF-1.7 magic number in the body. Same document, same publisher, same page text; no semantics changed.",
+    "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
+   },
+   "aethersdr_page": {
+    "browser_check": "CLEAN. Title 'DX//EDGE - AETHERSDR', 4283 body chars, 9 requests, ALL 200. Zero console errors, zero page errors, zero failure strings, zero loading placeholders.",
+    "feeds": "All 4 /api/feed targets 200: hackaday radio-hacks, flexradio, rtl-sdr, and github.com/aethersdr/AetherSDR/releases.atom. releases.atom appeared twice again, the documented benign duplicate; both 200.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "none. PROXY at aethersdr/index.html:348, both getCached call sites (432, 457) go through it.",
+    "version_label": "awaiting_james aethersdr-about-version-drift remains open and was NOT applied; held for James since 09-18. Not re-reported.",
+    "dxsummit_link": "NEW, see awaiting_james dxsummit-unreachable. https://www.dxsummit.fi/ in this page failed from two independent networks. NOT removed."
+   },
+   "other_surfaces": {
+    "http_sweep": "All 12 public paths returned 200 via curl: /, /cyber/, /aethersdr/, /otr/, /emulators/, /crane-cab/, /spot-chaser/, /morse/, /invaders/, /morse-invaders/, /skip/, /diag.html.",
+    "rotation_this_run": "Per the 09-25 note to finish the cycle, /morse/ and /invaders/ were loaded in Chromium tonight for the first time. Both CLEAN: zero non-200 (bar the documented /api/stat artifact on /invaders/), zero console errors, zero page errors, zero failure strings, zero loading placeholders, no allorigins. /morse/ 436 body chars, /invaders/ 42 body chars, both expected for canvas surfaces.",
+    "cycle_status": "The browser rotation cycle is now COMPLETE. Every public surface has been loaded in a real browser at least once: /, /cyber/, /aethersdr/ every night; /otr/ and /emulators/ on 09-23/09-24; /crane-cab/ on 09-24; /spot-chaser/ and /skip/ on 09-25; /morse/ and /invaders/ tonight. Only /morse-invaders/ and /diag.html remain browser-unseen; neither carries a feed surface. Next run should take those two and close the set."
+   },
+   "outbound_links_this_run": {
+    "curated_sweep": "Full sweep still NOT due by the 14-day rule (last_full_sweep 2026-09-17, next_due 2026-10-01), and no commit has touched Credits.jsx, Products.jsx or either standalone page since 47795e7 on 09-22, whose 3 new links were already checked on 09-24. So no rotating batch was fetched.",
+    "published_report_read": "NEW THIS RUN and the reason tonight was not quiet. https://dxedge.net/health/linkcheck.json was fetched and parsed: 200, valid JSON, 6456 bytes, generated 2026-09-21T15:55:27Z at commit 586ccc6, covering 663 URLs across all five source files. 639 ok, 15 blocked, 9 broken. This file is newer than the 09-17 in-container sweep and is produced from normal egress with a browser UA, so it is strictly better evidence, and no run between 09-22 and 09-25 had read it.",
+    "broken_9_triaged": "All 9 broken entries were independently re-tested tonight. THREE were genuine rot and are now fixed (the cisa.gov 404s, see cyber_page.repairs_made_here). THREE were transient or environment artifacts and need no action: crt.sh 502 on 09-21 but 200 tonight; www.dxmaps.com timed out on 09-21 but 200 tonight, redirecting to /spots/mapg.php?Lan=E; and http://dxc.ve7cc.net plus http://w3lpl.net both answer 503 through the egress proxy purely because they are http-only, the documented http-only-503 artifact, so neither is rot. TWO are two-network failures that are NOT 404s and NOT provably dead hosts, so they were reported rather than removed: www.dxsummit.fi and fiiir.com. That is 3 fixed, 4 dismissed, 2 escalated, 9 accounted for.",
+    "blocked_15_note": "All 15 blocked entries are bot walls or client-rendered 404s (atlas.mitre.org renders in a browser despite a 404 status; shodan, censys, abuseipdb, raspberrypi.com, eham.net, amazon and the sourceforge pages are 403/503 to automation). Consistent with every prior sweep. None treated as rot, none touched."
+   },
+   "repairs_made": "THREE. All three are outbound-link repairs in frontend/public/cyber/index.html, all 404 -> verified canonical URL on the same host, all within the autonomous mandate and well under the 10-link nightly cap. No feed endpoint, no allowlist, no backend, no infrastructure file touched. The page remains a self-contained single HTML file and index.css was not touched, so repo conventions hold.",
+   "backend_tests": "Still broken at collection: backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine, which does not define it (also used at 92, 96, 98). Pre-existing, not touched, not papered over. Outstanding.",
+   "new_finding_this_run": "The process finding is the important one: the nightly 14-day skip rule was silently suppressing real link rot, because the weekly GitHub Actions linkcheck publishes fresher results to /health/linkcheck.json and no nightly run was reading it. The three cisa.gov 404s had been visible in that file since 09-21 and went unreported for 5 nights. Filed as known issue published-linkcheck-json-is-the-fresher-source so future runs read it every night regardless of sweep due date.",
+   "james_notified": "YES. Email sent to sagejw@gmail.com: 3 fixes, plus the outstanding backlog. No push notification: nothing tonight needs a decision urgently enough to interrupt, and the two new items (dxsummit-unreachable, fiiir-tls-failure) are low severity and covered in the email.",
+   "escalations_sent": [
+    "dxsummit-unreachable (email only)",
+    "fiiir-tls-failure (email only)"
+   ]
+  },
   {
    "date": "2026-09-25",
    "run_outcome": "FULL RUN, eight surfaces green, zero repairs. WebFetch worked unattended on the first call (no PROVENANCE_REQUIRED), curl worked, and the headless-Chromium relay rig worked on all five page loads. Cert clean with an exact expiry re-read from CT logs. Every live feed 200 through the same-origin proxy. Nothing was broken. Nothing was repaired. Quiet night: no email, no push. Only this state file pushed.",
@@ -515,88 +586,6 @@
    "notification": "NONE SENT, quiet-night rule. Nothing was broken and nothing was fixed. All nine open awaiting_james items were escalated on earlier nights and were deliberately NOT re-reported, including the SOTA outage (09-15) and webfetch-permission-at-setup (09-14).",
    "commits_pushed": "State file only.",
    "deploy_result": "A state-file-only commit touches nothing the frontend build or the backend container consumes. Deploy will run as usual on push and was not separately gated on."
-  },
-  {
-   "date": "2026-09-16",
-   "run_outcome": "FULL RUN, all three surfaces green, after an unusual two-phase night. The run opened BLOCKED: five WebFetch calls all returned PROVENANCE_REQUIRED, including an off-site control, so the static checks were completed, a blind-night state file was written and pushed (c5be537), and James was notified by push naming the decision. James then granted access mid-session, WebFetch began working on the first retry, and every live check in Steps 1-3 was executed. Nothing was broken. Nothing was repaired. This entry replaces the blind-night entry originally committed in c5be537.",
-   "gate_event": {
-    "summary": "The provenance gate cleared mid-session for the first time by direct human action rather than by chance retry. Prior clears (09-05, 09-10) happened on an immediate retry with no intervention; tonight the gate was total and sticky across five calls spanning the whole first phase of the run, and only lifted once James granted access.",
-    "denied_calls": "https://dxedge.net/api/health?cb=20260916a twice, https://dxedge.net/api/health bare once, https://api.pota.app/spot/activator as the off-site control once, https://dxedge.net/api/health?nonce=0916r2 late in the run once. All error_type PROVENANCE_REQUIRED.",
-    "first_success": "https://dxedge.net/api/health?nonce=0916live1 immediately after access was granted. Every subsequent fetch and every relay leg worked with no further denial.",
-    "lesson": "A blind night is not necessarily a lost night if James is reachable. The escalation push is worth sending early rather than at the end of the run, because a granted permission converts the whole run from blind to full."
-   },
-   "cert": {
-    "status": "ok",
-    "evidence": "https://dxedge.net/api/health fetched cleanly over TLS at 05:01:17Z, plus /api/debug, /api/pota, /api/sota, /api/satellites/positions and every relay fetch across three browser page loads. No CERTIFICATE_VERIFY_FAILED and no expiry error anywhere in the run.",
-    "consecutive_failures": 0,
-    "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot still in place and working. Exact expiry date still not readable from this container: openssl sees the egress proxy certificate, not the real one."
-   },
-   "main_dashboard": {
-    "api_health": "ok",
-    "sfi": 116,
-    "k_index": 2,
-    "spots": 500,
-    "feed_proxy": true,
-    "sat_tles_metric": "0 at first read, 9 once the cache was warm",
-    "pota_spots_metric": "0 at first read, 9 once the cache was warm",
-    "cold_cache_diagnosis": "Reconfirmed for the fifth night running, exactly as proven on 09-10. Calling /api/pota and /api/satellites/positions warmed both caches and a later /api/health returned sat_tles 9 and pota_spots 9. Passive cache reads, not an outage. Not reported.",
-    "endpoints_verified": [
-     "/api/health (ok, 05:01:17Z)",
-     "/api/debug (ok, 27 cache keys, dist_exists true, world_json 44937 bytes)",
-     "/api/pota (9 live spots, all timestamped 2026-09-16 04:35-05:00)",
-     "/api/sota (empty, {\"spots\":[]}, correct post-fix behaviour, see sota_status)",
-     "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
-     "/api/dashboard",
-     "/api/recommendation",
-     "/api/solar/history",
-     "/api/voacap/summary"
-    ],
-    "browser_check": "DONE. Headless Chromium via the local relay. Title 'DXEdge - Propagation & DX Intelligence', 1902 body chars, 7 responses all 200, zero failed requests, zero panel errors, zero panels left loading, nothing pending at 22s. The four ws://127.0.0.1:8899/ws/spots console errors are the known rig artifact: the relay proxies GET only and cannot service a WebSocket upgrade. The 127.0.0.1 host in those URLs confirms it is the relay and not the site.",
-    "sota_status": "/api/sota returns {\"spots\":[]}. The 11a2c50 tombstone fix is holding: the deprecation sentinel is still being dropped rather than rendered as a fake spot. The endpoint remains dark, which is the highest open awaiting_james item, escalated in full on 09-15 and deliberately NOT re-reported tonight.",
-    "band_question_marks": "Two of tonight's 9 POTA spots render band '?': JF1AWC/1 on 430030.0 kHz and JA1BJT on 430050.1 kHz, both 70cm. This is the existing sota-band-unit-mismatch item, whose 09-10 update already records that FREQ_TO_BAND covers only 160m through 6m and so misses 70cm. Existing item, NOT re-reported."
-   },
-   "cyber_page": {
-    "browser_check": "DONE. Headless Chromium via the local relay. Title 'DX//EDGE · CYBER', 6268 body chars, zero '<name> failed:' panel lines, zero panels left on 'loading...', 8 same-origin /api/feed requests all 200, none pending at 20s, zero failed requests, zero console errors. Cleanest cyber run on record alongside 09-15: the usual Google Fonts rig artifact did not fire, fonts.googleapis.com and fonts.gstatic.com both returned 200.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "Tree-wide grep across html, js, jsx, py and json. Only two hits remain outside this state file's own history, and both are explanatory comments: backend/main.py:704 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win.",
-    "feed_routing_static_check": "All six feed fetches go through const PROXY = '/api/feed?url=' at line 349, used at lines 556, 586, 618, 639, 690 and 715. The only bare fetch( is line 374, inside getCached(), which receives the already-built proxy URL. Confirmed live: the only off-relay requests the page made were the three Google Fonts assets.",
-    "allowlist_gaps": "none. All 11 proxied hosts present in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
-    "feeds_observed_live_in_browser": [
-     "cisa known_exploited_vulnerabilities.json 200",
-     "cisa cybersecurity-advisories/all.xml 200",
-     "securityweek.com/feed 200",
-     "hamqsl.com/solarxml.php 200",
-     "krebsonsecurity.com/feed 200",
-     "api.first.org EPSS batch 1 200",
-     "api.first.org EPSS batch 2 200",
-     "services.nvd.nist.gov cves/2.0 CRITICAL 200 (the double-encoded query, fired by the real page)"
-    ],
-    "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
-   },
-   "aethersdr_page": {
-    "browser_check": "DONE. Title 'DX//EDGE · AETHERSDR', 4146 body chars, zero panel error lines, zero panels left loading, 9 responses all 200, none pending at 20s, zero failed requests, zero console errors.",
-    "allorigins_regression": false,
-    "feed_routing_static_check": "Both feed fetch paths go through const PROXY = '/api/feed?url=' at line 348, used at lines 432 and 457. The only bare fetch( is line 373 inside getCached(). Confirmed live: only off-relay requests were the three Google Fonts assets.",
-    "allowlist_gaps": "none. github.com, www.flexradio.com, www.rtl-sdr.com and hackaday.com all present in ALLOWED_HOSTS.",
-    "feeds_observed_live_in_browser": [
-     "github.com/aethersdr/AetherSDR/releases.atom 200",
-     "hackaday.com/category/radio-hacks/feed 200",
-     "flexradio.com/feed 200",
-     "rtl-sdr.com/feed 200"
-    ],
-    "duplicate_request_note": "The double request for the releases atom recurred (recorded 09-10, 09-12, 09-15; absent 09-13). Second is served from the feedproxy cache. Harmless."
-   },
-   "allowlist_audit_note": "ALLOWED_HOSTS holds exactly 15 entries and the two pages proxy exactly 15 distinct hosts, 11 plus 4, a perfect one-to-one match. No unused entry and no gap. backend/feedproxy.py unchanged since d055aed 2026-09-01. Confirmed live: across three browser loads the only off-relay requests any page made were Google Fonts stylesheet and woff2 assets, which are static <link> resources and never touch the proxy.",
-   "rig_note": "Two fresh gotchas for whoever writes the next static allowlist check, both of which produced a false alarm tonight before the live check cleared them. (1) Do not locate ALLOWED_HOSTS by splitting the source on the first occurrence of the string: feedproxy.py's module docstring names 'evil-cisa.gov' and 'cisa.gov.attacker.net' at lines 11-13 as examples of what must NOT pass a suffix match, and a naive split returns those two as the allowlist. Anchor on 'ALLOWED_HOSTS = frozenset({' instead. (2) Do not harvest feed hosts with a broad https?:// regex over the page source. Both standalone pages embed a large curated directory of ordinary outbound <a href> links plus Google Fonts, none of which touch the proxy; a broad sweep reported 29 and 18 hosts with 18 and 13 phantom 'gaps'. Resolve only the URLs that actually reach PROXY + encodeURIComponent. Also reconfirmed the 09-13 teardown note: kill the relay by exact argv match from /proc, not with pkill -f, which matches the killing shell's own command line.",
-   "new_surfaces_reviewed": "None. Zero commits landed between the 09-15 run and the start of tonight's, so tree HEAD was still 34ac8dc. No new standalone page, no new outbound link, no new third-party host, no new /api/feed bypass.",
-   "outbound_links_checked": "NONE, correctly skipped, and this was a judgement call worth recording. The 2026-09-03 sweep covered all 156 curated URLs and the 14-day rotation makes them eligible on 2026-09-17, so tonight at 13 days every URL was still inside the window and zero were due. WebFetch was working by the end of the run, so a sweep was physically possible, and it was still skipped because the rotation rule is the rule. Confirmed no new curated links exist, on a FULL unshallowed clone per the 09-15 clone_depth_gotcha: Credits.jsx 5eaeddc 2026-05-31, Products.jsx e655d14 2026-09-02, both standalone pages 49e82d2 2026-09-03. Next sweep due 2026-09-17 and it is now the oldest outstanding routine item.",
-   "backend_tests": "Still broken at collection, unchanged and still pre-existing. backend/tests/test_dxedge.py imports estimate_fof2 from voacap_engine at line 64 and uses it at lines 92, 96 and 98; voacap_engine.py defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and has zero definitions of estimate_fof2. Not touched, not papered over, reported as outstanding.",
-   "pat_status": "Retrieved from Mem, verified with git push --dry-run ('Everything up-to-date', exit 0) and used to push c5be537 and this entry. Push access live. The Mem note's 'expires ~August 27 2026' line is still wrong, now by 20 days; see known_issues pat-expiry-note-stale.",
-   "new_finding": "None about the site. All three surfaces green, every feed 200, cert clean. The finding is about the rig and it is a good one: the provenance gate can be cleared by James granting access mid-run, which converted tonight from the fifth blind night into a full run. See gate_event.",
-   "repairs_made": "none. Nothing on any of the three surfaces was broken.",
-   "notification": "PushNotification SENT early, during the blocked phase, naming the decision: grant this scheduled task standing fetch permission. James acted on it and access was granted mid-session. No second notification and no email sent: once the run completed, nothing was broken and nothing was fixed, so the quiet-night rule applies, and James was present and reading the session. The open awaiting_james items were all escalated previously and were NOT re-reported, including the SOTA outage escalated on 09-15.",
-   "commits_pushed": "c5be537 (blind-night state, superseded mid-run) plus this corrected full-run entry. No functional code change.",
-   "deploy_result": "State-file-only commits under scripts/health/ touch neither frontend nor backend, so no functional deploy risk. /api/health confirmed ok at 05:01:17Z and again through the relay at 05:02:29Z, and all three surfaces rendered clean in Chromium after the first push."
   }
  ],
  "known_issues_do_not_re_report": [
@@ -719,6 +708,16 @@
    "id": "otr-audio-is-a-media-element-not-a-feed",
    "since": "2026-09-24",
    "detail": "frontend/public/otr/index.html plays audio by setting audio.src directly to an https://archive.org/download/... URL. This is intentional and is NOT an allorigins-style third-party fetch regression: a media element load is not a CORS fetch and cannot go through /api/feed, which returns text. Do not 'fix' it by routing audio through the feed proxy. The right health check for OTR is to sample episode URLs from catalog.json (prefix + ids[ep[3]] + '/' + ep[4]) and confirm they return 200."
+  },
+  {
+   "id": "published-linkcheck-json-is-the-fresher-source",
+   "since": "2026-09-26",
+   "detail": "https://dxedge.net/health/linkcheck.json is produced by the weekly GitHub Actions job from normal egress with a browser UA, covers all 663 URLs across all five source files, and is usually FRESHER than the in-container 14-day rotating sweep. READ IT EVERY NIGHT, unconditionally, regardless of whether the curated sweep is due. On 2026-09-26 it was read for the first time and immediately surfaced three genuine cisa.gov 404s that the sweep-not-due rule had been skipping since 09-21. Parse-check the body as JSON, not just the status code: if the file is missing the SPA catch-all answers with index.html and HTTP 200. Always re-verify its broken entries independently before editing, since roughly half are transient: of the 9 broken on 09-21, 3 were real, 2 were transient, 2 were the http-only 503 artifact and 2 were two-network failures."
+  },
+  {
+   "id": "http-only-503-through-egress-proxy",
+   "since": "2026-09-26",
+   "detail": "Any http:// (not https) outbound link returns 503 through the sandbox egress proxy no matter whether the host is alive. http://dxc.ve7cc.net and http://w3lpl.net in Credits.jsx hit this every sweep. It is an environment artifact, never link rot. Do not remove an http-only entry on the strength of a 503 from this container."
   }
  ],
  "awaiting_james": [
@@ -796,6 +795,16 @@
    "residual_risk": "Low but not zero, and it is the kind of thing worth knowing about deliberately rather than by accident. A valid publicly-trusted DV certificate exists for a payment-suggestive name under James's domain. It is inert while no DNS record points at it, but anyone who could add or hijack that DNS record would inherit an already-trusted, already-issued cert, and a payment-themed page under a real dxedge.net name is more convincing than any lookalike domain.",
    "decision_needed": "Confirm whether a GoDaddy payments or website product is intentionally enabled on the dxedge.net account. If not, cancelling that product and revoking the two GoDaddy certs removes the inert asset; CAA records on dxedge.net restricting issuance to Let's Encrypt would prevent it recurring. Both are registrar-side changes outside this routine's mandate.",
    "not_notified_because": "Dormant, no DNS, nothing served, no time pressure. Raising it by phone at 9 PM would be noise; it belongs in the next email that goes out."
+  },
+  {
+   "id": "dxsummit-unreachable",
+   "raised": "2026-09-26",
+   "detail": "https://www.dxsummit.fi/ , linked from frontend/public/aethersdr/index.html, failed from two independent networks: 'connection error: timed out' from GitHub Actions in the 2026-09-21 linkcheck, and 'Recv failure: Connection reset by peer' from the nightly container tonight, on both the www and bare hostname. NOT removed, for three reasons: it is not a 404, a connection reset looks more like geo-blocking or a TLS-fingerprint wall than a dead host, and DX Summit is a well known live DX cluster front end that a ham would expect to find in that list. Needs James to open it in a normal browser and say whether it works for him. If it does, add it to a known-artifact list; if it does not, the entry should be removed or repointed."
+  },
+  {
+   "id": "fiiir-tls-failure",
+   "raised": "2026-09-26",
+   "detail": "https://fiiir.com/ , an entry in frontend/public/emulators/emulators.json, failed TLS from two independent networks: '[SSL: CERTIFICATE_VERIFY_FAILED] unable to get local issuer certificate' from GitHub Actions on 2026-09-21, and a secure-connection failure through the egress proxy tonight (the proxy reports bundleCoversEveryHost true, so this is not our CA store). Most likely the site is serving an incomplete certificate chain, which many browsers paper over and automation does not. Left alone: it is not a 404, the host is not dead, and emulators.json is outside the Step 4 curated scope. Needs James to decide whether a site with a broken chain stays linked."
   }
  ],
  "outbound_links": {

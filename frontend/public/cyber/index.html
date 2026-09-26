@@ -521,8 +521,8 @@ const DRILL_DATA = {
     { title: 'MITRE ATT&CK in practice', bullets: ['Map detections to specific (sub)techniques - drives gap analysis and reporting', 'D3FEND complements ATT&CK with defensive countermeasures', 'Detection engineering: per technique, ask "what artifact would prove this happened?"'], link: 'https://attack.mitre.org/' },
     { title: 'Incident response: PICERL', bullets: ['Prepare > Identify > Contain > Eradicate > Recover > Lessons-Learned', 'Containment trade-off: isolate fast (lose forensics) vs collect first (risk spread)', 'Pre-built runbooks per top-5 likely incident types beats writing from scratch under pressure'], link: 'https://www.sans.org/white-papers/33901/' },
     { title: 'Zero trust pragmatics', bullets: ['Identity is the new perimeter - every request authenticated + authorized in context', 'Microsegmentation: blast radius minimization, even inside the "trusted" network', 'Start with your crown jewels - boil-the-ocean zero-trust programs fail'], link: 'https://csrc.nist.gov/pubs/sp/800/207/final' },
-    { title: 'Cloud security posture (CSPM)', bullets: ['Misconfiguration is the #1 cloud breach root cause - public buckets, wide IAM, missing logging', 'Continuous control checks beat point-in-time audits', 'Centralize: org-wide guardrails (SCPs, policies) > per-account fixes'], link: 'https://www.cisa.gov/secure-cloud-business-applications-scuba' },
-    { title: 'Phishing-resistant MFA', bullets: ['TOTP and SMS are phishable via AitM proxies - users surrender both code + cookie', 'WebAuthn/FIDO2/passkeys bind to origin, defeat AitM by design', 'Prioritize phishing-resistant MFA for admins + privileged roles first'], link: 'https://www.cisa.gov/sites/default/files/2023-02/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf' },
+    { title: 'Cloud security posture (CSPM)', bullets: ['Misconfiguration is the #1 cloud breach root cause - public buckets, wide IAM, missing logging', 'Continuous control checks beat point-in-time audits', 'Centralize: org-wide guardrails (SCPs, policies) > per-account fixes'], link: 'https://www.cisa.gov/resources-tools/services/secure-cloud-business-applications-scuba-project' },
+    { title: 'Phishing-resistant MFA', bullets: ['TOTP and SMS are phishable via AitM proxies - users surrender both code + cookie', 'WebAuthn/FIDO2/passkeys bind to origin, defeat AitM by design', 'Prioritize phishing-resistant MFA for admins + privileged roles first'], link: 'https://www.cisa.gov/sites/default/files/publications/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf' },
   ],
 };
 function renderDrill() {
@@ -716,7 +716,7 @@ async function loadCISA() {
     const items = parseFeed(text).map(i => ({ ...i, source: 'CISA' }));
     el.innerHTML = renderFeedItems(items, 10);
   } catch (e) {
-    el.innerHTML = `<div class="feed-error">CISA: ${escapeHtml(e.message)} · <a href="https://www.cisa.gov/cybersecurity-advisories" target="_blank" rel="noopener">open feed ↗</a></div>`;
+    el.innerHTML = `<div class="feed-error">CISA: ${escapeHtml(e.message)} · <a href="https://www.cisa.gov/news-events/cybersecurity-advisories" target="_blank" rel="noopener">open feed ↗</a></div>`;
   }
 }
 
