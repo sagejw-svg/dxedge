@@ -599,7 +599,8 @@
     "webfetch-permission-at-setup",
     "health-metric-cold-cache",
     "backend-tests-collection-error"
-   ]
+   ],
+   "deploy_result": "Commit 06c9f64 (state file only, no code change) pushed to main at 04:32Z and the deploy workflow ran. VERIFIED LIVE at 04:40Z: /api/health returns ok with a fresh timestamp (04:39:58Z, advanced from the 04:06Z read, so this is not a cached body), /sw.js served fresh as JavaScript with CACHE_NAME 'dxedge-v47', and both standalone pages reloaded clean in Chromium afterwards (cyber 9/9 requests 200, aethersdr 5/5 200, zero feed-error nodes, zero page errors on either). Site not broken by the push, no revert needed. Incidental confirmation of health-metric-cold-cache: sat_tles read 0 at 04:06Z and 9 at 04:39Z, pota_spots still 0 while /api/pota served 12 live spots."
   }
  ],
  "known_issues_do_not_re_report": [
