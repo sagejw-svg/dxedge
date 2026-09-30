@@ -59,6 +59,8 @@
   .np .show { font-size: 17px; color: #fff; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
   .np .ep { font-size: 13px; color: var(--amber2); margin-top: 2px; overflow-wrap: anywhere; }
   .np .date { font-size: 11px; color: var(--dim); margin-top: 3px; }
+  .np .src { font-size: 10px; color: var(--green); margin-top: 3px; letter-spacing: .5px; display:none; overflow-wrap:anywhere; }
+  .np .src.note { color: var(--muted); letter-spacing: 0; }
   .np .summary { font-size: 12px; color: var(--muted); margin-top: 9px; line-height: 1.6;
     max-height: 5.2em; overflow: hidden; transition: max-height .25s; }
   .np .summary.open { max-height: 40em; }
@@ -208,6 +210,7 @@
         <div class="onair"><span class="dot"></span><span id="onairText">off air</span></div>
         <div class="show" id="npShow">Select a channel to begin</div>
         <div class="ep" id="npEp"></div>
+        <div class="src" id="npSrc"></div>
         <div class="date" id="npDate"></div>
         <div class="summary" id="npSummary"></div>
         <div class="more" id="npMore">show more</div>
@@ -244,6 +247,7 @@
     <button class="btn" id="searchBtn">🔍 Search episodes</button>
     <button class="btn" id="randomBtn" title="Play a random episode from any show">🎲 Surprise me</button>
     <label class="toggle"><input type="checkbox" id="commToggle" checked> vintage commercials</label>
+    <label class="toggle" id="enhLabel" title="When an episode has a cleaned-up copy (declick, dehiss, hum removal, or a better transfer of the same broadcast), play that instead. Vintage bandwidth and mic color are kept. Episodes without one play the regular copy."><input type="checkbox" id="enhToggle"> enhanced audio when available</label>
     <label class="toggle"><input type="checkbox" id="shuffleToggle" checked> shuffle custom stations</label>
   </div>
 
@@ -325,7 +329,13 @@
     gotPlaying: false,    // this track has actually started producing audio
     awaitingGesture: false, // autoplay blocked, waiting for a user click
     savedActive: -1,      // index of the active saved station chip (bug #10)
-    random: false         // "surprise me" random mode (keeps serving random picks)
+    random: false,        // "surprise me" random mode (keeps serving random picks)
+    source: load('otr_source','original')==='enhanced' ? 'enhanced' : 'original', // listener-wide preference
+    src: null,            // what playCurrent chose for this item: {url, enh, entry, why}
+    enhActive: false,     // the element is playing an enhanced file right now
+    enhFailed: {},        // original URL -> 1 once its enhanced copy failed this session
+    pendingRatio: 0,      // 0..1 position to restore after an Original/Enhanced swap
+    startSeek: 0, startedAt: 0 // offset and wall time this item was started at
   };
   function load(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
   function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
@@ -348,6 +358,115 @@
   // /otr/index.html all work. Relative fetches from /otr hit the SPA fallback.
   var BASE = (function(){ var p=location.pathname; if(!/\/$/.test(p) && !/\.[a-z0-9]+$/i.test(p)) p+='/'; return p.replace(/[^\/]*$/,''); })();
   function getJSON(name){ return fetch(BASE+name).then(function(r){ if(!r.ok) throw new Error(name+' HTTP '+r.status); return r.json(); }); }
+
+  // ---- enhanced audio (optional sidecar: enhanced.json) ----
+  // One listener-wide setting, not a per-episode switch. With "enhanced audio when available"
+  // on, an episode that has a mapped restoration plays it; every other episode plays the regular
+  // archive.org copy, silently. Policy is subtractive cleanup only (declick, dehiss, hum, dropouts,
+  // or a better transfer of the same performance); entries with method "generative" are ignored.
+  // The URL must be directly playable with CORS open (archive.org or an operator bucket). A
+  // missing, empty or broken sidecar leaves the player exactly as it was.
+  // Keys: "showId|YYYY-MM-DD|Title" (title compared case and punctuation blind), "showId||Title"
+  // or "showId|Title" when the title is unique in that show, or the archive filename stem.
+  var ENH = { byFull:{}, byLoose:{}, byStem:{}, count:0 }, titleCounts = {};
+  var LIVE_TOL = 2;   // seconds: on the live clock, enhanced plays only if its runtime matches the catalog's
+  var MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  function normTitle(t){ return String(t||'').toLowerCase().replace(/['\u2018\u2019`]/g,'').replace(/[^a-z0-9]+/g,' ').trim(); }
+  function isoDate(d){ // catalog "08 Jun 1947" -> "1947-06-08"; ISO passes through; anything else -> ''
+    d=String(d||'').trim(); var m;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    m=/^(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\.?,?\s+(\d{4})$/.exec(d);
+    if(m && MON[m[2].toLowerCase()]) return m[3]+'-'+String(MON[m[2].toLowerCase()]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+    return '';
+  }
+  function fileStem(f){ return String(f||'').replace(/^.*\//,'').replace(/\.[a-z0-9]+$/i,'').toLowerCase(); }
+  function validEnh(e){ return !!e && typeof e==='object' && typeof e.url==='string' && /^https?:\/\/\S+$/i.test(e.url)
+                             && String(e.method||'').toLowerCase()!=='generative'; }
+  function setEnhanced(data){
+    var m = { byFull:{}, byLoose:{}, byStem:{}, count:0 };
+    var eps = (data && typeof data==='object' && data.episodes && typeof data.episodes==='object') ? data.episodes : {};
+    Object.keys(eps).forEach(function(k){
+      var e=eps[k]; if(!validEnh(e)) return;
+      var parts=k.split('|').map(function(x){ return x.trim(); });
+      if(parts.length===1){ if(!parts[0]) return; m.byStem[fileStem(parts[0])]=e; }
+      else {
+        if(parts.length===2) parts=[parts[0],'',parts[1]];
+        if(parts.length!==3 || !parts[0] || !normTitle(parts[2])) return;
+        if(parts[1] && !isoDate(parts[1])) return;              // a date we cannot read: skip rather than guess
+        if(parts[1]) m.byFull[parts[0]+'|'+isoDate(parts[1])+'|'+normTitle(parts[2])]=e;
+        else m.byLoose[parts[0]+'|'+normTitle(parts[2])]=e;
+      }
+      m.count++;
+    });
+    ENH = m; titleCounts = {};
+  }
+  function titleCount(show, t){
+    var c=titleCounts[show.id];
+    if(!c){ c=titleCounts[show.id]={}; show.eps.forEach(function(e){ var n=normTitle(e[0]); c[n]=(c[n]||0)+1; }); }
+    return c[t]||0;
+  }
+  function enhFor(r){
+    if(!r || r.isAd || !ENH.count) return null;
+    var sid=r.show.id, t=normTitle(r.title), d=isoDate(r.date), e=null;
+    if(d) e=ENH.byFull[sid+'|'+d+'|'+t] || null;
+    if(!e && ENH.byLoose[sid+'|'+t] && titleCount(r.show,t)===1) e=ENH.byLoose[sid+'|'+t];
+    if(!e) e=ENH.byStem[fileStem(r.ep[4])] || null;
+    return e;
+  }
+  // Which file to play for this item: {url, enh, entry, why}. why: '' | 'clock' | 'failed'.
+  function pickSource(item, r){
+    var e = state.source==='enhanced' ? enhFor(r) : null;
+    if(!e) return { url:r.url, enh:false, entry:null, why:'' };
+    if(state.enhFailed[r.url]) return { url:r.url, enh:false, entry:e, why:'failed' };
+    if(state.live){ // the schedule is built from catalog runtimes; a different-length file would drift off it
+      var ed=+e.duration;
+      if(!(ed>0) || Math.abs(ed-itemDur(item))>LIVE_TOL) return { url:r.url, enh:false, entry:e, why:'clock' };
+    }
+    return { url:e.url, enh:true, entry:e, why:'' };
+  }
+  // Where to pick up after swapping files mid-episode. Off the clock, keep the same fraction of
+  // the runtime (pos/dur * newDur). On the clock both files share a runtime, so keep the seconds.
+  function resumePoint(){
+    var d=audio.duration, c=audio.currentTime||0;
+    if(state.gotPlaying || c>1){
+      if(!state.live && isFinite(d) && d>0) return { ratio: Math.min(0.999, c/d) };
+      return { seek: c };
+    }
+    var off=(state.startSeek||0) + (state.live && state.startedAt ? (Date.now()-state.startedAt)/1000 : 0);
+    return { seek: off>1 ? off : 0 };
+  }
+  function queueResume(p){ state.pendingSeek = p.seek||0; state.pendingRatio = p.ratio||0; }
+  // The setting changed, or the sidecar arrived: swap the current episode's file if the choice moved.
+  function applySource(){
+    var it=currentItem(), r=it&&resolve(it);
+    if(!r || r.isAd || !state.src){ renderSrcLine(); return; }
+    var want=pickSource(it, r);
+    if(want.url===state.src.url){ state.src=want; renderSrcLine(); return; }
+    var hold = audio.paused && !state.awaitingGesture;
+    queueResume(resumePoint());
+    playCurrent({ hold: hold });
+  }
+  // An enhanced file errored, 404'd or stalled: drop to the original at the same spot. Not a
+  // strike against the runaway-skip limiter, and not retried for this episode this session.
+  function enhFallback(){
+    var it=currentItem(), r=it&&resolve(it); if(!r) return;
+    state.enhFailed[r.url]=1;
+    queueResume(resumePoint());
+    toast('Enhanced copy unavailable, playing original');
+    playCurrent();
+  }
+  function renderSrcLine(){
+    var el=$('npSrc'), it=currentItem(), r=it&&resolve(it), s=state.src, html='', cls='src';
+    if(r && !r.isAd && s && s.entry){
+      if(s.enh){ html='Enhanced'+(s.entry.credit ? ' &middot; '+escapeHtml(String(s.entry.credit)) : ''); }
+      else if(s.why==='clock'){ html='Live clock uses original when runtimes differ.'; cls='src note'; }
+      else if(s.why==='failed'){ html='Enhanced copy unavailable, playing original.'; cls='src note'; }
+    }
+    el.className=cls; el.innerHTML=html; el.style.display=html?'block':'none';
+    el.title = (s && s.enh) ? 'Subtractive cleanup of the circulating copy. Vintage bandwidth and mic color kept.'+(s.entry.notes?' ('+String(s.entry.notes)+')':'') : '';
+  }
+  getJSON('enhanced.json').then(function(d){ setEnhanced(d); applySource(); })
+    .catch(function(){ setEnhanced(null); });
 
   // ---- catalog load ----
   getJSON('catalog.json').then(function(c){
@@ -546,7 +665,7 @@
     playCurrent();
   }
   function setQueue(order){ state.queue = order; state.qi = -1; state.history=[]; state.programsSinceAd=0;
-    state.live=false; state.schedAds=false; state.pendingSeek=0; state.random=false; }
+    state.live=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; }
 
   // Random ("surprise me"): pick episodes at random across a scope (all shows, or one
   // channel). A separate mode from the broadcast clock - it plays on demand and keeps
@@ -616,7 +735,8 @@
     }catch(e){ console.warn('audio graph failed (visualizer disabled)', e); }
   }
 
-  function playCurrent(){
+  function playCurrent(opts){
+    opts = opts || {};
     if(!state.queue.length) return;
     if(state.qi<0) state.qi=0;
     ensureAudioGraph();
@@ -628,20 +748,26 @@
     if(!r){ toast('Nothing to play'); return; }
     clearWatch(); clearBackoff();
     state.gotPlaying=false; state.awaitingGesture=false;
-    audio.src = r.url;
+    var src = pickSource(item, r);
+    state.src = src; state.enhActive = src.enh;
+    audio.src = src.url;
     var seekTo = state.pendingSeek; state.pendingSeek = 0;
-    if(seekTo>0){
+    var seekRatio = state.pendingRatio; state.pendingRatio = 0;
+    state.startSeek = seekTo; state.startedAt = Date.now();
+    if(seekTo>0 || seekRatio>0){
       var seekSrc = audio.src;
       audio.addEventListener('loadedmetadata', function onMeta(){
         audio.removeEventListener('loadedmetadata', onMeta);
         if(audio.src !== seekSrc) return;                              // user moved on before it loaded
         var d=audio.duration;
+        if(seekRatio>0){ if(isFinite(d) && d>0){ try{ audio.currentTime = seekRatio*d; }catch(e){} } return; }
         if(isFinite(d) && d>0 && seekTo>=d-10){ next(true); return; } // catalog runtime longer than the file
         try{ audio.currentTime = seekTo; }catch(e){}
       });
     }
-    setStatus('tuning');
     setMediaSession(r);
+    if(opts.hold){ setPlaying(false); setStatus('paused'); renderNowPlaying(); return; } // swapped while paused
+    setStatus('tuning');
     audio.play().catch(function(err){
       if(err && err.name==='NotAllowedError'){ state.awaitingGesture=true; setPlaying(false); setStatus('ready'); }
     });
@@ -727,6 +853,7 @@
   function onFail(kind){
     clearWatch();
     if(!state.queue.length) return;
+    if(state.enhActive){ enhFallback(); return; }
     state.errCount = (state.errCount||0) + 1;
     if(state.errCount >= 3){
       setPlaying(false); setStatus('error');
@@ -765,6 +892,7 @@
         title: r.isAd ? 'Commercial Break' : r.title,
         artist: r.isAd ? 'Vintage advertisement' : r.show.name,
         album: 'Old Time Radio' + (state.channel ? (' · '+titleCase(state.channel)) : (state.stationLabel ? (' · '+state.stationLabel) : ''))
+               + (state.enhActive && !r.isAd ? ' · Enhanced' : '')
       });
     }catch(e){}
   }
@@ -801,6 +929,7 @@
     var nx = state.queue[state.qi+1];
     if(nx){ var nr=resolve(nx); $('upnext').innerHTML = nr ? ('<b>up next</b> &nbsp;'+ (nr.isAd?'Commercial':escapeHtml(nr.show.name)+' - '+escapeHtml(nr.title))) : ''; }
     else $('upnext').innerHTML='';
+    renderSrcLine();
   }
   $('npMore').onclick = function(){ var s=$('npSummary'); s.classList.toggle('open'); this.textContent = s.classList.contains('open')?'show less':'show more'; };
   function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -878,6 +1007,14 @@
   $('searchBtn').onclick=function(){ var p=$('searchPanel'); if(p.classList.contains('open')){ closePanel('searchPanel'); } else { openPanel('searchPanel'); loadSearchIndex().then(function(){ $('searchInput').focus(); }); } };
   $('searchClose').onclick=function(){ closePanel('searchPanel'); };
   $('commToggle').checked = state.commercials; $('commToggle').onchange=function(){ state.commercials=this.checked; save('otr_comm', this.checked?'1':'0'); };
+  $('enhToggle').checked = state.source==='enhanced';
+  $('enhToggle').onchange=function(){
+    state.source = this.checked ? 'enhanced' : 'original'; save('otr_source', state.source);
+    if(!this.checked) toast('Enhanced audio off');
+    else if(!ENH.count) toast('Enhanced audio on. None mapped yet, so regular copies play.');
+    else toast('Enhanced audio on for '+ENH.count+' episode'+(ENH.count===1?'':'s')+'. The rest play as usual.');
+    applySource();
+  };
   $('shuffleToggle').checked = state.shuffle; $('shuffleToggle').onchange=function(){ state.shuffle=this.checked; save('otr_shuf', this.checked?'1':'0'); };
 
   // ---- search ----
@@ -1105,7 +1242,13 @@
     search: function(q){ if(!SEARCH) return null; runSearch(q); return document.querySelectorAll('#results .result').length; },
     searchResults: function(q){ if(!SEARCH) return null; runSearch(q); return Array.prototype.slice.call(document.querySelectorAll('#results .r-title')).slice(0,10).map(function(e){return e.textContent;}); },
     encodeStation: encodeStation,
-    decodeStation: decodeStation
+    decodeStation: decodeStation,
+    playEpisode: playEpisode,
+    setEnhanced: function(d){ setEnhanced(d); applySource(); return ENH.count; },
+    enhancedCount: function(){ return ENH.count; },
+    enhFor: function(showId, epIndex){ var s=byId[showId]; if(!s) return null; var r=resolve({showId:showId, epIndex:epIndex, isAd:false}); return enhFor(r); },
+    sourceInfo: function(){ var s=state.src; return { pref: state.source, enh: state.enhActive, why: s?s.why:null, url: s?s.url:null, src: audio.src, errCount: state.errCount }; },
+    onAirNow: function(ch){ var a=onAirNow(ch, Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, isAd:a.item.isAd, offset:a.offset, dur:a.dur, total:a.S.total } : null; }
   };
 
   function renderFoot(){
