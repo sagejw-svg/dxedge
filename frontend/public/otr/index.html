@@ -454,6 +454,7 @@
   // enhanced copy (commercials stay, never two in a row). Channels can't filter a shared clock, so
   // tuning one plays an enhanced-only mix of its shows instead, off the clock.
   var enhCounts = {};
+  function isAI(e){ return !!e && /(^|[^a-z])ai([^a-z]|$)/i.test(String(e.method||'')); }
   function onlyMode(){ return state.enhOnly && state.source==='enhanced' && ENH.count>0; }
   function hasEnh(it){ if(!it || it.isAd) return false; var r=resolve(it); return !!(r && enhFor(r)); }
   function onlyFilter(order){
@@ -552,7 +553,7 @@
     var it=currentItem(), r=it&&resolve(it);
     if(!r || r.isAd || !state.src){ renderSrcLine(); return; }
     var want=pickSource(it, r);
-    if(want.url===state.src.url){ state.src=want; renderSrcLine(); return; }
+    if(want.url===state.src.url){ state.src=want; state.enhActive=want.enh; setMediaSession(r); renderSrcLine(); return; } // same file, new label/credit
     var hold = audio.paused && !state.awaitingGesture;
     queueResume(resumePoint());
     playCurrent({ hold: hold });
@@ -577,13 +578,14 @@
     var show = !!(r && !r.isAd && s && s.entry);
     if(show){
       var credit = s.entry.credit ? ' &middot; '+escapeHtml(String(s.entry.credit)) : '';
-      if(s.enh){ html='Enhanced copy'+credit+' &middot; <a href="#" id="pickOrig" role="button">play original</a>'; }
+      if(s.enh){ html=(isAI(s.entry)?'AI enhanced copy':'Enhanced copy')+credit+' &middot; <a href="#" id="pickOrig" role="button">play original</a>'; }
       else if(s.why==='picked'){ html='Original copy &middot; <a href="#" id="pickEnh" role="button">play enhanced</a>'; cls='src note'; }
       else if(s.why==='failed'){ html='Enhanced copy unavailable, playing original.'; cls='src note'; }
     }
     el.className=cls; el.innerHTML=html; el.style.display=html?'block':'none';
     el.title = (s && s.enh && s.entry.notes) ? String(s.entry.notes) : '';
     $('enhBadge').style.display = (show && s.enh) ? 'inline-block' : 'none';
+    $('enhBadge').textContent = (show && s.enh && isAI(s.entry)) ? 'AI ENHANCED' : 'ENHANCED';
     var po=$('pickOrig'), pe=$('pickEnh');
     if(po) po.onclick=function(ev){ ev.preventDefault(); pickCopy(true); };
     if(pe) pe.onclick=function(ev){ ev.preventDefault(); pickCopy(false); };
@@ -1053,7 +1055,7 @@
     if(!('mediaSession' in navigator)) return;
     try{
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: r.isAd ? 'Commercial Break' : (r.title + (state.enhActive ? ' (enhanced)' : '')),
+        title: r.isAd ? 'Commercial Break' : (r.title + (state.enhActive ? (isAI(state.src && state.src.entry) ? ' (AI enhanced)' : ' (enhanced)') : '')),
         artist: r.isAd ? 'Vintage advertisement' : r.show.name,
         album: 'Old Time Radio' + (state.channel ? (' · '+titleCase(state.channel)) : (state.stationLabel ? (' · '+state.stationLabel) : ''))
 

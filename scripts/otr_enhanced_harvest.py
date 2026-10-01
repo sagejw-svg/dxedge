@@ -113,10 +113,12 @@ SOURCES = [
     ("identifier:BDP_* OR identifier:bdp_*", "transfer", "Ron Bowser-John Dunning Project", None),
 ]
 EXTRA = [  # single vetted items: identifier, catalog show id, method, credit, date for files that carry none
+    # AI restorations made with scripts/otr_restore.py go here once uploaded, e.g.
+    # ("lights-out-ai-enhanced-dxedge", "lights-out", "ai-enhanced", "AI restored for dxedge.net", None),
     ("oldtimeradioremastered", "x-minus-one", "remaster", "Old Time Radio Remastered", None),
     ("war-of-the-worlds_mixdown3", "mercury-theatre", "remaster", "War of the Worlds remaster", "1938-10-30"),
 ]
-RANK = {"remaster": 0, "restoration": 0, "transfer": 1}
+RANK = {"ai-enhanced": -1, "remaster": 0, "restoration": 0, "transfer": 1}
 
 def show_name(title, strip):
     t = str(title)

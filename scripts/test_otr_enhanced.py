@@ -197,6 +197,17 @@ def main():
         ck("switching while paused stays paused", st["paused"], st)
         ck("and lands at the same fraction of the new file", abs(st["t"] - ct0 / 30 * 36) < 2.0, {"was": ct0, "now": st["t"]})
 
+        # --- AI copies are labelled as AI ---
+        ai_map = json.dumps({"version": 1, "episodes": {"quiet-please|1947-06-08|Nothing Behind the Door":
+                             {"url": BASE + "/fx/enh.wav", "duration": 36, "method": "ai-enhanced", "credit": "AI restored for dxedge.net"}}})
+        pg.evaluate(f"window.__otr.setEnhanced({ai_map})"); wait_src("/fx/enh.wav")
+        ck("AI copies say 'AI ENHANCED' on the badge", pg.inner_text("#enhBadge") == "AI ENHANCED", pg.inner_text("#enhBadge"))
+        ck("and 'AI enhanced copy' under the title", pg.inner_text("#npSrc").startswith("AI enhanced copy"), pg.inner_text("#npSrc"))
+        ttl = pg.evaluate("navigator.mediaSession.metadata.title")
+        ck("and on the lock screen", "(AI enhanced)" in ttl, ttl)
+        pg.evaluate(f"window.__otr.setEnhanced({enh_map(BASE + '/fx/enh.wav', 36)})")
+        ck("non-AI copies keep the plain label", pg.inner_text("#enhBadge") == "ENHANCED", pg.inner_text("#enhBadge"))
+
         # --- "play original" for this episode, while the setting stays on ---
         pg.evaluate(f"window.__otr.setEnhanced({enh_map(BASE + '/fx/enh.wav', 36)})")
         pg.evaluate("localStorage.removeItem('otr_orig_pick')"); local_prefix(); pg.evaluate("window.__otr.playEpisode('quiet-please', 0)")
