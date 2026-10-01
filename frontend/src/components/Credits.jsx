@@ -327,7 +327,7 @@ export default function Credits() {
         </p>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, marginTop: 8 }}>
           Source code: <a href="https://github.com/sagejw-svg/dxedge" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>github.com/sagejw-svg/dxedge</a> · 
-          Support: <a href="https://paypal.me/sagejw" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', marginLeft: 4 }}>paypal.me/sagejw</a>
+          Support: <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noreferrer" style={{ color: 'var(--yellow)', marginLeft: 4 }}>tip jar on Ko-fi</a> or <a href="https://paypal.me/sagejw" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', marginLeft: 4 }}>paypal.me/sagejw</a>
         </p>
         <p style={{ fontSize: 12, color: 'var(--dim)', fontStyle: 'italic', marginTop: 8 }}>
           73 de K6WRJ

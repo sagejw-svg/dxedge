@@ -459,6 +459,13 @@ export default function App() {
           letterSpacing: 1, textTransform: 'uppercase', textDecoration: 'none'
         }}>DX//EDGE · AETHERSDR →</a>
       </div>
+      <div style={{ marginTop: 14, textAlign: 'center' }}>
+        <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noreferrer"
+          title="Helps cover hosting and development. Tips aren't tax deductible."
+          style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--dim)', textDecoration: 'none' }}>
+          ☕ tip jar: helps cover hosting and development ↗
+        </a>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 const BTC  = 'bc1q99naj9qx5wg26rxc7q37lzmtaz7dj6t80xdgxl'
 const ETH  = '0x450Af17245CD5238d5a826647E2F1bbAd2a982db'
 const PP   = 'https://paypal.me/sagejw'
+const KOFI = 'https://ko-fi.com/oldtimeradio'
 
 function QRCode({ value, size = 160 }) {
   // Generate QR using a free public API - no key needed
@@ -77,9 +78,23 @@ export default function Support() {
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 600 }}>
           DXEdge is free, open source, and runs on a $8/month DigitalOcean server. If it's useful to you, buying me a coffee keeps the lights on and motivates new features. 73 de K6WRJ.
         </p>
+        <p style={{ fontSize: 12, color: 'var(--dim)', lineHeight: 1.7, maxWidth: 600, marginTop: 8 }}>
+          Tips help cover hosting and development. They're tips to me, not donations to a charity, so they aren't tax deductible.
+        </p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 560 }}>
+        <a href={KOFI} target="_blank" rel="noreferrer" style={{
+          display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none',
+          background: 'var(--bg1)', border: '1px solid var(--border)', borderTop: '3px solid var(--yellow)',
+          borderRadius: 10, padding: '16px 18px'
+        }}>
+          <span style={{ fontSize: 22 }}>☕</span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Tip jar on Ko-fi ↗</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Card or PayPal, any amount, no account needed.</span>
+          </span>
+        </a>
         <AddressCard
           icon="💳" label="PayPal"
           link={PP} qrValue={PP}
