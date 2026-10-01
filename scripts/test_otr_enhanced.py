@@ -86,6 +86,51 @@ def main():
         u = pg.evaluate("(window.__otr.enhFor('quiet-please', 0) || {}).url || ''")
         ck("Quiet Please #1 maps to the Dunning transfer on archive.org", u.startswith("https://archive.org/download/BDP_QuietPlease/"), u)
 
+        # --- the greats ---
+        ids = pg.evaluate("Array.from(document.querySelectorAll('#greatChips .chip')).map(c => c.dataset.id)")
+        ck("greats row leads with X Minus One, Philip Marlowe, Gunsmoke", ids[:3] == ["x-minus-one", "the-adventures-of-philip-marlowe", "gunsmoke"], ids[:5])
+        ck("greats row covers 20+ classics, all real catalog shows", len(ids) >= 20, len(ids))
+        counts = pg.evaluate("['x-minus-one','the-adventures-of-philip-marlowe','gunsmoke'].map(id => window.__otr.enhCount(id))")
+        ck("X Minus One, Marlowe and Gunsmoke all have enhanced episodes", all(c > 0 for c in counts), counts)
+        ck("chips show the enhanced count", "enhanced" in pg.inner_text("#greatChips .chip[data-id='x-minus-one']"))
+
+        # --- enhanced episodes only ---
+        allenh = "window.__otr.state.queue.every(it => it.isAd || window.__otr.hasEnh(it))"
+        progs = "[...new Set(window.__otr.state.queue.filter(x => !x.isAd).map(x => x.showId))]"
+        pg.check("#enhOnly")
+        st = pg.evaluate("({only: window.__otr.onlyMode(), src: window.__otr.state.source, g: document.getElementById('greatsOnly').checked, t: document.getElementById('enhToggle').checked})")
+        ck("'enhanced episodes only' turns the setting on and syncs the greats filter", st == {"only": True, "src": "enhanced", "g": True, "t": True}, st)
+        q = pg.evaluate(f"(() => {{ window.__otr.playGreat('gunsmoke'); return {{ok: {allenh}, n: window.__otr.state.queue.filter(x => !x.isAd).length, shows: {progs}}}; }})()")
+        ck("Gunsmoke quick link plays only enhanced Gunsmoke", q["ok"] and q["n"] > 0 and q["shows"] == ["gunsmoke"], q)
+        ck("the tapped great is highlighted", pg.evaluate("document.querySelector('#greatChips .chip[data-id=\"gunsmoke\"]').classList.contains('on')"))
+        zero = pg.evaluate("Array.from(document.querySelectorAll('#greatChips .chip.none')).map(c => c.dataset.id)")
+        ck("greats with no enhanced copies are dimmed", len(zero) > 0, zero)
+        if zero:
+            before = pg.evaluate("window.__otr.state.stationLabel")
+            pg.evaluate(f"window.__otr.playGreat('{zero[0]}')")
+            ck("tapping a dimmed great says so and keeps playing what was on", "No enhanced episodes" in pg.inner_text("#toast") and pg.evaluate("window.__otr.state.stationLabel") == before)
+        ch = pg.evaluate(f"(() => {{ window.__otr.startChannel('crime'); return {{live: window.__otr.state.live, ok: {allenh}, n: window.__otr.state.queue.length, label: window.__otr.state.stationLabel, status: document.getElementById('onairText').textContent}}; }})()")
+        ck("a channel becomes an enhanced-only mix, off the live clock", (not ch["live"]) and ch["ok"] and ch["n"] > 0 and "enhanced only" in ch["label"], ch)
+        ck("status line names the mix", "enhanced only" in ch["status"], ch["status"])
+        cnt = pg.inner_text("#channelChips .station[data-ch='crime'] .st-count")
+        ck("channel cards count enhanced episodes", cnt.endswith("enhanced") and int(cnt.split()[0]) > 0, cnt)
+        rnd = pg.evaluate(f"(() => {{ document.getElementById('randomBtn').click(); return {{ok: {allenh}, n: window.__otr.state.queue.length}}; }})()")
+        ck("Surprise me draws only enhanced episodes", rnd["ok"] and rnd["n"] > 0, rnd)
+        mix = pg.evaluate(f"(() => {{ window.__otr.startStation(['lights-out', 'x-minus-one'], 'Mix'); return {{ok: {allenh}, shows: {progs}}}; }})()")
+        ck("a custom station keeps only the enhanced episodes", mix["ok"] and mix["shows"] == ["x-minus-one"], mix)
+        pg.evaluate("window.__otr.loadSearch()"); pg.wait_for_function("window.__otr.search('murder') !== null", timeout=30000)
+        sr = pg.evaluate("(() => { window.__otr.search('murder'); return {note: document.getElementById('searchNote').textContent, n: document.querySelectorAll('#results .result').length, enh: document.querySelectorAll('#results .r-show .enh-tag').length}; })()")
+        ck("search lists only enhanced episodes and says how many it hid", sr["n"] > 0 and sr["n"] == sr["enh"] and "hidden" in sr["note"], sr)
+        pg.reload(); pg.wait_for_function("window.__otr.ready() && window.__otr.enhancedCount() > 0", timeout=20000)
+        ck("enhanced-only persists across reload", pg.evaluate("window.__otr.onlyMode()") and pg.is_checked("#enhOnly") and pg.is_checked("#greatsOnly"))
+        pg.uncheck("#greatsOnly")
+        ck("unchecking the greats filter turns enhanced-only off everywhere", not pg.evaluate("window.__otr.onlyMode()") and not pg.is_checked("#enhOnly") and pg.is_checked("#enhToggle"))
+        q = pg.evaluate(f"(() => {{ window.__otr.playGreat('lights-out'); return {progs}; }})()")
+        ck("with it off, a show with no enhanced copies plays normally", q == ["lights-out"], q)
+        pg.check("#enhOnly"); pg.uncheck("#enhToggle")
+        ck("turning off enhanced audio also turns off enhanced-only", not pg.evaluate("window.__otr.onlyMode()") and not pg.is_checked("#enhOnly"))
+        pg.evaluate("localStorage.clear()")
+
         # --- empty sidecar ---
         MODE["enh"] = "fixture"; MODE["body"] = b'{"version":1,"episodes":{}}'; load(); MODE["enh"] = "file"
         ck("empty enhanced.json loads with zero entries", pg.evaluate("window.__otr.enhancedCount()") == 0)

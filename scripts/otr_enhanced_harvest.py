@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build frontend/public/otr/enhanced.json: better copies of /otr catalog episodes on archive.org.
 
-Source so far: the Ron Bowser-John Dunning Project (archive.org items BDP_*), lossless FLAC
+Sources: the "Digitally Restored" collections (processed restorations) and the Ron Bowser-John
+Dunning Project (archive.org items BDP_*), lossless FLAC
 transfers of John Dunning's collection, which archive.org also serves as VBR MP3. An episode
 is mapped only when all of these hold:
   * the catalog show matches a BDP item by name,
@@ -80,6 +81,11 @@ def cat_iso(d):
     return f"{m.group(3)}-{MON[m.group(2).lower()]:02d}-{int(m.group(1)):02d}" if m else ""
 
 def file_iso(name):
+    d = _file_iso(name)
+    try: datetime.date.fromisoformat(d); return d
+    except ValueError: return ""
+
+def _file_iso(name):
     n = os.path.basename(name)
     m = re.search(r"(?<!\d)(\d{2})-(\d{2})-(\d{2})(?!\d)", n)
     if m:  # BDP uses both MM-DD-YY and YY-MM-DD; OTR years (13..62) are > 12, so a leading field > 12 is the year
@@ -97,39 +103,72 @@ def file_title(name):
     n = re.sub(r"^.*?\d{2}-\d{2}-\d{2}", "", n)         # drop show / number / date prefix
     return re.sub(r"[-_ .]+$", "", n).strip(" -_")
 
+# Sources, best first when an episode has more than one. Restorations are processed copies
+# (declick, denoise, EQ); transfers are unprocessed but lossless-sourced. Each must still beat the
+# circulating copy's bitrate by MIN_GAIN, and none is a listening test.
+SOURCES = [
+    # (archive.org query, method, credit, how to strip the show name out of the item title)
+    ('title:("digitally restored") AND mediatype:audio', "restoration", "Digitally Restored collection",
+     r"\s*(\(|;|\bradio\b\s+digitally|\bdigitally\b|\bwith\b).*$"),
+    ("identifier:BDP_* OR identifier:bdp_*", "transfer", "Ron Bowser-John Dunning Project", None),
+]
+EXTRA = [  # single vetted items: identifier, catalog show id, method, credit, date for files that carry none
+    ("oldtimeradioremastered", "x-minus-one", "remaster", "Old Time Radio Remastered", None),
+    ("war-of-the-worlds_mixdown3", "mercury-theatre", "remaster", "War of the Worlds remaster", "1938-10-30"),
+]
+RANK = {"remaster": 0, "restoration": 0, "transfer": 1}
+
+def show_name(title, strip):
+    t = str(title)
+    if strip is None: return re.sub(r"^.*?Project[s]?\s*-?\s*", "", t)
+    return re.sub(strip, "", t, flags=re.I)
+
 def main():
     dry = "--dry-run" in sys.argv
     cat = json.load(open(os.path.join(OTR, "catalog.json")))
     shows = [s for s in cat["shows"] if not s.get("adv")]
-    bdp = get("https://archive.org/advancedsearch.php?q=identifier%3ABDP_*+OR+identifier%3Abdp_*&fl%5B%5D=identifier&fl%5B%5D=title&rows=500&output=json")["response"]["docs"]
-    bdp = [d for d in bdp if "Dunning" in str(d.get("title", ""))]
-    for d in bdp: d["key"] = show_key(re.sub(r"^.*?Project[s]?\s*-?\s*", "", str(d["title"])))
+    byid = {s["id"]: s for s in shows}
+    items = []
+    for q, method, credit, strip in SOURCES:
+        docs = get("https://archive.org/advancedsearch.php?q=" + urllib.parse.quote(q) + "&fl%5B%5D=identifier&fl%5B%5D=title&rows=500&output=json")["response"]["docs"]
+        if method == "transfer": docs = [d for d in docs if "Dunning" in str(d.get("title", ""))]
+        for d in docs:
+            items.append({"identifier": d["identifier"], "method": method, "credit": credit, "date": None,
+                          "key": show_key(show_name(d.get("title", ""), strip)), "show": None})
+    for ident, sid, method, credit, date in EXTRA:
+        items.append({"identifier": ident, "method": method, "credit": credit, "date": date, "key": set(), "show": sid})
 
     pairs = []
     for s in shows:
-        k = show_key(s["name"]); best = None
-        for d in bdp:
-            if not k or not d["key"]: continue
-            j = len(k & d["key"]) / len(k | d["key"])
-            if j >= 0.6 and (best is None or j > best[0]): best = (j, d)
-        if best: pairs.append((s, [x for x in bdp if x["key"] == best[1]["key"]]))   # include re-uploads (bdp_*_2025xx)
-    print(f"{len(pairs)} catalog shows have a Dunning collection:")
-    for s, ds in pairs: print(f"  {s['name']:45s} <- {', '.join(d['identifier'] for d in ds)}")
+        k = show_key(s["name"]); mine = [it for it in items if it["show"] == s["id"]]
+        best = {}
+        for it in items:
+            if it["show"] or not k or not it["key"]: continue
+            j = len(k & it["key"]) / len(k | it["key"])
+            if j >= 0.6 and j >= best.get(it["method"], (0,))[0]:
+                if j > best.get(it["method"], (0,))[0]: best[it["method"]] = (j, [])
+                best[it["method"]][1].append(it)                    # keep re-uploads of the same collection
+        for m in best.values(): mine += m[1]
+        if mine: pairs.append((s, mine))
+    print(f"{len(pairs)} catalog shows have a better source:")
+    for s, its in pairs: print(f"  {s['name']:45s} <- {', '.join(i['identifier'] for i in its)}")
 
-    idents = sorted({i for s, _ in pairs for i in s["ids"]} | {d["identifier"] for _, ds in pairs for d in ds})
+    idents = sorted({i for s, _ in pairs for i in s["ids"]} | {it["identifier"] for _, its in pairs for it in its})
     with ThreadPoolExecutor(8) as ex: M = dict(zip(idents, ex.map(meta, idents)))
 
     out, report = {}, []
-    for s, ds in pairs:
+    for s, its in pairs:
         cand = {}
-        for d in ds:
-            for f in M[d["identifier"]].get("files", []):
-                if f.get("format") not in ("VBR MP3", "MP3") or not f["name"].lower().endswith(".mp3"): continue
-                iso = file_iso(f.get("original") or f["name"])
+        for it in its:
+            for f in M[it["identifier"]].get("files", []):
+                if "MP3" not in str(f.get("format", "")) or not f["name"].lower().endswith(".mp3"): continue
+                src = f.get("original") or f["name"]
+                iso = file_iso(src) or it["date"] or ""
                 L = secs(f.get("length"))
-                if not iso or L < 60 or DAMAGE.search(f.get("original") or f["name"]): continue
-                cand.setdefault(iso, []).append({"ident": d["identifier"], "name": f["name"], "len": L,
-                                                 "kbps": int(f.get("size") or 0) * 8 / L / 1000, "title": file_title(f.get("original") or f["name"])})
+                if not iso or L < 60 or DAMAGE.search(src): continue
+                ttl = file_title(src) if file_iso(src) else (M[it["identifier"]].get("metadata", {}).get("title") or "")
+                cand.setdefault(iso, []).append({"iso": iso, "ident": it["identifier"], "name": f["name"], "len": L, "method": it["method"],
+                                                 "credit": it["credit"], "kbps": int(f.get("size") or 0) * 8 / L / 1000, "title": ttl})
         orig = {}
         for ident in s["ids"]:
             for f in M[ident].get("files", []):
@@ -137,37 +176,41 @@ def main():
                 if L > 0 and f.get("size"): orig[(ident, f["name"])] = int(f["size"]) * 8 / L / 1000
         n_map = n_date = 0; why = {}
         for e in s["eps"]:
-            iso = cat_iso(e[1])
+            iso = cat_iso(e[1]); undated = not iso
+            if undated: iso = file_iso(urllib.parse.unquote(e[4]))   # e.g. Gunsmoke: no catalog date, dated filenames
             if not iso: continue
+            ob = orig.get((s["ids"][e[3]], urllib.parse.unquote(e[4])))
+            def ok(x): return 0.75 <= x["len"] / max(e[2], 1) <= 1.35 and ob and x["kbps"] >= MIN_GAIN * ob
             c = None
             if iso in cand:
                 n_date += 1
-                c = max(cand[iso], key=lambda x: (sim(e[0], x["title"]), x["kbps"]))
-                t = sim(e[0], c["title"])
-                if len(cand[iso]) > 1 and t < 0.5: c = None; why["ambiguous"] = why.get("ambiguous", 0) + 1   # several shows that day
-                elif t < 0.5 or not twords(c["title"]) or not twords(e[0]): c = None                           # titles disagree
+                good = [x for x in cand[iso] if sim(e[0], x["title"]) >= 0.5 and twords(x["title"]) and twords(e[0])]
+                if len(cand[iso]) > 1 and not good: why["ambiguous"] = why.get("ambiguous", 0) + 1
+                fits = [x for x in good if ok(x)]
+                if good and not fits: why["no gain/length"] = why.get("no gain/length", 0) + 1; continue
+                if fits: c = min(fits, key=lambda x: (RANK[x["method"]], -sim(e[0], x["title"]), -x["kbps"]))
             if c is None:   # same story filed under a nearby date: needs a strong, multi-word title match
                 d0 = datetime.date.fromisoformat(iso); near = []
                 for k in range(-10, 11):
                     for x in cand.get((d0 + datetime.timedelta(days=k)).isoformat(), []):
-                        if min(len(twords(e[0])), len(twords(x["title"]))) >= 2 and sim(e[0], x["title"]) >= 0.75: near.append(x)
-                if len(near) == 1: c = near[0]; why["date shifted"] = why.get("date shifted", 0) + 1
+                        if min(len(twords(e[0])), len(twords(x["title"]))) >= 2 and sim(e[0], x["title"]) >= 0.75 and ok(x): near.append(x)
+                if near and len({x["iso"] for x in near}) == 1:          # one episode, possibly in more than one source
+                    c = min(near, key=lambda x: (RANK[x["method"]], -x["kbps"])); why["date shifted"] = why.get("date shifted", 0) + 1
                 else:
                     if iso in cand: why["title"] = why.get("title", 0) + 1
                     continue
-            if not (0.75 <= c["len"] / max(e[2], 1) <= 1.35): why["length"]=why.get("length",0)+1; continue
-            ob = orig.get((s["ids"][e[3]], urllib.parse.unquote(e[4])))
-            if not ob or c["kbps"] < MIN_GAIN * ob: why["no gain" if ob else "no orig size"]=why.get("no gain" if ob else "no orig size",0)+1; continue
-            key = f"{s['id']}|{iso}|{e[0]}"
+            key = (fileStem(e[4]) if undated else f"{s['id']}|{iso}|{e[0]}")
             out[key] = {"url": "https://archive.org/download/" + urllib.parse.quote(c["ident"]) + "/" + urllib.parse.quote(c["name"]),
-                        "duration": round(c["len"]), "credit": CREDIT, "method": "transfer",
-                        "notes": f"lossless-sourced transfer, {round(c['kbps'])} kbps vs {round(ob)} kbps circulating", "_score": sim(e[0], c["title"])}
+                        "duration": round(c["len"]), "credit": c["credit"], "method": c["method"],
+                        "notes": f"{round(c['kbps'])} kbps vs {round(ob)} kbps circulating", "_score": sim(e[0], c["title"])}
             n_map += 1
         report.append((s["name"], len(s["eps"]), n_date, n_map, why))
 
-    print("\nshow, catalog eps, same-date BDP files, mapped")
+    print("\nshow, catalog eps, same-date candidates, mapped")
     for r in sorted(report, key=lambda r: -r[3]): print(f"  {r[0]:45s} {r[1]:4d} {r[2]:4d} {r[3]:4d}  {r[4] or ''}")
-    print(f"\n{len(out)} episodes mapped")
+    meth = {}
+    for v in out.values(): meth[v["method"]] = meth.get(v["method"], 0) + 1
+    print(f"\n{len(out)} episodes mapped {meth}")
     if "--audit" in sys.argv:
         for k, v in sorted(out.items(), key=lambda kv: kv[1]["_score"])[:30]: print(f"  {v['_score']:.2f} {k[:70]:70s} <- {urllib.parse.unquote(v['url'].rsplit('/',1)[1])[:70]}")
     for v in out.values(): v.pop("_score", None)
@@ -176,6 +219,9 @@ def main():
                "source": "scripts/otr_enhanced_harvest.py", "episodes": dict(sorted(out.items()))}
         json.dump(doc, open(os.path.join(OTR, "enhanced.json"), "w"), indent=1, ensure_ascii=False)
         print("wrote enhanced.json", os.path.getsize(os.path.join(OTR, "enhanced.json")), "bytes")
+
+def fileStem(f):  # must match fileStem() in otr/index.html: last path part, no extension, lower case
+    return re.sub(r"\.[a-z0-9]+$", "", re.sub(r"^.*/", "", str(f)), flags=re.I).lower()
 
 if __name__ == "__main__":
     main()

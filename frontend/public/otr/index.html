@@ -65,7 +65,10 @@
   .np .src a:hover { color: #fff; }
   .enh-badge { display:none; margin-left: 6px; padding: 1px 6px; border: 1px solid var(--green); border-radius: 3px;
     color: var(--green); font-size: 9px; letter-spacing: 1.5px; line-height: 14px; }
-  .upnext .enh-tag { color: var(--green); font-size: 10px; margin-left: 4px; }
+  .upnext .enh-tag, .r-show .enh-tag { color: var(--green); font-size: 10px; margin-left: 4px; }
+  .section-h .greats-filter { margin-left: auto; }
+  .chip.great small { color: var(--green); }
+  .chip.great.none { opacity: .38; }
   .np .summary { font-size: 12px; color: var(--muted); margin-top: 9px; line-height: 1.6;
     max-height: 5.2em; overflow: hidden; transition: max-height .25s; }
   .np .summary.open { max-height: 40em; }
@@ -98,8 +101,8 @@
   .upnext b { color: var(--muted); font-weight: 500; }
 
   /* Tuner / channels */
-  .section-h { display:flex; align-items:baseline; gap:10px; margin: 20px 0 10px; }
-  .section-h .label { margin:0; }
+  .section-h { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin: 20px 0 10px; }
+  .section-h .label { margin:0; white-space:nowrap; }
   .section-h .hint { font-size: 10px; color: var(--dim); }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { border: 1px solid var(--border2); background: var(--bg1); color: var(--muted); border-radius: 999px;
@@ -247,12 +250,20 @@
   </div>
   <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
 
+  <div class="section-h">
+    <div class="label">the greats</div>
+    <span class="hint">one tap plays the whole show</span>
+    <label class="toggle greats-filter" title="Only play episodes that have an enhanced copy"><input type="checkbox" id="greatsOnly"> enhanced only</label>
+  </div>
+  <div class="chips" id="greatChips"></div>
+
   <div class="toolbar">
     <button class="btn" id="builderBtn">＋ Build a station</button>
     <button class="btn" id="searchBtn">🔍 Search episodes</button>
     <button class="btn" id="randomBtn" title="Play a random episode from any show">🎲 Surprise me</button>
     <label class="toggle"><input type="checkbox" id="commToggle" checked> vintage commercials</label>
     <label class="toggle" id="enhLabel" title="When an episode has a better copy (a cleaner transfer, a restoration, or an AI enhanced version), play that instead. Episodes without one play the regular copy. While one plays you can switch that episode back to the original."><input type="checkbox" id="enhToggle"> enhanced audio when available</label>
+    <label class="toggle" title="Only play episodes that have an enhanced copy. Channels become enhanced-only mixes of their shows (off the live clock); stations, Surprise me, the greats and search skip everything else."><input type="checkbox" id="enhOnly"> enhanced episodes only</label>
     <label class="toggle"><input type="checkbox" id="shuffleToggle" checked> shuffle custom stations</label>
   </div>
 
@@ -336,6 +347,7 @@
     savedActive: -1,      // index of the active saved station chip (bug #10)
     random: false,        // "surprise me" random mode (keeps serving random picks)
     source: load('otr_source','original')==='enhanced' ? 'enhanced' : 'original', // listener-wide preference
+    enhOnly: load('otr_enh_only','0')==='1',  // play only episodes that have an enhanced copy
     src: null,            // what playCurrent chose for this item: {url, enh, entry, why}
     enhActive: false,     // the element is playing an enhanced file right now
     enhFailed: {},        // original URL -> 1 once its enhanced copy failed this session
@@ -409,7 +421,7 @@
       }
       m.count++;
     });
-    ENH = m; titleCounts = {};
+    ENH = m; titleCounts = {}; enhCounts = {};
   }
   function titleCount(show, t){
     var c=titleCounts[show.id];
@@ -435,6 +447,90 @@
     if(picked(r.url)) return { url:r.url, enh:false, entry:e, why:'picked' };
     return { url:e.url, enh:true, entry:e, why:'' };
   }
+  // ---- enhanced only ----
+  // With "enhanced episodes only" on, every on-demand queue keeps just the programs that have an
+  // enhanced copy (commercials stay, never two in a row). Channels can't filter a shared clock, so
+  // tuning one plays an enhanced-only mix of its shows instead, off the clock.
+  var enhCounts = {};
+  function onlyMode(){ return state.enhOnly && state.source==='enhanced' && ENH.count>0; }
+  function hasEnh(it){ if(!it || it.isAd) return false; var r=resolve(it); return !!(r && enhFor(r)); }
+  function onlyFilter(order){
+    if(!onlyMode()) return order;
+    var out=[];
+    order.forEach(function(it){
+      if(it.isAd){ if(out.length && !out[out.length-1].isAd) out.push(it); }
+      else if(hasEnh(it)) out.push(it);
+    });
+    return out;
+  }
+  function enhEpisodes(shows){
+    var out=[];
+    shows.forEach(function(s){ s.eps.forEach(function(e,i){ var it={showId:s.id, epIndex:i, isAd:false}; if(hasEnh(it)) out.push(it); }); });
+    return out;
+  }
+  function enhCount(show){
+    if(!show) return 0;
+    if(!(show.id in enhCounts)) enhCounts[show.id] = ENH.count ? enhEpisodes([show]).length : 0;
+    return enhCounts[show.id];
+  }
+  function noneLeft(label){ toast('No enhanced episodes'+(label?' in '+label:'')+' yet'); }
+  // The mode changed while something is playing: re-cut what's queued.
+  function requeueForOnly(){
+    if(!state.queue.length) return;
+    if(state.channel && !state.stationShowIds){ startChannel(state.channel); return; }   // live channel -> enhanced mix
+    var head=state.queue.slice(0, state.qi+1), rest=onlyFilter(state.queue.slice(state.qi+1));
+    state.queue=head.concat(rest);
+    if(!hasEnh(currentItem())){ if(rest.length) next(false); else noneLeft(state.stationLabel); }
+    else renderNowPlaying();
+  }
+  function setOnly(on){
+    state.enhOnly=!!on; save('otr_enh_only', on?'1':'0');
+    if(on && state.source!=='enhanced'){ state.source='enhanced'; save('otr_source','enhanced'); }
+    syncEnhUI();
+    if(on){
+      if(!ENH.count){ toast('No enhanced episodes are available right now'); return; }
+      toast('Enhanced only: '+ENH.count+' episodes');
+      applySource(); requeueForOnly();
+    } else { toast('Playing all episodes again'); }
+  }
+  function syncEnhUI(){
+    $('enhToggle').checked = state.source==='enhanced';
+    $('enhOnly').checked = $('greatsOnly').checked = state.enhOnly && state.source==='enhanced';
+    if(CAT){ buildGreats(); refreshChannelCounts(); }
+  }
+  function refreshChannelCounts(){
+    document.querySelectorAll('#channelChips .station').forEach(function(card){
+      var shows=chanShows[card.dataset.ch]||[], el=card.querySelector('.st-count');
+      el.textContent = onlyMode() ? shows.reduce(function(n,s){ return n+enhCount(s); },0)+' enhanced' : shows.length+' shows';
+    });
+  }
+  // ---- the greats: one-tap quick links to the classics ----
+  var GREATS = ['x-minus-one','the-adventures-of-philip-marlowe','gunsmoke','suspense','dimension-x','quiet-please','escape',
+    'yours-truly-johnny-dollar','the-shadow','lights-out','have-gun-will-travel','dragnet','inner-sanctum-mysteries',
+    'the-mysterious-traveler','mercury-theatre','lux-radio-theatre','the-jack-benny-show','fibber-mcgee-and-molly',
+    'the-great-gildersleeve','our-miss-brooks','sam-spade','richard-diamond-private-detective','the-whistler','night-beat',
+    'frontier-gentleman','bold-venture','cbs-radio-mystery-theater','the-lone-ranger'];
+  function playGreat(id){
+    var s=byId[id]; if(!s) return;
+    if(onlyMode() && !enhCount(s)){ noneLeft(s.name); return; }
+    startStation([id], s.name + (onlyMode()?' · enhanced only':''));
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  function buildGreats(){
+    var el=$('greatChips'); if(!el || !CAT) return;
+    el.innerHTML='';
+    GREATS.forEach(function(id){
+      var s=byId[id]; if(!s) return;
+      var n=enhCount(s), c=document.createElement('span');
+      c.className='chip great'+(onlyMode() && !n ? ' none' : ''); c.dataset.id=id;
+      c.innerHTML=escapeHtml(s.name)+(n ? '<small>'+n+' enhanced</small>' : '');
+      c.title = n ? (n+' of '+s.eps.length+' episodes have an enhanced copy') : 'No enhanced copies yet';
+      c.onclick=function(){ ensureAudioGraph(); if(ac && ac.state==='suspended') ac.resume(); playGreat(id); };
+      el.appendChild(c);
+    });
+    markActiveChip();
+  }
+
   // Where to pick up after swapping files mid-episode: the same fraction of the runtime
   // (pos/dur * newDur). Before playback starts, the intended start offset (plus clock drift).
   function resumePoint(){
@@ -490,7 +586,7 @@
     if(po) po.onclick=function(ev){ ev.preventDefault(); pickCopy(true); };
     if(pe) pe.onclick=function(ev){ ev.preventDefault(); pickCopy(false); };
   }
-  getJSON('enhanced.json').then(function(d){ setEnhanced(d); applySource(); renderNowPlaying(); })
+  getJSON('enhanced.json').then(function(d){ setEnhanced(d); applySource(); renderNowPlaying(); if(CAT){ buildGreats(); refreshChannelCounts(); } })
     .catch(function(){ setEnhanced(null); });
 
   // ---- catalog load ----
@@ -499,7 +595,7 @@
     c.shows.forEach(function(s){ byId[s.id]=s; });
     c.channels.forEach(function(ch){ chanShows[ch] = c.shows.filter(function(s){ return s.ch.indexOf(ch)>=0; }); });
     adPool = byId['commercials'] || null;
-    buildChannelChips();
+    buildChannelChips(); buildGreats(); refreshChannelCounts();
     renderStationNow(); setInterval(renderStationNow, 5000);
     buildShowGrid();
     renderSaved();
@@ -560,6 +656,8 @@
       c.classList.toggle('on', state.channel && c.dataset.ch===state.channel);
     });
     document.querySelectorAll('#savedRow .chip').forEach(function(c){ c.classList.toggle('on', parseInt(c.dataset.idx,10)===state.savedActive); });
+    var one = (!state.channel && !state.random && state.stationShowIds && state.stationShowIds.length===1) ? state.stationShowIds[0] : null;
+    document.querySelectorAll('#greatChips .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.id===one); });
   }
 
   // ---- queue building ----
@@ -643,6 +741,14 @@
   // Tune in: join the station's broadcast at the current clock position.
   function startChannel(ch){
     if(!(chanShows[ch]||[]).length){ toast('No shows on that channel'); return; }
+    if(onlyMode()){   // a shared clock can't skip episodes, so play an enhanced-only mix of the channel instead
+      var shows=chanShows[ch];
+      if(!enhEpisodes(shows).length){ noneLeft(titleCase(ch)); return; }
+      state.channel=ch; state.stationShowIds=shows.map(function(s){ return s.id; }); state.stationLabel=titleCase(ch)+' · enhanced only';
+      state.savedActive=-1; save('otr_last','ch:'+ch);
+      setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds=true;
+      markActiveChip(); playCurrent(); return;
+    }
     var a=onAirNow(ch, Date.now()/1000); if(!a){ toast('No shows on that channel'); return; }
     var items=a.S.items, order=items.slice(a.idx).concat(items.slice(0,a.idx)), offset=a.offset;
     if(!state.commercials){
@@ -687,9 +793,10 @@
     setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds = true;
     markActiveChip();
     closePanel('builderPanel');
+    if(!state.queue.length && onlyMode()){ noneLeft(state.stationLabel); return; }
     playCurrent();
   }
-  function setQueue(order){ state.queue = order; state.qi = -1; state.history=[]; state.programsSinceAd=0;
+  function setQueue(order){ state.queue = onlyFilter(order); state.qi = -1; state.history=[]; state.programsSinceAd=0;
     state.live=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; }
 
   // Random ("surprise me"): pick episodes at random across a scope (all shows, or one
@@ -698,6 +805,7 @@
   function buildRandomOrder(showIds, n){
     var shows=showIds.map(function(id){ return byId[id]; }).filter(function(s){ return s && s.eps.length; });
     var order=[]; n=n||100; if(!shows.length) return order;
+    if(onlyMode()) return shuffleArr(enhEpisodes(shows)).slice(0, n);
     for(var i=0;i<n;i++){ var s=shows[Math.floor(Math.random()*shows.length)];
       order.push({ showId:s.id, epIndex:Math.floor(Math.random()*s.eps.length), isAd:false }); }
     return order;
@@ -708,6 +816,7 @@
     state.channel=null; state.stationShowIds=ids; state.stationLabel=label||'Surprise me'; state.savedActive=-1;
     setQueue(interleaveAds(buildRandomOrder(ids))); state.schedAds=true; state.random=true;
     markActiveChip(); closePanel('builderPanel'); closePanel('searchPanel');
+    if(!state.queue.length && onlyMode()){ noneLeft(); return; }
     playCurrent();
     window.scrollTo({top:0, behavior:'smooth'});
   }
@@ -898,7 +1007,7 @@
 
   function setPlaying(p){ $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play'; }
   function setStatus(kind){
-    var where = state.channel ? ' · '+titleCase(state.channel)+(state.live?' live':' (skipped ahead)')
+    var where = (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':' (skipped ahead)')
               : (state.stationLabel ? ' · '+state.stationLabel : '');
     var ad = currentItem() && currentItem().isAd;
     $('np').classList.toggle('live', kind==='playing');
@@ -1038,9 +1147,13 @@
   $('searchBtn').onclick=function(){ var p=$('searchPanel'); if(p.classList.contains('open')){ closePanel('searchPanel'); } else { openPanel('searchPanel'); loadSearchIndex().then(function(){ $('searchInput').focus(); }); } };
   $('searchClose').onclick=function(){ closePanel('searchPanel'); };
   $('commToggle').checked = state.commercials; $('commToggle').onchange=function(){ state.commercials=this.checked; save('otr_comm', this.checked?'1':'0'); };
-  $('enhToggle').checked = state.source==='enhanced';
+  syncEnhUI();
+  $('enhOnly').onchange=function(){ setOnly(this.checked); };
+  $('greatsOnly').onchange=function(){ setOnly(this.checked); };
   $('enhToggle').onchange=function(){
     state.source = this.checked ? 'enhanced' : 'original'; save('otr_source', state.source);
+    if(!this.checked && state.enhOnly){ state.enhOnly=false; save('otr_enh_only','0'); }
+    syncEnhUI();
     if(!this.checked) toast('Enhanced audio off');
     else if(!ENH.count) toast('Enhanced audio on. None mapped yet, so regular copies play.');
     else toast('Enhanced audio on for '+ENH.count+' episode'+(ENH.count===1?'':'s')+'. The rest play as usual.');
@@ -1074,10 +1187,14 @@
       });
     });
     hits.sort(function(a,b){ return b.score-a.score; });
+    hits.forEach(function(h){ h.enh = hasEnh({showId:h.sid, epIndex:h.epIndex, isAd:false}); });
+    var hidden=0;
+    if(onlyMode()){ var all=hits.length; hits=hits.filter(function(h){ return h.enh; }); hidden=all-hits.length; }
     note.textContent = hits.length ? (hits.length+' episode'+(hits.length>1?'s':'')+' found'+(hits.length>300?' (showing first 300)':'')) : 'No episodes matched.';
+    if(hidden) note.textContent += ' · '+hidden+' without an enhanced copy hidden';
     var slice=hits.slice(0,300);
     res.innerHTML = slice.map(function(h,i){
-      return '<div class="result" data-i="'+i+'"><div class="r-show">'+escapeHtml(h.show)+' &middot; '+escapeHtml(byId[h.sid].eps[h.epIndex][1]||'')+'</div>'+
+      return '<div class="result" data-i="'+i+'"><div class="r-show">'+escapeHtml(h.show)+' &middot; '+escapeHtml(byId[h.sid].eps[h.epIndex][1]||'')+(h.enh && state.source==='enhanced' ? '<span class="enh-tag">enhanced</span>' : '')+'</div>'+
         '<div class="r-title">'+hl(h.title,terms)+'</div><div class="r-sum">'+hl(h.sum,terms)+'</div></div>';
     }).join('');
     Array.prototype.forEach.call(res.querySelectorAll('.result'), function(el){
@@ -1095,6 +1212,7 @@
     state.channel=null; state.stationShowIds=[showId]; state.stationLabel=show.name;
     setQueue(order); state.qi=0;
     markActiveChip(); closePanel('searchPanel');
+    if(!state.queue.length && onlyMode()){ noneLeft(show.name); return; }
     playCurrent();
     window.scrollTo({top:0, behavior:'smooth'});
   }
@@ -1280,6 +1398,11 @@
     enhFor: function(showId, epIndex){ var s=byId[showId]; if(!s) return null; var r=resolve({showId:showId, epIndex:epIndex, isAd:false}); return enhFor(r); },
     sourceInfo: function(){ var s=state.src; return { pref: state.source, enh: state.enhActive, why: s?s.why:null, url: s?s.url:null, src: audio.src, errCount: state.errCount }; },
     pickCopy: pickCopy,
+    setOnly: setOnly,
+    onlyMode: function(){ return onlyMode(); },
+    hasEnh: function(it){ return hasEnh(it); },
+    enhCount: function(id){ return enhCount(byId[id]); },
+    playGreat: playGreat,
     onAirNow: function(ch){ var a=onAirNow(ch, Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, isAd:a.item.isAd, offset:a.offset, dur:a.dur, total:a.S.total } : null; }
   };
 
