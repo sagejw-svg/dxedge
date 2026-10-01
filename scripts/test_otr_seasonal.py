@@ -105,6 +105,9 @@ with sync_playwright() as p:
     ck('tune-in: no page errors', not errs7, errs7)
 
     # Usage beacon is loaded and reports
+    foot = pg7.evaluate('(function(){var f=document.getElementById("foot"), a=f.querySelectorAll("a"), ia=-1, kf=-1; a.forEach(function(x,i){ if(/archive.org\\/donate/.test(x.href)) ia=i; if(/ko-fi.com\\/oldtimeradio/.test(x.href)) kf=i; }); return {ia:ia, kf:kf, txt:f.innerText}; })()')
+    ck('footer: Internet Archive donate first, Ko-fi tip after it', foot['ia'] >= 0 and foot['kf'] > foot['ia'], foot)
+    ck('footer: tip line says not tax deductible', "aren't tax deductible" in foot['txt'], foot['txt'][-160:])
     ck('stat.js loaded on /otr/', pg7.evaluate('!!document.querySelector(\'script[src="/lib/stat.js"]\')'))
     pg7.wait_for_timeout(5000)
     pg7.evaluate('document.dispatchEvent(new Event("visibilitychange"))')

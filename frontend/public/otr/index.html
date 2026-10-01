@@ -212,6 +212,7 @@
 
   .foot { font-size: 10px; color: var(--dim); text-align:center; margin-top: 22px; line-height:1.7; }
   .foot a { color: var(--muted); }
+  .foot .tipline { display: inline-block; margin-top: 8px; }
   .toast { position: fixed; left:50%; bottom: 20px; transform: translateX(-50%); background: var(--bg3);
     border:1px solid var(--amber); color: var(--amber2); padding: 8px 14px; border-radius: 8px; font-size:12px;
     opacity:0; pointer-events:none; transition:opacity .25s; z-index:50; }
@@ -1709,7 +1710,9 @@
       '<a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a><br>'+
       'Catalogue and episode summaries curated by <a href="https://oldtime.radio" target="_blank" rel="noopener">Rob Dawson / codebox</a> (MIT, <a href="https://github.com/codebox/old-time-radio" target="_blank" rel="noopener">source</a>). '+
       'This is an independent fork on <a href="/">DXEdge</a>; the original station is live at <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.<br>'+
-      'Enjoying the shows? <a class="donate" href="https://archive.org/donate" target="_blank" rel="noopener">♥ Donate to the Internet Archive</a>';
+      'Enjoying the shows? <a class="donate" href="https://archive.org/donate" target="_blank" rel="noopener">♥ Donate to the Internet Archive</a><br>'+
+      '<span class="tipline">Like the player itself? Tips to the developer help cover hosting and development '+
+      '(they aren\'t tax deductible): <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener" id="tipLink">tip jar on Ko-fi ↗</a></span>';
   }
 })();
 </script>
