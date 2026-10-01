@@ -79,9 +79,16 @@ def main():
         def wait_meta(t=8000):
             pg.wait_for_function("isFinite(document.getElementById('audio').duration) && document.getElementById('audio').duration>0", timeout=t)
 
-        # --- real (empty) sidecar ---
+        # --- the committed sidecar ---
         pg.goto(BASE + "/otr/"); pg.evaluate("localStorage.clear()"); load()
-        ck("real enhanced.json loads with zero entries", pg.evaluate("window.__otr.enhancedCount()") == 0)
+        real = pg.evaluate("window.__otr.enhancedCount()")
+        ck("committed enhanced.json loads its mappings", real > 500, real)
+        u = pg.evaluate("(window.__otr.enhFor('quiet-please', 0) || {}).url || ''")
+        ck("Quiet Please #1 maps to the Dunning transfer on archive.org", u.startswith("https://archive.org/download/BDP_QuietPlease/"), u)
+
+        # --- empty sidecar ---
+        MODE["enh"] = "fixture"; MODE["body"] = b'{"version":1,"episodes":{}}'; load(); MODE["enh"] = "file"
+        ck("empty enhanced.json loads with zero entries", pg.evaluate("window.__otr.enhancedCount()") == 0)
         ck("setting is always shown (global, not per episode)", pg.is_visible("#enhToggle"))
         ck("default is original", pg.evaluate("window.__otr.sourceInfo().pref") == "original" and not pg.is_checked("#enhToggle"))
         pg.click("#enhToggle")
@@ -101,17 +108,18 @@ def main():
             "quiet-please|1947-06-08|Nothing Behind the Door": {url:"https://example.org/a.mp3", duration:1747, method:"subtractive", credit:"A"},
             "47-06-15_QUIETPLEASE_002_IHAVEBEENLOOKINGFORYOU": {url:"https://example.org/b.mp3", method:"subtractive"},
             "quiet-please||WE WERE HERE, FIRST!": {url:"https://example.org/c.mp3", method:"subtractive"},
-            "quiet-please|1947-06-29|Some Title": {url:"https://example.org/d.mp3", method:"generative"},
+            "quiet-please|1947-06-29|The Ticket Taker": {url:"https://example.org/d.mp3", method:"ai-enhanced"},
             "quiet-please|1947-07-06|Other": {url:null, method:"subtractive"},
             "quiet-please|June 1947|Nothing Behind the Door": {url:"https://example.org/e.mp3", method:"subtractive"},
             "quiet-please|1947-06-08|Nothing Behind the Door x": {url:"youtube.com/watch?v=1", method:"subtractive"}
         }})""")
-        ck("only valid entries count (generative, null url, bad date, non-URL dropped)", n == 3, n)
-        r = pg.evaluate("[0,1,2,3].map(i => { const e = window.__otr.enhFor('quiet-please', i); return e ? e.url : null; })")
+        ck("any method counts (AI enhanced included); null url, bad date, non-URL dropped", n == 4, n)
+        r = pg.evaluate("[0,1,2,3,4].map(i => { const e = window.__otr.enhFor('quiet-please', i); return e ? e.url : null; })")
         ck("full key matches date + title", r[0] == "https://example.org/a.mp3", r)
         ck("filename-stem key matches", r[1] == "https://example.org/b.mp3", r)
         ck("dateless key matches a unique title, case and punctuation blind", r[2] == "https://example.org/c.mp3", r)
-        ck("unmapped episode resolves to nothing", r[3] is None, r)
+        ck("AI enhanced entry is accepted", r[3] == "https://example.org/d.mp3", r)
+        ck("unmapped episode resolves to nothing", r[4] is None, r)
 
         # --- on-demand playback, swap keeps position by ratio ---
         enh_map = lambda url, dur: json.dumps({"version": 1, "episodes": {"quiet-please|1947-06-08|Nothing Behind the Door":
@@ -121,9 +129,11 @@ def main():
         wait_src("/fx/enh.wav"); wait_meta()
         ck("setting on + mapped episode plays the enhanced file", pg.evaluate("window.__otr.sourceInfo().enh"))
         line = pg.inner_text("#npSrc")
-        ck("credit line under the title", "Enhanced" in line and "SPERDVAC / Corey Harker" in line, line)
-        alb = pg.evaluate("navigator.mediaSession && navigator.mediaSession.metadata ? navigator.mediaSession.metadata.album : ''")
-        ck("Media Session album carries Enhanced", "Enhanced" in alb, alb)
+        ck("listener is told: line under the title with credit", "Enhanced copy" in line and "SPERDVAC / Corey Harker" in line, line)
+        ck("listener is told: ENHANCED badge on the on-air line", pg.is_visible("#enhBadge"))
+        ck("line offers 'play original'", pg.is_visible("#pickOrig"))
+        ttl = pg.evaluate("navigator.mediaSession && navigator.mediaSession.metadata ? navigator.mediaSession.metadata.title : ''")
+        ck("lock-screen title says enhanced", "(enhanced)" in ttl, ttl)
         pg.wait_for_function("!document.getElementById('audio').paused", timeout=8000)
         pg.evaluate("document.getElementById('audio').currentTime = 18")   # 50% of the 36 s enhanced file
         pg.wait_for_timeout(300)
@@ -141,6 +151,22 @@ def main():
         st = pg.evaluate("({t: document.getElementById('audio').currentTime, paused: document.getElementById('audio').paused})")
         ck("switching while paused stays paused", st["paused"], st)
         ck("and lands at the same fraction of the new file", abs(st["t"] - ct0 / 30 * 36) < 2.0, {"was": ct0, "now": st["t"]})
+
+        # --- "play original" for this episode, while the setting stays on ---
+        pg.evaluate(f"window.__otr.setEnhanced({enh_map(BASE + '/fx/enh.wav', 36)})")
+        pg.evaluate("localStorage.removeItem('otr_orig_pick')"); local_prefix(); pg.evaluate("window.__otr.playEpisode('quiet-please', 0)")
+        wait_src("/fx/enh.wav"); wait_meta(); pg.wait_for_function("!document.getElementById('audio').paused", timeout=8000)
+        pg.evaluate("document.getElementById('audio').currentTime = 27"); pg.wait_for_timeout(300)    # 75% of 36 s
+        pg.click("#pickOrig")
+        wait_src("/fx/orig/"); wait_meta(); pg.wait_for_function("document.getElementById('audio').currentTime > 15", timeout=8000)
+        ct = pg.evaluate("document.getElementById('audio').currentTime")
+        ck("'play original' swaps this episode at the same point (~22 s of 30)", 20.5 <= ct <= 24.5, ct)
+        ck("setting itself stays on", pg.is_checked("#enhToggle") and pg.evaluate("window.__otr.sourceInfo().pref") == "enhanced")
+        ck("badge hidden, line offers 'play enhanced'", not pg.is_visible("#enhBadge") and pg.is_visible("#pickEnh"), pg.inner_text("#npSrc"))
+        pg.evaluate("window.__otr.next()"); pg.evaluate("window.__otr.playEpisode('quiet-please', 0)")
+        ck("choice sticks for that episode", "/fx/orig/" in pg.evaluate("window.__otr.sourceInfo().url"))
+        pg.click("#pickEnh"); wait_src("/fx/enh.wav")
+        ck("'play enhanced' switches back", pg.evaluate("window.__otr.sourceInfo().enh") and pg.is_visible("#enhBadge"))
 
         # --- enhanced 404 falls back to original, no limiter strike ---
         pg.evaluate(f"window.__otr.setEnhanced({enh_map(BASE + '/fx/missing.mp3', 36)})")
@@ -161,17 +187,13 @@ def main():
         else:
             show = pg.evaluate(f"window.__otr.catalog().shows.find(s => s.id === {json.dumps(pick['showId'])})")
             ep = show["eps"][pick["epIndex"]]; stem = ep[4].rsplit(".", 1)[0]
-            def live_with(dur):
-                m = json.dumps({"version": 1, "episodes": {stem: {"url": BASE + "/fx/enh.wav", "duration": dur, "method": "subtractive"}}})
-                return pg.evaluate(f"""() => {{ window.__otr.setEnhanced({m}); window.__otr.catalog().prefix = '{BASE}/fx/orig/';
-                    window.__otr.startChannel({json.dumps(pick['ch'])}); const s = window.__otr.sourceInfo();
-                    return Object.assign(s, {{total: window.__otr.onAirNow({json.dumps(pick['ch'])}).total, live: window.__otr.state.live}}); }}""")
-            a = live_with(pick["dur"] + 60)
-            ck("live clock plays original when runtimes differ by > 2 s", a["live"] and not a["enh"] and a["why"] == "clock", a)
-            ck("schedule still built from catalog runtimes", a["total"] == pick["total"], {"before": pick["total"], "after": a["total"]})
-            ck("reason line shown", "Live clock uses original" in pg.inner_text("#npSrc"))
-            a = live_with(pick["dur"] + 1)
-            ck("live clock plays enhanced when runtimes match within 2 s", a["live"] and a["enh"], a)
+            m = json.dumps({"version": 1, "episodes": {stem: {"url": BASE + "/fx/enh.wav", "duration": pick["dur"] + 60, "method": "transfer"}}})
+            a = pg.evaluate(f"""() => {{ window.__otr.setEnhanced({m}); window.__otr.catalog().prefix = '{BASE}/fx/orig/';
+                window.__otr.startChannel({json.dumps(pick['ch'])}); const s = window.__otr.sourceInfo(); const a = window.__otr.onAirNow({json.dumps(pick['ch'])});
+                return Object.assign(s, {{total: a.total, live: window.__otr.state.live, ratio: window.__otr.state.startRatio, want: a.offset / a.dur}}); }}""")
+            ck("live channel plays the enhanced copy even when its runtime differs", a["live"] and a["enh"], a)
+            ck("joins at the same point in the story (offset as a fraction)", a["want"] < 0.01 or abs(a["ratio"] - a["want"]) < 0.01, a)
+            ck("shared schedule still built from catalog runtimes", a["total"] == pick["total"], {"before": pick["total"], "after": a["total"]})
             pg.evaluate("window.__otr.next()")
             ck("skip still follows the schedule, off the clock", not pg.evaluate("window.__otr.state.live"))
 

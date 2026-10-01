@@ -1,23 +1,23 @@
 {
   "_readme": [
-    "Template for enhanced.json. Nothing here is live; the player only reads enhanced.json.",
+    "Template for enhanced.json. Nothing here is live; the player only reads enhanced.json, which scripts/otr_enhanced_harvest.py regenerates.",
     "The /otr setting 'enhanced audio when available' plays an entry's url instead of the catalog copy. Unmapped episodes play the regular copy.",
-    "Policy is subtractive only: declick, dehiss, hum, dropouts, or a better transfer of the same performance. Entries with method 'generative' are ignored.",
-    "url must be a direct https file that sends Access-Control-Allow-Origin: * (archive.org download URLs do). No YouTube, Mixcloud, Spotify or web pages. Do not rehost on the droplet.",
+    "Any better version is accepted: a cleaner or higher-generation transfer, a restoration, or an AI enhanced version. method is informational.",
+    "url must be a direct file that sends Access-Control-Allow-Origin: * (archive.org download URLs do). No YouTube, Mixcloud, Spotify or web pages. Do not rehost on the droplet.",
     "Keys: 'showId|YYYY-MM-DD|Title' (title is case and punctuation blind), 'showId||Title' when the title is unique in that show, or the archive filename stem.",
-    "duration is the enhanced file's runtime in seconds. On live channels it plays only when within 2 s of the catalog runtime; otherwise live plays the original and on-demand plays the enhanced copy.",
+    "duration is the enhanced file's runtime in seconds. Live channels play enhanced copies too, joining at the same fraction of the story; a different runtime shifts that listener off the shared clock by the difference.",
     "An entry with url null is ignored, so placeholders are safe."
   ],
   "version": 1,
-  "policy": "subtractive-only",
+  "policy": "any-better",
   "episodes": {
     "quiet-please|1947-06-08|Nothing Behind the Door": {
       "url": "https://archive.org/download/REPLACE_ITEM/REPLACE_FILE.mp3",
       "duration": 1780,
       "label": "Enhanced",
       "credit": "SPERDVAC / Corey Harker",
-      "method": "subtractive",
-      "notes": "declick + light denoise; original bandwidth kept"
+      "method": "restoration",
+      "notes": "declick + light denoise"
     },
     "quiet-please|1947-06-15|I've Been Looking for You": {
       "url": null,
