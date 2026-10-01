@@ -176,7 +176,7 @@ const SOURCES = [
       },
       {
         name: 'Recharts',
-        url: 'https://recharts.org',
+        url: 'https://recharts.github.io',
         what: 'Chart library used for solar history graphs',
         icon: '📊',
       },
