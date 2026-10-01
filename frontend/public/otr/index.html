@@ -93,6 +93,14 @@
   .btn.play { background: var(--amber); color: #1a1200; border-color: var(--amber); font-weight: 600; min-width: 92px; justify-content:center; }
   .btn.play:hover { background: var(--amber2); }
   .btn.icon { padding: 9px 11px; }
+  .btn.seek15 { font-variant-numeric: tabular-nums; }
+  @media (max-width: 440px){ .transport { gap: 6px; } .transport .lbl { display: none; } .btn.icon { padding: 9px 10px; } }
+  .tools2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; }
+  .tools2 .mini { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); }
+  .tools2 select { background: var(--bg2); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
+    font-family: var(--font-mono); font-size: 11px; padding: 3px 6px; cursor: pointer; }
+  .tools2 select:focus-visible { outline: 1px solid var(--amber); outline-offset: 1px; }
+  .tools2 .sleep-left { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; }
   .vol { display: flex; align-items: center; gap: 7px; margin-left: auto; }
   .vol input[type=range]{ width: 96px; accent-color: var(--amber); }
   @media (max-width: 660px){ .vol { margin-left: 0; width:100%; } .vol input[type=range]{ flex:1; width:auto; } }
@@ -233,13 +241,22 @@
         </div>
 
         <div class="transport">
-          <button class="btn icon" id="prevBtn" title="Previous (p)" disabled>⏮ Prev</button>
+          <button class="btn icon" id="prevBtn" title="Previous (p)" aria-label="Previous" disabled>⏮<span class="lbl"> Prev</span></button>
+          <button class="btn icon seek15" id="backBtn" title="Back 15 seconds (left arrow)" aria-label="Back 15 seconds" disabled>↺ 15</button>
           <button class="btn play" id="playBtn" disabled>▶ Play</button>
-          <button class="btn icon" id="skipBtn" title="Skip to next (n)" disabled>⏭ Skip</button>
+          <button class="btn icon seek15" id="fwdBtn" title="Forward 15 seconds (right arrow)" aria-label="Forward 15 seconds" disabled>15 ↻</button>
+          <button class="btn icon" id="skipBtn" title="Skip to next (n)" aria-label="Skip to next" disabled>⏭<span class="lbl"> Skip</span></button>
           <div class="vol">
             <span style="font-size:11px;color:var(--dim)">vol</span>
             <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9">
           </div>
+        </div>
+        <div class="tools2">
+          <label class="mini" title="Playback speed">speed
+            <select id="rateSel"><option value="1">1x</option><option value="1.1">1.1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></label>
+          <label class="mini" title="Stop playing after a while, with a fade out">sleep
+            <select id="sleepSel"><option value="off">off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="end">end of episode</option></select></label>
+          <span class="sleep-left" id="sleepLeft"></span>
         </div>
         <div class="upnext" id="upnext"></div>
       </div>
@@ -823,8 +840,8 @@
     if(!state.queue.length && onlyMode()){ noneLeft(state.stationLabel); return; }
     playCurrent();
   }
-  function setQueue(order){ state.queue = onlyFilter(order); state.qi = -1; state.history=[]; state.programsSinceAd=0;
-    state.live=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; }
+  function setQueue(order){ state.cueNext=false; state.queue = onlyFilter(order); state.qi = -1; state.history=[]; state.programsSinceAd=0;
+    state.live=false; state.shifted=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; }
 
   // Random ("surprise me"): pick episodes at random across a scope (all shows, or one
   // channel). A separate mode from the broadcast clock - it plays on demand and keeps
@@ -948,7 +965,9 @@
   function advance(opts){
     opts = opts || {};
     if(!state.queue.length) return;
+    state.cueNext=false;
     if(!opts.auto && state.live){ state.live=false; }   // skipping takes you off the broadcast clock
+    if(!opts.auto) state.shifted=false;
     if(state.qi>=0){ state.history.push(state.qi); if(state.history.length>120) state.history.shift(); } // bug #2: cap history
     if(!opts.onError){ if(!currentItem() || !currentItem().isAd) insertAdIfDue(); }
     state.qi = state.qi+1;
@@ -974,7 +993,7 @@
   }
   function next(auto){ advance({ auto:auto }); }
   function prev(){
-    if(audio.currentTime>3){ audio.currentTime=0; return; }
+    if(audio.currentTime>3){ seekTo(0); return; }
     if(state.history.length){ state.qi = state.history.pop(); playCurrent(); }
     else { audio.currentTime=0; }
   }
@@ -989,6 +1008,7 @@
       else if(CAT && CAT.channels.length) startChannel(CAT.channels[0]);
       return;
     }
+    if(state.cueNext){ wakeFromSleep(); return; }   // woke after an end-of-episode sleep
     if(audio.paused){ audio.play().catch(function(){}); }
     else { audio.pause(); }
   };
@@ -996,11 +1016,86 @@
   $('prevBtn').onclick = function(){ if(state.queue.length){ state.errCount=0; prev(); } };
   $('vol').oninput = function(){ audio.volume = parseFloat(this.value); save('otr_vol', this.value); };
 
+  // ---- seeking: 15 second back/forward, the bar, arrow keys and Prev's restart all come through here ----
+  // Any seek on a live channel leaves the broadcast clock (status says time-shifted); tap the station to rejoin.
+  function offClock(){ if(state.live){ state.live=false; state.shifted=true; if(!audio.paused) setStatus('playing'); } }
+  function seekTo(sec){
+    var d=audio.duration||currentDur(); if(!d || !state.queue.length) return;
+    offClock();
+    audio.currentTime = Math.max(0, Math.min(d, sec));   // seeking to the end fires 'ended', which moves on
+  }
+  function seekBy(delta){ if(audio.duration) seekTo((audio.currentTime||0)+delta); }
+  $('backBtn').onclick = function(){ seekBy(-15); };
+  $('fwdBtn').onclick = function(){ seekBy(15); };
+
+  // ---- playback speed: 1x to 1.5x, pitch preserved, remembered on this device ----
+  // Faster than 1x drifts off a live channel's clock, so it counts as time-shifted.
+  state.rate = parseFloat(load('otr_rate','1')) || 1;
+  if([1,1.1,1.25,1.5].indexOf(state.rate)<0) state.rate=1;
+  $('rateSel').value = String(state.rate);
+  function applyRate(){
+    try{ audio.preservesPitch = true; audio.webkitPreservesPitch = true; }catch(e){}
+    audio.defaultPlaybackRate = state.rate; audio.playbackRate = state.rate;
+    if(state.rate!==1) offClock();
+  }
+  $('rateSel').onchange = function(){ state.rate = parseFloat(this.value)||1; save('otr_rate', String(state.rate)); applyRate(); };
+  audio.addEventListener('loadedmetadata', applyRate);
+
+  // ---- sleep timer: 15/30/60 minutes or end of episode, fading out before it stops ----
+  // The fade lowers the element volume. iPhone Safari ignores scripted volume, so there it simply stops.
+  var SLEEP = { mode:'off', until:0, timer:null }, SLEEP_FADE = 30, END_FADE = 15;
+  function baseVol(){ var v=parseFloat($('vol').value); return isNaN(v)?0.9:v; }
+  function fadeTo(frac){ try{ audio.volume = Math.max(0, Math.min(1, baseVol()*frac)); }catch(e){} }
+  function clearSleep(restore){
+    if(SLEEP.timer) clearInterval(SLEEP.timer);
+    SLEEP.mode='off'; SLEEP.until=0; SLEEP.timer=null;
+    $('sleepSel').value='off'; $('sleepLeft').textContent='';
+    if(restore!==false) fadeTo(1);
+  }
+  function sleepNow(){
+    audio.pause(); clearSleep(); toast('Sleep timer: stopped');
+  }
+  function sleepTick(){
+    if(SLEEP.mode==='off' || SLEEP.mode==='end') return;
+    var left=(SLEEP.until-Date.now())/1000;
+    if(left<=0){ if(!audio.paused) sleepNow(); else clearSleep(); return; }
+    $('sleepLeft').textContent = fmt(left)+' left';
+    if(left<SLEEP_FADE && !audio.paused) fadeTo(left/SLEEP_FADE);
+  }
+  $('sleepSel').onchange = function(){
+    var v=this.value;
+    if(v==='off'){ clearSleep(); return; }
+    clearSleep(); this.value=v; SLEEP.mode=v;
+    if(v==='end'){ $('sleepLeft').textContent='stops after this episode'; return; }
+    SLEEP.until = Date.now()+parseInt(v,10)*60000;
+    SLEEP.timer = setInterval(sleepTick, 1000); sleepTick();
+  };
+  // End of episode: fade the last few seconds of a program (not a commercial), then stop instead of moving on.
+  // The next Play continues with what comes after it.
+  audio.addEventListener('timeupdate', function(){
+    if(SLEEP.mode!=='end' || audio.paused) return;
+    var it=currentItem(); if(!it || it.isAd) return;
+    var d=audio.duration, left=d?d-audio.currentTime:99;
+    if(left<END_FADE) fadeTo(left/END_FADE);
+    else if(audio.volume < baseVol()-0.001) fadeTo(1);   // skipped away mid-fade: back to full
+  });
+  function wakeFromSleep(){
+    state.cueNext=false;
+    if(state.channel && !state.stationShowIds && state.live) startChannel(state.channel);   // rejoin the clock, time has passed
+    else next(true);
+  }
+  function sleepAtEnd(){
+    var it=currentItem();
+    if(SLEEP.mode!=='end' || !it || it.isAd) return false;
+    state.cueNext=true; clearSleep(); setPlaying(false); setStatus('paused'); toast('Sleep timer: stopped');
+    return true;
+  }
+
   audio.addEventListener('playing', function(){ state.gotPlaying=true; state.errCount=0; state.awaitingGesture=false; clearWatch(); clearBackoff(); setPlaying(true); setStatus('playing'); });
   audio.addEventListener('play', function(){ setPlaying(true); if(!state.gotPlaying) setStatus('tuning'); });
   audio.addEventListener('waiting', function(){ if(state.gotPlaying) setStatus('buffering'); });
   audio.addEventListener('pause', function(){ setPlaying(false); clearWatch(); if(!audio.ended) setStatus('paused'); });
-  audio.addEventListener('ended', function(){ next(true); });
+  audio.addEventListener('ended', function(){ if(sleepAtEnd()) return; next(true); });
   audio.addEventListener('error', function(){ onFail('error'); });
   audio.addEventListener('timeupdate', function(){
     var d=audio.duration||currentDur()||0, c=audio.currentTime||0;
@@ -1009,7 +1104,7 @@
     try{ if(audio.buffered.length){ $('buf').style.width = d?(100*audio.buffered.end(audio.buffered.length-1)/d)+'%':'0%'; } }catch(e){}
   });
   function currentDur(){ var it=currentItem(); if(it){ var s=byId[it.showId]; if(s&&s.eps[it.epIndex]) return s.eps[it.epIndex][2]; } return 0; }
-  $('bar').onclick = function(ev){ var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) audio.currentTime = Math.max(0, Math.min(d, p*d)); };
+  $('bar').onclick = function(ev){ var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) seekTo(p*d); };
 
   function clearWatch(){ if(state.playWatch){ clearTimeout(state.playWatch); state.playWatch=null; } }
   function clearBackoff(){ if(state.backoffTimer){ clearTimeout(state.backoffTimer); state.backoffTimer=null; } }
@@ -1034,7 +1129,7 @@
 
   function setPlaying(p){ $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play'; }
   function setStatus(kind){
-    var where = (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':' (skipped ahead)')
+    var where = (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
               : (state.stationLabel ? ' · '+state.stationLabel : '');
     var ad = currentItem() && currentItem().isAd;
     $('np').classList.toggle('live', kind==='playing');
@@ -1066,7 +1161,7 @@
     if(!('mediaSession' in navigator)) return;
     var ms=navigator.mediaSession;
     try{
-      ms.setActionHandler('play', function(){ audio.play().catch(function(){}); });
+      ms.setActionHandler('play', function(){ if(state.cueNext){ wakeFromSleep(); return; } audio.play().catch(function(){}); });
       ms.setActionHandler('pause', function(){ audio.pause(); });
       ms.setActionHandler('nexttrack', function(){ if(state.queue.length){ state.errCount=0; next(false); } });
       ms.setActionHandler('previoustrack', function(){ if(state.queue.length){ state.errCount=0; prev(); } });
@@ -1077,7 +1172,7 @@
   function renderNowPlaying(){
     var it = currentItem(); if(!it){ return; }
     var r = resolve(it); if(!r) return;
-    $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false;
+    $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false; $('backBtn').disabled=false; $('fwdBtn').disabled=false;
     $('vizIdle').style.display='none';
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
     $('npEp').textContent = r.isAd ? (r.title==='Commercial'?'Vintage advertisement':r.title) : r.title;
@@ -1392,8 +1487,8 @@
     if(e.key===' '||e.key==='Spacebar'){ e.preventDefault(); $('playBtn').click(); }
     else if(e.key==='n'||e.key==='N'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; next(false); } }
     else if(e.key==='p'||e.key==='P'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; prev(); } }
-    else if(e.key==='ArrowRight'){ if(audio.duration){ audio.currentTime=Math.min(audio.duration, audio.currentTime+15); } }
-    else if(e.key==='ArrowLeft'){ if(audio.duration){ audio.currentTime=Math.max(0, audio.currentTime-15); } }
+    else if(e.key==='ArrowRight'){ if(audio.duration){ e.preventDefault(); seekBy(15); } }
+    else if(e.key==='ArrowLeft'){ if(audio.duration){ e.preventDefault(); seekBy(-15); } }
   });
 
   // ---- headless test hook (see scripts/test_otr.py), mirrors window.__dx / __emu ----
@@ -1431,6 +1526,8 @@
     enhCount: function(id){ return enhCount(byId[id]); },
     playGreat: playGreat,
     onAirNow: function(ch){ var a=onAirNow(ch, Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, isAd:a.item.isAd, offset:a.offset, dur:a.dur, total:a.S.total } : null; },
+    sleepIn: function(ms){ if(SLEEP.mode!=='off' && SLEEP.mode!=='end'){ SLEEP.until=Date.now()+ms; sleepTick(); } },
+    sleepMode: function(){ return SLEEP.mode; },
     schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); }
   };
 
