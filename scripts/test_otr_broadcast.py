@@ -26,9 +26,10 @@ with sync_playwright() as p:
   pg.goto('http://127.0.0.1:8793/otr'); pg.wait_for_function('window.__otr&&__otr.ready()',timeout=15000)
   ck('no-slash /otr loads catalog', True)
   pg.wait_for_timeout(500)
-  cards=pg.eval_on_selector_all('#channelChips .station','els=>els.map(e=>[e.dataset.ch,e.querySelector(".st-now").textContent,e.querySelector(".st-left").textContent,e.querySelector(".st-bar i").style.width,e.querySelector(".st-count").textContent])')
+  cards=pg.eval_on_selector_all('#channelChips .station','els=>els.map(e=>[e.dataset.ch,e.querySelector(".st-now").textContent,e.querySelector(".st-left").textContent,e.querySelector(".st-bar i").style.width,e.querySelector(".st-count").textContent,!!e.querySelector(".st-season")])')
   for c in cards: print('   ',c)
-  ck('9 station cards with now playing', len(cards)==9 and all(c[1] and c[2].endswith('left') for c in cards), cards)
+  base=[c for c in cards if not c[5]]   # seasonal stations (e.g. Halloween in October) come and go by date
+  ck('9 station cards with now playing', len(base)==9 and all(c[1] and c[2].endswith('left') for c in cards), cards)
   pg2=b.new_context().new_page(); pg2.goto('http://127.0.0.1:8793/otr/'); pg2.wait_for_function('__otr.ready()'); pg2.wait_for_timeout(500)
   c2=pg2.eval_on_selector_all('#channelChips .station','els=>els.map(e=>e.querySelector(".st-now").textContent)')
   ck('schedule identical across visitors', [c[1] for c in cards]==c2, c2)

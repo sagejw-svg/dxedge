@@ -123,6 +123,8 @@
   .station .st-name { color: var(--text); font-size: 13px; font-weight: 600; }
   .station.on .st-name { color: var(--amber); }
   .station .st-count { color: var(--dim); font-size: 10px; white-space: nowrap; }
+  .station .st-season { margin-left: 7px; font-size: 9px; font-weight: 500; color: var(--amber2); border: 1px solid rgba(255,179,71,0.35);
+    border-radius: 999px; padding: 1px 6px; vertical-align: 1px; white-space: nowrap; }
   .station .st-actions { display:flex; align-items:center; gap:8px; }
   .station .st-dice { font-size: 12px; cursor: pointer; opacity: .45; transition: opacity .15s, transform .15s; line-height:1; }
   .station .st-dice:hover { opacity: 1; transform: scale(1.2) rotate(-12deg); }
@@ -594,6 +596,7 @@
     CAT = c;
     c.shows.forEach(function(s){ byId[s.id]=s; });
     c.channels.forEach(function(ch){ chanShows[ch] = c.shows.filter(function(s){ return s.ch.indexOf(ch)>=0; }); });
+    applySeasons(c);
     adPool = byId['commercials'] || null;
     buildChannelChips(); buildGreats(); refreshChannelCounts();
     renderStationNow(); setInterval(renderStationNow, 5000);
@@ -629,14 +632,36 @@
     }).catch(function(e){ console.warn('search index failed', e); });
   }
 
+  // ---- seasonal channels ----
+  // A seasonal station joins the front of the dial only during its month (visitor's local date).
+  // It is defined here rather than in catalog.json so the catalog stays a clean copy of the source data.
+  // Its broadcast clock is seeded by its id like every other channel. For testing, ?season=<id> shows only
+  // that seasonal station whatever the date, and ?season=off hides them all.
+  var SEASONS = [
+    { id:'halloween', month:9, tag:'October', until:'October 31',
+      shows:['quiet-please','lights-out','inner-sanctum-mysteries','suspense','the-mysterious-traveler'] }
+  ];
+  var SEASONAL = {};
+  function applySeasons(c){
+    var force = new URLSearchParams(location.search).get('season'), month = new Date().getMonth();
+    SEASONS.slice().reverse().forEach(function(se){
+      if(!(force!==null ? se.id===force : se.month===month)) return;
+      var shows = se.shows.map(function(id){ return byId[id]; }).filter(Boolean);
+      if(!shows.length || c.channels.indexOf(se.id)>=0) return;
+      chanShows[se.id] = shows; SEASONAL[se.id] = se;
+      c.channels.unshift(se.id);
+    });
+  }
+
   // ---- channels UI ----
   function buildChannelChips(){
     var el = $('channelChips'); el.innerHTML='';
     CAT.channels.forEach(function(ch){
       var n = (chanShows[ch]||[]).length;
       var c = document.createElement('div'); c.className='station'; c.dataset.ch=ch;
-      c.title = 'Tune in to '+titleCase(ch)+' ('+n+' shows in rotation)';
-      c.innerHTML = '<div class="st-head"><span class="st-name">'+titleCase(ch)+'</span>'+
+      var se = SEASONAL[ch];
+      c.title = 'Tune in to '+titleCase(ch)+' ('+n+' shows in rotation)'+(se?'. Seasonal station, on air through '+se.until+'.':'');
+      c.innerHTML = '<div class="st-head"><span class="st-name">'+titleCase(ch)+(se?'<span class="st-season">'+se.tag+'</span>':'')+'</span>'+
         '<span class="st-actions"><span class="st-dice" title="Random episode from this category">🎲</span>'+
         '<span class="st-count">'+n+' shows</span></span></div>'+
         '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"></div>';
@@ -1403,7 +1428,8 @@
     hasEnh: function(it){ return hasEnh(it); },
     enhCount: function(id){ return enhCount(byId[id]); },
     playGreat: playGreat,
-    onAirNow: function(ch){ var a=onAirNow(ch, Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, isAd:a.item.isAd, offset:a.offset, dur:a.dur, total:a.S.total } : null; }
+    onAirNow: function(ch){ var a=onAirNow(ch, Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, isAd:a.item.isAd, offset:a.offset, dur:a.dur, total:a.S.total } : null; },
+    schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); }
   };
 
   function renderFoot(){
@@ -1415,5 +1441,6 @@
   }
 })();
 </script>
+<script src="/lib/stat.js"></script>
 </body>
 </html>

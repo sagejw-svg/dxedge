@@ -36,7 +36,8 @@ def main():
         page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
         bad_resp = []
         def on_resp(r):
-            if r.status >= 400 and "favicon" not in r.url:  # harness serves no favicon; production does
+            # harness serves only /otr/, so the site favicon and the shared /lib/stat.js beacon 404 here; production serves both
+            if r.status >= 400 and "favicon" not in r.url and "/lib/stat.js" not in r.url:
                 bad_resp.append(f"{r.status} {r.url}")
         page.on("response", on_resp)
         page.goto(f"http://127.0.0.1:{PORT}/index.html")
@@ -94,7 +95,7 @@ def main():
         check("custom station builds a playlist", isinstance(surls, list) and len(surls) > 3, len(surls) if surls else 0)
 
         check("no page/JS errors", len(errors) == 0, errors[:5])
-        check("no failed resource loads (excl favicon)", len(bad_resp) == 0, bad_resp[:5])
+        check("no failed resource loads (excl favicon, beacon)", len(bad_resp) == 0, bad_resp[:5])
         browser.close()
     httpd.shutdown()
     print("\n" + ("ALL PASSED" if not fails else f"{len(fails)} FAILED: {fails}"))
