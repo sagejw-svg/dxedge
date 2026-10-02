@@ -1,64 +1,9 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-10-01T04:45:00Z",
+ "last_run": "2026-10-02T04:40:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
-  {
-   "date": "2026-09-22",
-   "run_outcome": "BLIND NIGHT. WebFetch PROVENANCE_REQUIRED on every call: /api/health?cb=20260922a, retry /api/health?cb=20260922retry, and an https://example.com control. All-host pattern, confirmed with a retry per provenance-gate-is-intermittent-and-per-host. No live surface checked. Per standing rule no curl/python/Chromium substitution. Static checks completed and passed. Zero repairs. Push sent early. No 2026-09-21 run is recorded in this file, so the 09-21 night appears to have been skipped entirely.",
-   "environment": {
-    "webfetch": "TOTAL BLOCK, 3 of 3 denied incl. example.com control.",
-    "browser": "NOT USED, same reasoning as 2026-09-20.",
-    "git": "Clone OK."
-   },
-   "cert": {
-    "status": "unknown",
-    "evidence": "WebFetch never reached the host; PROVENANCE_REQUIRED is a local permission denial, not a TLS result.",
-    "consecutive_failures": 0,
-    "counter_note": "Not incremented; unverifiable is not a renewal failure. Last positive confirmation 2026-09-19 04:08Z."
-   },
-   "main_dashboard": {
-    "api_health": "NOT CHECKED - gate.",
-    "api_debug": "NOT CHECKED - gate.",
-    "sota": "Carries over unverified: dark, upstream removed, awaiting_james sota-api-deprecation. Not re-reported.",
-    "endpoints_verified": []
-   },
-   "cyber_page": {
-    "browser_check": "NOT DONE - gate.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "STATIC clean. Tree-wide grep: only comment hits at backend/main.py:708 and backend/feedproxy.py:3. PROXY '/api/feed?url=' at line 349, all 6 getCached call sites (556, 586, 618, 639, 690, 715) use it.",
-    "allowlist_gaps": "none. Page last changed 49e82d2 (2026-09-03), feedproxy.py last changed d055aed (2026-09-01), so the 2026-09-20 static host check still holds.",
-    "page_source_unchanged": true
-   },
-   "aethersdr_page": {
-    "browser_check": "NOT DONE - gate.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "STATIC clean. PROXY at line 348, call sites 432 and 457.",
-    "allowlist_gaps": "none, unchanged since 2026-09-20 check.",
-    "page_source_unchanged": true,
-    "version_label_bug": "Unchanged, held under awaiting_james aethersdr-about-version-drift. Not re-reported."
-   },
-   "new_commit_review": {
-    "sha": "60594c2",
-    "subject": "Add Old Time Radio player at /otr",
-    "author": "Separate Claude session, not this routine.",
-    "scope": "New standalone frontend/public/otr/ (index.html, catalog.json, search.json), Otr.jsx shell, App.jsx route, sw.js bump, scripts/test_otr.py. Frontend only.",
-    "static_read": "Not a feed page. Only same-origin fetch() calls are catalog.json and search.json, both parse as valid JSON. External hosts referenced: archive.org (audio/metadata, CORS *) and oldtime.radio (attribution). No /api/feed bypass question arises because it uses no feed proxy by design, same category as emulators-page-has-no-feed-surface. No external script or stylesheet tags.",
-    "deploy_status": "UNVERIFIED - gate."
-   },
-   "prior_unverified": "2616852 usage-stats backend deploy is still unverified live (gate on 09-20 and 09-22, no 09-21 run).",
-   "outbound_links": "NOT DUE. Next full sweep 2026-10-01. No links checked tonight.",
-   "backend_tests": "Still broken at collection: test_dxedge.py:64 imports estimate_fof2, voacap_engine defines no such function. Pre-existing, outstanding.",
-   "repairs_made": "NONE.",
-   "problems_reported_tonight": [
-    "webfetch-permission-at-setup (routine could not run; same open decision)",
-    "deploy of 2616852 and 60594c2 unverified"
-   ],
-   "escalations_sent": [
-    "Push notification: blind night, fetch permission decision, unverified deploys."
-   ]
-  },
   {
    "date": "2026-09-22-interactive",
    "run_outcome": "FULL RUN, on demand with James present, about an hour after the blind 04:20Z nightly. WebFetch worked once James was there to approve it. All surfaces green. Zero repairs. One requested content change: oldtime.radio (the original OTR station) added to Credits and linked from the OTR tab and page.",
@@ -602,13 +547,88 @@
     }
    ],
    "outstanding_unchanged": "backend/tests collection error still present (test_dxedge.py imports estimate_fof2 from voacap_engine at line 64, used at 92/96/98; voacap_engine does not define it). Pre-existing, not papered over, reported as outstanding per instruction. All 17 awaiting_james items remain open; nothing was closed tonight."
+  },
+  {
+   "date": "2026-10-02",
+   "run_outcome": "BLIND NIGHT, fourth of the last six weeks' gated nights and the all-host total-block shape. WebFetch returned PROVENANCE_REQUIRED on 5 of 5 calls across 2 hosts, including an example.com control, so no live surface was checked and no verdict is offered on cert, /api/health, /api/debug, /cyber/ or /aethersdr/. Per substitution-is-not-permitted nothing was fetched by curl, python or Chromium to stand in. Escalation push sent EARLY at 04:15Z per the 09-16 lesson. Static and repo-side checks completed and are clean on every question they can answer. Zero repairs. ONE NEW escalation raised: support-page-qr-third-party.",
+   "environment": {
+    "webfetch": "TOTAL BLOCK, 5 of 5 denied: /api/health?cb=20261002a, a retry of the same, /api/health?cb=20261002b&nonce=1002b, /health/linkcheck.json?nonce=1002b, and an https://example.com/ control. Matches the 09-27/09-28 total-block shape, not the 09-18 partial one.",
+    "browser": "NOT USED against the live site, same reasoning as 09-20 and 09-22: relaying a page WebFetch refused is substitution. Local headless Chromium WAS used, legitimately, by the repo's own scripts/test_otr*.py suites, which drive a 127.0.0.1 fixture server and never touch dxedge.net.",
+    "git": "Clone OK, full depth. Push OK."
+   },
+   "cert": {
+    "status": "unknown",
+    "evidence": "WebFetch never reached the host. PROVENANCE_REQUIRED is a local permission denial, not a TLS result. crt.sh not attempted: it was ROBOTS_DISALLOWED on 09-30 and the gate was total tonight anyway.",
+    "consecutive_failures": 0,
+    "counter_note": "NOT incremented. Unverifiable is not a renewal failure, per the standing reading. Last positive confirmation 2026-10-01."
+   },
+   "main_dashboard": {
+    "api_health": "NOT CHECKED - gate.",
+    "api_debug": "NOT CHECKED - gate.",
+    "sota": "Carries over unverified: dark, upstream deprecated, held under awaiting_james sota-api-deprecation. Not re-reported.",
+    "solar_sfi": "Carries over unverified, held under awaiting_james solar-sfi-monthly-dataset. Not re-reported.",
+    "endpoints_verified": []
+   },
+   "cyber_page": {
+    "browser_check": "NOT DONE - gate.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "STATIC clean. Tree-wide grep over html/js/jsx/py/json outside state.json finds two hits only, both explanatory comments, at backend/main.py:708 and backend/feedproxy.py:3. PROXY is '/api/feed?url=' at line 349 and all 6 getCached call sites (556, 586, 618, 639, 690, 715) pass PROXY + encodeURIComponent. The only bare fetch( is the helper at 374 that receives the already-proxied URL. No bypass path exists in source.",
+    "allowlist_gaps": "NONE, re-derived tonight rather than carried over. All 11 proxy targets resolve to allowlisted hosts: www.cisa.gov (KEV 556, advisories 715), services.nvd.nist.gov (586), api.first.org (618), www.hamqsl.com (639), and the 7 tabbed news sources at 731-741 (krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com, news.google.com). No allowlist change made, needed or proposed.",
+    "page_source_unchanged": true,
+    "claude_docs_302": "5 docs.claude.com links still present at lines 501-503, 505, 506. Held under awaiting_james claude-docs-domain-migration, default is leave-until-301. Not re-verified tonight, gate.",
+    "atlas_mitre": "Lines 511-512 unchanged, expected in every linkcheck report, skipped per known issue atlas-mitre-spa-404s."
+   },
+   "aethersdr_page": {
+    "browser_check": "NOT DONE - gate.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "STATIC clean. PROXY at line 348, both call sites 432 and 457 proxied, only bare fetch( is the helper at 373.",
+    "allowlist_gaps": "NONE. The 4 NEWS_SOURCES resolve to github.com, www.flexradio.com, www.rtl-sdr.com and hackaday.com, all allowlisted.",
+    "page_source_unchanged": true,
+    "version_label_bug": "Unchanged, held under awaiting_james aethersdr-about-version-drift. Not re-reported."
+   },
+   "otr_page": {
+    "browser_check": "NOT DONE against the live site - gate. Deploy of the 7 new commits is UNVERIFIED.",
+    "local_tests": "RAN and PASSED offline. scripts/test_otr.py, test_otr_enhanced.py, test_otr_history.py, test_otr_seasonal.py and test_otr_transport.py all reported ALL PASSED or empty FAILS against their 127.0.0.1 fixture servers. test_otr_broadcast.py and test_otr_fixes.py were cut off by this run's own 2-minute command cap, not by a failure, so they are untested rather than failing.",
+    "feed_surface": "None. Only fetch( is getJSON at line 421, same-origin relative to its own directory. archive.org audio stays a media-element src per known issue otr-audio-is-a-media-element-not-a-feed."
+   },
+   "new_commit_review": {
+    "range": "37efe2a..95afedc, 7 commits, all 2026-10-01, author 'Claude' (a separate session, not this routine).",
+    "shas": [
+     "e932114",
+     "fa5d265",
+     "bedf380",
+     "e810bce",
+     "61f4a37",
+     "ffc4907",
+     "95afedc"
+    ],
+    "scope": "Frontend and scripts only. frontend/public/otr/{index.html,enhanced.json}, frontend/public/sw.js (CACHE_NAME v49 -> v56), frontend/src/App.jsx (a ko-fi tip line in the footer), frontend/src/components/{Credits.jsx,Support.jsx}, and 8 scripts/ files including 4 new test suites and scripts/otr_restore.py. 14 files, +3709/-1159.",
+    "excluded_files_untouched": "CONFIRMED. No change to nginx.conf, docker-compose.yml, .github/workflows/deploy.yml or scripts/cert_repair.sh.",
+    "feed_questions": "None arise. No new /api/feed call sites, no new proxy targets, no new allowlist hosts required, no allorigins.",
+    "new_outbound_hosts": "ko-fi.com/oldtimeradio (4 refs: App.jsx footer, Credits.jsx, otr/index.html footer, Support.jsx) and 306 archive.org refs in enhanced.json. None checked: the curated sweep is not due until 2026-10-15 and the gate was total anyway. The 09-22-interactive run verified oldtime.radio and the codebox repo; ko-fi.com is new tonight and unverified.",
+    "finding": "Reading Support.jsx for this review surfaced the api.qrserver.com dependency now raised as awaiting_james support-page-qr-third-party. Note it is NOT from these commits: Support.jsx was added by James himself in 59111ba on 2026-05-31 and these commits only changed its KOFI constant. Pre-existing and untracked, not a regression.",
+    "deploy_status": "UNVERIFIED - gate."
+   },
+   "outbound_links": "NOT DUE. Next curated sweep 2026-10-15. Rotation clock NOT advanced. Zero links checked tonight.",
+   "published_linkcheck": "COULD NOT BE READ. https://dxedge.net/health/linkcheck.json?nonce=1002b was denied by the gate on its only attempt. The standing read-it-every-night rule was honoured as an attempt; the data is simply unavailable. This is the second data loss the gate has caused that awaiting_james linkcheck-report-should-be-committed would have prevented, since a committed copy would have been readable from the clone.",
+   "backend_tests": "Still broken at collection, re-confirmed directly tonight rather than carried over: backend/tests/test_dxedge.py:64 imports estimate_fof2 and uses it at lines 92, 96 and 98, while backend/voacap_engine.py defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and no estimate_fof2. Pre-existing, not caused by this run, not papered over. Outstanding.",
+   "repairs_made": "NONE. Nothing was repairable: the four autonomous categories all need live data this run could not get, and the single new finding is an escalation by the runbook rather than an autonomous fix.",
+   "problems_reported_tonight": [
+    "webfetch-permission-at-setup (routine could not run; same open decision, now the blocking item for a 9th degraded night)",
+    "support-page-qr-third-party (NEW)",
+    "deploy of the 7 new OTR commits unverified"
+   ],
+   "escalations_sent": [
+    "Push notification at 04:15Z, early per the 09-16 lesson: blind night, fetch permission decision named as the specific ask.",
+    "Email to sagejw@gmail.com: 0 fixes, 2 decisions."
+   ]
   }
  ],
  "known_issues_do_not_re_report": [
   {
    "id": "substitution-is-not-permitted",
    "since": "2026-09-27",
-   "detail": "Governing rule for every future run, and it overrides the 09-24 curl note and the substitution half of the 09-03 browser note. When WebFetch fails or returns PROVENANCE_REQUIRED for a URL, the run must NOT fetch that content another way: not curl, not python requests, not headless Chromium, not any library or language. The correct behaviour on a blind night is exactly what the original 2026-09-04 note said: retry once with a fresh cache-buster, do the static and repo-side checks, record precisely which checks could not be run, notify James early, write state back, and stop. WHY THIS MATTERS BEYOND policy: the runs of 09-24, 09-25 and 09-26 leaned on curl and on the Chromium relay, and 09-26 in particular reached its three link repairs through a curl read of /health/linkcheck.json and curl re-verification of each URL. Those repairs look correct on inspection and are not being reverted. But the green verdicts of those nights rested on a channel this routine should not be using, so they are weaker evidence than they read as, and future runs must not cite them as precedent. The real fix is not a workaround, it is granting this scheduled task standing fetch permission at setup: see awaiting_james webfetch-permission-at-setup, open since 09-08 and the item that actually blocks the routine. HELD AGAIN 2026-09-28, the second consecutive blind night. Recording this because it is the rule most likely to erode: curl and the Chromium relay both still work in this container, so every blind night presents a working channel and a plausible argument for using it. The argument does not improve with repetition. A blind night correctly produces no verdict, not a verdict reached another way. HELD AGAIN 2026-09-29, third consecutive blind night, and this time the rule was BROKEN before it was read: that run made 3 curl calls to dxedge.net prior to loading state.json, then stopped. See run 2026-09-29 curl_violation_2026_09_29. The lesson is not that the rule is unworkable, it is that a rule stored only in state.json cannot bind the first probe of a run. Do not treat those 3 calls as precedent or as a green verdict. HELD 2026-09-30, and honoured cleanly on a working night: three URLs were refused (services.swpc.noaa.gov 10cm-flux twice, crt.sh robots) and none was substituted. The cost was accepted and recorded rather than worked around: the exact cert expiry went unread, and the current daily solar flux was taken from the site's own hamqsl feed instead of from NOAA direct. Also note a subtler case settled tonight: WebFetch returned a genuine 404 for atlas.mitre.org, and the run did NOT relay that host into Chromium to see whether it renders client-side, because the relay fetches with python. A 404 is a real answer from the target, so the temptation is to call a browser check \"added rendering\" rather than substitution; the run declined and recorded an inference instead. See atlas-mitre-spa-404s."
+   "detail": "Governing rule for every future run, and it overrides the 09-24 curl note and the substitution half of the 09-03 browser note. When WebFetch fails or returns PROVENANCE_REQUIRED for a URL, the run must NOT fetch that content another way: not curl, not python requests, not headless Chromium, not any library or language. The correct behaviour on a blind night is exactly what the original 2026-09-04 note said: retry once with a fresh cache-buster, do the static and repo-side checks, record precisely which checks could not be run, notify James early, write state back, and stop. WHY THIS MATTERS BEYOND policy: the runs of 09-24, 09-25 and 09-26 leaned on curl and on the Chromium relay, and 09-26 in particular reached its three link repairs through a curl read of /health/linkcheck.json and curl re-verification of each URL. Those repairs look correct on inspection and are not being reverted. But the green verdicts of those nights rested on a channel this routine should not be using, so they are weaker evidence than they read as, and future runs must not cite them as precedent. The real fix is not a workaround, it is granting this scheduled task standing fetch permission at setup: see awaiting_james webfetch-permission-at-setup, open since 09-08 and the item that actually blocks the routine. HELD AGAIN 2026-09-28, the second consecutive blind night. Recording this because it is the rule most likely to erode: curl and the Chromium relay both still work in this container, so every blind night presents a working channel and a plausible argument for using it. The argument does not improve with repetition. A blind night correctly produces no verdict, not a verdict reached another way. HELD AGAIN 2026-09-29, third consecutive blind night, and this time the rule was BROKEN before it was read: that run made 3 curl calls to dxedge.net prior to loading state.json, then stopped. See run 2026-09-29 curl_violation_2026_09_29. The lesson is not that the rule is unworkable, it is that a rule stored only in state.json cannot bind the first probe of a run. Do not treat those 3 calls as precedent or as a green verdict. HELD 2026-09-30, and honoured cleanly on a working night: three URLs were refused (services.swpc.noaa.gov 10cm-flux twice, crt.sh robots) and none was substituted. The cost was accepted and recorded rather than worked around: the exact cert expiry went unread, and the current daily solar flux was taken from the site's own hamqsl feed instead of from NOAA direct. Also note a subtler case settled tonight: WebFetch returned a genuine 404 for atlas.mitre.org, and the run did NOT relay that host into Chromium to see whether it renders client-side, because the relay fetches with python. A 404 is a real answer from the target, so the temptation is to call a browser check \"added rendering\" rather than substitution; the run declined and recorded an inference instead. See atlas-mitre-spa-404s. HELD AGAIN 2026-10-02, and this time honoured from the FIRST tool call of the run rather than after reading state.json, which is the failure mode of 09-29. What made the difference was ordering: the run fetched nothing before cloning the repo and reading this file. That is a cheap, repeatable discipline and future runs should keep it - clone and read state BEFORE the first probe. Cost accepted tonight: cert status, /api/health, /api/debug, both standalone page renders, /health/linkcheck.json and the deploy status of 7 new commits all went unread, and no verdict is offered on any of them. Note also that running the repo's own scripts/test_otr*.py was NOT treated as substitution, correctly: those suites drive a 127.0.0.1 fixture server built from files in the clone and never request dxedge.net, so they add offline test coverage rather than standing in for a denied fetch. The line to hold is the TARGET, not the tool: local Chromium against local fixtures is fine, local Chromium relaying dxedge.net is not."
   },
   {
    "id": "health-metric-cold-cache",
@@ -663,7 +683,7 @@
   {
    "id": "webfetch-provenance-gate",
    "since": "2026-09-04",
-   "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it. 2026-09-17: fired ONCE on the first call of the night (dxedge.net/api/health?cb=20260917a) and cleared on the immediate retry; every subsequent fetch worked first try. Important read: the mid-session grant James made on 09-16 did not stop the gate firing, but nor did it stick. That is the 09-05 intermittent pattern, not the total-block pattern, so it was handled by the retry-once rule and NOT escalated. 2026-09-18: PARTIAL gate, a new pattern. /api/health and /cyber/ answered first try and /api/pota answered on its retry, while /api/debug, /api/sota, /api/satellites/positions and two http-only emulator hosts were denied on BOTH attempts each. So it is neither the all-host total block nor a single first-call hiccup: it denied roughly half the calls, per URL, all night, and the denials were sticky. Handling: retry-once applied, denied endpoints recorded as gaps, no substitution via python or the Chromium relay, and the main-dashboard browser load skipped because it would have re-fetched the two denied endpoints. Escalation push sent early; James had not granted access by the end of the run. 6 of the last 15 nights degraded (09-04, 09-08, 09-09, 09-14, 09-16, 09-18). 2026-09-20: TOTAL BLOCK again, the all-host pattern. 5 denials over 35 minutes across 2 hosts: three /api/health variants, an example.com control, and a late-run retry at 04:42Z fired deliberately at the end to test whether the early escalation push had been answered. It had not. Handling: static checks only, no substitution, escalation push sent early at 04:12Z. Note the shape of the last week - 09-17 one retry-clearing hiccup, 09-18 a partial per-URL block, 09-19 fully clean, 09-20 fully blind. There is no trend to ride and no retry policy that fixes it; the gate is unpredictable run to run, which is itself the argument for granting this task standing fetch permission at setup rather than continuing to gamble nightly. 7 of the last 17 nights degraded (09-04, 09-08, 09-09, 09-14, 09-16, 09-18, 09-20). 2026-09-27: TOTAL BLOCK again, all-host. 6 denials over 35 minutes: /api/health on three distinct cache-busters, /api/debug, /health/linkcheck.json, and an example.com control. Never cleared. Escalation push sent early at 04:20Z and unanswered by 04:40Z. 8 of the last 24 nights degraded. The shape of the last week - 09-23 through 09-26 all clean, tonight fully blind - confirms yet again that there is no trend to ride. This note's ORIGINAL 2026-09-04 instruction, do the static checks and do NOT substitute curl, python or Chromium, is the correct one and is now reinstated as binding; see substitution-is-not-permitted."
+   "detail": "WebFetch can fail for the whole run with error_type PROVENANCE_REQUIRED, on every URL including example.com, saying the permission request was not answered in time. It is an interactive approval gate and an unattended run cannot clear it. When this happens the correct behaviour is to do the static/offline checks, record the gap, notify James, and NOT to substitute curl, python requests or headless Chromium for the denied fetch. If this recurs, the routine needs its fetch permissions granted at setup time rather than per run. RECURRED 2026-09-08, again all-host, again confirmed with an example.com control and with retries on two dxedge.net URLs. That is 2 fully blind nights out of the last 5 (09-04, 09-08). The per-run workaround is exhausted: this now needs the routine's fetch permissions granted at setup time. Escalated to James by push notification and email on 2026-09-08. RECURRED 2026-09-14, all-host again, confirmed with an example.com control and with retries on two dxedge.net URLs including one fired at the very end of the run. RECURRED 2026-09-16, all-host again, confirmed with an api.pota.app control plus three dxedge.net retries including a late-run nonce call. This one came the night AFTER a fully green run, which is new: the gate does not settle after a good night. 5 of the last 13 nights fully blind (09-04, 09-08, 09-09, 09-14, 09-16). RESOLVED-IN-RUN 2026-09-16: the gate was total and sticky across 5 calls including an api.pota.app control, then cleared the moment James granted access mid-session, and every fetch afterwards worked first try. This is the first clear caused by human action rather than a chance retry. Practical consequence for future runs: send the escalation push EARLY in a blocked run rather than at the end, because a granted permission can convert a blind night into a full one. Whether the grant is standing or was one-off for this session is not yet known; if a later night is gated again, that answers it. 2026-09-17: fired ONCE on the first call of the night (dxedge.net/api/health?cb=20260917a) and cleared on the immediate retry; every subsequent fetch worked first try. Important read: the mid-session grant James made on 09-16 did not stop the gate firing, but nor did it stick. That is the 09-05 intermittent pattern, not the total-block pattern, so it was handled by the retry-once rule and NOT escalated. 2026-09-18: PARTIAL gate, a new pattern. /api/health and /cyber/ answered first try and /api/pota answered on its retry, while /api/debug, /api/sota, /api/satellites/positions and two http-only emulator hosts were denied on BOTH attempts each. So it is neither the all-host total block nor a single first-call hiccup: it denied roughly half the calls, per URL, all night, and the denials were sticky. Handling: retry-once applied, denied endpoints recorded as gaps, no substitution via python or the Chromium relay, and the main-dashboard browser load skipped because it would have re-fetched the two denied endpoints. Escalation push sent early; James had not granted access by the end of the run. 6 of the last 15 nights degraded (09-04, 09-08, 09-09, 09-14, 09-16, 09-18). 2026-09-20: TOTAL BLOCK again, the all-host pattern. 5 denials over 35 minutes across 2 hosts: three /api/health variants, an example.com control, and a late-run retry at 04:42Z fired deliberately at the end to test whether the early escalation push had been answered. It had not. Handling: static checks only, no substitution, escalation push sent early at 04:12Z. Note the shape of the last week - 09-17 one retry-clearing hiccup, 09-18 a partial per-URL block, 09-19 fully clean, 09-20 fully blind. There is no trend to ride and no retry policy that fixes it; the gate is unpredictable run to run, which is itself the argument for granting this task standing fetch permission at setup rather than continuing to gamble nightly. 7 of the last 17 nights degraded (09-04, 09-08, 09-09, 09-14, 09-16, 09-18, 09-20). 2026-09-27: TOTAL BLOCK again, all-host. 6 denials over 35 minutes: /api/health on three distinct cache-busters, /api/debug, /health/linkcheck.json, and an example.com control. Never cleared. Escalation push sent early at 04:20Z and unanswered by 04:40Z. 8 of the last 24 nights degraded. The shape of the last week - 09-23 through 09-26 all clean, tonight fully blind - confirms yet again that there is no trend to ride. This note's ORIGINAL 2026-09-04 instruction, do the static checks and do NOT substitute curl, python or Chromium, is the correct one and is now reinstated as binding; see substitution-is-not-permitted. RECURRED 2026-10-02: TOTAL BLOCK, all-host. 5 denials over roughly 10 minutes across 2 hosts: /api/health on two distinct cache-busters plus an immediate same-URL retry, /health/linkcheck.json, and an https://example.com/ control. Never cleared; escalation push sent early at 04:15Z and unanswered by the end of the run. 9 of the last 29 nights degraded (09-04, 09-08, 09-09, 09-14, 09-16, 09-18, 09-20, 09-27, 09-28, 09-29, 10-02 - note that is 11 entries, the count having been understated in earlier amendments; treat the LIST as authoritative, not the running total). The shape of the last week again shows no trend: 09-30 and 10-01 both fully clean with live verdicts and a real repair, tonight fully blind. This remains the single strongest argument for awaiting_james webfetch-permission-at-setup."
   },
   {
    "id": "provenance-gate-is-intermittent-and-per-host",
@@ -856,6 +876,11 @@
    "raised": "2026-10-01",
    "priority": "low. Nothing is broken for visitors; this is housekeeping.",
    "detail": "5 links in frontend/public/cyber/index.html (lines 501, 502, 503, 505, 506) point at https://docs.claude.com/en/docs/build-with-claude/... Each answers HTTP 302 to the same path on platform.claude.com, and the target was verified to serve the real current documentation (fetched .../docs/en/build-with-claude/vision, titled 'Vision'). NOT rewritten autonomously, deliberately: the Step 5 mandate covers PERMANENT redirects and 302 Found is temporary, and the existing links still work for every visitor because browsers follow the hop. So there is no defect to repair, only a question of whether to pre-empt the migration. Options: (a) tell the nightly run to rewrite all 5 to platform.claude.com, (b) leave them and let the run rewrite only if the status ever becomes 301, which is the default if you say nothing."
+  },
+  {
+   "id": "support-page-qr-third-party",
+   "raised": "2026-10-02",
+   "detail": "Security-relevant, pre-existing, and not previously tracked. frontend/src/components/Support.jsx renders the donation QR codes as <img src> pointing at a third party: https://api.qrserver.com/v1/create-qr-code/?size=NxN&data=<encoded value>&bgcolor=0e0e0e&color=7affb2&qzone=2. The values passed in the data param are the page's BTC address (bc1q99...dgxl), ETH address (0x450Af...82db), https://paypal.me/sagejw and now https://ko-fi.com/oldtimeradio. CONCRETE RISK, and it is worse than the ordinary third-party-asset case: the QR is the artifact a visitor actually scans, and a compromised, hijacked or MITM'd api.qrserver.com could return a QR encoding a DIFFERENT wallet address while the plain-text address printed next to it stays correct. People scan QR codes without reading the address underneath, so donations would silently redirect with no visible tell and no integrity check available - an <img> cannot carry subresource integrity, and the URL is built fresh on every render. Secondary issues: the addresses are disclosed to a third party on every page view (minor, they are public by design), and the QRs break if the service goes down. PROVENANCE, stated precisely so this is not misread as a regression: Support.jsx was added by James himself in 59111ba on 2026-05-31, and the 7 OTR commits of 2026-10-01 only changed its KOFI constant. The dependency is James's own and about four months old. It surfaced tonight only because reviewing those commits meant reading the file, and it appears in neither known_issues nor awaiting_james, so it has never been reported. NOT fixed autonomously: it is not link rot, not a redirect, not a deprecated feed endpoint and not an /api/feed bypass (an image load is not a CORS fetch and cannot go through a proxy that returns text, same reasoning as otr-audio-is-a-media-element-not-a-feed), so it falls outside all four repair categories. It is also closely analogous to crane-cab-third-party-cdn, which was escalated rather than fixed. OPTIONS: (a) leave as is; (b) generate the QR codes client-side from a vendored QR library, which removes the third party entirely and is the clean fix; (c) pre-generate the four QR PNGs once, eyeball-verify each decodes to the right address, and commit them as static assets, which also removes the runtime dependency and is the smallest change; (d) drop the QR codes and show copy-to-clipboard text addresses only. Recommend (c) for the crypto addresses specifically, since those are the ones where a swap costs real money and the address set almost never changes. NOTE this was found by source reading on a blind night: whether the QRs currently render, and whether api.qrserver.com is even reachable, was NOT verified."
   }
  ],
  "outbound_links": {
