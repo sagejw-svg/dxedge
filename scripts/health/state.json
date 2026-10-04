@@ -1,64 +1,9 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-10-03T04:45:00Z",
+ "last_run": "2026-10-04T04:45:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
-  {
-   "date": "2026-09-23",
-   "run_outcome": "FULL RUN, all surfaces green. WebFetch worked unattended for the first time since the 09-13/09-17 green streak (no PROVENANCE_REQUIRED on any call). Cert clean, both health endpoints clean, every live feed 200 through the same-origin proxy, five surfaces rendered in a real browser with zero panel errors. Nothing was broken. Nothing was repaired. Quiet night: no email and no push notification sent. Only this state file pushed.",
-   "environment": {
-    "webfetch": "WORKING, unattended. /api/health and /api/debug both answered on the first call at 04:06Z with no approval gate. Notable because 09-20 and 09-22 were total blocks and the 09-22 green run needed James present.",
-    "browser": "Headless Chromium 1194 plus the local relay rig (scripts rebuilt from scratch each run; relay on 127.0.0.1:8899 forwarding to dxedge.net through the egress proxy, Chromium launched --no-proxy-server). Worked on all five page loads.",
-    "git": "Clone OK. PAT authenticated for ls-remote and push despite the stale Mem expiry note.",
-    "rate_limit_pacing": "Page loads spaced 20-35s apart per known issue api-rate-limit-on-feed. No throttling observed."
-   },
-   "cert": {
-    "status": "ok",
-    "evidence": "https://dxedge.net/api/health?cb=20260923a fetched cleanly over TLS by WebFetch at 04:06Z, by python at 04:07Z, and by every relay fetch behind the five browser loads. No CERTIFICATE_VERIFY_FAILED and no expiry error.",
-    "consecutive_failures": 0,
-    "notes": "cert_repair.sh guard and /etc/cron.d/dxedge-certbot presumed still in place; no deploy has run since 47795e7. Exact expiry date still unreadable from this container: openssl sees the egress proxy certificate, not the real one."
-   },
-   "main_dashboard": {
-    "api_health": "ok. sfi 116, k 2, spots 500, feed_proxy true, version 2.0.",
-    "api_debug": "ok. 24 cache keys, filesystem ok (dist, index.html, world.json 44937 bytes).",
-    "sat_tles_pota_spots": "0/0 on the first read at 04:06Z, then 9/25 on the relay read at 04:07Z once the caches warmed. Cold-cache cosmetic per known issue health-metric-cold-cache, reconfirmed for the fourth time. Not investigated further, not reported.",
-    "endpoints_verified": [
-     "/api/health (ok)",
-     "/api/debug (ok)",
-     "/api/pota (live spots current to 04:06Z: VK6WTF, JG3DHN, JI2ACT/2, JI1IZS/9 and more, bands resolving correctly)",
-     "/api/sota ({\"spots\":[]} - still dark, see sota_note)",
-     "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
-     "/api/dashboard, /api/recommendation, /api/solar/history, /api/voacap/summary (all 200 in the browser load)"
-    ],
-    "browser_check": "CLEAN. Title 'DXEdge - Propagation & DX Intelligence'. /, /assets/index-CC32Wzhd.js, /assets/index-CP3qRF0U.css, /lib/stat.js and the four /api/ calls all 200. /api/stat 204 with a net::ERR_ABORTED entry, the known sendBeacon-in-headless artifact. 5 ws://127.0.0.1:8899/ws/spots console errors, the known relay WebSocket artifact. Zero page errors, zero pending, zero failure strings.",
-    "sota_note": "SOTA still returns an empty array. Unchanged from 09-22. Held under awaiting_james sota-api-deprecation (highest open item, raised 2026-09-03, now 20 days old). Deliberately NOT re-reported, per the do-not-re-report rule."
-   },
-   "cyber_page": {
-    "browser_check": "CLEAN. Title 'DX//EDGE - CYBER', 6082 body chars. All 8 /api/feed calls 200: CISA KEV json, CISA advisories xml, krebsonsecurity, securityweek, hamqsl solarxml, NVD CRITICAL cves/2.0, and both api.first.org EPSS batches. Zero console errors, zero pageerrors, zero 'failed:' strings, zero 'loading...' placeholders, nothing pending at 20s.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "Tree-wide grep across html, js, jsx and py: only two hits remain and both are explanatory comments, backend/main.py:708 and backend/feedproxy.py:3. Browser capture recorded zero requests to allorigins.win.",
-    "allowlist_gaps": "none. Every host the page proxied tonight (www.cisa.gov, services.nvd.nist.gov, api.first.org, www.hamqsl.com, krebsonsecurity.com, www.securityweek.com) is already in ALLOWED_HOSTS. No allowlist change made, needed, or proposed.",
-    "epss_504_note": "The 09-17 cold-cache 504 on one EPSS call did NOT recur. Both batches answered 200 on the first load.",
-    "nvd_severity_mismatch": "Still open as an awaiting_james editorial item from 2026-09-05. NOT re-reported."
-   },
-   "aethersdr_page": {
-    "browser_check": "CLEAN. Title 'DX//EDGE - AETHERSDR', 4234 body chars. All 4 /api/feed calls 200: github.com/aethersdr/AetherSDR/releases.atom, hackaday radio-hacks, flexradio, rtl-sdr. Zero console errors, zero failure strings, zero loading placeholders, nothing pending at 20s. No duplicate releases-atom request this run.",
-    "allorigins_regression": false,
-    "allowlist_gaps": "none.",
-    "version_label_bug": "Unchanged and still latent. Held under awaiting_james aethersdr-about-version-drift. NOT re-reported."
-   },
-   "other_surfaces": {
-    "otr_page": "CLEAN. Title 'Old Time Radio - DXEdge', all responses 200, zero console errors. Not a feed surface.",
-    "emulators_page": "CLEAN. Title 'Emulators - DXEdge', 180679 body chars, zero console errors. Only non-200 is the /api/stat 204 plus its ERR_ABORTED sendBeacon artifact. Not a feed surface."
-   },
-   "new_commit_review": "NONE. HEAD was still 47795e7 (the 09-22 interactive commit) at clone time, so zero commits have landed since the last run and every backend and frontend source file is byte-identical to the night it was last verified green. The 2616852 usage-stats backend deploy and the 60594c2 OTR deploy, unverified on the blind 09-20 and 09-22 nights, are now both confirmed live: /api/health reports version 2.0, /lib/stat.js serves 200, and /otr/ renders.",
-   "outbound_links": "NOT DUE. Next full sweep 2026-10-01. No links checked tonight.",
-   "backend_tests": "Still broken at collection. tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine; voacap_engine defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and no estimate_fof2. Nearest relative is f2_layer_strength, which has a different signature and different semantics, so this is not a rename that can be mechanically applied. Pre-existing, outstanding, deliberately not papered over. (pytest is not installed in the nightly container, so the break was confirmed by reading the source rather than by running collection.)",
-   "repairs_made": "NONE.",
-   "problems_reported_tonight": [],
-   "escalations_sent": []
-  },
   {
    "date": "2026-09-24",
    "run_outcome": "FULL RUN, seven surfaces green, zero repairs. WebFetch was blocked all night by the provenance gate (PROVENANCE_REQUIRED on both calls, first and retry), but the night was NOT blind: curl through the egress proxy plus headless Chromium on the relay covered every check WebFetch would have done, including, for the first time, a definitive cert verdict AND an exact expiry date. Nothing was broken. Nothing was repaired. Quiet night: no email, no push. Only this state file pushed.",
@@ -650,6 +595,87 @@
    "escalations_sent": [],
    "james_notified": "No. Quiet night per the Step 6 rule: nothing broken, nothing fixed. The standing backlog was last emailed 2026-10-01, two days ago, so re-sending it would be noise. The one genuinely new piece of information tonight, the solar-flux corroboration, strengthens an item James already has rather than adding one.",
    "post_push_verification": "Commit 97e451e pushed to main at 04:34Z, which triggers deploy.yml and therefore redeploys the site even though the only change is this state file. Verified after the deploy window at 04:42Z: /api/health?nonce=1003post returns status ok, version 2.0, feed_proxy true; /sw.js?nonce=1003post still serves dxedge-v56. The deploy did not break anything and no revert was needed."
+  },
+  {
+   "date": "2026-10-04",
+   "run_outcome": "FULL RUN on every dimension this session can reach, zero repairs. WebFetch worked unattended with no provenance gate on any of 25 calls, the first included. Cert clean. /api/health and /api/debug ok. ALL 16 live feeds on the two standalone pages verified 200 individually through /api/feed with fresh nonces, including NVD, which was verified DIRECTLY for the first time (see the amendment to nvd-double-encoded-url-unverifiable). No browser exists in this session, so the Step 3 render, console and request-timing checks could not run and no verdict is offered on them. Nothing was broken. Nothing was repaired. Quiet night: no email, no push. Only this state file pushed. The run's real product beyond the green verdict is two METHOD corrections, one of which retires a false-confidence technique this routine adopted last night.",
+   "environment": {
+    "webfetch": "WORKING, unattended, zero gating. 25 calls across dxedge.net paths and none returned PROVENANCE_REQUIRED, including the very first call of the run. Cleanest fetch night since 09-25. Does not close awaiting_james webfetch-permission-at-setup: the gate is documented as intermittent and four of the last eight nights were degraded or blind.",
+    "browser": "NONE REACHABLE. Tool enumeration found no mcp__claude-in-chrome__* and no mcp__remote-devices__Claude_Browser__* in this session, and no device bridge: it is a cloud scheduled run. FOURTH consecutive run to confirm the Step 3 browser check can never execute here. Used the prompt's own stated fallback instead, checking every feed URL directly through /api/feed. The headless-Chromium relay was NOT built, per substitution-is-not-permitted.",
+    "curl": "NOT USED against dxedge.net or any other target. Zero curl and zero python fetches of site content all night.",
+    "git": "Clone OK. PAT ls-remote and push --dry-run both exit 0, so pat-expiry-note-stale still holds and the token remains good. HEAD at clone time was 382bb5e, identical to origin/main, so ZERO commits have landed since the 10-03 run and every source file is byte-identical to the night it was last verified green.",
+    "rate_limit_pacing": "Feed checks run in four batches of four with 25-27s gaps per api-rate-limit-on-feed. No throttling observed, no 429s."
+   },
+   "no_substitution_compliance": "HELD, no violation and no temptation: nothing was refused all night, so no forbidden channel was ever the only way to an answer. First tool call of the run was a WebFetch probe of /api/health, which is the permitted channel and may go first.",
+   "cert": {
+    "status": "ok",
+    "evidence": "Clean TLS on 25 WebFetch calls to dxedge.net across /api/health, /api/debug, /api/pota, /api/sota, /api/satellites/positions, /api/dashboard, /api/recommendation, /api/feed (x16), /sw.js, /health/linkcheck.json, /cyber/ and /aethersdr/. No CERTIFICATE_VERIFY_FAILED and no expiry error on any of them. Per Step 1 a clean fetch IS the cert verdict.",
+    "expires": "NOT RE-READ TONIGHT. crt.sh was not attempted: it has returned ROBOTS_DISALLOWED to WebFetch on 09-30 and 10-01 and it is listed 502 in the published linkcheck report, and substitution-is-not-permitted bars reaching it another way. Last known from the 09-25 CT read: 2026-11-29T13:08:28Z, issued 2026-08-31T13:08:29Z by Let's Encrypt CN=YE1. Roughly 56 days out. The certbot renewal window opens around 2026-10-30, so nothing is due and no deploy was needed for cert reasons.",
+    "consecutive_failures": 0
+   },
+   "main_dashboard": {
+    "api_health": "ok at 04:06:48Z. sfi 105, k_index 2, spots 500, solar true, feed_proxy true, version 2.0.",
+    "api_debug": "ok at 04:07:07Z. 40 cache keys, filesystem ok (dist_exists, index_html, world_json 44937 bytes).",
+    "sat_tles_pota_spots": "0/0 cold in /api/health while /api/pota served 28 live spots and /api/satellites/positions served 9 satellites in the same window. Cold-cache cosmetic per health-metric-cold-cache, now reconfirmed for the NINTH consecutive run. The brief's standing 'investigate both' is satisfied by this repeated finding. Not reported.",
+    "endpoints_verified": [
+     "/api/health (ok, first attempt, no gate)",
+     "/api/debug (ok)",
+     "/api/pota (28 live spots: WG0Y 7074.0 40m, KQ4RME 7074.0 40m, JS2RMF/1 7008.0 40m, W2SZ 3574.0 80m - bands resolving correctly on all four)",
+     "/api/sota ({\"spots\":[]} - still dark, see sota_note)",
+     "/api/satellites/positions (9 sats: AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3)",
+     "/api/dashboard?grid=CM95 (ok, band_conditions array populated 160m through 10m with good/fair/poor, 500 spots, no error field)",
+     "/api/recommendation?grid=CM95 (ok, local 15m good at 17:00Z, dx 40m fair to JA in 4h)",
+     "/sw.js (serves CACHE_NAME 'dxedge-v56', byte-matching repo HEAD frontend/public/sw.js line 4, so the frontend deploy is current per sw-js-is-a-deploy-tripwire)"
+    ],
+    "browser_check": "NOT RUN. No browser exists in this session. No verdict offered on the React dashboard's client-side render, its hashed bundle loads or its console. The seven API endpoints the dashboard depends on were all verified directly instead.",
+    "sota_note": "SOTA still returns an empty array. Unchanged since 09-15. Held under awaiting_james sota-api-deprecation, now 31 days old and still the oldest and highest open item. Deliberately NOT re-reported.",
+    "solar_sfi_note": "Carries the 10-03 confirmation forward with one more data point and was NOT re-reported. /api/health read sfi 105, identical to 10-03, while the site's own hamqsl feed read solarflux 93 timestamped 04 Oct 2026 0408 GMT. A 12-point gap, and the dashboard value has now been frozen at 105 for two consecutive nights inside the same month, which is what a monthly-mean dataset does. Held under awaiting_james solar-sfi-monthly-dataset."
+   },
+   "cyber_page": {
+    "browser_check": "NOT RUN, no browser in session. Inline '<name> failed:' panel strings, console errors and request timing therefore went unchecked and no verdict is offered on them. What WAS checked: the page shell fetched 200 with zero 'failed:' strings present and only the four normal pre-JS placeholders (loading CISA KEV catalog, loading NVD critical CVEs, loading solar data, loading CISA advisories).",
+    "feeds": "ALL 12 VERIFIED LIVE AND INDIVIDUALLY, not by cache key. Each fetched straight through /api/feed with a fresh nonce: hamqsl solarxml (flux 93, 04 Oct 0408 GMT), CISA advisories all.xml (newest 'CISA Adds Two Known Exploited Vulnerabilities to Catalog', Fri 02 Oct), CISA KEV json, krebsonsecurity (28 Sep), feedburner TheHackerNews (03 Oct), bleepingcomputer (03 Oct), darkreading (02 Oct), isc.sans.edu (03 Oct), securityweek (03 Oct), news.google.com PQC search (40 items), api.first.org EPSS (status OK, data returned), and services.nvd.nist.gov cves/2.0 (resultsTotal 1, format NVD_CVE, version 2.0). Zero 403 allowlist rejections, zero 502s, zero 504s, zero 422s.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "Tree-wide grep across html, js, jsx, py and json excluding state.json: two hits only, backend/main.py:708 and backend/feedproxy.py:3, both explanatory comments about why allorigins was replaced. PROXY is '/api/feed?url=' at line 349 and the only bare fetch( in the file is the helper at line 374 that receives an already-proxied URL. No bypass path exists in source.",
+    "allowlist_gaps": "NONE, re-derived from source tonight rather than carried over. ALLOWED_HOSTS in backend/feedproxy.py holds exactly 15 exact-match hosts. The page's 12 proxy targets resolve to www.cisa.gov, services.nvd.nist.gov, api.first.org, www.hamqsl.com, krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com and news.google.com, all present. No allowlist change was made, needed or proposed, so no security-relevant widening this run.",
+    "source_unchanged": "frontend/public/cyber/index.html last modified 2026-09-26 by c24545e. Byte-identical to the night it was last verified green.",
+    "held_items_not_re_reported": "claude-docs-domain-migration (5 docs.claude.com 302s at lines 501-503, 505, 506), nvd-panel-severity-mismatch, and the two atlas.mitre.org SPA 404s at lines 511-512 per atlas-mitre-spa-404s."
+   },
+   "aethersdr_page": {
+    "browser_check": "NOT RUN, no browser in session. Same gap as the cyber page: no verdict on inline failure strings, console errors or pending requests. The page shell fetched 200 with zero 'failed:' strings.",
+    "feeds": "ALL 4 VERIFIED LIVE AND INDIVIDUALLY through /api/feed with fresh nonces: github.com/aethersdr/AetherSDR/releases.atom (valid Atom, first entry 'AetherSDR v26.9.5 - Split remembers your audio, the chain windows gain live controls and noise reduction goes stereo', updated 2026-09-27T19:28:32Z), www.rtl-sdr.com (01 Oct), hackaday.com radio-hacks (03 Oct, 'The ESP32, An SDR In Itself'), and www.flexradio.com (200, valid RSS, newest item still 15 May 2026).",
+    "flexradio_feed_is_stale_not_broken": "Reconfirmed. FlexRadio's newest item is still 2026-05-15, now about 4.7 months old. That is the publisher posting nothing, not a feed defect and not link rot. No action. Recorded again so a future run does not read it as an outage.",
+    "allorigins_regression": false,
+    "allowlist_gaps": "NONE. The 4 feed targets resolve to github.com, www.rtl-sdr.com, hackaday.com and www.flexradio.com, all allowlisted. PROXY at line 348, both getCached call sites proxied, only bare fetch( is the helper at line 373.",
+    "version_label_bug": "Still latent and WIDENING. The ABOUT panel was read live tonight and still shows v26.6.3 while the page's own releases feed renders v26.9.5. Held under awaiting_james aethersdr-about-version-drift since 09-18; display logic on James's project metadata sits outside the four autonomous repair categories. NOT re-reported."
+   },
+   "new_commit_review": "NONE. HEAD was 382bb5e at clone time, equal to origin/main, so zero commits have landed since the 10-03 run. No new feed call sites, no new proxy targets, no new allowlist hosts, no new outbound links to check out of band. nginx.conf, docker-compose.yml, .github/workflows/deploy.yml and scripts/cert_repair.sh all untouched.",
+   "outbound_links": "NOT DUE. Curated sweep next due 2026-10-15 (last_full_sweep 2026-10-01, 14-day rotation). Rotation clock NOT advanced. Zero curated links checked tonight, correctly, per the skip-if-checked-within-14-days rule. No commits landed since 10-03 so no new links were introduced.",
+   "published_linkcheck": {
+    "read": "Yes, unconditionally per published-linkcheck-json-is-the-fresher-source.",
+    "result": "Valid JSON, generated 2026-09-28T17:41:17Z, 666 URLs, 644 ok, 22 not ok. Byte-for-byte the same 22 as the 09-30, 10-01 and 10-03 readings: 15 bot-wall/403 artifacts (2 atlas.mitre.org SPA 404s, golly.sourceforge.io, helpdesk.flexradio.com, search.censys.io, sourceforge.net/p/golly, wsjt.sourceforge.io, abuseipdb.com, amazon.com MLA-30 503, eddaardvark.co.uk, eham.net/reviews, 3 raspberrypi.com product pages, shodan.io) and 7 broken (dxc.ve7cc.net and w3lpl.net http-only timeouts, crt.sh 502, fiiir.com TLS, misc.0o0o.org/penrose timeout, drawerings.com 500, dxsummit.fi timeout). Zero genuine rot, zero edits made.",
+    "staleness_resolved": "The 10-01 run wrote 'if it is still 09-28 on the 10-05 run, suspect the weekly CI job'. That trigger is now CALIBRATED rather than carried: .github/workflows/linkcheck.yml schedules cron '17 9 * * 1', Mondays 09:17 UTC. 2026-09-28 WAS a Monday, so the 09-28 report is the expected current one for every night through 2026-10-05, and tonight's 6-day-old report is on schedule, not evidence of a broken job. The job should be suspected only if a run AFTER 2026-10-05 09:17 UTC still reads generated_at 2026-09-28."
+   },
+   "method_corrections_this_run": [
+    {
+     "id": "feedproxy-cache-key-proves-a-200",
+     "verdict": "DOWNGRADED. The technique as written last night overstates its own evidence and would have produced a false green tonight if leaned on.",
+     "finding": "backend/cache.py keys() is `return list(self._store.keys())` with NO expiry filtering. Expiry is enforced lazily inside get() only, which deletes a key when it is next READ after its deadline. A feed whose key is never read again therefore lingers in the key list indefinitely, for as long as the backend container runs.",
+     "proof": "Tonight's /api/debug still lists keys from earlier nightly runs that are days outside a 900s TTL, including services.nvd.nist.gov queries carrying pubEndDate=2026-09-26 and pubEndDate=2026-09-30, plus four www.cisa.gov link-verification paths (/scuba, the SCuBA resources-tools page, the phishing-resistant-MFA 508c PDF, and /news-events/cybersecurity-advisories) that no feed on either page fetches and that were proxied by the 09-26 link-repair run.",
+     "corrected_reading": "A present feedproxy key proves that feed returned 200 through the proxy at SOME point since the backend container last started. It is not a freshness verdict and must never be cited as proof of a 200 within 15 minutes. Its remaining legitimate uses are narrow: as a lower bound that the host is allowlisted and was reachable at least once, and as a cheap way to spot a feed that has NEVER succeeded since container start (no key at all). Live proof requires an individual /api/feed fetch per feed, paced per api-rate-limit-on-feed, which is what this run did for all 16.",
+     "side_benefit": "The lingering keys also date the backend container: keys set on 09-26 are still resident, so the backend process has not restarted since at least 2026-09-26, consistent with zero backend deploys in that window."
+    },
+    {
+     "id": "nvd-double-encoded-url-unverifiable",
+     "verdict": "LARGELY RETIRED. NVD is directly verifiable from this container after all.",
+     "finding": "The 422 has nothing to do with NVD and everything to do with percent-encoded characters inside the url param: WebFetch re-encodes the % and /api/feed rejects the mangled target. Any NVD query containing NO characters that need encoding passes through untouched. https://dxedge.net/api/feed?url=<encoded https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-76504> answered 200 tonight with resultsTotal 1, format NVD_CVE, version 2.0.",
+     "scope_limit": "This proves the host is allowlisted and reachable, the proxy path works, and the NVD 2.0 API is alive and answering. It does NOT exercise the page's own date-ranged cvssV3Severity=CRITICAL query, whose encoded colons remain unfetchable from here. So it is a strong host-and-API verdict, not a verdict on that exact panel query, and a run should say which it has."
+    }
+   ],
+   "backend_tests": "Still broken at collection, re-confirmed by reading the source tonight rather than carried over: backend/tests/test_dxedge.py:64 imports estimate_fof2 from voacap_engine and uses it at lines 92, 96 and 98, while backend/voacap_engine.py defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and no estimate_fof2. Nearest relative f2_layer_strength has a different signature and different semantics, so this is not a mechanical rename. Pre-existing, not caused by this run, not papered over. OUTSTANDING.",
+   "repairs_made": "NONE. Nothing met the autonomous-repair bar: no link rot (sweep not due, published report shows zero genuine rot), no page bypassing /api/feed, no deprecated upstream with a documented clean replacement, no allowlist drift, no cert failure, no new commits to review.",
+   "problems_reported_tonight": [],
+   "escalations_sent": [],
+   "james_notified": "No. Quiet night per the Step 6 rule: nothing broken, nothing fixed, no new decision raised. Last email 2026-10-02, last push notification 2026-10-02. The standing awaiting_james backlog, 19 items, was deliberately not re-surfaced."
   }
  ],
  "known_issues_do_not_re_report": [
@@ -676,7 +702,7 @@
   {
    "id": "nvd-double-encoded-url-unverifiable",
    "since": "2026-09-01",
-   "detail": "The cyber page's NVD query carries percent-encoded colons inside the url param. WebFetch re-encodes it and /api/feed answers 422 before the request reaches the upstream. This is a limitation of the checking environment, not a site defect. Verify NVD instead by looking for its cache key in /api/debug."
+   "detail": "The cyber page's NVD query carries percent-encoded colons inside the url param. WebFetch re-encodes it and /api/feed answers 422 before the request reaches the upstream. This is a limitation of the checking environment, not a site defect. Verify NVD instead by looking for its cache key in /api/debug. ### AMENDED 2026-10-04, LARGELY RETIRED: NVD IS directly verifiable. The 422 is caused by percent-encoded characters inside the url param, which WebFetch re-encodes, not by anything about NVD. A query with nothing needing encoding passes through clean: /api/feed?url=<encoded https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-76504> returned 200 on 2026-10-04 with resultsTotal 1, format NVD_CVE, version 2.0. Use that shape to verify the host, the proxy path and the NVD 2.0 API. It still does not exercise the page's own date-ranged cvssV3Severity=CRITICAL query, whose encoded colons remain unfetchable from here, so report it as a host-and-API verdict rather than a verdict on that panel's exact query."
   },
   {
    "id": "cisa-kev-appears-truncated-to-webfetch",
@@ -781,7 +807,7 @@
   {
    "id": "published-linkcheck-json-is-the-fresher-source",
    "since": "2026-09-26",
-   "detail": "https://dxedge.net/health/linkcheck.json is produced by the weekly GitHub Actions job from normal egress with a browser UA, covers all 663 URLs across all five source files, and is usually FRESHER than the in-container 14-day rotating sweep. READ IT EVERY NIGHT, unconditionally, regardless of whether the curated sweep is due. On 2026-09-26 it was read for the first time and immediately surfaced three genuine cisa.gov 404s that the sweep-not-due rule had been skipping since 09-21. Parse-check the body as JSON, not just the status code: if the file is missing the SPA catch-all answers with index.html and HTTP 200. Always re-verify its broken entries independently before editing, since roughly half are transient: of the 9 broken on 09-21, 3 were real, 2 were transient, 2 were the http-only 503 artifact and 2 were two-network failures. Read again 2026-10-03: generated_at 2026-09-28T17:41:17Z, 666 URLs, 7 broken, all 7 assessed as not rot. Note the report can be up to 7 days old because the job is weekly; judge its freshness against its own generated_at, and do not read a 5-day-old report as a broken job."
+   "detail": "https://dxedge.net/health/linkcheck.json is produced by the weekly GitHub Actions job from normal egress with a browser UA, covers all 663 URLs across all five source files, and is usually FRESHER than the in-container 14-day rotating sweep. READ IT EVERY NIGHT, unconditionally, regardless of whether the curated sweep is due. On 2026-09-26 it was read for the first time and immediately surfaced three genuine cisa.gov 404s that the sweep-not-due rule had been skipping since 09-21. Parse-check the body as JSON, not just the status code: if the file is missing the SPA catch-all answers with index.html and HTTP 200. Always re-verify its broken entries independently before editing, since roughly half are transient: of the 9 broken on 09-21, 3 were real, 2 were transient, 2 were the http-only 503 artifact and 2 were two-network failures. Read again 2026-10-03: generated_at 2026-09-28T17:41:17Z, 666 URLs, 7 broken, all 7 assessed as not rot. Note the report can be up to 7 days old because the job is weekly; judge its freshness against its own generated_at, and do not read a 5-day-old report as a broken job. ### AMENDED 2026-10-04 with the actual schedule, so no future run raises a false alarm about a stale report: .github/workflows/linkcheck.yml runs cron '17 9 * * 1', Mondays 09:17 UTC. A report is therefore expected to be up to 7 days old by design, and 2026-09-28 was a Monday. Suspect the CI job only when a run AFTER a passed Monday 09:17 UTC still reads the previous Monday's generated_at."
   },
   {
    "id": "http-only-503-through-egress-proxy",
@@ -796,7 +822,7 @@
   {
    "id": "feedproxy-cache-key-proves-a-200",
    "since": "2026-10-03",
-   "detail": "A TECHNIQUE, not a defect, and the most useful thing this run found. /api/debug lists the backend's live cache keys, and every proxied feed appears there as 'feedproxy:<exact upstream url>'. In backend/feedproxy.py fetch_feed, cache.set is reached ONLY on the HTTP 200 path: a non-200 raises FeedProxyError before it, a redirect with no Location raises, an over-cap body raises, and a disallowed host raises at validate() before any fetch happens. DEFAULT_TTL is 900s. Therefore the presence of a feedproxy key in /api/debug is proof that that exact feed returned 200 through the proxy within the last 15 minutes. One WebFetch of /api/debug thus answers, for EVERY feed on both standalone pages at once, the three questions Step 3 asks about non-200s, allowlist 403s and 502s. This matters because the Step 3 browser check can never run in a cloud scheduled session, and because it costs one request instead of seventeen, which also sidesteps api-rate-limit-on-feed. What it does NOT answer: whether a 200 body parsed correctly into its panel, whether the page logged a console error, and whether a panel is rendering an inline '<name> failed:' string. Those remain genuinely unchecked without a browser, and a run must say so rather than calling a cache-key sweep a render verdict."
+   "detail": "A TECHNIQUE, not a defect, and the most useful thing this run found. /api/debug lists the backend's live cache keys, and every proxied feed appears there as 'feedproxy:<exact upstream url>'. In backend/feedproxy.py fetch_feed, cache.set is reached ONLY on the HTTP 200 path: a non-200 raises FeedProxyError before it, a redirect with no Location raises, an over-cap body raises, and a disallowed host raises at validate() before any fetch happens. DEFAULT_TTL is 900s. Therefore the presence of a feedproxy key in /api/debug is proof that that exact feed returned 200 through the proxy within the last 15 minutes. One WebFetch of /api/debug thus answers, for EVERY feed on both standalone pages at once, the three questions Step 3 asks about non-200s, allowlist 403s and 502s. This matters because the Step 3 browser check can never run in a cloud scheduled session, and because it costs one request instead of seventeen, which also sidesteps api-rate-limit-on-feed. What it does NOT answer: whether a 200 body parsed correctly into its panel, whether the page logged a console error, and whether a panel is rendering an inline '<name> failed:' string. Those remain genuinely unchecked without a browser, and a run must say so rather than calling a cache-key sweep a render verdict. ### AMENDED 2026-10-04, READ THIS BEFORE USING THE TECHNIQUE: the 900s claim above is WRONG and the technique is downgraded. backend/cache.py keys() returns list(self._store.keys()) with no expiry filtering; expiry is applied lazily in get() only. A key whose feed is never read again lingers for the life of the container. Tonight's /api/debug still listed NVD keys with pubEndDate=2026-09-26 and 2026-09-30 and four www.cisa.gov link-verification paths proxied by the 09-26 run, all days outside any TTL. A present key therefore proves a 200 at SOME time since the backend container started, never a 200 within the last 15 minutes. Do not use it as a freshness or render verdict. Use it only as a lower bound (host allowlisted and reachable at least once) or to spot a feed with NO key at all. Live proof needs one /api/feed fetch per feed, paced per api-rate-limit-on-feed; the 2026-10-04 run did exactly that for all 16 and all answered 200."
   },
   {
    "id": "sw-js-is-a-deploy-tripwire",
@@ -929,7 +955,7 @@
   "next_due": "2026-10-15",
   "rotation_days": 14,
   "last_sweep_result": "2026-10-01: 31 of 32 sampled curated URLs checked with WebFetch. 30 clean, 1 genuine permanent move repaired (recharts.org -> recharts.github.io), 1 cisa.gov 403 environment artifact. 19 documented-artifact URLs skipped by design, listed in the run entry. Separately 5 docs.claude.com links 302 to platform.claude.com and were reported rather than rewritten.",
-  "note": "Rotation clock ADVANCED 2026-10-01: the curated sweep was due and was run with WebFetch. Clock was not advanced on 09-28 or 09-29 (blind nights) or 09-30 (not due). Next curated sweep due 2026-10-15. Kept at top level because the runs array is trimmed to the last 10 nights. The emulators catalogue is tracked separately in emulators_catalogue.",
+  "note": "Rotation clock ADVANCED 2026-10-01: the curated sweep was due and was run with WebFetch. Clock was not advanced on 09-28 or 09-29 (blind nights) or 09-30 (not due). Next curated sweep due 2026-10-15. Kept at top level because the runs array is trimmed to the last 10 nights. The emulators catalogue is tracked separately in emulators_catalogue. Reconfirmed 2026-10-04: sweep not due, clock not advanced, zero curated links checked.",
   "emulators_catalogue": {
    "source": "frontend/public/emulators/emulators.json",
    "url_count": 345,
@@ -943,6 +969,6 @@
   "otr_links_2026_09_24": "3 links added by the 09-21/09-23 OTR commits checked out of band (the full sweep is not due until 2026-10-01): archive.org/details/oldtimeradio 200, archive.org/donate 200, oldtime.radio 200. Separately, 14 archive.org episode audio URLs sampled from catalog.json, 14 of 14 200.",
   "published_linkcheck_2026_09_30": "Read https://dxedge.net/health/linkcheck.json unconditionally per the standing rule. Report generated 2026-09-28T17:41:17Z, 666 URLs, 644 ok, 22 not ok, zero genuine rot after triage, zero edits made. The 22 break down as 15 bot-wall/env artifacts, 2 http-only 503s, 1 crt.sh transient 502, 2 already-open awaiting_james items (fiiir.com, dxsummit.fi), 2 emulators.json entries outside curated scope (misc.0o0o.org/penrose timeout, drawerings.com 500), and the 2 atlas.mitre.org SPA 404s now documented under known issue atlas-mitre-spa-404s. The report is 2 days old, so the weekly CI job has not run since 09-28.",
   "published_linkcheck_2026_10_01": "Read unconditionally. Still the 2026-09-28T17:41:17Z report, 666 URLs, 644 ok, same 22 not-ok entries as the 09-30 reading, zero genuine rot. Now 3 days old; if the 10-05 run still sees 09-28, suspect the weekly CI job.",
-  "last_report_read": "2026-10-03: published linkcheck.json read as required. generated_at 2026-09-28T17:41:17Z, 666 URLs. This is the SAME report the 09-30 and 10-01 runs already read and assessed in full, so no new link data has arrived in five days and the weekly CI job has not re-run; next run due around 10-05. Count note for future runs: the 10-01 reading recorded 22 not-ok entries, while tonight's reading of the same file surfaced 7 under the stricter 'broken' flag. Those are two different fields in one report, not a change in the site - do not read the smaller number as an improvement. Value added tonight was independent re-verification rather than new data: misc.0o0o.org/penrose and www.drawerings.com were both fetched directly and both load fine, confirming the 10-01 call that their CI timeout and 500 were transient. Zero genuine rot, zero edits, rotation clock not advanced."
+  "last_report_read": "2026-10-04: published linkcheck.json read as required. generated_at 2026-09-28T17:41:17Z, 666 URLs, 644 ok, 22 not ok, the same report the 09-30, 10-01 and 10-03 runs read and triaged in full. Zero genuine rot, zero edits, rotation clock not advanced. Staleness question CLOSED this run rather than carried: the weekly job is cron '17 9 * * 1' (Mondays 09:17 UTC) and 09-28 was a Monday, so a 6-day-old report is on schedule. The 10-01 note's 'suspect the job if still 09-28 on 10-05' should be read as suspect only AFTER 2026-10-05 09:17 UTC."
  }
 }
