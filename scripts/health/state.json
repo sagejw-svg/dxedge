@@ -675,7 +675,8 @@
    "repairs_made": "NONE. Nothing met the autonomous-repair bar: no link rot (sweep not due, published report shows zero genuine rot), no page bypassing /api/feed, no deprecated upstream with a documented clean replacement, no allowlist drift, no cert failure, no new commits to review.",
    "problems_reported_tonight": [],
    "escalations_sent": [],
-   "james_notified": "No. Quiet night per the Step 6 rule: nothing broken, nothing fixed, no new decision raised. Last email 2026-10-02, last push notification 2026-10-02. The standing awaiting_james backlog, 19 items, was deliberately not re-surfaced."
+   "james_notified": "No. Quiet night per the Step 6 rule: nothing broken, nothing fixed, no new decision raised. Last email 2026-10-02, last push notification 2026-10-02. The standing awaiting_james backlog, 19 items, was deliberately not re-surfaced.",
+   "state_push_and_deploy": "Commit 8296bf3 pushed to main at 04:14Z (state file only, no frontend or backend source touched). Deploy verified at 04:20:23Z: /api/health returns status ok, version 2.0, feed_proxy true, and both standalone pages still serve HTML with zero 'failed:' strings and only their normal pre-JS placeholders. Site healthy after the push, no revert needed. Incidental extra evidence for health-metric-cold-cache: this post-deploy read showed sat_tles 9 (warmed by tonight's own /api/satellites/positions call) while pota_spots still read 0 even though /api/pota had served 28 live spots 13 minutes earlier, so the two health counters do not share a cache key with the endpoints that serve the data. Cosmetic, consistent with the standing finding, not reported."
   }
  ],
  "known_issues_do_not_re_report": [
