@@ -1,7 +1,7 @@
 {
   "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
   "schema_version": 1,
-  "last_run": "2026-10-07T04:45:00Z",
+  "last_run": "2026-10-07T04:40:00Z",
   "consecutive_cert_failures": 0,
   "runs": [
     {
@@ -719,8 +719,9 @@
       ],
       "james_notified": "NO, and this is the correct outcome under Step 6 rather than an omission. Nothing was broken and nothing was fixed, so the brief's instruction is to send nothing, write state and end with a one-line summary. No email. No push: every decision-shaped item tonight is an already-raised awaiting_james entry, and re-pinging the same backlog nightly is exactly the noise the routine is meant to avoid. The two new findings are both environment lessons for future runs with no action for James.",
       "escalations_sent": [],
-      "commit_pushed": "see deploy_result; this state file only",
-      "deploy_result": "pending at time of writing, recorded below after the push"
+      "commit_pushed": "f5d300a (chore(health): nightly state for 2026-10-07, full green, zero repairs). Parent dfb282a. State file only; no source file touched, so repo conventions (index.css tokens-only, standalone pages self-contained) are trivially intact.",
+      "deploy_result": "SUCCESS. Verified four ways about four minutes after the push, without api.github.com (blocked, so the workflow run status is unqueryable per deploy-verification-gap). (1) /api/health?pd1007=post1 returned status ok with a fresh timestamp 2026-10-07T04:38:37.103236Z, version 2.0, feed_proxy true. (2) /cyber/ reloaded 200, title 'DX//EDGE - CYBER', zero 'failed:' strings, panel structure intact. (3) /aethersdr/ reloaded 200, title 'DX//EDGE - AETHERSDR', zero 'failed:' strings, all sections present. (4) /sw.js?pd1007=post4 still returns CACHE_NAME 'dxedge-v56', matching repo HEAD, so the frontend bundle was not disturbed. No revert needed. INCIDENTAL CONFIRMATION worth recording: sat_tles read 9 rather than 0 on the post-deploy health call, retaining the warm value from the 04:25Z probe. A container restart would have zeroed it. That is positive evidence the deploy correctly took the no-rebuild fast path for a change touching neither frontend nor backend source, and it is a cheaper restart tripwire than anything prior runs have used.",
+      "post_deploy_health": "ok. status ok, sfi 105, k_index 2, spots 500, sat_tles 9 (warm, cache survived), pota_spots 0 (cold, documented artifact), feed_proxy true, version 2.0."
     }
   ],
   "known_issues_do_not_re_report": [
