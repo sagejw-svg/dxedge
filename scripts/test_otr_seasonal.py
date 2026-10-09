@@ -104,10 +104,12 @@ with sync_playwright() as p:
     ck('lock screen album names the station', 'Halloween' in (pg7.evaluate('navigator.mediaSession && navigator.mediaSession.metadata ? navigator.mediaSession.metadata.album : "Halloween"') or ''))
     ck('tune-in: no page errors', not errs7, errs7)
 
+    # Support links: Internet Archive donate and the Ko-fi tip jar, side by side in the header and again in the support card
+    sup = pg7.evaluate('(function(){ function order(id){ var f=document.getElementById(id), a=f.querySelectorAll("a"), ia=-1, kf=-1; a.forEach(function(x,i){ if(/archive.org\\/donate/.test(x.href)) ia=i; if(/ko-fi.com\\/oldtimeradio/.test(x.href)) kf=i; }); var r=f.getBoundingClientRect(); return {ia:ia, kf:kf, vis: r.height>0}; } return {top: order("supportTop"), card: order("support"), txt: document.getElementById("support").innerText}; })()')
+    ck('header: Internet Archive donate and Ko-fi tip both shown', sup['top']['ia'] >= 0 and sup['top']['kf'] > sup['top']['ia'] and sup['top']['vis'], sup)
+    ck('support card: both links, Ko-fi after the Archive', sup['card']['ia'] >= 0 and sup['card']['kf'] > sup['card']['ia'] and sup['card']['vis'], sup)
+    ck("support card: tips say not tax deductible", "aren't tax deductible" in sup['txt'], sup['txt'][-200:])
     # Usage beacon is loaded and reports
-    foot = pg7.evaluate('(function(){var f=document.getElementById("foot"), a=f.querySelectorAll("a"), ia=-1, kf=-1; a.forEach(function(x,i){ if(/archive.org\\/donate/.test(x.href)) ia=i; if(/ko-fi.com\\/oldtimeradio/.test(x.href)) kf=i; }); return {ia:ia, kf:kf, txt:f.innerText}; })()')
-    ck('footer: Internet Archive donate first, Ko-fi tip after it', foot['ia'] >= 0 and foot['kf'] > foot['ia'], foot)
-    ck('footer: tip line says not tax deductible', "aren't tax deductible" in foot['txt'], foot['txt'][-160:])
     ck('stat.js loaded on /otr/', pg7.evaluate('!!document.querySelector(\'script[src="/lib/stat.js"]\')'))
     pg7.wait_for_timeout(5000)
     pg7.evaluate('document.dispatchEvent(new Event("visibilitychange"))')

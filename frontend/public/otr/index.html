@@ -5,44 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#080808">
 <title>Old Time Radio - DXEdge</title>
-<meta name="description" content="A browser radio for thousands of classic 1930s-50s old-time radio shows from the Internet Archive: nine curated channels, build-your-own stations, a skip button, live audio visualizer, and full-text episode search.">
+<meta name="description" content="A browser radio for thousands of classic 1930s-50s old-time radio shows from the Internet Archive: live curated channels, build-your-own stations, a skip button, live audio visualizer, and full-text episode search.">
 <style>
   :root {
-    --bg: #080808; --bg1: #0e0e0e; --bg2: #141414; --bg3:#181818;
-    --border: #1e1e1e; --border2: #2a2a2a;
-    --text: #d8d8d8; --muted: #888; --dim: #444;
+    --bg: #080808; --bg1: #0f0f0f; --bg2: #161616; --bg3:#1c1c1c;
+    --border: #232323; --border2: #323232;
+    --text: #e2e2e2; --muted: #a6a6a6; --dim: #7c7c7c; --faint: #3c3c3c;
     --green: #00ff9d; --amber: #ffb347; --amber2:#ffd08a; --red: #ff5c5c; --blue:#7a9fff;
     --font-mono: 'SF Mono', 'Fira Code', 'Consolas', ui-monospace, monospace;
     --glow: 0 0 22px rgba(255,179,71,0.18);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
-  body { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 16px 14px 40px; -webkit-tap-highlight-color: transparent; }
+  body { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 18px 14px 48px; -webkit-tap-highlight-color: transparent; }
   a { color: var(--green); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  button { font-family: var(--font-mono); }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   .wrap { max-width: 1080px; margin: 0 auto; }
-  .label { font-size: 9px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
-  h1 { font-size: 21px; margin: 4px 0 2px; font-weight: 600; color: #fff; letter-spacing: 1px; }
+  .label { font-size: 10px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
+  h1 { font-size: 22px; margin: 4px 0 2px; font-weight: 600; color: #fff; letter-spacing: 1px; }
   h1 span { color: var(--amber); }
-  .intro { color: var(--muted); max-width: 720px; margin: 0 0 16px; font-size: 12px; }
-  .intro a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--border2); }
-  .intro a.donate, .foot a.donate { color: var(--amber); text-decoration: none; border: 1px solid rgba(255,179,71,0.35);
-    border-radius: 999px; padding: 1px 9px; margin-left: 4px; white-space: nowrap; }
-  .intro a.donate:hover, .foot a.donate:hover { background: rgba(255,179,71,0.1); border-color: var(--amber); }
+
+  /* Header: title on the left, support on the right (stacked under it on phones) */
+  .top { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+  .brand { flex: 1 1 420px; min-width: 0; }
+  .intro { color: var(--muted); max-width: 640px; margin: 4px 0 0; font-size: 12.5px; }
+  .intro a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 2px; }
+  .intro a:hover { color: var(--text); }
+  .support { display: flex; flex-direction: column; gap: 8px; flex: 0 0 300px; }
+  .sup { display: flex; flex-direction: column; gap: 1px; min-width: 0; border: 1px solid rgba(255,179,71,0.42);
+    border-radius: 10px; padding: 8px 13px 9px; background: rgba(255,179,71,0.05); text-decoration: none; transition: background .15s, border-color .15s; }
+  .sup:hover { background: rgba(255,179,71,0.12); border-color: var(--amber); text-decoration: none; }
+  .sup .sup-h { font-size: 12.5px; font-weight: 600; color: var(--amber2); }
+  .sup .sup-s { font-size: 11px; color: var(--muted); line-height: 1.45; }
+  @media (max-width: 780px){ .support { flex: 1 1 100%; flex-direction: row; } .support .sup { flex: 1 1 0; } }
+  @media (max-width: 520px){ .support .sup .sup-s { display: none; } .support .sup { padding: 9px 11px; justify-content: center; } }
 
   /* Console */
   .console {
     border: 1px solid var(--border); border-radius: 12px; background:
       radial-gradient(140% 120% at 50% -10%, rgba(255,179,71,0.05), transparent 55%), var(--bg1);
-    padding: 16px; margin-bottom: 16px; position: relative; overflow: hidden;
+    padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden;
   }
   .stack { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: center; }
-  @media (max-width: 660px){ .stack { grid-template-columns: 1fr; gap: 12px; } }
+  @media (max-width: 660px){ .stack { grid-template-columns: 1fr; gap: 10px; } }
 
   /* Visualizer */
   .viz-wrap { position: relative; width: 100%; aspect-ratio: 1/1; max-width: 220px; margin: 0 auto; }
+  @media (max-width: 660px){ .viz-wrap { max-width: 168px; } }
   canvas#viz { width: 100%; height: 100%; display: block; cursor: pointer; }
-  .viz-mode { position:absolute; left:0; right:0; bottom:2px; text-align:center; font-size:9px; letter-spacing:2px;
+  .viz-mode { position:absolute; left:0; right:0; bottom:2px; text-align:center; font-size:10px; letter-spacing:2px;
     text-transform:uppercase; color: var(--amber2); opacity:0; transition: opacity .5s; pointer-events:none; }
   .viz-mode.show { opacity:.9; }
   .viz-idle { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -50,37 +63,36 @@
 
   /* Now playing */
   .np { min-width: 0; }
-  .np .onair { display: inline-flex; align-items: center; gap: 7px; font-size: 9px; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+  .np .onair { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--dim); margin-bottom: 8px; flex-wrap: wrap; }
   .np .onair .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
   .np.live .onair { color: var(--amber); }
   .np.live .onair .dot { background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: pulse 1.6s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .np .show { font-size: 17px; color: #fff; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
-  .np .ep { font-size: 13px; color: var(--amber2); margin-top: 2px; overflow-wrap: anywhere; }
-  .np .date { font-size: 11px; color: var(--dim); margin-top: 3px; }
-  .np .src { font-size: 10px; color: var(--green); margin-top: 3px; letter-spacing: .5px; display:none; overflow-wrap:anywhere; }
+  .np .show { font-size: 18px; color: #fff; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+  .np .ep { font-size: 13.5px; color: var(--amber2); margin-top: 2px; overflow-wrap: anywhere; }
+  .np .date { font-size: 11.5px; color: var(--dim); margin-top: 3px; }
+  .np .src { font-size: 11px; color: var(--green); margin-top: 3px; letter-spacing: .5px; display:none; overflow-wrap:anywhere; }
   .np .src.note { color: var(--muted); letter-spacing: 0; }
   .np .src a { color: var(--amber); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
   .np .src a:hover { color: #fff; }
   .enh-badge { display:none; margin-left: 6px; padding: 1px 6px; border: 1px solid var(--green); border-radius: 3px;
     color: var(--green); font-size: 9px; letter-spacing: 1.5px; line-height: 14px; }
   .upnext .enh-tag, .r-show .enh-tag { color: var(--green); font-size: 10px; margin-left: 4px; }
-  .section-h .greats-filter { margin-left: auto; }
   .chip.great small { color: var(--green); }
   .chip.great.none { opacity: .38; }
   .np .summary { font-size: 12px; color: var(--muted); margin-top: 9px; line-height: 1.6;
     max-height: 5.2em; overflow: hidden; transition: max-height .25s; }
   .np .summary.open { max-height: 40em; }
-  .np .more { font-size: 10px; color: var(--dim); cursor: pointer; margin-top: 3px; display:none; }
+  .np .more { font-size: 11px; color: var(--dim); cursor: pointer; margin-top: 3px; display:none; }
   .np .more:hover { color: var(--green); }
-  .np-archive { font-size: 11px; margin-top: 7px; display:none; }
+  .np-archive { font-size: 11.5px; margin-top: 7px; display:none; }
   .np-archive a { color: var(--muted); text-decoration: none; }
   .np-archive a:hover { color: var(--amber); text-decoration: underline; }
 
   /* Transport */
-  .seek { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 10px; color: var(--dim); }
-  .bar { flex: 1; height: 5px; border-radius: 3px; background: var(--bg3); position: relative; cursor: pointer; }
+  .seek { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 11px; color: var(--dim); }
+  .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--bg3); position: relative; cursor: pointer; }
   .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--amber); width: 0%; }
   .bar .buf  { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--border2); width: 0%; }
   .time { font-variant-numeric: tabular-nums; min-width: 38px; }
@@ -96,36 +108,63 @@
   .btn.seek15 { font-variant-numeric: tabular-nums; }
   @media (max-width: 440px){ .transport { gap: 6px; } .transport .lbl { display: none; } .btn.icon { padding: 9px 10px; } }
   .tools2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; }
-  .tools2 .mini { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); }
+  .tools2 .mini { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--dim); }
   .tools2 select { background: var(--bg2); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
-    font-family: var(--font-mono); font-size: 11px; padding: 3px 6px; cursor: pointer; }
+    font-family: var(--font-mono); font-size: 11.5px; padding: 3px 6px; cursor: pointer; }
   .tools2 select:focus-visible { outline: 1px solid var(--amber); outline-offset: 1px; }
-  .linkish { background: none; border: none; padding: 0; color: var(--dim); font-family: var(--font-mono); font-size: 11px;
-    text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-  .linkish:hover:not(:disabled) { color: var(--amber); }
-  .linkish:disabled { opacity: .35; cursor: default; text-decoration: none; }
+  .linkish { background: none; border: none; padding: 0; color: var(--muted); font-family: var(--font-mono); font-size: 11.5px;
+    text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--faint); cursor: pointer; }
+  .linkish:hover:not(:disabled) { color: var(--amber); text-decoration-color: var(--amber); }
+  .linkish:disabled { opacity: .45; cursor: default; text-decoration: none; }
   .tools2 #linkBtn { margin-left: auto; }
+  .tools2 .sleep-left { font-size: 11.5px; color: var(--amber2); font-variant-numeric: tabular-nums; }
+  .vol { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+  .vol .vl { font-size: 11px; color: var(--dim); }
+  .vol input[type=range]{ width: 96px; accent-color: var(--amber); }
+  @media (max-width: 660px){ .vol { margin-left: 0; width:100%; } .vol input[type=range]{ flex:1; width:auto; } }
+  .upnext { margin-top: 11px; font-size: 11.5px; color: var(--dim); overflow-wrap:anywhere; }
+  .upnext b { color: var(--muted); font-weight: 500; }
+
+  /* Continue listening */
+  .section-h { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin: 6px 0 10px; }
+  .section-h .label { margin:0; white-space:nowrap; }
+  .section-h .hint { font-size: 11px; color: var(--dim); }
+  #contWrap { margin-bottom: 4px; }
   .chip.cont { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; border-radius: 10px;
     max-width: 260px; white-space: normal; padding: 6px 30px 7px 12px; position: relative; text-align: left; }
-  .chip.cont .c-show { font-size: 10px; color: var(--amber2); }
+  .chip.cont .c-show { font-size: 10.5px; color: var(--amber2); }
   .chip.cont .c-title { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-  .chip.cont .c-left { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .chip.cont .c-left { font-size: 10.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
   .chip.cont .c-x { position: absolute; top: 5px; right: 9px; color: var(--dim); font-size: 12px; }
   .chip.cont .c-x:hover { color: var(--amber); }
   #contRow .hint { font-size: 11px; color: var(--dim); }
   .result .r-mark { margin-left: 8px; font-size: 10px; color: var(--dim); letter-spacing: 0; text-transform: none; }
-  .tools2 .sleep-left { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; }
-  .vol { display: flex; align-items: center; gap: 7px; margin-left: auto; }
-  .vol input[type=range]{ width: 96px; accent-color: var(--amber); }
-  @media (max-width: 660px){ .vol { margin-left: 0; width:100%; } .vol input[type=range]{ flex:1; width:auto; } }
 
-  .upnext { margin-top: 11px; font-size: 11px; color: var(--dim); overflow-wrap:anywhere; }
-  .upnext b { color: var(--muted); font-weight: 500; }
+  /* Tabs: everything below the player is one tap away */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 16px 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .tab { border: 1px solid var(--border2); background: var(--bg1); color: var(--muted); border-radius: 8px; padding: 8px 13px;
+    font-family: var(--font-mono); font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; min-width: 0; }
+  .tab:hover { color: var(--text); border-color: var(--amber); }
+  .tab[aria-selected="true"] { color: var(--amber); border-color: var(--amber); background: rgba(255,179,71,0.08); box-shadow: var(--glow); }
+  .tab .ti { font-size: 13px; line-height: 1; }
+  .tab .sm { display: none; }
+  .tabs .surprise { margin-left: auto; border-style: dashed; color: var(--text); }
+  .tabs .surprise:hover { border-style: solid; }
+  @media (max-width: 660px){
+    .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .tab { padding: 9px 4px; gap: 5px; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+    .tab .lg { display: none; } .tab .sm { display: inline; }
+    .tabs .surprise { margin-left: 0; }
+  }
 
-  /* Tuner / channels */
-  .section-h { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin: 20px 0 10px; }
-  .section-h .label { margin:0; white-space:nowrap; }
-  .section-h .hint { font-size: 10px; color: var(--dim); }
+  .pane { display: none; }
+  .pane.on { display: block; animation: fade .18s; }
+  @keyframes fade { from{opacity:0;transform:translateY(4px)} to{opacity:1} }
+  .pane-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 12px; }
+  .pane-h h2 { font-size: 14px; color: #fff; margin: 0; font-weight: 600; }
+  .pane-h .hint { font-size: 11.5px; color: var(--dim); }
+  .pane-h .greats-filter { margin-left: auto; }
+
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { border: 1px solid var(--border2); background: var(--bg1); color: var(--muted); border-radius: 999px;
     padding: 7px 14px; font-size: 12px; cursor: pointer; font-family: var(--font-mono); user-select: none; white-space: nowrap; }
@@ -134,6 +173,7 @@
   .chip small { color: var(--dim); margin-left: 5px; }
   .chip.on small { color: var(--amber2); }
   .chip.custom { border-style: dashed; }
+  @media (max-width: 520px){ .chip { white-space: normal; text-align: left; } }
 
   /* Station cards: live broadcast clock, each station always on air */
   .chips.stations { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
@@ -142,97 +182,155 @@
   .station:hover { border-color: var(--amber); }
   .station.on { border-color: var(--amber); background: rgba(255,179,71,0.06); box-shadow: var(--glow); }
   .station .st-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-  .station .st-name { color: var(--text); font-size: 13px; font-weight: 600; }
+  .station .st-name { color: var(--text); font-size: 13.5px; font-weight: 600; }
   .station.on .st-name { color: var(--amber); }
-  .station .st-count { color: var(--dim); font-size: 10px; white-space: nowrap; }
-  .station .st-season { margin-left: 7px; font-size: 9px; font-weight: 500; color: var(--amber2); border: 1px solid rgba(255,179,71,0.35);
+  .station .st-count { color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .station .st-season { margin-left: 7px; font-size: 9.5px; font-weight: 500; color: var(--amber2); border: 1px solid rgba(255,179,71,0.35);
     border-radius: 999px; padding: 1px 6px; vertical-align: 1px; white-space: nowrap; }
   .station .st-actions { display:flex; align-items:center; gap:8px; }
-  .station .st-dice { font-size: 12px; cursor: pointer; opacity: .45; transition: opacity .15s, transform .15s; line-height:1; }
+  .station .st-dice { font-size: 13px; cursor: pointer; opacity: .6; transition: opacity .15s, transform .15s; line-height:1; padding: 2px; }
   .station .st-dice:hover { opacity: 1; transform: scale(1.2) rotate(-12deg); }
-  .station .st-now { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; min-height: 2.9em;
+  .station .st-now { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; min-height: 2.9em;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .station .st-now b { color: var(--amber2); font-weight: 500; }
   .station .st-now .ad { color: var(--dim); }
   .station .st-bar { height: 3px; border-radius: 2px; background: var(--bg3); margin-top: 7px; overflow: hidden; }
   .station .st-bar i { display:block; height:100%; width:0%; background: var(--amber); opacity:.7; }
-  .station .st-left { font-size: 9px; color: var(--dim); margin-top: 3px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+  @media (max-width: 520px){ .station .st-now { min-height: 0; } }
+  .station .st-left { font-size: 10px; color: var(--dim); margin-top: 3px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
-  .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin: 14px 0 4px; }
-  .toolbar .btn { padding: 7px 12px; }
-  .toggle { display:inline-flex; align-items:center; gap:7px; font-size:11px; color:var(--muted); cursor:pointer; user-select:none; }
+  .toggle { display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted); cursor:pointer; user-select:none; }
   .toggle input { accent-color: var(--amber); }
 
-  /* Panels (station builder + search) */
-  .panel { border: 1px solid var(--border); border-radius: 10px; background: var(--bg1); padding: 14px; margin-top: 12px; display:none; }
-  .panel.open { display:block; animation: fade .2s; }
-  @keyframes fade { from{opacity:0;transform:translateY(4px)} to{opacity:1} }
-  .panel h2 { font-size: 13px; color:#fff; margin:0 0 3px; font-weight:600; }
-  .panel .sub { font-size: 11px; color: var(--dim); margin-bottom: 12px; }
-  .panel .close { float:right; color:var(--dim); cursor:pointer; font-size:16px; line-height:1; }
-  .panel .close:hover { color: var(--red); }
+  /* Settings */
+  .settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+  .set { display: flex; gap: 11px; align-items: flex-start; border: 1px solid var(--border); border-radius: 10px; background: var(--bg1);
+    padding: 11px 13px; cursor: pointer; user-select: none; min-width: 0; }
+  .set:hover { border-color: var(--border2); }
+  .set input { accent-color: var(--amber); margin: 3px 0 0; width: 15px; height: 15px; flex: 0 0 auto; }
+  .set b { display: block; color: var(--text); font-weight: 600; font-size: 12.5px; }
+  .set small { display: block; color: var(--dim); font-size: 11.5px; line-height: 1.5; margin-top: 2px; }
+  .set:has(input:checked) { border-color: rgba(255,179,71,0.45); }
+  .set:has(input:checked) b { color: var(--amber2); }
+  .keys { font-size: 11.5px; color: var(--dim); margin-top: 14px; line-height: 2; }
+  kbd { font-family: var(--font-mono); font-size: 10.5px; color: var(--text); background: var(--bg2); border: 1px solid var(--border2);
+    border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; margin: 0 1px; }
+  @media (max-width: 520px){ .settings { grid-template-columns: 1fr; } }
+  @media (pointer: coarse){ .keys { display: none; } }
 
   input[type=search], input[type=text] { background: var(--bg); color: var(--text); border: 1px solid var(--border2);
-    border-radius: 7px; padding: 9px 11px; font-family: var(--font-mono); font-size: 13px; outline: none; width: 100%; }
+    border-radius: 7px; padding: 10px 12px; font-family: var(--font-mono); font-size: 13px; outline: none; width: 100%; }
   input[type=search]:focus, input[type=text]:focus { border-color: var(--amber); }
 
   /* Station builder show grid */
   .builder-tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin: 10px 0; }
-  .builder-tools .btn { padding: 6px 10px; font-size: 11px; }
-  .count { font-size: 11px; color: var(--dim); margin-left:auto; }
+  .builder-tools .btn { padding: 6px 10px; font-size: 11.5px; }
+  .count { font-size: 11.5px; color: var(--dim); margin-left:auto; }
   .count b { color: var(--amber); }
-  .showgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px;
-    max-height: 46vh; overflow-y: auto; padding: 2px; }
+  .showgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px;
+    max-height: 52vh; overflow-y: auto; padding: 2px; border: 1px solid var(--border); border-radius: 10px; padding: 8px; background: var(--bg1); }
   .showitem { display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:6px;
-    padding:6px 9px; background: var(--bg); cursor:pointer; font-size:12px; min-width:0; }
+    padding:7px 9px; background: var(--bg); cursor:pointer; font-size:12px; min-width:0; }
   .showitem:hover { border-color: var(--border2); }
   .showitem.on { border-color: var(--amber); background: rgba(255,179,71,0.06); }
   .showitem input { accent-color: var(--amber); }
   .showitem .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--text); }
-  .showitem .ec { font-size: 9px; color: var(--dim); }
-  .showitem .cat { font-size: 8px; color: var(--dim); letter-spacing:1px; text-transform:uppercase; }
+  .showitem .ec { font-size: 10px; color: var(--dim); }
+  .showitem .cat { font-size: 9px; color: var(--dim); letter-spacing:1px; text-transform:uppercase; }
   .showitem .arch { color: var(--dim); text-decoration:none; font-size:12px; padding:0 2px; }
   .showitem .arch:hover { color: var(--amber); }
-
   .builder-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
-  .savedrow { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+  .savedrow { display:flex; flex-wrap:wrap; gap:7px; margin-top:18px; }
+  .savedrow:empty { display: none; }
+  .savedrow .saved-h { width: 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .savedrow .saved-h .hint { font-size: 11px; color: var(--dim); }
   .sharebox { display:none; margin-top:10px; gap:7px; }
   .sharebox.open { display:flex; }
 
   /* Search results */
-  .results { max-height: 52vh; overflow-y: auto; margin-top: 12px; }
-  .result { border:1px solid var(--border); border-radius:7px; padding:9px 11px; margin-bottom:7px; background: var(--bg); cursor:pointer; }
-  .result:hover { border-color: var(--amber); }
-  .result .r-show { font-size: 10px; color: var(--amber); letter-spacing:1px; text-transform:uppercase; }
+  .results { margin-top: 12px; }
+  .result { border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:7px; background: var(--bg1); cursor:pointer; }
+  .result:hover, .result.on { border-color: var(--amber); }
+  .result.on { background: rgba(255,179,71,0.05); }
+  .result .r-show { font-size: 10.5px; color: var(--amber); letter-spacing:1px; text-transform:uppercase; }
   .result .r-title { font-size: 13px; color:#fff; margin: 1px 0 3px; }
-  .result .r-sum { font-size: 11px; color: var(--muted); line-height:1.5;
+  .result .r-sum { font-size: 11.5px; color: var(--muted); line-height:1.5;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .result mark { background: rgba(255,179,71,0.25); color: var(--amber2); border-radius:2px; }
-  .searchnote { font-size: 11px; color: var(--dim); margin-top: 8px; }
+  .searchnote { font-size: 11.5px; color: var(--dim); margin-top: 8px; }
+  .moreres { display: block; margin: 4px auto 0; }
 
-  .foot { font-size: 10px; color: var(--dim); text-align:center; margin-top: 22px; line-height:1.7; }
-  .foot a { color: var(--muted); }
-  .foot .tipline { display: inline-block; margin-top: 8px; }
+  /* Support card */
+  .support-card { margin-top: 30px; border: 1px solid rgba(255,179,71,0.28); border-radius: 12px; padding: 16px;
+    background: radial-gradient(120% 140% at 0% 0%, rgba(255,179,71,0.06), transparent 60%), var(--bg1); }
+  .support-card > .label { margin-bottom: 10px; color: var(--amber); }
+  .sup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 22px; }
+  .sup-col { display: flex; flex-direction: column; align-items: flex-start; }
+  .sup-col p { flex: 1; }
+  .sup-col h3 { font-size: 13px; color: #fff; margin: 0 0 4px; font-weight: 600; }
+  .sup-col p { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.6; }
+  .sup-col .sup { display: inline-flex; flex-direction: row; align-items: center; padding: 8px 14px; }
+  .sup-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .crypto { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: grid; gap: 7px; }
+  .crypto-h { font-size: 11.5px; color: var(--dim); }
+  .addr { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .addr .al { font-size: 11.5px; color: var(--amber2); flex: 0 0 52px; }
+  .addr code { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; min-width: 0; overflow-wrap: anywhere; user-select: all; }
+  .addr .copy { padding: 5px 10px; font-size: 11px; flex: 0 0 auto; }
+
+  .foot { font-size: 11px; color: var(--dim); text-align:center; margin-top: 20px; line-height:1.8; }
+  .foot a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 2px; }
+  .foot a:hover { color: var(--text); }
+
+  /* Docked now-playing bar: appears once the player scrolls out of view */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: rgba(13,13,13,0.97); border-top: 1px solid var(--border2);
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.5); padding-bottom: env(safe-area-inset-bottom); transform: translateY(110%); visibility: hidden;
+    transition: transform .22s ease, visibility 0s linear .22s; }
+  .dock.show { transform: none; visibility: visible; transition: transform .22s ease, visibility 0s; }
+  .dock-bar { height: 2px; background: var(--bg3); }
+  .dock-bar i { display: block; height: 100%; width: 0%; background: var(--amber); }
+  .dock-in { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; gap: 8px; padding: 8px 14px; }
+  .dock .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: 0 0 auto; }
+  .dock.live .dot { background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: pulse 1.6s infinite; }
+  .dock-txt { flex: 1; min-width: 0; cursor: pointer; padding: 2px 4px; }
+  .dock-show { font-size: 12.5px; color: #fff; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock-ep { font-size: 11px; color: var(--amber2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock .btn { padding: 8px 11px; flex: 0 0 auto; }
+  .dock .btn.play { min-width: 46px; padding: 8px 12px; }
+  body.docked { padding-bottom: 92px; }
+
   .toast { position: fixed; left:50%; bottom: 20px; transform: translateX(-50%); background: var(--bg3);
     border:1px solid var(--amber); color: var(--amber2); padding: 8px 14px; border-radius: 8px; font-size:12px;
-    opacity:0; pointer-events:none; transition:opacity .25s; z-index:50; }
+    opacity:0; pointer-events:none; transition:opacity .25s, bottom .22s; z-index:50; max-width: calc(100vw - 28px); }
   .toast.show { opacity:1; }
+  body.docked .toast { bottom: 82px; }
   .loading { color: var(--dim); font-size: 12px; padding: 20px 0; text-align:center; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="label">dxedge // audio</div>
-  <h1>OLD TIME <span>RADIO</span></h1>
-  <p class="intro">
-    Thousands of classic radio shows from the 1930s, 40s and 50s, streamed straight from the
-    <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>.
-    Pick a channel, build your own station, skip anything you like, and search episodes by plot.
-    Nothing is hosted here; audio plays direct from archive.org, a nonprofit library that keeps all of this free.
-    <a class="donate" href="https://archive.org/donate" target="_blank" rel="noopener">♥ Donate to the Internet Archive</a>
-  </p>
+  <header class="top">
+    <div class="brand">
+      <div class="label">dxedge // audio</div>
+      <h1>OLD TIME <span>RADIO</span></h1>
+      <p class="intro">
+        Thousands of classic radio shows from the 1930s, 40s and 50s, streamed straight from the
+        <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>.
+        Tune in to a live channel, build your own station, skip anything, and search episodes by plot.
+      </p>
+    </div>
+    <div class="support" id="supportTop" aria-label="Support">
+      <a class="sup ia" href="https://archive.org/donate" target="_blank" rel="noopener" id="donateTop">
+        <span class="sup-h">♥ Donate to the Internet Archive</span>
+        <span class="sup-s">the nonprofit library behind every show</span></a>
+      <a class="sup kofi" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener" id="tipTop">
+        <span class="sup-h">☕ Tip the developer on Ko-fi</span>
+        <span class="sup-s">helps cover hosting and development</span></a>
+    </div>
+  </header>
 
-  <div class="console">
+  <div class="console" id="console">
     <div class="stack">
       <div class="viz-wrap">
         <canvas id="viz"></canvas>
@@ -241,7 +339,7 @@
       </div>
       <div class="np" id="np">
         <div class="onair"><span class="dot"></span><span id="onairText">off air</span><span class="enh-badge" id="enhBadge" title="Playing an enhanced copy of this episode">ENHANCED</span></div>
-        <div class="show" id="npShow">Select a channel to begin</div>
+        <div class="show" id="npShow">Pick a channel to begin</div>
         <div class="ep" id="npEp"></div>
         <div class="src" id="npSrc"></div>
         <div class="date" id="npDate"></div>
@@ -255,15 +353,15 @@
           <span class="time" id="tDur">0:00</span>
         </div>
 
-        <div class="transport">
+        <div class="transport" id="transport">
           <button class="btn icon" id="prevBtn" title="Previous (p)" aria-label="Previous" disabled>⏮<span class="lbl"> Prev</span></button>
           <button class="btn icon seek15" id="backBtn" title="Back 15 seconds (left arrow)" aria-label="Back 15 seconds" disabled>↺ 15</button>
           <button class="btn play" id="playBtn" disabled>▶ Play</button>
           <button class="btn icon seek15" id="fwdBtn" title="Forward 15 seconds (right arrow)" aria-label="Forward 15 seconds" disabled>15 ↻</button>
           <button class="btn icon" id="skipBtn" title="Skip to next (n)" aria-label="Skip to next" disabled>⏭<span class="lbl"> Skip</span></button>
           <div class="vol">
-            <span style="font-size:11px;color:var(--dim)">vol</span>
-            <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9">
+            <span class="vl">vol</span>
+            <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9" aria-label="Volume">
           </div>
         </div>
         <div class="tools2">
@@ -288,37 +386,43 @@
     <div class="chips" id="contRow"></div>
   </div>
 
-  <div class="section-h">
-    <div class="label">channels</div>
-    <span class="hint">always on air: tune in to join the show in progress</span>
-  </div>
-  <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
+  <nav class="tabs" role="tablist" aria-label="Browse the radio">
+    <button class="tab" role="tab" id="channelsBtn" data-tab="channels" aria-controls="channelsPane" aria-selected="true"><span class="ti">📻</span>Channels</button>
+    <button class="tab" role="tab" id="greatsBtn" data-tab="greats" aria-controls="greatsPane" aria-selected="false"><span class="ti">★</span>The Greats</button>
+    <button class="tab" role="tab" id="searchBtn" data-tab="search" aria-controls="searchPanel" aria-selected="false" title="Search episodes (/)"><span class="ti">🔍</span>Search</button>
+    <button class="tab" role="tab" id="builderBtn" data-tab="build" aria-controls="builderPanel" aria-selected="false"><span class="ti">＋</span><span class="lg">Build a station</span><span class="sm">Build</span></button>
+    <button class="tab" role="tab" id="settingsBtn" data-tab="settings" aria-controls="settingsPane" aria-selected="false"><span class="ti">⚙</span>Settings</button>
+    <button class="tab surprise" id="randomBtn" title="Play a random episode from any show"><span class="ti">🎲</span>Surprise me</button>
+  </nav>
 
-  <div class="section-h">
-    <div class="label">the greats</div>
-    <span class="hint">one tap plays the whole show</span>
-    <label class="toggle greats-filter" title="Only play episodes that have an enhanced copy"><input type="checkbox" id="greatsOnly"> enhanced only</label>
-  </div>
-  <div class="chips" id="greatChips"></div>
+  <!-- Channels -->
+  <section class="pane on" id="channelsPane" role="tabpanel" aria-labelledby="channelsBtn">
+    <div class="pane-h"><h2>Channels</h2><span class="hint">always on air: tap one to join the show in progress, or roll its 🎲 for a random episode</span></div>
+    <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
+    <div class="savedrow" id="savedRow"></div>
+  </section>
 
-  <div class="toolbar">
-    <button class="btn" id="builderBtn">＋ Build a station</button>
-    <button class="btn" id="searchBtn">🔍 Search episodes</button>
-    <button class="btn" id="randomBtn" title="Play a random episode from any show">🎲 Surprise me</button>
-    <label class="toggle"><input type="checkbox" id="commToggle" checked> vintage commercials</label>
-    <label class="toggle" id="enhLabel" title="When an episode has a better copy (a cleaner transfer, a restoration, or an AI enhanced version), play that instead. Episodes without one play the regular copy. While one plays you can switch that episode back to the original."><input type="checkbox" id="enhToggle"> enhanced audio when available</label>
-    <label class="toggle" title="Only play episodes that have an enhanced copy. Channels become enhanced-only mixes of their shows (off the live clock); stations, Surprise me, the greats and search skip everything else."><input type="checkbox" id="enhOnly"> enhanced episodes only</label>
-    <label class="toggle"><input type="checkbox" id="shuffleToggle" checked> shuffle custom stations</label>
-  </div>
+  <!-- The Greats -->
+  <section class="pane" id="greatsPane" role="tabpanel" aria-labelledby="greatsBtn">
+    <div class="pane-h"><h2>The Greats</h2><span class="hint">one tap plays the whole show</span>
+      <label class="toggle greats-filter" title="Only play episodes that have an enhanced copy"><input type="checkbox" id="greatsOnly"> enhanced only</label></div>
+    <div class="chips" id="greatChips"></div>
+  </section>
+
+  <!-- Search -->
+  <section class="pane" id="searchPanel" role="tabpanel" aria-labelledby="searchBtn">
+    <div class="pane-h"><h2>Search episodes</h2><span class="hint">titles and plot summaries; tap a result to play it</span></div>
+    <input type="search" id="searchInput" placeholder="e.g. martian, murder, haunted house, robot..." autocomplete="off" aria-label="Search episodes">
+    <div class="searchnote" id="searchNote"></div>
+    <div class="results" id="results"></div>
+  </section>
 
   <!-- Station builder -->
-  <div class="panel" id="builderPanel">
-    <span class="close" id="builderClose">×</span>
-    <h2>Build your own station</h2>
-    <div class="sub">Pick any shows to mix into one station. Saved on this device, and shareable by link.</div>
-    <input type="text" id="stationName" placeholder="Station name (optional)" maxlength="40">
+  <section class="pane" id="builderPanel" role="tabpanel" aria-labelledby="builderBtn">
+    <div class="pane-h"><h2>Build your own station</h2><span class="hint">mix any shows into one station; saved stations appear under Channels, and you can share them by link</span></div>
+    <input type="text" id="stationName" placeholder="Station name (optional)" maxlength="40" aria-label="Station name">
     <div class="builder-tools">
-      <input type="search" id="builderFilter" placeholder="filter shows..." style="flex:1 1 200px; width:auto;">
+      <input type="search" id="builderFilter" placeholder="filter shows..." style="flex:1 1 200px; width:auto;" aria-label="Filter shows">
       <button class="btn" id="selAll">all</button>
       <button class="btn" id="selNone">none</button>
       <span class="count"><b id="selCount">0</b> selected</span>
@@ -330,23 +434,66 @@
       <button class="btn" id="shareStation" disabled>🔗 Share link</button>
     </div>
     <div class="sharebox" id="shareBox">
-      <input type="text" id="shareUrl" readonly>
+      <input type="text" id="shareUrl" readonly aria-label="Share link">
       <button class="btn" id="copyShare">copy</button>
     </div>
-    <div class="savedrow" id="savedRow"></div>
-  </div>
+  </section>
 
-  <!-- Search -->
-  <div class="panel" id="searchPanel">
-    <span class="close" id="searchClose">×</span>
-    <h2>Search episodes</h2>
-    <div class="sub">Full-text search across episode titles and plot summaries. Click a result to play it.</div>
-    <input type="search" id="searchInput" placeholder="e.g. martian, murder, haunted house, robot...">
-    <div class="searchnote" id="searchNote"></div>
-    <div class="results" id="results"></div>
-  </div>
+  <!-- Settings -->
+  <section class="pane" id="settingsPane" role="tabpanel" aria-labelledby="settingsBtn">
+    <div class="pane-h"><h2>Settings</h2><span class="hint">remembered on this device</span></div>
+    <div class="settings">
+      <label class="set"><input type="checkbox" id="commToggle" checked>
+        <span><b>Vintage commercials</b><small>Period ads between programs, one every two or three shows.</small></span></label>
+      <label class="set" id="enhLabel"><input type="checkbox" id="enhToggle">
+        <span><b>Enhanced audio when available</b><small>When an episode has a better copy (a cleaner transfer, a restoration, or an AI enhanced version), play that instead. Everything else plays the regular copy, and any episode can be switched back to the original while it plays.</small></span></label>
+      <label class="set"><input type="checkbox" id="enhOnly">
+        <span><b>Enhanced episodes only</b><small>Only play episodes that have an enhanced copy. Channels become enhanced-only mixes of their shows (off the live clock); stations, Surprise me, The Greats and search skip everything else.</small></span></label>
+      <label class="set"><input type="checkbox" id="shuffleToggle" checked>
+        <span><b>Shuffle custom stations</b><small>Shuffle episode order on your own stations and when playing a single show. Off plays each show in catalog order.</small></span></label>
+    </div>
+    <div class="keys">Keyboard: <kbd>space</kbd> play or pause &middot; <kbd>n</kbd> skip &middot; <kbd>p</kbd> previous &middot; <kbd>←</kbd> <kbd>→</kbd> 15 seconds &middot; <kbd>/</kbd> search</div>
+  </section>
+
+  <section class="support-card" id="support" aria-label="Support">
+    <div class="label">support</div>
+    <div class="sup-grid">
+      <div class="sup-col">
+        <h3>The shows</h3>
+        <p>Every episode streams straight from the Internet Archive, a nonprofit library that keeps all of this free. Nothing is hosted here.</p>
+        <a class="sup ia" href="https://archive.org/donate" target="_blank" rel="noopener" id="donateCard"><span class="sup-h">♥ Donate to the Internet Archive</span></a>
+      </div>
+      <div class="sup-col">
+        <h3>The player</h3>
+        <p>This player is built and run independently on DXEdge, with no ads and no cookies. Tips help cover hosting and development. They're tips to the developer, not donations to a charity, so they aren't tax deductible, and there are no perks, just thanks.</p>
+        <div class="sup-row">
+          <a class="sup kofi" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener" id="tipLink"><span class="sup-h">☕ Tip jar on Ko-fi</span></a>
+          <a class="sup pp" href="https://paypal.me/sagejw" target="_blank" rel="noopener" id="ppLink"><span class="sup-h">💳 PayPal</span></a>
+        </div>
+      </div>
+    </div>
+    <div class="crypto" id="crypto">
+      <div class="crypto-h">Prefer crypto? Tips to the developer:</div>
+      <div class="addr"><span class="al">₿ BTC</span><code id="btcAddr">bc1q99naj9qx5wg26rxc7q37lzmtaz7dj6t80xdgxl</code><button class="btn copy" data-copy="btcAddr">copy</button></div>
+      <div class="addr"><span class="al">Ξ ETH</span><code id="ethAddr">0x450Af17245CD5238d5a826647E2F1bbAd2a982db</code><button class="btn copy" data-copy="ethAddr">copy</button></div>
+    </div>
+  </section>
 
   <div class="foot" id="foot"></div>
+</div>
+
+<div class="dock" id="dock" aria-label="Now playing">
+  <div class="dock-bar"><i id="dockFill"></i></div>
+  <div class="dock-in">
+    <span class="dot"></span>
+    <div class="dock-txt" id="dockTxt" role="button" tabindex="0" title="Back to the player">
+      <div class="dock-show" id="dockShow"></div>
+      <div class="dock-ep" id="dockEp"></div>
+    </div>
+    <button class="btn play" id="dockPlay" aria-label="Play">▶</button>
+    <button class="btn icon" id="dockSkip" aria-label="Skip to next" title="Skip to next (n)">⏭</button>
+    <button class="btn icon" id="dockUp" aria-label="Back to the player" title="Back to the player">↑</button>
+  </div>
 </div>
 
 <audio id="audio" crossorigin="anonymous" preload="auto"></audio>
@@ -559,7 +706,6 @@
     var s=byId[id]; if(!s) return;
     if(onlyMode() && !enhCount(s)){ noneLeft(s.name); return; }
     startStation([id], s.name + (onlyMode()?' · enhanced only':''));
-    window.scrollTo({top:0, behavior:'smooth'});
   }
   function buildGreats(){
     var el=$('greatChips'); if(!el || !CAT) return;
@@ -667,9 +813,11 @@
     console.error(e);
   });
 
+  var searchLoading=null;
   function loadSearchIndex(){
     if(SEARCH) return Promise.resolve();
-    return getJSON('search.json').then(function(s){
+    if(searchLoading) return searchLoading;   // one fetch even if the tab and the catalog both ask
+    return (searchLoading = getJSON('search.json').then(function(s){
       SEARCH = s; SUMMAP = s; // s is {showId:[[epIndex,title,summary],...]} ; build epIndex->summary map
       SUMMAP = {};
       Object.keys(s).forEach(function(sid){
@@ -677,7 +825,7 @@
       });
       // if something is playing, fill its summary
       if(state.qi>=0) renderNowPlaying();
-    }).catch(function(e){ console.warn('search index failed', e); });
+    }).catch(function(e){ searchLoading=null; console.warn('search index failed', e); }));
   }
 
   // ---- episode identity ----
@@ -949,6 +1097,7 @@
       }
     }
     setStatus('ready');
+    updateDock();
   }
   function startStation(showIds, label){
     var shows = showIds.map(function(id){ return byId[id]; }).filter(Boolean);
@@ -957,7 +1106,6 @@
     state.savedActive = -1;
     setQueue(interleaveAds(buildProgramOrder(shows))); state.schedAds = true;
     markActiveChip();
-    closePanel('builderPanel');
     if(!state.queue.length && onlyMode()){ noneLeft(state.stationLabel); return; }
     playCurrent();
   }
@@ -988,10 +1136,9 @@
     if(!ids.length){ toast('Nothing to shuffle'); return; }
     state.channel=null; state.stationShowIds=ids; state.stationLabel=label||'Surprise me'; state.savedActive=-1;
     setQueue(interleaveAds(buildRandomOrder(ids))); state.schedAds=true; state.random=true;
-    markActiveChip(); closePanel('builderPanel'); closePanel('searchPanel');
+    markActiveChip();
     if(!state.queue.length && onlyMode()){ noneLeft(); return; }
     playCurrent();
-    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   // Pre-interleave commercials into an on-demand order so "up next" is always accurate
@@ -1296,12 +1443,16 @@
     advance({ auto:true, onError:true });
   }
 
-  function setPlaying(p){ $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play'; }
+  function setPlaying(p){
+    $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play';
+    var d=$('dockPlay'); d.textContent = p ? '⏸' : '▶'; d.setAttribute('aria-label', p ? 'Pause' : 'Play');
+  }
   function setStatus(kind){
     var where = (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
               : (state.stationLabel ? ' · '+state.stationLabel : '');
     var ad = currentItem() && currentItem().isAd;
     $('np').classList.toggle('live', kind==='playing');
+    $('dock').classList.toggle('live', kind==='playing');
     var t;
     if(kind==='playing') t = (ad?'commercial break':'on air') + where;
     else if(kind==='tuning') t = 'tuning in...' + where;
@@ -1361,6 +1512,48 @@
               + (!nr.isAd && pickSource(nx, nr).enh ? '<span class="enh-tag">enhanced</span>' : '')) : ''; }
     else $('upnext').innerHTML='';
     renderSrcLine();
+    updateDock();
+  }
+
+  // ---- docked now-playing bar ----
+  // Shows at the bottom of the window whenever the player's transport row is scrolled out of
+  // view and something is playing or cued, so play/pause and skip are always one tap away.
+  var dockWanted=false;
+  function dockHasContent(){ return state.queue.length>0 || !!state.channel; }
+  function updateDock(){
+    var dk=$('dock'), show = dockWanted && dockHasContent();
+    $('dockShow').textContent = $('npShow').textContent;
+    $('dockEp').textContent = $('npEp').textContent;
+    if(dk.classList.contains('show')!==show){
+      dk.classList.toggle('show', show);
+      document.body.classList.toggle('docked', show);
+      if(show) dk.removeAttribute('inert'); else dk.setAttribute('inert','');
+    }
+  }
+  // Crypto tip addresses: copy to clipboard, or select the text where the clipboard API is unavailable
+  document.querySelectorAll('.addr .copy').forEach(function(b){
+    b.onclick=function(){
+      var el=$(b.dataset.copy), txt=el.textContent.trim();
+      var sel=function(){ try{ var r=document.createRange(); r.selectNodeContents(el); var s=getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){} toast('Address selected, copy it from here'); };
+      try{ navigator.clipboard.writeText(txt).then(function(){ toast('Address copied'); }, sel); }catch(e){ sel(); }
+    };
+  });
+  function toPlayer(){ $('console').scrollIntoView({behavior:'smooth', block:'start'}); }
+  $('dock').setAttribute('inert','');
+  $('dockPlay').onclick=function(){ $('playBtn').click(); };
+  $('dockSkip').onclick=function(){ $('skipBtn').click(); };
+  $('dockUp').onclick=toPlayer;
+  $('dockTxt').onclick=toPlayer;
+  $('dockTxt').onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toPlayer(); } };
+  audio.addEventListener('timeupdate', function(){
+    if(!dockWanted) return;
+    var d=audio.duration||currentDur()||0; $('dockFill').style.width = d ? (100*(audio.currentTime||0)/d).toFixed(2)+'%' : '0%';
+  });
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ dockWanted = !en.isIntersecting; });
+      updateDock();
+    }, { threshold: 0 }).observe($('transport'));
   }
   $('npMore').onclick = function(){ var s=$('npSummary'); s.classList.toggle('open'); this.textContent = s.classList.contains('open')?'show less':'show more'; };
   function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -1391,7 +1584,7 @@
   $('selAll').onclick=function(){ document.querySelectorAll('#showGrid .showitem').forEach(function(it){ if(it.style.display!=='none'){ var cb=it.querySelector('input'); if(!cb.checked){ cb.checked=true; cb.onchange(); } } }); };
   $('selNone').onclick=function(){ document.querySelectorAll('#showGrid .showitem input').forEach(function(cb){ if(cb.checked){ cb.checked=false; cb.onchange(); } }); };
   $('playStation').onclick=function(){ var ids=Object.keys(selected); var nm=$('stationName').value.trim()||'Custom station'; startStation(ids, nm); };
-  $('saveStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim()||('Station '+(getSaved().length+1)); var arr=getSaved(); arr.push({name:nm, shows:ids}); save('otr_stations', JSON.stringify(arr)); renderSaved(); toast('Saved "'+nm+'"'); };
+  $('saveStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim()||('Station '+(getSaved().length+1)); var arr=getSaved(); arr.push({name:nm, shows:ids}); save('otr_stations', JSON.stringify(arr)); renderSaved(); toast('Saved "'+nm+'" under Channels'); };
   $('shareStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim(); var url=location.origin+BASE+'?s='+encodeStation(ids)+(nm?('&n='+encodeURIComponent(nm)):''); $('shareUrl').value=url; $('shareBox').classList.add('open'); $('shareUrl').select(); };
   $('copyShare').onclick=function(){ var i=$('shareUrl'); i.select(); try{ navigator.clipboard.writeText(i.value); }catch(e){ document.execCommand('copy'); } toast('Link copied'); };
 
@@ -1399,7 +1592,8 @@
   function renderSaved(){
     var row=$('savedRow'); var arr=getSaved(); row.innerHTML='';
     if(!arr.length){ return; }
-    var lab=document.createElement('div'); lab.className='label'; lab.style.width='100%'; lab.textContent='your stations'; row.appendChild(lab);
+    var lab=document.createElement('div'); lab.className='saved-h';
+    lab.innerHTML='<span class="label">your stations</span><span class="hint">saved on this device; make more under Build a station</span>'; row.appendChild(lab);
     arr.forEach(function(st, i){
       var c=document.createElement('div'); c.className='chip custom'; c.dataset.idx=i;
       c.innerHTML=escapeHtml(st.name)+'<small>'+st.shows.length+'</small> <span style="color:var(--dim);margin-left:6px" title="delete" aria-label="delete station">✕</span>';
@@ -1429,14 +1623,44 @@
     return byId[tok] ? tok : null;                                                          // slug code
   }).filter(Boolean); }catch(e){ return null; } }
 
-  // ---- panels ----
-  function openPanel(id){ closePanel('builderPanel'); closePanel('searchPanel'); $(id).classList.add('open'); $(id).scrollIntoView({behavior:'smooth',block:'nearest'}); }
-  function closePanel(id){ $(id).classList.remove('open'); }
-  $('builderBtn').onclick=function(){ var p=$('builderPanel'); if(p.classList.contains('open')) closePanel('builderPanel'); else openPanel('builderPanel'); };
-  $('builderClose').onclick=function(){ closePanel('builderPanel'); };
+  // ---- tabs: Channels / The Greats / Search / Build a station / Settings ----
+  // One pane shows at a time under the player, so nothing sits at the bottom of a long page.
+  // The open tab is remembered on this device; a link can open one with #search, #build, etc.
+  var TABS = { channels:'channelsPane', greats:'greatsPane', search:'searchPanel', build:'builderPanel', settings:'settingsPane' };
+  var curTab = 'channels';
+  function showTab(name, opts){
+    opts = opts || {};
+    if(!TABS[name]) name = 'channels';
+    curTab = name;
+    Object.keys(TABS).forEach(function(k){
+      var on = k===name, pane=$(TABS[k]), btn=document.querySelector('.tab[data-tab="'+k+'"]');
+      pane.classList.toggle('on', on);
+      if(btn){ btn.setAttribute('aria-selected', on?'true':'false'); btn.tabIndex = on ? 0 : -1; }
+    });
+    if(!opts.quiet) save('otr_tab', name);
+    if(name==='search'){
+      loadSearchIndex();
+      if(opts.focus) loadSearchIndex().then(function(){ try{ $('searchInput').focus({preventScroll:true}); }catch(e){ $('searchInput').focus(); } });
+    }
+    if(opts.reveal){   // keep the tab bar in view when switching from far down the page
+      var tb=document.querySelector('.tabs'), r=tb.getBoundingClientRect();
+      if(r.top<0 || r.top>window.innerHeight*0.6) tb.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  }
+  document.querySelectorAll('.tab[data-tab]').forEach(function(b){
+    b.onclick=function(){ showTab(b.dataset.tab, { focus: b.dataset.tab==='search' && !(window.matchMedia && matchMedia('(pointer: coarse)').matches) }); };
+  });
+  // Arrow keys move between tabs (standard tablist behaviour)
+  document.querySelector('.tabs').addEventListener('keydown', function(e){
+    if(e.key!=='ArrowRight' && e.key!=='ArrowLeft') return;
+    var names=Object.keys(TABS), i=names.indexOf(curTab), n=names[(i+(e.key==='ArrowRight'?1:names.length-1))%names.length];
+    e.preventDefault(); e.stopPropagation(); showTab(n); document.querySelector('.tab[data-tab="'+n+'"]').focus();
+  });
+  (function(){
+    var h=(location.hash||'').replace('#',''), want = TABS[h] ? h : load('otr_tab','channels');
+    showTab(want, { quiet: !!TABS[h] });
+  })();
   $('randomBtn').onclick=function(){ ensureAudioGraph(); if(ac && ac.state==='suspended') ac.resume(); startRandom(null, 'Surprise me'); };
-  $('searchBtn').onclick=function(){ var p=$('searchPanel'); if(p.classList.contains('open')){ closePanel('searchPanel'); } else { openPanel('searchPanel'); loadSearchIndex().then(function(){ $('searchInput').focus(); }); } };
-  $('searchClose').onclick=function(){ closePanel('searchPanel'); };
   $('commToggle').checked = state.commercials; $('commToggle').onchange=function(){ state.commercials=this.checked; save('otr_comm', this.checked?'1':'0'); };
   syncEnhUI();
   $('enhOnly').onchange=function(){ setOnly(this.checked); };
@@ -1481,16 +1705,32 @@
     hits.forEach(function(h){ h.enh = hasEnh({showId:h.sid, epIndex:h.epIndex, isAd:false}); });
     var hidden=0;
     if(onlyMode()){ var all=hits.length; hits=hits.filter(function(h){ return h.enh; }); hidden=all-hits.length; }
-    note.textContent = hits.length ? (hits.length+' episode'+(hits.length>1?'s':'')+' found'+(hits.length>300?' (showing first 300)':'')) : 'No episodes matched.';
+    note.textContent = hits.length ? (hits.length+' episode'+(hits.length>1?'s':'')+' found') : 'No episodes matched.';
     if(hidden) note.textContent += ' · '+hidden+' without an enhanced copy hidden';
-    var slice=hits.slice(0,300);
-    res.innerHTML = slice.map(function(h,i){
-      return '<div class="result" data-i="'+i+'"><div class="r-show">'+escapeHtml(h.show)+' &middot; '+escapeHtml(byId[h.sid].eps[h.epIndex][1]||'')+(h.enh && state.source==='enhanced' ? '<span class="enh-tag">enhanced</span>' : '')+heardMark(h.sid, h.epIndex)+'</div>'+
-        '<div class="r-title">'+hl(h.title,terms)+'</div><div class="r-sum">'+hl(h.sum,terms)+'</div></div>';
-    }).join('');
-    Array.prototype.forEach.call(res.querySelectorAll('.result'), function(el){
-      el.onclick=function(){ var h=slice[parseInt(el.dataset.i,10)]; playEpisode(h.sid, h.epIndex); };
-    });
+    // Results render 50 at a time in the page flow (no box-inside-a-box scrolling on phones).
+    var shown=0, PAGE=50;
+    res.innerHTML='';
+    function more(){
+      var end=Math.min(hits.length, shown+PAGE), frag=document.createDocumentFragment();
+      for(var i=shown;i<end;i++){
+        var h=hits[i], d=document.createElement('div'); d.className='result'; d.dataset.i=i;
+        d.innerHTML='<div class="r-show">'+escapeHtml(h.show)+' &middot; '+escapeHtml(byId[h.sid].eps[h.epIndex][1]||'')+(h.enh && state.source==='enhanced' ? '<span class="enh-tag">enhanced</span>' : '')+heardMark(h.sid, h.epIndex)+'</div>'+
+          '<div class="r-title">'+hl(h.title,terms)+'</div><div class="r-sum">'+hl(h.sum,terms)+'</div>';
+        d.onclick=(function(h, d){ return function(){
+          Array.prototype.forEach.call(res.querySelectorAll('.result.on'), function(x){ x.classList.remove('on'); });
+          d.classList.add('on'); playEpisode(h.sid, h.epIndex); }; })(h, d);
+        frag.appendChild(d);
+      }
+      shown=end;
+      var old=res.querySelector('.moreres'); if(old) old.parentNode.removeChild(old);
+      res.appendChild(frag);
+      if(shown<hits.length){
+        var b=document.createElement('button'); b.className='btn moreres';
+        b.textContent='show '+Math.min(PAGE, hits.length-shown)+' more ('+(hits.length-shown)+' left)';
+        b.onclick=more; res.appendChild(b);
+      }
+    }
+    more();
   }
   function hl(text, terms){ var t=escapeHtml(text); terms.forEach(function(term){ if(term.length<2) return; var re=new RegExp('('+term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'); t=t.replace(re,'<mark>$1</mark>'); }); return t; }
 
@@ -1503,10 +1743,9 @@
     state.channel=null; state.stationShowIds=[showId]; state.stationLabel=show.name;
     setQueue(order); state.qi=0;
     if(startSec>0) state.pendingSeek=startSec;
-    markActiveChip(); closePanel('searchPanel');
+    markActiveChip();
     if(!state.queue.length && onlyMode()){ noneLeft(show.name); return; }
     playCurrent();
-    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   // ---- visualizer: phonograph groove + radial spectrum ----
@@ -1654,6 +1893,9 @@
     var el=document.activeElement, tag=el&&el.tagName;
     if(tag==='INPUT'||tag==='TEXTAREA'||(el&&el.isContentEditable)) return;
     if(el && el.id==='viz') return;                 // canvas handles its own Enter/Space (change mode)
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.key==='/'){ e.preventDefault(); showTab('search', { focus:true, reveal:true }); return; }
+    if(el && el.classList && (el.classList.contains('tab') || el.id==='dockTxt') && (e.key===' '||e.key==='Spacebar')) return;   // let the focused tab activate
     if(e.key===' '||e.key==='Spacebar'){ e.preventDefault(); $('playBtn').click(); }
     else if(e.key==='n'||e.key==='N'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; next(false); } }
     else if(e.key==='p'||e.key==='P'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; prev(); } }
@@ -1702,17 +1944,16 @@
     onAirNow: function(ch){ var a=onAirNow(ch, Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, isAd:a.item.isAd, offset:a.offset, dur:a.dur, total:a.S.total } : null; },
     sleepIn: function(ms){ if(SLEEP.mode!=='off' && SLEEP.mode!=='end'){ SLEEP.until=Date.now()+ms; sleepTick(); } },
     sleepMode: function(){ return SLEEP.mode; },
-    schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); }
+    schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); },
+    tab: function(name){ if(name) showTab(name); return curTab; },
+    dockShown: function(){ return $('dock').classList.contains('show'); }
   };
 
   function renderFoot(){
     $('foot').innerHTML = CAT.shows.filter(function(s){ return !s.adv; }).length + ' shows across ' + CAT.channels.length + ' channels &middot; audio streamed from the '+
       '<a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a><br>'+
       'Catalogue and episode summaries curated by <a href="https://oldtime.radio" target="_blank" rel="noopener">Rob Dawson / codebox</a> (MIT, <a href="https://github.com/codebox/old-time-radio" target="_blank" rel="noopener">source</a>). '+
-      'This is an independent fork on <a href="/">DXEdge</a>; the original station is live at <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.<br>'+
-      'Enjoying the shows? <a class="donate" href="https://archive.org/donate" target="_blank" rel="noopener">♥ Donate to the Internet Archive</a><br>'+
-      '<span class="tipline">Like the player itself? Tips to the developer help cover hosting and development '+
-      '(they aren\'t tax deductible): <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener" id="tipLink">tip jar on Ko-fi ↗</a></span>';
+      'This is an independent fork on <a href="/">DXEdge</a>; the original station is live at <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.';
   }
 })();
 </script>

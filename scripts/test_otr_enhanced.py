@@ -97,6 +97,7 @@ def main():
         # --- enhanced episodes only ---
         allenh = "window.__otr.state.queue.every(it => it.isAd || window.__otr.hasEnh(it))"
         progs = "[...new Set(window.__otr.state.queue.filter(x => !x.isAd).map(x => x.showId))]"
+        pg.click("#settingsBtn")                                             # the toggles live in the Settings tab
         pg.check("#enhOnly")
         st = pg.evaluate("({only: window.__otr.onlyMode(), src: window.__otr.state.source, g: document.getElementById('greatsOnly').checked, t: document.getElementById('enhToggle').checked})")
         ck("'enhanced episodes only' turns the setting on and syncs the greats filter", st == {"only": True, "src": "enhanced", "g": True, "t": True}, st)
@@ -123,18 +124,19 @@ def main():
         ck("search lists only enhanced episodes and says how many it hid", sr["n"] > 0 and sr["n"] == sr["enh"] and "hidden" in sr["note"], sr)
         pg.reload(); pg.wait_for_function("window.__otr.ready() && window.__otr.enhancedCount() > 0", timeout=20000)
         ck("enhanced-only persists across reload", pg.evaluate("window.__otr.onlyMode()") and pg.is_checked("#enhOnly") and pg.is_checked("#greatsOnly"))
-        pg.uncheck("#greatsOnly")
+        pg.click("#greatsBtn"); pg.uncheck("#greatsOnly")
         ck("unchecking the greats filter turns enhanced-only off everywhere", not pg.evaluate("window.__otr.onlyMode()") and not pg.is_checked("#enhOnly") and pg.is_checked("#enhToggle"))
         q = pg.evaluate(f"(() => {{ window.__otr.playGreat('lights-out'); return {progs}; }})()")
         ck("with it off, a show with no enhanced copies plays normally", q == ["lights-out"], q)
-        pg.check("#enhOnly"); pg.uncheck("#enhToggle")
+        pg.click("#settingsBtn"); pg.check("#enhOnly"); pg.uncheck("#enhToggle")
         ck("turning off enhanced audio also turns off enhanced-only", not pg.evaluate("window.__otr.onlyMode()") and not pg.is_checked("#enhOnly"))
         pg.evaluate("localStorage.clear()")
 
         # --- empty sidecar ---
         MODE["enh"] = "fixture"; MODE["body"] = b'{"version":1,"episodes":{}}'; load(); MODE["enh"] = "file"
         ck("empty enhanced.json loads with zero entries", pg.evaluate("window.__otr.enhancedCount()") == 0)
-        ck("setting is always shown (global, not per episode)", pg.is_visible("#enhToggle"))
+        pg.click("#settingsBtn")
+        ck("setting lives in the Settings tab (global, not per episode)", pg.is_visible("#enhToggle"))
         ck("default is original", pg.evaluate("window.__otr.sourceInfo().pref") == "original" and not pg.is_checked("#enhToggle"))
         pg.click("#enhToggle")
         t = pg.inner_text("#toast")
@@ -269,8 +271,9 @@ def main():
         # --- 375 px ---
         m = b.new_page(viewport={"width": 375, "height": 800}); m.goto(BASE + "/otr/")
         m.wait_for_function("window.__otr && window.__otr.ready()", timeout=20000)
+        m.click("#settingsBtn")
         w = m.evaluate("({sw: document.documentElement.scrollWidth, vis: !!document.getElementById('enhToggle').offsetParent})")
-        ck("375 px: setting visible, no horizontal scroll", w["vis"] and w["sw"] <= 375, w)
+        ck("375 px: setting visible in the Settings tab, no horizontal scroll", w["vis"] and w["sw"] <= 375, w)
 
         ck("no page errors", not errs, errs)
         b.close()
