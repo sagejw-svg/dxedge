@@ -1,0 +1,16 @@
+{
+  "name": "Old Time Radio",
+  "short_name": "OTR Radio",
+  "description": "Classic 1930s to 50s radio: the networks' real weekly lineups and genre channels, on a tube set or a leather-cased portable.",
+  "start_url": "/otr/pop/",
+  "scope": "/otr/pop/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a110b",
+  "theme_color": "#1a110b",
+  "icons": [
+    { "src": "/otr/pop/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/otr/pop/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/otr/pop/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
