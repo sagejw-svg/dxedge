@@ -574,6 +574,7 @@
             <select id="sleepSel"><option value="off">off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="end">end of episode</option></select></label>
           <span class="sleep-left" id="sleepLeft"></span>
           <button class="advbtn" id="advBtn" aria-expanded="false" aria-controls="rack" title="Tube stage, graphic EQ and limiter"><span class="led"></span>🎛 Advanced</button>
+          <button class="linkish" id="popBtn" title="Open a pocket radio in its own window; it picks up the station you are on">pop out radio</button>
           <button class="linkish" id="linkBtn" disabled title="Copy a link that opens this episode at this moment">copy link to this moment</button>
         </div>
         <div class="upnext" id="upnext"></div>
@@ -4439,6 +4440,27 @@
       'Catalogue and episode summaries curated by <a href="https://oldtime.radio" target="_blank" rel="noopener">Rob Dawson / codebox</a> (MIT, <a href="https://github.com/codebox/old-time-radio" target="_blank" rel="noopener">source</a>). '+
       'This is an independent fork on <a href="/">DXEdge</a>; the original station is live at <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.';
   }
+})();
+</script>
+<script>
+/* Pop-out radio (/otr/pop/) and one radio at a time.
+ * "pop out radio" opens the pocket radio in a small window (a new tab on phones) tuned to the network or
+ * channel playing here, so it joins the same broadcast live. The two pages pause each other through a
+ * BroadcastChannel, so only one plays at a time. Reads window.__otr.state only; changes nothing in it. */
+(function(){
+  var a=document.getElementById('audio'), btn=document.getElementById('popBtn');
+  if(btn) btn.addEventListener('click', function(){
+    var st=(window.__otr && __otr.state) || {}, id=st.network || st.channel || '';
+    var url='/otr/pop/'+(id ? '?tune='+encodeURIComponent(id)+(a && !a.paused ? '&on=1' : '') : '');
+    var small=matchMedia('(pointer:fine)').matches && screen.width>=900;
+    var w=small ? window.open(url, 'otrpop', 'popup,width=430,height=880') : null;
+    if(!w) w=window.open(url, '_blank');
+    if(!w) location.href=url;
+  });
+  if(!a || !window.BroadcastChannel) return;
+  var ch=new BroadcastChannel('otr-radio'), me='full-'+Math.random().toString(36).slice(2);
+  a.addEventListener('playing', function(){ ch.postMessage({ type:'playing', from:me }); });
+  ch.onmessage=function(e){ var d=e.data||{}; if(d.type==='playing' && d.from!==me && !a.paused) a.pause(); };
 })();
 </script>
 <script src="/lib/stat.js"></script>

@@ -74,6 +74,25 @@ with sync_playwright() as p:
       y = pop.evaluate('([id,t])=>{const c=__pop.core().cursor(id,t); return c?{showId:c.item.showId,epIndex:c.item.epIndex,at:c.item.at,offset:c.offset}:null;}', [nid, t])
       if not x or not y or (x['showId'], x['epIndex'], x['at']) != (y['showId'], y['epIndex'], y['at']) or abs(x['offset'] - y['offset']) > 0.01: nbad.append((nid, t))
   ck('network stations match the full player across a week of sample times', not nbad, nbad[:3])
+  # ---------- pop out from the full player, and one radio at a time ----------
+  full.context.route(re.compile(r'https://archive\.org/.*'), serve_audio)
+  ck('the full player has a pop out button', full.is_visible('#popBtn'))
+  full.evaluate('__otr.startChannel("crime")')
+  full.wait_for_function('!document.getElementById("audio").paused && document.getElementById("audio").readyState>=3', timeout=20000)
+  with full.context.expect_page() as newp:
+    full.click('#popBtn')
+  pp = newp.value
+  pp.wait_for_function('window.__pop&&__pop.ready()', timeout=30000)
+  ck('pop out opens tuned to the station the full player is on', pp.evaluate('__pop.player().state.station') == 'crime')
+  pp.wait_for_function('__pop.player().state.status==="onair"', timeout=20000)
+  ck('and switches itself on, joining the same broadcast', pp.evaluate('!__pop.player().audio.paused'))
+  ck('the handoff is cleared from the address so a reload does not replay it', 'tune=' not in pp.url, pp.url)
+  full.wait_for_timeout(500)
+  ck('the full player pauses when the pop-out starts', full.evaluate('document.getElementById("audio").paused'))
+  full.evaluate('document.getElementById("audio").play()')
+  pp.wait_for_function('__pop.player().audio.paused', timeout=10000)
+  ck('and the pop-out pauses when the full player plays again', pp.evaluate('__pop.player().state.status') == 'paused')
+  pp.close()
   full.context.close()
 
   # ---------- the dial ----------

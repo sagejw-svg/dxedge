@@ -267,9 +267,21 @@
     player.on('notice', toast);
     buildFaceNav();
     setFace(Q.get('face') || load('otrpop_face', OTRFaces.defaultFor('otr')));
-    player.tuneTo(player.state.station);
+    var tune = Q.get('tune');                              // handed over by "pop out radio" on the full player
+    player.tuneTo(tune && core.station(tune) ? tune : player.state.station);
     render();
-    if (KIOSK && Q.get('autoplay') === '1') player.powerOn();
+    if ((KIOSK && Q.get('autoplay') === '1') || (tune && Q.get('on') === '1')) player.powerOn();
+    if (tune && history.replaceState) {                   // a reload should not tune and switch on again
+      var q2 = new URLSearchParams(location.search); q2.delete('tune'); q2.delete('on');
+      history.replaceState(null, '', location.pathname + (String(q2) ? '?' + q2 : ''));
+    }
+
+    // One radio at a time: this page and the full player (or another pop-out) pause each other.
+    if (window.BroadcastChannel) {
+      var bc = new BroadcastChannel('otr-radio'), me = 'pop-' + Math.random().toString(36).slice(2);
+      player.audio.addEventListener('playing', function(){ bc.postMessage({ type:'playing', from:me }); });
+      bc.onmessage = function(e){ var d = e.data || {}; if (d.type === 'playing' && d.from !== me && player.state.power && !player.audio.paused) player.pause(); };
+    }
   }).catch(function(e){
     console.error(e);
     setHTML('logStatus', 'The schedule did not load. Check the connection and reload.');
