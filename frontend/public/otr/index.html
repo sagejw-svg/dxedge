@@ -306,6 +306,94 @@
   .toast.show { opacity:1; }
   body.docked .toast { bottom: 82px; }
   .loading { color: var(--dim); font-size: 12px; padding: 20px 0; text-align:center; }
+
+  /* ---- Advanced sound rack ---- */
+  .advbtn { border: 1px solid var(--border2); background: var(--bg2); color: var(--muted); border-radius: 999px; padding: 3px 11px;
+    font-family: var(--font-mono); font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .advbtn:hover { border-color: var(--amber); color: var(--text); }
+  .advbtn .led { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .advbtn.on { color: var(--amber2); border-color: rgba(255,179,71,0.5); }
+  .advbtn.on .led { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .advbtn[aria-expanded="true"] { background: rgba(255,179,71,0.08); border-color: var(--amber); }
+  .rack { display: none; border: 1px solid var(--border2); border-radius: 12px; margin: 0 0 14px; overflow: hidden;
+    background: linear-gradient(180deg, #121212, #0b0b0b); box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+  .rack.open { display: block; animation: fade .2s; }
+  .rack-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #171717, #111); }
+  .rack-h h2 { font-size: 13px; color: #fff; margin: 0; font-weight: 600; letter-spacing: 1px; }
+  .rack-h .chain { font-size: 10.5px; color: var(--dim); letter-spacing: 1px; }
+  .rack-h .sp { flex: 1; }
+  .pwr { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border2); background: var(--bg); color: var(--muted);
+    border-radius: 999px; padding: 5px 12px 5px 8px; font-family: var(--font-mono); font-size: 11.5px; cursor: pointer; }
+  .pwr .sw { width: 30px; height: 16px; border-radius: 999px; background: #262626; position: relative; transition: background .15s; }
+  .pwr .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #777; transition: left .15s, background .15s; }
+  .pwr[aria-pressed="true"] { color: var(--green); border-color: rgba(0,255,157,0.4); }
+  .pwr[aria-pressed="true"] .sw { background: rgba(0,255,157,0.25); }
+  .pwr[aria-pressed="true"] .sw::after { left: 16px; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .pwr.small { padding: 3px 9px 3px 6px; font-size: 10.5px; }
+  .pwr.small .sw { width: 24px; height: 13px; } .pwr.small .sw::after { width: 9px; height: 9px; }
+  .pwr.small[aria-pressed="true"] .sw::after { left: 13px; }
+  .rack-x { background: none; border: none; color: var(--dim); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .rack-x:hover { color: var(--text); }
+  .rack-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; padding: 12px; }
+  @media (max-width: 820px){ .rack-body { grid-template-columns: minmax(0, 1fr); } }
+  .mod { border: 1px solid var(--border); border-radius: 10px; background: #0d0d0d; min-width: 0; position: relative; }
+  .mod-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .mod-h .label { color: var(--amber); }
+  .mod-h .sp { flex: 1; }
+  .mod.off .mod-b { opacity: .45; filter: saturate(.4); }
+  .mod-b { padding: 10px; transition: opacity .2s; }
+
+  /* tube module */
+  .tube-stage { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 10px; align-items: start; }
+  canvas#tubeCv { width: 120px; height: 200px; display: block; }
+  .tube-info { min-width: 0; }
+  .tube-name { font-size: 15px; font-weight: 600; color: var(--amber2); }
+  .tube-kind { font-size: 10.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .tube-note { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  canvas#xferCv { width: 100%; height: 86px; display: block; margin-top: 8px; border: 1px solid var(--border); border-radius: 6px; background: #080808; }
+  .tubes { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 4px; }
+  .tchip { border: 1px solid var(--border2); background: var(--bg1); color: var(--muted); border-radius: 6px; padding: 4px 7px;
+    font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
+  .tchip:hover { border-color: var(--amber); color: var(--text); }
+  .tchip[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); background: rgba(255,179,71,0.08); }
+  .knobs { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 4px; margin-top: 8px; }
+  .knob { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 52px; cursor: ns-resize; user-select: none; touch-action: none; outline: none; }
+  .knob svg { width: 46px; height: 46px; display: block; }
+  .knob .kl { font-size: 9.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .knob .kv { font-size: 10.5px; color: var(--amber2); font-variant-numeric: tabular-nums; min-height: 1.4em; }
+  .knob:focus-visible svg { filter: drop-shadow(0 0 4px var(--amber)); }
+
+  /* EQ module */
+  .eq-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; }
+  .seg button { background: var(--bg1); color: var(--muted); border: none; border-right: 1px solid var(--border2); padding: 3px 8px;
+    font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
+  .seg button:last-child { border-right: none; }
+  .seg button[aria-pressed="true"] { background: rgba(255,179,71,0.12); color: var(--amber); }
+  .eq-tools select { background: var(--bg1); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
+    font-family: var(--font-mono); font-size: 11px; padding: 3px 6px; cursor: pointer; }
+  .eq-read { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; min-height: 1.5em; margin-bottom: 4px; }
+  .eq-read .dim { color: var(--dim); }
+  canvas#eqCv { width: 100%; height: 240px; display: block; touch-action: none; cursor: crosshair; border-radius: 6px; outline: none; }
+  canvas#eqCv:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
+  @media (max-width: 520px){ canvas#eqCv { height: 210px; } }
+  .eq-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 8px; }
+  .eq-foot .hint { font-size: 10.5px; color: var(--dim); }
+
+  /* output strip */
+  .rack-out { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 14px 12px; }
+  .rack-out .label { color: var(--muted); }
+  .meter { flex: 1 1 180px; height: 10px; border-radius: 3px; background: #151515; position: relative; overflow: hidden; border: 1px solid var(--border); }
+  .meter i { position: absolute; inset: 0; clip-path: inset(0 100% 0 0);
+    background: linear-gradient(90deg, #00c47a 0%, #00ff9d 65%, #ffb347 82%, #ff5c5c 100%); }
+  .meter b { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; left: 0%; opacity: .8; }
+  .meter-db { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 64px; }
+  .limled { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .limled i { width: 8px; height: 8px; border-radius: 50%; background: #2a2a2a; }
+  .limled.hit i { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .rack-note { margin: 0 14px 12px; font-size: 11.5px; color: var(--amber2); border: 1px dashed rgba(255,179,71,0.4); border-radius: 8px; padding: 8px 10px; }
+  .rack-note[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -370,12 +458,71 @@
           <label class="mini" title="Stop playing after a while, with a fade out">sleep
             <select id="sleepSel"><option value="off">off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="end">end of episode</option></select></label>
           <span class="sleep-left" id="sleepLeft"></span>
+          <button class="advbtn" id="advBtn" aria-expanded="false" aria-controls="rack" title="Tube stage, graphic EQ and limiter"><span class="led"></span>🎛 Advanced</button>
           <button class="linkish" id="linkBtn" disabled title="Copy a link that opens this episode at this moment">copy link to this moment</button>
         </div>
         <div class="upnext" id="upnext"></div>
       </div>
     </div>
   </div>
+
+  <!-- Advanced sound: a small channel strip (EQ -> tube -> limiter), all in the browser -->
+  <section class="rack" id="rack" aria-label="Advanced sound">
+    <div class="rack-h">
+      <h2>ADVANCED SOUND</h2>
+      <span class="chain">EQ → TUBE → LIMITER</span>
+      <span class="sp"></span>
+      <button class="pwr" id="advPower" aria-pressed="false" title="Turn all processing on or off"><span class="sw"></span><span id="advPowerTxt">processing off</span></button>
+      <button class="btn" id="advReset" style="padding:5px 10px;font-size:11px" title="Flat EQ, default tube">reset</button>
+      <button class="rack-x" id="advClose" aria-label="Close advanced sound" title="Close (processing stays as set)">×</button>
+    </div>
+    <div class="rack-note" id="advIosNote" hidden>On iPhone, audio goes through the processing engine while this is on, and iOS stops it when the screen locks or you switch apps. Turn processing off and reload the page to get lock-screen playback back.</div>
+    <div class="rack-body">
+      <div class="mod" id="tubeMod">
+        <div class="mod-h"><span class="label">tube stage</span><span class="sp"></span>
+          <button class="pwr small" id="tubePower" aria-pressed="true"><span class="sw"></span>on</button></div>
+        <div class="mod-b">
+          <div class="tube-stage">
+            <canvas id="tubeCv" aria-label="Tube" role="img"></canvas>
+            <div class="tube-info">
+              <div class="tube-name" id="tubeName">12AX7</div>
+              <div class="tube-kind" id="tubeKind">preamp triode</div>
+              <div class="tube-note" id="tubeNote"></div>
+              <canvas id="xferCv" aria-label="Transfer curve and harmonics" role="img"></canvas>
+            </div>
+          </div>
+          <div class="tubes" id="tubeChips" role="group" aria-label="Choose a tube"></div>
+          <div class="knobs" id="tubeKnobs"></div>
+        </div>
+      </div>
+      <div class="mod" id="eqMod">
+        <div class="mod-h"><span class="label">graphic eq</span>
+          <div class="eq-tools">
+            <div class="seg" id="eqBands" role="group" aria-label="Number of bands">
+              <button data-n="10" aria-pressed="false">10</button><button data-n="15" aria-pressed="false">15</button><button data-n="31" aria-pressed="true">31</button>
+            </div>
+            <select id="eqPreset" aria-label="EQ preset"></select>
+          </div>
+          <span class="sp"></span>
+          <button class="pwr small" id="eqPower" aria-pressed="true"><span class="sw"></span>on</button>
+        </div>
+        <div class="mod-b">
+          <div class="eq-read" id="eqRead"><span class="dim">drag the faders, or sweep across to draw a curve</span></div>
+          <canvas id="eqCv" tabindex="0" aria-label="Graphic equalizer. Left and right arrows pick a band, up and down change its level, 0 resets it."></canvas>
+          <div class="eq-foot">
+            <div class="knobs" id="eqKnobs" style="margin:0"></div>
+            <span class="hint">±12 dB per band · double-click a band to zero it · LED ladders show the live spectrum with peak hold</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rack-out">
+      <span class="label">output</span>
+      <div class="meter" id="outMeter"><i></i><b></b></div>
+      <span class="meter-db" id="outDb">-∞ dB</span>
+      <span class="limled" id="limLed"><i></i>limiter</span>
+    </div>
+  </section>
 
   <div id="contWrap" hidden>
     <div class="section-h">
@@ -1173,18 +1320,28 @@
 
   // ---- playback ----
   var ac=null, srcNode=null, analyser=null, freq=null, analyserT=null, tdata=null;
+  // iPhone plays natively (no Web Audio) unless the listener turns Advanced sound on, which needs the graph.
   function ensureAudioGraph(){
-    if(IS_IOS){ initAudioSession(); if(!vizRAF) startViz(); return; } // native playback keeps audio alive when locked/backgrounded
+    if(IS_IOS && !ADV.on){ initAudioSession(); if(!vizRAF) startViz(); return; } // native playback keeps audio alive when locked/backgrounded
+    if(IS_IOS) initAudioSession();
     if(ac) return;
     try{
       ac = new (window.AudioContext||window.webkitAudioContext)();
       srcNode = ac.createMediaElementSource(audio);
+      // Advanced sound chain (EQ -> tube -> limiter) sits between the element and every tap,
+      // so the visualizer, the meters and the speakers all get the processed signal.
+      var tap = srcNode;
+      try{ PROC = makeChain(ac); PROC.apply(ADV); srcNode.connect(PROC.input); tap = PROC.output; }
+      catch(e2){ PROC = null; console.warn('advanced sound unavailable', e2); }
       analyser = ac.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.82;
       freq = new Uint8Array(analyser.frequencyBinCount);
-      srcNode.connect(analyser); analyser.connect(ac.destination);
+      tap.connect(analyser); analyser.connect(ac.destination);
       // second tap for waveform-style visualizers (longer window, no smoothing)
       analyserT = ac.createAnalyser(); analyserT.fftSize = 2048; tdata = new Uint8Array(analyserT.fftSize);
-      srcNode.connect(analyserT);
+      tap.connect(analyserT);
+      // third tap: high-resolution spectrum for the EQ's LED ladders
+      eqAn = ac.createAnalyser(); eqAn.fftSize = 8192; eqAn.smoothingTimeConstant = 0; eqBuf = new Float32Array(eqAn.frequencyBinCount);
+      tap.connect(eqAn); eqBins = null;
       startViz();
     }catch(e){ console.warn('audio graph failed (visualizer disabled)', e); }
   }
@@ -1888,6 +2045,633 @@
   }
   startViz();   // idle animation before first play; audio graph attaches on first tune-in
 
+  // ======================================================================
+  // ---- Advanced sound: graphic EQ -> tube stage -> safety limiter ----
+  // Plain Web Audio nodes, so it runs anywhere the player does:
+  //   EQ    10/15/31 peaking biquads on ISO centres (constant-Q, +/-12 dB) plus a preamp.
+  //   Tube  a WaveShaper (4x oversampled) whose curve is an asymmetric soft clipper,
+  //         voiced per tube: gain, knee hardness, and how early each half-wave clips
+  //         (positive grid conduction vs cutoff). Bias shifts the operating point, which
+  //         is what turns even harmonics up and down. Then a DC blocker, the output
+  //         transformer's band limits, a tone tilt, "sag" (a slow compressor standing in
+  //         for power-supply droop) and an output trim. Auto makeup keeps a -15 dBFS sine
+  //         at the same loudness whatever the drive, so the knobs change colour, not volume.
+  //   Limit a fast brick-wall-ish compressor at -1 dBFS so boosts can't clip.
+  // These are voicings in the spirit of each tube, not SPICE models of real circuits.
+  // Each tube's gain is fitted so drive 3 lands on a target distortion (12AX7 ~4%, 300B ~3%, 12AU7 ~1%,
+  // EL84/6V6 ~2.5%, EL34 ~2%, 6L6 ~1%, KT88 ~0.5%); b0 is its resting operating point, which is why
+  // the triodes lead with the 2nd harmonic and the power tubes with the 3rd as they are driven.
+  // ======================================================================
+  var TUBES = [
+    { id:'12AX7', kind:'preamp triode', shape:'mini', twin:true, gain:0.774, b0:0.25, kp:1.00, kn:0.55, h:1.8, hp:25, lp:17000, blue:0,
+      note:'High gain. The classic preamp tube: warm, even-order harmonics that bloom early.' },
+    { id:'12AT7', kind:'preamp triode', shape:'mini', twin:true, gain:0.701, b0:0.25, kp:0.90, kn:0.60, h:2.0, hp:25, lp:18000, blue:0,
+      note:'Medium gain. Cleaner than a 12AX7, with a little sparkle when pushed.' },
+    { id:'12AU7', kind:'preamp triode', shape:'mini', twin:true, gain:0.433, b0:0.3, kp:0.80, kn:0.66, h:2.2, hp:25, lp:19000, blue:0,
+      note:'Low gain and very linear. Gentle warmth with lots of headroom.' },
+    { id:'300B', kind:'directly heated triode', shape:'globe', gain:0.445, b0:0.55, kp:0.85, kn:0.50, h:1.6, hp:30, lp:16000, blue:0, filament:true,
+      note:'The audiophile single-ended triode. Low gain, very soft knee, rich second harmonic. Watch the filament.' },
+    { id:'EL84', kind:'power pentode', shape:'mini', gain:1.625, b0:0.12, kp:1.05, kn:0.90, h:2.6, hp:60, lp:11000, blue:0.5,
+      note:'Small power pentode. Chimey, compresses early, more odd-order bite.' },
+    { id:'6V6', kind:'beam power tetrode', shape:'octal', gain:1.354, b0:0.15, kp:1.00, kn:0.80, h:2.4, hp:50, lp:12000, blue:0.4,
+      note:'Sweet and round. Breaks up early with a smooth top end.' },
+    { id:'EL34', kind:'power pentode', shape:'bottle', gain:2.253, b0:0.06, kp:1.00, kn:0.95, h:3.0, hp:45, lp:13000, blue:0.7,
+      note:'Mid-forward and gritty. Strong odd harmonics when driven.' },
+    { id:'6L6', kind:'beam power tetrode', shape:'bottle', gain:2.099, b0:0.05, kp:0.90, kn:0.88, h:3.2, hp:40, lp:14000, blue:0.6,
+      note:'Big clean headroom and firm lows. Stays tidy until pushed hard.' },
+    { id:'KT88', kind:'beam power tetrode', shape:'big', gain:2.184, b0:0.04, kp:0.80, kn:0.78, h:3.6, hp:35, lp:15000, blue:0.9,
+      note:'The biggest bottle here. Tight and wide, with the most headroom of the set.' }
+  ];
+  var TUBE_BY = {}; TUBES.forEach(function(t){ TUBE_BY[t.id]=t; });
+  var ISO = {
+    31: [20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000],
+    15: [25,40,63,100,160,250,400,630,1000,1600,2500,4000,6300,10000,16000],
+    10: [31.5,63,125,250,500,1000,2000,4000,8000,16000]
+  };
+  var BPO = { 31:3, 15:1.5, 10:1 };                               // bands per octave
+  function bandQ(n){ var N=1/BPO[n], p=Math.pow(2,N); return Math.sqrt(p)/(p-1); }   // 4.32 / 2.15 / 1.41
+  function dB2lin(d){ return Math.pow(10, d/20); }
+  function clampN(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  // EQ presets are shapes over frequency, so they fit any band count.
+  function lg2(x){ return Math.log(x)/Math.LN2; }
+  function bell(f,fc,oct,db){ var o=lg2(f/fc)/oct; return db*Math.exp(-o*o*1.4); }
+  function shelfHi(f,fc,db){ return db/(1+Math.pow(2,-lg2(f/fc)*2.5)); }
+  function shelfLo(f,fc,db){ return db/(1+Math.pow(2, lg2(f/fc)*2.5)); }
+  var EQ_PRESETS = [
+    { id:'flat',   name:'Flat',                f:function(){ return 0; } },
+    { id:'warm',   name:'Warm',                f:function(f){ return bell(f,160,1.3,3) + bell(f,500,1.2,1) + shelfHi(f,7000,-4); } },
+    { id:'voice',  name:'Voice clarity',       f:function(f){ return shelfLo(f,90,-8) + bell(f,300,1,-2) + bell(f,2800,1.2,4) + shelfHi(f,9000,-3); } },
+    { id:'dehiss', name:'De-hiss',             f:function(f){ return shelfHi(f,5500,-10) + bell(f,2500,1,1.5); } },
+    { id:'hum',    name:'Hum cut',             f:function(f){ return bell(f,60,0.35,-12) + bell(f,120,0.3,-8) + bell(f,180,0.25,-4); } },
+    { id:'radio',  name:'Old AM radio',        f:function(f){ return shelfLo(f,250,-12) + shelfHi(f,3500,-12) + bell(f,1300,1.2,3); } },
+    { id:'loud',   name:'Late-night loudness', f:function(f){ return shelfLo(f,120,6) + shelfHi(f,8000,4) + bell(f,1000,1.5,-1); } },
+    { id:'bass',   name:'Bass lift',           f:function(f){ return shelfLo(f,150,7) + bell(f,400,1,-1); } }
+  ];
+  var PRESET_BY = {}; EQ_PRESETS.forEach(function(p){ PRESET_BY[p.id]=p; });
+  // Neighbouring graphic-EQ bands overlap, so faders set straight to a shape overshoot it. A few
+  // relaxation passes pick fader positions whose summed curve lands on the preset's shape.
+  function presetGains(id, n){
+    var p=PRESET_BY[id]||PRESET_BY.flat, c=ISO[n], tg=c.map(function(fc){ return clampN(p.f(fc),-12,12); }), g=tg.slice();
+    for(var it=0; it<10; it++){ var r=c.map(function(fc){ return respFor(fc, g, n, 48000); });
+      g=g.map(function(x,i){ return clampN(x+0.7*(tg[i]-r[i]), -12, 12); }); }
+    return g.map(function(x){ x=Math.round(x*2)/2; return Math.abs(x)<0.5?0:x; });
+  }
+
+  var ADV_DEF = { on:false, open:false, eqOn:true, tubeOn:true, bands:31, gains:null, pre:0, preset:'flat',
+                  tube:'12AX7', drive:3, bias:0, sag:2, tone:0, out:0 };
+  var advFresh = load('otr_adv', null) === null;
+  var ADV = (function(){
+    var d=JSON.parse(JSON.stringify(ADV_DEF));
+    try{ var s=JSON.parse(load('otr_adv','null')); if(s && typeof s==='object') Object.keys(d).forEach(function(k){ if(k in s) d[k]=s[k]; }); }catch(e){}
+    if(!ISO[d.bands]) d.bands=31;
+    if(advFresh && window.innerWidth<520) d.bands=15;              // phones start with 15 faders
+    if(!TUBE_BY[d.tube]) d.tube='12AX7';
+    if(!Array.isArray(d.gains) || d.gains.length!==d.bands) d.gains=presetGains(PRESET_BY[d.preset]?d.preset:'flat', d.bands);
+    d.gains=d.gains.map(function(g){ return clampN(+g||0,-12,12); });
+    return d;
+  })();
+  var PROC=null, eqAn=null, eqBuf=null, eqBins=null, advSaveT=null;
+  function saveAdv(){ clearTimeout(advSaveT); advSaveT=setTimeout(function(){ save('otr_adv', JSON.stringify(ADV)); }, 250); }
+
+  // The tube's transfer curve. g() is a soft clipper whose knee hardness is h and whose
+  // positive and negative halves saturate at 1/kp and 1/kn. Re-centred on the bias point
+  // and normalised to unity small-signal slope, then scaled by the drive.
+  function tubeCurve(t, drive, bias){
+    var n=4096, c=new Float32Array(n), G=t.gain*Math.pow(2,(drive-3)*0.5), b=bias*0.08+(t.b0||0);
+    var g=function(u){ var k=u>=0?t.kp:t.kn; return u/Math.pow(1+Math.pow(Math.abs(k*u),t.h),1/t.h); };
+    var e=1e-4, sl=(g(b+e)-g(b-e))/(2*e), g0=g(b);
+    for(var i=0;i<n;i++){ var v=i/(n-1)*2-1; c[i]=(g(2*G*v+b)-g0)/sl; }   // node input is pre-padded by 0.5
+    var A=0.18, M=256, ys=[], dc=0, si=0, so=0, j, x;
+    for(j=0;j<M;j++){ x=A*Math.sin(2*Math.PI*j/M); ys.push(curveAt(c,0.5*x)); dc+=ys[j]; }
+    dc/=M;
+    for(j=0;j<M;j++){ x=A*Math.sin(2*Math.PI*j/M); si+=x*x; so+=(ys[j]-dc)*(ys[j]-dc); }
+    return { curve:c, makeup: so>0 ? Math.sqrt(si/so) : 1, G:G, b:b };
+  }
+  function curveAt(c,v){ var p=(v+1)/2*(c.length-1); if(p<=0) return c[0]; if(p>=c.length-1) return c[c.length-1]; var i=Math.floor(p), f=p-i; return c[i]*(1-f)+c[i+1]*f; }
+  // Static harmonic profile of a curve: a 0.25 amplitude sine through it, DFT at 1..5x.
+  function harmonics(tc){
+    var M=512, A=0.25, re=[0,0,0,0,0,0], im=[0,0,0,0,0,0];
+    for(var j=0;j<M;j++){ var ph=2*Math.PI*j/M, y=curveAt(tc.curve, 0.5*A*Math.sin(ph))*tc.makeup;
+      for(var k=1;k<=5;k++){ re[k]+=y*Math.cos(k*ph); im[k]+=y*Math.sin(k*ph); } }
+    var mag=[0]; for(var k2=1;k2<=5;k2++) mag.push(Math.sqrt(re[k2]*re[k2]+im[k2]*im[k2]));
+    var thd=Math.sqrt(mag[2]*mag[2]+mag[3]*mag[3]+mag[4]*mag[4]+mag[5]*mag[5])/(mag[1]||1);
+    return { db:[2,3,4,5].map(function(k){ return 20*Math.log(Math.max(1e-9,mag[k]/(mag[1]||1)))/Math.LN10; }), thd:thd };
+  }
+  // RBJ peaking filter magnitude in dB, same maths as BiquadFilterNode 'peaking'.
+  function peakDb(f, f0, Q, gdb, fs){
+    if(!gdb || f0>=fs*0.5) return 0;
+    var A=Math.pow(10,gdb/40), w0=2*Math.PI*f0/fs, al=Math.sin(w0)/(2*Q), cw=Math.cos(w0);
+    var b0=1+al*A, b1=-2*cw, b2=1-al*A, a0=1+al/A, a1=-2*cw, a2=1-al/A, w=2*Math.PI*f/fs;
+    var c1=Math.cos(w), s1=Math.sin(w), c2=Math.cos(2*w), s2=Math.sin(2*w);
+    var nr=b0+b1*c1+b2*c2, ni=-(b1*s1+b2*s2), dr=a0+a1*c1+a2*c2, di=-(a1*s1+a2*s2);
+    return 10*Math.log((nr*nr+ni*ni)/(dr*dr+di*di))/Math.LN10;
+  }
+  // RBJ high shelf, S=1 (BiquadFilterNode 'highshelf'). The top fader is a shelf from its lower band
+  // edge: a peaking filter that close to Nyquist gets squeezed and leaves a ripple between 16k and 20k.
+  function shelfDb(f, f0, gdb, fs){
+    if(!gdb) return 0;
+    var A=Math.pow(10,gdb/40), w0=2*Math.PI*f0/fs, cw=Math.cos(w0), al=Math.sin(w0)/2*Math.SQRT2, sA=2*Math.sqrt(A)*al;
+    var b0=A*((A+1)+(A-1)*cw+sA), b1=-2*A*((A-1)+(A+1)*cw), b2=A*((A+1)+(A-1)*cw-sA), a0=(A+1)-(A-1)*cw+sA, a1=2*((A-1)-(A+1)*cw), a2=(A+1)-(A-1)*cw-sA;
+    var w=2*Math.PI*f/fs, c1=Math.cos(w), s1=Math.sin(w), c2=Math.cos(2*w), s2=Math.sin(2*w);
+    var nr=b0+b1*c1+b2*c2, ni=-(b1*s1+b2*s2), dr=a0+a1*c1+a2*c2, di=-(a1*s1+a2*s2);
+    return 10*Math.log((nr*nr+ni*ni)/(dr*dr+di*di))/Math.LN10;
+  }
+  function topShelfF(n){ var c=ISO[n]; return c[c.length-1]*Math.pow(2,-1/(2*BPO[n])); }
+  function bandDb(f, i, n, g, fs){ return i===ISO[n].length-1 ? shelfDb(f, Math.min(topShelfF(n), fs*0.45), g, fs) : peakDb(f, ISO[n][i], bandQ(n), g, fs); }
+  function respFor(f, gains, n, fs){ var s=0; for(var i=0;i<gains.length;i++) s+=bandDb(f, i, n, gains[i], fs); return s; }
+  function eqResponse(f){ return respFor(f, ADV.gains, ADV.bands, ac?ac.sampleRate:48000); }
+
+  // DynamicsCompressorNode applies a hidden makeup gain: 0.6 x the full-scale gain reduction (in dB).
+  // This mirrors the shared Blink/WebKit/Gecko kernel (KneeCurve, KAtSlope, Saturate) so the chain
+  // can take exactly that much back out and keep bypass and processing at the same level.
+  function compMakeupDb(thrDb, kneeDb, ratio){
+    var lin=function(d){ return Math.pow(10,d/20); }, db=function(x){ return 20*Math.log(Math.max(x,1e-12))/Math.LN10; };
+    var lt=lin(thrDb), kt=lin(thrDb+kneeDb), slope=1/ratio;
+    var knee=function(x,k){ return x<lt ? x : lt+(1-Math.exp(-k*(x-lt)))/k; };
+    var slopeAt=function(x,k){ if(x<lt) return 1; var x2=x*1.001; return (db(knee(x2,k))-db(knee(x,k)))/(db(x2)-db(x)); };
+    var mn=0.1, mx=10000, k=5; for(var i=0;i<15;i++){ if(slopeAt(kt,k)<slope) mx=k; else mn=k; k=Math.sqrt(mn*mx); }
+    var yk=db(knee(kt,k)), full = 1<kt ? knee(1,k) : lin(yk+slope*(0-db(kt)));
+    return -0.6*db(full);
+  }
+
+  // Build the chain in any BaseAudioContext (the live one, or an OfflineAudioContext for tests).
+  function makeChain(ctx){
+    var live = !(window.OfflineAudioContext && ctx instanceof OfflineAudioContext);
+    var C = { ctx:ctx, filters:[] };
+    function G(v){ var g=ctx.createGain(); g.gain.value=(v==null?1:v); return g; }
+    function BQ(type,f,q){ var b=ctx.createBiquadFilter(); b.type=type; b.frequency.value=f; if(q!=null) b.Q.value=q; return b; }
+    function setP(p,v){ if(live){ try{ p.setTargetAtTime(v, ctx.currentTime, 0.015); return; }catch(e){} } p.value=v; }
+    C.setP=setP;
+    C.input=G(); C.output=G();
+    C.eqIn=G(); C.eqOut=G();
+    C.tIn=G(0.5); C.shaper=ctx.createWaveShaper(); C.shaper.oversample='4x'; C.tMake=G();
+    C.dc=BQ('highpass',12,0.707); C.xHp=BQ('highpass',40,0.6); C.xLp=BQ('lowpass',16000,0.6);
+    C.toneLo=BQ('lowshelf',220); C.toneHi=BQ('highshelf',3500);
+    C.sag=ctx.createDynamicsCompressor(); C.sag.knee.value=6; C.sag.attack.value=0.008; C.tOut=G();
+    C.tIn.connect(C.shaper); C.shaper.connect(C.tMake); C.tMake.connect(C.dc); C.dc.connect(C.xHp); C.xHp.connect(C.xLp);
+    C.xLp.connect(C.toneLo); C.toneLo.connect(C.toneHi); C.toneHi.connect(C.sag); C.sag.connect(C.tOut);
+    // Limiter, then a soft clipper that only acts above 0.89 so nothing leaves the chain over 0 dBFS.
+    // DynamicsCompressorNode adds its own makeup gain (0.6 x the full-scale reduction, in dB, in
+    // Chromium, WebKit and Gecko alike); limTrim and the sag trim below take it back out so bypass
+    // and processing match in level.
+    C.lim=ctx.createDynamicsCompressor();
+    C.lim.threshold.value=-1; C.lim.knee.value=0; C.lim.ratio.value=20; C.lim.attack.value=0.002; C.lim.release.value=0.12;
+    C.limTrim=G(dB2lin(-compMakeupDb(-1,0,20))); C.clipIn=G(1/1.5); C.clip=ctx.createWaveShaper(); C.clip.oversample='2x';
+    C.clip.curve=(function(){ var n=8192, c=new Float32Array(n), k=0.89; for(var i=0;i<n;i++){ var x=(i/(n-1)*2-1)*1.5, a=Math.abs(x);
+      c[i]= a<k ? x : (x<0?-1:1)*(k+0.1*Math.tanh((a-k)/0.1)); } return c; })();
+    C.lim.connect(C.limTrim); C.limTrim.connect(C.clipIn); C.clipIn.connect(C.clip);
+    C.n=0;
+    C.setBands=function(S){
+      try{ C.eqIn.disconnect(); }catch(e){}
+      C.filters.forEach(function(f){ try{ f.disconnect(); }catch(e){} });
+      var fs=ctx.sampleRate, q=bandQ(S.bands);
+      var last=ISO[S.bands].length-1;
+      C.filters=ISO[S.bands].map(function(fc,i){ var b = i===last ? BQ('highshelf', Math.min(topShelfF(S.bands), fs*0.45)) : BQ('peaking', Math.min(fc, fs*0.45), q);
+        b.gain.value=S.gains[i]||0; return b; });
+      var prev=C.eqIn; C.filters.forEach(function(f){ prev.connect(f); prev=f; }); prev.connect(C.eqOut);
+      C.n=S.bands;
+    };
+    C.setGain=function(i,g){ if(C.filters[i]) setP(C.filters[i].gain, g); };
+    C.setTube=function(S){
+      var t=TUBE_BY[S.tube]||TUBES[0], tc=tubeCurve(t, S.drive, S.bias);
+      C.shaper.curve=tc.curve; setP(C.tMake.gain, tc.makeup);
+      setP(C.xHp.frequency, t.hp); setP(C.xLp.frequency, Math.min(t.lp, ctx.sampleRate*0.45));
+      setP(C.toneLo.gain, -S.tone*0.4); setP(C.toneHi.gain, S.tone*0.9);
+      var sagMk=0;
+      if(S.sag<=0){ setP(C.sag.threshold,0); setP(C.sag.ratio,1); }
+      else { var T=-4-S.sag*2.6, R=1.5+S.sag*0.25; setP(C.sag.threshold, T); setP(C.sag.ratio, R); setP(C.sag.release, 0.2+S.sag*0.02); sagMk=compMakeupDb(T,6,R); }
+      setP(C.tOut.gain, dB2lin(S.out - sagMk));
+      return tc;
+    };
+    C.route=function(S){
+      [C.input, C.eqOut, C.tOut, C.clip].forEach(function(n){ try{ n.disconnect(); }catch(e){} });
+      if(!S.on){ C.input.connect(C.output); return; }
+      var cur=C.input;
+      if(S.eqOn){ cur.connect(C.eqIn); cur=C.eqOut; }
+      if(S.tubeOn){ cur.connect(C.tIn); cur=C.tOut; }
+      cur.connect(C.lim); C.clip.connect(C.output);
+    };
+    C.apply=function(S){
+      if(C.n!==S.bands) C.setBands(S); else S.gains.forEach(function(g,i){ C.setGain(i,g); });
+      setP(C.eqIn.gain, dB2lin(S.pre));
+      C.setTube(S); C.route(S);
+    };
+    // Re-route with a 15 ms dip so switching sections never clicks.
+    C.reroute=function(S, fn){
+      if(!live){ if(fn) fn(); C.route(S); return; }
+      var t=ctx.currentTime; C.output.gain.cancelScheduledValues(t); C.output.gain.setTargetAtTime(0, t, 0.004);
+      setTimeout(function(){ if(fn) fn(); C.route(S); C.output.gain.cancelScheduledValues(ctx.currentTime); C.output.gain.setTargetAtTime(1, ctx.currentTime, 0.008); }, 22);
+    };
+    return C;
+  }
+
+  // ---- rotary knob: drag up/down (shift = fine), arrow keys, double-click resets ----
+  function arcPath(cx,cy,r,a0,a1){
+    var p=function(a){ var rad=(a-90)*Math.PI/180; return [cx+r*Math.cos(rad), cy+r*Math.sin(rad)]; };
+    var s=p(a0), e=p(a1), big=Math.abs(a1-a0)>180?1:0, sw=a1>a0?1:0;
+    return 'M'+s[0].toFixed(2)+' '+s[1].toFixed(2)+' A'+r+' '+r+' 0 '+big+' '+sw+' '+e[0].toFixed(2)+' '+e[1].toFixed(2);
+  }
+  function makeKnob(host, o){
+    var el=document.createElement('div'); el.className='knob'; el.tabIndex=0; el.setAttribute('role','slider');
+    el.setAttribute('aria-label',o.label); el.setAttribute('aria-valuemin',o.min); el.setAttribute('aria-valuemax',o.max);
+    el.title=o.title||o.label;
+    el.innerHTML='<svg viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="15.5" fill="#161616" stroke="#2e2e2e"/>'+
+      '<path class="trk" fill="none" stroke="#262626" stroke-width="3.2" stroke-linecap="round"/>'+
+      '<path class="val" fill="none" stroke="#ffb347" stroke-width="3.2" stroke-linecap="round"/>'+
+      '<line class="ptr" x1="23" y1="23" x2="23" y2="11.5" stroke="#ffd08a" stroke-width="2.2" stroke-linecap="round"/></svg>'+
+      '<span class="kv"></span><span class="kl">'+o.label+'</span>';
+    host.appendChild(el);
+    var trk=el.querySelector('.trk'), val=el.querySelector('.val'), ptr=el.querySelector('.ptr'), kv=el.querySelector('.kv');
+    trk.setAttribute('d', arcPath(23,23,19.5,-135,135));
+    var v=o.value, bip=o.min<0;
+    function ang(x){ return -135+270*(x-o.min)/(o.max-o.min); }
+    function render(){
+      var a=ang(v), a0=bip?ang(0):-135;
+      val.setAttribute('d', Math.abs(a-a0)<0.5 ? '' : arcPath(23,23,19.5,Math.min(a0,a),Math.max(a0,a)));
+      ptr.setAttribute('transform','rotate('+a.toFixed(1)+' 23 23)');
+      kv.textContent=o.fmt(v); el.setAttribute('aria-valuenow',v); el.setAttribute('aria-valuetext',o.fmt(v));
+    }
+    function set(nv, fire){ nv=Math.round(clampN(nv,o.min,o.max)/o.step)*o.step; nv=+nv.toFixed(3); if(nv===v && fire) return; v=nv; render(); if(fire) o.onChange(v); }
+    var drag=null;
+    el.addEventListener('pointerdown', function(e){ e.preventDefault(); el.focus(); el.setPointerCapture(e.pointerId); drag={y:e.clientY, v:v}; });
+    el.addEventListener('pointermove', function(e){ if(!drag) return; var span=o.max-o.min, k=e.shiftKey?0.25:1; set(drag.v+(drag.y-e.clientY)/150*span*k, true); });
+    el.addEventListener('pointerup', function(){ drag=null; }); el.addEventListener('pointercancel', function(){ drag=null; });
+    el.addEventListener('dblclick', function(){ set(o.def, true); });
+    el.addEventListener('wheel', function(e){ if(document.activeElement!==el) return; e.preventDefault(); set(v-(e.deltaY>0?1:-1)*o.step*(e.shiftKey?1:2), true); }, {passive:false});
+    el.addEventListener('keydown', function(e){
+      var st=o.step*(e.shiftKey?5:1), m={ArrowUp:st,ArrowRight:st,ArrowDown:-st,ArrowLeft:-st,PageUp:st*5,PageDown:-st*5}[e.key];
+      if(m!==undefined){ e.preventDefault(); e.stopPropagation(); set(v+m,true); }
+      else if(e.key==='Home'){ e.preventDefault(); set(o.min,true); } else if(e.key==='End'){ e.preventDefault(); set(o.max,true); }
+      else if(e.key===' '){ e.stopPropagation(); }
+    });
+    render();
+    return { el:el, set:function(nv){ set(nv,false); }, get:function(){ return v; } };
+  }
+
+  // ---- rack state + UI ----
+  var advKnobs={}, TV={ shown:ADV.tube, heat:0, glow:0, swapping:false, t0:0 }, lastTC=null;
+  function sgn(v,u){ return (v>0?'+':'')+(Math.round(v*10)/10)+(u||''); }
+  var KNOBS = [
+    { key:'drive', label:'Drive', min:0,   max:10, step:0.1, def:3, fmt:function(v){ return v.toFixed(1); }, title:'How hard the signal hits the tube' },
+    { key:'bias',  label:'Bias',  min:-5,  max:5,  step:0.1, def:0, fmt:function(v){ return v<0?'cold '+(-v).toFixed(1):v>0?'hot '+v.toFixed(1):'0'; }, title:'Operating point: hot adds even harmonics, cold thins it out' },
+    { key:'sag',   label:'Sag',   min:0,   max:10, step:0.1, def:2, fmt:function(v){ return v.toFixed(1); }, title:'Power-supply droop: loud passages squash a little' },
+    { key:'tone',  label:'Tone',  min:-10, max:10, step:0.5, def:0, fmt:function(v){ return v<0?'dark '+(-v):v>0?'bright '+v:'0'; }, title:'Tilt: darker or brighter' },
+    { key:'out',   label:'Output',min:-12, max:12, step:0.5, def:0, fmt:function(v){ return sgn(v,' dB'); }, title:'Tube stage output trim' }
+  ];
+  KNOBS.forEach(function(k){ k.value=ADV[k.key]; k.onChange=function(v){ ADV[k.key]=v; touchAdv(); tubeChanged(false); }; advKnobs[k.key]=makeKnob($('tubeKnobs'), k); });
+  advKnobs.pre=makeKnob($('eqKnobs'), { key:'pre', label:'Preamp', min:-12, max:6, step:0.5, def:0, value:ADV.pre, title:'EQ input level: pull it down if boosts push the limiter',
+    fmt:function(v){ return sgn(v,' dB'); }, onChange:function(v){ ADV.pre=v; touchAdv(); if(PROC) PROC.setP(PROC.eqIn.gain, dB2lin(v)); saveAdv(); } });
+
+  TUBES.forEach(function(t){
+    var b=document.createElement('button'); b.className='tchip'; b.textContent=t.id; b.dataset.id=t.id; b.title=t.kind;
+    b.onclick=function(){ if(ADV.tube===t.id) return; ADV.tube=t.id; touchAdv(); tubeChanged(true); };
+    $('tubeChips').appendChild(b);
+  });
+  var eqSel=$('eqPreset');
+  EQ_PRESETS.forEach(function(p){ var o=document.createElement('option'); o.value=p.id; o.textContent=p.name; eqSel.appendChild(o); });
+  var oc=document.createElement('option'); oc.value='custom'; oc.textContent='Custom'; oc.disabled=true; eqSel.appendChild(oc);
+  eqSel.onchange=function(){ ADV.preset=this.value; ADV.gains=presetGains(this.value, ADV.bands); touchAdv(); if(PROC) ADV.gains.forEach(function(g,i){ PROC.setGain(i,g); }); EQV.dirty=true; saveAdv(); };
+  document.querySelectorAll('#eqBands button').forEach(function(b){ b.onclick=function(){ setBandCount(parseInt(b.dataset.n,10)); }; });
+
+  // Changing band count keeps the shape: new faders read the old curve at their centres.
+  function setBandCount(n){
+    if(n===ADV.bands || !ISO[n]) return;
+    var old=ISO[ADV.bands], og=ADV.gains;
+    ADV.gains = ADV.preset!=='custom' ? presetGains(ADV.preset, n) : ISO[n].map(function(fc){
+      var x=lg2(fc), i=0; while(i<old.length-1 && lg2(old[i+1])<x) i++;
+      if(x<=lg2(old[0])) return og[0]; if(i>=old.length-1) return og[old.length-1];
+      var f=(x-lg2(old[i]))/(lg2(old[i+1])-lg2(old[i])); return Math.round((og[i]*(1-f)+og[i+1]*f)*2)/2; });
+    ADV.bands=n; EQV.sel=Math.min(EQV.sel, n-1); EQV.lv=[]; EQV.pk=[]; EQV.pkT=[]; eqBins=null;
+    if(PROC) PROC.reroute(ADV, function(){ PROC.setBands(ADV); });
+    syncAdvUI(); saveAdv();
+  }
+  // Any touch of a control turns processing on (opening the rack alone never changes the sound).
+  function touchAdv(){ if(!ADV.on) setAdvPower(true, true); }
+  function tubeChanged(swap){
+    if(swap){ TV.swapping=true; TV.t0=performance.now(); }
+    if(PROC){
+      if(swap) PROC.reroute(ADV, function(){ lastTC=PROC.setTube(ADV); });
+      else scheduleTube();
+    } else lastTC=tubeCurve(TUBE_BY[ADV.tube], ADV.drive, ADV.bias);
+    syncTubeInfo(); saveAdv();
+  }
+  var tubeRAF=0;
+  function scheduleTube(){ if(tubeRAF) return; tubeRAF=requestAnimationFrame(function(){ tubeRAF=0; if(PROC) lastTC=PROC.setTube(ADV); drawXfer(); }); }
+  var iosNoted=false;
+  function setAdvPower(on, auto){
+    ADV.on=!!on;
+    if(on){ ensureAudioGraph(); if(ac && ac.state==='suspended' && !audio.paused) ac.resume(); }
+    if(PROC) PROC.reroute(ADV);
+    if(IS_IOS){ $('advIosNote').hidden = !(on || ac); if(on && !iosNoted){ iosNoted=true; toast('iPhone: audio stops when the screen locks while processing is on'); } }
+    else if(auto) toast('Processing on');
+    syncAdvUI(); saveAdv();
+  }
+  function setModule(which, on){
+    ADV[which]=!!on;
+    if(on && !ADV.on){ ADV.on=true; ensureAudioGraph(); }
+    if(PROC) PROC.reroute(ADV);
+    syncAdvUI(); saveAdv();
+  }
+  $('advPower').onclick=function(){ setAdvPower(!ADV.on); if(!ADV.on && IS_IOS && ac) toast('Processing off. Reload the page to get lock-screen playback back.'); };
+  $('tubePower').onclick=function(){ setModule('tubeOn', !ADV.tubeOn); };
+  $('eqPower').onclick=function(){ setModule('eqOn', !ADV.eqOn); };
+  $('advReset').onclick=function(){
+    var keep={ on:ADV.on, open:ADV.open, bands:ADV.bands };
+    Object.keys(ADV_DEF).forEach(function(k){ ADV[k]=ADV_DEF[k]; }); ADV.on=keep.on; ADV.open=keep.open; ADV.bands=keep.bands;
+    ADV.gains=presetGains('flat', ADV.bands);
+    KNOBS.forEach(function(k){ advKnobs[k.key].set(ADV[k.key]); }); advKnobs.pre.set(0);
+    if(PROC) PROC.reroute(ADV, function(){ PROC.apply(ADV); });
+    TV.swapping=true; TV.t0=performance.now(); syncAdvUI(); saveAdv(); toast('Flat EQ, 12AX7 at defaults');
+  };
+  function openRack(open){
+    ADV.open=!!open; $('rack').classList.toggle('open', ADV.open); $('advBtn').setAttribute('aria-expanded', ADV.open?'true':'false');
+    if(ADV.open){ sizeRackCanvases(); startRack(); } saveAdv();
+  }
+  $('advBtn').onclick=function(){ openRack(!ADV.open); if(ADV.open) $('rack').scrollIntoView({behavior:'smooth', block:'nearest'}); };
+  $('advClose').onclick=function(){ openRack(false); };
+
+  function syncTubeInfo(){
+    var t=TUBE_BY[ADV.tube];
+    $('tubeName').textContent=t.id; $('tubeKind').textContent=t.kind; $('tubeNote').textContent=t.note;
+    document.querySelectorAll('#tubeChips .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.tube?'true':'false'); });
+    if(!PROC) lastTC=tubeCurve(t, ADV.drive, ADV.bias);
+    drawXfer();
+  }
+  function syncAdvUI(){
+    $('advBtn').classList.toggle('on', ADV.on);
+    var p=$('advPower'); p.setAttribute('aria-pressed', ADV.on?'true':'false'); $('advPowerTxt').textContent = ADV.on ? 'processing on' : 'processing off';
+    [['tubePower','tubeOn','tubeMod'],['eqPower','eqOn','eqMod']].forEach(function(x){
+      $(x[0]).setAttribute('aria-pressed', ADV[x[1]]?'true':'false'); $(x[0]).lastChild.textContent = ADV[x[1]]?'on':'bypass';
+      $(x[2]).classList.toggle('off', !(ADV.on && ADV[x[1]]));
+    });
+    document.querySelectorAll('#eqBands button').forEach(function(b){ b.setAttribute('aria-pressed', parseInt(b.dataset.n,10)===ADV.bands?'true':'false'); });
+    eqSel.value = PRESET_BY[ADV.preset] ? ADV.preset : 'custom';
+    if(IS_IOS) $('advIosNote').hidden = !(ADV.on || ac);
+    syncTubeInfo(); EQV.dirty=true;
+  }
+
+  // ---- canvases ----
+  function fitCanvas(cv){ var r=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(!w||!h) return null;
+    if(cv.width!==Math.round(w*r) || cv.height!==Math.round(h*r)){ cv.width=Math.round(w*r); cv.height=Math.round(h*r); }
+    var c=cv.getContext('2d'); c.setTransform(r,0,0,r,0,0); return { c:c, w:w, h:h }; }
+  function sizeRackCanvases(){ EQV.dirty=true; drawXfer(); }
+  window.addEventListener('resize', function(){ if(ADV.open) sizeRackCanvases(); });
+
+  // Transfer curve (left) and harmonic profile (right) for the current tube settings.
+  function drawXfer(){
+    var f=fitCanvas($('xferCv')); if(!f) return; var c=f.c, w=f.w, h=f.h;
+    var tc=lastTC || tubeCurve(TUBE_BY[ADV.tube], ADV.drive, ADV.bias), hm=harmonics(tc);
+    c.clearRect(0,0,w,h);
+    var s=h-12, x0=6, y0=6;
+    c.strokeStyle='rgba(255,255,255,0.08)'; c.lineWidth=1; c.strokeRect(x0+.5,y0+.5,s,s);
+    c.beginPath(); c.moveTo(x0,y0+s/2); c.lineTo(x0+s,y0+s/2); c.moveTo(x0+s/2,y0); c.lineTo(x0+s/2,y0+s); c.stroke();
+    c.setLineDash([2,3]); c.beginPath(); c.moveTo(x0,y0+s); c.lineTo(x0+s,y0); c.stroke(); c.setLineDash([]);
+    var pk=0, pts=[]; for(var i=0;i<=80;i++){ var xin=i/80*2-1, y=curveAt(tc.curve,0.5*xin)*tc.makeup; pts.push([xin,y]); pk=Math.max(pk,Math.abs(y)); }
+    var sc=Math.max(1,pk);
+    c.beginPath(); pts.forEach(function(p,i){ var X=x0+(p[0]+1)/2*s, Y=y0+s/2-(p[1]/sc)*s/2; if(i) c.lineTo(X,Y); else c.moveTo(X,Y); });
+    c.strokeStyle='#ffb347'; c.lineWidth=1.8; c.shadowColor='#ffb347'; c.shadowBlur=6; c.stroke(); c.shadowBlur=0;
+    c.font='9px '+getComputedStyle(document.body).fontFamily; c.fillStyle='#7c7c7c'; c.fillText('in → out', x0+3, y0+s-3);
+    // harmonics: bars from -80 dB (empty) to 0 dB relative to the fundamental
+    var bx=x0+s+12, bw=Math.max(8,(w-bx-6)/4-6), base=y0+s-10, top=y0+10;
+    hm.db.forEach(function(d,i){ var v=clampN((d+80)/80,0,1), X=bx+i*(bw+6), H=v*(base-top);
+      c.fillStyle='#1c1c1c'; c.fillRect(X,top,bw,base-top);
+      c.fillStyle= i%2===0 ? '#00ff9d' : '#ffb347'; c.globalAlpha=0.85; c.fillRect(X,base-H,bw,H); c.globalAlpha=1;
+      c.fillStyle='#9a9a9a'; c.fillText('H'+(i+2), X, base+9); });
+    c.fillStyle='#ffd08a'; c.fillText('THD '+(hm.thd*100<10?(hm.thd*100).toFixed(1):Math.round(hm.thd*100))+'%', bx, y0+6);
+  }
+
+  // The lit tube. Glass profiles are half-widths from the base (y=1) to the top (y=0).
+  var SHAPES = {
+    mini:   { top:0.16, base:0.82, prof:[[0.82,0.19],[0.30,0.19],[0.20,0.185]], plateH:0.36, plateW:0.26, plateY:0.40, socket:'mini' },
+    octal:  { top:0.12, base:0.76, prof:[[0.76,0.22],[0.30,0.22],[0.18,0.21]], plateH:0.36, plateW:0.30, plateY:0.36, socket:'octal' },
+    bottle: { top:0.08, base:0.76, prof:[[0.76,0.22],[0.62,0.245],[0.48,0.22],[0.36,0.18],[0.24,0.195],[0.14,0.19]], plateH:0.32, plateW:0.29, plateY:0.42, socket:'octal' },
+    big:    { top:0.05, base:0.76, prof:[[0.76,0.23],[0.56,0.25],[0.36,0.27],[0.20,0.265],[0.11,0.24]], plateH:0.36, plateW:0.32, plateY:0.36, socket:'octal' },
+    globe:  { top:0.07, base:0.76, prof:[[0.76,0.15],[0.62,0.16],[0.48,0.25],[0.34,0.28],[0.20,0.25],[0.12,0.19]], plateH:0.30, plateW:0.30, plateY:0.38, socket:'octal' }
+  };
+  function glassPath(c, cx, w, h, sh){
+    var P=sh.prof.map(function(p){ return [p[0]*h, p[1]*w]; }), topY=sh.top*h, last=P[P.length-1];
+    c.beginPath(); c.moveTo(cx-P[0][1], P[0][0]);
+    for(var i=1;i<P.length;i++){ var a=P[i-1], b=P[i]; c.quadraticCurveTo(cx-a[1], (a[0]+b[0])/2, cx-b[1], b[0]); }
+    c.bezierCurveTo(cx-last[1], topY-0.02*h, cx-last[1]*0.4, topY, cx, topY);
+    c.bezierCurveTo(cx+last[1]*0.4, topY, cx+last[1], topY-0.02*h, cx+last[1], last[0]);
+    for(var j=P.length-1;j>0;j--){ var a2=P[j], b2=P[j-1]; c.quadraticCurveTo(cx+a2[1], (a2[0]+b2[0])/2, cx+b2[1], b2[0]); }
+    c.closePath();
+  }
+  function drawTube(now){
+    var f=fitCanvas($('tubeCv')); if(!f) return; var c=f.c, w=f.w, h=f.h, cx=w/2;
+    var target = (ADV.on && ADV.tubeOn) ? 1 : 0;
+    if(TV.swapping){ var el=(now-TV.t0)/1000; if(el<0.35){ target=0; } else { TV.shown=ADV.tube; TV.swapping=false; } }
+    if(!TV.swapping && TV.shown!==ADV.tube) TV.shown=ADV.tube;
+    TV.heat += (target-TV.heat)*(target>TV.heat ? 0.022 : 0.12);            // slow warm-up, quick cool-down
+    var t=TUBE_BY[TV.shown], sh=SHAPES[t.shape], lv=PROC&&ADV.on&&ADV.tubeOn ? level() : 0;
+    TV.glow += (lv-TV.glow)*0.18;
+    var tt=now/1000, flick=0.965+0.035*Math.sin(tt*13.1)*Math.sin(tt*7.3+1.2), heat=TV.heat*flick;
+    var drv=ADV.drive/10, red=clampN((ADV.bias-1.5)/3.5,0,1)*0.55 + clampN((ADV.drive-6.5)/3.5,0,1)*0.45;
+    c.clearRect(0,0,w,h);
+    var plY=sh.plateY*h, plH=sh.plateH*h, plW=sh.plateW*w, mid=plY+plH/2;
+    // bloom on the faceplate behind the glass
+    if(heat>0.01){ var bl=c.createRadialGradient(cx,mid,4,cx,mid,w*0.75);
+      bl.addColorStop(0,'rgba(255,140,40,'+(0.22*heat*(0.65+0.8*TV.glow))+')'); bl.addColorStop(1,'rgba(255,140,40,0)');
+      c.fillStyle=bl; c.fillRect(0,0,w,h); }
+    // socket and chassis
+    var by=sh.base*h;
+    c.fillStyle='#141414'; c.fillRect(cx-w*0.42, h*0.9, w*0.84, h*0.1); c.fillStyle='#262626'; c.fillRect(cx-w*0.42, h*0.9, w*0.84, 1.5);
+    if(sh.socket==='octal'){ var bw=(t.shape==='globe'?0.17:0.24)*w, gb=c.createLinearGradient(cx-bw,0,cx+bw,0);
+      gb.addColorStop(0,'#1d140c'); gb.addColorStop(0.45,'#3a2a1a'); gb.addColorStop(1,'#140d07');
+      c.fillStyle=gb; c.fillRect(cx-bw, by, bw*2, h*0.9-by); }
+    else { c.strokeStyle='#8a8a8a'; c.lineWidth=1; for(var p=0;p<7;p++){ var px=cx-w*0.15+p*w*0.05; c.beginPath(); c.moveTo(px,by); c.lineTo(px,h*0.9); c.stroke(); } }
+    // glass interior
+    c.save(); glassPath(c,cx,w,h,sh); c.clip();
+    c.fillStyle='rgba(30,26,22,0.55)'; c.fillRect(0,0,w,h);
+    // getter mirror at the top
+    var gg=c.createLinearGradient(0,sh.top*h,0,sh.top*h+h*0.16); gg.addColorStop(0,'rgba(150,150,160,0.85)'); gg.addColorStop(0.5,'rgba(60,60,70,0.55)'); gg.addColorStop(1,'rgba(60,60,70,0)');
+    c.fillStyle=gg; c.fillRect(0,sh.top*h,w,h*0.18);
+    // support rods and micas
+    c.strokeStyle='rgba(170,170,170,0.5)'; c.lineWidth=1;
+    [-plW*0.62, plW*0.62].forEach(function(dx){ c.beginPath(); c.moveTo(cx+dx, plY-6); c.lineTo(cx+dx, by); c.stroke(); });
+    c.fillStyle='rgba(215,210,195,0.35)'; c.fillRect(cx-plW*0.75, plY-5, plW*1.5, 2.5); c.fillRect(cx-plW*0.75, plY+plH+3, plW*1.5, 2.5);
+    // heater glow behind the plates
+    if(heat>0.01){ var hg=c.createRadialGradient(cx,mid,1,cx,mid,plW*0.9);
+      hg.addColorStop(0,'rgba(255,170,70,'+(0.95*heat)+')'); hg.addColorStop(0.4,'rgba(255,110,30,'+(0.5*heat)+')'); hg.addColorStop(1,'rgba(255,90,20,0)');
+      c.fillStyle=hg; c.fillRect(cx-plW, plY-10, plW*2, plH+20); }
+    // plates: one structure per section (twin triodes have two)
+    var secs = t.twin ? [-plW*0.5, plW*0.5] : [0], pw = t.twin ? plW*0.82 : plW*1.5;
+    if(t.filament){ pw=plW*1.1; }
+    secs.forEach(function(dx){
+      var x=cx+dx-pw/2, pg=c.createLinearGradient(x,0,x+pw,0);
+      pg.addColorStop(0,'#2a2a2a'); pg.addColorStop(0.5,'#4a4a4a'); pg.addColorStop(1,'#232323');
+      c.fillStyle=pg; c.fillRect(x, plY, pw, plH);
+      if(red>0.02 && heat>0.3){ c.fillStyle='rgba(255,70,20,'+(red*heat*(0.35+0.65*TV.glow))+')'; c.fillRect(x, plY, pw, plH); }
+      // heater seen through the slot in the plate
+      if(heat>0.01){ c.fillStyle='rgba(255,'+Math.round(150+60*heat)+',80,'+(0.9*heat)+')'; c.shadowColor='#ff8a2a'; c.shadowBlur=8*heat;
+        c.fillRect(cx+dx-1.2, plY+plH*0.12, 2.4, plH*0.76); c.shadowBlur=0; }
+      c.strokeStyle='rgba(0,0,0,0.35)'; c.beginPath(); c.moveTo(x+pw*0.25,plY); c.lineTo(x+pw*0.25,plY+plH); c.moveTo(x+pw*0.75,plY); c.lineTo(x+pw*0.75,plY+plH); c.stroke();
+    });
+    // 300B: the directly heated filament, an M strung above and below the plate
+    if(t.filament && heat>0.01){ c.strokeStyle='rgba(255,'+Math.round(170+70*heat)+',120,'+heat+')'; c.lineWidth=1.3; c.shadowColor='#ffb060'; c.shadowBlur=10*heat;
+      c.beginPath(); var fx=[-0.36,-0.18,0,0.18,0.36]; fx.forEach(function(k,i){ var X=cx+k*pw, Y=i%2? plY-3 : plY+plH+3; if(i) c.lineTo(X,Y); else c.moveTo(X,Y); }); c.stroke(); c.shadowBlur=0; }
+    // blue fluorescence on the glass of power tubes, rising with the music
+    if(t.blue>0 && heat>0.3){ var bg=c.createRadialGradient(cx,mid,plW*0.3,cx,mid,w*0.36);
+      bg.addColorStop(0,'rgba(70,120,255,0)'); bg.addColorStop(0.7,'rgba(70,120,255,'+(t.blue*heat*(0.08+0.75*Math.pow(TV.glow,1.2)*(0.5+drv)))+')'); bg.addColorStop(1,'rgba(70,120,255,0)');
+      c.fillStyle=bg; c.fillRect(0,0,w,h); }
+    // printed type on the glass
+    c.fillStyle='rgba(235,235,235,0.55)'; c.font='bold 8px '+getComputedStyle(document.body).fontFamily; c.textAlign='center';
+    c.fillText(t.id, cx, plY+plH+16); c.textAlign='start';
+    c.restore();
+    // glass outline and reflections
+    glassPath(c,cx,w,h,sh); c.strokeStyle='rgba(255,255,255,0.22)'; c.lineWidth=1; c.stroke();
+    c.save(); glassPath(c,cx,w,h,sh); c.clip();
+    var lx=cx-sh.prof[0][1]*w*0.72, rg=c.createLinearGradient(lx-3,0,lx+5,0);
+    rg.addColorStop(0,'rgba(255,255,255,0)'); rg.addColorStop(0.5,'rgba(255,255,255,0.20)'); rg.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=rg; c.fillRect(lx-3, sh.top*h+8, 8, (sh.base-sh.top)*h-14);
+    c.fillStyle='rgba(255,255,255,0.07)'; c.fillRect(cx+sh.prof[0][1]*w*0.55, sh.top*h+14, 2, (sh.base-sh.top)*h-26);
+    c.restore();
+    if(TV.heat<0.05){ c.fillStyle='#5a5a5a'; c.font='9px '+getComputedStyle(document.body).fontFamily; c.textAlign='center';
+      c.fillText(ADV.on&&ADV.tubeOn ? '' : 'STANDBY', cx, h-3); c.textAlign='start'; }
+  }
+
+  // Graphic EQ: LED ladder per band (live spectrum, peak hold), fader caps, and the summed curve.
+  var EQV = { sel:-1, hover:-1, lv:[], pk:[], pkT:[], drag:null, dirty:true, curve:null, last:0 };
+  var LED_MIN=-74, LED_MAX=-20;            // band power in dBFS mapped onto the ladder (tuned on real OTR audio)
+  function eqGeom(w,h){ var L=30, R=6, T=8, B=18, n=ADV.bands; return { L:L, R:R, T:T, B:B, n:n, cw:(w-L-R)/n, ih:h-T-B, w:w, h:h }; }
+  function gainY(g,G){ return G.T+(12-g)/24*G.ih; }
+  function fmtF(f){ return f>=1000 ? (f%1000===0 ? f/1000 : (f/1000).toFixed(f<10000?2:1).replace(/0+$/,'').replace(/\.$/,''))+'k' : String(f); }
+  function bandLevels(dt, now){
+    var n=ADV.bands, c=ISO[n];
+    if(!eqAn || !eqBuf){ return; }
+    if(!eqBins){ var hz=ac.sampleRate/eqAn.fftSize, hb=1/(2*BPO[n]); eqBins=c.map(function(fc){ var lo=Math.max(1,Math.floor(fc*Math.pow(2,-hb)/hz)), hi=Math.max(lo+1,Math.ceil(fc*Math.pow(2,hb)/hz)); return [lo,Math.min(hi,eqBuf.length)]; }); }
+    var on = !audio.paused; if(on) eqAn.getFloatFrequencyData(eqBuf);
+    for(var i=0;i<n;i++){
+      var L=-140;
+      if(on){ var s=0, r=eqBins[i]; for(var k=r[0];k<r[1];k++) s+=Math.pow(10,eqBuf[k]/10); L=s>0?10*Math.log(s)/Math.LN10:-140; }
+      var cur=EQV.lv[i]; if(cur==null) cur=-140;
+      EQV.lv[i] = L>cur ? L : Math.max(L, cur-30*dt);
+      var p=EQV.pk[i]; if(p==null) p=-140;
+      if(EQV.lv[i]>=p){ EQV.pk[i]=EQV.lv[i]; EQV.pkT[i]=now; } else if(now-(EQV.pkT[i]||0)>1200){ EQV.pk[i]=p-16*dt; }
+    }
+  }
+  function drawEq(now){
+    var f=fitCanvas($('eqCv')); if(!f) return; var c=f.c, G=eqGeom(f.w,f.h), n=G.n;
+    var dt=Math.min(0.1,(now-(EQV.last||now))/1000); EQV.last=now;
+    bandLevels(dt, now);
+    c.clearRect(0,0,G.w,G.h);
+    var bg=c.createLinearGradient(0,G.T,0,G.T+G.ih); bg.addColorStop(0,'#0b0b0b'); bg.addColorStop(1,'#070707');
+    c.fillStyle=bg; c.fillRect(G.L,G.T,G.w-G.L-G.R,G.ih);
+    // LED ladders
+    var N=Math.max(12,Math.floor(G.ih/7)), sh=G.ih/N, lw=Math.max(2,G.cw*0.62), active=ADV.on&&ADV.eqOn;
+    for(var i=0;i<n;i++){
+      var x=G.L+i*G.cw+(G.cw-lw)/2, lvl=EQV.lv[i]==null?-140:EQV.lv[i], pk=EQV.pk[i]==null?-140:EQV.pk[i];
+      var lit=Math.round(clampN((lvl-LED_MIN)/(LED_MAX-LED_MIN),0,1)*N), pks=Math.round(clampN((pk-LED_MIN)/(LED_MAX-LED_MIN),0,1)*N)-1;
+      for(var s=0;s<N;s++){
+        var fr=s/(N-1), col= fr<0.62 ? '0,232,140' : fr<0.86 ? '255,179,71' : '255,92,92', y=G.T+G.ih-(s+1)*sh+0.75;
+        var a = s<lit ? 0.88 : (s===pks && pks>0 ? 1 : 0.07);
+        c.fillStyle='rgba('+col+','+a+')'; c.fillRect(x, y, lw, Math.max(1,sh-1.5));
+      }
+    }
+    // gain grid
+    c.font='9px '+getComputedStyle(document.body).fontFamily; c.textAlign='right';
+    [12,6,0,-6,-12].forEach(function(g){ var y=gainY(g,G); c.strokeStyle= g===0 ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.06)';
+      c.setLineDash(g===0?[4,3]:[]); c.beginPath(); c.moveTo(G.L,y+.5); c.lineTo(G.w-G.R,y+.5); c.stroke(); c.setLineDash([]);
+      c.fillStyle='#7c7c7c'; c.fillText((g>0?'+':'')+g, G.L-5, y+3); });
+    c.textAlign='start';
+    // summed response curve
+    if(EQV.dirty || !EQV.curve){ var pts=[], M=Math.max(60,Math.floor((G.w-G.L-G.R)/2));
+      for(var m=0;m<=M;m++){ var xf=m/M, fq=Math.pow(10, lg2(ISO[n][0])/lg2(10) + xf*(lg2(ISO[n][n-1])-lg2(ISO[n][0]))/lg2(10)); pts.push(eqResponse(fq)); }
+      EQV.curve=pts; EQV.dirty=false; }
+    c.beginPath(); EQV.curve.forEach(function(d,m){ var X=G.L+G.cw/2+m/(EQV.curve.length-1)*(G.cw*(n-1)), Y=gainY(clampN(d,-14,14),G); if(m) c.lineTo(X,Y); else c.moveTo(X,Y); });
+    c.strokeStyle= active ? 'rgba(255,200,120,0.95)' : 'rgba(160,160,160,0.5)'; c.lineWidth=2; c.shadowColor='#ffb347'; c.shadowBlur= active?8:0; c.stroke(); c.shadowBlur=0;
+    // fader caps
+    for(var j=0;j<n;j++){
+      var cxj=G.L+j*G.cw+G.cw/2, cy=gainY(ADV.gains[j],G), cw=Math.min(G.cw*0.86,24), sel=(j===EQV.sel||j===EQV.hover);
+      c.fillStyle='rgba(255,255,255,0.07)'; c.fillRect(cxj-0.5, G.T, 1, G.ih);
+      c.fillStyle= sel ? '#ffd08a' : '#202020'; c.strokeStyle= active ? '#ffb347' : '#666'; c.lineWidth=1;
+      c.fillRect(cxj-cw/2, cy-3.5, cw, 7); c.strokeRect(cxj-cw/2+.5, cy-3.5+.5, cw-1, 6);
+      c.fillStyle= sel ? '#1a1200' : (active?'#ffd08a':'#888'); c.fillRect(cxj-cw/2+2, cy-0.5, cw-4, 1);
+    }
+    // frequency labels, thinned to fit
+    c.fillStyle='#7c7c7c'; c.textAlign='center'; var every=Math.ceil(30/G.cw);
+    for(var q=0;q<n;q++){ if(q%every && q!==n-1) continue; if(q===n-1 && (n-1)%every && (n-1)%every<every/2) continue;
+      c.fillText(fmtF(ISO[n][q]), G.L+q*G.cw+G.cw/2, G.h-5); }
+    c.textAlign='start';
+  }
+  function eqRead(i){
+    var r=$('eqRead');
+    if(i<0){ r.innerHTML='<span class="dim">drag the faders, or sweep across to draw a curve</span>'; return; }
+    var f=ISO[ADV.bands][i];
+    r.innerHTML=fmtF(f)+'Hz &nbsp;<b>'+sgn(ADV.gains[i],' dB')+'</b> <span class="dim">&middot; curve '+sgn(Math.round(eqResponse(f)*10)/10,' dB')+'</span>';
+  }
+  function setBandGain(i, g, quiet){
+    g=Math.round(clampN(g,-12,12)*2)/2; if(Math.abs(g)<0.6) g=0;
+    if(ADV.gains[i]===g) return;
+    ADV.gains[i]=g; ADV.preset='custom'; eqSel.value='custom';
+    if(PROC) PROC.setGain(i,g); EQV.dirty=true; if(!quiet) touchAdv(); saveAdv();
+  }
+  (function(){
+    var cv=$('eqCv');
+    function at(e){ var r=cv.getBoundingClientRect(), G=eqGeom(r.width,r.height), x=e.clientX-r.left, y=e.clientY-r.top;
+      return { b: clampN(Math.floor((x-G.L)/G.cw),0,G.n-1), g: 12-(y-G.T)/G.ih*24 }; }
+    cv.addEventListener('pointerdown', function(e){ e.preventDefault(); cv.focus({preventScroll:true}); cv.setPointerCapture(e.pointerId);
+      var p=at(e); EQV.drag={ b:p.b, g:p.g }; EQV.sel=p.b; setBandGain(p.b,p.g); eqRead(p.b); });
+    cv.addEventListener('pointermove', function(e){ var p=at(e);
+      if(!EQV.drag){ if(e.pointerType==='mouse'){ EQV.hover=p.b; eqRead(p.b); } return; }
+      var a=EQV.drag.b, ga=EQV.drag.g;                                  // sweep: fill every band crossed
+      if(p.b!==a){ var st=p.b>a?1:-1; for(var b=a+st; b!==p.b; b+=st) setBandGain(b, ga+(p.g-ga)*(b-a)/(p.b-a)); }
+      setBandGain(p.b,p.g); EQV.drag={ b:p.b, g:p.g }; EQV.sel=p.b; eqRead(p.b); });
+    function end(){ EQV.drag=null; }
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    cv.addEventListener('pointerleave', function(){ EQV.hover=-1; if(EQV.sel<0) eqRead(-1); });
+    cv.addEventListener('dblclick', function(e){ var p=at(e); setBandGain(p.b,0); eqRead(p.b); });
+    cv.addEventListener('keydown', function(e){
+      var n=ADV.bands; if(EQV.sel<0) EQV.sel=Math.floor(n/2);
+      var k=e.key, st=e.shiftKey?3:0.5, used=true;
+      if(k==='ArrowLeft') EQV.sel=Math.max(0,EQV.sel-1); else if(k==='ArrowRight') EQV.sel=Math.min(n-1,EQV.sel+1);
+      else if(k==='ArrowUp') setBandGain(EQV.sel, ADV.gains[EQV.sel]+st); else if(k==='ArrowDown') setBandGain(EQV.sel, ADV.gains[EQV.sel]-st);
+      else if(k==='Home') EQV.sel=0; else if(k==='End') EQV.sel=n-1; else if(k==='0'||k==='Delete') setBandGain(EQV.sel,0);
+      else used=false;
+      if(used){ e.preventDefault(); e.stopPropagation(); eqRead(EQV.sel); }
+    });
+    cv.addEventListener('blur', function(){ EQV.sel=-1; eqRead(-1); });
+  })();
+
+  // Output meter (RMS bar, peak tick) and limiter lamp.
+  var meterBuf=null, limHitAt=0, pkHold=-120, pkHoldAt=0;
+  function drawMeter(now){
+    var m=$('outMeter'), bar=m.firstChild, tick=m.lastChild, txt=$('outDb'), rms=-120, peak=-120;
+    if(analyserT && !audio.paused){ if(!meterBuf) meterBuf=new Float32Array(analyserT.fftSize); analyserT.getFloatTimeDomainData(meterBuf);
+      var s=0, p=0; for(var i=0;i<meterBuf.length;i++){ var v=meterBuf[i]; s+=v*v; if(Math.abs(v)>p) p=Math.abs(v); }
+      rms=10*Math.log(s/meterBuf.length+1e-12)/Math.LN10; peak=20*Math.log(p+1e-9)/Math.LN10; }
+    if(peak>pkHold || now-pkHoldAt>1500){ pkHold=peak; pkHoldAt=now; }
+    var pos=function(d){ return clampN((d+60)/60*100,0,100); };
+    bar.style.clipPath='inset(0 '+(100-pos(rms)).toFixed(1)+'% 0 0)'; tick.style.left=pos(pkHold).toFixed(1)+'%';
+    txt.textContent = pkHold>-90 ? (Math.round(pkHold*10)/10)+' dB pk' : '-∞ dB';
+    if(PROC && ADV.on && !audio.paused && peak>-6 && PROC.lim.reduction < -0.5) limHitAt=now;   // only when it is really working
+    $('limLed').classList.toggle('hit', now-limHitAt<300);
+  }
+  var rackRAF=0;
+  function startRack(){ if(rackRAF) return; var loop=function(now){ if(!ADV.open){ rackRAF=0; return; } rackRAF=requestAnimationFrame(loop);
+      try{ drawTube(now); drawEq(now); drawMeter(now); }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }
+
+  // Offline measurement for tests: render a sine through a fresh chain and read the harmonics.
+  function advMeasure(o){
+    o=o||{}; var S=JSON.parse(JSON.stringify(ADV)); Object.keys(o.set||{}).forEach(function(k){ S[k]=o.set[k]; });
+    if(S.gains.length!==S.bands) S.gains=presetGains(S.preset in PRESET_BY ? S.preset : 'flat', S.bands);
+    var sr=o.sr||48000, dur=o.dur||1, f0=o.freq||1000, amp=o.amp==null?0.25:o.amp;
+    var oc=new OfflineAudioContext(1, Math.round(sr*dur), sr), C=makeChain(oc); C.apply(S);
+    var osc=oc.createOscillator(); osc.frequency.value=f0; var g=oc.createGain(); g.gain.value=amp;
+    osc.connect(g); g.connect(C.input); C.output.connect(oc.destination); osc.start();
+    return oc.startRendering().then(function(buf){
+      var d=buf.getChannelData(0), n0=Math.floor(d.length/2), N=d.length-n0, rms=0, pk=0, H=[];
+      for(var i=n0;i<d.length;i++){ rms+=d[i]*d[i]; pk=Math.max(pk,Math.abs(d[i])); }
+      rms=Math.sqrt(rms/N);
+      for(var k=1;k<=5;k++){ var re=0, im=0, w=2*Math.PI*k*f0/sr; for(var j=n0;j<d.length;j++){ re+=d[j]*Math.cos(w*j); im+=d[j]*Math.sin(w*j); }
+        H.push(20*Math.log(2*Math.sqrt(re*re+im*im)/N+1e-12)/Math.LN10); }
+      return { h:H, rel:H.map(function(x){ return x-H[0]; }), rms:rms, rmsIn:amp/Math.SQRT2, peak:pk, gainDb:20*Math.log(rms/(amp/Math.SQRT2))/Math.LN10 };
+    });
+  }
+
+  syncAdvUI(); if(ADV.open) openRack(true);
+
   // ---- keyboard shortcuts (enhancement) ----
   document.addEventListener('keydown', function(e){
     var el=document.activeElement, tag=el&&el.tagName;
@@ -1946,7 +2730,24 @@
     sleepMode: function(){ return SLEEP.mode; },
     schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); },
     tab: function(name){ if(name) showTab(name); return curTab; },
-    dockShown: function(){ return $('dock').classList.contains('show'); }
+    dockShown: function(){ return $('dock').classList.contains('show'); },
+    adv: {
+      state: function(){ return JSON.parse(JSON.stringify(ADV)); },
+      open: function(o){ openRack(o!==false); return ADV.open; },
+      power: function(on){ setAdvPower(on!==false); return ADV.on; },
+      module: function(which, on){ setModule(which, on); return ADV[which]; },
+      tube: function(id){ if(TUBE_BY[id]){ ADV.tube=id; tubeChanged(true); } return ADV.tube; },
+      knob: function(k, v){ if(advKnobs[k]){ advKnobs[k].set(v); ADV[k]=advKnobs[k].get(); if(k==='pre'){ if(PROC) PROC.setP(PROC.eqIn.gain, dB2lin(ADV.pre)); } else tubeChanged(false); saveAdv(); } return ADV[k]; },
+      bands: function(n){ setBandCount(n); return ADV.bands; },
+      gain: function(i, g){ setBandGain(i, g, true); return ADV.gains[i]; },
+      preset: function(id){ eqSel.value=id; eqSel.onchange(); return ADV.gains.slice(); },
+      response: function(f){ return eqResponse(f); },
+      liveChain: function(){ return PROC ? { n:PROC.n, filters:PROC.filters.map(function(f){ return [f.frequency.value, Math.round(f.Q.value*100)/100]; }), sr: ac.sampleRate } : null; },
+      levels: function(){ return EQV.lv.slice(); },
+      tubes: function(){ return TUBES.map(function(t){ return t.id; }); },
+      harmonics: function(id, drive, bias){ var t=TUBE_BY[id||ADV.tube]; return harmonics(tubeCurve(t, drive==null?ADV.drive:drive, bias==null?ADV.bias:bias)); },
+      measure: advMeasure
+    }
   };
 
   function renderFoot(){
