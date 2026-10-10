@@ -12,7 +12,10 @@ archive.org download URLs send Access-Control-Allow-Origin: *, so nothing is reh
 Run:  python3 scripts/otr_station_harvest.py            # write shows.json and print a report
       python3 scripts/otr_station_harvest.py --check    # validate every grid against catalog + harvested shows, write nothing
       python3 scripts/otr_station_harvest.py --dry-run  # report only
-Metadata is cached in $IA_CACHE (default /tmp/iacache) so reruns are cheap.
+      python3 scripts/otr_station_harvest.py --prune [report]   # drop files the weekly dead-link watch found dead
+                                                        # (default report: https://dxedge.net/health/otr-links.json), no re-harvest
+Metadata is cached in $IA_CACHE (default /tmp/iacache) so reruns are cheap. Every write also rebuilds the
+search.json lines for these shows (otr_station_summaries.py), since episode indices can shift.
 """
 import datetime, json, os, re, sys, time, urllib.parse, urllib.request
 
@@ -248,9 +251,53 @@ def stations():
     return sorted(f[:-10] for f in os.listdir(STATIONS) if f.endswith(".grid.json"))
 
 
+def prune(report_src):
+    """Drop station-only files the dead-link watch reported dead (404/410 at archive.org). Unsure entries are left alone."""
+    out = os.path.join(STATIONS, "shows.json")
+    if re.match(r"https?://", report_src):
+        with urllib.request.urlopen(urllib.request.Request(report_src + ("&" if "?" in report_src else "?") + "cb=%d" % int(time.time()),
+                                                            headers={"User-Agent": "dxedge-otr-harvest/1"}), timeout=60) as r:
+            body = r.read().decode("utf-8", "replace")
+        if not body.lstrip().startswith("{"):   # SPA catch-all answered with index.html
+            print("prune: no report at", report_src); return 0
+        report = json.loads(body)
+    else:
+        report = json.load(open(report_src))
+    dead = {}
+    for d in report.get("dead", []):
+        if d.get("group") == "station": dead.setdefault(d["show"], set()).add(d["file"])
+    if not dead:
+        print("prune: nothing dead in the report"); return 0
+    data = json.load(open(out))
+    removed = []
+    for s in data["shows"]:
+        gone = dead.get(s["id"])
+        if not gone: continue
+        keep = [e for e in s["eps"] if e[4] not in gone]
+        removed += [(s["id"], e[4]) for e in s["eps"] if e[4] in gone]
+        s["eps"] = keep
+    if not removed:
+        print("prune: dead files already gone"); return 0
+    data["generated"] = datetime.date.today().isoformat()
+    with open(out, "w") as f:
+        json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
+    for sid, name in removed: print("pruned", sid, name)
+    import otr_station_summaries
+    otr_station_summaries.main()
+    errs = []
+    for st in stations(): errs += check(st, data["shows"])
+    for e in errs: print("GRID ERROR:", e)
+    print("pruned %d files; shows.json rewritten" % len(removed))
+    return len(removed)
+
+
 def main():
     dry = "--dry-run" in sys.argv
     only_check = "--check" in sys.argv
+    if "--prune" in sys.argv:
+        i = sys.argv.index("--prune")
+        src = sys.argv[i + 1] if len(sys.argv) > i + 1 and not sys.argv[i + 1].startswith("--") else "https://dxedge.net/health/otr-links.json"
+        prune(src); return
     out = os.path.join(STATIONS, "shows.json")
     if only_check and os.path.exists(out):
         shows = json.load(open(out))["shows"]
@@ -275,6 +322,9 @@ def main():
     with open(out, "w") as f:
         json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
     print("wrote", out, "(%d shows, %d episodes, %.0f kB)" % (len(shows), sum(len(s["eps"]) for s in shows), os.path.getsize(out) / 1024))
+    # episode indices may have shifted: rebuild the search entries for these shows
+    import otr_station_summaries
+    otr_station_summaries.main()
     sys.exit(1 if errs else 0)
 
 

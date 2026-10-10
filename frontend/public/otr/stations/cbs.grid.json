@@ -12,150 +12,854 @@
   "tagline": "What CBS was carrying at this hour, this day of the week, 1938-56",
   "blurb": "A composite week of the Columbia Broadcasting System: Jack Benny, Amos 'n' Andy, Edgar Bergen and Red Skelton on Sunday night after the 1948 talent raids; Lux Radio Theatre on Monday at 9; Mystery Theater, Mr. and Mrs. North and Life with Luigi on Tuesday; Dr. Christian, Groucho, Bing Crosby and Burns and Allen on Wednesday; Suspense and Casey, Crime Photographer on Thursday; Hopalong Cassidy and Gang Busters on Saturday; Beulah at 7 every weeknight and the CBS Radio Mystery Theater late every night. Episodes run back to back with no commercials, so a half hour slot often fits two. Your local clock, like an affiliate.",
   "minLeft": 5,
-  "serial": ["ma-perkins", "perry-mason", "the-goldbergs", "vic-and-sade", "beulah", "yours-truly-johnny-dollar"],
+  "serial": [
+    "ma-perkins",
+    "perry-mason",
+    "the-goldbergs",
+    "vic-and-sade",
+    "beulah",
+    "lum-and-abner",
+    "yours-truly-johnny-dollar"
+  ],
   "pools": {
-    "overnight": ["suspense", "escape", "the-whistler", "gunsmoke", "have-gun-will-travel", "yours-truly-johnny-dollar", "the-adventures-of-philip-marlowe", "sam-spade", "jeff-regan", "broadway-is-my-beat", "the-line-up", "21st-precinct", "crime-classics", "romance", "the-man-called-x", "rocky-jordan", "mr-keen-tracer-of-lost-persons", "inner-sanctum-mysteries", "molle-mystery-theatre", "lights-out", "mercury-theatre", "the-campbell-playhouse", "screen-guild-theater", "lux-radio-theatre", "hallmark-playhouse", "casey-crime-photographer", "the-fbi-in-peace-and-war", "mr-and-mrs-north", "life-with-luigi", "my-friend-irma", "my-favorite-husband", "our-miss-brooks", "the-jack-benny-show", "jack-benny-1949", "amos-and-andy", "burns-and-allen", "the-red-skelton-show", "the-bing-crosby-show", "edgar-bergen-and-charlie-mccarthy", "dr-christian", "big-town", "blondie", "meet-corliss-archer", "academy-award", "radio-readers-digest", "first-nighter", "columbia-workshop", "fort-laramie", "frontier-gentleman", "luke-slaughter", "hopalong-cassidy", "gang-busters", "the-aldrich-family", "calling-all-cars", "it-pays-to-be-ignorant", "the-thin-man", "kate-smith-hour", "the-mel-blanc-show", "the-harold-peary-show", "the-spike-jones-show", "the-bickersons", "the-scarlet-pimpernel", "adventures-of-maisie"],
-    "morning": ["arthur-godfrey", "beulah", "ma-perkins", "perry-mason", "the-goldbergs", "vic-and-sade", "my-friend-irma", "blondie"],
-    "daytime": ["arthur-godfrey", "ma-perkins", "perry-mason", "the-goldbergs", "vic-and-sade", "columbia-workshop", "romance", "our-miss-brooks", "my-favorite-husband", "blondie", "the-bickersons", "adventures-of-maisie", "radio-readers-digest"],
-    "kids": ["tarzan", "jack-armstrong", "buck-rogers", "hopalong-cassidy", "gunsmoke"],
-    "strips": ["beulah", "beulah", "yours-truly-johnny-dollar", "perry-mason", "the-goldbergs", "vic-and-sade"],
-    "evening": ["suspense", "escape", "the-whistler", "yours-truly-johnny-dollar", "the-adventures-of-philip-marlowe", "jeff-regan", "broadway-is-my-beat", "the-line-up", "21st-precinct", "crime-classics", "romance", "the-man-called-x", "rocky-jordan", "mr-keen-tracer-of-lost-persons", "molle-mystery-theatre", "lights-out", "casey-crime-photographer", "the-fbi-in-peace-and-war", "mr-and-mrs-north", "life-with-luigi", "my-favorite-husband", "big-town", "blondie", "meet-corliss-archer", "radio-readers-digest", "first-nighter", "columbia-workshop", "it-pays-to-be-ignorant", "the-thin-man", "the-mel-blanc-show", "the-harold-peary-show", "the-spike-jones-show", "calling-all-cars", "adventures-of-maisie"],
-    "music": ["your-hit-parade", "kate-smith-hour", "the-bing-crosby-show", "the-spike-jones-show", "columbia-workshop", "arthur-godfrey"],
-    "sunday-morning": ["columbia-workshop", "romance", "hallmark-playhouse", "radio-readers-digest", "the-campbell-playhouse"],
-    "satkids": ["tarzan", "jack-armstrong", "buck-rogers", "gunsmoke", "hopalong-cassidy", "columbia-workshop"],
-    "late": ["cbs-radio-mystery-theater", "cbs-radio-mystery-theater-fantasy"]
+    "overnight": [
+      "suspense",
+      "escape",
+      "the-whistler",
+      "gunsmoke",
+      "have-gun-will-travel",
+      "yours-truly-johnny-dollar",
+      "the-adventures-of-philip-marlowe",
+      "sam-spade",
+      "jeff-regan",
+      "broadway-is-my-beat",
+      "the-line-up",
+      "21st-precinct",
+      "crime-classics",
+      "romance",
+      "the-man-called-x",
+      "rocky-jordan",
+      "mr-keen-tracer-of-lost-persons",
+      "inner-sanctum-mysteries",
+      "molle-mystery-theatre",
+      "lights-out",
+      "mercury-theatre",
+      "the-campbell-playhouse",
+      "screen-guild-theater",
+      "lux-radio-theatre",
+      "hallmark-playhouse",
+      "casey-crime-photographer",
+      "the-fbi-in-peace-and-war",
+      "mr-and-mrs-north",
+      "life-with-luigi",
+      "my-friend-irma",
+      "my-favorite-husband",
+      "our-miss-brooks",
+      "the-jack-benny-show",
+      "jack-benny-1949",
+      "amos-and-andy",
+      "burns-and-allen",
+      "the-red-skelton-show",
+      "the-bing-crosby-show",
+      "edgar-bergen-and-charlie-mccarthy",
+      "dr-christian",
+      "big-town",
+      "blondie",
+      "meet-corliss-archer",
+      "academy-award",
+      "radio-readers-digest",
+      "first-nighter",
+      "columbia-workshop",
+      "fort-laramie",
+      "frontier-gentleman",
+      "luke-slaughter",
+      "hopalong-cassidy",
+      "gang-busters",
+      "the-aldrich-family",
+      "calling-all-cars",
+      "it-pays-to-be-ignorant",
+      "the-thin-man",
+      "kate-smith-hour",
+      "the-mel-blanc-show",
+      "the-harold-peary-show",
+      "the-spike-jones-show",
+      "the-bickersons",
+      "the-scarlet-pimpernel",
+      "adventures-of-maisie"
+    ],
+    "morning": [
+      "arthur-godfrey",
+      "beulah",
+      "ma-perkins",
+      "perry-mason",
+      "the-goldbergs",
+      "vic-and-sade",
+      "my-friend-irma",
+      "blondie"
+    ],
+    "daytime": [
+      "arthur-godfrey",
+      "ma-perkins",
+      "perry-mason",
+      "the-goldbergs",
+      "vic-and-sade",
+      "columbia-workshop",
+      "romance",
+      "our-miss-brooks",
+      "my-favorite-husband",
+      "blondie",
+      "the-bickersons",
+      "adventures-of-maisie",
+      "radio-readers-digest"
+    ],
+    "kids": [
+      "tarzan",
+      "jack-armstrong",
+      "buck-rogers",
+      "hopalong-cassidy",
+      "gunsmoke"
+    ],
+    "strips": [
+      "beulah",
+      "beulah",
+      "yours-truly-johnny-dollar",
+      "perry-mason",
+      "the-goldbergs",
+      "vic-and-sade"
+    ],
+    "evening": [
+      "suspense",
+      "escape",
+      "the-whistler",
+      "yours-truly-johnny-dollar",
+      "the-adventures-of-philip-marlowe",
+      "jeff-regan",
+      "broadway-is-my-beat",
+      "the-line-up",
+      "21st-precinct",
+      "crime-classics",
+      "romance",
+      "the-man-called-x",
+      "rocky-jordan",
+      "mr-keen-tracer-of-lost-persons",
+      "molle-mystery-theatre",
+      "lights-out",
+      "casey-crime-photographer",
+      "the-fbi-in-peace-and-war",
+      "mr-and-mrs-north",
+      "life-with-luigi",
+      "my-favorite-husband",
+      "big-town",
+      "blondie",
+      "meet-corliss-archer",
+      "radio-readers-digest",
+      "first-nighter",
+      "columbia-workshop",
+      "it-pays-to-be-ignorant",
+      "the-thin-man",
+      "the-mel-blanc-show",
+      "the-harold-peary-show",
+      "the-spike-jones-show",
+      "calling-all-cars",
+      "adventures-of-maisie"
+    ],
+    "music": [
+      "your-hit-parade",
+      "kate-smith-hour",
+      "the-bing-crosby-show",
+      "the-spike-jones-show",
+      "columbia-workshop",
+      "arthur-godfrey"
+    ],
+    "sunday-morning": [
+      "columbia-workshop",
+      "romance",
+      "hallmark-playhouse",
+      "radio-readers-digest",
+      "the-campbell-playhouse"
+    ],
+    "satkids": [
+      "tarzan",
+      "jack-armstrong",
+      "buck-rogers",
+      "gunsmoke",
+      "hopalong-cassidy",
+      "columbia-workshop"
+    ],
+    "late": [
+      "cbs-radio-mystery-theater",
+      "cbs-radio-mystery-theater-fantasy"
+    ]
   },
   "defaults": [
-    { "from": "00:00", "to": "06:00", "pool": "overnight", "label": "Overnight" },
-    { "from": "06:00", "to": "09:00", "pool": "morning", "label": "Morning" },
-    { "from": "09:00", "to": "17:00", "pool": "daytime", "label": "Daytime" },
-    { "from": "17:00", "to": "18:00", "pool": "kids", "label": "After school" },
-    { "from": "18:00", "to": "19:30", "pool": "strips", "label": "News and strips" },
-    { "from": "19:30", "to": "23:00", "pool": "evening", "label": "Evening" },
-    { "from": "23:00", "to": "24:00", "pool": "overnight", "label": "Late night" }
+    {
+      "from": "00:00",
+      "to": "06:00",
+      "pool": "overnight",
+      "label": "Overnight"
+    },
+    {
+      "from": "06:00",
+      "to": "09:00",
+      "pool": "morning",
+      "label": "Morning"
+    },
+    {
+      "from": "09:00",
+      "to": "17:00",
+      "pool": "daytime",
+      "label": "Daytime"
+    },
+    {
+      "from": "17:00",
+      "to": "18:00",
+      "pool": "kids",
+      "label": "After school"
+    },
+    {
+      "from": "18:00",
+      "to": "19:30",
+      "pool": "strips",
+      "label": "News and strips"
+    },
+    {
+      "from": "19:30",
+      "to": "23:00",
+      "pool": "evening",
+      "label": "Evening"
+    },
+    {
+      "from": "23:00",
+      "to": "24:00",
+      "pool": "overnight",
+      "label": "Late night"
+    }
   ],
   "slots": [
-    { "days": [1,2,3,4,5], "at": "10:00", "len": 90, "show": "arthur-godfrey", "conf": "likely",
-      "src": "Arthur Godfrey Time, CBS weekdays 10:00-11:30 AM, 1945-72; a handful of broadcasts survive, daytime fill takes over when they run out" },
-    { "days": [1,2,3,4,5], "at": "13:15", "len": 15, "show": "ma-perkins", "conf": "likely",
-      "src": "Ma Perkins, CBS weekdays 1:15 PM, 1942-60 (Oxydol)" },
-    { "days": [1,2,3,4,5], "at": "14:15", "len": 15, "show": "perry-mason", "conf": "likely",
-      "src": "Perry Mason, CBS weekdays 2:15 PM, 1943-55 (episode dates confirm Mon-Fri)" },
-    { "days": [1,2,3,4,5], "at": "18:45", "len": 15, "pool": "strips", "label": "Lowell Thomas and the News (fill)", "conf": "fill",
-      "src": "Lowell Thomas moved his 6:45 newscast to CBS in 1947 and kept it until 1976; no usable recordings, quarter-hour strips fill" },
-    { "days": [1,2,3,4,5], "at": "19:00", "len": 15, "show": "beulah", "conf": "verified",
-      "src": "Beulah, CBS weekdays 7:00 PM, 1947-54 (ratings tables: M-F 7:00 15 CBS)" },
-    { "days": [1,2,3,4,5], "at": "19:15", "len": 15, "pool": "strips", "label": "Jack Smith Show (fill)", "conf": "fill",
-      "src": "Jack Smith sang the CBS 7:15 quarter hour for Procter and Gamble 1945-52; strips fill" },
-    { "days": [2,3,5], "at": "19:30", "len": 30, "pool": "strips", "label": "Club 15 (fill)", "conf": "fill",
-      "src": "Club 15 with Bob Crosby held CBS 7:30 weeknights 1947-53; not on archive.org, strips fill" },
-
-    { "days": [1], "at": "19:30", "len": 30, "show": "blondie", "conf": "verified",
-      "src": "Blondie, CBS Monday 7:30 PM, 1943-44 (ratings table: Mon 7:30 30 CBS); Sundays 7:30 1946-48" },
-    { "days": [1], "at": "20:00", "len": 30, "show": "inner-sanctum-mysteries", "conf": "verified",
-      "src": "Inner Sanctum Mysteries, CBS Monday 8:00 PM, 1946-50 (ratings tables: Mon 8:00 30 CBS; episode dates confirm Mondays)" },
-    { "days": [1], "at": "20:30", "len": 30, "pool": "music", "label": "Arthur Godfrey's Talent Scouts (fill)", "conf": "fill",
-      "src": "Talent Scouts held CBS Monday 8:30 1946-56 (every ratings table); not on archive.org, Godfrey and music fill" },
-    { "days": [1], "at": "21:00", "len": 60, "show": "lux-radio-theatre", "conf": "verified",
-      "src": "Lux Radio Theatre, CBS Monday 9:00 PM, 1935-54 (every ratings table: Mon 9:00 60 CBS; episode dates confirm Mondays)" },
-    { "days": [1], "at": "22:00", "len": 30, "show": "screen-guild-theater", "conf": "verified",
-      "src": "Screen Guild Players, CBS Monday 10:00 PM, 1942-47 (ratings tables: Mon 10:00 30 CBS; episode dates confirm Mondays)" },
-
-    { "days": [2], "at": "20:00", "len": 30, "show": "molle-mystery-theatre", "conf": "verified",
-      "src": "Mystery Theater (the Molle series, renamed), CBS Tuesday 8:00 PM, 1948-51 (ratings tables: Tue 8:00 30 CBS)" },
-    { "days": [2], "at": "20:30", "len": 30, "show": "mr-and-mrs-north", "conf": "verified",
-      "src": "Mr. and Mrs. North, CBS Tuesday 8:30 PM, 1947-54 (ratings tables: Tue 8:30 30 CBS)" },
-    { "days": [2], "at": "21:00", "len": 30, "show": "life-with-luigi", "conf": "verified",
-      "src": "Life with Luigi, CBS Tuesday 9:00 PM, 1949-53 (ratings tables: Tue 9:00 30 CBS)" },
-    { "days": [2], "at": "21:30", "len": 30, "show": "my-friend-irma", "conf": "verified",
-      "src": "My Friend Irma, CBS Tuesday 9:30 PM, 1952-53 (ratings table: Tue 9:30 30 CBS; episode dates confirm Tuesdays); Mondays 10:00 1947-52" },
-    { "days": [2], "at": "22:00", "len": 30, "show": "the-line-up", "conf": "approx",
-      "src": "The Line-Up, CBS 1951-52 (episode dates: mostly Tuesdays); 10:00 placed" },
-
-    { "days": [3], "at": "20:00", "len": 30, "show": "big-town", "conf": "verified",
-      "src": "Big Town, CBS Wednesday 8:00 PM, 1951-53 (ratings table: Wed 8:00 30 CBS); Tuesdays 8:00 1937-48" },
-    { "days": [3], "at": "20:30", "len": 30, "show": "dr-christian", "conf": "verified",
-      "src": "Dr. Christian, CBS Wednesday 8:30 PM, 1937-54 (every ratings table: Wed 8:30 CBS; episode dates confirm Wednesdays)" },
-    { "days": [3], "at": "21:00", "len": 30, "show": "you-bet-your-life", "conf": "verified",
-      "src": "You Bet Your Life, CBS Wednesday 9:00 PM, 1949-50 (ratings table: Wed 9:00 30 CBS; 1949 episode dates confirm Wednesdays)" },
-    { "days": [3], "at": "21:30", "len": 30, "show": "the-bing-crosby-show", "conf": "verified",
-      "src": "The Bing Crosby Show (Chesterfield), CBS Wednesday 9:30 PM, 1949-52 (ratings tables: Wed 9:30 30 CBS; episode dates confirm Wednesdays)" },
-    { "days": [3], "at": "22:00", "len": 30, "show": "burns-and-allen", "conf": "verified",
-      "src": "Burns and Allen, CBS Wednesday 10:00 PM, 1949-50 (ratings table: Wed 10:00 30 CBS; 1950 episode dates confirm Wednesdays)" },
-
-    { "days": [4], "at": "19:30", "len": 30, "show": "mr-keen-tracer-of-lost-persons", "conf": "verified",
-      "src": "Mr. Keen, Tracer of Lost Persons, CBS Thursday 7:30 PM, 1947-51 (ratings tables: Thu 7:30 30 CBS; episode dates confirm Thursdays)" },
-    { "days": [4], "at": "20:00", "len": 30, "show": "the-fbi-in-peace-and-war", "conf": "verified",
-      "src": "The FBI in Peace and War, CBS Thursday 8:00 PM, 1948-51 (ratings tables: Thu 8:00 30 CBS)" },
-    { "days": [4], "at": "20:30", "len": 30, "show": "hallmark-playhouse", "conf": "verified",
-      "src": "Hallmark Playhouse, CBS Thursday 8:30 PM, 1951-52 (ratings table: Thu 8:30 30 CBS); 10:00 in 1948-50" },
-    { "days": [4], "at": "21:00", "len": 30, "show": "suspense", "conf": "verified",
-      "src": "Suspense, CBS Thursday 9:00 PM, 1948-51 (ratings tables: Thu 9:00 30 CBS); Thursdays 8:00 1945-48, Mondays 8:00 1951-53" },
-    { "days": [4], "at": "21:30", "len": 30, "show": "casey-crime-photographer", "conf": "verified",
-      "src": "Casey, Crime Photographer, CBS Thursday 9:30 PM, 1946-50 (ratings tables: Thu 9:30 30 CBS)" },
-    { "days": [4], "at": "22:00", "len": 30, "show": "radio-readers-digest", "conf": "approx",
-      "src": "Radio Reader's Digest, CBS 1947-48 (episode dates confirm Thursdays); 10:00 placed" },
-
-    { "days": [5], "at": "20:00", "len": 30, "show": "the-aldrich-family", "conf": "verified",
-      "src": "The Aldrich Family, CBS Friday 8:00 PM, 1945-46 (ratings table: Fri 8:00 30 CBS); the NBC years' shows play" },
-    { "days": [5], "at": "20:30", "len": 30, "show": "easy-aces", "conf": "verified",
-      "src": "Mr. Ace and Jane (Easy Aces), CBS Friday 8:30 PM, 1948-49 (ratings table: Fri 8:30 30 CBS); the serial chapters play two to a slot" },
-    { "days": [5], "at": "21:00", "len": 30, "show": "the-adventures-of-philip-marlowe", "conf": "approx",
-      "src": "The Adventures of Philip Marlowe, CBS 1950 (episode dates: Fridays, Tuesdays and Wednesdays); Friday 9:00 placed" },
-    { "days": [5], "at": "21:30", "len": 30, "show": "broadway-is-my-beat", "conf": "approx",
-      "src": "Broadway Is My Beat, CBS 1950 (episode dates: mostly Fridays); 9:30 placed" },
-    { "days": [5], "at": "22:00", "len": 30, "show": "escape", "conf": "approx",
-      "src": "Escape, CBS 1950 (episode dates: Fridays); 10:00 placed. Escape moved around the CBS schedule every season" },
-
-    { "days": [6], "at": "09:00", "len": 60, "pool": "satkids", "label": "Let's Pretend (fill)", "conf": "fill",
-      "src": "Let's Pretend held CBS Saturday mornings 1934-54; not harvested, Saturday serials fill" },
-    { "days": [6], "at": "12:30", "len": 30, "show": "gunsmoke", "conf": "likely",
-      "src": "Gunsmoke, CBS Saturday 12:30 PM, 1952-53, before its move to Sunday 6:30 in 1955" },
-    { "days": [6], "at": "19:00", "len": 30, "show": "academy-award", "conf": "approx",
-      "src": "Academy Award Theater, CBS 1946 (Saturday 7:00 in reference listings); catalog episodes are undated" },
-    { "days": [6], "at": "19:30", "len": 30, "pool": "music", "label": "Vaughn Monroe Show (fill)", "conf": "fill",
-      "src": "Vaughn Monroe held CBS Saturday 7:30 in 1950-53 (tables: Sat 7:30 30 CBS); music fills" },
-    { "days": [6], "at": "20:00", "len": 30, "show": "jeff-regan", "conf": "approx",
-      "src": "Jeff Regan, Investigator, CBS 1948 (episode dates confirm Saturdays); 8:00 placed. Gene Autry's Melody Ranch held the network slot" },
-    { "days": [6], "at": "20:30", "len": 30, "show": "hopalong-cassidy", "conf": "verified",
-      "src": "Hopalong Cassidy, CBS Saturday 8:30 PM, 1950-52 (ratings tables: Sat 8:30 30 CBS; 1951 episode dates confirm Saturdays)" },
-    { "days": [6], "at": "21:00", "len": 30, "show": "gang-busters", "conf": "verified",
-      "src": "Gang Busters, CBS Saturday 9:00 PM, 1949-55 (ratings tables: Sat 9:00 30 CBS; episode dates confirm Saturdays)" },
-    { "days": [6], "at": "21:30", "len": 30, "show": "my-favorite-husband", "conf": "verified",
-      "src": "My Favorite Husband, CBS Saturday 9:30 PM, 1950-51 (ratings table: Sat 9:30 30 CBS)" },
-    { "days": [6], "at": "22:00", "len": 30, "show": "the-adventures-of-philip-marlowe", "conf": "approx",
-      "src": "The Adventures of Philip Marlowe, CBS 1951 (episode dates confirm Saturdays); 10:00 placed" },
-
-    { "days": [0], "at": "06:00", "len": 300, "pool": "sunday-morning", "label": "Sunday morning (fill)", "conf": "fill",
-      "src": "CBS Sunday mornings were church, Invitation to Learning and the news; drama fills" },
-    { "days": [0], "at": "14:30", "len": 30, "show": "frontier-gentleman", "conf": "approx",
-      "src": "Frontier Gentleman, CBS 1958 (episode dates confirm Sundays); 2:30 placed" },
-    { "days": [0], "at": "15:00", "len": 30, "show": "luke-slaughter", "conf": "approx",
-      "src": "Luke Slaughter of Tombstone, CBS 1958 (episode dates confirm Sundays); 3:00 placed" },
-    { "days": [0], "at": "17:00", "len": 30, "show": "fort-laramie", "conf": "approx",
-      "src": "Fort Laramie, CBS 1956 (episode dates confirm Sundays); 5:00 placed" },
-    { "days": [0], "at": "17:30", "len": 30, "show": "yours-truly-johnny-dollar", "conf": "approx",
-      "src": "Yours Truly, Johnny Dollar held CBS Sunday 5:30 from 1957; the catalog's 1956 weeknight serial chapters play two to a slot" },
-    { "days": [0], "at": "18:00", "len": 30, "show": "have-gun-will-travel", "conf": "approx",
-      "src": "Have Gun, Will Travel, CBS 1958-60 (episode dates confirm Sundays); 6:00 placed" },
-    { "days": [0], "at": "18:30", "len": 30, "show": "our-miss-brooks", "conf": "verified",
-      "src": "Our Miss Brooks, CBS Sunday 6:30 PM, 1948-57 (ratings tables: Sun 6:30 30 CBS; episode dates confirm Sundays)" },
-    { "days": [0], "at": "19:00", "len": 30, "show": "the-jack-benny-show", "conf": "verified",
-      "src": "The Jack Benny Program, CBS Sunday 7:00 PM, 1949-55 (every ratings table: Sun 7:00 30 CBS; episode dates confirm Sundays)" },
-    { "days": [0], "at": "19:30", "len": 30, "show": "amos-and-andy", "conf": "verified",
-      "src": "Amos 'n' Andy, CBS Sunday 7:30 PM, 1948-54 (ratings tables: Sun 7:30 30 CBS; 1948-49 episode dates confirm Sundays)" },
-    { "days": [0], "at": "20:00", "len": 30, "show": "sam-spade", "conf": "verified",
-      "src": "The Adventures of Sam Spade, CBS Sunday 8:00 PM, 1946-49 (ratings tables: Sun 8:00 30 CBS; episode dates confirm Sundays). Charlie McCarthy took the hour in 1949" },
-    { "days": [0], "at": "20:30", "len": 30, "show": "the-red-skelton-show", "conf": "verified",
-      "src": "The Red Skelton Show, CBS Sunday 8:30 PM, 1949-52 (ratings tables: Sun 8:30 30 CBS; 1951 episode dates confirm Sundays)" },
-    { "days": [0], "at": "21:00", "len": 30, "show": "meet-corliss-archer", "conf": "verified",
-      "src": "Meet Corliss Archer, CBS Sunday 9:00 PM, 1947-52 (ratings tables: Sun 9:00 30 CBS)" },
-    { "days": [0], "at": "21:30", "len": 30, "show": "the-whistler", "conf": "approx",
-      "src": "The Whistler, CBS Pacific network 1950-51 (episode dates confirm Sundays); 9:30 placed" },
-    { "days": [0], "at": "22:00", "len": 30, "show": "the-thin-man", "conf": "approx",
-      "src": "The Adventures of the Thin Man held CBS Sunday 10:30 in 1943-44 (table: Sun 10:30 30 CBS); placed half an hour early so the Mystery Theater can follow" },
-
-    { "days": [0,1,2,3,4,5,6], "at": "22:30", "len": 60, "pool": "late", "label": "CBS Radio Mystery Theater", "conf": "approx",
-      "src": "CBS Radio Mystery Theater ran nightly 1974-82, by far the latest thing on this dial; most affiliates carried it late in the evening, 10:30 placed" }
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "10:30",
+      "len": 60,
+      "show": "arthur-godfrey",
+      "conf": "verified",
+      "src": "Arthur Godfrey Time, CBS weekday mornings 1945-72 (NYT logs 9 and 11 Nov 1948: WCBS 10:30 'Arthur Godfrey Show'; Chicago Tribune 8 Nov 1948: WBBM 9:30 CT); a handful of broadcasts survive, daytime fill takes over when they run out"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "13:15",
+      "len": 15,
+      "show": "ma-perkins",
+      "conf": "verified",
+      "src": "Ma Perkins, CBS weekdays 1:15 PM, 1942-60 (NYT log 11 Nov 1948: WCBS 1:15; Chicago Tribune 8 Nov 1948: WBBM 12:15 CT; Oxydol)"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "14:15",
+      "len": 15,
+      "show": "perry-mason",
+      "conf": "verified",
+      "src": "Perry Mason, CBS weekdays 2:15 PM, 1943-55 (NYT log 8 Nov 1948: WCBS 2:15; Chicago Tribune: WBBM 1:15 CT; episode dates confirm Mon-Fri)"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "18:45",
+      "len": 15,
+      "pool": "strips",
+      "label": "Lowell Thomas and the News (fill)",
+      "conf": "fill",
+      "src": "Lowell Thomas moved his 6:45 newscast to CBS in 1947 and kept it until 1976 (NYT logs 8-12 Nov 1948 and 6-10 Nov 1950: WCBS 6:45); no usable recordings, quarter-hour strips fill"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "19:00",
+      "len": 15,
+      "show": "beulah",
+      "conf": "verified",
+      "src": "Beulah, CBS weekdays 7:00 PM, 1947-54 (ratings tables: M-F 7:00 15 CBS; NYT logs Nov 1948, Nov 1950, 3 Nov 1952: WCBS 7:00)"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "19:15",
+      "len": 15,
+      "pool": "strips",
+      "label": "Jack Smith Show (fill)",
+      "conf": "fill",
+      "src": "Jack Smith sang the CBS 7:15 quarter hour for Procter and Gamble 1945-52 (NYT logs Nov 1948 and Nov 1950: WCBS 7:15); strips fill"
+    },
+    {
+      "days": [
+        2,
+        3,
+        5
+      ],
+      "at": "19:30",
+      "len": 30,
+      "pool": "strips",
+      "label": "Club 15 (fill)",
+      "conf": "fill",
+      "src": "Club 15 with Bob Crosby held CBS 7:30 weeknights 1947-53 (NYT logs 11 Nov 1948, 6-10 Nov 1950, 3 Nov 1952: WCBS 7:30); not on archive.org, strips fill"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "blondie",
+      "conf": "verified",
+      "src": "Blondie, CBS Monday 7:30 PM, 1943-44 (ratings table: Mon 7:30 30 CBS); Sundays 7:30 1946-48"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "inner-sanctum-mysteries",
+      "conf": "verified",
+      "src": "Inner Sanctum Mysteries, CBS Monday 8:00 PM, 1946-50 (ratings tables: Mon 8:00 30 CBS; NYT log 8 Nov 1948: 'Inner Sanctum: Front Page Murder'; episode dates confirm Mondays); ABC Monday 8:00 by the fall of 1950"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "20:30",
+      "len": 30,
+      "pool": "music",
+      "label": "Arthur Godfrey's Talent Scouts (fill)",
+      "conf": "fill",
+      "src": "Talent Scouts held CBS Monday 8:30 1946-56 (every ratings table; NYT logs 8 Nov 1948, 6 Nov 1950, 3 Nov 1952); not on archive.org, Godfrey and music fill"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "21:00",
+      "len": 60,
+      "show": "lux-radio-theatre",
+      "conf": "verified",
+      "src": "Lux Radio Theatre, CBS Monday 9:00 PM, 1935-54 (every ratings table: Mon 9:00 60 CBS; NYT logs 8 Nov 1948, 6 Nov 1950, 3 Nov 1952: WCBS 9-10 'Radio Theatre'; episode dates confirm Mondays)"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "screen-guild-theater",
+      "conf": "verified",
+      "src": "Screen Guild Players, CBS Monday 10:00 PM, 1942-47 (ratings tables: Mon 10:00 30 CBS; episode dates confirm Mondays)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "molle-mystery-theatre",
+      "conf": "verified",
+      "src": "Mystery Theater (the Molle series, renamed), CBS Tuesday 8:00 PM, 1948-51 (ratings tables: Tue 8:00 30 CBS; NYT logs 9 Nov 1948 and 7 Nov 1950: WCBS 8:00)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "mr-and-mrs-north",
+      "conf": "verified",
+      "src": "Mr. and Mrs. North, CBS Tuesday 8:30 PM, 1947-54 (ratings tables: Tue 8:30 30 CBS; NYT logs 9 Nov 1948 and 7 Nov 1950: WCBS 8:30)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "life-with-luigi",
+      "conf": "verified",
+      "src": "Life with Luigi, CBS Tuesday 9:00 PM, 1949-53 (ratings tables: Tue 9:00 30 CBS; NYT log 7 Nov 1950: WCBS 9:00); Tuesday 9:30 in its first season (NYT log 9 Nov 1948)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "my-friend-irma",
+      "conf": "verified",
+      "src": "My Friend Irma, CBS Tuesday 9:30 PM, 1952-53 (ratings table: Tue 9:30 30 CBS; episode dates confirm Tuesdays); Mondays 10:00 1947-52"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-line-up",
+      "conf": "approx",
+      "src": "The Line-Up, CBS 1951-52 (episode dates: mostly Tuesdays); 10:00 placed. Hit the Jackpot held Tuesday 10:00 in 1948"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "big-town",
+      "conf": "verified",
+      "src": "Big Town, CBS Wednesday 8:00 PM, 1951-53 (ratings table: Wed 8:00 30 CBS); Tuesdays 8:00 1937-48"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "dr-christian",
+      "conf": "verified",
+      "src": "Dr. Christian, CBS Wednesday 8:30 PM, 1937-54 (every ratings table: Wed 8:30 CBS; NYT logs 10 Nov 1948 and 8 Nov 1950: WCBS 8:30; episode dates confirm Wednesdays)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "you-bet-your-life",
+      "conf": "verified",
+      "src": "You Bet Your Life, CBS Wednesday 9:00 PM, 1949-50 (ratings table: Wed 9:00 30 CBS; 1949 episode dates confirm Wednesdays)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "the-bing-crosby-show",
+      "conf": "verified",
+      "src": "The Bing Crosby Show (Chesterfield), CBS Wednesday 9:30 PM, 1949-52 (ratings tables: Wed 9:30 30 CBS; NYT log 8 Nov 1950: WCBS 9:30; episode dates confirm Wednesdays)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "burns-and-allen",
+      "conf": "verified",
+      "src": "Burns and Allen, CBS Wednesday 10:00 PM, 1949-50 (ratings table: Wed 10:00 30 CBS; 1950 episode dates confirm Wednesdays)"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "mr-keen-tracer-of-lost-persons",
+      "conf": "verified",
+      "src": "Mr. Keen, Tracer of Lost Persons, CBS Thursday 7:30 PM, 1947-48 and 1949-51 (ratings tables: Thu 7:30 30 CBS), Thursday 8:30 in the fall of 1948 and 1950 (NYT logs 11 Nov 1948, 9 Nov 1950); episode dates confirm Thursdays"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-fbi-in-peace-and-war",
+      "conf": "verified",
+      "src": "The FBI in Peace and War, CBS Thursday 8:00 PM, 1948-51 (ratings tables: Thu 8:00 30 CBS; NYT logs 11 Nov 1948 and 9 Nov 1950: WCBS 8:00)"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "hallmark-playhouse",
+      "conf": "verified",
+      "src": "Hallmark Playhouse, CBS Thursday 8:30 PM, 1951-52 (ratings table: Thu 8:30 30 CBS); 10:00 in 1948-50"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "suspense",
+      "conf": "verified",
+      "src": "Suspense, CBS Thursday 9:00 PM, 1948-51 (ratings tables: Thu 9:00 30 CBS; NYT logs 11 Nov 1948 and 9 Nov 1950: WCBS 9:00); Thursdays 8:00 1945-48, Mondays 8:00 1951-53 (NYT log 3 Nov 1952)"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "casey-crime-photographer",
+      "conf": "verified",
+      "src": "Casey, Crime Photographer, CBS Thursday 9:30 PM, 1946-50 (ratings tables: Thu 9:30 30 CBS; NYT logs 11 Nov 1948 and 9 Nov 1950: WCBS 9:30 'Crime Photographer')"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "radio-readers-digest",
+      "conf": "approx",
+      "src": "Radio Reader's Digest, CBS 1947-48 (episode dates confirm Thursdays); 10:00 placed. Hallmark Playhouse held Thursday 10:00 in 1948-50 (NYT logs 11 Nov 1948, 9 Nov 1950)"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-aldrich-family",
+      "conf": "verified",
+      "src": "The Aldrich Family, CBS Friday 8:00 PM, 1945-46 (ratings table: Fri 8:00 30 CBS); the NBC years' shows play"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "easy-aces",
+      "conf": "verified",
+      "src": "Mr. Ace and Jane (Easy Aces), CBS Friday 8:30 PM, 1948-49 (ratings table: Fri 8:30 30 CBS; NYT log 12 Nov 1948: WCBS 8:30 'Comedy: mr. ace and JANE'); the serial chapters play two to a slot"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "the-adventures-of-philip-marlowe",
+      "conf": "approx",
+      "src": "The Adventures of Philip Marlowe, CBS 1950 (episode dates: Fridays, Tuesdays and Wednesdays); Friday 9:00 placed. Sunday 8:30 in the fall of 1948 (Chicago Tribune 7 Nov 1948: WBBM 7:30 CT)"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "broadway-is-my-beat",
+      "conf": "verified",
+      "src": "Broadway Is My Beat, CBS Friday 9:30 PM, 1950 (NYT log 10 Nov 1950: WCBS 9:30 'Play: Broadway's My Beat, With Larry Thor'); Saturday 7:00 by the fall of 1952"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "my-favorite-husband",
+      "conf": "approx",
+      "src": "My Favorite Husband, CBS Friday 10:00 PM, 1948-49 (NYT log 12 Nov 1948: WCBS 10:00 'Playhouse: Angel Face, With Lucille Ball'; episode dates confirm Fridays in 1949); Saturday 9:30 in 1950-51"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "11:00",
+      "len": 60,
+      "pool": "satkids",
+      "label": "Let's Pretend (fill)",
+      "conf": "fill",
+      "src": "Let's Pretend held CBS Saturday 11:05 AM, 1934-54 (NYT log 13 Nov 1948: WCBS 11:05), with Junior Miss at 11:30; not harvested, Saturday serials fill"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "12:00",
+      "len": 60,
+      "conf": "fill",
+      "src": "CBS Saturday noon carried Theatre of Today and Stars Over Hollywood (NYT logs 8 Nov 1952 and 7 Feb 1953: WCBS 12:00 and 12:30); not harvested, daytime fill plays",
+      "pool": "daytime",
+      "label": "Theatre of Today and Stars Over Hollywood (fill)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "19:00",
+      "len": 30,
+      "show": "yours-truly-johnny-dollar",
+      "conf": "likely",
+      "src": "Yours Truly, Johnny Dollar, CBS Saturday 7:00 PM, 1950 (NYT log 11 Nov 1950: WCBS 'Yours Truly, Johnny Dollar' in the 7:00 row); the catalog's 1956 weeknight serial chapters play two to a slot"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "19:30",
+      "len": 30,
+      "pool": "music",
+      "label": "Vaughn Monroe Show (fill)",
+      "conf": "fill",
+      "src": "Vaughn Monroe held CBS Saturday 7:30 in 1948-53 (tables: Sat 7:30 30 CBS; NYT logs 11 Nov 1950, 8 Nov 1952, 7 Feb 1953: WCBS 7:30); music fills"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "jeff-regan",
+      "conf": "approx",
+      "src": "Jeff Regan, Investigator, CBS 1948 (episode dates confirm Saturdays); 8:00 placed. Gene Autry's Melody Ranch held the network slot (NYT logs 8 Nov 1952 and 7 Feb 1953: WCBS 8:00)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "hopalong-cassidy",
+      "conf": "verified",
+      "src": "Hopalong Cassidy, CBS Saturday 8:30 PM, 1950-52 (ratings tables: Sat 8:30 30 CBS; NYT logs 11 Nov 1950 and 3 Feb 1951: WCBS 8:30; 1951 episode dates confirm Saturdays)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "gang-busters",
+      "conf": "verified",
+      "src": "Gang Busters, CBS Saturday 9:00 PM, 1949-55 (ratings tables: Sat 9:00 30 CBS; NYT logs 11 Nov 1950 and 8 Nov 1952: WCBS 9:00; episode dates confirm Saturdays)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "gunsmoke",
+      "conf": "verified",
+      "src": "Gunsmoke, CBS Saturday 9:30 PM, 1952-53 (NYT log 7 Feb 1953: WCBS 9:30 'Gunsmoke'), before its move to Sunday 6:30 in 1955; My Favorite Husband held the slot in 1950-51"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-adventures-of-philip-marlowe",
+      "conf": "approx",
+      "src": "The Adventures of Philip Marlowe, CBS 1951 (episode dates confirm Saturdays); 10:00 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "06:00",
+      "len": 300,
+      "pool": "sunday-morning",
+      "label": "Sunday morning (fill)",
+      "conf": "fill",
+      "src": "CBS Sunday mornings were church, Invitation to Learning and the news; drama fills"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "14:30",
+      "len": 30,
+      "show": "frontier-gentleman",
+      "conf": "approx",
+      "src": "Frontier Gentleman, CBS 1958 (episode dates confirm Sundays); 2:30 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "15:00",
+      "len": 30,
+      "show": "escape",
+      "conf": "verified",
+      "src": "Escape, CBS Sunday 3:00 PM, fall 1950 (Washington Post log 5 Nov 1950: WTOP 3:00 'Escape ... Earth Abides'); Escape moved around the CBS schedule every season"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "17:00",
+      "len": 30,
+      "show": "fort-laramie",
+      "conf": "approx",
+      "src": "Fort Laramie, CBS 1956 (episode dates confirm Sundays); 5:00 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "17:30",
+      "len": 30,
+      "show": "luke-slaughter",
+      "conf": "approx",
+      "src": "Luke Slaughter of Tombstone, CBS 1958 (episode dates confirm Sundays); 5:30 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "18:00",
+      "len": 30,
+      "show": "have-gun-will-travel",
+      "conf": "approx",
+      "src": "Have Gun, Will Travel, CBS 1958-60 (episode dates confirm Sundays); 6:00 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "18:30",
+      "len": 30,
+      "show": "our-miss-brooks",
+      "conf": "verified",
+      "src": "Our Miss Brooks, CBS Sunday 6:30 PM, 1949-57 (ratings tables: Sun 6:30 30 CBS; NYT log 2 Nov 1952: 6:30-7; episode dates confirm Sundays); Sunday 9:30 in its first season (Chicago Tribune 7 Nov 1948)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "19:00",
+      "len": 30,
+      "show": "the-jack-benny-show",
+      "conf": "verified",
+      "src": "The Jack Benny Program, CBS Sunday 7:00 PM, 1949-55 (every ratings table: Sun 7:00 30 CBS; NYT log 2 Nov 1952: 7-7:30; episode dates confirm Sundays)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "amos-and-andy",
+      "conf": "verified",
+      "src": "Amos 'n' Andy, CBS Sunday 7:30 PM, 1948-54 (ratings tables: Sun 7:30 30 CBS; Chicago Tribune 7 Nov 1948: WBBM 6:30 CT; NYT log 2 Nov 1952: 7:30-8)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "sam-spade",
+      "conf": "verified",
+      "src": "The Adventures of Sam Spade, CBS Sunday 8:00 PM, 1946-49 (ratings tables: Sun 8:00 30 CBS; Chicago Tribune 7 Nov 1948: WBBM 7:00 CT; episode dates confirm Sundays). Charlie McCarthy took the hour in 1949"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "the-red-skelton-show",
+      "conf": "verified",
+      "src": "The Red Skelton Show, CBS Sunday 8:30 PM, 1949-52 (ratings tables: Sun 8:30 30 CBS; Chicago Tribune 5 Nov 1950: 7:30 CT; 1951 episode dates confirm Sundays); Philip Marlowe held the slot in the fall of 1948"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "meet-corliss-archer",
+      "conf": "verified",
+      "src": "Meet Corliss Archer, CBS Sunday 9:00 PM, 1947-52 (ratings tables: Sun 9:00 30 CBS; Chicago Tribune 5 Nov 1950: WBBM 8:00 CT)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "escape",
+      "conf": "verified",
+      "src": "Escape, CBS Sunday 9:30 PM, fall 1952 (Chicago Tribune 2 Nov 1952: 8:30 CT; NYT weekly page 2 Nov 1952 in a 9:30 block); Our Miss Brooks held 9:30 in 1948"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-whistler",
+      "conf": "approx",
+      "src": "The Whistler, CBS Pacific network 1950-51 (episode dates confirm Sundays); 10:00 placed. The Thin Man held CBS Sunday 10:30 in 1943-44 and Lum and Abner's half hour sat at 10:00 in 1948"
+    },
+    {
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "at": "22:30",
+      "len": 60,
+      "pool": "late",
+      "label": "CBS Radio Mystery Theater",
+      "conf": "approx",
+      "src": "CBS Radio Mystery Theater ran nightly 1974-82, by far the latest thing on this dial; most affiliates carried it late in the evening, 10:30 placed"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "17:45",
+      "len": 15,
+      "show": "lum-and-abner",
+      "conf": "verified",
+      "src": "Lum and Abner, CBS weekdays 5:45 PM, 1947-48 (NYT log 4 and 5 Nov 1947: WCBS 5:45 'Lum 'n' Abner-Sketch'); a Sunday 10:00 half hour by the fall of 1948"
+    }
   ]
 }

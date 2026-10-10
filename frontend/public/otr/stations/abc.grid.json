@@ -22,145 +22,849 @@
   "tagline": "What ABC was carrying at this hour, this day of the week, 1945-53",
   "blurb": "A composite week of the American Broadcasting Company (the NBC Blue Network until 1945): The Lone Ranger on Monday, Wednesday and Friday at 7:30, The Fat Man and This Is Your FBI on Friday nights, Bing Crosby's Philco Radio Time on Wednesday at 10, Stop the Music and Walter Winchell on Sunday, the 5 o'clock serials for the kids. Episodes run back to back with no commercials, so a half hour slot often fits two. Your local clock, like an affiliate.",
   "anchor": "sunday",
-  "serial": ["jack-armstrong", "dick-tracy", "terry-and-the-pirates", "hop-harrigan", "big-jon-and-sparkie", "the-adventures-of-superman", "lum-and-abner", "chandu-the-magician"],
+  "serial": [
+    "jack-armstrong",
+    "dick-tracy",
+    "terry-and-the-pirates",
+    "hop-harrigan",
+    "big-jon-and-sparkie",
+    "the-adventures-of-superman",
+    "chandu-the-magician"
+  ],
   "pools": {
-    "overnight": ["the-clock", "quiet-please", "inner-sanctum-mysteries", "the-fat-man", "counter-spy", "pat-novak-for-hire", "this-is-your-fbi", "gang-busters", "the-new-adventures-of-sherlock-holmes", "mr-district-attorney", "michael-shayne", "duffys-tavern", "fibber-mcgee-and-molly", "abbott-and-costello", "you-bet-your-life", "the-henry-morgan-show", "philco-radio-time", "information-please", "the-life-of-riley", "theatre-guild-on-the-air", "the-railroad-hour", "the-green-hornet", "the-lone-ranger"],
-    "morning": ["breakfast-in-hollywood", "ethel-and-albert", "lum-and-abner", "easy-aces", "ladies-be-seated", "paul-whiteman"],
-    "daytime": ["ethel-and-albert", "ladies-be-seated", "lum-and-abner", "easy-aces", "breakfast-in-hollywood", "the-life-of-riley", "paul-whiteman", "the-railroad-hour", "information-please"],
-    "kids": ["jack-armstrong", "dick-tracy", "terry-and-the-pirates", "hop-harrigan", "sky-king", "big-jon-and-sparkie", "the-adventures-of-superman", "challenge-of-the-yukon", "chandu-the-magician", "space-patrol", "tom-corbett-space-cadet"],
-    "satkids": ["sky-king", "challenge-of-the-yukon", "jack-armstrong", "hop-harrigan", "the-green-hornet"],
-    "news": ["bill-stern-sports-reel", "bill-stern-sports-reel", "walter-winchell", "drew-pearson"],
-    "evening": ["the-fat-man", "counter-spy", "the-clock", "quiet-please", "michael-shayne", "mr-district-attorney", "duffys-tavern", "the-life-of-riley", "fibber-mcgee-and-molly", "the-new-adventures-of-sherlock-holmes", "inner-sanctum-mysteries", "pat-novak-for-hire", "the-henry-morgan-show", "information-please", "this-is-your-fbi", "gang-busters"],
-    "music": ["the-railroad-hour", "philco-radio-time", "paul-whiteman"],
-    "sunday-morning": ["the-greatest-story-ever-told", "paul-whiteman", "the-railroad-hour"],
-    "sunday-afternoon": ["the-railroad-hour", "philco-radio-time", "paul-whiteman", "the-life-of-riley", "theatre-guild-on-the-air"],
-    "hollywood": ["breakfast-in-hollywood"]
+    "overnight": [
+      "the-clock",
+      "quiet-please",
+      "inner-sanctum-mysteries",
+      "the-fat-man",
+      "counter-spy",
+      "pat-novak-for-hire",
+      "this-is-your-fbi",
+      "gang-busters",
+      "the-new-adventures-of-sherlock-holmes",
+      "mr-district-attorney",
+      "michael-shayne",
+      "duffys-tavern",
+      "fibber-mcgee-and-molly",
+      "abbott-and-costello",
+      "you-bet-your-life",
+      "the-henry-morgan-show",
+      "philco-radio-time",
+      "information-please",
+      "the-life-of-riley",
+      "theatre-guild-on-the-air",
+      "the-railroad-hour",
+      "the-green-hornet",
+      "the-lone-ranger"
+    ],
+    "morning": [
+      "breakfast-in-hollywood",
+      "ethel-and-albert",
+      "lum-and-abner",
+      "easy-aces",
+      "ladies-be-seated",
+      "paul-whiteman"
+    ],
+    "daytime": [
+      "ethel-and-albert",
+      "ladies-be-seated",
+      "lum-and-abner",
+      "easy-aces",
+      "breakfast-in-hollywood",
+      "the-life-of-riley",
+      "paul-whiteman",
+      "the-railroad-hour",
+      "information-please"
+    ],
+    "kids": [
+      "jack-armstrong",
+      "dick-tracy",
+      "terry-and-the-pirates",
+      "hop-harrigan",
+      "sky-king",
+      "big-jon-and-sparkie",
+      "the-adventures-of-superman",
+      "challenge-of-the-yukon",
+      "chandu-the-magician",
+      "space-patrol",
+      "tom-corbett-space-cadet"
+    ],
+    "satkids": [
+      "sky-king",
+      "challenge-of-the-yukon",
+      "jack-armstrong",
+      "hop-harrigan",
+      "the-green-hornet"
+    ],
+    "news": [
+      "bill-stern-sports-reel",
+      "bill-stern-sports-reel",
+      "walter-winchell",
+      "drew-pearson"
+    ],
+    "evening": [
+      "the-fat-man",
+      "counter-spy",
+      "the-clock",
+      "quiet-please",
+      "michael-shayne",
+      "mr-district-attorney",
+      "duffys-tavern",
+      "the-life-of-riley",
+      "fibber-mcgee-and-molly",
+      "the-new-adventures-of-sherlock-holmes",
+      "inner-sanctum-mysteries",
+      "pat-novak-for-hire",
+      "the-henry-morgan-show",
+      "information-please",
+      "this-is-your-fbi",
+      "gang-busters"
+    ],
+    "music": [
+      "the-railroad-hour",
+      "philco-radio-time",
+      "paul-whiteman"
+    ],
+    "sunday-morning": [
+      "the-greatest-story-ever-told",
+      "paul-whiteman",
+      "the-railroad-hour"
+    ],
+    "sunday-afternoon": [
+      "the-railroad-hour",
+      "philco-radio-time",
+      "paul-whiteman",
+      "the-life-of-riley",
+      "theatre-guild-on-the-air"
+    ],
+    "hollywood": [
+      "breakfast-in-hollywood"
+    ]
   },
   "defaults": [
-    { "from": "00:00", "to": "06:00", "pool": "overnight", "label": "Overnight" },
-    { "from": "06:00", "to": "09:00", "pool": "morning", "label": "Morning" },
-    { "from": "09:00", "to": "17:00", "pool": "daytime", "label": "Daytime" },
-    { "from": "17:00", "to": "18:00", "pool": "kids", "label": "After school" },
-    { "from": "18:00", "to": "19:30", "pool": "news", "label": "News and sports" },
-    { "from": "19:30", "to": "23:00", "pool": "evening", "label": "Evening" },
-    { "from": "23:00", "to": "24:00", "pool": "overnight", "label": "Late night" }
+    {
+      "from": "00:00",
+      "to": "06:00",
+      "pool": "overnight",
+      "label": "Overnight"
+    },
+    {
+      "from": "06:00",
+      "to": "09:00",
+      "pool": "morning",
+      "label": "Morning"
+    },
+    {
+      "from": "09:00",
+      "to": "17:00",
+      "pool": "daytime",
+      "label": "Daytime"
+    },
+    {
+      "from": "17:00",
+      "to": "18:00",
+      "pool": "kids",
+      "label": "After school"
+    },
+    {
+      "from": "18:00",
+      "to": "19:30",
+      "pool": "news",
+      "label": "News and sports"
+    },
+    {
+      "from": "19:30",
+      "to": "23:00",
+      "pool": "evening",
+      "label": "Evening"
+    },
+    {
+      "from": "23:00",
+      "to": "24:00",
+      "pool": "overnight",
+      "label": "Late night"
+    }
   ],
   "slots": [
-    { "days": [1,2,3,4,5], "at": "09:00", "len": 60, "pool": "morning", "label": "Breakfast Club hour", "conf": "fill",
-      "src": "Don McNeill's Breakfast Club held ABC 9-10 AM for 35 years; archive.org has no usable recordings, so morning fill plays here" },
-    { "days": [1,2,3,4,5], "at": "11:00", "len": 30, "show": "breakfast-in-hollywood", "conf": "likely",
-      "src": "Breakfast in Hollywood, Blue/ABC weekdays 11:00 AM, 1943-48 (Tom Breneman)" },
-    { "days": [1,2,3,4,5], "at": "13:15", "len": 15, "show": "ethel-and-albert", "conf": "approx",
-      "src": "Ethel and Albert, ABC weekday quarter hour 1944-50; the exact slot moved around the afternoon" },
-    { "days": [1,2,3,4,5], "at": "15:00", "len": 30, "show": "ladies-be-seated", "conf": "likely",
-      "src": "Ladies Be Seated, Blue/ABC weekdays 3:00 PM, 1944-50 (Johnny Olson)" },
-    { "days": [1,2,3,4,5], "at": "15:30", "len": 60, "show": "paul-whiteman", "conf": "likely",
-      "src": "Paul Whiteman Club, ABC weekdays 3:30-4:30 PM, 1946-47; plays his ABC hours and 1943 Blue summer shows" },
-    { "days": [1,2,3,4,5], "at": "16:45", "len": 15, "show": "hop-harrigan", "conf": "likely",
-      "src": "Hop Harrigan, Blue/ABC weekdays 4:45 PM, 1942-46" },
-    { "days": [1,2,3,4,5], "at": "17:00", "len": 15, "show": "terry-and-the-pirates", "conf": "likely",
-      "src": "Terry and the Pirates, Blue/ABC weekdays 5:00 PM, 1943-48 (Quaker)" },
-    { "days": [1,2,3,4,5], "at": "17:15", "len": 15, "show": "dick-tracy", "conf": "likely",
-      "src": "Dick Tracy, Blue/ABC weekdays 5:15 PM, 1943-48 (Tootsie Rolls)" },
-    { "days": [1,3,5], "at": "17:30", "len": 30, "show": "jack-armstrong", "conf": "likely",
-      "src": "Jack Armstrong, ABC Mon/Wed/Fri 5:30 PM, 1947-50 (Wheaties); two quarter-hour chapters fill the half hour" },
-    { "days": [2,4], "at": "17:30", "len": 30, "show": "tom-corbett-space-cadet", "conf": "likely",
-      "src": "Tom Corbett, Space Cadet, ABC Tue/Thu 5:30 PM, Jan-Jul 1952 (episode dates confirm Tue/Thu); Sky King held the slot 1947-50" },
-    { "days": [1,2,3,4,5], "at": "18:00", "len": 60, "pool": "news", "label": "Local news and sports", "conf": "fill",
-      "src": "Affiliates ran local news here; Bill Stern's sports reel and wartime Winchell and Pearson commentaries stand in" },
-    { "days": [2,3,4], "at": "19:00", "len": 15, "show": "easy-aces", "conf": "likely",
-      "src": "Easy Aces, NBC Blue Tue/Wed/Thu 7:00 PM, 1935-42 (Anacin)" },
-    { "days": [1,5], "at": "19:00", "len": 15, "pool": "news", "label": "Headline Edition", "conf": "fill",
-      "src": "ABC's 7:00 news strip; no recordings, sports and commentary fill" },
-    { "days": [1,2,3,4,5], "at": "19:15", "len": 15, "pool": "news", "label": "Elmer Davis and the News", "conf": "fill",
-      "src": "Elmer Davis held ABC 7:15 PM 1945-53; no recordings on archive.org, so commentary and sports fill" },
-    { "days": [1,3,5], "at": "19:30", "len": 30, "show": "the-lone-ranger", "conf": "verified",
-      "src": "The Lone Ranger, ABC Mon/Wed/Fri 7:30 PM, 1942-54 (1947-48 ratings table: MWF 7:30 30 ABC)" },
-    { "days": [2], "at": "19:30", "len": 30, "show": "the-green-hornet", "conf": "likely",
-      "src": "The Green Hornet, ABC Tuesday and Thursday nights 1947-48 (General Mills); episode dates confirm Tue/Thu" },
-    { "days": [4], "at": "19:30", "len": 30, "show": "counter-spy", "conf": "verified",
-      "src": "Counter-Spy, ABC Tue/Thu 7:30 PM, 1948-49, alternating nights with The Lone Ranger (1948-49 season page)" },
-    { "days": [1], "at": "20:00", "len": 30, "show": "the-railroad-hour", "conf": "verified",
-      "src": "The Railroad Hour, ABC Monday 8:00 PM, Oct 1948-Jun 1949 (45 minutes until April, then 30; NBC from the fall). The 45-minute shows run over, as the chain rule allows" },
-    { "days": [2,3,4], "at": "20:00", "len": 30, "show": "lum-and-abner", "conf": "likely",
-      "src": "Lum and Abner, Blue/ABC 8:15 PM Mon-Thu, 1941-47 (Alka-Seltzer); the half hour holds two chapters" },
-    { "days": [5], "at": "20:00", "len": 30, "show": "the-fat-man", "conf": "verified",
-      "src": "The Fat Man, ABC Friday 8:00 PM, 1946-51 (1947-51 ratings tables: Fri 8:00 30 ABC); Richard Diamond took the slot in 1951-52" },
-    { "days": [1], "at": "20:30", "len": 30, "show": "the-new-adventures-of-sherlock-holmes", "conf": "likely",
-      "src": "Sherlock Holmes, ABC Monday 8:30 PM, 1946-47 (Kreml)" },
-    { "days": [2], "at": "20:30", "len": 30, "show": "duffys-tavern", "conf": "verified",
-      "src": "Duffy's Tavern, Blue Network Tuesday 8:30 PM, 1942-44 (1943-44 ratings table: Tue 8:30 30 Blue)" },
-    { "days": [3], "at": "20:30", "len": 30, "pool": "evening", "label": "Vox Pop (fill)", "conf": "fill",
-      "src": "ABC Wednesday 8:30 was Vox Pop in 1947-48; not on archive.org, evening fill plays" },
-    { "days": [4], "at": "20:30", "len": 30, "show": "the-clock", "conf": "approx",
-      "src": "The Clock, ABC Thursdays 1947-48 (episode dates); 8:30 placed" },
-    { "days": [5], "at": "20:30", "len": 30, "show": "this-is-your-fbi", "conf": "verified",
-      "src": "This Is Your FBI, ABC Friday 8:30 PM, 1945-53 (1947-49 ratings tables: Fri 8:30 30 ABC)" },
-    { "days": [1], "at": "21:00", "len": 30, "show": "counter-spy", "conf": "approx",
-      "src": "Counter-Spy, Blue Network Mondays 1942-44 (episode dates); 9:00 placed" },
-    { "days": [2], "at": "21:00", "len": 60, "pool": "evening", "label": "America's Town Meeting hour (fill)", "conf": "fill",
-      "src": "America's Town Meeting of the Air held an ABC Tuesday hour; its surviving debates are a later harvest candidate" },
-    { "days": [3], "at": "21:00", "len": 30, "show": "abbott-and-costello", "conf": "likely",
-      "src": "The Abbott and Costello Show, ABC Wednesday 9:00 PM, Oct 1947-Jun 1949 (plays their earlier NBC Camel shows)" },
-    { "days": [4], "at": "21:00", "len": 30, "show": "chandu-the-magician", "conf": "approx",
-      "src": "Chandu the Magician, ABC Thursdays 1949-50 (episode dates); 9:00 placed" },
-    { "days": [5], "at": "21:00", "len": 30, "show": "ozzie-harriet", "conf": "verified",
-      "src": "The Adventures of Ozzie and Harriet, ABC Friday 9:00 PM, 1949-54 (ratings tables 1950-53: Fri 9:00 30 ABC; episode dates confirm Fridays). Gang Busters held the Blue Network's Friday 9:00 in 1940-45" },
-    { "days": [3], "at": "21:30", "len": 30, "show": "you-bet-your-life", "conf": "verified",
-      "src": "You Bet Your Life, ABC Wednesday 9:30 PM, 1948-49 (ratings table: Wed 9:30 30 ABC)" },
-    { "days": [5], "at": "21:30", "len": 30, "show": "mr-district-attorney", "conf": "verified",
-      "src": "Mr. District Attorney, ABC Friday 9:30 PM, 1951-52 (ratings table: Fri 9:30 30 ABC). The Sheriff held the slot 1945-51 but nothing usable survives" },
-    { "days": [1], "at": "22:00", "len": 30, "show": "fibber-mcgee-and-molly", "conf": "likely",
-      "src": "Fibber McGee and Molly, NBC Blue Monday 10:00 PM, 1935-36 (Johnson's Wax); episode dates confirm Mondays" },
-    { "days": [3], "at": "22:00", "len": 30, "show": "philco-radio-time", "conf": "verified",
-      "src": "Philco Radio Time with Bing Crosby, ABC Wednesday 10:00 PM, 1946-49 (ratings tables: Wed 10:00 30 ABC)" },
-    { "days": [3], "at": "22:30", "len": 30, "show": "the-henry-morgan-show", "conf": "likely",
-      "src": "The Henry Morgan Show, ABC Wednesday 10:30 PM, 1946-47, right after Crosby" },
-    { "days": [5], "at": "22:00", "len": 60, "pool": "news", "label": "Gillette Cavalcade of Sports (fill)", "conf": "fill",
-      "src": "Friday night fights held ABC 10:00; Bill Stern's sports reel stands in" },
-
-    { "days": [6], "at": "09:00", "len": 90, "show": "big-jon-and-sparkie", "conf": "likely",
-      "src": "No School Today with Big Jon and Sparkie, ABC Saturday 9:00-10:30 AM, 1950-58" },
-    { "days": [6], "at": "10:30", "len": 30, "show": "space-patrol", "conf": "approx",
-      "src": "Space Patrol, ABC Saturdays 1952-55 (episode dates confirm Saturday); morning slot placed" },
-    { "days": [6], "at": "11:00", "len": 30, "show": "the-adventures-of-superman", "conf": "approx",
-      "src": "Superman, ABC Saturday half hours 1949-51; plays the 1940-47 chapters two at a time" },
-    { "days": [6], "at": "11:30", "len": 30, "pool": "satkids", "label": "Saturday serials", "conf": "fill",
-      "src": "Sky King (ABC 1946-54) and Challenge of the Yukon (ABC 1947-49) rotate here; their exact Saturday slots are not pinned down" },
-    { "days": [6], "at": "14:00", "len": 180, "pool": "music", "label": "Metropolitan Opera matinee (fill)", "conf": "fill",
-      "src": "ABC carried the Met's Saturday matinee 1940-58; operetta and music fill in for the opera" },
-    { "days": [6], "at": "19:30", "len": 30, "show": "red-ryder", "conf": "likely",
-      "src": "Red Ryder, Blue Network Tue/Thu/Sat 7:30 PM, 1942 (episode dates confirm)" },
-    { "days": [6], "at": "20:00", "len": 60, "pool": "evening", "label": "Famous Jury Trials (fill)", "conf": "fill",
-      "src": "ABC Saturday 8:00 was Famous Jury Trials; one surviving episode, evening fill plays" },
-    { "days": [6], "at": "21:00", "len": 30, "show": "gang-busters", "conf": "verified",
-      "src": "Gang Busters, ABC Saturday 9:00 PM, 1945-48 (1946-47 ratings table: Sat 9:00 30 ABC)" },
-
-    { "days": [0], "at": "06:00", "len": 240, "pool": "sunday-morning", "label": "Sunday morning", "conf": "fill",
-      "src": "ABC Sunday mornings were church services and choirs; The Greatest Story Ever Told and light music fill" },
-    { "days": [0], "at": "10:00", "len": 420, "pool": "sunday-afternoon", "label": "Sunday afternoon", "conf": "fill",
-      "src": "Concerts, Sammy Kaye and public affairs filled ABC's Sunday daytime; music and Theatre Guild repeats play" },
-    { "days": [0], "at": "17:00", "len": 30, "show": "counter-spy", "conf": "approx",
-      "src": "Counter-Spy, ABC Sundays 1947-48 (episode dates confirm Sunday); 5:00 placed" },
-    { "days": [0], "at": "17:30", "len": 30, "show": "quiet-please", "conf": "approx",
-      "src": "Quiet, Please, ABC Sundays Sept 1948-Jun 1949 (episode dates confirm Sunday); 5:30 placed" },
-    { "days": [0], "at": "18:00", "len": 15, "show": "drew-pearson", "conf": "likely",
-      "src": "Drew Pearson, Blue/ABC Sunday 6:00 PM, 1945-53; two wartime broadcasts survive" },
-    { "days": [0], "at": "18:15", "len": 15, "pool": "news", "label": "Monday Morning Headlines (fill)", "conf": "fill",
-      "src": "ABC's Sunday 6:15 news quarter hour; commentary and sports fill" },
-    { "days": [0], "at": "18:30", "len": 30, "show": "the-greatest-story-ever-told", "conf": "likely",
-      "src": "The Greatest Story Ever Told, ABC Sunday 6:30 PM, 1947-56 (Goodyear)" },
-    { "days": [0], "at": "19:00", "len": 30, "show": "pat-novak-for-hire", "conf": "approx",
-      "src": "Pat Novak, for Hire, ABC Sundays Feb-Jun 1949 (episode dates confirm Sunday); 7:00 placed" },
-    { "days": [0], "at": "19:30", "len": 30, "show": "the-clock", "conf": "approx",
-      "src": "The Clock, ABC Sundays Nov 1946-47 (episode dates confirm Sunday); 7:30 placed" },
-    { "days": [0], "at": "20:00", "len": 60, "show": "stop-the-music", "conf": "verified",
-      "src": "Stop the Music, ABC Sunday 8:00-9:00 PM, 1948-52 (ratings table: Sun 8:00 60 ABC); only a few complete hours survive" },
-    { "days": [0], "at": "21:00", "len": 15, "show": "walter-winchell", "conf": "verified",
-      "src": "Walter Winchell's Jergens Journal, Blue/ABC Sunday 9:00 PM, 1932-55 (ratings tables 1943-53: Sun 9:00 15 Blue/ABC); wartime broadcasts survive" },
-    { "days": [0], "at": "21:15", "len": 15, "pool": "hollywood", "label": "Louella Parsons (fill)", "conf": "fill",
-      "src": "Louella Parsons' Hollywood news held ABC Sunday 9:15; Breakfast in Hollywood stands in" },
-    { "days": [0], "at": "21:30", "len": 60, "show": "theatre-guild-on-the-air", "conf": "verified",
-      "src": "Theatre Guild on the Air (U.S. Steel Hour), ABC Sunday 9:30 PM 1948-49 (ratings table: Sun 9:30 60 ABC; 10:00 in 1947-48)" }
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "09:00",
+      "len": 60,
+      "pool": "morning",
+      "label": "Breakfast Club hour",
+      "conf": "fill",
+      "src": "Don McNeill's Breakfast Club held ABC 9-10 AM for 35 years; archive.org has no usable recordings, so morning fill plays here"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "14:00",
+      "len": 30,
+      "show": "breakfast-in-hollywood",
+      "conf": "verified",
+      "src": "Breakfast in Hollywood, ABC weekdays 2:00 PM (NYT log 9 Feb 1949: WJZ 2:00 'Breakfast in Hollywood'); 11:00 AM in its Blue Network years"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "15:00",
+      "len": 30,
+      "show": "ladies-be-seated",
+      "conf": "verified",
+      "src": "Ladies Be Seated, Blue/ABC weekdays 3:00 PM, 1944-50 (NYT log 9 Feb 1949: WJZ 3:00; Chicago Tribune 8 Nov 1948: WLS 2:00 CT)"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "15:30",
+      "len": 60,
+      "show": "paul-whiteman",
+      "conf": "verified",
+      "src": "Paul Whiteman Club, ABC weekdays 3:30-4:30 PM, 1946-47 (NYT log 4 and 6 Nov 1947: WJZ 3:30; Chicago Tribune 3 Nov 1947: WENR 2:30 CT); plays his ABC hours and 1943 Blue summer shows"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "16:45",
+      "len": 15,
+      "show": "dick-tracy",
+      "conf": "verified",
+      "src": "Dick Tracy, Blue/ABC weekdays 4:45 PM, 1943-48 (NYT log 4 and 6 Nov 1947: WJZ 4:45 'Dick Tracy-Sketch')"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "17:15",
+      "len": 15,
+      "show": "terry-and-the-pirates",
+      "conf": "verified",
+      "src": "Terry and the Pirates, Blue/ABC weekdays 5:15 PM, 1943-48 (NYT log 4 and 6 Nov 1947: WJZ 5:15; Chicago Tribune 3 Nov 1947: WENR 5:15 CT)"
+    },
+    {
+      "days": [
+        1,
+        3,
+        5
+      ],
+      "at": "17:30",
+      "len": 30,
+      "show": "jack-armstrong",
+      "conf": "verified",
+      "src": "Jack Armstrong, ABC Mon/Wed/Fri 5:30 PM by 1950 (NYT log 6 and 8 Feb 1950: WJZ 5:30), Tue/Thu 5:30 in 1947-48 (NYT 4 and 6 Nov 1947); two quarter-hour chapters fill the half hour"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "17:30",
+      "len": 30,
+      "show": "tom-corbett-space-cadet",
+      "conf": "likely",
+      "src": "Tom Corbett, Space Cadet, ABC Tue/Thu 5:30 PM, Jan-Jul 1952 (episode dates confirm Tue/Thu); Thursday here, Sky King takes Tuesday"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "18:00",
+      "len": 15,
+      "pool": "news",
+      "label": "Local news and sports",
+      "conf": "fill",
+      "src": "Affiliates ran local news here; Bill Stern's sports reel and wartime Winchell and Pearson commentaries stand in"
+    },
+    {
+      "days": [
+        2,
+        3,
+        4
+      ],
+      "at": "19:00",
+      "len": 15,
+      "show": "easy-aces",
+      "conf": "likely",
+      "src": "Easy Aces, NBC Blue Tue/Wed/Thu 7:00 PM, 1935-42 (Anacin)"
+    },
+    {
+      "days": [
+        1,
+        5
+      ],
+      "at": "19:00",
+      "len": 15,
+      "pool": "news",
+      "label": "Headline Edition",
+      "conf": "fill",
+      "src": "Headline Edition, ABC weeknights 7:00 PM (NYT logs 4-6 Nov 1947, 9 Feb 1949, 3 Nov 1952: WJZ 7:00); no recordings, sports and commentary fill"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "19:15",
+      "len": 15,
+      "pool": "news",
+      "label": "Elmer Davis and the News",
+      "conf": "fill",
+      "src": "Elmer Davis held ABC 7:15 PM weeknights 1945-53 (NYT logs 4 and 6 Nov 1947, 9 Feb 1949, 3 Nov 1952: WJZ 7:15); no recordings on archive.org, commentary and sports fill"
+    },
+    {
+      "days": [
+        1,
+        3,
+        5
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "the-lone-ranger",
+      "conf": "verified",
+      "src": "The Lone Ranger, ABC Mon/Wed/Fri 7:30 PM, 1942-54 (1947-48 ratings table: MWF 7:30 30 ABC; NYT logs 9 Feb 1949, 6 and 8 Feb 1950, 3 Nov 1952: WJZ 7:30)"
+    },
+    {
+      "days": [
+        2,
+        4
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "counter-spy",
+      "conf": "verified",
+      "src": "Counter-Spy, ABC Tue/Thu 7:30 PM, 1948-50, alternating nights with The Lone Ranger (1948-49 season page; NYT log 7 Feb 1950: WJZ 7:30 'Counterspy')"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-railroad-hour",
+      "conf": "verified",
+      "src": "The Railroad Hour, ABC Monday 8:00 PM, Oct 1948-Jun 1949 (Chicago Tribune 8 Nov 1948: WLS 7:00 CT 'The Railroad hour (A)'; 45 minutes until April). The 45-minute shows run over, as the chain rule allows"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-fat-man",
+      "conf": "verified",
+      "src": "The Fat Man, ABC Friday 8:00 PM, 1946-51 (1947-51 ratings tables: Fri 8:00 30 ABC; Chicago Tribune 12 Nov 1948: WLS 7:00 CT); Richard Diamond took the slot in 1951-52"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "the-new-adventures-of-sherlock-holmes",
+      "conf": "likely",
+      "src": "Sherlock Holmes, ABC Monday 8:30 PM, 1946-47 (Kreml)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "duffys-tavern",
+      "conf": "verified",
+      "src": "Duffy's Tavern, Blue Network Tuesday 8:30 PM, 1942-44 (1943-44 ratings table: Tue 8:30 30 Blue)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "20:30",
+      "len": 30,
+      "pool": "evening",
+      "label": "Vox Pop (fill)",
+      "conf": "fill",
+      "src": "ABC Wednesday 8:30 was Vox Pop in 1947-48; not on archive.org, evening fill plays"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "the-clock",
+      "conf": "verified",
+      "src": "The Clock, ABC Thursday 8:30 PM, 1947-48 (NYT log 6 Nov 1947: WJZ 8:30 'Drama: The Clock')"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "this-is-your-fbi",
+      "conf": "verified",
+      "src": "This Is Your FBI, ABC Friday 8:30 PM, 1945-53 (1947-53 ratings tables: Fri 8:30 30 ABC; Chicago Tribune 12 Nov 1948: WLS 7:30 CT)"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "21:00",
+      "len": 30,
+      "conf": "fill",
+      "src": "Counter-Spy's Blue Network Monday run (1942-44) could not be placed from the logs; evening fill plays",
+      "pool": "evening",
+      "label": "ABC Monday 9:00 (fill)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "21:00",
+      "len": 60,
+      "pool": "evening",
+      "label": "America's Town Meeting hour (fill)",
+      "conf": "fill",
+      "src": "America's Town Meeting of the Air held an ABC Tuesday hour; its surviving debates are a later harvest candidate"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "abbott-and-costello",
+      "conf": "verified",
+      "src": "The Abbott and Costello Show, ABC Wednesday 9:00 PM, 1947-48 (NYT log 5 Nov 1947: WJZ 9-9:30 'Comedy: Abbott and Costello'), Thursday 8:00 in 1948-49; plays their earlier NBC Camel shows"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "chandu-the-magician",
+      "conf": "approx",
+      "src": "Chandu the Magician, ABC Thursdays 1949-50 (episode dates); 9:00 placed"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "ozzie-harriet",
+      "conf": "verified",
+      "src": "The Adventures of Ozzie and Harriet, ABC Friday 9:00 PM, 1949-54 (ratings tables 1950-53: Fri 9:00 30 ABC; NYT logs 10 Nov 1950 and 7 Nov 1952: WJZ 9-9:30). Break the Bank held the slot in 1948"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "you-bet-your-life",
+      "conf": "verified",
+      "src": "You Bet Your Life, ABC Wednesday 9:30 PM, 1948-49 (ratings table: Wed 9:30 30 ABC; NYT log 9 Feb 1949: WJZ 9:30 'Groucho Marx Show')"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "mr-district-attorney",
+      "conf": "verified",
+      "src": "Mr. District Attorney, ABC Friday 9:30 PM, 1951-52 (ratings table: Fri 9:30 30 ABC). The Sheriff held the slot 1945-51 (Chicago Tribune 12 Nov 1948: WENR 8:30 CT) but nothing usable survives"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "fibber-mcgee-and-molly",
+      "conf": "likely",
+      "src": "Fibber McGee and Molly, NBC Blue Monday 10:00 PM, 1935-36 (Johnson's Wax); episode dates confirm Mondays"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "philco-radio-time",
+      "conf": "verified",
+      "src": "Philco Radio Time with Bing Crosby, ABC Wednesday 10:00 PM, 1946-49 (ratings tables: Wed 10:00 30 ABC; NYT logs 5 Nov 1947 and 9 Feb 1949: WJZ 10-10:30)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "the-henry-morgan-show",
+      "conf": "verified",
+      "src": "The Henry Morgan Show, ABC Wednesday 10:30 PM, 1946-48 (NYT log 5 Nov 1947: WJZ 10:30-11 'Henry Morgan Show'), right after Crosby"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "22:00",
+      "len": 60,
+      "pool": "news",
+      "label": "Gillette Cavalcade of Sports (fill)",
+      "conf": "fill",
+      "src": "Friday night fights held ABC 10:00; Bill Stern's sports reel stands in"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "09:00",
+      "len": 90,
+      "show": "big-jon-and-sparkie",
+      "conf": "likely",
+      "src": "No School Today with Big Jon and Sparkie, ABC Saturday 9:00-10:30 AM, 1950-58"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "10:30",
+      "len": 30,
+      "show": "space-patrol",
+      "conf": "likely",
+      "src": "Space Patrol, ABC Saturday 10:30 AM, 1952-55 (NYT log 7 Feb 1953: WJZ in the 10:30 block; episode dates confirm Saturday)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "11:00",
+      "len": 30,
+      "conf": "fill",
+      "src": "ABC Saturday 11:00 was Junior Junction (NYT log 3 Feb 1951: WJZ 11:00); not on archive.org, serials fill. Superman's ABC run could not be found in the Saturday logs",
+      "pool": "satkids",
+      "label": "Junior Junction (fill)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "11:30",
+      "len": 30,
+      "pool": "satkids",
+      "label": "Saturday serials",
+      "conf": "fill",
+      "src": "Sky King (ABC 1946-54) and Challenge of the Yukon (ABC 1947-49) rotate here; their exact Saturday slots are not pinned down"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "14:00",
+      "len": 180,
+      "pool": "music",
+      "label": "Metropolitan Opera matinee (fill)",
+      "conf": "fill",
+      "src": "ABC carried the Met's Saturday matinee 1940-58 (NYT log 3 Feb 1951: WJZ 2:00 Met Opera); operetta and music fill in for the opera"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "red-ryder",
+      "conf": "likely",
+      "src": "Red Ryder, Blue Network Tue/Thu/Sat 7:30 PM, 1942 (episode dates confirm)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "20:00",
+      "len": 60,
+      "pool": "evening",
+      "label": "Famous Jury Trials (fill)",
+      "conf": "fill",
+      "src": "Famous Jury Trials held ABC Saturday evenings 1945-49 (Chicago Tribune 13 Nov 1948 places it about 7:30 ET); one surviving episode, evening fill plays"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "gang-busters",
+      "conf": "verified",
+      "src": "Gang Busters, ABC Saturday 9:00 PM, 1945-48 (1946-47 ratings table: Sat 9:00 30 ABC; Chicago Tribune 13 Nov 1948 about 8:00-8:30 CT)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "06:00",
+      "len": 240,
+      "pool": "sunday-morning",
+      "label": "Sunday morning",
+      "conf": "fill",
+      "src": "ABC Sunday mornings were church services and choirs; The Greatest Story Ever Told and light music fill"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "10:00",
+      "len": 420,
+      "pool": "sunday-afternoon",
+      "label": "Sunday afternoon",
+      "conf": "fill",
+      "src": "Concerts, Sammy Kaye and public affairs filled ABC's Sunday daytime; music and Theatre Guild repeats play"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "17:00",
+      "len": 30,
+      "show": "quiet-please",
+      "conf": "likely",
+      "src": "Quiet, Please, ABC Sunday about 5:00 PM, Sept 1948-Jun 1949 (Chicago Tribune and Washington Post 7 Nov 1948 place it in the 5 o'clock hour; episode dates confirm Sunday)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "17:30",
+      "len": 30,
+      "show": "counter-spy",
+      "conf": "verified",
+      "src": "Counter-Spy, ABC Sunday 5:30 PM, 1947-48 (NYT log 2 Nov 1947: WJZ 5:30 'David Harding-Counterspy'; episode dates confirm Sunday)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "18:00",
+      "len": 15,
+      "show": "drew-pearson",
+      "conf": "verified",
+      "src": "Drew Pearson, Blue/ABC Sunday 6:00 PM, 1945-53 (NYT log 2 Nov 1947: WJZ 6:00; Washington Post 5 Feb 1950: 6:00); two wartime broadcasts survive"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "18:15",
+      "len": 15,
+      "pool": "news",
+      "label": "Monday Morning Headlines (fill)",
+      "conf": "fill",
+      "src": "ABC's Sunday 6:15 news quarter hour; commentary and sports fill"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "18:30",
+      "len": 30,
+      "show": "the-greatest-story-ever-told",
+      "conf": "verified",
+      "src": "The Greatest Story Ever Told, ABC Sunday 6:30 PM, 1947-49 (NYT log 2 Nov 1947: WJZ 6:30; Chicago Tribune 7 Nov 1948: 5:30 CT), 5:30 from 1950 (Goodyear)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "19:00",
+      "len": 30,
+      "show": "pat-novak-for-hire",
+      "conf": "approx",
+      "src": "Pat Novak, for Hire, ABC Sundays Feb-Jun 1949 (episode dates confirm Sunday); 7:00 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "the-clock",
+      "conf": "approx",
+      "src": "The Clock, ABC Sundays Nov 1946-47 (episode dates confirm Sunday); 7:30 placed. Exploring the Unknown held 7:30 by Nov 1947"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "20:00",
+      "len": 60,
+      "show": "stop-the-music",
+      "conf": "verified",
+      "src": "Stop the Music, ABC Sunday 8:00-9:00 PM, 1948-52 (ratings table: Sun 8:00 60 ABC; Washington Post 5 Feb 1950: 8:00); only a few complete hours survive"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:00",
+      "len": 15,
+      "show": "walter-winchell",
+      "conf": "verified",
+      "src": "Walter Winchell's Jergens Journal, Blue/ABC Sunday 9:00 PM, 1932-55 (ratings tables 1943-53: Sun 9:00 15 Blue/ABC; NYT log 2 Nov 1947: WJZ 9:00); wartime broadcasts survive"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:15",
+      "len": 15,
+      "pool": "hollywood",
+      "label": "Louella Parsons (fill)",
+      "conf": "fill",
+      "src": "Louella Parsons' Hollywood news held ABC Sunday 9:15 (NYT log 2 Nov 1947: WJZ 9:15); Breakfast in Hollywood stands in"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:30",
+      "len": 60,
+      "show": "theatre-guild-on-the-air",
+      "conf": "verified",
+      "src": "Theatre Guild on the Air (U.S. Steel Hour), ABC Sunday 9:30 PM, 1947-49 (NYT log 2 Nov 1947: WJZ 9:30; Chicago Tribune 7 Nov 1948: 8:30 CT; ratings table 1948-49: Sun 9:30 60 ABC); NBC 8:30 from 1949"
+    },
+    {
+      "days": [
+        1,
+        3
+      ],
+      "at": "17:00",
+      "len": 15,
+      "show": "challenge-of-the-yukon",
+      "conf": "verified",
+      "src": "Challenge of the Yukon, ABC Mon/Wed 5:00 PM, 1947-50 (NYT log 6 and 8 Feb 1950: WJZ 5:00); Tennessee Jed held 5:00 in 1947"
+    },
+    {
+      "days": [
+        2,
+        4
+      ],
+      "at": "17:00",
+      "len": 15,
+      "show": "the-green-hornet",
+      "conf": "verified",
+      "src": "The Green Hornet, ABC Tuesday (and Thursday) 5:00 PM, 1948-50 (NYT log 7 Feb 1950: WJZ 5:00; Chicago Tribune 9 Nov 1948: WENR 5:00)"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "17:00",
+      "len": 15,
+      "show": "big-jon-and-sparkie",
+      "conf": "verified",
+      "src": "Big Jon and Sparkie, ABC weekdays 5:00 PM, 1950-58 (NYT log 3 and 7 Nov 1952: WJZ 5:00)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "17:30",
+      "len": 30,
+      "show": "sky-king",
+      "conf": "verified",
+      "src": "Sky King, ABC Tuesday 5:30 PM in 1950 (NYT log 7 Feb 1950: WJZ 5:30), Mon/Wed/Fri 5:30 in 1947-49 (NYT 5 Nov 1947, 9 Feb 1949; Chicago Tribune 8 Nov 1948)"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "18:15",
+      "len": 15,
+      "show": "ethel-and-albert",
+      "conf": "verified",
+      "src": "Ethel and Albert, ABC weekdays 6:15 PM, 1947-49 (NYT log 4, 5 and 6 Nov 1947 and 9 Feb 1949: WJZ 6:15 'Ethel and Albert-Sketch')"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "18:30",
+      "len": 30,
+      "pool": "news",
+      "label": "Local news and sports",
+      "conf": "fill",
+      "src": "Affiliates ran local news here; Bill Stern's sports reel and wartime Winchell and Pearson commentaries stand in"
+    },
+    {
+      "days": [
+        2,
+        3
+      ],
+      "at": "20:00",
+      "len": 30,
+      "pool": "evening",
+      "label": "ABC 8:00 (fill)",
+      "conf": "fill",
+      "src": "ABC's Tuesday and Wednesday 8:00 carried quiz and public-affairs shows nobody recorded; evening fill plays"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "20:00",
+      "len": 30,
+      "pool": "evening",
+      "label": "Candid Microphone (fill)",
+      "conf": "fill",
+      "src": "Candid Microphone held ABC Thursday 8:00 in 1947-48 (NYT log 6 Nov 1947: WJZ 8:00); not on archive.org, evening fill plays"
+    }
   ]
 }

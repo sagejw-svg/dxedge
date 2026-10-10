@@ -12,152 +12,840 @@
   "tagline": "What NBC was carrying at this hour, this day of the week, 1936-53",
   "blurb": "A composite week of the National Broadcasting Company, the network of the big Sunday and Tuesday night comedy blocks: Jack Benny at 7 on Sunday, then Phil Harris and Alice Faye, Charlie McCarthy and Fred Allen; Tuesday with Amos 'n' Andy, Fibber McGee, Bob Hope and Red Skelton; Groucho and Mr. District Attorney on Wednesday; Dragnet on Thursday; Truth or Consequences and the Grand Ole Opry on Saturday. Episodes run back to back with no commercials, so a half hour slot often fits two. Your local clock, like an affiliate.",
   "minLeft": 5,
-  "serial": ["jack-armstrong", "tom-mix", "dick-tracy", "vic-and-sade", "ma-perkins", "one-mans-family"],
+  "serial": [
+    "jack-armstrong",
+    "tom-mix",
+    "dick-tracy",
+    "vic-and-sade",
+    "ma-perkins",
+    "one-mans-family"
+  ],
   "pools": {
-    "overnight": ["the-fred-allen-show", "fred-allen-1945", "the-bob-hope-show", "fibber-mcgee-and-molly", "the-great-gildersleeve", "duffys-tavern", "mr-district-attorney", "dragnet", "night-beat", "dimension-x", "x-minus-one", "the-aldrich-family", "the-life-of-riley", "burns-and-allen", "eddie-cantor", "abbott-and-costello", "information-please", "molle-mystery-theatre", "dark-fantasy", "lights-out", "new-adventures-of-nero-wolfe", "richard-diamond-private-detective", "the-six-shooter", "tales-of-the-texas-rangers", "barrie-craig-confidential-investigator", "the-falcon", "whitehall-1212", "mr-moto", "the-saint", "father-knows-best", "the-halls-of-ivy", "the-martin-and-lewis-show", "the-phil-harris-alice-faye-show", "cavalcade-of-america", "the-big-story", "people-are-funny", "the-judy-canova-show", "dennis-day", "can-you-top-this", "truth-or-consequences", "jack-benny-nbc", "edgar-bergen-and-charlie-mccarthy", "the-red-skelton-show", "amos-and-andy", "dangerous-assignment", "screen-directors-playhouse", "nbc-university-theater", "the-railroad-hour", "the-big-show", "candy-matson"],
-    "morning": ["vic-and-sade", "ma-perkins", "one-mans-family", "the-bickersons", "a-date-with-judy", "dennis-day", "the-aldrich-family"],
-    "daytime": ["vic-and-sade", "ma-perkins", "one-mans-family", "the-bickersons", "a-date-with-judy", "dennis-day", "the-aldrich-family", "nbc-university-theater", "the-railroad-hour", "cavalcade-of-america", "information-please", "the-judy-canova-show"],
-    "kids": ["adventures-of-frank-merriwell", "jack-armstrong", "tom-mix", "dick-tracy"],
-    "news": ["bill-stern-sports-reel", "bill-stern-sports-reel", "vic-and-sade", "ma-perkins"],
-    "evening": ["mr-district-attorney", "dragnet", "night-beat", "molle-mystery-theatre", "new-adventures-of-nero-wolfe", "richard-diamond-private-detective", "the-six-shooter", "tales-of-the-texas-rangers", "barrie-craig-confidential-investigator", "the-falcon", "whitehall-1212", "the-saint", "dangerous-assignment", "the-big-story", "cavalcade-of-america", "duffys-tavern", "the-life-of-riley", "the-aldrich-family", "people-are-funny", "father-knows-best", "the-halls-of-ivy", "dimension-x", "x-minus-one", "information-please", "mr-moto", "screen-directors-playhouse", "dark-fantasy", "lights-out"],
-    "music": ["the-railroad-hour", "kraft-music-hall", "your-hit-parade", "grand-ole-opry", "dennis-day", "the-judy-canova-show", "the-big-show"],
-    "sunday-morning": ["nbc-university-theater", "the-railroad-hour", "cavalcade-of-america", "one-mans-family", "the-big-show"],
-    "satkids": ["adventures-of-frank-merriwell", "jack-armstrong", "tom-mix", "dick-tracy", "dimension-x"]
+    "overnight": [
+      "the-fred-allen-show",
+      "fred-allen-1945",
+      "the-bob-hope-show",
+      "fibber-mcgee-and-molly",
+      "the-great-gildersleeve",
+      "duffys-tavern",
+      "mr-district-attorney",
+      "dragnet",
+      "night-beat",
+      "dimension-x",
+      "x-minus-one",
+      "the-aldrich-family",
+      "the-life-of-riley",
+      "burns-and-allen",
+      "eddie-cantor",
+      "abbott-and-costello",
+      "information-please",
+      "molle-mystery-theatre",
+      "dark-fantasy",
+      "lights-out",
+      "new-adventures-of-nero-wolfe",
+      "richard-diamond-private-detective",
+      "the-six-shooter",
+      "tales-of-the-texas-rangers",
+      "barrie-craig-confidential-investigator",
+      "the-falcon",
+      "whitehall-1212",
+      "mr-moto",
+      "the-saint",
+      "father-knows-best",
+      "the-halls-of-ivy",
+      "the-martin-and-lewis-show",
+      "the-phil-harris-alice-faye-show",
+      "cavalcade-of-america",
+      "the-big-story",
+      "people-are-funny",
+      "the-judy-canova-show",
+      "dennis-day",
+      "can-you-top-this",
+      "truth-or-consequences",
+      "jack-benny-nbc",
+      "edgar-bergen-and-charlie-mccarthy",
+      "the-red-skelton-show",
+      "amos-and-andy",
+      "dangerous-assignment",
+      "screen-directors-playhouse",
+      "nbc-university-theater",
+      "the-railroad-hour",
+      "the-big-show",
+      "candy-matson"
+    ],
+    "morning": [
+      "vic-and-sade",
+      "ma-perkins",
+      "one-mans-family",
+      "the-bickersons",
+      "a-date-with-judy",
+      "dennis-day",
+      "the-aldrich-family"
+    ],
+    "daytime": [
+      "vic-and-sade",
+      "ma-perkins",
+      "one-mans-family",
+      "the-bickersons",
+      "a-date-with-judy",
+      "dennis-day",
+      "the-aldrich-family",
+      "nbc-university-theater",
+      "the-railroad-hour",
+      "cavalcade-of-america",
+      "information-please",
+      "the-judy-canova-show"
+    ],
+    "kids": [
+      "adventures-of-frank-merriwell",
+      "jack-armstrong",
+      "tom-mix",
+      "dick-tracy"
+    ],
+    "news": [
+      "bill-stern-sports-reel",
+      "bill-stern-sports-reel",
+      "vic-and-sade",
+      "ma-perkins"
+    ],
+    "evening": [
+      "mr-district-attorney",
+      "dragnet",
+      "night-beat",
+      "molle-mystery-theatre",
+      "new-adventures-of-nero-wolfe",
+      "richard-diamond-private-detective",
+      "the-six-shooter",
+      "tales-of-the-texas-rangers",
+      "barrie-craig-confidential-investigator",
+      "the-falcon",
+      "whitehall-1212",
+      "the-saint",
+      "dangerous-assignment",
+      "the-big-story",
+      "cavalcade-of-america",
+      "duffys-tavern",
+      "the-life-of-riley",
+      "the-aldrich-family",
+      "people-are-funny",
+      "father-knows-best",
+      "the-halls-of-ivy",
+      "dimension-x",
+      "x-minus-one",
+      "information-please",
+      "mr-moto",
+      "screen-directors-playhouse",
+      "dark-fantasy",
+      "lights-out"
+    ],
+    "music": [
+      "the-railroad-hour",
+      "kraft-music-hall",
+      "your-hit-parade",
+      "grand-ole-opry",
+      "dennis-day",
+      "the-judy-canova-show",
+      "the-big-show"
+    ],
+    "sunday-morning": [
+      "nbc-university-theater",
+      "the-railroad-hour",
+      "cavalcade-of-america",
+      "one-mans-family",
+      "the-big-show"
+    ],
+    "satkids": [
+      "adventures-of-frank-merriwell",
+      "jack-armstrong",
+      "tom-mix",
+      "dick-tracy",
+      "dimension-x"
+    ]
   },
   "defaults": [
-    { "from": "00:00", "to": "06:00", "pool": "overnight", "label": "Overnight" },
-    { "from": "06:00", "to": "09:00", "pool": "morning", "label": "Morning" },
-    { "from": "09:00", "to": "17:00", "pool": "daytime", "label": "Daytime" },
-    { "from": "17:00", "to": "18:00", "pool": "kids", "label": "After school" },
-    { "from": "18:00", "to": "19:30", "pool": "news", "label": "News and sports" },
-    { "from": "19:30", "to": "23:00", "pool": "evening", "label": "Evening" },
-    { "from": "23:00", "to": "24:00", "pool": "overnight", "label": "Late night" }
+    {
+      "from": "00:00",
+      "to": "06:00",
+      "pool": "overnight",
+      "label": "Overnight"
+    },
+    {
+      "from": "06:00",
+      "to": "09:00",
+      "pool": "morning",
+      "label": "Morning"
+    },
+    {
+      "from": "09:00",
+      "to": "17:00",
+      "pool": "daytime",
+      "label": "Daytime"
+    },
+    {
+      "from": "17:00",
+      "to": "18:00",
+      "pool": "kids",
+      "label": "After school"
+    },
+    {
+      "from": "18:00",
+      "to": "19:30",
+      "pool": "news",
+      "label": "News and sports"
+    },
+    {
+      "from": "19:30",
+      "to": "23:00",
+      "pool": "evening",
+      "label": "Evening"
+    },
+    {
+      "from": "23:00",
+      "to": "24:00",
+      "pool": "overnight",
+      "label": "Late night"
+    }
   ],
   "slots": [
-    { "days": [1,2,3,4,5], "at": "15:15", "len": 15, "show": "ma-perkins", "conf": "likely",
-      "src": "Ma Perkins, NBC weekdays 3:15 PM, 1942-49 (Oxydol); also on CBS at 1:15" },
-    { "days": [1,2,3,4,5], "at": "15:30", "len": 15, "show": "vic-and-sade", "conf": "approx",
-      "src": "Vic and Sade, NBC weekday quarter hour 1932-44 (episode dates confirm Mon-Fri); afternoon slot placed" },
-    { "days": [1,2,3,4,5], "at": "17:30", "len": 15, "show": "jack-armstrong", "conf": "likely",
-      "src": "Jack Armstrong, NBC weekdays 5:30 PM, 1936-41 (Wheaties), before the move to Blue/ABC" },
-    { "days": [1,2,3,4,5], "at": "17:45", "len": 15, "show": "tom-mix", "conf": "likely",
-      "src": "Tom Mix Ralston Straight Shooters, NBC weekdays 5:45 PM, 1933-42, before the Mutual years" },
-    { "days": [1,2,3,4,5], "at": "18:45", "len": 15, "pool": "news", "label": "Lowell Thomas and the News (fill)", "conf": "fill",
-      "src": "Lowell Thomas held NBC 6:45 PM weeknights for Sun Oil (ratings tables 1943-47: M-F 6:45 15 NBC); no usable recordings, strips fill" },
-    { "days": [1,2,3,4,5], "at": "19:00", "len": 30, "pool": "news", "label": "Supper Club (fill)", "conf": "fill",
-      "src": "The Chesterfield Supper Club held NBC 7:00 weeknights 1944-49; not on archive.org, strips and sports fill" },
-    { "days": [1,2,3,5], "at": "19:30", "len": 15, "pool": "news", "label": "News of the World (fill)", "conf": "fill",
-      "src": "News of the World held NBC 7:30 weeknights (1952-53 table: M-F 7:30 15 NBC); no recordings, strips fill" },
-    { "days": [1,2,3,5], "at": "19:45", "len": 15, "pool": "news", "label": "One Man's Family quarter hour (fill)", "conf": "fill",
-      "src": "One Man's Family held NBC 7:45 weeknights 1950-55 (tables: M-F 7:45 15 NBC); the catalog has only its earlier half-hour shows, which play on Sunday afternoon instead" },
-
-    { "days": [1], "at": "20:00", "len": 30, "show": "the-railroad-hour", "conf": "verified",
-      "src": "The Railroad Hour, NBC Monday 8:00 PM, 1949-54 (ratings tables: Mon 8:00 30 NBC)" },
-    { "days": [1], "at": "20:30", "len": 30, "pool": "music", "label": "Voice of Firestone (fill)", "conf": "fill",
-      "src": "The Voice of Firestone held NBC Monday 8:30 for decades (tables: Mon 8:30 30 NBC); concerts are not on archive.org, music fills" },
-    { "days": [1], "at": "21:00", "len": 30, "pool": "music", "label": "The Telephone Hour (fill)", "conf": "fill",
-      "src": "The Bell Telephone Hour held NBC Monday 9:00, 1940-58; music fills" },
-    { "days": [1], "at": "21:30", "len": 30, "show": "dangerous-assignment", "conf": "approx",
-      "src": "Dangerous Assignment, NBC 1950 (episode dates confirm Mondays); 9:30 placed" },
-    { "days": [1], "at": "22:00", "len": 30, "show": "night-beat", "conf": "likely",
-      "src": "Night Beat, NBC Monday 10:00 PM, 1950 (episode dates confirm Mondays)" },
-    { "days": [1], "at": "22:30", "len": 30, "show": "information-please", "conf": "verified",
-      "src": "Information Please, NBC Monday 10:30 PM, 1943-45 (1943-44 table: Mon 10:30 30 NBC; episode dates confirm Mondays)" },
-
-    { "days": [2], "at": "20:00", "len": 30, "show": "cavalcade-of-america", "conf": "verified",
-      "src": "Cavalcade of America, NBC Tuesday 8:00 PM, 1951-53 (1951-52 table: Tue 8:00 30 NBC); Mondays 8:00 from 1940" },
-    { "days": [2], "at": "20:30", "len": 30, "show": "a-date-with-judy", "conf": "verified",
-      "src": "A Date with Judy, NBC Tuesday 8:30 PM, 1945-49 (ratings tables: Tue 8:30 30 NBC)" },
-    { "days": [2], "at": "21:00", "len": 30, "show": "amos-and-andy", "conf": "verified",
-      "src": "Amos 'n' Andy, NBC Tuesday 9:00 PM, 1945-48 (ratings tables: Tue 9:00 30 NBC; episode dates confirm Tuesdays)" },
-    { "days": [2], "at": "21:30", "len": 30, "show": "fibber-mcgee-and-molly", "conf": "verified",
-      "src": "Fibber McGee and Molly, NBC Tuesday 9:30 PM, 1940-53 (every ratings table: Tue 9:30 30 NBC); plays the surviving 1935-37 shows" },
-    { "days": [2], "at": "22:00", "len": 30, "show": "the-bob-hope-show", "conf": "verified",
-      "src": "The Bob Hope Show, NBC Tuesday 10:00 PM, 1938-48 (ratings tables: Tue 10:00 30 NBC), then 9:00 to 1952" },
-    { "days": [2], "at": "22:30", "len": 30, "show": "the-red-skelton-show", "conf": "verified",
-      "src": "The Red Skelton Show, NBC Tuesday 10:30 PM, 1941-47 (ratings tables: Tue 10:30 30 NBC)" },
-
-    { "days": [3], "at": "20:00", "len": 30, "show": "the-halls-of-ivy", "conf": "verified",
-      "src": "The Halls of Ivy, NBC Wednesday 8:00 PM, 1950-52 (1951-52 table: Wed 8:00 30 NBC; episode dates confirm Wednesdays)" },
-    { "days": [3], "at": "20:30", "len": 30, "show": "the-great-gildersleeve", "conf": "verified",
-      "src": "The Great Gildersleeve, NBC Wednesday 8:30 PM, 1946-54 (ratings tables: Wed 8:30 30 NBC)" },
-    { "days": [3], "at": "21:00", "len": 30, "show": "you-bet-your-life", "conf": "verified",
-      "src": "You Bet Your Life, NBC Wednesday 9:00 PM, 1950-56 (ratings tables: Wed 9:00 30 NBC; episode dates confirm Wednesdays)" },
-    { "days": [3], "at": "21:30", "len": 30, "show": "mr-district-attorney", "conf": "verified",
-      "src": "Mr. District Attorney, NBC Wednesday 9:30 PM, 1940-52 (every ratings table: Wed 9:30 30 NBC)" },
-    { "days": [3], "at": "22:00", "len": 30, "show": "the-big-story", "conf": "verified",
-      "src": "The Big Story, NBC Wednesday 10:00 PM, 1947-51 (ratings tables: Wed 10:00 30 NBC)" },
-    { "days": [3], "at": "22:30", "len": 30, "show": "richard-diamond-private-detective", "conf": "verified",
-      "src": "Richard Diamond, NBC Wednesday 10:30 PM, Sep-Dec 1950 (1950-51 table footnote; episode dates confirm Wednesdays)" },
-
-    { "days": [4], "at": "19:30", "len": 30, "show": "dennis-day", "conf": "verified",
-      "src": "A Day in the Life of Dennis Day, NBC Thursday 7:30 PM, 1947-48 (ratings table: Thu 7:30 30 NBC)" },
-    { "days": [4], "at": "20:00", "len": 30, "show": "father-knows-best", "conf": "verified",
-      "src": "Father Knows Best, NBC Thursday 8:00 PM, 1949-52 (1951-52 table: Thu 8:00 30 NBC; episode dates confirm Thursdays)" },
-    { "days": [4], "at": "20:30", "len": 30, "show": "burns-and-allen", "conf": "verified",
-      "src": "Burns and Allen, NBC Thursday 8:30 PM, 1946-49 (ratings tables: Thu 8:30 30 NBC; 1949 episode dates confirm Thursdays)" },
-    { "days": [4], "at": "21:00", "len": 30, "show": "dragnet", "conf": "verified",
-      "src": "Dragnet, NBC Thursday 9:00 PM, 1950-52 (ratings tables: Thu 9:00 30 NBC; 1952 episode dates confirm Thursdays)" },
-    { "days": [4], "at": "21:30", "len": 30, "show": "kraft-music-hall", "conf": "verified",
-      "src": "Kraft Music Hall held NBC Thursday 9:00, 1936-49 (ratings tables: Thu 9:00 30 NBC); placed after Dragnet here. Two broadcasts survive on archive.org" },
-    { "days": [4], "at": "22:00", "len": 30, "show": "abbott-and-costello", "conf": "verified",
-      "src": "The Abbott and Costello Show, NBC Thursday 10:00 PM, 1943-47 (ratings tables: Thu 10:00 30 NBC; episode dates confirm Thursdays)" },
-    { "days": [4], "at": "22:30", "len": 30, "show": "eddie-cantor", "conf": "verified",
-      "src": "The Eddie Cantor Show, NBC Thursday 10:30 PM, 1946-47 (ratings table: Thu 10:30 30 NBC); Wednesdays at 9:00 1940-46" },
-
-    { "days": [5], "at": "20:00", "len": 30, "show": "new-adventures-of-nero-wolfe", "conf": "approx",
-      "src": "The New Adventures of Nero Wolfe, NBC 1950-51 (episode dates confirm Fridays); 8:00 placed" },
-    { "days": [5], "at": "20:30", "len": 30, "show": "duffys-tavern", "conf": "verified",
-      "src": "Duffy's Tavern, NBC Friday 8:30 PM, 1945-46 (ratings table: Fri 8:30 30 NBC); Wednesday 9:00 from 1946" },
-    { "days": [5], "at": "21:00", "len": 30, "show": "people-are-funny", "conf": "verified",
-      "src": "People Are Funny, NBC Friday 9:00 PM, 1946-48 (ratings tables: Fri 9:00 30 NBC)" },
-    { "days": [5], "at": "21:30", "len": 30, "pool": "evening", "label": "Jimmy Durante Show (fill)", "conf": "fill",
-      "src": "Jimmy Durante held NBC Friday 9:30 in 1949-50 (table: Fri 9:30 30 NBC); not harvested, evening fill plays" },
-    { "days": [5], "at": "22:00", "len": 30, "show": "the-life-of-riley", "conf": "verified",
-      "src": "The Life of Riley, NBC Friday 10:00 PM, 1948-51 (ratings tables: Fri 10:00 30 NBC); Saturdays 8:00 1945-48" },
-    { "days": [5], "at": "22:30", "len": 15, "show": "bill-stern-sports-reel", "conf": "likely",
-      "src": "Bill Stern's Colgate Sports Newsreel, NBC Friday 10:30 PM, 1941-51 (episode dates confirm Fridays)" },
-
-    { "days": [6], "at": "10:00", "len": 30, "show": "adventures-of-frank-merriwell", "conf": "likely",
-      "src": "The Adventures of Frank Merriwell, NBC Saturday 10:00 AM, 1946-49 (episode dates confirm Saturdays)" },
-    { "days": [6], "at": "10:30", "len": 90, "pool": "satkids", "label": "Saturday morning (fill)", "conf": "fill",
-      "src": "Archie Andrews and Smilin' Ed McConnell followed on NBC Saturday mornings; not harvested, serials fill" },
-    { "days": [6], "at": "20:00", "len": 30, "show": "dimension-x", "conf": "approx",
-      "src": "Dimension X, NBC 1950-51 (episode dates: Fridays, Saturdays and Sundays); Saturday 8:00 placed" },
-    { "days": [6], "at": "20:30", "len": 30, "show": "truth-or-consequences", "conf": "verified",
-      "src": "Truth or Consequences, NBC Saturday 8:30 PM, 1940-50 (every ratings table: Sat 8:30 30 NBC)" },
-    { "days": [6], "at": "21:00", "len": 30, "show": "your-hit-parade", "conf": "verified",
-      "src": "Your Hit Parade, NBC Saturday 9:00 PM, 1946-50 (ratings tables: Sat 9:00 30 NBC); only two broadcasts are on archive.org" },
-    { "days": [6], "at": "21:30", "len": 30, "show": "can-you-top-this", "conf": "verified",
-      "src": "Can You Top This?, NBC Saturday 9:30 PM, 1945-47 (ratings tables: Sat 9:30 30 NBC)" },
-    { "days": [6], "at": "22:00", "len": 30, "show": "the-judy-canova-show", "conf": "verified",
-      "src": "The Judy Canova Show, NBC Saturday 10:00 PM, 1945-51 (ratings tables: Sat 10:00 30 NBC)" },
-    { "days": [6], "at": "22:30", "len": 30, "show": "grand-ole-opry", "conf": "verified",
-      "src": "Grand Ole Opry (Prince Albert), NBC Saturday 10:30 PM, 1943-57 (1943-44 table: Sat 10:30 30 NBC)" },
-
-    { "days": [0], "at": "06:00", "len": 300, "pool": "sunday-morning", "label": "Sunday morning (fill)", "conf": "fill",
-      "src": "NBC Sunday mornings were church, choirs and the news; drama and music fill" },
-    { "days": [0], "at": "14:30", "len": 60, "show": "nbc-university-theater", "conf": "approx",
-      "src": "NBC University Theater, 1948-51 (episode dates: Sundays); 2:30 placed" },
-    { "days": [0], "at": "15:30", "len": 30, "show": "one-mans-family", "conf": "approx",
-      "src": "One Man's Family, NBC 1949-50 (episode dates confirm Sundays in 1949); 3:30 placed" },
-    { "days": [0], "at": "18:30", "len": 30, "show": "the-great-gildersleeve", "conf": "verified",
-      "src": "The Great Gildersleeve, NBC Sunday 6:30 PM, 1941-46 (ratings tables: Sun 6:30 30 NBC; episode dates confirm Sundays)" },
-    { "days": [0], "at": "19:00", "len": 30, "show": "jack-benny-nbc", "conf": "verified",
-      "src": "The Jack Benny Program, NBC Sunday 7:00 PM, 1936-48 (every ratings table: Sun 7:00 30 NBC)" },
-    { "days": [0], "at": "19:30", "len": 30, "show": "the-phil-harris-alice-faye-show", "conf": "verified",
-      "src": "The Phil Harris-Alice Faye Show, NBC Sunday 7:30 PM, 1946-50 (ratings tables: Sun 7:30 30 NBC); 8:00 from 1951" },
-    { "days": [0], "at": "20:00", "len": 30, "show": "edgar-bergen-and-charlie-mccarthy", "conf": "verified",
-      "src": "Edgar Bergen and Charlie McCarthy, NBC Sunday 8:00 PM, 1937-48 (every ratings table: Sun 8:00 30 NBC)" },
-    { "days": [0], "at": "20:30", "len": 30, "show": "fred-allen-1945", "conf": "verified",
-      "src": "The Fred Allen Show, NBC Sunday 8:30 PM, 1945-49 (ratings tables: Sun 8:30 30 NBC)" },
-    { "days": [0], "at": "21:00", "len": 30, "pool": "music", "label": "Manhattan Merry-Go-Round (fill)", "conf": "fill",
-      "src": "Manhattan Merry-Go-Round held NBC Sunday 9:00 (tables: Sun 9:00 30 NBC); music fills" },
-    { "days": [0], "at": "21:30", "len": 30, "show": "dragnet", "conf": "verified",
-      "src": "Dragnet, NBC Sunday 9:30 PM, 1952-53 (ratings table: Sun 9:30 30 NBC; episode dates confirm Sundays)" },
-    { "days": [0], "at": "22:00", "len": 30, "show": "barrie-craig-confidential-investigator", "conf": "verified",
-      "src": "Barrie Craig, Confidential Investigator, NBC Sunday 10:00 PM, 1952-53 (ratings table: Sun 10:00 30 NBC)" },
-    { "days": [0], "at": "22:30", "len": 30, "show": "whitehall-1212", "conf": "approx",
-      "src": "Whitehall 1212, NBC 1951-52 (episode dates confirm Sundays); 10:30 placed" }
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "15:15",
+      "len": 15,
+      "show": "ma-perkins",
+      "conf": "verified",
+      "src": "Ma Perkins, NBC weekdays 3:15 PM, 1942-49 (NYT log 8 and 11 Nov 1948: WNBC 3:15; Chicago Tribune 8 Nov 1948: WMAQ 2:15 CT; Oxydol); also on CBS at 1:15"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "15:30",
+      "len": 15,
+      "show": "vic-and-sade",
+      "conf": "approx",
+      "src": "Vic and Sade, NBC weekday quarter hour 1932-44 (episode dates confirm Mon-Fri); afternoon slot placed"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "17:30",
+      "len": 15,
+      "show": "jack-armstrong",
+      "conf": "likely",
+      "src": "Jack Armstrong, NBC weekdays 5:30 PM, 1936-41 (Wheaties), before the move to Blue/ABC"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "17:45",
+      "len": 15,
+      "show": "tom-mix",
+      "conf": "likely",
+      "src": "Tom Mix Ralston Straight Shooters, NBC weekdays 5:45 PM, 1933-42, before the Mutual years"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "18:45",
+      "len": 15,
+      "pool": "news",
+      "label": "Lowell Thomas and the News (fill)",
+      "conf": "fill",
+      "src": "Lowell Thomas held NBC 6:45 PM weeknights for Sun Oil until 1947 (ratings tables 1943-47: M-F 6:45 15 NBC), then CBS; no usable recordings, strips fill"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "at": "19:00",
+      "len": 30,
+      "pool": "news",
+      "label": "Supper Club (fill)",
+      "conf": "fill",
+      "src": "The Chesterfield Supper Club held NBC 7:00 weeknights 1944-49 (NYT logs 9, 10 and 12 Nov 1948: WNBC 7:00 'Supper Club Variety'); not on archive.org, strips and sports fill"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "at": "19:30",
+      "len": 15,
+      "pool": "news",
+      "label": "News of the World (fill)",
+      "conf": "fill",
+      "src": "News of the World held NBC 7:15 weeknights in 1948 and 7:30 from 1950 (NYT logs Nov 1948, Nov 1950, 3 Nov 1952: WNBC 'News of the World, Morgan Beatty'); no recordings, strips fill"
+    },
+    {
+      "days": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "at": "19:45",
+      "len": 15,
+      "pool": "news",
+      "label": "One Man's Family quarter hour (fill)",
+      "conf": "fill",
+      "src": "One Man's Family held NBC 7:45 weeknights 1950-55 (NYT logs 6-10 Nov 1950 and 3 Nov 1952: WNBC 7:45); the catalog has only its earlier half-hour shows, which play on Sunday afternoon instead"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-railroad-hour",
+      "conf": "verified",
+      "src": "The Railroad Hour, NBC Monday 8:00 PM, 1949-54 (ratings tables: Mon 8:00 30 NBC; NYT logs 6 Nov 1950 and 3 Nov 1952: WNBC 8:00). Cavalcade of America held Monday 8:00 in 1948"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "20:30",
+      "len": 30,
+      "pool": "music",
+      "label": "Voice of Firestone (fill)",
+      "conf": "fill",
+      "src": "The Voice of Firestone held NBC Monday 8:30 for decades (tables: Mon 8:30 30 NBC; NYT logs 1948-52: WNBC 8:30 'Howard Barlow Orchestra'); concerts are not on archive.org, music fills"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "21:00",
+      "len": 30,
+      "pool": "music",
+      "label": "The Telephone Hour (fill)",
+      "conf": "fill",
+      "src": "The Bell Telephone Hour held NBC Monday 9:00, 1940-58 (NYT logs 1948-52: WNBC 9:00 'Donald Voorhees Orchestra'; Chicago Tribune 6 Nov 1950: WMAQ 8:00 CT); music fills"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "dangerous-assignment",
+      "conf": "approx",
+      "src": "Dangerous Assignment, NBC 1950 (episode dates confirm Mondays); 9:30 placed"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "22:00",
+      "len": 30,
+      "conf": "fill",
+      "src": "The Carnation Contented Hour held NBC Monday 10:00 in 1948 (NYT log 8 Nov 1948; Chicago Tribune: WMAQ 9:00 CT) and the NBC Symphony by 1950; music fills",
+      "pool": "music",
+      "label": "Contented Hour (fill)"
+    },
+    {
+      "days": [
+        1
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "information-please",
+      "conf": "verified",
+      "src": "Information Please, NBC Monday 10:30 PM, 1943-45 (1943-44 table: Mon 10:30 30 NBC; episode dates confirm Mondays)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "cavalcade-of-america",
+      "conf": "verified",
+      "src": "Cavalcade of America, NBC Tuesday 8:00 PM, 1949-53 (NYT log 7 Nov 1950: WNBC 8:00; 1951-52 ratings table: Tue 8:00 30 NBC); Mondays 8:00 in 1940-49 (NYT log 8 Nov 1948)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "a-date-with-judy",
+      "conf": "verified",
+      "src": "A Date with Judy, NBC Tuesday 8:30 PM, 1945-49 (ratings tables: Tue 8:30 30 NBC; NYT log 9 Nov 1948: 'A Date With Judy, With Louise Erickson')"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "amos-and-andy",
+      "conf": "verified",
+      "src": "Amos 'n' Andy, NBC Tuesday 9:00 PM, 1945-48 (ratings tables: Tue 9:00 30 NBC; episode dates confirm Tuesdays)"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "fibber-mcgee-and-molly",
+      "conf": "verified",
+      "src": "Fibber McGee and Molly, NBC Tuesday 9:30 PM, 1940-53 (every ratings table: Tue 9:30 30 NBC; NYT logs 9 Nov 1948 and 7 Nov 1950: WNBC 9:30); plays the surviving 1935-37 shows"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-bob-hope-show",
+      "conf": "verified",
+      "src": "The Bob Hope Show, NBC Tuesday 10:00 PM, 1938-48 (ratings tables: Tue 10:00 30 NBC), then 9:00 to 1952"
+    },
+    {
+      "days": [
+        2
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "the-red-skelton-show",
+      "conf": "verified",
+      "src": "The Red Skelton Show, NBC Tuesday 10:30 PM, 1941-47 (ratings tables: Tue 10:30 30 NBC)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-halls-of-ivy",
+      "conf": "verified",
+      "src": "The Halls of Ivy, NBC Wednesday 8:00 PM, 1950-52 (NYT log 8 Nov 1950: WNBC 8:00 'Halls of Ivy, With Mr. and Mrs. Ronald Colman'; 1951-52 table: Wed 8:00 30 NBC)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "the-great-gildersleeve",
+      "conf": "verified",
+      "src": "The Great Gildersleeve, NBC Wednesday 8:30 PM, 1946-54 (ratings tables: Wed 8:30 30 NBC; NYT logs 10 Nov 1948 and 8 Nov 1950: WNBC 8:30)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "you-bet-your-life",
+      "conf": "verified",
+      "src": "You Bet Your Life, NBC Wednesday 9:00 PM, 1950-56 (ratings tables: Wed 9:00 30 NBC; NYT log 8 Nov 1950: WNBC 'Groucho Marx: You Bet Your Life'); Duffy's Tavern held the slot in 1946-49"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "mr-district-attorney",
+      "conf": "verified",
+      "src": "Mr. District Attorney, NBC Wednesday 9:30 PM, 1940-52 (every ratings table: Wed 9:30 30 NBC; NYT logs 10 Nov 1948 and 8 Nov 1950: WNBC 9:30)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-big-story",
+      "conf": "verified",
+      "src": "The Big Story, NBC Wednesday 10:00 PM, 1947-51 (ratings tables: Wed 10:00 30 NBC; NYT logs 10 Nov 1948 and 8 Nov 1950: WNBC 10:00)"
+    },
+    {
+      "days": [
+        3
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "richard-diamond-private-detective",
+      "conf": "verified",
+      "src": "Richard Diamond, NBC Wednesday 10:30 PM, Sep-Dec 1950 (NYT log 8 Nov 1950: WNBC 10:30 'Richard Diamond-Sketch'; episode dates confirm Wednesdays); Curtain Time held the slot in 1948"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "dennis-day",
+      "conf": "verified",
+      "src": "A Day in the Life of Dennis Day, NBC Thursday 7:30 PM, 1947-48 (ratings table: Thu 7:30 30 NBC)"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "father-knows-best",
+      "conf": "verified",
+      "src": "Father Knows Best, NBC Thursday 8:00 PM, 1951-52 (1951-52 table: Thu 8:00 30 NBC; NYT log 9 Nov 1950: 8:30; episode dates confirm Thursdays). The Aldrich Family held 8:00 in 1948-50"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "burns-and-allen",
+      "conf": "verified",
+      "src": "Burns and Allen, NBC Thursday 8:30 PM, 1946-49 (ratings tables: Thu 8:30 30 NBC; NYT log 11 Nov 1948: 'George Burns and Gracie Allen, Comedy')"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "dragnet",
+      "conf": "verified",
+      "src": "Dragnet, NBC Thursday 9:00 PM, 1950-52 (ratings tables: Thu 9:00 30 NBC; NYT log 9 Nov 1950: WNBC 9:00 'Dragnet-Play'; 1952 episode dates confirm Thursdays)"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "kraft-music-hall",
+      "conf": "verified",
+      "src": "Kraft Music Hall held NBC Thursday 9:00, 1936-49 (ratings tables: Thu 9:00 30 NBC; NYT log 11 Nov 1948: 'Music Hall: Al Jolson, Oscar Levant'); placed after Dragnet here. Two broadcasts survive on archive.org"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "abbott-and-costello",
+      "conf": "verified",
+      "src": "The Abbott and Costello Show, NBC Thursday 10:00 PM, 1943-47 (ratings tables: Thu 10:00 30 NBC; episode dates confirm Thursdays)"
+    },
+    {
+      "days": [
+        4
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "eddie-cantor",
+      "conf": "verified",
+      "src": "The Eddie Cantor Show, NBC Thursday 10:30 PM, 1946-47 (ratings table: Thu 10:30 30 NBC); Wednesdays at 9:00 1940-46"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "new-adventures-of-nero-wolfe",
+      "conf": "verified",
+      "src": "The New Adventures of Nero Wolfe, NBC Friday 8:00 PM, 1950-51 (NYT log 10 Nov 1950: WNBC 8:00 'Play: Nero Wolfe, With Sydney Greenstreet')"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "night-beat",
+      "conf": "verified",
+      "src": "Night Beat, NBC Friday 8:30 PM, 1950 (NYT log 10 Nov 1950: WNBC 8:30 'Play: Nightbeat, With Frank Lovejoy'); Mondays in the spring of 1950"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "people-are-funny",
+      "conf": "verified",
+      "src": "People Are Funny, NBC Friday 9:00 PM, 1946-48 (ratings tables: Fri 9:00 30 NBC); Tuesday 10:30 from the fall of 1948 (NYT logs 9 Nov 1948 and 7 Nov 1950)"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "21:30",
+      "len": 30,
+      "conf": "verified",
+      "src": "Duffy's Tavern, NBC Friday 9:30 PM, 1950-51 (NYT log 10 Nov 1950: WNBC 9:30 'Comedy: Duffy's Tavern'); Wednesday 9:00 in 1946-49, Friday 8:30 in 1945-46",
+      "show": "duffys-tavern"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-life-of-riley",
+      "conf": "verified",
+      "src": "The Life of Riley, NBC Friday 10:00 PM, 1948-51 (ratings tables: Fri 10:00 30 NBC; NYT logs 12 Nov 1948 and 10 Nov 1950: WNBC 10:00); Saturdays 8:00 1945-48"
+    },
+    {
+      "days": [
+        5
+      ],
+      "at": "22:30",
+      "len": 15,
+      "show": "bill-stern-sports-reel",
+      "conf": "verified",
+      "src": "Bill Stern's Colgate Sports Newsreel, NBC Friday 10:30 PM, 1941-51 (NYT logs 12 Nov 1948 and 10 Nov 1950: WNBC 10:30 'Sports: Bill Stern'; episode dates confirm Fridays)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "10:00",
+      "len": 30,
+      "show": "adventures-of-frank-merriwell",
+      "conf": "likely",
+      "src": "The Adventures of Frank Merriwell, NBC Saturday 10:00 AM, 1946-49 (episode dates confirm Saturdays)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "10:30",
+      "len": 90,
+      "pool": "satkids",
+      "label": "Saturday morning (fill)",
+      "conf": "fill",
+      "src": "Archie Andrews (10:30) and Smilin' Ed McConnell (11:30) followed on NBC Saturday mornings (NYT log 13 Nov 1948); not harvested, serials fill"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "the-man-called-x",
+      "conf": "verified",
+      "src": "The Man Called X, NBC Saturday 8:00 PM, 1950-51 (NYT log 11 Nov 1950: WNBC 8:00 'Play: The Man Called X, With Herbert Marshall'; episode dates confirm Saturdays); Hollywood Star Theatre held the slot in 1948"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "truth-or-consequences",
+      "conf": "verified",
+      "src": "Truth or Consequences, NBC Saturday 8:30 PM, 1940-50 (every ratings table: Sat 8:30 30 NBC; NYT log 13 Nov 1948: 8:30-9)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "21:00",
+      "len": 30,
+      "show": "your-hit-parade",
+      "conf": "verified",
+      "src": "Your Hit Parade, NBC Saturday 9:00 PM, 1946-50 (ratings tables: Sat 9:00 30 NBC; NYT log 11 Nov 1950: WNBC 9:00; Chicago Tribune 13 Nov 1948: WMAQ 8:00 CT); only two broadcasts are on archive.org"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "can-you-top-this",
+      "conf": "verified",
+      "src": "Can You Top This?, NBC Saturday 9:30 PM, 1945-47 (ratings tables: Sat 9:30 30 NBC); Judy Canova (1948) and Dennis Day (1950) held the slot after it, and the show itself moved to Mutual and then ABC"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "the-judy-canova-show",
+      "conf": "verified",
+      "src": "The Judy Canova Show, NBC Saturday 10:00 PM, 1945-51 (ratings tables: Sat 10:00 30 NBC; NYT log 11 Nov 1950: WNBC 10:00; 9:30 in the fall of 1948)"
+    },
+    {
+      "days": [
+        6
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "grand-ole-opry",
+      "conf": "verified",
+      "src": "Grand Ole Opry (Prince Albert), NBC Saturday 10:30 PM, 1943-57 (1943-44 table: Sat 10:30 30 NBC; NYT log 11 Nov 1950: WNBC 10:30 'Grand Ole Opry, With Red Foley; Hank Williams, Guest')"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "06:00",
+      "len": 300,
+      "pool": "sunday-morning",
+      "label": "Sunday morning (fill)",
+      "conf": "fill",
+      "src": "NBC Sunday mornings were church, choirs and the news; drama and music fill"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "14:30",
+      "len": 60,
+      "show": "nbc-university-theater",
+      "conf": "likely",
+      "src": "NBC University Theater, NBC Sunday afternoon 1948-51 (Chicago Tribune 7 Nov 1948 places it in the 1:00 CT hour; episode dates confirm Sundays); 2:30 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "15:30",
+      "len": 30,
+      "show": "one-mans-family",
+      "conf": "likely",
+      "src": "One Man's Family, NBC Sunday afternoon 1949-50 (Chicago Tribune 7 Nov 1948 places it in the 2:00 CT hour; episode dates confirm Sundays in 1949); 3:30 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "18:30",
+      "len": 30,
+      "show": "the-great-gildersleeve",
+      "conf": "verified",
+      "src": "The Great Gildersleeve, NBC Sunday 6:30 PM, 1941-46 (ratings tables: Sun 6:30 30 NBC; episode dates confirm Sundays); Ozzie and Harriet held the slot in 1948"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "19:00",
+      "len": 30,
+      "show": "jack-benny-nbc",
+      "conf": "verified",
+      "src": "The Jack Benny Program, NBC Sunday 7:00 PM, 1936-48 (every ratings table: Sun 7:00 30 NBC; Chicago Tribune 7 Nov 1948: WMAQ 6:00 CT)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "19:30",
+      "len": 30,
+      "show": "the-phil-harris-alice-faye-show",
+      "conf": "verified",
+      "src": "The Phil Harris-Alice Faye Show, NBC Sunday 7:30 PM, 1946-50 (ratings tables: Sun 7:30 30 NBC; Chicago Tribune 7 Nov 1948: WMAQ 6:30 CT); 8:00 from 1951 (NYT log 2 Nov 1952)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "20:00",
+      "len": 30,
+      "show": "edgar-bergen-and-charlie-mccarthy",
+      "conf": "verified",
+      "src": "Edgar Bergen and Charlie McCarthy, NBC Sunday 8:00 PM, 1937-48 (every ratings table: Sun 8:00 30 NBC; Chicago Tribune 7 Nov 1948: WMAQ 7:00 CT)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "20:30",
+      "len": 30,
+      "show": "fred-allen-1945",
+      "conf": "verified",
+      "src": "The Fred Allen Show, NBC Sunday 8:30 PM, 1945-49 (ratings tables: Sun 8:30 30 NBC; Chicago Tribune 7 Nov 1948: WMAQ 7:30 CT); Theatre Guild took the hour in 1949"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:00",
+      "len": 30,
+      "pool": "music",
+      "label": "Manhattan Merry-Go-Round (fill)",
+      "conf": "fill",
+      "src": "Manhattan Merry-Go-Round held NBC Sunday 9:00 (tables: Sun 9:00 30 NBC; Chicago Tribune 7 Nov 1948: WMAQ 8:00 CT); music fills"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "21:30",
+      "len": 30,
+      "show": "dragnet",
+      "conf": "verified",
+      "src": "Dragnet, NBC Sunday 9:30 PM, 1952-53 (ratings table: Sun 9:30 30 NBC; NYT log 2 Nov 1952: 9:30-10 'Dragnet, With Jack Webb'; episode dates confirm Sundays)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "22:00",
+      "len": 30,
+      "show": "barrie-craig-confidential-investigator",
+      "conf": "verified",
+      "src": "Barrie Craig, Confidential Investigator, NBC Sunday 10:00 PM, 1952-53 (ratings table: Sun 10:00 30 NBC; Chicago Tribune 2 Nov 1952: WMAQ 9:00 CT)"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "22:30",
+      "len": 30,
+      "show": "whitehall-1212",
+      "conf": "approx",
+      "src": "Whitehall 1212, NBC 1951-52 (episode dates confirm Sundays); 10:30 placed"
+    },
+    {
+      "days": [
+        0
+      ],
+      "at": "16:00",
+      "len": 30,
+      "show": "dimension-x",
+      "conf": "approx",
+      "src": "Dimension X, NBC 1950-51 (episode dates: Fridays and Saturdays in 1950, Sundays in 1951); Sunday afternoon placed"
+    }
   ]
 }
