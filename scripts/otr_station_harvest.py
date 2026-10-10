@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Build frontend/public/otr/stations/<station>.shows.json: the station-only shows a network station
-(station.js) needs that the /otr catalog does not carry, harvested from archive.org metadata.
+"""Build frontend/public/otr/stations/shows.json: the station-only shows the network stations (station.js)
+need that the /otr catalog does not carry, harvested from archive.org metadata. One shared file serves
+every network grid (NBC, CBS, ABC, Mutual); a show harvested for one grid is available to all of them.
 
-The grid itself is hand-authored in frontend/public/otr/stations/<station>.grid.json. This script only
+The grids themselves are hand-authored in frontend/public/otr/stations/<station>.grid.json. This script only
 fetches episode lists (title, date, runtime, file) for the shows listed in HARVEST below, in the same
 row shape the catalog uses, so the player resolves and streams them exactly like catalog episodes:
     url = "https://archive.org/download/" + show.ids[ep[3]] + "/" + ep[4]
 archive.org download URLs send Access-Control-Allow-Origin: *, so nothing is rehosted.
 
-Run:  python3 scripts/otr_station_harvest.py            # write abc.shows.json and print a report
-      python3 scripts/otr_station_harvest.py --check    # validate the grid against catalog + harvested shows, write nothing
+Run:  python3 scripts/otr_station_harvest.py            # write shows.json and print a report
+      python3 scripts/otr_station_harvest.py --check    # validate every grid against catalog + harvested shows, write nothing
       python3 scripts/otr_station_harvest.py --dry-run  # report only
 Metadata is cached in $IA_CACHE (default /tmp/iacache) so reruns are cheap.
 """
@@ -19,7 +20,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OTR = os.path.join(HERE, "..", "frontend", "public", "otr")
 STATIONS = os.path.join(OTR, "stations")
 CACHE = os.environ.get("IA_CACHE", "/tmp/iacache")
-STATION = "abc"
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 
 # id -> (display name, [archive.org identifiers], options)
@@ -47,6 +47,44 @@ HARVEST = {
     "drew-pearson":                ("Drew Pearson",                 ["WWII_News_19450422_Drew_Pearson", "WWII_News_19450506_Drew_Pearson"], {"min": 5*60}),
     "hop-harrigan":                ("Hop Harrigan",                 ["otr_hopharrigan"], {"min": 8*60}),
     "paul-whiteman":               ("Paul Whiteman",                ["PaulWhitemanJHMC"], {"min": 15*60}),
+    # NBC
+    "cavalcade-of-america":        ("Cavalcade of America",         ["OTRR_Cavalcade_of_America_Singles"], {"min": 15*60}),
+    "jack-benny-nbc":              ("The Jack Benny Program (NBC years)", ["TheJackBennyProgram"], {"min": 20*60, "years": (1934, 1948)}),
+    "fred-allen-1945":             ("The Fred Allen Show (1945-49)", ["FredAllen--theFredAllenShow1945-1949"], {"min": 15*60}),
+    "kraft-music-hall":            ("Kraft Music Hall",              ["KraftMusicHallWithBingCrosby441221ChristmasShow", "KraftMusicHallWithAlJolson471127DorothyLamour"], {"min": 15*60}),
+    "truth-or-consequences":       ("Truth or Consequences",        ["TruthorConsequences"], {"min": 15*60}),
+    "a-date-with-judy":            ("A Date with Judy",             ["A_Date_With_Judy"], {"min": 15*60}),
+    "the-judy-canova-show":        ("The Judy Canova Show",         ["The.Judy.Canova.Show"], {"min": 15*60}),
+    "people-are-funny":            ("People Are Funny",             ["PeopleAreFunny"], {"min": 15*60}),
+    "the-big-story":               ("The Big Story",                ["OTRR_Big_Story_Singles"], {"min": 15*60}),
+    "dennis-day":                  ("A Day in the Life of Dennis Day", ["otr_dennisday"], {"min": 15*60}),
+    "can-you-top-this":            ("Can You Top This?",            ["Can-You-Top_This"], {"min": 15*60}),
+    "grand-ole-opry":              ("Grand Ole Opry",               ["GrandOleOpryOtr"], {"min": 15*60}),
+    "your-hit-parade":             ("Your Hit Parade",              ["YourHitParade19440506", "YourHitParadeMarch201948"], {"min": 15*60}),
+    "the-roy-rogers-show":         ("The Roy Rogers Show",          ["The_Roy_Rogers_Show"], {"min": 15*60}),
+    # CBS
+    "beulah":                      ("Beulah",                       ["TheBeulahShow"], {"min": 8*60}),
+    "life-with-luigi":             ("Life with Luigi",              ["Life_With_Luigi"], {"min": 15*60}),
+    "mr-and-mrs-north":            ("Mr. and Mrs. North",           ["OTRR_Mr_and_Mrs_North_Singles"], {"min": 15*60}),
+    "the-fbi-in-peace-and-war":    ("The FBI in Peace and War",     ["FBI_In_Peace_And_War"], {"min": 15*60}),
+    "casey-crime-photographer":    ("Casey, Crime Photographer",    ["OTRR_Casey_Crime_Photographer_Singles"], {"min": 15*60}),
+    "hallmark-playhouse":          ("Hallmark Playhouse",           ["HallmarkPlayhouse"], {"min": 15*60}),
+    "crime-classics":              ("Crime Classics",               ["OTRR_Crime_Classics_Singles"], {"min": 15*60}),
+    "romance":                     ("Romance",                      ["OTRR_Certified_Romance_Singles"], {"min": 15*60}),
+    "big-town":                    ("Big Town",                     ["BigTown"], {"min": 15*60}),
+    "blondie":                     ("Blondie",                      ["OtrBlondie"], {"min": 15*60}),
+    "meet-corliss-archer":         ("Meet Corliss Archer",          ["MeetCorlissArcher_14"], {"min": 15*60}),
+    "the-thin-man":                ("The Adventures of the Thin Man", ["ThinManOtr"], {"min": 15*60}),
+    "kate-smith-hour":             ("The Kate Smith Hour",          ["Kate_Smith_Hour"], {"min": 15*60}),
+    "columbia-workshop":           ("Columbia Workshop",            ["ColumbiaWorkshop"], {"min": 10*60}),
+    "arthur-godfrey":              ("Arthur Godfrey",               ["Arthur_Godfrey"], {"min": 15*60}),
+    "jack-benny-1949":             ("The Jack Benny Program (1949-50)", ["OTRR_Jack_Benny_Singles_1949-1950"], {"min": 20*60}),
+    # Mutual
+    "captain-midnight":            ("Captain Midnight",             ["Captain_Midnight"], {"min": 8*60}),
+    "tom-mix":                     ("Tom Mix Ralston Straight Shooters", ["Tom_Mix"], {"min": 8*60}),
+    "bulldog-drummond":            ("Bulldog Drummond",             ["Bulldog_Drummond"], {"min": 15*60}),
+    "the-cisco-kid":               ("The Cisco Kid",                ["The-Cisco-Kid-VER.2"], {"min": 15*60}),
+    "true-detective-mysteries":    ("True Detective Mysteries",     ["TrueDetectiveMysteries"], {"min": 15*60}),
 }
 CREDIT = "Episode lists harvested from archive.org item metadata (scripts/otr_station_harvest.py)"
 
@@ -174,41 +212,46 @@ def load_grid(station):
 
 
 def check(station, shows):
-    """Validate the grid: every show id resolves, pools are non-empty, slots never overlap, times parse."""
+    """Validate a grid: every show id resolves, pools are non-empty, slots never overlap, times parse."""
     grid = load_grid(station)
     cat = json.load(open(os.path.join(OTR, "catalog.json")))
     ids = {s["id"] for s in cat["shows"] if not s.get("adv")} | {s["id"] for s in shows}
     errs = []
+    pre = station + ": "
     def mins(t):
         m = re.fullmatch(r"(\d{2}):(\d{2})", t)
         if not m: errs.append("bad time " + t); return 0
         return int(m.group(1)) * 60 + int(m.group(2))
     for pname, pool in grid["pools"].items():
-        if not pool: errs.append("empty pool " + pname)
+        if not pool: errs.append(pre + "empty pool " + pname)
         for sid in pool:
-            if sid not in ids: errs.append("pool %s: unknown show %s" % (pname, sid))
+            if sid not in ids: errs.append(pre + "pool %s: unknown show %s" % (pname, sid))
     for sid in grid.get("serial", []):
-        if sid not in ids: errs.append("serial: unknown show " + sid)
+        if sid not in ids: errs.append(pre + "serial: unknown show " + sid)
     for d in grid["defaults"]:
         mins(d["from"]); mins(d["to"])
-        if d["pool"] not in grid["pools"]: errs.append("defaults: unknown pool " + d["pool"])
+        if d["pool"] not in grid["pools"]: errs.append(pre + "defaults: unknown pool " + d["pool"])
     for s in grid["slots"]:
-        if "show" in s and s["show"] not in ids: errs.append("slot %s: unknown show %s" % (s["at"], s["show"]))
-        if "pool" in s and s["pool"] not in grid["pools"]: errs.append("slot %s: unknown pool %s" % (s["at"], s["pool"]))
-        if "show" not in s and "pool" not in s: errs.append("slot %s: neither show nor pool" % s["at"])
-        if s.get("conf") not in ("verified", "likely", "approx", "fill"): errs.append("slot %s: bad conf" % s["at"])
+        if "show" in s and s["show"] not in ids: errs.append(pre + "slot %s: unknown show %s" % (s["at"], s["show"]))
+        if "pool" in s and s["pool"] not in grid["pools"]: errs.append(pre + "slot %s: unknown pool %s" % (s["at"], s["pool"]))
+        if "show" not in s and "pool" not in s: errs.append(pre + "slot %s: neither show nor pool" % s["at"])
+        if s.get("conf") not in ("verified", "likely", "approx", "fill"): errs.append(pre + "slot %s: bad conf" % s["at"])
     for day in range(7):
         iv = sorted((mins(s["at"]), mins(s["at"]) + s["len"], s.get("show") or s.get("label")) for s in grid["slots"] if day in s["days"])
         for a, b in zip(iv, iv[1:]):
-            if b[0] < a[1]: errs.append("day %d: %s overlaps %s" % (day, a, b))
-        if iv and iv[-1][1] > 24 * 60: errs.append("day %d: %s runs past midnight" % (day, iv[-1]))
+            if b[0] < a[1]: errs.append(pre + "day %d: %s overlaps %s" % (day, a, b))
+        if iv and iv[-1][1] > 24 * 60: errs.append(pre + "day %d: %s runs past midnight" % (day, iv[-1]))
     return errs
+
+
+def stations():
+    return sorted(f[:-10] for f in os.listdir(STATIONS) if f.endswith(".grid.json"))
 
 
 def main():
     dry = "--dry-run" in sys.argv
     only_check = "--check" in sys.argv
-    out = os.path.join(STATIONS, STATION + ".shows.json")
+    out = os.path.join(STATIONS, "shows.json")
     if only_check and os.path.exists(out):
         shows = json.load(open(out))["shows"]
     else:
@@ -220,12 +263,13 @@ def main():
             dated = sum(1 for e in show["eps"] if e[1])
             print("%-30s %4d eps  %5.1f h  dated %3d   %s" % (sid, len(show["eps"]), total / 3600, dated, "; ".join(rep)))
             for e in show["eps"][:2]: print("      ", e[1] or "(undated)", "|", e[0], "|", e[2] // 60, "min")
-    errs = check(STATION, shows)
+    errs = []
+    for st in stations(): errs += check(st, shows)
     for e in errs: print("GRID ERROR:", e)
     if only_check or dry:
-        print("check only" if only_check else "dry run", "- grid", "OK" if not errs else "has %d errors" % len(errs))
+        print("check only" if only_check else "dry run", "- grids", ", ".join(stations()), "OK" if not errs else "have %d errors" % len(errs))
         sys.exit(1 if errs else 0)
-    data = {"version": 1, "station": STATION, "generated": datetime.date.today().isoformat(), "source": CREDIT,
+    data = {"version": 2, "generated": datetime.date.today().isoformat(), "source": CREDIT,
             "prefix": "https://archive.org/download/", "shows": shows}
     os.makedirs(STATIONS, exist_ok=True)
     with open(out, "w") as f:

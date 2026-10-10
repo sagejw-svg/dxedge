@@ -219,6 +219,10 @@
   .guide summary::before { content: '▸'; color: var(--amber); margin-right: 2px; }
   .guide[open] summary::before { content: '▾'; }
   .guide summary .hint { font-size: 10.5px; color: var(--dim); }
+  .guide summary .guide-pick { margin-left: auto; display: inline-flex; gap: 5px; }
+  .guide .gchip { font: inherit; font-size: 10.5px; color: var(--muted); background: var(--bg2); border: 1px solid var(--border2); border-radius: 999px; padding: 1px 9px; cursor: pointer; }
+  .guide .gchip.on { color: var(--amber2); border-color: rgba(255,179,71,0.5); background: rgba(255,179,71,0.08); }
+  @media (max-width: 520px){ .guide summary .guide-pick { margin-left: 0; width: 100%; } }
   .guide-body { padding: 2px 0 10px; }
   .guide-blurb { font-size: 11.5px; color: var(--muted); line-height: 1.55; margin: 0 0 10px; }
   .guide-legend { font-size: 10.5px; color: var(--dim); margin: 0 0 8px; line-height: 1.6; }
@@ -723,9 +727,9 @@
   <section class="pane on" id="channelsPane" role="tabpanel" aria-labelledby="channelsBtn">
     <!-- Network stations (station.js + stations/<id>.grid.json): the network's real weekly lineup on your local clock -->
     <div class="netrow" id="networks" hidden>
-      <div class="pane-h"><h3>Network stations</h3><span class="hint">what the network was carrying at this hour on this day of the week, on your local clock; no commercials, so a half hour often fits two shows. Pause and rewind as you like; tune back in and you are live again.</span></div>
+      <div class="pane-h"><h3>Network stations</h3><span class="hint">what each network was carrying at this hour on this day of the week, on your local clock; no commercials, so a half hour often fits two shows. Pause and rewind as you like; tune back in and you are live again.</span></div>
       <div class="chips stations networks" id="networkChips"></div>
-      <details class="guide" id="netGuide"><summary>Today on <span id="netGuideName">the network</span> <span class="hint" id="netGuideDay"></span></summary><div class="guide-body" id="netGuideBody"></div></details>
+      <details class="guide" id="netGuide"><summary><span>Today on <span id="netGuideName">the network</span></span> <span class="hint" id="netGuideDay"></span><span class="guide-pick" id="netGuidePick"></span></summary><div class="guide-body" id="netGuideBody"></div></details>
     </div>
     <div class="pane-h"><h2>Channels</h2><span class="hint">always on air: tap one to join the show in progress, or roll its 🎲 for a random episode</span></div>
     <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
@@ -1474,21 +1478,20 @@
   // zone hears the same thing. Pause, rewind and skip go time-shifted like a channel; tapping the card
   // (or reloading) rejoins live. Station-only shows live in byId but not in CAT.shows, so the builder,
   // search and the footer count never see them.
-  var NETWORKS = ['abc'], NETS = {}, NET_ORDER = [], netGuideDay = -1;
+  var NETWORKS = ['nbc','cbs','abc','mutual'], NETS = {}, NET_ORDER = [], netGuideDay = -1, netGuideSel = null;
   function loadNetworks(){
-    NETWORKS.forEach(function(id){
-      Promise.all([getJSON('stations/'+id+'.grid.json'), getJSON('stations/'+id+'.shows.json').catch(function(){ return null; })])
-        .then(function(res){
-          var grid=res[0], extra=res[1];
-          if(extra && extra.shows) extra.shows.forEach(function(s){ if(!byId[s.id]){ s.st=true; byId[s.id]=s; } });
+    // one shared file of station-only shows (stations/shows.json), then each network's grid
+    getJSON('stations/shows.json').catch(function(){ return null; }).then(function(extra){
+      if(extra && extra.shows) extra.shows.forEach(function(s){ if(!byId[s.id]){ s.st=true; byId[s.id]=s; } });
+      NETWORKS.forEach(function(id){
+        getJSON('stations/'+id+'.grid.json').then(function(grid){
           NETS[id] = new OTRStation.Station(grid, byId);
-          NETS[id].extraCount = extra && extra.shows ? extra.shows.length : 0;
-          NET_ORDER.push(id);
+          NET_ORDER = NETWORKS.filter(function(n){ return !!NETS[n]; });
           buildNetworkCards(); renderNetworkNow();
           var last = load('otr_last','');
           if(last==='net:'+id && !state.queue.length && !state.channel) cueNetwork(id);
-        })
-        .catch(function(e){ console.warn('network station '+id+' unavailable', e); });
+        }).catch(function(e){ console.warn('network station '+id+' unavailable', e); });
+      });
     });
   }
   function netShowCount(N){ var seen={}; N.slots.forEach(function(s){ if(s.show && N.has(s.show)) seen[s.show]=1; }); Object.keys(N.pools).forEach(function(p){ N.pools[p].forEach(function(id){ seen[id]=1; }); }); return Object.keys(seen).length; }
@@ -1500,12 +1503,27 @@
       c.innerHTML = '<div class="st-head"><span class="st-name">'+escapeHtml(N.name)+'<span class="st-season">network</span></span>'+
         '<span class="st-actions"><span class="st-count">'+netShowCount(N)+' shows</span></span></div>'+
         '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"><span class="l"></span><span class="rejoin" style="display:none">rejoin live</span></div><div class="st-next"></div>';
-      c.onclick = function(){ startNetwork(id); };
+      c.onclick = function(){ startNetwork(id); setGuideNet(id); };
       el.appendChild(c);
     });
     row.hidden = !NET_ORDER.length;
-    if(NET_ORDER.length){ $('netGuideName').textContent = NETS[NET_ORDER[0]].grid.long || NETS[NET_ORDER[0]].name; $('netGuideDay').textContent=OTRStation.DAYS[new Date().getDay()]+', your local time'; }
+    // guide picker: one chip per network; the tuned network (or the first) is selected
+    var pick=$('netGuidePick'); pick.innerHTML='';
+    NET_ORDER.forEach(function(id){
+      var b=document.createElement('button'); b.type='button'; b.className='gchip'; b.dataset.net=id; b.textContent=NETS[id].name;
+      b.onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); setGuideNet(id); if(!$('netGuide').open) $('netGuide').open=true; };
+      pick.appendChild(b);
+    });
+    setGuideNet(netGuideSel && NETS[netGuideSel] ? netGuideSel : (state.network && NETS[state.network] ? state.network : NET_ORDER[0]));
     markActiveChip();
+  }
+  function setGuideNet(id){
+    if(!NETS[id]) return;
+    var changed = netGuideSel!==id; netGuideSel=id;
+    $('netGuideName').textContent = NETS[id].grid.long || NETS[id].name;
+    $('netGuideDay').textContent = OTRStation.DAYS[new Date().getDay()]+', your local time';
+    document.querySelectorAll('#netGuidePick .gchip').forEach(function(b){ b.classList.toggle('on', b.dataset.net===id); });
+    if(changed && $('netGuide').open) renderNetGuide(true);
   }
   function netItem(it){ return { showId:it.showId, epIndex:it.epIndex, isAd:false, at:it.at, dur:it.dur, own:it.own, fill:it.fill, label:it.label, net:true }; }
   function netLabel(N, it){
@@ -1532,7 +1550,7 @@
     if($('netGuide').open) renderNetGuide();
   }
   function renderNetGuide(force){
-    var id=NET_ORDER[0]; if(!id) return;
+    var id=netGuideSel||NET_ORDER[0]; if(!id || !NETS[id]) return;
     var N=NETS[id], now=new Date(), day=now.getDay(), minute=now.getHours()*60+now.getMinutes();
     var body=$('netGuideBody');
     if(netGuideDay!==day || force){

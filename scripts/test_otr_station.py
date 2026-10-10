@@ -21,16 +21,29 @@ def ck(n,c,d=''):
   print('PASS' if c else 'FAIL',n,'' if c else d)
   if not c: F.append(n)
 OFFLINE=os.environ.get('OTR_OFFLINE')=='1'
-grid=json.load(open(os.path.join(ROOT,'otr/stations/abc.grid.json')))
 with sync_playwright() as p:
   b=p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
   def page(tz='America/Los_Angeles', url='http://127.0.0.1:8797/otr/'):
     ctx=b.new_context(viewport={'width':1100,'height':900}, timezone_id=tz); pg=ctx.new_page(); errs=[]
     pg.on('pageerror',lambda e:errs.append(str(e))); pg.goto(url)
-    pg.wait_for_function('window.__otr&&__otr.ready()&&__otr.network.ready()',timeout=20000); pg.wait_for_timeout(400)
+    pg.wait_for_function('window.__otr&&__otr.ready()&&__otr.network.ids().length===4',timeout=20000); pg.wait_for_timeout(400)
     return pg, errs
   pg,errs=page()
-  ck('station.js loaded and ABC registered', pg.evaluate('__otr.network.ids()')==['abc'])
+  ck('station.js loaded and the four networks registered in order', pg.evaluate('__otr.network.ids()')==['nbc','cbs','abc','mutual'])
+  cards4=pg.eval_on_selector_all('#networkChips .station','els=>els.map(e=>[e.dataset.net, e.querySelector(".st-now").textContent, e.querySelector(".st-left .l").textContent])')
+  ck('every network card shows something on the air', len(cards4)==4 and all(c[1] and c[2].endswith('left') for c in cards4), cards4)
+  def at(dow,h,m): return pg.evaluate('([d,h,m])=>{ const x=new Date(); x.setDate(x.getDate()+((d-x.getDay()+7)%7)); x.setHours(h,m,0,0); return x.getTime()/1000; }',[dow,h,m])
+  nbc=pg.evaluate('t=>__otr.network.onAir("nbc",t)', at(2,21,40)); print('   nbc tue 9:40:', nbc)
+  ck('NBC Tuesday 9:40 PM is the comedy block (Fibber McGee or a neighbour running over)', nbc and nbc['showId'] in ('fibber-mcgee-and-molly','amos-and-andy','the-bob-hope-show') and nbc['slot'] in (21*60, 21*60+30, 22*60), nbc)
+  cbs=pg.evaluate('t=>__otr.network.onAir("cbs",t)', at(1,21,20)); print('   cbs mon 9:20:', cbs)
+  ck('CBS Monday 9:20 PM is Lux Radio Theatre (or Talent Scouts fill running over)', cbs and (cbs['showId']=='lux-radio-theatre' or (cbs['fill'] and cbs['slot']==20*60+30)), cbs)
+  mut=pg.evaluate('t=>__otr.network.onAir("mutual",t)', at(0,17,10)); print('   mutual sun 5:10:', mut)
+  ck('Mutual Sunday 5:10 PM is The Shadow (or True Detective running over)', mut and mut['showId'] in ('the-shadow','true-detective-mysteries'), mut)
+  late=pg.evaluate('t=>__otr.network.onAir("cbs",t)', at(3,22,50))
+  ck('CBS late every night is the Radio Mystery Theater', late and late['showId'].startswith('cbs-radio-mystery-theater'), late)
+  pg.click('#netGuidePick .gchip[data-net="mutual"]'); pg.wait_for_timeout(250)
+  ck('guide picker switches the lineup to Mutual', 'Mutual Broadcasting' in pg.inner_text('#netGuideName') and pg.evaluate('document.querySelector("#netGuidePick .gchip.on").dataset.net')=='mutual' and pg.evaluate('document.querySelectorAll("#netGuideBody tr").length')>=10)
+  pg.click('#netGuidePick .gchip[data-net="abc"]'); pg.wait_for_timeout(250)
   ck('harvested station-only shows registered (not in catalog)', pg.evaluate('__otr.network.extra().length')>=15 and pg.evaluate('__otr.catalog().shows.some(s=>s.st)')==False)
   ck('footer and builder unaffected by station-only shows', pg.evaluate('document.querySelectorAll("#showGrid .srow, #showGrid .show, #showGrid [data-id]").length')<=pg.evaluate('__otr.catalog().shows.length') and 'shows across' in pg.inner_text('#foot'))
   card=pg.eval_on_selector('#networkChips .station[data-net="abc"]','e=>({now:e.querySelector(".st-now").textContent,left:e.querySelector(".st-left .l").textContent,bar:e.querySelector(".st-bar i").style.width,next:e.querySelector(".st-next").textContent,count:e.querySelector(".st-count").textContent})')
@@ -69,7 +82,8 @@ with sync_playwright() as p:
   names=[r['name'] for r in lu]
   ck('Friday lineup lists the real ABC slots in order', 'The Lone Ranger' in names and 'The Fat Man' in names and 'This Is Your FBI' in names and names.index('The Fat Man')<names.index('This Is Your FBI'), names)
   ck('every lineup row carries a confidence class', all(r['conf'] in ('verified','likely','approx','fill') for r in lu))
-  pg.click('#netGuide summary'); pg.wait_for_timeout(200)
+  if not pg.evaluate('document.getElementById("netGuide").open'): pg.click('#netGuide summary')
+  pg.wait_for_timeout(200)
   rows=pg.evaluate('Array.from(document.querySelectorAll("#netGuideBody tr")).length')
   ck('guide renders today\'s lineup with a highlighted current row', rows>=12 and pg.evaluate('document.querySelectorAll("#netGuideBody tr.now").length')==1, rows)
   # restore: tuning saves otr_last=net:abc; a reload cues the station (no autoplay) and Play tunes it
@@ -92,7 +106,7 @@ with sync_playwright() as p:
     st2=pg.evaluate('({live:__otr.state.live, shifted:__otr.state.shifted, status:document.getElementById("onairText").textContent})')
     pg.evaluate('__otr.state.pausedAt=0')
     pg.wait_for_timeout(5200)
-    rejoin=pg.evaluate('getComputedStyle(document.querySelector("#networkChips .station .rejoin")).display')
+    rejoin=pg.evaluate('getComputedStyle(document.querySelector("#networkChips .station[data-net=abc] .rejoin")).display')
     ck('a long pause leaves the listener time-shifted, with a rejoin offer on the card', (not st2['live']) and st2['shifted'] and 'time-shifted' in st2['status'] and rejoin!='none', (st2,rejoin))
     pg.evaluate('document.querySelector("#networkChips .station[data-net=abc]").click()')
     pg.wait_for_function('__otr.state.live===true && /ABC live/.test(document.getElementById("onairText").textContent)', timeout=20000)
@@ -109,7 +123,7 @@ with sync_playwright() as p:
     after=pg.evaluate('({len:__otr.state.queue.length, qi:__otr.state.qi, net:__otr.state.network})')
     ck('reaching the end of the queue extends the chain instead of wrapping', after['len']>before and after['qi']==before and after['net']=='abc', (before,after))
     # reload: the station is cued, not autoplayed; Play tunes in live
-    pg.reload(); pg.wait_for_function('window.__otr&&__otr.ready()&&__otr.network.ready()',timeout=20000); pg.wait_for_timeout(500)
+    pg.reload(); pg.wait_for_function('window.__otr&&__otr.ready()&&__otr.network.ids().length===4',timeout=20000); pg.wait_for_timeout(500)
     cue=pg.evaluate('({net:__otr.state.network, q:__otr.state.queue.length, paused:document.getElementById("audio").paused, show:document.getElementById("npShow").textContent, status:document.getElementById("onairText").textContent})')
     ck('reload cues the last network without autoplay (leaving and coming back lands on what is on now)', cue['net']=='abc' and cue['q']==0 and cue['paused'] and cue['show'] and 'ready' in cue['status'], cue)
     pg.click('#playBtn'); pg.wait_for_function('__otr.state.live===true && __otr.state.network==="abc"', timeout=20000)
@@ -120,7 +134,7 @@ with sync_playwright() as p:
   ck('no page errors', not errs and not errs2 and not errs3, errs+errs2+errs3)
   # phone width: no horizontal scroll with the network row
   pgm=b.new_context(viewport={'width':375,'height':800}, timezone_id='America/Los_Angeles').new_page(); pgm.goto('http://127.0.0.1:8797/otr/')
-  pgm.wait_for_function('window.__otr&&__otr.ready()&&__otr.network.ready()',timeout=20000); pgm.wait_for_timeout(300)
+  pgm.wait_for_function('window.__otr&&__otr.ready()&&__otr.network.ids().length===4',timeout=20000); pgm.wait_for_timeout(300)
   ck('no horizontal scroll at 375px with the network row', pgm.evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth+1'))
   b.close()
 print('\n%d failures' % len(F), F)
