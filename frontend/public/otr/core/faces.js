@@ -2,7 +2,8 @@
  * and calls player methods (radio-player.js), so faces can be swapped while a show keeps playing.
  *
  *   OTRFaces.register({ id, name, blurb, sources:['otr'], size:{w,h}, build(root, ctx) -> { update(), destroy() } })
- *   ctx = { player, core, scale() -> current CSS scale of the face, toast(msg) }
+ *   ctx = { player, core, scale() -> current CSS scale of the face, toast(msg), openFinder() }
+ *   sources lists what a face can play: 'otr' (the dial) and/or 'live' (internet stations).
  *
  * Each face is drawn at a fixed design size and scaled to fit by the host page, so the same face
  * works on a phone, in a desktop pop-out window and on a 7 inch Pi screen (800x480 or 1280x720).
@@ -12,7 +13,7 @@
  */
 (function(){
   'use strict';
-  var FACES = [], DEFAULTS = { otr:'tabletop' };
+  var FACES = [], DEFAULTS = { otr:'tabletop', live:'car' };
   var REDUCED = (function(){ try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
 
   function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
@@ -82,29 +83,36 @@
 
   // A rotary knob. kind 'tune' turns the dial (one turn is about four stations); kind 'volume' turns
   // 0..1 over 270 degrees. Arrow keys work on both; on the tuning knob they hop station to station.
-  function Knob(knob, ctx, kind){
+  function Knob(knob, ctx, kind, opt){
+    opt = opt || {};
     var B = window.OTRCore.BAND, P = ctx.player, KPD = 0.7;   // kHz per degree on the tuning knob
     knob.setAttribute('role', 'slider'); knob.tabIndex = 0;
     var drag = null;
     function angleOf(e){ var r = knob.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; }
+    var fixedVol = kind === 'volume' && !P.canSetVolume;      // iPhone: volume comes from the phone's buttons
     knob.addEventListener('pointerdown', function(e){
       e.preventDefault();
-      if (kind === 'volume' && !P.canSetVolume) { ctx.toast('Use the volume buttons on your phone.'); return; }
-      drag = { a:angleOf(e), id:e.pointerId, moved:false };
+      drag = { a:angleOf(e), id:e.pointerId, moved:false, warned:false };
       try { knob.setPointerCapture(e.pointerId); } catch (x) {}
     });
     knob.addEventListener('pointermove', function(e){
       if (!drag || e.pointerId !== drag.id) return;
       var a = angleOf(e), d = a - drag.a; if (d > 180) d -= 360; if (d < -180) d += 360;
       if (!drag.moved && Math.abs(d) < 3) return;
-      drag.a = a;
-      if (kind === 'tune') { if (!drag.moved) P.beginTune(); P.setFreq(P.state.freq + d * KPD); }
+      drag.a = a; drag.moved = true;
+      if (fixedVol) { if (!drag.warned) { drag.warned = true; ctx.toast('Use the volume buttons on your phone.'); } return; }
+      if (kind === 'tune') { if (!P.state.tuning) P.beginTune(); P.setFreq(P.state.freq + d * KPD); }
       else P.setVolume(P.state.volume + d / 270);
-      drag.moved = true;
     });
-    function up(e){ if (!drag || e.pointerId !== drag.id) return; var d = drag; drag = null; if (kind === 'tune' && d.moved) P.endTune(); }
+    function up(e){
+      if (!drag || e.pointerId !== drag.id) return; var d = drag; drag = null;
+      if (kind === 'tune' && d.moved) { P.endTune(); return; }
+      if (!d.moved && opt.onTap) { opt.onTap(); return; }
+      if (!d.moved && fixedVol) ctx.toast('Use the volume buttons on your phone.');
+    }
     knob.addEventListener('pointerup', up); knob.addEventListener('pointercancel', up);
     knob.addEventListener('keydown', function(e){
+      if ((e.key === 'Enter' || e.key === ' ') && opt.onTap) { e.preventDefault(); opt.onTap(); return; }
       var dir = (e.key === 'ArrowRight' || e.key === 'ArrowUp') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowDown') ? -1 : 0;
       if (!dir) return; e.preventDefault();
       if (kind === 'tune') P.step(dir);
@@ -121,7 +129,7 @@
           knob.setAttribute('aria-valuenow', Math.round(s.freq)); knob.setAttribute('aria-valuetext', st ? st.name + ', ' + st.freq + ' kilocycles' : Math.round(s.freq) + ' kilocycles');
         } else {
           deg = -135 + s.volume * 270;
-          knob.setAttribute('aria-label', 'Volume'); knob.setAttribute('aria-valuemin', 0); knob.setAttribute('aria-valuemax', 100);
+          knob.setAttribute('aria-label', opt.onTap ? 'Volume. Press for power' : 'Volume'); knob.setAttribute('aria-valuemin', 0); knob.setAttribute('aria-valuemax', 100);
           knob.setAttribute('aria-valuenow', Math.round(s.volume * 100)); knob.setAttribute('aria-valuetext', P.canSetVolume ? Math.round(s.volume * 100) + ' percent' : 'Set with the phone volume buttons');
         }
         knob.style.setProperty('--rot', deg.toFixed(1) + 'deg');
@@ -285,6 +293,91 @@
   };
 
   // ---------------------------------------------------------------------------------------------
+  // Car stereo (a double-DIN head unit; plays the dial and live internet stations)
+  // ---------------------------------------------------------------------------------------------
+  var CAR = {
+    id:'car', name:'Car stereo', blurb:'A dashboard head unit with presets, for the dial or live stations', sources:['otr', 'live'], size:{ w:380, h:214 },
+    build:function(root, ctx){
+      var P = ctx.player, core = ctx.core;
+      var face = el('div', 'face car');
+      var pre = ''; for (var i = 0; i < 6; i++) pre += '<button type="button" class="cs-btn cs-pre" data-i="' + i + '"><b>' + (i + 1) + '</b></button>';
+      face.innerHTML =
+        '<div class="cs-dash"><div class="cs-unit">' +
+          '<div class="cs-row1">' +
+            '<div class="cs-kwrap"><div class="knob cs-knob" data-k="vol"><i></i></div><span>Push power</span></div>' +
+            '<div class="cs-disp" aria-hidden="true"><div class="cs-ind"><span class="cs-src"></span><span class="cs-pn"></span><span class="cs-st">ST</span><span class="cs-sig"><i></i><i></i><i></i><i></i></span></div>' +
+              '<div class="cs-main"></div><div class="cs-sub"></div></div>' +
+            '<div class="cs-side"><button type="button" class="cs-btn cs-srcb">Source</button><button type="button" class="cs-btn cs-find">Find</button></div>' +
+          '</div>' +
+          '<div class="cs-row2"><button type="button" class="cs-btn cs-seek" data-d="-1" aria-label="Seek down">&#9664;&#9664;</button>' + pre +
+            '<button type="button" class="cs-btn cs-seek" data-d="1" aria-label="Seek up">&#9654;&#9654;</button></div>' +
+          '<div class="cs-row3"><div class="cs-door"><span>Auto reverse</span></div><div class="cs-brand">DXEdge</div></div>' +
+        '</div></div>';
+      root.appendChild(face);
+      var vol = Knob(face.querySelector('[data-k=vol]'), ctx, 'volume', { onTap:function(){ P.togglePower(); } });
+      var main = face.querySelector('.cs-main'), sub = face.querySelector('.cs-sub'), srcEl = face.querySelector('.cs-src'), pn = face.querySelector('.cs-pn');
+      var flash = null, flashT = 0;
+      function say(msg){ flash = msg; clearTimeout(flashT); flashT = setTimeout(function(){ flash = null; update(); }, 1400); update(); }
+
+      face.querySelector('.cs-srcb').addEventListener('click', function(){ P.setSource(P.isLive() ? 'otr' : 'live'); say(P.isLive() ? 'LIVE RADIO' : 'AM DIAL'); });
+      face.querySelector('.cs-find').addEventListener('click', function(){ if (!P.isLive()) P.setSource('live'); if (ctx.openFinder) ctx.openFinder(); });
+      face.querySelectorAll('.cs-seek').forEach(function(b){ b.addEventListener('click', function(){ P.step(+b.dataset.d); }); });
+      face.querySelectorAll('.cs-pre').forEach(function(b){
+        var i = +b.dataset.i, timer = 0, held = false;
+        b.addEventListener('pointerdown', function(e){
+          held = false; clearTimeout(timer);
+          timer = setTimeout(function(){
+            held = true;
+            if (P.savePreset(i)) { say('P' + (i + 1) + ' SAVED'); try { navigator.vibrate && navigator.vibrate(30); } catch (x) {} }
+            else say('NOTHING TO SAVE');
+          }, 700);
+        });
+        function cancel(){ clearTimeout(timer); }
+        b.addEventListener('pointerup', cancel); b.addEventListener('pointerleave', cancel); b.addEventListener('pointercancel', cancel);
+        b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+        b.addEventListener('click', function(){
+          if (held) { held = false; return; }
+          if (!P.recallPreset(i)) { say('P' + (i + 1) + ' EMPTY'); ctx.toast('Hold a preset button to save the station that is playing.'); }
+        });
+        b.addEventListener('keydown', function(e){ if (e.key === 's' || e.key === 'S') { e.preventDefault(); if (P.savePreset(i)) say('P' + (i + 1) + ' SAVED'); } });
+      });
+
+      function clock(){ var d = new Date(), h = d.getHours() % 12 || 12; return h + ':' + String(d.getMinutes()).padStart(2, '0') + (d.getHours() < 12 ? ' AM' : ' PM'); }
+      function update(){
+        var s = P.state, live = P.isLive();
+        face.dataset.power = s.power ? 'on' : 'off';
+        face.dataset.status = s.status;
+        vol.update();
+        var idx = P.presetIndex();
+        srcEl.textContent = live ? 'NET' : 'AM';
+        pn.textContent = idx >= 0 ? 'P' + (idx + 1) : '';
+        var m = '', u = '';
+        if (!s.power) { m = clock(); u = ''; }
+        else if (flash) { m = flash; u = ''; }
+        else if (live) {
+          m = s.stream ? s.stream.name : 'NO STATION';
+          u = s.status === 'error' ? 'NOT ANSWERING' : s.status === 'idle' ? 'PRESS FIND' : (s.status === 'buffering' || s.status === 'warming') ? 'CONNECTING' : (s.stream ? (s.stream.place || s.stream.tags.join(' ')) : '');
+        } else {
+          var near = core.nearest(s.freq), st = near && near.station;
+          m = Math.round(s.freq) + '  ' + (st ? st.name : '');
+          u = s.tuning ? 'SEEK' : (s.res ? s.res.show : '');
+        }
+        if (main.textContent !== m) { main.textContent = m; main.classList.toggle('long', m.length > 13); main.classList.toggle('xlong', m.length > 18); }
+        if (sub.textContent !== u) sub.textContent = u;
+        face.querySelectorAll('.cs-pre').forEach(function(b){
+          var i = +b.dataset.i, v = P.presets()[i], name = !v ? '' : (live ? v.name : ((core.station(v) || {}).name || v));
+          b.classList.toggle('on', i === idx);
+          b.setAttribute('aria-label', 'Preset ' + (i + 1) + (name ? ': ' + name : ', empty') + '. Hold to save the station playing.');
+        });
+      }
+      var t = setInterval(function(){ if (!P.state.power) update(); }, 15000);
+      P.on('change', update); P.on('freq', update); P.on('source', update);
+      update();
+      return { update:update, destroy:function(){ clearInterval(t); clearTimeout(flashT); P.off('change', update); P.off('freq', update); P.off('source', update); face.remove(); } };
+    }
+  };
+
+  // ---------------------------------------------------------------------------------------------
   // Styles (injected once, so any host page can use the faces)
   // ---------------------------------------------------------------------------------------------
   var CSS = [
@@ -401,13 +494,55 @@
     '.pt-tune{right:6px;top:92px}',
     '.pt-vol{left:6px;top:92px}',
     '.pt-wheel:focus-visible{outline:2px solid #ffd894;outline-offset:2px}',
+    /* ---------------- car stereo ---------------- */
+    '.car{width:380px;height:214px;font-family:"Avenir Next",Futura,"Helvetica Neue",Arial,sans-serif}',
+    '.cs-dash{position:absolute;inset:0;border-radius:18px;padding:16px 10px;background:radial-gradient(120% 90% at 50% 0%,#3a3b3f,#222327 70%);',
+      'box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -10px 20px rgba(0,0,0,.45),0 24px 50px rgba(0,0,0,.55)}',
+    '.cs-unit{position:relative;height:100%;border-radius:8px;padding:10px 10px 0;background:linear-gradient(180deg,#26282c,#141518 60%,#101113);',
+      'box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px #050506,0 2px 0 rgba(255,255,255,.05),0 0 0 3px #0b0b0c}',
+    '.cs-row1{display:flex;align-items:center;gap:8px}',
+    '.cs-kwrap{display:flex;flex-direction:column;align-items:center;gap:3px;width:70px}',
+    '.cs-kwrap span{font-size:8.5px;letter-spacing:.06em;color:#8c8f95}',
+    '.cs-knob{width:60px;height:60px;border-radius:50%;cursor:grab;touch-action:none;background:radial-gradient(circle at 35% 30%,#4a4c51,#1b1c1f 62%,#0c0c0d);box-shadow:0 4px 8px rgba(0,0,0,.6),inset 0 1px 1px rgba(255,255,255,.18)}',
+    '.cs-knob i{position:absolute;inset:6px;border-radius:50%;transform:rotate(var(--rot,0deg));background:radial-gradient(circle,#2a2b2f 0 55%,transparent 56%),repeating-conic-gradient(#2c2d31 0 5deg,#17181a 5deg 10deg)}',
+    '.cs-knob i::after{content:"";position:absolute;left:50%;top:5px;width:3px;height:10px;margin-left:-1.5px;border-radius:2px;background:#6b6e74;transition:background .4s,box-shadow .4s}',
+    '.car[data-power=on] .cs-knob i::after{background:#ffb347;box-shadow:0 0 6px rgba(255,179,71,.8)}',
+    '.cs-disp{flex:1;min-width:0;height:88px;border-radius:5px;padding:7px 10px 6px;background:linear-gradient(180deg,#0f0904,#170d05);box-shadow:inset 0 2px 6px rgba(0,0,0,.9),0 0 0 1px #000,0 1px 0 rgba(255,255,255,.06);',
+      'font-family:"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;color:#5a3a12;text-transform:uppercase;overflow:hidden;position:relative}',
+    '.cs-disp::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 45%);pointer-events:none}',
+    '.cs-ind{display:flex;gap:10px;align-items:center;font-size:9px;letter-spacing:.12em;height:12px}',
+    '.cs-st,.cs-sig{opacity:0}',
+    '.cs-sig{display:flex;gap:2px;align-items:flex-end;margin-left:auto;height:9px}',
+    '.cs-sig i{display:block;width:3px;background:currentColor}',
+    '.cs-sig i:nth-child(1){height:3px}.cs-sig i:nth-child(2){height:5px}.cs-sig i:nth-child(3){height:7px}.cs-sig i:nth-child(4){height:9px}',
+    '.cs-main{margin-top:6px;font-size:19px;line-height:1.2;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.cs-main.long{font-size:15px;margin-top:8px}.cs-main.xlong{font-size:12.5px;margin-top:9px}',
+    '.cs-sub{margin-top:5px;font-size:10.5px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}',
+    '.car[data-power=on] .cs-disp{color:#ffb347;text-shadow:0 0 6px rgba(255,160,40,.55)}',
+    '.car[data-power=off] .cs-main{font-size:22px;text-align:center;margin-top:12px;color:#7a5220}',
+    '.car[data-status=onair] .cs-st,.car[data-status=onair] .cs-sig{opacity:1}',
+    '.cs-side{display:flex;flex-direction:column;gap:8px;width:62px}',
+    '.cs-btn{appearance:none;border:0;border-radius:5px;cursor:pointer;font:600 10px "Avenir Next",Futura,Arial,sans-serif;letter-spacing:.05em;color:#a7aab0;',
+      'background:linear-gradient(180deg,#2e3034,#1c1d20);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 3px rgba(0,0,0,.6);transition:color .3s,text-shadow .3s}',
+    '.cs-btn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 1px 1px rgba(0,0,0,.6)}',
+    '.cs-side .cs-btn{height:38px}',
+    '.car[data-power=on] .cs-btn{color:#ffcf8a;text-shadow:0 0 5px rgba(255,170,60,.55)}',
+    '.cs-row2{display:flex;gap:5px;margin-top:10px}',
+    '.cs-row2 .cs-btn{flex:1;height:36px;font-size:12px}',
+    '.cs-seek{flex:1.25!important;font-size:9px!important;letter-spacing:-.1em}',
+    '.cs-pre b{font-weight:600}',
+    '.car[data-power=on] .cs-pre.on{color:#1a0e02;background:linear-gradient(180deg,#ffc66e,#e8962e);text-shadow:none}',
+    '.cs-row3{display:flex;align-items:center;gap:10px;margin-top:10px}',
+    '.cs-door{flex:1;height:16px;border-radius:3px;background:linear-gradient(180deg,#0b0b0c,#1d1e21);box-shadow:inset 0 1px 2px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:flex-end;padding-right:8px}',
+    '.cs-door span{font-size:7.5px;letter-spacing:.1em;color:#5f6268}',
+    '.cs-brand{font:italic 700 15px "Avenir Next",Futura,Arial,sans-serif;color:#b9bcc2;letter-spacing:.02em}',
     '@media (prefers-reduced-motion:reduce){.tt-heat,.tt-spill,.tt-fil,.tt-band,.tt-eye i{transition-duration:.2s!important;animation:none!important}.pt-meter i{transition:none}}'
   ].join('\n');
 
   function injectCSS(){ if (document.getElementById('otr-faces-css')) return; var s = el('style'); s.id = 'otr-faces-css'; s.textContent = CSS; document.head.appendChild(s); }
 
   function register(f){ FACES.push(f); }
-  register(TABLETOP); register(PORTABLE);
+  register(TABLETOP); register(PORTABLE); register(CAR);
 
   window.OTRFaces = {
     register:register,

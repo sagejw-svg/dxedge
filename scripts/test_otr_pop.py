@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Pop-out player (/otr/pop/) and the shared radio core (/otr/core/): clock parity with the full player,
 the dial, power, tuning with static, station steps, episode chaining, the error limiter, faces, layouts
-for a phone and a 7 inch Pi screen, keyboard and lock-screen metadata.
+for a phone and a 7 inch Pi screen, keyboard and lock-screen metadata; live internet stations (a stub of
+the radio-browser.info API), the car stereo, presets, and the pop out handoff from the full player.
 Audio is a silent WAV stub served for every archive.org URL (with byte ranges, so seeking works), so this
 runs offline. Run from the repo root: python3 scripts/test_otr_pop.py"""
 import http.server, socketserver, threading, os, io, struct, re, json
@@ -33,6 +34,23 @@ def serve_audio(route):
   hdr['content-range'] = 'bytes %d-%d/%d' % (a, z, total)
   route.fulfill(status=206, body=WAV[a:z + 1], headers=hdr)
 
+# A stub of radio-browser.info: a few playable stations and some that a web page cannot play.
+def rb(name, uuid, url, codec='MP3', hls=0, state='Texas', tags='hip hop,rap', clicks=100):
+  return {'stationuuid': uuid, 'name': name, 'url_resolved': url, 'codec': codec, 'bitrate': 128, 'hls': hls, 'state': state,
+          'country': 'The United States Of America', 'countrycode': 'US', 'tags': tags, 'favicon': '', 'homepage': '', 'clickcount': clicks}
+RB = [rb('KTST Hip Hop 97.9', 'u1', 'https://stream.test/ktst', clicks=900), rb('Gulf Coast Rap', 'u2', 'https://stream.test/gulf', clicks=500),
+      rb('Plain HTTP Station', 'u3', 'http://insecure.test/x', clicks=800), rb('HLS Only', 'u4', 'https://stream.test/hls.m3u8', hls=1),
+      rb('Ogg Station', 'u5', 'https://stream.test/ogg', codec='OGG'), rb('Lone Star Classic Rock', 'u6', 'https://stream.test/lonestar', tags='classic rock', clicks=300)]
+RB_CALLS = []
+def serve_rb(route):
+  u = route.request.url; RB_CALLS.append(u)
+  if '/json/url/' in u: return route.fulfill(status=200, body='{"ok":true}', headers={'content-type': 'application/json', 'access-control-allow-origin': '*'})
+  from urllib.parse import urlparse, parse_qs
+  qs = {k: v[0].lower() for k, v in parse_qs(urlparse(u).query).items()}
+  out = [x for x in RB if ('tag' not in qs or qs['tag'] in x['tags']) and ('name' not in qs or qs['name'] in x['name'].lower())
+         and ('state' not in qs or qs['state'] == x['state'].lower())]
+  route.fulfill(status=200, body=json.dumps(out), headers={'content-type': 'application/json', 'access-control-allow-origin': '*'})
+
 from playwright.sync_api import sync_playwright
 F = []
 def ck(n, c, d=''):
@@ -43,6 +61,8 @@ with sync_playwright() as p:
   b = p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
   def page(url='/otr/pop/', w=390, h=844, mobile=True, audio='ok', ready='window.__pop&&__pop.ready()'):
     ctx = b.new_context(viewport={'width': w, 'height': h}, is_mobile=mobile, has_touch=mobile, timezone_id='America/Los_Angeles')
+    ctx.route(re.compile(r'https://de\d\.api\.radio-browser\.info/.*'), serve_rb)
+    ctx.route(re.compile(r'https://stream\.test/.*'), serve_audio)
     if audio == 'ok': ctx.route(re.compile(r'https://archive\.org/.*'), serve_audio)
     else: ctx.route(re.compile(r'https://archive\.org/.*'), lambda r: r.fulfill(status=404, body='gone'))
     pg = ctx.new_page(); errs = []
@@ -153,7 +173,7 @@ with sync_playwright() as p:
   pop.click('#faces button[data-id=portable]'); pop.wait_for_timeout(300)
   ck('switching to the portable swaps the face', pop.query_selector('.face.pt') is not None and pop.query_selector('.face.tt') is None)
   ck('and the show keeps playing', pop.evaluate('__pop.player().audio.src') == src0 and not pop.evaluate('__pop.player().audio.paused'))
-  ck('face choice is remembered', pop.evaluate('localStorage.getItem("otrpop_face")') == 'portable')
+  ck('face choice is remembered for the dial', pop.evaluate('localStorage.getItem("otrpop_face_otr")') == 'portable')
   wheel = pop.query_selector('.pt-tune').bounding_box()
   f0 = pop.evaluate('__pop.player().state.freq')
   pop.mouse.move(wheel['x'] + 11, wheel['y'] + 80); pop.mouse.down(); pop.mouse.move(wheel['x'] + 11, wheel['y'] + 40, steps=6)
@@ -181,6 +201,95 @@ with sync_playwright() as p:
   ck('no page errors on the phone page', not perrs, perrs)
   pop.context.close()
 
+  # ---------- live stations and the car stereo ----------
+  lv, lerrs = page()
+  ck('the dial is the default source, on the tube set', lv.evaluate('__pop.player().state.source') == 'otr' and lv.evaluate('__pop.face()') == 'tabletop')
+  lv.click('.seg button[data-src=live]'); lv.wait_for_timeout(300)
+  ck('choosing live stations switches to the car stereo', lv.evaluate('__pop.face()') == 'car' and lv.query_selector('.face.car') is not None)
+  ck('only faces that can play live stations are offered', lv.eval_on_selector_all('#faces button', 'b=>b.map(x=>x.dataset.id)') == ['car'])
+  ck('the finder opens with the presets', lv.is_visible('#finder') and lv.eval_on_selector_all('#presetList li', 'l=>l.length') == 6)
+  lv.wait_for_function('__pop.results()!==null', timeout=10000)
+  names = lv.eval_on_selector_all('#results .r-name', 'e=>e.map(x=>x.textContent)')
+  ck('a popular list loads on its own', len(names) >= 3, names)
+  ck('stations a web page cannot play are left out (http, HLS, Ogg)', not any(n in names for n in ['Plain HTTP Station', 'HLS Only', 'Ogg Station']), names)
+  ck('most played first', names[0] == 'KTST Hip Hop 97.9', names)
+  lv.click('#chips button[data-id=tx-hiphop]')
+  lv.wait_for_function('document.getElementById("findNote").textContent.startsWith("Hip hop in Texas")', timeout=10000)
+  q = [u for u in RB_CALLS if 'state=Texas' in u]
+  ck('the Texas hip hop button asks for Texas and several spellings of the genre', len(q) >= 3 and any('tag=hip+hop' in u or 'tag=hip%20hop' in u for u in q) and any('tag=rap' in u for u in q), q[:4])
+  ck('and asks only for https streams', all('is_https=true' in u for u in q))
+  lv.fill('#findQ', 'classic rock'); lv.press('#findQ', 'Enter')
+  lv.wait_for_function('document.getElementById("findNote").textContent.startsWith("classic rock")', timeout=10000)
+  ck('a typed search finds stations', 'Lone Star Classic Rock' in lv.eval_on_selector_all('#results .r-name', 'e=>e.map(x=>x.textContent)'))
+  lv.click('#results li:has(.r-name:text-is("Lone Star Classic Rock")) .r-play')
+  lv.wait_for_function('__pop.player().state.status==="onair"', timeout=15000)
+  ck('tapping a station switches the radio on and plays its stream', lv.evaluate('__pop.player().audio.src') == 'https://stream.test/lonestar')
+  ck('the play is reported to the directory', any('/json/url/u6' in u for u in RB_CALLS))
+  ck('the car display shows the station', 'LONE STAR' in lv.inner_text('.cs-main').upper(), lv.inner_text('.cs-main'))
+  ck('the card names the station and says it is live', lv.inner_text('#logShow') == 'Lone Star Classic Rock' and 'Live' in lv.inner_text('#logNext'), lv.inner_text('#logNext'))
+  ck('the playing station is marked in the list', lv.evaluate('document.querySelector("#results li.now .r-name").textContent') == 'Lone Star Classic Rock')
+  ms = lv.evaluate('navigator.mediaSession.metadata?{t:navigator.mediaSession.metadata.title,a:navigator.mediaSession.metadata.album}:null')
+  ck('lock screen shows the station', ms and ms['t'] == 'Lone Star Classic Rock' and ms['a'] == 'Live radio', ms)
+  # hold preset 2 to save it
+  pb = lv.query_selector('.cs-pre[data-i="1"]').bounding_box()
+  lv.mouse.move(pb['x'] + 10, pb['y'] + 10); lv.mouse.down(); lv.wait_for_timeout(900); lv.mouse.up(); lv.wait_for_timeout(200)
+  ck('holding preset 2 saves the station', (lv.evaluate('__pop.player().presets("live")[1]') or {}).get('name') == 'Lone Star Classic Rock')
+  ck('the display confirms it', 'P2 SAVED' in lv.inner_text('.cs-main'), lv.inner_text('.cs-main'))
+  ck('and the preset list shows it', 'Lone Star' in lv.inner_text('#presetList'))
+  lv.click('#chips button[data-id=tx-hiphop]')
+  lv.wait_for_function('document.getElementById("findNote").textContent.startsWith("Hip hop in Texas")', timeout=10000)
+  lv.click('#results li:first-child .r-save')
+  ck('Save puts a station in the first empty preset', (lv.evaluate('__pop.player().presets("live")[0]') or {}).get('name') == 'KTST Hip Hop 97.9')
+  lv.wait_for_timeout(1500)
+  lv.click('.cs-pre[data-i="0"]')
+  lv.wait_for_function('__pop.player().audio.src==="https://stream.test/ktst" && __pop.player().state.status==="onair"', timeout=15000)
+  ck('tapping preset 1 plays it', True)
+  ck('the lit preset follows the station', lv.evaluate('document.querySelector(".cs-pre.on").dataset.i') == '0')
+  lv.click('.cs-seek[data-d="1"]')
+  lv.wait_for_function('__pop.player().audio.src==="https://stream.test/lonestar"', timeout=15000)
+  ck('seek steps through the saved presets', True)
+  lv.keyboard.press('1'); lv.wait_for_function('__pop.player().audio.src==="https://stream.test/ktst"', timeout=15000)
+  ck('number keys recall presets', True)
+  lv.evaluate('__pop.player().audio.dispatchEvent(new Event("ended"))'); lv.wait_for_timeout(2200)
+  ck('a dropped stream reconnects to the same station', lv.evaluate('__pop.player().audio.src') == 'https://stream.test/ktst' and lv.evaluate('__pop.player().state.status') in ('onair', 'buffering'))
+  lv.click('.cs-srcb'); lv.wait_for_timeout(400)
+  ck('Source on the car stereo goes back to the dial', lv.evaluate('__pop.player().state.source') == 'otr')
+  ck('and back to the tube set, the dial default', lv.evaluate('__pop.face()') == 'tabletop')
+  lv.wait_for_function('__pop.player().state.status==="onair"', timeout=15000)
+  ck('playing the dial station', 'archive.org' in lv.evaluate('__pop.player().audio.src'))
+  lv.click('#faces button[data-id=car]'); lv.wait_for_timeout(300)
+  ck('the car stereo can play the dial too', lv.evaluate('__pop.face()') == 'car' and lv.inner_text('.cs-main').strip()[:3].isdigit(), lv.inner_text('.cs-main'))
+  lv.click('.cs-pre[data-i="1"]')
+  lv.wait_for_function('__pop.player().state.station==="cbs"', timeout=15000)
+  ck('dial presets default to the networks (2 is CBS)', True)
+  lv.click('.seg button[data-src=live]'); lv.wait_for_timeout(300)
+  ck('back on live stations the last station resumes', lv.evaluate('__pop.player().audio.src') == 'https://stream.test/ktst')
+  lv.click('.seg button[data-src=otr]'); lv.wait_for_timeout(300)
+  ck('the dial remembers it was on the car stereo', lv.evaluate('__pop.face()') == 'car')
+  lv.click('.seg button[data-src=live]'); lv.wait_for_timeout(300)
+  lv.click('.cs-knob'); lv.wait_for_timeout(200)
+  ck('pushing the knob turns the car stereo off', lv.evaluate('__pop.player().state.power') is False and lv.get_attribute('.face.car', 'data-power') == 'off')
+  ck('and the display shows the clock', re.search(r'\d:\d\d [AP]M', lv.inner_text('.cs-main')) is not None, lv.inner_text('.cs-main'))
+  lv.reload(); lv.wait_for_function('window.__pop&&__pop.ready()', timeout=20000); lv.wait_for_timeout(300)
+  ck('after a reload it comes back on live stations and the car stereo', lv.evaluate('__pop.player().state.source') == 'live' and lv.evaluate('__pop.face()') == 'car')
+  ck('with the presets kept', (lv.evaluate('__pop.player().presets("live")[1]') or {}).get('name') == 'Lone Star Classic Rock')
+  lv.click('#addUrl summary'); lv.fill('#urlName', 'My station'); lv.fill('#urlIn', 'https://stream.test/mine'); lv.click('#urlForm button')
+  lv.wait_for_function('__pop.player().audio.src==="https://stream.test/mine"', timeout=15000)
+  ck('a pasted https stream address plays', lv.inner_text('#logShow') == 'My station')
+  lv.fill('#urlIn', 'http://insecure.test/x'); lv.click('#urlForm button'); lv.wait_for_timeout(200)
+  ck('an http address is refused with a reason', 'https' in lv.inner_text('#toast'))
+  ck('no page errors on live stations', not lerrs, lerrs)
+  lv.context.close()
+
+  dead, derrs = page(audio='ok')
+  dead.context.route(re.compile(r'https://stream\.test/.*'), lambda r: r.fulfill(status=404, body='gone'))
+  dead.evaluate('__pop.player().setSource("live")'); dead.wait_for_function('__pop.results()!==null', timeout=10000)
+  dead.click('#results li:first-child .r-play')
+  dead.wait_for_function('__pop.player().state.status==="error"', timeout=20000)
+  ck('a station that will not connect gets three tries, then a 30 second wait', dead.evaluate('__pop.player().state.errCount') == 3)
+  ck('and the card says the station is not answering', 'not answering' in dead.inner_text('#logStatus'), dead.inner_text('#logStatus'))
+  dead.context.close()
+
   # ---------- errors ----------
   bad, berrs = page(audio='404')
   bad.click('#playBtn')
@@ -192,7 +301,8 @@ with sync_playwright() as p:
   # ---------- layouts ----------
   for (w, h, mob, url, name) in [(390, 844, True, '/otr/pop/', 'iPhone portrait'), (375, 667, True, '/otr/pop/', 'small phone'),
                                  (844, 390, True, '/otr/pop/', 'phone landscape'), (800, 480, False, '/otr/pop/?kiosk=1', 'Pi 800x480'),
-                                 (1280, 720, False, '/otr/pop/?kiosk=1&face=portable', 'Pi 1280x720'), (420, 820, False, '/otr/pop/', 'desktop pop-out window')]:
+                                 (1280, 720, False, '/otr/pop/?kiosk=1&face=portable', 'Pi 1280x720'), (420, 820, False, '/otr/pop/', 'desktop pop-out window'),
+                                 (390, 844, True, '/otr/pop/?src=live', 'iPhone car stereo'), (800, 480, False, '/otr/pop/?kiosk=1&src=live', 'Pi 800x480 car stereo')]:
     pg, e = page(url, w, h, mob)
     m = pg.evaluate('()=>{const r=document.getElementById("stage").getBoundingClientRect(); return {sw:document.documentElement.scrollWidth, iw:innerWidth, sh:document.documentElement.scrollHeight, ih:innerHeight, top:r.top, bottom:r.bottom, left:r.left, right:r.right};}')
     ck(name + ': no sideways scroll', m['sw'] <= m['iw'], m)

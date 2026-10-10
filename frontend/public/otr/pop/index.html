@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="OTR Radio">
-<meta name="description" content="A pocket radio for classic 1930s to 50s radio: the networks' real weekly lineups and genre channels, tuned on a tube set or a leather-cased portable.">
+<meta name="description" content="A pocket radio: classic 1930s to 50s radio on the networks' real weekly lineups, plus live internet stations, on a tube set, a leather-cased portable or a car stereo.">
 <link rel="manifest" href="/otr/pop/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/otr/pop/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/otr/pop/icon-192.png">
@@ -20,6 +20,7 @@
     --sans:Futura,"Futura PT","Avenir Next","Century Gothic","Gill Sans",sans-serif;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   html{height:100%;background:var(--wall)}
   body{margin:0;min-height:100%;color:var(--paper);font-family:var(--sans);-webkit-tap-highlight-color:transparent;
     background:radial-gradient(70% 48% at 50% 30%,var(--lamp),var(--wall) 72%) fixed var(--wall);
@@ -51,10 +52,43 @@
   .btn.quiet{border-color:rgba(241,230,208,.22);background:transparent;color:var(--muted)}
   .shift{margin:10px 0 0;font-size:13px;color:var(--amber)}
 
-  .faces{display:flex;gap:8px;justify-content:center}
+  .side{width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:14px}
+  .pick{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .seg{display:inline-flex;padding:3px;border-radius:20px;background:rgba(0,0,0,.28);border:1px solid rgba(241,230,208,.14)}
+  .seg button{padding:7px 14px;border-radius:16px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px}
+  .seg button[aria-pressed=true]{background:rgba(244,184,96,.18);color:var(--paper)}
+  .faces{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
   .faces button{padding:7px 14px;border-radius:18px;border:1px solid rgba(241,230,208,.18);background:transparent;color:var(--muted);cursor:pointer;font-size:13px}
   .faces button[aria-pressed=true]{color:var(--paper);border-color:rgba(244,184,96,.6);background:rgba(244,184,96,.12)}
 
+  .finder{width:100%;max-width:420px;padding:0 4px}
+  .finder h2{margin:0 0 8px;font:500 19px var(--serif);color:#fff6e4;text-align:center}
+  .find-form{display:flex;gap:8px}
+  .find-form input{flex:1;min-width:0;padding:10px 14px;border-radius:22px;border:1px solid rgba(241,230,208,.22);background:rgba(0,0,0,.25);color:var(--paper);font:inherit;font-size:15px}
+  .find-form input::placeholder{color:var(--dim)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+  .chips button{padding:6px 12px;border-radius:16px;border:1px solid rgba(241,230,208,.16);background:transparent;color:var(--muted);cursor:pointer;font-size:12.5px}
+  .chips button[aria-pressed=true]{border-color:rgba(244,184,96,.6);color:var(--paper)}
+  .find-note{margin:10px 0 0;font-size:12.5px;color:var(--dim);text-align:center}
+  .results{list-style:none;margin:8px 0 0;padding:0}
+  .results li{display:flex;align-items:center;gap:8px;border-top:1px solid rgba(241,230,208,.08)}
+  .results li:first-child{border-top:0}
+  .r-play{flex:1;min-width:0;text-align:left;padding:10px 4px;border:0;background:none;cursor:pointer}
+  .r-name{display:block;font-size:15px;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r-sub{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .results li.now .r-name{color:var(--amber)}
+  .r-save{flex:none;padding:6px 12px;border-radius:14px;border:1px solid rgba(241,230,208,.18);background:transparent;color:var(--muted);cursor:pointer;font-size:12px}
+  .presets{margin-top:14px}
+  .presets h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--muted);text-align:center}
+  .presets ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .presets li{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:10px;background:rgba(0,0,0,.22);font-size:13px;min-width:0}
+  .presets li b{color:var(--amber);font-weight:600;flex:none}
+  .presets li span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--paper)}
+  .presets li.empty span{color:var(--dim)}
+  .presets li button{flex:none;border:0;background:none;color:var(--dim);cursor:pointer;font-size:15px;padding:0 2px}
+  .addurl{margin-top:12px;font-size:13px;color:var(--muted)}
+  .addurl summary{cursor:pointer;text-align:center}
+  .addurl .find-form{margin-top:8px;flex-wrap:wrap}
   .foot{max-width:420px;text-align:center;font-size:12px;line-height:1.6;color:var(--dim);padding:4px 8px 0}
   .foot p{margin:6px 0}
   .foot .install{color:var(--muted)}
@@ -65,13 +99,14 @@
 
   /* Landscape: radio on the left, the log on the right. This is the layout a 7 inch Pi screen gets. */
   @media (orientation:landscape) and (min-width:600px){
-    .room{grid-template-columns:auto minmax(260px,420px);grid-template-rows:auto auto 1fr;align-items:center;column-gap:28px;min-height:calc(100vh - 32px)}
-    .stage{grid-row:1 / span 3}
-    .log{text-align:left;align-self:end}
+    .room{grid-template-columns:auto minmax(260px,440px);align-items:center;column-gap:28px;min-height:calc(100vh - 32px)}
+    .side{align-items:flex-start;max-height:calc(100vh - 32px);overflow-y:auto;padding:6px 4px 10px;align-self:center}
+    .log{text-align:left}
     .log-progress{margin-left:0}
-    .log-actions,.faces{justify-content:flex-start}
-    .faces{justify-self:start;align-self:start}
-    .foot{text-align:left;justify-self:start;align-self:start}
+    .log-actions,.faces,.chips{justify-content:flex-start}
+    .pick{align-items:flex-start}
+    .finder h2,.find-note,.presets h3,.addurl summary{text-align:left}
+    .foot{text-align:left}
   }
   body.kiosk{cursor:none}
   body.kiosk .foot{display:none}
@@ -82,6 +117,7 @@
 <main class="room">
   <div class="stage" id="stage"><div class="fit" id="fit"></div></div>
 
+  <div class="side" id="side">
   <section class="log" id="log" aria-live="polite">
     <p class="log-status" id="logStatus">Loading the schedule</p>
     <h1 class="log-show" id="logShow">Old Time Radio</h1>
@@ -96,25 +132,54 @@
     </div>
   </section>
 
-  <nav class="faces" id="faces" aria-label="Choose a radio"></nav>
+  <div class="pick">
+    <div class="seg" role="group" aria-label="What to listen to">
+      <button type="button" data-src="otr" aria-pressed="true">Old time radio</button>
+      <button type="button" data-src="live" aria-pressed="false">Live stations</button>
+    </div>
+    <nav class="faces" id="faces" aria-label="Choose a radio"></nav>
+  </div>
+
+  <section class="finder" id="finder" hidden aria-labelledby="findH">
+    <h2 id="findH">Find a live station</h2>
+    <form class="find-form" id="findForm" role="search">
+      <input type="search" id="findQ" placeholder="Station, city or genre" aria-label="Station, city or genre" enterkeyhint="search" autocomplete="off">
+      <button type="submit" class="btn">Search</button>
+    </form>
+    <div class="chips" id="chips"></div>
+    <p class="find-note" id="findNote"></p>
+    <ol class="results" id="results"></ol>
+    <div class="presets"><h3>Presets</h3><ol id="presetList"></ol></div>
+    <details class="addurl" id="addUrl"><summary>Add a station by its stream address</summary>
+      <form class="find-form" id="urlForm">
+        <input id="urlName" placeholder="Name" aria-label="Station name" autocomplete="off">
+        <input id="urlIn" type="url" placeholder="https://" aria-label="Stream address" autocomplete="off">
+        <button type="submit" class="btn quiet">Play</button>
+      </form>
+      <p class="find-note">The address has to start with https. Stations come from the community directory at radio-browser.info, and only ones whose streams a web page can play are listed.</p>
+    </details>
+  </section>
 
   <footer class="foot" id="foot">
     <p class="install" id="install" hidden></p>
     <p>Shows stream from the <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>. Catalog and episode notes by Rob Dawson, <a href="https://oldtime.radio" target="_blank" rel="noopener">oldtime.radio</a>.</p>
+    <p>Live stations are found through <a href="https://www.radio-browser.info" target="_blank" rel="noopener">radio-browser.info</a> and play the stations' own streams, commercials included.</p>
     <p><a href="/otr/" target="_blank" rel="noopener">Open the full player</a> &nbsp; <a href="https://archive.org/donate" target="_blank" rel="noopener">Donate to the Internet Archive</a></p>
   </footer>
+  </div>
 </main>
 <div class="toast" id="toast" role="status"></div>
 <audio id="audio" preload="auto"></audio>
 
 <script src="/otr/station.js"></script>
 <script src="/otr/core/radio-core.js"></script>
+<script src="/otr/core/live-source.js"></script>
 <script src="/otr/core/radio-player.js"></script>
 <script src="/otr/core/faces.js"></script>
 <script>
 "use strict";
 /* Pop-out player for /otr. Phones, a small desktop window, or a Pi kiosk.
- * URL options: ?face=tabletop|portable  ?kiosk=1 (no footer, no cursor)  ?autoplay=1 (kiosk: switch on at load;
+ * URL options: ?face=tabletop|portable|car  ?src=otr|live  ?kiosk=1 (no footer, no cursor)  ?autoplay=1 (kiosk: switch on at load;
  * launch Chromium with --autoplay-policy=no-user-gesture-required)  ?season=<id>|off  ?ios=1 (iPhone code path). */
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -156,21 +221,38 @@
   window.addEventListener('load', function(){ refit(true); });
 
   // ---- faces ----
+  // Each source remembers its own radio: the dial defaults to the tube set, live stations to the car stereo.
+  function src(){ return player ? player.state.source : 'otr'; }
+  function faceFor(source){
+    var saved = load('otrpop_face_' + source, source === 'otr' ? load('otrpop_face', '') : ''), f = OTRFaces.get(saved);
+    return f && f.sources.indexOf(source) >= 0 ? f.id : OTRFaces.defaultFor(source);
+  }
   function setFace(id){
-    var def = OTRFaces.get(id) || OTRFaces.get(OTRFaces.defaultFor('otr'));
+    var def = OTRFaces.get(id);
+    if (!def || def.sources.indexOf(src()) < 0) def = OTRFaces.get(faceFor(src()));
     if (face) face.destroy();
-    faceDef = def; save('otrpop_face', def.id);
-    face = def.build($('fit'), { player:player, core:core, scale:function(){ return scale; }, toast:toast });
+    faceDef = def; save('otrpop_face_' + src(), def.id);
+    face = def.build($('fit'), { player:player, core:core, scale:function(){ return scale; }, toast:toast, openFinder:openFinder });
     refit(true); requestAnimationFrame(function(){ refit(true); });
     document.querySelectorAll('#faces button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id === def.id ? 'true' : 'false'); });
   }
   function buildFaceNav(){
     var nav = $('faces'); nav.innerHTML = '';
-    OTRFaces.list('otr').forEach(function(f){
+    OTRFaces.list(src()).forEach(function(f){
       var b = document.createElement('button'); b.type = 'button'; b.dataset.id = f.id; b.textContent = f.name; b.title = f.blurb;
       b.onclick = function(){ setFace(f.id); }; nav.appendChild(b);
+      b.setAttribute('aria-pressed', faceDef && faceDef.id === f.id ? 'true' : 'false');
     });
   }
+  function onSource(source){
+    document.querySelectorAll('.seg button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.src === source ? 'true' : 'false'); });
+    $('finder').hidden = source !== 'live';
+    if (!faceDef || faceDef.id !== faceFor(source)) setFace(faceFor(source));
+    buildFaceNav();
+    if (source === 'live') { renderPresets(); if (!lastResults) runSearch({ id:'popular', country:'US' }, 'Popular in the US'); }
+    render();
+  }
+  document.querySelectorAll('.seg button').forEach(function(b){ b.onclick = function(){ if (player) player.setSource(b.dataset.src); }; });
 
   // ---- the log under the radio ----
   function stationLine(st){
@@ -179,6 +261,7 @@
   }
   function render(){
     if (!player) return;
+    if (player.isLive()) { renderLive(); return; }
     var s = player.state, st = core.station(s.station), res = s.res;
     var near = core.nearest(s.freq), under = near && near.station;
     var status;
@@ -207,6 +290,27 @@
     if (shifted) sh.textContent = s.offsetLive > 0 ? 'You are ' + fmt(s.offsetLive) + ' behind the broadcast.' : 'You are ' + fmt(-s.offsetLive) + ' ahead of the broadcast.';
     renderProgress();
   }
+  function renderLive(){
+    var s = player.state, st = s.stream, name = st ? st.name : '';
+    var status;
+    if (!st) status = s.power ? 'Pick a station below to start listening.' : 'Live stations. Pick one below.';
+    else if (!s.power) status = esc(name) + '. The radio is off.';
+    else status = ({ warming:'Warming up', buffering:'Connecting to <b>' + esc(name) + '</b>', onair:'<span class="air"></span>On the air', paused:'Paused',
+      idle:'Pick a station below to start listening.', error:esc(name) + ' is not answering. Trying again in 30 seconds.' }[s.status] || '');
+    setHTML('logStatus', status);
+    setText('logShow', st ? name : 'Live stations');
+    setText('logEp', st ? (st.tags || []).join(', ') : '');
+    setText('logMeta', st ? [st.place, st.quality].filter(Boolean).join('. ') + (st.place || st.quality ? '.' : '') : '');
+    $('logProgress').hidden = true; $('rejoinBtn').hidden = true; $('logShift').hidden = true;
+    var pb = $('playBtn'); pb.disabled = false;
+    pb.textContent = !s.power ? 'Turn on' : (s.status === 'error' ? 'Try again' : (player.audio.paused && s.status !== 'buffering' && s.status !== 'warming') ? 'Play' : 'Pause');
+    renderListening();
+    markResults();
+  }
+  function renderListening(){
+    var p = player.position();
+    setHTML('logNext', p.t > 0 ? 'Live. Listening for ' + fmt(p.t) + '.' : (player.state.stream && player.state.power ? 'Live.' : ''));
+  }
   // Network items: a real slot reads "Sunday, the 7:00 PM slot"; a stand-in says what it is standing in for.
   function slotLine(sl){
     if (!sl.fill) return sl.day + ', the ' + sl.time + ' slot';
@@ -215,6 +319,7 @@
     return sl.day + ', in place of ' + lab;
   }
   function renderProgress(){
+    if (player && player.isLive()) { renderListening(); return; }
     if (!player || !player.state.item) { $('logProgress').hidden = true; return; }
     var p = player.position();
     $('logProgress').hidden = false;
@@ -224,6 +329,83 @@
   function esc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function setText(id, t){ var e = $(id); if (e.textContent !== t) e.textContent = t; }
   function setHTML(id, h){ var e = $(id); if (e._h !== h) { e.innerHTML = h; e._h = h; } }
+
+  // ---- finding live stations ----
+  var lastResults = null, searchSeq = 0;
+  function openFinder(){
+    var f = $('finder'); f.hidden = false;
+    f.scrollIntoView({ behavior:OTRFaces.reducedMotion ? 'auto' : 'smooth', block:'start' });
+    setTimeout(function(){ try { $('findQ').focus({ preventScroll:true }); } catch (e) {} }, 350);
+  }
+  function buildChips(){
+    var el = $('chips'); el.innerHTML = '';
+    OTRLive.QUICK.forEach(function(q){
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = q.label; b.dataset.id = q.id; b.setAttribute('aria-pressed', 'false');
+      b.onclick = function(){ $('findQ').value = ''; runSearch(q, q.label); };
+      el.appendChild(b);
+    });
+  }
+  function runSearch(opt, label){
+    var seq = ++searchSeq;
+    document.querySelectorAll('#chips button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id === opt.id ? 'true' : 'false'); });
+    setText('findNote', 'Searching' + (label ? ' for ' + label.toLowerCase() : '') + '.');
+    OTRLive.search(opt).then(function(list){
+      if (seq !== searchSeq) return;
+      lastResults = list; renderResults(list);
+      setText('findNote', list.length ? (label ? label + ': ' : '') + list.length + ' station' + (list.length === 1 ? '' : 's') + ' that play here.' : 'No stations found that a web page can play. Try a different word.');
+    }).catch(function(e){
+      if (seq !== searchSeq) return;
+      setText('findNote', 'The station directory is not answering. Try again in a minute.');
+    });
+  }
+  function renderResults(list){
+    var ol = $('results'); ol.innerHTML = '';
+    list.forEach(function(st){
+      var li = document.createElement('li'); li.dataset.id = st.id;
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'r-play';
+      var sub = [st.place].concat(st.tags.slice(0, 2)).concat([st.quality]).filter(Boolean).join(', ');
+      b.innerHTML = '<span class="r-name">' + esc(st.name) + '</span><span class="r-sub">' + esc(sub) + '</span>';
+      b.onclick = function(){ listen(st); };
+      var sv = document.createElement('button'); sv.type = 'button'; sv.className = 'r-save'; sv.textContent = 'Save';
+      sv.setAttribute('aria-label', 'Save ' + st.name + ' to a preset');
+      sv.onclick = function(){
+        var i = player.addPreset(st);
+        if (i < 0) toast('All six presets are in use. Remove one below, or hold a preset button on the radio.');
+        else { toast(st.name + ' is on preset ' + (i + 1) + '.'); renderPresets(); }
+      };
+      li.appendChild(b); li.appendChild(sv); ol.appendChild(li);
+    });
+    markResults();
+  }
+  function markResults(){
+    var id = player && player.state.stream ? player.state.stream.id : '';
+    document.querySelectorAll('#results li').forEach(function(li){ li.classList.toggle('now', li.dataset.id === id); });
+  }
+  // Picking a station is a tap, so it can also switch the radio on.
+  function listen(st){ if (!player.state.power) { player.state.stream = st; player.setSource('live'); player.powerOn(); } else player.playStream(st); }
+  function renderPresets(){
+    if (!player) return;
+    var ol = $('presetList'); ol.innerHTML = '';
+    player.presets('live').forEach(function(v, i){
+      var li = document.createElement('li'); li.className = v ? '' : 'empty';
+      li.innerHTML = '<b>' + (i + 1) + '</b><span>' + (v ? esc(v.name) : 'Empty') + '</span>';
+      if (v) {
+        li.querySelector('span').style.cursor = 'pointer';
+        li.querySelector('span').onclick = function(){ listen(v); };
+        var x = document.createElement('button'); x.type = 'button'; x.innerHTML = '&times;'; x.setAttribute('aria-label', 'Remove ' + v.name + ' from preset ' + (i + 1));
+        x.onclick = function(){ player.clearPreset(i, 'live'); renderPresets(); };
+        li.appendChild(x);
+      }
+      ol.appendChild(li);
+    });
+  }
+  $('findForm').addEventListener('submit', function(e){ e.preventDefault(); var q = $('findQ').value.trim(); if (q) runSearch({ q:q }, q); });
+  $('urlForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var st = OTRLive.custom($('urlIn').value, $('urlName').value);
+    if (!st) { toast('That address needs to start with https://'); return; }
+    listen(st); toast('Hold a preset button on the radio to keep it.');
+  });
 
   // ---- buttons and keys ----
   $('playBtn').onclick = function(){
@@ -235,10 +417,11 @@
   };
   $('rejoinBtn').onclick = function(){ player.rejoin(); };
   document.addEventListener('keydown', function(e){
-    if (!player || e.target.closest('.knob,.pt-wheel,input,textarea')) return;
+    if (!player || e.target.closest('.knob,.pt-wheel,input,textarea,.cs-pre')) return;
     if (e.key === ' ') { e.preventDefault(); $('playBtn').click(); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); player.step(+1); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); player.step(-1); }
+    else if (/^[1-6]$/.test(e.key) && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (!player.recallPreset(+e.key - 1)) toast('Preset ' + e.key + ' is empty.'); }
   });
   document.addEventListener('visibilitychange', function(){ if (!document.hidden && player) { player.tick(); render(); } });
 
@@ -265,10 +448,15 @@
     player.on('tick', function(){ if (!player.state.power) render(); });
     player.on('freq', function(){ if (player.state.tuning) render(); });
     player.on('notice', toast);
-    buildFaceNav();
-    setFace(Q.get('face') || load('otrpop_face', OTRFaces.defaultFor('otr')));
+    player.on('source', onSource);
+    player.on('change', function(){ if (player.isLive()) renderPresets(); });
+    buildChips();
     var tune = Q.get('tune');                              // handed over by "pop out radio" on the full player
-    player.tuneTo(tune && core.station(tune) ? tune : player.state.station);
+    if (tune && core.station(tune)) player.state.source = 'otr';
+    else if (Q.get('src') === 'live' || Q.get('src') === 'otr') player.state.source = Q.get('src');
+    setFace(Q.get('face') || faceFor(player.state.source));
+    if (player.isLive()) { if (player.state.stream) player.playStream(player.state.stream); onSource('live'); }
+    else { player.tuneTo(tune && core.station(tune) ? tune : player.state.station); onSource('otr'); }
     render();
     if ((KIOSK && Q.get('autoplay') === '1') || (tune && Q.get('on') === '1')) player.powerOn();
     if (tune && history.replaceState) {                   // a reload should not tune and switch on again
@@ -291,7 +479,8 @@
   window.__pop = {
     ready:function(){ return !!(player && face); },
     core:function(){ return core; }, player:function(){ return player; },
-    face:function(){ return faceDef && faceDef.id; }, setFace:setFace, scale:function(){ return scale; }
+    face:function(){ return faceDef && faceDef.id; }, setFace:setFace, scale:function(){ return scale; },
+    results:function(){ return lastResults; }, search:runSearch
   };
 })();
 </script>

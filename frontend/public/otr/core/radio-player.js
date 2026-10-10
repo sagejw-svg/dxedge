@@ -7,7 +7,11 @@
  *   player.beginTune(); player.setFreq(khz); player.endTune()   a drag of a knob or the dial
  *   player.tuneTo(id)  player.step(+1|-1)  player.rejoin()      jump to a station, live
  *   player.pause() / resume() / setVolume(0..1)
- *   player.on('change' | 'tick' | 'freq' | 'notice', fn)
+ *   player.on('change' | 'tick' | 'freq' | 'notice' | 'source', fn)
+ *
+ * Two sources share the one radio: 'otr' (the dial of networks and genre channels, radio-core.js) and
+ * 'live' (real internet stations, live-source.js). player.setSource(), player.playStream(station), and
+ * six presets per source: recallPreset(i), savePreset(i) (store what is playing), addPreset(station).
  *
  * iPhone notes carried over from /otr: audio plays through the element itself, never Web Audio, so it
  * keeps going on the lock screen; navigator.audioSession.type='playback' lets it sound with the ring
@@ -27,6 +31,8 @@
   function load(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
   function save(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
   function now(){ return Date.now() / 1000; }
+  function readJSON(k){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+  var OTR_PRESETS = ['nbc', 'cbs', 'abc', 'mutual', 'crime', 'comedy'];
 
   // Two seconds of AM static as a WAV blob: brown noise with a little crackle and a slow swell.
   // A plain <audio> element can loop it on every platform, iPhone included, with no Web Audio.
@@ -78,8 +84,14 @@
       offsetLive:0,                         // how far behind (+) or ahead (-) of the live clock, seconds
       volume:parseFloat(load(this.keyPrefix + 'vol', '0.85')),
       commercials:load('otr_comm', '1') === '1',  // shared with the full player
-      errCount:0, warmUntil:0
+      errCount:0, warmUntil:0,
+      source:load(this.keyPrefix + 'source', 'otr') === 'live' ? 'live' : 'otr',
+      stream:readJSON(this.keyPrefix + 'stream'),   // the live station last played (a station object)
+      presets:{ otr:null, live:null }
     };
+    this.state.presets.otr = (function(list){ return list.map(function(id){ return id && core.station(id) ? id : null; }); })(readJSON(this.keyPrefix + 'presets_otr') || OTR_PRESETS);
+    var lp = readJSON(this.keyPrefix + 'presets_live'); this.state.presets.live = (lp && lp.length === 6) ? lp : [null, null, null, null, null, null];
+    while (this.state.presets.otr.length < 6) this.state.presets.otr.push(null);
     if (!(this.state.volume >= 0 && this.state.volume <= 1)) this.state.volume = 0.85;
     this.audio.volume = this.state.volume;
     this.staticEl.volume = Math.min(1, this.state.volume * 0.5);
@@ -89,10 +101,10 @@
     a.addEventListener('loadedmetadata', function(){
       if (self.pendingSeek > 0) { try { a.currentTime = Math.min(self.pendingSeek, Math.max(0, (a.duration || 1e9) - 3)); } catch (e) {} self.pendingSeek = 0; }
     });
-    a.addEventListener('playing', function(){ self.clearWatch(); self.state.errCount = 0; self.set({ status:'onair' }); self.syncSession(); });
+    a.addEventListener('playing', function(){ self.clearWatch(); self.state.errCount = 0; if (!self.listenAt) self.listenAt = now(); self.set({ status:'onair' }); self.syncSession(); });
     a.addEventListener('waiting', function(){ if (self.state.power && !self.state.tuning) { self.set({ status:'buffering' }); self.arm(); } });
     a.addEventListener('pause', function(){ if (self.state.power && !self.state.tuning && !a.ended && self.state.status !== 'buffering' && self.state.status !== 'warming' && self.state.status !== 'error') { self.set({ status:'paused' }); self.syncSession(); } });
-    a.addEventListener('ended', function(){ if (self.state.power) self.playNext(); });
+    a.addEventListener('ended', function(){ if (!self.state.power) return; if (self.isLive()) self.fail('ended'); else self.playNext(); });   // a live stream only ends when the connection drops
     a.addEventListener('error', function(){ if (self.state.power && a.getAttribute('src')) self.fail('error'); });
 
     this.tickTimer = setInterval(function(){ if (!document.hidden) self.tick(); }, 1000);
@@ -116,7 +128,9 @@
     if (!this.staticPrimed) { this.staticPrimed = true; se.muted = true;
       var pr = se.play(); if (pr && pr.then) pr.then(function(){ se.pause(); se.muted = false; }, function(){ se.muted = false; }); else { se.pause(); se.muted = false; } }
     this.set({ power:true, status:'warming', warmUntil:Date.now() + 2200, errCount:0 });
-    this.tuneTo(this.state.station, { keepStatus:true });
+    if (!this.isLive()) this.tuneTo(this.state.station, { keepStatus:true });
+    else if (this.state.stream) this.playStream(this.state.stream, { keepStatus:true });
+    else this.set({ status:'idle' });
   };
   Player.prototype.powerOff = function(){
     this.clearWatch(); clearTimeout(this.backoff); this.backoff = null;
@@ -130,6 +144,7 @@
   Player.prototype.tuneTo = function(id, opts){
     opts = opts || {};
     var st = this.core.station(id); if (!st) return;
+    if (this.state.source !== 'otr') { this.state.source = 'otr'; save(this.keyPrefix + 'source', 'otr'); this.emit('source', 'otr'); }
     save(this.keyPrefix + 'station', id);
     this.animateFreq(st.freq);
     this.cursor = this.core.cursor(id, now(), { commercials:this.state.commercials });
@@ -144,7 +159,7 @@
     this.set({ item:c.item, res:this.core.resolve(c.item), next:c.peek(2) });
   };
   Player.prototype.beginTune = function(){
-    if (this.state.tuning) return;
+    if (this.state.tuning || this.isLive()) return;
     cancelAnimationFrame(this.snapRAF);
     this.wasPlaying = this.state.power && !this.audio.paused;
     this.tuneStartedAt = now();
@@ -166,7 +181,7 @@
     this.emit('freq', f);
   };
   Player.prototype.endTune = function(){
-    if (!this.state.tuning) return;
+    if (!this.state.tuning || this.isLive()) return;
     this.staticEl.pause();
     var near = this.core.nearest(this.state.freq), target = near ? near.station : null;
     this.state.tuning = false;
@@ -179,6 +194,7 @@
   };
   // Up or down the dial one station (lock-screen buttons, arrow keys, a tap on a station name).
   Player.prototype.step = function(dir){
+    if (this.isLive()) { this.stepPreset(dir); return; }
     var near = this.core.nearest(this.state.freq);
     var id = this.state.station || (near ? near.station.id : null);
     var nb = this.core.neighbor(id, dir);
@@ -206,7 +222,77 @@
     }
     this.snapRAF = requestAnimationFrame(frame);
   };
-  Player.prototype.rejoin = function(){ if (this.state.station) this.tuneTo(this.state.station); };
+  Player.prototype.rejoin = function(){
+    if (this.isLive()) { if (this.state.stream) this.playStream(this.state.stream, { retry:true }); return; }
+    if (this.state.station) this.tuneTo(this.state.station);
+  };
+
+  // ---- sources and live stations ----
+  Player.prototype.isLive = function(){ return this.state.source === 'live'; };
+  Player.prototype.setSource = function(src){
+    src = src === 'live' ? 'live' : 'otr';
+    if (src === this.state.source) return;
+    this.clearWatch(); clearTimeout(this.backoff); this.backoff = null; this.staticEl.pause(); this.audio.pause();
+    this.state.errCount = 0; this.state.tuning = false;
+    if (src === 'otr') { this.tuneTo(this.state.station); return; }      // tuneTo flips the source and announces it
+    this.state.source = 'live'; save(this.keyPrefix + 'source', 'live'); this.emit('source', 'live');
+    if (this.state.stream) this.playStream(this.state.stream);
+    else this.set({ item:null, res:null, next:[], status:this.state.power ? 'idle' : 'off' });
+  };
+  Player.prototype.streamRes = function(st){
+    return { show:st.name, title:(st.tags || []).join(', '), date:'', isAd:false, live:true, place:st.place || '', quality:st.quality || '', slot:null, url:st.url };
+  };
+  Player.prototype.playStream = function(st, opts){
+    opts = opts || {};
+    if (!st || !st.url) return;
+    if (this.state.source !== 'live') { this.state.source = 'live'; save(this.keyPrefix + 'source', 'live'); this.emit('source', 'live'); }
+    this.state.stream = st; save(this.keyPrefix + 'stream', JSON.stringify(st));
+    if (!this.state.power) { this.set({ item:null, res:this.streamRes(st), next:[], status:'off' }); return; }
+    clearTimeout(this.backoff); this.backoff = null; this.pendingSeek = 0; this.listenAt = 0;
+    if (!opts.retry) this.state.errCount = 0;
+    this.set({ item:null, res:this.streamRes(st), next:[], offsetLive:0, status:opts.keepStatus && Date.now() < this.state.warmUntil ? 'warming' : 'buffering' });
+    if (!opts.retry && window.OTRLive) window.OTRLive.counted(st);
+    this.audio.src = st.url;
+    var p = this.audio.play(), self = this;
+    if (p && p.catch) p.catch(function(e){ if (e && e.name === 'NotAllowedError') { self.set({ status:'paused' }); self.notice('Tap play to start the sound.'); } });
+    this.arm(); this.syncSession();
+  };
+
+  // ---- presets: six per source; the dial stores station ids, live stores whole station objects ----
+  Player.prototype.presets = function(src){ return this.state.presets[src || this.state.source]; };
+  Player.prototype.storePresets = function(src){ save(this.keyPrefix + 'presets_' + src, JSON.stringify(this.state.presets[src])); this.emit('change', this.state); };
+  Player.prototype.currentId = function(){ return this.isLive() ? (this.state.stream ? this.state.stream.id : null) : this.state.station; };
+  Player.prototype.presetIndex = function(){
+    var id = this.currentId(), p = this.presets();
+    for (var i = 0; i < p.length; i++) { var v = p[i]; if (v && (v.id || v) === id) return i; }
+    return -1;
+  };
+  Player.prototype.savePreset = function(i){
+    var src = this.state.source, p = this.state.presets[src];
+    if (src === 'live') { if (!this.state.stream) return false; p[i] = this.state.stream; }
+    else { if (!this.state.station) return false; p[i] = this.state.station; }
+    this.storePresets(src); return true;
+  };
+  Player.prototype.addPreset = function(st){                 // a live station into the first empty slot
+    var p = this.state.presets.live;
+    for (var i = 0; i < p.length; i++) if (p[i] && p[i].id === st.id) return i;
+    for (var j = 0; j < p.length; j++) if (!p[j]) { p[j] = st; this.storePresets('live'); return j; }
+    return -1;
+  };
+  Player.prototype.clearPreset = function(i, src){ src = src || this.state.source; this.state.presets[src][i] = null; this.storePresets(src); };
+  Player.prototype.recallPreset = function(i){
+    var v = this.presets()[i]; if (!v) return false;
+    if (this.isLive()) this.playStream(v); else this.jump(v);
+    return true;
+  };
+  Player.prototype.stepPreset = function(dir){
+    var p = this.presets(), filled = [];
+    p.forEach(function(v, i){ if (v) filled.push(i); });
+    if (!filled.length) { this.notice('Save a station to a preset first.'); return; }
+    var cur = this.presetIndex(), k = filled.indexOf(cur);
+    var next = k < 0 ? (dir > 0 ? filled[0] : filled[filled.length - 1]) : filled[(k + (dir > 0 ? 1 : -1) + filled.length) % filled.length];
+    this.recallPreset(next);
+  };
 
   // ---- playback ----
   Player.prototype.start = function(item, offset, keepStatus){
@@ -229,6 +315,7 @@
   Player.prototype.resume = function(){
     if (!this.state.power) { this.powerOn(); return; }
     if (this.state.status === 'error' || !this.audio.getAttribute('src')) { this.rejoin(); return; }
+    if (this.isLive()) { this.rejoin(); return; }        // a live stream resumes at what is on now, not where it paused
     this.audio.play().catch(function(){});
   };
   Player.prototype.setVolume = function(v){
@@ -246,6 +333,17 @@
   Player.prototype.fail = function(why){
     var self = this; this.clearWatch();
     this.state.errCount++;
+    if (this.isLive()) {                                    // a live station: reconnect, twice, then wait 30 s
+      if (this.state.errCount <= 2) {
+        this.notice('Lost the station. Reconnecting.');
+        setTimeout(function(){ if (self.state.power && self.isLive() && self.state.stream) self.playStream(self.state.stream, { retry:true }); }, 1500);
+        return;
+      }
+      this.audio.pause(); this.set({ status:'error' });
+      clearTimeout(this.backoff);
+      this.backoff = setTimeout(function(){ if (self.state.power && self.isLive()) { self.state.errCount = 0; self.rejoin(); } }, 30000);
+      return;
+    }
     if (this.state.errCount <= 2) { this.notice(why === 'stall' ? 'That episode is not loading. Moving on.' : 'That episode is unavailable. Moving on.'); this.playNext(); return; }
     this.audio.pause();
     this.set({ status:'error' });
@@ -257,7 +355,7 @@
   Player.prototype.tick = function(){
     var s = this.state;
     if (s.status === 'warming' && Date.now() > s.warmUntil) { s.status = this.audio.paused ? 'buffering' : 'onair'; this.emit('change', s); }
-    if (s.power && s.item && s.status === 'onair') {
+    if (s.power && s.item && s.status === 'onair' && !this.isLive()) {
       var behind = (now() - s.item.at) - this.audio.currentTime;
       s.offsetLive = Math.abs(behind) < 45 ? 0 : behind;
     }
@@ -265,7 +363,9 @@
     this.emit('tick', s);
   };
   Player.prototype.position = function(){
-    var s = this.state; if (!s.item) return { t:0, dur:0 };
+    var s = this.state;
+    if (this.isLive()) return { t:(s.power && this.listenAt && !this.audio.paused) ? now() - this.listenAt : 0, dur:0, live:true };
+    if (!s.item) return { t:0, dur:0 };
     var dur = (this.audio.duration && isFinite(this.audio.duration)) ? this.audio.duration : s.item.dur;
     if (!s.power) return { t:Math.max(0, now() - s.item.at), dur:s.item.dur };
     return { t:this.audio.currentTime || this.pendingSeek || 0, dur:dur };
@@ -287,7 +387,10 @@
     var ms = navigator.mediaSession, s = this.state, st = this.core.station(s.station);
     try {
       ms.playbackState = !s.power ? 'none' : (this.audio.paused ? 'paused' : 'playing');
-      if (s.res && s.power && window.MediaMetadata) {
+      if (this.isLive() && s.stream && s.power && window.MediaMetadata) {
+        var art = s.stream.favicon ? [{ src:s.stream.favicon }] : (this.artwork ? [{ src:this.artwork, sizes:'512x512', type:'image/png' }] : []);
+        ms.metadata = new MediaMetadata({ title:s.stream.name, artist:s.stream.place || s.stream.tags.join(', '), album:'Live radio', artwork:art });
+      } else if (s.res && s.power && window.MediaMetadata) {
         ms.metadata = new MediaMetadata({ title:s.res.isAd ? 'Commercial break' : s.res.title, artist:s.res.isAd ? (st ? st.name : '') : s.res.show,
           album:(st ? st.name + ' on ' + (st.freq / 10) + ' kc' : 'Old Time Radio'), artwork:this.artwork ? [{ src:this.artwork, sizes:'512x512', type:'image/png' }] : [] });
       }
