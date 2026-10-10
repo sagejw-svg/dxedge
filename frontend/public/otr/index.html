@@ -335,8 +335,22 @@
   .pwr.small[aria-pressed="true"] .sw::after { left: 13px; }
   .rack-x { background: none; border: none; color: var(--dim); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
   .rack-x:hover { color: var(--text); }
-  .rack-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; padding: 12px; }
-  @media (max-width: 820px){ .rack-body { grid-template-columns: minmax(0, 1fr); } }
+  .rack-body { display: grid; grid-template-columns: 300px 168px minmax(0, 1fr); gap: 12px; padding: 12px; }
+  /* the lava lamp: its own column on a full-width rack; under the tube (EQ alongside, taller) on a
+     narrower one; after the EQ on a phone */
+  .lamp-stage { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  canvas#lampCv { width: 144px; height: 240px; display: block; flex: none; cursor: zoom-in; border-radius: 8px; }
+  .lamp-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; width: 100%; }
+  .lamp-stat { font-size: 10.5px; color: var(--muted); line-height: 1.45; min-height: 3em; text-align: center; }
+  @media (max-width: 1039px){
+    .rack-body { grid-template-columns: 300px minmax(0, 1fr); }
+    #lampMod { grid-column: 1; grid-row: 2; } #eqMod { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+    #eqMod > .mod-b { flex: 1; display: flex; flex-direction: column; } canvas#eqCv { height: auto; flex: 1 1 240px; min-height: 240px; }
+    .lamp-stage { flex-direction: row; align-items: flex-start; } canvas#lampCv { width: 120px; height: 200px; } .lamp-stat { text-align: left; } }
+  @media (max-width: 820px){
+    .rack-body { grid-template-columns: minmax(0, 1fr); } #lampMod, #eqMod { grid-column: auto; grid-row: auto; } #lampMod { order: 3; }
+    #eqMod, #eqMod > .mod-b { display: block; } canvas#eqCv { height: 240px; } }
+  #lampColSel { width: 100%; background: var(--bg1); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 11px; }
   .mod { border: 1px solid var(--border); border-radius: 10px; background: #0d0d0d; min-width: 0; position: relative; }
   .mod-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
   .mod-h .label { color: var(--amber); }
@@ -421,6 +435,8 @@
   .tv-panel { background: #0c0c0c; border-left: 1px solid var(--border2); padding: 14px; overflow-y: auto; }
   @media (max-width: 760px){ .tv-panel { border-left: none; border-top: 1px solid var(--border2); overflow: visible; } }
   .tv-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .tv-top .label { color: var(--amber); } .tv-top .sp { flex: 1; }
+  .tview[data-subj="lamp"] .tv-tube { display: none; } .tview:not([data-subj="lamp"]) .tv-lamp { display: none; }
+  .tv-seg button { padding: 5px 11px; font-size: 11.5px; }
   #tvKnobs .knob { width: 66px; } #tvKnobs .knob .kl { letter-spacing: 0.5px; }
   .tv-sec { margin-top: 14px; } .tv-sec > .kl { font-size: 9.5px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
   .rack-row2 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; padding: 0 12px 12px; }
@@ -551,6 +567,20 @@
           </div>
           <div class="tubes" id="tubeChips" role="group" aria-label="Choose a tube"></div>
           <div class="knobs" id="tubeKnobs"></div>
+        </div>
+      </div>
+      <div class="mod" id="lampMod">
+        <div class="mod-h"><span class="label">lava lamp</span><span class="sp"></span>
+          <button class="btn tzoom" id="lampZoom" title="See the lamp big: zoom, filters, colours, bulb">⤢ zoom</button>
+          <button class="pwr small" id="lampPower" aria-pressed="true" title="The lamp's switch"><span class="sw"></span>on</button></div>
+        <div class="mod-b">
+          <div class="lamp-stage">
+            <canvas id="lampCv" role="img" aria-label="Lava lamp. Click to open it big" title="Click to zoom in"></canvas>
+            <div class="lamp-info">
+              <div class="lamp-stat" id="lampStat" aria-live="polite">warming up</div>
+              <select id="lampColSel" aria-label="Wax and liquid colours"></select>
+            </div>
+          </div>
         </div>
       </div>
       <div class="mod" id="eqMod">
@@ -740,18 +770,26 @@
 <div class="tview" id="tview" hidden role="dialog" aria-modal="true" aria-label="Tube view">
   <div class="tv-stage" id="tvStage">
     <canvas id="tvCv" role="img" aria-label="The tube, zoomed in"></canvas>
-    <div class="tv-hud"><div class="n" id="tvName">12AX7</div><div class="k" id="tvKind"></div><div class="k" id="tvLookName"></div>
+    <div class="tv-hud"><div class="n" id="tvName">12AX7</div><div class="k" id="tvKind"></div><div class="k" id="tvLookName"></div><div class="k tv-lamp" id="tvStat"></div>
       <div class="tv-legend" id="tvLegend" hidden><span>cool</span><i></i><span>hot</span></div></div>
     <div class="tv-standby" id="tvStandby" hidden><span>The tube is in standby.</span><button class="btn play" id="tvLight" style="min-width:0;padding:6px 12px">Light it up</button></div>
     <div class="tv-zoom"><button id="tvOut" aria-label="Zoom out" title="Zoom out (-)">−</button><span class="zl" id="tvZl">100%</span><button id="tvIn" aria-label="Zoom in" title="Zoom in (+)">+</button>
       <button id="tvFit" title="Fit (0)" style="font-size:11px">fit</button><button id="tvFull" title="Full screen" aria-label="Full screen">⛶</button></div>
   </div>
   <aside class="tv-panel">
-    <div class="tv-top"><span class="label">tube view</span><span class="sp"></span><button class="rack-x" id="tvClose" aria-label="Close tube view" title="Close (Esc)">×</button></div>
+    <div class="tv-top"><div class="seg tv-seg" id="tvSubj" role="group" aria-label="What to look at"><button data-s="tube" aria-pressed="true">Tube</button><button data-s="lamp" aria-pressed="false">Lava lamp</button></div><span class="sp"></span><button class="rack-x" id="tvClose" aria-label="Close tube view" title="Close (Esc)">×</button></div>
     <div class="tv-sec"><div class="kl">filter</div><div class="chips2" id="tvLooks" role="group" aria-label="Filter"></div></div>
-    <div class="tv-sec"><div class="kl">glow</div><div class="knobs left" id="tvKnobs"></div></div>
-    <div class="tv-sec"><div class="kl">tube</div><div class="chips2" id="tvTubes" role="group" aria-label="Choose a tube"></div></div>
-    <div class="mod-note">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
+    <div class="tv-sec tv-tube"><div class="kl">glow</div><div class="knobs left" id="tvKnobs"></div></div>
+    <div class="tv-sec tv-tube"><div class="kl">tube</div><div class="chips2" id="tvTubes" role="group" aria-label="Choose a tube"></div></div>
+    <div class="tv-sec tv-lamp"><div class="kl">lamp</div>
+      <div class="chips2"><button class="pwr small" id="tvLampPower" aria-pressed="true"><span class="sw"></span>on</button>
+        <button class="tchip" id="tvLampMusic" aria-pressed="false" title="Louder audio feeds the bulb a little more power. It shows up slowly, through the wax, the way real heat would.">♪ music warms the bulb</button>
+        <button class="tchip" id="tvLampCold" title="A new lamp: cold wax on the bottom, a new random seed">start cold</button></div>
+      <div class="knobs left" id="tvLampKnobs"></div></div>
+    <div class="tv-sec tv-lamp"><div class="kl">wax / liquid</div><div class="chips2" id="tvLampCols" role="group" aria-label="Wax and liquid colours"></div></div>
+    <div class="tv-sec tv-lamp"><div class="kl">base</div><div class="chips2" id="tvLampBases" role="group" aria-label="Base finish"></div></div>
+    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. None of this changes the sound.</div>
+    <div class="mod-note tv-tube">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
   </aside>
 </div>
 
@@ -2313,6 +2351,21 @@
     { id:'vintage', name:'Vintage photo', p:look({ bg:'#0d0a06' }), css:'sepia(0.85) contrast(1.08) brightness(0.95) saturate(0.9)', overlay:'vintage' }
   ];
   var LOOK_BY={}; TUBE_LOOKS.forEach(function(l){ LOOK_BY[l.id]=l; });
+  // Lava lamp colourways (wax, liquid, what the wax fluoresces under black light, its neon line) and base finishes.
+  var LAMP_COLS = [
+    { id:'classic', name:'Red / yellow',   wax:[222,48,22],   liq:[255,186,44],  uv:[255,96,70],   neon:[255,40,160] },
+    { id:'blue',    name:'White / blue',   wax:[244,240,230], liq:[34,104,255],  uv:[190,225,255], neon:[0,240,255] },
+    { id:'orange',  name:'Orange / clear', wax:[255,118,18],  liq:[255,236,205], uv:[255,150,40],  neon:[255,140,0], clear:true },
+    { id:'purple',  name:'Pink / purple',  wax:[255,84,168],  liq:[118,36,206],  uv:[255,110,220], neon:[255,60,220] },
+    { id:'green',   name:'Yellow / green', wax:[255,212,34],  liq:[34,186,84],   uv:[230,255,60],  neon:[160,255,40] },
+    { id:'bclear',  name:'Blue / clear',   wax:[44,110,255],  liq:[226,240,255], uv:[90,170,255],  neon:[60,140,255], clear:true }
+  ];
+  var LAMP_BASES = [
+    { id:'gold',   name:'Gold',   m:['#2a1c06','#7a5718','#e8c06a','#fff0c2','#a07226'] },
+    { id:'silver', name:'Chrome', m:['#1c1e21','#5a6068','#d6dce2','#ffffff','#8a9098'] },
+    { id:'black',  name:'Black',  m:['#060606','#1a1a1a','#4a4a4a','#9a9a9a','#262626'] }
+  ];
+  var LCOL_BY={}, LBASE_BY={}; LAMP_COLS.forEach(function(x){ LCOL_BY[x.id]=x; }); LAMP_BASES.forEach(function(x){ LBASE_BY[x.id]=x; });
 
   var ADV_DEF = { on:false, open:false, eqOn:true, tubeOn:true, bands:31, gains:null, pre:0, preset:'flat',
                   tube:'12AX7', drive:3, bias:0, sag:2, tone:0, out:0,
@@ -2320,7 +2373,8 @@
                   spkOn:false, cab:'console', spkInt:8,
                   roomOn:false, room:'living', rmDecay:0.55, rmMix:20, rmTone:4,
                   wOn:false, width:100, wChar:9,
-                  tvFilter:'natural', tvBright:100, tvResp:100, tvSpeed:50, tvFlicker:35 };
+                  tvFilter:'natural', tvBright:100, tvResp:100, tvSpeed:50, tvFlicker:35,
+                  lampOn:true, lampCol:'classic', lampBase:'gold', lampW:25, lampMusic:false, lampBright:100, lampTime:1 };
   var advFresh = load('otr_adv', null) === null;
   var ADV = (function(){
     var d=JSON.parse(JSON.stringify(ADV_DEF));
@@ -2331,6 +2385,8 @@
     if(!CAB_BY[d.cab]) d.cab='console';
     if(!ROOM_BY[d.room]) d.room='living';
     if(!LOOK_BY[d.tvFilter]) d.tvFilter='natural';
+    if(!LCOL_BY[d.lampCol]) d.lampCol='classic'; if(!LBASE_BY[d.lampBase]) d.lampBase='gold';
+    d.lampW=clampN(+d.lampW||25,15,40); d.lampBright=clampN(+d.lampBright||0,0,200); d.lampTime=clampN(+d.lampTime||1,1,8); d.lampOn=d.lampOn!==false; d.lampMusic=!!d.lampMusic;
     d.deListen=false;                                              // listen is a momentary tool, never restored
     if(!Array.isArray(d.gains) || d.gains.length!==d.bands) d.gains=presetGains(PRESET_BY[d.preset]?d.preset:'flat', d.bands);
     d.gains=d.gains.map(function(g){ return clampN(+g||0,-12,12); });
@@ -2708,7 +2764,7 @@
   $('eqPower').onclick=function(){ setModule('eqOn', !ADV.eqOn); };
   $('advReset').onclick=function(){
     var keep={ on:ADV.on, open:ADV.open, bands:ADV.bands };
-    Object.keys(ADV_DEF).forEach(function(k){ ADV[k]=ADV_DEF[k]; }); ADV.on=keep.on; ADV.open=keep.open; ADV.bands=keep.bands;
+    Object.keys(ADV_DEF).forEach(function(k){ if(!/^lamp/.test(k)) ADV[k]=ADV_DEF[k]; }); ADV.on=keep.on; ADV.open=keep.open; ADV.bands=keep.bands;   // the lamp is not part of the sound
     ADV.gains=presetGains('flat', ADV.bands);
     roomDefaults(); Object.keys(advKnobs).forEach(function(k){ advKnobs[k].set(ADV[k]); });
     if(PROC) PROC.reroute(ADV, function(){ PROC.apply(ADV); });
@@ -2770,7 +2826,7 @@
   $('deListen').onclick=function(){ ADV.deListen=!ADV.deListen; if(ADV.deListen) touchMod('deOn'); if(PROC) PROC.setDe(ADV); syncAdvUI(); toast(ADV.deListen?'Listening to the S band only':'Listening to everything'); };
 
   // ---- Tube view: the tube full size, with zoom, pan, filters and glow controls ----
-  var TVZ={ z:1, x:0, y:0 }, tvRAF=0, tvGeom=null, tvPrevFocus=null, tvPtr={};
+  var TVZ={ z:1, x:0, y:0, subj:'tube' }, tvRAF=0, tvGeom=null, tvPrevFocus=null, tvPtr={};
   var TV_KNOBS=[
     { key:'tvBright', label:'Brightness', min:0, max:200, step:1, def:100, title:'How bright the heater, plates and glow are',
       fmt:function(v){ return Math.round(v)+'%'; } },
@@ -2792,16 +2848,50 @@
     b.onclick=function(){ if(ADV.tube===t.id) return; ADV.tube=t.id; touchAdv(); tubeChanged(true); syncAdvUI(); };
     $('tvTubes').appendChild(b);
   });
+  // Lava lamp controls (the lamp's own picture settings; none of them touch the sound)
+  var LAMP_KNOBS=[
+    { key:'lampW', label:'Bulb', min:15, max:40, step:1, def:25, title:'Bulb wattage: more heat runs the lamp hot (wax stays up), less makes it lazy', fmt:function(v){ return Math.round(v)+' W'; } },
+    { key:'lampBright', label:'Glow', min:0, max:200, step:1, def:100, title:'How brightly the bulb lights the liquid and the wax (picture only)', fmt:function(v){ return Math.round(v)+'%'; } },
+    { key:'lampTime', label:'Speed', min:1, max:8, step:0.5, def:1, title:'1x is real time; faster runs the physics quicker', fmt:function(v){ return v===1?'real time':v+'x'; } }
+  ];
+  LAMP_KNOBS.forEach(function(k){ k.value=ADV[k.key]; k.onChange=function(v){ ADV[k.key]=v; saveAdv(); syncLampUI(); }; advKnobs[k.key]=makeKnob($('tvLampKnobs'), k); });
+  LAMP_COLS.forEach(function(x){
+    var b=document.createElement('button'); b.className='tchip'; b.dataset.id=x.id; b.textContent=x.name;
+    b.onclick=function(){ ADV.lampCol=x.id; saveAdv(); syncLampUI(); }; $('tvLampCols').appendChild(b);
+    var op=document.createElement('option'); op.value=x.id; op.textContent=x.name; $('lampColSel').appendChild(op);
+  });
+  LAMP_BASES.forEach(function(x){ var b=document.createElement('button'); b.className='tchip'; b.dataset.id=x.id; b.textContent=x.name;
+    b.onclick=function(){ ADV.lampBase=x.id; saveAdv(); syncLampUI(); }; $('tvLampBases').appendChild(b); });
+  $('lampColSel').onchange=function(){ ADV.lampCol=this.value; saveAdv(); syncLampUI(); };
+  function setLampOn(on){ ADV.lampOn=!!on; saveAdv(); syncLampUI(); }
+  $('lampPower').onclick=function(){ setLampOn(!ADV.lampOn); }; $('tvLampPower').onclick=function(){ setLampOn(!ADV.lampOn); };
+  $('tvLampMusic').onclick=function(){ ADV.lampMusic=!ADV.lampMusic; saveAdv(); syncLampUI(); if(ADV.lampMusic && !ADV.on) toast('Music heat follows the sound once it plays'); };
+  $('tvLampCold').onclick=function(){ lampRestart(); toast('A new lamp, cold from the box'); };
+  function syncLampUI(){
+    var c=LCOL_BY[ADV.lampCol]||LAMP_COLS[0];
+    [$('lampPower'),$('tvLampPower')].forEach(function(b){ b.setAttribute('aria-pressed', ADV.lampOn?'true':'false'); b.lastChild.textContent=ADV.lampOn?'on':'off'; });
+    $('tvLampMusic').setAttribute('aria-pressed', ADV.lampMusic?'true':'false');
+    $('lampColSel').value=ADV.lampCol;
+    document.querySelectorAll('#tvLampCols .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampCol?'true':'false'); });
+    document.querySelectorAll('#tvLampBases .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampBase?'true':'false'); });
+    if(TVZ.subj==='lamp'){ var w=c.name.split(' / '); $('tvKind').textContent=w[0]+' wax · '+w[1]+' liquid · '+Math.round(ADV.lampW)+' W'; }
+    if(LAMP && LAMP.stat) syncLampStat();
+  }
   function syncTubeView(){
-    var t=TUBE_BY[ADV.tube], L=curLook();
-    $('tvName').textContent=t.id; $('tvKind').textContent=t.kind; $('tvLookName').textContent=L.name+' filter';
+    var t=TUBE_BY[ADV.tube], L=curLook(), lamp=TVZ.subj==='lamp';
+    $('tview').setAttribute('data-subj', TVZ.subj); $('tview').setAttribute('aria-label', lamp?'Lava lamp view':'Tube view');
+    document.querySelectorAll('#tvSubj button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.s===TVZ.subj?'true':'false'); });
+    $('tvCv').setAttribute('aria-label', lamp?'The lava lamp, zoomed in':'The tube, zoomed in');
+    $('tvName').textContent= lamp ? 'Lava lamp' : t.id; $('tvKind').textContent=t.kind; $('tvLookName').textContent=L.name+' filter';
+    if(lamp) syncLampUI();
     document.querySelectorAll('#tvLooks .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.tvFilter?'true':'false'); });
     document.querySelectorAll('#tvTubes .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.tube?'true':'false'); });
     $('tvLegend').hidden = ADV.tvFilter!=='thermal';
-    $('tvStandby').hidden = ADV.on && ADV.tubeOn;
+    $('tvStandby').hidden = lamp || (ADV.on && ADV.tubeOn);
   }
   function tvIsOpen(){ return !$('tview').hidden; }
-  function openTubeView(){
+  function openTubeView(subj){
+    TVZ.subj = subj==='lamp' ? 'lamp' : 'tube';
     tvPrevFocus=document.activeElement; $('tview').hidden=false; document.body.style.overflow='hidden';
     syncTubeView(); startTV(); try{ $('tvClose').focus({preventScroll:true}); }catch(e){}
   }
@@ -2826,7 +2916,7 @@
   }
   function startTV(){ if(tvRAF) return; TVQ.q=1; TVQ.ceil=1; TVQ.ema=16.7; TVQ.last=0; TVQ.t=0;
     var loop=function(now){ if(!tvIsOpen()){ tvRAF=0; return; } tvRAF=requestAnimationFrame(loop);
-      try{ var cv=$('tvCv'); tvGeom=renderTube(cv, now, 'big', TVZ.z, TVZ.x, TVZ.y, tvQuality(now, cv)); $('tvZl').textContent=Math.round(TVZ.z*100)+'%'; }catch(e){ console.warn(e); } };
+      try{ var cv=$('tvCv'); tvGeom=(TVZ.subj==='lamp'?renderLamp:renderTube)(cv, now, 'big', TVZ.z, TVZ.x, TVZ.y, tvQuality(now, cv)); $('tvZl').textContent=Math.round(TVZ.z*100)+'%'; }catch(e){ console.warn(e); } };
     tvRAF=requestAnimationFrame(loop); }
   function clampPan(){ if(TVZ.z<=1.001){ TVZ.z=1; TVZ.x=0; TVZ.y=0; return; } TVZ.x=clampN(TVZ.x,-TW*0.55,TW*0.55); TVZ.y=clampN(TVZ.y,-TH*0.55,TH*0.55); }
   // Zoom about a point (CSS px in the canvas) so whatever is under the cursor or the pinch stays put.
@@ -2857,8 +2947,11 @@
     $('tvFull').onclick=function(){ if(document.fullscreenElement) document.exitFullscreen(); else $('tview').requestFullscreen().catch(function(){}); };
     $('tvClose').onclick=closeTubeView;
     $('tvLight').onclick=function(){ if(!ADV.on) setAdvPower(true); if(!ADV.tubeOn) setModule('tubeOn', true); syncTubeView(); };
-    $('tubeCv').addEventListener('click', openTubeView);
-    $('tubeZoom').onclick=openTubeView;
+    $('tubeCv').addEventListener('click', function(){ openTubeView('tube'); });
+    $('tubeZoom').onclick=function(){ openTubeView('tube'); };
+    $('lampCv').addEventListener('click', function(){ openTubeView('lamp'); });
+    $('lampZoom').onclick=function(){ openTubeView('lamp'); };
+    document.querySelectorAll('#tvSubj button').forEach(function(b){ b.onclick=function(){ if(TVZ.subj===b.dataset.s) return; TVZ.subj=b.dataset.s; TVZ.z=1; clampPan(); syncTubeView(); }; });
     document.addEventListener('keydown', function(e){
       if(!tvIsOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
       var tag=document.activeElement && document.activeElement.tagName; if(tag==='INPUT'||tag==='SELECT') return;
@@ -2925,7 +3018,7 @@
     $('deListen').setAttribute('aria-pressed', ADV.deListen?'true':'false');
     var stages=[['EQ','eqOn'],['DE-ESS','deOn'],['TUBE','tubeOn'],['SPEAKER','spkOn'],['ROOM','roomOn'],['WIDTH','wOn'],['LIMIT','']];
     $('advChain').innerHTML=stages.map(function(st){ return '<span class="'+(ADV.on && (!st[1] || ADV[st[1]]) ? 'on' : '')+'">'+st[0]+'</span>'; }).join(' → ');
-    syncTubeInfo(); EQV.dirty=true; SPKV.dirty=true; drawRoom(); syncTubeView();
+    syncTubeInfo(); EQV.dirty=true; SPKV.dirty=true; drawRoom(); syncTubeView(); syncLampUI();
   }
 
   // ---- canvases ----
@@ -3316,6 +3409,417 @@
   }
   function drawTube(now){ renderTube($('tubeCv'), now, 'rack'); }
 
+  // ---- Lava lamp physics ----
+  // A slice through the lamp in the 120 x 200 logical space the tube uses (y grows down), in
+  // seconds and degrees C. Nothing is scripted or looped; everything comes from these rules plus a
+  // little noise, so no two evenings are the same.
+  //  Wax: parcels ("lobes") of molten paraffin, each with its own volume, heat and velocity. Paraffin
+  //   expands about three times more than the liquid when warmed, so a parcel rises when it is hotter
+  //   than the crossover temperature and sinks when it cools below it. It melts over a latent-heat
+  //   plateau; solid wax is heavy and stuck where it lies. Drag is Stokes-like, so big blobs move
+  //   faster than small ones, and heat leaves through the surface, so big blobs hold heat longer.
+  //  Necks: parcels of one blob are joined by threads of wax that pull them together (surface
+  //   tension). A thread thins as it is stretched (its volume is conserved) and breaks once it is
+  //   longer than its own circumference (Rayleigh-Plateau), sometimes leaving a satellite droplet.
+  //   Parcels of different blobs that stay pressed together long enough for the film of liquid
+  //   between them to drain grow a neck and become one blob; neighbours inside a blob fuse.
+  //  Liquid: a coarse grid with its own temperature and incompressible flow (buoyancy, viscosity,
+  //   pressure projection, advection), dragged by the wax and dragging it back.
+  //  Heat: the bulb warms the bottom of the glass and the coil under the wax; the glass and the cap
+  //   lose heat to the room; wax and liquid trade heat across every blob's surface.
+  // Warm-up, the first tower pushing up through the cake, blobs budding off the pool, merging,
+  // stalling under the cap when the lamp runs hot, and the wax setting again when it is switched off
+  // all follow from those rules.
+  function makeLava(seed){
+    var rnd=mulberry32((seed>>>0)||1);
+    var CX=60, Y0=33.5, Y1=126.5, TROOM=22, TM=34, TX=48, LAT=10;
+    var PROF=[[128,19],[114,21.6],[96,21],[70,18.2],[46,14.6],[26,12.4]], PM=[];
+    (function(){ var n=PROF.length, d=[], i; for(i=0;i<n-1;i++) d.push((PROF[i+1][1]-PROF[i][1])/(PROF[i][0]-PROF[i+1][0]));
+      PM[0]=0; PM[n-1]=0; for(i=1;i<n-1;i++) PM[i] = d[i-1]*d[i]<=0 ? 0 : (d[i-1]+d[i])/2;
+      for(i=0;i<n-1;i++){ if(!d[i]){ PM[i]=PM[i+1]=0; continue; } var a=PM[i]/d[i], b=PM[i+1]/d[i], s=a*a+b*b; if(s>9){ var q=3/Math.sqrt(s); PM[i]=q*a*d[i]; PM[i+1]=q*b*d[i]; } } })();
+    function outer(y){ var P=PROF; if(y>=P[0][0]) return P[0][1]; for(var i=1;i<P.length;i++){ if(y>=P[i][0]){ var a=P[i-1], b=P[i], h=a[0]-b[0], s=(a[0]-y)/h, s2=s*s, s3=s2*s;
+      return (2*s3-3*s2+1)*a[1]+(s3-2*s2+s)*h*PM[i-1]+(3*s2-2*s3)*b[1]+(s3-s2)*h*PM[i]; } } return P[P.length-1][1]; }
+    function inner(y){ return outer(y)-1.4; }
+    // the bottom of the bottle dishes down a little toward the coil in the middle
+    function floorY(x){ var w=inner(Y1), u=(x-CX)/w; return Y1-2.2*u*u; }
+
+    // ---- the liquid grid ----
+    var CS=2.5, GX=18, GY=Math.ceil((Y1-Y0)/CS), GN=GX*GY, GX0=CX-GX*CS/2, CC=2.6;
+    var M=new Uint8Array(GN), TL=new Float32Array(GN), U=new Float32Array(GN), V=new Float32Array(GN), T2=new Float32Array(GN), U2=new Float32Array(GN), V2=new Float32Array(GN),
+        PR=new Float32Array(GN), DV=new Float32Array(GN), FU=new Float32Array(GN), FV=new Float32Array(GN), EDGE=new Uint8Array(GN), BOT=new Float32Array(GN), i, j, k;
+    for(j=0;j<GY;j++) for(i=0;i<GX;i++){ var xc=GX0+(i+0.5)*CS, yc=Y0+(j+0.5)*CS; M[j*GX+i] = Math.abs(xc-CX)<inner(Math.min(yc,Y1))-0.4 ? 1 : 0; }
+    for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]) continue; EDGE[k]=(i===0||!M[k-1])+(i===GX-1||!M[k+1]);
+      if(j>=GY-2){ BOT[k]=0.25+Math.exp(-Math.pow((GX0+(i+0.5)*CS-CX)/9,2)); } }
+    var bs=0; for(k=0;k<GN;k++) bs+=BOT[k]; for(k=0;k<GN;k++) BOT[k]/=bs;
+    function cellAt(x,y){ var a=Math.floor((x-GX0)/CS), b=Math.floor((y-Y0)/CS); if(a<0) a=0; else if(a>=GX) a=GX-1; if(b<0) b=0; else if(b>=GY) b=GY-1; return b*GX+a; }
+    function bil(A,x,y){ var fx=(x-GX0)/CS-0.5, fy=(y-Y0)/CS-0.5; if(fx<0) fx=0; else if(fx>GX-1.001) fx=GX-1.001; if(fy<0) fy=0; else if(fy>GY-1.001) fy=GY-1.001;
+      var a=fx|0, b=fy|0, s=fx-a, t=fy-b, q=b*GX+a; return (A[q]*(1-s)+A[q+1]*s)*(1-t)+(A[q+GX]*(1-s)+A[q+GX+1]*s)*t; }
+    // spread an amount over the cells a disc covers (heat and momentum from a blob go into all of them)
+    function spread(A, x, y, r, amt, cap){
+      var a0=Math.max(0,Math.floor((x-r-GX0)/CS)), a1=Math.min(GX-1,Math.floor((x+r-GX0)/CS)), b0=Math.max(0,Math.floor((y-r-Y0)/CS)), b1=Math.min(GY-1,Math.floor((y+r-Y0)/CS)), n=0, a, b;
+      for(b=b0;b<=b1;b++) for(a=a0;a<=a1;a++) if(M[b*GX+a]) n++;
+      if(!n){ A[cellAt(x,y)]+=amt/cap; return; } var per=amt/(n*cap); for(b=b0;b<=b1;b++) for(a=a0;a<=a1;a++){ var q=b*GX+a; if(M[q]) A[q]+=per; }
+    }
+    function avgIn(A, x, y, r){
+      var a0=Math.max(0,Math.floor((x-r-GX0)/CS)), a1=Math.min(GX-1,Math.floor((x+r-GX0)/CS)), b0=Math.max(0,Math.floor((y-r-Y0)/CS)), b1=Math.min(GY-1,Math.floor((y+r-Y0)/CS)), n=0, s=0, a, b;
+      for(b=b0;b<=b1;b++) for(a=a0;a<=a1;a++){ var q=b*GX+a; if(M[q]){ s+=A[q]; n++; } } return n ? s/n : bil(A,x,y);
+    }
+
+    // ---- wax ----
+    var CW=0.28, VMAX=125, area=0, yy;
+    for(yy=Y0; yy<Y1; yy+=0.5) area+=2*inner(yy)*0.5;
+    var WAX=area*0.14, L=[], LINKS=[], CONTACT={}, nextId=1;
+    var S={ t:0, power:1, on:true, music:0, seed:seed, lobes:L, links:LINKS };
+    function lobe(x,y,v,e){ var o={ id:nextId++, x:x, y:y, vx:0, vy:0, v:v, r:Math.sqrt(v/Math.PI), e:e, T:0, f:0, rest:0, sq:0, el:0, ang:0 }; phase(o); return o; }
+    function phase(o){ var e=o.e; if(e<TM){ o.T=e; o.f=0; } else if(e<TM+LAT){ o.T=TM; o.f=(e-TM)/LAT; } else { o.T=e-LAT; o.f=1; } }
+    function link(a,b,rn,L0){ LINKS.push({ a:a, b:b, rn0:rn, L0:L0, rn:rn }); }
+    function reset(){
+      L.length=0; LINKS.length=0; CONTACT={};
+      // a cold cake of wax across the bottom, in parcels joined edge to edge
+      var n=Math.max(3,Math.round(WAX/(VMAX*0.55))), v=WAX/n, w=inner(Y1-3)-2, i;
+      for(i=0;i<n;i++){ var x=CX-w+(2*w)*(i+0.5)/n, o=lobe(x, 0, v, TROOM); o.y=floorY(x)-o.r*0.55; L.push(o); }
+      for(i=1;i<n;i++) link(L[i-1], L[i], Math.min(L[i].r,L[i-1].r)*0.9, Math.hypot(L[i].x-L[i-1].x, L[i].y-L[i-1].y));
+      for(k=0;k<GN;k++){ TL[k]=TROOM; U[k]=V[k]=0; PR[k]=0; }
+      S.t=0;
+    }
+
+    // ---- one step ----
+    var DT=1/60, liqAcc=0;
+    // blob membership from the links (union-find), so contacts know whether they are inside one blob
+    function blobsOf(){ var par={}, i; function f(a){ while(par[a]!==a){ par[a]=par[par[a]]; a=par[a]; } return a; }
+      for(i=0;i<L.length;i++) par[L[i].id]=L[i].id;
+      for(i=0;i<LINKS.length;i++){ var a=f(LINKS[i].a.id), b=f(LINKS[i].b.id); if(a!==b) par[a]=b; }
+      for(i=0;i<L.length;i++) L[i].blob=f(L[i].id); }
+    function linked(a,b){ for(var i=0;i<LINKS.length;i++){ var l=LINKS[i]; if((l.a===a&&l.b===b)||(l.a===b&&l.b===a)) return l; } return null; }
+    function step(){
+      var dt=DT, P=S.on ? S.power*(1+0.6*S.music) : 0, n=L.length, i, a, b, o;
+      blobsOf();
+      // forces from the liquid: buoyancy, drag (Stokes: 1/r per unit mass), a little thermal noise
+      for(i=0;i<n;i++){ o=L[i];
+        var tl=bil(TL,o.x,o.y), acc=1.0*((o.T-TX)-0.35*(tl-TX)) - (1-o.f)*8;
+        o.vy-=acc*dt;
+        var g=3.0/Math.max(1,o.r)*(0.6+0.4*o.f), ul=bil(U,o.x,o.y), vl=bil(V,o.x,o.y), fr=1-Math.exp(-g*dt), dvx=(ul-o.vx)*fr, dvy=(vl-o.vy)*fr;
+        o.vx+=dvx; o.vy+=dvy; spread(FU,o.x,o.y,o.r,-dvx*o.v*0.12,1); spread(FV,o.x,o.y,o.r,-dvy*o.v*0.12,1);
+        if(o.f>0.5){ o.vx+=(rnd()-0.5)*0.5*dt*60*0.05; o.vy+=(rnd()-0.5)*0.5*dt*60*0.05; }
+      }
+      // necks: surface tension pulls a blob's parcels together; stretched necks thin and break
+      for(i=LINKS.length-1;i>=0;i--){ var l=LINKS[i]; a=l.a; b=l.b;
+        var dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1e-6, nx=dx/d, ny=dy/d, solid=Math.min(a.f,b.f)<0.5;
+        l.rn=l.rn0*Math.sqrt(l.L0/Math.max(l.L0,d));
+        var gap=d-(a.r+b.r)*0.8;
+        if(!solid && (l.rn<0.5 || (gap>0 && gap>Math.PI*2*l.rn))){
+          // the thread breaks; a thick one leaves a satellite droplet behind
+          LINKS.splice(i,1);
+          if(l.rn>1.2 && gap>2 && rnd()<0.3){ var sv=Math.min(Math.PI*l.rn*l.rn*0.8, a.v*0.15, b.v*0.15); a.v-=sv/2; b.v-=sv/2; a.r=Math.sqrt(a.v/Math.PI); b.r=Math.sqrt(b.v/Math.PI);
+            var s=lobe((a.x+b.x)/2,(a.y+b.y)/2,sv,(a.e+b.e)/2); s.vx=(a.vx+b.vx)/2; s.vy=(a.vy+b.vy)/2; L.push(s); }
+          continue; }
+        // tension ~ circumference of the neck; viscous damping along the neck
+        var ma=a.v, mb=b.v, ten=(solid?40:2.4)*l.rn*(gap>-a.r*0.3 ? 1 : 0.3), rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny, damp=(solid?1:0.25)*l.rn*rv;
+        var Fm=(ten+damp)*dt*KT; a.vx+=Fm*nx/ma; a.vy+=Fm*ny/ma; b.vx-=Fm*nx/mb; b.vy-=Fm*ny/mb;
+        // a neck that is pressed together grows thicker (the blobs are flowing into one)
+        if(d<l.L0){ l.L0=Math.max(d,(a.r+b.r)*0.5); l.rn0=Math.min(0.85*Math.min(a.r,b.r), l.rn0+0.6*dt); }
+        // heat runs along the neck
+        var q=0.15*l.rn*(b.T-a.T)*dt; a.e+=q/(a.v*CW); b.e-=q/(b.v*CW);
+      }
+      // contacts: push apart; parcels of different blobs pressed together long enough coalesce;
+      // neighbours inside one blob fuse while the result is not too big
+      var fused=false;
+      for(i=0;i<L.length;i++){ a=L[i]; for(var jj=i+1;jj<L.length;jj++){ b=L[jj];
+        var ex=b.x-a.x, ey=b.y-a.y, dd=Math.sqrt(ex*ex+ey*ey)||1e-6, touch=(a.r+b.r)*0.95;
+        var key=a.id<b.id ? a.id+':'+b.id : b.id+':'+a.id;
+        if(dd>=touch){ if(CONTACT[key]) delete CONTACT[key]; continue; }
+        var ux=ex/dd, uy=ey/dd, same=a.blob===b.blob, ov=(same?(a.r+b.r)*0.62:touch)-dd;
+        if(same && dd<(a.r+b.r)*0.66 && a.v+b.v<=VMAX && a.f>0.6 && b.f>0.6){ fuse(a,b); fused=true; break; }
+        if(ov>0){ var push=(same?8:22)*ov*dt, wa=b.v/(a.v+b.v), wb=a.v/(a.v+b.v);
+          a.vx-=push*ux*wa; a.vy-=push*uy*wa; b.vx+=push*ux*wb; b.vy+=push*uy*wb; }
+        if(!same && a.f>0.7 && b.f>0.7){ var tm=(a.T+b.T)/2, need=1.6*Math.exp(-(tm-50)/9)*(0.6+0.8*rnd());
+          CONTACT[key]=(CONTACT[key]||0)+dt*(0.5+ov); if(CONTACT[key]>need){ delete CONTACT[key]; link(a,b,0.35*Math.min(a.r,b.r),dd); } }
+        var q2=0.05*Math.min(a.r,b.r)*(b.T-a.T)*dt; a.e+=q2/(a.v*CW); b.e-=q2/(b.v*CW);
+      } if(fused) break; }
+      // move; keep inside the glass, above the dished floor, below the surface
+      for(i=0;i<L.length;i++){ o=L[i];
+        if(o.f<0.5 && o.rest>0.5){ o.vx=0; o.vy=Math.max(0,o.vy); }   // solid wax on the bottom stays put
+        o.x+=o.vx*dt; o.y+=o.vy*dt;
+        var ry=o.r*(1-0.38*o.rest), fy=floorY(o.x), w=inner(o.y)-o.r*0.92;
+        if(o.x>CX+w){ o.x=CX+w; if(o.vx>0) o.vx*=-0.1; o.vy*=0.97; } else if(o.x<CX-w){ o.x=CX-w; if(o.vx<0) o.vx*=-0.1; o.vy*=0.97; }
+        var onFloor=o.y+ry>=fy-0.05;
+        if(o.y+ry>fy){ o.y=fy-ry; if(o.vy>0) o.vy=0; o.vx*=0.985; o.vx+=(CX-o.x)*0.02*dt*60*0.05; }
+        if(o.y-ry*1.0<Y0+0.3){ o.y=Y0+0.3+ry; if(o.vy<0) o.vy=0; o.vx*=0.99; }
+        o.rest+=((onFloor?1:0)-o.rest)*(1-Math.exp(-dt*3));
+        o.sq+=(((o.y-ry<Y0+0.6)?1:0)-o.sq)*(1-Math.exp(-dt*3));    // flattening under the cap
+        var sp=Math.sqrt(o.vx*o.vx+o.vy*o.vy); o.el+=(Math.min(0.45, sp*0.03*o.f)-o.el)*(1-Math.exp(-dt*2)); if(sp>0.3) o.ang=Math.atan2(o.vy,o.vx);
+      }
+      // heat: the coil under the wax, wax <-> liquid across each blob's surface
+      for(i=0;i<L.length;i++){ o=L[i];
+        // the coil and the hot glass bottom: strongest in the middle, felt a little way up as well
+        var gapF=Math.max(0, floorY(o.x)-(o.y+o.r*(1-0.38*o.rest))), prox=Math.exp(-gapF/3);
+        if(prox>0.02){ var sh=0.12+Math.exp(-Math.pow((o.x-CX)/5,2)); o.e+=P*KC*sh*o.r*1.6*prox*dt/(o.v*CW); }
+        var tl2=avgIn(TL,o.x,o.y,o.r), Q=0.06*2*Math.PI*o.r*(tl2-o.T)*dt;
+        o.e+=Q/(o.v*CW); spread(TL,o.x,o.y,o.r,-Q,CC); phase(o);
+      }
+      // parcels too big to stay round split in two along the way they are moving
+      for(i=0;i<L.length;i++){ o=L[i]; if(o.v>VMAX*1.02){ var half=o.v/2, ang=o.rest>0.5?0:o.ang+Math.PI/2, ca=Math.cos(ang), sa=Math.sin(ang), r2=Math.sqrt(half/Math.PI);
+          var c=lobe(o.x+ca*r2*0.6, o.y+sa*r2*0.6, half, o.e); c.vx=o.vx; c.vy=o.vy; c.rest=o.rest;
+          o.v=half; o.r=r2; o.x-=ca*r2*0.6; o.y-=sa*r2*0.6; L.push(c); link(o,c,r2*0.8,r2*1.2); } }
+      liqAcc+=dt; if(liqAcc>=2*DT-1e-9){ liquid(liqAcc, P); liqAcc=0; }
+      S.t+=dt;
+    }
+    function fuse(a,b){
+      var v=a.v+b.v, wa=a.v/v, wb=b.v/v;
+      a.x=a.x*wa+b.x*wb; a.y=a.y*wa+b.y*wb; a.vx=a.vx*wa+b.vx*wb; a.vy=a.vy*wa+b.vy*wb; a.e=a.e*wa+b.e*wb; a.rest=Math.max(a.rest,b.rest);
+      a.v=v; a.r=Math.sqrt(v/Math.PI); phase(a);
+      for(var i=LINKS.length-1;i>=0;i--){ var l=LINKS[i]; if(l.a===b) l.a=a; if(l.b===b) l.b=a; if(l.a===l.b) LINKS.splice(i,1); }
+      // drop duplicate links between the same two parcels
+      var seen={}; for(i=LINKS.length-1;i>=0;i--){ var l2=LINKS[i], key=Math.min(l2.a.id,l2.b.id)+':'+Math.max(l2.a.id,l2.b.id); if(seen[key]) LINKS.splice(i,1); else seen[key]=1; }
+      L.splice(L.indexOf(b),1);
+    }
+
+    // ---- the liquid ----
+    function liquid(dt, P){
+      var i, j, k, s=0, n=0;
+      for(k=0;k<GN;k++) if(M[k]){ s+=TL[k]; n++; } var tav=s/n;
+      for(k=0;k<GN;k++){ if(!M[k]){ U[k]=V[k]=0; FU[k]=FV[k]=0; continue; } V[k]+=-0.25*(TL[k]-tav)*dt + FV[k]; U[k]+=FU[k]; FU[k]=FV[k]=0; }
+      var nu=3*dt/(CS*CS);
+      for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]){ U2[k]=V2[k]=0; continue; }
+        var uL=i>0&&M[k-1]?U[k-1]:0, uR=i<GX-1&&M[k+1]?U[k+1]:0, uU=j>0&&M[k-GX]?U[k-GX]:0, uD=j<GY-1&&M[k+GX]?U[k+GX]:0;
+        var vL=i>0&&M[k-1]?V[k-1]:0, vR=i<GX-1&&M[k+1]?V[k+1]:0, vU=j>0&&M[k-GX]?V[k-GX]:0, vD=j<GY-1&&M[k+GX]?V[k+GX]:0;
+        U2[k]=U[k]+nu*(uL+uR+uU+uD-4*U[k]); V2[k]=V[k]+nu*(vL+vR+vU+vD-4*V[k]); }
+      U.set(U2); V.set(V2); project();
+      for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]){ U2[k]=V2[k]=0; T2[k]=TL[k]; continue; }
+        var x=GX0+(i+0.5)*CS-U[k]*dt, y=Y0+(j+0.5)*CS-V[k]*dt; U2[k]=bil(U,x,y); V2[k]=bil(V,x,y); T2[k]=bil(TL,x,y); }
+      U.set(U2); V.set(V2); TL.set(T2); project();
+      var kap=1.4*dt/(CS*CS), qb=P*QB*dt;
+      for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]){ T2[k]=TL[k]; continue; }
+        var tl=TL[k], L2=i>0&&M[k-1]?TL[k-1]:tl, R2=i<GX-1&&M[k+1]?TL[k+1]:tl, Uu=j>0&&M[k-GX]?TL[k-GX]:tl, Dd=j<GY-1&&M[k+GX]?TL[k+GX]:tl;
+        T2[k]=tl+kap*(L2+R2+Uu+Dd-4*tl) + qb*BOT[k]/CC - (EDGE[k]*LSIDE + (j===0?LTOP:0))*(tl-TROOM)*dt; }
+      TL.set(T2);
+      for(j=0;j<GY;j++){ for(i=0;i<GX/2;i++){ k=j*GX+i; if(!M[k]){ var kk=k; while(kk<j*GX+GX-1 && !M[kk]) kk++; TL[k]=TL[kk]; } }
+        for(i=GX-1;i>=GX/2;i--){ k=j*GX+i; if(!M[k]){ var k2=k; while(k2>j*GX && !M[k2]) k2--; TL[k]=TL[k2]; } } }
+    }
+    var QB=150, LSIDE=0.035, LTOP=0.12, KT=12, KC=5;
+    function project(){
+      var i, j, k, it, h=CS;
+      for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]){ DV[k]=0; PR[k]=0; continue; }
+        var uR=i<GX-1&&M[k+1]?U[k+1]:-U[k], uL=i>0&&M[k-1]?U[k-1]:-U[k], vD=j<GY-1&&M[k+GX]?V[k+GX]:-V[k], vU=j>0&&M[k-GX]?V[k-GX]:-V[k];
+        DV[k]=(uR-uL+vD-vU)/(2*h); }
+      for(it=0;it<20;it++){ for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]) continue;
+        var pL=i>0&&M[k-1]?PR[k-1]:PR[k], pR=i<GX-1&&M[k+1]?PR[k+1]:PR[k], pU=j>0&&M[k-GX]?PR[k-GX]:PR[k], pD=j<GY-1&&M[k+GX]?PR[k+GX]:PR[k];
+        PR[k]=(pL+pR+pU+pD-DV[k]*h*h)/4; } }
+      for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]) continue;
+        var qL=i>0&&M[k-1]?PR[k-1]:PR[k], qR=i<GX-1&&M[k+1]?PR[k+1]:PR[k], qU=j>0&&M[k-GX]?PR[k-GX]:PR[k], qD=j<GY-1&&M[k+GX]?PR[k+GX]:PR[k];
+        U[k]-=(qR-qL)/(2*h); V[k]-=(qD-qU)/(2*h); }
+    }
+
+    function stats(){
+      var vt=0, et=0, ft=0, up=0, top=1e9, tb=0, nb=0, tt=0, nt=0; blobsOf(); var bl={};
+      for(var i=0;i<L.length;i++){ var o=L[i]; vt+=o.v; et+=o.T*o.v; ft+=o.f*o.v; if(o.y<(Y0+Y1)/2) up+=o.v; if(o.y-o.r<top) top=o.y-o.r; if(o.v>4) bl[o.blob]=1; }
+      for(i=0;i<GX;i++){ var kb=(GY-2)*GX+i, kt=GX+i; if(M[kb]){ tb+=TL[kb]; nb++; } if(M[kt]){ tt+=TL[kt]; nt++; } }
+      return { t:S.t, lobes:L.length, links:LINKS.length, blobs:Object.keys(bl).length, waxT:et/vt, melt:ft/vt, up:up/vt, top:(Y1-top)/(Y1-Y0), tBot:tb/nb, tTop:tt/nt, vol:vt };
+    }
+    reset();
+    return { S:S, L:L, LINKS:LINKS, TL:TL, U:U, V:V, M:M, DT:DT, step:step, reset:reset, stats:stats, inner:inner, outer:outer, floorY:floorY,
+      sampleTL:function(x,y){ return bil(TL,x,y); },
+      geo:{ CX:CX, Y0:Y0, Y1:Y1, CS:CS, GX:GX, GY:GY, GX0:GX0, TM:TM, TX:TX, TROOM:TROOM } };
+  }
+
+  // ---- the lava lamp: state, clock, painter ----
+  // Same 120 x 200 logical space as the tube. The lamp stands on the floor at y=190: a spun-metal
+  // cone base (190..126) with the bulb inside, the glass bottle (128..26, its outline is the
+  // simulation's), and a cone cap (31..8). The wax is drawn as a smooth field over the simulated
+  // parcels and their necks, shaded per pixel: lit from the bulb underneath, a soft highlight from
+  // the room, glowing thin edges; the field is sampled at about two device pixels per cell over the
+  // part of the lamp that is on screen, so it stays sharp at any zoom for the same cost.
+  var LCX=60, LFLOOR=190, LBASE=126;
+  var LAMP={ sim:null, last:0, acc:0, warming:true, stat:null, statT:0, music:0, seed:0, F:{} };
+  function lampSim(){ if(!LAMP.sim){ LAMP.seed=(Math.random()*4294967296)>>>0; LAMP.sim=makeLava(LAMP.seed); LAMP.warming=true; LAMP.stat=LAMP.sim.stats(); } return LAMP.sim; }
+  function lampRestart(seed){ LAMP.seed = seed==null ? (Math.random()*4294967296)>>>0 : seed>>>0; LAMP.sim=makeLava(LAMP.seed); LAMP.warming=true; LAMP.acc=0; LAMP.stat=LAMP.sim.stats(); syncLampStat(); }
+  // advance the simulation to wall-clock time; the first warm-up runs at 3x
+  function lampAdvance(sec){ var sim=lampSim(), n=Math.round(sec/sim.DT); for(var i=0;i<n;i++){ sim.step(); if(i%60===0) lampWatch(); } lampWatch(); }
+  function lampWatch(){ var st=LAMP.stat=LAMP.sim.stats();
+    if(LAMP.warming && ADV.lampOn && st.melt>0.9 && st.up>0.12) LAMP.warming=false;
+    if(!LAMP.warming && st.melt<0.1) LAMP.warming=true; }
+  function lampTick(now){
+    var sim=lampSim(), dt=LAMP.last ? Math.min(0.1,(now-LAMP.last)/1000) : 0; LAMP.last=now; if(dt<=0) return;
+    sim.S.on=!!ADV.lampOn; sim.S.power=clampN(ADV.lampW,15,40)/25;
+    var lv = ADV.lampMusic ? (TV.lvOverride!=null ? TV.lvOverride : level()) : 0;
+    LAMP.music += (lv-LAMP.music)*(1-Math.exp(-dt/1.5)); sim.S.music = ADV.lampMusic ? clampN(LAMP.music*1.6,0,1) : 0;
+    var spd = LAMP.warming && ADV.lampOn ? Math.max(3, ADV.lampTime) : ADV.lampTime;
+    LAMP.acc += dt*spd; var n=0; while(LAMP.acc>=sim.DT && n<16){ sim.step(); LAMP.acc-=sim.DT; n++; } if(n>=16) LAMP.acc=0;
+    if(now-LAMP.statT>500){ LAMP.statT=now; lampWatch(); syncLampStat(); }
+  }
+  function lampStatus(){
+    var st=LAMP.stat; if(!st) return ''; var w=Math.round(st.waxT)+'°C';
+    if(!ADV.lampOn) return st.melt>0.1 || st.waxT>27 ? 'off, cooling · wax '+w : 'off · the wax has set';
+    if(LAMP.warming) return 'warming up'+(ADV.lampTime<3?' (shown 3x)':'')+' · wax '+w;
+    var s = st.up>0.85 && st.tTop>45 ? 'running hot: the wax stays up' : st.up<0.04 && st.tTop<36 ? 'lazy: barely warm enough' : 'flowing';
+    return s+' · wax '+w+(ADV.lampMusic && LAMP.sim.S.music>0.05 ? ' · ♪ +'+Math.round(LAMP.sim.S.music*60)+'% heat' : '');
+  }
+  function syncLampStat(){ var t=lampStatus(); if($('lampStat').textContent!==t) $('lampStat').textContent=t; if(tvIsOpen() && TVZ.subj==='lamp' && $('tvStat').textContent!==t) $('tvStat').textContent=t; }
+
+  // glass outline (outer, minus inset) between y0 (top) and y1 (bottom)
+  function lampGlass(c, sim, inset, y0, y1, open){
+    var cx=LCX, y; c.beginPath(); c.moveTo(cx-(sim.outer(y1)-inset), y1);
+    for(y=y1-1.5; y>y0; y-=1.5) c.lineTo(cx-(sim.outer(y)-inset), y);
+    c.lineTo(cx-(sim.outer(y0)-inset), y0); c.lineTo(cx+(sim.outer(y0)-inset), y0);
+    for(y=y0+1.5; y<y1; y+=1.5) c.lineTo(cx+(sim.outer(y)-inset), y);
+    c.lineTo(cx+(sim.outer(y1)-inset), y1); if(!open) c.closePath();
+  }
+  function lampWall(c, sim, side, y0, y1, inset){ c.beginPath(); for(var y=y0; y<=y1+0.01; y+=1.5){ var x=LCX+side*(sim.outer(y)-inset); if(y===y0) c.moveTo(x,y); else c.lineTo(x,y); } }
+  // metal: a horizontal sweep for spun metal, from the finish's five tones
+  function metalGrad(c, x0, x1, m){ var g=c.createLinearGradient(x0,0,x1,0); g.addColorStop(0,m[0]); g.addColorStop(0.18,m[1]); g.addColorStop(0.34,m[3]); g.addColorStop(0.46,m[2]); g.addColorStop(0.75,m[1]); g.addColorStop(1,m[0]); return g; }
+
+  // wax primitives: each parcel is an ellipse (flattened on the floor and under the cap, drawn out
+  // along its motion), each neck a string of small discs as thick as the neck is
+  function waxPrims(sim){
+    var out=[], L=sim.L, i, K=2.1;
+    for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*(1+ee), b=o.r/(1+0.8*ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
+      var sx=1+0.32*o.rest+0.22*o.sq, sy=1-0.38*o.rest-0.28*o.sq;
+      // M = diag(sx,sy) R diag(a,b); store its inverse rows and the bounding extents
+      var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10;
+      out.push({ x:o.x, y:o.y, i00:m11/det/K, i01:-m01/det/K, i10:-m10/det/K, i11:m00/det/K, ex:K*Math.sqrt(m00*m00+m01*m01), ey:K*Math.sqrt(m10*m10+m11*m11), T:o.T, f:o.f });
+    }
+    for(i=0;i<sim.LINKS.length;i++){ var l=sim.LINKS[i], A=l.a, Bq=l.b, dx=Bq.x-A.x, dy=Bq.y-A.y, d=Math.sqrt(dx*dx+dy*dy); if(d<(A.r+Bq.r)*0.55) continue;
+      var ux=dx/d, uy=dy/d, s0=A.r*0.55, s1=d-Bq.r*0.55, rn=Math.max(0.45,l.rn), n=Math.max(1,Math.ceil((s1-s0)/(rn*0.8)));
+      for(var k=0;k<=n;k++){ var t=s0+(s1-s0)*k/n, f=t/d, rr=rn*K;
+        out.push({ x:A.x+ux*t, y:A.y+uy*t, i00:1/rr, i01:0, i10:0, i11:1/rr, ex:rr, ey:rr, T:A.T+(Bq.T-A.T)*f, f:Math.min(A.f,Bq.f) }); } }
+    return out;
+  }
+  function lampField(view, sim, vis, ppu, cover){
+    // the window of the lamp to sample: wax (or the whole inside for Thermal) cut to what is on screen
+    var prims=waxPrims(sim), g=sim.geo, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, i, p;
+    if(cover){ x0=LCX-23; x1=LCX+23; y0=g.Y0; y1=g.Y1+1; }
+    for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
+    x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
+    if(x1<=x0 || y1<=y0) return null;
+    var cs=Math.max(0.1, 2.0/ppu); if((x1-x0)*(y1-y0)/(cs*cs)>46000) cs=Math.sqrt((x1-x0)*(y1-y0)/46000);
+    var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
+    if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); } else { st.F.fill(0,0,N); st.FT.fill(0,0,N); st.FF.fill(0,0,N); }
+    var F=st.F, FT=st.FT, FF=st.FF;
+    for(i=0;i<prims.length;i++){ p=prims[i];
+      var a0=Math.max(0,Math.floor((p.x-p.ex-x0)/cs)), a1=Math.min(W-1,Math.ceil((p.x+p.ex-x0)/cs)), b0=Math.max(0,Math.floor((p.y-p.ey-y0)/cs)), b1=Math.min(H-1,Math.ceil((p.y+p.ey-y0)/cs));
+      for(var b=b0;b<=b1;b++){ var ry=y0+b*cs-p.y, row=b*W;
+        for(var a=a0;a<=a1;a++){ var rx=x0+a*cs-p.x, qx=p.i00*rx+p.i01*ry, qy=p.i10*rx+p.i11*ry, d2=qx*qx+qy*qy; if(d2>=1) continue;
+          var w=1-d2; w=w*w*w; F[row+a]+=w; FT[row+a]+=w*p.T; FF[row+a]+=w*p.f; } } }
+    return { F:F, FT:FT, FF:FF, W:W, H:H, x0:x0, y0:y0, cs:cs, st:st };
+  }
+  function lampPaintWax(c, view, sim, look, o, lit){
+    var thermal=look==='thermal', fd=lampField(view, sim, o.vis, o.ppu, thermal); if(!fd) return;
+    var F=fd.F, FT=fd.FT, FF=fd.FF, W=fd.W, H=fd.H, cs=fd.cs, st=fd.st, TH0=0.46, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], g=sim.geo;
+    if(!st.cv){ st.cv=document.createElement('canvas'); }
+    if(st.cv.width!==W || st.cv.height!==H){ st.cv.width=W; st.cv.height=H; st.cx=st.cv.getContext('2d'); st.img=st.cx.createImageData(W,H); }
+    var D=st.img.data, wc=look==='blacklight' ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35);
+    var hx=-0.38, hy=-0.52, hz=0.76;                                   // the room light, up and to the left
+    for(var b=0;b<H;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.3+0.7*Math.exp(-above/42))+0.1;
+      for(var a=0;a<W;a++){ var k=b*W+a, x=fd.x0+a*cs, f=F[k], pi=k*4, edge=(wIn-Math.abs(x-LCX))/cs+0.5;
+        if(edge<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; }
+        var A=0, R=0, G=0, Bc=0;
+        if(f>TH0*0.55){
+          var fl=a>0?F[k-1]:f, fr=a<W-1?F[k+1]:f, fu=b>0?F[k-W]:f, fdn=b<H-1?F[k+W]:f, gx=(fr-fl)/(2*cs), gy=(fdn-fu)/(2*cs), gm=Math.sqrt(gx*gx+gy*gy)+1e-6;
+          A=Math.max(0,Math.min(1,(f-TH0)/(gm*cs)+0.5));
+          if(A>0){ var T=FT[k]/f, mf=FF[k]/f, h=Math.min(1,(f-TH0)/0.9), nx=-gx*5, ny=-gy*5, nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
+            var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp; spec*=spec; spec*=spec; spec*=spec;   // ^16
+            if(thermal){ var tc=thermRGB((T-22)/45), sh=0.7+0.3*dl; R=tc[0]*sh; G=tc[1]*sh; Bc=tc[2]*sh; }
+            else if(look==='blacklight'){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
+            else if(look==='neon'){ var e2=Math.exp(-Math.pow((f-TH0)/(gm*cs*1.6+0.02),2)), nc=col.neon; R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
+            else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
+            else { var base = mf<0.6 ? solidC : wc, glow=mf<0.6 ? 0.4 : 1, li=Lb*(0.42+0.58*dl)*glow, rim=(1-h)*0.32*Lb*glow, hot=Math.max(0,T-50)*0.012*lit;
+              R=base[0]*(0.16+0.95*li+rim)+255*hot*0.6+255*spec*0.4; G=base[1]*(0.16+0.95*li+rim)+150*hot*0.6+245*spec*0.4; Bc=base[2]*(0.16+0.95*li+rim)+60*hot*0.6+235*spec*0.4; } }
+        }
+        if(thermal && A<1){ var tl=sim.sampleTL(x,y), lc=thermRGB((tl-22)/45); R=R*A+lc[0]*0.55*(1-A); G=G*A+lc[1]*0.55*(1-A); Bc=Bc*A+lc[2]*0.55*(1-A); A=1; }
+        A*=Math.min(1,edge);
+        D[pi]=R>255?255:R; D[pi+1]=G>255?255:G; D[pi+2]=Bc>255?255:Bc; D[pi+3]=A*255;
+      } }
+    st.cx.putImageData(st.img,0,0);
+    c.save(); c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs); c.restore();
+  }
+
+  function paintLamp(c, now, o){
+    var sim=lampSim(), g=sim.geo, L=curLook(), look=L.id, P=L.p, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], fin=(LBASE_BY[ADV.lampBase]||LAMP_BASES[0]).m, cx=LCX, d=o.detail||1;
+    var B=clampN(ADV.lampBright,0,200)/100, on=!!ADV.lampOn, pw=on ? clampN(ADV.lampW,15,40)/25*(1+0.25*sim.S.music) : 0;
+    var warm=LAMP.stat ? clampN((LAMP.stat.tBot-22)/28,0,1) : 0, lit=on ? Math.min(1.5,pw)*B*(0.55+0.45*Math.min(1,warm+0.5)) : 0;
+    var thermal=look==='thermal', uv=look==='blacklight', neon=look==='neon', xray=look==='xray';
+    var add=function(fn){ c.save(); c.globalCompositeOperation='lighter'; fn(); c.restore(); };
+    var liq= uv ? [96,30,190] : xray ? [90,140,200] : neon ? [40,0,70] : col.liq, glowC=mix(liq, uv?col.uv:col.wax, 0.3);
+    var mt= xray ? ['#0d1620','#1d3040','#6a8aa8','#a8c8e8','#2a4050'] : neon ? ['#0a0414','#14081e','#3a1050','#ff28c8','#1a0828'] : thermal ? ['#06041e','#120a40','#2a1a70','#3a2a90','#160c50'] : uv ? ['#120822','#2a1648','#5a3a90','#9a7ae0','#2a1848'] : fin;
+    var Y0=g.Y0, Y1=g.Y1;
+
+    // the room: the lamp lights the wall behind it and pools on the table
+    if(lit>0.01 && !thermal && !xray){ var br=110, bl=c.createRadialGradient(cx,92,4,cx,92,br); bl.addColorStop(0,rgba(glowC,clampN(0.2*lit,0,0.5))); bl.addColorStop(0.5,rgba(glowC,clampN(0.06*lit,0,0.2))); bl.addColorStop(1,rgba(glowC,0));
+      c.fillStyle=bl; c.beginPath(); c.arc(cx,92,br,0,Math.PI*2); c.fill(); }
+    if(P.synth){ c.save(); c.strokeStyle='rgba(255,40,200,0.22)'; c.lineWidth=0.5;
+      for(var gx=-6; gx<=6; gx++){ c.beginPath(); c.moveTo(cx+gx*6, LFLOOR); c.lineTo(cx+gx*40, LFLOOR+120); c.stroke(); } c.restore(); }
+    var tg=c.createLinearGradient(0,LFLOOR,0,LFLOOR+30); tg.addColorStop(0,P.chassisCol[0]); tg.addColorStop(1,P.chassisCol[1]); c.fillStyle=tg; c.fillRect(-TW,LFLOOR,TW*3,TH);
+    c.fillStyle=P.chassisEdge; c.fillRect(-TW,LFLOOR,TW*3,0.6);
+    if(lit>0.01) add(function(){ var pr=c.createRadialGradient(cx,LFLOOR+3,1,cx,LFLOOR+3,56); pr.addColorStop(0,rgba(glowC,clampN(0.3*lit,0,0.6))); pr.addColorStop(1,rgba(glowC,0));
+      c.save(); c.translate(cx,LFLOOR+3); c.scale(1,0.2); c.translate(-cx,-(LFLOOR+3)); c.fillStyle=pr; c.fillRect(cx-60,LFLOOR-60,120,120); c.restore(); });
+
+    // ---- the bottle: liquid, coil, wax, glass ----
+    lampGlass(c, sim, 0, 26, 128); c.fillStyle= xray ? 'rgba(120,170,220,0.06)' : 'rgba(205,220,230,0.035)'; c.fill();
+    // the liquid, lit from the bulb underneath (Thermal draws the liquid's own temperature instead)
+    var ins=function(){ c.beginPath(); var y; c.moveTo(cx-sim.inner(Y1),Y1); for(y=Y1-1.5;y>Y0;y-=1.5) c.lineTo(cx-sim.inner(y),y); c.lineTo(cx-sim.inner(Y0),Y0); c.lineTo(cx+sim.inner(Y0),Y0); for(y=Y0+1.5;y<Y1;y+=1.5) c.lineTo(cx+sim.inner(y),y); c.lineTo(cx+sim.inner(Y1),Y1); c.closePath(); };
+    if(!thermal){ var dk=[8,6,6], lg=c.createLinearGradient(0,Y0,0,Y1+1), k0=col.clear&&!uv&&!neon&&!xray ? 0.35 : 1;
+      [0,0.35,0.7,0.88,1].forEach(function(s){ var ii=clampN(0.07+lit*k0*(0.1+0.75*Math.exp(-(1-s)*93/36)),0,1); lg.addColorStop(s, rgba(mix(dk, liq, ii), 1)); });
+      ins(); c.fillStyle=lg; c.fill();
+      if(lit>0.01) add(function(){ var cg=c.createRadialGradient(0,0,0,0,0,1); cg.addColorStop(0,rgba(liq,clampN(0.5*lit*k0,0,0.8))); cg.addColorStop(0.45,rgba(liq,clampN(0.14*lit*k0,0,0.3))); cg.addColorStop(1,rgba(liq,0));
+        ins(); c.translate(cx,Y1+6); c.scale(26,70); c.fillStyle=cg; c.fill(); });
+    }
+    // headspace under the cap, and the meniscus
+    lampGlass(c, sim, 1.4, 30, Y0); c.fillStyle= thermal ? '#05031a' : 'rgba(12,10,9,0.92)'; c.fill();
+    c.strokeStyle= rgba(xray?[170,210,255]:[255,255,255], 0.18+0.15*Math.min(1,lit)); c.lineWidth=0.5; c.beginPath(); c.ellipse(cx, Y0, sim.inner(Y0), sim.inner(Y0)*0.12, 0, 0, Math.PI); c.stroke();
+    // the coil lying on the bottom (a flat spring that spreads the heat and breaks the wax's grip)
+    c.save(); c.strokeStyle= xray ? 'rgba(220,240,255,0.9)' : thermal ? thermCol(0.55+0.4*warm) : neon ? 'rgba(0,240,255,0.8)' : 'rgba(170,165,160,0.75)'; c.lineWidth=0.75; c.beginPath();
+    for(var a=0; a<=Math.PI*2*3.2; a+=0.2){ var rr=2.5+a*0.42, px=cx+Math.cos(a)*rr, py=Y1-1.1+Math.sin(a)*rr*0.16; if(a===0) c.moveTo(px,py); else c.lineTo(px,py); } c.stroke(); c.restore();
+    // the wax
+    lampPaintWax(c, o.view, sim, look, o, lit);
+    // the bulb shining up through the bottom of the glass and the pool
+    if(lit>0.01 && !thermal) add(function(){ var bg=c.createRadialGradient(cx,Y1+2,0,cx,Y1+2,18); bg.addColorStop(0,rgba(mix(liq,[255,240,210],0.5),clampN(0.55*lit,0,0.9))); bg.addColorStop(1,rgba(liq,0));
+      c.save(); c.translate(cx,Y1+2); c.scale(1,0.45); c.translate(-cx,-(Y1+2)); c.fillStyle=bg; c.fillRect(cx-20,Y1-20,40,40); c.restore(); });
+    // glass: Fresnel edges, wall thickness, outline, highlights that follow the bottle
+    var fr=c.createLinearGradient(cx-22,0,cx+22,0), gt= xray ? [150,200,255] : uv ? [190,150,255] : [215,225,235], ea= uv||neon ? 0.3 : 0.15;
+    fr.addColorStop(0,rgba(gt,ea)); fr.addColorStop(0.12,rgba(gt,ea*0.35)); fr.addColorStop(0.3,rgba(gt,0)); fr.addColorStop(0.7,rgba(gt,0)); fr.addColorStop(0.88,rgba(gt,ea*0.35)); fr.addColorStop(1,rgba(gt,ea));
+    lampGlass(c, sim, 0, 26, 127); c.fillStyle=fr; c.fill();
+    if(neon) add(function(){ lampGlass(c, sim, 0, 27, 126, true); c.strokeStyle='rgba(0,240,255,0.25)'; c.lineWidth=3; c.stroke(); });
+    lampGlass(c, sim, 0, 27, 126, true); c.strokeStyle= neon ? 'rgba(0,240,255,0.95)' : xray ? 'rgba(170,215,255,0.6)' : 'rgba(255,255,255,0.2)'; c.lineWidth=0.7; c.stroke();
+    if(!thermal){ var ra=uv||neon ? 0.3 : 0.22; c.lineCap='round';
+      lampWall(c, sim, -1, 36, 118, 4.5); c.strokeStyle=rgba([255,255,255],ra*0.35); c.lineWidth=3.2; c.stroke();
+      lampWall(c, sim, -1, 38, 115, 4.6); c.strokeStyle=rgba([255,255,255],ra*0.9); c.lineWidth=0.8; c.stroke();
+      lampWall(c, sim, 1, 44, 110, 2.6); c.strokeStyle=rgba([255,255,255],ra*0.45); c.lineWidth=1; c.stroke(); }
+
+    // ---- the cap ----
+    var capPath=function(){ c.beginPath(); c.moveTo(cx-13.9,31.2); c.quadraticCurveTo(cx-11.2,19,cx-7.8,9.2); c.lineTo(cx+7.8,9.2); c.quadraticCurveTo(cx+11.2,19,cx+13.9,31.2); c.ellipse(cx,31.2,13.9,1.9,0,0,Math.PI,false); c.closePath(); };
+    capPath(); c.fillStyle=metalGrad(c,cx-14,cx+14,mt); c.fill();
+    c.beginPath(); c.ellipse(cx,9.2,7.8,1.25,0,0,Math.PI*2); c.fillStyle=mt[1]; c.fill(); c.strokeStyle='rgba(255,255,255,0.22)'; c.lineWidth=0.4; c.stroke();
+    c.beginPath(); c.ellipse(cx,31.2,13.9,1.9,0,0,Math.PI); c.strokeStyle='rgba(255,255,255,0.28)'; c.lineWidth=0.5; c.stroke();
+    if(lit>0.01) add(function(){ c.beginPath(); c.ellipse(cx,31.6,13,1.6,0,0,Math.PI); c.strokeStyle=rgba(glowC,clampN(0.25*lit,0,0.5)); c.lineWidth=1; c.stroke(); });
+
+    // ---- the base: a spun cone with the bulb inside ----
+    var basePath=function(){ c.beginPath(); c.moveTo(cx-19.6,LBASE); c.bezierCurveTo(cx-21,150,cx-24,176,cx-33,LFLOOR); c.ellipse(cx,LFLOOR,33,4.8,0,Math.PI,0,true); c.bezierCurveTo(cx+24,176,cx+21,150,cx+19.6,LBASE); c.ellipse(cx,LBASE,19.6,3.1,0,0,Math.PI,false); c.closePath(); };
+    basePath(); c.fillStyle=metalGrad(c,cx-30,cx+30,mt); c.fill();
+    var sg=c.createLinearGradient(0,LBASE,0,LFLOOR); sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(1,'rgba(0,0,0,0.45)'); c.fillStyle=sg; c.fill();
+    if(lit>0.01) add(function(){ var rg=c.createLinearGradient(0,LBASE,0,LBASE+22); rg.addColorStop(0,rgba(glowC,clampN(0.16*lit,0,0.4))); rg.addColorStop(1,rgba(glowC,0)); basePath(); c.fillStyle=rg; c.fill(); });
+    // a rolled band near the top of the base
+    c.beginPath(); c.ellipse(cx,LBASE+6,20.2,3.2,0,0,Math.PI); c.strokeStyle='rgba(255,255,255,0.16)'; c.lineWidth=0.6; c.stroke();
+    c.beginPath(); c.ellipse(cx,LBASE+6.8,20.3,3.2,0,0,Math.PI); c.strokeStyle='rgba(0,0,0,0.35)'; c.lineWidth=0.5; c.stroke();
+    // light leaking between the glass and the collar
+    c.beginPath(); c.ellipse(cx,LBASE,19.6,3.1,0,0,Math.PI); c.strokeStyle= lit>0.01 ? rgba(mix(glowC,[255,240,200],0.4),clampN(0.35+0.4*lit,0,1)) : 'rgba(255,255,255,0.18)'; c.lineWidth=0.8; c.stroke();
+    if(lit>0.01) add(function(){ c.beginPath(); c.ellipse(cx,LBASE+0.4,19,2.7,0,0,Math.PI); c.strokeStyle=rgba(glowC,clampN(0.22*lit,0,0.5)); c.lineWidth=2.6; c.stroke(); });
+    c.beginPath(); c.ellipse(cx,LFLOOR,33,4.8,0,0,Math.PI); c.strokeStyle='rgba(255,255,255,0.12)'; c.lineWidth=0.5; c.stroke();
+    if(o.view==='rack' && !on && LAMP.stat && LAMP.stat.melt<0.1){ c.fillStyle='#6a6a6a'; c.font='9px '+(FONT||getComputedStyle(document.body).fontFamily); c.textAlign='center'; c.fillText('OFF', cx, TH-3); c.textAlign='start'; }
+  }
+  function renderLamp(cv, now, view, z, px, py, q){
+    var f=fitCanvas(cv, q); if(!f) return null; lampTick(now);
+    var c=f.c, r=f.r, L=curLook(), W=cv.width, H=cv.height;
+    var s=Math.min(f.w/TW, f.h/TH)*(view==='big'?0.94:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=f.h/2-(TH/2+(py||0))*s;
+    if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
+    c.setTransform(1,0,0,1,0,0);
+    var bg = L.p.bg || (view==='big' ? '#060504' : null); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
+    c.setTransform(r*s,0,0,r*s,r*tx,r*ty);
+    paintLamp(c, now, { detail:r*s, view:view, ppu:r*s, vis:{ x0:-tx/s, y0:-ty/s, x1:(f.w-tx)/s, y1:(f.h-ty)/s } });
+    c.setTransform(1,0,0,1,0,0); lookOverlay(c, W, H, L, now);
+    return { s:s, tx:tx, ty:ty, w:f.w, h:f.h };
+  }
+  function drawLamp(now){ renderLamp($('lampCv'), now, 'rack'); }
+
   // Graphic EQ: LED ladder per band (live spectrum, peak hold), fader caps, and the summed curve.
   var EQV = { sel:-1, hover:-1, lv:[], pk:[], pkT:[], drag:null, dirty:true, curve:null, last:0 };
   var LED_MIN=-74, LED_MAX=-20;            // band power in dBFS mapped onto the ladder (tuned on real OTR audio)
@@ -3550,7 +4054,7 @@
   }
   var rackRAF=0;
   function startRack(){ if(rackRAF) return; var loop=function(now){ if(!ADV.open){ rackRAF=0; return; } rackRAF=requestAnimationFrame(loop);
-      try{ drawTube(now); if(!tvIsOpen()){ drawEq(now); drawMeter(now); drawSpk(now); drawGonio(now); drawDeGR(now); } }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }   // the Tube view covers the rack: only its little tube keeps up
+      try{ drawTube(now); drawLamp(now); if(!tvIsOpen()){ drawEq(now); drawMeter(now); drawSpk(now); drawGonio(now); drawDeGR(now); } }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }   // the Tube view covers the rack: only its little tube keeps up
 
   // Offline measurement for tests: render through a fresh chain (stereo) and read it back.
   //   tones: [{f,a}] (default one sine at freq/amp), impulse: true for a single click at 50 ms,
@@ -3659,7 +4163,8 @@
       deGr: function(){ return PROC ? PROC.deComp.reduction : null; },
       corr: function(){ return GON.corr; },
       tv: {
-        open: function(){ openTubeView(); return tvIsOpen(); }, close: function(){ closeTubeView(); return tvIsOpen(); }, isOpen: tvIsOpen,
+        open: function(subj){ openTubeView(subj); return tvIsOpen(); }, close: function(){ closeTubeView(); return tvIsOpen(); }, isOpen: tvIsOpen,
+        subject: function(sj){ if(sj){ TVZ.subj = sj==='lamp' ? 'lamp' : 'tube'; syncTubeView(); } return TVZ.subj; },
         look: function(id){ if(LOOK_BY[id]){ ADV.tvFilter=id; syncTubeView(); saveAdv(); } return ADV.tvFilter; },
         looks: function(){ return TUBE_LOOKS.map(function(l){ return l.id; }); },
         zoom: function(z,x,y){ if(z!=null){ TVZ.z=z; TVZ.x=x||0; TVZ.y=y||0; clampPan(); } return { z:TVZ.z, x:TVZ.x, y:TVZ.y }; },
@@ -3668,9 +4173,20 @@
         bench: function(n, which){ var cv=$(which==='rack'?'tubeCv':'tvCv'), t0=performance.now(); n=n||30;
           for(var i=0;i<n;i++){ renderTube(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
         quality: function(v){ if(v!==undefined) TVQ.lock = v==null ? null : clampN(+v,0.25,1); return { q:TVQ.q, lock:TVQ.lock, ema:TVQ.ema, w:$('tvCv').width, cw:$('tvCv').clientWidth }; },
-        sample: function(which){ var cv=$(which==='rack'?'tubeCv':'tvCv'); if(!cv.width) return null; var c=cv.getContext('2d'), W=cv.width, H=cv.height;
+        sample: function(which){ var cv=$(which==='rack'?'tubeCv':which==='lamp'?'lampCv':'tvCv'); if(!cv.width) return null; var c=cv.getContext('2d'), W=cv.width, H=cv.height;
           var d=c.getImageData(Math.floor(W*0.3),Math.floor(H*0.25),Math.max(1,Math.floor(W*0.4)),Math.max(1,Math.floor(H*0.5))).data, r=0,g=0,b=0,n=d.length/4;
           for(var i=0;i<d.length;i+=4){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; } return { r:r/n, g:g/n, b:b/n, lum:(0.2126*r+0.7152*g+0.0722*b)/n, filter:cv.style.filter }; }
+      },
+      lamp: {
+        state: function(){ lampSim(); var st=LAMP.sim.stats(); st.warming=LAMP.warming; st.seed=LAMP.seed; st.on=ADV.lampOn; st.music=LAMP.sim.S.music; st.status=lampStatus(); return st; },
+        advance: function(sec){ lampSim(); LAMP.sim.S.on=!!ADV.lampOn; LAMP.sim.S.power=clampN(ADV.lampW,15,40)/25; lampAdvance(sec||1); syncLampStat(); return this.state(); },
+        reset: function(seed){ lampRestart(seed); return this.state(); },
+        set: function(o){ Object.keys(o||{}).forEach(function(k){ if(('lamp'+k.charAt(0).toUpperCase()+k.slice(1)) in ADV_DEF) ADV['lamp'+k.charAt(0).toUpperCase()+k.slice(1)]=o[k]; }); Object.keys(advKnobs).forEach(function(k){ if(/^lamp/.test(k)) advKnobs[k].set(ADV[k]); }); saveAdv(); syncLampUI(); return JSON.parse(JSON.stringify(ADV)); },
+        blobs: function(){ lampSim(); return LAMP.sim.L.map(function(o){ return { x:o.x, y:o.y, r:o.r, T:o.T, f:o.f }; }); },
+        cols: function(){ return LAMP_COLS.map(function(x){ return x.id; }); },
+        bench: function(n, which){ var cv=$(which==='rack'?'lampCv':'tvCv'), t0=performance.now(); n=n||30;
+          for(var i=0;i<n;i++){ renderLamp(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
+        stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; }
       },
       // Test-only: decode the start of a real recording (byte range) and report the energy in the
       // voice band (200 Hz-3 kHz) and the S band (above 5 kHz) after the chain.
