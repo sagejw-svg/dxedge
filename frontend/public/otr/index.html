@@ -3651,7 +3651,7 @@
     var st=LAMP.stat; if(!st) return ''; var w=Math.round(st.waxT)+'°C';
     if(!ADV.lampOn) return st.melt>0.1 || st.waxT>27 ? 'off, cooling · wax '+w : 'off · the wax has set';
     if(LAMP.warming) return 'warming up'+(ADV.lampTime<3?' (shown 3x)':'')+' · wax '+w;
-    var s = st.up>0.85 && st.tTop>45 ? 'running hot: the wax stays up' : st.up<0.04 && st.tTop<36 ? 'lazy: barely warm enough' : 'flowing';
+    var s = st.up>0.85 && st.tTop>45 ? 'running hot: the wax stays up' : st.up<0.04 && ADV.lampW<20 ? 'lazy: barely warm enough' : 'flowing';
     return s+' · wax '+w+(ADV.lampMusic && LAMP.sim.S.music>0.05 ? ' · ♪ +'+Math.round(LAMP.sim.S.music*60)+'% heat' : '');
   }
   function syncLampStat(){ var t=lampStatus(); if($('lampStat').textContent!==t) $('lampStat').textContent=t; if(tvIsOpen() && TVZ.subj==='lamp' && $('tvStat').textContent!==t) $('tvStat').textContent=t; }
