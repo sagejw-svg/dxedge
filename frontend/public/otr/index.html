@@ -199,6 +199,44 @@
   @media (max-width: 520px){ .station .st-now { min-height: 0; } }
   .station .st-left { font-size: 10px; color: var(--dim); margin-top: 3px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
+  /* Network stations (station.js): what the network carried at this hour on this weekday, local clock */
+  .netrow { margin: 0 0 14px; }
+  .netrow[hidden] { display: none; }
+  .netrow .pane-h { margin-bottom: 8px; }
+  .netrow .pane-h h3 { font-size: 12.5px; color: var(--amber2); margin: 0; font-weight: 600; letter-spacing: .4px; }
+  .chips.stations.networks { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+  .station.network { border-color: rgba(255,179,71,0.28); background: linear-gradient(180deg, rgba(255,179,71,0.05), transparent 60%), var(--bg1); }
+  .station.network .st-now { min-height: 0; -webkit-line-clamp: 3; }
+  .station.network .st-now .slot { color: var(--amber2); font-weight: 600; }
+  .station.network .st-now .fill { color: var(--dim); font-style: italic; }
+  .station.network .st-next { font-size: 10.5px; color: var(--dim); margin-top: 4px; line-height: 1.45; }
+  .station.network .st-next b { color: var(--muted); font-weight: 500; }
+  .station.network .st-left { display:flex; justify-content: space-between; gap: 8px; letter-spacing: .4px; }
+  .station.network .st-left .rejoin { color: var(--amber); cursor: pointer; letter-spacing: 0; text-decoration: underline dotted; }
+  .guide { margin-top: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg1); padding: 0 12px; }
+  .guide summary { cursor: pointer; font-size: 11.5px; color: var(--muted); padding: 8px 0; user-select: none; list-style: none; display:flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .guide summary::-webkit-details-marker { display:none; }
+  .guide summary::before { content: '▸'; color: var(--amber); margin-right: 2px; }
+  .guide[open] summary::before { content: '▾'; }
+  .guide summary .hint { font-size: 10.5px; color: var(--dim); }
+  .guide-body { padding: 2px 0 10px; }
+  .guide-blurb { font-size: 11.5px; color: var(--muted); line-height: 1.55; margin: 0 0 10px; }
+  .guide-legend { font-size: 10.5px; color: var(--dim); margin: 0 0 8px; line-height: 1.6; }
+  .guide-legend i { display:inline-block; width: 7px; height: 7px; border-radius: 50%; margin: 0 4px 0 8px; vertical-align: 0; }
+  .guide table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+  .guide td { padding: 4px 6px 4px 0; vertical-align: top; border-top: 1px solid var(--border); line-height: 1.4; }
+  .guide td.t { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; width: 68px; }
+  .guide td.n { color: var(--text); }
+  .guide td.n i { display:inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
+  .guide td.s { color: var(--dim); font-size: 10.5px; }
+  .guide tr.fill td.n { color: var(--dim); font-style: italic; }
+  .guide tr.now td { background: rgba(255,179,71,0.07); }
+  .guide tr.now td.n { color: var(--amber2); }
+  .guide .c-verified { background: var(--green, #6fcf97); } .guide .c-likely { background: var(--amber); } .guide .c-approx { background: #b08cff; } .guide .c-fill { background: var(--bg3); border: 1px solid var(--border2); }
+  @media (max-width: 640px){ .guide td.s { display: none; } }
+  .np .slot { font-size: 11px; color: var(--dim); margin-top: 3px; line-height: 1.5; }
+  .np .slot b { color: var(--amber2); font-weight: 500; }
+
   .toggle { display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted); cursor:pointer; user-select:none; }
   .toggle input { accent-color: var(--amber); }
 
@@ -503,6 +541,7 @@
         <div class="ep" id="npEp"></div>
         <div class="src" id="npSrc"></div>
         <div class="date" id="npDate"></div>
+        <div class="slot" id="npSlot" style="display:none"></div>
         <div class="summary" id="npSummary"></div>
         <div class="more" id="npMore">show more</div>
         <div class="np-archive" id="npArchive"></div>
@@ -682,6 +721,12 @@
 
   <!-- Channels -->
   <section class="pane on" id="channelsPane" role="tabpanel" aria-labelledby="channelsBtn">
+    <!-- Network stations (station.js + stations/<id>.grid.json): the network's real weekly lineup on your local clock -->
+    <div class="netrow" id="networks" hidden>
+      <div class="pane-h"><h3>Network stations</h3><span class="hint">what the network was carrying at this hour on this day of the week, on your local clock; no commercials, so a half hour often fits two shows. Pause and rewind as you like; tune back in and you are live again.</span></div>
+      <div class="chips stations networks" id="networkChips"></div>
+      <details class="guide" id="netGuide"><summary>Today on <span id="netGuideName">the network</span> <span class="hint" id="netGuideDay"></span></summary><div class="guide-body" id="netGuideBody"></div></details>
+    </div>
     <div class="pane-h"><h2>Channels</h2><span class="hint">always on air: tap one to join the show in progress, or roll its 🎲 for a random episode</span></div>
     <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
     <div class="savedrow" id="savedRow"></div>
@@ -810,6 +855,7 @@
 <audio id="audio" crossorigin="anonymous" preload="auto"></audio>
 <div class="toast" id="toast"></div>
 
+<script src="/otr/station.js"></script>
 <script>
 "use strict";
 (function(){
@@ -854,7 +900,9 @@
     enhActive: false,     // the element is playing an enhanced file right now
     enhFailed: {},        // original URL -> 1 once its enhanced copy failed this session
     pendingRatio: 0,      // 0..1 position to restore after an Original/Enhanced swap
-    startSeek: 0, startRatio: 0, startedAt: 0 // where and when this item was started
+    startSeek: 0, startRatio: 0, startedAt: 0, // where and when this item was started
+    network: null,        // id of the network station being followed (station.js), else null
+    pausedAt: 0           // when a network listener paused; a long pause makes them time-shifted
   };
   function load(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
   function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
@@ -1101,6 +1149,7 @@
     adPool = byId['commercials'] || null;
     buildChannelChips(); buildGreats(); refreshChannelCounts();
     renderStationNow(); setInterval(renderStationNow, 5000);
+    loadNetworks();
     buildShowGrid();
     renderSaved();
     renderFoot();
@@ -1279,6 +1328,9 @@
     document.querySelectorAll('#channelChips .station').forEach(function(c){
       c.classList.toggle('on', state.channel && c.dataset.ch===state.channel);
     });
+    document.querySelectorAll('#networkChips .station').forEach(function(c){
+      c.classList.toggle('on', !!state.network && c.dataset.net===state.network);
+    });
     document.querySelectorAll('#savedRow .chip').forEach(function(c){ c.classList.toggle('on', parseInt(c.dataset.idx,10)===state.savedActive); });
     var one = (!state.channel && !state.random && state.stationShowIds && state.stationShowIds.length===1) ? state.stationShowIds[0] : null;
     document.querySelectorAll('#greatChips .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.id===one); });
@@ -1361,6 +1413,8 @@
     });
   }
   document.addEventListener('visibilitychange', renderStationNow);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) renderNetworkNow(); });
+  setInterval(renderNetworkNow, 5000);
 
   // Tune in: join the station's broadcast at the current clock position.
   function startChannel(ch){
@@ -1410,6 +1464,131 @@
     setStatus('ready');
     updateDock();
   }
+
+  // ---- network stations (station.js) ----
+  // A network station plays what the network was carrying at this hour on this day of the week, on the
+  // listener's local clock, from a hand-authored grid (stations/<id>.grid.json) plus station-only shows
+  // harvested from archive.org (stations/<id>.shows.json, scripts/otr_station_harvest.py). Episodes run
+  // back to back with no commercials: when one ends, the next comes from whichever show owns the slot at
+  // that minute. The week is a pure function of the clock, so nothing is stored and everyone in a time
+  // zone hears the same thing. Pause, rewind and skip go time-shifted like a channel; tapping the card
+  // (or reloading) rejoins live. Station-only shows live in byId but not in CAT.shows, so the builder,
+  // search and the footer count never see them.
+  var NETWORKS = ['abc'], NETS = {}, NET_ORDER = [], netGuideDay = -1;
+  function loadNetworks(){
+    NETWORKS.forEach(function(id){
+      Promise.all([getJSON('stations/'+id+'.grid.json'), getJSON('stations/'+id+'.shows.json').catch(function(){ return null; })])
+        .then(function(res){
+          var grid=res[0], extra=res[1];
+          if(extra && extra.shows) extra.shows.forEach(function(s){ if(!byId[s.id]){ s.st=true; byId[s.id]=s; } });
+          NETS[id] = new OTRStation.Station(grid, byId);
+          NETS[id].extraCount = extra && extra.shows ? extra.shows.length : 0;
+          NET_ORDER.push(id);
+          buildNetworkCards(); renderNetworkNow();
+          var last = load('otr_last','');
+          if(last==='net:'+id && !state.queue.length && !state.channel) cueNetwork(id);
+        })
+        .catch(function(e){ console.warn('network station '+id+' unavailable', e); });
+    });
+  }
+  function netShowCount(N){ var seen={}; N.slots.forEach(function(s){ if(s.show && N.has(s.show)) seen[s.show]=1; }); Object.keys(N.pools).forEach(function(p){ N.pools[p].forEach(function(id){ seen[id]=1; }); }); return Object.keys(seen).length; }
+  function buildNetworkCards(){
+    var row=$('networks'), el=$('networkChips'); el.innerHTML='';
+    NET_ORDER.forEach(function(id){
+      var N=NETS[id], c=document.createElement('div'); c.className='station network'; c.dataset.net=id;
+      c.title = N.grid.tagline || ('Tune in to '+N.name);
+      c.innerHTML = '<div class="st-head"><span class="st-name">'+escapeHtml(N.name)+'<span class="st-season">network</span></span>'+
+        '<span class="st-actions"><span class="st-count">'+netShowCount(N)+' shows</span></span></div>'+
+        '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"><span class="l"></span><span class="rejoin" style="display:none">rejoin live</span></div><div class="st-next"></div>';
+      c.onclick = function(){ startNetwork(id); };
+      el.appendChild(c);
+    });
+    row.hidden = !NET_ORDER.length;
+    if(NET_ORDER.length){ $('netGuideName').textContent = NETS[NET_ORDER[0]].grid.long || NETS[NET_ORDER[0]].name; $('netGuideDay').textContent=OTRStation.DAYS[new Date().getDay()]+', your local time'; }
+    markActiveChip();
+  }
+  function netItem(it){ return { showId:it.showId, epIndex:it.epIndex, isAd:false, at:it.at, dur:it.dur, own:it.own, fill:it.fill, label:it.label, net:true }; }
+  function netLabel(N, it){
+    var d=N.describe(it);
+    return it.fill ? '<span class="fill">'+escapeHtml(d.label||'fill')+'</span> <b>'+escapeHtml(d.show)+'</b>'
+                   : '<span class="slot">'+escapeHtml(d.slotTime)+' '+escapeHtml(d.show)+'</span>';
+  }
+  function renderNetworkNow(){
+    if(document.hidden) return;
+    var now=Date.now()/1000;
+    NET_ORDER.forEach(function(id){
+      var N=NETS[id], card=document.querySelector('#networkChips .station[data-net="'+id+'"]'); if(!card) return;
+      var a=N.onAir(now); if(!a){ card.querySelector('.st-now').textContent='off air'; return; }
+      var d=N.describe(a.item), html=netLabel(N,a.item)+' &middot; '+escapeHtml(d.title);
+      var el=card.querySelector('.st-now'); if(el._h!==html){ el.innerHTML=html; el._h=html; }
+      card.querySelector('.st-bar i').style.width=(100*a.offset/a.item.dur).toFixed(1)+'%';
+      card.querySelector('.st-left .l').textContent=fmt(a.left)+' left';
+      var shifted = state.network===id && !state.live && state.queue.length;
+      card.querySelector('.st-left .rejoin').style.display = shifted ? '' : 'none';
+      var up=N.upcoming(now, 3), nx=card.querySelector('.st-next');
+      var nh=up.length ? 'then '+up.map(function(it){ var dd=N.describe(it), t=new Date(it.at*1000); return '<b>'+escapeHtml(dd.show)+'</b> '+OTRStation.clock12(t.getHours()*60+t.getMinutes()).replace(/ /,' '); }).join(' &middot; ') : '';
+      if(nx._h!==nh){ nx.innerHTML=nh; nx._h=nh; }
+    });
+    if($('netGuide').open) renderNetGuide();
+  }
+  function renderNetGuide(force){
+    var id=NET_ORDER[0]; if(!id) return;
+    var N=NETS[id], now=new Date(), day=now.getDay(), minute=now.getHours()*60+now.getMinutes();
+    var body=$('netGuideBody');
+    if(netGuideDay!==day || force){
+      netGuideDay=day;
+      $('netGuideDay').textContent=OTRStation.DAYS[day]+', your local time';
+      var rows=N.lineup(day), h='';
+      if(N.grid.blurb) h+='<p class="guide-blurb">'+escapeHtml(N.grid.blurb)+'</p>';
+      h+='<div class="guide-legend">Each slot is a real day and time from one season of the network\'s schedule; the week is a composite. '+
+         '<i class="c-verified"></i>printed in a season ratings table <i class="c-likely"></i>standard reference <i class="c-approx"></i>day confirmed by the episode dates, hour placed <i class="c-fill"></i>fill for an hour nobody recorded</div>';
+      h+='<table>'+rows.map(function(r){
+        return '<tr class="'+(r.fill?'fill':'')+'" data-start="'+r.start+'" data-end="'+r.end+'"><td class="t">'+escapeHtml(r.time)+'</td>'+
+               '<td class="n"><i class="c-'+r.conf+'"></i>'+escapeHtml(r.name)+'</td><td class="s">'+escapeHtml(r.src||'')+'</td></tr>';
+      }).join('')+'</table>';
+      body.innerHTML=h;
+    }
+    body.querySelectorAll('tr').forEach(function(tr){ var s=+tr.dataset.start, e=+tr.dataset.end; tr.classList.toggle('now', minute>=s && minute<e); });
+  }
+  $('netGuide').addEventListener('toggle', function(){ if(this.open) renderNetGuide(true); });
+  function netQueue(N, t){ var a=N.onAir(t); if(!a) return null; return { a:a, items:[a.item].concat(N.upcoming(t, 6)).map(netItem) }; }
+  // Tune in: join the network's chain at the current clock position.
+  function startNetwork(id){
+    var N=NETS[id]; if(!N) return;
+    var q=netQueue(N, Date.now()/1000); if(!q){ toast('Nothing on the air right now'); return; }
+    if(onlyMode()) toast('Station mode plays the full lineup; enhanced-only is ignored here');
+    state.channel=null; state.stationShowIds=null; state.stationLabel=N.name; state.savedActive=-1;
+    save('otr_last','net:'+id);
+    setQueue(q.items, true); state.network=id; state.live=true; state.schedAds=true; state.pausedAt=0;
+    state.pendingSeek = q.a.offset>5 ? q.a.offset : 0;
+    markActiveChip();
+    playCurrent();
+  }
+  // Keep the queue ahead of the listener: the chain continues from the scheduled end of the last queued item.
+  function extendNetworkQueue(){
+    var N=NETS[state.network], last=state.queue[state.queue.length-1]; if(!N || !last) return;
+    var more=N.upcoming(last.at+1, 6).map(netItem);
+    if(more.length) state.queue=state.queue.concat(more);
+  }
+  // Restore on load: highlight the card and preview what's on, without autoplaying (like cueChannel).
+  function cueNetwork(id){
+    var N=NETS[id]; if(!N) return;
+    state.channel=null; state.stationShowIds=null; state.stationLabel=N.name; state.savedActive=-1; state.network=id;
+    markActiveChip();
+    $('vizIdle').style.display='none'; $('playBtn').disabled=false;
+    var a=N.onAir(Date.now()/1000);
+    if(a){ var r=resolve(a.item); if(r){ $('npShow').textContent=r.show.name; $('npEp').textContent=r.title; $('npDate').textContent=r.date||''; renderSlotLine(a.item); } }
+    setStatus('ready'); updateDock();
+  }
+  function renderSlotLine(it){
+    var el=$('npSlot'); if(!it || !state.network || !NETS[state.network]){ el.style.display='none'; el.innerHTML=''; return; }
+    var N=NETS[state.network], d=N.describe(it), t=new Date(it.at*1000);
+    var when=d.day+' '+OTRStation.clock12(t.getHours()*60+t.getMinutes());
+    var lab=d.label||'fill'; if(!/\(fill\)$/.test(lab)) lab+=' (fill)';
+    el.innerHTML = '<b>'+escapeHtml(N.name)+'</b> &middot; '+escapeHtml(when)+(d.fill ? ' &middot; '+escapeHtml(lab) : ' &middot; '+escapeHtml(d.slotTime)+' slot')+
+                   (d.slotSrc ? '<br>'+escapeHtml(d.slotSrc) : '');
+    el.style.display='block';
+  }
   function startStation(showIds, label){
     var shows = showIds.map(function(id){ return byId[id]; }).filter(Boolean);
     if(!shows.length){ toast('No valid shows in that station'); return; }
@@ -1420,8 +1599,9 @@
     if(!state.queue.length && onlyMode()){ noneLeft(state.stationLabel); return; }
     playCurrent();
   }
-  function setQueue(order){ state.cueNext=false; state.queue = onlyFilter(order); state.qi = -1; state.history=[]; state.programsSinceAd=0;
-    state.live=false; state.shifted=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; }
+  // raw: keep the order exactly as given (a network station's chain cannot be filtered to enhanced-only copies)
+  function setQueue(order, raw){ state.cueNext=false; state.queue = raw ? order.slice() : onlyFilter(order); state.qi = -1; state.history=[]; state.programsSinceAd=0;
+    state.live=false; state.shifted=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; state.network=null; }
 
   // Random ("surprise me"): pick episodes at random across a scope (all shows, or one
   // channel). A separate mode from the broadcast clock - it plays on demand and keeps
@@ -1570,6 +1750,7 @@
     opts = opts || {};
     if(!state.queue.length) return;
     state.cueNext=false;
+    if(state.network && state.qi+1 >= state.queue.length) extendNetworkQueue();   // the chain never ends
     if(!opts.auto && state.live){ state.live=false; }   // skipping takes you off the broadcast clock
     if(!opts.auto) state.shifted=false;
     if(state.qi>=0){ state.history.push(state.qi); if(state.history.length>120) state.history.shift(); } // bug #2: cap history
@@ -1608,7 +1789,8 @@
     if(ac && ac.state==='suspended') ac.resume();
     state.awaitingGesture=false; clearBackoff();
     if(!state.queue.length){ // nothing playing yet: tune the cued/last channel, else the first
-      if(state.channel) startChannel(state.channel);
+      if(state.network) startNetwork(state.network);
+      else if(state.channel) startChannel(state.channel);
       else if(CAT && CAT.channels.length) startChannel(CAT.channels[0]);
       return;
     }
@@ -1704,7 +1886,8 @@
   });
   function wakeFromSleep(){
     state.cueNext=false;
-    if(state.channel && !state.stationShowIds && state.live) startChannel(state.channel);   // rejoin the clock, time has passed
+    if(state.network && state.live) startNetwork(state.network);                             // rejoin the network live
+    else if(state.channel && !state.stationShowIds && state.live) startChannel(state.channel);   // rejoin the clock, time has passed
     else next(true);
   }
   function sleepAtEnd(){
@@ -1717,7 +1900,9 @@
   audio.addEventListener('playing', function(){ state.gotPlaying=true; state.errCount=0; state.awaitingGesture=false; clearWatch(); clearBackoff(); setPlaying(true); setStatus('playing'); });
   audio.addEventListener('play', function(){ setPlaying(true); if(!state.gotPlaying) setStatus('tuning'); });
   audio.addEventListener('waiting', function(){ if(state.gotPlaying) setStatus('buffering'); });
-  audio.addEventListener('pause', function(){ setPlaying(false); clearWatch(); if(!audio.ended) setStatus('paused'); });
+  audio.addEventListener('pause', function(){ setPlaying(false); clearWatch(); if(!audio.ended) setStatus('paused'); if(state.network && !audio.ended) state.pausedAt=Date.now(); });
+  // A network listener who pauses for more than a few seconds is behind the clock: say so, and offer rejoin.
+  audio.addEventListener('play', function(){ if(state.network && state.live && state.pausedAt && Date.now()-state.pausedAt>8000) offClock(); state.pausedAt=0; });
   audio.addEventListener('ended', function(){
     finishItem(trackItem());
     if(sleepAtEnd()) return; next(true);
@@ -1769,7 +1954,8 @@
     var d=$('dockPlay'); d.textContent = p ? '⏸' : '▶'; d.setAttribute('aria-label', p ? 'Pause' : 'Play');
   }
   function setStatus(kind){
-    var where = (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
+    var where = state.network && NETS[state.network] ? ' · '+NETS[state.network].name+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
+              : (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
               : (state.stationLabel ? ' · '+state.stationLabel : '');
     var ad = currentItem() && currentItem().isAd;
     $('np').classList.toggle('live', kind==='playing');
@@ -1793,7 +1979,7 @@
       navigator.mediaSession.metadata = new MediaMetadata({
         title: r.isAd ? 'Commercial Break' : (r.title + (state.enhActive ? (isAI(state.src && state.src.entry) ? ' (AI enhanced)' : ' (enhanced)') : '')),
         artist: r.isAd ? 'Vintage advertisement' : r.show.name,
-        album: 'Old Time Radio' + (state.channel ? (' · '+titleCase(state.channel)) : (state.stationLabel ? (' · '+state.stationLabel) : ''))
+        album: 'Old Time Radio' + (state.network && NETS[state.network] ? (' · '+NETS[state.network].name) : state.channel ? (' · '+titleCase(state.channel)) : (state.stationLabel ? (' · '+state.stationLabel) : ''))
 
       });
     }catch(e){}
@@ -1818,6 +2004,7 @@
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
     $('npEp').textContent = r.isAd ? (r.title==='Commercial'?'Vintage advertisement':r.title) : r.title;
     $('npDate').textContent = r.date || '';
+    renderSlotLine(state.network && it.net ? it : null);
     var sum = $('npSummary'), more=$('npMore');
     if(r.summary){ sum.textContent = r.summary; sum.style.display='block';
       more.style.display = (r.summary.length>210)?'block':'none'; sum.classList.remove('open'); more.textContent='show more';
@@ -4147,6 +4334,17 @@
     schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); },
     tab: function(name){ if(name) showTab(name); return curTab; },
     dockShown: function(){ return $('dock').classList.contains('show'); },
+    network: {
+      ready: function(){ return NET_ORDER.length>0; },
+      ids: function(){ return NET_ORDER.slice(); },
+      station: function(id){ return NETS[id||NET_ORDER[0]]; },
+      tune: startNetwork, cue: cueNetwork,
+      onAir: function(id, t){ var N=NETS[id||NET_ORDER[0]], a=N&&N.onAir(t||Date.now()/1000); return a ? { showId:a.item.showId, epIndex:a.item.epIndex, at:a.item.at, dur:a.item.dur, offset:a.offset, fill:a.item.fill, slot:a.item.own.start, conf:a.item.own.conf } : null; },
+      upcoming: function(id, t, n){ var N=NETS[id||NET_ORDER[0]]; return N ? N.upcoming(t||Date.now()/1000, n||5).map(function(it){ return { showId:it.showId, epIndex:it.epIndex, at:it.at, dur:it.dur, fill:it.fill, slot:it.own.start }; }) : []; },
+      lineup: function(id, day){ var N=NETS[id||NET_ORDER[0]]; return N ? N.lineup(day==null?new Date():day) : []; },
+      queue: function(){ return state.queue.map(function(it){ return { showId:it.showId, epIndex:it.epIndex, at:it.at, net:!!it.net }; }); },
+      extra: function(){ return Object.keys(byId).filter(function(id){ return byId[id].st; }); }
+    },
     adv: {
       state: function(){ return JSON.parse(JSON.stringify(ADV)); },
       open: function(o){ openRack(o!==false); return ADV.open; },
