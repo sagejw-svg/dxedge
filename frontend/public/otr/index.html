@@ -394,6 +394,33 @@
   .limled.hit i { background: var(--red); box-shadow: 0 0 8px var(--red); }
   .rack-note { margin: 0 14px 12px; font-size: 11.5px; color: var(--amber2); border: 1px dashed rgba(255,179,71,0.4); border-radius: 8px; padding: 8px 10px; }
   .rack-note[hidden] { display: none; }
+  .rack-row2 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; padding: 0 12px 12px; }
+  @media (max-width: 1060px){ .rack-row2 { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 560px){ .rack-row2 { grid-template-columns: minmax(0,1fr); } }
+  .mod-note { font-size: 11px; color: var(--dim); line-height: 1.5; margin-top: 8px; }
+  .mod-sub { font-size: 11.5px; color: var(--amber2); margin-top: 2px; }
+  .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 2px; }
+  .knobs.left { justify-content: flex-start; gap: 6px 10px; }
+  canvas#spkCv { width: 100%; height: 132px; display: block; }
+  canvas#roomCv { width: 100%; height: 74px; display: block; border: 1px solid var(--border); border-radius: 6px; background: #080808; }
+  .gonio-wrap { display: flex; gap: 10px; align-items: stretch; }
+  canvas#gonioCv { width: 128px; height: 128px; display: block; border: 1px solid var(--border); border-radius: 6px; background: #040704; flex: 0 0 auto; }
+  .corr { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .corr .kl { font-size: 9.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .corrbar { position: relative; height: 10px; border-radius: 3px; border: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(255,92,92,.35), rgba(255,179,71,.25) 45%, rgba(0,255,157,.3)); }
+  .corrbar b { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1.5px; background: #fff; border-radius: 2px; left: 100%; transition: left .08s linear; }
+  .corr .cv { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; }
+  .corr .scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); }
+  .gr { display: flex; align-items: center; gap: 8px; }
+  .gr .kl { font-size: 9.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+  .grbar { flex: 1; display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; height: 12px; }
+  .grbar i { background: #1d1d1d; border-radius: 1px; }
+  .grbar i.on { background: var(--amber); box-shadow: 0 0 4px rgba(255,179,71,.6); } .grbar i.on.hot { background: var(--red); box-shadow: 0 0 4px rgba(255,92,92,.6); }
+  .grv { font-size: 10.5px; color: var(--amber2); min-width: 50px; text-align: right; font-variant-numeric: tabular-nums; }
+  .chain span { color: var(--faint); } .chain span.on { color: var(--amber); }
+  .rack-h select { background: var(--bg1); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
+    font-family: var(--font-mono); font-size: 11px; padding: 4px 6px; cursor: pointer; max-width: 210px; }
 </style>
 </head>
 <body>
@@ -470,8 +497,9 @@
   <section class="rack" id="rack" aria-label="Advanced sound">
     <div class="rack-h">
       <h2>ADVANCED SOUND</h2>
-      <span class="chain">EQ → TUBE → LIMITER</span>
+      <span class="chain" id="advChain" title="Signal path, lit stages are on"></span>
       <span class="sp"></span>
+      <select id="advScene" aria-label="Scenes" title="Set every stage at once"><option value="">Scenes…</option></select>
       <button class="pwr" id="advPower" aria-pressed="false" title="Turn all processing on or off"><span class="sw"></span><span id="advPowerTxt">processing off</span></button>
       <button class="btn" id="advReset" style="padding:5px 10px;font-size:11px" title="Flat EQ, default tube">reset</button>
       <button class="rack-x" id="advClose" aria-label="Close advanced sound" title="Close (processing stays as set)">×</button>
@@ -513,6 +541,56 @@
             <div class="knobs" id="eqKnobs" style="margin:0"></div>
             <span class="hint">±12 dB per band · double-click a band to zero it · LED ladders show the live spectrum with peak hold</span>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="rack-row2">
+      <div class="mod" id="deMod">
+        <div class="mod-h"><span class="label">de-esser</span><span class="sp"></span>
+          <button class="pwr small" id="dePower" aria-pressed="false"><span class="sw"></span>bypass</button></div>
+        <div class="mod-b">
+          <div class="gr"><span class="kl">reduction</span><div class="grbar" id="deGr"></div><span class="grv" id="deGrV">0.0 dB</span></div>
+          <div class="knobs left" id="deKnobs"></div>
+          <div class="chips2"><button class="tchip" id="deListen" aria-pressed="false" title="Hear only the band the de-esser works on, to tune the frequency">🎧 listen to the band</button></div>
+          <div class="mod-note">Tames spitty S, T and SH sounds by compressing only the band above the frequency you set. Old transfers often have them baked in, and the tube makes them louder, so it sits before the tube.</div>
+        </div>
+      </div>
+      <div class="mod" id="spkMod">
+        <div class="mod-h"><span class="label">speaker</span><span class="sp"></span>
+          <button class="pwr small" id="spkPower" aria-pressed="false"><span class="sw"></span>bypass</button></div>
+        <div class="mod-b">
+          <canvas id="spkCv" role="img" aria-label="Speaker cabinet and its frequency response"></canvas>
+          <div class="chips2" id="cabChips" role="group" aria-label="Choose a speaker"></div>
+          <div class="mod-sub" id="cabName"></div>
+          <div class="mod-note" id="cabNote"></div>
+          <div class="knobs left" id="spkKnobs"></div>
+        </div>
+      </div>
+      <div class="mod" id="roomMod">
+        <div class="mod-h"><span class="label">room</span><span class="sp"></span>
+          <button class="pwr small" id="roomPower" aria-pressed="false"><span class="sw"></span>bypass</button></div>
+        <div class="mod-b">
+          <canvas id="roomCv" role="img" aria-label="Room impulse response"></canvas>
+          <div class="chips2" id="roomChips" role="group" aria-label="Choose a room"></div>
+          <div class="mod-note" id="roomNote"></div>
+          <div class="knobs left" id="roomKnobs"></div>
+        </div>
+      </div>
+      <div class="mod" id="wMod">
+        <div class="mod-h"><span class="label">stereo width</span><span class="sp"></span>
+          <button class="pwr small" id="wPower" aria-pressed="false"><span class="sw"></span>bypass</button></div>
+        <div class="mod-b">
+          <div class="gonio-wrap">
+            <canvas id="gonioCv" role="img" aria-label="Goniometer: a vertical line is mono, a wide cloud is stereo"></canvas>
+            <div class="corr">
+              <span class="kl">phase correlation</span>
+              <div class="corrbar"><b id="corrMark"></b></div>
+              <div class="scale"><span>-1</span><span>0</span><span>+1</span></div>
+              <span class="cv" id="corrV">mono</span>
+            </div>
+          </div>
+          <div class="knobs left" id="wKnobs"></div>
+          <div class="mod-note">Spreads mono recordings into stereo with a mid/side pseudo-stereo trick. Bass stays in the centre, and folding back to mono gives you the original exactly. 0% collapses anything to mono.</div>
         </div>
       </div>
     </div>
@@ -2118,8 +2196,35 @@
     return g.map(function(x){ x=Math.round(x*2)/2; return Math.abs(x)<0.5?0:x; });
   }
 
+  // ---- speakers, rooms and scenes for the second row of the rack ----
+  // Speaker cabinets: the same seven filters for every cabinet (HP, HP, peak, peak, peak, LP, LP)
+  // plus a short "box" echo that adds the comb colour of a cabinet. HP/LP Q is Web Audio's
+  // resonance in dB (-3.01 is Butterworth); peaking Q is linear. Values are at full intensity.
+  var CABS = [
+    { id:'console', name:"Console radio '40s", note:'A floor console with a 12-inch field-coil speaker in an open-back wooden cabinet: warm boom around 140 Hz, soft top end.',
+      f:[['highpass',70,2.0],['highpass',70,-3.01],['peaking',140,1.1,4.5],['peaking',450,1.0,1.5],['peaking',2400,1.2,2.5],['lowpass',5200,1.0],['lowpass',5200,-3.01]], box:[1.1,0.22] },
+    { id:'bakelite', name:"Tabletop Bakelite '50s", note:'A kitchen-table set with a 5-inch speaker in a small plastic box: no bass, a forward nasal midrange.',
+      f:[['highpass',180,3.0],['highpass',180,-3.01],['peaking',420,1.6,3],['peaking',1500,1.2,5],['peaking',3000,2.0,2],['lowpass',3800,2.0],['lowpass',3800,-3.01]], box:[0.45,0.30] },
+    { id:'horn', name:"Theater horn '30s", note:'A movie-palace horn: honky, projecting midrange that cuts across a big room.',
+      f:[['highpass',110,1.0],['highpass',110,-3.01],['peaking',300,1.0,-3],['peaking',950,0.9,4.5],['peaking',2800,1.5,3],['lowpass',7000,1.0],['lowpass',7000,-3.01]], box:[2.2,0.15] },
+    { id:'monitor', name:"Studio monitor '40s", note:'A broadcast studio monitor: the widest range of the four, just a little rounded at each end.',
+      f:[['highpass',55,1.0],['highpass',55,-3.01],['peaking',100,1.0,2],['peaking',800,1.0,-1],['peaking',3000,1.0,1.5],['lowpass',9500,0.5],['lowpass',9500,-3.01]], box:[0.8,0.10] }
+  ];
+  var CAB_BY={}; CABS.forEach(function(c){ CAB_BY[c.id]=c; });
+  var ROOMS = [
+    { id:'living',  name:"Living room '40s", decay:0.55, pre:3,  span:22,  er:7,  tone:4, mix:20, note:'Rugs, drapes and a sofa: short and soft.' },
+    { id:'studio',  name:'Radio studio',     decay:0.9,  pre:6,  span:40,  er:9,  tone:6, mix:15, note:'A treated broadcast studio: a little air, no echo.' },
+    { id:'theater', name:'Theater',          decay:1.8,  pre:16, span:70,  er:10, tone:5, mix:22, note:'A plaster movie palace with balcony reflections.' },
+    { id:'hall',    name:'Grand hall',       decay:3.4,  pre:28, span:110, er:12, tone:4, mix:25, note:'Stone and height: a long, dark tail.' }
+  ];
+  var ROOM_BY={}; ROOMS.forEach(function(r){ ROOM_BY[r.id]=r; });
+
   var ADV_DEF = { on:false, open:false, eqOn:true, tubeOn:true, bands:31, gains:null, pre:0, preset:'flat',
-                  tube:'12AX7', drive:3, bias:0, sag:2, tone:0, out:0 };
+                  tube:'12AX7', drive:3, bias:0, sag:2, tone:0, out:0,
+                  deOn:false, deFreq:5, deAmt:5, deListen:false,
+                  spkOn:false, cab:'console', spkInt:8,
+                  roomOn:false, room:'living', rmDecay:0.55, rmMix:20, rmTone:4,
+                  wOn:false, width:100, wChar:9 };
   var advFresh = load('otr_adv', null) === null;
   var ADV = (function(){
     var d=JSON.parse(JSON.stringify(ADV_DEF));
@@ -2127,6 +2232,9 @@
     if(!ISO[d.bands]) d.bands=31;
     if(advFresh && window.innerWidth<520) d.bands=15;              // phones start with 15 faders
     if(!TUBE_BY[d.tube]) d.tube='12AX7';
+    if(!CAB_BY[d.cab]) d.cab='console';
+    if(!ROOM_BY[d.room]) d.room='living';
+    d.deListen=false;                                              // listen is a momentary tool, never restored
     if(!Array.isArray(d.gains) || d.gains.length!==d.bands) d.gains=presetGains(PRESET_BY[d.preset]?d.preset:'flat', d.bands);
     d.gains=d.gains.map(function(g){ return clampN(+g||0,-12,12); });
     return d;
@@ -2195,32 +2303,118 @@
     return -0.6*db(full);
   }
 
+
+  // Web Audio BiquadFilterNode magnitude response in dB for any type we use (spec formulas).
+  function bqDb(type, f, f0, Q, gdb, fs){
+    f0=Math.min(f0, fs*0.49);
+    var w0=2*Math.PI*f0/fs, cw=Math.cos(w0), sw=Math.sin(w0), A=Math.pow(10,(gdb||0)/40), b0,b1,b2,a0,a1,a2,al,sA;
+    if(type==='lowpass'||type==='highpass'){ al=sw/(2*Math.pow(10,Q/20)); a0=1+al; a1=-2*cw; a2=1-al;
+      if(type==='lowpass'){ b0=(1-cw)/2; b1=1-cw; b2=(1-cw)/2; } else { b0=(1+cw)/2; b1=-(1+cw); b2=(1+cw)/2; } }
+    else if(type==='peaking'){ if(!gdb) return 0; al=sw/(2*Q); b0=1+al*A; b1=-2*cw; b2=1-al*A; a0=1+al/A; a1=-2*cw; a2=1-al/A; }
+    else { if(!gdb) return 0; al=sw/2*Math.SQRT2; sA=2*Math.sqrt(A)*al;
+      if(type==='highshelf'){ b0=A*((A+1)+(A-1)*cw+sA); b1=-2*A*((A-1)+(A+1)*cw); b2=A*((A+1)+(A-1)*cw-sA); a0=(A+1)-(A-1)*cw+sA; a1=2*((A-1)-(A+1)*cw); a2=(A+1)-(A-1)*cw-sA; }
+      else { b0=A*((A+1)-(A-1)*cw+sA); b1=2*A*((A-1)-(A+1)*cw); b2=A*((A+1)-(A-1)*cw-sA); a0=(A+1)+(A-1)*cw+sA; a1=-2*((A-1)+(A+1)*cw); a2=(A+1)+(A-1)*cw-sA; } }
+    var w=2*Math.PI*f/fs, c1=Math.cos(w), s1=Math.sin(w), c2=Math.cos(2*w), s2=Math.sin(2*w);
+    var nr=b0+b1*c1+b2*c2, ni=-(b1*s1+b2*s2), dr=a0+a1*c1+a2*c2, di=-(a1*s1+a2*s2);
+    return 10*Math.log((nr*nr+ni*ni)/(dr*dr+di*di))/Math.LN10;
+  }
+  // A cabinet at an intensity (0..10): corners slide in from 20 Hz / 20 kHz, peaks and the box echo scale up.
+  function cabParams(S){
+    var cab=CAB_BY[S.cab]||CABS[0], k=clampN(S.spkInt,0,10)/10;
+    var f=cab.f.map(function(x){ var t=x[0], fr=x[1];
+      if(t==='highpass') fr=20*Math.pow(fr/20,k); else if(t==='lowpass') fr=20000*Math.pow(fr/20000,k);
+      return { type:t, f:fr, Q:x[2], g:(x[3]||0)*k }; });
+    return { f:f, boxMs:cab.box[0], boxG:cab.box[1]*k };
+  }
+  function cabDb(f, P, fs){
+    var s=0; P.f.forEach(function(x){ s+=bqDb(x.type, f, x.f, x.Q, x.g, fs); });
+    var w=2*Math.PI*f*P.boxMs/1000, re=1+P.boxG*Math.cos(w), im=-P.boxG*Math.sin(w);
+    return s+10*Math.log(re*re+im*im)/Math.LN10;
+  }
+  // Level trim: average the cabinet's response over 200 Hz - 3 kHz (where voices live) and undo it.
+  function cabTrimDb(P, fs){ var s=0, n=24; for(var i=0;i<n;i++){ s+=cabDb(200*Math.pow(15,i/(n-1)), P, fs); } return -s/n; }
+
+  // Early reflections for a room: deterministic, so the drawing and the impulse response agree.
+  function roomER(S){
+    var R=ROOM_BY[S.room]||ROOMS[0], rnd=mulberry32(hashStr('er:'+R.id)), out=[];
+    for(var k=0;k<R.er;k++){ out.push({ t:(R.span*(k+1)/(R.er+1))*(0.65+0.7*rnd())/1000, g:(0.55+0.4*rnd())*(1-0.5*k/R.er), side:rnd()<0.5?0:1, s:rnd()<0.5?-1:1 }); }
+    return out;
+  }
+  // Stereo impulse response: lowpassed noise with an RT60 envelope whose top end decays faster
+  // (the Tone knob sets where), decorrelated left and right, plus the early reflections.
+  function genIR(ctx, S){
+    var sr=ctx.sampleRate, dec=clampN(S.rmDecay,0.2,6), len=Math.ceil(sr*Math.min(6.5, dec*1.3+0.06)), buf=ctx.createBuffer(2,len,sr);
+    var fc0=1500*Math.pow(8, clampN(S.rmTone,0,10)/10), er=roomER(S), step=Math.exp(-6.91/(dec*sr));
+    for(var ch=0; ch<2; ch++){
+      var d=buf.getChannelData(ch), rnd=mulberry32(hashStr('ir:'+ch+':'+S.room)), lp=0, env=1, a=0;
+      for(var i=0;i<len;i++){
+        if((i&63)===0){ var t=i/sr, fc=fc0*Math.exp(-t*2.5/dec)+250; a=Math.exp(-2*Math.PI*fc/sr); }
+        lp=(1-a)*(rnd()*2-1)+a*lp; d[i]=lp*env*2.2; env*=step;
+      }
+      er.forEach(function(e){ var idx=Math.floor((e.t+(e.side===ch?0:0.0007))*sr); if(idx<len) d[idx]+=e.s*e.g*Math.exp(-6.91*e.t/dec)*(e.side===ch?1:0.6); });
+      var fi=Math.floor(sr*0.0015); for(var j=0;j<fi&&j<len;j++) d[j]*=j/fi;
+    }
+    return buf;
+  }
+
   // Build the chain in any BaseAudioContext (the live one, or an OfflineAudioContext for tests).
+  // Order, as in a hardware channel strip: EQ > de-esser > tube > speaker > room > width > limiter.
   function makeChain(ctx){
     var live = !(window.OfflineAudioContext && ctx instanceof OfflineAudioContext);
-    var C = { ctx:ctx, filters:[] };
+    var C = { ctx:ctx, filters:[], live:live };
     function G(v){ var g=ctx.createGain(); g.gain.value=(v==null?1:v); return g; }
+    function MONO(v){ var g=G(v); g.channelCount=1; g.channelCountMode='explicit'; g.channelInterpretation='speakers'; return g; }
     function BQ(type,f,q){ var b=ctx.createBiquadFilter(); b.type=type; b.frequency.value=f; if(q!=null) b.Q.value=q; return b; }
     function setP(p,v){ if(live){ try{ p.setTargetAtTime(v, ctx.currentTime, 0.015); return; }catch(e){} } p.value=v; }
+    function chain(list){ for(var i=0;i<list.length-1;i++) list[i].connect(list[i+1]); }
     C.setP=setP;
     C.input=G(); C.output=G();
+    // EQ
     C.eqIn=G(); C.eqOut=G();
+    // De-esser: Linkwitz-Riley 4th-order split (flat when summed); only the top band is compressed.
+    // DynamicsCompressorNode looks ahead 6 ms (Blink, WebKit and Gecko share the kernel), which delays
+    // only the top band; the voice band gets the same delay so the two still sum flat at the crossover.
+    C.deIn=G(); C.deOut=G(); C.deLowG=G(); C.deLowDel=ctx.createDelay(0.05); C.deLowDel.delayTime.value=0.006;
+    C.deLp=[BQ('lowpass',6000,-3.0103),BQ('lowpass',6000,-3.0103)]; C.deHp=[BQ('highpass',6000,-3.0103),BQ('highpass',6000,-3.0103)];
+    C.deComp=ctx.createDynamicsCompressor(); C.deComp.knee.value=3; C.deComp.attack.value=0.001; C.deComp.release.value=0.06; C.deTrim=G();
+    chain([C.deIn, C.deLp[0], C.deLp[1], C.deLowDel, C.deLowG, C.deOut]); chain([C.deIn, C.deHp[0], C.deHp[1], C.deComp, C.deTrim, C.deOut]);
+    // Tube
     C.tIn=G(0.5); C.shaper=ctx.createWaveShaper(); C.shaper.oversample='4x'; C.tMake=G();
     C.dc=BQ('highpass',12,0.707); C.xHp=BQ('highpass',40,0.6); C.xLp=BQ('lowpass',16000,0.6);
     C.toneLo=BQ('lowshelf',220); C.toneHi=BQ('highshelf',3500);
     C.sag=ctx.createDynamicsCompressor(); C.sag.knee.value=6; C.sag.attack.value=0.008; C.tOut=G();
-    C.tIn.connect(C.shaper); C.shaper.connect(C.tMake); C.tMake.connect(C.dc); C.dc.connect(C.xHp); C.xHp.connect(C.xLp);
-    C.xLp.connect(C.toneLo); C.toneLo.connect(C.toneHi); C.toneHi.connect(C.sag); C.sag.connect(C.tOut);
+    chain([C.tIn, C.shaper, C.tMake, C.dc, C.xHp, C.xLp, C.toneLo, C.toneHi, C.sag, C.tOut]);
+    // Speaker: seven filters, then the dry signal plus a short box echo, then a level trim.
+    C.spkIn=G(); C.spkF=CABS[0].f.map(function(x){ return BQ(x[0], x[1], x[2]); }); C.spkMix=G(); C.spkBox=ctx.createDelay(0.01); C.spkBoxG=G(0); C.spkOut=G();
+    chain([C.spkIn].concat(C.spkF)); var lastF=C.spkF[C.spkF.length-1];
+    lastF.connect(C.spkMix); lastF.connect(C.spkBox); C.spkBox.connect(C.spkBoxG); C.spkBoxG.connect(C.spkMix); C.spkMix.connect(C.spkOut);
+    // Room: dry plus pre-delayed convolution with a generated stereo impulse response.
+    C.rmIn=G(); C.rmDry=G(); C.rmPre=ctx.createDelay(0.2); C.rmWet=G(0); C.rmOut=G(); C.conv=null;
+    C.rmIn.connect(C.rmDry); C.rmDry.connect(C.rmOut); C.rmIn.connect(C.rmPre); C.rmWet.connect(C.rmOut);
+    // Width (mid/side): M=(L+R)/2 stays as is. S = the original side plus a synthetic side made from
+    // M by a short delay, band-limited to 220 Hz - 7 kHz so the bass stays centred. L=M+S, R=M-S,
+    // so folding back to mono gives exactly M: nothing cancels on a mono speaker.
+    C.wIn=G(); C.wIn.channelCount=2; C.wIn.channelCountMode='explicit'; C.wIn.channelInterpretation='speakers';
+    C.wSplit=ctx.createChannelSplitter(2); C.wM=MONO(); C.wSo=MONO(); C.wSL=MONO(0.5); C.wSR=MONO(-0.5);
+    C.wDel=ctx.createDelay(0.05); C.wSh=BQ('highpass',220,-3.0103); C.wSl=BQ('lowpass',7000,-3.0103); C.wSyn=MONO(0.6);
+    C.wS=MONO(); C.wSw=MONO(1); C.wNeg=MONO(-1); C.wL=MONO(); C.wR=MONO(); C.wMerge=ctx.createChannelMerger(2); C.wOut=G();
+    C.wIn.connect(C.wM); C.wIn.connect(C.wSplit); C.wSplit.connect(C.wSL,0); C.wSplit.connect(C.wSR,1); C.wSL.connect(C.wSo); C.wSR.connect(C.wSo); C.wSo.connect(C.wS);
+    chain([C.wM, C.wDel, C.wSh, C.wSl, C.wSyn, C.wS, C.wSw]);
+    C.wM.connect(C.wL); C.wM.connect(C.wR); C.wSw.connect(C.wL); C.wSw.connect(C.wNeg); C.wNeg.connect(C.wR);
+    C.wL.connect(C.wMerge,0,0); C.wR.connect(C.wMerge,0,1); C.wMerge.connect(C.wOut);
     // Limiter, then a soft clipper that only acts above 0.89 so nothing leaves the chain over 0 dBFS.
     // DynamicsCompressorNode adds its own makeup gain (0.6 x the full-scale reduction, in dB, in
-    // Chromium, WebKit and Gecko alike); limTrim and the sag trim below take it back out so bypass
-    // and processing match in level.
+    // Chromium, WebKit and Gecko alike); the trims take it back out so bypass and processing match.
     C.lim=ctx.createDynamicsCompressor();
     C.lim.threshold.value=-1; C.lim.knee.value=0; C.lim.ratio.value=20; C.lim.attack.value=0.002; C.lim.release.value=0.12;
     C.limTrim=G(dB2lin(-compMakeupDb(-1,0,20))); C.clipIn=G(1/1.5); C.clip=ctx.createWaveShaper(); C.clip.oversample='2x';
     C.clip.curve=(function(){ var n=8192, c=new Float32Array(n), k=0.89; for(var i=0;i<n;i++){ var x=(i/(n-1)*2-1)*1.5, a=Math.abs(x);
       c[i]= a<k ? x : (x<0?-1:1)*(k+0.1*Math.tanh((a-k)/0.1)); } return c; })();
-    C.lim.connect(C.limTrim); C.limTrim.connect(C.clipIn); C.clipIn.connect(C.clip);
+    chain([C.lim, C.limTrim, C.clipIn, C.clip]);
+    // Stereo taps on the final output for the goniometer and correlation meter.
+    if(live){ C.gTap=G(); C.gTap.channelCount=2; C.gTap.channelCountMode='explicit'; C.gTap.channelInterpretation='speakers';
+      C.gSplit=ctx.createChannelSplitter(2); C.anL=ctx.createAnalyser(); C.anR=ctx.createAnalyser(); C.anL.fftSize=C.anR.fftSize=1024;
+      C.output.connect(C.gTap); C.gTap.connect(C.gSplit); C.gSplit.connect(C.anL,0); C.gSplit.connect(C.anR,1); }
     C.n=0;
     C.setBands=function(S){
       try{ C.eqIn.disconnect(); }catch(e){}
@@ -2244,18 +2438,57 @@
       setP(C.tOut.gain, dB2lin(S.out - sagMk));
       return tc;
     };
+    // De-esser: Amount 0..10 sets threshold (-30 to -66 dBFS in the top band) and ratio (3:1 to 8:1).
+    // Measured on real archive.org transfers, S-band peaks sit around -47 to -33 dBFS, so the default 5
+    // (-48 dBFS) trims typical peaks by a few dB and 10 cuts them by about 20.
+    C.setDe=function(S){
+      var f=Math.min(S.deFreq*1000, ctx.sampleRate*0.45);
+      C.deLp.concat(C.deHp).forEach(function(b){ setP(b.frequency, f); });
+      var a=clampN(S.deAmt,0,10), T=a>0 ? -30-a*3.6 : 0, R=a>0 ? 3+a*0.5 : 1;
+      setP(C.deComp.threshold, T); setP(C.deComp.ratio, R);
+      setP(C.deTrim.gain, dB2lin(-(a>0 ? compMakeupDb(T,3,R) : compMakeupDb(0,3,1))) * (S.deListen ? 2 : 1));
+      setP(C.deLowG.gain, S.deListen ? 0 : 1);
+    };
+    C.setSpk=function(S){
+      var P=cabParams(S), fs=ctx.sampleRate;
+      P.f.forEach(function(x,i){ var b=C.spkF[i]; if(b.type!==x.type) b.type=x.type; setP(b.frequency, Math.min(x.f, fs*0.45)); setP(b.Q, x.Q); setP(b.gain, x.g); });
+      setP(C.spkBox.delayTime, P.boxMs/1000); setP(C.spkBoxG.gain, P.boxG);
+      setP(C.spkMix.gain, dB2lin(cabTrimDb(P, fs)));
+      return P;
+    };
+    // Room: equal-power dry/wet. A new impulse response gets a new ConvolverNode, faded in.
+    C.setRoom=function(S, regen){
+      var R=ROOM_BY[S.room]||ROOMS[0], m=clampN(S.rmMix,0,100)/100;
+      setP(C.rmPre.delayTime, R.pre/1000);
+      var dry=Math.cos(m*Math.PI/2), wet=Math.sin(m*Math.PI/2)*1.0;
+      setP(C.rmDry.gain, dry);
+      if(regen || !C.conv){
+        var nc=ctx.createConvolver(); nc.normalize=true; nc.buffer=genIR(ctx,S);
+        var old=C.conv; C.conv=nc; C.rmPre.connect(nc);
+        if(old && live){ var t=ctx.currentTime; C.rmWet.gain.cancelScheduledValues(t); C.rmWet.gain.setTargetAtTime(0,t,0.02);
+          setTimeout(function(){ try{ old.disconnect(); C.rmPre.disconnect(old); }catch(e){} nc.connect(C.rmWet); C.rmWet.gain.cancelScheduledValues(ctx.currentTime); C.rmWet.gain.setTargetAtTime(wetNow(), ctx.currentTime, 0.03); }, 90);
+          return; }
+        if(old){ try{ old.disconnect(); C.rmPre.disconnect(old); }catch(e){} }
+        nc.connect(C.rmWet);
+      }
+      setP(C.rmWet.gain, wet);
+      function wetNow(){ return Math.sin(clampN(S.rmMix,0,100)/100*Math.PI/2); }
+    };
+    // Width 0..200%: 0 folds to mono; the original side scales with it and the synthetic side tops out
+    // at 0.9 of the mid at 200%, so neither channel ever flips polarity (no hollow, phasey sound).
+    C.setWidth=function(S){ var w=clampN(S.width,0,200)/100; setP(C.wSo.gain, w); setP(C.wSyn.gain, 0.45*w); setP(C.wDel.delayTime, clampN(S.wChar,3,20)/1000); };
     C.route=function(S){
-      [C.input, C.eqOut, C.tOut, C.clip].forEach(function(n){ try{ n.disconnect(); }catch(e){} });
+      [C.input, C.eqOut, C.deOut, C.tOut, C.spkOut, C.rmOut, C.wOut, C.clip].forEach(function(n){ try{ n.disconnect(); }catch(e){} });
       if(!S.on){ C.input.connect(C.output); return; }
       var cur=C.input;
-      if(S.eqOn){ cur.connect(C.eqIn); cur=C.eqOut; }
-      if(S.tubeOn){ cur.connect(C.tIn); cur=C.tOut; }
+      [['eqOn',C.eqIn,C.eqOut],['deOn',C.deIn,C.deOut],['tubeOn',C.tIn,C.tOut],['spkOn',C.spkIn,C.spkOut],['roomOn',C.rmIn,C.rmOut],['wOn',C.wIn,C.wOut]]
+        .forEach(function(s){ if(S[s[0]]){ cur.connect(s[1]); cur=s[2]; } });
       cur.connect(C.lim); C.clip.connect(C.output);
     };
     C.apply=function(S){
       if(C.n!==S.bands) C.setBands(S); else S.gains.forEach(function(g,i){ C.setGain(i,g); });
       setP(C.eqIn.gain, dB2lin(S.pre));
-      C.setTube(S); C.route(S);
+      C.setTube(S); C.setDe(S); C.setSpk(S); C.setRoom(S, true); C.setWidth(S); C.route(S);
     };
     // Re-route with a 15 ms dip so switching sections never clicks.
     C.reroute=function(S, fn){
@@ -2380,9 +2613,9 @@
     var keep={ on:ADV.on, open:ADV.open, bands:ADV.bands };
     Object.keys(ADV_DEF).forEach(function(k){ ADV[k]=ADV_DEF[k]; }); ADV.on=keep.on; ADV.open=keep.open; ADV.bands=keep.bands;
     ADV.gains=presetGains('flat', ADV.bands);
-    KNOBS.forEach(function(k){ advKnobs[k.key].set(ADV[k.key]); }); advKnobs.pre.set(0);
+    roomDefaults(); Object.keys(advKnobs).forEach(function(k){ advKnobs[k].set(ADV[k]); });
     if(PROC) PROC.reroute(ADV, function(){ PROC.apply(ADV); });
-    TV.swapping=true; TV.t0=performance.now(); syncAdvUI(); saveAdv(); toast('Flat EQ, 12AX7 at defaults');
+    TV.swapping=true; TV.t0=performance.now(); SPKV.dirty=true; syncAdvUI(); saveAdv(); toast('Back to defaults: flat EQ, 12AX7, new stages bypassed');
   };
   function openRack(open){
     ADV.open=!!open; $('rack').classList.toggle('open', ADV.open); $('advBtn').setAttribute('aria-expanded', ADV.open?'true':'false');
@@ -2390,6 +2623,82 @@
   }
   $('advBtn').onclick=function(){ openRack(!ADV.open); if(ADV.open) $('rack').scrollIntoView({behavior:'smooth', block:'nearest'}); };
   $('advClose').onclick=function(){ openRack(false); };
+
+  // ---- second row: de-esser, speaker, room, stereo width ----
+  var MODNAME={ deOn:'De-esser', spkOn:'Speaker', roomOn:'Room', wOn:'Stereo width', tubeOn:'Tube stage', eqOn:'Graphic EQ' };
+  // Touching a bypassed module's control switches that module (and processing) on.
+  function touchMod(m){ touchAdv(); if(!ADV[m]){ setModule(m,true); toast(MODNAME[m]+' on'); } }
+  var roomT=0;
+  function roomChanged(regen){
+    if(PROC){ if(regen){ clearTimeout(roomT); roomT=setTimeout(function(){ PROC.setRoom(ADV,true); }, 140); } else PROC.setRoom(ADV,false); }
+    drawRoom(); saveAdv();
+  }
+  var MOD_KNOBS = [
+    { host:'deKnobs', mod:'deOn', key:'deFreq', label:'Freq', min:3, max:10, step:0.1, def:5, title:'Where the S band starts',
+      fmt:function(v){ return v.toFixed(1)+'k'; }, apply:function(){ if(PROC) PROC.setDe(ADV); } },
+    { host:'deKnobs', mod:'deOn', key:'deAmt', label:'Amount', min:0, max:10, step:0.1, def:5, title:'How hard sibilance is pulled down',
+      fmt:function(v){ return v.toFixed(1); }, apply:function(){ if(PROC) PROC.setDe(ADV); } },
+    { host:'spkKnobs', mod:'spkOn', key:'spkInt', label:'Intensity', min:0, max:10, step:0.1, def:8, title:'From a hint of the cabinet to all of it',
+      fmt:function(v){ return v.toFixed(1); }, apply:function(){ if(PROC) PROC.setSpk(ADV); SPKV.dirty=true; } },
+    { host:'roomKnobs', mod:'roomOn', key:'rmDecay', label:'Decay', min:0.2, max:6, step:0.05, def:0.55, title:'Reverb time (RT60)',
+      fmt:function(v){ return v.toFixed(2)+'s'; }, apply:function(){ roomChanged(true); } },
+    { host:'roomKnobs', mod:'roomOn', key:'rmMix', label:'Mix', min:0, max:60, step:1, def:20, title:'How much of the room you hear',
+      fmt:function(v){ return Math.round(v)+'%'; }, apply:function(){ roomChanged(false); } },
+    { host:'roomKnobs', mod:'roomOn', key:'rmTone', label:'Tone', min:0, max:10, step:0.5, def:4, title:'How fast the highs die away: drapes and rugs, or plaster and stone',
+      fmt:function(v){ return v<3.5?'dark':v>6.5?'bright':'warm'; }, apply:function(){ roomChanged(true); } },
+    { host:'wKnobs', mod:'wOn', key:'width', label:'Width', min:0, max:200, step:1, def:100, title:'0% is mono, 100% adds pseudo-stereo, 200% is very wide',
+      fmt:function(v){ return v===0?'mono':Math.round(v)+'%'; }, apply:function(){ if(PROC) PROC.setWidth(ADV); } },
+    { host:'wKnobs', mod:'wOn', key:'wChar', label:'Character', min:3, max:20, step:0.5, def:9, title:'The pseudo-stereo delay: short is tight, long is roomy',
+      fmt:function(v){ return v.toFixed(1)+'ms'; }, apply:function(){ if(PROC) PROC.setWidth(ADV); } }
+  ];
+  var MK_BY={};
+  MOD_KNOBS.forEach(function(k){ MK_BY[k.key]=k; k.value=ADV[k.key];
+    k.onChange=function(v){ ADV[k.key]=v; touchMod(k.mod); k.apply(); saveAdv(); };
+    advKnobs[k.key]=makeKnob($(k.host), k); });
+  function roomDefaults(){ var R=ROOM_BY[ADV.room]; MK_BY.rmDecay.def=R.decay; MK_BY.rmMix.def=R.mix; MK_BY.rmTone.def=R.tone; }
+  roomDefaults();
+  CABS.forEach(function(c){
+    var b=document.createElement('button'); b.className='tchip'; b.dataset.id=c.id; b.textContent=c.name.replace(/ '\d\ds$/,''); b.title=c.name;
+    b.onclick=function(){ ADV.cab=c.id; touchMod('spkOn'); if(PROC) PROC.setSpk(ADV); SPKV.dirty=true; syncAdvUI(); saveAdv(); };
+    $('cabChips').appendChild(b);
+  });
+  ROOMS.forEach(function(r){
+    var b=document.createElement('button'); b.className='tchip'; b.dataset.id=r.id; b.textContent=r.name.replace(/ '\d\ds$/,''); b.title=r.name;
+    b.onclick=function(){ ADV.room=r.id; ADV.rmDecay=r.decay; ADV.rmMix=r.mix; ADV.rmTone=r.tone; roomDefaults();
+      ['rmDecay','rmMix','rmTone'].forEach(function(k){ advKnobs[k].set(ADV[k]); });
+      touchMod('roomOn'); clearTimeout(roomT); if(PROC) PROC.setRoom(ADV,true); syncAdvUI(); saveAdv(); };
+    $('roomChips').appendChild(b);
+  });
+  [['dePower','deOn'],['spkPower','spkOn'],['roomPower','roomOn'],['wPower','wOn']].forEach(function(x){ $(x[0]).onclick=function(){ setModule(x[1], !ADV[x[1]]); }; });
+  $('deListen').onclick=function(){ ADV.deListen=!ADV.deListen; if(ADV.deListen) touchMod('deOn'); if(PROC) PROC.setDe(ADV); syncAdvUI(); toast(ADV.deListen?'Listening to the S band only':'Listening to everything'); };
+
+  // Scenes set every stage at once.
+  var SCENES = [
+    { id:'fireside', name:"Fireside console, 1940s", s:{ eqOn:true, preset:'warm', tubeOn:true, tube:'12AX7', drive:3, bias:0.5, sag:3, tone:-1, out:0,
+      deOn:true, deAmt:4.5, deFreq:5, spkOn:true, cab:'console', spkInt:8, roomOn:true, room:'living', rmDecay:0.55, rmMix:20, rmTone:4, wOn:true, width:70, wChar:9 } },
+    { id:'kitchen', name:'Kitchen table Bakelite', s:{ eqOn:true, preset:'flat', tubeOn:true, tube:'EL84', drive:3.5, bias:0, sag:4, tone:0, out:0,
+      deOn:true, deAmt:5, deFreq:4.5, spkOn:true, cab:'bakelite', spkInt:9, roomOn:true, room:'living', rmDecay:0.45, rmMix:14, rmTone:5, wOn:false, width:100, wChar:9 } },
+    { id:'palace', name:'Movie palace', s:{ eqOn:true, preset:'warm', tubeOn:true, tube:'6L6', drive:3, bias:0, sag:2, tone:0, out:0,
+      deOn:true, deAmt:4.5, deFreq:5.5, spkOn:true, cab:'horn', spkInt:8, roomOn:true, room:'theater', rmDecay:1.8, rmMix:24, rmTone:5, wOn:true, width:110, wChar:12 } },
+    { id:'clear', name:'Clean and clear', s:{ eqOn:true, preset:'voice', tubeOn:true, tube:'12AU7', drive:2, bias:0, sag:1, tone:0, out:0,
+      deOn:true, deAmt:6, deFreq:5, spkOn:false, roomOn:true, room:'studio', rmDecay:0.9, rmMix:8, rmTone:6, wOn:true, width:100, wChar:9 } },
+    { id:'night', name:'Late night, low volume', s:{ eqOn:true, preset:'loud', tubeOn:true, tube:'300B', drive:2.5, bias:0, sag:4, tone:-2, out:0,
+      deOn:true, deAmt:6, deFreq:5, spkOn:true, cab:'monitor', spkInt:6, roomOn:true, room:'living', rmDecay:0.55, rmMix:10, rmTone:3, wOn:true, width:80, wChar:9 } }
+  ];
+  var scSel=$('advScene');
+  SCENES.forEach(function(sc){ var o=document.createElement('option'); o.value=sc.id; o.textContent=sc.name; scSel.appendChild(o); });
+  function applyScene(id){
+    var sc=SCENES.filter(function(x){ return x.id===id; })[0]; if(!sc) return;
+    Object.keys(sc.s).forEach(function(k){ ADV[k]=sc.s[k]; });
+    ADV.gains=presetGains(ADV.preset, ADV.bands); ADV.deListen=false; roomDefaults();
+    Object.keys(advKnobs).forEach(function(k){ advKnobs[k].set(ADV[k]); });
+    var wasOn=ADV.on; ADV.on=true; ensureAudioGraph(); if(ac && ac.state==='suspended' && !audio.paused) ac.resume();
+    if(PROC) PROC.reroute(ADV, function(){ PROC.apply(ADV); lastTC=tubeCurve(TUBE_BY[ADV.tube], ADV.drive, ADV.bias); });
+    TV.swapping=true; TV.t0=performance.now(); SPKV.dirty=true; EQV.dirty=true;
+    if(IS_IOS && !wasOn && !iosNoted){ iosNoted=true; toast('iPhone: audio stops when the screen locks while processing is on'); } else toast(sc.name);
+    syncAdvUI(); saveAdv();
+  }
+  scSel.onchange=function(){ var v=this.value; this.value=''; applyScene(v); };
 
   function syncTubeInfo(){
     var t=TUBE_BY[ADV.tube];
@@ -2401,21 +2710,28 @@
   function syncAdvUI(){
     $('advBtn').classList.toggle('on', ADV.on);
     var p=$('advPower'); p.setAttribute('aria-pressed', ADV.on?'true':'false'); $('advPowerTxt').textContent = ADV.on ? 'processing on' : 'processing off';
-    [['tubePower','tubeOn','tubeMod'],['eqPower','eqOn','eqMod']].forEach(function(x){
+    [['tubePower','tubeOn','tubeMod'],['eqPower','eqOn','eqMod'],['dePower','deOn','deMod'],['spkPower','spkOn','spkMod'],['roomPower','roomOn','roomMod'],['wPower','wOn','wMod']].forEach(function(x){
       $(x[0]).setAttribute('aria-pressed', ADV[x[1]]?'true':'false'); $(x[0]).lastChild.textContent = ADV[x[1]]?'on':'bypass';
       $(x[2]).classList.toggle('off', !(ADV.on && ADV[x[1]]));
     });
     document.querySelectorAll('#eqBands button').forEach(function(b){ b.setAttribute('aria-pressed', parseInt(b.dataset.n,10)===ADV.bands?'true':'false'); });
     eqSel.value = PRESET_BY[ADV.preset] ? ADV.preset : 'custom';
     if(IS_IOS) $('advIosNote').hidden = !(ADV.on || ac);
-    syncTubeInfo(); EQV.dirty=true;
+    var cab=CAB_BY[ADV.cab], rm=ROOM_BY[ADV.room];
+    document.querySelectorAll('#cabChips .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.cab?'true':'false'); });
+    document.querySelectorAll('#roomChips .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.room?'true':'false'); });
+    $('cabName').textContent=cab.name; $('cabNote').textContent=cab.note; $('roomNote').textContent=rm.name+': '+rm.note;
+    $('deListen').setAttribute('aria-pressed', ADV.deListen?'true':'false');
+    var stages=[['EQ','eqOn'],['DE-ESS','deOn'],['TUBE','tubeOn'],['SPEAKER','spkOn'],['ROOM','roomOn'],['WIDTH','wOn'],['LIMIT','']];
+    $('advChain').innerHTML=stages.map(function(st){ return '<span class="'+(ADV.on && (!st[1] || ADV[st[1]]) ? 'on' : '')+'">'+st[0]+'</span>'; }).join(' → ');
+    syncTubeInfo(); EQV.dirty=true; SPKV.dirty=true; drawRoom();
   }
 
   // ---- canvases ----
   function fitCanvas(cv){ var r=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(!w||!h) return null;
     if(cv.width!==Math.round(w*r) || cv.height!==Math.round(h*r)){ cv.width=Math.round(w*r); cv.height=Math.round(h*r); }
     var c=cv.getContext('2d'); c.setTransform(r,0,0,r,0,0); return { c:c, w:w, h:h }; }
-  function sizeRackCanvases(){ EQV.dirty=true; drawXfer(); }
+  function sizeRackCanvases(){ EQV.dirty=true; SPKV.dirty=true; drawXfer(); drawRoom(); }
   window.addEventListener('resize', function(){ if(ADV.open) sizeRackCanvases(); });
 
   // Transfer curve (left) and harmonic profile (right) for the current tube settings.
@@ -2634,6 +2950,121 @@
     cv.addEventListener('blur', function(){ EQV.sel=-1; eqRead(-1); });
   })();
 
+  // ---- speaker: a lit cabinet on the left, its frequency response on the right ----
+  var SPKV={ dirty:true, curve:null, glow:0 };
+  function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+  function dialGlow(c,x,y,r,g){
+    var gr=c.createRadialGradient(x,y,1,x,y,r*2.4); gr.addColorStop(0,'rgba(255,190,90,'+(0.55*g)+')'); gr.addColorStop(1,'rgba(255,150,40,0)');
+    c.fillStyle=gr; c.fillRect(x-r*2.5,y-r*2.5,r*5,r*5);
+    var face=c.createRadialGradient(x,y-r*0.3,1,x,y,r); face.addColorStop(0,'rgba(255,'+Math.round(200+40*g)+','+Math.round(120+60*g)+','+(0.25+0.75*g)+')'); face.addColorStop(1,'rgba(150,90,30,'+(0.25+0.6*g)+')');
+    c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fillStyle=face; c.fill(); c.strokeStyle='#c9a86a'; c.lineWidth=1.2; c.stroke();
+    c.strokeStyle='rgba(60,30,10,0.6)'; c.lineWidth=0.7; for(var i=0;i<9;i++){ var a=Math.PI*(0.8+i*0.175); c.beginPath(); c.moveTo(x+Math.cos(a)*r*0.72,y+Math.sin(a)*r*0.72); c.lineTo(x+Math.cos(a)*r*0.9,y+Math.sin(a)*r*0.9); c.stroke(); }
+    c.strokeStyle='#8b1a1a'; c.lineWidth=1.2; c.beginPath(); c.moveTo(x,y+r*0.2); c.lineTo(x+Math.cos(-1.1)*r*0.85,y+Math.sin(-1.1)*r*0.85); c.stroke();
+  }
+  function knobDot(c,x,y,r){ var g=c.createRadialGradient(x-r*0.3,y-r*0.3,0.5,x,y,r); g.addColorStop(0,'#6a5a4a'); g.addColorStop(1,'#1a120c'); c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fillStyle=g; c.fill(); }
+  function drawCab(c, id, x0, y0, w, h, g){
+    var cx=x0+w/2;
+    if(id==='console'){
+      var cw=w*0.84, L=cx-cw/2, T=y0+4, B=y0+h-4;
+      c.beginPath(); c.moveTo(L,B); c.lineTo(L,T+26); c.quadraticCurveTo(L,T,cx,T); c.quadraticCurveTo(L+cw,T,L+cw,T+26); c.lineTo(L+cw,B); c.closePath();
+      var wd=c.createLinearGradient(L,0,L+cw,0); wd.addColorStop(0,'#4a2c14'); wd.addColorStop(0.3,'#7a4c26'); wd.addColorStop(0.55,'#5e3a1c'); wd.addColorStop(0.8,'#82532b'); wd.addColorStop(1,'#3e240f');
+      c.fillStyle=wd; c.fill(); c.strokeStyle='#2a1708'; c.lineWidth=1; c.stroke();
+      c.strokeStyle='rgba(0,0,0,0.18)'; for(var gi=0;gi<7;gi++){ var gx=L+6+gi*cw/7; c.beginPath(); c.moveTo(gx,T+18); c.bezierCurveTo(gx+3,T+50,gx-3,B-40,gx+1,B-6); c.stroke(); }
+      var gT=T+48, gB=B-16, gL=L+9, gW=cw-18;
+      c.beginPath(); c.moveTo(gL,gB); c.lineTo(gL,gT+12); c.quadraticCurveTo(gL,gT,cx,gT); c.quadraticCurveTo(gL+gW,gT,gL+gW,gT+12); c.lineTo(gL+gW,gB); c.closePath();
+      var cl=c.createLinearGradient(0,gT,0,gB); cl.addColorStop(0,'#8a7558'); cl.addColorStop(1,'#5e4e3a'); c.fillStyle=cl; c.fill();
+      var sg=c.createRadialGradient(cx,(gT+gB)/2,2,cx,(gT+gB)/2,gW*0.45); sg.addColorStop(0,'rgba(0,0,0,0.35)'); sg.addColorStop(1,'rgba(0,0,0,0)'); c.fillStyle=sg; c.fill();
+      c.fillStyle='#3a2210'; [0.25,0.5,0.75].forEach(function(f){ c.fillRect(gL+gW*f-2,gT+4,4,gB-gT-4); });
+      dialGlow(c,cx,T+28,11,g); knobDot(c,cx-22,T+32,4); knobDot(c,cx+22,T+32,4);
+      c.fillStyle='#2a1708'; c.fillRect(L-2,B-3,cw+4,4);
+    } else if(id==='bakelite'){
+      var bw=w*0.94, bh=h*0.56, bx=cx-bw/2, by=y0+(h-bh)/2+4;
+      rr(c,bx,by,bw,bh,16); var bk=c.createLinearGradient(0,by,0,by+bh); bk.addColorStop(0,'#6a3a1a'); bk.addColorStop(0.15,'#4a2810'); bk.addColorStop(1,'#24120a');
+      c.fillStyle=bk; c.fill(); c.strokeStyle='#1a0c05'; c.stroke();
+      c.fillStyle='rgba(255,255,255,0.10)'; rr(c,bx+8,by+3,bw-16,6,3); c.fill();
+      c.strokeStyle='#c9a86a'; c.lineWidth=2; for(var li=0;li<5;li++){ var ly=by+14+li*(bh-26)/4; c.beginPath(); c.moveTo(bx+10,ly); c.lineTo(bx+bw*0.5,ly); c.stroke(); }
+      dialGlow(c,bx+bw*0.74,by+bh*0.42,12,g); knobDot(c,bx+bw*0.64,by+bh-9,4); knobDot(c,bx+bw*0.86,by+bh-9,4);
+      c.fillStyle='#120804'; c.fillRect(bx+12,by+bh,8,3); c.fillRect(bx+bw-20,by+bh,8,3);
+    } else if(id==='horn'){
+      var hy=y0+h*0.45, hx0=x0+8, hx1=x0+w-4;
+      var gl=c.createRadialGradient(hx1-6,hy,2,hx1-6,hy,w*0.55); gl.addColorStop(0,'rgba(255,170,70,'+(0.35*g)+')'); gl.addColorStop(1,'rgba(255,150,40,0)'); c.fillStyle=gl; c.fillRect(x0,y0,w,h);
+      c.fillStyle='#2a2a2a'; rr(c,hx0,hy-10,16,20,3); c.fill();
+      c.beginPath(); c.moveTo(hx0+16,hy-5); c.bezierCurveTo(hx0+40,hy-6,hx1-26,hy-14,hx1-4,hy-40); c.lineTo(hx1-4,hy+40); c.bezierCurveTo(hx1-26,hy+14,hx0+40,hy+6,hx0+16,hy+5); c.closePath();
+      var mt=c.createLinearGradient(0,hy-40,0,hy+40); mt.addColorStop(0,'#9a9a9a'); mt.addColorStop(0.5,'#5a5a5a'); mt.addColorStop(1,'#2c2c2c'); c.fillStyle=mt; c.fill(); c.strokeStyle='#1a1a1a'; c.stroke();
+      c.beginPath(); c.ellipse(hx1-4,hy,6,40,0,0,Math.PI*2); var mo=c.createRadialGradient(hx1-4,hy,1,hx1-4,hy,40); mo.addColorStop(0,'rgba(255,190,110,'+(0.15+0.6*g)+')'); mo.addColorStop(1,'#0e0e0e'); c.fillStyle=mo; c.fill(); c.strokeStyle='#777'; c.stroke();
+      c.strokeStyle='#3a3a3a'; c.lineWidth=2; c.beginPath(); c.moveTo(hx0+30,hy+6); c.lineTo(hx0+24,y0+h-6); c.moveTo(hx0+50,hy+8); c.lineTo(hx0+58,y0+h-6); c.stroke(); c.lineWidth=1;
+    } else {
+      var mw=w*0.62, mh=h-12, mx=cx-mw/2, my=y0+6;
+      rr(c,mx,my,mw,mh,5); var mg=c.createLinearGradient(mx,0,mx+mw,0); mg.addColorStop(0,'#241a12'); mg.addColorStop(0.5,'#3a2a1c'); mg.addColorStop(1,'#1e150e'); c.fillStyle=mg; c.fill(); c.strokeStyle='#120c06'; c.stroke();
+      var gy=my+mh*0.42, r=mw*0.36; c.beginPath(); c.arc(cx,gy,r,0,Math.PI*2); var fab=c.createRadialGradient(cx,gy,2,cx,gy,r); fab.addColorStop(0,'#3d3832'); fab.addColorStop(1,'#5c554c'); c.fillStyle=fab; c.fill();
+      c.strokeStyle='rgba(201,168,106,0.55)'; c.stroke();
+      c.fillStyle='rgba(255,200,120,'+(0.2+0.7*g)+')'; rr(c,cx-12,my+mh-20,24,8,2); c.fill();
+      c.fillStyle='rgba(40,20,0,0.8)'; c.font='6px '+getComputedStyle(document.body).fontFamily; c.textAlign='center'; c.fillText('ON AIR',cx,my+mh-14); c.textAlign='start';
+    }
+  }
+  function drawSpk(now){
+    var f=fitCanvas($('spkCv')); if(!f) return; var c=f.c, w=f.w, h=f.h;
+    var on=ADV.on&&ADV.spkOn, tgt=on ? 0.55+0.45*(PROC?level():0) : 0.06; SPKV.glow+=(tgt-SPKV.glow)*0.12;
+    c.clearRect(0,0,w,h);
+    var iw=Math.min(104, w*0.42); drawCab(c, ADV.cab, 0, 0, iw, h, SPKV.glow);
+    // response curve, level-trimmed so 0 dB is where voices sit
+    var px=iw+10, pw=w-px-4, top=8, ph=h-24, fs=ac?ac.sampleRate:48000;
+    if(SPKV.dirty || !SPKV.curve){ var P=cabParams(ADV), tr=cabTrimDb(P,fs), pts=[]; for(var i=0;i<=160;i++){ var fq=40*Math.pow(300,i/160); pts.push(cabDb(fq,P,fs)+tr); } SPKV.curve=pts; SPKV.dirty=false; }
+    var y=function(d){ return top+ph/2-clampN(d,-24,12)/18*ph/2; };
+    c.strokeStyle='rgba(255,255,255,0.07)'; c.lineWidth=1; [-12,0,6].forEach(function(d){ c.beginPath(); c.moveTo(px,y(d)+.5); c.lineTo(px+pw,y(d)+.5); c.stroke(); });
+    c.font='9px '+getComputedStyle(document.body).fontFamily; c.fillStyle='#7c7c7c';
+    [[100,'100'],[1000,'1k'],[10000,'10k']].forEach(function(t){ var X=px+Math.log(t[0]/40)/Math.log(300)*pw;
+      c.fillStyle='rgba(255,255,255,0.07)'; c.fillRect(X,top,1,ph); c.fillStyle='#7c7c7c'; c.fillText(t[1], Math.min(X-6, px+pw-c.measureText(t[1]).width), h-4); });
+    c.beginPath(); SPKV.curve.forEach(function(d,i){ var X=px+i/(SPKV.curve.length-1)*pw, Y=y(d); if(i) c.lineTo(X,Y); else c.moveTo(X,Y); });
+    c.strokeStyle= on ? '#ffb347' : 'rgba(160,160,160,0.5)'; c.lineWidth=1.8; c.shadowColor='#ffb347'; c.shadowBlur= on?6:0; c.stroke(); c.shadowBlur=0;
+  }
+
+  // ---- room: the generated impulse response, early reflections and the decay ----
+  function drawRoom(){
+    var f=fitCanvas($('roomCv')); if(!f) return; var c=f.c, w=f.w, h=f.h, R=ROOM_BY[ADV.room], dec=ADV.rmDecay, on=ADV.on&&ADV.roomOn;
+    c.clearRect(0,0,w,h);
+    var span=Math.max(0.35, dec*1.15+R.pre/1000), X=function(t){ return 4+t/span*(w-8); }, base=h-14, top=6, er=roomER(ADV), rnd=mulberry32(hashStr('draw:'+ADV.room));
+    var fc0=1500*Math.pow(8,ADV.rmTone/10);
+    for(var i=0;i<w-8;i+=2){ var t=i/(w-8)*span-R.pre/1000; if(t<0) continue; var e=Math.exp(-6.91*t/dec), bright=clampN((fc0*Math.exp(-t*2.5/dec))/12000,0.15,1);
+      var hh=(base-top)*e*(0.35+0.65*rnd()); c.fillStyle= on ? 'rgba(0,232,140,'+(0.35+0.4*bright)+')' : 'rgba(150,150,150,0.35)'; c.fillRect(4+i, base-hh, 1.5, hh); }
+    er.forEach(function(e){ var x=X(e.t+R.pre/1000); c.fillStyle= on ? '#ffb347' : '#888'; var hh=(base-top)*e.g*Math.exp(-6.91*e.t/dec); c.fillRect(x, base-hh, 1.5, hh); });
+    c.fillStyle= on ? '#ffd08a' : '#999'; c.fillRect(4, top, 2, base-top);                      // the direct sound
+    c.font='9px '+getComputedStyle(document.body).fontFamily; c.fillStyle='#7c7c7c';
+    c.fillText('pre '+R.pre+' ms · RT60 '+dec.toFixed(2)+' s · mix '+Math.round(ADV.rmMix)+'%', 8, h-3);
+  }
+
+  // ---- stereo width: goniometer (mid up, side across) and phase correlation ----
+  var GON={ L:null, R:null, corr:1, scale:4 };
+  function drawGonio(now){
+    var f=fitCanvas($('gonioCv')); if(!f) return; var c=f.c, w=f.w, h=f.h, cx=w/2, cy=h/2;
+    c.fillStyle='rgba(4,7,4,0.32)'; c.fillRect(0,0,w,h);
+    c.strokeStyle='rgba(0,255,157,0.10)'; c.lineWidth=1; c.beginPath(); c.moveTo(cx,4); c.lineTo(cx,h-4); c.moveTo(4,cy); c.lineTo(w-4,cy);
+    c.moveTo(cx-cx*0.7,cy-cy*0.7); c.lineTo(cx+cx*0.7,cy+cy*0.7); c.moveTo(cx+cx*0.7,cy-cy*0.7); c.lineTo(cx-cx*0.7,cy+cy*0.7); c.stroke();
+    c.font='8px '+getComputedStyle(document.body).fontFamily; c.fillStyle='rgba(0,255,157,0.35)'; c.fillText('L',cx-cx*0.78,cy-cy*0.72); c.fillText('R',cx+cx*0.7,cy-cy*0.72); c.fillText('M',cx+3,10);
+    if(!PROC || !PROC.anL || audio.paused){ $('corrV').textContent= PROC ? 'idle' : 'play to see'; return; }
+    if(!GON.L){ GON.L=new Float32Array(PROC.anL.fftSize); GON.R=new Float32Array(PROC.anR.fftSize); }
+    PROC.anL.getFloatTimeDomainData(GON.L); PROC.anR.getFloatTimeDomainData(GON.R);
+    var sLR=0, sLL=0, sRR=0, pk=1e-4, n=GON.L.length;
+    for(var i=0;i<n;i++){ var l=GON.L[i], r=GON.R[i]; sLR+=l*r; sLL+=l*l; sRR+=r*r; pk=Math.max(pk,Math.abs(l)+Math.abs(r)); }
+    GON.scale+=((0.42*Math.min(w,h))/pk-GON.scale)*0.08; var k=Math.min(GON.scale, 400);
+    c.fillStyle='rgba(120,255,200,0.75)';
+    for(var j=0;j<n;j+=2){ var L=GON.L[j], Rr=GON.R[j]; c.fillRect(cx+(L-Rr)*k*0.7071, cy-(L+Rr)*k*0.7071, 1.4, 1.4); }
+    var corr = (sLL>1e-9 && sRR>1e-9) ? sLR/Math.sqrt(sLL*sRR) : 1; GON.corr+=(corr-GON.corr)*0.15;
+    $('corrMark').style.left=((GON.corr+1)/2*100).toFixed(1)+'%';
+    $('corrV').textContent = GON.corr>0.985 ? 'mono' : (GON.corr>=0?'+':'')+GON.corr.toFixed(2)+(GON.corr<0?' (phasey)':'');
+  }
+
+  // ---- de-esser gain reduction lamps ----
+  (function(){ var g=$('deGr'); for(var i=0;i<16;i++){ var s=document.createElement('i'); g.appendChild(s); } })();
+  var deGrHold=0;
+  function drawDeGR(now){
+    var red = (PROC && ADV.on && ADV.deOn && !audio.paused) ? -PROC.deComp.reduction : 0;
+    deGrHold = red>deGrHold ? red : Math.max(red, deGrHold-0.4);
+    var lit=Math.round(clampN(deGrHold/12,0,1)*16);
+    Array.prototype.forEach.call($('deGr').children, function(s,i){ s.className = i<lit ? (i>=8?'on hot':'on') : ''; });
+    $('deGrV').textContent = (deGrHold>0.05 ? '-'+deGrHold.toFixed(1) : '0.0')+' dB';
+  }
+
   // Output meter (RMS bar, peak tick) and limiter lamp.
   var meterBuf=null, limHitAt=0, pkHold=-120, pkHoldAt=0;
   function drawMeter(now){
@@ -2650,23 +3081,35 @@
   }
   var rackRAF=0;
   function startRack(){ if(rackRAF) return; var loop=function(now){ if(!ADV.open){ rackRAF=0; return; } rackRAF=requestAnimationFrame(loop);
-      try{ drawTube(now); drawEq(now); drawMeter(now); }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }
+      try{ drawTube(now); drawEq(now); drawMeter(now); drawSpk(now); drawGonio(now); drawDeGR(now); }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }
 
-  // Offline measurement for tests: render a sine through a fresh chain and read the harmonics.
+  // Offline measurement for tests: render through a fresh chain (stereo) and read it back.
+  //   tones: [{f,a}] (default one sine at freq/amp), impulse: true for a single click at 50 ms,
+  //   probe: [Hz] to read per-channel levels, plus harmonics of the first tone, correlation, tail energy.
   function advMeasure(o){
     o=o||{}; var S=JSON.parse(JSON.stringify(ADV)); Object.keys(o.set||{}).forEach(function(k){ S[k]=o.set[k]; });
     if(S.gains.length!==S.bands) S.gains=presetGains(S.preset in PRESET_BY ? S.preset : 'flat', S.bands);
     var sr=o.sr||48000, dur=o.dur||1, f0=o.freq||1000, amp=o.amp==null?0.25:o.amp;
-    var oc=new OfflineAudioContext(1, Math.round(sr*dur), sr), C=makeChain(oc); C.apply(S);
-    var osc=oc.createOscillator(); osc.frequency.value=f0; var g=oc.createGain(); g.gain.value=amp;
-    osc.connect(g); g.connect(C.input); C.output.connect(oc.destination); osc.start();
+    var oc=new OfflineAudioContext(2, Math.round(sr*dur), sr), C=makeChain(oc); C.apply(S);
+    var tones=o.tones || [{ f:f0, a:amp }];
+    if(o.impulse){ var b=oc.createBuffer(1,64,sr); b.getChannelData(0)[0]=o.amp||0.5; var bs=oc.createBufferSource(); bs.buffer=b; bs.connect(C.input); bs.start(0.05); }
+    else tones.forEach(function(t){ var osc=oc.createOscillator(); osc.frequency.value=t.f; var g=oc.createGain(); g.gain.value=t.a; osc.connect(g); g.connect(C.input); osc.start(); });
+    C.output.connect(oc.destination);
     return oc.startRendering().then(function(buf){
-      var d=buf.getChannelData(0), n0=Math.floor(d.length/2), N=d.length-n0, rms=0, pk=0, H=[];
-      for(var i=n0;i<d.length;i++){ rms+=d[i]*d[i]; pk=Math.max(pk,Math.abs(d[i])); }
+      var Ld=buf.getChannelData(0), Rd=buf.getChannelData(1), n0=o.impulse?0:Math.floor(Ld.length/2), N=Ld.length-n0;
+      function dft(d,f){ var re=0, im=0, w=2*Math.PI*f/sr; for(var j=n0;j<d.length;j++){ re+=d[j]*Math.cos(w*j); im+=d[j]*Math.sin(w*j); } return 20*Math.log(2*Math.sqrt(re*re+im*im)/N+1e-12)/Math.LN10; }
+      var rms=0, pk=0, sLR=0, sLL=0, sRR=0;
+      for(var i=n0;i<Ld.length;i++){ rms+=Ld[i]*Ld[i]; pk=Math.max(pk,Math.abs(Ld[i]),Math.abs(Rd[i])); sLR+=Ld[i]*Rd[i]; sLL+=Ld[i]*Ld[i]; sRR+=Rd[i]*Rd[i]; }
       rms=Math.sqrt(rms/N);
-      for(var k=1;k<=5;k++){ var re=0, im=0, w=2*Math.PI*k*f0/sr; for(var j=n0;j<d.length;j++){ re+=d[j]*Math.cos(w*j); im+=d[j]*Math.sin(w*j); }
-        H.push(20*Math.log(2*Math.sqrt(re*re+im*im)/N+1e-12)/Math.LN10); }
-      return { h:H, rel:H.map(function(x){ return x-H[0]; }), rms:rms, rmsIn:amp/Math.SQRT2, peak:pk, gainDb:20*Math.log(rms/(amp/Math.SQRT2))/Math.LN10 };
+      var out={ rms:rms, rmsIn:tones[0].a/Math.SQRT2, peak:pk, corr:(sLL>1e-12&&sRR>1e-12)?sLR/Math.sqrt(sLL*sRR):1 };
+      if(!o.impulse){ var H=[]; for(var k=1;k<=5;k++) H.push(dft(Ld,k*tones[0].f)); out.h=H; out.rel=H.map(function(x){ return x-H[0]; });
+        out.gainDb=20*Math.log(rms/(tones[0].a/Math.SQRT2))/Math.LN10; }
+      if(o.probe){ var M=new Float32Array(Ld.length); for(var q=0;q<Ld.length;q++) M[q]=(Ld[q]+Rd[q])/2;
+        out.probe=o.probe.map(function(f){ return { f:f, L:dft(Ld,f), R:dft(Rd,f), M:dft(M,f) }; }); }
+      if(o.impulse){ var at=Math.floor(sr*0.05), tot=0, tail=0, t2=at+Math.floor(sr*(o.tailAfter||0.2));
+        for(var u=at;u<Ld.length;u++){ var e=Ld[u]*Ld[u]+Rd[u]*Rd[u]; tot+=e; if(u>=t2) tail+=e; }
+        out.tailDb=10*Math.log((tail+1e-15)/(tot+1e-15))/Math.LN10; }
+      return out;
     });
   }
 
@@ -2737,7 +3180,32 @@
       power: function(on){ setAdvPower(on!==false); return ADV.on; },
       module: function(which, on){ setModule(which, on); return ADV[which]; },
       tube: function(id){ if(TUBE_BY[id]){ ADV.tube=id; tubeChanged(true); } return ADV.tube; },
-      knob: function(k, v){ if(advKnobs[k]){ advKnobs[k].set(v); ADV[k]=advKnobs[k].get(); if(k==='pre'){ if(PROC) PROC.setP(PROC.eqIn.gain, dB2lin(ADV.pre)); } else tubeChanged(false); saveAdv(); } return ADV[k]; },
+      knob: function(k, v){ if(advKnobs[k]){ advKnobs[k].set(v); ADV[k]=advKnobs[k].get();
+        if(k==='pre'){ if(PROC) PROC.setP(PROC.eqIn.gain, dB2lin(ADV.pre)); } else if(MK_BY[k]){ MK_BY[k].apply(); } else tubeChanged(false); saveAdv(); } return ADV[k]; },
+      scene: function(id){ applyScene(id); return JSON.parse(JSON.stringify(ADV)); },
+      scenes: function(){ return SCENES.map(function(x){ return x.id; }); },
+      cabs: function(){ return CABS.map(function(x){ return x.id; }); },
+      rooms: function(){ return ROOMS.map(function(x){ return x.id; }); },
+      cabResponse: function(f, id, intensity){ var S=JSON.parse(JSON.stringify(ADV)); if(id) S.cab=id; if(intensity!=null) S.spkInt=intensity; var P=cabParams(S); return cabDb(f,P,48000)+cabTrimDb(P,48000); },
+      deGr: function(){ return PROC ? PROC.deComp.reduction : null; },
+      corr: function(){ return GON.corr; },
+      // Test-only: decode the start of a real recording (byte range) and report the energy in the
+      // voice band (200 Hz-3 kHz) and the S band (above 5 kHz) after the chain.
+      analyzeFile: function(url, set, bytes, hiHz){
+        return fetch(url, { headers:{ Range:'bytes=0-'+(bytes||700000) } }).then(function(r){ return r.arrayBuffer(); }).then(function(ab){
+          var tmp=new OfflineAudioContext(1,1,48000); return tmp.decodeAudioData(ab); }).then(function(src){
+          var S=JSON.parse(JSON.stringify(ADV)); Object.keys(set||{}).forEach(function(k){ S[k]=set[k]; });
+          var oc=new OfflineAudioContext(2, Math.min(src.length, 48000*60), src.sampleRate), C=makeChain(oc); C.apply(S);
+          var bs=oc.createBufferSource(); bs.buffer=src; bs.connect(C.input); bs.start();
+          var hp1=oc.createBiquadFilter(), hp2=oc.createBiquadFilter(); hp1.type=hp2.type='highpass'; hp1.frequency.value=hp2.frequency.value=(hiHz||5000); hp1.Q.value=hp2.Q.value=-3.0103;
+          var lp=oc.createBiquadFilter(), hpv=oc.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3000; hpv.type='highpass'; hpv.frequency.value=200;
+          var mg=oc.createChannelMerger(2), mono=oc.createGain(); mono.channelCount=1; mono.channelCountMode='explicit';
+          C.output.connect(mono); mono.connect(hp1); hp1.connect(hp2); hp2.connect(mg,0,0); mono.connect(hpv); hpv.connect(lp); lp.connect(mg,0,1); mg.connect(oc.destination);
+          return oc.startRendering(); }).then(function(b){
+          function db(d){ var s=0, pk=0; for(var i=0;i<d.length;i++){ s+=d[i]*d[i]; pk=Math.max(pk,Math.abs(d[i])); } return { rms:10*Math.log(s/d.length+1e-15)/Math.LN10, pk:20*Math.log(pk+1e-9)/Math.LN10 }; }
+          return { hi:db(b.getChannelData(0)), lo:db(b.getChannelData(1)), secs:b.length/b.sampleRate };
+        });
+      },
       bands: function(n){ setBandCount(n); return ADV.bands; },
       gain: function(i, g){ setBandGain(i, g, true); return ADV.gains[i]; },
       preset: function(id){ eqSel.value=id; eqSel.onchange(); return ADV.gains.slice(); },
