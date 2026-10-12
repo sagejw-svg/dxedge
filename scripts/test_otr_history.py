@@ -68,11 +68,15 @@ with sync_playwright() as p:
     pg.reload(); ready(pg)
     chips = pg.eval_on_selector_all('#contRow .chip.cont', 'els=>els.map(e=>[e.dataset.key, e.querySelector(".c-left").textContent])')
     ck('continue listening row shows it after reload', any(c[0] == pick['key'] and c[1].endswith('left') for c in chips), chips)
-    ck('continue row visible', pg.evaluate('!document.getElementById("contWrap").hidden'))
-    pg.click(f'#contRow .chip.cont[data-key="{pick["key"]}"]'); pg.wait_for_function(PLAYING, timeout=45000); pg.wait_for_timeout(800)
+    # a single episode in progress is offered up front (start box, or the line under Play when a station is cued)
+    mode = pg.evaluate('__otr.mode()'); go = '#startGo' if mode == 'idle' else '#cueResumeBtn'
+    ck('one episode in progress is offered up front, not in a second list', pg.evaluate('document.getElementById("contWrap").hidden') and pg.is_visible(go)
+       and (mode != 'idle' or 'Pick up' in pg.inner_text(go)), (mode, pg.inner_text(go)))
+    pg.click(go); pg.wait_for_function(PLAYING, timeout=45000); pg.wait_for_timeout(800)
     frac = pg.evaluate(f'{A}.currentTime/{A}.duration')
     ck('tapping it resumes at the saved spot', 0.37 < frac < 0.47, frac)
     ck('resume toast explains how to start over', 'Prev starts it over' in pg.inner_text('#toast'), pg.inner_text('#toast'))
+    ck('continue row visible once playing', pg.evaluate('!document.getElementById("contWrap").hidden'))
     pg.click('#prevBtn'); pg.wait_for_timeout(600)
     ck('Prev restarts from the top', pg.evaluate(f'{A}.currentTime') < 3)
 
@@ -115,7 +119,7 @@ with sync_playwright() as p:
     # --- episode link
     pg.evaluate(f'__otr.playEpisode("{pick["sid"]}", {pick["i"]}, 300)'); pg.wait_for_function(PLAYING, timeout=45000); pg.wait_for_timeout(800)
     ck('playEpisode with a start second seeks there', 295 <= pg.evaluate(f'{A}.currentTime') <= 315, pg.evaluate(f'{A}.currentTime'))
-    pg.click('#linkBtn'); pg.wait_for_timeout(500)
+    pg.click('#moreBtn'); pg.click('#linkBtn'); pg.wait_for_timeout(500)   # copy link lives in More
     link = pg.evaluate('__otr.state.lastLink')
     ck('link has the episode key and time', link and f'?e={pick["key"]}&t=' in link, link)
     clip = pg.evaluate('navigator.clipboard.readText()')

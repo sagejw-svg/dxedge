@@ -99,8 +99,11 @@ with sync_playwright() as p:
   ck('the full player has a pop out button', full.is_visible('#popBtn'))
   full.evaluate('__otr.startChannel("crime")')
   full.wait_for_function('!document.getElementById("audio").paused && document.getElementById("audio").readyState>=3', timeout=20000)
+  full.wait_for_function('__otr.mode()==="active"', timeout=20000)
+  ck('once playing, the start box link gives way to Pop out radio in More', not full.is_visible('#popBtn'))
+  full.click('#moreBtn')
   with full.context.expect_page() as newp:
-    full.click('#popBtn')
+    full.click('#popBtn2')
   pp = newp.value
   pp.wait_for_function('window.__pop&&__pop.ready()', timeout=30000)
   ck('pop out opens tuned to the station the full player is on', pp.evaluate('__pop.player().state.station') == 'crime')

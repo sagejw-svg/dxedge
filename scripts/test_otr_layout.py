@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Layout checks for the Old Time Radio player (/otr/): the tab bar under the player
-(Channels / The Greats / Search / Build a station / Settings), the docked now-playing
+(Listen / Search / My stations / Settings gear), the docked now-playing
 bar, search paging, keyboard access, and the Internet Archive + Ko-fi support links.
 Serves frontend/public over HTTP and drives it at phone and desktop widths.
 
@@ -68,8 +68,8 @@ with sync_playwright() as p:
     ck("channels hidden while settings open", not pg.is_visible("#channelChips"))
     ck("tab remembered", pg.evaluate("localStorage.getItem('otr_tab')") == "settings")
     pg.screenshot(path=f"{out}-phone-settings.png", full_page=True)
-    pg.click("#greatsBtn"); pg.wait_for_timeout(200)
-    ck("greats tab shows chips", pg.is_visible("#greatChips .chip"))
+    pg.click("#channelsBtn"); pg.wait_for_timeout(200)
+    ck("Listen tab carries the classic shows", pg.is_visible("#greatChips .chip") and pg.is_visible("#channelChips"))
     pg.click("#builderBtn"); pg.wait_for_timeout(200)
     ck("build tab shows the grid", pg.is_visible("#showGrid .showitem"))
     pg.click("#searchBtn"); pg.wait_for_timeout(200)
@@ -94,7 +94,9 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(f"http://127.0.0.1:{PORT}/otr/#greats")
     pg.wait_for_function("window.__otr && window.__otr.ready()", timeout=20000)
-    ck("#greats hash opens The Greats", pg.evaluate("__otr.tab()") == "greats")
+    pg.wait_for_timeout(2000)
+    ck("#greats hash opens Listen at the classic shows", pg.evaluate("__otr.tab()") == "channels" and pg.is_visible("#greatChips .chip")
+       and pg.evaluate("(function(){var r=document.getElementById('greatsSec').getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0;})()"))
     pg.click("body"); pg.keyboard.press("/"); pg.wait_for_timeout(400)
     ck("'/' opens search and focuses the box", pg.evaluate("__otr.tab()") == "search" and pg.evaluate("document.activeElement.id") == "searchInput")
     pg.keyboard.press("Escape"); pg.evaluate("document.activeElement.blur()")
@@ -104,7 +106,7 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{out}-desk.png")
     ck("no page errors (desktop)", not errs, errs[:3])
     pg.set_viewport_size({"width": 375, "height": 800})
-    for t in ["channels", "greats", "search", "build", "settings"]:
+    for t in ["channels", "search", "build", "settings"]:
         pg.evaluate(f"__otr.tab('{t}')"); pg.wait_for_timeout(100)
         sw = pg.evaluate("document.documentElement.scrollWidth")
         ck(f"375 px no horizontal scroll on {t}", sw <= 375, sw)

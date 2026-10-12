@@ -33,14 +33,15 @@
   .intro { color: var(--muted); max-width: 640px; margin: 4px 0 0; font-size: 12.5px; }
   .intro a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 2px; }
   .intro a:hover { color: var(--text); }
-  .support { display: flex; flex-direction: column; gap: 8px; flex: 0 0 300px; }
-  .sup { display: flex; flex-direction: column; gap: 1px; min-width: 0; border: 1px solid rgba(255,179,71,0.42);
-    border-radius: 10px; padding: 8px 13px 9px; background: rgba(255,179,71,0.05); text-decoration: none; transition: background .15s, border-color .15s; }
+  .support { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 1 auto; align-self: flex-end; }
+  .sup { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 40px; border: 1px solid rgba(255,179,71,0.42);
+    border-radius: 999px; padding: 6px 15px; background: rgba(255,179,71,0.05); text-decoration: none; transition: background .15s, border-color .15s; }
   .sup:hover { background: rgba(255,179,71,0.12); border-color: var(--amber); text-decoration: none; }
-  .sup .sup-h { font-size: 12.5px; font-weight: 600; color: var(--amber2); }
+  .sup .sup-h { font-size: 12px; font-weight: 600; color: var(--amber2); white-space: nowrap; }
+  .top .sup .sup-s { display: none; }
   .sup .sup-s { font-size: 11px; color: var(--muted); line-height: 1.45; }
-  @media (max-width: 780px){ .support { flex: 1 1 100%; flex-direction: row; } .support .sup { flex: 1 1 0; } }
-  @media (max-width: 520px){ .support .sup .sup-s { display: none; } .support .sup { padding: 9px 11px; justify-content: center; } }
+  @media (max-width: 780px){ .support { flex: 1 1 100%; } .support .sup { flex: 1 1 0; } }
+  @media (max-width: 400px){ .support .sup { padding: 6px 10px; } .support .sup .sup-h { font-size: 11.5px; white-space: normal; text-align: center; } }
 
   /* Console */
   .console {
@@ -116,8 +117,52 @@
     text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--faint); cursor: pointer; }
   .linkish:hover:not(:disabled) { color: var(--amber); text-decoration-color: var(--amber); }
   .linkish:disabled { opacity: .45; cursor: default; text-decoration: none; }
-  .tools2 #linkBtn { margin-left: auto; }
+  .tools2 .sp { flex: 1; }
   .tools2 .sleep-left { font-size: 11.5px; color: var(--amber2); font-variant-numeric: tabular-nums; }
+  .btn.morebtn { padding: 7px 12px; font-size: 11.5px; }
+  .btn.morebtn[aria-expanded="true"] { border-color: var(--amber); color: var(--amber); }
+
+  /* Player modes. idle: nothing has played yet, so only the start box shows; cued: the last station is
+     waiting, so Play and volume show; active: everything. Controls appear when they do something. */
+  .start { display: none; }
+  .console.idle .start { display: flex; flex-direction: column; gap: 5px; }
+  .start-lab { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .start.back .start-lab { color: var(--amber2); }
+  .start-title { font-size: 17px; color: #fff; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  .start-sub { font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+  .start-sub:empty { display: none; }
+  .start-prog { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--dim); max-width: 460px; }
+  .start-prog[hidden] { display: none; }
+  .start-prog .bar { height: 4px; cursor: default; }
+  .start-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .start-btns .btn { min-height: 46px; padding: 10px 16px; font-size: 12.5px; justify-content: center; }
+  .start-btns .btn[hidden] { display: none; }
+  .btn.play.big { font-size: 13.5px; padding: 10px 22px; }
+  .start-links { margin-top: 2px; }
+  @media (max-width: 520px){ .start-btns .btn.play { flex: 1 1 100%; } .start-btns .btn:not(.play) { flex: 1 1 0; } }
+  .console.idle .stack { grid-template-columns: 1fr; }
+  .console.idle .viz-wrap, .console.idle .np > .onair, .console.idle .np > .show, .console.idle .np > .ep, .console.idle .np > .src,
+  .console.idle .np > .date, .console.idle .np > .slot, .console.idle .np > .summary, .console.idle .np > .more, .console.idle .np > .np-archive,
+  .console.idle .seek, .console.idle .transport, .console.idle .upnext, .console.idle #moreBtn, .console.idle .sleep-left,
+  .console.idle .cue-resume { display: none !important; }
+  .console.cued .seek, .console.cued #prevBtn, .console.cued #backBtn, .console.cued #fwdBtn, .console.cued #skipBtn, .console.cued .upnext { display: none !important; }
+  .cue-resume { margin-top: 9px; }
+  .cue-resume[hidden], .console:not(.cued) .cue-resume { display: none; }
+
+  /* More: an inline panel on wide screens, a sheet from the bottom on phones */
+  .morep { margin-top: 10px; border: 1px solid var(--border2); border-radius: 12px; background: var(--bg2); padding: 4px 14px 8px; max-width: 440px; }
+  .morep[hidden] { display: none; }
+  .morep-h { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+  .mrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 46px; padding: 0 2px; border: none;
+    border-top: 1px solid var(--border); background: none; color: var(--text); font-family: var(--font-mono); font-size: 12.5px; cursor: pointer; text-align: left; }
+  .mrow:hover:not(:disabled) { color: #fff; } .mrow:hover:not(:disabled) .mv { color: var(--amber2); }
+  .mrow .mv { color: var(--amber); font-size: 12px; }
+  .mrow:disabled { opacity: .45; cursor: default; }
+  .mrow select { background: var(--bg1); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; font-family: var(--font-mono); font-size: 12px; padding: 6px 8px; cursor: pointer; }
+  @media (max-width: 660px){
+    .morep { position: fixed; left: 0; right: 0; bottom: 0; max-width: none; margin: 0; border-radius: 18px 18px 0 0; z-index: 90;
+      padding: 6px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: 0 -16px 48px rgba(0,0,0,.7); }
+  }
   .vol { display: flex; align-items: center; gap: 7px; margin-left: auto; }
   .vol .vl { font-size: 11px; color: var(--dim); }
   .vol input[type=range]{ width: 96px; accent-color: var(--amber); }
@@ -148,14 +193,13 @@
   .tab[aria-selected="true"] { color: var(--amber); border-color: var(--amber); background: rgba(255,179,71,0.08); box-shadow: var(--glow); }
   .tab .ti { font-size: 13px; line-height: 1; }
   .tab .sm { display: none; }
-  .tabs .surprise { margin-left: auto; border-style: dashed; color: var(--text); }
-  .tabs .surprise:hover { border-style: solid; }
+  .tab.gear { margin-left: auto; min-width: 44px; }
   @media (max-width: 660px){
-    .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .tab { padding: 9px 4px; gap: 5px; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
-    .tab .lg { display: none; } .tab .sm { display: inline; }
-    .tabs .surprise { margin-left: 0; }
+    .tabs { flex-wrap: nowrap; }
+    .tab { flex: 1 1 auto; min-height: 44px; padding: 9px 6px; gap: 5px; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+    .tab.gear { flex: 0 0 44px; }
   }
+  @media (max-width: 380px){ .tab .ti { display: none; } .tab.gear .ti { display: inline; } }
 
   .pane { display: none; }
   .pane.on { display: block; animation: fade .18s; }
@@ -184,13 +228,21 @@
   .station .st-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
   .station .st-name { color: var(--text); font-size: 13.5px; font-weight: 600; }
   .station.on .st-name { color: var(--amber); }
-  .station .st-count { color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .station .st-count { display: none; }
+  /* a play mark on every card: the whole card tunes in */
+  .station .st-name::before { content: '\25B6'; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 8px;
+    border-radius: 50%; border: 1px solid rgba(255,179,71,0.45); color: var(--amber); font-size: 8px; vertical-align: 1px; }
+  .station.network .st-name::before { background: var(--amber); color: #1a1200; border-color: var(--amber); }
+  .station.on .st-name::before { background: var(--amber); color: #1a1200; }
+  #channelsPane .pane-h h2 { color: var(--amber); font-size: 13.5px; }
+  #channelsPane .sect { margin-top: 22px; }
+  #channelsPane .netrow + .pane-h { margin-top: 4px; }
   .station .st-season { margin-left: 7px; font-size: 9.5px; font-weight: 500; color: var(--amber2); border: 1px solid rgba(255,179,71,0.35);
     border-radius: 999px; padding: 1px 6px; vertical-align: 1px; white-space: nowrap; }
   .station .st-actions { display:flex; align-items:center; gap:8px; }
   .station .st-dice { font-size: 13px; cursor: pointer; opacity: .6; transition: opacity .15s, transform .15s; line-height:1; padding: 2px; }
   .station .st-dice:hover { opacity: 1; transform: scale(1.2) rotate(-12deg); }
-  .station .st-now { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; min-height: 2.9em;
+  .station .st-now { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; min-height: 0;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .station .st-now b { color: var(--amber2); font-weight: 500; }
   .station .st-now .ad { color: var(--dim); }
@@ -207,6 +259,8 @@
   .chips.stations.networks { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
   .station.network { border-color: rgba(255,179,71,0.28); background: linear-gradient(180deg, rgba(255,179,71,0.05), transparent 60%), var(--bg1); }
   .station.network .st-now { min-height: 0; -webkit-line-clamp: 3; }
+  .station.network .st-now b { display: block; color: var(--amber2); font-weight: 600; font-size: 13px; }
+  .station.network .st-now .sep { display: none; }
   .station.network .st-now .slot { color: var(--amber2); font-weight: 600; }
   .station.network .st-now .fill { color: var(--dim); font-style: italic; }
   .station.network .st-next { font-size: 10.5px; color: var(--dim); margin-top: 4px; line-height: 1.45; }
@@ -516,23 +570,20 @@
     <div class="brand">
       <div class="label">dxedge // audio</div>
       <h1>OLD TIME <span>RADIO</span></h1>
-      <p class="intro">
-        Thousands of classic radio shows from the 1930s, 40s and 50s, streamed straight from the
-        <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>.
-        Tune in to a live channel, build your own station, skip anything, and search episodes by plot.
-      </p>
+      <p class="intro">Classic radio from the 1930s to the 1950s, free from the
+        <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>.</p>
     </div>
     <div class="support" id="supportTop" aria-label="Support">
       <a class="sup ia" href="https://archive.org/donate" target="_blank" rel="noopener" id="donateTop">
         <span class="sup-h">♥ Donate to the Internet Archive</span>
         <span class="sup-s">the nonprofit library behind every show</span></a>
       <a class="sup kofi" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener" id="tipTop">
-        <span class="sup-h">☕ Tip the developer on Ko-fi</span>
+        <span class="sup-h">☕ Tip the developer</span>
         <span class="sup-s">helps cover hosting and development</span></a>
     </div>
   </header>
 
-  <div class="console" id="console">
+  <div class="console idle" id="console">
     <div class="stack">
       <div class="viz-wrap">
         <canvas id="viz"></canvas>
@@ -540,6 +591,19 @@
         <div class="viz-mode" id="vizMode"></div>
       </div>
       <div class="np" id="np">
+        <!-- Start: what a visitor sees before anything has played. One tap starts the radio. -->
+        <div class="start" id="startBox">
+          <div class="start-lab" id="startLab">nothing playing yet</div>
+          <div class="start-title" id="startTitle">Tap any station below, or start here</div>
+          <div class="start-sub" id="startSub"></div>
+          <div class="start-prog" id="startProg" hidden><div class="bar"><div class="fill" id="startFill"></div></div><span class="time" id="startTime"></span></div>
+          <div class="start-btns">
+            <button class="btn play big" id="startGo">▶ Tune in</button>
+            <button class="btn" id="startAlt" hidden></button>
+            <button class="btn" id="randomBtn" title="Play a random episode from any show">🎲 Surprise me</button>
+          </div>
+          <div class="start-links"><button class="linkish" id="popBtn" title="Open a pocket radio in its own window; it picks up the station you are on">or open the radio</button></div>
+        </div>
         <div class="onair"><span class="dot"></span><span id="onairText">off air</span><span class="enh-badge" id="enhBadge" title="Playing an enhanced copy of this episode">ENHANCED</span></div>
         <div class="show" id="npShow">Pick a channel to begin</div>
         <div class="ep" id="npEp"></div>
@@ -568,16 +632,24 @@
           </div>
         </div>
         <div class="tools2">
-          <label class="mini" title="Playback speed">speed
+          <button class="btn morebtn" id="moreBtn" aria-expanded="false" aria-controls="morePanel" title="Speed, sleep timer, pop out radio, copy link">⋯ More</button>
+          <span class="sleep-left" id="sleepLeft" aria-live="polite"></span>
+          <span class="sp"></span>
+          <button class="advbtn" id="advBtn" aria-expanded="false" aria-controls="rack" title="Tube stage, graphic EQ, lava lamp and more"><span class="led"></span>🎛 Advanced sound</button>
+        </div>
+        <!-- More: the occasional controls, out of the way until asked for -->
+        <div class="morep" id="morePanel" hidden role="dialog" aria-label="More options">
+          <div class="morep-h"><span class="label">more</span><button class="rack-x" id="moreClose" aria-label="Close more options">×</button></div>
+          <label class="mrow" title="Playback speed"><span>Speed</span>
             <select id="rateSel"><option value="1">1x</option><option value="1.1">1.1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></label>
-          <label class="mini" title="Stop playing after a while, with a fade out">sleep
+          <label class="mrow" title="Stop playing after a while, with a fade out"><span>Sleep timer</span>
             <select id="sleepSel"><option value="off">off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="end">end of episode</option></select></label>
-          <span class="sleep-left" id="sleepLeft"></span>
-          <button class="advbtn" id="advBtn" aria-expanded="false" aria-controls="rack" title="Tube stage, graphic EQ and limiter"><span class="led"></span>🎛 Advanced</button>
-          <button class="linkish" id="popBtn" title="Open a pocket radio in its own window; it picks up the station you are on">pop out radio</button>
-          <button class="linkish" id="linkBtn" disabled title="Copy a link that opens this episode at this moment">copy link to this moment</button>
+          <button class="mrow" id="popBtn2" title="Open a pocket radio in its own window; it picks up the station you are on"><span>Pop out radio</span><span class="mv">open</span></button>
+          <button class="mrow" id="linkBtn" disabled title="Copy a link that opens this episode at this moment"><span>Copy link to this moment</span><span class="mv">copy</span></button>
+          <button class="mrow" id="moreRandom"><span>Surprise me</span><span class="mv">🎲</span></button>
         </div>
         <div class="upnext" id="upnext"></div>
+        <div class="cue-resume" id="cueResume" hidden><button class="linkish" id="cueResumeBtn"></button></div>
       </div>
     </div>
   </div>
@@ -716,32 +788,29 @@
   </div>
 
   <nav class="tabs" role="tablist" aria-label="Browse the radio">
-    <button class="tab" role="tab" id="channelsBtn" data-tab="channels" aria-controls="channelsPane" aria-selected="true"><span class="ti">📻</span>Channels</button>
-    <button class="tab" role="tab" id="greatsBtn" data-tab="greats" aria-controls="greatsPane" aria-selected="false"><span class="ti">★</span>The Greats</button>
+    <button class="tab" role="tab" id="channelsBtn" data-tab="channels" aria-controls="channelsPane" aria-selected="true"><span class="ti">📻</span>Listen</button>
     <button class="tab" role="tab" id="searchBtn" data-tab="search" aria-controls="searchPanel" aria-selected="false" title="Search episodes (/)"><span class="ti">🔍</span>Search</button>
-    <button class="tab" role="tab" id="builderBtn" data-tab="build" aria-controls="builderPanel" aria-selected="false"><span class="ti">＋</span><span class="lg">Build a station</span><span class="sm">Build</span></button>
-    <button class="tab" role="tab" id="settingsBtn" data-tab="settings" aria-controls="settingsPane" aria-selected="false"><span class="ti">⚙</span>Settings</button>
-    <button class="tab surprise" id="randomBtn" title="Play a random episode from any show"><span class="ti">🎲</span>Surprise me</button>
+    <button class="tab" role="tab" id="builderBtn" data-tab="build" aria-controls="builderPanel" aria-selected="false"><span class="ti">＋</span>My stations</button>
+    <button class="tab gear" role="tab" id="settingsBtn" data-tab="settings" aria-controls="settingsPane" aria-selected="false" aria-label="Settings" title="Settings"><span class="ti">⚙</span></button>
   </nav>
 
   <!-- Channels -->
   <section class="pane on" id="channelsPane" role="tabpanel" aria-labelledby="channelsBtn">
     <!-- Network stations (station.js + stations/<id>.grid.json): the network's real weekly lineup on your local clock -->
     <div class="netrow" id="networks" hidden>
-      <div class="pane-h"><h3>Network stations</h3><span class="hint">what each network was carrying at this hour on this day of the week, on your local clock; no commercials, so a half hour often fits two shows. Pause and rewind as you like; tune back in and you are live again.</span></div>
+      <div class="pane-h"><h2>On the air now</h2><span class="hint">what each network was carrying at this hour on this day of the week, on your clock</span></div>
       <div class="chips stations networks" id="networkChips"></div>
       <details class="guide" id="netGuide"><summary><span>Today on <span id="netGuideName">the network</span></span> <span class="hint" id="netGuideDay"></span><span class="guide-pick" id="netGuidePick"></span></summary><div class="guide-body" id="netGuideBody"></div></details>
     </div>
-    <div class="pane-h"><h2>Channels</h2><span class="hint">always on air: tap one to join the show in progress, or roll its 🎲 for a random episode</span></div>
+    <div class="pane-h"><h2>Channels</h2><span class="hint">always on, one kind of show each; 🎲 plays a random one</span></div>
     <div class="chips stations" id="channelChips"><span class="loading">loading catalog...</span></div>
     <div class="savedrow" id="savedRow"></div>
-  </section>
-
-  <!-- The Greats -->
-  <section class="pane" id="greatsPane" role="tabpanel" aria-labelledby="greatsBtn">
-    <div class="pane-h"><h2>The Greats</h2><span class="hint">one tap plays the whole show</span>
-      <label class="toggle greats-filter" title="Only play episodes that have an enhanced copy"><input type="checkbox" id="greatsOnly"> enhanced only</label></div>
-    <div class="chips" id="greatChips"></div>
+    <!-- Classic shows (The Greats): one tap plays a whole show -->
+    <div class="sect" id="greatsSec">
+      <div class="pane-h"><h2>Classic shows</h2><span class="hint">one tap plays the whole run</span>
+        <label class="toggle greats-filter" title="Only play episodes that have an enhanced copy"><input type="checkbox" id="greatsOnly"> enhanced only</label></div>
+      <div class="chips" id="greatChips"></div>
+    </div>
   </section>
 
   <!-- Search -->
@@ -754,7 +823,9 @@
 
   <!-- Station builder -->
   <section class="pane" id="builderPanel" role="tabpanel" aria-labelledby="builderBtn">
-    <div class="pane-h"><h2>Build your own station</h2><span class="hint">mix any shows into one station; saved stations appear under Channels, and you can share them by link</span></div>
+    <div class="pane-h"><h2>My stations</h2><span class="hint">stations you saved on this device; they also sit under Listen</span></div>
+    <div class="savedrow" id="savedRow2"></div>
+    <div class="pane-h" style="margin-top:14px"><h2>Make a station</h2><span class="hint">mix any shows into one station, save it, or share it by link</span></div>
     <input type="text" id="stationName" placeholder="Station name (optional)" maxlength="40" aria-label="Station name">
     <div class="builder-tools">
       <input type="search" id="builderFilter" placeholder="filter shows..." style="flex:1 1 200px; width:auto;" aria-label="Filter shows">
@@ -1257,13 +1328,15 @@
     var items=Object.keys(PROG).map(function(k){ var f=findEp(k); return f ? { k:k, f:f, r:PROG[k][0], ts:PROG[k][1] } : null; })
       .filter(Boolean).sort(function(a,b){ return b.ts-a.ts; }).slice(0,6);
     var nHeard=Object.keys(HEARD).length;
-    wrap.hidden = !items.length && !nHeard; row.innerHTML='';
+    // before anything plays, the start box (or the line under Play) already offers a single episode in progress
+    var quiet = items.length<=1 && (typeof playerMode==='undefined' || playerMode!=='active');
+    wrap.hidden = (!items.length && !nHeard) || quiet; row.innerHTML=''; renderStartBox();
     if(!items.length){ row.innerHTML='<span class="hint">Nothing in progress. '+nHeard+' episode'+(nHeard===1?'':'s')+' marked heard on this device.</span>'; return; }
     items.forEach(function(x){
       var s=byId[x.f.showId], e=s.eps[x.f.epIndex], left=Math.max(0,(1-x.r)*(e[2]||0));
       var c=document.createElement('div'); c.className='chip cont'; c.dataset.key=x.k;
       c.title='Resume '+s.name+': '+e[0];
-      c.innerHTML='<span class="c-show">'+escapeHtml(s.name)+'</span><span class="c-title">'+escapeHtml(e[0])+'</span>'+
+      c.innerHTML='<span class="c-show">'+escapeHtml(s.name)+'</span><span class="c-title">'+escapeHtml(niceTitle(e[0]))+'</span>'+
         '<span class="c-left">'+(e[2]?fmt(left)+' left':Math.round(x.r*100)+'% in')+'</span><span class="c-x" title="remove" aria-label="remove from continue listening">✕</span>';
       c.onclick=function(ev){
         if(ev.target.classList.contains('c-x')){ ev.stopPropagation(); var saved=PROG[x.k]; delete PROG[x.k]; persistHistory(); renderContinue();
@@ -1328,6 +1401,24 @@
     });
   }
   function titleCase(s){ return s.replace(/(^|[-\s])\w/g, function(m){ return m.toUpperCase(); }).replace(/-/g,' '); }
+  // Display-only tidy-up of archive episode titles: leading catalog codes ("Mca 1947-04-06001"), bare
+  // yymmdd dates ("430316" -> "16 Mar 1943"), glued "aka" alternates, "partial" tags, stray dashes, and
+  // Title Case Of Small Words. The catalog, search and links keep the original strings.
+  var MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], SMALLW={of:1,the:1,a:1,an:1,and:1,or:1,'for':1,'in':1,on:1,at:1,to:1,by:1,'with':1,from:1};
+  function niceTitle(t){
+    if(!t) return t || '';
+    var x=String(t).trim(), m;
+    if((m=/^(\d{2})(\d{2})(\d{2})$/.exec(x)) && +m[2]>=1 && +m[2]<=12 && +m[3]>=1 && +m[3]<=31) return (+m[3])+' '+MONS[+m[2]-1]+' 19'+m[1];
+    if((m=/^(19\d{2})-?(\d{2})-?(\d{2})$/.exec(x)) && +m[2]>=1 && +m[2]<=12 && +m[3]>=1 && +m[3]<=31) return (+m[3])+' '+MONS[+m[2]-1]+' '+m[1];
+    var y=x.replace(/^[A-Za-z]{2,5}\s+\d{4}-\d{2}-\d{2,5}\s+/, '')
+           .replace(/^[-–:\s]+/, '').replace(/[\s\-–]+$/, '')
+           .replace(/\s*\(?\bpartial\b\)?$/i, '')
+           .replace(/([a-z])aka (?=[A-Z])/, '$1 aka ').replace(/\s+aka\s+.+$/i, '');
+    var w=y.split(' ');
+    if(w.length>=3 && w.every(function(v){ return !/^[a-z]/.test(v); }))
+      y=w.map(function(v,i){ return i>0 && SMALLW[v.toLowerCase()] ? v.toLowerCase() : v; }).join(' ');
+    return y || x;
+  }
 
   function markActiveChip(){
     document.querySelectorAll('#channelChips .station').forEach(function(c){
@@ -1336,7 +1427,7 @@
     document.querySelectorAll('#networkChips .station').forEach(function(c){
       c.classList.toggle('on', !!state.network && c.dataset.net===state.network);
     });
-    document.querySelectorAll('#savedRow .chip').forEach(function(c){ c.classList.toggle('on', parseInt(c.dataset.idx,10)===state.savedActive); });
+    document.querySelectorAll('#savedRow .chip, #savedRow2 .chip').forEach(function(c){ c.classList.toggle('on', parseInt(c.dataset.idx,10)===state.savedActive); });
     var one = (!state.channel && !state.random && state.stationShowIds && state.stationShowIds.length===1) ? state.stationShowIds[0] : null;
     document.querySelectorAll('#greatChips .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.id===one); });
   }
@@ -1410,7 +1501,7 @@
         html='<span class="ad">commercial break</span>'+(ns?' then <b>'+escapeHtml(ns.name)+'</b>':'');
       } else {
         var s=byId[a.item.showId], e=s.eps[a.item.epIndex];
-        html='<b>'+escapeHtml(s.name)+'</b> &middot; '+escapeHtml(e[0]);
+        html='<b>'+escapeHtml(s.name)+'</b> &middot; '+escapeHtml(niceTitle(e[0]));
       }
       if(el._h!==html){ el.innerHTML=html; el._h=html; }
       card.querySelector('.st-bar i').style.width=(100*a.offset/a.dur).toFixed(1)+'%';
@@ -1452,14 +1543,14 @@
   function cueChannel(ch){
     if(!(chanShows[ch]||[]).length) return;
     state.channel = ch; state.stationShowIds = null; state.stationLabel = titleCase(ch); state.savedActive = -1;
-    markActiveChip();
+    markActiveChip(); setPlayerMode('cued');
     $('vizIdle').style.display='none';
     $('playBtn').disabled=false;
     var a = onAirNow(ch, Date.now()/1000);
     if(a){ var r = resolve(a.item);
       if(r){
         $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
-        $('npEp').textContent = r.isAd ? 'Vintage advertisement' : r.title;
+        $('npEp').textContent = r.isAd ? 'Vintage advertisement' : niceTitle(r.title);
         $('npDate').textContent = r.date || '';
         var sum=$('npSummary'), more=$('npMore');
         if(r.summary){ sum.textContent=r.summary; sum.style.display='block'; more.style.display=r.summary.length>210?'block':'none'; }
@@ -1501,13 +1592,14 @@
     NET_ORDER.forEach(function(id){
       var N=NETS[id], c=document.createElement('div'); c.className='station network'; c.dataset.net=id;
       c.title = N.grid.tagline || ('Tune in to '+N.name);
-      c.innerHTML = '<div class="st-head"><span class="st-name">'+escapeHtml(N.name)+'<span class="st-season">network</span></span>'+
+      c.innerHTML = '<div class="st-head"><span class="st-name">'+escapeHtml(N.name)+'<span class="st-season">live</span></span>'+
         '<span class="st-actions"><span class="st-count">'+netShowCount(N)+' shows</span></span></div>'+
         '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"><span class="l"></span><span class="rejoin" style="display:none">rejoin live</span></div><div class="st-next"></div>';
       c.onclick = function(){ startNetwork(id); setGuideNet(id); };
       el.appendChild(c);
     });
     row.hidden = !NET_ORDER.length;
+    renderStartBox();
     // guide picker: one chip per network; the tuned network (or the first) is selected
     var pick=$('netGuidePick'); pick.innerHTML='';
     NET_ORDER.forEach(function(id){
@@ -1538,17 +1630,19 @@
     NET_ORDER.forEach(function(id){
       var N=NETS[id], card=document.querySelector('#networkChips .station[data-net="'+id+'"]'); if(!card) return;
       var a=N.onAir(now); if(!a){ card.querySelector('.st-now').textContent='off air'; return; }
-      var d=N.describe(a.item), html=netLabel(N,a.item)+' &middot; '+escapeHtml(d.title);
-      var el=card.querySelector('.st-now'); if(el._h!==html){ el.innerHTML=html; el._h=html; }
+      var d=N.describe(a.item), html='<b>'+escapeHtml(d.show)+'</b><span class="sep"> &middot; </span>'+escapeHtml(niceTitle(d.title));
+      var el=card.querySelector('.st-now'); if(el._h!==html){ el.innerHTML=html; el._h=html;
+        card.title = (N.grid.tagline || ('Tune in to '+N.name)) + (a.item.fill ? '. Playing in place of '+String(d.label||'the scheduled show').replace(/\s*\(fill\)$/,'') : ''); }
       card.querySelector('.st-bar i').style.width=(100*a.offset/a.item.dur).toFixed(1)+'%';
       card.querySelector('.st-left .l').textContent=fmt(a.left)+' left';
       var shifted = state.network===id && !state.live && state.queue.length;
       card.querySelector('.st-left .rejoin').style.display = shifted ? '' : 'none';
-      var up=N.upcoming(now, 3), nx=card.querySelector('.st-next');
+      var up=N.upcoming(now, 1), nx=card.querySelector('.st-next');
       var nh=up.length ? 'then '+up.map(function(it){ var dd=N.describe(it), t=new Date(it.at*1000); return '<b>'+escapeHtml(dd.show)+'</b> '+OTRStation.clock12(t.getHours()*60+t.getMinutes()).replace(/ /,' '); }).join(' &middot; ') : '';
       if(nx._h!==nh){ nx.innerHTML=nh; nx._h=nh; }
     });
     if($('netGuide').open) renderNetGuide();
+    renderStartBox();
   }
   function renderNetGuide(force){
     var id=netGuideSel||NET_ORDER[0]; if(!id || !NETS[id]) return;
@@ -1593,10 +1687,10 @@
   function cueNetwork(id){
     var N=NETS[id]; if(!N) return;
     state.channel=null; state.stationShowIds=null; state.stationLabel=N.name; state.savedActive=-1; state.network=id;
-    markActiveChip();
+    markActiveChip(); setPlayerMode('cued');
     $('vizIdle').style.display='none'; $('playBtn').disabled=false;
     var a=N.onAir(Date.now()/1000);
-    if(a){ var r=resolve(a.item); if(r){ $('npShow').textContent=r.show.name; $('npEp').textContent=r.title; $('npDate').textContent=r.date||''; renderSlotLine(a.item); } }
+    if(a){ var r=resolve(a.item); if(r){ $('npShow').textContent=r.show.name; $('npEp').textContent=niceTitle(r.title); $('npDate').textContent=r.date||''; renderSlotLine(a.item); } }
     setStatus('ready'); updateDock();
   }
   function renderSlotLine(it){
@@ -1720,6 +1814,7 @@
     var guard=0;
     while(!r && guard<50){ state.qi = (state.qi+1)%state.queue.length; item=currentItem(); r=resolve(item); guard++; }
     if(!r){ toast('Nothing to play'); return; }
+    setPlayerMode('active');
     clearWatch(); clearBackoff();
     state.gotPlaying=false; state.awaitingGesture=false;
     // resume a saved spot (never on the live clock, never over an explicit seek or a copy swap)
@@ -2021,7 +2116,7 @@
     $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false; $('backBtn').disabled=false; $('fwdBtn').disabled=false; $('linkBtn').disabled=!!r.isAd;
     $('vizIdle').style.display='none';
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
-    $('npEp').textContent = r.isAd ? (r.title==='Commercial'?'Vintage advertisement':r.title) : r.title;
+    $('npEp').textContent = r.isAd ? (r.title==='Commercial'?'Vintage advertisement':r.title) : niceTitle(r.title);
     $('npDate').textContent = r.date || '';
     renderSlotLine(state.network && it.net ? it : null);
     var sum = $('npSummary'), more=$('npMore');
@@ -2035,7 +2130,7 @@
     } else arch.style.display='none';
     // up next
     var nx = state.queue[state.qi+1];
-    if(nx){ var nr=resolve(nx); $('upnext').innerHTML = nr ? ('<b>up next</b> &nbsp;'+ (nr.isAd?'Commercial':escapeHtml(nr.show.name)+' - '+escapeHtml(nr.title))
+    if(nx){ var nr=resolve(nx); $('upnext').innerHTML = nr ? ('<b>up next</b> &nbsp;'+ (nr.isAd?'Commercial':escapeHtml(nr.show.name)+' - '+escapeHtml(niceTitle(nr.title)))
               + (!nr.isAd && pickSource(nx, nr).enh ? '<span class="enh-tag">enhanced</span>' : '')) : ''; }
     else $('upnext').innerHTML='';
     renderSrcLine();
@@ -2111,16 +2206,20 @@
   $('selAll').onclick=function(){ document.querySelectorAll('#showGrid .showitem').forEach(function(it){ if(it.style.display!=='none'){ var cb=it.querySelector('input'); if(!cb.checked){ cb.checked=true; cb.onchange(); } } }); };
   $('selNone').onclick=function(){ document.querySelectorAll('#showGrid .showitem input').forEach(function(cb){ if(cb.checked){ cb.checked=false; cb.onchange(); } }); };
   $('playStation').onclick=function(){ var ids=Object.keys(selected); var nm=$('stationName').value.trim()||'Custom station'; startStation(ids, nm); };
-  $('saveStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim()||('Station '+(getSaved().length+1)); var arr=getSaved(); arr.push({name:nm, shows:ids}); save('otr_stations', JSON.stringify(arr)); renderSaved(); toast('Saved "'+nm+'" under Channels'); };
+  $('saveStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim()||('Station '+(getSaved().length+1)); var arr=getSaved(); arr.push({name:nm, shows:ids}); save('otr_stations', JSON.stringify(arr)); renderSaved(); toast('Saved "'+nm+'": it is under My stations and Listen'); };
   $('shareStation').onclick=function(){ var ids=Object.keys(selected); if(!ids.length) return; var nm=$('stationName').value.trim(); var url=location.origin+BASE+'?s='+encodeStation(ids)+(nm?('&n='+encodeURIComponent(nm)):''); $('shareUrl').value=url; $('shareBox').classList.add('open'); $('shareUrl').select(); };
   $('copyShare').onclick=function(){ var i=$('shareUrl'); i.select(); try{ navigator.clipboard.writeText(i.value); }catch(e){ document.execCommand('copy'); } toast('Link copied'); };
 
   function getSaved(){ try{ return JSON.parse(load('otr_stations','[]'))||[]; }catch(e){ return []; } }
   function renderSaved(){
-    var row=$('savedRow'); var arr=getSaved(); row.innerHTML='';
-    if(!arr.length){ return; }
+    renderSavedInto($('savedRow2'), true);
+    renderSavedInto($('savedRow'), false);
+  }
+  function renderSavedInto(row, mine){
+    var arr=getSaved(); row.innerHTML='';
+    if(!arr.length){ if(mine) row.innerHTML='<span class="hint" style="font-size:11.5px;color:var(--dim)">None yet. Pick some shows below and save them as a station.</span>'; return; }
     var lab=document.createElement('div'); lab.className='saved-h';
-    lab.innerHTML='<span class="label">your stations</span><span class="hint">saved on this device; make more under Build a station</span>'; row.appendChild(lab);
+    lab.innerHTML= mine ? '' : '<span class="label">your stations</span><span class="hint">saved on this device; make more under My stations</span>'; if(!mine) row.appendChild(lab);
     arr.forEach(function(st, i){
       var c=document.createElement('div'); c.className='chip custom'; c.dataset.idx=i;
       c.innerHTML=escapeHtml(st.name)+'<small>'+st.shows.length+'</small> <span style="color:var(--dim);margin-left:6px" title="delete" aria-label="delete station">✕</span>';
@@ -2150,14 +2249,21 @@
     return byId[tok] ? tok : null;                                                          // slug code
   }).filter(Boolean); }catch(e){ return null; } }
 
-  // ---- tabs: Channels / The Greats / Search / Build a station / Settings ----
+  // ---- tabs: Listen / Search / My stations / Settings ----
   // One pane shows at a time under the player, so nothing sits at the bottom of a long page.
   // The open tab is remembered on this device; a link can open one with #search, #build, etc.
-  var TABS = { channels:'channelsPane', greats:'greatsPane', search:'searchPanel', build:'builderPanel', settings:'settingsPane' };
+  var TABS = { channels:'channelsPane', search:'searchPanel', build:'builderPanel', settings:'settingsPane' };
   var curTab = 'channels';
   function showTab(name, opts){
     opts = opts || {};
+    var toGreats = name==='greats';   // The Greats became "Classic shows" inside Listen
     if(!TABS[name]) name = 'channels';
+    if(toGreats){
+      // cards above it fill in as the schedules load, so settle the scroll a few times unless the visitor scrolls first
+      var moved=false, stop=function(){ moved=true; };
+      ['wheel','touchstart','keydown'].forEach(function(ev){ window.addEventListener(ev, stop, { once:true, passive:true }); });
+      [0, 300, 900, 1800].forEach(function(ms){ setTimeout(function(){ var g=$('greatsSec'); if(g && !moved) g.scrollIntoView({ block:'start' }); }, ms); });
+    }
     curTab = name;
     Object.keys(TABS).forEach(function(k){
       var on = k===name, pane=$(TABS[k]), btn=document.querySelector('.tab[data-tab="'+k+'"]');
@@ -2184,10 +2290,92 @@
     e.preventDefault(); e.stopPropagation(); showTab(n); document.querySelector('.tab[data-tab="'+n+'"]').focus();
   });
   (function(){
-    var h=(location.hash||'').replace('#',''), want = TABS[h] ? h : load('otr_tab','channels');
-    showTab(want, { quiet: !!TABS[h] });
+    var h=(location.hash||'').replace('#',''), want = (TABS[h] || h==='greats') ? h : load('otr_tab','channels');
+    showTab(want, { quiet: !!TABS[h] || h==='greats' });
   })();
   $('randomBtn').onclick=function(){ ensureAudioGraph(); if(ac && ac.state==='suspended') ac.resume(); startRandom(null, 'Surprise me'); };
+
+  // ---- player modes and the start box ----
+  // idle: nothing has played yet; the start box offers one tap (the first network, or where you left off).
+  // cued: the last station is waiting (restored on load); Play and volume show. active: the full player.
+  var playerMode='idle';
+  function setPlayerMode(m){
+    if(m==='cued' && playerMode==='active') return;
+    playerMode=m; var c=$('console'); c.classList.toggle('idle', m==='idle'); c.classList.toggle('cued', m==='cued');
+    if(m==='cued') renderCueResume();
+    renderContinue();
+    // the visualizer was display:none while idle, so its canvas has no size yet
+    if(m!=='idle') requestAnimationFrame(function(){ try{ sizeCanvas(); }catch(e){} });
+  }
+  function wakeAudio(){ ensureAudioGraph(); if(ac && ac.state==='suspended') ac.resume(); }
+  function lastTarget(){
+    var last=load('otr_last',''), m=/^(net|ch):(.+)$/.exec(last);
+    if(m && m[1]==='net' && NETS[m[2]]) return { kind:'net', id:m[2], name:NETS[m[2]].name };
+    if(m && m[1]==='ch' && (chanShows[m[2]]||[]).length) return { kind:'ch', id:m[2], name:titleCase(m[2]) };
+    return null;
+  }
+  function firstTarget(){
+    if(NET_ORDER.length) return { kind:'net', id:NET_ORDER[0], name:NETS[NET_ORDER[0]].name };
+    if(CAT && CAT.channels.length) return { kind:'ch', id:CAT.channels[0], name:titleCase(CAT.channels[0]) };
+    return null;
+  }
+  function tuneTarget(tg){ wakeAudio(); if(tg.kind==='net'){ startNetwork(tg.id); setGuideNet(tg.id); } else startChannel(tg.id); }
+  function nowOn(tg){
+    var now=Date.now()/1000;
+    if(tg.kind==='net'){ var N=NETS[tg.id], a=N && N.onAir(now); if(!a) return null; var d=N.describe(a.item); return { show:d.show, title:niceTitle(d.title) }; }
+    var b=onAirNow(tg.id, now), r=b && resolve(b.item); if(!r) return null;
+    return r.isAd ? { show:'a commercial break', title:'' } : { show:r.show.name, title:niceTitle(r.title) };
+  }
+  function lastProgress(){
+    var best=null;
+    Object.keys(PROG).forEach(function(k){ var f=findEp(k); if(f && byId[f.showId] && (!best || PROG[k][1]>best.ts)) best={ k:k, f:f, r:PROG[k][0], ts:PROG[k][1] }; });
+    return best;
+  }
+  function renderStartBox(){
+    if(playerMode!=='idle' || !CAT) return;
+    var back=lastProgress(), tg=firstTarget(), alt=lastTarget()||tg;
+    $('startBox').classList.toggle('back', !!back);
+    if(back){
+      var s=byId[back.f.showId], e=s.eps[back.f.epIndex], dur=e[2]||0;
+      $('startLab').textContent='welcome back';
+      $('startTitle').textContent=s.name+' · '+niceTitle(e[0]);
+      $('startSub').textContent='';
+      $('startProg').hidden=!dur; $('startFill').style.width=(back.r*100).toFixed(1)+'%'; $('startTime').textContent=dur ? fmt(back.r*dur)+' of '+fmt(dur) : '';
+      $('startGo').textContent='▶ Pick up where you left off'; $('startGo').disabled=false;
+      $('startGo').onclick=function(){ wakeAudio(); playEpisode(back.f.showId, back.f.epIndex); };
+      if(alt){ $('startAlt').hidden=false; $('startAlt').textContent=(alt.kind==='net'?'Live on ':'Tune in to ')+alt.name; $('startAlt').onclick=function(){ tuneTarget(alt); }; }
+      else $('startAlt').hidden=true;
+    } else {
+      var on=tg && nowOn(tg);
+      $('startLab').textContent='nothing playing yet';
+      $('startTitle').textContent='Tap any station below, or start here';
+      $('startSub').textContent = on ? ('On '+tg.name+' right now: '+on.show+(on.title ? ', \u201c'+on.title+'\u201d' : '')) : '';
+      $('startProg').hidden=true; $('startAlt').hidden=true;
+      $('startGo').textContent = tg ? '▶ Tune in to '+tg.name : '▶ Tune in'; $('startGo').disabled=!tg;
+      $('startGo').onclick=function(){ if(tg) tuneTarget(tg); };
+    }
+  }
+  // cued with an episode in progress: offer it under Play
+  function renderCueResume(){
+    var back=lastProgress(), w=$('cueResume'); if(!back){ w.hidden=true; return; }
+    var s=byId[back.f.showId], e=s.eps[back.f.epIndex], dur=e[2]||0;
+    $('cueResumeBtn').textContent='or pick up '+s.name+', '+niceTitle(e[0])+(dur ? ' ('+fmt(back.r*dur)+' of '+fmt(dur)+')' : '');
+    $('cueResumeBtn').onclick=function(){ wakeAudio(); playEpisode(back.f.showId, back.f.epIndex); };
+    w.hidden=false;
+  }
+
+  // ---- More: speed, sleep timer, pop out radio, copy link, surprise me ----
+  function openMore(open){
+    var p=$('morePanel'); p.hidden=!open; $('moreBtn').setAttribute('aria-expanded', open?'true':'false');
+    if(open){ var f=p.querySelector('select'); try{ f.focus({preventScroll:true}); }catch(e){} }
+  }
+  $('moreBtn').onclick=function(ev){ ev.stopPropagation(); openMore($('morePanel').hidden); };
+  $('moreClose').onclick=function(){ openMore(false); $('moreBtn').focus(); };
+  $('popBtn2').onclick=function(){ openMore(false); $('popBtn').click(); };
+  $('moreRandom').onclick=function(){ openMore(false); $('randomBtn').onclick(); };
+  $('linkBtn').addEventListener('click', function(){ openMore(false); });
+  document.addEventListener('click', function(ev){ var p=$('morePanel'); if(!p.hidden && !p.contains(ev.target) && ev.target!==$('moreBtn')) openMore(false); });
+  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape' && !$('morePanel').hidden){ openMore(false); $('moreBtn').focus(); } });
   $('commToggle').checked = state.commercials; $('commToggle').onchange=function(){ state.commercials=this.checked; save('otr_comm', this.checked?'1':'0'); };
   syncEnhUI();
   $('enhOnly').onchange=function(){ setOnly(this.checked); };
@@ -4352,6 +4540,8 @@
     sleepMode: function(){ return SLEEP.mode; },
     schedule: function(ch){ return buildSchedule(ch).items.map(function(it){ return { showId:it.showId, isAd:it.isAd }; }); },
     tab: function(name){ if(name) showTab(name); return curTab; },
+    mode: function(){ return playerMode; },
+    niceTitle: function(t){ return niceTitle(t); },
     dockShown: function(){ return $('dock').classList.contains('show'); },
     network: {
       ready: function(){ return NET_ORDER.length>0; },

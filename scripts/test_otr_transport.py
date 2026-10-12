@@ -24,6 +24,9 @@ def ck(n, c, d=''):
 URL = f'http://127.0.0.1:{PORT}/otr/?season=off'
 PLAYING = '!document.getElementById("audio").paused && document.getElementById("audio").currentTime>1'
 T = 'document.getElementById("audio").currentTime'
+def sel(pg, which, v):   # speed and sleep live in the More panel
+    if not pg.is_visible('#morePanel'): pg.click('#moreBtn')
+    pg.select_option(which, v)
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
@@ -69,7 +72,7 @@ with sync_playwright() as p:
     pg.wait_for_function(PLAYING, timeout=45000)
 
     # speed
-    pg.select_option('#rateSel', '1.25'); pg.wait_for_timeout(300)
+    sel(pg, '#rateSel', '1.25'); pg.wait_for_timeout(300)
     ck('speed 1.25x applied', abs(pg.evaluate('document.getElementById("audio").playbackRate') - 1.25) < 1e-6)
     ck('pitch preserved', pg.evaluate('document.getElementById("audio").preservesPitch !== false'))
     pg.click('#skipBtn'); pg.wait_for_function(PLAYING, timeout=45000); pg.wait_for_timeout(500)
@@ -78,12 +81,12 @@ with sync_playwright() as p:
     ck('faster than 1x on a channel is time-shifted', not pg.evaluate('__otr.state.live') and 'time-shifted' in pg.inner_text('#onairText').lower(), pg.inner_text('#onairText').lower())
     pg.reload(); pg.wait_for_function('__otr.ready()')
     ck('speed remembered after reload', pg.input_value('#rateSel') == '1.25')
-    pg.select_option('#rateSel', '1')
+    sel(pg, '#rateSel', '1')
 
     # sleep timer, minutes
     pg.click('#channelChips .station[data-ch="western"]'); pg.wait_for_function(PLAYING, timeout=45000)
     base = pg.evaluate('document.getElementById("audio").volume')
-    pg.select_option('#sleepSel', '15'); pg.wait_for_timeout(1200)
+    sel(pg, '#sleepSel', '15'); pg.wait_for_timeout(1200)
     left = pg.inner_text('#sleepLeft')
     ck('15 min timer counts down', left.startswith('14:5') or left.startswith('15:00'), left)
     pg.evaluate('__otr.sleepIn(4000)'); pg.wait_for_timeout(1600)
@@ -94,15 +97,15 @@ with sync_playwright() as p:
     ck('volume restored and timer cleared', abs(pg.evaluate('document.getElementById("audio").volume') - base) < 0.02 and pg.input_value('#sleepSel') == 'off' and pg.inner_text('#sleepLeft') == '')
     # cancel restores
     pg.click('#playBtn'); pg.wait_for_function(PLAYING, timeout=45000)
-    pg.select_option('#sleepSel', '30'); pg.evaluate('__otr.sleepIn(10000)'); pg.wait_for_timeout(1500)
-    pg.select_option('#sleepSel', 'off'); pg.wait_for_timeout(300)
+    sel(pg, '#sleepSel', '30'); pg.evaluate('__otr.sleepIn(10000)'); pg.wait_for_timeout(1500)
+    sel(pg, '#sleepSel', 'off'); pg.wait_for_timeout(300)
     ck('turning it off mid-fade restores volume', abs(pg.evaluate('document.getElementById("audio").volume') - base) < 0.02 and not pg.evaluate('document.getElementById("audio").paused'))
 
     # sleep at end of episode
     pg.click('#skipBtn'); pg.wait_for_function(PLAYING, timeout=45000)
     while pg.evaluate('__otr.currentInfo().isAd'):
         pg.click('#skipBtn'); pg.wait_for_function(PLAYING, timeout=45000)
-    pg.select_option('#sleepSel', 'end')
+    sel(pg, '#sleepSel', 'end')
     ck('end mode labelled', 'after this episode' in pg.inner_text('#sleepLeft'))
     qi = pg.evaluate('__otr.state.qi')
     pg.evaluate('(function(a){a.currentTime=a.duration-8})(document.getElementById("audio"))')
@@ -118,8 +121,10 @@ with sync_playwright() as p:
     # phone width: one transport row, no sideways scroll
     m = b.new_context(viewport={'width': 375, 'height': 800}).new_page()
     m.goto(URL); m.wait_for_function('__otr.ready()'); m.wait_for_timeout(400)
+    ck('mobile: transport hidden until something plays', not m.is_visible('.transport'))
+    m.evaluate('__otr.startChannel("crime")'); m.wait_for_function('__otr.mode()==="active"', timeout=30000); m.wait_for_timeout(300)
     tops = m.eval_on_selector_all('.transport .btn', 'els=>els.map(e=>Math.round(e.getBoundingClientRect().top))')
-    ck('mobile: five transport buttons on one row', len(tops) == 5 and len(set(tops)) == 1, tops)
+    ck('mobile: five transport buttons on one row', len(tops) == 5 and len(set(tops)) == 1 and tops[0] > 0, tops)
     ck('mobile: no horizontal scroll', m.evaluate('document.documentElement.scrollWidth') <= 375)
     SP = os.environ.get('SP', '/tmp')
     m.locator('.np').screenshot(path=f'{SP}/otr_transport_mobile.png')

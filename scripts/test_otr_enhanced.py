@@ -124,7 +124,7 @@ def main():
         ck("search lists only enhanced episodes and says how many it hid", sr["n"] > 0 and sr["n"] == sr["enh"] and "hidden" in sr["note"], sr)
         pg.reload(); pg.wait_for_function("window.__otr.ready() && window.__otr.enhancedCount() > 0", timeout=20000)
         ck("enhanced-only persists across reload", pg.evaluate("window.__otr.onlyMode()") and pg.is_checked("#enhOnly") and pg.is_checked("#greatsOnly"))
-        pg.click("#greatsBtn"); pg.uncheck("#greatsOnly")
+        pg.click("#channelsBtn"); pg.uncheck("#greatsOnly")     # the classic shows live in Listen now
         ck("unchecking the greats filter turns enhanced-only off everywhere", not pg.evaluate("window.__otr.onlyMode()") and not pg.is_checked("#enhOnly") and pg.is_checked("#enhToggle"))
         q = pg.evaluate(f"(() => {{ window.__otr.playGreat('lights-out'); return {progs}; }})()")
         ck("with it off, a show with no enhanced copies plays normally", q == ["lights-out"], q)
