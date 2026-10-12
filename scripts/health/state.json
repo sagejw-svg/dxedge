@@ -1,84 +1,9 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights.",
  "schema_version": 1,
- "last_run": "2026-10-11T04:35:00Z",
+ "last_run": "2026-10-12T04:32:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
-  {
-   "date": "2026-10-02",
-   "run_outcome": "BLIND NIGHT, fourth of the last six weeks' gated nights and the all-host total-block shape. WebFetch returned PROVENANCE_REQUIRED on 5 of 5 calls across 2 hosts, including an example.com control, so no live surface was checked and no verdict is offered on cert, /api/health, /api/debug, /cyber/ or /aethersdr/. Per substitution-is-not-permitted nothing was fetched by curl, python or Chromium to stand in. Escalation push sent EARLY at 04:15Z per the 09-16 lesson. Static and repo-side checks completed and are clean on every question they can answer. Zero repairs. ONE NEW escalation raised: support-page-qr-third-party.",
-   "environment": {
-    "webfetch": "TOTAL BLOCK, 5 of 5 denied: /api/health?cb=20261002a, a retry of the same, /api/health?cb=20261002b&nonce=1002b, /health/linkcheck.json?nonce=1002b, and an https://example.com/ control. Matches the 09-27/09-28 total-block shape, not the 09-18 partial one.",
-    "browser": "NOT USED against the live site, same reasoning as 09-20 and 09-22: relaying a page WebFetch refused is substitution. Local headless Chromium WAS used, legitimately, by the repo's own scripts/test_otr*.py suites, which drive a 127.0.0.1 fixture server and never touch dxedge.net.",
-    "git": "Clone OK, full depth. Push OK."
-   },
-   "cert": {
-    "status": "unknown",
-    "evidence": "WebFetch never reached the host. PROVENANCE_REQUIRED is a local permission denial, not a TLS result. crt.sh not attempted: it was ROBOTS_DISALLOWED on 09-30 and the gate was total tonight anyway.",
-    "consecutive_failures": 0,
-    "counter_note": "NOT incremented. Unverifiable is not a renewal failure, per the standing reading. Last positive confirmation 2026-10-01."
-   },
-   "main_dashboard": {
-    "api_health": "NOT CHECKED - gate.",
-    "api_debug": "NOT CHECKED - gate.",
-    "sota": "Carries over unverified: dark, upstream deprecated, held under awaiting_james sota-api-deprecation. Not re-reported.",
-    "solar_sfi": "Carries over unverified, held under awaiting_james solar-sfi-monthly-dataset. Not re-reported.",
-    "endpoints_verified": []
-   },
-   "cyber_page": {
-    "browser_check": "NOT DONE - gate.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "STATIC clean. Tree-wide grep over html/js/jsx/py/json outside state.json finds two hits only, both explanatory comments, at backend/main.py:708 and backend/feedproxy.py:3. PROXY is '/api/feed?url=' at line 349 and all 6 getCached call sites (556, 586, 618, 639, 690, 715) pass PROXY + encodeURIComponent. The only bare fetch( is the helper at 374 that receives the already-proxied URL. No bypass path exists in source.",
-    "allowlist_gaps": "NONE, re-derived tonight rather than carried over. All 11 proxy targets resolve to allowlisted hosts: www.cisa.gov (KEV 556, advisories 715), services.nvd.nist.gov (586), api.first.org (618), www.hamqsl.com (639), and the 7 tabbed news sources at 731-741 (krebsonsecurity.com, feeds.feedburner.com, www.bleepingcomputer.com, www.darkreading.com, isc.sans.edu, www.securityweek.com, news.google.com). No allowlist change made, needed or proposed.",
-    "page_source_unchanged": true,
-    "claude_docs_302": "5 docs.claude.com links still present at lines 501-503, 505, 506. Held under awaiting_james claude-docs-domain-migration, default is leave-until-301. Not re-verified tonight, gate.",
-    "atlas_mitre": "Lines 511-512 unchanged, expected in every linkcheck report, skipped per known issue atlas-mitre-spa-404s."
-   },
-   "aethersdr_page": {
-    "browser_check": "NOT DONE - gate.",
-    "allorigins_regression": false,
-    "allorigins_evidence": "STATIC clean. PROXY at line 348, both call sites 432 and 457 proxied, only bare fetch( is the helper at 373.",
-    "allowlist_gaps": "NONE. The 4 NEWS_SOURCES resolve to github.com, www.flexradio.com, www.rtl-sdr.com and hackaday.com, all allowlisted.",
-    "page_source_unchanged": true,
-    "version_label_bug": "Unchanged, held under awaiting_james aethersdr-about-version-drift. Not re-reported."
-   },
-   "otr_page": {
-    "browser_check": "NOT DONE against the live site - gate. Deploy of the 7 new commits is UNVERIFIED.",
-    "local_tests": "RAN and PASSED offline. scripts/test_otr.py, test_otr_enhanced.py, test_otr_history.py, test_otr_seasonal.py and test_otr_transport.py all reported ALL PASSED or empty FAILS against their 127.0.0.1 fixture servers. test_otr_broadcast.py and test_otr_fixes.py were cut off by this run's own 2-minute command cap, not by a failure, so they are untested rather than failing.",
-    "feed_surface": "None. Only fetch( is getJSON at line 421, same-origin relative to its own directory. archive.org audio stays a media-element src per known issue otr-audio-is-a-media-element-not-a-feed."
-   },
-   "new_commit_review": {
-    "range": "37efe2a..95afedc, 7 commits, all 2026-10-01, author 'Claude' (a separate session, not this routine).",
-    "shas": [
-     "e932114",
-     "fa5d265",
-     "bedf380",
-     "e810bce",
-     "61f4a37",
-     "ffc4907",
-     "95afedc"
-    ],
-    "scope": "Frontend and scripts only. frontend/public/otr/{index.html,enhanced.json}, frontend/public/sw.js (CACHE_NAME v49 -> v56), frontend/src/App.jsx (a ko-fi tip line in the footer), frontend/src/components/{Credits.jsx,Support.jsx}, and 8 scripts/ files including 4 new test suites and scripts/otr_restore.py. 14 files, +3709/-1159.",
-    "excluded_files_untouched": "CONFIRMED. No change to nginx.conf, docker-compose.yml, .github/workflows/deploy.yml or scripts/cert_repair.sh.",
-    "feed_questions": "None arise. No new /api/feed call sites, no new proxy targets, no new allowlist hosts required, no allorigins.",
-    "new_outbound_hosts": "ko-fi.com/oldtimeradio (4 refs: App.jsx footer, Credits.jsx, otr/index.html footer, Support.jsx) and 306 archive.org refs in enhanced.json. None checked: the curated sweep is not due until 2026-10-15 and the gate was total anyway. The 09-22-interactive run verified oldtime.radio and the codebox repo; ko-fi.com is new tonight and unverified.",
-    "finding": "Reading Support.jsx for this review surfaced the api.qrserver.com dependency now raised as awaiting_james support-page-qr-third-party. Note it is NOT from these commits: Support.jsx was added by James himself in 59111ba on 2026-05-31 and these commits only changed its KOFI constant. Pre-existing and untracked, not a regression.",
-    "deploy_status": "UNVERIFIED - gate."
-   },
-   "outbound_links": "NOT DUE. Next curated sweep 2026-10-15. Rotation clock NOT advanced. Zero links checked tonight.",
-   "published_linkcheck": "COULD NOT BE READ. https://dxedge.net/health/linkcheck.json?nonce=1002b was denied by the gate on its only attempt. The standing read-it-every-night rule was honoured as an attempt; the data is simply unavailable. This is the second data loss the gate has caused that awaiting_james linkcheck-report-should-be-committed would have prevented, since a committed copy would have been readable from the clone.",
-   "backend_tests": "Still broken at collection, re-confirmed directly tonight rather than carried over: backend/tests/test_dxedge.py:64 imports estimate_fof2 and uses it at lines 92, 96 and 98, while backend/voacap_engine.py defines maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path, and no estimate_fof2. Pre-existing, not caused by this run, not papered over. Outstanding.",
-   "repairs_made": "NONE. Nothing was repairable: the four autonomous categories all need live data this run could not get, and the single new finding is an escalation by the runbook rather than an autonomous fix.",
-   "problems_reported_tonight": [
-    "webfetch-permission-at-setup (routine could not run; same open decision, now the blocking item for a 9th degraded night)",
-    "support-page-qr-third-party (NEW)",
-    "deploy of the 7 new OTR commits unverified"
-   ],
-   "escalations_sent": [
-    "Push notification at 04:15Z, early per the 09-16 lesson: blind night, fetch permission decision named as the specific ask.",
-    "Email to sagejw@gmail.com: 0 fixes, 2 decisions."
-   ]
-  },
   {
    "date": "2026-10-03",
    "run_outcome": "FULL RUN on the feed and endpoint dimensions, zero repairs. The provenance gate fired but was PARTIAL and cleared: /api/health was denied on three distinct URL strings and then answered on a fourth with a fresh nonce, while every other dxedge.net path and every third-party host worked first try. No browser exists in this session at all, so the Step 3 render and console checks could not run and no verdict is offered on them; the feed dimension of both standalone pages was instead proved rigorously without a browser (see feedproxy-cache-key-proves-a-200). Cert clean. Every feed on both pages answered 200. Nothing was broken. Nothing was repaired. Quiet night: no email, no push. Only this state file pushed.",
@@ -763,6 +688,76 @@
    "problems_reported_tonight": "NONE SENT. Quiet-night rule applied exactly as the brief specifies: nothing was broken on any of the three surfaces and nothing was fixed, so no email and no PushNotification were sent. The two new findings above are a correction to this routine's own methodology and an awareness note on a feature James shipped himself today; neither is a defect and neither needs a decision from him tonight, so neither justified waking his phone at 9 PM.",
    "escalations_sent": "NONE.",
    "deliberately_not_reported": "sat_tles/pota_spots 0/0 (health-metric-cold-cache, root-caused 10-05). The sfi 105 monthly-dataset value (already open as solar-sfi-monthly-dataset). The aethersdr hardcoded version label (already open, and not independently observed tonight). The 33 linkcheck not-ok entries (all already triaged). The backend test collection error (pre-existing, reported as outstanding rather than as news). The absent Google Fonts cert artifact (its absence is not a finding)."
+  },
+  {
+   "date": "2026-10-12",
+   "run_outcome": "FULL WORKING NIGHT on all three brief surfaces plus the main dashboard render, ZERO repairs, ZERO escalations, nothing sent to James. Quiet-night rule applied deliberately: nothing was broken and nothing was fixed, so no email and no push. Both standalone pages rendered in Chromium and came back completely clean, and the cyber page's 7 tabs were driven again per the 10-11 method, all filling. Zero NEW findings against the site. One new RIG limitation recorded (relay does not proxy WebSockets) so a future run does not misread it as a dashboard defect.",
+   "environment": {
+    "webfetch": "WORKING after an intermittent start, for the FOURTH night running, and the 10-09/10-10/10-11 refinement paid off a third time. /api/health was denied twice on ?cb=20261012a and a ?cb=20261012b retry, and an https://example.com/ control was ALSO denied, which on a 10-02 reading would have been called a total block and stopped the run. It was not total. Changing the param NAME cleared it: /health/linkcheck.json?nonce=1012c and /api/health?nonce=1012c both served immediately, and roughly 8 further calls succeeded with zero denials. CAUTION FOR FUTURE RUNS: the example.com control being denied is NOT sufficient evidence of a total block. Tonight a denied control coexisted with a fully working dxedge.net. Probe the real target with a changed param NAME before declaring a blind night.",
+    "ordering_discipline": "PARTIALLY honoured. The 10-02 rule is clone and read state BEFORE the first probe; this run issued 2 WebFetch calls to /api/health before cloning. No substitution occurred and nothing was lost, because WebFetch is the sanctioned Step 1 tool rather than a second channel, but the two wasted calls are exactly the ones that used the known-bad same-param-name retry. Reading state first would have gone straight to a fresh param name. Keep the clone-first discipline.",
+    "curl": "Not used against dxedge.net or any denied URL. substitution-is-not-permitted honoured. One curl went to 127.0.0.1:8099, the local relay, purely as a rig liveness check; that is not a fetch of dxedge content through a second channel, same reading as 10-11.",
+    "browser": "YES, and LEGITIMATE under browser-check-now-possible as refined 2026-09-27: WebFetch was demonstrably working on dxedge.net BEFORE the rig was built (health, debug, linkcheck.json, sw.js, pota and satellites all read), and the rig supplied client-side rendering and tab interaction that WebFetch genuinely cannot do. It stood in for no denied fetch. ELEVENTH consecutive confirmation that no mcp browser exists in this session: a keyword tool search for navigate/console/network returned only Jam session-replay readers, Dropbox, Slack, Notion and Microsoft 365 tools, nothing that can drive a page.",
+    "rig": "Rebuilt from scratch at scratchpad/rig/{relay.py,check.py,dash.py}; the 10-11 rig did not persist, as expected for an ephemeral container. relay.py serves the live page from dxedge.net and forwards same-origin /api/ calls upstream with python requests verifying against /root/.ccr/ca-bundle.crt, answers POST /api/stat with 204 locally to kill the known stat noise, and Chromium 1194 runs with --no-proxy-server against 127.0.0.1:8099. check.py takes a page, a wait and an optional 'tabs' mode; dash.py renders the React dashboard.",
+    "github_api": "Not attempted; api.github.com is blocked by the egress proxy. Deploy currency judged from the /sw.js tripwire instead.",
+    "git": "Token from Mem note 46ad97ee works for ls-remote, full clone and push. The note's own text STILL says it expired ~August 27 2026, now seven weeks stale and still wrong; see pat-expiry-note-stale. Note also the brief says the PAT has no expiration while the note says it expired, so the two disagree and the token simply works.",
+    "pytest": "NOT INSTALLED in this container, so the backend suite could not be executed tonight. The known collection error was confirmed STATICALLY instead, which is sufficient: see backend_tests.",
+    "mem": "get_note worked first try."
+   },
+   "cert": {
+    "status": "VALID",
+    "evidence": "No CERTIFICATE_VERIFY_FAILED and no expiry error on any successful HTTPS fetch to dxedge.net across the run, 04:24Z to 04:30Z, spanning /api/health, /api/debug, /health/linkcheck.json, /sw.js, /api/pota and /api/satellites/positions. The relay additionally completed roughly 45 upstream TLS handshakes to dxedge.net with python requests under full verification against /root/.ccr/ca-bundle.crt while rendering three pages and driving 7 tabs.",
+    "consecutive_failures": 0,
+    "expiry_not_readable_tonight": "Unchanged limitation, not re-investigated. openssl here sees the egress proxy certificate, and crt.sh has been 502/robots-blocked. Exact notAfter went unread rather than guessed or reached another way."
+   },
+   "main_dashboard": {
+    "api_health": "status ok at 2026-10-12T04:24:35Z, a fresh live read. sfi 105, k_index 2, spots 500, sat_tles 0, pota_spots 0, solar true, feed_proxy true, version 2.0.",
+    "api_debug": "04:25:02Z. cache.solar true, sfi 105, spots 500, sat_tles 0. dist_exists, index_html, world_json all true, world_json_bytes 44937. 34 cache keys, and every feed target on both standalone pages is represented.",
+    "browser_render": "CLEAN, and done tonight rather than inferred. Title 'DXEdge - Propagation & DX Intelligence', #root has children, panels populated (propagation intel, one-hour recommendations, world clocks all rendered with live values). All four XHRs 200: /api/dashboard?grid=CM95, /api/recommendation?grid=CM95, /api/solar/history?hours=48, /api/voacap/summary?grid=CM95.",
+    "sat_tles_pota_spots_zeros": "RECONFIRMED COSMETIC, not re-investigated as a defect per known-bad-items-in-brief-are-stale. The underlying feeds were verified live and healthy: /api/pota returned 26 spots with no error string and /api/satellites/positions returned count 9 with 9 named objects (AO-91, BY70-1, CAS-4B, FO-29, ISS, LilacSat-2, PSAT-2, SO-50, XW-3). /api/health is a passive cache reader and these two keys have short and long TTLs that are simply cold at 9 PM PT.",
+    "sota": "Carries over, held under awaiting_james sota-api-deprecation. Not re-reported.",
+    "solar_sfi": "Carries over, held under awaiting_james solar-sfi-monthly-dataset. Not re-reported."
+   },
+   "cyber_page": {
+    "browser_check": "DONE and FULLY CLEAN. feed-error=0 and still-loading=0 on initial render AND on every one of the 7 tabs across both tabbed panels (#newsTabs 5 tabs, #aiPqcTabs 2 tabs), per the cyber-tabbed-panels-need-clicking method. 15 /api/feed requests observed, ALL 200, covering all 13 distinct feeds; krebsonsecurity and securityweek legitimately fire twice each (a standing panel plus a news tab).",
+    "feeds_200": "hamqsl solarxml, krebsonsecurity, securityweek, cisa advisories all.xml, cisa KEV json, api.first.org EPSS (2 distinct queries), services.nvd.nist.gov CRITICAL cves, feeds.feedburner.com TheHackersNews, bleepingcomputer, darkreading rss.xml, isc.sans.edu rssfeed_full.xml, news.google.com PQC search.",
+    "allorigins_regression": false,
+    "allorigins_evidence": "STATIC clean, re-derived tonight. Tree-wide grep over html/js/jsx/py/json outside state.json finds two hits only, both explanatory comments, at backend/main.py:708 and backend/feedproxy.py:3. PROXY is '/api/feed?url=' at line 349 and all 6 getCached call sites (556, 586, 618, 639, 690, 715) pass PROXY + encodeURIComponent. The only bare fetch( is the helper at 374 that receives the already-proxied URL. Confirmed live too: every network request the browser made for feed data went to /api/feed, and no request to any allorigins host appeared in the log.",
+    "allowlist_gaps": "NONE, re-derived programmatically tonight rather than carried over. All 9 statically-resolvable cyber feed hosts are in ALLOWED_HOSTS, and the 2 dynamically-built targets (services.nvd.nist.gov, api.first.org) are allowlisted and were observed 200 in the browser. ALLOWED_HOSTS holds 15 entries. No allowlist change made, needed or proposed.",
+    "console": "Only net::ERR_CERT_AUTHORITY_INVALID for fonts.googleapis.com, which is the documented chromium-google-fonts-cert-artifact of the rig, not a site defect. Zero page errors, zero site-origin console errors.",
+    "claude_docs_302": "5 docs.claude.com links still present. Held under awaiting_james claude-docs-domain-migration, default is leave-until-301. Not re-verified tonight.",
+    "atlas_mitre": "Unchanged, skipped per known issue atlas-mitre-spa-404s."
+   },
+   "aethersdr_page": {
+    "browser_check": "DONE and FULLY CLEAN. feed-error=0, still-loading=0. 5 /api/feed requests, ALL 200, covering all 4 NEWS_SOURCES: www.flexradio.com/feed/, hackaday.com/category/radio-hacks/feed/, www.rtl-sdr.com/feed/, and github.com/aethersdr/AetherSDR/releases.atom (fetched twice, two call sites at lines 432 and 457).",
+    "allorigins_regression": false,
+    "allorigins_evidence": "STATIC clean. PROXY at line 348, both call sites 432 and 457 proxied, only bare fetch( is the helper at 373. Confirmed live: all feed traffic went through /api/feed.",
+    "allowlist_gaps": "NONE. The 4 NEWS_SOURCES resolve to github.com, www.flexradio.com, www.rtl-sdr.com and hackaday.com, all allowlisted.",
+    "console": "Only the Google Fonts rig artifact. Zero site-origin errors.",
+    "version_label_bug": "Unchanged, held under awaiting_james aethersdr-about-version-drift. Not re-reported."
+   },
+   "deploy_currency": {
+    "verdict": "CURRENT. /sw.js?tripwire=1012 served CACHE_NAME 'dxedge-v67', byte-identical to repo HEAD frontend/public/sw.js line 4 at commit 7a09ca0. Fetched with a fresh param per the 10-07 amendment, so this is not the stale-cache false alarm.",
+    "note": "This moves the tripwire from v56 (recorded 10-03) to v67, and confirms the 10 OTR commits of 10-09 and 10-10 plus the 10-11 nightly state commit are all live."
+   },
+   "new_commit_review": {
+    "range": "Nothing new since the last run. HEAD is 7a09ca0, which is the 10-11 nightly state commit written by this routine. The 10 OTR feature commits below it are dated 10-09 and 10-10 and were already reviewed by the 10-11 run.",
+    "otr_third_party": "No change. The radio-browser.info dependency remains held under awaiting_james otr-live-stations-unproxied-third-party. Not re-reported."
+   },
+   "outbound_links_this_run": {
+    "curated_sweep": "NOT DUE and clock NOT advanced. next_due stays 2026-10-15. Zero curated URLs checked for sweep purposes.",
+    "published_report": "Read at /health/linkcheck.json?nonce=1012c. generated_at 2026-10-05T18:31:03Z, commit 3c0d563, 667 entries, 634 ok, 24 blocked, 9 broken. UNCHANGED from the 10-05 generation for the fifth night running, and this is CORRECT rather than stale: linkcheck.yml runs cron '17 9 * * 1' and the run clock was Monday 2026-10-12 04:29 UTC, about five hours BEFORE this week's 09:17 UTC slot. Contributes zero new link data; its 9 broken entries were already triaged by the 10-06 and 10-08 runs.",
+    "tripwire_for_next_run": "The next run, 2026-10-13, lands AFTER Monday 09:17 UTC has passed, so it should see generated_at advance to a 2026-10-12 report. If it still reads 2026-10-05, that is the first genuine staleness signal for the weekly job and is worth investigating per published-linkcheck-json-is-the-fresher-source."
+   },
+   "backend_tests": {
+    "status": "STILL BROKEN at collection, pre-existing, NOT caused by this run and NOT papered over.",
+    "method": "pytest is not installed in this container so the suite could not be executed. Confirmed statically instead, which settles it: backend/tests/test_dxedge.py line 64 imports estimate_fof2 from voacap_engine, and voacap_engine.py defines only maidenhead_to_latlon, great_circle, path_midpoint, solar_zenith, f2_layer_strength and predict_path. estimate_fof2 does not exist, so collection cannot succeed.",
+    "note": "The nearest real function is f2_layer_strength, and test_dxedge.py lines 92-98 assert fof2-shaped behaviour (monotonic in zenith and in sfi, bounded 3.5 to 15), so the likely intent is a renamed or never-landed helper. Deliberately NOT fixed: the brief forbids deleting the import, and writing a new estimate_fof2 or repointing the tests is a source change outside the repair mandate. Reported as outstanding, as every prior run has."
+   },
+   "repairs_made": [],
+   "problems_reported_tonight": [],
+   "escalations_sent": [],
+   "james_notified": "NOTHING SENT. Quiet-night rule applied per Step 6: nothing was broken and nothing was fixed, so no email and no push notification. Same decision as 10-11. The two early WebFetch denials cleared within the run and cost nothing, so they are not an escalation; webfetch-permission-at-setup stays open and unreported tonight, last_reported 2026-10-06.",
+   "state_push_and_deploy": "State committed and pushed to main. This is a scripts/health/ only change, no frontend or backend source touched, so no --no-cache container rebuild is expected."
   }
  ],
  "known_issues_do_not_re_report": [
@@ -949,6 +944,11 @@
    "id": "cyber-tabbed-panels-need-clicking",
    "since": "2026-10-11",
    "detail": "The cyber page's two tabbed feed panels load ONLY their first tab on render. frontend/public/cyber/index.html buildTabbedPanel() ends with select(0), so a plain page load fires 8 of the page's 13 feeds and leaves 5 unmeasured: The Hacker News, BleepingComputer, Dark Reading, SANS ISC (newsTabs 1-4) and Google News PQC (aiPqcTabs 1). Browser nights before 2026-10-11 reported '9 of 9' or '12 of 12' feed requests and treated that as full page coverage; it was not. A browser check of this page must click every tab in #newsTabs and #aiPqcTabs and assert per-tab that the content element has no .feed-error and no leftover .loading. scratchpad/rig/tabs.py does exactly this and is the pattern to rebuild. Pace the clicks: 8 feeds already fired on load and nginx limits /api/ to 30r/m burst 10, so allow the window to drain (~20s) then click at ~9s intervals; tonight 13 feeds over ~90s saw zero throttling."
+  },
+  {
+   "id": "rig-relay-does-not-proxy-websockets",
+   "since": "2026-10-12",
+   "detail": "A RIG limitation, not a site defect, recorded so no future run reports it as one. The main React dashboard opens a WebSocket to /ws/spots for the live spot feed. scratchpad/rig/relay.py is a plain HTTP forwarder with no Upgrade handling, so Chromium against 127.0.0.1 logs 'WebSocket connection to ws://127.0.0.1:8099/ws/spots failed: Unexpected response code: 200' and the header shows the connection indicator stuck at 'connecting...'. Both are artifacts of the relay. The route is REAL and present in the deployed app: backend/main.py:108 declares @app.websocket('/ws/spots') with ws_spots() connecting to the broadcaster and sending an init frame of the first 100 spots. Independent evidence the pipeline is healthy: /api/health reported spots 500 and /api/debug lists a populated 'spots' cache key. To actually verify the live socket a future run must either add Upgrade proxying to the relay or judge it from /api/health spots plus the dashboard's HTTP panels, and must NOT read the rig's WS error as a dashboard regression."
   }
  ],
  "awaiting_james": [
@@ -1106,7 +1106,7 @@
   "next_due": "2026-10-15",
   "rotation_days": 14,
   "last_sweep_result": "2026-10-01: 31 of 32 sampled curated URLs checked with WebFetch. 30 clean, 1 genuine permanent move repaired (recharts.org -> recharts.github.io), 1 cisa.gov 403 environment artifact. 19 documented-artifact URLs skipped by design, listed in the run entry. Separately 5 docs.claude.com links 302 to platform.claude.com and were reported rather than rewritten.",
-  "note": "Rotation clock ADVANCED 2026-10-01: the curated sweep was due and was run with WebFetch. Clock was not advanced on 09-28 or 09-29 (blind nights) or 09-30 (not due). Next curated sweep due 2026-10-15. Kept at top level because the runs array is trimmed to the last 10 nights. The emulators catalogue is tracked separately in emulators_catalogue. Reconfirmed 2026-10-04: sweep not due, clock not advanced, zero curated links checked. Reconfirmed 2026-10-05: sweep NOT due and clock NOT advanced, but 15 curated URLs were checked out of band as extra coverage (all clean) and 7 more were left unread to the provenance gate. Those 15 do not reset their own 14-day clocks for sweep purposes; next curated sweep still due 2026-10-15. Reconfirmed 2026-10-06: sweep NOT due and clock NOT advanced. Zero curated links checked, because the provenance gate shut before any third-party host could be attempted and substitution is not permitted. Universe re-counted statically tonight at 180 distinct URLs across 112 distinct hosts (Credits.jsx 34, Products.jsx 47, cyber 71, aethersdr 37), which refines the brief's 'roughly 150 distinct hosts'. Next curated sweep still due 2026-10-15. Reconfirmed 2026-10-07: sweep NOT due and clock NOT advanced; next curated sweep still due 2026-10-15. 13 curated URLs were checked out of band as extra coverage while the gate was open (all live, zero rot) and do NOT reset their own clocks. The published CI report was read and is byte-identical to the one the 10-06 run read (generated 2026-10-05T18:31:03Z, commit 3c0d563), so it contributed zero new link data; the weekly job has not re-run. Static universe re-counted at 163 distinct curated URLs across the four source files, of which 97 are neither feed targets nor documented-artifact hosts. Note the 'https://url' regex false positive from cyber/index.html:220, which is <input> placeholder text and not a link. Reconfirmed 2026-10-08: sweep NOT due and clock NOT advanced. One curated URL (nanovna.com) checked out of band as CI-report triage; it does not reset its own 14-day clock. Next curated sweep still due 2026-10-15, and the 10-08 run leaves it to that date deliberately rather than pulling it forward on an open-gate night. Reconfirmed 2026-10-11: sweep NOT due and clock NOT advanced; next curated sweep still due 2026-10-15. Zero curated URLs checked for sweep purposes. The published CI report was read and is unchanged from the 10-05 generation for the fourth night running, which is CORRECT rather than stale: the weekly job runs Mondays, 09-28 and 10-05 were both Mondays and 10-11 is a Sunday, so the next report is due Monday 10-12. The 10-01 staleness tripwire is therefore closed, not carried forward.",
+  "note": "Rotation clock ADVANCED 2026-10-01: the curated sweep was due and was run with WebFetch. Clock was not advanced on 09-28 or 09-29 (blind nights) or 09-30 (not due). Next curated sweep due 2026-10-15. Kept at top level because the runs array is trimmed to the last 10 nights. The emulators catalogue is tracked separately in emulators_catalogue. Reconfirmed 2026-10-04: sweep not due, clock not advanced, zero curated links checked. Reconfirmed 2026-10-05: sweep NOT due and clock NOT advanced, but 15 curated URLs were checked out of band as extra coverage (all clean) and 7 more were left unread to the provenance gate. Those 15 do not reset their own 14-day clocks for sweep purposes; next curated sweep still due 2026-10-15. Reconfirmed 2026-10-06: sweep NOT due and clock NOT advanced. Zero curated links checked, because the provenance gate shut before any third-party host could be attempted and substitution is not permitted. Universe re-counted statically tonight at 180 distinct URLs across 112 distinct hosts (Credits.jsx 34, Products.jsx 47, cyber 71, aethersdr 37), which refines the brief's 'roughly 150 distinct hosts'. Next curated sweep still due 2026-10-15. Reconfirmed 2026-10-07: sweep NOT due and clock NOT advanced; next curated sweep still due 2026-10-15. 13 curated URLs were checked out of band as extra coverage while the gate was open (all live, zero rot) and do NOT reset their own clocks. The published CI report was read and is byte-identical to the one the 10-06 run read (generated 2026-10-05T18:31:03Z, commit 3c0d563), so it contributed zero new link data; the weekly job has not re-run. Static universe re-counted at 163 distinct curated URLs across the four source files, of which 97 are neither feed targets nor documented-artifact hosts. Note the 'https://url' regex false positive from cyber/index.html:220, which is <input> placeholder text and not a link. Reconfirmed 2026-10-08: sweep NOT due and clock NOT advanced. One curated URL (nanovna.com) checked out of band as CI-report triage; it does not reset its own 14-day clock. Next curated sweep still due 2026-10-15, and the 10-08 run leaves it to that date deliberately rather than pulling it forward on an open-gate night. Reconfirmed 2026-10-11: sweep NOT due and clock NOT advanced; next curated sweep still due 2026-10-15. Zero curated URLs checked for sweep purposes. The published CI report was read and is unchanged from the 10-05 generation for the fourth night running, which is CORRECT rather than stale: the weekly job runs Mondays, 09-28 and 10-05 were both Mondays and 10-11 is a Sunday, so the next report is due Monday 10-12. The 10-01 staleness tripwire is therefore closed, not carried forward. Reconfirmed 2026-10-12: sweep NOT due and clock NOT advanced; next curated sweep still due 2026-10-15. Zero curated URLs checked. The published CI report was read and is unchanged from the 2026-10-05 generation for the FIFTH night running, which is still correct and not stale: the run clock was Monday 04:29 UTC, roughly five hours before the Monday 09:17 UTC cron slot. The 2026-10-13 run is the first that should see it advance, and is the one that should raise a staleness flag if it does not.",
   "emulators_catalogue": {
    "source": "frontend/public/emulators/emulators.json",
    "url_count": 345,
