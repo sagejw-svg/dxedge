@@ -1,6 +1,6 @@
 # Filament: a tube synthesizer for DXEdge
 
-Design brief, v0.3, 13 Oct 2026 (v0.1 was 11 Oct; v0.3 adds build status). Filament is the name (decision 1). The decisions James answered on 13 Oct are recorded in the Decisions table at the end; the changes they caused are marked **(decision N)** where they land in the text.
+Design brief, v0.4, 13 Oct 2026 (v0.1 was 11 Oct; v0.3 added build status; v0.4 adds Cathode, the second device). Filament is the name (decision 1). The decisions James answered on 13 Oct are recorded in the Decisions table at the end; the changes they caused are marked **(decision N)** where they land in the text.
 
 ## Build status (13 Oct 2026)
 
@@ -15,6 +15,10 @@ What shipped in 0.1, all measured by `scripts/test_synth.py` (103 checks, all pa
 * Patch changes, note on and off, and voice stealing are click-free (duck, swap while silent, ramp back).
 * 30 seconds of random patch and controller changes produce no NaN and nothing over 0 dBFS. A final ceiling was added after the copied /otr clipper because its 2x oversampling filter can overshoot it by about 1%.
 * CPU: about 20% of real time for 8 voices including the rack, in headless Chrome on the build server. Not yet checked on a real phone.
+
+**Stereo round (13 Oct, late evening, commit `28a975f`)**, chosen by James as the next round: unison 1 to 8 with detune and spread, filter stereo offset (two filters per voice only when used), LFO 2 with an auto-pan destination, stereo phase 0 to 180 degrees on both LFOs, the ensemble (I, II, I+II, strings) before the output tubes, and the /otr goniometer and correlation meter. Two new factory patches (Seven Filaments, Twin Sweep); five revoiced to use the new stereo. Suite: 127 checks, all passing. Found and fixed in the same push: the final ceiling added in 0.1 had 1.9 dB of gain below its knee. Known tradeoff: a wide stereo offset on Ladder 24 can thin out in mono (two 4-pole filters an octave apart); Valve 12 stays within about 2.5 dB, and the correlation meter goes amber below zero.
+
+**Cathode, the second device (13 Oct, just after midnight)**. James asked for "a Korg MS-20 Mini". Claude declined to copy Korg's product (its name, panel and branding) and offered an original semi-modular monosynth in the same family instead; James chose the name Cathode, a second device in the rack at /synth/, and a patch panel with cables (decision 9). What shipped: one voice at 2x with VCO 1 (tri, saw, pulse, noise; 32' to 4'), VCO 2 (saw, square, narrow, ring; semi, fine, sync), V1 drive tube, a high-pass then a low-pass (2-pole state variable filters whose resonance runs through a diode clipper, so a loud input fights the peak; both self-oscillate from about 8 on the knob and track the keys to within a cent), V2 as a cathode follower after the low-pass, and the VCA. Modulation: MG with a shape knob (ramp down, triangle, ramp up), EG 1 (delay, attack, release), EG 2 (hold, ADSR), sample and hold, white and pink noise, glide, multi or single trigger. The patch panel has 18 outputs and 18 inputs; every input prints its normal (the pre-wired source) and a cable overrides it. Patch by click, drag or keyboard; drag a plug to move or pull it; the knobs that scale a jack name what is reaching it. A rail above the chassis picks which device the keyboard, wheels and MIDI play; both devices feed the same ensemble and output tubes, which take their settings from the active device's patch. An inactive or silent device sleeps, so Cathode costs nothing until it is used. 11 factory patches (Grid Bias Bass, Plate Screamer, Bubble Lab, Filter Kick, Ring Bells, Sync Sweep, Night Wind, Growl FM, Trill Gate, Theremin Glide, Hollow Reed), all near -14.5 dB like Filament's. Suite: 190 checks, all passing, including filter cutoff and tuning, normals, cables, feedback patches, fuzz, the panel UI on desktop and phone, and sleep and wake. Not built (offered, not chosen): an external audio input through the filters.
 
 Calls made during the build that are worth reviewing: the default first patch is Wide Novachord Strings with a 120 ms attack; the main-page tab shipped right away (your answer: live with the tab now); the Diode Squelch and Hollow Pluck patches use Ladder 24 and Valve 12 until Diode 18 and the low pass gate arrive in 0.2.
 
@@ -385,7 +389,7 @@ Chosen: (pending James)
 |**0.1 First sound**|Worklet engine: 2 oscillators, sub and noise, V1 drive. Filters: Valve 12 and Ladder 24. Amp and filter envelopes, LFO 1, 8 voice poly, on screen and computer keyboard. **Web MIDI (notes, velocity, pitch bend, mod wheel, sustain, aftertouch) with MIDI learn (decision 7).** Output tube pair, speaker, room, width, limiter. Chassis with 4 lit tubes and the VU pair. 12 patches.|You can open it on a phone and play a pad that sounds good in 5 seconds, and play it from the new keyboard on the PC. Tests 1 to 7 and 12 pass.|
 |**0.2 Character**|Diode 18, Sallen-Key 12, Poly 24, state variable, low pass gate. Dual filter routing including split. Mod matrix, LFO 2, unison, all stereo controls, ensemble, tape echo, spring, response plot, goniometer and correlation. Arpeggiator.|Every model self-oscillates where it should. Mono fold passes for all patches.|
 |**0.3 Delight**|1939 mode, punched paper sequencer, Theremin mode, share links, WAV recording, the Tube view, faces, lava lamp module, Surprise me, about 40 patches.|Share link round trip test passes.|
-|**Later**|MPE, microtuning, a WebAssembly engine if needed, the vanity domain, microphonic tube taps. Then the road to the rack: a second device, host clock and transport, patterns, mixer, cables (each with its own brief).|When there is a reason|
+|**Later**|MPE, microtuning, a WebAssembly engine if needed, the vanity domain, microphonic tube taps. Then the road to the rack: host clock and transport, patterns, mixer (each with its own brief). The second device and cables arrived early with Cathode (decision 9).|When there is a reason|
 
 ## Decisions
 
@@ -401,6 +405,7 @@ Answered by James on 13 Oct 2026 in the v0.1 table, recorded here.
 |6|Warm-up default|Off. Quick and real warm-up available as options.|
 |7|MIDI keyboard|James is buying a small one, so Web MIDI moves into 0.1. Shortlist above; model not yet chosen.|
 |8|Vanity domain|Later|
+|9|An MS-20 style synth (asked 13 Oct)|**Cathode**: an original mono semi-modular, not a copy of Korg's product. Second device in the rack at /synth/, sharing the keyboard, MIDI, meters and output tubes. Patch panel with cables. External audio input not chosen.|
 
 Still open: which keyboard (see shortlist). Decision 3 resolved on 13 Oct: the tab went live with the first push.
 

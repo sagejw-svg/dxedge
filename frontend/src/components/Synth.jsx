@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ *
- * Filament
+ * Filament (and Cathode, the second device in its rack)
  * A playable polyphonic tube synthesizer: lit tubes that do real work
  * (V1 drives the filters, V2 sits in the Valve filter's resonance loop,
  * V3/V4 are the output pair), filters with character, and stereo you
@@ -17,11 +17,13 @@ export default function Synth() {
   return (
     <div className="synth-panel">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...label, marginBottom: 8 }}>filament &middot; tube synthesizer</div>
+        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; a synth rack</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
-          A polyphonic synthesizer built around lit tubes that do real work: one drives the filters,
-          one sits inside the Valve filter's resonance loop, and a push-pull pair runs the output.
-          Play it with the keys on screen, your computer keyboard, or a MIDI keyboard.
+          Two synthesizers in one rack. Filament is polyphonic and built around lit tubes that do real
+          work: one drives the filters, one sits inside the Valve filter's resonance loop, and a
+          push-pull pair runs the output. Cathode is a one-voice semi-modular with a screaming
+          high-pass and low-pass pair and a patch panel you wire with cables.
+          Play them with the keys on screen, your computer keyboard, or a MIDI keyboard.
           Full page version at <a href="/synth/">dxedge.net/synth</a>.
         </p>
       </div>

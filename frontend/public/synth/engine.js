@@ -1,7 +1,17 @@
-// Filament engine: the voice worklet plus the rack, in any BaseAudioContext.
+// Filament engine: the devices (worklets) plus the rack, in any BaseAudioContext.
 // The page uses it live; the tests use it inside an OfflineAudioContext and measure the result.
+//
+// The rack holds two devices, Filament (poly) and Cathode (mono, semi-modular). Both feed the
+// same ensemble and output chain. The keyboard, wheels and MIDI go to the active device, and the
+// rack takes its settings (ens, out) from the active device's patch. A device that is not
+// active lets go of its keys, finishes its tails and sleeps; Cathode's node is only built the
+// first time it is chosen.
 import { makeSynthChain, makeEnsemble, tubeData } from './rack.js';
 import { normalize } from './patches.js';
+import { normalizeC } from './cathode.js';
+
+export const deviceOf = p => (p && p.device === 'cathode' ? 'cathode' : 'filament');
+export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : normalize(p));
 
 const WORKLET = new URL('./voice.worklet.js', import.meta.url).href;
 
@@ -20,33 +30,72 @@ export function rackState(p) {
 
 export async function createEngine(ctx, opts = {}) {
   if (!ctx.__filament) { await ctx.audioWorklet.addModule(WORKLET); ctx.__filament = true; }
-  let patch = normalize(opts.patch);
-  const node = new AudioWorkletNode(ctx, 'filament', {
-    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-    processorOptions: { tubes: tubeData(), patch, events: opts.events || [] },
-  });
-  const E = { ctx, node, C: null, master: ctx.createGain(), meter: { v1: 0, v2: 0, voices: 0, cpu: 0, notes: [] } };
+  const E = { ctx, C: null, master: ctx.createGain(), meter: { v1: 0, v2: 0, voices: 0, cpu: 0, notes: [] }, nodes: {}, patches: {}, meters: {} };
   E.master.gain.value = opts.volume == null ? 1 : opts.volume;
-  if (opts.rack === false) {
-    node.connect(E.master);
-  } else {
+  let patch = normalizeAny(opts.patch);
+  E.device = deviceOf(patch); E.patches[E.device] = patch;
+  if (opts.rack !== false) {
     E.C = makeSynthChain(ctx);
     E.ens = makeEnsemble(ctx);
-    node.connect(E.ens.input); E.ens.output.connect(E.C.input);
+    E.ens.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
   if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
-  node.port.onmessage = e => { const m = e.data; if (m && m.t === 'meter') { E.meter = m; if (E.onMeter) E.onMeter(m); } };
+  const ctl = { bend: 0, mw: 0, at: 0 };
+  function nodeFor(dev, events) {
+    if (E.nodes[dev]) return E.nodes[dev];
+    const n = new AudioWorkletNode(ctx, dev, {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
+      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device },
+    });
+    n.connect(E.C ? E.ens.input : E.master);
+    n.port.onmessage = e => {
+      const m = e.data; if (!m || m.t !== 'meter') return;
+      E.meters[dev] = m;
+      if (dev === E.device) {
+        let cpu = 0; Object.keys(E.meters).forEach(k => { cpu += E.meters[k].cpu || 0; });
+        E.meter = Object.assign({}, m, { cpu });
+        if (E.onMeter) E.onMeter(E.meter);
+      }
+    };
+    E.nodes[dev] = n;
+    return n;
+  }
+  nodeFor(E.device, opts.events);
+  Object.defineProperty(E, 'node', { get: () => E.nodes[E.device] });
 
   let S = E.C ? rackState(patch) : null;
   if (E.C) { E.C.apply(S); E.ens.set(patch.ens); }
   let ensJ = JSON.stringify(patch.ens);
 
   E.patch = () => patch;
+  E.patchOf = dev => E.patches[dev] || null;
   // load: true ducks the voices for the swap (a different patch); false smooths (a knob moved).
+  // A patch for the device that is not active is kept (and sent, if its node exists) but leaves the rack alone.
   E.setPatch = (p, load) => {
-    patch = normalize(p);
-    node.port.postMessage({ t: 'patch', p: patch, load: !!load });
+    const np = normalizeAny(p), dev = deviceOf(np);
+    E.patches[dev] = np;
+    if (E.nodes[dev]) E.nodes[dev].port.postMessage({ t: 'patch', p: np, load: !!load });
+    if (dev !== E.device) return;
+    patch = np;
+    applyRack();
+  };
+  // Move the keyboard to another device. Its patch (if given) loads with it, and the rack takes that patch's settings.
+  E.setDevice = (dev, p) => {
+    dev = dev === 'cathode' ? 'cathode' : 'filament';
+    if (p) E.patches[dev] = normalizeAny(Object.assign({}, p, { device: dev }));
+    if (dev === E.device) { if (p) E.setPatch(E.patches[dev], true); return; }
+    const old = E.nodes[E.device];
+    if (old) old.port.postMessage({ t: 'active', on: false });
+    E.device = dev;
+    const existed = !!E.nodes[dev], n = nodeFor(dev);
+    if (existed) { n.port.postMessage({ t: 'active', on: true }); if (p) n.port.postMessage({ t: 'patch', p: E.patches[dev], load: true }); }
+    n.port.postMessage({ t: 'bend', v: ctl.bend }); n.port.postMessage({ t: 'mw', v: ctl.mw }); n.port.postMessage({ t: 'at', v: ctl.at });
+    patch = E.patches[dev] || normalizeAny({ device: dev }); E.patches[dev] = patch;
+    E.meter = Object.assign({}, E.meters[dev] || { v1: 0, v2: 0, voices: 0, notes: [] }, { cpu: E.meter.cpu || 0 });
+    applyRack();
+  };
+  function applyRack() {
     if (!E.C) return;
     const ej = JSON.stringify(patch.ens); if (ej !== ensJ) { E.ens.set(patch.ens); ensJ = ej; }
     const N = rackState(patch), C = E.C;
@@ -63,14 +112,15 @@ export async function createEngine(ctx, opts = {}) {
       if (N.width !== S.width || N.wChar !== S.wChar) C.setWidth(N);
     }
     S = N;
-  };
-  E.noteOn = (n, v = 0.8) => node.port.postMessage({ t: 'on', n, v });
-  E.noteOff = n => node.port.postMessage({ t: 'off', n });
-  E.bend = v => node.port.postMessage({ t: 'bend', v });           // -1..1
-  E.modWheel = v => node.port.postMessage({ t: 'mw', v });         // 0..1
-  E.aftertouch = v => node.port.postMessage({ t: 'at', v });       // 0..1
-  E.sustain = on => node.port.postMessage({ t: 'sus', on: !!on });
-  E.panic = () => node.port.postMessage({ t: 'panic' });
+  }
+  const post = m => E.nodes[E.device].port.postMessage(m);
+  E.noteOn = (n, v = 0.8) => post({ t: 'on', n, v });
+  E.noteOff = n => post({ t: 'off', n });
+  E.bend = v => { ctl.bend = v; post({ t: 'bend', v }); };          // -1..1
+  E.modWheel = v => { ctl.mw = v; post({ t: 'mw', v }); };          // 0..1
+  E.aftertouch = v => { ctl.at = v; post({ t: 'at', v }); };        // 0..1
+  E.sustain = on => post({ t: 'sus', on: !!on });
+  E.panic = () => Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' }));
   E.mono = on => { if (E.C) E.C.setMono(!!on); };
   return E;
 }
@@ -79,7 +129,7 @@ export async function createEngine(ctx, opts = {}) {
 // Returns the AudioBuffer.
 export async function renderOffline({ patch, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
-  const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalize(e.p) } : {}));
+  const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {}));
   const E = await createEngine(ctx, { patch, events: ev, rack });
   if (mono) E.mono(true);
   return ctx.startRendering();

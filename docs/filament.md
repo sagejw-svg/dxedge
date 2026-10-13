@@ -10,6 +10,12 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
+The rack now holds two devices: **Filament** (poly, the tube synth) and **Cathode** (mono,
+semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
+original design: own name, panel, jack names and voicing, not a copy of Korg's). The rail above the
+chassis picks which device the keyboard, wheels and MIDI play; both feed the same ensemble and
+output rack, which takes its settings from the active device's patch.
+
 Full brief: `docs/filament-design.md` (a copy of the project doc, kept in the repo so the nightly
 task can read it).
 
@@ -27,9 +33,10 @@ task can read it).
 | File | What it is |
 |-|-|
 | `frontend/public/synth/index.html` | The page: panel, chassis, keyboard, MIDI, patches, test hook `window.__synth` |
-| `frontend/public/synth/voice.worklet.js` | The voice engine (AudioWorklet): oscillators, V1, filters, envelopes, LFO, voices |
-| `frontend/public/synth/engine.js` | Builds worklet + rack in any context; `renderOffline`; `midiEvent` |
-| `frontend/public/synth/patches.js` | Patch schema v1, defaults, `normalize`, the factory set |
+| `frontend/public/synth/voice.worklet.js` | Both devices' engines (AudioWorklet): processor `filament` (oscillators, V1, filters, envelopes, LFOs, voices) and processor `cathode` (one voice, the patch graph, diode-clipped SVF high-pass and low-pass) |
+| `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent` |
+| `frontend/public/synth/patches.js` | Filament patch schema v1, defaults, `normalize`, the factory set |
+| `frontend/public/synth/cathode.js` | Cathode patch schema v1 (`device: 'cathode'`, `cables: [[source, input]]`), the jack lists and normals, `normalizeC`, its factory set |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx` |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
@@ -72,6 +79,21 @@ task can read it).
 - [ ] Spring reverb: two tube-driven springs of different lengths, drip
 Done when: every model self-oscillates where it should; mono fold passes for all patches.
 
+### Cathode (second device) - first version done 13 Oct 2026
+- [x] Mono semi-modular voice at 2x: VCO 1 (tri, saw, pulse, noise; 32' to 4'), VCO 2 (saw, square,
+      narrow, ring; semi, fine, sync), mixer, V1 drive tube, HPF then LPF (2-pole SVF, diode-clipped
+      resonance, self-oscillation calibrated to within 1 cent), V2 cathode follower, VCA
+- [x] MG (shape morphs ramp down, triangle, ramp up; pulse width follows), EG 1 (delay, attack,
+      release), EG 2 (hold, ADSR), S&H, white and pink noise, glide, multi or single trigger
+- [x] Patch panel: 18 outputs, 18 inputs with printed normals; click, drag or keyboard to patch;
+      a plug can be moved or pulled; knobs that scale a jack name what reaches it
+- [x] Rack rail (device switcher); per-device current and user patches; an inactive device lets go,
+      fades and sleeps (so does an idle one), so the second device costs nothing while it waits
+- [x] 11 factory patches; tests in the C. section of the suite
+- [ ] External audio input (the mic or a line in through the filters) - offered, not chosen yet
+- [ ] A second Cathode voice for duophonic play, or a poly-chain mode
+- [ ] Cathode on the mod matrix and arpeggiator when those land (they should be rack-wide, not Filament-only)
+
 ### 0.3 Delight
 - [ ] 1939 mode (divide-down, LC resonators, seven envelope shapes, six-channel vibrato)
 - [ ] Punched paper roll step sequencer
@@ -94,10 +116,14 @@ Done when: share link round trip test passes.
 
 ## Notes from James
 (write here; the nightly run reads this first)
+- 2026-10-13: Cathode (the second device) shipped from an interactive session just after midnight.
+  The nightly list carries on at the graphic EQ. When the EQ lands, make it rack-wide (it sits in the
+  shared output chain, so both devices' patches carry the same `out` fields).
 - 2026-10-13 (night of Oct 12 PT): the stereo round (unison, filter stereo offset, LFO 2 with stereo
   phase, goniometer and correlation, ensemble) shipped from an interactive session. Tonight's 11:52 PM
   run (Oct 12): bug check only, no roadmap item. From the following night, resume the list from the
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-13 (just after midnight PT, interactive): Cathode, the second device, and the rack rail (see the Cathode section above). Suite: ALL PASS (190 checks). CPU: Cathode Plate Screamer about 17% of real time with the rack; Filament 8 voices 27 to 32% (this server varies run to run). No Filament patch changed; Filament now sleeps when silent for 100 ms, which only saves CPU.
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).

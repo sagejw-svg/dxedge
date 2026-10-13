@@ -309,6 +309,7 @@ class Filament extends AudioWorkletProcessor {
     this.cc = new Float64Array(4);
     this.duck = 1; this.duckDir = 0; this.pendingPatch = null;
     this.events = [];
+    this.active = o.active !== false; this.idleN = 0;
     this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
     this.P = null; this.S = new Float64Array(NP); this.Sp = new Float64Array(NP); this.T = new Float64Array(NP); this.CT = new Float64Array(NP * (128 / CTRL + 1));
     this.setPatch(o.patch || {}, true);
@@ -406,6 +407,10 @@ class Filament extends AudioWorkletProcessor {
       case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
       case 'sus': this.sus = !!m.on; if (!this.sus) this.releaseSustained(); break;
       case 'panic': this.held = []; this.voices.forEach(v => { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.pending = null; }); break;
+      case 'active':      // the rack moved the keyboard to another device: let go of every key, let the tails ring
+        this.active = !!m.on;
+        if (!this.active) { this.held = []; this.sus = false; this.voices.forEach(v => { v.sust = false; v.pending = null; if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; } }); }
+        break;
     }
   }
 
@@ -513,8 +518,25 @@ class Filament extends AudioWorkletProcessor {
     const t0 = Date.now();
     const out = outputs[0], L = out[0], R = out[1] || out[0], n = L.length;
     const L2 = this.L2, R2 = this.R2;
-    L2.fill(0, 0, n * OS); R2.fill(0, 0, n * OS);
     const base = currentFrame;
+    // Asleep: no voice has sounded for 100 ms (the decimators and DC blockers have run down) and
+    // no note is due in this block. A second device in the rack costs nothing while it waits.
+    if (this.idleN >= C_IDLE_FR && !(this.events.length && (this.events[0].at || 0) < base + n)) {
+      let any = false; for (let i = 0; i < NV; i++) if (this.voices[i].on) { any = true; break; }
+      if (!any) {
+        if (this.pendingPatch) {
+          const oldModel = (this.P.filt || {}).model;
+          this.setPatch(this.pendingPatch); this.pendingPatch = null; this.duck = 1; this.duckDir = 0;
+          if ((this.P.filt || {}).model !== oldModel) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
+        }
+        this.target(this.S); this.Sp.set(this.S);
+        for (let q = 0; q < 2; q++) this.lfoG[q] = (this.lfoG[q] + clamp(num(((q ? this.P.lfo2 : this.P.lfo1) || {}).rate, q ? 0.2 : 5), 0.01, 40) * n / this.sr) % 1;
+        L.fill(0); if (R !== L) R.fill(0);
+        this.meterOut(n, t0);
+        return true;
+      }
+    }
+    L2.fill(0, 0, n * OS); R2.fill(0, 0, n * OS);
     let pos = 0;
     while (pos < n) {
       while (this.events.length && (this.events[0].at || 0) <= base + pos) this.apply(this.events.shift());
@@ -533,20 +555,25 @@ class Filament extends AudioWorkletProcessor {
       L[i] = yl; if (R !== L) R[i] = yr;
     }
     this.dcxL = xl; this.dcL = yl; this.dcxR = xr; this.dcR = yr;
-    // meters, about 30 a second
+    let any = false; for (let i = 0; i < NV; i++) if (this.voices[i].on) { any = true; break; }
+    this.idleN = any ? 0 : this.idleN + n;
+    this.meterOut(n, t0);
+    return true;
+  }
+  // meters, about 30 a second
+  meterOut(n, t0) {
     this.cpuMs += Date.now() - t0; this.cpuFrames += n;
     this.meterN += n;
     if (this.meterN >= this.sr / 30) {
       const act = this.voices.filter(v => v.on);
       this.port.postMessage({
-        t: 'meter', v1: Math.sqrt(this.v1Acc / Math.max(1, this.accN)), v2: Math.sqrt(this.v2Acc / Math.max(1, this.accN)),
+        t: 'meter', dev: 'filament', v1: Math.sqrt(this.v1Acc / Math.max(1, this.accN)), v2: Math.sqrt(this.v2Acc / Math.max(1, this.accN)),
         voices: act.length, notes: act.filter(v => v.gate || v.sust).map(v => v.note),
         cpu: this.cpuMs / (this.cpuFrames / this.sr * 1000),
       });
       this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0;
       if (this.cpuFrames > this.sr) { this.cpuMs *= 0.5; this.cpuFrames *= 0.5; }
     }
-    return true;
   }
 
   // Cutoff calibration and coefficients for one filter, at control rate. fc and res come in
@@ -846,3 +873,439 @@ function isStruct(a, b) {
 function get(o, path) { const ks = path.split('.'); let x = o; for (const k of ks) { if (x == null) return undefined; x = x[k]; } return x; }
 
 registerProcessor('filament', Filament);
+
+// =====================================================================================
+// Cathode: the second device in the rack. One voice, semi-modular, with a patch panel.
+// =====================================================================================
+//
+//   VCO 1 (tri, saw, pulse, noise) --\
+//                                     mix -> [filter in] -> V1 drive tube -> HPF -> [LPF in] -> LPF
+//   VCO 2 (saw, square, narrow, ring)/        -> V2 follower tube -> [VCA in] -> VCA -> out (mono, both sides)
+//
+// Both filters are 2-pole state variable filters whose resonance is positive feedback of the
+// band-pass through a diode clipper, solved like Valve 12 (linearised at the previous sample,
+// one Newton step). The clipper is what lets the resonance scream without running away: a
+// loud input squeezes the loop, so the peak fights the signal instead of sitting on top of it.
+//
+// The patch panel. Every jack is a slot in SRC, written once per sample (at 2x) in a fixed
+// order: keyboard, MG, noise, S&H, EG 1, EG 2, VCOs, mix, drive, HPF, LPF, VCA. An input
+// reads SRC[EFF[i]]: the cable plugged into it, else its normal (the pre-wired source the
+// panel prints under the jack), else ZERO. A source computed later in the order reaches an
+// earlier input one sample late (about 10 microseconds), which is what lets any cable,
+// feedback loops included, be patched without a solver.
+//
+// Messages in: as Filament, plus {t:'active', on}. An inactive Cathode lets go of its
+// gate and fades out over 0.6 s, then sleeps. An active one sleeps too when its VCA is
+// closed by an idle envelope and nothing can open it without a key.
+
+// The panel (cathode.js) carries the same lists; the suite checks they match.
+const C_SRC = ['kbd', 'gate', 'vel', 'wheel', 'mgTri', 'mgPulse', 'white', 'pink', 'sh', 'eg1', 'eg1i', 'eg2', 'eg2i', 'vco1', 'vco2', 'mix', 'hpf', 'lpf'];
+const C_IN = ['pitch', 'vco2', 'pmA', 'pmB', 'shIn', 'shClk', 'eg1Trig', 'eg2Trig', 'filtIn', 'hpA', 'hpB', 'hpCut', 'lpfIn', 'lpA', 'lpB', 'lpCut', 'vcaIn', 'vca'];
+const C_NORM = { pmA: 'mgTri', pmB: 'eg1', shIn: 'white', shClk: 'mgPulse', eg1Trig: 'gate', eg2Trig: 'gate', filtIn: 'mix',
+  hpA: 'mgTri', hpB: 'eg2', lpfIn: 'hpf', lpA: 'mgTri', lpB: 'eg2', vcaIn: 'lpf', vca: 'eg2' };
+const CS = {}; C_SRC.forEach((k, i) => { CS[k] = i; });
+const CI = {}; C_IN.forEach((k, i) => { CI[k] = i; });
+const C_ZERO = C_SRC.length;
+const CS_KBD = CS.kbd, CS_GATE = CS.gate, CS_VEL = CS.vel, CS_WHEEL = CS.wheel, CS_MGT = CS.mgTri, CS_MGP = CS.mgPulse,
+  CS_WHITE = CS.white, CS_PINK = CS.pink, CS_SH = CS.sh, CS_EG1 = CS.eg1, CS_EG1I = CS.eg1i, CS_EG2 = CS.eg2, CS_EG2I = CS.eg2i,
+  CS_VCO1 = CS.vco1, CS_VCO2 = CS.vco2, CS_MIX = CS.mix, CS_HPF = CS.hpf, CS_LPF = CS.lpf;
+const CI_PITCH = CI.pitch, CI_VCO2 = CI.vco2, CI_PMA = CI.pmA, CI_PMB = CI.pmB, CI_SHIN = CI.shIn, CI_SHCLK = CI.shClk,
+  CI_T1 = CI.eg1Trig, CI_T2 = CI.eg2Trig, CI_FIN = CI.filtIn, CI_HPA = CI.hpA, CI_HPB = CI.hpB, CI_HPC = CI.hpCut,
+  CI_LIN = CI.lpfIn, CI_LPA = CI.lpA, CI_LPB = CI.lpB, CI_LPC = CI.lpCut, CI_VIN = CI.vcaIn, CI_VCA = CI.vca;
+
+// Diode clipper for the resonance loops: c(u) = u / sqrt(1 + (u/vc)^2), re-centred on a small
+// bias (a pair of mismatched diodes) and normalised to unity slope there, like the tube curves.
+const D_VC = 0.5, D_B = 0.08;
+function diodeTable() {
+  const c = u => u / Math.sqrt(1 + (u / D_VC) * (u / D_VC));
+  const e = 1e-5, sl = (c(D_B + e) - c(D_B - e)) / (2 * e), c0 = c(D_B);
+  const tab = new Float32Array(TT_N);
+  for (let i = 0; i < TT_N; i++) { const u = (i / (TT_N - 1) * 2 - 1) * TT_R; tab[i] = (c(u + D_B) - c0) / sl; }
+  return tab;
+}
+// Loop gain KC * peak^KCX: oscillation starts where it passes 2R = 1.414, at peak 0.8 (KC_T).
+// Past that the clipped loop runs flat, the same number of cents at every cutoff (measured:
+// 3 at 0.81, 28 at 0.9, 64 at full), so the cutoff is raised by CCAL[0] e + CCAL[1] e^2 cents,
+// e running 0..1 from the threshold to full peak.
+const KC = 2.6, KCX = 2.73, KC_T = Math.pow(1.41421356 / KC, 1 / KCX), CCAL = [50.77, 13.21];
+function peakCorr(pk) { if (pk <= KC_T) return 1; const e = (pk - KC_T) / (1 - KC_T); return Math.pow(2, (CCAL[0] * e + CCAL[1] * e * e) / 1200); }
+// 2-pole SVF with diode-clipped band-pass feedback. State: Float64Array [s1, s2, bp, g, k, in, lp, hp].
+const D_S1 = 0, D_S2 = 1, D_BP = 2, D_G = 3, D_K = 4, D_IN = 5, D_LP = 6, D_HP = 7, D_N = 8;
+function svfDiode(s, tab) {
+  const y = s[D_IN], g = s[D_G], k = s[D_K], R2 = 1.41421356;
+  let s1 = s[D_S1], s2 = s[D_S2];
+  const v0 = s[D_BP];
+  let T0, T1;
+  { const tp = (v0 + TT_R) * TT_SCALE;
+    if (tp <= 0) { T0 = tab[0]; T1 = 0; } else if (tp >= TT_N - 1) { T0 = tab[TT_N - 1]; T1 = 0; }
+    else { const ti = tp | 0, d = tab[ti + 1] - tab[ti]; T0 = tab[ti] + d * (tp - ti); T1 = d * TT_SCALE; } }
+  const c1 = k * T1, c0 = k * (T0 - T1 * v0);
+  const hp = (y + c0 + c1 * s1 - (R2 + g) * s1 - s2) / (1 + R2 * g + g * g - c1 * g);
+  const bp = g * hp + s1; s1 = g * hp + bp;
+  const lp = g * bp + s2; s2 = g * bp + lp;
+  s[D_S1] = s1; s[D_S2] = s2; s[D_BP] = bp; s[D_LP] = lp; s[D_HP] = hp;
+}
+
+// 2^x for the per-sample pitch and cutoff CVs: a table for the integer part, a polynomial for the
+// rest (error about 2e-7, a fraction of a thousandth of a cent).
+const P2 = new Float64Array(129); for (let i = 0; i < 129; i++) P2[i] = Math.pow(2, i - 64);
+function exp2(x) {
+  if (x < -60) x = -60; else if (x > 60) x = 60;
+  const i = Math.floor(x), f = x - i;
+  return P2[i + 64] * (1 + f * (0.693147 + f * (0.2402265 + f * (0.0555041 + f * (0.0096181 + f * 0.0013334))))) ;
+}
+
+// smoothed parameters
+const C_L1 = 0, C_L2 = 1, C_PW = 2, C_PMA = 3, C_PMB = 4, C_HCUT = 5, C_HPK = 6, C_HA = 7, C_HB = 8, C_HKT = 9,
+  C_LCUT = 10, C_LPK = 11, C_LA = 12, C_LB = 13, C_LKT = 14, C_VLVL = 15, C_VBIAS = 16, C_VVEL = 17, C_G1 = 18, C_MK1 = 19,
+  C_G2 = 20, C_MK2 = 21, C_MGR = 22, C_MGS = 23, C_TUNE = 24, C_SEMI2 = 25, C_WHL = 26, C_NP = 27;
+const C_IDLE_FR = 4800;               // frames of silence before an idle device sleeps
+
+class Cathode extends AudioWorkletProcessor {
+  constructor(options) {
+    super();
+    const o = (options && options.processorOptions) || {};
+    this.sr = sampleRate; this.fs = sampleRate * OS;
+    this.tubes = {}; (o.tubes || []).forEach(t => { this.tubes[t.id] = t; });
+    this.tabCache = {};
+    this.dTab = diodeTable();
+    this.o1 = new Osc(); this.o2 = new Osc();
+    this.hpS = new Float64Array(D_N); this.lpS = new Float64Array(D_N);
+    this.hpS[D_G] = 0.01; this.lpS[D_G] = 0.1;
+    this.SRC = new Float64Array(C_ZERO + 1); this.EFF = new Int32Array(C_IN.length);
+    this.L2 = new Float64Array(128 * OS); this.M1 = new Float64Array(128);
+    this.dec = new Decim(halfbandTaps(95, 9));
+    this.dcO = 0; this.dcxO = 0;
+    // keyboard
+    this.held = []; this.note = 60; this.kbdT = 0; this.kbd = 0; this.vel = 0.8; this.gate = false; this.sust = false; this.retrig = 0;
+    this.bend = 0; this.mw = 0; this.at = 0; this.sus = false;
+    // modulation state
+    this.mgPh = 0; this.nb0 = 0; this.nb1 = 0; this.nb2 = 0; this.shV = 0; this.shHi = 0;
+    this.e1 = 0; this.e1s = 0; this.e1n = 0; this.t1Hi = 0;
+    this.e2 = 0; this.e2s = 0; this.e2h = 0; this.t2Hi = 0;
+    this.dcx1 = 0; this.dcy1 = 0; this.dcx2 = 0; this.dcy2 = 0;
+    this.drift = 0; this.driftT = 0; this.driftN = 0; this.drift2 = 0; this.drift2T = 0;
+    this.active = o.active !== false; this.actFade = this.active ? 1 : 0; this.quietN = 0; this.sleeping = false;
+    this.duck = 1; this.duckDir = 0; this.pendingPatch = null;
+    this.events = [];
+    this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
+    this.P = null; this.S = new Float64Array(C_NP); this.T = new Float64Array(C_NP);
+    this.setPatch(o.patch || {});
+    this.target(this.S);
+    (o.events || []).forEach(e => this.events.push(e));
+    this.events.sort((a, b) => (a.at || 0) - (b.at || 0));
+    this.port.onmessage = e => this.onMsg(e.data);
+  }
+
+  table(id, bias) {
+    const key = id + ':' + bias.toFixed(3);
+    let t = this.tabCache[key];
+    if (!t) {
+      const tube = this.tubes[id] || this.tubes['12AX7'] || { gain: 0.774, b0: 0.25, kp: 1, kn: 0.55, h: 1.8, hp: 25 };
+      t = this.tabCache[key] = tubeTable(tube, bias);
+      const keys = Object.keys(this.tabCache); if (keys.length > 32) delete this.tabCache[keys[0]];
+    }
+    return t;
+  }
+  setPatch(p) {
+    this.P = p;
+    const dr = p.drive || {}, fo = p.follow || {};
+    this.t1 = this.tubes[dr.tube] || this.tubes['12AX7'] || { gain: 0.774 };
+    this.tab1 = this.table(dr.tube || '12AX7', num(dr.bias, 0));
+    this.t2 = this.tubes[fo.tube] || this.tubes['12AU7'] || { gain: 0.6 };
+    this.tab2 = this.table(fo.tube || '12AU7', 0);
+    this.g1 = (this.t1.gain || 0.774) * Math.pow(2, (num(dr.amount, 3) - 3) * 0.5);
+    this.mk1 = tubeMakeup(this.tab1, this.g1, 0.5);
+    this.g2 = (this.t2.gain || 0.6) * Math.pow(2, (num(fo.drive, 3) - 3) * 0.5);
+    this.mk2 = tubeMakeup(this.tab2, this.g2, 0.5);
+    // the patch panel: one source per input, cable first, then the normal
+    const EFF = this.EFF;
+    for (let i = 0; i < C_IN.length; i++) { const nm = C_NORM[C_IN[i]]; EFF[i] = nm ? CS[nm] : C_ZERO; }
+    (Array.isArray(p.cables) ? p.cables : []).forEach(c => {
+      if (!Array.isArray(c)) return;
+      const s = CS[c[0]], d = CI[c[1]];
+      if (s !== undefined && d !== undefined) EFF[d] = s;
+    });
+    // Can the VCA open without a key? Only if its CV is an envelope that something other than the
+    // keyboard can trigger, or the bias holds it open. If not, a silent idle Cathode may sleep.
+    const vs = EFF[CI_VCA];
+    this.sleepEg = vs === CS_EG1 && EFF[CI_T1] === CS_GATE ? 1 : vs === CS_EG2 && EFF[CI_T2] === CS_GATE ? 2 : 0;
+    this.canSleep = this.sleepEg > 0 && num((p.vca || {}).bias, 0) <= 0;
+  }
+  target(T) {
+    const P = this.P, v1 = P.vco1 || {}, v2 = P.vco2 || {}, pm = P.pm || {}, h = P.hpf || {}, l = P.lpf || {}, va = P.vca || {}, mg = P.mg || {}, c = P.ctl || {};
+    T[C_L1] = num(v1.level, 0.8); T[C_L2] = num(v2.level, 0); T[C_PW] = clamp(num(v1.pw, 0.5), 0.05, 0.95);
+    T[C_PMA] = num(pm.a, 0); T[C_PMB] = num(pm.b, 0);
+    T[C_HCUT] = clamp(num(h.cutoff, 20), 10, 20000); T[C_HPK] = clamp(num(h.peak, 0), 0, 1); T[C_HA] = num(h.a, 0); T[C_HB] = num(h.b, 0); T[C_HKT] = num(h.kt, 0);
+    T[C_LCUT] = clamp(num(l.cutoff, 2000), 10, 20000); T[C_LPK] = clamp(num(l.peak, 0), 0, 1); T[C_LA] = num(l.a, 0); T[C_LB] = num(l.b, 0); T[C_LKT] = num(l.kt, 0);
+    T[C_VLVL] = num(va.level, 0.8); T[C_VBIAS] = clamp(num(va.bias, 0), 0, 1); T[C_VVEL] = clamp(num(va.vel, 0.3), 0, 1);
+    T[C_G1] = this.g1; T[C_MK1] = this.mk1; T[C_G2] = this.g2; T[C_MK2] = this.mk2;
+    T[C_MGR] = clamp(num(mg.rate, 4), 0.02, 60); T[C_MGS] = clamp(num(mg.shape, 0.5), 0, 1);
+    T[C_TUNE] = num(P.tune, 0); T[C_SEMI2] = num(v2.semi, 0) + num(v2.fine, 0) / 100; T[C_WHL] = num(c.wheel, 30);
+    return T;
+  }
+
+  onMsg(m) {
+    if (!m) return;
+    if (m.at != null) { this.events.push(m); this.events.sort((a, b) => a.at - b.at); return; }
+    this.apply(m);
+  }
+  apply(m) {
+    switch (m.t) {
+      case 'patch': {
+        if (this.pendingPatch) { this.pendingPatch = m.p; break; }
+        if (m.load || isStructC(this.P, m.p)) { this.pendingPatch = m.p; this.duckDir = -1; }
+        else this.setPatch(m.p);
+        break;
+      }
+      case 'on': this.noteOn(m.n | 0, num(m.v, 0.8)); break;
+      case 'off': this.noteOff(m.n | 0); break;
+      case 'bend': this.bend = clamp(num(m.v, 0), -1, 1); break;
+      case 'mw': this.mw = clamp(num(m.v, 0), 0, 1); break;
+      case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
+      case 'sus': this.sus = !!m.on; if (!this.sus && this.sust) { this.sust = false; if (!this.held.length) this.gate = false; } break;
+      case 'panic': this.held = []; this.gate = false; this.sust = false; this.e1 = 0; this.e1s = 0; this.e2 = 0; this.e2s = 0; this.e2h = 0; break;
+      case 'active':
+        this.active = !!m.on;
+        if (!this.active) { this.held = []; this.gate = false; this.sust = false; this.sus = false; }
+        break;
+    }
+  }
+  noteOn(n, vel) {
+    this.held = this.held.filter(h => h !== n); this.held.push(n);
+    const multi = ((this.P.ctl || {}).trig || 'multi') !== 'single';
+    if (this.gate && multi) this.retrig = 2;            // the gate drops for one 2x sample, so both EGs start again
+    this.note = n; this.kbdT = (n - 60) / 12; this.vel = vel; this.gate = true; this.sust = false;
+    if (num((this.P.ctl || {}).glide, 0) <= 0) this.kbd = this.kbdT;
+  }
+  noteOff(n) {
+    const wasTop = this.held.length && this.held[this.held.length - 1] === n;
+    this.held = this.held.filter(h => h !== n);
+    if (!wasTop) return;
+    if (this.held.length) {                   // last-note priority: fall back to the previous key
+      const m = this.held[this.held.length - 1];
+      this.note = m; this.kbdT = (m - 60) / 12;
+      if (num((this.P.ctl || {}).glide, 0) <= 0) this.kbd = this.kbdT;
+      if (((this.P.ctl || {}).trig || 'multi') !== 'single') this.retrig = 2;
+      return;
+    }
+    if (this.sus) { this.sust = true; return; }
+    this.gate = false;
+  }
+
+  process(inputs, outputs) {
+    const t0 = Date.now();
+    const out = outputs[0], L = out[0], R = out[1] || out[0], n = L.length;
+    const base = currentFrame;
+    const due = this.events.length && (this.events[0].at || 0) < base + n;
+    // asleep: inactive and faded, or idle with nothing that could open the VCA
+    const idle = this.canSleep && !this.gate && !this.retrig && (this.sleepEg === 1 ? this.e1s === 0 : this.e2s === 0) && this.quietN >= C_IDLE_FR;
+    if (!due && ((!this.active && this.actFade <= 0) || (idle && this.duckDir === 0 && !this.pendingPatch))) {
+      this.sleeping = true;
+      L.fill(0); if (R !== L) R.fill(0);
+      if (this.pendingPatch) { this.setPatch(this.pendingPatch); this.pendingPatch = null; this.duck = 1; this.duckDir = 0; }
+      this.target(this.S);
+      this.mgPh = (this.mgPh + this.S[C_MGR] * n / this.sr) % 1;
+      this.kbd = this.kbdT;
+      this.meter(n, t0);
+      return true;
+    }
+    this.sleeping = false;
+    const L2 = this.L2; L2.fill(0, 0, n * OS);
+    let pos = 0;
+    while (pos < n) {
+      while (this.events.length && (this.events[0].at || 0) <= base + pos) this.apply(this.events.shift());
+      let end = n;
+      if (this.events.length) { const at = this.events[0].at - base; if (at > pos && at < n) end = at; }
+      this.render(pos, end);
+      pos = end;
+    }
+    const M = this.M1;
+    this.dec.run(L2, M, n);
+    const a = 1 - TWO_PI * 8 / this.sr;
+    let x = this.dcxO, y = this.dcO, pk = 0;
+    for (let i = 0; i < n; i++) { const v = M[i]; y = v - x + a * y; x = v; L[i] = y; const ay = y < 0 ? -y : y; if (ay > pk) pk = ay; }
+    this.dcxO = x; this.dcO = y;
+    if (R !== L) R.set(L);
+    this.quietN = pk < 1e-5 ? this.quietN + n : 0;
+    this.meter(n, t0);
+    return true;
+  }
+  meter(n, t0) {
+    this.cpuMs += Date.now() - t0; this.cpuFrames += n;
+    this.meterN += n;
+    if (this.meterN >= this.sr / 30) {
+      const on = this.gate || this.e2s !== 0 || this.e1s !== 0;
+      this.port.postMessage({
+        t: 'meter', dev: 'cathode', v1: Math.sqrt(this.v1Acc / Math.max(1, this.accN)), v2: Math.sqrt(this.v2Acc / Math.max(1, this.accN)),
+        voices: on && !this.sleeping ? 1 : 0, notes: this.gate || this.sust ? [this.note] : [],
+        cpu: this.cpuMs / (this.cpuFrames / this.sr * 1000),
+      });
+      this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0;
+      if (this.cpuFrames > this.sr) { this.cpuMs *= 0.5; this.cpuFrames *= 0.5; }
+    }
+  }
+
+  render(a, b) {
+    if (b <= a) return;
+    const sr = this.sr, fs = this.fs, frames = b - a;
+    const duck0 = this.duck;
+    if (this.duckDir === -1 && duck0 <= 0) {
+      if (this.pendingPatch) { this.setPatch(this.pendingPatch); this.pendingPatch = null; }
+      this.target(this.S);
+      this.duckDir = 1;
+    }
+    if (this.duckDir !== 0) {
+      this.duck = clamp(this.duck + this.duckDir * frames / (0.003 * sr), 0, 1);
+      if (this.duckDir === 1 && this.duck >= 1) this.duckDir = 0;
+    }
+    const act0 = this.actFade;
+    this.actFade = this.active ? clamp(act0 + frames / (0.005 * sr), 0, 1) : clamp(act0 - frames / (0.6 * sr), 0, 1);
+    const P = this.P, T = this.target(this.T), S = this.S;
+    const ks = 1 - Math.exp(-CTRL / (0.02 * sr));
+    const v1 = P.vco1 || {}, v2 = P.vco2 || {}, c = P.ctl || {}, e1p = P.eg1 || {}, e2p = P.eg2 || {}, pm = P.pm || {};
+    const w1 = v1.wave === 'tri' ? W_TRI : v1.wave === 'pulse' ? W_PULSE : v1.wave === 'noise' ? -1 : W_SAW;
+    const w2n = v2.wave || 'saw', ring = w2n === 'ring', w2 = w2n === 'saw' ? W_SAW : W_PULSE;
+    const pw2 = w2n === 'narrow' ? 0.1 : 0.5, sync = !!v2.sync && w1 >= 0;
+    const sc1 = CSCALE[v1.scale] ?? 0, sc2 = CSCALE[v2.scale] ?? 0;
+    const both = pm.dest !== 'vco2';
+    const glide = Math.max(0, num(c.glide, 0)), gk = glide > 0 ? 1 - Math.exp(-1 / (glide * fs)) : 1;
+    const bendR = num(c.bend, 2), driftC = clamp(num(P.drift, 1), 0, 8);
+    // envelope coefficients at the 2x rate
+    const d1 = Math.max(0, num(e1p.delay, 0)) * fs, a1 = coef(Math.max(0.0005, num(e1p.a, 0.005)) / 1.466, fs), r1 = coef(Math.max(0.002, num(e1p.r, 0.3)) / 4.6, fs);
+    const a2 = coef(Math.max(0.0005, num(e2p.a, 0.005)) / 1.466, fs), dd2 = coef(Math.max(0.002, num(e2p.d, 0.3)) / 4.6, fs);
+    const s2 = clamp(num(e2p.s, 0.7), 0, 1), r2 = coef(Math.max(0.002, num(e2p.r, 0.3)) / 4.6, fs), h2 = Math.max(0, num(e2p.hold, 0)) * fs;
+    const SRC = this.SRC, EFF = this.EFF, o1 = this.o1.s, o2 = this.o2.s, osc1 = this.o1, osc2 = this.o2;
+    const hpS = this.hpS, lpS = this.lpS, dTab = this.dTab, tab1 = this.tab1, tab2 = this.tab2;
+    const L2 = this.L2, C4 = 261.6255653 / fs, PIfs = Math.PI / fs, fcMax = sr * 0.45;
+    const dcA = 1 - TWO_PI * 15 / fs;
+    const eP = EFF[CI_PITCH], eV2 = EFF[CI_VCO2], ePA = EFF[CI_PMA], ePB = EFF[CI_PMB], eSI = EFF[CI_SHIN], eSC = EFF[CI_SHCLK],
+      eT1 = EFF[CI_T1], eT2 = EFF[CI_T2], eFI = EFF[CI_FIN], eHA = EFF[CI_HPA], eHB = EFF[CI_HPB], eHC = EFF[CI_HPC],
+      eLI = EFF[CI_LIN], eLA = EFF[CI_LPA], eLB = EFF[CI_LPB], eLC = EFF[CI_LPC], eVI = EFF[CI_VIN], eVC = EFF[CI_VCA];
+    let mgPh = this.mgPh, nb0 = this.nb0, nb1 = this.nb1, nb2 = this.nb2, shV = this.shV, shHi = this.shHi;
+    let e1 = this.e1, e1s = this.e1s, e1n = this.e1n, t1Hi = this.t1Hi, e2 = this.e2, e2s = this.e2s, e2h = this.e2h, t2Hi = this.t2Hi;
+    let dcx1 = this.dcx1, dcy1 = this.dcy1, dcx2 = this.dcx2, dcy2 = this.dcy2, kbd = this.kbd;
+    let v1Acc = 0, v2Acc = 0;
+    let basePitch = 0, mgInc = 0, mgS = 0.5, l1 = 0, l2 = 0, pw = 0.5, pmA = 0, pmB = 0, semi2 = 0;
+    let hcut = 20, hkt = 0, ha = 0, hb = 0, lcut = 2000, lkt = 0, la = 0, lb = 0, G1 = 1, MK1 = 1, G2 = 1, MK2 = 1, ampK = 0, bias = 0, whl = 0;
+    const kbdT = this.kbdT;
+    for (let i = a; i < b; i++) {
+      const fr = i - a;
+      if (fr % CTRL === 0) {
+        for (let j = 0; j < C_NP; j++) S[j] += (T[j] - S[j]) * ks;
+        if (--this.driftN <= 0) { this.driftT = Math.random() * 2 - 1; this.drift2T = Math.random() * 2 - 1; this.driftN = (0.3 + Math.random() * 0.6) * sr / CTRL; }
+        this.drift += (this.driftT - this.drift) * 0.0003; this.drift2 += (this.drift2T - this.drift2) * 0.0003;
+        basePitch = this.bend * bendR / 12 + S[C_TUNE] / 1200 + driftC * this.drift / 1200;
+        semi2 = S[C_SEMI2] / 12 + driftC * 0.5 * (this.drift2 - this.drift) / 1200;
+        mgInc = S[C_MGR] / fs; mgS = S[C_MGS] < 0.005 ? 0.005 : S[C_MGS] > 0.995 ? 0.995 : S[C_MGS];
+        l1 = S[C_L1]; l2 = S[C_L2]; pw = S[C_PW]; pmA = S[C_PMA] / 12; pmB = S[C_PMB] / 12;
+        hcut = S[C_HCUT]; hkt = S[C_HKT]; ha = S[C_HA] * 5; hb = S[C_HB] * 5;
+        lcut = S[C_LCUT]; lkt = S[C_LKT]; la = S[C_LA] * 5; lb = S[C_LB] * 5;
+        hpS[D_K] = KC * Math.pow(S[C_HPK], KCX); lpS[D_K] = KC * Math.pow(S[C_LPK], KCX);
+        hcut *= peakCorr(S[C_HPK]); lcut *= peakCorr(S[C_LPK]);
+        G1 = S[C_G1]; MK1 = S[C_MK1]; G2 = S[C_G2]; MK2 = S[C_MK2];
+        ampK = S[C_VLVL] * (1 - S[C_VVEL] * (1 - this.vel)); bias = S[C_VBIAS];
+        whl = this.mw * S[C_WHL] / 1200;
+      }
+      const duck = (duck0 + (this.duck - duck0) * (fr / frames)) * (act0 + (this.actFade - act0) * (fr / frames));
+      for (let s = 0; s < OS; s++) {
+        // ---- keyboard ----
+        kbd += (kbdT - kbd) * gk;
+        let gt = this.gate ? 1 : 0;
+        if (this.retrig > 0) { this.retrig--; gt = 0; }
+        SRC[CS_KBD] = kbd; SRC[CS_GATE] = gt; SRC[CS_VEL] = this.vel; SRC[CS_WHEEL] = this.mw;
+        // ---- MG: shape morphs a falling ramp (0) through a triangle (0.5) to a rising ramp (1) ----
+        mgPh += mgInc; if (mgPh >= 1) mgPh -= 1;
+        SRC[CS_MGT] = mgPh < mgS ? -1 + 2 * mgPh / mgS : 1 - 2 * (mgPh - mgS) / (1 - mgS);
+        SRC[CS_MGP] = mgPh < mgS ? 1 : -1;
+        // ---- noise ----
+        const wn = Math.random() * 2 - 1;
+        nb0 = 0.99765 * nb0 + wn * 0.0990460; nb1 = 0.96300 * nb1 + wn * 0.2965164; nb2 = 0.57000 * nb2 + wn * 1.0526913;
+        SRC[CS_WHITE] = wn; SRC[CS_PINK] = (nb0 + nb1 + nb2 + wn * 0.1848) * 0.25;
+        // ---- sample and hold: on the clock's rising edge ----
+        const ck = SRC[eSC];
+        if (!shHi) { if (ck > 0.3) { shHi = 1; shV = SRC[eSI]; } } else if (ck < 0.1) shHi = 0;
+        SRC[CS_SH] = shV;
+        // ---- EG 1: delay, attack, release ----
+        const g1 = SRC[eT1];
+        if (!t1Hi) { if (g1 > 0.3) { t1Hi = 1; if (d1 > 0) { e1s = 1; e1n = d1; } else e1s = 2; } }
+        else if (g1 < 0.1) { t1Hi = 0; if (e1s !== 0) e1s = 4; }
+        if (e1s === 1) { if (--e1n <= 0) e1s = 2; }
+        else if (e1s === 2) { e1 += (1.3 - e1) * a1; if (e1 >= 1) { e1 = 1; e1s = 3; } }
+        else if (e1s === 4) { e1 -= e1 * r1; if (e1 < 1e-5) { e1 = 0; e1s = 0; } }
+        SRC[CS_EG1] = e1; SRC[CS_EG1I] = -e1;
+        // ---- EG 2: attack, decay, sustain, release; hold keeps it going after the gate falls ----
+        const g2 = SRC[eT2];
+        if (!t2Hi) { if (g2 > 0.3) { t2Hi = 1; e2s = 2; e2h = 0; } }
+        else if (g2 < 0.1) { t2Hi = 0; if (e2s !== 0) { if (h2 > 0) e2h = h2; else e2s = 4; } }
+        if (e2h > 0 && !t2Hi) { if (--e2h <= 0) { e2h = 0; e2s = 4; } }
+        if (e2s === 2) { e2 += (1.3 - e2) * a2; if (e2 >= 1) { e2 = 1; e2s = 5; } }
+        else if (e2s === 5) e2 += (s2 - e2) * dd2;
+        else if (e2s === 4) { e2 -= e2 * r2; if (e2 < 1e-5) { e2 = 0; e2s = 0; } }
+        SRC[CS_EG2] = e2; SRC[CS_EG2I] = -e2;
+        // ---- VCOs (1 V per octave throughout; 0 is middle C) ----
+        const pm = pmA * SRC[ePA] + pmB * SRC[ePB] + whl * SRC[CS_MGT];
+        const pin = kbd + basePitch + SRC[eP];
+        const p1 = pin + sc1 + (both ? pm : 0), p2 = pin + sc2 + semi2 + pm + SRC[eV2];
+        let x1;
+        if (w1 < 0) { x1 = wn; o1[O_WRAP] = -1; }
+        else { let d = C4 * exp2(p1); if (d > 0.45) d = 0.45; o1[O_DT] = d; o1[O_PW] = pw; osc1.step(w1); x1 = o1[O_Y]; }
+        let x2;
+        { let d = C4 * exp2(p2); if (d > 0.45) d = 0.45; o2[O_DT] = d; o2[O_PW] = pw2; osc2.step(w2);
+          if (sync && o1[O_WRAP] >= 0) { o2[O_X] = o1[O_WRAP]; osc2.sync(w2); }
+          x2 = o2[O_Y]; if (ring) x2 *= x1; }
+        SRC[CS_VCO1] = x1; SRC[CS_VCO2] = x2;
+        SRC[CS_MIX] = (x1 * l1 + x2 * l2) * 0.6;
+        // ---- V1 drive tube, then a coupling cap ----
+        let x = SRC[eFI]; if (!(x > -8 && x < 8)) x = x > 0 ? 8 : x < 0 ? -8 : 0;
+        v1Acc += x * x;
+        let y;
+        { const tp = (G1 * x + TT_R) * TT_SCALE;
+          if (tp <= 0) y = tab1[0]; else if (tp >= TT_N - 1) y = tab1[TT_N - 1];
+          else { const ti = tp | 0; y = tab1[ti] + (tab1[ti + 1] - tab1[ti]) * (tp - ti); }
+          y = y / G1 * MK1; }
+        dcy1 = y - dcx1 + dcA * dcy1; dcx1 = y;
+        // ---- HPF ----
+        { let fc = hcut * exp2(hkt * kbd + ha * SRC[eHA] + hb * SRC[eHB] + SRC[eHC]);
+          if (fc < 10) fc = 10; else if (fc > fcMax) fc = fcMax;
+          hpS[D_G] = Math.tan(PIfs * fc); hpS[D_IN] = dcy1; svfDiode(hpS, dTab);
+          let hv = hpS[D_HP]; if (!(hv > -8 && hv < 8)) { hv = 0; hpS.fill(0, 0, 3); }
+          SRC[CS_HPF] = hv; }
+        // ---- LPF, then V2 (a cathode follower) ----
+        { let fc = lcut * exp2(lkt * kbd + la * SRC[eLA] + lb * SRC[eLB] + SRC[eLC]);
+          if (fc < 10) fc = 10; else if (fc > fcMax) fc = fcMax;
+          lpS[D_G] = Math.tan(PIfs * fc); lpS[D_IN] = SRC[eLI]; svfDiode(lpS, dTab);
+          let lv = lpS[D_LP]; if (!(lv > -8 && lv < 8)) { lv = 0; lpS.fill(0, 0, 3); }
+          v2Acc += lv * lv;
+          let z;
+          { const tp = (G2 * lv + TT_R) * TT_SCALE;
+            if (tp <= 0) z = tab2[0]; else if (tp >= TT_N - 1) z = tab2[TT_N - 1];
+            else { const ti = tp | 0; z = tab2[ti] + (tab2[ti + 1] - tab2[ti]) * (tp - ti); }
+            z = z / G2 * MK2; }
+          dcy2 = z - dcx2 + dcA * dcy2; dcx2 = z;
+          SRC[CS_LPF] = dcy2; }
+        // ---- VCA ----
+        let cv = SRC[eVC] + bias; if (cv < 0) cv = 0; else if (cv > 1.5) cv = 1.5;
+        let vi = SRC[eVI]; if (!(vi > -8 && vi < 8)) vi = 0;
+        L2[i * OS + s] = vi * cv * ampK * duck;
+      }
+    }
+    // seed the filters with a whisper of noise, so a self-oscillating one starts on its own
+    if (hpS[D_S1] === 0) hpS[D_S1] = (Math.random() - 0.5) * 1e-4;
+    if (lpS[D_S1] === 0) lpS[D_S1] = (Math.random() - 0.5) * 1e-4;
+    for (let j = 0; j < 3; j++) { if (Math.abs(hpS[j]) < 1e-20) hpS[j] = 0; if (Math.abs(lpS[j]) < 1e-20) lpS[j] = 0; }
+    this.kbd = kbd; this.mgPh = mgPh; this.nb0 = nb0; this.nb1 = nb1; this.nb2 = nb2; this.shV = shV; this.shHi = shHi;
+    this.e1 = e1; this.e1s = e1s; this.e1n = e1n; this.t1Hi = t1Hi; this.e2 = e2; this.e2s = e2s; this.e2h = e2h; this.t2Hi = t2Hi;
+    this.dcx1 = dcx1; this.dcy1 = dcy1; this.dcx2 = dcx2; this.dcy2 = dcy2;
+    this.v1Acc += v1Acc; this.v2Acc += v2Acc; this.accN += frames * OS;
+  }
+}
+const CSCALE = { 32: -2, 16: -1, 8: 0, 4: 1 };
+function isStructC(a, b) {
+  if (!a) return true;
+  return ['vco1.wave', 'vco2.wave', 'vco2.sync', 'drive.tube', 'follow.tube', 'ctl.trig'].some(k => get(a, k) !== get(b, k)) ||
+    JSON.stringify(a.cables || []) !== JSON.stringify(b.cables || []);
+}
+Cathode.SRC = C_SRC; Cathode.IN = C_IN; Cathode.NORM = C_NORM;
+
+registerProcessor('cathode', Cathode);

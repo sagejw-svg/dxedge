@@ -11,7 +11,8 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   4 push-pull cancels even harmonics   5 fuzz                     6 no clicks
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
-plus playing-it checks (keys, computer keyboard, patches, knobs, persistence).
+plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
+panel, the rack rail) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
 """
@@ -64,6 +65,21 @@ def patch(**over):
         if isinstance(v, dict): p.setdefault(k, {}).update(v)
         else: p[k] = v
     return p
+
+def cpatch(**over):
+    """A clean Cathode test patch: VCO 1 saw straight through open filters, EG 2 square, no drift."""
+    p = {"device": "cathode", "drift": 0, "vco1": {"wave": "saw", "scale": 8, "level": 0.8}, "vco2": {"level": 0},
+         "drive": {"tube": "12AU7", "amount": 0}, "follow": {"tube": "12AU7", "drive": 0},
+         "hpf": {"cutoff": 20, "peak": 0, "a": 0, "b": 0, "kt": 0}, "lpf": {"cutoff": 18000, "peak": 0, "a": 0, "b": 0, "kt": 0},
+         "eg2": {"hold": 0, "a": 0.001, "d": 0.1, "s": 1, "r": 0.01}, "vca": {"level": 0.8, "vel": 0, "bias": 0}, "cables": [],
+         "ens": {"on": False}, "out": {"tube": "12AU7", "topology": "se", "drive": 0, "bias": 0, "sag": 0, "spkOn": False, "roomOn": False, "wOn": False}}
+    for k, v in over.items():
+        if isinstance(v, dict): p.setdefault(k, {}).update(v)
+        else: p[k] = v
+    return p
+def welch(x, n=8192):
+    w = np.hanning(n); segs = [x[i:i + n] * w for i in range(0, len(x) - n, n // 2)]
+    return np.mean([np.abs(np.fft.rfft(sg)) ** 2 for sg in segs], axis=0), np.fft.rfftfreq(n, 1 / SR)
 
 from playwright.sync_api import sync_playwright
 CHROME = os.environ.get("SYNTH_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -288,6 +304,176 @@ with sync_playwright() as pw:
     ck(f"S. goniometer draws the stereo image and the correlation meter reads it ({ct!r}, {cv:+.2f}, {painted} lit pixels)", painted > 50 and ct not in ("idle", "play to see") and -1 <= cv <= 1, (ct, cv, painted))
     for n_ in (48, 55, 60, 64): pg.evaluate(f"__synth.noteOff({n_})")
 
+
+    # ---------------------------------------------------------------- C. Cathode, the second device
+    src = pg.evaluate("fetch('./voice.worklet.js').then(r => r.text())")
+    import re as _re
+    def jlist(name): return json.loads(_re.search(r"const " + name + r" = (\[[^\]]*\]);", src).group(1).replace("'", '"'))
+    jk = pg.evaluate("__synth.jacks()")
+    norm_w = dict(_re.findall(r"(\w+): '(\w+)'", _re.search(r"const C_NORM = \{([^}]*)\}", src).group(1)))
+    ck(f"C. the worklet and the panel agree on the jacks ({len(jk['src'])} outputs, {len(jk['inp'])} inputs, {len(jk['norm'])} normals)",
+       jlist("C_SRC") == jk["src"] and jlist("C_IN") == jk["inp"] and norm_w == jk["norm"], (jlist("C_SRC"), jlist("C_IN"), norm_w))
+    # filters: -3 dB at the cutoff (white noise through VCO 1's noise wave, VCA held open by its bias)
+    nz = dict(vco1={"wave": "noise", "level": 0.5}, vca={"bias": 1, "level": 0.8})
+    # Noise is noisy, so compare a band around the cutoff (0.8 to 1.25 fc) with what a 2-pole
+    # Butterworth at exactly fc would pass over the same band.
+    Lr, _ = render(cpatch(**nz), [], 5.0, rack=False); Pr, fq = welch(Lr[SR // 4:])
+    for fc in (150, 1000, 5000):
+        for kind in ("lpf", "hpf"):
+            if kind == "hpf" and fc == 5000: continue
+            over = dict(nz); over[kind] = {"cutoff": fc}
+            L, _ = render(cpatch(**over), [], 5.0, rack=False); Pf, _ = welch(L[SR // 4:])
+            band = (fq > fc * 0.8) & (fq < fc * 1.25); r = (fq[band] / fc) ** 4
+            H2 = 1 / (1 + r) if kind == "lpf" else r / (1 + r)
+            g = 10 * math.log10(np.mean(Pf[band]) / np.mean(Pr[band])); gt = 10 * math.log10(np.mean(H2))
+            ck(f"C. {kind.upper()} at {fc} Hz, peak 0: {g:.2f} dB over the band round the cutoff, a true {fc} Hz filter passes {gt:.2f} (within 1.2 dB)", abs(g - gt) <= 1.2, (g, gt))
+    # self oscillation: in tune across the keys, from the threshold up
+    for kind in ("lpf", "hpf"):
+        devs = []
+        for n in (48, 60, 72, 84):
+            over = {"vco1": {"level": 0}, "vca": {"bias": 1}, kind: {"cutoff": 262, "peak": 1, "kt": 1}}
+            if kind == "hpf": over["lpf"] = {"cutoff": 18000}
+            L, _ = render(cpatch(**over), note(n), 1.5, rack=False)
+            f = peak_freq(L[SR // 2:]); devs.append(1200 * math.log2(f / (262 * 2 ** ((n - 60) / 12))))
+        ck(f"C. {kind.upper()} at full peak self-oscillates in tune over 3 octaves (cents {[round(d, 1) for d in devs]})", max(abs(d) for d in devs) <= 5, devs)
+    lv = {}
+    for pk in (0.75, 0.86, 0.93):
+        L, _ = render(cpatch(vco1={"level": 0}, vca={"bias": 1}, lpf={"cutoff": 440, "peak": pk}), [], 3.0, rack=False)
+        lv[pk] = db(np.sqrt(np.mean(L[2 * SR:] ** 2))); f = peak_freq(L[2 * SR:]) if lv[pk] > -60 else 0
+        if pk > 0.8: ck(f"C. LPF peak {pk}: oscillates at {f:.1f} Hz for 440 ({1200 * math.log2(f / 440):+.1f} cents)", abs(1200 * math.log2(f / 440)) <= 5, f)
+    ck(f"C. the scream starts at peak 8: silent at 7.5, oscillating at 8.6 and louder at 9.3 ({lv[0.75]:.0f}, {lv[0.86]:.0f}, {lv[0.93]:.0f} dB)",
+       lv[0.75] < -90 and lv[0.86] > -35 and lv[0.93] > lv[0.86], lv)
+    # normals and the VCA: no cables, EG 2 gates the sound
+    L, _ = render(cpatch(), note(60, 0.2, 0.6), 1.0, rack=False)
+    pre, mid, post = (db(np.sqrt(np.mean(L[a:b] ** 2))) for a, b in ((0, int(0.19 * SR)), (int(0.25 * SR), int(0.55 * SR)), (int(0.7 * SR), SR)))
+    ck(f"C. normals: EG 2 opens the VCA only while the key is down ({pre:.0f}, {mid:.0f}, {post:.0f} dB)", pre < -100 and mid > -30 and post < -80, (pre, mid, post))
+    L, _ = render(cpatch(lpf={"cutoff": 500, "peak": 0.3, "a": 0.3}, mg={"rate": 3, "shape": 0.5}), note(45), 2.5, rack=False)
+    cs = np.array([centroid(L[i:i + 2400]) for i in range(SR // 2, len(L) - 2400, 1200)])
+    F_ = np.abs(np.fft.rfft(cs - cs.mean(), 8 * len(cs))); fr_ = np.fft.rfftfreq(8 * len(cs), 1200 / SR)
+    ck(f"C. normals: the MG sweeps the LPF through LPF A (centroid moves {cs.min():.0f}-{cs.max():.0f} Hz at {fr_[np.argmax(F_)]:.2f} Hz)",
+       cs.max() > 1.5 * cs.min() and abs(fr_[np.argmax(F_)] - 3) < 0.3, (cs.min(), cs.max(), fr_[np.argmax(F_)]))
+    # cables
+    L, _ = render(cpatch(eg2={"a": 0.3}, cables=[["gate", "vca"]]), note(60, 0.2, 0.6), 1.0, rack=False)
+    a_ = db(np.sqrt(np.mean(L[int(0.202 * SR):int(0.212 * SR)] ** 2))); b_ = db(np.sqrt(np.mean(L[int(0.4 * SR):int(0.5 * SR)] ** 2)))
+    post = db(np.sqrt(np.mean(L[int(0.62 * SR):] ** 2)))
+    ck(f"C. cable GATE -> VCA CV replaces EG 2: full level at once, off at release ({a_:.1f}, {b_:.1f}, {post:.0f} dB)", abs(a_ - b_) < 1.5 and post < -60, (a_, b_, post))
+    L, _ = render(cpatch(mg={"rate": 4, "shape": 0.5}, cables=[["sh", "pitch"]]), note(60), 3.2, rack=False)
+    fs_ = []
+    for k in range(1, 12):
+        x = L[int((k * 0.25 + 0.05) * SR):int((k * 0.25 + 0.2) * SR)]; zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0]
+        fs_.append(SR * (len(zc) - 1) / (zc[-1] - zc[0]) if len(zc) > 2 else 0)
+    ck(f"C. cable S&H -> PITCH: a new random pitch each MG step ({len(set(round(f) for f in fs_))} distinct of {len(fs_)})", len(set(round(f) for f in fs_)) >= 8, [round(f) for f in fs_])
+    L, _ = render(cpatch(mg={"rate": 8, "shape": 0.5}, eg2={"a": 0.002, "d": 0.03, "s": 0, "r": 0.03}, cables=[["mgPulse", "eg2Trig"]]), note(60, 0.1, 1.6), 2.2, rack=False)
+    e_ = env(L, 240)[int(0.3 * SR):int(1.5 * SR)]
+    E_ = np.abs(np.fft.rfft(e_ - e_.mean(), 4 * len(e_))); fe = np.fft.rfftfreq(4 * len(e_), 1 / SR)
+    ck(f"C. cable MG pulse -> EG 2 TRIG: the envelope repeats at the MG rate ({fe[np.argmax(E_[fe < 50])]:.2f} Hz for 8)", abs(fe[np.argmax(E_[fe < 50])] - 8) < 0.3, fe[np.argmax(E_[fe < 50])])
+    base_ = cpatch(vco1={"wave": "tri", "level": 0.8}, vco2={"wave": "square", "semi": 7, "level": 0}, lpf={"cutoff": 600, "peak": 0.5, "b": 0.3})
+    L0, _ = render(base_, note(48), 1.0, rack=False); base_["cables"] = [["vco2", "lpB"]]; L1_, _ = render(base_, note(48), 1.0, rack=False)
+    s0, s1 = tone_amp(L0[SR // 4:], 130.81 * 1.5 + 130.81), tone_amp(L1_[SR // 4:], 130.81 * 1.5 + 130.81)
+    ck(f"C. cable VCO 2 -> LPF B: audio-rate filter FM puts a sideband at f1+f2 ({db(s0):.0f} -> {db(s1):.0f} dB)", db(s1) > db(s0) + 15, (db(s0), db(s1)))
+    for cab in ([["lpf", "filtIn"]], [["hpf", "pitch"], ["lpf", "lpCut"]], [["vco1", "shClk"], ["vco2", "shIn"], ["sh", "filtIn"]]):
+        L, R = render(cpatch(lpf={"cutoff": 900, "peak": 0.97}, hpf={"cutoff": 200, "peak": 0.9}, vca={"bias": 0.5}, cables=cab), note(60), 1.5)
+        pk = max(np.max(np.abs(L)), np.max(np.abs(R)))
+        ck(f"C. feedback patch {cab}: bounded, under 0 dBFS after the rack (peak {db(pk):.1f} dBFS)", np.all(np.isfinite(L)) and pk <= 1.0 and pk > 1e-3, pk)
+    norm_ = pg.evaluate("__synth.setPatch({device:'cathode', cables:[['sh','lpA'],['mgTri','lpA'],['nope','lpA'],['eg1','vca']]}).cables")
+    ck(f"C. one cable per input, unknown jacks dropped ({norm_})", norm_ == [["mgTri", "lpA"], ["eg1", "vca"]], norm_)
+    # keyboard: trigger modes and glide
+    ev2 = [{"at": 0.1, "t": "on", "n": 60, "v": 0.8}, {"at": 0.5, "t": "on", "n": 64, "v": 0.8}, {"at": 0.9, "t": "off", "n": 64}, {"at": 0.95, "t": "off", "n": 60}]
+    lv2 = {}
+    for trig in ("multi", "single"):
+        L, _ = render(cpatch(eg2={"a": 0.002, "d": 0.05, "s": 0, "r": 0.05}, ctl={"trig": trig}), ev2, 1.0, rack=False)
+        lv2[trig] = db(np.sqrt(np.mean(L[int(0.505 * SR):int(0.53 * SR)] ** 2)))
+    ck(f"C. multi trigger restarts EG 2 on a legato key, single does not ({lv2['multi']:.0f} vs {lv2['single']:.0f} dB)", lv2["multi"] > -30 and lv2["single"] < -60, lv2)
+    L, _ = render(cpatch(vco1={"wave": "tri"}, ctl={"glide": 0.08}), ev2, 1.0, rack=False)
+    def zf(x):
+        zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0]; return SR * (len(zc) - 1) / (zc[-1] - zc[0])
+    fa, fm_, fb = zf(L[int(0.3 * SR):int(0.48 * SR)]), zf(L[int(0.53 * SR):int(0.57 * SR)]), zf(L[int(0.8 * SR):int(0.89 * SR)])
+    ck(f"C. glide slides between keys ({fa:.0f} -> {fm_:.0f} -> {fb:.0f} Hz)", abs(fa - 261.6) < 2 and 263 < fm_ < 326 and abs(fb - 329.6) < 3, (fa, fm_, fb))
+    # sleep and wake: a note after a long silence plays like the first (both devices)
+    for pp_ in (cpatch(), patch()):
+        L, _ = render(pp_, note(60, 0.05, 0.3) + note(60, 1.4, 1.65), 2.0, rack=False)
+        a1, a2 = (db(np.sqrt(np.mean(L[int(t * SR):int((t + 0.2) * SR)] ** 2))) for t in (0.08, 1.43))
+        ck(f"C. {pp_.get('device', 'filament')}: a note after it has gone to sleep plays like the first ({a1:.1f} vs {a2:.1f} dB)", abs(a1 - a2) < 1.0 and a1 > -40, (a1, a2))
+    # a cable change mid-note rides the duck: no click
+    ev = note(48, 0.05) + [{"at": 0.8, "t": "patch", "p": cpatch(lpf={"cutoff": 600, "peak": 0.5, "b": 0.3}, vco2={"wave": "square", "semi": 7}, cables=[["vco2", "lpB"]])}]
+    L, _ = render(cpatch(lpf={"cutoff": 600, "peak": 0.5, "b": 0.3}, vco2={"wave": "square", "semi": 7}), ev, 1.4, rack=False)
+    s_ = np.abs(np.diff(L)); worst = float(np.max(s_[int(0.75 * SR):int(0.86 * SR)])); steady = float(max(np.max(s_[int(0.3 * SR):int(0.7 * SR)]), np.max(s_[int(0.95 * SR):])))
+    ck(f"C. patching a cable mid-note does not click (worst step {worst:.4f}, steady {steady:.4f})", worst <= 1.5 * steady + 1e-4, (worst, steady))
+    # fuzz: random knobs and cables, feedback included
+    rng = random.Random(7); pk = 0; bad = 0
+    for t in range(16):
+        cab = [[rng.choice(jk["src"]), rng.choice(jk["inp"])] for _ in range(rng.randint(1, 6))]
+        fp_ = {"device": "cathode", "vco1": {"wave": rng.choice(["tri", "saw", "pulse", "noise"]), "level": rng.random()},
+               "vco2": {"wave": rng.choice(["saw", "square", "narrow", "ring"]), "level": rng.random(), "sync": rng.random() < 0.3, "semi": rng.randint(-12, 12)},
+               "pm": {"a": rng.uniform(-24, 24), "b": rng.uniform(-24, 24)}, "drive": {"amount": rng.uniform(0, 10)},
+               "hpf": {"cutoff": rng.uniform(20, 3000), "peak": rng.random(), "a": rng.uniform(-1, 1), "b": rng.uniform(-1, 1), "kt": rng.random()},
+               "lpf": {"cutoff": rng.uniform(30, 12000), "peak": rng.random(), "a": rng.uniform(-1, 1), "b": rng.uniform(-1, 1), "kt": rng.random()},
+               "mg": {"rate": rng.uniform(0.1, 40), "shape": rng.random()}, "follow": {"drive": rng.uniform(0, 10)}, "vca": {"bias": rng.choice([0, 0, 1])},
+               "out": {"drive": rng.uniform(0, 10), "level": rng.uniform(-6, 12)}, "cables": cab}
+        L, R = render(fp_, note(rng.randint(30, 90), 0.0, 0.6), 1.0)
+        bad += int(not (np.all(np.isfinite(L)) and np.all(np.isfinite(R)))); pk = max(pk, float(np.max(np.abs(L))), float(np.max(np.abs(R))))
+    ck(f"C. fuzz, 16 random patches with random cables: finite and under 0 dBFS (peak {db(pk):.2f} dBFS)", bad == 0 and pk <= 1.0, (bad, pk))
+    # factory set: level, mono fold, headroom
+    cf = pg.evaluate("__synth.cathodeFactory()")
+    ck(f"C. {len(cf)} Cathode factory patches (10 or more)", len(cf) >= 10, cf)
+    for f_ in cf:
+        P = pg.evaluate("n => __synth.cathodePatch(n)", f_["name"]); n_ = 36 if f_["cat"] == "Bass" or f_["name"] == "Filter Kick" else 60
+        L, R = render(P, note(n_, 0.05, 1.8), 2.6)
+        x = (L ** 2 + R ** 2) / 2; w = int(0.3 * SR); loud = 10 * math.log10(np.convolve(x, np.ones(w) / w, "valid").max() + 1e-12)
+        seg = slice(int(0.3 * SR), int(1.7 * SR)); st = math.sqrt(np.mean(x[seg])); mo = math.sqrt(np.mean(((L[seg] + R[seg]) / 2) ** 2))
+        pkf = max(np.max(np.abs(L)), np.max(np.abs(R)))
+        ck(f"C. {f_['name']}: loudness {loud:.1f} dB (want -18 to -11), mono fold {db(st) - db(mo):.1f} dB, peak {db(pkf):.1f} dBFS",
+           -18 <= loud <= -11 and db(mo) >= db(st) - 3.0 and pkf <= 1.0, (loud, db(st) - db(mo), pkf))
+    # CPU, logged
+    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": pg.evaluate("__synth.cathodePatch('Plate Screamer')"), "events": note(60, 0.0), "seconds": 6.0})
+    info("9. CPU Cathode (Plate Screamer, one voice, both filters screaming)", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time, rack included")
+    # the rack rail, live
+    pg.evaluate("__synth.setDevice('cathode')"); pg.wait_for_timeout(200)
+    ck("C. rail: Cathode lit, its panel shown, Filament's hidden", pg.evaluate("__synth.device()") == "cathode" and pg.is_visible("#mCLpf") and not pg.is_visible("#mFilt")
+       and pg.get_attribute("#devC", "aria-pressed") == "true")
+    pg.evaluate("__synth.load('Plate Screamer')"); pg.wait_for_timeout(150)
+    pg.evaluate("__synth.noteOn(60, 0.8)"); pg.wait_for_timeout(400); m = pg.evaluate("__synth.meter()")
+    ck(f"C. live: the keyboard plays Cathode (meter from {m.get('dev')}, {m.get('voices')} voice, notes {m.get('notes')})", m.get("dev") == "cathode" and m.get("voices") == 1 and m.get("notes") == [60], m)
+    ck("C. chassis: V1 and V2 show Cathode's drive and follower tubes", pg.inner_text("#nameV1") == "12AX7" and pg.inner_text("#nameV2") == "12AX7" and "follow" in pg.inner_text("#roleV2").lower())
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    ck("C. switching devices lets go of the held key", pg.evaluate("__synth.state()")["down"] == [])
+    pg.evaluate("__synth.noteOn(64, 0.8)"); pg.wait_for_timeout(1000); m = pg.evaluate("__synth.meter()")
+    mc = pg.evaluate("__synth.engine().meters.cathode")
+    ck(f"C. back on Filament: it plays, and Cathode has faded out and sleeps (Filament {m.get('voices')} voices; Cathode {mc.get('voices')})",
+       m.get("dev") == "filament" and m.get("voices") >= 1 and mc.get("voices") == 0, (m, mc))
+    pg.evaluate("__synth.noteOff(64)")
+    # the patch panel
+    pg.evaluate("__synth.setDevice('cathode')"); pg.evaluate("__synth.load('Plate Screamer')"); pg.wait_for_timeout(150)
+    J = lambda kind, id_: f'#jackfield .jack[data-kind="{kind}"][data-id="{id_}"]'
+    pg.locator(J("out", "sh")).scroll_into_view_if_needed(); pg.click(J("out", "sh")); pg.click(J("in", "lpA")); pg.wait_for_timeout(100)
+    ck("C. panel: click S&H OUT then LPF A patches a cable, drawn on the panel", pg.evaluate("__synth.patch().cables") == [["sh", "lpA"]] and pg.evaluate("__synth.cablePaths()") == 1,
+       (pg.evaluate("__synth.patch().cables"), pg.evaluate("__synth.cablePaths()")))
+    ck("C. panel: the LPF A knob now says what it is listening to", pg.evaluate("document.querySelector('#kCLpf .knob[data-path=\"lpf.a\"] .kl').textContent") == "A: S&H")
+    a = pg.locator(J("out", "vco2") + " i").bounding_box(); c = pg.locator(J("in", "lpB") + " i").bounding_box()
+    pg.mouse.move(a["x"] + 13, a["y"] + 13); pg.mouse.down(); pg.mouse.move(a["x"] + 60, a["y"] + 90, steps=6); pg.mouse.move(c["x"] + 13, c["y"] + 13, steps=6); pg.mouse.up(); pg.wait_for_timeout(100)
+    ck("C. panel: dragging VCO 2 onto LPF B patches it", ["vco2", "lpB"] in pg.evaluate("__synth.patch().cables") and pg.evaluate("__synth.cablePaths()") == 2)
+    a = pg.locator(J("in", "lpB") + " i").bounding_box(); c = pg.locator(J("in", "hpB") + " i").bounding_box()
+    pg.mouse.move(a["x"] + 13, a["y"] + 13); pg.mouse.down(); pg.mouse.move(c["x"] + 13, c["y"] + 13, steps=8); pg.mouse.up(); pg.wait_for_timeout(100)
+    ck("C. panel: dragging a plug from LPF B to HPF B moves the cable", sorted(map(tuple, pg.evaluate("__synth.patch().cables"))) == [("sh", "lpA"), ("vco2", "hpB")], pg.evaluate("__synth.patch().cables"))
+    pg.focus(J("out", "mgPulse")); pg.keyboard.press("Enter"); pg.focus(J("in", "eg2Trig")); pg.keyboard.press("Enter")
+    ck("C. panel: keyboard patching (Enter on an output, then an input)", ["mgPulse", "eg2Trig"] in pg.evaluate("__synth.patch().cables"))
+    pg.focus(J("out", "white")); pg.keyboard.press("Enter"); pg.keyboard.press("Escape")
+    ck("C. panel: Escape cancels a half-made patch", pg.evaluate("document.querySelectorAll('#jackfield .jack.armed').length") == 0)
+    pg.click(J("in", "lpA")); pg.wait_for_timeout(50)
+    ck("C. panel: clicking a patched input pulls its cable and says what it is back to", ["sh", "lpA"] not in pg.evaluate("__synth.patch().cables")
+       and "normal" in pg.inner_text("#patchStat") and pg.evaluate("document.querySelector('#kCLpf .knob[data-path=\"lpf.a\"] .kl').textContent") == "A: MG")
+    lab = pg.get_attribute(J("in", "hpB"), "aria-label")
+    ck(f"C. panel: jacks say what they are patched to ({lab!r})", "patched from VCO 2" in lab, lab)
+    pg.click("#unplugAll"); pg.wait_for_timeout(50)
+    ck("C. panel: unplug all", pg.evaluate("__synth.patch().cables") == [] and pg.evaluate("__synth.cablePaths()") == 0)
+    pg.click(J("out", "eg1")); pg.click(J("in", "pitch")); pg.wait_for_timeout(300)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
+    ck("C. a reload brings back Cathode, its edited patch and its cable", pg.evaluate("__synth.device()") == "cathode" and pg.evaluate("__synth.patch().cables") == [["eg1", "pitch"]]
+       and pg.evaluate("__synth.cablePaths()") == 1, (pg.evaluate("__synth.device()"), pg.evaluate("__synth.patch().cables")))
+    pg.screenshot(path=os.path.join(SHOTS, "synth_cathode_desktop.png"), full_page=True)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
+    ck("C. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
@@ -405,6 +591,16 @@ with sync_playwright() as pw:
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")
         ph.screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}.png"))
+        ck(f"10. {w}px: the Patch tab belongs to Cathode only", not ph.is_visible('.tabs [data-go="patch"]'))
+        ph.tap("#devC"); ph.wait_for_timeout(150); ph.tap('.tabs [data-go="patch"]'); ph.wait_for_timeout(250)
+        ck(f"10. {w}px: Cathode's Patch tab shows the jacks, no horizontal scroll", ph.is_visible("#jackfield") and not ph.is_visible("#mCLpf")
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        small = ph.evaluate("""() => [...document.querySelectorAll('.tabs button, .jack, .devbtn, .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.dataset.id || e.textContent)""")
+        ck(f"10. {w}px: jacks, tabs and the rail are 44 px or more", not small, small)
+        a = ph.locator('#jackfield .jack[data-kind="out"][data-id="mgTri"]'); a.scroll_into_view_if_needed(); a.tap()
+        c = ph.locator('#jackfield .jack[data-kind="in"][data-id="pmA"]'); c.scroll_into_view_if_needed(); c.tap(); ph.wait_for_timeout(100)
+        ck(f"10. {w}px: tap an output, tap an input: patched", ph.evaluate("__synth.patch().cables") == [["mgTri", "pmA"]], ph.evaluate("__synth.patch().cables"))
+        ph.screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_patch.png"))
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
     b.close()

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#080808">
 <title>Filament - a tube synthesizer - DXEdge</title>
-<meta name="description" content="Filament: a playable polyphonic tube synthesizer in the browser. Lit tubes that do real work, filters with character, and stereo you can play. Touch, computer keyboard or MIDI. No ads, no cookies, no accounts.">
+<meta name="description" content="Filament: a playable polyphonic tube synthesizer in the browser, and Cathode, a one-voice semi-modular with a patch panel, in the same rack. Lit tubes that do real work, filters with character, and stereo you can play. Touch, computer keyboard or MIDI. No ads, no cookies, no accounts.">
 <style>
   :root {
     --bg: #080808; --bg1: #0f0f0f; --bg2: #161616; --bg3:#1c1c1c;
@@ -74,6 +74,38 @@
   .lamp i.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
   .lamp i.warn { background: var(--red); box-shadow: 0 0 8px var(--red); }
   .lamp b { color: var(--amber2); font-weight: 600; }
+
+  /* the rack rail: which device the keyboard plays */
+  .rail { display: flex; gap: 6px; padding: 8px 10px 0; align-items: center; flex-wrap: wrap; }
+  .rail .label { margin-right: 4px; }
+  .devbtn { display: inline-flex; align-items: baseline; gap: 8px; background: linear-gradient(180deg, #1a1a1a, #101010); color: var(--muted); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; min-height: 36px; font-size: 12px; letter-spacing: 3px; font-weight: 600; }
+  .devbtn small { font-size: 9.5px; letter-spacing: 1px; font-weight: 400; color: var(--dim); text-transform: uppercase; }
+  .devbtn i { width: 7px; height: 7px; border-radius: 50%; background: #333; align-self: center; }
+  .devbtn[aria-pressed="true"] { color: var(--amber2); border-color: var(--amber); background: rgba(255,179,71,0.07); }
+  .devbtn[aria-pressed="true"] i { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  body[data-dev="cathode"] [data-dev="filament"], body[data-dev="filament"] [data-dev="cathode"] { display: none !important; }
+
+  /* the patch panel */
+  .mod[data-full] { grid-column: 1 / -1; position: relative; }
+  .jackfield { display: flex; flex-wrap: wrap; gap: 10px 18px; position: relative; z-index: 1; }
+  .jgroup { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .jgroup .gl { font-size: 9.5px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+  .jrow { display: flex; flex-wrap: wrap; gap: 4px; }
+  .jrow.ins { border-top: 1px dashed #2c2c2c; padding-top: 4px; }
+  .jack { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 62px; min-height: 64px; padding: 4px 2px 3px; background: transparent; border: 1px solid transparent;
+    border-radius: 6px; color: var(--muted); cursor: pointer; touch-action: none; font-size: 8.5px; letter-spacing: 0.5px; line-height: 1.15; text-align: center; }
+  .jack i { width: 26px; height: 26px; border-radius: 50%; display: block; flex: 0 0 auto;
+    background: radial-gradient(circle at 50% 50%, #000 0 5px, #2b2b2b 6px 8px, #8d8d8d 9px 10px, #3a3a3a 11px 13px); box-shadow: 0 1px 2px rgba(0,0,0,.7); }
+  .jack.out i { background: radial-gradient(circle at 50% 50%, #000 0 5px, #2b2b2b 6px 8px, #d9a25a 9px 10px, #3a2a14 11px 13px); }
+  .jack small { font-size: 8px; color: var(--dim); letter-spacing: 0; text-transform: none; }
+  .jack small.pt { color: var(--amber2); }
+  .jack:hover { border-color: #3a3a3a; }
+  .jack.armed { border-color: var(--green); color: var(--green); box-shadow: 0 0 8px rgba(0,255,157,0.35); }
+  .jack.target { border-color: var(--amber); }
+  svg.cables { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; }
+  svg.cables path { fill: none; stroke-linecap: round; }
+  .pstat { min-height: 1.5em; }
 
   /* tabs (phone) */
   .tabs { display: none; gap: 4px; padding: 8px 8px 0; overflow-x: auto; }
@@ -173,13 +205,17 @@
     .panel { grid-template-columns: 1fr; padding: 8px 6px; }
     body[data-tab] .mod { display: none; }
     body[data-tab="play"] .mod[data-tab~="play"], body[data-tab="osc"] .mod[data-tab~="osc"], body[data-tab="filter"] .mod[data-tab~="filter"],
-    body[data-tab="mod"] .mod[data-tab~="mod"], body[data-tab="stereo"] .mod[data-tab~="stereo"], body[data-tab="rack"] .mod[data-tab~="rack"] { display: block; }
+    body[data-tab="mod"] .mod[data-tab~="mod"], body[data-tab="stereo"] .mod[data-tab~="stereo"], body[data-tab="rack"] .mod[data-tab~="rack"],
+    body[data-tab="patch"] .mod[data-tab~="patch"] { display: block; }
+    .rail { padding: 6px 6px 0; } .rail .label { display: none; } .devbtn small { display: none; } .devbtn { flex: 1 1 0; justify-content: center; min-height: 44px; }
+    .jackfield { gap: 8px; } .jgroup { flex: 1 1 100%; }
+    .jack { width: calc((100% - 16px) / 5); min-width: 52px; min-height: 66px; font-size: 8px; }
     body[data-tab="stereo"] #mStereo { order: -2; } body[data-tab="stereo"] #mEns { order: -1; }
     .keybed { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 6px 6px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #333; }
     .kctl { min-width: 54px; }
     .btn, .btn.small { min-height: 44px; min-width: 44px; padding: 4px 10px; }
     .chip { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 12px; }
-    .tabs button { min-height: 44px; min-width: 44px; padding: 7px 6px; }
+    .tabs button { min-height: 44px; min-width: 44px; padding: 7px 3px; letter-spacing: 0; font-size: 11px; }
     .kctl .hide-s { display: none; }
     .strip { width: 22px; }
     .knob { width: 52px; }
@@ -188,13 +224,14 @@
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
 </head>
-<body data-tab="play">
+<body data-tab="play" data-dev="filament">
 <div class="wrap">
   <header class="top">
     <div class="brand">
       <div class="label">dxedge.net / synth</div>
-      <h1>FILA<span>MENT</span></h1>
-      <p class="intro">A tube synthesizer. The tubes do real work: one drives the filters, one sits inside the Valve filter's resonance loop, and a push-pull pair runs the output. Play it with the keys below, your computer keyboard, or a MIDI keyboard.</p>
+      <h1 id="devTitle">FILA<span>MENT</span></h1>
+      <p class="intro" data-dev="cathode">Cathode, the second device in the rack: one voice, two VCOs, a screaming high-pass and low-pass pair, and a patch panel. Everything is pre-wired; a cable overrides the normal printed under a jack.</p>
+      <p class="intro" data-dev="filament">A tube synthesizer. The tubes do real work: one drives the filters, one sits inside the Valve filter's resonance loop, and a push-pull pair runs the output. Play it with the keys below, your computer keyboard, or a MIDI keyboard.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
       <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
@@ -210,16 +247,21 @@
   </header>
 
   <div class="inst"><div class="inst-in">
+    <div class="rail" role="group" aria-label="Rack devices: the keyboard plays the lit one">
+      <span class="label">rack</span>
+      <button class="devbtn" id="devF" data-d="filament" aria-pressed="true"><i></i>FILAMENT<small>poly tube synth</small></button>
+      <button class="devbtn" id="devC" data-d="cathode" aria-pressed="false"><i></i>CATHODE<small>mono semi-modular</small></button>
+    </div>
     <div class="chassis" id="chassis" aria-label="Tube chassis">
       <div class="tgroup">
         <figure class="tube" data-t="v1" data-tab-go="filter" title="V1, the drive tube before the filters"><canvas id="tubeV1" aria-hidden="true"></canvas><figcaption><span class="role">V1 drive</span><br><b id="nameV1">12AX7</b></figcaption></figure>
-        <figure class="tube" data-t="v2" data-tab-go="filter" title="V2, inside the Valve 12 resonance loop"><canvas id="tubeV2" aria-hidden="true"></canvas><figcaption><span class="role">V2 loop</span><br><b id="nameV2">12AT7</b></figcaption></figure>
+        <figure class="tube" data-t="v2" data-tab-go="filter" title="V2, inside the Valve 12 resonance loop"><canvas id="tubeV2" aria-hidden="true"></canvas><figcaption><span class="role" id="roleV2">V2 loop</span><br><b id="nameV2">12AT7</b></figcaption></figure>
       </div>
       <div class="tgroup">
         <figure class="tube" data-t="v3" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV3" aria-hidden="true"></canvas><figcaption><span class="role">V3 out</span><br><b id="nameV3">EL34</b></figcaption></figure>
         <figure class="tube" data-t="v4" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV4" aria-hidden="true"></canvas><figcaption><span class="role">V4 <span id="topoV4">PP</span></span><br><b id="nameV4">EL34</b></figcaption></figure>
       </div>
-      <div class="plate" aria-hidden="true">FILAMENT<small>tube synthesizer &middot; model 01</small></div>
+      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span></div>
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="lamps">
@@ -235,31 +277,57 @@
       <button role="tab" data-go="osc" aria-selected="false">Osc</button>
       <button role="tab" data-go="filter" aria-selected="false">Filter</button>
       <button role="tab" data-go="mod" aria-selected="false">Mod</button>
+      <button role="tab" data-go="patch" aria-selected="false" data-dev="cathode">Patch</button>
       <button role="tab" data-go="stereo" aria-selected="false">Stereo</button>
       <button role="tab" data-go="rack" aria-selected="false">Rack</button>
     </nav>
 
     <div class="panel" id="panel">
-      <section class="mod" data-tab="osc" id="mOsc1"><h3><span class="pilot"></span>Osc 1</h3><div class="chips" data-chips="osc1.wave"></div><div class="knobs" id="kOsc1"></div></section>
-      <section class="mod" data-tab="osc" id="mOsc2"><h3><span class="pilot"></span>Osc 2</h3><div class="chips" data-chips="osc2.wave"></div>
+      <section class="mod" data-dev="filament" data-tab="osc" id="mOsc1"><h3><span class="pilot"></span>Osc 1</h3><div class="chips" data-chips="osc1.wave"></div><div class="knobs" id="kOsc1"></div></section>
+      <section class="mod" data-dev="filament" data-tab="osc" id="mOsc2"><h3><span class="pilot"></span>Osc 2</h3><div class="chips" data-chips="osc2.wave"></div>
         <div class="chips"><button class="chip" id="syncBtn" aria-pressed="false" title="Hard sync to Osc 1">sync</button></div><div class="knobs" id="kOsc2"></div></section>
-      <section class="mod" data-tab="osc" id="mSub"><h3><span class="pilot"></span>Sub, noise, drift</h3>
+      <section class="mod" data-dev="filament" data-tab="osc" id="mSub"><h3><span class="pilot"></span>Sub, noise, drift</h3>
         <div class="chips"><span class="cl">sub</span><span data-chips="sub.wave" class="chips" style="margin:0"></span><span data-chips="sub.oct" class="chips" style="margin:0"></span></div>
         <div class="chips"><span class="cl">noise</span><span data-chips="noise.color" class="chips" style="margin:0"></span></div>
         <div class="knobs" id="kSub"></div></section>
-      <section class="mod" data-tab="filter" id="mV1"><h3><span class="pilot"></span>V1 drive tube</h3><div class="chips" data-chips="v1.tube"></div><div class="knobs" id="kV1"></div>
+      <section class="mod" data-dev="filament" data-tab="filter" id="mV1"><h3><span class="pilot"></span>V1 drive tube</h3><div class="chips" data-chips="v1.tube"></div><div class="knobs" id="kV1"></div>
         <div class="note">Before the filters. More drive, more saturation into the filter.</div></section>
-      <section class="mod" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
+      <section class="mod" data-dev="filament" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
         <div class="chips" id="loopChips"><span class="cl">V2 loop</span><span data-chips="filt.tube" class="chips" style="margin:0"></span></div>
         <div class="knobs" id="kFilt"></div><div class="note" id="filtNote"></div></section>
-      <section class="mod" data-tab="mod" id="mEnvA"><h3><span class="pilot"></span>Amp envelope</h3><div class="knobs" id="kEnvA"></div></section>
-      <section class="mod" data-tab="mod" id="mEnvF"><h3><span class="pilot"></span>Filter envelope</h3><div class="knobs" id="kEnvF"></div></section>
-      <section class="mod" data-tab="mod" id="mLfo"><h3><span class="pilot"></span>LFO 1</h3><div class="chips" data-chips="lfo1.wave"></div><div class="chips" data-chips="lfo1.mode"></div><div class="knobs" id="kLfo"></div></section>
-      <section class="mod" data-tab="mod" id="mLfo2"><h3><span class="pilot" id="lfo2Pilot"></span>LFO 2</h3><div class="chips" data-chips="lfo2.wave"></div><div class="chips" data-chips="lfo2.mode"></div><div class="knobs" id="kLfo2"></div>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mEnvA"><h3><span class="pilot"></span>Amp envelope</h3><div class="knobs" id="kEnvA"></div></section>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mEnvF"><h3><span class="pilot"></span>Filter envelope</h3><div class="knobs" id="kEnvF"></div></section>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mLfo"><h3><span class="pilot"></span>LFO 1</h3><div class="chips" data-chips="lfo1.wave"></div><div class="chips" data-chips="lfo1.mode"></div><div class="knobs" id="kLfo"></div></section>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mLfo2"><h3><span class="pilot" id="lfo2Pilot"></span>LFO 2</h3><div class="chips" data-chips="lfo2.wave"></div><div class="chips" data-chips="lfo2.mode"></div><div class="knobs" id="kLfo2"></div>
         <div class="note">Stereo phase offsets the right side: on tremolo it auto-pans, on cutoff the sweep moves between the speakers.</div></section>
-      <section class="mod" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
-      <section class="mod" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
+      <section class="mod" data-dev="filament" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
+      <section class="mod" data-dev="filament" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
         <div class="note">Mod wheel and aftertouch come from a MIDI keyboard, or the MOD strip by the keys.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="osc" id="mCV1"><h3><span class="pilot"></span>VCO 1</h3><div class="chips" data-chips="vco1.wave"></div><div class="chips" data-chips="vco1.scale"></div><div class="knobs" id="kCV1"></div></section>
+      <section class="mod" data-dev="cathode" data-tab="osc" id="mCV2"><h3><span class="pilot" id="cv2Pilot"></span>VCO 2</h3><div class="chips" data-chips="vco2.wave"></div><div class="chips" data-chips="vco2.scale"></div>
+        <div class="chips"><button class="chip" id="cSyncBtn" aria-pressed="false" title="Hard sync VCO 2 to VCO 1">sync</button></div><div class="knobs" id="kCV2"></div></section>
+      <section class="mod" data-dev="cathode" data-tab="osc mod" id="mCPm"><h3><span class="pilot"></span>Pitch mod</h3><div class="chips"><span class="cl">to</span><span data-chips="pm.dest" class="chips" style="margin:0"></span></div><div class="knobs" id="kCPm"></div>
+        <div class="note">PM A and PM B are the depths of whatever reaches those jacks: MG and EG 1 unless a cable says otherwise.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="play" id="mCCtl"><h3><span class="pilot"></span>Keys and wheel</h3><div class="chips"><span class="cl">trigger</span><span data-chips="ctl.trig" class="chips" style="margin:0"></span></div><div class="knobs" id="kCCtl"></div>
+        <div class="note">Multi trigger restarts the envelopes on every key; single only on the first key of a phrase, so legato lines glide without a new attack.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="filter" id="mCTubes"><h3><span class="pilot"></span>V1 drive, V2 follower</h3>
+        <div class="chips"><span class="cl">V1</span><span data-chips="drive.tube" class="chips" style="margin:0"></span></div>
+        <div class="chips"><span class="cl">V2</span><span data-chips="follow.tube" class="chips" style="margin:0"></span></div><div class="knobs" id="kCTubes"></div>
+        <div class="note">V1 drives the filter input. V2 is a cathode follower after the low-pass: it rounds off the scream.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="filter" id="mCHpf"><h3><span class="pilot"></span>High-pass</h3><div class="knobs" id="kCHpf"></div></section>
+      <section class="mod" data-dev="cathode" data-tab="filter play" id="mCLpf"><h3><span class="pilot"></span>Low-pass</h3><div class="knobs" id="kCLpf"></div>
+        <div class="note">Peak past 8 screams: the resonance runs through a diode clipper, so it fights the signal rather than sitting on top of it.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="mod" id="mCMg"><h3><span class="pilot"></span>MG</h3><div class="knobs" id="kCMg"></div>
+        <div class="note">Shape morphs a falling ramp through a triangle to a rising ramp; the pulse output's width follows it.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="mod" id="mCEg1"><h3><span class="pilot"></span>EG 1</h3><div class="knobs" id="kCEg1"></div></section>
+      <section class="mod" data-dev="cathode" data-tab="mod" id="mCEg2"><h3><span class="pilot"></span>EG 2</h3><div class="knobs" id="kCEg2"></div>
+        <div class="note">Hold keeps EG 2 going after you let go, for that long.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="mod play" id="mCVca"><h3><span class="pilot"></span>VCA</h3><div class="knobs" id="kCVca"></div>
+        <div class="note">Bias opens the VCA with no key: a drone. VCA CV is EG 2 unless a cable says otherwise.</div></section>
+      <section class="mod" data-dev="cathode" data-tab="patch" id="mCPatch" data-full><h3><span class="pilot" id="patchPilot"></span>Patch panel<button class="chip sw" id="unplugAll" title="Pull every cable: back to the normals">unplug all</button></h3>
+        <div class="jackfield" id="jackfield" role="group" aria-label="Patch panel"></div>
+        <svg class="cables" id="cablesSvg" aria-hidden="true"></svg>
+        <div class="note pstat" id="patchStat" aria-live="polite">Click an output (gold ring), then an input. Or drag a cable from one to the other. Click a patched input to pull its cable.</div></section>
       <section class="mod" data-tab="stereo play" id="mStereo"><h3><span class="pilot"></span>Stereo</h3><div class="chips" data-chips="stereo.pan"></div>
         <div class="row"><button class="chip" id="wOnBtn" aria-pressed="true">width on</button><button class="chip" id="monoBtn" aria-pressed="false" title="Hold to hear the mono fold (what a phone speaker plays)">mono check</button></div>
         <div class="gonio-wrap">
@@ -300,7 +368,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.2 in progress (the stereo round) &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.3: two devices in the rack, Filament and Cathode &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -309,8 +377,9 @@
 import { makeKnob } from './knob.js';
 import { TUBES, TUBE_BY } from './rack.js';
 import { paintTubeState, fitCanvas } from './tubepaint.js';
-import { createEngine, renderOffline, midiEvent } from './engine.js';
+import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
+import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 
 const $ = id => document.getElementById(id);
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -321,10 +390,30 @@ const store = {
 function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms || 2600); }
 
 // ---------------------------------------------------------------- patch state
-let user = (store.get('filament_user', []) || []).filter(p => p && typeof p === 'object').map(normalize);
-let saved = store.get('filament_cur', null);
-let cur = saved && saved.patch ? normalize(saved.patch) : clone(FACTORY.find(p => p.name === 'Wide Novachord Strings') || FACTORY[0]);
-let curKey = saved && saved.key ? saved.key : 'f:' + cur.name;
+// Two devices in the rack, each with its own current patch, edit flag and user patches. The
+// globals cur, curKey, edited and user always belong to the active device (dev); the other
+// device's are parked in DS until the rail switches back.
+const DEVS = {
+  filament: { name: 'Filament', factory: FACTORY, cats: CATS, normalize, def: DEFAULT, enums: ENUMS, kCur: 'filament_cur', kUser: 'filament_user', first: 'Wide Novachord Strings' },
+  cathode: { name: 'Cathode', factory: C_FACTORY, cats: C_CATS, normalize: normalizeC, def: C_DEFAULT, enums: C_ENUMS, kCur: 'cathode_cur', kUser: 'cathode_user', first: 'Plate Screamer' },
+};
+const D = () => DEVS[dev];
+function loadDevState(d) {
+  const X = DEVS[d];
+  const user = (store.get(X.kUser, []) || []).filter(p => p && typeof p === 'object').map(X.normalize);
+  const saved = store.get(X.kCur, null);
+  const cur = saved && saved.patch ? X.normalize(saved.patch) : clone(X.factory.find(p => p.name === X.first) || X.factory[0]);
+  let curKey = saved && saved.key ? saved.key : 'f:' + cur.name;
+  const all = X.factory.map(p => ({ key: 'f:' + p.name, p })).concat(user.map(p => ({ key: 'u:' + p.name, p })));
+  if (saved && saved.key && !all.some(x => x.key === saved.key)) curKey = 'f:' + X.factory[0].name;
+  let edited = false;
+  if (saved && saved.patch) { const base = all.find(x => x.key === curKey); edited = !!base && JSON.stringify(base.p) !== JSON.stringify(X.normalize(saved.patch)); }
+  return { cur, curKey, edited, user };
+}
+const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode') };
+let dev = store.get('synth_dev', 'filament') === 'cathode' ? 'cathode' : 'filament';
+let { cur, curKey, edited, user } = DS[dev];
+document.body.dataset.dev = dev;
 
 // ---------------------------------------------------------------- audio
 let ctx = null, E = null, enginePromise = null, started = false;
@@ -367,7 +456,7 @@ function pushPatch(load) {
   pushT = requestAnimationFrame(() => {
     pushT = 0; const l = pushLoad; pushLoad = false;
     withEngine(() => E.setPatch(cur, l));
-    store.set('filament_cur', { key: curKey, patch: cur });
+    store.set(D().kCur, { key: curKey, patch: cur });
   });
 }
 
@@ -400,34 +489,40 @@ const one = v => v.toFixed(1);
 const LOG = (lo, hi) => ({ to: p => lo * Math.pow(hi / lo, p), from: v => Math.log(Math.max(lo, v) / lo) / Math.log(hi / lo) });
 const LIN = { to: p => p, from: v => v };
 
-// A knob bound to a patch path. Log knobs run on a 0..1 position and show the mapped value.
+// The device a control belongs to: its section's data-dev, or null for the shared rack.
+const devOfEl = el => { const h = el.closest('section[data-dev]'); return h ? h.dataset.dev : null; };
+const patchOf = d => (!d || d === dev ? cur : DS[d].cur);
+// A knob bound to a patch path. Log knobs run on a 0..1 position (or -1..1, pmin) and show the mapped value.
+// Knobs are keyed 'device:path' (shared rack knobs by path alone): both devices have a tune knob.
 function K(hostId, path, label, o) {
-  const map = o.map || LIN, host = $(hostId);
-  const min = o.map ? 0 : o.min, max = o.map ? 1 : o.max, step = o.step || (o.map ? 0.001 : (max - min) / 200);
-  const def = map.from(getPath(DEFAULT, path));
+  const map = o.map || LIN, host = $(hostId), kd = o.dev || devOfEl(host), key = kd ? kd + ':' + path : path;
+  const min = o.map ? (o.pmin || 0) : o.min, max = o.map ? 1 : o.max, step = o.step || (o.map ? 0.001 : (max - min) / 200);
+  const def = map.from(getPath(DEVS[kd || 'filament'].def, path));
   const k = makeKnob(host, {
-    label, min, max, step, value: map.from(getPath(cur, path)), def,
+    label, min, max, step, value: map.from(getPath(patchOf(kd), path)), def,
     fmt: p => (o.fmt || one)(map.to(p)), title: o.title || label,
     onChange: p => { let v = map.to(p); if (o.round) v = Math.round(v); setPath(cur, path, v); afterChange(path); pushPatch(false); },
   });
   k.el.dataset.path = path;
-  k.el.addEventListener('pointerdown', () => { if (learning) armLearn(path); });
-  KN[path] = { k, map };
+  if (o.dev) k.el.dataset.dev = o.dev;
+  k.el.addEventListener('pointerdown', () => { if (learning) armLearn(key); });
+  KN[key] = { k, map, path, dev: kd };
   return k;
 }
+const kn = (path, d) => KN[(d || dev) + ':' + path] || KN[path];
 function chips(el, path, opts, labels) {
-  const p = el.dataset.chips || path;
-  const list = opts || ENUMS[p] || [];
+  const p = el.dataset.chips || path, kd = devOfEl(el), key = kd ? kd + ':' + p : p;
+  const X = DEVS[kd || 'filament'], list = opts || X.enums[p] || [];
   el.innerHTML = '';
   list.forEach(v => {
     const b = document.createElement('button'); b.className = 'chip'; b.type = 'button';
     b.textContent = (labels && labels[v]) || String(v); b.dataset.v = String(v);
-    b.addEventListener('click', () => { const val = typeof getPath(DEFAULT, p) === 'number' ? +v : v; setPath(cur, p, val); refreshChips(p); afterChange(p); pushPatch(false); });
+    b.addEventListener('click', () => { const val = typeof getPath(X.def, p) === 'number' ? +v : v; setPath(cur, p, val); refreshChips(key); afterChange(p); pushPatch(false); });
     el.appendChild(b);
   });
-  CH[p] = el; refreshChips(p);
+  CH[key] = { el, path: p, dev: kd }; refreshChips(key);
 }
-function refreshChips(p) { const el = CH[p]; if (!el) return; const v = String(getPath(cur, p)); el.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function refreshChips(key) { const c = CH[key]; if (!c || (c.dev && c.dev !== dev)) return; const v = String(getPath(cur, c.path)); c.el.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
 
 const WAVE_L = { saw: 'saw', pulse: 'pulse', tri: 'tri', sine: 'sine' };
 document.querySelectorAll('[data-chips]').forEach(el => {
@@ -440,6 +535,9 @@ document.querySelectorAll('[data-chips]').forEach(el => {
     'out.topology': { se: 'single ended', pp: 'push-pull' },
     'out.cab': { console: "console '40s", bakelite: "Bakelite '50s", horn: "theater horn", monitor: 'studio monitor' },
     'out.room': { living: 'living room', studio: 'studio', theater: 'theater', hall: 'hall' },
+    'vco1.scale': { 32: "32'", 16: "16'", 8: "8'", 4: "4'" }, 'vco2.scale': { 32: "32'", 16: "16'", 8: "8'", 4: "4'" },
+    'vco1.wave': { tri: 'tri', saw: 'saw', pulse: 'pulse', noise: 'noise' }, 'vco2.wave': { saw: 'saw', square: 'square', narrow: 'narrow', ring: 'ring' },
+    'pm.dest': { both: 'both VCOs', vco2: 'VCO 2 only' },
   }[p];
   chips(el, p, p === 'sub.oct' ? [1, 2] : null, labels || (p.endsWith('wave') ? WAVE_L : null));
 });
@@ -494,8 +592,8 @@ K('kCtl', 'mw.vib', 'whl vib', { title: 'Mod wheel to vibrato depth', min: 0, ma
 K('kCtl', 'mw.cut', 'whl cut', { title: 'Mod wheel to filter cutoff', min: -4, max: 4, step: 0.05, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'oct' });
 K('kCtl', 'at.cut', 'AT cut', { title: 'Aftertouch (key pressure) to filter cutoff', min: -4, max: 4, step: 0.05, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'oct' });
 K('kCtl', 'at.vib', 'AT vib', { title: 'Aftertouch (key pressure) to vibrato depth', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c' });
-K('kStereo', 'stereo.spread', 'spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'How far voices spread across the field' });
-K('kStereo', 'stereo.uspread', 'uni spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Unison spread: how far unison copies fan out across the field' });
+K('kStereo', 'stereo.spread', 'spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'How far voices spread across the field', dev: 'filament' });
+K('kStereo', 'stereo.uspread', 'uni spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Unison spread: how far unison copies fan out across the field', dev: 'filament' });
 K('kStereo', 'out.width', 'width', { min: 0, max: 200, step: 1, fmt: v => Math.round(v) + '%', title: 'Mid/side width. 0 folds to mono; never flips polarity.' });
 K('kStereo', 'out.wChar', 'width char', { min: 3, max: 20, step: 0.5, fmt: v => v.toFixed(1) + 'ms' });
 K('kOut', 'out.drive', 'drive', { min: 0, max: 10, step: 0.1 });
@@ -517,12 +615,52 @@ K('kRoom', 'out.rmMix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round
 K('kRoom', 'out.rmDecay', 'decay', { min: 0.2, max: 6, step: 0.05, fmt: v => v.toFixed(2) + 's' });
 K('kRoom', 'out.rmTone', 'tone', { min: 0, max: 10, step: 0.1 });
 
+// ---- Cathode ----
+const BSQ = m => ({ to: p => m * p * Math.abs(p), from: v => Math.sign(v) * Math.sqrt(Math.abs(v) / m) });     // square law: fine near 0
+const fmtSt = v => Math.abs(v) < 0.995 ? (v > 0 ? '+' : '') + Math.round(v * 100) + 'c' : (v > 0 ? '+' : '') + v.toFixed(1) + 'st';
+const fmtOct5 = v => Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '') + (v * 5).toFixed(1) + 'oct';
+const fmtPk = v => (v * 10).toFixed(1);
+const fmtHzR = v => v < 1 ? v.toFixed(2) + 'Hz' : v.toFixed(1) + 'Hz';
+const fmtBias = v => v < 0 ? 'cold ' + (-v).toFixed(1) : v > 0 ? 'hot ' + v.toFixed(1) : '0';
+K('kCV1', 'vco1.pw', 'pw', { min: 0.05, max: 0.95, step: 0.01, fmt: pct, title: 'Pulse width (the pulse wave)' });
+K('kCV1', 'vco1.level', 'level', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'VCO 1 into the mix' });
+K('kCV2', 'vco2.semi', 'semi', { min: -12, max: 12, step: 1, round: true, fmt: v => (v > 0 ? '+' : '') + v });
+K('kCV2', 'vco2.fine', 'fine', { min: -50, max: 50, step: 1, fmt: v => (v > 0 ? '+' : '') + Math.round(v) + 'c' });
+K('kCV2', 'vco2.level', 'level', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'VCO 2 into the mix' });
+K('kCPm', 'pm.a', 'A: MG', { map: BSQ(24), pmin: -1, fmt: fmtSt, title: 'Depth of whatever reaches PM A (the MG unless a cable is patched)' });
+K('kCPm', 'pm.b', 'B: EG 1', { map: BSQ(24), pmin: -1, fmt: fmtSt, title: 'Depth of whatever reaches PM B (EG 1 unless a cable is patched)' });
+K('kCPm', 'tune', 'tune', { min: -100, max: 100, step: 1, fmt: v => (v > 0 ? '+' : '') + Math.round(v) + 'c' });
+K('kCPm', 'drift', 'drift', { min: 0, max: 8, step: 0.1, fmt: v => v.toFixed(1) + 'c', title: 'Slow random pitch wander, VCO 2 a little apart from VCO 1' });
+K('kCCtl', 'ctl.glide', 'glide', { min: 0, max: 2, step: 0.005, fmt: v => v === 0 ? 'off' : fmtS(v) });
+K('kCCtl', 'ctl.bend', 'bend', { min: 0, max: 12, step: 1, round: true, fmt: v => '±' + v });
+K('kCCtl', 'ctl.wheel', 'whl vib', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c', title: 'Mod wheel: MG to pitch, this deep at full' });
+K('kCTubes', 'drive.amount', 'V1 drive', { min: 0, max: 10, step: 0.1 });
+K('kCTubes', 'drive.bias', 'V1 bias', { min: -5, max: 5, step: 0.1, fmt: fmtBias, title: 'Operating point: hot adds even harmonics' });
+K('kCTubes', 'follow.drive', 'V2 drive', { min: 0, max: 10, step: 0.1, title: 'How hard the low-pass pushes the follower' });
+[['kCHpf', 'hpf', LOG(20, 8000)], ['kCLpf', 'lpf', LOG(30, 18000)]].forEach(([h, f, m]) => {
+  K(h, f + '.cutoff', 'cutoff', { map: m, fmt: fmtHz });
+  K(h, f + '.peak', 'peak', { min: 0, max: 1, step: 0.005, fmt: fmtPk, title: 'Resonance. Self-oscillates from about 8.' });
+  K(h, f + '.a', 'A: MG', { min: -1, max: 1, step: 0.01, fmt: fmtOct5, title: 'Depth of whatever reaches ' + (f === 'hpf' ? 'HPF' : 'LPF') + ' A (the MG unless patched)' });
+  K(h, f + '.b', 'B: EG 2', { min: -1, max: 1, step: 0.01, fmt: fmtOct5, title: 'Depth of whatever reaches ' + (f === 'hpf' ? 'HPF' : 'LPF') + ' B (EG 2 unless patched)' });
+  K(h, f + '.kt', 'key trk', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Key tracking: 100% follows the keyboard exactly' });
+});
+K('kCMg', 'mg.rate', 'rate', { map: LOG(0.05, 40), fmt: fmtHzR });
+K('kCMg', 'mg.shape', 'shape', { min: 0, max: 1, step: 0.01, fmt: v => v < 0.03 ? 'ramp dn' : v > 0.97 ? 'ramp up' : Math.abs(v - 0.5) < 0.03 ? 'tri' : pct(v) });
+K('kCEg1', 'eg1.delay', 'delay', { min: 0, max: 3, step: 0.005, fmt: v => v === 0 ? '0' : fmtS(v) });
+K('kCEg1', 'eg1.a', 'attack', { map: T, fmt: fmtS }); K('kCEg1', 'eg1.r', 'release', { map: TR, fmt: fmtS });
+K('kCEg2', 'eg2.hold', 'hold', { min: 0, max: 3, step: 0.005, fmt: v => v === 0 ? '0' : fmtS(v) });
+K('kCEg2', 'eg2.a', 'attack', { map: T, fmt: fmtS }); K('kCEg2', 'eg2.d', 'decay', { map: LOG(0.003, 10), fmt: fmtS });
+K('kCEg2', 'eg2.s', 'sustain', { min: 0, max: 1, step: 0.01, fmt: pct }); K('kCEg2', 'eg2.r', 'release', { map: TR, fmt: fmtS });
+K('kCVca', 'vca.level', 'level', { min: 0, max: 1, step: 0.01, fmt: pct });
+K('kCVca', 'vca.vel', 'velocity', { min: 0, max: 1, step: 0.01, fmt: pct });
+K('kCVca', 'vca.bias', 'bias', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Opens the VCA with no key: a drone' });
+
 function toggle(id, path, label) {
-  const b = $(id);
+  const b = $(id), td = devOfEl(b);
   b.addEventListener('click', () => { setPath(cur, path, !getPath(cur, path)); afterChange(path); pushPatch(false); });
-  return () => { const on = !!getPath(cur, path); b.setAttribute('aria-pressed', String(on)); if (label) b.textContent = label(on); };
+  return () => { if (td && td !== dev) return; const on = !!getPath(cur, path); b.setAttribute('aria-pressed', String(on)); if (label) b.textContent = label(on); };
 }
-const TG = [toggle('syncBtn', 'osc2.sync'), toggle('wOnBtn', 'out.wOn', on => on ? 'width on' : 'width off'),
+const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), toggle('wOnBtn', 'out.wOn', on => on ? 'width on' : 'width off'),
             toggle('spkOnBtn', 'out.spkOn', on => on ? 'on' : 'off'), toggle('roomOnBtn', 'out.roomOn', on => on ? 'on' : 'off'),
             toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off')];
 // touching a bypassed module's control switches it on (the /otr rack rule)
@@ -533,39 +671,57 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('wOnBtn', 'out.wOn', on => on
 // Whatever depends on more than one control.
 function afterChange(path) {
   TG.forEach(f => f());
-  const valve = cur.filt.model === 'valve12';
-  $('loopChips').style.display = valve ? '' : 'none';
-  ['filt.sag', 'filt.bias'].forEach(p => { KN[p].k.el.style.display = valve ? '' : 'none'; });
-  $('filtNote').textContent = valve
-    ? 'Valve 12: 2-pole lowpass with V2 in its resonance loop. Triodes sing, power tubes scream.'
-    : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
+  if (dev === 'cathode') afterC(path); else afterF();
   $('spkPilot').classList.toggle('off', !cur.out.spkOn); $('roomPilot').classList.toggle('off', !cur.out.roomOn);
   $('mSpk').classList.toggle('off', !cur.out.spkOn); $('mRoom').classList.toggle('off', !cur.out.roomOn);
   $('ensPilot').classList.toggle('off', !cur.ens.on); $('mEns').classList.toggle('off', !cur.ens.on);
-  const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
-  $('lfo2Pilot').classList.toggle('off', !l2on);
-  KN['voice.detune'].k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; KN['stereo.uspread'].k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
-  $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube; $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
+  $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
   $('topoV4').textContent = cur.out.topology === 'pp' ? 'PP' : 'SE';
-  document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
   if (path && !String(path).startsWith('__')) markEdited();
 }
+function afterC(path) {
+  $('nameV1').textContent = cur.drive.tube; $('nameV2').textContent = cur.follow.tube; $('roleV2').textContent = 'V2 follow';
+  document.querySelector('[data-t="v2"]').classList.remove('off');
+  $('cv2Pilot').classList.toggle('off', !(cur.vco2.level > 0) && !cur.cables.some(c => c[0] === 'vco2'));
+  $('patchPilot').classList.toggle('off', !cur.cables.length);
+  // knobs that scale a jack say what is reaching it
+  [['pm.a', 'pmA', 'A'], ['pm.b', 'pmB', 'B'], ['hpf.a', 'hpA', 'A'], ['hpf.b', 'hpB', 'B'], ['lpf.a', 'lpA', 'A'], ['lpf.b', 'lpB', 'B']].forEach(([p, jin, l]) => {
+    const K_ = kn(p, 'cathode'); if (!K_) return;
+    const c = cur.cables.find(x => x[1] === jin), src = c ? c[0] : C_NORM[jin];
+    const t = l + ': ' + SRC_SHORT[src];
+    const lab = K_.k.el.querySelector('.kl'); if (lab.textContent !== t) { lab.textContent = t; K_.k.el.setAttribute('aria-label', t); }
+  });
+  refreshJacks(); drawCables();
+}
+function afterF() {
+  const valve = cur.filt.model === 'valve12';
+  $('roleV2').textContent = 'V2 loop';
+  $('loopChips').style.display = valve ? '' : 'none';
+  ['filt.sag', 'filt.bias'].forEach(p => { kn(p).k.el.style.display = valve ? '' : 'none'; });
+  $('filtNote').textContent = valve
+    ? 'Valve 12: 2-pole lowpass with V2 in its resonance loop. Triodes sing, power tubes scream.'
+    : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
+  const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
+  $('lfo2Pilot').classList.toggle('off', !l2on);
+  kn('voice.detune').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
+  $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube;
+  document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
+}
 function refreshAll() {
-  Object.keys(KN).forEach(p => { const { k, map } = KN[p]; k.set(map.from(getPath(cur, p))); });
+  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; e.k.set(e.map.from(getPath(cur, e.path))); });
   Object.keys(CH).forEach(refreshChips);
   afterChange('__load');
 }
 
 // ---------------------------------------------------------------- patch list
-let edited = false;
 function markEdited() { if (!edited) { edited = true; fillSelect(); } }
-function allPatches() { return FACTORY.map(p => ({ key: 'f:' + p.name, p, user: false })).concat(user.map(p => ({ key: 'u:' + p.name, p, user: true }))); }
+function allPatches() { return D().factory.map(p => ({ key: 'f:' + p.name, p, user: false })).concat(user.map(p => ({ key: 'u:' + p.name, p, user: true }))); }
 function fillSelect() {
   const sel = $('patchSel'); sel.innerHTML = '';
   if (edited) { const o = document.createElement('option'); o.value = '__edit'; o.textContent = '* ' + cur.name + ' (edited)'; sel.appendChild(o); }
-  CATS.forEach(c => {
+  D().cats.forEach(c => {
     const g = document.createElement('optgroup'); g.label = c;
-    FACTORY.filter(p => p.cat === c).forEach(p => { const o = document.createElement('option'); o.value = 'f:' + p.name; o.textContent = p.name; g.appendChild(o); });
+    D().factory.filter(p => p.cat === c).forEach(p => { const o = document.createElement('option'); o.value = 'f:' + p.name; o.textContent = p.name; g.appendChild(o); });
     if (g.children.length) sel.appendChild(g);
   });
   if (user.length) { const g = document.createElement('optgroup'); g.label = 'Yours';
@@ -585,28 +741,180 @@ $('saveP').addEventListener('click', () => { $('saveForm').classList.add('open')
 $('saveNo').addEventListener('click', () => $('saveForm').classList.remove('open'));
 function doSave() {
   const name = $('saveName').value.trim().slice(0, 40); if (!name) return;
-  if (FACTORY.some(p => p.name === name)) { toast('That name belongs to a factory patch.'); return; }
-  cur.name = name; const p = normalize(cur);
-  user = user.filter(u => u.name !== name).concat([p]); store.set('filament_user', user);
+  if (D().factory.some(p => p.name === name)) { toast('That name belongs to a factory patch.'); return; }
+  cur.name = name; const p = D().normalize(cur);
+  user = user.filter(u => u.name !== name).concat([p]); store.set(D().kUser, user);
   curKey = 'u:' + name; edited = false; fillSelect(); $('saveForm').classList.remove('open');
-  store.set('filament_cur', { key: curKey, patch: cur }); toast('Saved "' + name + '" in this browser.');
+  store.set(D().kCur, { key: curKey, patch: cur }); toast('Saved "' + name + '" in this browser.');
 }
 $('saveOk').addEventListener('click', doSave);
 $('saveName').addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); if (e.key === 'Escape') $('saveForm').classList.remove('open'); e.stopPropagation(); });
 $('delP').addEventListener('click', () => {
   if (!curKey.startsWith('u:')) return; const name = curKey.slice(2);
-  user = user.filter(u => u.name !== name); store.set('filament_user', user); toast('Deleted "' + name + '".'); loadKey('f:' + FACTORY[0].name);
+  user = user.filter(u => u.name !== name); store.set(D().kUser, user); toast('Deleted "' + name + '".'); loadKey('f:' + D().factory[0].name);
 });
-if (saved && saved.key && !allPatches().some(x => x.key === saved.key)) curKey = 'f:' + FACTORY[0].name;
-if (saved && saved.patch) { const base = allPatches().find(x => x.key === curKey); edited = !!base && JSON.stringify(base.p) !== JSON.stringify(normalize(saved.patch)); }
+
+// ---------------------------------------------------------------- the rack rail
+// The keyboard, wheels and MIDI play the lit device; the panel, patch list and chassis show it.
+function setDevice(d) {
+  d = d === 'cathode' ? 'cathode' : 'filament';
+  if (d === dev) return;
+  [...down.keys()].forEach(n => { down.set(n, 1); noteOff(n); });     // let go on the old device first
+  if (sustainOn) setSustain(false);
+  if (PP.armed) arm(null);
+  store.set(D().kCur, { key: curKey, patch: cur });
+  DS[dev] = { cur, curKey, edited, user };
+  dev = d; ({ cur, curKey, edited, user } = DS[d]);
+  showDevice();
+  store.set('synth_dev', d);
+  if (document.body.dataset.tab === 'patch' && d !== 'cathode') goTab('play');
+  withEngine(() => E.setDevice(d, cur));
+  refreshAll(); fillSelect(); $('saveForm').classList.remove('open');
+}
+function showDevice() {
+  document.body.dataset.dev = dev;
+  $('devF').setAttribute('aria-pressed', String(dev === 'filament')); $('devC').setAttribute('aria-pressed', String(dev === 'cathode'));
+  $('devTitle').innerHTML = dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
+}
+document.querySelectorAll('.devbtn').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.d)));
+showDevice();
+
+// ---------------------------------------------------------------- Cathode patch panel
+// Click (or tap, or Enter) an output and then an input, or the other way round; or drag between
+// them. A click on a patched input pulls its cable; dragging a patched input's plug moves it, or
+// pulls it if dropped anywhere but another input. One cable per input, any number per output.
+const PP = { armed: null, drag: null, els: { out: {}, in: {} } };
+const CABLE_COL = ['#ffb347', '#00ff9d', '#7a9fff', '#ff6b6b', '#e8e2d0', '#d38cff'];
+function buildJacks() {
+  const host = $('jackfield'); host.innerHTML = '';
+  JACK_GROUPS.forEach(g => {
+    const gr = document.createElement('div'); gr.className = 'jgroup';
+    const gl = document.createElement('span'); gl.className = 'gl'; gl.textContent = g.name; gr.appendChild(gl);
+    const ro = document.createElement('div'); ro.className = 'jrow outs'; g.out.forEach(id => ro.appendChild(jackEl('out', id, JACK_LABEL[id])));
+    const ri = document.createElement('div'); ri.className = 'jrow ins'; g.in.forEach(id => ri.appendChild(jackEl('in', id, inLabel(id))));
+    gr.appendChild(ro); gr.appendChild(ri); host.appendChild(gr);
+  });
+}
+function jackEl(kind, id, label) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'jack ' + kind; b.dataset.kind = kind; b.dataset.id = id;
+  b.innerHTML = '<i></i><span></span><small></small>'; b.querySelector('span').textContent = label;
+  PP.els[kind][id] = b; return b;
+}
+function refreshJacks() {
+  const cab = cur.cables || [];
+  C_SRC.forEach(id => {
+    const b = PP.els.out[id], n = cab.filter(c => c[0] === id).length, sm = b.querySelector('small');
+    sm.textContent = n ? n + (n > 1 ? ' cables' : ' cable') : 'out'; sm.className = n ? 'pt' : '';
+    b.setAttribute('aria-label', JACK_LABEL[id] + ' output' + (n ? ', ' + n + (n > 1 ? ' cables' : ' cable') : ''));
+  });
+  C_IN.forEach(id => {
+    const b = PP.els.in[id], c = cab.find(x => x[1] === id), sm = b.querySelector('small'), nm = C_NORM[id];
+    sm.textContent = c ? '\u2190 ' + SRC_SHORT[c[0]] : nm ? 'norm ' + SRC_SHORT[nm] : 'open'; sm.className = c ? 'pt' : '';
+    b.setAttribute('aria-label', inLabel(id) + ' input, ' + (c ? 'patched from ' + JACK_LABEL[c[0]] : nm ? 'normalled to ' + JACK_LABEL[nm] : 'nothing patched'));
+  });
+  const A = PP.armed;
+  document.querySelectorAll('#jackfield .jack').forEach(b => b.classList.toggle('armed', !!A && b.dataset.kind === A.kind && b.dataset.id === A.id));
+}
+function sockAt(el, r0) { const r = el.querySelector('i').getBoundingClientRect(); return [r.left + r.width / 2 - r0.left, r.top + r.height / 2 - r0.top]; }
+function cablePath(a, b, col, op, temp) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy), sag = Math.min(90, 16 + d * 0.22);
+  const p = 'M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' C' + (a[0] + dx * 0.15).toFixed(1) + ' ' + (a[1] + sag).toFixed(1) + ' ' +
+    (b[0] - dx * 0.15).toFixed(1) + ' ' + (b[1] + sag).toFixed(1) + ' ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1);
+  return '<path d="' + p + '" stroke="rgba(0,0,0,0.6)" stroke-width="7" opacity="' + op + '"/>' +
+    '<path class="cable" d="' + p + '" stroke="' + col + '" stroke-width="4" opacity="' + op + '"' + (temp ? ' stroke-dasharray="7 5"' : '') + '/>' +
+    '<circle cx="' + a[0].toFixed(1) + '" cy="' + a[1].toFixed(1) + '" r="6.5" fill="' + col + '" opacity="' + op + '"/>' +
+    (temp ? '' : '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1) + '" r="6.5" fill="' + col + '" opacity="' + op + '"/>');
+}
+function drawCables(temp) {
+  const svg = $('cablesSvg'), sec = $('mCPatch');
+  if (dev !== 'cathode' || !sec.offsetParent) return;
+  const r0 = sec.getBoundingClientRect(); let h = '';
+  (cur.cables || []).forEach((c, i) => {
+    const a = PP.els.out[c[0]], b = PP.els.in[c[1]]; if (!a || !b) return;
+    const lifted = PP.drag && PP.drag.moved && PP.drag.liftSrc && PP.drag.id === c[1];
+    h += cablePath(sockAt(a, r0), sockAt(b, r0), CABLE_COL[i % CABLE_COL.length], lifted ? 0.18 : 0.92, false);
+  });
+  if (temp) h += cablePath(temp.a, temp.b, temp.col || '#ffffff', 0.95, true);
+  svg.innerHTML = h;
+}
+function pstat(t) { $('patchStat').textContent = t; }
+function cablesChanged() { afterChange('cables'); pushPatch(false); }
+function connect(src, inp) {
+  cur.cables = normCables((cur.cables || []).filter(c => c[1] !== inp).concat([[src, inp]]));
+  pstat(JACK_LABEL[src] + ' \u2192 ' + inLabel(inp) + ': patched.');
+  cablesChanged();
+}
+function unplug(inp) {
+  if (!(cur.cables || []).some(c => c[1] === inp)) return;
+  cur.cables = cur.cables.filter(c => c[1] !== inp);
+  const nm = C_NORM[inp];
+  pstat(inLabel(inp) + ' unplugged' + (nm ? ': back to its normal, ' + JACK_LABEL[nm] + '.' : '.'));
+  cablesChanged();
+}
+function arm(kind, id) { PP.armed = kind ? { kind, id } : null; refreshJacks(); }
+function jackActivate(kind, id) {
+  const A = PP.armed;
+  if (A && A.kind === kind && A.id === id) { arm(null); pstat('Cancelled.'); return; }
+  if (A && A.kind !== kind) { if (kind === 'in') connect(A.id, id); else connect(id, A.id); arm(null); return; }
+  if (kind === 'in' && (cur.cables || []).some(c => c[1] === id)) { unplug(id); return; }
+  arm(kind, id);
+  pstat(kind === 'out' ? JACK_LABEL[id] + ': now choose an input.' : inLabel(id) + ': now choose an output to feed it.');
+}
+function jackAt(x, y) { const el = document.elementFromPoint(x, y), j = el && el.closest && el.closest('.jack'); return j && $('jackfield').contains(j) ? j : null; }
+{
+  const jf = $('jackfield');
+  buildJacks();
+  jf.addEventListener('pointerdown', e => {
+    const j = e.target.closest('.jack'); if (!j) return;
+    e.preventDefault(); j.focus({ preventScroll: true });
+    try { jf.setPointerCapture(e.pointerId); } catch (err) {}
+    const kind = j.dataset.kind, id = j.dataset.id, c = kind === 'in' ? (cur.cables || []).find(x => x[1] === id) : null;
+    PP.drag = { pid: e.pointerId, kind, id, x: e.clientX, y: e.clientY, moved: false, liftSrc: c ? c[0] : null };
+  });
+  jf.addEventListener('pointermove', e => {
+    const d = PP.drag; if (!d || d.pid !== e.pointerId) return;
+    if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return;
+    d.moved = true;
+    const r0 = $('mCPatch').getBoundingClientRect();
+    const from = d.liftSrc ? PP.els.out[d.liftSrc] : PP.els[d.kind][d.id];
+    const t = jackAt(e.clientX, e.clientY);
+    document.querySelectorAll('#jackfield .jack.target').forEach(b => { if (b !== t) b.classList.remove('target'); });
+    const want = d.liftSrc ? 'in' : d.kind === 'out' ? 'in' : 'out';
+    if (t && t.dataset.kind === want) t.classList.add('target');
+    drawCables({ a: sockAt(from, r0), b: [e.clientX - r0.left, e.clientY - r0.top] });
+  });
+  const end = e => {
+    const d = PP.drag; if (!d || d.pid !== e.pointerId) return; PP.drag = null;
+    document.querySelectorAll('#jackfield .jack.target').forEach(b => b.classList.remove('target'));
+    if (e.type === 'pointercancel') { drawCables(); return; }
+    if (!d.moved) { jackActivate(d.kind, d.id); drawCables(); return; }
+    const t = jackAt(e.clientX, e.clientY), tk = t && t.dataset.kind, tid = t && t.dataset.id;
+    if (d.liftSrc) {                        // a plug pulled from an input: move it, or pull it out
+      if (tk === 'in' && tid === d.id) { drawCables(); return; }
+      if (tk === 'in') { cur.cables = cur.cables.filter(c => c[1] !== d.id); connect(d.liftSrc, tid); return; }
+      unplug(d.id); return;
+    }
+    if (t && tk !== d.kind) { if (d.kind === 'out') connect(d.id, tid); else connect(tid, d.id); arm(null); return; }
+    drawCables();
+  };
+  ['pointerup', 'pointercancel'].forEach(ev => jf.addEventListener(ev, end));
+  jf.addEventListener('click', e => { if (e.detail !== 0) return; const j = e.target.closest('.jack'); if (j) { jackActivate(j.dataset.kind, j.dataset.id); drawCables(); } });
+  jf.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if (PP.armed) { arm(null); pstat('Cancelled.'); } e.stopPropagation(); }
+    else if (e.key === ' ' || e.key === 'Enter') e.stopPropagation();
+  });
+  $('unplugAll').addEventListener('click', () => { if (!(cur.cables || []).length) return; cur.cables = []; arm(null); pstat('Every cable pulled: the normals are back.'); cablesChanged(); });
+  if (window.ResizeObserver) new ResizeObserver(() => drawCables()).observe($('mCPatch'));
+  window.addEventListener('resize', () => drawCables());
+}
 refreshAll(); fillSelect();
 
 // ---------------------------------------------------------------- phone tabs
-function goTab(t) { document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); }
+function goTab(t) { if (t === 'patch' && dev !== 'cathode') t = 'play'; document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables()); }
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
 document.querySelectorAll('.tube[data-tab-go]').forEach(f => f.addEventListener('click', () => {
   const t = f.dataset.tabGo; goTab(t);
-  const sec = t === 'rack' ? $('mOut') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');
+  const sec = t === 'rack' ? $('mOut') : dev === 'cathode' ? $('mCTubes') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');
   sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }));
 goTab(store.get('filament_tab', 'play') || 'play');
@@ -658,7 +966,7 @@ $('keys').addEventListener('pointermove', e => {
   if (n == null || n === was) return;
   ptrs.set(e.pointerId, n);
   // slide: in mono modes press the new key first so it glides; in poly let go first
-  if (cur.voice.mode !== 'poly') { noteOn(n, velAt(keyEls.get(n), e.clientY)); noteOff(was); }
+  if (dev === 'cathode' || cur.voice.mode !== 'poly') { noteOn(n, velAt(keyEls.get(n), e.clientY)); noteOff(was); }
   else { noteOff(was); noteOn(n, velAt(keyEls.get(n), e.clientY)); }
 });
 const ptrUp = e => { if (!ptrs.has(e.pointerId)) return; const n = ptrs.get(e.pointerId); ptrs.delete(e.pointerId); noteOff(n); };
@@ -732,11 +1040,12 @@ function midiMsg(e) {
       break;
   }
 }
-function learnCC(c) { Object.keys(ccMap).forEach(k => { if (ccMap[k] === learnPath) delete ccMap[k]; }); ccMap[c] = learnPath; store.set('filament_midimap', ccMap); toast('CC ' + c + ' now moves ' + learnPath); learnPath = null; document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); showCC(); }
+const knByKey = key => KN[key] || KN['filament:' + key];    // maps saved before Cathode used bare paths
+function learnCC(c) { Object.keys(ccMap).forEach(k => { if (ccMap[k] === learnPath) delete ccMap[k]; }); ccMap[c] = learnPath; store.set('filament_midimap', ccMap); toast('CC ' + c + ' now moves ' + learnPath.replace(':', ' ')); learnPath = null; document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); showCC(); }
 function ccTo(c, v01) {
-  const p = ccMap[c], K = KN[p]; if (!K) return;
+  const K = knByKey(ccMap[c]); if (!K || (K.dev && K.dev !== dev)) return;
   const lo = +K.k.el.getAttribute('aria-valuemin'), hi = +K.k.el.getAttribute('aria-valuemax');
-  K.k.set(lo + (hi - lo) * v01); let v = K.map.to(K.k.get()); setPath(cur, p, v); afterChange(p); pushPatch(false);
+  K.k.set(lo + (hi - lo) * v01); let v = K.map.to(K.k.get()); setPath(cur, K.path, v); afterChange(K.path); pushPatch(false);
 }
 function hookInputs() { let names = []; midiAcc.inputs.forEach(i => { i.onmidimessage = midiMsg; names.push(i.name); });
   $('midiState').textContent = names.length ? names[0].slice(0, 16) : 'no device'; $('lampMidi').className = names.length ? 'green' : '';
@@ -747,8 +1056,8 @@ $('midiBtn').addEventListener('click', async () => {
     if (!midiAcc.inputs.size) toast('MIDI is allowed, but no keyboard is plugged in yet.', 4000); }
   catch (e) { toast('MIDI permission was refused.', 4000); }
 });
-function showCC() { document.querySelectorAll('.knob .cc').forEach(x => x.remove()); Object.keys(ccMap).forEach(c => { const K = KN[ccMap[c]]; if (K) { const s = document.createElement('span'); s.className = 'cc'; s.textContent = 'cc' + c; K.k.el.appendChild(s); } }); }
-function armLearn(path) { learnPath = path; document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); KN[path].k.el.classList.add('learn'); toast('Move a knob on your MIDI keyboard to map it to ' + path); }
+function showCC() { document.querySelectorAll('.knob .cc').forEach(x => x.remove()); Object.keys(ccMap).forEach(c => { const K = knByKey(ccMap[c]); if (K) { const s = document.createElement('span'); s.className = 'cc'; s.textContent = 'cc' + c; K.k.el.appendChild(s); } }); }
+function armLearn(key) { learnPath = key; document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); KN[key].k.el.classList.add('learn'); toast('Move a knob on your MIDI keyboard to map it to ' + KN[key].path); }
 $('learnBtn').addEventListener('click', () => { learning = !learning; learnPath = null; $('learnBtn').setAttribute('aria-pressed', String(learning));
   document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); toast(learning ? 'Learn: click a knob, then move a control on your keyboard.' : 'Learn off.'); });
 showCC();
@@ -819,10 +1128,12 @@ function frame(now) {
   const running = ctx && ctx.state === 'running';
   let oL = 0, oR = 0, pk = 0;
   if (E && E.C && E.C.anL && running) { const a = rms(E.C.anL), b = rms(E.C.anR); oL = a[0]; oR = b[0]; pk = Math.max(a[1], b[1]); }
-  const valve = cur.filt.model === 'valve12';
+  const cath = dev === 'cathode', valve = !cath && cur.filt.model === 'valve12';
   const tgt = {
-    v1: { tube: cur.v1.tube, drive: cur.v1.drive, bias: cur.v1.bias, lv: clampN(m.v1 * 3, 0, 1.2), on: true },
-    v2: { tube: cur.filt.tube, drive: 3 + cur.filt.res * 5, bias: cur.filt.bias, lv: clampN(m.v2 * 3, 0, 1.2), on: valve },
+    v1: cath ? { tube: cur.drive.tube, drive: cur.drive.amount, bias: cur.drive.bias, lv: clampN(m.v1 * 3, 0, 1.2), on: true }
+      : { tube: cur.v1.tube, drive: cur.v1.drive, bias: cur.v1.bias, lv: clampN(m.v1 * 3, 0, 1.2), on: true },
+    v2: cath ? { tube: cur.follow.tube, drive: cur.follow.drive, bias: 0, lv: clampN(m.v2 * 3, 0, 1.2), on: true }
+      : { tube: cur.filt.tube, drive: 3 + cur.filt.res * 5, bias: cur.filt.bias, lv: clampN(m.v2 * 3, 0, 1.2), on: valve },
     v3: { tube: cur.out.tube, drive: cur.out.drive, bias: cur.out.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
     v4: { tube: cur.out.tube, drive: cur.out.drive, bias: cur.out.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
   };
@@ -851,13 +1162,19 @@ requestAnimationFrame(frame);
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.2-stereo',
+  version: '0.3-cathode',
   ready: () => !!E,
+  device: () => dev,
+  setDevice: d => setDevice(d),
   patch: () => clone(cur),
-  setPatch: p => { cur = normalize(p); curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur); },
-  load: name => loadKey('f:' + name),
+  setPatch: p => { const np = normalizeAny(p); if (deviceOf(np) !== dev) setDevice(deviceOf(np)); cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur); },
+  load: name => { const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : dev; setDevice(d); loadKey('f:' + name); },
   factory: () => FACTORY.map(p => ({ name: p.name, cat: p.cat })),
   factoryPatch: name => clone(FACTORY.find(p => p.name === name)),
+  cathodeFactory: () => C_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
+  cathodePatch: name => clone(C_FACTORY.find(p => p.name === name)),
+  jacks: () => ({ src: C_SRC.slice(), inp: C_IN.slice(), norm: Object.assign({}, C_NORM) }),
+  cablePaths: () => document.querySelectorAll('#cablesSvg path.cable').length,
   tubes: () => TUBES.map(t => t.id),
   noteOn: (n, v) => noteOn(n, v == null ? 0.8 : v), noteOff: n => noteOff(n),
   meter: () => E ? Object.assign({}, E.meter) : null,
