@@ -100,6 +100,57 @@ Done when: every model self-oscillates where it should; mono fold passes for all
 - [ ] A second Cathode voice for duophonic play, or a poly-chain mode
 - [ ] Cathode on the mod matrix and arpeggiator when those land (they should be rack-wide, not Filament-only)
 
+### MIDI files: recorder and player (James, 13 Oct 2026) - next, ahead of the 0.2 list
+James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
+devices (so Filament and Cathode play at once); built by the nightly job. Two slices; if both do not
+fit in one night, ship slice 1 and leave slice 2 unchecked here.
+- [ ] Slice 1: `smf.js`, the recorder with .mid export, import with the track list, the player
+- [ ] Slice 2: Render WAV (imported file or take, both devices, rack included)
+
+Spec (what "done" means):
+- **Our own Standard MIDI File code** in a new `frontend/public/synth/smf.js`: pure functions, no DOM,
+  no dependency (licensing rule 1; @tonejs/midi is allowed by the register but we do not need it).
+  Read format 0 and 1 (format 2: play its tracks one after another, or refuse with a clear message),
+  running status, note on with velocity 0 as note off, tempo meta events including tempo changes
+  mid-file, time signature, track names, end of track; skip sysex and unknown metas; ticks per quarter
+  division (refuse SMPTE division with a message). Channel events kept: notes, pitch bend, CC 1 (mod
+  wheel), CC 64 (sustain), channel and poly pressure (as aftertouch); program changes ignored. Write
+  format 1 at 480 ticks per quarter: a tempo track (tempo, 4/4) plus one track per device used, each
+  named "Filament: <patch>" or "Cathode: <patch>".
+- **Recorder** (a strip next to the keyboard, phone friendly, 44 px targets): Rec arms; the first
+  note starts the take; it captures notes and velocities, bend, mod wheel, sustain and aftertouch
+  from every input (on-screen keys, computer keys, MIDI keyboard) with the device each event went to.
+  Stop, Play (replays through the same devices), Clear, Export .mid (downloads
+  `filament-take-YYYYMMDD-HHMM.mid`). Show take length and note count.
+- **Import**: a button (file input accepting .mid, .midi, audio/midi) and drag and drop onto the
+  strip. Show file name, length and a track list: name, channel(s), note count, and chips per track
+  for Filament, Cathode or off. Defaults: channel 10 (drums) off, since there is no drum machine yet;
+  a single melodic track goes to the selected device; with several, the first goes to Filament, the
+  lowest-pitched to Cathode, the rest to Filament. Remember assignments while the file stays loaded.
+- **Player**: play, stop, loop, a tempo control (50 to 200% of the file's tempo, the file's own tempo
+  map underneath), position readout, and the on-screen keys light for playback notes. Schedule
+  ahead from the main thread (about 150 ms lookahead, 25 ms timer) and send each event to the worklet
+  with `at` set to its exact frame (the engine already supports timestamped events). Stop sends note
+  offs for every sounding playback note, sustain off, bend 0, wheel 0.
+- **Both devices at once** (engine): add a way to send events to a named device
+  (`E.sendTo(dev, msg)`, creating its node if needed). Today an inactive device lets go of its keys
+  and Cathode fades out on `{t:'active', on:false}`; playback notes routed to the inactive device
+  must still sound, so the fade and the sleep must respect playback (for example a per-device
+  playback flag that holds the device awake while the player runs). The keyboard keeps playing the
+  selected device. The shared rack keeps taking its settings from the selected device's patch.
+- **Render WAV** (slice 2): `renderOffline` grows a two-device form (both patches, events tagged with
+  their device); render the loaded file or the take with the rack, 48 kHz stereo, 16-bit WAV, capped
+  at 10 minutes, with a progress note and a download.
+- **Tests** (scripts/test_synth.py): SMF round trip (write then read gives the same events and
+  timing); hand-built byte fixtures for format 0 and 1 with running status, velocity-0 note offs and a
+  mid-file tempo change, read back to the right times; a measured render of an imported two-note
+  melody (pitch and onset within 5 ms at 120 BPM and after the tempo change); a two-track file with
+  one track on Filament (a chord) and one on Cathode (a bass line) renders both (both sets of
+  frequencies present); channel 10 is off by default; the recorder captures notes driven through
+  `__synth` and its export parses back with timing within 5 ms; the UI imports a file with
+  set_input_files, play lights the keys, stop releases every note, export triggers a download; phone
+  widths have no horizontal scroll with the strip open.
+
 ### 0.3 Delight
 - [ ] 1939 mode (divide-down, LC resonators, seven envelope shapes, six-channel vibrato)
 - [ ] Punched paper roll step sequencer
@@ -122,6 +173,11 @@ Done when: share link round trip test passes.
 
 ## Notes from James
 (write here; the nightly run reads this first)
+- 2026-10-13 (afternoon): **Tonight's run (Oct 13, 11:52 PM) builds MIDI files: recorder and player**,
+  per the spec in its roadmap section above (James chose recorder and player with WAV render, tracks
+  assigned to devices, built by the nightly job). Slice 1 first; slice 2 (Render WAV) the same night
+  if it fits, otherwise the next night. After both slices are ticked, resume the 0.2 list at the
+  graphic EQ. Licensing rule 1 applies: write the MIDI file reader and writer ourselves.
 - 2026-10-13: Cathode (the second device) shipped from an interactive session just after midnight.
   The nightly list carries on at the graphic EQ. When the EQ lands, make it rack-wide (it sits in the
   shared output chain, so both devices' patches carry the same `out` fields).
