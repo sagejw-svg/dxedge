@@ -10,6 +10,18 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
+Full brief: `docs/filament-design.md` (a copy of the project doc, kept in the repo so the nightly
+task can read it).
+
+## Nightly build and bug check (scheduled task, 11:52 PM Pacific)
+1. Bugs first: run `python3 scripts/test_synth.py` and load https://dxedge.net/synth/ headless. Anything
+   failing or broken is the night's work.
+2. Otherwise the next unchecked item below, in order, unless Notes from James says otherwise. One item
+   per night; a big item ships as a coherent slice and the rest is written down here.
+3. Every new feature gets measured tests in the suite. Push to main only on ALL PASS. Never edit /otr.
+4. Tick the item, add a line to the Nightly log (date, what changed, commit, check count, CPU), and
+   note anything that changes how an existing patch sounds so James can listen.
+
 ## Files
 
 | File | What it is |
