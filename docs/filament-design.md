@@ -406,8 +406,9 @@ Answered by James on 13 Oct 2026 in the v0.1 table, recorded here.
 |7|MIDI keyboard|James is buying a small one, so Web MIDI moves into 0.1. Shortlist above; model not yet chosen.|
 |8|Vanity domain|Later|
 |9|An MS-20 style synth (asked 13 Oct)|**Cathode**: an original mono semi-modular, not a copy of Korg's product. Second device in the rack at /synth/, sharing the keyboard, MIDI, meters and output tubes. Patch panel with cables. External audio input not chosen.|
+|10|Other projects' code (13 Oct; this may become a commercial product)|**Reference only** unless the license is permissive: read them for ideas, write our own code. Rules, the register of approved and reference-only resources, and notes on our own rights are in `docs/filament-licensing.md`.|
 
-Still open: which keyboard (see shortlist). Decision 3 resolved on 13 Oct: the tab went live with the first push.
+Still open: which keyboard (see shortlist); a commercial product name, since a music plugin called filament (Forma Labs Audio) shipped in June 2026 (see `docs/filament-licensing.md`); whether the repo stays public and gets a LICENSE before any sale. Decision 3 resolved on 13 Oct: the tab went live with the first push.
 
 ## Automation
 

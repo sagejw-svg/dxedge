@@ -27,6 +27,11 @@ task can read it).
 3. Every new feature gets measured tests in the suite. Push to main only on ALL PASS. Never edit /otr.
 4. Tick the item, add a line to the Nightly log (date, what changed, commit, check count, CPU), and
    note anything that changes how an existing patch sounds so James can listen.
+5. Licensing (this may become a commercial product): follow `docs/filament-licensing.md`. Write our
+   own code. Never copy or line-by-line translate code from GPL, AGPL, LGPL, MPL or CC BY-SA sources,
+   Stack Overflow, or unlicensed code (openDAW, VCV Rack, Surge XT and Cmajor are reference only).
+   Permissive code and CC0 content need a register row in that file before they land. No other
+   company's product names or trademarks in the UI, patches or code.
 
 ## Files
 
@@ -40,6 +45,7 @@ task can read it).
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx` |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
+| `docs/filament-licensing.md` | Licensing rules, the register of approved and reference-only resources, notes on our own rights |
 
 ## Roadmap
 
