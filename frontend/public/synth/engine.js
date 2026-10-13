@@ -1,6 +1,6 @@
 // Filament engine: the voice worklet plus the rack, in any BaseAudioContext.
 // The page uses it live; the tests use it inside an OfflineAudioContext and measure the result.
-import { makeSynthChain, tubeData } from './rack.js';
+import { makeSynthChain, makeEnsemble, tubeData } from './rack.js';
 import { normalize } from './patches.js';
 
 const WORKLET = new URL('./voice.worklet.js', import.meta.url).href;
@@ -31,14 +31,16 @@ export async function createEngine(ctx, opts = {}) {
     node.connect(E.master);
   } else {
     E.C = makeSynthChain(ctx);
-    node.connect(E.C.input);
+    E.ens = makeEnsemble(ctx);
+    node.connect(E.ens.input); E.ens.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
   if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
   node.port.onmessage = e => { const m = e.data; if (m && m.t === 'meter') { E.meter = m; if (E.onMeter) E.onMeter(m); } };
 
   let S = E.C ? rackState(patch) : null;
-  if (E.C) E.C.apply(S);
+  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); }
+  let ensJ = JSON.stringify(patch.ens);
 
   E.patch = () => patch;
   // load: true ducks the voices for the swap (a different patch); false smooths (a knob moved).
@@ -46,6 +48,7 @@ export async function createEngine(ctx, opts = {}) {
     patch = normalize(p);
     node.port.postMessage({ t: 'patch', p: patch, load: !!load });
     if (!E.C) return;
+    const ej = JSON.stringify(patch.ens); if (ej !== ensJ) { E.ens.set(patch.ens); ensJ = ej; }
     const N = rackState(patch), C = E.C;
     const tubeKeys = ['tube', 'drive', 'bias', 'sag', 'tone', 'out', 'topology'];
     const roomRegen = N.room !== S.room || N.rmDecay !== S.rmDecay || N.rmTone !== S.rmTone;

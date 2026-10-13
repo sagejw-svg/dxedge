@@ -184,7 +184,7 @@ with sync_playwright() as pw:
 
     # ---------------------------------------------------------------- 7. mono fold, every factory patch
     names = [f["name"] for f in pg.evaluate("__synth.factory()")]
-    ck("12 factory patches", len(names) == 12, names)
+    ck(f"{len(names)} factory patches (12 or more)", len(names) >= 12, names)
     for n in names:
         P = pg.evaluate("n => __synth.factoryPatch(n)", n)
         chord = [36] if P["cat"] == "Bass" else ([60] if P["voice"]["mode"] != "poly" else [48, 55, 60, 64])
@@ -204,6 +204,90 @@ with sync_playwright() as pw:
         al = db(X[(~harm) & (f > 30) & (f < 20000)].max() / X[harm].max())
         ck(f"8. aliasing: a {wave} at 4 kHz keeps aliases {al:.1f} dB below its strongest harmonic (baseline -45)", al <= -45, al)
 
+    # ---------------------------------------------------------------- S. the stereo round
+    def corr(a, b): return float(np.sum(a * b) / math.sqrt(np.sum(a * a) * np.sum(b * b) + 1e-30))
+    def env(x, w=480): return np.sqrt(np.convolve(x ** 2, np.ones(w) / w, "valid"))
+    def centroid(x):
+        X = np.abs(np.fft.rfft(x * np.hanning(len(x)))); f = np.fft.rfftfreq(len(x), 1 / SR); return float(np.sum(X * f) / np.sum(X))
+    def cents_of_peaks(x, f0, span=30):
+        n = len(x); X = np.abs(np.fft.rfft(x * np.hanning(n), 4 * n)); f = np.fft.rfftfreq(4 * n, 1 / SR)
+        m = (f > f0 * 2 ** (-span / 1200)) & (f < f0 * 2 ** (span / 1200)); Xm, fm = X[m], f[m]
+        pk = [i for i in range(1, len(Xm) - 1) if Xm[i] > Xm[i - 1] and Xm[i] > Xm[i + 1] and Xm[i] > 0.2 * Xm.max()]
+        return sorted(1200 * math.log2(fm[i] / f0) for i in pk)
+    # unison
+    sine1 = patch(osc1={"wave": "sine", "level": 0.8})
+    L1, R1 = render(sine1, note(57), 2.0, rack=False)
+    L4, R4 = render(patch(osc1={"wave": "sine", "level": 0.8}, voice={"unison": 4, "detune": 20}, stereo={"pan": "center", "spread": 0, "uspread": 1}), note(57), 2.0, rack=False)
+    pk = cents_of_peaks(L4[SR // 2:] + R4[SR // 2:], 220)
+    want = [-20, -6.67, 6.67, 20]
+    ck(f"S. unison 4 at 20 cents: four copies at -20, -6.7, +6.7, +20 cents (found {[round(c, 1) for c in pk]})",
+       len(pk) == 4 and all(abs(a - b) < 1.5 for a, b in zip(pk, want)), pk)
+    lv = db(np.sqrt(np.mean((L4[SR // 2:] + R4[SR // 2:]) ** 2)) / np.sqrt(np.mean((L1[SR // 2:] + R1[SR // 2:]) ** 2)))
+    ck(f"S. unison keeps the level within 3 dB of a single voice ({lv:+.1f} dB)", abs(lv) < 3, lv)
+    ck(f"S. unison spread fans the copies across the field (L/R correlation {corr(L4[SR // 2:], R4[SR // 2:]):.2f})", corr(L4[SR // 2:], R4[SR // 2:]) < 0.8)
+    pg.evaluate("__synth.setPatch(Object.assign(__synth.factoryPatch('Seven Filaments'), {}))"); pg.wait_for_timeout(150)
+    pg.evaluate("__synth.noteOn(60, 0.8)"); pg.wait_for_timeout(300)
+    nv = pg.evaluate("__synth.meter().voices"); pg.evaluate("__synth.noteOff(60)")
+    ck(f"S. live: one note on Seven Filaments sounds seven voices ({nv})", nv == 7, nv)
+    # filter stereo offset
+    sp = {"pan": "center", "spread": 0}
+    for model in ("ladder24", "valve12"):
+        L, R = render(patch(filt={"model": model, "cutoff": 600, "offset": 1}, stereo=sp), note(45), 1.5, rack=False)
+        cl, cr = centroid(L[SR // 2:]), centroid(R[SR // 2:])
+        ck(f"S. {model} stereo offset +1 oct: the right side is brighter (centroid {cl:.0f} -> {cr:.0f} Hz)", cr > cl * 1.25, (cl, cr))
+    L, R = render(patch(filt={"cutoff": 600, "offset": 0}, stereo=sp), note(45), 1.0, rack=False)
+    ck("S. offset 0 on a centred voice: left and right identical", float(np.max(np.abs(L - R))) == 0.0, float(np.max(np.abs(L - R))))
+    # LFO stereo phase
+    for ph, want_neg in ((180, True), (0, False)):
+        L, R = render(patch(lfo1={"wave": "sine", "rate": 2, "amp": 1, "phase": ph}, stereo=sp), note(57), 3.0, rack=False)
+        el, er = env(L[SR:]), env(R[SR:]); c = corr(el - el.mean(), er - er.mean())
+        ck(f"S. LFO 1 tremolo at stereo phase {ph}: envelopes {'opposed, an auto-pan' if want_neg else 'together'} (corr {c:.2f})", c < -0.8 if want_neg else c > 0.95, c)
+    L, R = render(patch(filt={"model": "valve12", "cutoff": 500, "res": 0.5}, lfo1={"wave": "tri", "rate": 1, "cutoff": 2, "phase": 180}, stereo=sp), note(45), 3.0, rack=False)
+    cl = np.array([centroid(L[i:i + 4800]) for i in range(SR, len(L) - 4800, 2400)]); cr = np.array([centroid(R[i:i + 4800]) for i in range(SR, len(R) - 4800, 2400)])
+    c = corr(cl - cl.mean(), cr - cr.mean())
+    ck(f"S. LFO 1 cutoff at stereo phase 180: the sweep moves between the speakers (centroid corr {c:.2f})", c < -0.5, c)
+    # LFO 2
+    L, _ = render(patch(osc1={"wave": "sine", "level": 0.8}, lfo2={"wave": "sine", "rate": 3, "pitch": 50}, stereo=sp), note(57), 3.0, rack=False)
+    x = L[SR:]; zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0]; frc = x[zc] / (x[zc] - x[zc + 1]); tz = (zc + frc) / SR; inst = 1 / np.diff(tz)
+    Fq = np.abs(np.fft.rfft(inst - inst.mean(), 8 * len(inst))); ff = np.fft.rfftfreq(8 * len(inst), float(np.mean(np.diff(tz))))
+    rate = float(ff[np.argmax(Fq)]); swing = 1200 * math.log2(inst.max() / inst.min())
+    ck(f"S. LFO 2 vibrato runs at its own rate ({rate:.2f} Hz, swing {swing:.0f} cents for 50 each way)", abs(rate - 3) < 0.15 and 80 < swing < 120, (rate, swing))
+    L, R = render(patch(lfo2={"wave": "sine", "rate": 1.5, "pan": 1}, stereo=sp), note(57), 3.0, rack=False)
+    el, er = env(L[SR:]), env(R[SR:]); c = corr(el - el.mean(), er - er.mean())
+    ck(f"S. LFO 2 auto-pan swings the voice side to side (corr {c:.2f})", c < -0.7, c)
+    # ensemble
+    padp = patch(osc1={"wave": "saw", "level": 0.8}, filt={"cutoff": 3000}, envA={"a": 0.01, "s": 1, "r": 0.1}, stereo=sp, out={"tube": "12AU7", "drive": 0})
+    chord = [e for n_ in (48, 55, 60, 64) for e in note(n_, 0.02)]
+    seg = slice(SR // 2, 3 * SR - 1000)
+    padp["ens"] = {"on": False}; L0, R0 = render(padp, chord, 3.0)
+    st0 = math.sqrt((np.mean(L0[seg] ** 2) + np.mean(R0[seg] ** 2)) / 2)
+    ck("S. ensemble off: a centred patch stays identical left and right", float(np.max(np.abs(L0 - R0))) < 1e-6, float(np.max(np.abs(L0 - R0))))
+    for mode in ("I", "II", "I+II", "strings"):
+        padp["ens"] = {"on": True, "mode": mode, "mix": 60}; L, R = render(padp, chord, 3.0)
+        st = math.sqrt((np.mean(L[seg] ** 2) + np.mean(R[seg] ** 2)) / 2); mo = math.sqrt(np.mean(((L[seg] + R[seg]) / 2) ** 2)); c = corr(L[seg], R[seg])
+        ck(f"S. ensemble {mode}: stereo (corr {c:.2f}), mono fold loses {db(st) - db(mo):.1f} dB, level {db(st) - db(st0):+.1f} dB",
+           c < 0.97 and db(st) - db(mo) <= 3 and abs(db(st) - db(st0)) < 2.5, (c, db(st) - db(mo), db(st) - db(st0)))
+    sn = patch(osc1={"wave": "sine", "level": 0.8, "fixed": 440}, stereo=sp, out={"tube": "12AU7", "drive": 0})
+    sb = {}
+    for on in (False, True):
+        sn["ens"] = {"on": on, "mode": "I+II", "mix": 80}; L, _ = render(sn, note(60), 2.0)
+        x = L[SR // 2:]; sb[on] = db(tone_amp(x, 440 + 9.75) / tone_amp(x, 440))
+    ck(f"S. ensemble I+II puts sidebands 9.75 Hz either side of a tone ({sb[False]:.0f} -> {sb[True]:.0f} dB)", sb[True] > -45 and sb[True] > sb[False] + 20, sb)
+    # the last ceiling is unity gain below its knee (it shipped at +1.9 dB in v0.1)
+    g = pg.evaluate("""async () => { const { makeSynthChain } = await import('./rack.js');
+      const ctx = new OfflineAudioContext(1, 4800, 48000), C = makeSynthChain(ctx), o = ctx.createOscillator(), a = ctx.createGain();
+      o.frequency.value = 1000; a.gain.value = 0.5; o.connect(a); a.connect(C.ceilIn); C.ceil.connect(ctx.destination); o.start();
+      const b = await ctx.startRendering(), d = b.getChannelData(0); let m = 0; for (let i = 480; i < d.length; i++) m = Math.max(m, Math.abs(d[i])); return m; }""")
+    ck(f"S. the final ceiling is unity gain below its knee (0.5 in, {g:.4f} out)", abs(g - 0.5) < 0.002, g)
+    # goniometer and correlation, live
+    pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
+    for n_ in (48, 55, 60, 64): pg.evaluate(f"__synth.noteOn({n_}, 0.8)")
+    pg.wait_for_timeout(1200)
+    ct = pg.evaluate("__synth.corrText()"); cv = pg.evaluate("__synth.correlation()")
+    painted = pg.evaluate("""() => { const c = document.getElementById('gonioCv'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 1; i < x.length; i += 4) s += x[i] > 150 ? 1 : 0; return s; }""")
+    ck(f"S. goniometer draws the stereo image and the correlation meter reads it ({ct!r}, {cv:+.2f}, {painted} lit pixels)", painted > 50 and ct not in ("idle", "play to see") and -1 <= cv <= 1, (ct, cv, painted))
+    for n_ in (48, 55, 60, 64): pg.evaluate(f"__synth.noteOff({n_})")
+
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
@@ -211,6 +295,12 @@ with sync_playwright() as pw:
         big["filt"]["model"] = model
         r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
         info(f"9. CPU {model}, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time in headless Chrome (offline render, rack included)")
+    big["filt"]["model"] = "valve12"; big["filt"]["offset"] = 0.5
+    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
+    info("9. CPU valve12 with stereo offset (two filters per voice), 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+    big["filt"]["offset"] = 0; big["voice"] = {"unison": 2, "count": 8}; big["ens"] = {"on": True, "mode": "strings", "mix": 50}
+    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
+    info("9. CPU valve12, 8 notes x unison 2 = 16 voices, ensemble on", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
 
     # ---------------------------------------------------------------- 12. MIDI
     def rmidi(p, midi, seconds):

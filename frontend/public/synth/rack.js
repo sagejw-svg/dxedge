@@ -357,12 +357,74 @@ function makeSynthChain(ctx){
   C.ceil=ctx.createWaveShaper(); C.ceil.oversample='none';
   C.ceil.curve=(function(){ var n=4097, c=new Float32Array(n), k=0.97, r=0.0285; for(var i=0;i<n;i++){ var x=(i/(n-1)*2-1)*1.25, a=Math.abs(x);
     c[i]= a<k ? x : (x<0?-1:1)*(k+r*Math.tanh((a-k)/r)); } return c; })();
-  C.final.connect(C.ceil); C.out=C.ceil;
+  // A WaveShaper reads its curve over an input of -1..1, so the curve (drawn over -1.25..1.25)
+  // needs the input scaled by 1/1.25 to stay unity gain below the knee.
+  C.ceilIn=G(1/1.25); C.final.connect(C.ceilIn); C.ceilIn.connect(C.ceil); C.out=C.ceil;
   C.setMono=function(on){ C.setP(C.stG.gain, on?0:1); C.setP(C.moG.gain, on?1:0); };   // moSum already halves: (L+R)/2, the mid
   return C;
 }
+// ======================================================================
+// Ensemble: the bucket brigade chorus before the output tubes (brief: ENSEMBLE > ... > V3/V4).
+//   I, II   one triangle LFO sweeps two delay lines in antiphase, one per side (0.513 / 0.863 Hz,
+//           1.66 to 5.35 ms), the classic 1980s polysynth chorus.
+//   I+II    the same lines swept fast and shallow (9.75 Hz, 3.3 to 3.7 ms): a shimmering vibrato.
+//   strings three lines, each swept by a slow and a fast sine 120 degrees apart, mixed two to a
+//           side: the three-phase string ensemble of the 1970s string machines.
+// The delay lines read the mid (L+R)/2; the dry signal keeps its own stereo. Left and right wet
+// are the same signal at slightly different delays, so folding to mono combs a little but never
+// cancels. Lowpasses before and after stand in for the bucket brigade's own filters.
+// ======================================================================
+var ENS_MODES = {
+  'I':       { rate: 0.513, center: 0.003505, depth: 0.001845, juno: 1, str: 0 },
+  'II':      { rate: 0.863, center: 0.003505, depth: 0.001845, juno: 1, str: 0 },
+  'I+II':    { rate: 9.75,  center: 0.0035,   depth: 0.0002,   juno: 1, str: 0 },
+  'strings': { rate: 0,     center: 0.006,    depth: 0,        juno: 0, str: 1 }
+};
+function makeEnsemble(ctx){
+  var live = !(window.OfflineAudioContext && ctx instanceof OfflineAudioContext);
+  function G(v){ var g=ctx.createGain(); g.gain.value=v; return g; }
+  function ST(n){ n.channelCount=2; n.channelCountMode='explicit'; n.channelInterpretation='speakers'; return n; }
+  function LP(f){ var b=ctx.createBiquadFilter(); b.type='lowpass'; b.frequency.value=f; b.Q.value=0.6; return b; }
+  function setP(p,v){ if(live){ try{ p.setTargetAtTime(v, ctx.currentTime, 0.03); return; }catch(e){} } p.value=v; }
+  function sine(freq, deg){ var o=ctx.createOscillator(), ph=deg*Math.PI/180;
+    o.setPeriodicWave(ctx.createPeriodicWave(new Float32Array([0, Math.sin(ph)]), new Float32Array([0, Math.cos(ph)]), { disableNormalization: true }));
+    o.frequency.value=freq; return o; }
+  var E = { oscs: [] };
+  E.input=ST(G(1)); E.output=ST(G(1)); E.dry=ST(G(1)); E.input.connect(E.dry); E.dry.connect(E.output);
+  E.mid=G(1); E.mid.channelCount=1; E.mid.channelCountMode='explicit'; E.mid.channelInterpretation='speakers';
+  E.pre=LP(9000); E.input.connect(E.mid); E.mid.connect(E.pre);
+  E.wetL=G(0); E.wetR=G(0); E.postL=LP(8000); E.postR=LP(8000); E.merge=ctx.createChannelMerger(2);
+  E.wetL.connect(E.postL); E.wetR.connect(E.postR); E.postL.connect(E.merge,0,0); E.postR.connect(E.merge,0,1); E.merge.connect(E.output);
+  // two antiphase lines
+  E.dA=ctx.createDelay(0.05); E.dB=ctx.createDelay(0.05); E.dA.delayTime.value=E.dB.delayTime.value=0.0035;
+  E.pre.connect(E.dA); E.pre.connect(E.dB);
+  E.lfo=ctx.createOscillator(); E.lfo.type='triangle'; E.lfo.frequency.value=0.513;
+  E.depA=G(0.001845); E.depB=G(-0.001845); E.lfo.connect(E.depA); E.lfo.connect(E.depB); E.depA.connect(E.dA.delayTime); E.depB.connect(E.dB.delayTime);
+  E.jL=G(1); E.jR=G(1); E.dA.connect(E.jL); E.dB.connect(E.jR); E.jL.connect(E.wetL); E.jR.connect(E.wetR);
+  E.oscs.push(E.lfo);
+  // three-phase string lines
+  E.sL=G(0); E.sR=G(0); E.sL.connect(E.wetL); E.sR.connect(E.wetR);
+  E.sd=[0,1,2].map(function(k){
+    var d=ctx.createDelay(0.05); d.delayTime.value=0.006; E.pre.connect(d);
+    var slow=sine(0.63, k*120), fast=sine(5.3, k*120), gs=G(0.0012), gf=G(0.00025);
+    slow.connect(gs); fast.connect(gf); gs.connect(d.delayTime); gf.connect(d.delayTime); E.oscs.push(slow, fast);
+    if(k===0){ d.connect(E.sL); } else if(k===2){ d.connect(E.sR); } else { var h=G(0.5); d.connect(h); h.connect(E.sL); h.connect(E.sR); }
+    return d; });
+  E.oscs.forEach(function(o){ o.start(0); });
+  E.set=function(ens){
+    ens=ens||{}; var on=!!ens.on, m=ENS_MODES[ens.mode]||ENS_MODES['I'], mix=Math.max(0, Math.min(1, (+ens.mix||0)/100));
+    if(m.juno){ setP(E.lfo.frequency, m.rate); setP(E.depA.gain, m.depth); setP(E.depB.gain, -m.depth); setP(E.dA.delayTime, m.center); setP(E.dB.delayTime, m.center); }
+    setP(E.jL.gain, m.juno); setP(E.jR.gain, m.juno); setP(E.sL.gain, m.str*0.8); setP(E.sR.gain, m.str*0.8);
+    // equal-loudness blend: the wet adds energy, so the dry comes down a little as the mix rises
+    setP(E.wetL.gain, on ? mix*0.85 : 0); setP(E.wetR.gain, on ? mix*0.85 : 0);
+    setP(E.dry.gain, on ? 1 - 0.32*mix : 1);
+  };
+  E.stop=function(){ E.oscs.forEach(function(o){ try{ o.stop(); }catch(e){} }); };
+  return E;
+}
+
 // The tube voicings the worklet needs (it cannot import this module in every browser).
 function tubeData(){ return TUBES.map(function(t){ return { id:t.id, gain:t.gain, b0:t.b0, kp:t.kp, kn:t.kn, h:t.h, hp:t.hp, kind:t.kind }; }); }
 
 export { TUBES, TUBE_BY, CABS, CAB_BY, ROOMS, ROOM_BY, tubeCurve, curveAt, harmonics, makeChain, makeSynthChain,
-         compMakeupDb, dB2lin, clampN, hashStr, mulberry32, ppMakeup, tubeData };
+         compMakeupDb, dB2lin, clampN, hashStr, mulberry32, ppMakeup, tubeData, makeEnsemble, ENS_MODES };

@@ -53,10 +53,10 @@ task can read it).
 
 ### 0.2 Character - next, one item per night, in this order
 - [ ] Graphic EQ in the rack row (the chain already has it; needs the UI and patch fields)
-- [ ] Goniometer and correlation meter (copy the /otr drawing into the Stereo section)
-- [ ] LFO 2, and stereo phase (0-180 degrees) for both LFOs
-- [ ] Unison 1-8 copies per note with detune and spread
-- [ ] Filter stereo offset (left and right cutoffs apart by up to +/-1 octave)
+- [x] Goniometer and correlation meter (copied from /otr into the Stereo section) - 13 Oct, stereo round
+- [x] LFO 2 (adds auto-pan), and stereo phase (0-180 degrees) for both LFOs - 13 Oct, stereo round
+- [x] Unison 1-8 copies per note with detune and spread (copies come from the 16-voice pool) - 13 Oct, stereo round
+- [x] Filter stereo offset (left and right cutoffs apart by up to +/-1 octave; two filters per voice only when in use) - 13 Oct, stereo round
 - [ ] Diode 18 filter model (then move the Diode Squelch patch onto it)
 - [ ] Sallen-Key 12 (aggressive LP/HP pair, hard-clipping resonance)
 - [ ] Poly 24 (OTA cascade)
@@ -67,7 +67,7 @@ task can read it).
 - [ ] Mod matrix: 8 slots in a drawer (sources: envs, LFOs, velocity, key, wheel, aftertouch, random)
 - [ ] Host clock and transport (one shared tempo the arp and LFO sync read)
 - [ ] Arpeggiator: up, down, up-down, random, as played; 1-4 oct; 40-240 BPM; gate, swing, latch
-- [ ] Ensemble: BBD chorus I, II, I+II, and a three-phase string ensemble
+- [x] Ensemble: BBD chorus I, II, I+II, and a three-phase string ensemble - 13 Oct, stereo round
 - [ ] Tape echo: mono, ping pong, offset; wow and flutter; tube record amp
 - [ ] Spring reverb: two tube-driven springs of different lengths, drip
 Done when: every model self-oscillates where it should; mono fold passes for all patches.
@@ -87,12 +87,17 @@ Done when: share link round trip test passes.
 - CPU on a real mid-range phone (headless Chrome on the build server: about 20% of real time for
   8 voices including the rack). The budget is 40%. WebAssembly is the fallback if a phone misses it.
 
+- Stereo offset or a stereo-phase cutoff LFO on Ladder 24 can thin out in mono: two 4-pole filters an
+  octave apart are up to 180 degrees out of phase between their cutoffs. Valve 12 (2-pole) stays within
+  about 2.5 dB. Factory patches are kept within 3 dB (test 7); the correlation meter goes amber below 0.
+  A fully mono-safe version would need a third (centre) filter per voice; not done, CPU.
+
 ## Notes from James
 (write here; the nightly run reads this first)
-- 2026-10-13 (night of Oct 12 PT): James chose a "stereo round" in an interactive session that is building
-  it now: unison, filter stereo offset, LFO 2 with stereo phase, goniometer and correlation, ensemble.
-  Tonight's 11:52 PM run: bug check only, no roadmap item, and do not edit frontend/public/synth/ unless
-  something is broken on the live site. The interactive session will tick its items when it pushes.
+- 2026-10-13 (night of Oct 12 PT): the stereo round (unison, filter stereo offset, LFO 2 with stereo
+  phase, goniometer and correlation, ensemble) shipped from an interactive session. Tonight's 11:52 PM
+  run (Oct 12): bug check only, no roadmap item. From the following night, resume the list from the
+  first unchecked item (the graphic EQ).
 
 ## Nightly log
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).

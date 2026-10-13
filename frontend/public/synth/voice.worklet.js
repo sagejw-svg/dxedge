@@ -9,6 +9,11 @@
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
 //   -> filter (Valve 12 or Ladder 24) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
+// Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
+// moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
+// oscillators and V1. Otherwise one filter feeds both sides. Unison stacks 1-8 voices on a
+// note, each a full voice, spread in pitch (detune) and across the field (unison spread).
+//
 // Oscillators are band limited with BLEP (steps) and BLAMP (kinks) residuals applied
 // across two samples, so each oscillator runs one sample behind. That delay is what
 // lets hard sync, FM and the pulse edge all use the same correction.
@@ -183,6 +188,66 @@ class Osc {
   }
 }
 
+// ---------- filters ----------
+// Both models keep their state in a Float64Array and read their input from it, for the same
+// reason as the oscillators: nothing boxed per sample. A voice has two (left and right).
+const F_S1 = 0, F_S2 = 1, F_S3 = 2, F_S4 = 3, F_ZI = 4, F_BP = 5, F_SH = 6, F_SAG = 7, F_IN = 8, F_OUT = 9,
+  F_G = 10, F_K = 11, F_COMP = 12, F_GH = 13, F_AH = 14, F_SAGA = 15, F_LG = 16, F_V2 = 17, F_N = 18;
+class Filt {
+  constructor() { this.s = new Float64Array(F_N); this.s[F_COMP] = 1; this.s[F_AH] = 1; this.s[F_LG] = 1.3; this.s[F_G] = 0.1; }
+  reset() { const s = this.s; s[F_S1] = s[F_S2] = s[F_S3] = s[F_S4] = s[F_ZI] = s[F_BP] = s[F_SH] = s[F_SAG] = 0; }
+  bad() { const s = this.s; return !(Math.abs(s[F_S1]) < 1e6 && Math.abs(s[F_S2]) < 1e6 && Math.abs(s[F_S3]) < 1e6 && Math.abs(s[F_S4]) < 1e6 && Math.abs(s[F_BP]) < 1e6); }
+  flush() { const s = this.s; for (let i = 0; i < 4; i++) if (Math.abs(s[i]) < 1e-20) s[i] = 0; }
+  // Ladder 24: the transistor ladder after Teemu Voipio's cheap non-linear ZDF method.
+  ladder() {
+    const s = this.s, y = s[F_IN], fq = s[F_G], r = s[F_K];
+    let s1 = s[F_S1], s2 = s[F_S2], s3 = s[F_S3], s4 = s[F_S4];
+    const ih = 0.5 * (y + s[F_ZI]); s[F_ZI] = y;
+    let qa = ih - r * s4; qa *= qa;
+    const t0 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = s1 * s1; const t1 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = s2 * s2; const t2 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = s3 * s3; const t3 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = s4 * s4; const t4 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    const g0 = 1 / (1 + fq * t1), g1 = 1 / (1 + fq * t2), g2 = 1 / (1 + fq * t3), g3 = 1 / (1 + fq * t4);
+    const f3 = fq * t3 * g3, f2 = fq * t2 * g2 * f3, f1 = fq * t1 * g1 * f2, f0 = fq * t0 * g0 * f1;
+    const y3 = (g3 * s4 + f3 * g2 * s3 + f2 * g1 * s2 + f1 * g0 * s1 + f0 * y) / (1 + r * f0);
+    const xx = t0 * (y - r * y3);
+    const y0 = t1 * g0 * (s1 + fq * xx), yy1 = t2 * g1 * (s2 + fq * y0), yy2 = t3 * g2 * (s3 + fq * yy1);
+    s1 += 2 * fq * (xx - y0); s2 += 2 * fq * (y0 - yy1); s3 += 2 * fq * (yy1 - yy2); s4 += 2 * fq * (yy2 - t4 * y3);
+    s[F_S1] = s1; s[F_S2] = s2; s[F_S3] = s3; s[F_S4] = s4;
+    s[F_OUT] = y3 * s[F_COMP];
+  }
+  // Valve 12: a 2-pole SVF lowpass whose resonance is positive feedback of the band-pass through
+  // the loop tube's curve, a coupling-cap high-pass and a supply-sag follower, linearised at the
+  // previous band-pass value and solved exactly (one Newton step).
+  valve(lTab) {
+    const s = this.s, y = s[F_IN], g = s[F_G], kq = s[F_K], R = 0.70710678, aH = s[F_AH], gH = s[F_GH];
+    let s1 = s[F_S1], s2 = s[F_S2], shh = s[F_SH], sag = s[F_SAG];
+    // Supply sag: a loud loop pulls the rail down, so the loop tube runs out of headroom
+    // sooner. Small-signal gain is untouched, so it keeps oscillating, just lower.
+    const lGe = s[F_LG] * (1 + 2.5 * s[F_SAGA] * sag);
+    const v0 = s[F_BP], u0 = lGe * v0;
+    let T0, T1;
+    { const tp = (u0 + TT_R) * TT_SCALE;
+      if (tp <= 0) { T0 = lTab[0]; T1 = 0; } else if (tp >= TT_N - 1) { T0 = lTab[TT_N - 1]; T1 = 0; }
+      else { const ti = tp | 0, d = lTab[ti + 1] - lTab[ti]; T0 = lTab[ti] + d * (tp - ti); T1 = d * TT_SCALE; }
+      T0 /= lGe; }
+    const bh = -shh * aH;                     // coupling-cap high-pass: out = aH*in + bh
+    const c1 = kq * aH * T1, c0 = kq * (aH * (T0 - T1 * v0) + bh);
+    const hp = (y + c0 + c1 * s1 - (2 * R + g) * s1 - s2) / (1 + 2 * R * g + g * g - c1 * g);
+    const bpn = g * hp + s1; s1 = g * hp + bpn;
+    const lp = g * bpn + s2; s2 = g * bpn + lp;
+    const fbRaw = T0 + T1 * (bpn - v0);
+    const vH = (fbRaw - shh) * gH * aH; const lpH = vH + shh; shh = lpH + vH;
+    const af = Math.abs(fbRaw);
+    sag += (af - sag) * (af > sag ? 0.0005 : 0.000035);
+    s[F_S1] = s1; s[F_S2] = s2; s[F_SH] = shh; s[F_SAG] = sag; s[F_BP] = bpn;
+    if (kq > 0.05) s[F_V2] += fbRaw * fbRaw;
+    s[F_OUT] = lp;
+  }
+}
+
 // smoothed parameter slots
 const K_L1 = 0;
 const K_L2 = 1;
@@ -206,7 +271,17 @@ const K_LC = 18;
 const K_LPW = 19;
 const K_LA = 20;
 const K_VOL = 21;
-const NP = 22;
+const K_OFF = 22;     // filter stereo offset, octaves (-1..1)
+const K_DET = 23;     // unison detune, cents
+const K_USP = 24;     // unison spread, 0..1
+const K_L1PH = 25;    // LFO 1 stereo phase, degrees
+const K_L2P = 26;     // LFO 2 amounts: pitch (cents), cutoff (oct), pw, amp, pan
+const K_L2C = 27;
+const K_L2PW = 28;
+const K_L2A = 29;
+const K_L2PAN = 30;
+const K_L2PH = 31;    // LFO 2 stereo phase, degrees
+const NP = 32;
 
 // ---------- envelopes ----------
 const E_IDLE = 0, E_ATT = 1, E_DEC = 2, E_SUS = 3, E_REL = 4;
@@ -227,7 +302,11 @@ class Filament extends AudioWorkletProcessor {
     this.dcL = 0; this.dcR = 0; this.dcxL = 0; this.dcxR = 0;
     this.bend = 0; this.mw = 0; this.at = 0; this.sus = false;
     this.held = []; this.order = 0; this.altPan = 1;
-    this.lfoG = 0; this.lfoGv = 0; this.lfoGt = 0; this.shG = 0; this.shPrevG = 0;
+    this.lfoG = new Float64Array(2);        // global LFO phases
+    this.gsh = new Float64Array(10);        // global LFO random state, 5 per LFO: curL, prevL, curR, prevR, lastPhase
+    this.lfoRate = new Float64Array(2); this.lfoDelay = new Float64Array(2); this.lfoWave = new Int32Array(2); this.lfoGlob = new Int32Array(2);
+    this.lfoG0 = new Float64Array(2); this.LV = new Float64Array(4);   // per tick: LFO1 L, LFO1 R, LFO2 L, LFO2 R
+    this.cc = new Float64Array(4);
     this.duck = 1; this.duckDir = 0; this.pendingPatch = null;
     this.events = [];
     this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
@@ -244,12 +323,11 @@ class Filament extends AudioWorkletProcessor {
       i, on: false, note: 60, vel: 0.8, gate: false, sust: false, age: 0, pan: 0, gl: 0.7071, gr: 0.7071,
       pitch: 60, pitchT: 60, o1: new Osc(), o2: new Osc(), sub: new Osc(),
       ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, pending: null, fade: 1, killing: false,
-      // filter states
-      s1: 0, s2: 0, s3: 0, s4: 0, zi: 0, bp: 0, sh: 0, sag: 0,
+      fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
       dcx: 0, dcy: 0,
       nb0: 0, nb1: 0, nb2: 0,
       drift: 0, driftT: 0, driftN: 0, drift2: 0, drift2T: 0,
-      lfoP: Math.random(), lfoV: 0, lfoT: 0, sh: 0, shPrev: 0, lfoAge: 0,
+      lp: Float64Array.from([Math.random(), Math.random()]), lsh: new Float64Array(10), lfoAge: 0,
       // control-rate values
       dt1: 0, dt2: 0, dts: 0, fg: 0, kres: 0, lvl: 0, lvlT: 0, pw1: 0.5, pw2: 0.5,
     };
@@ -298,6 +376,11 @@ class Filament extends AudioWorkletProcessor {
     T[K_V1G] = this.v1G; T[K_V1MK] = this.v1Mk;
     T[K_LP] = num(l.pitch, 0); T[K_LC] = num(l.cutoff, 0); T[K_LPW] = num(l.pw, 0); T[K_LA] = num(l.amp, 0);
     T[K_VOL] = num((P.voice || {}).level, 0.8);
+    const vo = P.voice || {}, st = P.stereo || {}, l2 = P.lfo2 || {};
+    T[K_OFF] = clamp(num(f.offset, 0), -1, 1); T[K_DET] = num(vo.detune, 12); T[K_USP] = clamp(num(st.uspread, 0.5), 0, 1);
+    T[K_L1PH] = clamp(num(l.phase, 0), 0, 180);
+    T[K_L2P] = num(l2.pitch, 0); T[K_L2C] = num(l2.cutoff, 0); T[K_L2PW] = num(l2.pw, 0); T[K_L2A] = num(l2.amp, 0);
+    T[K_L2PAN] = clamp(num(l2.pan, 0), 0, 1); T[K_L2PH] = clamp(num(l2.phase, 0), 0, 180);
     return T;
   }
 
@@ -329,53 +412,66 @@ class Filament extends AudioWorkletProcessor {
   // ----- notes -----
   mode() { return ((this.P.voice || {}).mode) || 'poly'; }
   count() { return clamp(((this.P.voice || {}).count) | 0 || 8, 1, NV); }
+  uni() { return clamp(num((this.P.voice || {}).unison, 1) | 0, 1, 8); }
+  // Unison stacks copies from the same pool: polyphony is the voice count, and the pool grows to
+  // count x unison (at most 16), so turning unison up costs voices only past 16.
+  pool() { return Math.min(NV, this.count() * this.uni()); }
   noteOn(n, vel) {
     this.held = this.held.filter(h => h !== n); this.held.push(n);
-    const mode = this.mode();
+    const mode = this.mode(), U = this.uni();
     if (mode !== 'poly') {
-      const v = this.voices[0];
-      const legato = mode === 'legato' && v.gate && v.on;
-      v.note = n; v.pitchT = n; v.vel = vel; v.gate = true; v.sust = false;
-      if (!v.on) { v.pitch = n; this.startVoice(v, n, vel, true); }
-      else if (!legato) { this.trigger(v, vel); }
-      if (num((this.P.voice || {}).glide, 0) <= 0) v.pitch = n;
+      const glideOff = num((this.P.voice || {}).glide, 0) <= 0;
+      for (let j = 0; j < NV; j++) {
+        const v = this.voices[j];
+        if (j >= U) { if (v.on && v.gate) { v.gate = false; v.as = E_REL; v.fs = E_REL; } continue; }
+        const legato = mode === 'legato' && v.gate && v.on;
+        v.note = n; v.pitchT = n; v.vel = vel; v.gate = true; v.sust = false;
+        v.uPos = U > 1 ? j / (U - 1) * 2 - 1 : 0;
+        if (!v.on) { v.pitch = n; this.startVoice(v, n, vel, true, j, U); }
+        else if (!legato) this.trigger(v, vel);
+        if (glideOff) v.pitch = n;
+      }
       return;
     }
-    const N = this.count();
-    let v = null;
-    for (let i = 0; i < N; i++) { const w = this.voices[i]; if (w.on && w.note === n && !w.killing) { v = w; break; } }
-    if (v) { v.gate = true; v.sust = false; v.vel = vel; this.trigger(v, vel); v.age = ++this.order; return; }
-    for (let i = 0; i < N; i++) { const w = this.voices[i]; if (!w.on && !w.pending) { v = w; break; } }
-    if (!v) {          // steal: oldest released voice, else the quietest
+    const N = this.pool(), age0 = this.order;
+    let found = 0;
+    for (let i = 0; i < NV; i++) { const w = this.voices[i]; if (w.on && w.note === n && !w.killing) { w.gate = true; w.sust = false; this.trigger(w, vel); w.age = ++this.order; found++; } }
+    if (found) return;
+    for (let j = 0; j < U; j++) {
+      let v = null;
+      for (let i = 0; i < N; i++) { const w = this.voices[i]; if (!w.on && !w.pending) { v = w; break; } }
+      if (v) { this.startVoice(v, n, vel, false, j, U); continue; }
+      // steal: the oldest released voice, else the quietest, never a copy this note just took
       let best = null;
-      for (let i = 0; i < N; i++) { const w = this.voices[i]; if (!w.gate && !w.sust && !w.pending && (!best || w.age < best.age)) best = w; }
-      if (!best) for (let i = 0; i < N; i++) { const w = this.voices[i]; if (!w.pending && (!best || w.ae < best.ae)) best = w; }
-      if (!best) best = this.voices[0];
-      best.pending = { n, vel }; best.killing = true; best.gate = false;
-      return;
+      for (let i = 0; i < N; i++) { const w = this.voices[i]; if (w.age > age0 || w.pending) continue; if (!w.gate && !w.sust && (!best || w.age < best.age)) best = w; }
+      if (!best) for (let i = 0; i < N; i++) { const w = this.voices[i]; if (w.age > age0 || w.pending) continue; if (!best || w.ae < best.ae) best = w; }
+      if (!best) break;
+      best.pending = { n, vel, j, U }; best.killing = true; best.gate = false; best.age = ++this.order;
     }
-    this.startVoice(v, n, vel, false);
   }
-  startVoice(v, n, vel, mono) {
+  startVoice(v, n, vel, mono, j, U) {
     const P = this.P;
     v.on = true; v.note = n; v.vel = vel; v.gate = true; v.sust = false; v.killing = false; v.fade = 1; v.pending = null;
     v.age = ++this.order;
+    v.uPos = (U || 1) > 1 ? (j || 0) / (U - 1) * 2 - 1 : 0;
     if (!mono || num((P.voice || {}).glide, 0) <= 0) v.pitch = n;
     v.pitchT = n;
-    // pan
+    // pan (unison copies share their note's pan and spread around it)
     const st = P.stereo || {}, spread = clamp(num(st.spread, 0.5), 0, 1), pm = st.pan || 'alt';
     let pan = 0;
-    if (pm === 'alt') { this.altPan = -this.altPan; pan = this.altPan * spread; }
-    else if (pm === 'key') pan = clamp((n - 60) / 30, -1, 1) * spread;
-    else if (pm === 'random') pan = (Math.random() * 2 - 1) * spread;
-    v.pan = pan; v.gl = Math.cos((pan + 1) * Math.PI / 4); v.gr = Math.sin((pan + 1) * Math.PI / 4);
-    // per-voice LFO restarts with the note
-    const l = P.lfo1 || {};
-    if (l.mode === 'voice') v.lfoP = 0;
+    if (!j) { if (pm === 'alt') { this.altPan = -this.altPan; pan = this.altPan * spread; }
+      else if (pm === 'key') pan = clamp((n - 60) / 30, -1, 1) * spread;
+      else if (pm === 'random') pan = (Math.random() * 2 - 1) * spread;
+      this.lastPan = pan; }
+    else pan = this.lastPan || 0;
+    v.pan = pan;
+    // per-voice LFOs restart with the note
+    if ((P.lfo1 || {}).mode === 'voice') v.lp[0] = 0;
+    if ((P.lfo2 || {}).mode === 'voice') v.lp[1] = 0;
     v.lfoAge = 0;
     v.ae = 0; v.fe = 0;
-    // a whisper of thermal noise in the filter, so a self-oscillating filter starts on its own
-    if (v.s1 === 0 && v.s2 === 0) { v.s1 = (Math.random() - 0.5) * 1e-3; v.bp = v.s1; }
+    // a whisper of thermal noise in the filters, so a self-oscillating filter starts on its own
+    for (const F of [v.fL, v.fR]) if (F.s[F_S1] === 0 && F.s[F_S2] === 0) { F.s[F_S1] = (Math.random() - 0.5) * 1e-3; F.s[F_BP] = F.s[F_S1]; }
     this.trigger(v, vel);
   }
   trigger(v, vel) { v.as = E_ATT; v.fs = E_ATT; v.vel = vel; v.lfoAge = 0; }
@@ -383,17 +479,20 @@ class Filament extends AudioWorkletProcessor {
     this.held = this.held.filter(h => h !== n);
     const mode = this.mode();
     if (mode !== 'poly') {
-      const v = this.voices[0];
-      if (v.note !== n) return;
-      if (this.held.length) {             // fall back to the previous held note
-        const m = this.held[this.held.length - 1];
-        v.note = m; v.pitchT = m;
-        if (num((this.P.voice || {}).glide, 0) <= 0) v.pitch = m;
-        if (mode === 'mono') this.trigger(v, v.vel);
-        return;
+      if (this.voices[0].note !== n) return;
+      const U = this.uni();
+      for (let j = 0; j < U; j++) {
+        const v = this.voices[j];
+        if (this.held.length) {             // fall back to the previous held note
+          const m = this.held[this.held.length - 1];
+          v.note = m; v.pitchT = m;
+          if (num((this.P.voice || {}).glide, 0) <= 0) v.pitch = m;
+          if (mode === 'mono') this.trigger(v, v.vel);
+          continue;
+        }
+        if (this.sus) { v.sust = true; v.gate = false; continue; }
+        v.gate = false; if (v.as !== E_IDLE) { v.as = E_REL; v.fs = E_REL; }
       }
-      if (this.sus) { v.sust = true; v.gate = false; return; }
-      v.gate = false; if (v.as !== E_IDLE) { v.as = E_REL; v.fs = E_REL; }
       return;
     }
     for (let i = 0; i < NV; i++) {
@@ -450,6 +549,38 @@ class Filament extends AudioWorkletProcessor {
     return true;
   }
 
+  // Cutoff calibration and coefficients for one filter, at control rate. fc and res come in
+  // through this.cc so nothing is boxed: cc[0] = fc (Hz), cc[1] = resonance 0..1.
+  fcoef(F, model) {
+    const sr = this.sr, fs = this.fs, res = this.cc[1];
+    let fc = clamp(this.cc[0], 16, sr * 0.45);
+    if (model === 1) {
+      // Ladder: the tanh stages pull a self-oscillating filter flat, by an amount set by how
+      // far the loop gain is past 4 (measured: about 86 cents per unit, a little less up high).
+      const over = res * 4.45 - 4;
+      if (over > 0) { const g0 = Math.PI * fc / fs; fc *= Math.pow(2, over * (86 - 280 * g0) / 1200); }
+    } else if (res > 0.6) {
+      // Valve: the coupling cap's phase lead pushes the resonance up; pull the cutoff down to
+      // match, fully from the point where the loop can oscillate (RES_T). Past that point
+      // the saturating tube pulls it flat again, by a measured amount per tube (VCAL, cents).
+      const vCal = VCAL[this.lTube.id] || VCAL0;
+      const w = res >= RES_T ? 1 : (res - 0.6) / (RES_T - 0.6), ws = w * w * (3 - 2 * w);
+      fc *= 1 + (this.vComp - 1) * ws;
+      const e = res > RES_T ? (res - RES_T) / (1 - RES_T) : 0;
+      fc *= Math.pow(2, -(vCal[0] * ws + vCal[1] * e + vCal[2] * e * e) / 1200);
+    }
+    fc = clamp(fc, 16, sr * 0.45);
+    const s = F.s;
+    s[F_G] = Math.tan(Math.PI * fc / fs);
+    if (model === 1) { s[F_K] = res * 4.45; s[F_COMP] = 1 + s[F_K] * 0.45; }
+    else {
+      // The coupling cap in the Valve loop sits a fixed ratio below the cutoff (each tube's hp/400),
+      // so its phase lead, and the pitch shift that comes with it, is the same on every key.
+      s[F_K] = KMAX * Math.pow(res, KEXP);
+      s[F_GH] = Math.tan(Math.PI * Math.min(fc * (this.lTube.hp || 25) / 400, sr * 0.2) / fs); s[F_AH] = 1 / (1 + s[F_GH]);
+    }
+  }
+
   render(a, b) {
     if (b <= a) return;
     const sr = this.sr, fs = this.fs, frames = b - a;
@@ -461,8 +592,7 @@ class Filament extends AudioWorkletProcessor {
       const oldModel = (this.P.filt || {}).model;
       if (this.pendingPatch) { this.setPatch(this.pendingPatch); this.pendingPatch = null; }
       this.target(this.S); this.Sp.set(this.S);
-      if ((this.P.filt || {}).model !== oldModel)
-        for (const v of this.voices) { v.s1 = v.s2 = v.s3 = v.s4 = v.bp = v.sh = v.zi = v.sag = 0; }
+      if ((this.P.filt || {}).model !== oldModel) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
       this.duckDir = 1;
     }
     if (this.duckDir !== 0) {
@@ -475,11 +605,18 @@ class Filament extends AudioWorkletProcessor {
     const k = 1 - Math.exp(-frames / (0.02 * sr));
     for (let j = 0; j < NP; j++) { Sp[j] = S[j]; S[j] += (T[j] - S[j]) * k; }
 
-    // ---- global LFO ----
-    const l = P.lfo1 || {}, lrate = clamp(num(l.rate, 5), 0.01, 40), lwave = l.wave || 'sine', lglobal = l.mode !== 'voice';
-    const ldelay = Math.max(0, num(l.delay, 0));
-    const lfoG0 = this.lfoG;
-    this.lfoG = (this.lfoG + lrate * frames / sr) % 1;
+    // ---- LFOs (two, each global or per voice, each with a stereo phase) ----
+    const LP = [P.lfo1 || {}, P.lfo2 || {}];
+    const lRate = this.lfoRate, lDelay = this.lfoDelay, lWave = this.lfoWave, lGlob = this.lfoGlob, lG0 = this.lfoG0;
+    for (let q = 0; q < 2; q++) {
+      lRate[q] = clamp(num(LP[q].rate, q ? 0.2 : 5), 0.01, 40); lDelay[q] = Math.max(0, num(LP[q].delay, 0));
+      lWave[q] = LWAVES[LP[q].wave] ?? 0; lGlob[q] = LP[q].mode === 'voice' ? 0 : 1;
+      lG0[q] = this.lfoG[q]; this.lfoG[q] = (this.lfoG[q] + lRate[q] * frames / sr) % 1;
+    }
+    const LV = this.LV, gsh = this.gsh;
+    // An LFO nobody listens to costs nothing: skip it (its phase still runs).
+    const lUse0 = S[K_LP] > 0 || this.T[K_LP] > 0 || S[K_LC] > 0 || this.T[K_LC] > 0 || S[K_LPW] > 0 || this.T[K_LPW] > 0 || S[K_LA] > 0 || this.T[K_LA] > 0 || mwvAny(P, this);
+    const lUse1 = S[K_L2P] > 0 || this.T[K_L2P] > 0 || S[K_L2C] > 0 || this.T[K_L2C] > 0 || S[K_L2PW] > 0 || this.T[K_L2PW] > 0 || S[K_L2A] > 0 || this.T[K_L2A] > 0 || S[K_L2PAN] > 0 || this.T[K_L2PAN] > 0;
     const sx = num(P.tune, 0) / 100;
 
     // patch values read once
@@ -498,17 +635,17 @@ class Filament extends AudioWorkletProcessor {
     const vo = P.voice || {}, glide = Math.max(0, num(vo.glide, 0)), gk = glide > 0 ? 1 - Math.exp(-CTRL / (glide * sr)) : 1;
     const bendR = num(vo.bend, 2), driftC = clamp(num(P.drift, 1.5), 0, 8);
     const mwv = num((P.mw || {}).vib, 30), mwc = num((P.mw || {}).cut, 0), atc = num((P.at || {}).cut, 1), atv = num((P.at || {}).vib, 0);
-    // The coupling cap in the Valve loop sits a fixed ratio below the cutoff (each tube's hp/400),
-    // so its phase lead, and the pitch shift that comes with it, is the same on every key.
-    const hpRatio = (this.lTube.hp || 25) / 400, vComp = this.vComp, vCal = VCAL[this.lTube.id] || VCAL0;
-    let gH = 0, aH = 1;
     const lG = 1.3 * Math.pow((this.lTube.gain || 0.774) / 0.774, LGX);
     const v1Tab = this.v1Tab, lTab = this.lTab;
     const dcA = 1 - TWO_PI * 15 / fs;
     const L2 = this.L2, R2 = this.R2;
-    const N = this.count();
+    const N = this.pool(), U = this.uni(), uniG = 1 / Math.sqrt(U);
     const l2Any = S[K_L2] > 1e-4 || this.T[K_L2] > 0 || Sp[K_L2] > 1e-4;
     const lsAny = S[K_LS] > 1e-4 || this.T[K_LS] > 0 || Sp[K_LS] > 1e-4;
+    // Two filters per voice only when something makes left and right differ.
+    const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
+      (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
+    const cc = this.cc, isLadder = model === 1;
 
     // smoothed parameters at each control tick, shared by every voice
     const CT = this.CT, nt = Math.ceil(frames / CTRL);
@@ -519,14 +656,15 @@ class Filament extends AudioWorkletProcessor {
       const v = this.voices[vi];
       if (!v.on) continue;
       if (vi >= N && this.mode() === 'poly' && v.as !== E_REL && !v.killing) { v.as = E_REL; v.fs = E_REL; v.gate = false; }
-      const o1o = v.o1, o2o = v.o2, so = v.sub;
-      let s1 = v.s1, s2 = v.s2, s3 = v.s3, s4 = v.s4, zi = v.zi, bp = v.bp, shh = v.sh, sag = v.sag;
+      const o1o = v.o1, o2o = v.o2, so = v.sub, FL = v.fL, FR = v.fR, fl = FL.s, frs = FR.s;
+      if (st2 && !v.st2) frs.set(fl);               // the right filter starts where the left one is
+      v.st2 = st2;
+      FL.s[F_LG] = lG; FR.s[F_LG] = lG;
       let dcx = v.dcx, dcy = v.dcy, nb0 = v.nb0, nb1 = v.nb1, nb2 = v.nb2;
       let ae = v.ae, fe = v.fe, as = v.as, fst = v.fs;
-      let fg = v.fg, kres = v.kres, dt1 = v.dt1, dt2 = v.dt2, dts = v.dts, pw1 = v.pw1, pw2 = v.pw2, lfoAmp = 1, cutMul = 1;
-      let fdG = 1, fdC = 1, ladK = 0, ladComp = 1, valK = 0, valR = 0.7071, sagAmt = 0;
+      let dt1 = v.dt1, dt2 = v.dt2, dts = v.dts, pw1 = v.pw1, pw2 = v.pw2, ampL = 1, ampR = 1, gl = 0.7071, gr = 0.7071;
+      let fdG = 1, fdC = 1;
       let fade = v.fade;
-      let t1 = 1, t2 = 1, t3 = 1, t4 = 1, g0 = 1, g1 = 1, g2 = 1, g3 = 1;
       let l1 = 0, l2 = 0, ls = 0, ln = 0, fm = 0, ring = 0, G1 = 1, mk1 = 1, vol = 0;
       const use2 = l2Any || sync, useS = lsAny;
       for (let i = a; i < b; i++) {
@@ -534,67 +672,76 @@ class Filament extends AudioWorkletProcessor {
         // ---- control tick ----
         if (fr % CTRL === 0) {
           const cb = ((fr / CTRL) | 0) * NP;
-          // LFO
-          let lph;
-          if (lglobal) lph = (lfoG0 + lrate * fr / sr) % 1;
-          else { v.lfoP = (v.lfoP + lrate * CTRL / sr) % 1; lph = v.lfoP; }
-          let lv;
-          switch (lwave) {
-            case 'tri': lv = lph < 0.5 ? 4 * lph - 1 : 3 - 4 * lph; break;
-            case 'saw': lv = 1 - 2 * lph; break;
-            case 'square': lv = lph < 0.5 ? 1 : -1; break;
-            case 'sh': case 'smooth': {
-              const last = lglobal ? this.shPhase : v.shPhase;
-              if (last == null || lph < last) { if (lglobal) { this.shPrevG = this.shG; this.shG = Math.random() * 2 - 1; } else { v.shPrev = v.sh2 || 0; v.sh2 = Math.random() * 2 - 1; } }
-              if (lglobal) this.shPhase = lph; else v.shPhase = lph;
-              const cur = lglobal ? this.shG : v.sh2, prv = lglobal ? this.shPrevG : (v.shPrev || 0);
-              lv = lwave === 'sh' ? cur : prv + (cur - prv) * (0.5 - 0.5 * Math.cos(Math.PI * lph));
-              break;
-            }
-            default: lv = Math.sin(TWO_PI * lph);
-          }
           v.lfoAge += CTRL / sr;
-          const lfoFade = ldelay > 0 ? clamp((v.lfoAge - ldelay * 0.5) / (ldelay * 0.5), 0, 1) : 1;
-          lv *= lfoFade;
+          // LFOs: left and right values for each. Random waves take the phase knob as how far
+          // the right side wanders on its own (0 = same as left, 180 = independent).
+          for (let q = 0; q < 2; q++) {
+            if (q ? !lUse1 : !lUse0) { LV[q * 2] = 0; LV[q * 2 + 1] = 0; if (!lGlob[q]) v.lp[q] = (v.lp[q] + lRate[q] * CTRL / sr) % 1; continue; }
+            let ph;
+            if (lGlob[q]) ph = (lG0[q] + lRate[q] * fr / sr) % 1;
+            else { v.lp[q] = (v.lp[q] + lRate[q] * CTRL / sr) % 1; ph = v.lp[q]; }
+            const phOff = CT[cb + (q ? K_L2PH : K_L1PH)] / 360;
+            let vL = 0, vR = 0;
+            const wv = lWave[q];
+            if (wv >= 4) {
+              const R5 = lGlob[q] ? gsh : v.lsh, o = q * 5;
+              if (ph < R5[o + 4] || R5[o + 4] === 0) {
+                R5[o + 1] = R5[o]; R5[o] = Math.random() * 2 - 1; R5[o + 3] = R5[o + 2]; R5[o + 2] = Math.random() * 2 - 1;
+              }
+              R5[o + 4] = ph > 0 ? ph : 1e-9;
+              const sm = 0.5 - 0.5 * Math.cos(Math.PI * ph);
+              const aL = wv === 4 ? R5[o] : R5[o + 1] + (R5[o] - R5[o + 1]) * sm;
+              const aR = wv === 4 ? R5[o + 2] : R5[o + 3] + (R5[o + 2] - R5[o + 3]) * sm;
+              const wR = phOff * 2;               // 0..1
+              vL = aL; vR = aL * (1 - wR) + aR * wR;
+            } else {
+              for (let c = 0; c < 2; c++) {
+                if (c && phOff === 0) { vR = vL; break; }
+                let x = c ? ph + phOff : ph; x -= Math.floor(x);
+                let y;
+                if (wv === 1) y = x < 0.5 ? 4 * x - 1 : 3 - 4 * x;
+                else if (wv === 2) y = 1 - 2 * x;
+                else if (wv === 3) y = x < 0.5 ? 1 : -1;
+                else y = Math.sin(TWO_PI * x);
+                if (c) vR = y; else vL = y;
+              }
+            }
+            const fadeQ = lDelay[q] > 0 ? clamp((v.lfoAge - lDelay[q] * 0.5) / (lDelay[q] * 0.5), 0, 1) : 1;
+            LV[q * 2] = vL * fadeQ; LV[q * 2 + 1] = vR * fadeQ;
+          }
+          const l1L = LV[0], l1R = LV[1], l2L = LV[2], l2R = LV[3];
           // drift: smooth random walk per voice
           if (--v.driftN <= 0) { v.driftT = Math.random() * 2 - 1; v.drift2T = Math.random() * 2 - 1; v.driftN = (0.3 + Math.random() * 0.6) * sr / CTRL; }
           v.drift += (v.driftT - v.drift) * 0.0003; v.drift2 += (v.drift2T - v.drift2) * 0.0003;
-          // pitch
+          // pitch: LFOs, wheel and pressure, unison detune, drift
           v.pitch += (v.pitchT - v.pitch) * gk;
-          const vib = (CT[cb + K_LP] + this.mw * mwv + this.at * atv) * lv / 100;
-          const pn = v.pitch + this.bend * bendR + sx + vib + driftC * v.drift / 100;
-          const f1 = fix1 > 0 ? fix1 * Math.pow(2, (vib + driftC * v.drift / 100) / 12) : 440 * Math.pow(2, (pn + off1 - 69) / 12);
+          const vib = ((CT[cb + K_LP] + this.mw * mwv + this.at * atv) * l1L + CT[cb + K_L2P] * l2L) / 100;
+          const det = v.uPos * CT[cb + K_DET] / 100;
+          const pn = v.pitch + this.bend * bendR + sx + vib + det + driftC * v.drift / 100;
+          const f1 = fix1 > 0 ? fix1 * Math.pow(2, (vib + det + driftC * v.drift / 100) / 12) : 440 * Math.pow(2, (pn + off1 - 69) / 12);
           const f2 = fix2 > 0 ? fix2 : 440 * Math.pow(2, (pn + off2 + driftC * 0.5 * v.drift2 / 100 - 69) / 12);
           dt1 = Math.min(f1 / fs, 0.45); dt2 = Math.min(f2 / fs, 0.45); dts = dt1 / subDiv;
-          pw1 = clamp(CT[cb + K_PW1] + CT[cb + K_LPW] * lv * 0.5, 0.03, 0.97); pw2 = clamp(CT[cb + K_PW2] + CT[cb + K_LPW] * lv * 0.5, 0.03, 0.97);
-          // filter cutoff
+          const pwm = (CT[cb + K_LPW] * l1L + CT[cb + K_L2PW] * l2L) * 0.5;
+          pw1 = clamp(CT[cb + K_PW1] + pwm, 0.03, 0.97); pw2 = clamp(CT[cb + K_PW2] + pwm, 0.03, 0.97);
+          // filter cutoffs, left and right
           const oct = CT[cb + K_KT] * (v.pitch - 60) / 12 + CT[cb + K_ENV] * 7 * fe + CT[cb + K_VELF] * (v.vel - 0.79) * 3
-            + CT[cb + K_LC] * lv + this.mw * mwc + this.at * atc;
-          let fc = CT[cb + K_CUT] * Math.pow(2, oct);
-          fc = clamp(fc, 16, sr * 0.45);
-          const res = clamp(CT[cb + K_RES], 0, 1);
-          if (model === 1) {
-            // Ladder: the tanh stages pull a self-oscillating filter flat, by an amount set by how
-            // far the loop gain is past 4 (measured: about 86 cents per unit, a little less up high).
-            const over = res * 4.45 - 4;
-            if (over > 0) { const g0 = Math.PI * fc / fs; fc *= Math.pow(2, over * (86 - 280 * g0) / 1200); }
-          } else if (res > 0.6) {
-            // Valve: the coupling cap's phase lead pushes the resonance up; pull the cutoff down to
-            // match, fully from the point where the loop can oscillate (RES_T). Past that point
-            // the saturating tube pulls it flat again, by a measured amount per tube (vCal, cents).
-            const w = res >= RES_T ? 1 : (res - 0.6) / (RES_T - 0.6), ws = w * w * (3 - 2 * w);
-            fc *= 1 + (vComp - 1) * ws;
-            const e = res > RES_T ? (res - RES_T) / (1 - RES_T) : 0;
-            fc *= Math.pow(2, -(vCal[0] * ws + vCal[1] * e + vCal[2] * e * e) / 1200);
-          }
-          fc = clamp(fc, 16, sr * 0.45);
-          fg = Math.tan(Math.PI * fc / fs);
-          gH = Math.tan(Math.PI * Math.min(fc * hpRatio, sr * 0.2) / fs); aH = 1 / (1 + gH);
+            + this.mw * mwc + this.at * atc;
+          const res = clamp(CT[cb + K_RES], 0, 1), half = CT[cb + K_OFF] * 0.5;
+          cc[1] = res;
+          cc[0] = CT[cb + K_CUT] * Math.pow(2, oct + CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L - (st2 ? half : 0));
+          this.fcoef(FL, model);
+          if (st2) { cc[0] = CT[cb + K_CUT] * Math.pow(2, oct + CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R + half); this.fcoef(FR, model); }
+          const sagA = clamp(CT[cb + K_SAG], 0, 10) / 10; fl[F_SAGA] = sagA; frs[F_SAGA] = sagA;
           const fd = clamp(CT[cb + K_FDRV], 0, 10);
           fdG = Math.pow(2, (fd - 3) / 3); fdC = 1 / Math.sqrt(fdG);
-          if (model === 1) { ladK = res * 4.45; ladComp = 1 + ladK * 0.45; }
-          else { valK = KMAX * Math.pow(res, KEXP); sagAmt = clamp(CT[cb + K_SAG], 0, 10) / 10; }
-          lfoAmp = 1 - clamp(CT[cb + K_LA], 0, 1) * (0.5 - 0.5 * lv);
+          // amplitude: tremolo per side
+          const la1 = clamp(CT[cb + K_LA], 0, 1), la2 = clamp(CT[cb + K_L2A], 0, 1);
+          ampL = (1 - la1 * (0.5 - 0.5 * l1L)) * (1 - la2 * (0.5 - 0.5 * l2L));
+          ampR = (1 - la1 * (0.5 - 0.5 * l1R)) * (1 - la2 * (0.5 - 0.5 * l2R));
+          // pan: the note's pan, its unison place, and LFO 2's auto-pan
+          const pan = clamp(v.pan + v.uPos * CT[cb + K_USP] + CT[cb + K_L2PAN] * l2L, -1, 1);
+          if (pan !== v.lastPan) { v.lastPan = pan; v.gl = Math.cos((pan + 1) * Math.PI / 4); v.gr = Math.sin((pan + 1) * Math.PI / 4); }
+          gl = v.gl; gr = v.gr;
           l1 = CT[cb + K_L1]; l2 = CT[cb + K_L2]; ls = CT[cb + K_LS]; ln = CT[cb + K_LN];
           fm = CT[cb + K_FM] * 0.25; ring = CT[cb + K_RING]; G1 = CT[cb + K_V1G]; mk1 = CT[cb + K_V1MK]; vol = CT[cb + K_VOL];
         }
@@ -609,7 +756,8 @@ class Filament extends AudioWorkletProcessor {
         else if (fst === E_REL) { fe += (0 - fe) * fR; }
         if (v.killing) { fade -= 1 / (0.002 * sr); if (fade <= 0) { fade = 0; } }
         const duck = duck0 + (this.duck - duck0) * (fr / frames);
-        const amp = ae * (1 - velA * (1 - v.vel)) * lfoAmp * fade * duck * vol * 0.5;
+        const amp = ae * (1 - velA * (1 - v.vel)) * fade * duck * vol * 0.5 * uniG * fdC;
+        const aLg = amp * ampL * gl, aRg = amp * ampR * gr;
         // ---- 2x inner loop ----
         for (let s = 0; s < OS; s++) {
           // oscillators
@@ -630,86 +778,36 @@ class Filament extends AudioWorkletProcessor {
             if (pink) { nb0 = 0.99765 * nb0 + wn * 0.0990460; nb1 = 0.96300 * nb1 + wn * 0.2965164; nb2 = 0.57000 * nb2 + wn * 1.0526913; xn = (nb0 + nb1 + nb2 + wn * 0.1848) * 0.25; }
             else xn = wn;
           }
-          let x = (x1 * l1 + x2 * l2 + xs * ls + xn * ln) * 0.6;
+          const x = (x1 * l1 + x2 * l2 + xs * ls + xn * ln) * 0.6;
           // V1 drive tube, then a coupling cap (15 Hz) to stop its DC reaching the filter
           v1Acc += x * x;
           let y;
-          { let tp = (G1 * x + TT_R) * TT_SCALE;
+          { const tp = (G1 * x + TT_R) * TT_SCALE;
             if (tp <= 0) y = v1Tab[0]; else if (tp >= TT_N - 1) y = v1Tab[TT_N - 1];
             else { const ti = tp | 0; y = v1Tab[ti] + (v1Tab[ti + 1] - v1Tab[ti]) * (tp - ti); }
             y = y / G1 * mk1; }
-          dcy = y - dcx + dcA * dcy; dcx = y; y = dcy;
-          y *= fdG;
-          // filter
-          if (model === 1) {
-            // ---- Ladder 24 ----
-            const fq = fg, r = ladK, ih = 0.5 * (y + zi); zi = y;
-            let q = ih - r * s4, qa = q * q;
-            const t0 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
-            if (true) {
-              qa = s1 * s1; t1 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
-              qa = s2 * s2; t2 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
-              qa = s3 * s3; t3 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
-              qa = s4 * s4; t4 = ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
-              g0 = 1 / (1 + fq * t1); g1 = 1 / (1 + fq * t2); g2 = 1 / (1 + fq * t3); g3 = 1 / (1 + fq * t4);
-            }
-            const f3 = fq * t3 * g3, f2 = fq * t2 * g2 * f3, f1 = fq * t1 * g1 * f2, f0 = fq * t0 * g0 * f1;
-            const y3 = (g3 * s4 + f3 * g2 * s3 + f2 * g1 * s2 + f1 * g0 * s1 + f0 * y) / (1 + r * f0);
-            const xx = t0 * (y - r * y3);
-            const y0 = t1 * g0 * (s1 + fq * xx), yy1 = t2 * g1 * (s2 + fq * y0), yy2 = t3 * g2 * (s3 + fq * yy1);
-            s1 += 2 * fq * (xx - y0); s2 += 2 * fq * (y0 - yy1); s3 += 2 * fq * (yy1 - yy2); s4 += 2 * fq * (yy2 - t4 * y3);
-            y = y3 * ladComp;
-            v2Acc += 0;
-          } else {
-            // ---- Valve 12 ----
-            const g = fg, R = 0.70710678;
-            const kq = valK;
-            // Supply sag: a loud loop pulls the rail down, so the loop tube runs out of headroom
-            // sooner. Small-signal gain is untouched, so it keeps oscillating, just lower.
-            const lGe = lG * (1 + 2.5 * sagAmt * sag);
-            // linearise the loop tube at the last band-pass value
-            const v0 = bp, u0 = lGe * v0;
-            let T0, T1;
-            { const tp = (u0 + TT_R) * TT_SCALE;
-              if (tp <= 0) { T0 = lTab[0]; T1 = 0; } else if (tp >= TT_N - 1) { T0 = lTab[TT_N - 1]; T1 = 0; }
-              else { const ti = tp | 0, d = lTab[ti + 1] - lTab[ti]; T0 = lTab[ti] + d * (tp - ti); T1 = d * TT_SCALE; }
-              T0 /= lGe; }
-            const bh = -shh * aH;                     // coupling-cap high-pass: out = aH*in + bh
-            const c1 = kq * aH * T1, c0 = kq * (aH * (T0 - T1 * v0) + bh);
-            const hp = (y + c0 + c1 * s1 - (2 * R + g) * s1 - s2) / (1 + 2 * R * g + g * g - c1 * g);
-            const bpn = g * hp + s1; s1 = g * hp + bpn;
-            const lp = g * bpn + s2; s2 = g * bpn + lp;
-            const fbRaw = T0 + T1 * (bpn - v0);
-            // high-pass state update (TPT one-pole lowpass inside it)
-            const vH = (fbRaw - shh) * gH * aH; const lpH = vH + shh; shh = lpH + vH;
-            // sag follower on the loop level: fast attack, slow release
-            const af = Math.abs(fbRaw);
-            sag += (af - sag) * (af > sag ? 0.0005 : 0.000035);
-            bp = bpn;
-            v2Acc += fbRaw * fbRaw * (kq > 0.05 ? 1 : 0);
-            y = lp;
-          }
-          y *= fdC * amp;
+          dcy = y - dcx + dcA * dcy; dcx = y; y = dcy * fdG;
+          // filter(s)
+          fl[F_IN] = y;
+          if (isLadder) FL.ladder(); else FL.valve(lTab);
+          const yl = fl[F_OUT];
+          let yr = yl;
+          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else FR.valve(lTab); yr = frs[F_OUT]; }
           const idx = i * OS + s;
-          L2[idx] += y * v.gl; R2[idx] += y * v.gr;
+          L2[idx] += yl * aLg; R2[idx] += yr * aRg;
         }
       }
       // write back
-      v.s1 = s1; v.s2 = s2; v.s3 = s3; v.s4 = s4; v.zi = zi; v.bp = bp; v.sh = shh; v.sag = sag;
       v.dcx = dcx; v.dcy = dcy; v.nb0 = nb0; v.nb1 = nb1; v.nb2 = nb2;
-      v.ae = ae; v.fe = fe; v.as = as; v.fs = fst; v.fg = fg; v.kres = kres; v.dt1 = dt1; v.dt2 = dt2; v.dts = dts; v.pw1 = pw1; v.pw2 = pw2;
+      v.ae = ae; v.fe = fe; v.as = as; v.fs = fst; v.dt1 = dt1; v.dt2 = dt2; v.dts = dts; v.pw1 = pw1; v.pw2 = pw2;
       v.fade = fade;
+      v2Acc += fl[F_V2] + (st2 ? frs[F_V2] : 0); fl[F_V2] = 0; frs[F_V2] = 0;
       // flush denormals / blow-ups
-      if (!(Math.abs(s1) < 1e6) || !(Math.abs(s2) < 1e6) || !(Math.abs(s3) < 1e6) || !(Math.abs(s4) < 1e6) || !(Math.abs(bp) < 1e6)) {
-        v.s1 = v.s2 = v.s3 = v.s4 = v.bp = v.sh = v.zi = 0;
-      } else {
-        if (Math.abs(v.s1) < 1e-20) v.s1 = 0; if (Math.abs(v.s2) < 1e-20) v.s2 = 0;
-        if (Math.abs(v.s3) < 1e-20) v.s3 = 0; if (Math.abs(v.s4) < 1e-20) v.s4 = 0;
-      }
+      if (FL.bad() || FR.bad()) { FL.reset(); FR.reset(); } else { FL.flush(); FR.flush(); }
       if (as === E_IDLE || (v.killing && fade <= 0)) {
-        v.on = false; v.as = E_IDLE; v.ae = 0; v.killing = false; v.fade = 1;
-        v.s1 = v.s2 = v.s3 = v.s4 = v.bp = v.sh = v.zi = v.sag = 0;
-        if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false); }
+        v.on = false; v.as = E_IDLE; v.ae = 0; v.killing = false; v.fade = 1; v.st2 = false;
+        FL.reset(); FR.reset();
+        if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U); }
       }
     }
     // a stale NaN would poison the decimator forever
@@ -732,11 +830,14 @@ const VCAL0 = [0, 0, 0];
 // that the power tubes' odd harmonics come through.
 const KMAX = 2.2, KEXP = 2.7, RES_T = Math.pow(1.41421356 / KMAX, 1 / KEXP);
 const LGX = 0.3;   // how much of each tube's own gain reaches the Valve loop (0 = all the same)
+const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };
 // tanh(x)/x, Pade approximant (exact enough for |x| < 3, still monotone and bounded beyond)
 function tdx(x) { const a = x * x; return ((a + 105) * a + 945) / ((15 * a + 420) * a + 945); }
 function num(v, d) { v = +v; return isFinite(v) ? v : d; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+// the mod wheel and aftertouch can add vibrato through LFO 1 even when its own depth is 0
+function mwvAny(P, self) { return (self.mw > 0 && num((P.mw || {}).vib, 30) > 0) || (self.at > 0 && num((P.at || {}).vib, 0) > 0); }
 function isStruct(a, b) {
   if (!a) return true;
   return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube',

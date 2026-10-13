@@ -102,6 +102,17 @@
   .knob.learn svg { filter: drop-shadow(0 0 6px var(--green)); }
   .knob .cc { position: absolute; top: -2px; right: 2px; font-size: 8px; color: var(--green); }
   .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  /* goniometer and correlation: copied from /otr (f9f5d2b, index.html lines 547-555) */
+  .gonio-wrap { display: flex; gap: 10px; align-items: stretch; margin: 6px 0 2px; }
+  canvas#gonioCv { width: 112px; height: 112px; display: block; border: 1px solid var(--border); border-radius: 6px; background: #040704; flex: 0 0 auto; }
+  .corr { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .corr .kl { font-size: 9.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .corrbar { position: relative; height: 10px; border-radius: 3px; border: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(255,92,92,.35), rgba(255,179,71,.25) 45%, rgba(0,255,157,.3)); }
+  .corrbar b { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1.5px; background: #fff; border-radius: 2px; left: 100%; transition: left .08s linear; }
+  .corr .cv { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; }
+  .corr .cv.warn { color: var(--amber); }
+  .corr .scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); }
   .note { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
 
   /* keybed */
@@ -163,6 +174,7 @@
     body[data-tab] .mod { display: none; }
     body[data-tab="play"] .mod[data-tab~="play"], body[data-tab="osc"] .mod[data-tab~="osc"], body[data-tab="filter"] .mod[data-tab~="filter"],
     body[data-tab="mod"] .mod[data-tab~="mod"], body[data-tab="stereo"] .mod[data-tab~="stereo"], body[data-tab="rack"] .mod[data-tab~="rack"] { display: block; }
+    body[data-tab="stereo"] #mStereo { order: -2; } body[data-tab="stereo"] #mEns { order: -1; }
     .keybed { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 6px 6px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #333; }
     .kctl { min-width: 54px; }
     .btn, .btn.small { min-height: 44px; min-width: 44px; padding: 4px 10px; }
@@ -243,12 +255,25 @@
       <section class="mod" data-tab="mod" id="mEnvA"><h3><span class="pilot"></span>Amp envelope</h3><div class="knobs" id="kEnvA"></div></section>
       <section class="mod" data-tab="mod" id="mEnvF"><h3><span class="pilot"></span>Filter envelope</h3><div class="knobs" id="kEnvF"></div></section>
       <section class="mod" data-tab="mod" id="mLfo"><h3><span class="pilot"></span>LFO 1</h3><div class="chips" data-chips="lfo1.wave"></div><div class="chips" data-chips="lfo1.mode"></div><div class="knobs" id="kLfo"></div></section>
+      <section class="mod" data-tab="mod" id="mLfo2"><h3><span class="pilot" id="lfo2Pilot"></span>LFO 2</h3><div class="chips" data-chips="lfo2.wave"></div><div class="chips" data-chips="lfo2.mode"></div><div class="knobs" id="kLfo2"></div>
+        <div class="note">Stereo phase offsets the right side: on tremolo it auto-pans, on cutoff the sweep moves between the speakers.</div></section>
       <section class="mod" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
       <section class="mod" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
         <div class="note">Mod wheel and aftertouch come from a MIDI keyboard, or the MOD strip by the keys.</div></section>
       <section class="mod" data-tab="stereo play" id="mStereo"><h3><span class="pilot"></span>Stereo</h3><div class="chips" data-chips="stereo.pan"></div>
         <div class="row"><button class="chip" id="wOnBtn" aria-pressed="true">width on</button><button class="chip" id="monoBtn" aria-pressed="false" title="Hold to hear the mono fold (what a phone speaker plays)">mono check</button></div>
+        <div class="gonio-wrap">
+          <canvas id="gonioCv" role="img" aria-label="Goniometer: a vertical line is mono, a wide cloud is stereo"></canvas>
+          <div class="corr">
+            <span class="kl">phase correlation</span>
+            <div class="corrbar"><b id="corrMark"></b></div>
+            <div class="scale"><span>-1</span><span>0</span><span>+1</span></div>
+            <span class="cv" id="corrV" aria-live="off">play to see</span>
+          </div>
+        </div>
         <div class="knobs" id="kStereo"></div></section>
+      <section class="mod" data-tab="stereo rack" id="mEns"><h3><span class="pilot" id="ensPilot"></span>Ensemble<button class="chip sw" id="ensOnBtn" aria-pressed="false">off</button></h3><div class="chips" data-chips="ens.mode"></div><div class="knobs" id="kEns"></div>
+        <div class="note">Bucket brigade chorus before the output tubes. I and II sweep slow, I+II shimmers, strings is the three-phase ensemble of the string machines.</div></section>
       <section class="mod" data-tab="rack" id="mOut" data-wide><h3><span class="pilot"></span>Output tubes, V3 and V4</h3><div class="chips" data-chips="out.tube"></div><div class="chips" data-chips="out.topology"></div>
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
       <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
@@ -275,7 +300,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.1 &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.2 in progress (the stereo round) &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -410,7 +435,8 @@ document.querySelectorAll('[data-chips]').forEach(el => {
   const labels = {
     'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24' },
     'lfo1.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' },
-    'lfo1.mode': { global: 'global', voice: 'per voice' }, 'stereo.pan': { center: 'centre', alt: 'alternate', key: 'keyboard', random: 'random' },
+    'lfo1.mode': { global: 'global', voice: 'per voice' }, 'lfo2.mode': { global: 'global', voice: 'per voice' },
+    'lfo2.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' }, 'stereo.pan': { center: 'centre', alt: 'alternate', key: 'keyboard', random: 'random' },
     'out.topology': { se: 'single ended', pp: 'push-pull' },
     'out.cab': { console: "console '40s", bakelite: "Bakelite '50s", horn: "theater horn", monitor: 'studio monitor' },
     'out.room': { living: 'living room', studio: 'studio', theater: 'theater', hall: 'hall' },
@@ -442,6 +468,7 @@ K('kFilt', 'filt.keytrack', 'key trk', { min: 0, max: 1, step: 0.01, fmt: pct, t
 K('kFilt', 'filt.env', 'env', { min: -1, max: 1, step: 0.01, fmt: v => (v > 0 ? '+' : '') + Math.round(v * 100), title: 'Filter envelope amount' });
 K('kFilt', 'filt.vel', 'velocity', { min: 0, max: 1, step: 0.01, fmt: pct });
 K('kFilt', 'filt.sag', 'sag', { min: 0, max: 10, step: 0.1, title: 'Supply sag in the Valve loop: a loud resonance blooms, then settles' });
+K('kFilt', 'filt.offset', 'stereo off', { min: -1, max: 1, step: 0.01, fmt: v => v === 0 ? '0' : (v > 0 ? '+' : '') + v.toFixed(2) + 'oct', title: 'Stereo offset: left and right cutoffs move apart by up to an octave each way' });
 K('kFilt', 'filt.bias', 'loop bias', { min: -5, max: 5, step: 0.1, fmt: v => v < 0 ? 'cold ' + (-v).toFixed(1) : v > 0 ? 'hot ' + v.toFixed(1) : '0', title: 'V2 bias: hot adds even harmonics to the resonance' });
 const T = LOG(0.001, 10), TR = LOG(0.003, 12);
 K('kEnvA', 'envA.a', 'attack', { map: T, fmt: fmtS }); K('kEnvA', 'envA.d', 'decay', { map: T, fmt: fmtS });
@@ -451,10 +478,13 @@ K('kEnvF', 'envF.a', 'attack', { map: T, fmt: fmtS }); K('kEnvF', 'envF.d', 'dec
 K('kEnvF', 'envF.s', 'sustain', { min: 0, max: 1, step: 0.01, fmt: pct }); K('kEnvF', 'envF.r', 'release', { map: TR, fmt: fmtS });
 K('kLfo', 'lfo1.rate', 'rate', { map: LOG(0.02, 30), fmt: v => v < 1 ? v.toFixed(2) + 'Hz' : v.toFixed(1) + 'Hz' });
 K('kLfo', 'lfo1.delay', 'delay', { min: 0, max: 5, step: 0.01, fmt: fmtS, title: 'Fade the LFO in after each note starts' });
+K('kLfo', 'lfo1.phase', 'stereo ph', { min: 0, max: 180, step: 1, fmt: v => Math.round(v) + '°', title: 'Stereo phase: offsets the right side of the LFO (random waves: how far the right side wanders on its own)' });
 K('kLfo', 'lfo1.pitch', 'vibrato', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c' });
 K('kLfo', 'lfo1.cutoff', 'cutoff', { min: 0, max: 4, step: 0.01, fmt: v => v.toFixed(2) + 'oct' });
 K('kLfo', 'lfo1.pw', 'pwm', { min: 0, max: 0.9, step: 0.01, fmt: pct });
 K('kLfo', 'lfo1.amp', 'tremolo', { min: 0, max: 1, step: 0.01, fmt: pct });
+K('kVoice', 'voice.unison', 'unison', { min: 1, max: 8, step: 1, round: true, fmt: v => v === 1 ? 'off' : 'x' + v, title: 'Unison: stack 1 to 8 voices on each note' });
+K('kVoice', 'voice.detune', 'detune', { min: 0, max: 50, step: 0.5, fmt: v => v.toFixed(1) + 'c', title: 'Unison detune: the outer copies sit this many cents either side' });
 K('kVoice', 'voice.count', 'voices', { min: 1, max: 16, step: 1, round: true, fmt: v => '' + v });
 K('kVoice', 'voice.glide', 'glide', { min: 0, max: 2, step: 0.005, fmt: v => v === 0 ? 'off' : fmtS(v) });
 K('kVoice', 'voice.bend', 'bend', { min: 0, max: 12, step: 1, round: true, fmt: v => '±' + v });
@@ -465,6 +495,7 @@ K('kCtl', 'mw.cut', 'whl cut', { title: 'Mod wheel to filter cutoff', min: -4, m
 K('kCtl', 'at.cut', 'AT cut', { title: 'Aftertouch (key pressure) to filter cutoff', min: -4, max: 4, step: 0.05, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'oct' });
 K('kCtl', 'at.vib', 'AT vib', { title: 'Aftertouch (key pressure) to vibrato depth', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c' });
 K('kStereo', 'stereo.spread', 'spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'How far voices spread across the field' });
+K('kStereo', 'stereo.uspread', 'uni spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Unison spread: how far unison copies fan out across the field' });
 K('kStereo', 'out.width', 'width', { min: 0, max: 200, step: 1, fmt: v => Math.round(v) + '%', title: 'Mid/side width. 0 folds to mono; never flips polarity.' });
 K('kStereo', 'out.wChar', 'width char', { min: 3, max: 20, step: 0.5, fmt: v => v.toFixed(1) + 'ms' });
 K('kOut', 'out.drive', 'drive', { min: 0, max: 10, step: 0.1 });
@@ -472,6 +503,15 @@ K('kOut', 'out.bias', 'bias', { min: -5, max: 5, step: 0.1, fmt: v => v < 0 ? 'c
 K('kOut', 'out.sag', 'sag', { min: 0, max: 10, step: 0.1, title: 'Rectifier sag: loud passages squash a little' });
 K('kOut', 'out.tone', 'tone', { min: -5, max: 5, step: 0.1, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) });
 K('kOut', 'out.level', 'level', { min: -24, max: 12, step: 0.5, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'dB' });
+K('kLfo2', 'lfo2.rate', 'rate', { map: LOG(0.02, 30), fmt: v => v < 1 ? v.toFixed(2) + 'Hz' : v.toFixed(1) + 'Hz' });
+K('kLfo2', 'lfo2.delay', 'delay', { min: 0, max: 5, step: 0.01, fmt: fmtS });
+K('kLfo2', 'lfo2.phase', 'stereo ph', { min: 0, max: 180, step: 1, fmt: v => Math.round(v) + '°' });
+K('kLfo2', 'lfo2.pan', 'auto-pan', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Moves each voice across the field' });
+K('kLfo2', 'lfo2.pitch', 'vibrato', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c' });
+K('kLfo2', 'lfo2.cutoff', 'cutoff', { min: 0, max: 4, step: 0.01, fmt: v => v.toFixed(2) + 'oct' });
+K('kLfo2', 'lfo2.pw', 'pwm', { min: 0, max: 0.9, step: 0.01, fmt: pct });
+K('kLfo2', 'lfo2.amp', 'tremolo', { min: 0, max: 1, step: 0.01, fmt: pct });
+K('kEns', 'ens.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 K('kSpk', 'out.spkInt', 'intensity', { min: 0, max: 10, step: 0.1 });
 K('kRoom', 'out.rmMix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 K('kRoom', 'out.rmDecay', 'decay', { min: 0.2, max: 6, step: 0.05, fmt: v => v.toFixed(2) + 's' });
@@ -483,9 +523,10 @@ function toggle(id, path, label) {
   return () => { const on = !!getPath(cur, path); b.setAttribute('aria-pressed', String(on)); if (label) b.textContent = label(on); };
 }
 const TG = [toggle('syncBtn', 'osc2.sync'), toggle('wOnBtn', 'out.wOn', on => on ? 'width on' : 'width off'),
-            toggle('spkOnBtn', 'out.spkOn', on => on ? 'on' : 'off'), toggle('roomOnBtn', 'out.roomOn', on => on ? 'on' : 'off')];
+            toggle('spkOnBtn', 'out.spkOn', on => on ? 'on' : 'off'), toggle('roomOnBtn', 'out.roomOn', on => on ? 'on' : 'off'),
+            toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off')];
 // touching a bypassed module's control switches it on (the /otr rack rule)
-[['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn']].forEach(([id, path]) => {
+[['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on']].forEach(([id, path]) => {
   $(id).addEventListener('pointerdown', e => { if (e.target.closest('.sw')) return; if (!getPath(cur, path)) { setPath(cur, path, true); afterChange(path); pushPatch(false); } });
 });
 
@@ -497,9 +538,13 @@ function afterChange(path) {
   ['filt.sag', 'filt.bias'].forEach(p => { KN[p].k.el.style.display = valve ? '' : 'none'; });
   $('filtNote').textContent = valve
     ? 'Valve 12: 2-pole lowpass with V2 in its resonance loop. Triodes sing, power tubes scream.'
-    : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises.';
+    : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
   $('spkPilot').classList.toggle('off', !cur.out.spkOn); $('roomPilot').classList.toggle('off', !cur.out.roomOn);
   $('mSpk').classList.toggle('off', !cur.out.spkOn); $('mRoom').classList.toggle('off', !cur.out.roomOn);
+  $('ensPilot').classList.toggle('off', !cur.ens.on); $('mEns').classList.toggle('off', !cur.ens.on);
+  const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
+  $('lfo2Pilot').classList.toggle('off', !l2on);
+  KN['voice.detune'].k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; KN['stereo.uspread'].k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
   $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube; $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
   $('topoV4').textContent = cur.out.topology === 'pp' ? 'PP' : 'SE';
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
@@ -742,6 +787,29 @@ function drawVU(l, r) {
     const a = ang(v); c.strokeStyle = '#111'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(cx + R * 0.25 * Math.cos(a), cy + R * 0.25 * Math.sin(a)); c.lineTo(cx + R * 0.97 * Math.cos(a), cy + R * 0.97 * Math.sin(a)); c.stroke();
   });
 }
+// ---- goniometer (mid up, side across) and phase correlation ----
+// Copied from /otr (f9f5d2b, index.html drawGonio, lines 4403-4422); reads this page's analysers.
+const GON = { L: null, R: null, corr: 1, scale: 4 };
+function drawGonio(running) {
+  const f = fitCanvas($('gonioCv')); if (!f) return; const c = f.c, w = f.w, h = f.h, cx = w / 2, cy = h / 2;
+  c.fillStyle = 'rgba(4,7,4,0.32)'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = 'rgba(0,255,157,0.10)'; c.lineWidth = 1; c.beginPath(); c.moveTo(cx, 4); c.lineTo(cx, h - 4); c.moveTo(4, cy); c.lineTo(w - 4, cy);
+  c.moveTo(cx - cx * 0.7, cy - cy * 0.7); c.lineTo(cx + cx * 0.7, cy + cy * 0.7); c.moveTo(cx + cx * 0.7, cy - cy * 0.7); c.lineTo(cx - cx * 0.7, cy + cy * 0.7); c.stroke();
+  c.font = '8px ' + getComputedStyle(document.body).fontFamily; c.fillStyle = 'rgba(0,255,157,0.35)'; c.fillText('L', cx - cx * 0.78, cy - cy * 0.72); c.fillText('R', cx + cx * 0.7, cy - cy * 0.72); c.fillText('M', cx + 3, 10);
+  if (!E || !E.C || !E.C.anL || !running) { $('corrV').textContent = E ? 'idle' : 'play to see'; return; }
+  if (!GON.L) { GON.L = new Float32Array(E.C.anL.fftSize); GON.R = new Float32Array(E.C.anR.fftSize); }
+  E.C.anL.getFloatTimeDomainData(GON.L); E.C.anR.getFloatTimeDomainData(GON.R);
+  let sLR = 0, sLL = 0, sRR = 0, pk = 1e-4; const n = GON.L.length;
+  for (let i = 0; i < n; i++) { const l = GON.L[i], r = GON.R[i]; sLR += l * r; sLL += l * l; sRR += r * r; pk = Math.max(pk, Math.abs(l) + Math.abs(r)); }
+  if (sLL < 1e-9 && sRR < 1e-9) { $('corrV').textContent = 'idle'; return; }
+  GON.scale += ((0.42 * Math.min(w, h)) / pk - GON.scale) * 0.08; const k = Math.min(GON.scale, 400);
+  c.fillStyle = 'rgba(120,255,200,0.75)';
+  for (let j = 0; j < n; j += 2) { const L = GON.L[j], Rr = GON.R[j]; c.fillRect(cx + (L - Rr) * k * 0.7071, cy - (L + Rr) * k * 0.7071, 1.4, 1.4); }
+  const corr = (sLL > 1e-9 && sRR > 1e-9) ? sLR / Math.sqrt(sLL * sRR) : 1; GON.corr += (corr - GON.corr) * 0.15;
+  $('corrMark').style.left = ((GON.corr + 1) / 2 * 100).toFixed(1) + '%';
+  $('corrV').textContent = GON.corr > 0.985 ? 'mono' : (GON.corr >= 0 ? '+' : '') + GON.corr.toFixed(2) + (GON.corr < 0 ? ' (phasey)' : '');
+  $('corrV').classList.toggle('warn', GON.corr < 0);
+}
 function frame(now) {
   requestAnimationFrame(frame);
   if (document.hidden) return;
@@ -774,6 +842,7 @@ function frame(now) {
   drawVU(vuL, vuR);
   eyeLv += (clampN(pk / 0.89, 0, 1) - eyeLv) * (1 - Math.exp(-dt / (pk / 0.89 > eyeLv ? 0.03 : 0.4)));
   drawEye(eyeLv);
+  const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
   $('voicesV').textContent = m.voices || 0;
   const cpu = m.cpu || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
 }
@@ -782,7 +851,7 @@ requestAnimationFrame(frame);
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.1',
+  version: '0.2-stereo',
   ready: () => !!E,
   patch: () => clone(cur),
   setPatch: p => { cur = normalize(p); curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur); },
@@ -792,6 +861,7 @@ window.__synth = {
   tubes: () => TUBES.map(t => t.id),
   noteOn: (n, v) => noteOn(n, v == null ? 0.8 : v), noteOff: n => noteOff(n),
   meter: () => E ? Object.assign({}, E.meter) : null,
+  correlation: () => GON.corr, corrText: () => $('corrV').textContent,
   state: () => ({ ctx: ctx ? ctx.state : 'none', down: [...down.keys()], tab: document.body.dataset.tab, oct: baseOct, sustain: sustainOn }),
   engine: () => E,
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
