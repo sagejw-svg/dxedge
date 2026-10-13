@@ -44,7 +44,7 @@ advice; have an IP attorney review before a commercial launch.
 |-|-|-|-|
 | [DaisySP](https://github.com/electro-smith/DaisySP) | MIT | Envelopes, analog-style kick, snare and hi-hat models, Karplus-Strong, modal and resonator synthesis, granular player, phaser, wavefolder, overdrive, limiter, noise sources | Port specific modules to JS for the drum machine and effects. **Not** its `DaisySP-LGPL` folder. |
 | [Mutable Instruments eurorack](https://github.com/pichenettes/eurorack) | MIT for the STM32 modules (AVR projects are GPL-3.0; hardware CC BY-SA 3.0) | Some of the best open synth DSP there is: macro oscillators, resonators, granular textures | Port STM32-module code only, after checking each file's header. Their page: "Mutable Instruments is a registered trademark"; never use that name, and rename anything derived from a module. |
-| [Airwindows](https://github.com/airwindows/airwindows) | MIT | Hundreds of small effects: console and tape saturation, reverbs, compressors, EQs | Port individual effects for the rack's effect devices. |
+| [Airwindows](https://github.com/airwindows/airwindows) | MIT | The full open source code of a large collection of small audio effect plugins (the repo page gives no count) | Port individual effects for the rack's effect devices; check each one does what we need first. |
 | [STK, Synthesis ToolKit](https://github.com/thestk/stk) | MIT-style (keep the copyright and permission notice) | Physical models: plucked and bowed strings, winds, modal bars, classic FM instruments | Port instrument models for a physical modeling device. |
 | [Freeverb](https://ccrma.stanford.edu/~jos/pasp/Freeverb.html) | Public domain (Jezar at Dreampoint) | The classic Schroeder-Moorer reverb | A plain reverb device or a building block. |
 | [signalsmith-stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch) | MIT, ships a WASM/AudioWorklet build | Pitch shifting and time stretching (best between about 0.75x and 1.5x) | The sampler's stretch and repitch. Saves weeks. |
@@ -54,7 +54,7 @@ advice; have an IP attorney review before a commercial launch.
 | [@tonejs/midi](https://github.com/Tonejs/Midi) | MIT | Read and write MIDI files | Import and export .mid in the song sequencer. |
 | [webaudio-pianoroll](https://github.com/g200kg/webaudio-pianoroll) | Apache-2.0 | A piano roll editor component | Starting point or reference for the piano roll. |
 | [Yjs](https://github.com/yjs/yjs) | MIT | CRDT shared data types | Multiplayer and shared projects, much later. |
-| [AKWF waveforms](https://www.adventurekid.se/akrt/waveforms/adventure-kid-waveforms/) | CC0 1.0 | Thousands of single-cycle waveforms | Wavetables for a wavetable device. |
+| [AKWF waveforms](https://www.adventurekid.se/akrt/waveforms/adventure-kid-waveforms/) | CC0 1.0 | A large set of single-cycle waveforms (the author's page gives no count) | Wavetables for a wavetable device. |
 | [FluidR3_GM SoundFont](https://github.com/educandu/abcjs-soundfonts) | MIT (per that repository's notes; confirm at the original source before shipping) | A General MIDI instrument set | Default sounds for imported MIDI files and a GM fallback. |
 | Salamander Grand Piano | Public domain now (originally CC BY 3.0), per the same repository; confirm at source | A sampled grand piano | A piano preset for the sampler. |
 
