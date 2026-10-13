@@ -41,6 +41,8 @@ task can read it).
 | `frontend/public/synth/voice.worklet.js` | Both devices' engines (AudioWorklet): processor `filament` (oscillators, V1, filters, envelopes, LFOs, voices) and processor `cathode` (one voice, the patch graph, diode-clipped SVF high-pass and low-pass) |
 | `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent` |
 | `frontend/public/synth/patches.js` | Filament patch schema v1, defaults, `normalize`, the factory set |
+| `frontend/public/synth/smf.js` | Our own Standard MIDI File reader and writer (pure functions): `readSMF`, `songOf` (tempo map to seconds, multi-channel tracks split per channel, format 2 played in sequence), `writeSMF` (format 1, 480 ppq), `bytesOf` |
+| `frontend/public/synth/deck.js` | The MIDI deck above the keys: recorder, import with the track list and device chips, the player (150 ms lookahead, 25 ms timer, frame-exact `at`), Render WAV |
 | `frontend/public/synth/cathode.js` | Cathode patch schema v1 (`device: 'cathode'`, `cables: [[source, input]]`), the jack lists and normals, `normalizeC`, its factory set |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx` |
@@ -64,7 +66,7 @@ task can read it).
 - [x] 12 factory patches, user patches in localStorage
 - [x] Tests 1-7, 8, 9 (logged), 10, 12 plus UI checks
 
-### 0.2 Character - next, one item per night, in this order
+### 0.2 Character - next (from the graphic EQ), one item per night, in this order
 - [ ] Graphic EQ in the rack row (the chain already has it; needs the UI and patch fields)
 - [x] Goniometer and correlation meter (copied from /otr into the Stereo section) - 13 Oct, stereo round
 - [x] LFO 2 (adds auto-pan), and stereo phase (0-180 degrees) for both LFOs - 13 Oct, stereo round
@@ -100,12 +102,28 @@ Done when: every model self-oscillates where it should; mono fold passes for all
 - [ ] A second Cathode voice for duophonic play, or a poly-chain mode
 - [ ] Cathode on the mod matrix and arpeggiator when those land (they should be rack-wide, not Filament-only)
 
-### MIDI files: recorder and player (James, 13 Oct 2026) - next, ahead of the 0.2 list
+### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
 devices (so Filament and Cathode play at once); built by the nightly job. Two slices; if both do not
 fit in one night, ship slice 1 and leave slice 2 unchecked here.
-- [ ] Slice 1: `smf.js`, the recorder with .mid export, import with the track list, the player
-- [ ] Slice 2: Render WAV (imported file or take, both devices, rack included)
+- [x] Slice 1: `smf.js`, the recorder with .mid export, import with the track list, the player - 13 Oct
+- [x] Slice 2: Render WAV (imported file or take, both devices, rack included) - 13 Oct, same run
+
+Calls made while building it (James can overrule any of them):
+- A track named "Filament: ..." or "Cathode: ..." (our own exports) goes back to that device on import,
+  ahead of the other defaults, so a take round-trips.
+- A track with notes on several channels (every format 0 file) is split into one row per channel.
+- If the first melodic track is also the lowest, the lowest of the other tracks goes to Cathode.
+- A track with no notes (only bend or pedal) follows the note track on its channel, or is off.
+- Export writes Filament on MIDI channel 1 and Cathode on channel 2, at 120 BPM.
+- Render WAV renders whatever was played last (the file or the take); if nothing has been played, the
+  file if one is loaded, else the take. It uses the tempo control and the selected device's rack settings,
+  adds a 2 s tail, and writes 16-bit without dither.
+- A tempo change while playing lands where scheduling has reached (up to 150 ms later), so events are
+  never sent out of order.
+- Known limits: the keyboard and the player share note numbers on a device, so releasing a key the
+  player is also holding lets go of the player's note; switching devices while playing turns sustain off
+  on the device you leave. Neither seemed worth the extra plumbing yet.
 
 Spec (what "done" means):
 - **Our own Standard MIDI File code** in a new `frontend/public/synth/smf.js`: pure functions, no DOM,
@@ -171,6 +189,11 @@ Done when: share link round trip test passes.
   about 2.5 dB. Factory patches are kept within 3 dB (test 7); the correlation meter goes amber below 0.
   A fully mono-safe version would need a third (centre) filter per voice; not done, CPU.
 
+- Listen to the MIDI deck: record a take across both devices, import a few real .mid files (a GM
+  song with drums, a format 0 file), and render one to WAV. The tests check timing, pitch and routing,
+  not how a busy GM file sounds on two synth voices. The calls made while building it are listed under
+  the MIDI files section; any of them can change.
+
 ## Notes from James
 (write here; the nightly run reads this first)
 - 2026-10-13 (afternoon): **Tonight's run (Oct 13, 11:52 PM) builds MIDI files: recorder and player**,
@@ -187,5 +210,6 @@ Done when: share link round trip test passes.
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-13 (2:33 PM PT, scheduled run): bug check clean (suite ALL PASS 190, live page no errors, sw.js v71 matched). Built MIDI files, both slices, per Notes from James: `smf.js` (our own reader and writer), `deck.js` (recorder, .mid export, import with track list and device chips, player with loop and tempo 50-200%, Render WAV), `E.sendTo` and a playback hold in the engine (`{t:'play'}` keeps an inactive Cathode awake; `{t:'flush'}` drops queued playback events on stop), and a two-device `renderOffline`. Found and fixed during the build: Stop could leave a note stuck when its note off was already scheduled but not yet played (now every note playback touched is released; regression check added). Commit COMMIT. Suite: ALL PASS (228 checks; 38 new in M. and the phone deck). CPU (test 9, headless, final run): Cathode 14.7%; Filament 8 voices 18.9% (Ladder 24) and 20.0% (Valve 12); stereo offset 23.6%; 16 voices with ensemble 30.3%. No patch changed and no existing sound changed; the deck adds no DSP to the voices. Since this ran in the afternoon, tonight's 11:52 PM run should find both slices ticked and resume the 0.2 list at the graphic EQ, as the note says.
 - 2026-10-13 (just after midnight PT, interactive): Cathode, the second device, and the rack rail (see the Cathode section above). Suite: ALL PASS (190 checks). CPU: Cathode Plate Screamer about 17% of real time with the rack; Filament 8 voices 27 to 32% (this server varies run to run). No Filament patch changed; Filament now sleeps when silent for 100 ms, which only saves CPU.
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).

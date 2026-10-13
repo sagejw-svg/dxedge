@@ -12,7 +12,8 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
+panel, the rack rail), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+with both devices at once, Render WAV) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
 """
@@ -474,6 +475,193 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
     ck("C. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- M. MIDI files: recorder, import, player, render WAV
+    # Fixtures are built byte by byte here (not with smf.js), so the reader is checked against the format itself.
+    def vlq(v):
+        out = [v & 0x7f]; v >>= 7
+        while v: out.insert(0, (v & 0x7f) | 0x80); v >>= 7
+        return out
+    def mthd(fmt, ntrk, div): return list(b"MThd") + [0, 0, 0, 6, 0, fmt, 0, ntrk, div >> 8, div & 255]
+    def mtrk(body): return list(b"MTrk") + [(len(body) >> 24) & 255, (len(body) >> 16) & 255, (len(body) >> 8) & 255, len(body) & 255] + body
+    def tempo(us): return [0xFF, 0x51, 3, (us >> 16) & 255, (us >> 8) & 255, us & 255]
+    def tname(s): return [0xFF, 0x03, len(s)] + list(s.encode())
+    EOT = [0, 0xFF, 0x2F, 0]
+    # format 1, 96 ppq: 120 BPM, then 60 BPM from tick 384 (2.0 s). A4 at 0 to 0.5 s; E5 at tick 480 (3.0 s) to tick 576 (4.0 s).
+    # Running status, a velocity-0 note off, a sysex and an unknown meta (both skipped; both cancel running status).
+    T0 = [0] + tname("Tempo") + [0] + tempo(500000) + vlq(384) + tempo(1000000) + EOT
+    T1 = [0] + tname("Melody") + [0, 0x90, 69, 100] + vlq(96) + [69, 0] + [0, 0xF0, 3, 0x7E, 0x7F, 0xF7] + [0, 0xFF, 0x7F, 2, 1, 2] \
+        + vlq(384) + [0x90, 76, 100] + vlq(96) + [76, 0] + EOT
+    MEL = mthd(1, 2, 96) + mtrk(T0) + mtrk(T1)
+    r = pg.evaluate("a => __synth.smf.read(a)", MEL); s_ = r["song"]
+    evs = [(round(e["time"], 4), e["data"]) for e in s_["parts"][0]["events"]]
+    ck("M. read format 1: running status, velocity-0 note offs, sysex and an unknown meta skipped, tempo change at 2 s",
+       r["format"] == 1 and r["ppq"] == 96 and len(s_["parts"]) == 1 and s_["parts"][0]["name"] == "Melody"
+       and evs == [(0, [0x90, 69, 100]), (0.5, [0x80, 69, 0]), (3.0, [0x90, 76, 100]), (4.0, [0x80, 76, 0])] and abs(s_["length"] - 4.0) < 1e-9, (r["format"], evs, s_["length"]))
+    # format 0: one track, melody on channel 1 and drums on channel 10, running status across both, tempo change mid-file
+    F0 = [0] + tempo(600000) + [0, 0x90, 60, 90] + [0, 0x99, 36, 100] + vlq(48) + [36, 0] + vlq(48) + [0x80, 60, 0] \
+        + [0] + tempo(300000) + vlq(96) + [0x90, 62, 90] + vlq(96) + [62, 0] + EOT
+    r = pg.evaluate("a => __synth.smf.read(a)", mthd(0, 1, 96) + mtrk(F0)); s_ = r["song"]
+    mel = [p for p in s_["parts"] if p["chans"] == [1]]; drm = [p for p in s_["parts"] if p["chans"] == [10]]
+    t_ = [round(e["time"], 4) for e in mel[0]["events"]] if mel else []
+    ck("M. read format 0: split by channel, running status, tempo 100 then 200 BPM (notes at 0, 0.6 s and 0.9 s)",
+       r["format"] == 0 and len(mel) == 1 and len(drm) == 1 and t_ == [0, 0.6, 0.9, 1.2] and drm[0]["notes"] == 1, (r["format"], [(p["name"], p["chans"]) for p in s_["parts"]], t_))
+    # format 2: two sequences, played one after another
+    F2a = [0, 0x90, 60, 90] + vlq(96) + [0x80, 60, 0] + vlq(96) + [0xFF, 0x2F, 0]
+    F2b = [0, 0x90, 67, 90] + vlq(96) + [0x80, 67, 0] + EOT
+    r = pg.evaluate("a => __synth.smf.read(a)", mthd(2, 2, 96) + mtrk(F2a) + mtrk(F2b)); s_ = r["song"]
+    ck("M. read format 2: the second sequence starts where the first ends (1.0 s)", len(s_["parts"]) == 2 and abs(s_["parts"][1]["events"][0]["time"] - 1.0) < 1e-9
+       and abs(s_["length"] - 1.5) < 1e-9, [(p["events"][0]["time"]) for p in s_["parts"]])
+    ok = pg.evaluate("a => __synth.deck().importBytes(a, 'smpte.mid')", list(b"MThd") + [0, 0, 0, 6, 0, 0, 0, 1, 0xE7, 0x28] + mtrk(F2b))
+    ck("M. a SMPTE-timed file is refused with a clear message", ok is False and "SMPTE" in pg.inner_text("#fileStat"), pg.inner_text("#fileStat"))
+    ok = pg.evaluate("a => __synth.deck().importBytes(a, 'junk.mid')", list(b"RIFF....junk"))
+    ck("M. a file that is not MIDI is refused with a clear message", ok is False and "not a Standard MIDI File" in pg.inner_text("#fileStat"))
+
+    # round trip: write then read gives the same events, timing within one tick at 480 ppq, 120 BPM (1.04 ms)
+    parts = [{"name": "Filament: Test", "ch": 0, "events": [{"time": 0.0, "data": [0x90, 60, 100]}, {"time": 0.1234, "data": [0xE0, 0, 96]}, {"time": 0.3337, "data": [0xB0, 1, 77]},
+              {"time": 0.5, "data": [0xB0, 64, 127]}, {"time": 0.75, "data": [0x80, 60, 0]}, {"time": 0.9, "data": [0xD0, 50]}, {"time": 1.25, "data": [0xB0, 64, 0]}]},
+             {"name": "Cathode: Bass", "ch": 1, "events": [{"time": 0.2, "data": [0x91, 36, 80]}, {"time": 0.6, "data": [0x81, 36, 0]}, {"time": 0.6, "data": [0x91, 36, 81]}, {"time": 2.0, "data": [0x81, 36, 0]}]}]
+    wb = pg.evaluate("a => __synth.smf.write(a)", {"bpm": 120, "parts": parts})
+    r = pg.evaluate("a => __synth.smf.read(a)", wb)
+    got = [(p["name"], [(e["time"], e["data"]) for e in p["events"]]) for p in r["song"]["parts"]]
+    exp = [(p["name"], [(e["time"], e["data"]) for e in p["events"]]) for p in parts]
+    same = len(got) == 2 and all(g[0] == x[0] and len(g[1]) == len(x[1]) and all(a[1] == b_[1] and abs(a[0] - b_[0]) <= 1 / 960 + 1e-9 for a, b_ in zip(g[1], x[1])) for g, x in zip(got, exp))
+    ck("M. SMF round trip: write then read gives the same events, names and times (within 1.04 ms)", same and r["format"] == 1 and r["ppq"] == 480 and r["timeSig"] == [4, 4], got)
+
+    # an imported melody, rendered through the deck's own score: onsets and pitches, before and after the tempo change
+    sine = patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.001, "d": 0.1, "s": 1, "r": 0.01}, ens={"on": False})
+    pg.evaluate("__synth.setDevice('filament')")
+    ck("M. import: a melodic single track goes to the selected device", pg.evaluate("a => __synth.deck().importBytes(a, 'melody.mid')", MEL)
+       and pg.evaluate("__synth.deck().song().assign") == ["filament"])
+    def render_deck(fil, cat, seconds=None, rack=True):
+        a = pg.evaluate("__synth.deck().renderArgs('file')")
+        a["patches"] = {"filament": fil, "cathode": cat}; a["rack"] = rack
+        if seconds: a["seconds"] = seconds
+        return a, dec(pg.evaluate("a => __synth.render2(a)", a))
+    def onset(x, t0, A):
+        i0 = int(t0 * SR); k = np.nonzero(np.abs(x[i0:]) > 0.1 * A)[0]
+        return (i0 + int(k[0])) / SR if len(k) else None
+    a, (L, R) = render_deck(sine, cpatch(), rack=False)
+    A1 = float(np.max(np.abs(L[int(0.1 * SR):int(0.4 * SR)]))); A2 = float(np.max(np.abs(L[int(3.1 * SR):int(3.4 * SR)])))
+    o1, o2 = onset(L, 0.0, A1), onset(L, 2.5, A2)
+    f1, f2 = peak_freq(L[int(0.05 * SR):int(0.45 * SR)]), peak_freq(L[int(3.05 * SR):int(3.45 * SR)])
+    c1, c2 = 1200 * math.log2(f1 / 440), 1200 * math.log2(f2 / 659.255)
+    ck(f"M. imported melody at 120 BPM: A4 starts at {1000 * o1:.2f} ms and is {c1:+.2f} cents from 440 Hz", o1 is not None and o1 <= 0.005 and abs(c1) < 5, (o1, f1))
+    ck(f"M. after the tempo change to 60 BPM: E5 starts at {o2:.4f} s (expected 3.000) and is {c2:+.2f} cents from 659.26 Hz", o2 is not None and abs(o2 - 3.0) <= 0.005 and abs(c2) < 5, (o2, f2))
+    ck("M. the note between ends on time (silent at 2.5 s)", float(np.max(np.abs(L[int(0.6 * SR):int(2.9 * SR)]))) < 0.01 * A1)
+    pg.evaluate("() => { const t = document.getElementById('tempoIn'); t.value = 200; t.dispatchEvent(new Event('input')); }")
+    a = pg.evaluate("__synth.deck().renderArgs('file')")
+    ons = [e["at"] for e in a["events"] if e["t"] == "on"]
+    ck("M. tempo 200%: the score runs twice as fast (E5 at 1.5 s, render 2 s + 2 s tail)", ons == [0, 1.5] and abs(a["seconds"] - 4.0) < 1e-9, (ons, a["seconds"]))
+    pg.evaluate("() => { const t = document.getElementById('tempoIn'); t.value = 100; t.dispatchEvent(new Event('input')); }")
+
+    # two tracks, two devices at once: a chord on Filament, a bass line on Cathode
+    T1c = [0] + tname("Chord") + [0, 0x90, 60, 100, 0, 64, 100, 0, 67, 100] + vlq(384) + [0x80, 60, 0, 0, 64, 0, 0, 67, 0] + EOT
+    T2b = [0] + tname("Bass") + [0, 0x91, 38, 110] + vlq(192) + [38, 0] + [0, 33, 110] + vlq(192) + [0x81, 33, 0] + EOT
+    DRM = [0] + tname("Drums") + [0, 0x99, 36, 100] + vlq(48) + [36, 0] + EOT
+    TWO = mthd(1, 4, 96) + mtrk([0] + tempo(500000) + EOT) + mtrk(T1c) + mtrk(T2b) + mtrk(DRM)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
+    sg = pg.evaluate("__synth.deck().song()")
+    ck("M. defaults: first melodic track on Filament, the lowest-pitched on Cathode, channel 10 off", sg["assign"] == ["filament", "cathode", "off"], sg)
+    tri = cpatch(vco1={"wave": "tri", "scale": 8, "level": 0.8})
+    _, (L, R) = render_deck(sine, tri)
+    seg = L[int(0.2 * SR):int(0.9 * SR)]; seg2 = L[int(1.2 * SR):int(1.9 * SR)]
+    amp = {f: tone_amp(seg, f) for f in (261.63, 329.63, 392.0, 73.42, 480.0)}
+    floor_ = max(amp[480.0], 1e-6)
+    ck("M. both devices sound at once: the Filament chord (C4 E4 G4) and the Cathode bass (D2) are all present",
+       all(amp[f] > 30 * floor_ for f in (261.63, 329.63, 392.0, 73.42)), {k: round(db(v), 1) for k, v in amp.items()})
+    ck("M. the bass line moves on Cathode (A1 in the second second)", tone_amp(seg2, 55.0) > 10 * tone_amp(seg2, 73.42), (db(tone_amp(seg2, 55.0)), db(tone_amp(seg2, 73.42))))
+    pg.evaluate("__synth.deck().assign(1, 'off')")
+    _, (L, R) = render_deck(sine, tri); seg = L[int(0.2 * SR):int(0.9 * SR)]
+    ck("M. a track set to off is silent (D2 drops by 30 dB or more), the chord still plays", tone_amp(seg, 73.42) < amp[73.42] / 31.6 and tone_amp(seg, 261.63) > 30 * floor_,
+       (db(tone_amp(seg, 73.42)), db(amp[73.42])))
+    pg.evaluate("__synth.deck().assign(1, 'cathode')")
+
+    # the recorder, driven through __synth: notes, velocities and the device each went to
+    pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("__synth.deck().arm()")
+    tt = pg.evaluate("""async () => { const t = [], w = ms => new Promise(r => setTimeout(r, ms)), now = () => performance.now() / 1000;
+      await w(120);
+      __synth.noteOn(60, 0.8); t.push(now()); await w(200); __synth.noteOn(64, 0.5); t.push(now()); await w(200);
+      __synth.noteOff(60); t.push(now()); __synth.noteOff(64); t.push(now()); await w(80);
+      __synth.setDevice('cathode'); await w(60); __synth.noteOn(36, 1.0); t.push(now()); await w(150); __synth.noteOff(36); t.push(now());
+      await w(50); __synth.deck().stopRec(); __synth.setDevice('filament'); return t; }""")
+    tk = pg.evaluate("__synth.deck().take()")
+    ne = [e for e in tk["events"] if e["t"] in ("on", "off")]
+    sig = [(e["t"], e["n"], e["dev"]) for e in ne]
+    ck("M. recorder: the first note starts the take; notes, offs and devices captured in order",
+       sig == [("on", 60, "filament"), ("on", 64, "filament"), ("off", 60, "filament"), ("off", 64, "filament"), ("on", 36, "cathode"), ("off", 36, "cathode")]
+       and ne[0]["time"] == 0 and not tk["rec"] and not tk["armed"], sig)
+    dt = max(abs((e["time"]) - (t - tt[0])) for e, t in zip(ne, tt))
+    ck(f"M. recorder timing matches the calls within 5 ms (worst {1000 * dt:.2f} ms), velocities kept", dt <= 0.005 and [round(e["v"], 2) for e in ne if e["t"] == "on"] == [0.8, 0.5, 1.0], (dt,))
+    xb = pg.evaluate("__synth.deck().exportBytes()"); r = pg.evaluate("a => __synth.smf.read(a)", xb)
+    pp = r["song"]["parts"]
+    ex = [(round(e["time"], 4), e["data"][:2]) for p in pp for e in p["events"] if (e["data"][0] & 0xE0) == 0x80]
+    exp_ = sorted([(e["time"], [(0x90 if e["t"] == "on" else 0x80) | (1 if e["dev"] == "cathode" else 0), e["n"]]) for e in ne], key=lambda x: (x[1][0] & 15, x[0]))
+    tm_ok = len(ex) == len(exp_) and all(a_[1] == b_[1] and abs(a_[0] - b_[0]) <= 0.005 for a_, b_ in zip(ex, exp_))
+    ck("M. export: two named tracks (Filament, Cathode), and the take parses back with timing within 5 ms",
+       len(pp) == 2 and pp[0]["name"].startswith("Filament: ") and pp[1]["name"].startswith("Cathode: ") and tm_ok, ([p["name"] for p in pp], ex, exp_))
+    pg.evaluate("a => __synth.deck().importBytes(a, 'take.mid')", xb)
+    ck("M. our own export imports back onto the devices it was played on", pg.evaluate("__synth.deck().song().assign") == ["filament", "cathode"])
+
+    # the strip, in the page: import with the file picker, play lights the keys, stop lets go of everything
+    pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
+    LONG = mthd(1, 3, 96) + mtrk([0] + tempo(500000) + EOT) \
+        + mtrk([0] + tname("Pads") + [0, 0x90, 60, 100, 0, 64, 100] + vlq(960) + [0x80, 60, 0, 0, 64, 0] + EOT) \
+        + mtrk([0] + tname("Bass") + [0, 0x91, 36, 110] + vlq(960) + [0x81, 36, 0] + EOT)
+    pg.set_input_files("#impIn", files=[{"name": "long.mid", "mimeType": "audio/midi", "buffer": bytes(LONG)}]); pg.wait_for_timeout(150)
+    ck("M. UI: the file picker imports a file and lists its tracks with device chips", "long.mid" in pg.inner_text("#fileStat") and pg.is_visible("#trackList")
+       and pg.evaluate("document.querySelectorAll('#trackList .trk').length") == 2
+       and pg.evaluate("document.querySelector('#trackList .chip[data-trk=\"1\"][data-v=\"cathode\"]').getAttribute('aria-pressed')") == "true", pg.inner_text("#fileStat"))
+    pg.click("#playFile"); pg.wait_for_timeout(500)
+    keys_lit = pg.evaluate("[...document.querySelectorAll('.key.down')].map(k => +k.dataset.n).sort((a, b) => a - b)")
+    mf = pg.evaluate("__synth.engine().meters.filament"); mc = pg.evaluate("__synth.engine().meters.cathode")
+    ck("M. UI: play lights the keys for playback notes", {60, 64} <= set(keys_lit) and pg.evaluate("__synth.deck().playing()"), keys_lit)
+    ck("M. UI: both devices play while the keyboard stays on Filament (Cathode held awake)", pg.evaluate("__synth.device()") == "filament" and mf["voices"] >= 2
+       and mc and mc["voices"] == 1 and mc["notes"] == [36], (mf["voices"], mc))
+    p0 = pg.evaluate("__synth.deck().position()")
+    ck(f"M. UI: the position runs ({p0:.2f} s after 0.5 s)", 0.3 < p0 < 0.7, p0)
+    pg.click("#stopBtn"); pg.wait_for_timeout(250)
+    mf = pg.evaluate("__synth.engine().meters.filament"); mc = pg.evaluate("__synth.engine().meters.cathode")
+    ck("M. UI: stop releases every playback note and unlights the keys", not pg.evaluate("__synth.deck().playing()") and pg.evaluate("document.querySelectorAll('.key.down').length") == 0
+       and mf["notes"] == [] and mc["notes"] == [] and pg.evaluate("__synth.deck().sounding()") == {"filament": [], "cathode": []}, (mf["notes"], mc["notes"]))
+    pg.wait_for_timeout(900)
+    ck("M. UI: after stop the inactive Cathode fades and sleeps again", pg.evaluate("__synth.engine().meters.cathode.voices") == 0)
+    # loop: a 1 s file comes round again
+    pg.evaluate("a => __synth.deck().importBytes(a, 'loop.mid')", mthd(2, 2, 96) + mtrk(F2a) + mtrk(F2b))
+    pg.click("#loopBtn"); pg.click("#playFile"); pg.wait_for_timeout(1900)
+    ck(f"M. UI: loop comes round (still playing after 1.9 s of a 1.5 s file)", pg.evaluate("__synth.deck().playing()") and pg.evaluate("__synth.deck().position()") < 1.5, pg.evaluate("__synth.deck().position()"))
+    pg.click("#stopBtn"); pg.click("#loopBtn"); pg.wait_for_timeout(100)
+    ck("M. UI: no stuck notes after a looped stop", pg.evaluate("__synth.engine().meters.filament.notes") == [] and pg.evaluate("document.querySelectorAll('.key.down').length") == 0)
+    # regression: a stop that lands after a note off was scheduled (150 ms ahead) but before it played
+    pg.click("#playFile"); pg.wait_for_function("__synth.deck().position() >= 0.4", timeout=5000); pg.click("#stopBtn"); pg.wait_for_timeout(150)
+    ck("M. UI: stop with a note off still in flight leaves no stuck note", pg.evaluate("__synth.engine().meters.filament.notes") == [],
+       pg.evaluate("__synth.engine().meters.filament.notes"))
+    pg.click("#playFile"); pg.wait_for_timeout(2000)
+    ck("M. UI: without loop the player stops by itself at the end", not pg.evaluate("__synth.deck().playing()") and pg.evaluate("__synth.engine().meters.filament.notes") == [])
+    # export and render downloads
+    with pg.expect_download() as dl:
+        pg.click("#expBtn")
+    d_ = dl.value; mb = open(d_.path(), "rb").read()
+    r = pg.evaluate("a => __synth.smf.read(a)", list(mb))
+    import re as _re2
+    ck(f"M. UI: export downloads {d_.suggested_filename}, a MIDI file with the take", bool(_re2.fullmatch(r"filament-take-\d{8}-\d{4}\.mid", d_.suggested_filename))
+       and sum(p["notes"] for p in r["song"]["parts"]) == 3, d_.suggested_filename)
+    pg.evaluate("p => __synth.setPatch(p)", tri); pg.evaluate("p => __synth.setPatch(p)", sine); pg.wait_for_timeout(100)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
+    with pg.expect_download(timeout=60000) as dl:
+        pg.click("#wavBtn")
+    d_ = dl.value
+    import wave as _wave
+    with _wave.open(str(d_.path()), "rb") as wv:
+        prm = (wv.getnchannels(), wv.getsampwidth(), wv.getframerate(), wv.getnframes())
+        pcm = np.frombuffer(wv.readframes(wv.getnframes()), dtype="<i2").astype(np.float64).reshape(-1, 2) / 32768
+    wL = pcm[:, 0]; seg = wL[int(0.2 * SR):int(0.9 * SR)]
+    ck(f"M. Render WAV: {d_.suggested_filename} is 48 kHz 16-bit stereo, the file's 2 s plus a 2 s tail", prm[:3] == (2, 2, 48000) and abs(prm[3] - 4 * SR) <= 1
+       and d_.suggested_filename.startswith("filament-two-") and d_.suggested_filename.endswith(".wav"), (prm, d_.suggested_filename))
+    ck("M. Render WAV: both devices are in it (the C4 chord root and the D2 bass)", tone_amp(seg, 261.63) > 30 * tone_amp(seg, 480.0) and tone_amp(seg, 73.42) > 30 * tone_amp(seg, 480.0)
+       and float(np.max(np.abs(pcm))) <= 1.0, (db(tone_amp(seg, 261.63)), db(tone_amp(seg, 73.42)), db(tone_amp(seg, 480.0))))
+    ck("M. Render WAV: a progress note, then the result", "rendered" in pg.inner_text("#wavStat"), pg.inner_text("#wavStat"))
+    ck("M. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
@@ -601,6 +789,14 @@ with sync_playwright() as pw:
         c = ph.locator('#jackfield .jack[data-kind="in"][data-id="pmA"]'); c.scroll_into_view_if_needed(); c.tap(); ph.wait_for_timeout(100)
         ck(f"10. {w}px: tap an output, tap an input: patched", ph.evaluate("__synth.patch().cables") == [["mgTri", "pmA"]], ph.evaluate("__synth.patch().cables"))
         ph.screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_patch.png"))
+        ph.tap("#devF"); ph.wait_for_timeout(100); ph.tap('.tabs [data-go="play"]'); ph.wait_for_timeout(100)
+        ph.locator("#deckBtn").scroll_into_view_if_needed(); ph.locator("#deckBtn").tap()
+        ph.set_input_files("#impIn", files=[{"name": "a-rather-long-file-name-for-a-small-phone.mid", "mimeType": "audio/midi", "buffer": bytes(TWO)}]); ph.wait_for_timeout(150)
+        ck(f"10. {w}px: MIDI deck open with a file's tracks listed, no horizontal scroll", ph.is_visible("#trackList") and ph.evaluate("document.querySelectorAll('#trackList .trk').length") == 3
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        small = ph.evaluate("""() => [...document.querySelectorAll('#deck .btn, #deck .chip, #tempoIn')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
+        ck(f"10. {w}px: the deck's buttons, chips and tempo slider are 44 px or more", not small, small)
+        ph.locator("#deck").screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_deck.png"))
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
     b.close()

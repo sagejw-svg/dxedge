@@ -166,6 +166,26 @@
   .kctl .row { gap: 4px; }
   .kctl b { color: var(--amber2); }
 
+  /* the MIDI deck: recorder, file import, player */
+  .deck { padding: 6px 10px; border-top: 1px solid #000; background: linear-gradient(180deg, #101010, #0c0c0c); }
+  .deck.drop { outline: 2px dashed var(--green); outline-offset: -4px; }
+  .drow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+  .drow + .drow { margin-top: 6px; }
+  .deck .label { margin-right: 2px; }
+  .dstat { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+  .deck .btn:disabled { opacity: 0.4; cursor: default; }
+  #recBtn[aria-pressed="true"] { border-color: var(--red); color: var(--red); background: rgba(255,92,92,0.08); }
+  #recBtn.live { box-shadow: 0 0 8px rgba(255,92,92,0.45); }
+  .dbody { margin-top: 6px; border-top: 1px dashed #2c2c2c; padding-top: 6px; }
+  .dbody[hidden] { display: none; }
+  .tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .tempo input { width: 130px; accent-color: var(--amber); min-height: 34px; }
+  .tracks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+  .trk { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; border: 1px solid #222; border-radius: 6px; padding: 4px 8px; min-width: 0; }
+  .trk .tn { color: var(--text); font-size: 12px; flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+  .trk .tm { color: var(--dim); font-size: 10.5px; }
+  .trk .chips { margin: 0; }
+
   footer { margin-top: 14px; font-size: 11px; color: var(--dim); line-height: 1.7; }
   footer p { margin: 4px 0; max-width: 980px; }
   kbd { background: #1a1a1a; border: 1px solid #333; border-radius: 3px; padding: 0 4px; font-size: 10.5px; color: var(--text); }
@@ -217,6 +237,7 @@
     .chip { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 12px; }
     .tabs button { min-height: 44px; min-width: 44px; padding: 7px 3px; letter-spacing: 0; font-size: 11px; }
     .kctl .hide-s { display: none; }
+    .deck { padding: 6px; } .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
     .strip { width: 22px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
@@ -348,6 +369,33 @@
       <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
     </div>
 
+    <section class="deck" id="deck" aria-label="MIDI files: record a take, import a file, play it">
+      <div class="drow">
+        <span class="label">midi</span>
+        <button class="btn small" id="recBtn" aria-pressed="false" title="Arm the recorder: the first note starts the take">&#9679; rec</button>
+        <button class="btn small" id="stopBtn" title="Stop recording and playback">&#9632; stop</button>
+        <button class="btn small" id="playTake" aria-pressed="false" disabled title="Play the take through the devices it was played on">&#9654; take</button>
+        <button class="btn small" id="expBtn" disabled title="Download the take as a MIDI file">.mid</button>
+        <button class="btn small" id="clrBtn" disabled>clear</button>
+        <span class="dstat" id="takeStat">no take</span>
+        <button class="btn small" id="impBtn" title="Open a MIDI file (or drop one here)">import</button>
+        <input type="file" id="impIn" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
+        <button class="btn small" id="deckBtn" aria-expanded="false" aria-controls="deckBody">file &#9662;</button>
+      </div>
+      <div class="dbody" id="deckBody" hidden>
+        <div class="drow"><span class="dstat" id="fileStat"></span></div>
+        <div class="drow">
+          <button class="btn small" id="playFile" aria-pressed="false" disabled>&#9654; play</button>
+          <button class="btn small" id="loopBtn" aria-pressed="false">loop</button>
+          <label class="tempo">tempo <input type="range" id="tempoIn" min="50" max="200" step="5" value="100" aria-label="Playback tempo, percent of the file's tempo"><b id="tempoV">100%</b></label>
+          <span class="dstat" id="posV">0:00.0 / 0:00.0</span>
+          <button class="btn small" id="wavBtn" disabled title="Render the file (or the take) with both devices and the rack to a 48 kHz 16-bit WAV">render wav</button>
+          <span class="dstat" id="wavStat"></span>
+        </div>
+        <div class="tracks" id="trackList" aria-label="Tracks: pick the device each one plays"></div>
+      </div>
+    </section>
+
     <div class="keybed" id="keybed">
       <div class="strips">
         <div class="strip" id="pbStrip" role="slider" aria-label="Pitch bend" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0" tabindex="0"><div class="thumb"></div><span class="sl">PITCH</span></div>
@@ -366,9 +414,10 @@
   <footer>
     <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Knobs: drag up or down (shift for fine), arrow keys, double click to reset.
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
+    <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.3: two devices in the rack, Filament and Cathode &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.4: two devices in the rack, Filament and Cathode, and a MIDI deck to record, import and play files &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -378,6 +427,8 @@ import { makeKnob } from './knob.js';
 import { TUBES, TUBE_BY } from './rack.js';
 import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
+import { createDeck } from './deck.js';
+import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 
@@ -462,22 +513,24 @@ function pushPatch(load) {
 
 // ---------------------------------------------------------------- notes
 const down = new Map();       // note -> source count
+let deck = null;              // the MIDI deck, built further down
 let sustainOn = false;
 function noteOn(n, v) {
   if (n < 0 || n > 127) return;
   wake();
-  withEngine(() => E.noteOn(n, v));
+  withEngine(() => E.noteOn(n, v)); rec({ t: 'on', n, v });
   down.set(n, (down.get(n) || 0) + 1); paintKey(n, true);
 }
+const rec = m => { if (deck) deck.rec(dev, m); };
 function noteOff(n) {
   const c = (down.get(n) || 0) - 1;
   if (c > 0) { down.set(n, c); return; }
   down.delete(n); paintKey(n, false);
-  withEngine(() => E.noteOff(n));
+  withEngine(() => E.noteOff(n)); rec({ t: 'off', n });
 }
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
-  withEngine(() => E.sustain(sustainOn));
+  withEngine(() => E.sustain(sustainOn)); rec({ t: 'sus', on: sustainOn });
 }
 
 // ---------------------------------------------------------------- controls
@@ -938,14 +991,14 @@ function buildKeys() {
     if (black) { el.style.left = (x - bW / 2) + 'px'; el.style.width = bW + 'px'; }
     else { el.style.left = x + 'px'; el.style.width = wW + 'px'; x += wW; if (pc === 0) el.innerHTML = '<span class="kn">C' + (Math.floor(n / 12) - 1) + '</span>'; }
     host.appendChild(el); keyEls.set(n, el);
-    if (down.has(n)) el.classList.add('down');
+    if (down.has(n) || (deck && deck.lit(n))) el.classList.add('down');
   }
   host.style.width = x + 'px';
   $('octV').textContent = 'C' + baseOct;
   // phones: start the scroll on the middle C of the visible range
   if (phone) { const w = $('keyswrap'); w.scrollLeft = Math.max(0, 7 * wW - w.clientWidth / 2 + 3 * wW); }
 }
-function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', on); }
+function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || down.has(n) || !!(deck && deck.lit(n))); }
 buildKeys();
 let lastW = window.innerWidth; window.addEventListener('resize', () => { if (Math.abs(window.innerWidth - lastW) > 40) { lastW = window.innerWidth; buildKeys(); } });
 function setOct(o) { baseOct = clampN(o, 0, 7); store.set('filament_oct', baseOct); buildKeys(); }
@@ -986,13 +1039,13 @@ function strip(id, spring, onV) {
   requestAnimationFrame(show);
   return { set(x) { v = spring ? (x + 1) / 2 : x; show(); } };
 }
-const PB = strip('pbStrip', true, v => withEngine(() => E.bend(v)));
-const MW = strip('mwStrip', false, v => withEngine(() => E.modWheel(v)));
+const PB = strip('pbStrip', true, v => { withEngine(() => E.bend(v)); rec({ t: 'bend', v }); });
+const MW = strip('mwStrip', false, v => { withEngine(() => E.modWheel(v)); rec({ t: 'mw', v }); });
 
 // computer keyboard
 const KEYMAP = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15, ';': 16, "'": 17 };
 const keyDown = new Map();
-function typing(e) { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
+function typing(e) { const t = e.target; return t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
 window.addEventListener('keydown', e => {
   if (typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
@@ -1026,12 +1079,12 @@ function midiMsg(e) {
   switch (ev.t) {
     case 'on': noteOn(ev.n, ev.v); break;
     case 'off': noteOff(ev.n); break;
-    case 'bend': PB.set(ev.v); withEngine(() => E.bend(ev.v)); break;
-    case 'at': withEngine(() => E.aftertouch(ev.v)); break;
+    case 'bend': PB.set(ev.v); withEngine(() => E.bend(ev.v)); rec(ev); break;
+    case 'at': withEngine(() => E.aftertouch(ev.v)); rec(ev); break;
     case 'mw':
       if (learning && learnPath) return learnCC(1);
       if (ccMap[1]) return ccTo(1, ev.v);
-      MW.set(ev.v); withEngine(() => E.modWheel(ev.v)); break;
+      MW.set(ev.v); withEngine(() => E.modWheel(ev.v)); rec(ev); break;
     case 'sus': setSustain(ev.on); break;
     case 'panic': [...down.keys()].forEach(n => { down.set(n, 1); noteOff(n); }); withEngine(() => E.panic()); break;
     case 'cc':
@@ -1061,6 +1114,13 @@ function armLearn(key) { learnPath = key; document.querySelectorAll('.knob.learn
 $('learnBtn').addEventListener('click', () => { learning = !learning; learnPath = null; $('learnBtn').setAttribute('aria-pressed', String(learning));
   document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); toast(learning ? 'Learn: click a knob, then move a control on your keyboard.' : 'Learn off.'); });
 showCC();
+
+// ---------------------------------------------------------------- the MIDI deck (deck.js)
+deck = createDeck({
+  dev: () => dev, ctx: () => ctx, engine: () => E, wake, withEngine, toast,
+  patchOf: d => (d === dev ? cur : DS[d].cur), patchName: d => (d === dev ? cur : DS[d].cur).name || DEVS[d].name,
+  lit: n => paintKey(n, false),
+});
 
 // ---------------------------------------------------------------- the chassis
 const TUBE_ST = {};
@@ -1162,7 +1222,7 @@ requestAnimationFrame(frame);
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.3-cathode',
+  version: '0.4-midi-deck',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -1182,6 +1242,10 @@ window.__synth = {
   state: () => ({ ctx: ctx ? ctx.state : 'none', down: [...down.keys()], tab: document.body.dataset.tab, oct: baseOct, sustain: sustainOn }),
   engine: () => E,
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
+  deck: () => deck.test,
+  smf: { write: o => [...writeSMF(o)], read: arr => { const f = readSMF(Uint8Array.from(arr)); return { format: f.format, ppq: f.ppq, tempos: f.tempos, timeSig: f.timeSig, song: songOf(f) }; }, bytesOf },
+  // Two-device render: opts {patches:{filament, cathode}, device, events:[{at, dev, t, ...}], seconds}
+  render2: async opts => { const buf = await renderOffline(opts); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
   // Offline render: opts {patch, events:[{at (s), t, n, v, ...}], seconds, rack, mono}. Returns base64 float32 L and R.
   // MIDI bytes as a score: [{at (s), data:[status, d1, d2]}], mapped with the same midiEvent() as a keyboard.
   renderMidi: async opts => { const events = (opts.midi || []).map(m => Object.assign({ at: m.at }, midiEvent(m.data))).filter(e => e.t && e.t !== 'cc');

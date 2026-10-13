@@ -42,11 +42,11 @@ export async function createEngine(ctx, opts = {}) {
   }
   if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
   const ctl = { bend: 0, mw: 0, at: 0 };
-  function nodeFor(dev, events) {
+  function nodeFor(dev, events, playing) {
     if (E.nodes[dev]) return E.nodes[dev];
     const n = new AudioWorkletNode(ctx, dev, {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device },
+      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device, playing: !!playing },
     });
     n.connect(E.C ? E.ens.input : E.master);
     n.port.onmessage = e => {
@@ -62,6 +62,10 @@ export async function createEngine(ctx, opts = {}) {
     return n;
   }
   nodeFor(E.device, opts.events);
+  // Other devices that play a score from the start (the two-device offline render): their
+  // patches load, and playback holds them awake although the keyboard is not on them.
+  (opts.others || []).forEach(o => { const d = o.dev === 'cathode' ? 'cathode' : 'filament'; if (d === E.device) return;
+    E.patches[d] = normalizeAny(Object.assign({}, o.patch, { device: d })); nodeFor(d, o.events, true); });
   Object.defineProperty(E, 'node', { get: () => E.nodes[E.device] });
 
   let S = E.C ? rackState(patch) : null;
@@ -120,18 +124,38 @@ export async function createEngine(ctx, opts = {}) {
   E.modWheel = v => { ctl.mw = v; post({ t: 'mw', v }); };          // 0..1
   E.aftertouch = v => { ctl.at = v; post({ t: 'at', v }); };        // 0..1
   E.sustain = on => post({ t: 'sus', on: !!on });
+  // The MIDI file player: send to a named device, whether or not the keyboard is on it (its node
+  // is built if needed), and hold a device awake while playback runs.
+  E.sendTo = (dev, m) => nodeFor(dev === 'cathode' ? 'cathode' : 'filament').port.postMessage(m);
+  E.playing = (dev, on) => E.sendTo(dev, { t: 'play', on: !!on });
   E.panic = () => Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' }));
   E.mono = on => { if (E.C) E.C.setMono(!!on); };
   return E;
 }
 
 // Render a score offline. events: [{at: seconds, t:'on'|'off'|..., ...}], times in seconds.
+// Two-device form: patches {filament, cathode} and device (whose patch sets the rack, default
+// the patch's device); an event with dev:'cathode' or dev:'filament' goes to that device, one
+// without dev to the rack's device. onProgress(fraction) is called as the render runs.
 // Returns the AudioBuffer.
-export async function renderOffline({ patch, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false }) {
+export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
-  const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {}));
-  const E = await createEngine(ctx, { patch, events: ev, rack });
+  const frame = e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {});
+  let main = patch, others = [];
+  if (patches) {
+    const dev0 = device || deviceOf(patch) || 'filament';
+    main = Object.assign({}, patches[dev0] || {}, { device: dev0 });
+    others = Object.keys(patches).filter(d => d !== dev0 && patches[d])
+      .map(d => ({ dev: d, patch: patches[d], events: events.filter(e => e.dev === d).map(frame) }))
+      .filter(o => o.events.length);
+    events = events.filter(e => !e.dev || e.dev === dev0);
+  }
+  const E = await createEngine(ctx, { patch: main, events: events.map(frame), rack, others });
   if (mono) E.mono(true);
+  if (onProgress) {
+    const step = Math.max(1, Math.ceil(seconds / 50));
+    for (let t = step; t < seconds; t += step) ctx.suspend(t).then(() => { onProgress(t / seconds); ctx.resume(); });
+  }
   return ctx.startRendering();
 }
 
