@@ -89,6 +89,10 @@ Done when: share link round trip test passes.
 
 ## Notes from James
 (write here; the nightly run reads this first)
+- 2026-10-13 (night of Oct 12 PT): James chose a "stereo round" in an interactive session that is building
+  it now: unison, filter stereo offset, LFO 2 with stereo phase, goniometer and correlation, ensemble.
+  Tonight's 11:52 PM run: bug check only, no roadmap item, and do not edit frontend/public/synth/ unless
+  something is broken on the live site. The interactive session will tick its items when it pushes.
 
 ## Nightly log
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).
