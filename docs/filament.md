@@ -39,7 +39,9 @@ task can read it).
 |-|-|
 | `frontend/public/synth/index.html` | The page: panel, chassis, keyboard, MIDI, patches, test hook `window.__synth` |
 | `frontend/public/synth/voice.worklet.js` | Both devices' engines (AudioWorklet): processor `filament` (oscillators, V1, filters, envelopes, LFOs, voices) and processor `cathode` (one voice, the patch graph, diode-clipped SVF high-pass and low-pass) |
-| `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent` |
+| `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent`. The master gain feeds `makeMasterFx` (skip with `masterFx: false`) |
+| `frontend/public/synth/masterfx.js`, `master.worklet.js`, `masterui.js` | Master bus after every device: tempo-syncable stereo delay, Freeverb-style reverb, bus compressor/limiter. Each bypasses on its own. State is `filament_master` in localStorage, not a device patch |
+| `frontend/public/synth/wav.js` | 24-bit / 44.1 kHz stereo WAV: live record of the master, and offline render of N seconds (10 minute cap) |
 | `frontend/public/synth/patches.js` | Filament patch schema v1, defaults, `normalize`, the factory set |
 | `frontend/public/synth/cathode.js` | Cathode patch schema v1 (`device: 'cathode'`, `cables: [[source, input]]`), the jack lists and normals, `normalizeC`, its factory set |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
@@ -156,10 +158,13 @@ Spec (what "done" means):
 - [ ] Punched paper roll step sequencer
 - [ ] Theremin mode with the magic eye as tuning indicator
 - [ ] Share links (`?p=`), JSON export/import, Surprise me
-- [ ] WAV recording (10 minute cap)
+- [x] WAV recording (10 minute cap) - 14 Oct, master bus: live record and offline render, 24-bit 44.1 kHz stereo. (The MIDI file render in slice 2 is a separate button: 48 kHz 16-bit of a take. Still open.)
 - [ ] Tube view, faces (walnut, studio rack black, black light), lava lamp module
 - [ ] About 40 factory patches
 Done when: share link round trip test passes.
+
+### Master bus (14 Oct 2026)
+Delay, reverb and a compressor/limiter on the master, after Filament, Cathode and the rack. Each one bypasses on its own; with all three off the master is a straight wire (the worklet is not in the path). The delay syncs to a tempo on the strip (40–240 BPM, straight, dotted and triplet divisions, or a free time) and can ping-pong. The reverb is our own code for the public-domain Freeverb structure (see `docs/filament-licensing.md`). The compressor is original, with an optional ceiling limiter. Record and Render WAV write a 24-bit, 44.1 kHz stereo file, capped at 10 minutes. Nothing in a device patch changed, so factory patches sound the same until a master effect is switched on.
 
 ## Open items for James
 - Play it on the new keyboard and on a phone: is the Novachord Strings default the right first sound?
@@ -187,5 +192,6 @@ Done when: share link round trip test passes.
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-14: Master bus (delay, Freeverb-style reverb, compressor/limiter) and 24-bit 44.1 kHz WAV record/render. New modules plus the master-output hook in `engine.js`. Suite covers measurable effect, transparent bypass, and a valid non-silent WAV.
 - 2026-10-13 (just after midnight PT, interactive): Cathode, the second device, and the rack rail (see the Cathode section above). Suite: ALL PASS (190 checks). CPU: Cathode Plate Screamer about 17% of real time with the rack; Filament 8 voices 27 to 32% (this server varies run to run). No Filament patch changed; Filament now sleeps when silent for 100 ms, which only saves CPU.
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).

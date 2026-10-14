@@ -9,6 +9,7 @@
 import { makeSynthChain, makeEnsemble, tubeData } from './rack.js';
 import { normalize } from './patches.js';
 import { normalizeC } from './cathode.js';
+import { makeMasterFx } from './masterfx.js';
 
 export const deviceOf = p => (p && p.device === 'cathode' ? 'cathode' : 'filament');
 export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : normalize(p));
@@ -40,7 +41,17 @@ export async function createEngine(ctx, opts = {}) {
     E.ens.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
-  if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
+  // Master bus after every device and the rack. masterFx:false leaves the master gain
+  // connected straight through. A bypassed bus does the same: install() wires the master
+  // gain to the destination until an effect or a recording inserts the worklet.
+  if (opts.masterFx === false) {
+    if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
+  } else {
+    E.fx = await makeMasterFx(ctx, opts.master);
+    E.fx.install(E.master, opts.destination !== null ? (opts.destination || ctx.destination) : null);
+  }
+  E.setMaster = partial => (E.fx ? E.fx.set(partial) : null);
+  E.masterState = () => (E.fx ? E.fx.state() : null);
   const ctl = { bend: 0, mw: 0, at: 0 };
   function nodeFor(dev, events) {
     if (E.nodes[dev]) return E.nodes[dev];
@@ -127,10 +138,10 @@ export async function createEngine(ctx, opts = {}) {
 
 // Render a score offline. events: [{at: seconds, t:'on'|'off'|..., ...}], times in seconds.
 // Returns the AudioBuffer.
-export async function renderOffline({ patch, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false }) {
+export async function renderOffline({ patch, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, master = null, masterFx = true }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {}));
-  const E = await createEngine(ctx, { patch, events: ev, rack });
+  const E = await createEngine(ctx, { patch, events: ev, rack, master, masterFx });
   if (mono) E.mono(true);
   return ctx.startRendering();
 }

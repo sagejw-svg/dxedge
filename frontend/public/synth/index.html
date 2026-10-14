@@ -146,6 +146,14 @@
   .corr .cv.warn { color: var(--amber); }
   .corr .scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); }
   .note { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
+  #mMaster { min-width: 0; max-width: 100%; }
+  #mMaster .fxrow { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin: 2px 0 6px; min-width: 0; max-width: 100%; }
+  #mMaster .knobs { display: flex; flex-wrap: wrap; max-width: 100%; }
+  #mMaster .fxname { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); width: 58px; flex: 0 0 auto; }
+  #mMaster .fxstat { font-size: 10.5px; color: var(--dim); min-height: 1.4em; flex: 1 1 120px; }
+  #mMaster .fxoff .knobs { opacity: 0.45; }
+    #mMaster select.btn { max-width: 130px; min-width: 0; }
+  #wavSecs { width: 64px; background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 4px 6px; font-size: 12px; }
 
   /* keybed */
   .keybed { display: flex; gap: 8px; align-items: stretch; padding: 8px 10px 10px; border-top: 1px solid #000; background: linear-gradient(180deg, #0b0b0b, #121212); }
@@ -220,6 +228,8 @@
     .strip { width: 22px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
+    #wavSecs { min-height: 44px; min-width: 44px; }
+    #mMaster select.btn { min-width: 44px; max-width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
@@ -346,6 +356,7 @@
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
       <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
       <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
+      <section class="mod" data-tab="rack" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
     </div>
 
     <div class="keybed" id="keybed">
@@ -368,7 +379,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.3: two devices in the rack, Filament and Cathode &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.3: two devices in the rack, Filament and Cathode, with a master delay, reverb and compressor. Record or render a 24-bit WAV from the master. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -378,6 +389,7 @@ import { makeKnob } from './knob.js';
 import { TUBES, TUBE_BY } from './rack.js';
 import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
+import { mountMaster } from './masterui.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 
@@ -1159,10 +1171,16 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
+// ---------------------------------------------------------------- master bus (delay, reverb, compressor, WAV)
+const master = mountMaster({
+  host: $('masterHost'), store, withEngine, getEngine: () => E, toast,
+  getNotes: () => [...down.keys()], getPatch: () => cur,
+});
+
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.3-cathode',
+  version: '0.3-master',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -1188,6 +1206,11 @@ window.__synth = {
     const buf = await renderOffline(Object.assign({ patch: cur }, opts, { events })); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
   render: async opts => { const buf = await renderOffline(Object.assign({ patch: cur }, opts)); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
   timeRender: async opts => { const t0 = performance.now(); const buf = await renderOffline(Object.assign({ patch: cur }, opts)); return { ms: performance.now() - t0, seconds: buf.duration }; },
+  master: () => master.get(),
+  setMaster: s => master.set(s),
+  renderWav: opts => master.renderWav(opts || {}),
+  recordStart: () => master.recordStart(),
+  recordStop: () => master.recordStop(),
 };
 </script>
 <script src="/lib/stat.js"></script>

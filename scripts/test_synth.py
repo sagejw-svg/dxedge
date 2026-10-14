@@ -12,7 +12,8 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
+panel, the rack rail), M. (master bus: reverb, tempo-synced delay, compressor/limiter, WAV)
+and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
 """
@@ -88,8 +89,10 @@ with sync_playwright() as pw:
     pg = b.new_page(viewport={"width": 1366, "height": 1000}); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
-    def render(p, events, seconds, rack=True, mono=False):
-        return dec(pg.evaluate("a => __synth.render(a)", {"patch": p, "events": events, "seconds": seconds, "rack": rack, "mono": mono}))
+    def render(p, events, seconds, rack=True, mono=False, master=None, masterFx=True):
+        body = {"patch": p, "events": events, "seconds": seconds, "rack": rack, "mono": mono, "masterFx": masterFx}
+        if master is not None: body["master"] = master
+        return dec(pg.evaluate("a => __synth.render(a)", body))
     def note(n, at=0.0, off=None, v=0.8):
         e = [{"at": at, "t": "on", "n": n, "v": v}]
         if off is not None: e.append({"at": off, "t": "off", "n": n})
@@ -572,6 +575,146 @@ with sync_playwright() as pw:
     pg.screenshot(path=os.path.join(SHOTS, "synth_desktop.png"), full_page=True)
     ck("desktop: no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- M. master bus: reverb, delay, compressor, WAV
+    import struct
+    def rms(x): return float(np.sqrt(np.mean(np.square(x)))) if len(x) else 0.0
+    def win(x, a, b): return x[int(a * SR):int(b * SR)]
+    tone = patch(osc1={"wave": "sine", "level": 0.9, "fixed": 330}, envA={"a": 0.001, "d": 0.05, "s": 1, "r": 0.004},
+                 filt={"cutoff": 12000, "res": 0}, v1={"drive": 0}, out={"level": 0, "drive": 0, "roomOn": False, "wOn": False, "spkOn": False})
+    blip = note(60, 0.05, 0.09)
+    dryL, dryR = render(tone, blip, 1.2, rack=False)
+    bareL, bareR = render(tone, blip, 1.2, rack=False, masterFx=False)
+    # Oscillators start at a random phase, so two renders are not sample-identical.
+    # A transparent bus still matches the amplitude envelope, the level and the silence after the note.
+    def menv(x, n=480):
+        return np.array([np.sqrt(np.mean(x[i:i + n] ** 2)) for i in range(0, len(x) - n, n // 2)])
+    egap = float(np.max(np.abs(menv(dryL) - menv(bareL))))
+    nr = rms(win(dryL, 0.06, 0.09)) / max(rms(win(bareL, 0.06, 0.09)), 1e-12)
+    tail_d, tail_b = rms(win(dryL, 0.3, 0.8)), rms(win(bareL, 0.3, 0.8))
+    lr = float(np.max(np.abs(dryL - dryR)))
+    ck(f"M. bypass is transparent (envelope {egap:.2e}, level {nr:.3f}, tail {tail_d:.2e})",
+       egap < 0.02 and 0.97 < nr < 1.03 and tail_d < 1e-5 and tail_b < 1e-5 and lr < 1e-5, (egap, nr, tail_d, lr))
+    # delay: full wet, 250 ms, no feedback. The blip leaves the dry window and comes back in the echo window.
+    dly = {"delay": {"on": True, "sync": False, "time": 250, "feedback": 0, "mix": 1, "ping": False, "offset": 0}}
+    dL, dR = render(tone, blip, 1.2, rack=False, master=dly)
+    dry_w, echo_w = rms(win(dL, 0.05, 0.16)), rms(win(dL, 0.28, 0.42))
+    bare_echo = rms(win(dryL, 0.28, 0.42))
+    ck(f"M. delay moves the blip to 250 ms (echo {db(echo_w):.1f} dB, dry window {db(dry_w):.1f} dB, bypass echo {db(bare_echo):.1f} dB)",
+       echo_w > 1e-3 and echo_w > dry_w * 4 and echo_w > bare_echo * 10, (echo_w, dry_w, bare_echo))
+    # tempo sync: 120 BPM eighth note is the same 250 ms; a quarter note lands later, not there.
+    sync8 = {"tempo": 120, "delay": {"on": True, "sync": True, "div": "1/8", "feedback": 0, "mix": 1, "ping": False}}
+    sL, _ = render(tone, blip, 1.2, rack=False, master=sync8)
+    ck("M. synced 1/8 at 120 BPM delays by 250 ms", rms(win(sL, 0.28, 0.42)) > rms(win(sL, 0.05, 0.16)) * 4)
+    sync4 = {"tempo": 120, "delay": {"on": True, "sync": True, "div": "1/4", "feedback": 0, "mix": 1, "ping": False}}
+    qL, _ = render(tone, blip, 1.2, rack=False, master=sync4)
+    ck("M. synced 1/4 at 120 BPM delays by 500 ms, not 250",
+       rms(win(qL, 0.52, 0.68)) > 1e-3 and rms(win(qL, 0.52, 0.68)) > rms(win(qL, 0.28, 0.42)) * 4)
+    st = pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false, sync:true, div:'1/8'}})""")
+    ck(f"M. an eighth note at 120 BPM is 250 ms ({st['delaySec']*1000:.1f} ms)", abs(st["delaySec"] - 0.25) < 1e-6, st["delaySec"])
+    st = pg.evaluate("""() => __synth.setMaster({tempo:100, delay:{sync:true, div:'1/4', offset:1, ping:false}})""")
+    ck("M. right offset doubles the right delay when sync is on", abs(st["delaySec"] - 0.6) < 1e-6 and abs(st["delaySecR"] - 1.2) < 1e-6, st)
+    # ping-pong: first repeat on the right, the next one on the left.
+    png = {"delay": {"on": True, "sync": False, "time": 200, "feedback": 0, "mix": 1, "ping": True}}
+    pL, pR = render(tone, blip, 0.9, rack=False, master=png)
+    r1, l1 = rms(win(pR, 0.23, 0.34)), rms(win(pL, 0.23, 0.34))
+    l2, r2 = rms(win(pL, 0.43, 0.54)), rms(win(pR, 0.43, 0.54))
+    ck(f"M. ping-pong alternates sides (R then L, {db(r1):.1f}/{db(l1):.1f} then {db(l2):.1f}/{db(r2):.1f} dB)",
+       r1 > l1 * 3 and l2 > r2 * 3 and r1 > 1e-3, (r1, l1, l2, r2))
+    # reverb tail after the note has gone
+    held = note(60, 0.05, 0.22)
+    rev = {"reverb": {"on": True, "size": 0.85, "damp": 0.15, "mix": 1, "width": 1}}
+    rL, rR = render(tone, held, 2.0, rack=False, master=rev)
+    bL, bR = render(tone, held, 2.0, rack=False)
+    tail, bare = rms(win(rL, 1.0, 1.8)), rms(win(bL, 1.0, 1.8))
+    ck(f"M. reverb leaves a tail ({db(tail):.1f} dB, bypass {db(bare):.1f} dB)", tail > 1e-4 and tail > bare * 20, (tail, bare))
+    wide = rms(win(rL - rR, 0.4, 1.2)); mid = rms(win((rL + rR) * 0.5, 0.4, 1.2))
+    ck(f"M. reverb width is stereo (side {db(wide):.1f} dB, mid {db(mid):.1f} dB)", wide > mid * 0.05 and wide > 1e-4, (wide, mid))
+    # compressor pulls a sustained tone down; the limiter holds the peak near its ceiling
+    sus = patch(osc1={"wave": "sine", "level": 0.9, "fixed": 220}, envA={"a": 0.002, "d": 0.1, "s": 1, "r": 0.05},
+                filt={"cutoff": 12000}, out={"level": 6, "drive": 0})
+    hold = note(60, 0.02)
+    c0L, _ = render(sus, hold, 1.0, rack=False)
+    seg = slice(int(0.35 * SR), int(0.9 * SR))
+    c1L, _ = render(sus, hold, 1.0, rack=False, master={"comp": {"on": True, "threshold": -36, "ratio": 10, "attack": 3, "release": 80, "knee": 0, "makeup": 0, "limit": False}})
+    ck(f"M. compressor lowers a loud tone ({db(rms(c0L[seg])):.1f} -> {db(rms(c1L[seg])):.1f} dB RMS)",
+       rms(c1L[seg]) < rms(c0L[seg]) * 0.5 and rms(c1L[seg]) > 1e-4, (rms(c0L[seg]), rms(c1L[seg])))
+    pk = float(np.max(np.abs(c0L[seg])))
+    ceil = db(pk) - 12
+    limL, _ = render(sus, hold, 1.0, rack=False, master={"comp": {"on": True, "threshold": 0, "ratio": 1, "knee": 0, "makeup": 0, "attack": 1, "release": 40, "limit": True, "ceiling": ceil}})
+    pk2 = float(np.max(np.abs(limL[int(0.2 * SR):])))
+    ck(f"M. limiter holds the peak near its ceiling ({db(pk):.1f} -> {db(pk2):.1f} dBFS, ceiling {ceil:.1f} dB)",
+       pk2 < pk * 0.55 and pk2 > 0, (pk, pk2, ceil))
+    # bypass buttons on the strip
+    pg.click("#fxRev"); pg.wait_for_timeout(40)
+    ck("M. reverb button switches the bus on", pg.get_attribute("#fxRev", "aria-pressed") == "true" and pg.evaluate("__synth.master().reverb.on") is True)
+    pg.click("#fxRev"); pg.wait_for_timeout(40)
+    ck("M. reverb button bypasses it again", pg.get_attribute("#fxRev", "aria-pressed") == "false" and pg.evaluate("__synth.master().reverb.on") is False)
+    pg.click("#fxDelay"); pg.click("#fxComp"); pg.wait_for_timeout(40)
+    ck("M. delay and compressor each have their own bypass",
+       pg.evaluate("__synth.master().delay.on") is True and pg.evaluate("__synth.master().comp.on") is True and pg.evaluate("__synth.master().reverb.on") is False)
+    pg.click("#fxDelay"); pg.click("#fxComp")
+
+    def parse_wav(b):
+        if len(b) < 44 or b[0:4] != b"RIFF" or b[8:12] != b"WAVE": return None
+        o, fmt, data = 12, None, None
+        while o + 8 <= len(b):
+            cid, sz = b[o:o + 4], int.from_bytes(b[o + 4:o + 8], "little")
+            body = b[o + 8:o + 8 + sz]
+            if cid == b"fmt ": fmt = body
+            elif cid == b"data": data = body
+            o += 8 + sz + (sz & 1)
+        if not fmt or data is None or len(fmt) < 16: return None
+        audio_fmt, ch, rate, byterate, align, bits = struct.unpack("<HHIIHH", fmt[:16])
+        return {"fmt": audio_fmt, "ch": ch, "rate": rate, "align": align, "bits": bits, "data": data, "riff": int.from_bytes(b[4:8], "little"), "size": len(b)}
+
+    def pcm24(data):
+        n = len(data) // 6
+        L = np.empty(n); R = np.empty(n)
+        for i in range(n):
+            def s24(z):
+                v = z[0] | (z[1] << 8) | (z[2] << 16)
+                return v - 0x1000000 if v & 0x800000 else v
+            L[i] = s24(data[i * 6:i * 6 + 3]) / 8388607
+            R[i] = s24(data[i * 6 + 3:i * 6 + 6]) / 8388607
+        return L, R
+
+    wsecs = 1.25
+    wav = pg.evaluate("""async a => __synth.renderWav(a)""", {"seconds": wsecs, "rack": False, "patch": tone,
+        "events": note(60, 0.0, 0.3), "master": {"reverb": {"on": True, "size": 0.8, "damp": 0.2, "mix": 0.7, "width": 1}}})
+    raw = base64.b64decode(wav["b64"])
+    info_w = parse_wav(raw)
+    frames = int(round(wsecs * 44100))
+    ck("M. WAV header is 24-bit 44.1 kHz stereo PCM",
+       info_w and info_w["fmt"] == 1 and info_w["ch"] == 2 and info_w["rate"] == 44100 and info_w["bits"] == 24 and info_w["align"] == 6, info_w and {k: info_w[k] for k in ("fmt", "ch", "rate", "bits", "align")})
+    ck(f"M. WAV length matches {wsecs} s ({frames} frames, file {len(raw)} bytes)",
+       info_w and len(info_w["data"]) == frames * 6 and info_w["riff"] == len(raw) - 8 and wav["frames"] == frames, (len(raw), wav["frames"] if wav else None))
+    if info_w:
+        wL, wR = pcm24(info_w["data"])
+        tail = rms(wL[int(0.9 * 44100):])
+        ck(f"M. exported WAV is not silent (RMS {db(rms(wL)):.1f} dB, tail {db(tail):.1f} dB)", rms(wL) > 1e-3 and rms(wR) > 1e-3 and tail > 1e-4, (rms(wL), tail))
+    else:
+        ck("M. exported WAV is not silent", False, "no header")
+    pg.fill("#wavSecs", "1")
+    with pg.expect_download(timeout=60000) as di:
+        pg.click("#wavGo")
+    dl = di.value
+    dl_bytes = open(dl.path(), "rb").read()
+    dl_info = parse_wav(dl_bytes)
+    ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
+       dl.suggested_filename.endswith(".wav") and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
+    pg.evaluate("__synth.noteOn(60, 0.8)")
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(700)
+    pg.evaluate("__synth.noteOff(60)")
+    rec = pg.evaluate("() => __synth.recordStop()")
+    rec_raw = base64.b64decode(rec["b64"]) if rec and rec.get("b64") else b""
+    rec_info = parse_wav(rec_raw) if rec_raw else None
+    rec_rms = rms(pcm24(rec_info["data"])[0]) if rec_info and len(rec_info["data"]) >= 6 else 0
+    ck(f"M. live recording is a non-silent 24-bit WAV ({rec['frames'] if rec else 0} frames, {db(rec_rms):.1f} dB)",
+       rec_info and rec_info["fmt"] == 1 and rec_info["rate"] == 44100 and rec_info["bits"] == 24 and rec_info["ch"] == 2
+       and rec["frames"] > 44100 * 0.3 and rec_rms > 1e-3, rec["frames"] if rec else None)
+    pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
+
     # ---------------------------------------------------------------- 10. layout (phone)
     for w, h in ((375, 667), (390, 844)):
         ph = b.new_page(viewport={"width": w, "height": h}, is_mobile=True, has_touch=True, device_scale_factor=2); perr = []
@@ -601,6 +744,13 @@ with sync_playwright() as pw:
         c = ph.locator('#jackfield .jack[data-kind="in"][data-id="pmA"]'); c.scroll_into_view_if_needed(); c.tap(); ph.wait_for_timeout(100)
         ck(f"10. {w}px: tap an output, tap an input: patched", ph.evaluate("__synth.patch().cables") == [["mgTri", "pmA"]], ph.evaluate("__synth.patch().cables"))
         ph.screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_patch.png"))
+        ph.click('.tabs [data-go="rack"]'); ph.wait_for_timeout(150)
+        small = ph.evaluate("""() => [...document.querySelectorAll('#mMaster .chip, #mMaster .btn, #wavSecs')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
+        ck(f"10. {w}px: master bus is on the Rack tab, no horizontal scroll, 44 px targets",
+           ph.is_visible("#mMaster") and ph.is_visible("#fxRev") and not ph.is_visible("#mFilt")
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}") and not small,
+           (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), small))
+        ph.click('.tabs [data-go="play"]')
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
     b.close()
