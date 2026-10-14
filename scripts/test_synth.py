@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1470,7 +1470,7 @@ with sync_playwright() as pw:
     ck("R. beat 4 is the downbeat of the next bar in 4/4", pure["bar"] == 1, pure["bar"])
     ck("R. tempo clamps to 40..240", pure["tempo"] == 40, pure["tempo"])
     ck("R. centre pan is unity and a hard right pan drops the left", abs(pure["balL"] - 1) < 1e-12 and abs(pure["balR"] - 1) < 1e-12 and abs(pure["hard"]) < 1e-12 and abs(pure["half"] - 0.7071067811865476) < 1e-9, pure)
-    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "thyratron", "dekatron", "lattice"], pure)
+    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "thyratron", "gleam", "dekatron", "lattice"], pure)
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
@@ -1772,7 +1772,7 @@ with sync_playwright() as pw:
        desc["id"] == "lattice" and desc["api"] == "dxrack/1" and desc["instrument"] is True and desc["outs"] == 1 and desc["midi"]
        and desc["processor"] == "lattice" and desc["worklet"] == "lattice.worklet.js" and desc["over"] == 2
        and desc["pos"] == "float" and all(w in desc["warp"] for w in ("bend", "sync", "pwm", "fm"))
-       and desc["ids"] == ["filament", "cathode", "thyratron", "dekatron", "lattice"], desc)
+       and desc["ids"] == ["filament", "cathode", "thyratron", "gleam", "dekatron", "lattice"], desc)
     L, R = lat(lpatch(), [{"at": 0.02, "t": "on", "n": 69, "v": 0.9}], 0.55)
     seg = L[int(0.12 * SR):int(0.5 * SR)]
     got = peak_freq(seg); cents = abs(1200 * math.log2(got / 440.0))
@@ -1996,6 +1996,257 @@ with sync_playwright() as pw:
         slash_detail = (sp.url, str(e).split("\n")[0], serr)
     ck("slashless /synth redirects and the synth initializes", slash_ok, slash_detail)
     sctx.close()
+    # ---------------------------------------------------------------- G. Gleam, the touch field
+    def g_render(patch, events, seconds=0.8):
+        raw = pg.evaluate(
+            """async ({patch, events, seconds}) => __synth.gleamRender({patch, events, seconds, sampleRate: 48000})""",
+            {"patch": patch, "events": events, "seconds": seconds},
+        )
+        return dec(raw)
+    def g_fx(**kw):
+        raw = pg.evaluate("""async (o) => __synth.gleamFxRender(o)""", kw)
+        return dec(raw)
+    def g_rms(x, a, b):
+        i, j = int(a * SR), int(b * SR)
+        seg = x[i:j]
+        return float(np.sqrt(np.mean(seg * seg))) if len(seg) else 0.0
+    def cents(f, target):
+        return 1200 * math.log(max(f, 1e-9) / target) / math.log(2)
+    src_blob = ""
+    for fn in ("gleam.js", "gleam-dsp.js", "gleam.worklet.js", "gleam-fx.js", "gleam-ui.js", "gleam/index.html"):
+        with open(os.path.join(ROOT, "synth", fn), encoding="utf-8") as fh:
+            src_blob += fh.read().lower()
+    ck("G. the sources do not borrow another performance pad's name", "kaoss" not in src_blob)
+
+    pure_g = pg.evaluate("""async () => {
+      const g = await import('/synth/gleam.js');
+      const opt = (scale, root, x) => g.pitchOf(x, { scale, root, octaves: 1 });
+      const tape = { duration: 1, events: [
+        { t: 0, type: 'down', id: 1, x: 0.2, y: 0.5, z: 0.8 },
+        { t: 0.4, type: 'up', id: 1, x: 0.2, y: 0.5, z: 0.8 },
+        { t: 0.7, type: 'down', id: 2, x: 0.8, y: 0.2, z: 0.5 },
+      ]};
+      const ids = (t, loop) => g.pointersAt(tape, t, loop).map(p => p.id);
+      const lo = g.effectOf(0.1, 0, 0, 120), hi = g.effectOf(0.9, 1, 0.5, 120);
+      const o0 = g.orbitPosition(0, 0.5, 1, 0), o1 = g.orbitPosition(0.25, 0.5, 1, 0);
+      const stay = g.driftPosition(1.2, 0, 3, { x: 0.2, y: -0.3 });
+      return {
+        c3: opt('major', 0, 0).midi, g3: opt('major', 0, 0.5).midi, c4: opt('major', 0, 1).midi,
+        hz: opt('major', 0, 0).hz, minor: opt('minor', 0, 2 / 7).midi, penta: opt('pentatonic', 0, 0.4).midi,
+        chrom: opt('chromatic', 0, 0.5).midi, free: opt('free', 0, 0.5).midi, rooted: opt('major', 2, 0).midi,
+        near: g.placeOf(0, 0).gain, far: g.placeOf(1, 1).gain, left: g.placeOf(-1, 0).pan,
+        ox: o0.x, oy: o0.y, ox1: o1.x, oy1: o1.y, stayX: stay.x, stayY: stay.y,
+        midIds: ids(0.2, false), afterUp: ids(0.5, false), endIds: ids(0.8, false), wrapIds: ids(1.05, true),
+        cutLo: lo.cutoff, cutHi: hi.cutoff, fb: hi.feedback,
+        id: g.gleamDevice.id, api: g.gleamDevice.api, proc: g.gleamDevice.processor, worklet: g.gleamDevice.worklet,
+      };
+    }""")
+    ck("G. major, minor, pentatonic, chromatic and free quantize from the root",
+       pure_g["c3"] == 48 and pure_g["g3"] == 55 and pure_g["c4"] == 60 and pure_g["minor"] == 51
+       and pure_g["penta"] == 52 and pure_g["chrom"] == 54 and pure_g["free"] == 54 and pure_g["rooted"] == 50
+       and abs(pure_g["hz"] - 130.8128) < 0.02, pure_g)
+    ck("G. a near orb is louder than a far one, and orbit and drift are deterministic",
+       pure_g["near"] > pure_g["far"] * 3 and abs(pure_g["left"] + 1) < 1e-9
+       and abs(pure_g["ox"] - 0.5) < 1e-9 and abs(pure_g["oy"]) < 1e-9
+       and abs(pure_g["ox1"]) < 1e-6 and abs(pure_g["oy1"] - 0.5) < 1e-6
+       and abs(pure_g["stayX"] - 0.2) < 1e-9 and abs(pure_g["stayY"] + 0.3) < 1e-9, pure_g)
+    ck("G. a looped gesture does not keep a finger that was only down at the end",
+       pure_g["midIds"] == [1] and pure_g["afterUp"] == [] and pure_g["endIds"] == [2] and 2 not in pure_g["wrapIds"], pure_g)
+    ck("G. the effect sweep rises with X and full Y is the feedback amount",
+       pure_g["cutLo"] < pure_g["cutHi"] and abs(pure_g["fb"] - 0.88) < 1e-9
+       and pure_g["id"] == "gleam" and pure_g["api"] == "dxrack/1" and pure_g["proc"] == "gleam"
+       and pure_g["worklet"] == "gleam.worklet.js", pure_g)
+
+    base_p = {"device": "gleam", "mode": "field", "scale": "major", "root": 0, "octaves": 1,
+              "glide": 0, "level": 0.85, "space": 0, "reverb": 0, "hrtf": False, "color": 0}
+    held = [{"at": 0.02, "type": "on", "id": "a", "x": 0, "y": 0, "z": 1}]
+    toneL, toneR = g_render(base_p, held, 0.9)
+    f0 = peak_freq(toneL[int(0.35 * SR):int(0.8 * SR)])
+    ck(f"G. a finger at the left of a one-octave major is C3 ({f0:.2f} Hz)", abs(cents(f0, 130.8128)) < 15
+       and g_rms(toneL, 0.3, 0.8) > 0.02, (f0, g_rms(toneL, 0.3, 0.8)))
+    brightL, _brightR = g_render(dict(base_p), [{"at": 0.02, "type": "on", "id": "a", "x": 0, "y": 1, "z": 1}], 0.9)
+    def harm(x):
+        sl = x[int(0.35 * SR):int(0.8 * SR)]
+        return sum(tone_amp(sl, 130.8128 * k) for k in (3, 4, 5, 6))
+    ck("G. raising Y adds harmonics above the fundamental", harm(brightL) > harm(toneL) * 4, (harm(toneL), harm(brightL)))
+    quietL, _qR = g_render(base_p, [{"at": 0.02, "type": "on", "id": "a", "x": 0.25, "y": 0.2, "z": 0.35}], 0.8)
+    loudL, _lR = g_render(base_p, [{"at": 0.02, "type": "on", "id": "a", "x": 0.25, "y": 0.2, "z": 1}], 0.8)
+    ratio = g_rms(loudL, 0.3, 0.7) / max(g_rms(quietL, 0.3, 0.7), 1e-9)
+    ck(f"G. pressure scales the level ({ratio:.2f}x) and a voice stays inside full scale",
+       1.8 < ratio < 4 and g_rms(quietL, 0.3, 0.7) > 1e-3 and float(np.max(np.abs(loudL))) <= 1.001, ratio)
+    duoL, duoR = g_render(dict(base_p, space=0, reverb=0), [
+        {"at": 0.02, "type": "on", "id": "c", "x": 0, "y": 0, "z": 0.8},
+        {"at": 0.02, "type": "on", "id": "g", "x": 0.5, "y": 0, "z": 0.8},
+    ], 0.8)
+    sl = duoL[int(0.3 * SR):int(0.7 * SR)]
+    a_c, a_g = tone_amp(sl, 130.8128), tone_amp(sl, 195.9977)
+    ck("G. two fingers sound together", a_c > 0.02 and a_g > 0.02 and float(np.max(np.abs(duoL))) <= 1.001
+       and bool(np.isfinite(duoL).all() and np.isfinite(duoR).all()), (a_c, a_g))
+    relL, relR = g_render(base_p, held + [{"at": 0.15, "type": "off", "id": "a"}], 0.9)
+    ck("G. a released finger is silent after the tail", g_rms(relL, 0.05, 0.12) > 0.01 and g_rms(relL, 0.55, 0.75) < 1e-4
+       and g_rms(relR, 0.55, 0.75) < 1e-4, (g_rms(relL, 0.05, 0.12), g_rms(relL, 0.55, 0.75)))
+    panL, panR = g_render(dict(base_p, space=1, reverb=0), [{"at": 0.02, "type": "on", "id": "a", "x": 0, "y": 0.3, "z": 1}], 0.6)
+    panL2, panR2 = g_render(dict(base_p, space=1, reverb=0), [{"at": 0.02, "type": "on", "id": "a", "x": 1, "y": 0.3, "z": 1}], 0.6)
+    ck("G. the field pans hard left and hard right",
+       g_rms(panL, 0.2, 0.5) > g_rms(panR, 0.2, 0.5) * 8 and g_rms(panR2, 0.2, 0.5) > g_rms(panL2, 0.2, 0.5) * 8,
+       (g_rms(panL, 0.2, 0.5), g_rms(panR, 0.2, 0.5), g_rms(panL2, 0.2, 0.5), g_rms(panR2, 0.2, 0.5)))
+    nearL, _nR = g_render({"device": "gleam", "mode": "room", "reverb": 0, "level": 0.85, "glide": 0}, [
+        {"at": 0.02, "type": "on", "id": "o", "x": 0, "y": 0, "z": 1, "hz": 220, "room": True}], 0.6)
+    farL, _fR = g_render({"device": "gleam", "mode": "room", "reverb": 0, "level": 0.85, "glide": 0}, [
+        {"at": 0.02, "type": "on", "id": "o", "x": 1, "y": 1, "z": 1, "hz": 220, "room": True}], 0.6)
+    ck("G. a near orb is louder than the same orb in the corner",
+       g_rms(nearL, 0.2, 0.5) > g_rms(farL, 0.2, 0.5) * 2, (g_rms(nearL, 0.2, 0.5), g_rms(farL, 0.2, 0.5)))
+    hL, hR = g_render(dict(base_p, hrtf=True, space=1, reverb=0), [{"at": 0.02, "type": "on", "id": "a", "x": 0, "y": 0.2, "z": 1}], 0.5)
+    ck("G. HRTF keeps a left-hand finger on the left and inside full scale",
+       g_rms(hL, 0.15, 0.4) > g_rms(hR, 0.15, 0.4) * 1.15 and g_rms(hL, 0.15, 0.4) > 1e-3
+       and float(np.max(np.abs(hL))) <= 1.01 and bool(np.isfinite(hL).all() and np.isfinite(hR).all()),
+       (g_rms(hL, 0.15, 0.4), g_rms(hR, 0.15, 0.4)))
+    rng_g = random.Random(7)
+    rnd = []
+    for i in range(48):
+        rnd.append({"at": i * 0.04, "type": "on" if i % 3 else "off", "id": str(i % 6),
+                    "x": rng_g.random(), "y": rng_g.random(), "z": rng_g.random()})
+    rnd.append({"at": 1.95, "type": "panic"})
+    rL, rR = g_render(dict(base_p, octaves=2, space=0.6, reverb=0.2), rnd, 2.0)
+    ck("G. a burst of ons and offs stays finite and inside full scale",
+       bool(np.isfinite(rL).all() and np.isfinite(rR).all()) and float(np.max(np.abs(rL))) <= 1.001
+       and float(np.max(np.abs(rR))) <= 1.001 and g_rms(rL, 1.7, 1.95) > 1e-4, float(np.max(np.abs(rL))))
+    panL, _ = g_render(dict(base_p), held + [{"at": 0.2, "type": "panic"}], 0.7)
+    ck("G. panic silences every voice", g_rms(panL, 0.35, 0.6) < 1e-4, g_rms(panL, 0.35, 0.6))
+
+    dullL, _dR = g_fx(hz=3000, x=0.02, y=0, z=0, seconds=0.5, on=True)
+    openL, _oR = g_fx(hz=3000, x=0.95, y=0, z=0, seconds=0.5, on=True)
+    ck("G. a low X darkens a bright tone and a high X leaves it",
+       g_rms(openL, 0.15, 0.4) > g_rms(dullL, 0.15, 0.4) * 4 and g_rms(openL, 0.15, 0.4) > 0.05,
+       (g_rms(dullL, 0.15, 0.4), g_rms(openL, 0.15, 0.4)))
+    wetL, _wR = g_fx(hz=440, x=0.85, y=0.9, z=0, seconds=1.0, burst=0.08, on=True)
+    dryL, _drR = g_fx(hz=440, x=0.85, y=0, z=0, seconds=1.0, burst=0.08, on=True)
+    ck("G. delay feedback leaves a tail after the tone stops",
+       g_rms(wetL, 0.35, 0.8) > g_rms(dryL, 0.35, 0.8) * 3 and g_rms(wetL, 0.35, 0.8) > 1e-3,
+       (g_rms(wetL, 0.35, 0.8), g_rms(dryL, 0.35, 0.8)))
+    chopL, _cR = g_fx(hz=220, x=0.9, y=0.05, z=1, seconds=0.6, on=True, tempo=120)
+    evenL, _eR = g_fx(hz=220, x=0.9, y=0.05, z=0, seconds=0.6, on=True, tempo=120)
+    def window_span(x):
+        w = int(0.02 * SR)
+        vals = [float(np.max(np.abs(x[i:i + w]))) for i in range(int(0.08 * SR), int(0.45 * SR), w)]
+        return (min(vals), max(vals)) if vals else (0, 0)
+    chop, even = window_span(chopL), window_span(evenL)
+    ck("G. stutter opens and closes the gate", chop[0] < even[0] * 0.35 and chop[1] > chop[0] * 4 and even[0] > 0.05,
+       (chop, even))
+    byL, _bR = g_fx(hz=3000, x=0.02, y=0.8, z=1, seconds=0.4, on=False)
+    ck("G. effect bypass ignores the sweep", g_rms(byL, 0.1, 0.3) > g_rms(dullL, 0.1, 0.3) * 4, (g_rms(byL, 0.1, 0.3), g_rms(dullL, 0.1, 0.3)))
+
+    for gw, gh, mobile in ((1280, 800, False), (390, 844, True)):
+        gp = b.new_page(viewport={"width": gw, "height": gh}, is_mobile=mobile, has_touch=mobile)
+        gerr = []
+        gp.on("pageerror", lambda e, box=gerr: box.append(str(e)))
+        gp.goto(BASE + "gleam/")
+        gp.wait_for_function("window.__gleam && __gleam.ready()", timeout=20000)
+        gp.wait_for_timeout(200)
+        ck(f"G. {gw}px standalone: no horizontal scroll and no page errors",
+           gp.evaluate("document.documentElement.scrollWidth <= innerWidth") and not gerr,
+           (gp.evaluate("[document.documentElement.scrollWidth, innerWidth]"), gerr))
+        touch = gp.evaluate("""() => {
+          const bar = document.getElementById('gleamBar');
+          const ev = new Event('touchmove', { bubbles: true, cancelable: true });
+          bar.dispatchEvent(ev);
+          return {
+            pad: getComputedStyle(document.getElementById('gleamPad')).touchAction,
+            bar: getComputedStyle(bar).touchAction,
+            prevented: ev.defaultPrevented,
+          };
+        }""")
+        ck(f"G. {gw}px: the pad does not steal scrolling from the controls",
+           touch["pad"] == "none" and "pan-y" in touch["bar"] and touch["prevented"] is False, touch)
+        ptr = gp.evaluate("""() => {
+          const pad = document.getElementById('gleamPad');
+          const r = pad.getBoundingClientRect();
+          const fire = (type, id, x, y) => pad.dispatchEvent(new PointerEvent(type, {
+            pointerId: id, clientX: r.left + x, clientY: r.top + y, bubbles: true, cancelable: true,
+            pointerType: 'touch', pressure: 0.7, isPrimary: id === 1, buttons: type === 'pointerdown' ? 1 : 0,
+          }));
+          fire('pointerdown', 1, 28, 36);
+          const one = window.__gleam.voices();
+          fire('pointerdown', 2, 70, 48);
+          const two = window.__gleam.voices();
+          fire('pointerup', 1, 28, 36);
+          const left = window.__gleam.voices();
+          fire('pointercancel', 2, 70, 48);
+          const none = window.__gleam.voices();
+          fire('pointerdown', 3, 40, 55);
+          fire('pointercancel', 3, 40, 55);
+          return { one, two, left, none, cancel: window.__gleam.voices() };
+        }""")
+        ck(f"G. {gw}px: each pointer is a voice, and up or cancel releases it",
+           ptr["one"] == 1 and ptr["two"] == 2 and ptr["left"] == 1 and ptr["none"] == 0 and ptr["cancel"] == 0, ptr)
+        gp.evaluate("""() => window.__gleam.playTape({ duration: 1.2, events: [{ t: 0, type: 'down', id: 7, x: 0.3, y: 0.6, z: 0.8 }] })""")
+        gp.wait_for_timeout(80)
+        playing = gp.evaluate("window.__gleam.voices()")
+        gp.evaluate("window.__gleam.stopTape()")
+        gp.wait_for_timeout(40)
+        ck(f"G. {gw}px: stopping a looped gesture releases its voices", playing >= 1 and gp.evaluate("window.__gleam.voices()") == 0, playing)
+        if mobile:
+            small = gp.evaluate("""() => [...document.querySelectorAll('#gleamBar .gchip, #gleamBar select, #gleamBar a, #gleamBar input')]
+              .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+              .map(e => (e.id || e.textContent || '').trim().slice(0, 16) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+            ck("G. 390px: mode chips are 44 px or more", not small, small)
+        box = gp.locator("#gleamPad").bounding_box()
+        gp.mouse.move(box["x"] + 36, box["y"] + 48)
+        gp.mouse.down()
+        gp.wait_for_timeout(520)
+        vis = gp.evaluate("""() => {
+          const v = window.__gleam.visual();
+          const c = document.getElementById('gleamCv');
+          const ctx = c.getContext('2d');
+          const data = ctx.getImageData(0, 0, c.width, c.height).data;
+          let bright = 0;
+          for (let i = 0; i < data.length; i += 16) if (data[i] > 40 || data[i + 1] > 30) bright++;
+          return { level: v.level, particles: v.particles, bright, voices: window.__gleam.voices() };
+        }""")
+        gp.mouse.up()
+        gp.wait_for_timeout(60)
+        after = gp.evaluate("window.__gleam.voices()")
+        ck(f"G. {gw}px: a held pointer glows and lets go",
+           vis["voices"] >= 1 and vis["level"] > 0 and (vis["particles"] > 0 or vis["bright"] > 0) and after == 0, (vis, after))
+        gp.close()
+
+    rack_before = len(errs)
+    pg.evaluate("__synth.setDevice('gleam')")
+    pg.wait_for_timeout(250)
+    ck("G. the rail shows the pad and hides Filament's filter",
+       pg.evaluate("__synth.device()") == "gleam" and pg.is_visible("#gleamPad") and not pg.is_visible("#mFilt"))
+    fx = pg.evaluate("""() => {
+      const h = __synth.gleam();
+      const before = h.fxProbe();
+      h.effectAt({ x: 0.15, y: 0.85, z: 1 });
+      const mid = h.fxProbe();
+      h.effectAt(null);
+      return { before, mid, after: h.fxProbe(), hasSet: typeof __synth.engine().fx.setInsert === 'function',
+               ids: __synth.devices().map(d => d.id) };
+    }""")
+    ck("G. the effect pad inserts on the master only while a finger is down",
+       fx["hasSet"] and fx["before"]["inserted"] and fx["before"]["on"] is False and fx["mid"]["on"] is True and fx["after"]["on"] is False
+       and "gleam" in fx["ids"], fx)
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.evaluate("__synth.setDevice('gleam')")
+    ph.wait_for_timeout(250)
+    ck("G. 390px rack: the pad fits, the rail stays 44 px, no page errors",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#gleamPad") and not ph.is_visible("#mFilt") and not perr,
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, #gleamBar .gchip')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.textContent || '').trim().slice(0, 16) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("G. 390px rack: rail and pad chips are 44 px or more", not small, small)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(150)
+    ck("G. leaving the pad returns the keyboard to Filament", pg.evaluate("__synth.device()") == "filament" and not pg.is_visible("#gleamPad"))
+    ck("G. no page errors", len(errs) == rack_before, errs[rack_before:])
     b.close()
 
 print()

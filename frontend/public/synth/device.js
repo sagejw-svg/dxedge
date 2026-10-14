@@ -2,7 +2,7 @@
 //
 // A device is one instrument or effect the rack can host. It has a descriptor,
 // a parameter table with stable ids, MIDI in, a stereo output, and a versioned
-// patch. Filament and Cathode are the first two. A step sequencer or a drum
+// patch. Filament, Cathode, Thyratron and Gleam register here. A step sequencer or a drum
 // machine registers the same way and subscribes to the transport for the clock.
 //
 // The shape follows the published Web Audio Modules 2.0 ideas (a descriptor,
@@ -17,6 +17,7 @@
 import { DEFAULT, RANGE, ENUMS } from './patches.js';
 import { C_DEFAULT, RANGE as C_RANGE, C_ENUMS } from './cathode.js';
 import { THY_DEFAULT, THY_RANGE, THY_ENUMS, normalizeThy } from './thyratron.js';
+import { gleamDevice } from './gleam.js';
 
 export const RACK_API = 'dxrack/1';
 
@@ -98,3 +99,5 @@ registerDevice({
   parameters: parameterTable(THY_DEFAULT, THY_RANGE, THY_ENUMS),
   normalize: normalizeThy,
 });
+
+registerDevice(gleamDevice);

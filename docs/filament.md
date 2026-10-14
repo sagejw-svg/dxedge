@@ -10,18 +10,20 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds five devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds six devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
 original design: own name, panel, jack names and voicing, not a copy of Korg's), **Thyratron**
 (a monophonic ladder-filter synthesizer: three oscillators, a mixer, a 24 dB/octave ladder that
 sings at full emphasis), **Dekatron** (an original analog-style drum machine: kick, snare,
 closed hat, open hat, clap, tom and rim, with a 16-step pattern), and **Lattice** (an original
 wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, two filters, and a
-drag-and-drop modulation matrix). The rail above the chassis picks which device the keyboard,
+drag-and-drop modulation matrix), and **Gleam** (an original touch field: each finger is a voice,
+with a room of orbs and a master effect pad). The rail above the chassis picks which device the keyboard,
 wheels and MIDI play. Filament and Cathode feed the shared ensemble and output rack. Dekatron
-copies those output fields. Lattice and Thyratron have their own panels and sleep until the rail
-selects them; the shared output knobs stay on the Filament patch while either of those is showing.
-Dekatron and Lattice register when their nodes are hosted. Thyratron is registered in `device.js`.
+copies those output fields. Lattice, Thyratron and Gleam have their own panels and sleep until the rail
+selects them; the shared output knobs stay on the Filament patch while one of those is showing.
+Dekatron and Lattice register when their nodes are hosted. Thyratron and Gleam are registered in `device.js`.
+Gleam is also a full-screen page at `/synth/gleam/`.
 
 The rack framework (14 Oct) is what those devices plug into. Each device
 has one contract: a descriptor, a parameter table, MIDI in, a stereo output and a versioned patch.
@@ -84,7 +86,13 @@ task can read it).
 | `frontend/public/synth/thyratron-dsp.js` | The monophonic voice: 2x oscillators, the ladder, two contours, glide, the half-band decimator |
 | `frontend/public/synth/thyratron.worklet.js` | AudioWorklet processor `thyratron`. Imports the engine; no DSP of its own |
 | `frontend/public/synth/thyratron-ui.js` | Wood-and-black panel, and `createThyHost` / `renderThyAudio` (the page adapter). `attach` calls `addDevice` |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode and Thyratron are registered here; Dekatron and Lattice register when their nodes are hosted |
+| `frontend/public/synth/gleam.js` | Gleam patch schema v1 (`device: 'gleam'`), scales, gesture tape, room geometry, `gleamDevice` |
+| `frontend/public/synth/gleam-dsp.js` | Gleam voice engine: one oscillator and a one-pole lowpass per finger, equal-power pan, a short room delay on a wet bus |
+| `frontend/public/synth/gleam.worklet.js` | AudioWorklet processor `gleam`. Dry stereo on output 0, optional per-voice outputs for HRTF, wet room on the last output |
+| `frontend/public/synth/gleam-fx.js` | Effect pad nodes: lowpass sweep, stutter gate, feedback delay. Bypassed unless a finger is down |
+| `frontend/public/synth/gleam-ui.js` | Pad, host, and `renderGleamBuffer`. `attach` calls `addDevice` |
+| `frontend/public/synth/gleam/index.html` | Full-screen Gleam. Same modules as the rack |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
@@ -236,6 +244,21 @@ written and tuned for this voice.
 | Identity | `id: 'thyratron'`, `api: 'dxrack/1'`, `processor: 'thyratron'`, `worklet: 'thyratron.worklet.js'`, one stereo output, 2x oversampling |
 | Patch | `normalizeThy(patch)` → schema v1 JSON, `device: 'thyratron'`. Stored on `thyratron_cur`, the same way Dekatron keeps its pattern. A project may name Thyratron as the keyboard device. |
 | Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
+
+### Gleam (touch field) - done 14 Oct 2026
+Original touch instrument. The name, the scales, the gesture tape and the room are ours. It is not
+a copy of any performance pad. No third-party DSP and no new dependency.
+
+| | |
+|-|-|
+| Identity | `id: 'gleam'`, `api: 'dxrack/1'`, `processor: 'gleam'`, `worklet: 'gleam.worklet.js'`, one stereo output into the mixer |
+| Patch | `normalizeGleam(patch)` → schema v1 JSON, `device: 'gleam'`. Modes `field`, `room`, `effect`. Scales major, minor, pentatonic, chromatic, free. |
+| Field | Each pointer is a voice. X is pitch (root at the left, `octaves` across). Y is timbre (sine toward saw, one-pole lowpass that keeps the fundamental). Pressure or contact size is level. |
+| Room | Orbs around a listener at the origin. Pan follows X. Distance lowers the dry gain and raises the room send. Optional HRTF is a `PannerNode` per voice, built only while that switch is on. Orbit and drift are automatic motion. |
+| Gestures | A tape of `{t, type, id, x, y, z}`. Looping replays from the start of the take, so a finger still down at the end is up at the top. Stopping the loop releases those voices. |
+| Effect | While a finger is down in effect mode, the pad inserts on the rack master: X sweeps a lowpass, Y is delay feedback, Z stutters only if the patch asks for it. Finger up is a straight wire again. The insert is not in the path otherwise, so a bypassed master stays a bypassed master. |
+| Page | The rail hosts it. `/synth/gleam/` is the same pad full screen. `touch-action: none` is on the pad only. |
+| Messages | `{t:'patch'}`, `{t:'voice', id, slot, on, hz, y, level, pan, gain, send}`, `{t:'on'}`, `{t:'off'}`, `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
 
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
