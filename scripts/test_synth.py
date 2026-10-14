@@ -967,8 +967,11 @@ with sync_playwright() as pw:
     ck("M. UI: play lights the keys for playback notes", {60, 64} <= set(keys_lit) and pg.evaluate("__synth.deck().playing()"), keys_lit)
     ck("M. UI: both devices play while the keyboard stays on Filament (Cathode held awake)", pg.evaluate("__synth.device()") == "filament" and mf["voices"] >= 2
        and mc and mc["voices"] == 1 and mc["notes"] == [36], (mf["voices"], mc))
-    p0 = pg.evaluate("__synth.deck().position()")
-    ck(f"M. UI: the position runs ({p0:.2f} s after 0.5 s)", 0.3 < p0 < 0.7, p0)
+    # Measured inside the page: the wall-clock bound (under 0.7 s) failed on a loaded server on
+    # 14 Oct because the evaluate calls above add their own round trips before the read.
+    pa, pb, el = pg.evaluate("""async () => { const d = __synth.deck(), a = d.position(), t0 = performance.now();
+      await new Promise(r => setTimeout(r, 300)); return [a, d.position(), (performance.now() - t0) / 1000]; }""")
+    ck(f"M. UI: the position runs ({pa:.2f} s after play, then +{pb - pa:.2f} s in {el:.2f} s)", pa > 0.3 and abs((pb - pa) - el) < 0.1, (pa, pb, el))
     pg.click("#stopBtn"); pg.wait_for_timeout(250)
     mf = pg.evaluate("__synth.engine().meters.filament"); mc = pg.evaluate("__synth.engine().meters.cathode")
     ck("M. UI: stop releases every playback note and unlights the keys", not pg.evaluate("__synth.deck().playing()") and pg.evaluate("document.querySelectorAll('.key.down').length") == 0
