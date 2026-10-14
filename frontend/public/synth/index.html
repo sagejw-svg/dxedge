@@ -265,6 +265,11 @@
   .deck .btn:disabled { opacity: 0.4; cursor: default; }
   #recBtn[aria-pressed="true"] { border-color: var(--red); color: var(--red); background: rgba(255,92,92,0.08); }
   #recBtn.live { box-shadow: 0 0 8px rgba(255,92,92,0.45); }
+  .mastrec { display: inline-flex; align-items: center; gap: 6px; }
+  .rec-master { color: var(--red); border-color: rgba(255, 92, 92, 0.7); }
+  .rec-master[aria-pressed="true"] { color: #fff; background: rgba(255, 92, 92, 0.22); border-color: var(--red); box-shadow: 0 0 8px rgba(255, 92, 92, 0.45); }
+  .rec-time { color: var(--red); font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: 0.4px; }
+  .rec-time:empty { display: none; }
   .dbody { margin-top: 6px; border-top: 1px dashed #2c2c2c; padding-top: 6px; }
   .dbody[hidden] { display: none; }
   .tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
@@ -296,7 +301,8 @@
     .intro { display: none; }
     h1 { font-size: 18px; }
     .top { gap: 8px; margin-bottom: 8px; align-items: center; }
-    .brand { order: 1; flex: 1 1 auto; } .top > .sup { order: 2; } .top > .bar { order: 3; flex: 1 1 100%; flex-wrap: nowrap; min-width: 0; }
+    .brand { order: 1; flex: 1 1 auto; } .top > .sup { order: 2; } .top > .bar { order: 3; flex: 1 1 100%; flex-wrap: wrap; min-width: 0; }
+    .bar .mastrec { flex: 1 1 100%; max-width: 100%; min-width: 0; }
     .bar #patchSel { flex: 1 1 0; width: 0; min-width: 0; max-width: none; }
     .bar .saveform.open ~ #midiBtn, .bar .saveform.open ~ #learnBtn { display: none; }
     .sup { padding: 4px 11px; font-size: 11px; }
@@ -322,14 +328,14 @@
     body[data-tab="grain"] .mod[data-tab~="grain"], body[data-tab="space"] .mod[data-tab~="space"] { display: block; }
     body[data-dev="dekatron"] .tabs [data-go="osc"], body[data-dev="dekatron"] .tabs [data-go="filter"],
     body[data-dev="dekatron"] .tabs [data-go="mod"], body[data-dev="dekatron"] .tabs [data-go="stereo"],
-    body[data-dev="dekatron"] .tabs [data-go="rack"], body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
+    body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
     body[data-dev="lattice"] .tabs [data-go="stereo"], body[data-dev="lattice"] .tabs [data-go="voice"],
     body[data-dev="lattice"] .tabs [data-go="patch"] { display: none !important; }
     body[data-dev="thyratron"] .tabs [data-go="stereo"], body[data-dev="thyratron"] .tabs [data-go="patch"],
     body[data-dev="thyratron"] .tabs [data-go="voice"] { display: none !important; }
     body[data-dev="gleam"] .tabs [data-go="osc"], body[data-dev="gleam"] .tabs [data-go="filter"],
     body[data-dev="gleam"] .tabs [data-go="mod"], body[data-dev="gleam"] .tabs [data-go="stereo"],
-    body[data-dev="gleam"] .tabs [data-go="rack"], body[data-dev="gleam"] .tabs [data-go="patch"] { display: none !important; }
+    body[data-dev="gleam"] .tabs [data-go="patch"] { display: none !important; }
     body[data-dev="mote"] .tabs [data-go="osc"], body[data-dev="mote"] .tabs [data-go="filter"],
     body[data-dev="mote"] .tabs [data-go="mod"], body[data-dev="mote"] .tabs [data-go="stereo"],
     body[data-dev="mote"] .tabs [data-go="patch"], body[data-dev="mote"] .tabs [data-go="voice"] { display: none !important; }
@@ -375,7 +381,7 @@
       <p class="intro" data-dev="lattice">Lattice, a wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, two filters, and a modulation matrix you drag into place. Draw LFO shapes, or drop a WAV file to play it as a cycle.</p>
       <p class="intro" data-dev="thyratron">Thyratron, a monophonic ladder synthesizer: three oscillators, a mixer with noise and feedback, and a 24 dB/octave ladder low-pass that will sing when the emphasis is full. Glide, two contours, and the pitch and mod wheels.</p>
       <p class="intro" data-dev="gleam">Gleam, a touch field. Each finger is a voice: across is pitch, up is timbre, pressure is level. A room view places sounding orbs around a listener, and the same pad can sweep the rack master.</p>
-      <p class="intro" data-dev="mote">Mote, a granular instrument: load any sound, record the microphone, or capture the rack, then play it as a cloud of grains. Drag the highlighted region to move through the waveform.</p>
+      <p class="intro" data-dev="mote">Mote, a granular instrument: load any sound, record the microphone, or capture the rack, then play it as a cloud of grains. Capture rack is an input, not an export. Drag the highlighted region to move through the waveform. The red rec button saves what you hear as a WAV.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
       <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
@@ -383,6 +389,11 @@
       <button class="btn small" id="nextP" aria-label="Next patch">&rsaquo;</button>
       <button class="btn small" id="saveP">save</button>
       <button class="btn small" id="delP" hidden>delete</button>
+      <span class="mastrec" id="mastRecWrap">
+        <button type="button" class="btn small rec-master" id="mastRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV.">&#9679; rec</button>
+        <span class="rec-time" id="mastTime" data-rec-time aria-live="polite"></span>
+        <button type="button" class="btn small" id="mastJump" title="Open the Master panel: effects, record, and render wav">master</button>
+      </span>
       <span class="saveform" id="saveForm"><input id="saveName" maxlength="40" aria-label="Patch name"><button class="btn small" id="saveOk">ok</button><button class="btn small" id="saveNo">cancel</button></span>
       <button class="btn small" id="midiBtn"><span class="long">Connect </span>MIDI</button>
       <button class="btn small" id="learnBtn" aria-pressed="false" hidden title="MIDI learn: press, click a knob, move a knob on your keyboard">learn</button>
@@ -511,6 +522,8 @@
         <div class="hostbar">
           <button class="btn small" id="trPlay" aria-pressed="false">play</button>
           <button class="btn small" id="trStop">stop</button>
+          <button type="button" class="btn small rec-master" id="trRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV.">&#9679; rec</button>
+          <span class="rec-time" id="trTime" data-rec-time aria-live="polite"></span>
           <label>tempo <input id="hostTempo" type="number" min="40" max="240" step="1" value="120" aria-label="Tempo in beats per minute"></label>
           <span class="pos" id="trPos" aria-live="polite">1.1 · stopped</span>
         </div>
@@ -646,7 +659,7 @@
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.10: Filament, Cathode, Thyratron, Dekatron, Lattice, Gleam, and Mote in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Gleam is the touch field; <a href="/synth/gleam/">full screen</a> uses the same voices. Record or render a 24-bit WAV from the master. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.10: Filament, Cathode, Thyratron, Dekatron, Lattice, Gleam, and Mote in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Gleam is the touch field; <a href="/synth/gleam/">full screen</a> uses the same voices. The red rec button records a 24-bit WAV of the master on every device. The Master panel, on the Rack tab, has the same recording plus the effects and render wav. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1324,10 +1337,10 @@ function setDevice(d) {
   showDevice();
   store.set('synth_dev', d);
   const tab = document.body.dataset.tab;
-  if ((tab === 'patch' && d !== 'cathode') || (tab === 'voice' && d !== 'dekatron') || (d === 'dekatron' && tab !== 'play' && tab !== 'voice')) goTab('play');
+  if ((tab === 'patch' && d !== 'cathode') || (tab === 'voice' && d !== 'dekatron') || (d === 'dekatron' && tab !== 'play' && tab !== 'voice' && tab !== 'rack')) goTab('play');
   if (d === 'lattice' && (tab === 'stereo' || tab === 'voice' || tab === 'patch')) goTab('play');
   if (d === 'thyratron' && (tab === 'stereo' || tab === 'voice' || tab === 'patch')) goTab('play');
-  if (d === 'gleam' && tab !== 'play') goTab('play');
+  if (d === 'gleam' && tab !== 'play' && tab !== 'rack') goTab('play');
   if ((tab === 'grain' || tab === 'space') && d !== 'mote') goTab('play');
   if (d === 'mote' && tab !== 'play' && tab !== 'grain' && tab !== 'space' && tab !== 'rack') goTab('play');
   const run = () => {
@@ -1517,15 +1530,20 @@ refreshAll(); fillSelect();
 function goTab(t) {
   if (t === 'patch' && dev !== 'cathode') t = 'play';
   if (t === 'voice' && dev !== 'dekatron') t = 'play';
-  if (dev === 'dekatron' && t !== 'play' && t !== 'voice') t = 'play';
+  if (dev === 'dekatron' && t !== 'play' && t !== 'voice' && t !== 'rack') t = 'play';
   if (dev === 'lattice' && (t === 'stereo' || t === 'voice' || t === 'patch')) t = 'play';
   if (dev === 'thyratron' && (t === 'stereo' || t === 'patch' || t === 'voice')) t = 'play';
-  if (dev === 'gleam' && t !== 'play') t = 'play';
+  if (dev === 'gleam' && t !== 'play' && t !== 'rack') t = 'play';
   if ((t === 'grain' || t === 'space') && dev !== 'mote') t = 'play';
   if (dev === 'mote' && t !== 'play' && t !== 'grain' && t !== 'space' && t !== 'rack') t = 'play';
   document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables());
 }
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
+$('mastJump').addEventListener('click', () => {
+  goTab('rack');
+  const sec = $('mMaster');
+  if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
 document.querySelectorAll('.tube[data-tab-go]').forEach(f => f.addEventListener('click', () => {
   const t = f.dataset.tabGo; goTab(t);
   const sec = t === 'rack' ? $('mOut') : dev === 'gleam' ? $('gleamPad') : dev === 'dekatron' ? $('mDrumTr') : dev === 'thyratron' ? $('mThyLad') : dev === 'lattice' ? $('latticeRoot') : dev === 'cathode' ? $('mCTubes') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');

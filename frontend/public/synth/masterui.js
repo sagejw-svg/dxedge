@@ -20,7 +20,7 @@ export function mountMaster(api) {
   host.innerHTML =
     '<div class="fxrow" id="fxTransport">' +
       '<span class="fxname">tempo</span><span class="knobs" id="fxTempo"></span>' +
-      '<button type="button" class="chip" id="fxRec" aria-pressed="false">record</button>' +
+      '<button type="button" class="chip" id="fxRec" data-master-rec aria-pressed="false">record</button>' +
       '<input id="wavSecs" type="number" min="0.1" max="600" step="0.1" value="4" aria-label="Render length in seconds">' +
       '<button type="button" class="btn small" id="wavGo">render wav</button>' +
       '<span class="fxstat" id="fxStat" aria-live="polite"></span>' +
@@ -44,7 +44,7 @@ export function mountMaster(api) {
       '<button type="button" class="chip" id="fxLim" aria-pressed="true">limit</button>' +
       '<span class="knobs" id="fxCompKn"></span>' +
     '</div>' +
-    '<div class="note">Delay, reverb and the bus compressor sit on the master, after both devices. Bypass leaves the sound untouched. Record and render save a 24-bit, 44.1 kHz stereo WAV, up to 10 minutes.</div>';
+    '<div class="note">Delay, reverb and the bus compressor sit on the master, after every device. Bypass leaves the sound untouched. Record, here or the red rec button, and render save a 24-bit, 44.1 kHz stereo WAV, up to 10 minutes.</div>';
 
   const $ = id => host.querySelector('#' + id) || document.getElementById(id);
   const divSel = $('fxDiv');
@@ -150,6 +150,18 @@ export function mountMaster(api) {
   let recTimer = 0;
   function stat(t) { $('fxStat').textContent = t; }
   function engine() { return api.getEngine(); }
+  function recButtons() { return [...document.querySelectorAll('[data-master-rec]')]; }
+  function fmtSec(s) { return (s < 10 ? s.toFixed(1) : String(Math.round(s))) + 's'; }
+  function paintElapsed(text) {
+    document.querySelectorAll('[data-rec-time]').forEach(el => { el.textContent = text || ''; });
+  }
+  function paintRec(on) {
+    recButtons().forEach(b => {
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (b.id === 'fxRec') b.textContent = on ? 'stop' : 'record';
+    });
+    if (!on) paintElapsed('');
+  }
 
   async function recordStart() {
     const E = engine();
@@ -159,14 +171,15 @@ export function mountMaster(api) {
     E.fx.recordStart();
     if (E.fx.onCap) { /* replaced below */ }
     E.fx.onCap = () => { stopRec(true); };
-    $('fxRec').setAttribute('aria-pressed', 'true');
-    $('fxRec').textContent = 'stop';
+    paintRec(true);
+    paintElapsed('0.0s');
     stat('recording');
     clearInterval(recTimer);
     recTimer = setInterval(() => {
       if (!E.fx || !E.fx.recording()) return;
-      const s = E.fx.recordedSeconds();
-      stat('recording ' + (s < 10 ? s.toFixed(1) : Math.round(s)) + 's');
+      const label = fmtSec(E.fx.recordedSeconds());
+      stat('recording ' + label);
+      paintElapsed(label);
     }, 200);
     return true;
   }
@@ -174,8 +187,7 @@ export function mountMaster(api) {
   async function stopRec(download) {
     const E = engine();
     clearInterval(recTimer);
-    $('fxRec').setAttribute('aria-pressed', 'false');
-    $('fxRec').textContent = 'record';
+    paintRec(false);
     if (!E || !E.fx) return null;
     const was = E.fx.recording() || E.fx.recordedSeconds() > 0;
     const samples = await E.fx.recordStop();
@@ -186,11 +198,12 @@ export function mountMaster(api) {
     return { bytes, frames: samples.L.length, sampleRate: 44100, bits: 24, channels: 2, name };
   }
 
-  $('fxRec').addEventListener('click', () => {
+  function onRecClick() {
     const E = engine();
     if (E && E.fx && E.fx.recording()) stopRec(true);
     else recordStart();
-  });
+  }
+  recButtons().forEach(b => b.addEventListener('click', onRecClick));
 
   let rendering = false;
   $('wavGo').addEventListener('click', async () => {
