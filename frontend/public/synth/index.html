@@ -268,6 +268,7 @@
   .mastrec { display: inline-flex; align-items: center; gap: 6px; }
   .rec-master { color: var(--red); border-color: rgba(255, 92, 92, 0.7); }
   .rec-master[aria-pressed="true"] { color: #fff; background: rgba(255, 92, 92, 0.22); border-color: var(--red); box-shadow: 0 0 8px rgba(255, 92, 92, 0.45); }
+  .hostbar #trRec { padding: 6px 14px; font-size: 13px; font-weight: 650; letter-spacing: 0.4px; }
   .rec-time { color: var(--red); font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: 0.4px; }
   .rec-time:empty { display: none; }
   .dbody { margin-top: 6px; border-top: 1px dashed #2c2c2c; padding-top: 6px; }
@@ -390,7 +391,7 @@
       <button class="btn small" id="saveP">save</button>
       <button class="btn small" id="delP" hidden>delete</button>
       <span class="mastrec" id="mastRecWrap">
-        <button type="button" class="btn small rec-master" id="mastRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV.">&#9679; rec</button>
+        <button type="button" class="btn small rec-master" id="mastRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV named for this device, or rack when several are playing.">&#9679; rec</button>
         <span class="rec-time" id="mastTime" data-rec-time aria-live="polite"></span>
         <button type="button" class="btn small" id="mastJump" title="Open the Master panel: effects, record, and render wav">master</button>
       </span>
@@ -522,7 +523,7 @@
         <div class="hostbar">
           <button class="btn small" id="trPlay" aria-pressed="false">play</button>
           <button class="btn small" id="trStop">stop</button>
-          <button type="button" class="btn small rec-master" id="trRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV.">&#9679; rec</button>
+          <button type="button" class="btn rec-master" id="trRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV named for this device, or rack when several are playing.">&#9679; record</button>
           <span class="rec-time" id="trTime" data-rec-time aria-live="polite"></span>
           <label>tempo <input id="hostTempo" type="number" min="40" max="240" step="1" value="120" aria-label="Tempo in beats per minute"></label>
           <span class="pos" id="trPos" aria-live="polite">1.1 · stopped</span>
@@ -583,7 +584,7 @@
           <button class="btn small" id="projDown">download</button>
           <label class="btn small filebtn" for="projFile">upload<input id="projFile" type="file" accept="application/json,.json"></label>
         </div>
-        <div class="note">Level, pan, mute and solo sit in front of the shared ensemble and output tubes. Centre pan and full level leave the sound alone. Play runs the master clock; Dekatron's pattern follows it. Save keeps the project in this browser. Download and upload move the same JSON.</div>
+        <div class="note">Level, pan, mute and solo sit in front of the shared ensemble and output tubes. Centre pan and full level leave the sound alone. Play runs the master clock; Dekatron's pattern follows it. The red record button next to play saves what you hear as a WAV, named for the device on screen, or rack when several are playing. The same recording is on the Master panel below. Save keeps the project in this browser. Download and upload move the same JSON.</div>
       </section>
       <section class="mod" data-tab="rack" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
     </div>
@@ -659,7 +660,7 @@
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.10: Filament, Cathode, Thyratron, Dekatron, Lattice, Gleam, and Mote in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Gleam is the touch field; <a href="/synth/gleam/">full screen</a> uses the same voices. The red rec button records a 24-bit WAV of the master on every device. The Master panel, on the Rack tab, has the same recording plus the effects and render wav. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.10: Filament, Cathode, Thyratron, Dekatron, Lattice, Gleam, and Mote in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Gleam is the touch field; <a href="/synth/gleam/">full screen</a> uses the same voices. The red rec button records a 24-bit WAV of the master on every device. The file is named for the lit device, or rack when several are playing. The Master panel, on the Rack tab below the instrument, has the same recording plus the effects and render wav. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1905,9 +1906,50 @@ requestAnimationFrame(frame);
 
 // ---------------------------------------------------------------- master bus (delay, reverb, compressor, WAV)
 // Sits after the rack mixer's master output. Effects off is a straight wire.
+// A take is named for the lit device (Mote-20261014-135311.wav). If more than
+// one device plays during the take, the name is rack-….
+const WAV_LABEL = {
+  filament: 'Filament', cathode: 'Cathode', thyratron: 'Thyratron', gleam: 'Gleam',
+  dekatron: 'Dekatron', lattice: 'Lattice', mote: 'Mote',
+};
+let wavHeard = new Set();
+function meterOn(m) {
+  if (!m) return false;
+  return (m.voices || 0) > 0 || (m.grains || 0) > 0 || !!(m.notes && m.notes.length) || !!m.playing;
+}
+function meterOf(id) {
+  if (id === 'dekatron') return drumHost.meter();
+  if (id === 'lattice') return latticeHost.meter();
+  if (id === 'thyratron') return thyHost.meter();
+  if (id === 'gleam') return gleamHost.meter();
+  if (id === 'mote') return moteHost.meter();
+  return E && E.meters ? E.meters[id] : null;
+}
+function playingNow() {
+  const s = new Set();
+  if (deck && deck.test && deck.test.playing()) Object.keys(deck.test.sounding() || {}).forEach(id => s.add(id));
+  if (player && player.test && player.test.playing()) (player.test.devices ? player.test.devices() : []).forEach(id => { if (id && id !== 'off') s.add(id); });
+  if (meterOn(meterOf(dev))) s.add(dev);
+  // Dekatron's pattern follows the master clock even when another device is lit.
+  if (dev !== 'dekatron' && drumHost.meter().playing) s.add('dekatron');
+  return s;
+}
+function wavArm() {
+  wavHeard = new Set();
+  playingNow().forEach(id => wavHeard.add(id));
+}
+function wavPrefix(duringTake) {
+  const now = playingNow();
+  if (duringTake) {
+    now.forEach(id => wavHeard.add(id));
+    if (wavHeard.size > 1) return 'rack';
+  } else if (now.size > 1) return 'rack';
+  return WAV_LABEL[dev] || 'Filament';
+}
 const master = mountMaster({
   host: $('masterHost'), store, withEngine, getEngine: () => E, toast,
   getNotes: () => heldNotes(), getPatch: () => cur,
+  wavArm, wavPrefix,
 });
 
 // Dekatron's panel. It edits whichever object drumPatch() returns, so it can be built

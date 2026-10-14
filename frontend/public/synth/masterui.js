@@ -44,7 +44,7 @@ export function mountMaster(api) {
       '<button type="button" class="chip" id="fxLim" aria-pressed="true">limit</button>' +
       '<span class="knobs" id="fxCompKn"></span>' +
     '</div>' +
-    '<div class="note">Delay, reverb and the bus compressor sit on the master, after every device. Bypass leaves the sound untouched. Record, here or the red rec button, and render save a 24-bit, 44.1 kHz stereo WAV, up to 10 minutes.</div>';
+    '<div class="note">Delay, reverb and the bus compressor sit on the master, after every device. Bypass leaves the sound untouched. Record, here or the red rec button, and render save a 24-bit, 44.1 kHz stereo WAV, up to 10 minutes. The file is named for the lit device, or rack when several are playing.</div>';
 
   const $ = id => host.querySelector('#' + id) || document.getElementById(id);
   const divSel = $('fxDiv');
@@ -150,6 +150,10 @@ export function mountMaster(api) {
   let recTimer = 0;
   function stat(t) { $('fxStat').textContent = t; }
   function engine() { return api.getEngine(); }
+  function prefix(duringTake) {
+    const name = api.wavPrefix ? api.wavPrefix(!!duringTake) : '';
+    return name || 'filament';
+  }
   function recButtons() { return [...document.querySelectorAll('[data-master-rec]')]; }
   function fmtSec(s) { return (s < 10 ? s.toFixed(1) : String(Math.round(s))) + 's'; }
   function paintElapsed(text) {
@@ -168,6 +172,7 @@ export function mountMaster(api) {
     if (!E || !E.fx) { stat('audio is not ready'); return false; }
     if (E.fx.recording()) return true;
     if (E.ctx && E.ctx.state !== 'running') { try { await E.ctx.resume(); } catch (e) {} }
+    if (api.wavArm) api.wavArm();
     E.fx.recordStart();
     if (E.fx.onCap) { /* replaced below */ }
     E.fx.onCap = () => { stopRec(true); };
@@ -177,6 +182,7 @@ export function mountMaster(api) {
     clearInterval(recTimer);
     recTimer = setInterval(() => {
       if (!E.fx || !E.fx.recording()) return;
+      if (api.wavPrefix) api.wavPrefix(true);
       const label = fmtSec(E.fx.recordedSeconds());
       stat('recording ' + label);
       paintElapsed(label);
@@ -192,7 +198,7 @@ export function mountMaster(api) {
     const was = E.fx.recording() || E.fx.recordedSeconds() > 0;
     const samples = await E.fx.recordStop();
     const bytes = encodeWav24(samples.L, samples.R);
-    const name = wavName('filament');
+    const name = wavName(prefix(true));
     if (download && samples.L.length) downloadWav(bytes, name);
     stat(samples.L.length ? (was ? 'saved ' + name : name) : 'nothing recorded');
     return { bytes, frames: samples.L.length, sampleRate: 44100, bits: 24, channels: 2, name };
@@ -217,7 +223,7 @@ export function mountMaster(api) {
       const notes = api.getNotes();
       const events = (notes.length ? notes : [60]).map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
       const w = await renderToWav({ patch: api.getPatch(), events, seconds, rack: true, master: state });
-      const name = downloadWav(w.bytes, wavName('filament'));
+      const name = downloadWav(w.bytes, wavName(prefix(false)));
       stat('saved ' + name + ' · ' + w.frames + ' frames');
     } catch (e) {
       console.error(e);

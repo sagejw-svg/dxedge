@@ -1325,8 +1325,9 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
-       dl.suggested_filename.endswith(".wav") and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
+       bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     pg.evaluate("__synth.noteOn(60, 0.8)")
     pg.evaluate("() => __synth.recordStart()")
     pg.wait_for_timeout(700)
@@ -1337,11 +1338,13 @@ with sync_playwright() as pw:
     rec_rms = rms(pcm24(rec_info["data"])[0]) if rec_info and len(rec_info["data"]) >= 6 else 0
     ck(f"M. live recording is a non-silent 24-bit WAV ({rec['frames'] if rec else 0} frames, {db(rec_rms):.1f} dB)",
        rec_info and rec_info["fmt"] == 1 and rec_info["rate"] == 44100 and rec_info["bits"] == 24 and rec_info["ch"] == 2
-       and rec["frames"] > 44100 * 0.3 and rec_rms > 1e-3, rec["frames"] if rec else None)
+       and rec["frames"] > 44100 * 0.3 and rec_rms > 1e-3
+       and bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", rec.get("name") or "")), (rec["frames"] if rec else None, rec.get("name") if rec else None))
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
     DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -1366,13 +1369,27 @@ with sync_playwright() as pw:
         raw_dl = open(dl.path(), "rb").read()
         info_dl = parse_wav(raw_dl)
         ck(f"M. {dev}: recording downloads a non-empty 24-bit WAV ({dl.suggested_filename}, {len(raw_dl)} bytes)",
-           dl.suggested_filename.endswith(".wav") and info_dl and info_dl["fmt"] == 1 and info_dl["bits"] == 24 and info_dl["ch"] == 2 and info_dl["rate"] == 44100 and len(info_dl["data"]) > 0,
+           bool(_re2.fullmatch(WAV_LABEL[dev] + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and info_dl and info_dl["fmt"] == 1 and info_dl["bits"] == 24 and info_dl["ch"] == 2 and info_dl["rate"] == 44100 and len(info_dl["data"]) > 0,
            (dl.suggested_filename, len(raw_dl), None if not info_dl else {k: info_dl[k] for k in ("fmt", "bits", "ch", "rate")}))
         pg.wait_for_function("() => document.getElementById('mastRec').getAttribute('aria-pressed')==='false' && document.getElementById('fxRec').textContent==='record'", timeout=8000)
     help_txt = pg.evaluate("""() => [...document.querySelectorAll('#mMoteStage .note, .intro[data-dev="mote"]')].map(n => n.textContent).join(' ')""")
     ck("Mo. help says Capture rack is an input, not an export", "Capture rack is an input, not an export" in help_txt, help_txt)
     pg.evaluate("__synth.panic()")
     pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(200)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
+    pg.evaluate("__synth.deck().play('file')")
+    pg.wait_for_function("""() => __synth.deck().playing() && Object.keys(__synth.deck().sounding()).length >= 2""", timeout=5000)
+    pg.click("#trRec")
+    pg.wait_for_function("""() => document.getElementById('trRec').getAttribute('aria-pressed')==='true'""", timeout=8000)
+    pg.wait_for_timeout(350)
+    with pg.expect_download(timeout=20000) as di:
+        pg.click("#trRec")
+    rack_dl = di.value
+    ck("M. several devices playing: the WAV is named rack",
+       bool(_re2.fullmatch(r"rack-\d{8}-\d{6}\.wav", rack_dl.suggested_filename)) and len(open(rack_dl.path(), "rb").read()) > 44,
+       rack_dl.suggested_filename)
+    pg.evaluate("__synth.deck().stop()")
     pg.wait_for_timeout(200)
 
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
