@@ -118,8 +118,10 @@ function growBuf() {
   };
 }
 
-// Linear resampler. When the rates match, samples pass through unchanged.
+// Linear resampler. When the rates match, samples are copied unchanged: the
+// recording is the same sequence the worklet just wrote to the speakers.
 export function makeCapture(srcRate, dstRate) {
+  const same = srcRate === dstRate;
   const step = srcRate / dstRate;
   let frac = 0, holdL = 0, holdR = 0;
   const L = growBuf(), R = growBuf();
@@ -127,6 +129,10 @@ export function makeCapture(srcRate, dstRate) {
     push(inL, inR) {
       const n = inL.length;
       if (!n) return;
+      if (same) {
+        for (let i = 0; i < n; i++) { L.push(inL[i]); R.push(inR[i] || 0); }
+        return;
+      }
       let next = frac;
       while (next < n) {
         const i = Math.floor(next), f = next - i;
@@ -166,7 +172,10 @@ export async function makeMasterFx(ctx, initial) {
     if (node) return node;
     node = new AudioWorkletNode(ctx, 'filament-master', {
       numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
-      channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'discrete',
+      // Speakers, not discrete: a mono bus is heard in both speakers, and a
+      // stereo bus keeps its channels. Discrete would record a mono signal on
+      // the left only.
+      channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
       processorOptions: { master: forWorklet(state) },
     });
     node.port.onmessage = e => {
@@ -223,14 +232,17 @@ export async function makeMasterFx(ctx, initial) {
     recording: () => recording,
     recordedSeconds: () => (cap ? cap.seconds() : 0),
     recordStart() {
-      cap = makeCapture(ctx.sampleRate, 44100);
+      // Same rate as the context. Resampling to 44.1 kHz is not what the
+      // speakers played, and a 48 kHz performance labeled 44.1 kHz comes out slow.
+      cap = makeCapture(ctx.sampleRate, ctx.sampleRate);
       recording = true;
       force = true;
       waitEnd = null;
       route();
       if (node) node.port.postMessage({ t: 'rec', on: true });
     },
-    // Resolves with { L, R } Float32Arrays at 44.1 kHz, once the worklet has flushed.
+    // Resolves with { L, R, sampleRate } once the worklet has flushed.
+    // L and R are the samples the worklet wrote to the destination.
     recordStop() {
       recording = false;
       return new Promise(resolve => {
@@ -240,6 +252,7 @@ export async function makeMasterFx(ctx, initial) {
           done = true;
           waitEnd = null;
           const took = cap ? cap.take() : { L: new Float32Array(0), R: new Float32Array(0) };
+          took.sampleRate = ctx.sampleRate;
           cap = null;
           force = false;
           route();

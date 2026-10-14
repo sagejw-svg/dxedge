@@ -197,11 +197,12 @@ export function mountMaster(api) {
     if (!E || !E.fx) return null;
     const was = E.fx.recording() || E.fx.recordedSeconds() > 0;
     const samples = await E.fx.recordStop();
-    const bytes = encodeWav24(samples.L, samples.R);
+    const rate = samples.sampleRate || (E.ctx && E.ctx.sampleRate) || 44100;
+    const bytes = encodeWav24(samples.L, samples.R, rate);
     const name = wavName(prefix(true));
     if (download && samples.L.length) downloadWav(bytes, name);
     stat(samples.L.length ? (was ? 'saved ' + name : name) : 'nothing recorded');
-    return { bytes, frames: samples.L.length, sampleRate: 44100, bits: 24, channels: 2, name };
+    return { bytes, frames: samples.L.length, sampleRate: rate, bits: 24, channels: 2, name };
   }
 
   function onRecClick() {
@@ -244,7 +245,7 @@ export function mountMaster(api) {
     async recordStop() {
       const w = await stopRec(false);
       if (!w) return null;
-      return { b64: bytesToB64(w.bytes), bytes: w.bytes.length, frames: w.frames, sr: 44100, bits: 24, channels: 2, name: w.name };
+      return { b64: bytesToB64(w.bytes), bytes: w.bytes.length, frames: w.frames, sr: w.sampleRate, bits: 24, channels: 2, name: w.name };
     },
     async renderWav(opts) {
       const w = await renderToWav(Object.assign({ patch: api.getPatch(), master: state, rack: true }, opts));
