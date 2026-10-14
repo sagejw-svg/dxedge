@@ -923,6 +923,12 @@ with sync_playwright() as pw:
     controlled = sp.evaluate("""async () => {
       await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        await new Promise(resolve => {
+          const t = setTimeout(resolve, 3000);
+          navigator.serviceWorker.addEventListener('controllerchange', () => { clearTimeout(t); resolve(); }, { once: true });
+        });
+      }
       return !!navigator.serviceWorker.controller;
     }""")
     ck("slashless /synth: the service worker is in control", controlled)
