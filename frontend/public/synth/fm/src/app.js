@@ -443,18 +443,26 @@ app.controller('MidiCtrl', ['$scope', function($scope) {
 		visualizer.cycleMode();
 	};
 
+	var heldCodes = new Set();
+	function releaseKeys() {
+		heldCodes.clear();
+		if (mml) { mml.stop(); mml = null; }
+		synth.panic();
+	}
+	this.panic = releaseKeys;
+
 	this.onKeyDown = function(ev) {
 		var note = qwertyNotes[ev.keyCode];
 		if (ev.metaKey) return false;
 		if (ev.keyCode === 32) {
-			if (mml) { mml.stop(); mml = null; }
-			synth.panic();
+			releaseKeys();
 			ev.stopPropagation();
 			ev.preventDefault();
 			return false;
 		}
 		if (note) {
-			if (!ev.repeat) {
+			if (!ev.repeat && !heldCodes.has(ev.keyCode)) {
+				heldCodes.add(ev.keyCode);
 				synth.noteOn(note, 0.8 + (ev.ctrlKey ? 0.47 : 0));
 			}
 			ev.stopPropagation();
@@ -465,13 +473,19 @@ app.controller('MidiCtrl', ['$scope', function($scope) {
 
 	this.onKeyUp = function(ev) {
 		var note = qwertyNotes[ev.keyCode];
-		if (note)
+		if (note && heldCodes.has(ev.keyCode)) {
+			heldCodes.delete(ev.keyCode);
 			synth.noteOff(note);
+		}
 		return false;
 	};
 
 	window.addEventListener('keydown', this.onKeyDown, false);
 	window.addEventListener('keyup', this.onKeyUp, false);
+	window.addEventListener('blur', releaseKeys, false);
+	document.addEventListener('visibilitychange', function() {
+		if (document.visibilityState === 'hidden') releaseKeys();
+	});
 }]);
 
 app.controller('OperatorCtrl', function($scope) {
@@ -658,6 +672,14 @@ window.__hexode = {
 	ready: function() { return hexodeReady; },
 	noteOn: function(n, v) { synth.noteOn(n, v == null ? 0.8 : v); },
 	noteOff: function(n) { synth.noteOff(n); },
+	panic: function() { synth.panic(); },
+	held: function() {
+		return synth.voices.filter(function(v) { return v && v.down === true; }).map(function(v) { return v.note; });
+	},
+	midi: function(data) {
+		var bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+		synth.processMidiEvent({ data: bytes });
+	},
 	resume: function() { return audioContext.resume(); },
 	peak: function() { return hexodePeak; },
 	loadSysex: function(list) {

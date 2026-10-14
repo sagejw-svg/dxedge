@@ -2,7 +2,9 @@ var PER_VOICE_LEVEL = 0.125 / 6; // nominal per-voice level borrowed from Hexter
 var PITCH_BEND_RANGE = 2; // semitones (in each direction)
 
 var MIDI_CC_MODULATION = 1,
-	MIDI_CC_SUSTAIN_PEDAL = 64;
+	MIDI_CC_SUSTAIN_PEDAL = 64,
+	MIDI_CC_ALL_SOUND_OFF = 120,
+	MIDI_CC_ALL_NOTES_OFF = 123;
 
 // TODO: Probably reduce responsibility to voice management; rename VoiceManager, MIDIChannel, etc.
 function Synth(voiceClass, polyphony) {
@@ -64,6 +66,10 @@ Synth.prototype.controller = function(controlNumber, value) {
 		case MIDI_CC_SUSTAIN_PEDAL:
 			this.sustainPedal(value > 0.5);
 			break;
+		case MIDI_CC_ALL_SOUND_OFF:
+		case MIDI_CC_ALL_NOTES_OFF:
+			this.panic();
+			break;
 	}
 };
 
@@ -101,12 +107,12 @@ Synth.prototype.noteOn = function(note, velocity) {
 };
 
 Synth.prototype.noteOff = function(note) {
-	for (var i = 0, voice; i < this.voices.length, voice = this.voices[i]; i++) {
+	for (var i = 0; i < this.voices.length; i++) {
+		var voice = this.voices[i];
 		if (voice && voice.note === note && voice.down === true) {
 			voice.down = false;
 			if (this.sustainPedalDown === false)
 				voice.noteOff();
-			break;
 		}
 	}
 };

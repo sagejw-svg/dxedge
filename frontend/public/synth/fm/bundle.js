@@ -21550,6 +21550,7 @@ var global = window;
           setMidiIn(index);
         }
         function setMidiIn(index) {
+          synth2.panic();
           if (!selectMidi[index])
             return;
           var id = selectMidi[index].value;
@@ -21620,6 +21621,8 @@ var global = window;
       var PITCH_BEND_RANGE = 2;
       var MIDI_CC_MODULATION = 1;
       var MIDI_CC_SUSTAIN_PEDAL = 64;
+      var MIDI_CC_ALL_SOUND_OFF = 120;
+      var MIDI_CC_ALL_NOTES_OFF = 123;
       function Synth2(voiceClass, polyphony) {
         this.voices = [];
         this.voiceClass = voiceClass;
@@ -21668,6 +21671,10 @@ var global = window;
           case MIDI_CC_SUSTAIN_PEDAL:
             this.sustainPedal(value > 0.5);
             break;
+          case MIDI_CC_ALL_SOUND_OFF:
+          case MIDI_CC_ALL_NOTES_OFF:
+            this.panic();
+            break;
         }
       };
       Synth2.prototype.channelAftertouch = function(value) {
@@ -21699,12 +21706,12 @@ var global = window;
         this.voices.push(voice);
       };
       Synth2.prototype.noteOff = function(note) {
-        for (var i = 0, voice; i < this.voices.length, voice = this.voices[i]; i++) {
+        for (var i = 0; i < this.voices.length; i++) {
+          var voice = this.voices[i];
           if (voice && voice.note === note && voice.down === true) {
             voice.down = false;
             if (this.sustainPedalDown === false)
               voice.noteOff();
-            break;
           }
         }
       };
@@ -27742,21 +27749,28 @@ void main(void){
     this.onVizClick = function() {
       visualizer.cycleMode();
     };
+    var heldCodes = new Set();
+    function releaseKeys() {
+      heldCodes.clear();
+      if (mml) {
+        mml.stop();
+        mml = null;
+      }
+      synth.panic();
+    }
+    this.panic = releaseKeys;
     this.onKeyDown = function(ev) {
       var note = qwertyNotes[ev.keyCode];
       if (ev.metaKey) return false;
       if (ev.keyCode === 32) {
-        if (mml) {
-          mml.stop();
-          mml = null;
-        }
-        synth.panic();
+        releaseKeys();
         ev.stopPropagation();
         ev.preventDefault();
         return false;
       }
       if (note) {
-        if (!ev.repeat) {
+        if (!ev.repeat && !heldCodes.has(ev.keyCode)) {
+          heldCodes.add(ev.keyCode);
           synth.noteOn(note, 0.8 + (ev.ctrlKey ? 0.47 : 0));
         }
         ev.stopPropagation();
@@ -27766,12 +27780,18 @@ void main(void){
     };
     this.onKeyUp = function(ev) {
       var note = qwertyNotes[ev.keyCode];
-      if (note)
+      if (note && heldCodes.has(ev.keyCode)) {
+        heldCodes.delete(ev.keyCode);
         synth.noteOff(note);
+      }
       return false;
     };
     window.addEventListener("keydown", this.onKeyDown, false);
     window.addEventListener("keyup", this.onKeyUp, false);
+    window.addEventListener("blur", releaseKeys, false);
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState === "hidden") releaseKeys();
+    });
   }]);
   app.controller("OperatorCtrl", function($scope) {
     $scope.$watchGroup(["operator.oscMode", "operator.freqCoarse", "operator.freqFine", "operator.detune"], function() {
@@ -27933,6 +27953,20 @@ void main(void){
     },
     noteOff: function(n) {
       synth.noteOff(n);
+    },
+    panic: function() {
+      synth.panic();
+    },
+    held: function() {
+      return synth.voices.filter(function(v) {
+        return v && v.down === true;
+      }).map(function(v) {
+        return v.note;
+      });
+    },
+    midi: function(data) {
+      var bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+      synth.processMidiEvent({ data: bytes });
     },
     resume: function() {
       return audioContext.resume();

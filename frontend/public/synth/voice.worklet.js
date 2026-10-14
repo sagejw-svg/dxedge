@@ -26,12 +26,13 @@
 //              a coupling-capacitor high-pass, and a supply-sag follower.
 //
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
-//   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}. Any of them may carry at:<frame>
-//   (an absolute frame, as currentFrame counts) to land on an exact sample; offline tests
-//   pass a whole score that way in processorOptions.events. The MIDI file player sends its
+//   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}, {t:'release'}. Any of them may carry
+//   at:<frame> (an absolute frame, as currentFrame counts) to land on an exact sample; offline
+//   tests pass a whole score that way in processorOptions.events. The MIDI file player sends its
 //   events that way with pb:true, plus {t:'play',on} (playback holds the device awake and its
 //   notes survive the keyboard moving to the other device) and {t:'flush'} (drop every queued
-//   pb event that has not landed yet; sent on stop).
+//   pb event that has not landed yet; sent on stop). {t:'release'} lets go of keys the page was
+//   holding (blur, tab hide, device change) and leaves pb notes sounding.
 // Messages out: {t:'meter', v1, v2, voices, cpu, notes} about 30 times a second.
 
 const OS = 2;
@@ -304,7 +305,7 @@ class Filament extends AudioWorkletProcessor {
     this.decL = new Decim(taps); this.decR = new Decim(taps);
     this.dcL = 0; this.dcR = 0; this.dcxL = 0; this.dcxR = 0;
     this.bend = 0; this.mw = 0; this.at = 0; this.sus = false;
-    this.held = []; this.order = 0; this.altPan = 1;
+    this.held = []; this.kbdHeld = new Set(); this.order = 0; this.altPan = 1;
     this.lfoG = new Float64Array(2);        // global LFO phases
     this.gsh = new Float64Array(10);        // global LFO random state, 5 per LFO: curL, prevL, curR, prevR, lastPhase
     this.lfoRate = new Float64Array(2); this.lfoDelay = new Float64Array(2); this.lfoWave = new Int32Array(2); this.lfoGlob = new Int32Array(2);
@@ -324,7 +325,7 @@ class Filament extends AudioWorkletProcessor {
 
   newVoice(i) {
     return {
-      i, on: false, note: 60, vel: 0.8, gate: false, sust: false, age: 0, pan: 0, gl: 0.7071, gr: 0.7071,
+      i, on: false, note: 60, vel: 0.8, gate: false, sust: false, pb: false, age: 0, pan: 0, gl: 0.7071, gr: 0.7071,
       pitch: 60, pitchT: 60, o1: new Osc(), o2: new Osc(), sub: new Osc(),
       ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, pending: null, fade: 1, killing: false,
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
@@ -403,18 +404,25 @@ class Filament extends AudioWorkletProcessor {
         else this.setPatch(m.p);
         break;
       }
-      case 'on': this.noteOn(m.n | 0, num(m.v, 0.8)); break;
+      case 'on': this.noteOn(m.n | 0, num(m.v, 0.8), !!m.pb); break;
       case 'off': this.noteOff(m.n | 0); break;
       case 'bend': this.bend = clamp(num(m.v, 0), -1, 1); break;
       case 'mw': this.mw = clamp(num(m.v, 0), 0, 1); break;
       case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
       case 'sus': this.sus = !!m.on; if (!this.sus) this.releaseSustained(); break;
-      case 'panic': this.held = []; this.voices.forEach(v => { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.pending = null; }); break;
+      case 'panic':
+        this.held = []; this.kbdHeld.clear(); this.sus = false;
+        this.voices.forEach(v => { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.sust = false; v.pb = false; v.pending = null; });
+        break;
+      case 'release': this.releaseInput(); break;
       case 'play': this.playing = !!m.on; break;
       case 'flush': this.events = this.events.filter(e => !e.pb); break;
       case 'active':      // the rack moved the keyboard to another device: let go of every key, let the tails ring
         this.active = !!m.on;
-        if (!this.active && !this.playing) { this.held = []; this.sus = false; this.voices.forEach(v => { v.sust = false; v.pending = null; if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; } }); }
+        if (!this.active && !this.playing) {
+          this.held = []; this.kbdHeld.clear(); this.sus = false;
+          this.voices.forEach(v => { v.sust = false; v.pb = false; v.pending = null; if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; } });
+        } else if (!this.active && this.playing) this.releaseInput();
         break;
     }
   }
@@ -426,7 +434,9 @@ class Filament extends AudioWorkletProcessor {
   // Unison stacks copies from the same pool: polyphony is the voice count, and the pool grows to
   // count x unison (at most 16), so turning unison up costs voices only past 16.
   pool() { return Math.min(NV, this.count() * this.uni()); }
-  noteOn(n, vel) {
+  noteOn(n, vel, pb) {
+    pb = !!pb;
+    if (pb) this.kbdHeld.delete(n); else this.kbdHeld.add(n);
     this.held = this.held.filter(h => h !== n); this.held.push(n);
     const mode = this.mode(), U = this.uni();
     if (mode !== 'poly') {
@@ -435,9 +445,9 @@ class Filament extends AudioWorkletProcessor {
         const v = this.voices[j];
         if (j >= U) { if (v.on && v.gate) { v.gate = false; v.as = E_REL; v.fs = E_REL; } continue; }
         const legato = mode === 'legato' && v.gate && v.on;
-        v.note = n; v.pitchT = n; v.vel = vel; v.gate = true; v.sust = false;
+        v.note = n; v.pitchT = n; v.vel = vel; v.gate = true; v.sust = false; v.pb = pb;
         v.uPos = U > 1 ? j / (U - 1) * 2 - 1 : 0;
-        if (!v.on) { v.pitch = n; this.startVoice(v, n, vel, true, j, U); }
+        if (!v.on) { v.pitch = n; this.startVoice(v, n, vel, true, j, U, pb); }
         else if (!legato) this.trigger(v, vel);
         if (glideOff) v.pitch = n;
       }
@@ -445,23 +455,23 @@ class Filament extends AudioWorkletProcessor {
     }
     const N = this.pool(), age0 = this.order;
     let found = 0;
-    for (let i = 0; i < NV; i++) { const w = this.voices[i]; if (w.on && w.note === n && !w.killing) { w.gate = true; w.sust = false; this.trigger(w, vel); w.age = ++this.order; found++; } }
+    for (let i = 0; i < NV; i++) { const w = this.voices[i]; if (w.on && w.note === n && !w.killing) { w.gate = true; w.sust = false; w.pb = pb; this.trigger(w, vel); w.age = ++this.order; found++; } }
     if (found) return;
     for (let j = 0; j < U; j++) {
       let v = null;
       for (let i = 0; i < N; i++) { const w = this.voices[i]; if (!w.on && !w.pending) { v = w; break; } }
-      if (v) { this.startVoice(v, n, vel, false, j, U); continue; }
+      if (v) { this.startVoice(v, n, vel, false, j, U, pb); continue; }
       // steal: the oldest released voice, else the quietest, never a copy this note just took
       let best = null;
       for (let i = 0; i < N; i++) { const w = this.voices[i]; if (w.age > age0 || w.pending) continue; if (!w.gate && !w.sust && (!best || w.age < best.age)) best = w; }
       if (!best) for (let i = 0; i < N; i++) { const w = this.voices[i]; if (w.age > age0 || w.pending) continue; if (!best || w.ae < best.ae) best = w; }
       if (!best) break;
-      best.pending = { n, vel, j, U }; best.killing = true; best.gate = false; best.age = ++this.order;
+      best.pending = { n, vel, j, U, pb }; best.killing = true; best.gate = false; best.age = ++this.order;
     }
   }
-  startVoice(v, n, vel, mono, j, U) {
+  startVoice(v, n, vel, mono, j, U, pb) {
     const P = this.P;
-    v.on = true; v.note = n; v.vel = vel; v.gate = true; v.sust = false; v.killing = false; v.fade = 1; v.pending = null;
+    v.on = true; v.note = n; v.vel = vel; v.gate = true; v.sust = false; v.pb = !!pb; v.killing = false; v.fade = 1; v.pending = null;
     v.age = ++this.order;
     v.uPos = (U || 1) > 1 ? (j || 0) / (U - 1) * 2 - 1 : 0;
     if (!mono || num((P.voice || {}).glide, 0) <= 0) v.pitch = n;
@@ -486,6 +496,7 @@ class Filament extends AudioWorkletProcessor {
   }
   trigger(v, vel) { v.as = E_ATT; v.fs = E_ATT; v.vel = vel; v.lfoAge = 0; }
   noteOff(n) {
+    this.kbdHeld.delete(n);
     this.held = this.held.filter(h => h !== n);
     const mode = this.mode();
     if (mode !== 'poly') {
@@ -516,6 +527,26 @@ class Filament extends AudioWorkletProcessor {
   }
   releaseSustained() {
     for (let i = 0; i < NV; i++) { const v = this.voices[i]; if (v.sust) { v.sust = false; if (!v.gate) { v.as = E_REL; v.fs = E_REL; } } }
+  }
+  // Let go of keys the page is holding. Notes a MIDI file already started (pb) keep sounding,
+  // including ones the sustain pedal is holding for the player.
+  releaseInput() {
+    this.kbdHeld.clear();
+    const pbNotes = new Set();
+    let pbSus = false;
+    for (let i = 0; i < NV; i++) {
+      const v = this.voices[i];
+      if (v.pending) { if (v.pending.pb) pbNotes.add(v.pending.n); else v.pending = null; }
+      if (v.pb) {
+        if (v.on && (v.gate || v.sust)) pbNotes.add(v.note);
+        if (v.sust) pbSus = true;
+        continue;
+      }
+      v.sust = false;
+      if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; }
+    }
+    this.sus = pbSus;
+    this.held = this.held.filter(n => pbNotes.has(n));
   }
 
   // ----- audio -----
@@ -839,7 +870,7 @@ class Filament extends AudioWorkletProcessor {
       if (as === E_IDLE || (v.killing && fade <= 0)) {
         v.on = false; v.as = E_IDLE; v.ae = 0; v.killing = false; v.fade = 1; v.st2 = false;
         FL.reset(); FR.reset();
-        if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U); }
+        if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U, pnd.pb); }
       }
     }
     // a stale NaN would poison the decimator forever
@@ -983,7 +1014,8 @@ class Cathode extends AudioWorkletProcessor {
     this.dec = new Decim(halfbandTaps(95, 9));
     this.dcO = 0; this.dcxO = 0;
     // keyboard
-    this.held = []; this.note = 60; this.kbdT = 0; this.kbd = 0; this.vel = 0.8; this.gate = false; this.sust = false; this.retrig = 0;
+    this.held = []; this.kbdHeld = new Set(); this.pbHeld = new Set();
+    this.note = 60; this.kbdT = 0; this.kbd = 0; this.vel = 0.8; this.gate = false; this.sust = false; this.retrig = 0;
     this.bend = 0; this.mw = 0; this.at = 0; this.sus = false;
     // modulation state
     this.mgPh = 0; this.nb0 = 0; this.nb1 = 0; this.nb2 = 0; this.shV = 0; this.shHi = 0;
@@ -1064,22 +1096,32 @@ class Cathode extends AudioWorkletProcessor {
         else this.setPatch(m.p);
         break;
       }
-      case 'on': this.noteOn(m.n | 0, num(m.v, 0.8)); break;
+      case 'on': this.noteOn(m.n | 0, num(m.v, 0.8), !!m.pb); break;
       case 'off': this.noteOff(m.n | 0); break;
       case 'bend': this.bend = clamp(num(m.v, 0), -1, 1); break;
       case 'mw': this.mw = clamp(num(m.v, 0), 0, 1); break;
       case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
       case 'sus': this.sus = !!m.on; if (!this.sus && this.sust) { this.sust = false; if (!this.held.length) this.gate = false; } break;
-      case 'panic': this.held = []; this.gate = false; this.sust = false; this.e1 = 0; this.e1s = 0; this.e2 = 0; this.e2s = 0; this.e2h = 0; break;
+      case 'panic':
+        this.held = []; this.kbdHeld.clear(); this.pbHeld.clear(); this.sus = false;
+        this.gate = false; this.sust = false; this.e1 = 0; this.e1s = 0; this.e2 = 0; this.e2s = 0; this.e2h = 0;
+        break;
+      case 'release': this.releaseInput(); break;
       case 'play': this.playing = !!m.on; break;
       case 'flush': this.events = this.events.filter(e => !e.pb); break;
       case 'active':
         this.active = !!m.on;
-        if (!this.active && !this.playing) { this.held = []; this.gate = false; this.sust = false; this.sus = false; }
+        if (!this.active && !this.playing) {
+          this.held = []; this.kbdHeld.clear(); this.pbHeld.clear();
+          this.gate = false; this.sust = false; this.sus = false;
+        } else if (!this.active && this.playing) this.releaseInput();
         break;
     }
   }
-  noteOn(n, vel) {
+  noteOn(n, vel, pb) {
+    pb = !!pb;
+    if (pb) { this.kbdHeld.delete(n); this.pbHeld.add(n); }
+    else { this.pbHeld.delete(n); this.kbdHeld.add(n); }
     this.held = this.held.filter(h => h !== n); this.held.push(n);
     const multi = ((this.P.ctl || {}).trig || 'multi') !== 'single';
     if (this.gate && multi) this.retrig = 2;            // the gate drops for one 2x sample, so both EGs start again
@@ -1087,6 +1129,7 @@ class Cathode extends AudioWorkletProcessor {
     if (num((this.P.ctl || {}).glide, 0) <= 0) this.kbd = this.kbdT;
   }
   noteOff(n) {
+    this.kbdHeld.delete(n); this.pbHeld.delete(n);
     const wasTop = this.held.length && this.held[this.held.length - 1] === n;
     this.held = this.held.filter(h => h !== n);
     if (!wasTop) return;
@@ -1099,6 +1142,16 @@ class Cathode extends AudioWorkletProcessor {
     }
     if (this.sus) { this.sust = true; return; }
     this.gate = false;
+  }
+  // Let go of keys the page is holding. A note the MIDI file is playing (pb) stays,
+  // and the sustain pedal stays down if that note still needs it.
+  releaseInput() {
+    const notes = [...this.kbdHeld];
+    this.kbdHeld.clear();
+    const wasSus = this.sus;
+    this.sus = false;
+    for (let i = 0; i < notes.length; i++) this.noteOff(notes[i]);
+    if (wasSus && this.pbHeld.has(this.note) && (this.gate || this.sust)) this.sus = true;
   }
 
   process(inputs, outputs) {

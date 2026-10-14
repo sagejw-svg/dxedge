@@ -94,6 +94,7 @@ export function createPlayer(api) {
     if (E) Object.keys(touched).forEach(d => {
       if (d === 'filament' || d === 'cathode') {
         E.sendTo(d, { t: 'flush' });
+        E.sendTo(d, { t: 'panic' });
         touched[d].forEach(n => E.sendTo(d, { t: 'off', n }));
         E.sendTo(d, { t: 'sus', on: false });
         E.sendTo(d, { t: 'bend', v: 0 });

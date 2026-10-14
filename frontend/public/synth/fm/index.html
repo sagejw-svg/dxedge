@@ -39,6 +39,7 @@
 				<button class="dx7-button teal" ng-click="midiCtrl.onDemoClick(1)">Demo 2</button>
 				<button class="dx7-button pink" ng-click="presetCtrl.save()">Save</button>
 				<button class="dx7-button pink" ng-click="presetCtrl.reset()">Reset</button>
+				<button class="dx7-button purple" id="panicBtn" type="button" ng-click="midiCtrl.panic()">Panic</button>
 			</div>
 			<div class="dx7-buttons-row-2">
 				<label>MIDI in <select class="dx7-button" id="midiIn" aria-label="MIDI input"></select></label>
@@ -161,7 +162,7 @@
 		</div>
 	</div>
 	<footer class="site-foot">
-		<p>Keys: the letter row is one octave from C, the row below is the octave under it. Space stops every note. Knobs and sliders drag up and down.</p>
+		<p>Keys: the letter row is one octave from C, the row below is the octave under it. Space or Panic stops every note. Knobs and sliders drag up and down.</p>
 		<p>Hexode uses the FM engine by <a href="https://github.com/mmontag/dx7-synth-js">Matt Montag</a>, MIT license, commit <code>f269f0e</code>. A factory cartridge is not included. Load a 32-voice .syx of your own. Part of <a href="/synth/">the Filament rack</a> on <a href="/">DXEdge</a>.</p>
 	</footer>
 	<script src="bundle.js"></script>

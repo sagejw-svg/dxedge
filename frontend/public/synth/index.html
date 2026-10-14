@@ -533,13 +533,13 @@
         <div class="row"><button class="btn small" id="octDn" aria-label="Octave down">oct &minus;</button><button class="btn small" id="octUp" aria-label="Octave up">+</button></div>
         <div>octave <b id="octV">C3</b></div>
         <div class="hide-s">velocity <b id="velV">100</b></div>
-        <div class="row"><button class="btn small" id="holdBtn" aria-pressed="false" title="Sustain pedal (space bar)">hold</button></div>
+        <div class="row"><button class="btn small" id="holdBtn" aria-pressed="false" title="Sustain pedal (space bar)">hold</button><button class="btn small" id="panicBtn" type="button" title="Silence every note">panic</button></div>
       </div>
     </div>
   </div></div>
 
   <footer>
-    <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Knobs: drag up or down (shift for fine), arrow keys, double click to reset.
+    <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Panic silences every note. Knobs: drag up or down (shift for fine), arrow keys, double click to reset.
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
@@ -773,24 +773,53 @@ $('projFile').addEventListener('change', () => {
 });
 
 // ---------------------------------------------------------------- notes
-const down = new Map();       // note -> source count
+// Each sounding note remembers who is holding it (one computer key, one pointer,
+// one MIDI note, or the test hook). A second note-on from the same holder does
+// not stack, so one note-off always lets go. That is what was sticking keys:
+// Shift and other modifiers reissued keydown without repeat, the count went to
+// 2, and the single keyup left the gate open.
+const holds = new Map();      // note -> Set of source ids
 let deck = null, player = null;   // the MIDI deck and the library player, built further down
 let sustainOn = false;
-function noteOn(n, v) {
+function held(n) { const s = holds.get(n); return !!(s && s.size); }
+function heldNotes() { const out = []; holds.forEach((s, n) => { if (s && s.size) out.push(n); }); return out; }
+function noteOn(n, v, src) {
   if (n < 0 || n > 127) return;
+  src = src || 'api';
+  let set = holds.get(n);
+  if (set && set.has(src)) return;
   wake();
+  const fresh = !set || set.size === 0;
+  if (!set) { set = new Set(); holds.set(n, set); }
+  set.add(src);
+  if (!fresh) return;
   if (dev === 'dekatron') { const id = voiceForNote(n); if (id) withEngine(() => drumHost.trigger(id, v)); }
   else withEngine(() => E.noteOn(n, v));
   rec({ t: 'on', n, v });
-  down.set(n, (down.get(n) || 0) + 1); paintKey(n, true);
+  paintKey(n, true);
 }
 const rec = m => { if (deck) deck.rec(dev, m); };
-function noteOff(n) {
-  const c = (down.get(n) || 0) - 1;
-  if (c > 0) { down.set(n, c); return; }
-  down.delete(n); paintKey(n, false);
+function noteOff(n, src) {
+  const set = holds.get(n);
+  if (src) {
+    if (!set || !set.has(src)) return;
+    set.delete(src);
+    if (set.size) return;
+  } else if (set) set.clear();
+  holds.delete(n); paintKey(n, false);
   if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
   rec({ t: 'off', n });
+}
+function dropHolds() {
+  keyDown.clear(); ptrs.clear();
+  const notes = heldNotes();
+  holds.clear();
+  notes.forEach(n => {
+    paintKey(n, false);
+    if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
+    rec({ t: 'off', n });
+  });
+  if (sustainOn) setSustain(false);
 }
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
@@ -1081,8 +1110,9 @@ $('delP').addEventListener('click', () => {
 function setDevice(d) {
   if (d !== 'cathode' && d !== 'dekatron') d = 'filament';
   if (d === dev) return;
-  [...down.keys()].forEach(n => { down.set(n, 1); noteOff(n); });     // let go on the old device first
-  if (sustainOn) setSustain(false);
+  const playbackBusy = (deck && deck.test && deck.test.playing()) || (player && player.test && player.test.playing());
+  releaseInput();
+  if (!playbackBusy) withEngine(() => E.panic());
   if (PP.armed) arm(null);
   store.set(D().kCur, { key: curKey, patch: cur });
   DS[dev] = { cur, curKey, edited, user };
@@ -1277,77 +1307,96 @@ function buildKeys() {
     if (black) { el.style.left = (x - bW / 2) + 'px'; el.style.width = bW + 'px'; }
     else { el.style.left = x + 'px'; el.style.width = wW + 'px'; x += wW; if (pc === 0) el.innerHTML = '<span class="kn">C' + (Math.floor(n / 12) - 1) + '</span>'; }
     host.appendChild(el); keyEls.set(n, el);
-    if (down.has(n) || (deck && deck.lit(n)) || (player && player.lit(n))) el.classList.add('down');
+    if (held(n) || (deck && deck.lit(n)) || (player && player.lit(n))) el.classList.add('down');
   }
   host.style.width = x + 'px';
   $('octV').textContent = 'C' + baseOct;
   // phones: start the scroll on the middle C of the visible range
   if (phone) { const w = $('keyswrap'); w.scrollLeft = Math.max(0, 7 * wW - w.clientWidth / 2 + 3 * wW); }
 }
-function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || down.has(n) || !!(deck && deck.lit(n)) || !!(player && player.lit(n))); }
+function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || held(n) || !!(deck && deck.lit(n)) || !!(player && player.lit(n))); }
 buildKeys();
 let lastW = window.innerWidth; window.addEventListener('resize', () => { if (Math.abs(window.innerWidth - lastW) > 40) { lastW = window.innerWidth; buildKeys(); } });
 function setOct(o) { baseOct = clampN(o, 0, 7); store.set('filament_oct', baseOct); buildKeys(); }
 $('octDn').addEventListener('click', () => setOct(baseOct - 1)); $('octUp').addEventListener('click', () => setOct(baseOct + 1));
 $('holdBtn').addEventListener('click', () => setSustain(!sustainOn));
+$('panicBtn').addEventListener('click', () => panic());
 
 const ptrs = new Map();     // pointerId -> note
 function keyAt(x, y) { const el = document.elementFromPoint(x, y); const k = el && el.closest && el.closest('.key'); return k && $('keys').contains(k) ? +k.dataset.n : null; }
 function velAt(el, y) { const r = el.getBoundingClientRect(); return clampN(0.3 + 0.7 * (y - r.top) / r.height, 0.05, 1); }
+function ptrSrc(id) { return 'ptr:' + id; }
 $('keys').addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
   const n = keyAt(e.clientX, e.clientY); if (n == null) return;
-  e.preventDefault(); $('keys').setPointerCapture(e.pointerId);
-  ptrs.set(e.pointerId, n); noteOn(n, velAt(keyEls.get(n), e.clientY));
+  e.preventDefault();
+  try { $('keys').setPointerCapture(e.pointerId); } catch (err) {}
+  if (ptrs.get(e.pointerId) === n) return;
+  const was = ptrs.get(e.pointerId);
+  ptrs.set(e.pointerId, n);
+  if (was != null) noteOff(was, ptrSrc(e.pointerId));
+  noteOn(n, velAt(keyEls.get(n), e.clientY), ptrSrc(e.pointerId));
 });
 $('keys').addEventListener('pointermove', e => {
   if (!ptrs.has(e.pointerId)) return;
   const n = keyAt(e.clientX, e.clientY), was = ptrs.get(e.pointerId);
   if (n == null || n === was) return;
   ptrs.set(e.pointerId, n);
+  const src = ptrSrc(e.pointerId);
   // slide: in mono modes press the new key first so it glides; in poly let go first
-  if (dev === 'cathode' || cur.voice.mode !== 'poly') { noteOn(n, velAt(keyEls.get(n), e.clientY)); noteOff(was); }
-  else { noteOff(was); noteOn(n, velAt(keyEls.get(n), e.clientY)); }
+  if (dev === 'cathode' || (cur.voice && cur.voice.mode !== 'poly')) { noteOn(n, velAt(keyEls.get(n), e.clientY), src); noteOff(was, src); }
+  else { noteOff(was, src); noteOn(n, velAt(keyEls.get(n), e.clientY), src); }
 });
-const ptrUp = e => { if (!ptrs.has(e.pointerId)) return; const n = ptrs.get(e.pointerId); ptrs.delete(e.pointerId); noteOff(n); };
+const ptrUp = e => { if (!ptrs.has(e.pointerId)) return; const n = ptrs.get(e.pointerId); ptrs.delete(e.pointerId); noteOff(n, ptrSrc(e.pointerId)); };
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('keys').addEventListener(ev, ptrUp));
+window.addEventListener('pointerup', ptrUp, true);
+window.addEventListener('pointercancel', ptrUp, true);
+document.addEventListener('pointerleave', e => { if (e.relatedTarget) return; [...ptrs.keys()].forEach(id => ptrUp({ pointerId: id })); });
 
 // pitch and mod strips
 function strip(id, spring, onV) {
   const el = $(id), th = el.querySelector('.thumb'); let v = spring ? 0.5 : 0, act = null;
   const show = () => { th.style.top = ((1 - v) * (el.clientHeight - 16)) + 'px'; el.setAttribute('aria-valuenow', (spring ? v * 2 - 1 : v).toFixed(2)); };
   const setY = y => { const r = el.getBoundingClientRect(); v = clampN(1 - (y - r.top - 8) / (r.height - 16), 0, 1); show(); onV(spring ? v * 2 - 1 : v); };
-  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); act = e.pointerId; setY(e.clientY); });
+  el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (err) {} act = e.pointerId; setY(e.clientY); });
   el.addEventListener('pointermove', e => { if (act === e.pointerId) setY(e.clientY); });
   const up = e => { if (act !== e.pointerId) return; act = null; if (spring) { v = 0.5; show(); onV(0); } };
-  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
   el.addEventListener('keydown', e => { const d = { ArrowUp: 0.05, ArrowDown: -0.05 }[e.key]; if (d) { e.preventDefault(); e.stopPropagation(); v = clampN(v + d, 0, 1); show(); onV(spring ? v * 2 - 1 : v); } });
   el.addEventListener('keyup', e => { if (spring && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { v = 0.5; show(); onV(0); } });
   requestAnimationFrame(show);
-  return { set(x) { v = spring ? (x + 1) / 2 : x; show(); } };
+  return { set(x) { v = spring ? (x + 1) / 2 : x; show(); }, active: () => act != null, release() { if (act == null) return; act = null; if (spring) { v = 0.5; show(); onV(0); } } };
 }
 const PB = strip('pbStrip', true, v => { withEngine(() => E.bend(v)); rec({ t: 'bend', v }); });
 const MW = strip('mwStrip', false, v => { withEngine(() => E.modWheel(v)); rec({ t: 'mw', v }); });
 
-// computer keyboard
-const KEYMAP = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15, ';': 16, "'": 17 };
-const keyDown = new Map();
+// computer keyboard. Codes, not e.key: Shift turns ";" into ":" and would miss the keyup.
+const CODEMAP = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12, KeyO: 13, KeyL: 14, KeyP: 15, Semicolon: 16, Quote: 17 };
+const keyDown = new Map();   // code -> note
 function typing(e) { const t = e.target; return t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
 window.addEventListener('keydown', e => {
-  if (typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = e.key.toLowerCase();
-  if (k === ' ') { e.preventDefault(); if (!e.repeat) setSustain(true); return; }
-  if (e.repeat) { if (k in KEYMAP) e.preventDefault(); return; }
-  if (k === 'z') { setOct(baseOct - 1); return; } if (k === 'x') { setOct(baseOct + 1); return; }
-  if (k === 'c') { vel = clampN(vel - 0.1, 0.1, 1); $('velV').textContent = Math.round(vel * 127); return; }
-  if (k === 'v') { vel = clampN(vel + 0.1, 0.1, 1); $('velV').textContent = Math.round(vel * 127); return; }
-  if (k in KEYMAP) { e.preventDefault(); const n = 12 * (baseOct + 1) + KEYMAP[k]; keyDown.set(k, n); noteOn(n, vel); }
+  if (typing(e)) return;
+  if (e.code === 'Space') { if (e.metaKey || e.ctrlKey || e.altKey) return; e.preventDefault(); if (!e.repeat) setSustain(true); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const semi = CODEMAP[e.code];
+  if (semi == null) {
+    if (e.repeat) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z') setOct(baseOct - 1);
+    else if (k === 'x') setOct(baseOct + 1);
+    else if (k === 'c') { vel = clampN(vel - 0.1, 0.1, 1); $('velV').textContent = Math.round(vel * 127); }
+    else if (k === 'v') { vel = clampN(vel + 0.1, 0.1, 1); $('velV').textContent = Math.round(vel * 127); }
+    return;
+  }
+  e.preventDefault();
+  if (e.repeat || keyDown.has(e.code)) return;
+  const n = 12 * (baseOct + 1) + semi;
+  keyDown.set(e.code, n); noteOn(n, vel, 'key:' + e.code);
 });
 window.addEventListener('keyup', e => {
-  const k = e.key.toLowerCase();
-  if (k === ' ') { if (!typing(e)) setSustain(false); return; }
-  if (keyDown.has(k)) { noteOff(keyDown.get(k)); keyDown.delete(k); }
+  if (e.code === 'Space') { if (!typing(e)) setSustain(false); return; }
+  if (keyDown.has(e.code)) { const n = keyDown.get(e.code); keyDown.delete(e.code); noteOff(n, 'key:' + e.code); }
 });
-window.addEventListener('blur', () => { keyDown.forEach(n => noteOff(n)); keyDown.clear(); });
 $('velV').textContent = Math.round(vel * 127);
 
 // mono check: momentary
@@ -1357,14 +1406,32 @@ $('monoBtn').addEventListener('pointerdown', e => { e.preventDefault(); mono(tru
 $('monoBtn').addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); mono(true); } });
 $('monoBtn').addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); mono(false); } });
 
+// Blur and a hidden tab drop the keyup or pointerup that would have followed, so let go of
+// every input note here. A MIDI file keeps playing: releaseKeys spares pb notes, and this
+// does not stop the transport. Panic (the button, or MIDI CC 120/123) does.
+function releaseInput() {
+  dropHolds();
+  if ($('monoBtn').getAttribute('aria-pressed') === 'true') mono(false);
+  if (PB.active()) PB.release();
+  withEngine(() => E.releaseKeys());
+}
+function panic() {
+  releaseInput();
+  withEngine(() => E.panic());
+  if (deck && deck.silence) deck.silence();
+  if (player && player.test && player.test.playing()) player.test.stop();
+}
+window.addEventListener('blur', releaseInput);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') releaseInput(); });
+
 // ---------------------------------------------------------------- MIDI
 let midiAcc = null, learning = false, learnPath = null, ccMap = store.get('filament_midimap', {}) || {};
 function midiMsg(e) {
   const ev = midiEvent(e.data); if (!ev) return;
   $('lampMidi').className = 'on'; clearTimeout(midiMsg.t); midiMsg.t = setTimeout(() => { $('lampMidi').className = midiAcc ? 'green' : ''; }, 120);
   switch (ev.t) {
-    case 'on': noteOn(ev.n, ev.v); break;
-    case 'off': noteOff(ev.n); break;
+    case 'on': noteOn(ev.n, ev.v, 'midi:' + ev.n); break;
+    case 'off': noteOff(ev.n, 'midi:' + ev.n); break;
     case 'bend': PB.set(ev.v); withEngine(() => E.bend(ev.v)); rec(ev); break;
     case 'at': withEngine(() => E.aftertouch(ev.v)); rec(ev); break;
     case 'mw':
@@ -1372,7 +1439,7 @@ function midiMsg(e) {
       if (ccMap[1]) return ccTo(1, ev.v);
       MW.set(ev.v); withEngine(() => E.modWheel(ev.v)); rec(ev); break;
     case 'sus': setSustain(ev.on); break;
-    case 'panic': [...down.keys()].forEach(n => { down.set(n, 1); noteOff(n); }); withEngine(() => E.panic()); break;
+    case 'panic': panic(); break;
     case 'cc':
       if (learning && learnPath) return learnCC(ev.c);
       if (ccMap[ev.c]) ccTo(ev.c, ev.v);
@@ -1556,7 +1623,7 @@ requestAnimationFrame(frame);
 // Sits after the rack mixer's master output. Effects off is a straight wire.
 const master = mountMaster({
   host: $('masterHost'), store, withEngine, getEngine: () => E, toast,
-  getNotes: () => [...down.keys()], getPatch: () => cur,
+  getNotes: () => heldNotes(), getPatch: () => cur,
 });
 
 // Dekatron's panel. It edits whichever object drumPatch() returns, so it can be built
@@ -1623,7 +1690,8 @@ window.__synth = {
   noteOn: (n, v) => noteOn(n, v == null ? 0.8 : v), noteOff: n => noteOff(n),
   meter: () => E ? Object.assign({}, E.meter) : null,
   correlation: () => GON.corr, corrText: () => $('corrV').textContent,
-  state: () => ({ ctx: ctx ? ctx.state : 'none', down: [...down.keys()], tab: document.body.dataset.tab, oct: baseOct, sustain: sustainOn }),
+  state: () => ({ ctx: ctx ? ctx.state : 'none', down: heldNotes(), ptrs: [...ptrs.keys()], keys: [...keyDown.keys()], tab: document.body.dataset.tab, oct: baseOct, sustain: sustainOn }),
+  panic: () => panic(),
   engine: () => E,
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
   deck: () => deck.test,
