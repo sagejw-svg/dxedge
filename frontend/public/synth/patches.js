@@ -34,7 +34,7 @@ export const DEFAULT = {
 };
 
 // [min, max] for every numeric field; anything else is an enum or a flag.
-const RANGE = {
+export const RANGE = {
   tune: [-100, 100], drift: [0, 8],
   'osc1.oct': [-3, 3], 'osc1.semi': [-12, 12], 'osc1.fine': [-50, 50], 'osc1.level': [0, 1], 'osc1.pw': [0.05, 0.95], 'osc1.fixed': [0, 8000],
   'osc2.oct': [-3, 3], 'osc2.semi': [-12, 12], 'osc2.fine': [-50, 50], 'osc2.level': [0, 1], 'osc2.pw': [0.05, 0.95], 'osc2.fm': [0, 1], 'osc2.ring': [0, 1], 'osc2.fixed': [0, 8000],
