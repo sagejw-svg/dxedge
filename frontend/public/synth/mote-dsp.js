@@ -73,6 +73,12 @@ function writeLine(d, x) {
   d.buf[d.w] = x;
   d.w = d.w + 1 === d.buf.length ? 0 : d.w + 1;
 }
+function silenceLine(d) {
+  if (!d || !d.buf) return;
+  d.buf.fill(0);
+  d.w = 0;
+  d.lp = 0;
+}
 function hadamard(a, b, c, d) {
   const s0 = a + b, s1 = a - b, s2 = c + d, s3 = c - d;
   return [0.5 * (s0 + s2), 0.5 * (s1 + s3), 0.5 * (s0 - s2), 0.5 * (s1 - s3)];
@@ -149,6 +155,16 @@ export function setMoteBuffer(eng, L, R, srcSr, name) {
   eng.bufR = n === r.length ? r : r.slice(0, n);
   if (name) eng.sourceName = name;
   eng.scan = 0;
+  // The new buffer is a different source. Grains still walking the previous
+  // file, and the delay and reverb they had filled, would keep sounding on
+  // top of it. A capture or a dropped file should start clean.
+  eng.cloudPhase = 1;
+  if (eng.grains) {
+    for (let i = 0; i < eng.grains.length; i++) eng.grains[i].on = false;
+  }
+  silenceLine(eng.delayL);
+  silenceLine(eng.delayR);
+  if (eng.fdn) for (let i = 0; i < eng.fdn.length; i++) silenceLine(eng.fdn[i]);
 }
 
 function alloc(eng) {

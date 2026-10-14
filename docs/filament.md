@@ -287,10 +287,45 @@ registerDevice({
 |-|-|
 | Identity | `id: 'mote'`, `api: 'dxrack/1'`, `processor: 'mote'`, `worklet: 'mote.worklet.js'`, one stereo output |
 | Patch | `normalizeMote(patch)` → schema v1 JSON, `device: 'mote'`. `parameters` includes `grain.*`, `lfo.*`, `tail.*`, `level`, `source` |
-| Notes | Keyboard mode: MIDI note 60 is the buffer's own pitch. Note 72 is an octave up. With keyboard mode off, notes are ignored and the cloud plays on its own |
+| Notes | Keyboard mode: MIDI note 60 is the buffer's own pitch. Note 72 is an octave up. With keyboard mode off, notes are ignored and the cloud plays on its own. Loading a buffer stops grains that were reading the previous file and clears the delay and reverb. Stopping the cloud (freeze released into keyboard mode with no notes) still leaves that tail in the output |
 | Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}`, `{t:'buffer', L, R, sr, name}` |
 | Sources | `glass`, `air`, `bell` are shipped files. `file`, `mic` and `rack` are buffers kept for the session, not in the JSON |
 | Meters | Worklet posts `{t:'meter', grains, voices, cpu, level, position, parts}` |
+
+### Heptode (MIDI-file instrument) - first version
+Original multitimbral player. A packed score runs inside the AudioWorklet, not on a page timer.
+Every channel starts as the same clean voice (a sine leaning toward a triangle, a gentle envelope,
+no drive and no effects). A program number may pick a family envelope only. The player then morphs
+that voice per channel: wave, FM amount, filter and envelope, drive, and sends into a delay, a chorus,
+and a short reverb. An XY field places each channel in the stereo image.
+- [x] Drag in any .mid, or pick a bundled file. Tempo, loop, mute, solo, and a performance cap for very dense files
+- [x] Piano roll drawn on a canvas, including files with more than 100,000 notes
+- [x] Gentle randomize, and a morph between two stored mixes
+- [x] Sixteen channels, pitch bend, mod, sustain, expression, pan, volume, program change, and tempo changes
+- [x] Voice stealing under a polyphony cap. Performance mode culls notes that cannot be heard
+- [x] Tests in the H. section
+
+`heptodeDevice` in `heptode.js` is the `dxrack/1` descriptor. `heptode.js` calls `registerDevice` when the page imports it. `createHeptodeHost.attach` calls `addDevice('heptode', node)`, so the master recorder hears it.
+
+```js
+registerDevice({
+  id: 'heptode', name: 'Heptode', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  processor: 'heptode', worklet: 'heptode.worklet.js',
+  parameters: { level: { id, label, type: 'float', default, min, max }, /* poly, tempo, fx.* */ },
+  async create(ctx, host) { /* stereo AudioWorkletNode, processor 'heptode' */ },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'heptode'`, `api: 'dxrack/1'`, `processor: 'heptode'`, `worklet: 'heptode.worklet.js'`, one stereo output |
+| Patch | `normalizeHeptode(patch)` → schema v1 JSON, `device: 'heptode'`. Sixteen `tracks`, each with wave, fm, filter, envelope, drive, sends, pan, space |
+| Start | Wave near a sine, fm 0, drive 0, sends 0. A program may change the envelope and the wave only |
+| Score | `smf.js` with `{ wide: true }` keeps program change and CC 7, 10, 11, 6, 100, 101, 120, 121, 123. The deck's default read is unchanged |
+| Voices | Pool of 32. Performance mode uses at most 16 and drops notes shorter than 12 ms or quieter than velocity 8 |
+| Messages | `{t:'patch', p}`, `{t:'score', score, bpm}`, `{t:'play'}`, `{t:'stop'}`, `{t:'seek', pos}`, `{t:'on', tr, n, v}`, `{t:'off', tr, n}`, `{t:'cc', tr, c, v}`, `{t:'bend', tr, v}`, `{t:'panic'}`, `{t:'active', on}` |
+| Library | Seven CC0 sequences in `frontend/public/synth/heptode/midi/`. Five are original reductions of public-domain pieces, one is an original tune, one is a generated density test |
 
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
@@ -479,6 +514,7 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-14 (interactive): Heptode, a MIDI-file player, on the rack rail. Every channel starts as one plain voice. Per track: wave and FM, filter and envelope, drive, delay, chorus and reverb sends, and an orb on the stereo field. Packed score playback in the AudioWorklet, with a polyphony cap and a performance cull for files past 100,000 notes. Library is original sequences of public-domain pieces, an original tune (Glass Arcade), and a generated density file. Rebased onto the master-recorder fix. The red rec button records Heptode. Loading a buffer into Mote clears that device's delay and reverb so the new source is not heard through the previous tail. Cache `dxedge-v84`. Suite: ALL PASS (631 checks). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless): Cathode 8.6%; Filament 8 voices 11.6% (Ladder 24) and 10.8% (Valve 12); stereo offset 12.6%; 16 voices with ensemble 17.5%. Dekatron Spark 4.6% (drums only). Thyratron Walnut Bass, one note, 2.9% (voice only). Mote Drift Glass 2.8% (grains only). Lattice Glass Pad, one note, 13.9% (Lattice only). No Filament or Cathode voice code changed.
 - 2026-10-14 (interactive): Mote, a granular instrument, on the rack rail. Original grain engine in an AudioWorklet. File, microphone, and rack-capture sources. Glass, air and bell are generated CC0 sounds. signalsmith-stretch was not used. The keyboard map was not edited. Rebased onto Thyratron and Gleam. Cache `dxedge-v82`. Suite: ALL PASS (545 checks). CPU (test 9, headless): Cathode 9.1%; Filament 8 voices 11.5% (Ladder 24) and 11.0% (Valve 12); stereo offset 12.6%; 16 voices with ensemble 17.3%. Dekatron Spark 4.6% (drums only). Thyratron Walnut Bass, one note, 2.7% (voice only). Mote Drift Glass 2.7% (grains only). Lattice Glass Pad, one note, 13.1% (Lattice only). No Filament or Cathode voice code changed.
 - 2026-10-14 (interactive): Gleam, a touch field, on the rack rail and full screen at `/synth/gleam/`. Each pointer is a voice (across is pitch on a chosen scale, up is timbre, pressure is level). A room of orbs sets pan and distance, with optional HRTF, and orbs can orbit or drift. Gestures record and loop. Effect mode inserts a lowpass, stutter and delay on the rack master only while a finger is down. Original code, no third-party DSP. Rebased onto Thyratron and Lattice. Cache `dxedge-v81`. Suite: ALL PASS (514 checks). CPU (test 9, headless): Cathode 9.8%; Filament 8 voices 12.1% (Ladder 24) and 11.0% (Valve 12); stereo offset 13.5%; 16 voices with ensemble 17.9%. Dekatron Spark 4.7% (drums only). Thyratron Walnut Bass, one note, 2.8% (voice only). Lattice Glass Pad, one note, 13.5% (Lattice only). No Filament or Cathode voice code changed.
 - 2026-10-14 (interactive): Thyratron, a monophonic ladder-filter device on the rack. Three oscillators (oscillator 3 can run as the mod-wheel source), mixer with noise and feedback, 24 dB/octave ladder that sings at full emphasis, two ADS contours, glide, pitch and mod wheels. Wood-and-black panel and six presets (Walnut Bass, Pilot Lead, Herald Brass, Arc Sweep, Crypt Wail, Bone Rattle). Registered in `device.js`. A reload onto Thyratron or Lattice builds the shared output knobs from the Filament patch. Rebased onto the stuck-key fix and Lattice. Cache `dxedge-v80`. Suite: ALL PASS (478 checks). CPU (test 9, headless): Cathode 9.3%; Filament 8 voices 11.6% (Ladder 24) and 11.5% (Valve 12); stereo offset 12.4%; 16 voices with ensemble 17.4%. Dekatron Spark 4.6% (drums only). Thyratron Walnut Bass, one note, 2.8% (voice only). Lattice Glass Pad, one note, 13.3% (Lattice only). No Filament or Cathode factory patch changed.
