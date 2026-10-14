@@ -1,0 +1,272 @@
+[
+  {
+    "id": "beethoven-sym5-i",
+    "file": "beethoven-symphony-5-mvt1.mid",
+    "title": "Symphony No. 5, movement 1 (opening)",
+    "composer": "Ludwig van Beethoven",
+    "year": 1808,
+    "kind": "classical",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Symphony No. 5 in C minor, Op. 67, first movement, published 1808.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "bach-toccata-fugue-dm",
+    "file": "bach-toccata-fugue-dm.mid",
+    "title": "Toccata and Fugue in D minor (opening)",
+    "composer": "Johann Sebastian Bach",
+    "year": 1700,
+    "kind": "classical",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Toccata and Fugue in D minor, BWV 565. The opening toccata only.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "joplin-maple-leaf-rag",
+    "file": "joplin-maple-leaf-rag.mid",
+    "title": "Maple Leaf Rag (A strain)",
+    "composer": "Scott Joplin",
+    "year": 1899,
+    "kind": "ragtime",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Maple Leaf Rag, published 1899.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "joplin-the-entertainer",
+    "file": "joplin-the-entertainer.mid",
+    "title": "The Entertainer (theme)",
+    "composer": "Scott Joplin",
+    "year": 1902,
+    "kind": "ragtime",
+    "license": "CC0 1.0",
+    "composition": "Public domain. The Entertainer, published 1902.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "sousa-stars-and-stripes",
+    "file": "sousa-stars-and-stripes.mid",
+    "title": "The Stars and Stripes Forever (trio)",
+    "composer": "John Philip Sousa",
+    "year": 1897,
+    "kind": "march",
+    "license": "CC0 1.0",
+    "composition": "Public domain. The Stars and Stripes Forever, published 1897. Trio theme.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "traditional-greensleeves",
+    "file": "traditional-greensleeves.mid",
+    "title": "Greensleeves",
+    "composer": "Traditional",
+    "year": 1580,
+    "kind": "folk",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Traditional English tune, 16th century.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "foster-oh-susanna",
+    "file": "foster-oh-susanna.mid",
+    "title": "Oh! Susanna",
+    "composer": "Stephen Foster",
+    "year": 1848,
+    "kind": "folk",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Oh! Susanna, Stephen Foster, 1848.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "handy-st-louis-blues",
+    "file": "handy-st-louis-blues.mid",
+    "title": "St. Louis Blues (chorus)",
+    "composer": "W. C. Handy",
+    "year": 1914,
+    "kind": "blues",
+    "license": "CC0 1.0",
+    "composition": "Public domain. St. Louis Blues, W. C. Handy, published 1914.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "traditional-frankie-and-johnny",
+    "file": "traditional-frankie-and-johnny.mid",
+    "title": "Frankie and Johnny",
+    "composer": "Traditional",
+    "year": 1900,
+    "kind": "folk",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Traditional American ballad.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file."
+  },
+  {
+    "id": "dx-pixel-march",
+    "file": "dx-pixel-march.mid",
+    "title": "Pixel March",
+    "composer": "DX Edge",
+    "year": 2026,
+    "kind": "chiptune",
+    "license": "CC0 1.0",
+    "composition": "Original chiptune march written for this library.",
+    "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0."
+  },
+  {
+    "id": "dx-neon-alley",
+    "file": "dx-neon-alley.mid",
+    "title": "Neon Alley",
+    "composer": "DX Edge",
+    "year": 2026,
+    "kind": "synth-pop",
+    "license": "CC0 1.0",
+    "composition": "Original synth-pop tune written for this library.",
+    "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0."
+  },
+  {
+    "id": "dx-dock-lamp",
+    "file": "dx-dock-lamp.mid",
+    "title": "Dock Lamp",
+    "composer": "DX Edge",
+    "year": 2026,
+    "kind": "chiptune",
+    "license": "CC0 1.0",
+    "composition": "Original short chiptune written for this library.",
+    "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0."
+  },
+  {
+    "id": "bach-toccata-spooky",
+    "file": "bach-toccata-spooky.mid",
+    "title": "Toccata in D minor (spooky organ)",
+    "composer": "Johann Sebastian Bach",
+    "year": 1700,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Toccata and Fugue in D minor, BWV 565. A slow organ reduction of the opening, written for this library, separate from the other Bach file.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
+    "presets": {
+      "filament": "Haunted Organ",
+      "cathode": "Chapel Organ"
+    }
+  },
+  {
+    "id": "grieg-mountain-king",
+    "file": "grieg-mountain-king.mid",
+    "title": "In the Hall of the Mountain King (opening)",
+    "composer": "Edvard Grieg",
+    "year": 1875,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Peer Gynt, Op. 23, \"In the Hall of the Mountain King\" (1875). Opening theme only, one sequence up a step. Not the later presto.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
+    "presets": {
+      "filament": "Horror Pad",
+      "cathode": "Cellar Drone",
+      "dekatron": "Lantern"
+    }
+  },
+  {
+    "id": "saint-saens-danse-macabre",
+    "file": "saint-saens-danse-macabre.mid",
+    "title": "Danse macabre (excerpt)",
+    "composer": "Camille Saint-Saëns",
+    "year": 1874,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Danse macabre, Op. 40 (1874). Opening tritone and a short waltz theme.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
+    "presets": {
+      "filament": "Eerie Bells",
+      "cathode": "Bell Jar"
+    }
+  },
+  {
+    "id": "mussorgsky-bald-mountain",
+    "file": "mussorgsky-bald-mountain.mid",
+    "title": "Night on Bald Mountain (excerpt)",
+    "composer": "Modest Mussorgsky",
+    "year": 1867,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Night on Bald Mountain (1867); the familiar concert shape is Rimsky-Korsakov's 1886 arrangement, also public domain. Short original reduction of the opening.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
+    "presets": {
+      "filament": "Creaky Drone",
+      "cathode": "Creak Pulse"
+    }
+  },
+  {
+    "id": "chopin-funeral-march",
+    "file": "chopin-funeral-march.mid",
+    "title": "Funeral March (theme)",
+    "composer": "Frédéric Chopin",
+    "year": 1839,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Piano Sonata No. 2, Op. 35, movement 3, Marche funèbre (1839). The Bb minor theme only.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
+    "presets": {
+      "filament": "Haunted Organ",
+      "cathode": "Heartbeat"
+    }
+  },
+  {
+    "id": "traditional-dies-irae",
+    "file": "traditional-dies-irae.mid",
+    "title": "Dies irae",
+    "composer": "Traditional",
+    "year": 1250,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Public domain. Dies irae, the 13th-century sequence, set here in a steady 4/4 so a transport can play it.",
+    "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
+    "presets": {
+      "filament": "Ghost Choir",
+      "cathode": "Choir Breath"
+    }
+  },
+  {
+    "id": "dx-lantern-walk",
+    "file": "dx-lantern-walk.mid",
+    "title": "Lantern Walk",
+    "composer": "DX Edge",
+    "year": 2026,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Original spooky music-box tune written for this library.",
+    "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0.",
+    "presets": {
+      "filament": "Glass Music Box",
+      "cathode": "Heartbeat"
+    }
+  },
+  {
+    "id": "dx-cellar-stairs",
+    "file": "dx-cellar-stairs.mid",
+    "title": "Cellar Stairs",
+    "composer": "DX Edge",
+    "year": 2026,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Original spooky tune written for this library: a lub-dub under a chromatic descent.",
+    "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0.",
+    "presets": {
+      "filament": "Sub Heartbeat",
+      "cathode": "Creak Pulse",
+      "dekatron": "Bones"
+    }
+  },
+  {
+    "id": "dx-porch-ghost",
+    "file": "dx-porch-ghost.mid",
+    "title": "Porch Ghost",
+    "composer": "DX Edge",
+    "year": 2026,
+    "kind": "halloween",
+    "license": "CC0 1.0",
+    "composition": "Original spooky tune written for this library: a slow wail over a two-note pulse.",
+    "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0.",
+    "presets": {
+      "filament": "Theremin Wail",
+      "cathode": "Wail Glide",
+      "dekatron": "Lantern"
+    }
+  }
+]
