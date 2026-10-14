@@ -10,11 +10,20 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds two devices: **Filament** (poly, the tube synth) and **Cathode** (mono,
+The rack now holds three devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
-original design: own name, panel, jack names and voicing, not a copy of Korg's). The rail above the
-chassis picks which device the keyboard, wheels and MIDI play; both feed the same ensemble and
-output rack, which takes its settings from the active device's patch.
+original design: own name, panel, jack names and voicing, not a copy of Korg's), and **Dekatron**
+(an original analog-style drum machine: kick, snare, closed hat, open hat, clap, tom and rim, with
+a 16-step pattern). The rail above the chassis picks which device the keyboard, wheels and MIDI
+play. All three feed the shared ensemble and output rack. The rack takes its settings from the
+active device's patch. Dekatron registers on the device contract and follows the master clock.
+
+The rack framework (14 Oct) is what those devices plug into. Each device
+has one contract: a descriptor, a parameter table, MIDI in, a stereo output and a versioned patch.
+A mixer strip per device (level, pan, mute, solo) sums into the shared ensemble and output tubes.
+A master clock (tempo, play/stop, 24 pulses a quarter) is there for anything that wants to subscribe.
+A project is one JSON document, kept in this browser and downloadable. A strip at its defaults is a
+straight wire, so Filament and Cathode sound the same as they did before the mixer.
 
 Full brief: `docs/filament-design.md` (a copy of the project doc, kept in the repo so the nightly
 task can read it).
@@ -39,11 +48,21 @@ task can read it).
 |-|-|
 | `frontend/public/synth/index.html` | The page: panel, chassis, keyboard, MIDI, patches, test hook `window.__synth` |
 | `frontend/public/synth/voice.worklet.js` | Both devices' engines (AudioWorklet): processor `filament` (oscillators, V1, filters, envelopes, LFOs, voices) and processor `cathode` (one voice, the patch graph, diode-clipped SVF high-pass and low-pass) |
-| `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent`. The master gain feeds `makeMasterFx` (skip with `masterFx: false`) |
-| `frontend/public/synth/masterfx.js`, `master.worklet.js`, `masterui.js` | Master bus after every device: tempo-syncable stereo delay, Freeverb-style reverb, bus compressor/limiter. Each bypasses on its own. State is `filament_master` in localStorage, not a device patch |
+| `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent`; hosts the mixer, transport and device facades. The master gain feeds `makeMasterFx` after the mixer (a bypassed offline render skips the worklet; `masterFx: false` wires the gain straight through) |
+| `frontend/public/synth/masterfx.js`, `master.worklet.js`, `masterui.js` | Master bus after the mixer and the output chain: tempo-syncable stereo delay, Freeverb-style reverb, bus compressor/limiter. Each bypasses on its own. State is `filament_master` in localStorage, not a device patch |
 | `frontend/public/synth/wav.js` | 24-bit / 44.1 kHz stereo WAV: live record of the master, and offline render of N seconds (10 minute cap) |
 | `frontend/public/synth/patches.js` | Filament patch schema v1, defaults, `normalize`, the factory set |
+| `frontend/public/synth/smf.js` | Our own Standard MIDI File reader and writer (pure functions): `readSMF`, `songOf` (tempo map to seconds, multi-channel tracks split per channel, format 2 played in sequence), `writeSMF` (format 1, 480 ppq), `bytesOf` |
+| `frontend/public/synth/deck.js` | The MIDI deck above the keys: recorder, import with the track list and device chips, the player (150 ms lookahead, 25 ms timer, frame-exact `at`), Render WAV |
 | `frontend/public/synth/cathode.js` | Cathode patch schema v1 (`device: 'cathode'`, `cables: [[source, input]]`), the jack lists and normals, `normalizeC`, its factory set |
+| `frontend/public/synth/drums.js` | Dekatron patch schema v1 (`device: 'dekatron'`), the parameter table, `normalizeDrum`, `voiceForNote`, `drumDevice` (the host adapter), six factory patterns |
+| `frontend/public/synth/drums-dsp.js` | The drum engine: 2x voices, the half-band decimator, the sample clock (`stepSeconds`) |
+| `frontend/public/synth/drums.worklet.js` | AudioWorklet processor `dekatron`. Imports the engine; no DSP of its own |
+| `frontend/public/synth/drums-ui.js` | The pattern panel, and `createDrumHost` / `renderDrums` (the page adapter). `attach` calls `registerDevice` and `addDevice`, and the pattern follows `host.transport` |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament and Cathode are registered here; Dekatron registers when its node is hosted |
+| `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
+| `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
+| `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx` |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
@@ -66,7 +85,7 @@ task can read it).
 - [x] 12 factory patches, user patches in localStorage
 - [x] Tests 1-7, 8, 9 (logged), 10, 12 plus UI checks
 
-### 0.2 Character - next, one item per night, in this order
+### 0.2 Character - next (from the graphic EQ), one item per night, in this order
 - [ ] Graphic EQ in the rack row (the chain already has it; needs the UI and patch fields)
 - [x] Goniometer and correlation meter (copied from /otr into the Stereo section) - 13 Oct, stereo round
 - [x] LFO 2 (adds auto-pan), and stereo phase (0-180 degrees) for both LFOs - 13 Oct, stereo round
@@ -80,7 +99,7 @@ task can read it).
 - [ ] Dual filter slots A and B with serial, parallel and split routing
 - [ ] Live filter response plot
 - [ ] Mod matrix: 8 slots in a drawer (sources: envs, LFOs, velocity, key, wheel, aftertouch, random)
-- [ ] Host clock and transport (one shared tempo the arp and LFO sync read)
+- [ ] Host clock and transport (one shared tempo the arp and LFO sync read). The clock itself landed with the rack framework on 14 Oct (tempo, play/stop, subscriptions). What remains here is the arp and the LFO sync reading it. Neither reads it yet, so no patch sounds different.
 - [ ] Arpeggiator: up, down, up-down, random, as played; 1-4 oct; 40-240 BPM; gate, swing, latch
 - [x] Ensemble: BBD chorus I, II, I+II, and a three-phase string ensemble - 13 Oct, stereo round
 - [ ] Tape echo: mono, ping pong, offset; wow and flutter; tube record amp
@@ -102,12 +121,77 @@ Done when: every model self-oscillates where it should; mono fold passes for all
 - [ ] A second Cathode voice for duophonic play, or a poly-chain mode
 - [ ] Cathode on the mod matrix and arpeggiator when those land (they should be rack-wide, not Filament-only)
 
-### MIDI files: recorder and player (James, 13 Oct 2026) - next, ahead of the 0.2 list
+### Dekatron (drum machine) - first version done 14 Oct 2026
+Original analog-style drums, not a port of DaisySP or any other drum model (the register allows a
+DaisySP port; this one is written from the ordinary drum vocabulary: a pitch that falls, noise
+through a band, a handful of noise bursts, a short wood block). No third-party samples.
+- [x] Seven voices in `drums.worklet.js` at 2x with a Kaiser half-band decimator: kick, snare,
+      closed hat, open hat, clap, tom, rim. The two hats cut each other.
+- [x] 16-step pattern: per-step on/off, an accent lane, swing (full swing is a triplet, and the
+      next on-beat stays on the grid), pattern length 1 to 16. Internal clock, or an external tick.
+- [x] Its own panel (transport, step grid, voice knobs) in the house style, on the rack rail next
+      to Filament and Cathode. The keys play the voices: C kick, C# rim, D snare, D# clap, F tom,
+      F# closed hat, A# open hat, in any octave.
+- [x] Six factory patterns (Relay, Late Shift, Brush, Spark, Walk, Dozen). Tests in the D. section.
+- [x] On the shared host clock. `createDrumHost.attach` calls `registerDevice(drumDevice)` and
+      `addDevice('dekatron', node)`, and the pattern follows `engine.transport` (play, stop, tempo,
+      24 pulses a quarter). The worklet's own clock remains for a render that has no transport.
+
+The host adapter is `drumDevice` in `drums.js` (the `dxrack/1` descriptor) and `create` in
+`drums-ui.js`. It does not import Filament's engine. The page calls `engine.registerDevice(drumDevice)`
+and `engine.addDevice('dekatron', node)`, and the pattern follows `engine.transport`.
+
+```js
+registerDevice({
+  id: 'dekatron', name: 'Dekatron', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  parameters: { 'seq.bpm': { id, label, type: 'float', default, min, max }, /* ... */ },
+  async create(ctx, host) {
+    const output = /* stereo AudioWorkletNode, processor 'dekatron' */;
+    host.transport.subscribe(ev => { /* play | stop | tempo | clock (24 ppq) */ });
+    return output;
+  },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'dekatron'`, `api: 'dxrack/1'`, `processor: 'dekatron'`, `worklet: 'drums.worklet.js'`, one stereo output, 2x oversampling |
+| Patch | `normalize(patch)` → schema v1 JSON, `device: 'dekatron'`. `parameters` is the dxrack/1 table (`level`, `seq.*`, `voices.<id>.<knob>`). Steps and the accent lane are pattern data, not knobs. |
+| Notes | `voiceForNote(midiNote)` → a voice id, or null. `midi([0x90, note, vel])` is how a host plays a pad. |
+| Messages | `{t:'patch', p}`, `{t:'trig', voice, v}`, `{t:'transport', playing, clock, step}`, `{t:'tick'}`, `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
+| Clock | With `host.transport`: play, stop, tempo, and `clock` pulses at 24 per quarter. A step is 6 pulses; swing delays an odd step by up to 2 pulses, and the next even step stays on the grid. Without a transport, the worklet fires step i at `stepSeconds(i, bpm, swing)`. |
+| Meters | Worklet posts `{t:'meter'}` and `{t:'step', step, length, playing}` |
+
+### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
 devices (so Filament and Cathode play at once); built by the nightly job. Two slices; if both do not
 fit in one night, ship slice 1 and leave slice 2 unchecked here.
-- [ ] Slice 1: `smf.js`, the recorder with .mid export, import with the track list, the player
-- [ ] Slice 2: Render WAV (imported file or take, both devices, rack included)
+- [x] Slice 1: `smf.js`, the recorder with .mid export, import with the track list, the player - 13 Oct
+- [x] Slice 2: Render WAV (imported file or take, both devices, rack included) - 13 Oct, same run
+
+Calls made while building it (James can overrule any of them):
+- A track named "Filament: ..." or "Cathode: ..." (our own exports) goes back to that device on import,
+  ahead of the other defaults, so a take round-trips.
+- A track with notes on several channels (every format 0 file) is split into one row per channel.
+- If the first melodic track is also the lowest, the lowest of the other tracks goes to Cathode.
+- A track with no notes (only bend or pedal) follows the note track on its channel, or is off.
+- Export writes Filament on MIDI channel 1 and Cathode on channel 2, at 120 BPM.
+- Render WAV renders whatever was played last (the file or the take); if nothing has been played, the
+  file if one is loaded, else the take. It uses the tempo control and the selected device's rack settings,
+  adds a 2 s tail, and writes 16-bit without dither.
+- A tempo change while playing lands where scheduling has reached (up to 150 ms later), so events are
+  never sent out of order.
+- APIs added, for whoever builds on this: `smf.js` exports `readSMF`, `songOf`, `tickTimer`,
+  `writeSMF`, `bytesOf`; `deck.js` exports `createDeck(api)`, `defaultAssign`, `scoreOfSong`,
+  `encodeWav`; the engine has `E.sendTo(dev, msg)`, `E.playing(dev, on)`, and `renderOffline` takes
+  `{patches, device, events:[{at, dev, ...}], onProgress}`; the worklets take `{t:'play', on}` and
+  `{t:'flush'}`. Test hooks: `__synth.deck()`, `__synth.smf`, `__synth.render2`.
+- Both slices landed together: the build fit in one run, and James's note allowed slice 2 the same
+  night. Nothing is left on this item beyond the known limits below.
+- Known limits: the keyboard and the player share note numbers on a device, so releasing a key the
+  player is also holding lets go of the player's note; switching devices while playing turns sustain off
+  on the device you leave. Neither seemed worth the extra plumbing yet.
 
 Spec (what "done" means):
 - **Our own Standard MIDI File code** in a new `frontend/public/synth/smf.js`: pure functions, no DOM,
@@ -118,7 +202,7 @@ Spec (what "done" means):
   division (refuse SMPTE division with a message). Channel events kept: notes, pitch bend, CC 1 (mod
   wheel), CC 64 (sustain), channel and poly pressure (as aftertouch); program changes ignored. Write
   format 1 at 480 ticks per quarter: a tempo track (tempo, 4/4) plus one track per device used, each
-  named "Filament: <patch>" or "Cathode: <patch>".
+  named "Filament: <patch>", "Cathode: <patch>" or "Dekatron: <patch>".
 - **Recorder** (a strip next to the keyboard, phone friendly, 44 px targets): Rec arms; the first
   note starts the take; it captures notes and velocities, bend, mod wheel, sustain and aftertouch
   from every input (on-screen keys, computer keys, MIDI keyboard) with the device each event went to.
@@ -126,7 +210,7 @@ Spec (what "done" means):
   `filament-take-YYYYMMDD-HHMM.mid`). Show take length and note count.
 - **Import**: a button (file input accepting .mid, .midi, audio/midi) and drag and drop onto the
   strip. Show file name, length and a track list: name, channel(s), note count, and chips per track
-  for Filament, Cathode or off. Defaults: channel 10 (drums) off, since there is no drum machine yet;
+  for Filament, Cathode, Dekatron or off. Defaults: channel 10 to Dekatron;
   a single melodic track goes to the selected device; with several, the first goes to Filament, the
   lowest-pitched to Cathode, the rest to Filament. Remember assignments while the file stays loaded.
 - **Player**: play, stop, loop, a tempo control (50 to 200% of the file's tempo, the file's own tempo
@@ -153,6 +237,61 @@ Spec (what "done" means):
   set_input_files, play lights the keys, stop releases every note, export triggers a download; phone
   widths have no horizontal scroll with the strip open.
 
+### Rack framework - done 14 Oct 2026
+The core a step sequencer or a drum machine plugs into, without changing Filament's or Cathode's sound.
+- [x] Device contract in `device.js` (descriptor, parameter table, MIDI in, stereo out, versioned patch). Shaped after the published Web Audio Modules 2.0 ideas; our own code, the package was not copied (see `docs/filament-licensing.md`)
+- [x] Mixer: per-device level, pan, mute, solo, summed into the shared ensemble and output tubes. Defaults are a straight wire
+- [x] Transport and master clock: tempo, play/stop, clock events a device subscribes to (`device.subscribe(fn)`, 24 pulses per quarter, stamped with AudioContext time)
+- [x] Project save/load: JSON, localStorage (`dxrack_project`) plus file download and upload. Reopening the page brings the tempo, mixer and name back; Load saved or an upload also brings the patches and which device the keyboard plays
+- [x] Filament and Cathode migrated onto it. Tests in the R. section of the suite
+
+Device API, for the next device (a step sequencer, a drum machine):
+
+```js
+import { registerDevice, RACK_API } from './device.js';
+
+registerDevice({
+  id: 'drums',                 // stable id
+  name: 'Drums',               // our own name, no other product's
+  vendor: 'DX Edge',
+  version: '1',
+  api: RACK_API,               // 'dxrack/1'
+  description: '',
+  instrument: true,            // makes sound from notes
+  audioInputs: 0,
+  audioOutputs: 1,             // one stereo output
+  midiInput: true,
+  midiOutput: false,
+  parameters: {                // stable ids. See parameterTable() for the shape
+    'kick.level': { id: 'kick.level', label: 'kick.level', type: 'float', default: 0.8, min: 0, max: 1 },
+  },
+  // Optional. If present, the host calls it. Filament and Cathode use `processor` instead
+  // (an AudioWorklet name) and the engine builds the node.
+  async create(ctx, host) {
+    const output = ctx.createGain();           // stereo AudioNode the mixer taps
+    host.transport.subscribe(ev => {           // ev.type: 'play' | 'stop' | 'tempo' | 'clock'
+      // ev.tempo, ev.playing, ev.beat, ev.bar, ev.beatInBar, ev.timeSig
+      // ev.time is AudioContext seconds; ev.tick is the pulse index (24 per quarter)
+      // ev.frame is that time in samples, for a worklet message { ..., at: ev.frame }
+    });
+    return output;                             // or { node, output }
+  },
+});
+
+// On a running engine (window.__synth.engine(), or createEngine's return):
+//   E.devices.filament.parameterInfo()
+//   E.devices.filament.getParameter('filt.cutoff')
+//   E.devices.filament.setParameter('filt.cutoff', 1200)   // clamped, smoothed
+//   E.devices.filament.getPatch() / setPatch(json, load)
+//   E.devices.filament.midi([0x90, 60, 100])               // raw bytes, or {t, n, v}
+//   E.devices.filament.subscribe(fn)                       // clock events; returns unsubscribe
+//   E.mix.set('drums', { level: 0.8, pan: -0.2, mute: false, solo: false })
+//   E.mix.attach('drums', outputNode)                      // or E.addDevice(id, node, patch)
+//   E.transport.play() / stop() / setTempo(bpm) / state()
+// A project is { v:1, kind:'dxrack', name, tempo, timeSig:[4,4], device, mixer, devices:{ id: { patch } } }.
+// normalizeProject() fills gaps. Centre pan and level 1 do not change the signal.
+```
+
 ### 0.3 Delight
 - [ ] 1939 mode (divide-down, LC resonators, seven envelope shapes, six-channel vibrato)
 - [ ] Punched paper roll step sequencer
@@ -176,6 +315,11 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   about 2.5 dB. Factory patches are kept within 3 dB (test 7); the correlation meter goes amber below 0.
   A fully mono-safe version would need a third (centre) filter per voice; not done, CPU.
 
+- Listen to the MIDI deck: record a take across both devices, import a few real .mid files (a GM
+  song with drums, a format 0 file), and render one to WAV. The tests check timing, pitch and routing,
+  not how a busy GM file sounds on two synth voices. The calls made while building it are listed under
+  the MIDI files section; any of them can change.
+
 ## Notes from James
 (write here; the nightly run reads this first)
 - 2026-10-13 (afternoon): **Tonight's run (Oct 13, 11:52 PM) builds MIDI files: recorder and player**,
@@ -192,6 +336,9 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   first unchecked item (the graphic EQ).
 
 ## Nightly log
-- 2026-10-14: Master bus (delay, Freeverb-style reverb, compressor/limiter) and 24-bit 44.1 kHz WAV record/render. New modules plus the master-output hook in `engine.js`. Suite: ALL PASS (211 checks), including measurable effect, transparent bypass, and a valid non-silent WAV.
+- 2026-10-14: Master bus (delay, Freeverb-style reverb, compressor/limiter) and 24-bit 44.1 kHz WAV record/render. New modules plus the master-output hook in `engine.js`. Suite: ALL PASS (211 checks), including measurable effect, transparent bypass, and a valid non-silent WAV. Landed later the same day, after the rack and Dekatron, with the bus after the mixer.
+- 2026-10-14 (interactive): Dekatron on the rack. The drum machine registers with `registerDevice` and `addDevice`, its pattern follows the master clock, and the mixer has a Dekatron strip. The pattern stays on `dekatron_cur`; a project may name Dekatron as the keyboard device. Cache `dxedge-v75`. The 0.2 host-clock item stays open for the arp and LFO sync. Suite: ALL PASS (293 checks; the D. section, the phone pattern page, and the rack checks). CPU (test 9, headless): Cathode 8.5%; Filament 8 voices 11.5% (Valve 12); stereo offset 12.9%; 16 voices with ensemble 17.6%. Ladder 24, 8 voices, measured 12.4% on the same build (the suite's own line was split by a server log). Dekatron Spark, pattern running, 4.5% (drums only). No factory patch changed and no existing Filament or Cathode sound changed.
+- 2026-10-14 (interactive): the rack framework. Device contract (`device.js`, dxrack/1), mixer (level, pan, mute, solo; defaults are a straight wire into the shared ensemble), master clock (tempo, play/stop, 24 ppq, devices subscribe), project JSON in localStorage plus download and upload. Filament and Cathode sit on it; their voices were not edited. The 0.2 host-clock item stays open for the arp and LFO sync, which do not read the clock yet. Rebased onto the slashless `/synth` fix: the worker claims its clients before activate finishes, and the cache is `dxedge-v74` (v73 was already live). Suite: ALL PASS (256 checks; the R. section, the phone rack tab, and the two slashless checks). CPU (test 9, headless): Cathode 9.2%; Filament 8 voices 11.8% (Ladder 24) and 11.0% (Valve 12); stereo offset 13.0%; 16 voices with ensemble 17.3%. No factory patch changed and no existing sound changed.
+- 2026-10-13 (manual run, Oct 13 afternoon; built about 2:15 to 2:40 PM PT by the scheduled task fired by hand, pushed from the interactive session because the task's own push was refused by its environment): bug check clean (suite ALL PASS 190, live page no errors, sw.js v71 matched). Built MIDI files, both slices, per Notes from James: `smf.js` (our own reader and writer), `deck.js` (recorder, .mid export, import with track list and device chips, player with loop and tempo 50-200%, Render WAV), `E.sendTo` and a playback hold in the engine (`{t:'play'}` keeps an inactive Cathode awake; `{t:'flush'}` drops queued playback events on stop), and a two-device `renderOffline`. Found and fixed during the build: Stop could leave a note stuck when its note off was already scheduled but not yet played (now every note playback touched is released; regression check added). Commit `2b5ed70`. Suite: ALL PASS (228 checks; 38 new in M. and the phone deck). CPU (test 9, headless, final run): Cathode 14.7%; Filament 8 voices 18.9% (Ladder 24) and 20.0% (Valve 12); stereo offset 23.6%; 16 voices with ensemble 30.3%. No patch changed and no existing sound changed; the deck adds no DSP to the voices. Since this ran in the afternoon, tonight's 11:52 PM run should find both slices ticked and resume the 0.2 list at the graphic EQ, as the note says.
 - 2026-10-13 (just after midnight PT, interactive): Cathode, the second device, and the rack rail (see the Cathode section above). Suite: ALL PASS (190 checks). CPU: Cathode Plate Screamer about 17% of real time with the rack; Filament 8 voices 27 to 32% (this server varies run to run). No Filament patch changed; Filament now sleeps when silent for 100 ms, which only saves CPU.
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).

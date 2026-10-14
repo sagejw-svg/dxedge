@@ -20,7 +20,7 @@ export function mountMaster(api) {
   host.innerHTML =
     '<div class="fxrow" id="fxTransport">' +
       '<span class="fxname">tempo</span><span class="knobs" id="fxTempo"></span>' +
-      '<button type="button" class="chip" id="recBtn" aria-pressed="false">record</button>' +
+      '<button type="button" class="chip" id="fxRec" aria-pressed="false">record</button>' +
       '<input id="wavSecs" type="number" min="0.1" max="600" step="0.1" value="4" aria-label="Render length in seconds">' +
       '<button type="button" class="btn small" id="wavGo">render wav</button>' +
       '<span class="fxstat" id="fxStat" aria-live="polite"></span>' +
@@ -159,8 +159,8 @@ export function mountMaster(api) {
     E.fx.recordStart();
     if (E.fx.onCap) { /* replaced below */ }
     E.fx.onCap = () => { stopRec(true); };
-    $('recBtn').setAttribute('aria-pressed', 'true');
-    $('recBtn').textContent = 'stop';
+    $('fxRec').setAttribute('aria-pressed', 'true');
+    $('fxRec').textContent = 'stop';
     stat('recording');
     clearInterval(recTimer);
     recTimer = setInterval(() => {
@@ -174,8 +174,8 @@ export function mountMaster(api) {
   async function stopRec(download) {
     const E = engine();
     clearInterval(recTimer);
-    $('recBtn').setAttribute('aria-pressed', 'false');
-    $('recBtn').textContent = 'record';
+    $('fxRec').setAttribute('aria-pressed', 'false');
+    $('fxRec').textContent = 'record';
     if (!E || !E.fx) return null;
     const was = E.fx.recording() || E.fx.recordedSeconds() > 0;
     const samples = await E.fx.recordStop();
@@ -186,7 +186,7 @@ export function mountMaster(api) {
     return { bytes, frames: samples.L.length, sampleRate: 44100, bits: 24, channels: 2, name };
   }
 
-  $('recBtn').addEventListener('click', () => {
+  $('fxRec').addEventListener('click', () => {
     const E = engine();
     if (E && E.fx && E.fx.recording()) stopRec(true);
     else recordStart();

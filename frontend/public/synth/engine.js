@@ -7,9 +7,12 @@
 // active lets go of its keys, finishes its tails and sleeps; Cathode's node is only built the
 // first time it is chosen.
 import { makeSynthChain, makeEnsemble, tubeData } from './rack.js';
-import { normalize } from './patches.js';
+import { normalize, clone, getPath, setPath } from './patches.js';
 import { normalizeC } from './cathode.js';
 import { makeMasterFx } from './masterfx.js';
+import { createMixer } from './mixer.js';
+import { createTransport } from './transport.js';
+import { RACK_API, getDevice, listDevices, registerDevice } from './device.js';
 
 export const deviceOf = p => (p && p.device === 'cathode' ? 'cathode' : 'filament');
 export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : normalize(p));
@@ -41,25 +44,37 @@ export async function createEngine(ctx, opts = {}) {
     E.ens.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
-  // Master bus after every device and the rack. masterFx:false leaves the master gain
-  // connected straight through. A bypassed bus does the same: install() wires the master
-  // gain to the destination until an effect or a recording inserts the worklet.
+  // Mixer in front of the shared ensemble (or the master, when the rack is off).
+  // Default strips are a straight wire, so a project that never touches them
+  // sounds the same as the two devices feeding the ensemble directly.
+  E.mix = createMixer(ctx);
+  E.mix.connect(E.C ? E.ens.input : E.master);
+  E.mix.set('filament', {});
+  E.mix.set('cathode', {});
+  if (opts.mixer) E.mix.load(opts.mixer);
+  E.transport = createTransport(ctx, { tempo: opts.tempo, timeSig: opts.timeSig });
+  E.api = RACK_API;
+  // Master bus after the mixer and the output chain:
+  // devices → mixer → ensemble/chain → master gain → FX → destination.
+  // masterFx:false leaves the master gain connected straight through. A bypassed
+  // bus does the same, and a bypassed offline render never builds the worklet.
+  const dest = opts.destination !== null ? (opts.destination || ctx.destination) : null;
   if (opts.masterFx === false) {
-    if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
+    if (dest) E.master.connect(dest);
   } else {
     E.fx = await makeMasterFx(ctx, opts.master);
-    E.fx.install(E.master, opts.destination !== null ? (opts.destination || ctx.destination) : null);
+    E.fx.install(E.master, dest);
   }
   E.setMaster = partial => (E.fx ? E.fx.set(partial) : null);
   E.masterState = () => (E.fx ? E.fx.state() : null);
   const ctl = { bend: 0, mw: 0, at: 0 };
-  function nodeFor(dev, events) {
+  function nodeFor(dev, events, playing) {
     if (E.nodes[dev]) return E.nodes[dev];
     const n = new AudioWorkletNode(ctx, dev, {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device },
+      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device, playing: !!playing },
     });
-    n.connect(E.C ? E.ens.input : E.master);
+    E.mix.attach(dev, n);
     n.port.onmessage = e => {
       const m = e.data; if (!m || m.t !== 'meter') return;
       E.meters[dev] = m;
@@ -73,6 +88,10 @@ export async function createEngine(ctx, opts = {}) {
     return n;
   }
   nodeFor(E.device, opts.events);
+  // Other devices that play a score from the start (the two-device offline render): their
+  // patches load, and playback holds them awake although the keyboard is not on them.
+  (opts.others || []).forEach(o => { const d = o.dev === 'cathode' ? 'cathode' : 'filament'; if (d === E.device) return;
+    E.patches[d] = normalizeAny(Object.assign({}, o.patch, { device: d })); nodeFor(d, o.events, true); });
   Object.defineProperty(E, 'node', { get: () => E.nodes[E.device] });
 
   let S = E.C ? rackState(patch) : null;
@@ -131,18 +150,92 @@ export async function createEngine(ctx, opts = {}) {
   E.modWheel = v => { ctl.mw = v; post({ t: 'mw', v }); };          // 0..1
   E.aftertouch = v => { ctl.at = v; post({ t: 'at', v }); };        // 0..1
   E.sustain = on => post({ t: 'sus', on: !!on });
+  // The MIDI file player: send to a named device, whether or not the keyboard is on it (its node
+  // is built if needed), and hold a device awake while playback runs.
+  E.sendTo = (dev, m) => nodeFor(dev === 'cathode' ? 'cathode' : 'filament').port.postMessage(m);
+  E.playing = (dev, on) => E.sendTo(dev, { t: 'play', on: !!on });
   E.panic = () => Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' }));
   E.mono = on => { if (E.C) E.C.setMono(!!on); };
+
+  // A device the page and other devices talk to. Subscribing does not change
+  // the voice: Filament and Cathode ignore the clock until something reads it.
+  function facade(id) {
+    const desc = getDevice(id);
+    return {
+      id,
+      descriptor: desc,
+      get output() { return E.nodes[id] || null; },
+      parameterInfo: () => (desc && desc.parameters) || {},
+      getPatch: () => (E.patches[id] ? clone(E.patches[id]) : null),
+      setPatch: (p, load) => {
+        if (id !== 'filament' && id !== 'cathode') { E.patches[id] = clone(p); return E.patches[id]; }
+        E.setPatch(Object.assign({}, p, { device: id }), !!load);
+        return E.patches[id];
+      },
+      getParameter: pid => getPath(E.patches[id] || {}, pid),
+      setParameter: (pid, value) => {
+        if (id !== 'filament' && id !== 'cathode') {
+          const base = clone(E.patches[id] || {});
+          setPath(base, pid, value);
+          E.patches[id] = base;
+          return getPath(base, pid);
+        }
+        const base = clone(E.patches[id] || normalizeAny({ device: id }));
+        setPath(base, pid, value);
+        if (id === 'cathode') base.device = 'cathode';
+        E.setPatch(base, false);
+        return getPath(E.patches[id], pid);
+      },
+      midi: data => {
+        const ev = data && data.t ? data : midiEvent(data);
+        if (!ev) return null;
+        const node = (id === 'filament' || id === 'cathode') ? nodeFor(id) : E.nodes[id];
+        if (node && node.port) node.port.postMessage(ev);
+        return ev;
+      },
+      subscribe: fn => E.transport.subscribe(fn),
+    };
+  }
+  E.devices = { filament: facade('filament'), cathode: facade('cathode') };
+  E.listDevices = () => listDevices();
+  E.registerDevice = desc => registerDevice(desc);
+  // Host a device that brought its own node (a sequencer, a drum machine).
+  E.addDevice = (id, node, patch) => {
+    const desc = getDevice(id);
+    if (!desc) throw new Error('unknown device ' + id);
+    if (node) E.mix.attach(id, node.output || node);
+    if (patch !== undefined) E.patches[id] = patch;
+    if (node) E.nodes[id] = node.node || node;
+    const inst = facade(id);
+    E.devices[id] = inst;
+    return inst;
+  };
   return E;
 }
 
 // Render a score offline. events: [{at: seconds, t:'on'|'off'|..., ...}], times in seconds.
+// Two-device form: patches {filament, cathode} and device (whose patch sets the rack, default
+// the patch's device); an event with dev:'cathode' or dev:'filament' goes to that device, one
+// without dev to the rack's device. onProgress(fraction) is called as the render runs.
 // Returns the AudioBuffer.
-export async function renderOffline({ patch, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, master = null, masterFx = true }) {
+export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo, master = null, masterFx = true }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
-  const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {}));
-  const E = await createEngine(ctx, { patch, events: ev, rack, master, masterFx });
+  const frame = e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {});
+  let main = patch, others = [];
+  if (patches) {
+    const dev0 = device || deviceOf(patch) || 'filament';
+    main = Object.assign({}, patches[dev0] || {}, { device: dev0 });
+    others = Object.keys(patches).filter(d => d !== dev0 && patches[d])
+      .map(d => ({ dev: d, patch: patches[d], events: events.filter(e => e.dev === d).map(frame) }))
+      .filter(o => o.events.length);
+    events = events.filter(e => !e.dev || e.dev === dev0);
+  }
+  const E = await createEngine(ctx, { patch: main, events: events.map(frame), rack, others, mixer, tempo, master, masterFx });
   if (mono) E.mono(true);
+  if (onProgress) {
+    const step = Math.max(1, Math.ceil(seconds / 50));
+    for (let t = step; t < seconds; t += step) ctx.suspend(t).then(() => { onProgress(t / seconds); ctx.resume(); });
+  }
   return ctx.startRendering();
 }
 
