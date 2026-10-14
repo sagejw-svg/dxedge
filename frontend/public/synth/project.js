@@ -7,6 +7,7 @@
 
 import { normalize } from './patches.js';
 import { normalizeC } from './cathode.js';
+import { normalizeMote } from './mote.js';
 import { normalizeStrip } from './mixer.js';
 import { clampTempo, normalizeSig } from './transport.js';
 
@@ -15,7 +16,7 @@ export const PROJECT_KEY = 'dxrack_project';
 
 export function normalizeProject(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
-  const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' || src.device === 'thyratron' || src.device === 'gleam' ? src.device : 'filament';
+  const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' || src.device === 'thyratron' || src.device === 'gleam' || src.device === 'mote' ? src.device : 'filament';
   const name = String(src.name == null ? 'Untitled' : src.name).trim().slice(0, 40) || 'Untitled';
   const mixerIn = src.mixer && typeof src.mixer === 'object' ? src.mixer : {};
   const ids = new Set(['filament', 'cathode']);
@@ -25,16 +26,18 @@ export function normalizeProject(raw) {
   const devs = src.devices && typeof src.devices === 'object' ? src.devices : {};
   const fil = devs.filament && devs.filament.patch;
   const cat = devs.cathode && devs.cathode.patch;
+  const devices = {
+    filament: { patch: normalize(fil) },
+    cathode: { patch: normalizeC(cat) },
+  };
+  if (devs.mote) devices.mote = { patch: normalizeMote(devs.mote.patch) };
   return {
     v: PROJECT_SCHEMA, kind: 'dxrack', name,
     tempo: clampTempo(src.tempo == null ? 120 : src.tempo),
     timeSig: normalizeSig(src.timeSig),
     device,
     mixer,
-    devices: {
-      filament: { patch: normalize(fil) },
-      cathode: { patch: normalizeC(cat) },
-    },
+    devices,
   };
 }
 

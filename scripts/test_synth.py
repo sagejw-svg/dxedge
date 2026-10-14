@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1439,6 +1439,198 @@ with sync_playwright() as pw:
     ck("T. 390px: no page errors", not perr, perr)
     ph.close()
 
+    # ---------------------------------------------------------------- Mo. Mote, the granular instrument
+    def mote(patch, events=None, seconds=1.0, tone=None):
+        payload = {"patch": patch, "events": events or [], "seconds": seconds}
+        if tone: payload["tone"] = tone
+        return dec(pg.evaluate("a => __synth.moteRender(a)", payload))
+    def gpatch(**over):
+        p = {"device": "mote", "level": 1, "source": "glass",
+             "grain": {"size": 400, "density": 2, "position": 0.4, "spray": 0, "pitch": 0, "pitchRand": 0,
+                       "reverse": 0, "window": "hann", "spread": 0, "freeze": True, "keyboard": False},
+             "lfo": {"rate": 0.2, "depth": 0, "dest": "position"},
+             "tail": {"delay": 0.2, "feedback": 0, "reverb": 0, "mix": 0}}
+        for k, v in over.items():
+            if isinstance(v, dict): p.setdefault(k, {}).update(v)
+            else: p[k] = v
+        return p
+    devm = pg.evaluate("""() => { const d = __synth.moteDevice(); const n = d.normalize({ grain: { size: 9999 } }); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput, proc: d.processor, worklet: d.worklet,
+      size: d.parameters['grain.size'] && d.parameters['grain.size'].type,
+      freeze: d.parameters['grain.freeze'] && d.parameters['grain.freeze'].type,
+      keys: d.parameters['grain.keyboard'] && d.parameters['grain.keyboard'].type,
+      win: d.parameters['grain.window'] && d.parameters['grain.window'].type,
+      dest: d.parameters['lfo.dest'] && d.parameters['lfo.dest'].type,
+      src: d.parameters['source'] && d.parameters['source'].type,
+      has: ['grain.density','grain.position','grain.spray','grain.pitch','grain.pitchRand','grain.reverse','grain.spread','lfo.rate','lfo.depth','tail.delay','tail.feedback','tail.reverb','tail.mix','level'].every(k => !!d.parameters[k]),
+      clamped: n.grain.size
+    }; }""")
+    ck("Mo. adapter: dxrack/1, stereo out, MIDI in, grain parameters",
+       devm["id"] == "mote" and devm["api"] == "dxrack/1" and devm["inst"] is True and devm["outs"] == 1 and devm["midi"]
+       and devm["proc"] == "mote" and devm["worklet"] == "mote.worklet.js" and devm["size"] == "float"
+       and devm["freeze"] == "boolean" and devm["keys"] == "boolean" and devm["win"] == "choice" and devm["dest"] == "choice"
+       and devm["src"] == "choice" and devm["has"] and devm["clamped"] == 400, devm)
+    tone = {"freq": 440, "seconds": 1.0, "amp": 0.7}
+    L, R = mote(gpatch(), seconds=0.8, tone=tone)
+    mid = L[len(L)//5:len(L)//5*4]
+    f0 = peak_freq(mid)
+    ck(f"Mo. a frozen grain of a 440 Hz buffer peaks at 440 ({f0:.1f} Hz)", abs(f0 - 440) < 12 and float(np.max(np.abs(L))) <= 1.0 and bool(np.all(np.isfinite(L))) and bool(np.all(np.isfinite(R))), f0)
+    ck("Mo. spread 0 is identical left and right", float(np.max(np.abs(L - R))) < 1e-5, float(np.max(np.abs(L - R))))
+    Lp, Rp = mote(gpatch(grain={"pitch": 12}), seconds=0.8, tone=tone)
+    fp = peak_freq(Lp[len(Lp)//5:len(Lp)//5*4])
+    ck(f"Mo. pitch +12 is an octave ({fp:.1f} Hz)", abs(fp - 880) < 15, fp)
+    Lk, Rk = mote(gpatch(grain={"keyboard": True, "pitch": 0}), [{"at": 0.02, "t": "on", "n": 72, "v": 1}], 0.8, tone)
+    fk = peak_freq(Lk[len(Lk)//4:])
+    ck(f"Mo. keyboard note 72 is an octave up ({fk:.1f} Hz)", abs(fk - 880) < 15, fk)
+    Ls, Rs = mote(gpatch(grain={"keyboard": True}), [], 0.5, tone)
+    ck("Mo. keyboard mode with no notes is silent", rms(Ls) < 1e-4 and rms(Rs) < 1e-4, (rms(Ls), rms(Rs)))
+    burst = {"freq": 440, "seconds": 2000 / SR, "amp": 0.8, "burst": 900}
+    fwd, _ = mote(gpatch(grain={"size": 80, "density": 24, "position": 0, "reverse": 0}), seconds=0.35, tone=burst)
+    rev0, _ = mote(gpatch(grain={"size": 80, "density": 24, "position": 0, "reverse": 1}), seconds=0.35, tone=burst)
+    rev1, _ = mote(gpatch(grain={"size": 80, "density": 24, "position": 1, "reverse": 1}), seconds=0.35, tone=burst)
+    ck("Mo. reverse from the start of a front-loaded buffer is much quieter than forward", rms(fwd) > 0.01 and rms(rev0) < rms(fwd) * 0.15, (rms(fwd), rms(rev0)))
+    ck("Mo. reverse from the end of that buffer is audible", rms(rev1) > rms(fwd) * 0.15, (rms(rev1), rms(fwd)))
+    wide, wideR = mote(gpatch(grain={"size": 120, "density": 16, "spread": 1, "position": 0.5}), seconds=0.6, tone=tone)
+    ck("Mo. spread 1 separates the channels", float(np.max(np.abs(wide - wideR))) > 0.02, float(np.max(np.abs(wide - wideR))))
+    dryL, _ = mote(gpatch(grain={"keyboard": True, "size": 40, "density": 30, "position": 0.2}),
+                   [{"at": 0.02, "t": "on", "n": 60, "v": 1}, {"at": 0.08, "t": "off", "n": 60}], 1.2, tone)
+    wetL, _ = mote(gpatch(grain={"keyboard": True, "size": 40, "density": 30, "position": 0.2},
+                          tail={"delay": 0.2, "feedback": 0.7, "reverb": 0.8, "mix": 0.85}),
+                   [{"at": 0.02, "t": "on", "n": 60, "v": 1}, {"at": 0.08, "t": "off", "n": 60}], 1.2, tone)
+    late = slice(int(0.55 * SR), None)
+    ck("Mo. the tail keeps sounding after the note", rms(dryL[late]) < 1e-4 and rms(wetL[late]) > 1e-3 and rms(wetL[late]) > rms(dryL[late]) * 20,
+       (rms(dryL[late]), rms(wetL[late])))
+    half = {"freq": 440, "seconds": 1.0, "amp": 0.8, "silentUntil": 0.5}
+    still, _ = mote(gpatch(grain={"size": 40, "density": 20, "position": 0.1, "spray": 0}, lfo={"rate": 6, "depth": 0, "dest": "position"}), seconds=0.7, tone=half)
+    moved, _ = mote(gpatch(grain={"size": 40, "density": 20, "position": 0.1, "spray": 0}, lfo={"rate": 6, "depth": 1, "dest": "position"}), seconds=0.7, tone=half)
+    ck("Mo. an LFO on position reaches a buffer that is silent at the start", rms(still) < 2e-3 and rms(moved) > rms(still) * 4 and rms(moved) > 0.005,
+       (rms(still), rms(moved)))
+    rng = random.Random(7)
+    fuzz_ok = True
+    fuzz_peak = 0.0
+    for _ in range(8):
+        fpch = gpatch(level=rng.random(), grain={
+            "size": rng.uniform(5, 400), "density": rng.uniform(0.5, 60), "position": rng.random(), "spray": rng.random(),
+            "pitch": rng.uniform(-24, 24), "pitchRand": rng.uniform(0, 12), "reverse": rng.random(),
+            "window": rng.choice(["hann", "tri", "plank", "gauss"]), "spread": rng.random(),
+            "freeze": rng.choice([True, False]), "keyboard": rng.choice([True, False])},
+            lfo={"rate": rng.uniform(0.05, 8), "depth": rng.random(), "dest": rng.choice(["position", "size", "density", "pitch", "spray"])},
+            tail={"delay": rng.uniform(0.05, 0.8), "feedback": rng.uniform(0, 0.8), "reverb": rng.random(), "mix": rng.random()})
+        ev = [{"at": 0.01, "t": "on", "n": 60, "v": 0.8}] if fpch["grain"]["keyboard"] else []
+        aL, aR = mote(fpch, ev, 0.25, {"freq": 220, "seconds": 0.5, "amp": 0.5})
+        fuzz_peak = max(fuzz_peak, float(np.max(np.abs(aL))), float(np.max(np.abs(aR))))
+        if not (np.all(np.isfinite(aL)) and np.all(np.isfinite(aR)) and fuzz_peak <= 1.0001):
+            fuzz_ok = False
+            break
+    ck(f"Mo. random patches stay finite and at or under 0 dBFS (peak {fuzz_peak:.3f})", fuzz_ok, fuzz_peak)
+    fac_ok = True
+    fac_detail = []
+    for name in ("Drift Glass", "Keyed Glass", "Air Bed"):
+        P = pg.evaluate("n => __synth.motePatch(n)", name)
+        ev = [{"at": 0.02, "t": "on", "n": 60, "v": 0.9}]
+        aL, aR = mote(P, ev, 0.8)
+        level = rms(aL)
+        fac_detail.append((name, level))
+        if level <= 1e-3 or not np.all(np.isfinite(aL)) or not np.all(np.isfinite(aR)): fac_ok = False
+    ck("Mo. the three factory patches sound", fac_ok, fac_detail)
+    ms = pg.evaluate("""async () => { const t0 = performance.now(); await __synth.moteRender({patch: __synth.motePatch('Drift Glass'), events: [{at: 0.02, t: 'on', n: 60, v: 0.8}], seconds: 4}); return performance.now() - t0; }""")
+    info("Mo. CPU Mote Drift Glass", f"{100 * ms / 4000:.1f}% of real time in headless Chrome (offline render, grains only)")
+    files = pg.evaluate("""async () => {
+      const out = {};
+      for (const n of ['glass', 'air', 'bell']) {
+        const r = await fetch('/synth/sources/' + n + '.wav');
+        const u = new Uint8Array(await r.arrayBuffer());
+        out[n] = { ok: r.ok, n: u.length, riff: String.fromCharCode(u[0], u[1], u[2], u[3]) };
+      }
+      return out;
+    }""")
+    ck("Mo. glass, air and bell are RIFF files", all(files[n]["ok"] and files[n]["riff"] == "RIFF" and files[n]["n"] > 1000 for n in ("glass", "air", "bell")), files)
+    pg.evaluate("__synth.setDevice('mote')"); pg.wait_for_timeout(300)
+    ck("Mo. the rail lights Mote and shows the waveform", pg.evaluate("__synth.device()") == "mote" and pg.locator("#devM").get_attribute("aria-pressed") == "true"
+       and pg.is_visible("#moteWave") and not pg.is_visible("#mFilt"), pg.evaluate("__synth.device()"))
+    pg.locator("#moteDrop").scroll_into_view_if_needed()
+    box = pg.locator("#moteDrop").bounding_box()
+    pg.mouse.move(box["x"] + 8, box["y"] + box["height"] / 2)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] * 0.75, box["y"] + box["height"] / 2, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(80)
+    pos = pg.evaluate("__synth.patch().grain.position")
+    ck(f"Mo. dragging the waveform sets the grain position ({pos:.2f})", 0.68 <= pos <= 0.84, pos)
+    pg.locator('#moteWin [data-v="tri"]').click(); pg.wait_for_timeout(40)
+    ck("Mo. the window chips select a shape", pg.evaluate("__synth.patch().grain.window") == "tri")
+    before = pg.evaluate("__synth.patch().grain.freeze")
+    pg.locator("#moteFreeze").click(); pg.wait_for_timeout(40)
+    ck("Mo. freeze toggles", pg.evaluate("__synth.patch().grain.freeze") != before)
+    tiny = pg.evaluate("""() => {
+      const sr = 8000, n = 160;
+      const data = n * 2;
+      const buf = new ArrayBuffer(44 + data);
+      const v = new DataView(buf);
+      const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      s(0, 'RIFF'); v.setUint32(4, 36 + data, true); s(8, 'WAVE'); s(12, 'fmt '); v.setUint32(16, 16, true);
+      v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+      v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, data, true);
+      for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 440 * i / sr) * 8000), true);
+      let bin = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
+      return btoa(bin);
+    }""")
+    raw = base64.b64decode(tiny)
+    pg.set_input_files("#moteFile", files=[{"name": "taken-grain.wav", "mimeType": "audio/wav", "buffer": raw}])
+    pg.wait_for_timeout(400)
+    ck("Mo. a chosen file becomes the source", "taken-grain" in (pg.locator("#moteName").inner_text() or ""), pg.locator("#moteName").inner_text())
+    dropped = pg.evaluate("""async (b64) => {
+      const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const file = new File([bin], 'dropped-grain.wav', { type: 'audio/wav' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      const el = document.getElementById('moteDrop');
+      el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      await new Promise(r => setTimeout(r, 250));
+      return document.getElementById('moteName').textContent;
+    }""", tiny)
+    ck("Mo. a dropped file becomes the source", "dropped-grain" in (dropped or ""), dropped)
+    pg.locator("#moteKeys").click(); pg.wait_for_timeout(40)
+    pg.evaluate("__synth.noteOn(60, 0.9)"); pg.wait_for_timeout(250)
+    meter = pg.evaluate("__synth.moteMeter()")
+    ck("Mo. keys mode counts a held note", (meter.get("voices") or 0) >= 1 or (meter.get("grains") or 0) >= 1, meter)
+    pg.evaluate("__synth.noteOff(60)")
+    pg.wait_for_timeout(50)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
+    ck("Mo. reload keeps the device and the grain position", pg.evaluate("__synth.device()") == "mote" and abs(pg.evaluate("__synth.patch().grain.position") - pos) < 0.02,
+       (pg.evaluate("__synth.device()"), pg.evaluate("__synth.patch().grain.position")))
+    probe = pg.evaluate("() => __synth.moteCaptureProbe(0.3, 523)")
+    ck("Mo. a capture of a tone has samples", probe and probe["n"] > 1000 and probe["rms"] > 1e-3, probe)
+    cap = dec(pg.evaluate("""() => __synth.moteRender({
+      patch: { device: 'mote', level: 1, grain: { size: 200, density: 8, position: 0.4, spray: 0, pitch: 0, pitchRand: 0, reverse: 0, window: 'hann', spread: 0, freeze: true, keyboard: false }, lfo: { depth: 0 }, tail: { mix: 0 } },
+      seconds: 0.5, useHost: true
+    })"""))
+    fc = peak_freq(cap[0][len(cap[0])//5:])
+    ck(f"Mo. grains of a captured 523 Hz tone peak near 523 ({fc:.1f} Hz)", abs(fc - 523) < 20, fc)
+    pg.screenshot(path=os.path.join(SHOTS, "synth_mote_desktop.png"), full_page=True)
+    pg.evaluate("__synth.setDevice('filament')")
+    ck("Mo. no page errors", not errs, errs)
+
+    # Mote on a phone, then back to Filament so later pages still boot on the tube synth.
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2); perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE); ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000); ph.wait_for_timeout(200)
+    ph.evaluate("__synth.setDevice('mote')"); ph.wait_for_timeout(300)
+    ck("Mo. 390px: no horizontal scroll", ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+    ck("Mo. 390px: the waveform is on screen and the filter is not", ph.is_visible("#moteWave") and not ph.is_visible("#mFilt") and not ph.is_visible("#chassis"))
+    ph.tap('.tabs [data-go="grain"]'); ph.wait_for_timeout(200)
+    ck("Mo. 390px: the Grain tab shows size and the window shapes", ph.is_visible("#mMoteGrain") and ph.is_visible("#moteWin") and not ph.is_visible("#moteWave"))
+    small = ph.evaluate("""() => [...document.querySelectorAll('#moteRoot .chip, #moteRoot .knob, .tabs button, .devbtn')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Mo. 390px: grain chips, knobs and the rail are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="space"]'); ph.wait_for_timeout(200)
+    ck("Mo. 390px: the Space tab shows the tail, still no horizontal scroll", ph.is_visible("#kMoteTail") and not ph.is_visible("#mMoteGrain")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_mote_phone.png"))
+    ph.evaluate("__synth.setDevice('filament')")
+    ck("Mo. 390px: no page errors", not perr, perr)
+    ph.close()
+
 
     # ---------------------------------------------------------------- R. the rack framework
     def rms(x):
@@ -1470,7 +1662,7 @@ with sync_playwright() as pw:
     ck("R. beat 4 is the downbeat of the next bar in 4/4", pure["bar"] == 1, pure["bar"])
     ck("R. tempo clamps to 40..240", pure["tempo"] == 40, pure["tempo"])
     ck("R. centre pan is unity and a hard right pan drops the left", abs(pure["balL"] - 1) < 1e-12 and abs(pure["balR"] - 1) < 1e-12 and abs(pure["hard"]) < 1e-12 and abs(pure["half"] - 0.7071067811865476) < 1e-9, pure)
-    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "thyratron", "gleam", "dekatron", "lattice"], pure)
+    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and {"filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote"} <= set(pure["both"]), pure)
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
@@ -1772,7 +1964,7 @@ with sync_playwright() as pw:
        desc["id"] == "lattice" and desc["api"] == "dxrack/1" and desc["instrument"] is True and desc["outs"] == 1 and desc["midi"]
        and desc["processor"] == "lattice" and desc["worklet"] == "lattice.worklet.js" and desc["over"] == 2
        and desc["pos"] == "float" and all(w in desc["warp"] for w in ("bend", "sync", "pwm", "fm"))
-       and desc["ids"] == ["filament", "cathode", "thyratron", "gleam", "dekatron", "lattice"], desc)
+       and {"filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote"} <= set(desc["ids"]), desc)
     L, R = lat(lpatch(), [{"at": 0.02, "t": "on", "n": 69, "v": 0.9}], 0.55)
     seg = L[int(0.12 * SR):int(0.5 * SR)]
     got = peak_freq(seg); cents = abs(1200 * math.log2(got / 440.0))
