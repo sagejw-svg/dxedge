@@ -85,6 +85,27 @@
   .devbtn[aria-pressed="true"] { color: var(--amber2); border-color: var(--amber); background: rgba(255,179,71,0.07); }
   .devbtn[aria-pressed="true"] i { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
   body[data-dev="cathode"] [data-dev="filament"], body[data-dev="filament"] [data-dev="cathode"] { display: none !important; }
+  body[data-dev="dekatron"] [data-dev="filament"], body[data-dev="dekatron"] [data-dev="cathode"],
+  body[data-dev="filament"] [data-dev="dekatron"], body[data-dev="cathode"] [data-dev="dekatron"] { display: none !important; }
+  #drumRoot { display: contents; }
+  body[data-dev="filament"] #drumRoot, body[data-dev="cathode"] #drumRoot { display: none !important; }
+  body[data-dev="dekatron"] #mStereo, body[data-dev="dekatron"] #mEns, body[data-dev="dekatron"] #mOut,
+  body[data-dev="dekatron"] #mSpk, body[data-dev="dekatron"] #mRoom { display: none !important; }
+  .dgrid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .drow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .drow .dpad, .drow .dn { flex: 0 0 72px; width: 72px; text-align: left; }
+  .dpad { background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 4px; font-size: 10px; letter-spacing: 0.5px; padding: 2px 4px; cursor: pointer; min-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dpad:hover { border-color: #333; color: var(--amber2); }
+  .dsteps { display: flex; gap: 3px; overflow-x: auto; min-width: 0; flex: 1 1 auto; padding-bottom: 2px; }
+  .dnum { flex: 0 0 22px; width: 22px; text-align: center; font-size: 8px; color: var(--faint); }
+  .dnum.bar { color: var(--dim); }
+  .dstep { flex: 0 0 22px; width: 22px; height: 22px; padding: 0; border-radius: 3px; border: 1px solid #2a2a2a; background: #121212; cursor: pointer; }
+  .dstep.bar { border-color: #3a3a3a; }
+  .dstep.on { background: var(--amber); border-color: var(--amber2); }
+  .dstep.accent.on { background: var(--green); border-color: #8dffc8; }
+  .dstep.now { box-shadow: 0 0 0 1px var(--amber2); }
+  .dstep.past { opacity: 0.28; }
+  .dstep:hover { border-color: var(--amber); }
 
   /* the patch panel */
   .mod[data-full] { grid-column: 1 / -1; position: relative; }
@@ -206,7 +227,14 @@
     body[data-tab] .mod { display: none; }
     body[data-tab="play"] .mod[data-tab~="play"], body[data-tab="osc"] .mod[data-tab~="osc"], body[data-tab="filter"] .mod[data-tab~="filter"],
     body[data-tab="mod"] .mod[data-tab~="mod"], body[data-tab="stereo"] .mod[data-tab~="stereo"], body[data-tab="rack"] .mod[data-tab~="rack"],
-    body[data-tab="patch"] .mod[data-tab~="patch"] { display: block; }
+    body[data-tab="patch"] .mod[data-tab~="patch"], body[data-tab="voice"] .mod[data-tab~="voice"] { display: block; }
+    body[data-dev="dekatron"] .tabs [data-go="osc"], body[data-dev="dekatron"] .tabs [data-go="filter"],
+    body[data-dev="dekatron"] .tabs [data-go="mod"], body[data-dev="dekatron"] .tabs [data-go="stereo"],
+    body[data-dev="dekatron"] .tabs [data-go="rack"], body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
+    .devbtn { letter-spacing: 0.5px; font-size: 10px; padding: 6px 4px; min-width: 0; overflow: hidden; }
+    .dstep { flex-basis: 44px; width: 44px; height: 44px; }
+    .dnum { flex-basis: 44px; width: 44px; }
+    .dpad { min-height: 44px; min-width: 44px; }
     .rail { padding: 6px 6px 0; } .rail .label { display: none; } .devbtn small { display: none; } .devbtn { flex: 1 1 0; justify-content: center; min-height: 44px; }
     .jackfield { gap: 8px; } .jgroup { flex: 1 1 100%; }
     .jack { width: calc((100% - 16px) / 5); min-width: 52px; min-height: 66px; font-size: 8px; }
@@ -232,6 +260,7 @@
       <h1 id="devTitle">FILA<span>MENT</span></h1>
       <p class="intro" data-dev="cathode">Cathode, the second device in the rack: one voice, two VCOs, a screaming high-pass and low-pass pair, and a patch panel. Everything is pre-wired; a cable overrides the normal printed under a jack.</p>
       <p class="intro" data-dev="filament">A tube synthesizer. The tubes do real work: one drives the filters, one sits inside the Valve filter's resonance loop, and a push-pull pair runs the output. Play it with the keys below, your computer keyboard, or a MIDI keyboard.</p>
+      <p class="intro" data-dev="dekatron">Dekatron, a counting-tube drum machine: kick, snare, hats, clap, tom and rim, synthesized, with a 16-step pattern. The keys play the voices. Swing, accents and the pattern length live on the panel.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
       <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
@@ -251,6 +280,7 @@
       <span class="label">rack</span>
       <button class="devbtn" id="devF" data-d="filament" aria-pressed="true"><i></i>FILAMENT<small>poly tube synth</small></button>
       <button class="devbtn" id="devC" data-d="cathode" aria-pressed="false"><i></i>CATHODE<small>mono semi-modular</small></button>
+      <button class="devbtn" id="devD" data-d="dekatron" aria-pressed="false"><i></i>DEKATRON<small>drum pattern</small></button>
     </div>
     <div class="chassis" id="chassis" aria-label="Tube chassis">
       <div class="tgroup">
@@ -261,7 +291,7 @@
         <figure class="tube" data-t="v3" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV3" aria-hidden="true"></canvas><figcaption><span class="role">V3 out</span><br><b id="nameV3">EL34</b></figcaption></figure>
         <figure class="tube" data-t="v4" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV4" aria-hidden="true"></canvas><figcaption><span class="role">V4 <span id="topoV4">PP</span></span><br><b id="nameV4">EL34</b></figcaption></figure>
       </div>
-      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span></div>
+      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span></div>
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="lamps">
@@ -278,6 +308,7 @@
       <button role="tab" data-go="filter" aria-selected="false">Filter</button>
       <button role="tab" data-go="mod" aria-selected="false">Mod</button>
       <button role="tab" data-go="patch" aria-selected="false" data-dev="cathode">Patch</button>
+      <button role="tab" data-go="voice" aria-selected="false" data-dev="dekatron">Voice</button>
       <button role="tab" data-go="stereo" aria-selected="false">Stereo</button>
       <button role="tab" data-go="rack" aria-selected="false">Rack</button>
     </nav>
@@ -346,6 +377,7 @@
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
       <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
       <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
+      <div id="drumRoot"></div>
     </div>
 
     <div class="keybed" id="keybed">
@@ -368,7 +400,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.3: two devices in the rack, Filament and Cathode &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.4: Filament, Cathode, and Dekatron, a drum machine &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -380,6 +412,8 @@ import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
+import { drumDevice, normalizeDrum, DRUM_FACTORY, DRUM_CATS, DRUM_DEFAULT, voiceForNote } from './drums.js';
+import { createDrumHost, mountDrumPanel, renderDrums } from './drums-ui.js';
 
 const $ = id => document.getElementById(id);
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -396,6 +430,7 @@ function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.classList
 const DEVS = {
   filament: { name: 'Filament', factory: FACTORY, cats: CATS, normalize, def: DEFAULT, enums: ENUMS, kCur: 'filament_cur', kUser: 'filament_user', first: 'Wide Novachord Strings' },
   cathode: { name: 'Cathode', factory: C_FACTORY, cats: C_CATS, normalize: normalizeC, def: C_DEFAULT, enums: C_ENUMS, kCur: 'cathode_cur', kUser: 'cathode_user', first: 'Plate Screamer' },
+  dekatron: { name: 'Dekatron', factory: DRUM_FACTORY, cats: DRUM_CATS, normalize: normalizeDrum, def: DRUM_DEFAULT, enums: {}, kCur: 'dekatron_cur', kUser: 'dekatron_user', first: 'Relay' },
 };
 const D = () => DEVS[dev];
 function loadDevState(d) {
@@ -410,8 +445,12 @@ function loadDevState(d) {
   if (saved && saved.patch) { const base = all.find(x => x.key === curKey); edited = !!base && JSON.stringify(base.p) !== JSON.stringify(X.normalize(saved.patch)); }
   return { cur, curKey, edited, user };
 }
-const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode') };
-let dev = store.get('synth_dev', 'filament') === 'cathode' ? 'cathode' : 'filament';
+const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron') };
+const savedDev = store.get('synth_dev', 'filament');
+let dev = savedDev === 'cathode' || savedDev === 'dekatron' ? savedDev : 'filament';
+const drumHost = createDrumHost();
+let drumPanel = null;
+function drumPatch() { return dev === 'dekatron' ? cur : DS.dekatron.cur; }
 let { cur, curKey, edited, user } = DS[dev];
 document.body.dataset.dev = dev;
 
@@ -424,11 +463,16 @@ function ensureEngine() {
   initAudioSession();
   try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); }
   catch (e) { toast('This browser cannot start Web Audio.'); return Promise.reject(e); }
-  enginePromise = createEngine(ctx, { patch: cur }).then(e => {
+  const bootPatch = dev === 'dekatron' ? DS.filament.cur : cur;
+  enginePromise = createEngine(ctx, { patch: bootPatch }).then(e => {
     E = e; E.master.gain.value = 1;
-    queue.splice(0).forEach(fn => fn());
-    updateAudioLamp();
-    return E;
+    const ready = dev === 'dekatron'
+      ? drumHost.attach(ctx, E.ens ? E.ens.input : E.master).then(() => {
+        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        drumHost.setActive(true); drumHost.setPatch(cur);
+      })
+      : Promise.resolve();
+    return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); return E; });
   }).catch(err => { console.error(err); toast('Audio engine failed to load: ' + err.message, 6000); throw err; });
   ctx.onstatechange = updateAudioLamp;
   return enginePromise;
@@ -455,7 +499,8 @@ function pushPatch(load) {
   if (pushT) return;
   pushT = requestAnimationFrame(() => {
     pushT = 0; const l = pushLoad; pushLoad = false;
-    withEngine(() => E.setPatch(cur, l));
+    if (dev === 'dekatron') { cur = normalizeDrum(cur); withEngine(() => drumHost.setPatch(cur)); }
+    else withEngine(() => E.setPatch(cur, l));
     store.set(D().kCur, { key: curKey, patch: cur });
   });
 }
@@ -466,14 +511,15 @@ let sustainOn = false;
 function noteOn(n, v) {
   if (n < 0 || n > 127) return;
   wake();
-  withEngine(() => E.noteOn(n, v));
+  if (dev === 'dekatron') { const id = voiceForNote(n); if (id) withEngine(() => drumHost.trigger(id, v)); }
+  else withEngine(() => E.noteOn(n, v));
   down.set(n, (down.get(n) || 0) + 1); paintKey(n, true);
 }
 function noteOff(n) {
   const c = (down.get(n) || 0) - 1;
   if (c > 0) { down.set(n, c); return; }
   down.delete(n); paintKey(n, false);
-  withEngine(() => E.noteOff(n));
+  if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
 }
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
@@ -670,6 +716,12 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), tog
 
 // Whatever depends on more than one control.
 function afterChange(path) {
+  if (dev === 'dekatron') {
+    $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
+    $('topoV4').textContent = cur.out.topology === 'pp' ? 'PP' : 'SE';
+    if (path && path !== '__load') markEdited();
+    return;
+  }
   TG.forEach(f => f());
   if (dev === 'cathode') afterC(path); else afterF();
   $('spkPilot').classList.toggle('off', !cur.out.spkOn); $('roomPilot').classList.toggle('off', !cur.out.roomOn);
@@ -711,6 +763,7 @@ function refreshAll() {
   Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; e.k.set(e.map.from(getPath(cur, e.path))); });
   Object.keys(CH).forEach(refreshChips);
   afterChange('__load');
+  if (dev === 'dekatron' && drumPanel) drumPanel.sync();
 }
 
 // ---------------------------------------------------------------- patch list
@@ -757,7 +810,7 @@ $('delP').addEventListener('click', () => {
 // ---------------------------------------------------------------- the rack rail
 // The keyboard, wheels and MIDI play the lit device; the panel, patch list and chassis show it.
 function setDevice(d) {
-  d = d === 'cathode' ? 'cathode' : 'filament';
+  if (d !== 'cathode' && d !== 'dekatron') d = 'filament';
   if (d === dev) return;
   [...down.keys()].forEach(n => { down.set(n, 1); noteOff(n); });     // let go on the old device first
   if (sustainOn) setSustain(false);
@@ -767,14 +820,26 @@ function setDevice(d) {
   dev = d; ({ cur, curKey, edited, user } = DS[d]);
   showDevice();
   store.set('synth_dev', d);
-  if (document.body.dataset.tab === 'patch' && d !== 'cathode') goTab('play');
-  withEngine(() => E.setDevice(d, cur));
+  const tab = document.body.dataset.tab;
+  if ((tab === 'patch' && d !== 'cathode') || (tab === 'voice' && d !== 'dekatron') || (d === 'dekatron' && tab !== 'play' && tab !== 'voice')) goTab('play');
+  const run = () => {
+    if (d === 'dekatron') {
+      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      return drumHost.attach(ctx, E.ens ? E.ens.input : E.master).then(() => { drumHost.setActive(true); drumHost.setPatch(cur); });
+    }
+    drumHost.setActive(false);
+    E.setDevice(d, cur);
+  };
   refreshAll(); fillSelect(); $('saveForm').classList.remove('open');
+  if (E) return run();
+  queue.push(run); return ensureEngine();
 }
 function showDevice() {
   document.body.dataset.dev = dev;
-  $('devF').setAttribute('aria-pressed', String(dev === 'filament')); $('devC').setAttribute('aria-pressed', String(dev === 'cathode'));
-  $('devTitle').innerHTML = dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
+  $('devF').setAttribute('aria-pressed', String(dev === 'filament'));
+  $('devC').setAttribute('aria-pressed', String(dev === 'cathode'));
+  $('devD').setAttribute('aria-pressed', String(dev === 'dekatron'));
+  $('devTitle').innerHTML = dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
 }
 document.querySelectorAll('.devbtn').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.d)));
 showDevice();
@@ -910,11 +975,16 @@ function jackAt(x, y) { const el = document.elementFromPoint(x, y), j = el && el
 refreshAll(); fillSelect();
 
 // ---------------------------------------------------------------- phone tabs
-function goTab(t) { if (t === 'patch' && dev !== 'cathode') t = 'play'; document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables()); }
+function goTab(t) {
+  if (t === 'patch' && dev !== 'cathode') t = 'play';
+  if (t === 'voice' && dev !== 'dekatron') t = 'play';
+  if (dev === 'dekatron' && t !== 'play' && t !== 'voice') t = 'play';
+  document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables());
+}
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
 document.querySelectorAll('.tube[data-tab-go]').forEach(f => f.addEventListener('click', () => {
   const t = f.dataset.tabGo; goTab(t);
-  const sec = t === 'rack' ? $('mOut') : dev === 'cathode' ? $('mCTubes') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');
+  const sec = t === 'rack' ? $('mOut') : dev === 'dekatron' ? $('mDrumTr') : dev === 'cathode' ? $('mCTubes') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');
   sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }));
 goTab(store.get('filament_tab', 'play') || 'play');
@@ -1128,8 +1198,15 @@ function frame(now) {
   const running = ctx && ctx.state === 'running';
   let oL = 0, oR = 0, pk = 0;
   if (E && E.C && E.C.anL && running) { const a = rms(E.C.anL), b = rms(E.C.anR); oL = a[0]; oR = b[0]; pk = Math.max(a[1], b[1]); }
-  const cath = dev === 'cathode', valve = !cath && cur.filt.model === 'valve12';
-  const tgt = {
+  const drumOn = dev === 'dekatron';
+  const dm = drumOn ? drumHost.meter() : null;
+  const cath = dev === 'cathode', valve = !drumOn && !cath && cur.filt.model === 'valve12';
+  const tgt = drumOn ? {
+    v1: { tube: TUBE_ST.v1.shown || '12AU7', drive: 2, bias: 0, lv: clampN((dm.v1 || 0) * 4, 0, 1.2), on: true },
+    v2: { tube: TUBE_ST.v2.shown || '12AU7', drive: 2, bias: 0, lv: 0, on: false },
+    v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
+    v4: { tube: TUBE_ST.v4.shown || 'EL34', drive: TUBE_ST.v4.drive, bias: TUBE_ST.v4.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
+  } : {
     v1: cath ? { tube: cur.drive.tube, drive: cur.drive.amount, bias: cur.drive.bias, lv: clampN(m.v1 * 3, 0, 1.2), on: true }
       : { tube: cur.v1.tube, drive: cur.v1.drive, bias: cur.v1.bias, lv: clampN(m.v1 * 3, 0, 1.2), on: true },
     v2: cath ? { tube: cur.follow.tube, drive: cur.follow.drive, bias: 0, lv: clampN(m.v2 * 3, 0, 1.2), on: true }
@@ -1154,25 +1231,57 @@ function frame(now) {
   eyeLv += (clampN(pk / 0.89, 0, 1) - eyeLv) * (1 - Math.exp(-dt / (pk / 0.89 > eyeLv ? 0.03 : 0.4)));
   drawEye(eyeLv);
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
-  $('voicesV').textContent = m.voices || 0;
-  const cpu = m.cpu || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
+  const cpuSrc = drumOn ? dm : m;
+  $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
+  const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
 }
 requestAnimationFrame(frame);
+
+// Dekatron's panel. It edits whichever object drumPatch() returns, so it can be built
+// while another device is on screen and stay out of that device's patch.
+drumHost.setMeterListener(m => { if (dev === 'dekatron' && drumPanel) drumPanel.follow(m.step, m.playing); });
+drumPanel = mountDrumPanel($('drumRoot'), {
+  patch: drumPatch,
+  edited() { if (dev !== 'dekatron') return; markEdited(); pushPatch(false); },
+  wake,
+  trigger(id) { drumHost.trigger(id, 0.9); },
+  transport(on) { drumHost.transport(on); },
+  playing: () => drumHost.meter().playing,
+});
 
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.3-cathode',
+  version: '0.4-dekatron',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
   patch: () => clone(cur),
-  setPatch: p => { const np = normalizeAny(p); if (deviceOf(np) !== dev) setDevice(deviceOf(np)); cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur); },
-  load: name => { const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : dev; setDevice(d); loadKey('f:' + name); },
+  setPatch: p => {
+    if (p && p.device === 'dekatron') {
+      const np = normalizeDrum(p);
+      const switched = dev !== 'dekatron' ? setDevice('dekatron') : null;
+      cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true);
+      return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
+    }
+    const np = normalizeAny(p); if (deviceOf(np) !== dev) setDevice(deviceOf(np)); cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur);
+  },
+  load: name => {
+    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : dev;
+    const switched = setDevice(d); loadKey('f:' + name); return switched;
+  },
   factory: () => FACTORY.map(p => ({ name: p.name, cat: p.cat })),
   factoryPatch: name => clone(FACTORY.find(p => p.name === name)),
   cathodeFactory: () => C_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
   cathodePatch: name => clone(C_FACTORY.find(p => p.name === name)),
+  drumDevice: () => drumDevice,
+  drumFactory: () => DRUM_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
+  drumPatch: name => clone(DRUM_FACTORY.find(p => p.name === name)),
+  drumMeter: () => Object.assign({}, drumHost.meter()),
+  drumRender: async opts => {
+    const buf = await renderDrums(Object.assign({ patch: dev === 'dekatron' ? cur : DRUM_DEFAULT }, opts));
+    return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
+  },
   jacks: () => ({ src: C_SRC.slice(), inp: C_IN.slice(), norm: Object.assign({}, C_NORM) }),
   cablePaths: () => document.querySelectorAll('#cablesSvg path.cable').length,
   tubes: () => TUBES.map(t => t.id),

@@ -10,11 +10,14 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds two devices: **Filament** (poly, the tube synth) and **Cathode** (mono,
+The rack now holds three devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
-original design: own name, panel, jack names and voicing, not a copy of Korg's). The rail above the
-chassis picks which device the keyboard, wheels and MIDI play; both feed the same ensemble and
-output rack, which takes its settings from the active device's patch.
+original design: own name, panel, jack names and voicing, not a copy of Korg's), and **Dekatron**
+(an original analog-style drum machine: kick, snare, closed hat, open hat, clap, tom and rim, with
+a 16-step pattern). The rail above the chassis picks which device the keyboard, wheels and MIDI
+play. Filament and Cathode feed the shared ensemble and output rack, which takes its settings from
+the active device's patch. Dekatron is a separate worklet summed into that same chain; its own
+pattern clock does not move the other devices.
 
 Full brief: `docs/filament-design.md` (a copy of the project doc, kept in the repo so the nightly
 task can read it).
@@ -42,6 +45,10 @@ task can read it).
 | `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent` |
 | `frontend/public/synth/patches.js` | Filament patch schema v1, defaults, `normalize`, the factory set |
 | `frontend/public/synth/cathode.js` | Cathode patch schema v1 (`device: 'cathode'`, `cables: [[source, input]]`), the jack lists and normals, `normalizeC`, its factory set |
+| `frontend/public/synth/drums.js` | Dekatron patch schema v1 (`device: 'dekatron'`), the parameter table, `normalizeDrum`, `voiceForNote`, `drumDevice` (the host adapter), six factory patterns |
+| `frontend/public/synth/drums-dsp.js` | The drum engine: 2x voices, the half-band decimator, the sample clock (`stepSeconds`) |
+| `frontend/public/synth/drums.worklet.js` | AudioWorklet processor `dekatron`. Imports the engine; no DSP of its own |
+| `frontend/public/synth/drums-ui.js` | The pattern panel, and `createDrumHost` / `renderDrums` (the page adapter) |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx` |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
@@ -100,6 +107,36 @@ Done when: every model self-oscillates where it should; mono fold passes for all
 - [ ] A second Cathode voice for duophonic play, or a poly-chain mode
 - [ ] Cathode on the mod matrix and arpeggiator when those land (they should be rack-wide, not Filament-only)
 
+### Dekatron (drum machine) - first version done 14 Oct 2026
+Original analog-style drums, not a port of DaisySP or any other drum model (the register allows a
+DaisySP port; this one is written from the ordinary drum vocabulary: a pitch that falls, noise
+through a band, a handful of noise bursts, a short wood block). No third-party samples.
+- [x] Seven voices in `drums.worklet.js` at 2x with a Kaiser half-band decimator: kick, snare,
+      closed hat, open hat, clap, tom, rim. The two hats cut each other.
+- [x] 16-step pattern: per-step on/off, an accent lane, swing (full swing is a triplet, and the
+      next on-beat stays on the grid), pattern length 1 to 16. Internal clock, or an external tick.
+- [x] Its own panel (transport, step grid, voice knobs) in the house style, on the rack rail next
+      to Filament and Cathode. The keys play the voices: C kick, C# rim, D snare, D# clap, F tom,
+      F# closed hat, A# open hat, in any octave.
+- [x] Six factory patterns (Relay, Late Shift, Brush, Spark, Walk, Dozen). Tests in the D. section.
+- [ ] Dekatron on the shared host clock, once that clock exists. Until then the pattern clock is
+      inside the worklet (`stepSeconds`), and a host can drive it with `{t:'tick'}` instead.
+
+The host adapter is `drumDevice` in `drums.js`, plus `createDrumHost` in `drums-ui.js`. A future
+rack calls `createDrumNode(ctx, {patch, destination})` and posts the messages below. It does not
+import Filament's engine. The page wires the node to the shared ensemble input and sleeps it when
+another device is selected.
+
+| | |
+|-|-|
+| Identity | `id: 'dekatron'`, `processor: 'dekatron'`, `worklet: 'drums.worklet.js'`, `channels: 2`, `oversample: 2` |
+| Patch | `normalize(patch)` → schema v1 JSON, `device: 'dekatron'`. `parameters` is the stable knob list (`level`, `seq.*`, `voices.<id>.<knob>`). Steps and the accent lane are pattern data, not knobs. |
+| Factory | `factory`, `defaults` |
+| Notes | `voiceForNote(midiNote)` → a voice id, or null |
+| Messages | `{t:'patch', p}`, `{t:'trig', voice, v}`, `{t:'transport', playing}`, `{t:'tick'}` (external clock only), `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
+| Clock | `clock.modes`: `internal` (the worklet fires step i at `clock.stepSeconds(i, bpm, swing)`) and `external` (one `{t:'tick'}` per step after transport starts). |
+| Meters | Worklet posts `{t:'meter'}` and `{t:'step', step, length, playing}` |
+
 ### MIDI files: recorder and player (James, 13 Oct 2026) - next, ahead of the 0.2 list
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
 devices (so Filament and Cathode play at once); built by the nightly job. Two slices; if both do not
@@ -116,7 +153,7 @@ Spec (what "done" means):
   division (refuse SMPTE division with a message). Channel events kept: notes, pitch bend, CC 1 (mod
   wheel), CC 64 (sustain), channel and poly pressure (as aftertouch); program changes ignored. Write
   format 1 at 480 ticks per quarter: a tempo track (tempo, 4/4) plus one track per device used, each
-  named "Filament: <patch>" or "Cathode: <patch>".
+  named "Filament: <patch>", "Cathode: <patch>" or "Dekatron: <patch>".
 - **Recorder** (a strip next to the keyboard, phone friendly, 44 px targets): Rec arms; the first
   note starts the take; it captures notes and velocities, bend, mod wheel, sustain and aftertouch
   from every input (on-screen keys, computer keys, MIDI keyboard) with the device each event went to.
@@ -124,7 +161,7 @@ Spec (what "done" means):
   `filament-take-YYYYMMDD-HHMM.mid`). Show take length and note count.
 - **Import**: a button (file input accepting .mid, .midi, audio/midi) and drag and drop onto the
   strip. Show file name, length and a track list: name, channel(s), note count, and chips per track
-  for Filament, Cathode or off. Defaults: channel 10 (drums) off, since there is no drum machine yet;
+  for Filament, Cathode, Dekatron or off. Defaults: channel 10 to Dekatron;
   a single melodic track goes to the selected device; with several, the first goes to Filament, the
   lowest-pitched to Cathode, the rest to Filament. Remember assignments while the file stays loaded.
 - **Player**: play, stop, loop, a tempo control (50 to 200% of the file's tempo, the file's own tempo

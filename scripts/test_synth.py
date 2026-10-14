@@ -12,7 +12,8 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel) and
+playing-it checks (keys, computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
 """
@@ -474,6 +475,127 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
     ck("C. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- D. Dekatron, the drum machine
+    # Offline renders go through drums.worklet.js (2x, then the half-band), not a copy of the DSP.
+    def drum(patch, events, seconds=1.0):
+        return dec(pg.evaluate("a => __synth.drumRender(a)", {"patch": patch, "events": events, "seconds": seconds}))
+    def step_sec(i, bpm, swing):
+        sixteenth = 60 / bpm / 4
+        return sixteenth * (i + ((swing / 3) if (i & 1) else 0))
+    def onsets(x, thr=0.04, gap=0.04):
+        d = np.abs(np.diff(x)); times = []; last = -1e9
+        for i, v in enumerate(d):
+            if v >= thr and (i - last) / SR >= gap:
+                times.append(i / SR); last = i
+        return times
+    def near(got, want, tol=0.005):
+        if len(got) != len(want): return False
+        return all(abs(a - b) <= tol for a, b in zip(got, want))
+    VOICE_IDS = ["kick", "snare", "hatC", "hatO", "clap", "tom", "rim"]
+    devd = pg.evaluate("__synth.drumDevice()")
+    ck("D. adapter: dekatron, stereo, 2x worklet, seven voices, a parameter table",
+       devd["id"] == "dekatron" and devd["channels"] == 2 and devd["oversample"] == 2
+       and devd["processor"] == "dekatron" and devd["worklet"] == "drums.worklet.js"
+       and devd["voices"] == VOICE_IDS and len(devd["parameters"]) >= 40
+       and devd["clock"]["modes"] == ["internal", "external"]
+       and devd["messages"] == ["patch", "trig", "transport", "tick", "panic", "active"], devd)
+    quiet = {vid: {"level": 0} for vid in VOICE_IDS}
+    for vid in VOICE_IDS:
+        voices = dict(quiet); voices[vid] = {"level": 1}
+        L, R = drum({"device": "dekatron", "level": 1, "voices": voices}, [{"at": 0.02, "t": "trig", "voice": vid, "v": 1}], 0.45)
+        pk = float(max(np.max(np.abs(L)), np.max(np.abs(R))))
+        ck(f"D. {vid} triggers, stays finite, and stays at or under 0 dBFS (peak {db(pk):.1f} dBFS)",
+           pk > 0.05 and pk <= 1.0 and np.all(np.isfinite(L)) and np.all(np.isfinite(R)), pk)
+    def rim_score(seq, rim_steps, accent=None):
+        steps = {vid: [0] * 16 for vid in VOICE_IDS}; steps["rim"] = rim_steps
+        voices = dict(quiet); voices["rim"] = {"tune": 1600, "decay": 0.01, "color": 1, "level": 1, "attack": 0, "pan": 0}
+        return {"device": "dekatron", "level": 1, "seq": seq, "voices": voices, "steps": steps,
+                "accent": accent if accent is not None else [0] * 16}
+    def hit_times(seq, rim_steps, seconds):
+        length = int(seq["length"]); out = []; i = 0
+        while i < 400:
+            t = step_sec(i, seq["bpm"], seq.get("swing", 0))
+            if t >= seconds - 0.03: break
+            if rim_steps[i % length]: out.append(t)
+            i += 1
+        return out
+    straight = {"bpm": 120, "swing": 0, "length": 8, "accentAmt": 0, "clock": "internal"}
+    row = [1] * 16
+    L, _ = drum(rim_score(straight, row), [{"at": 0, "t": "transport", "playing": True}], 1.05)
+    got, want = onsets(L), hit_times(straight, row, 1.05)
+    ck(f"D. internal clock, 120 BPM, straight: {len(got)} steps within 5 ms", near(got, want), (got, want))
+    swung = {"bpm": 120, "swing": 1, "length": 8, "accentAmt": 0, "clock": "internal"}
+    L, _ = drum(rim_score(swung, row), [{"at": 0, "t": "transport", "playing": True}], 1.2)
+    got, want = onsets(L), hit_times(swung, row, 1.2)
+    ck(f"D. swing 100% delays the offbeats to a triplet and the on-beats stay put ({len(got)} steps)", near(got, want), (["%.4f" % t for t in got], ["%.4f" % t for t in want]))
+    short = {"bpm": 120, "swing": 0, "length": 4, "accentAmt": 0, "clock": "internal"}
+    one = [1, 0, 0, 0] + [1] * 12
+    L, _ = drum(rim_score(short, one), [{"at": 0, "t": "transport", "playing": True}], 1.6)
+    got, want = onsets(L), hit_times(short, one, 1.6)
+    ck(f"D. pattern length 4 loops the first step only (hits at {['%.3f' % t for t in got]})", near(got, want) and want == [0.0, 0.5, 1.0, 1.5], (got, want))
+    acc_seq = {"bpm": 90, "swing": 0, "length": 4, "accentAmt": 1, "clock": "internal"}
+    L, _ = drum(rim_score(acc_seq, row, [1, 0, 1, 0] + [0] * 12), [{"at": 0, "t": "transport", "playing": True}], 0.8)
+    def win_peak(x, t, w=0.02):
+        a = int(t * SR); b = min(len(x), a + int(w * SR)); return float(np.max(np.abs(x[a:b]))) if b > a else 0.0
+    p_acc, p_plain = win_peak(L, step_sec(0, 90, 0)), win_peak(L, step_sec(1, 90, 0))
+    ck(f"D. an accented step is louder ({p_acc:.3f} vs {p_plain:.3f})", p_acc > p_plain * 1.15 and p_plain > 0.05, (p_acc, p_plain))
+    ext = {"bpm": 100, "swing": 0, "length": 4, "accentAmt": 0, "clock": "external"}
+    ticks = [{"at": 0, "t": "transport", "playing": True}] + [{"at": 0.08 + 0.2 * i, "t": "tick"} for i in range(4)]
+    L, _ = drum(rim_score(ext, row), ticks, 1.0)
+    got = onsets(L); want = [0.08 + 0.2 * i for i in range(4)]
+    ck(f"D. external clock fires one step per tick, within 5 ms", near(got, want), (got, want))
+    hats = {"device": "dekatron", "level": 1, "voices": dict(quiet, hatO={"decay": 0.9, "level": 1, "tune": 400}, hatC={"decay": 0.03, "level": 1})}
+    open_L, _ = drum(hats, [{"at": 0.05, "t": "trig", "voice": "hatO", "v": 1}], 0.4)
+    choke_L, _ = drum(hats, [{"at": 0.05, "t": "trig", "voice": "hatO", "v": 1}, {"at": 0.12, "t": "trig", "voice": "hatC", "v": 1}], 0.4)
+    sl = slice(int(0.2 * SR), int(0.35 * SR))
+    open_rms, choke_rms = float(np.sqrt(np.mean(open_L[sl] ** 2))), float(np.sqrt(np.mean(choke_L[sl] ** 2)))
+    ck(f"D. a closed hat cuts the open hat (tail {open_rms:.4f} -> {choke_rms:.4f})", choke_rms < open_rms * 0.25 and open_rms > 0.01, (open_rms, choke_rms))
+    df = pg.evaluate("__synth.drumFactory()")
+    ck(f"D. {len(df)} factory patterns (6)", len(df) == 6, df)
+    for f_ in df:
+        P = pg.evaluate("n => __synth.drumPatch(n)", f_["name"])
+        L, R = drum(P, [{"at": 0, "t": "transport", "playing": True}], 2.0)
+        pk = float(max(np.max(np.abs(L)), np.max(np.abs(R)))); rms = float(np.sqrt(np.mean(L ** 2)))
+        ck(f"D. {f_['name']}: sounds, finite, peak {db(pk):.1f} dBFS", rms > 1e-3 and pk <= 1.0 and np.all(np.isfinite(L)) and np.all(np.isfinite(R)), (rms, pk))
+    rng = random.Random(11); bad = 0; pk = 0.0; loud = 0
+    for _ in range(12):
+        steps = {vid: [1 if rng.random() < 0.4 else 0 for _s in range(16)] for vid in VOICE_IDS}
+        voices = {vid: {"tune": rng.uniform(30, 2400), "decay": rng.uniform(0.01, 1.2), "color": rng.random(),
+                        "attack": rng.random(), "level": rng.random(), "pan": rng.uniform(-1, 1)} for vid in VOICE_IDS}
+        fp = {"device": "dekatron", "level": rng.random(), "seq": {"bpm": rng.uniform(40, 240), "swing": rng.random(),
+              "length": rng.randint(1, 16), "accentAmt": rng.random()}, "steps": steps, "voices": voices,
+              "accent": [1 if rng.random() < 0.3 else 0 for _s in range(16)]}
+        L, R = drum(fp, [{"at": 0, "t": "transport", "playing": True}], 0.7)
+        bad += int(not (np.all(np.isfinite(L)) and np.all(np.isfinite(R))))
+        pk = max(pk, float(np.max(np.abs(L))), float(np.max(np.abs(R))))
+        loud += int(np.sqrt(np.mean(L ** 2)) > 1e-4)
+    ck(f"D. fuzz, 12 random patterns: finite and at or under 0 dBFS (peak {db(pk):.2f} dBFS)", bad == 0 and pk <= 1.0 and loud >= 8, (bad, pk, loud))
+    ms = pg.evaluate("""async () => { const t0 = performance.now();
+        await __synth.drumRender({patch: __synth.drumPatch('Spark'), events: [{at: 0, t: 'transport', playing: true}], seconds: 4});
+        return performance.now() - t0; }""")
+    info("D. CPU Dekatron Spark, pattern running", f"{100 * ms / 4000:.1f}% of real time in headless Chrome (offline render, drums only)")
+    pg.evaluate("__synth.setDevice('dekatron')"); pg.wait_for_timeout(250)
+    ck("D. rail: Dekatron lit, the pattern shown, Filament's filter hidden",
+       pg.evaluate("__synth.device()") == "dekatron" and pg.is_visible("#mDrumGrid") and pg.is_visible("#drumPlay")
+       and not pg.is_visible("#mFilt") and not pg.is_visible("#mCLpf") and pg.get_attribute("#devD", "aria-pressed") == "true")
+    ck("D. the grid is 8 rows of 16 steps", pg.evaluate("document.querySelectorAll('#drumGrid .dstep').length") == 128)
+    before = pg.evaluate("__synth.patch().steps.snare[3]")
+    pg.locator("#drumGrid .dstep[data-kind='snare'][data-step='3']").click(); pg.wait_for_timeout(50)
+    ck("D. clicking a step toggles it in the patch", pg.evaluate("__synth.patch().steps.snare[3]") == (0 if before else 1),
+       (before, pg.evaluate("__synth.patch().steps.snare[3]")))
+    pg.click("#drumPlay"); pg.wait_for_timeout(350)
+    dm = pg.evaluate("__synth.drumMeter()")
+    ck(f"D. play runs the pattern (step {dm.get('step')})", dm.get("playing") and dm.get("step", -1) >= 0, dm)
+    pg.evaluate("__synth.noteOn(62, 1)"); pg.wait_for_timeout(200)
+    ck("D. the keyboard plays a voice (D is the snare)", pg.evaluate("__synth.drumMeter()").get("voices", 0) >= 1)
+    pg.evaluate("__synth.noteOff(62)"); pg.click("#drumPlay"); pg.wait_for_timeout(100)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
+    ck("D. a reload comes back to Dekatron with the edited step",
+       pg.evaluate("__synth.device()") == "dekatron" and pg.evaluate("__synth.patch().steps.snare[3]") == (0 if before else 1))
+    pg.screenshot(path=os.path.join(SHOTS, "synth_dekatron_desktop.png"), full_page=True)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    ck("D. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
@@ -603,6 +725,25 @@ with sync_playwright() as pw:
         ph.screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_patch.png"))
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
+    # Dekatron on a phone, on its own page so the checks above keep starting from Filament.
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2); perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE); ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000); ph.wait_for_timeout(200)
+    ph.evaluate("__synth.setDevice('dekatron')"); ph.wait_for_timeout(250)
+    ck("D. 390px: no horizontal scroll on the pattern", ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+    ck("D. 390px: the pattern is on screen and Filament's sections are not", ph.is_visible("#mDrumGrid") and ph.is_visible("#drumPlay") and not ph.is_visible("#mFilt"))
+    small = ph.evaluate("""() => [...document.querySelectorAll('#drumRoot .dstep, #drumRoot .dpad, #drumPlay, .devbtn, .tabs button')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("D. 390px: steps, pads, play and the rail are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="voice"]'); ph.wait_for_timeout(200)
+    ck("D. 390px: the Voice tab shows the voice knobs, still no horizontal scroll", ph.is_visible("#mDrumVoice") and not ph.is_visible("#mDrumGrid")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+    small = ph.evaluate("""() => [...document.querySelectorAll('#drumVoices .chip, .tabs button')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.textContent.trim())""")
+    ck("D. 390px: voice chips are 44 px or more", not small, small)
+    ph.screenshot(path=os.path.join(SHOTS, "synth_dekatron_phone.png"))
+    ph.evaluate("__synth.setDevice('filament')")
+    ck("D. 390px: no page errors", not perr, perr)
+    ph.close()
     b.close()
 
 print()
