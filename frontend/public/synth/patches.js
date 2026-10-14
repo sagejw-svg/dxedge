@@ -4,6 +4,8 @@
 // link, an imported file, a localStorage copy from an earlier version) always loads: missing
 // fields take the default and out-of-range numbers are clamped.
 
+import { EQ_N, EQ_PRESETS, eqFit } from './rack.js';
+
 export const SCHEMA = 1;
 
 export const DEFAULT = {
@@ -30,6 +32,8 @@ export const DEFAULT = {
     spkOn: false, cab: 'monitor', spkInt: 6,
     roomOn: true, room: 'studio', rmMix: 15, rmDecay: 0.9, rmTone: 6,
     wOn: true, width: 120, wChar: 9,
+    // the graphic EQ, first in the rack (after the ensemble): off, 10 flat octave bands
+    eqOn: false, eqBands: 10, eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], eqPre: 0, eqPreset: 'flat',
   },
 };
 
@@ -50,7 +54,25 @@ export const RANGE = {
   'stereo.spread': [0, 1], 'stereo.uspread': [0, 1], 'ens.mix': [0, 100],
   'out.drive': [0, 10], 'out.bias': [-5, 5], 'out.sag': [0, 10], 'out.tone': [-5, 5], 'out.level': [-24, 12],
   'out.spkInt': [0, 10], 'out.rmMix': [0, 100], 'out.rmDecay': [0.2, 6], 'out.rmTone': [0, 10], 'out.width': [0, 200], 'out.wChar': [3, 20],
+  'out.eqBands': [10, 31], 'out.eqPre': [-12, 12],
 };
+// The graphic EQ's fields, shared with Cathode (the rack is the same for both devices).
+export const EQ_RANGE = { 'out.eqBands': [10, 31], 'out.eqPre': [-12, 12] };
+export const EQ_PRESET_IDS = EQ_PRESETS.map(p => p.id).concat(['custom']);
+// After the generic merge: snap the band count to 10, 15 or 31, and take the fader gains from the
+// raw patch (an array the merge cannot size): each clamped to +/-12 dB in 0.5 dB steps. Gains of
+// the wrong length are fitted again from the preset, or reset flat if the preset is custom.
+export function normEq(o, src) {
+  o.eqBands = EQ_N.reduce((a, b) => (Math.abs(b - o.eqBands) < Math.abs(a - o.eqBands) ? b : a), 10);
+  const g = src && Array.isArray(src.eqGains) ? src.eqGains : null;
+  if (g && g.length === o.eqBands) {
+    o.eqGains = g.map(x => { const n = +x; return isFinite(n) ? Math.round(Math.min(12, Math.max(-12, n)) * 2) / 2 : 0; });
+  } else {
+    o.eqGains = o.eqPreset !== 'custom' ? eqFit(o.eqPreset, o.eqBands) : new Array(o.eqBands).fill(0);
+    if (o.eqPreset === 'custom' && g) o.eqPreset = 'flat';
+  }
+  return o;
+}
 export const ENUMS = {
   'osc1.wave': ['saw', 'pulse', 'tri', 'sine'], 'osc2.wave': ['saw', 'pulse', 'tri', 'sine'],
   'sub.wave': ['square', 'sine'], 'noise.color': ['white', 'pink'],
@@ -66,6 +88,7 @@ export const ENUMS = {
   'out.topology': ['se', 'pp'],
   'out.cab': ['console', 'bakelite', 'horn', 'monitor'],
   'out.room': ['living', 'studio', 'theater', 'hall'],
+  'out.eqPreset': EQ_PRESET_IDS,
 };
 export const CATS = ['Bass', 'Lead', 'Pad', 'Keys', 'Pluck', 'FX', 'Halloween'];
 
@@ -87,6 +110,7 @@ export function normalize(p) {
       else if (typeof d === 'string') { const e = ENUMS[path]; const v = String(s).slice(0, 60); if (!e || e.includes(v)) dst[k] = v; }
     });
   })(out, p, '');
+  normEq(out.out, p.out);
   if (!CATS.includes(out.cat)) out.cat = 'Keys';
   out.voice.count = Math.round(out.voice.count); out.voice.unison = Math.round(out.voice.unison);
   out.v = SCHEMA;

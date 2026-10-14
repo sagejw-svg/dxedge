@@ -15,7 +15,8 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
+Halloween presets), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
@@ -1011,6 +1012,151 @@ with sync_playwright() as pw:
     ck("M. Render WAV: a progress note, then the result", "rendered" in pg.inner_text("#wavStat"), pg.inner_text("#wavStat"))
     ck("M. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Q. the graphic EQ (rack-wide)
+    # A quiet saw at 50 Hz through the rack with the EQ in and out: each harmonic's level ratio is
+    # the EQ's response at that frequency, so one pair of renders measures the whole curve. The
+    # output tube runs clean, so the stages after the EQ stay linear.
+    def eqp(base, **out):
+        q = json.loads(json.dumps(base)); q.setdefault("out", {}).update(out); return q
+    sawq = patch(osc1={"wave": "saw", "level": 0.12, "fixed": 50}, filt={"model": "valve12", "cutoff": 20000, "res": 0, "drive": 0})
+    HARM = [h for h in sorted(set(int(round(50 * 2 ** (k / 3) / 50)) * 50 for k in range(0, 26))) if h <= 15000]
+    def harm_amps(x, hs): return np.array([tone_amp(x, h) for h in hs])
+    def eq_measure(base, out, hs=HARM, ev=None, ch=0, ref=None):
+        ev = ev or note(60, 0.0)
+        A = render(eqp(base, **(ref or {"eqOn": False})), ev, 1.4)[ch][int(0.3 * SR):int(1.3 * SR)]
+        B = render(eqp(base, **out), ev, 1.4)[ch][int(0.3 * SR):int(1.3 * SR)]
+        return 20 * np.log10(harm_amps(B, hs) / harm_amps(A, hs))
+    def eq_want(gains, n, hs=HARM): return np.array(pg.evaluate("a => a.hs.map(f => __synth.eq.response(f, a.g, a.n))", {"hs": hs, "g": gains, "n": n}))
+    rnd_eq = random.Random(11)
+    g31 = [round(rnd_eq.uniform(-12, 12) * 2) / 2 for _ in range(31)]
+    for n, gains, label in ((31, g31, "a random 31-band curve"), (10, pg.evaluate("__synth.eq.fit('smile', 10)"), "the smile preset at 10 bands"),
+                            (15, pg.evaluate("__synth.eq.fit('radio', 15)"), "the AM radio preset at 15 bands")):
+        meas = eq_measure(sawq, {"eqOn": True, "eqBands": n, "eqGains": gains, "eqPreset": "custom"})
+        err = float(np.max(np.abs(meas - eq_want(gains, n))))
+        ck(f"Q. EQ: {label}, measured at {len(HARM)} harmonics from 50 Hz to 15 kHz, matches the plotted curve within 0.25 dB (worst {err:.2f})", err <= 0.25,
+           [(h, round(m, 2), round(w_, 2)) for h, m, w_ in zip(HARM, meas, eq_want(gains, n))])
+    # one band alone: +12 dB at its centre, and the neighbours an octave away barely move
+    g10 = [0] * 10; g10[5] = 12
+    m1 = eq_measure(sawq, {"eqOn": True, "eqBands": 10, "eqGains": g10}, hs=[1000, 500, 2000, 250, 4000])
+    ck(f"Q. EQ: the 1 kHz fader at +12 lifts 1 kHz by {m1[0]:.2f} dB and an octave either side by {m1[1]:.1f} and {m1[2]:.1f} dB", abs(m1[0] - 12) <= 0.3 and max(m1[1:3]) < 5 and max(abs(m1[3]), abs(m1[4])) < 1.5, m1)
+    # off is off: faders and level set but the EQ bypassed measure the same as no EQ at all
+    moff = eq_measure(sawq, {"eqOn": False, "eqBands": 31, "eqGains": g31, "eqPre": 9})
+    ck(f"Q. EQ off is out of circuit: its faders and level make no difference (worst {float(np.max(np.abs(moff))):.3f} dB)", float(np.max(np.abs(moff))) <= 0.05, moff)
+    # in, flat, at 0 dB: transparent
+    m0 = eq_measure(sawq, {"eqOn": True, "eqBands": 31, "eqGains": [0] * 31, "eqPre": 0})
+    ck(f"Q. EQ in but flat is transparent (worst {float(np.max(np.abs(m0))):.3f} dB)", float(np.max(np.abs(m0))) <= 0.05, m0)
+    # the level knob
+    m6 = eq_measure(sawq, {"eqOn": True, "eqPre": 6})
+    ck(f"Q. EQ level +6 dB lifts everything by 6 (measured {float(np.mean(m6)):.2f}, spread {float(np.ptp(m6)):.2f})", abs(float(np.mean(m6)) - 6) <= 0.2 and float(np.ptp(m6)) <= 0.2, m6)
+    # the presets: the fitted faders land on each preset's shape at every band centre
+    worst = {}
+    for pid in pg.evaluate("__synth.eq.presets()"):
+        for n in (10, 15, 31):
+            e = pg.evaluate("""a => { const g = __synth.eq.fit(a.id, a.n), c = __synth.eq.centres(a.n);
+              return Math.max(...c.filter(f => f >= 30 && f <= 16000).map(f => Math.abs(__synth.eq.response(f, g, a.n) - __synth.eq.target(a.id, f)))); }""", {"id": pid, "n": n})
+            worst[f"{pid}/{n}"] = round(e, 2)
+    bad = {k: v for k, v in worst.items() if v > (2.5 if k.endswith("/10") else 1.5)}
+    ck(f"Q. EQ presets: {len(worst) // 3} presets x 3 band counts land within 1.5 dB of their shape (2.5 at 10 bands) at every band centre", not bad, bad)
+    info("Q. EQ preset fit, worst dB per preset/bands", worst)
+    # stereo: both channels get the same EQ (mono-safe by construction), measured on a hard-panned pair of voices
+    wide = patch(osc1={"wave": "saw", "level": 0.12, "fixed": 50}, filt={"model": "valve12", "cutoff": 20000, "res": 0, "drive": 0}, stereo={"pan": "alt", "spread": 1})
+    sm = pg.evaluate("__synth.eq.fit('smile', 15)")
+    two = note(60, 0.0) + note(64, 0.0)
+    mL = eq_measure(wide, {"eqOn": True, "eqBands": 15, "eqGains": sm}, ev=two, ch=0)
+    mR = eq_measure(wide, {"eqOn": True, "eqBands": 15, "eqGains": sm}, ev=two, ch=1)
+    w15 = eq_want(sm, 15)
+    ck(f"Q. EQ: left and right get the same curve (worst {float(max(np.max(np.abs(mL - w15)), np.max(np.abs(mR - w15)))):.2f} dB from the plot)", float(max(np.max(np.abs(mL - w15)), np.max(np.abs(mR - w15)))) <= 0.25, (mL, mR))
+    P = pg.evaluate("__synth.factoryPatch('Wide Novachord Strings')")
+    folds = []
+    for on in (False, True):
+        q = eqp(P, eqOn=on, eqBands=15, eqGains=sm, eqPreset="smile")
+        L, R = render(q, [e for k in (48, 55, 60, 64) for e in note(k, 0.05, 1.8)], 2.4)
+        sg = slice(int(0.3 * SR), int(1.7 * SR))
+        st = math.sqrt((np.mean(L[sg] ** 2) + np.mean(R[sg] ** 2)) / 2); mo = math.sqrt(np.mean(((L[sg] + R[sg]) / 2) ** 2)); folds.append(db(st) - db(mo))
+    # (this patch's voices start at random phases, so its fold varies about 0.3 dB from render to render either way)
+    ck(f"Q. EQ on a wide patch keeps its mono fold inside the 3 dB limit ({folds[0]:.2f} dB off, {folds[1]:.2f} dB on)", folds[1] <= 3 and abs(folds[1] - folds[0]) <= 0.75, folds)
+    # Cathode carries the same rack fields: its EQ measures the same way (VCO 1 saw at 110 Hz, A2)
+    cq = cpatch(vco1={"wave": "saw", "scale": 8, "level": 0.12}, vca={"level": 0.5, "vel": 0, "bias": 0})
+    ch_h = [110 * k for k in (1, 2, 3, 4, 6, 9, 14, 23, 36, 55, 90, 130)]
+    rc = pg.evaluate("__synth.eq.fit('presence', 31)")
+    mc = eq_measure(cq, {"eqOn": True, "eqBands": 31, "eqGains": rc, "eqPreset": "presence"}, hs=ch_h, ev=note(45, 0.0))
+    wc = eq_want(rc, 31, ch_h)
+    ck(f"Q. EQ is rack-wide: Cathode's own EQ (presence, 31 bands) matches the plot within 0.25 dB (worst {float(np.max(np.abs(mc - wc))):.2f})", float(np.max(np.abs(mc - wc))) <= 0.25, list(zip(ch_h, mc, wc)))
+    # headroom: every fader and the level at +12 into a loud chord still never passes 0 dBFS
+    hot = patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, voice={"level": 1},
+                out={"tube": "EL34", "topology": "pp", "drive": 8, "level": 12, "roomOn": True, "wOn": True, "width": 200, "eqOn": True, "eqBands": 31, "eqGains": [12] * 31, "eqPre": 12})
+    L, R = render(hot, [e for k in (36, 48, 55, 60, 64, 67, 72, 79) for e in note(k, 0.0)], 2.0)
+    pk = float(max(np.max(np.abs(L)), np.max(np.abs(R))))
+    ck(f"Q. EQ all +12 and level +12 on a full chord: finite and under 0 dBFS (peak {db(pk):.2f} dBFS)", bool(np.all(np.isfinite(L)) and np.all(np.isfinite(R))) and pk <= 1.0, pk)
+    # the schema: old patches load; out-of-range and odd values are put right
+    nz = pg.evaluate("""() => { const N = __synth.eq.normalize, o = p => N(p).out;
+      const old = o({ name: 'old', out: { tube: 'EL34' } });
+      const snap = o({ out: { eqBands: 12 } }), snap2 = o({ out: { eqBands: 25 } });
+      const clamp = o({ out: { eqBands: 10, eqGains: [20, -30, 'x', null, 1.26, 0, 0, 0, 0, 0], eqPre: 99, eqPreset: 'custom' } });
+      const refit = o({ out: { eqBands: 31, eqGains: [1, 2, 3], eqPreset: 'warm' } });
+      const bad = o({ out: { eqBands: 15, eqGains: [1, 2], eqPreset: 'custom' } });
+      const unk = o({ out: { eqPreset: 'nonsense' } });
+      const cath = N({ device: 'cathode', out: { eqOn: true, eqBands: 15, eqGains: new Array(15).fill(3), eqPreset: 'custom' } }).out;
+      const cold = N({ device: 'cathode' }).out;
+      return { old: [old.eqOn, old.eqBands, old.eqGains.length, old.eqGains.every(g => g === 0), old.eqPre, old.eqPreset],
+        snap: [snap.eqBands, snap.eqGains.length, snap2.eqBands], clamp: [clamp.eqGains.slice(0, 5), clamp.eqPre],
+        refit: [refit.eqGains.length, JSON.stringify(refit.eqGains) === JSON.stringify(__synth.eq.fit('warm', 31))], bad: [bad.eqGains.length, bad.eqPreset, bad.eqGains.every(g => g === 0)],
+        unk: unk.eqPreset, cath: [cath.eqOn, cath.eqBands, cath.eqGains[7]], cold: [cold.eqOn, cold.eqBands, cold.eqGains.length] }; }""")
+    ck("Q. schema: a patch from before the EQ loads with it off, 10 flat bands, level 0, preset flat", nz["old"] == [False, 10, 10, True, 0, "flat"], nz["old"])
+    ck("Q. schema: a band count snaps to 10, 15 or 31 and the gains follow it", nz["snap"] == [10, 10, 31], nz["snap"])
+    ck("Q. schema: fader gains clamp to +/-12 dB in 0.5 dB steps, junk reads 0; level clamps to +12", nz["clamp"] == [[12, -12, 0, 0, 1.5], 12], nz["clamp"])
+    ck("Q. schema: gains of the wrong length are fitted again from the preset", nz["refit"] == [31, True], nz["refit"])
+    ck("Q. schema: wrong-length custom gains reset flat", nz["bad"] == [15, "flat", True], nz["bad"])
+    ck("Q. schema: an unknown preset name falls back to flat", nz["unk"] == "flat", nz["unk"])
+    ck("Q. schema: Cathode patches carry the same EQ fields", nz["cath"] == [True, 15, 3] and nz["cold"] == [False, 10, 10], nz)
+    # the section, in the page
+    pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
+    sec = pg.locator("#mEq"); sec.scroll_into_view_if_needed()
+    ck("Q. UI: the Graphic EQ section is in the rack, off for a factory patch", pg.is_visible("#mEq") and pg.get_attribute("#eqOnBtn", "aria-pressed") == "false" and pg.evaluate("__synth.engine().C.filters.length") == 10)
+    pg.click('#eqPresetChips .chip[data-v="smile"]'); pg.wait_for_timeout(250)
+    st = pg.evaluate("[__synth.patch().out, __synth.eq.live()]")
+    ck("Q. UI: a preset chip switches the EQ on and the rack runs its faders", st[0]["eqOn"] and st[0]["eqPreset"] == "smile" and st[0]["eqGains"] == pg.evaluate("__synth.eq.fit('smile', 10)")
+       and all(abs(a - b_) < 0.05 for a, b_ in zip(st[1]["gains"], st[0]["eqGains"])) and pg.get_attribute("#eqOnBtn", "aria-pressed") == "true", st)
+    pg.click('#eqBandChips .chip[data-v="31"]'); pg.wait_for_timeout(300)
+    st = pg.evaluate("[__synth.patch().out, __synth.eq.live()]")
+    ck("Q. UI: 31 bands rebuilds the rack's EQ (30 peaking filters and a top shelf) and keeps the preset", st[1]["n"] == 31 and st[1]["types"].count("peaking") == 30 and st[1]["types"][-1] == "highshelf"
+       and st[0]["eqGains"] == pg.evaluate("__synth.eq.fit('smile', 31)"), st)
+    cvb = pg.query_selector("#eqCv").bounding_box()
+    # band 20 of 31 (1.6 kHz): the plot's left margin is 28 px, the top 8 px, the bottom 16 px
+    bx = cvb["x"] + 28 + (cvb["width"] - 34) / 31 * 20.5
+    pg.mouse.move(bx, cvb["y"] + 8 + 2); pg.mouse.down(); pg.mouse.up(); pg.wait_for_timeout(200)
+    o = pg.evaluate("__synth.patch().out")
+    ck(f"Q. UI: clicking near the top of a fader sets that band near +12 and the preset to custom ({o['eqGains'][20]} dB at 1.6 kHz)", o["eqGains"][20] >= 11 and o["eqPreset"] == "custom"
+       and pg.is_visible('#eqPresetChips .chip[data-v="custom"]') and abs(pg.evaluate("__synth.eq.live().gains[20]") - o["eqGains"][20]) < 0.1, o)
+    cvb = pg.query_selector("#eqCv").bounding_box()       # the custom chip may have moved it
+    bx = cvb["x"] + 28 + (cvb["width"] - 34) / 31 * 20.5
+    pg.mouse.move(cvb["x"] + 28 + (cvb["width"] - 34) / 31 * 2.5, cvb["y"] + cvb["height"] - 16 - 2); pg.mouse.down()
+    pg.mouse.move(cvb["x"] + 28 + (cvb["width"] - 34) / 31 * 8.5, cvb["y"] + cvb["height"] - 16 - 2, steps=4); pg.mouse.up(); pg.wait_for_timeout(150)
+    o = pg.evaluate("__synth.patch().out")
+    ck(f"Q. UI: a sweep across the faders draws a curve (bands 2 to 8 all pulled down: {o['eqGains'][2:9]})", all(g <= -10 for g in o["eqGains"][2:9]), o["eqGains"])
+    pg.mouse.dblclick(bx, cvb["y"] + cvb["height"] / 2); pg.wait_for_timeout(100)
+    ck("Q. UI: double click zeroes a band", pg.evaluate("__synth.patch().out.eqGains[20]") == 0)
+    pg.focus("#eqCv"); pg.keyboard.press("ArrowUp"); pg.keyboard.press("ArrowUp"); pg.keyboard.press("Shift+ArrowUp"); pg.wait_for_timeout(100)
+    ck("Q. UI: arrow keys move the selected band (0.5 dB, shift 3 dB) and do not play notes", pg.evaluate("__synth.patch().out.eqGains[20]") == 4 and not pg.evaluate("__synth.state()").get("down"), pg.evaluate("__synth.patch().out.eqGains[20]"))
+    pg.click("#eqOnBtn"); pg.wait_for_timeout(100)
+    ck("Q. UI: the on button bypasses the EQ and keeps the faders", not pg.evaluate("__synth.patch().out.eqOn") and pg.evaluate("__synth.patch().out.eqGains[20]") == 4 and pg.get_attribute("#mEq", "class").find("off") >= 0)
+    ck("Q. UI: the plot is painted", pg.evaluate("__synth.eq.painted()") > 5, pg.evaluate("__synth.eq.painted()"))
+    # each device keeps its own EQ; the rack follows the lit one
+    pg.click("#devC"); pg.wait_for_timeout(250)
+    ck("Q. UI: Cathode has its own EQ (its patch's 10 bands, off) and the rack follows it", pg.evaluate("__synth.eq.live().n") == 10 and not pg.evaluate("__synth.patch().out.eqOn") and pg.is_visible("#mEq"))
+    pg.click('#eqPresetChips .chip[data-v="air"]'); pg.wait_for_timeout(200)
+    pg.click("#devF"); pg.wait_for_timeout(250)
+    ck("Q. UI: back on Filament its 31-band custom curve returns", pg.evaluate("__synth.eq.live().n") == 31 and pg.evaluate("__synth.patch().out.eqPreset") == "custom")
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
+    ck("Q. UI: the EQ settings survive a reload", pg.evaluate("__synth.patch().out.eqBands") == 31 and pg.evaluate("__synth.patch().out.eqGains[20]") == 4 and pg.evaluate("__synth.eq.live().n") == 31)
+    # the LED ladders read the live signal (the audio context runs after a gesture)
+    pg.locator("#mEq").scroll_into_view_if_needed(); pg.click('#eqPresetChips .chip[data-v="flat"]')
+    k = pg.query_selector('.key[data-n="60"]'); k.scroll_into_view_if_needed(); kb_ = k.bounding_box()
+    pg.mouse.move(kb_["x"] + kb_["width"] / 2, kb_["y"] + kb_["height"] * 0.9); pg.mouse.down(); pg.wait_for_timeout(700)
+    lv = pg.evaluate("__synth.eq.levels()"); pg.mouse.up(); pg.wait_for_timeout(100)
+    ck(f"Q. UI: the LED ladders read the live spectrum (loudest band {max(lv) if lv else -999:.0f} dBFS)", bool(lv) and max(lv) > -70, lv)
+    ck("Q. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
@@ -1024,6 +1170,9 @@ with sync_playwright() as pw:
     big["filt"]["offset"] = 0; big["voice"] = {"unison": 2, "count": 8}; big["ens"] = {"on": True, "mode": "strings", "mix": 50}
     r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
     info("9. CPU valve12, 8 notes x unison 2 = 16 voices, ensemble on", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+    big["voice"] = {"unison": 1, "count": 8}; big["ens"] = {"on": False}; big["out"] = {"eqOn": True, "eqBands": 31, "eqGains": [3, -3] * 15 + [3]}
+    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
+    info("9. CPU valve12, 8 voices, graphic EQ on at 31 bands", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
 
     # ---------------------------------------------------------------- 12. MIDI
     def rmidi(p, midi, seconds):
@@ -1689,6 +1838,17 @@ with sync_playwright() as pw:
            ph.is_visible("#mMaster") and ph.is_visible("#fxRev") and not ph.is_visible("#mFilt")
            and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}") and not small,
            (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), small))
+        ph.locator("#mEq").scroll_into_view_if_needed()
+        ck(f"10. {w}px: the Rack tab shows the graphic EQ, no horizontal scroll", ph.is_visible("#eqCv") and not ph.is_visible("#mOsc1")
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        small = ph.evaluate("""() => [...document.querySelectorAll('#mEq .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.textContent)""")
+        ck(f"10. {w}px: the EQ's chips are 44 px or more", not small, small)
+        ph.locator('#eqPresetChips .chip[data-v="warm"]').tap(); ph.wait_for_timeout(150)
+        cb = ph.query_selector("#eqCv").bounding_box()
+        ph.touchscreen.tap(cb["x"] + 28 + (cb["width"] - 34) / 10 * 7.5, cb["y"] + 8 + 3); ph.wait_for_timeout(150)
+        o = ph.evaluate("__synth.patch().out")
+        ck(f"10. {w}px: a preset tap turns the EQ on; a tap on a fader sets it ({o['eqGains'][7]} dB at 4 kHz)", o["eqOn"] and o["eqGains"][7] >= 10 and o["eqPreset"] == "custom", o)
+        ph.locator("#mEq").screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_eq.png"))
         ph.locator('.tabs [data-go="mix"]').scroll_into_view_if_needed(); ph.locator('.tabs [data-go="mix"]').tap(); ph.wait_for_timeout(180)
         ck(f"10. {w}px: the Mix tab is the desk, with letters, arms, meters and sends",
            ph.is_visible("#mHost") and ph.is_visible("#mixFArm") and ph.is_visible("#mixFMeter") and ph.is_visible("#mixFRev")

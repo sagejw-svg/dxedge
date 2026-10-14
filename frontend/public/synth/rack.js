@@ -361,6 +361,11 @@ function makeSynthChain(ctx){
   // needs the input scaled by 1/1.25 to stay unity gain below the knee.
   C.ceilIn=G(1/1.25); C.final.connect(C.ceilIn); C.ceilIn.connect(C.ceil); C.out=C.ceil;
   C.setMono=function(on){ C.setP(C.stG.gain, on?0:1); C.setP(C.moG.gain, on?1:0); };   // moSum already halves: (L+R)/2, the mid
+  // The EQ's spectrum tap (live only). The copied route() disconnects the chain's input and the
+  // EQ's output each time it runs, so the tap is plugged back in after every route.
+  addEqTap(C);
+  var route0 = C.route;
+  C.route = function(S){ route0(S); if(C.eqAn){ C.input.connect(C.eqTapIn); C.eqOut.connect(C.eqAn); } };
   return C;
 }
 // ======================================================================
@@ -423,8 +428,70 @@ function makeEnsemble(ctx){
   return E;
 }
 
+// ======================================================================
+// Graphic EQ, rack-wide (the first stage of makeChain: ensemble > EQ > output tubes).
+// The chain's EQ (ISO band centres, 1/1, 2/3 and 1/3 octave peaking filters, the top band a
+// shelf) and its response maths are in the copied block above. Here: the band counts a patch may
+// use, the presets, and fitting a preset onto the faders. eqFit is copied from /otr/index.html at
+// f9f5d2b (presetGains, lines 2670-2677); the preset shapes are new, voiced for a synthesizer.
+// ======================================================================
+var EQ_N = [10, 15, 31];
+function eqLg2(x){ return Math.log(x)/Math.LN2; }
+function eqBell(f,fc,oct,db){ var o=eqLg2(f/fc)/oct; return db*Math.exp(-o*o*1.4); }
+function eqHi(f,fc,db){ return db/(1+Math.pow(2,-eqLg2(f/fc)*2.5)); }
+function eqLo(f,fc,db){ return db/(1+Math.pow(2, eqLg2(f/fc)*2.5)); }
+var EQ_PRESETS = [
+  { id:'flat',     name:'flat',      f:function(){ return 0; } },
+  { id:'warm',     name:'warm',      f:function(f){ return eqBell(f,160,1.3,3) + eqBell(f,500,1.2,1) + eqHi(f,7000,-4); } },
+  { id:'smile',    name:'smile',     f:function(f){ return eqLo(f,120,6) + eqHi(f,8000,4) + eqBell(f,1000,1.5,-1); } },
+  { id:'bass',     name:'bass lift', f:function(f){ return eqLo(f,150,7) + eqBell(f,400,1,-1); } },
+  { id:'presence', name:'presence',  f:function(f){ return eqBell(f,2500,1.2,4) + eqLo(f,80,-2); } },
+  { id:'air',      name:'air',       f:function(f){ return eqHi(f,10000,6); } },
+  { id:'scoop',    name:'mid scoop', f:function(f){ return eqBell(f,800,1.5,-6); } },
+  { id:'lowcut',   name:'low cut',   f:function(f){ return eqLo(f,150,-12); } },
+  { id:'radio',    name:'AM radio',  f:function(f){ return eqLo(f,250,-12) + eqHi(f,3500,-12) + eqBell(f,1300,1.2,3); } }
+];
+var EQ_PRESET_BY = {}; EQ_PRESETS.forEach(function(p){ EQ_PRESET_BY[p.id]=p; });
+function eqBandsOf(n){ return ISO[n] ? n : 10; }
+function eqCentres(n){ return ISO[eqBandsOf(n)].slice(); }
+// The summed response in dB of n faders at gains (the same filters the chain builds).
+function eqResponse(f, gains, n, fs){ return respFor(f, gains, eqBandsOf(n), fs||48000); }
+// Neighbouring bands overlap, so faders set straight to a shape overshoot it. A few relaxation
+// passes pick fader positions whose summed curve lands on the preset's shape.
+function eqFit(id, n){
+  n=eqBandsOf(n);
+  var p=EQ_PRESET_BY[id]||EQ_PRESET_BY.flat, c=ISO[n], tg=c.map(function(fc){ return clampN(p.f(fc),-12,12); }), g=tg.slice();
+  for(var it=0; it<10; it++){ var r=c.map(function(fc){ return respFor(fc, g, n, 48000); });
+    g=g.map(function(x,i){ return clampN(x+0.7*(tg[i]-r[i]), -12, 12); }); }
+  return g.map(function(x){ x=Math.round(x*2)/2; return Math.abs(x)<0.5?0:x; });
+}
+// The target shape of a preset at a frequency (what eqFit aims for), for the tests and the plot.
+function eqTarget(id, f){ var p=EQ_PRESET_BY[id]||EQ_PRESET_BY.flat; return clampN(p.f(f),-12,12); }
+// A new band count keeps the shape: a preset is fitted again; custom faders read the old curve
+// (interpolated on a log frequency axis) at their new centres. Copied from /otr setBandCount.
+function eqResample(gains, from, to, preset){
+  from=eqBandsOf(from); to=eqBandsOf(to);
+  if(preset && preset!=='custom') return eqFit(preset, to);
+  var old=ISO[from], og=gains;
+  return ISO[to].map(function(fc){
+    var x=eqLg2(fc), i=0; while(i<old.length-1 && eqLg2(old[i+1])<x) i++;
+    if(x<=eqLg2(old[0])) return og[0]||0; if(i>=old.length-1) return og[old.length-1]||0;
+    var f=(x-eqLg2(old[i]))/(eqLg2(old[i+1])-eqLg2(old[i])); return Math.round(((og[i]||0)*(1-f)+(og[i+1]||0)*f)*2)/2; });
+}
+// Live only: an analyser for the EQ's LED ladders. It hears the EQ's output when the EQ is in
+// circuit and the chain's input when it is bypassed (setEqTap), so the ladders always move.
+function addEqTap(C){
+  var ctx=C.ctx; if(!C.live) return C;
+  C.eqAn=ctx.createAnalyser(); C.eqAn.fftSize=8192; C.eqAn.smoothingTimeConstant=0;
+  C.eqTapIn=ctx.createGain(); C.eqTapIn.gain.value=1; C.input.connect(C.eqTapIn); C.eqTapIn.connect(C.eqAn);
+  C.eqOut.connect(C.eqAn);
+  C.setEqTap=function(eqOn){ C.setP(C.eqTapIn.gain, eqOn?0:1); };
+  return C;
+}
+
 // The tube voicings the worklet needs (it cannot import this module in every browser).
 function tubeData(){ return TUBES.map(function(t){ return { id:t.id, gain:t.gain, b0:t.b0, kp:t.kp, kn:t.kn, h:t.h, hp:t.hp, kind:t.kind }; }); }
 
 export { TUBES, TUBE_BY, CABS, CAB_BY, ROOMS, ROOM_BY, tubeCurve, curveAt, harmonics, makeChain, makeSynthChain,
-         compMakeupDb, dB2lin, clampN, hashStr, mulberry32, ppMakeup, tubeData, makeEnsemble, ENS_MODES };
+         compMakeupDb, dB2lin, clampN, hashStr, mulberry32, ppMakeup, tubeData, makeEnsemble, ENS_MODES,
+         ISO, EQ_N, EQ_PRESETS, EQ_PRESET_BY, eqCentres, eqResponse, eqFit, eqTarget, eqResample, addEqTap };

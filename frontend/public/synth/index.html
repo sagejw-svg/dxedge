@@ -465,6 +465,12 @@
   #mMaster .fxoff .knobs { opacity: 0.45; }
   #mMaster select.btn { max-width: 130px; min-width: 0; }
   #wavSecs { width: 64px; background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 4px 6px; font-size: 12px; }
+  /* graphic EQ: adapted from /otr (f9f5d2b, index.html lines 486-490) */
+  .eq-read { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; min-height: 1.5em; margin: 2px 0 4px; }
+  .eq-read .dim { color: var(--dim); }
+  canvas#eqCv { width: 100%; height: 190px; display: block; touch-action: none; cursor: crosshair; border-radius: 6px; outline: none; border: 1px solid var(--border); background: #070707; }
+  canvas#eqCv:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
+  #mEq.off canvas#eqCv { opacity: 0.75; }
 
   /* keybed */
   .keybed { display: flex; gap: 8px; align-items: stretch; padding: 8px 10px 10px; border-top: 1px solid #000; background: linear-gradient(180deg, #0b0b0b, #121212); }
@@ -696,6 +702,7 @@
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
     #mHost input[type="range"], #hostTempo, #projName, #mixName { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
+    canvas#eqCv { height: 170px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
     #wavSecs { min-height: 44px; min-width: 44px; }
@@ -880,6 +887,13 @@
         <div class="knobs" id="kStereo"></div></section>
       <section class="mod" data-tab="stereo rack" id="mEns"><h3><span class="pilot" id="ensPilot"></span>Ensemble<button class="chip sw" id="ensOnBtn" aria-pressed="false">off</button></h3><div class="chips" data-chips="ens.mode"></div><div class="knobs" id="kEns"></div>
         <div class="note">Bucket brigade chorus before the output tubes. I and II sweep slow, I+II shimmers, strings is the three-phase ensemble of the string machines.</div></section>
+      <section class="mod" data-tab="rack" id="mEq" data-wide><h3><span class="pilot" id="eqPilot"></span>Graphic EQ<button class="chip sw" id="eqOnBtn" aria-pressed="false">off</button></h3>
+        <div class="chips" id="eqBandChips" role="group" aria-label="Number of bands"><span class="cl">bands</span></div>
+        <div class="chips" id="eqPresetChips" role="group" aria-label="EQ preset"></div>
+        <div class="eq-read" id="eqRead"><span class="dim">drag the faders, or sweep across to draw a curve</span></div>
+        <canvas id="eqCv" tabindex="0" aria-label="Graphic equalizer. Left and right arrows pick a band, up and down change its level (shift for 3 dB), 0 resets it."></canvas>
+        <div class="knobs" id="kEq"></div>
+        <div class="note">After the ensemble and before the output tubes, so a boost drives them harder. &plusmn;12 dB per band; double click a band to zero it. The LED ladders show the live spectrum.</div></section>
       <section class="mod" data-tab="rack" id="mOut" data-wide><h3><span class="pilot"></span>Output tubes, V3 and V4</h3><div class="chips" data-chips="out.tube"></div><div class="chips" data-chips="out.topology"></div>
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
       <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
@@ -1212,7 +1226,7 @@
 
 <script type="module">
 import { makeKnob } from './knob.js';
-import { TUBES, TUBE_BY } from './rack.js';
+import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample } from './rack.js';
 import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
@@ -2227,6 +2241,7 @@ K('kSpk', 'out.spkInt', 'intensity', { min: 0, max: 10, step: 0.1 });
 K('kRoom', 'out.rmMix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 K('kRoom', 'out.rmDecay', 'decay', { min: 0.2, max: 6, step: 0.05, fmt: v => v.toFixed(2) + 's' });
 K('kRoom', 'out.rmTone', 'tone', { min: 0, max: 10, step: 0.1 });
+K('kEq', 'out.eqPre', 'level', { min: -12, max: 12, step: 0.5, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'dB', title: 'EQ level: into the faders, so it sets how hard the EQ drives the output tubes' });
 
 // ---- Cathode ----
 const BSQ = m => ({ to: p => m * p * Math.abs(p), from: v => Math.sign(v) * Math.sqrt(Math.abs(v) / m) });     // square law: fine near 0
@@ -2275,9 +2290,9 @@ function toggle(id, path, label) {
 }
 const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), toggle('wOnBtn', 'out.wOn', on => on ? 'width on' : 'width off'),
             toggle('spkOnBtn', 'out.spkOn', on => on ? 'on' : 'off'), toggle('roomOnBtn', 'out.roomOn', on => on ? 'on' : 'off'),
-            toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off')];
+            toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off'), toggle('eqOnBtn', 'out.eqOn', on => on ? 'on' : 'off')];
 // touching a bypassed module's control switches it on (the /otr rack rule)
-[['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on']].forEach(([id, path]) => {
+[['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on'], ['mEq', 'out.eqOn']].forEach(([id, path]) => {
   $(id).addEventListener('pointerdown', e => { if (e.target.closest('.sw')) return; if (!getPath(cur, path)) { setPath(cur, path, true); afterChange(path); pushPatch(false); } });
 });
 
@@ -2297,6 +2312,8 @@ function afterChange(path) {
   $('spkPilot').classList.toggle('off', !cur.out.spkOn); $('roomPilot').classList.toggle('off', !cur.out.roomOn);
   $('mSpk').classList.toggle('off', !cur.out.spkOn); $('mRoom').classList.toggle('off', !cur.out.roomOn);
   $('ensPilot').classList.toggle('off', !cur.ens.on); $('mEns').classList.toggle('off', !cur.ens.on);
+  $('eqPilot').classList.toggle('off', !cur.out.eqOn); $('mEq').classList.toggle('off', !cur.out.eqOn);
+  refreshEqChips(); EQV.dirty = true;
   $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
   $('topoV4').textContent = cur.out.topology === 'pp' ? 'PP' : 'SE';
   if (path && !String(path).startsWith('__')) markEdited();
@@ -2349,6 +2366,140 @@ function refreshAll() {
   if (dev === 'additron' && adPanel) adPanel.sync();
   if (dev === 'rhumbatron' && rhumPanel) rhumPanel.sync();
   if (dev === 'resnatron' && rnPanel) rnPanel.sync();
+}
+
+// ---------------------------------------------------------------- graphic EQ (rack-wide)
+// Faders over LED ladders, with the summed curve on top; presets and the band count as chips.
+// The drawing and the pointer and key handling are adapted from /otr (f9f5d2b, index.html drawEq
+// and its handlers, lines 4217-4319). The state here is the active device's patch (cur.out.eq*),
+// so Filament and Cathode each carry their own EQ, like the rest of the rack.
+const EQV = { sel: -1, hover: -1, lv: [], pk: [], pkT: [], drag: null, dirty: true, curve: null, last: 0, bins: null, buf: null };
+const LED_MIN = -80, LED_MAX = -26;            // band power in dBFS mapped onto the ladder
+const BPO_ = { 10: 1, 15: 1.5, 31: 3 };
+const lg2 = x => Math.log(x) / Math.LN2;
+const sgnDb = v => (v > 0 ? '+' : '') + (Math.round(v * 10) / 10).toFixed(1) + ' dB';
+const fmtF = f => f >= 1000 ? (f % 1000 === 0 ? f / 1000 : (f / 1000).toFixed(f < 10000 ? 2 : 1).replace(/0+$/, '').replace(/\.$/, '')) + 'k' : String(f);
+const eqSR = () => (ctx ? ctx.sampleRate : 48000);
+const eqResp = f => eqResponse(f, cur.out.eqGains, cur.out.eqBands, eqSR());
+function eqChip(host, label, v, fn) {
+  const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.textContent = label; b.dataset.v = String(v);
+  b.addEventListener('click', fn); host.appendChild(b); return b;
+}
+EQ_N.forEach(n => eqChip($('eqBandChips'), String(n), n, () => setEqBands(n)));
+EQ_PRESETS.forEach(p => eqChip($('eqPresetChips'), p.name, p.id, () => setEqPreset(p.id)));
+eqChip($('eqPresetChips'), 'custom', 'custom', () => {}).title = 'Your own curve: drag the faders';
+function refreshEqChips() {
+  const o = cur.out;
+  $('eqBandChips').querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === o.eqBands)));
+  $('eqPresetChips').querySelectorAll('.chip').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.v === o.eqPreset)); if (b.dataset.v === 'custom') b.style.visibility = o.eqPreset === 'custom' ? '' : 'hidden'; });
+}
+function eqEdited() { EQV.dirty = true; afterChange('out.eqGains'); pushPatch(false); }
+function setEqPreset(id) { cur.out.eqPreset = id; cur.out.eqGains = eqFit(id, cur.out.eqBands); eqEdited(); }
+// A new band count keeps the shape: a preset is fitted again, custom faders read the old curve.
+function setEqBands(n) {
+  if (n === cur.out.eqBands) return;
+  cur.out.eqGains = eqResample(cur.out.eqGains, cur.out.eqBands, n, cur.out.eqPreset); cur.out.eqBands = n;
+  EQV.sel = Math.min(EQV.sel, n - 1); EQV.hover = -1; EQV.lv = []; EQV.pk = []; EQV.pkT = []; EQV.bins = null;
+  eqEdited();
+}
+// A pointer near the centre line snaps to 0 (so a drawn curve can land on flat); keys step exactly.
+function setBandGain(i, g, exact) {
+  g = Math.round(clampN(g, -12, 12) * 2) / 2; if (!exact && Math.abs(g) < 0.6) g = 0;
+  if (cur.out.eqGains[i] === g) return;
+  cur.out.eqGains[i] = g; cur.out.eqPreset = 'custom'; eqEdited();
+}
+function eqGeom(w, h) { const L = 28, R = 6, T = 8, B = 16, n = cur.out.eqBands; return { L, R, T, B, n, cw: (w - L - R) / n, ih: h - T - B, w, h }; }
+const gainY = (g, G) => G.T + (12 - g) / 24 * G.ih;
+function eqLevels(dt, now) {
+  const n = cur.out.eqBands, c = eqCentres(n), an = E && E.C && E.C.eqAn, on = !!an && ctx && ctx.state === 'running';
+  if (on && (!EQV.buf || EQV.buf.length !== an.frequencyBinCount)) { EQV.buf = new Float32Array(an.frequencyBinCount); EQV.bins = null; }
+  if (EQV.binsN !== n) { EQV.bins = null; EQV.binsN = n; EQV.lv = []; EQV.pk = []; EQV.pkT = []; }
+  if (on && !EQV.bins) { const hz = ctx.sampleRate / an.fftSize, hb = 1 / (2 * BPO_[n]);
+    EQV.bins = c.map(fc => { const lo = Math.max(1, Math.floor(fc * Math.pow(2, -hb) / hz)), hi = Math.max(lo + 1, Math.ceil(fc * Math.pow(2, hb) / hz)); return [lo, Math.min(hi, EQV.buf.length)]; }); }
+  if (on) an.getFloatFrequencyData(EQV.buf);
+  for (let i = 0; i < n; i++) {
+    let L = -140;
+    if (on) { let s = 0; const r = EQV.bins[i]; for (let k = r[0]; k < r[1]; k++) s += Math.pow(10, EQV.buf[k] / 10); L = s > 0 ? 10 * Math.log10(s) : -140; }
+    const cv = EQV.lv[i] == null ? -140 : EQV.lv[i];
+    EQV.lv[i] = L > cv ? L : Math.max(L, cv - 30 * dt);
+    const p = EQV.pk[i] == null ? -140 : EQV.pk[i];
+    if (EQV.lv[i] >= p) { EQV.pk[i] = EQV.lv[i]; EQV.pkT[i] = now; } else if (now - (EQV.pkT[i] || 0) > 1200) EQV.pk[i] = p - 16 * dt;
+  }
+}
+function drawEq(now) {
+  const f = fitCanvas($('eqCv')); if (!f) return; const c = f.c, G = eqGeom(f.w, f.h), n = G.n, cen = eqCentres(n), gains = cur.out.eqGains;
+  const dt = Math.min(0.1, (now - (EQV.last || now)) / 1000); EQV.last = now;
+  eqLevels(dt, now);
+  c.clearRect(0, 0, G.w, G.h);
+  c.fillStyle = '#090909'; c.fillRect(G.L, G.T, G.w - G.L - G.R, G.ih);
+  // LED ladders
+  const N = Math.max(12, Math.floor(G.ih / 7)), sh = G.ih / N, lw = Math.max(2, G.cw * 0.62), active = !!cur.out.eqOn;
+  for (let i = 0; i < n; i++) {
+    const x = G.L + i * G.cw + (G.cw - lw) / 2, lvl = EQV.lv[i] == null ? -140 : EQV.lv[i], pk = EQV.pk[i] == null ? -140 : EQV.pk[i];
+    const lit = Math.round(clampN((lvl - LED_MIN) / (LED_MAX - LED_MIN), 0, 1) * N), pks = Math.round(clampN((pk - LED_MIN) / (LED_MAX - LED_MIN), 0, 1) * N) - 1;
+    for (let s2 = 0; s2 < N; s2++) {
+      const fr = s2 / (N - 1), col = fr < 0.62 ? '0,232,140' : fr < 0.86 ? '255,179,71' : '255,92,92', y = G.T + G.ih - (s2 + 1) * sh + 0.75;
+      const a = s2 < lit ? 0.85 : (s2 === pks && pks > 0 ? 1 : 0.07);
+      c.fillStyle = 'rgba(' + col + ',' + a + ')'; c.fillRect(x, y, lw, Math.max(1, sh - 1.5));
+    }
+  }
+  // gain grid
+  c.font = '9px ' + getComputedStyle(document.body).fontFamily; c.textAlign = 'right';
+  [12, 6, 0, -6, -12].forEach(g => { const y = gainY(g, G); c.strokeStyle = g === 0 ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.06)';
+    c.setLineDash(g === 0 ? [4, 3] : []); c.beginPath(); c.moveTo(G.L, y + 0.5); c.lineTo(G.w - G.R, y + 0.5); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#7c7c7c'; c.fillText((g > 0 ? '+' : '') + g, G.L - 5, y + 3); });
+  c.textAlign = 'start';
+  // the summed response, the same filters the rack runs
+  if (EQV.dirty || !EQV.curve) { const pts = [], M = Math.max(60, Math.floor((G.w - G.L - G.R) / 2)), a0 = lg2(cen[0]), a1 = lg2(cen[n - 1]);
+    for (let m = 0; m <= M; m++) pts.push(eqResp(Math.pow(2, a0 + m / M * (a1 - a0))));
+    EQV.curve = pts; EQV.dirty = false; }
+  c.beginPath(); EQV.curve.forEach((d, m) => { const X = G.L + G.cw / 2 + m / (EQV.curve.length - 1) * (G.cw * (n - 1)), Y = gainY(clampN(d, -14, 14), G); if (m) c.lineTo(X, Y); else c.moveTo(X, Y); });
+  c.strokeStyle = active ? 'rgba(255,200,120,0.95)' : 'rgba(160,160,160,0.5)'; c.lineWidth = 2; c.shadowColor = '#ffb347'; c.shadowBlur = active ? 8 : 0; c.stroke(); c.shadowBlur = 0;
+  // fader caps
+  for (let j = 0; j < n; j++) {
+    const cx = G.L + j * G.cw + G.cw / 2, cy = gainY(gains[j] || 0, G), cw = Math.min(G.cw * 0.86, 24), sel = j === EQV.sel || j === EQV.hover;
+    c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(cx - 0.5, G.T, 1, G.ih);
+    c.fillStyle = sel ? '#ffd08a' : '#202020'; c.strokeStyle = active ? '#ffb347' : '#666'; c.lineWidth = 1;
+    c.fillRect(cx - cw / 2, cy - 3.5, cw, 7); c.strokeRect(cx - cw / 2 + 0.5, cy - 3.5 + 0.5, cw - 1, 6);
+    c.fillStyle = sel ? '#1a1200' : (active ? '#ffd08a' : '#888'); c.fillRect(cx - cw / 2 + 2, cy - 0.5, cw - 4, 1);
+  }
+  // frequency labels, thinned to fit
+  c.fillStyle = '#7c7c7c'; c.textAlign = 'center'; const every = Math.ceil(30 / G.cw);
+  for (let q = 0; q < n; q++) { if (q % every && q !== n - 1) continue; if (q === n - 1 && (n - 1) % every && (n - 1) % every < every / 2) continue;
+    c.fillText(fmtF(cen[q]), G.L + q * G.cw + G.cw / 2, G.h - 4); }
+  c.textAlign = 'start';
+}
+function eqRead(i) {
+  const r = $('eqRead');
+  if (i < 0) { r.innerHTML = '<span class="dim">drag the faders, or sweep across to draw a curve</span>'; return; }
+  const f = eqCentres(cur.out.eqBands)[i];
+  r.innerHTML = fmtF(f) + 'Hz &nbsp;<b>' + sgnDb(cur.out.eqGains[i] || 0) + '</b> <span class="dim">&middot; curve ' + sgnDb(eqResp(f)) + '</span>';
+}
+{
+  const cv = $('eqCv');
+  const at = e => { const r = cv.getBoundingClientRect(), G = eqGeom(r.width, r.height);
+    return { b: clampN(Math.floor((e.clientX - r.left - G.L) / G.cw), 0, G.n - 1), g: 12 - (e.clientY - r.top - G.T) / G.ih * 24 }; };
+  cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.focus({ preventScroll: true }); try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    const p = at(e); EQV.drag = { b: p.b, g: p.g }; EQV.sel = p.b; setBandGain(p.b, p.g); eqRead(p.b); });
+  cv.addEventListener('pointermove', e => { const p = at(e);
+    if (!EQV.drag) { if (e.pointerType === 'mouse') { EQV.hover = p.b; eqRead(p.b); } return; }
+    const a = EQV.drag.b, ga = EQV.drag.g;                                 // sweep: fill every band crossed
+    if (p.b !== a) { const st = p.b > a ? 1 : -1; for (let k = a + st; k !== p.b; k += st) setBandGain(k, ga + (p.g - ga) * (k - a) / (p.b - a)); }
+    setBandGain(p.b, p.g); EQV.drag = { b: p.b, g: p.g }; EQV.sel = p.b; eqRead(p.b); });
+  const end = () => { EQV.drag = null; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  cv.addEventListener('pointerleave', () => { EQV.hover = -1; if (EQV.sel < 0) eqRead(-1); });
+  cv.addEventListener('dblclick', e => { const p = at(e); setBandGain(p.b, 0); eqRead(p.b); });
+  cv.addEventListener('keydown', e => {
+    const n = cur.out.eqBands; if (EQV.sel < 0) EQV.sel = Math.floor(n / 2);
+    const k = e.key, st = e.shiftKey ? 3 : 0.5; let used = true;
+    if (k === 'ArrowLeft') EQV.sel = Math.max(0, EQV.sel - 1); else if (k === 'ArrowRight') EQV.sel = Math.min(n - 1, EQV.sel + 1);
+    else if (k === 'ArrowUp') setBandGain(EQV.sel, (cur.out.eqGains[EQV.sel] || 0) + st, true); else if (k === 'ArrowDown') setBandGain(EQV.sel, (cur.out.eqGains[EQV.sel] || 0) - st, true);
+    else if (k === 'Home') EQV.sel = 0; else if (k === 'End') EQV.sel = n - 1; else if (k === '0' || k === 'Delete') setBandGain(EQV.sel, 0);
+    else used = false;
+    if (used) { e.preventDefault(); e.stopPropagation(); if (!cur.out.eqOn) { cur.out.eqOn = true; afterChange('out.eqOn'); pushPatch(false); } eqRead(EQV.sel); }
+  });
+  cv.addEventListener('blur', () => { EQV.sel = -1; eqRead(-1); });
 }
 
 // ---------------------------------------------------------------- patch list
@@ -3127,6 +3278,7 @@ function frame(now) {
   drawEye(eyeLv);
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
   paintHost();
+  if ($('mEq').offsetParent) drawEq(now);
   const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
@@ -4033,6 +4185,14 @@ window.__synth = {
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
   deck: () => deck.test,
   player: () => player.test,
+  // the graphic EQ: the maths the plot uses, and what the live rack is running
+  eq: {
+    response: (f, gains, n, fs) => eqResponse(f, gains, n, fs || 48000), fit: (id, n) => eqFit(id, n), target: (id, f) => eqTarget(id, f),
+    centres: n => eqCentres(n), presets: () => EQ_PRESETS.map(p => p.id), normalize: p => normalizeAny(p),
+    live: () => (E && E.C ? { n: E.C.filters.length, gains: E.C.filters.map(f => f.gain.value), types: E.C.filters.map(f => f.type), pre: E.C.eqIn.gain.value, tap: !!E.C.eqAn } : null),
+    levels: () => EQV.lv.slice(),
+    painted: () => { const c = $('eqCv'); if (!c.width) return 0; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 4) s += x[i] + x[i + 1]; return s / (x.length / 4); },
+  },
   smf: { write: o => [...writeSMF(o)], read: arr => { const f = readSMF(Uint8Array.from(arr)); return { format: f.format, ppq: f.ppq, tempos: f.tempos, timeSig: f.timeSig, song: songOf(f) }; }, bytesOf },
   // Two-device render: opts {patches:{filament, cathode}, device, events:[{at, dev, t, ...}], seconds}
   render2: async opts => { const buf = await renderOffline(opts); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },

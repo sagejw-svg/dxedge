@@ -135,7 +135,7 @@ task can read it).
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
-| `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" |
+| `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, and the graphic EQ's presets, fitting, resampling and live spectrum tap) |
 | `frontend/public/synth/fm/` | Hexode, a vendored six-operator FM page (MIT, Matt Montag). The name on the page is Hexode. See `CHANGES.md` and `THIRD_PARTY_NOTICES.md` |
 | `frontend/public/synth/acid/` | Anode, a vendored acid bass groovebox (CC BY 4.0, David Whiting / Vitling). The page credits the author. Drums in this copy are synthesized. See `CHANGES.md` |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx`. Links Hexode and Anode |
@@ -161,7 +161,10 @@ task can read it).
 - [x] Tests 1-7, 8, 9 (logged), 10, 12 plus UI checks
 
 ### 0.2 Character - next (from the graphic EQ), one item per night, in this order
-- [ ] Graphic EQ in the rack row (the chain already has it; needs the UI and patch fields)
+- [x] Graphic EQ in the rack row (the chain already has it; needs the UI and patch fields) - 13 Oct, nightly.
+      Rack-wide: both devices' patches carry `out.eqOn`, `eqBands` (10, 15 or 31), `eqGains`, `eqPre` (level,
+      +/-12 dB) and `eqPreset`; the rack follows the lit device like the rest of `out`. Off by default, so no
+      patch changed. Presets: flat, warm, smile, bass lift, presence, air, mid scoop, low cut, AM radio.
 - [x] Goniometer and correlation meter (copied from /otr into the Stereo section) - 13 Oct, stereo round
 - [x] LFO 2 (adds auto-pan), and stereo phase (0-180 degrees) for both LFOs - 13 Oct, stereo round
 - [x] Unison 1-8 copies per note with detune and spread (copies come from the 16-voice pool) - 13 Oct, stereo round
@@ -760,6 +763,16 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
 - Nightly check, 15 Oct 2026 (night): the Windows app (`desktop/`, commit `6e178d4`) packs all of `frontend/public` into the installer, including `/otr` (4.6 MB), Crane Cab and the emulators, not only `/synth`. Decide what the installer should carry before the first `desktop-v*` tag. Electron and electron-builder now have register rows in `docs/filament-licensing.md`; `THIRD_PARTY_NOTICES.md` still needs an Electron entry before a public release.
 - Nightly check, 15 Oct 2026 (night): the factory patch "Wide Novachord Strings" uses a historic Hammond product name (rule 6 of the licensing file). Trademark status not checked; renaming a factory patch is your call, so it was left alone.
 - Nightly check, 15 Oct 2026 (night): Hexode (`/synth/fm/`, vendored) scrolls sideways at 375 px on the live site. Not new tonight (the page has not changed since 14 Oct).
+- Graphic EQ (13 Oct nightly): listen to the presets on a few patches. The EQ sits before the output tubes,
+  so a boost also drives them harder (more colour, by design); the level knob trims that. Calls made, any of
+  which can change: each device's patch carries its own EQ (the rack follows the lit device, like the room and
+  tubes); new patches start with it off at 10 bands; no factory patch uses it yet (say if you want some
+  retuned to show it off); the preset list (flat, warm, smile, bass lift, presence, air, mid scoop, low cut,
+  AM radio) is new, voiced for a synth, with warm, smile, bass lift and AM radio taken from /otr's shapes.
+- /otr bug seen while porting (not fixed: /otr is off limits to this job): in /otr's graphic EQ, Arrow Up or
+  Down on a band at 0 dB does nothing without Shift. Its `setBandGain` snaps anything under 0.6 dB to 0, so a
+  0.5 dB key step from 0 lands back on 0. Found by reading the code; the synth's copy failed a test the same
+  way before it was fixed here (the snap now applies to the pointer only). A one-line fix in /otr if you want it.
 
 ## Notes from James
 (write here; the nightly run reads this first)

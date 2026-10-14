@@ -6,7 +6,7 @@
 // rack takes its settings (ens, out) from the active device's patch. A device that is not
 // active lets go of its keys, finishes its tails and sleeps; Cathode's node is only built the
 // first time it is chosen.
-import { makeSynthChain, makeEnsemble, tubeData } from './rack.js';
+import { makeSynthChain, makeEnsemble, tubeData, dB2lin } from './rack.js';
 import { normalize, clone, getPath, setPath } from './patches.js';
 import { normalizeC } from './cathode.js';
 import { makeMasterFx } from './masterfx.js';
@@ -20,11 +20,12 @@ export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : no
 const WORKLET = new URL('./voice.worklet.js', import.meta.url).href;
 
 // The rack's state object, in the shape /otr's makeChain expects (its ADV), from a patch.
+// The graphic EQ (eqOn, eqBands, eqGains, eqPre) is the first stage; the de-esser stays out.
 export function rackState(p) {
   const o = p.out;
   return {
-    on: true, eqOn: false, deOn: false, tubeOn: true, spkOn: !!o.spkOn, roomOn: !!o.roomOn, wOn: !!o.wOn,
-    bands: 10, gains: new Array(10).fill(0), pre: 0, preset: 'flat',
+    on: true, eqOn: !!o.eqOn, deOn: false, tubeOn: true, spkOn: !!o.spkOn, roomOn: !!o.roomOn, wOn: !!o.wOn,
+    bands: o.eqBands || 10, gains: (o.eqGains || new Array(10).fill(0)).slice(), pre: o.eqPre || 0, preset: o.eqPreset || 'flat',
     tube: o.tube, drive: o.drive, bias: o.bias, sag: o.sag, tone: o.tone, out: o.level, topology: o.topology,
     deFreq: 5, deAmt: 0, deListen: false,
     cab: o.cab, spkInt: o.spkInt, room: o.room, rmDecay: o.rmDecay, rmMix: o.rmMix, rmTone: o.rmTone,
@@ -95,7 +96,7 @@ export async function createEngine(ctx, opts = {}) {
   Object.defineProperty(E, 'node', { get: () => E.nodes[E.device] });
 
   let S = E.C ? rackState(patch) : null;
-  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); }
+  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); if (E.C.setEqTap) E.C.setEqTap(S.eqOn); }
   let ensJ = JSON.stringify(patch.ens);
 
   E.patch = () => patch;
@@ -131,16 +132,21 @@ export async function createEngine(ctx, opts = {}) {
     const N = rackState(patch), C = E.C;
     const tubeKeys = ['tube', 'drive', 'bias', 'sag', 'tone', 'out', 'topology'];
     const roomRegen = N.room !== S.room || N.rmDecay !== S.rmDecay || N.rmTone !== S.rmTone;
-    const routeChange = N.spkOn !== S.spkOn || N.roomOn !== S.roomOn || N.wOn !== S.wOn;
+    const routeChange = N.spkOn !== S.spkOn || N.roomOn !== S.roomOn || N.wOn !== S.wOn || N.eqOn !== S.eqOn;
     const swap = N.tube !== S.tube || N.topology !== S.topology;     // a new curve: dip around it
-    if (swap || routeChange) {
-      C.reroute(N, () => { C.setTube(N); C.setSpk(N); C.setRoom(N, roomRegen); C.setWidth(N); });
+    const bandsChange = N.bands !== S.bands;                          // new EQ filters: dip around them too
+    if (swap || routeChange || bandsChange) {
+      C.reroute(N, () => { if (bandsChange) C.setBands(N); C.setTube(N); C.setSpk(N); C.setRoom(N, roomRegen); C.setWidth(N); });
     } else {
       if (tubeKeys.some(k => N[k] !== S[k])) C.setTube(N);
       if (N.cab !== S.cab || N.spkInt !== S.spkInt) C.setSpk(N);
       if (roomRegen || N.rmMix !== S.rmMix) C.setRoom(N, roomRegen);
       if (N.width !== S.width || N.wChar !== S.wChar) C.setWidth(N);
     }
+    // the graphic EQ: fader gains (same band count) and its level, smoothed like any knob
+    if (!bandsChange) N.gains.forEach((g, i) => { if (g !== S.gains[i]) C.setGain(i, g); });
+    if (N.pre !== S.pre) C.setP(C.eqIn.gain, dB2lin(N.pre));
+    if (C.setEqTap && N.eqOn !== S.eqOn) C.setEqTap(N.eqOn);
     S = N;
   }
   const post = m => E.nodes[E.device].port.postMessage(m);
