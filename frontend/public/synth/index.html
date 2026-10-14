@@ -95,12 +95,24 @@
   body[data-dev="filament"] [data-dev="dekatron"], body[data-dev="cathode"] [data-dev="dekatron"] { display: none !important; }
   body[data-dev="lattice"] [data-dev="filament"], body[data-dev="lattice"] [data-dev="cathode"], body[data-dev="lattice"] [data-dev="dekatron"],
   body[data-dev="filament"] [data-dev="lattice"], body[data-dev="cathode"] [data-dev="lattice"], body[data-dev="dekatron"] [data-dev="lattice"] { display: none !important; }
-  #drumRoot, #latticeRoot { display: contents; }
-  body[data-dev="filament"] #drumRoot, body[data-dev="cathode"] #drumRoot, body[data-dev="lattice"] #drumRoot { display: none !important; }
+  body[data-dev="thyratron"] [data-dev="filament"], body[data-dev="thyratron"] [data-dev="cathode"],
+  body[data-dev="thyratron"] [data-dev="dekatron"], body[data-dev="thyratron"] [data-dev="lattice"],
+  body[data-dev="filament"] [data-dev="thyratron"], body[data-dev="cathode"] [data-dev="thyratron"],
+  body[data-dev="dekatron"] [data-dev="thyratron"], body[data-dev="lattice"] [data-dev="thyratron"] { display: none !important; }
+  #drumRoot, #latticeRoot, #thyRoot { display: contents; }
+  body[data-dev="filament"] #drumRoot, body[data-dev="cathode"] #drumRoot, body[data-dev="lattice"] #drumRoot, body[data-dev="thyratron"] #drumRoot { display: none !important; }
+  body:not([data-dev="thyratron"]) #thyRoot { display: none !important; }
   body[data-dev="dekatron"] #mStereo, body[data-dev="dekatron"] #mEns, body[data-dev="dekatron"] #mOut,
   body[data-dev="dekatron"] #mSpk, body[data-dev="dekatron"] #mRoom { display: none !important; }
   body[data-dev="lattice"] #chassis, body[data-dev="lattice"] #mStereo, body[data-dev="lattice"] #mEns,
   body[data-dev="lattice"] #mOut, body[data-dev="lattice"] #mSpk, body[data-dev="lattice"] #mRoom { display: none !important; }
+  body[data-dev="thyratron"] #mStereo, body[data-dev="thyratron"] #mEns, body[data-dev="thyratron"] #mOut,
+  body[data-dev="thyratron"] #mSpk, body[data-dev="thyratron"] #mRoom { display: none !important; }
+  .thy { background: linear-gradient(180deg, #4a2e1c 0, #2a1a10 22px, rgba(0,0,0,0.45) 22px); border-color: #6b4a2a; }
+  .thy h3 { color: #e6d2b0; }
+  #thyOsc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .thy-osc { border: 1px solid #3a2a1c; background: #101010; border-radius: 6px; padding: 6px; min-width: 0; }
+  .thy-ol { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #e6d2b0; margin-bottom: 4px; }
   .dgrid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .drow { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .drow .dpad, .drow .dn { flex: 0 0 72px; width: 72px; text-align: left; }
@@ -282,6 +294,9 @@
     body[data-dev="dekatron"] .tabs [data-go="rack"], body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
     body[data-dev="lattice"] .tabs [data-go="stereo"], body[data-dev="lattice"] .tabs [data-go="voice"],
     body[data-dev="lattice"] .tabs [data-go="patch"] { display: none !important; }
+    body[data-dev="thyratron"] .tabs [data-go="stereo"], body[data-dev="thyratron"] .tabs [data-go="patch"],
+    body[data-dev="thyratron"] .tabs [data-go="voice"] { display: none !important; }
+    #thyOsc { grid-template-columns: 1fr; }
     .devbtn { letter-spacing: 0.5px; font-size: 10px; padding: 6px 4px; min-width: 0; overflow: hidden; }
     .dstep { flex-basis: 44px; width: 44px; height: 44px; }
     .dnum { flex-basis: 44px; width: 44px; }
@@ -320,6 +335,7 @@
       <p class="intro" data-dev="filament">A tube synthesizer. The tubes do real work: one drives the filters, one sits inside the Valve filter's resonance loop, and a push-pull pair runs the output. Play it with the keys below, your computer keyboard, or a MIDI keyboard.</p>
       <p class="intro" data-dev="dekatron">Dekatron, a counting-tube drum machine: kick, snare, hats, clap, tom and rim, synthesized, with a 16-step pattern. The keys play the voices. Swing, accents and the pattern length live on the panel.</p>
       <p class="intro" data-dev="lattice">Lattice, a wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, two filters, and a modulation matrix you drag into place. Draw LFO shapes, or drop a WAV file to play it as a cycle.</p>
+      <p class="intro" data-dev="thyratron">Thyratron, a monophonic ladder synthesizer: three oscillators, a mixer with noise and feedback, and a 24 dB/octave ladder low-pass that will sing when the emphasis is full. Glide, two contours, and the pitch and mod wheels.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
       <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
@@ -339,6 +355,7 @@
       <span class="label">rack</span>
       <button class="devbtn" id="devF" data-d="filament" aria-pressed="true"><i></i>FILAMENT<small>poly tube synth</small></button>
       <button class="devbtn" id="devC" data-d="cathode" aria-pressed="false"><i></i>CATHODE<small>mono semi-modular</small></button>
+      <button class="devbtn" id="devT" data-d="thyratron" aria-pressed="false"><i></i>THYRATRON<small>ladder mono</small></button>
       <button class="devbtn" id="devD" data-d="dekatron" aria-pressed="false"><i></i>DEKATRON<small>drum pattern</small></button>
       <button class="devbtn" id="devL" data-d="lattice" aria-pressed="false"><i></i>LATTICE<small>wavetable</small></button>
     </div>
@@ -355,7 +372,7 @@
         <figure class="tube" data-t="v3" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV3" aria-hidden="true"></canvas><figcaption><span class="role">V3 out</span><br><b id="nameV3">EL34</b></figcaption></figure>
         <figure class="tube" data-t="v4" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV4" aria-hidden="true"></canvas><figcaption><span class="role">V4 <span id="topoV4">PP</span></span><br><b id="nameV4">EL34</b></figcaption></figure>
       </div>
-      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span></div>
+      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span></div>
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="lamps">
@@ -443,6 +460,7 @@
       <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
       <div id="drumRoot"></div>
       <div id="latticeRoot"></div>
+      <div id="thyRoot"></div>
       <section class="mod" data-tab="rack" id="mHost" data-wide><h3><span class="pilot" id="hostPilot"></span>Transport and mixer</h3>
         <div class="hostbar">
           <button class="btn small" id="trPlay" aria-pressed="false">play</button>
@@ -470,6 +488,13 @@
           <label>pan <input type="range" id="mixDPan" min="-1" max="1" step="0.01" value="0" aria-label="Dekatron pan"></label>
           <button class="chip" id="mixDMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixDSolo" aria-pressed="false">solo</button>
+        </div>
+        <div class="mixrow" data-mix="thyratron">
+          <span class="who">Thyratron</span>
+          <label>level <input type="range" id="mixTLvl" min="0" max="1" step="0.01" value="1" aria-label="Thyratron level"></label>
+          <label>pan <input type="range" id="mixTPan" min="-1" max="1" step="0.01" value="0" aria-label="Thyratron pan"></label>
+          <button class="chip" id="mixTMute" aria-pressed="false">mute</button>
+          <button class="chip" id="mixTSolo" aria-pressed="false">solo</button>
         </div>
         <div class="mixrow" data-mix="lattice">
           <span class="who">Lattice</span>
@@ -561,7 +586,7 @@
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.9: Filament, Cathode, Dekatron, and Lattice in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Record or render a 24-bit WAV from the master. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.10: Filament, Cathode, Thyratron, Dekatron, and Lattice in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Record or render a 24-bit WAV from the master. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -583,6 +608,8 @@ import { drumDevice, normalizeDrum, DRUM_FACTORY, DRUM_CATS, DRUM_DEFAULT, voice
 import { createDrumHost, mountDrumPanel, renderDrums } from './drums-ui.js';
 import { normalizeLattice, LATTICE_FACTORY, LATTICE_CATS, LATTICE_DEFAULT, latticeDevice } from './lattice.js';
 import { createLatticeHost, mountLatticePanel, renderLattice } from './lattice-ui.js';
+import { normalizeThy, THY_FACTORY, THY_CATS, THY_DEFAULT, THY_ENUMS } from './thyratron.js';
+import { createThyHost, mountThyPanel, renderThyAudio } from './thyratron-ui.js';
 
 const $ = id => document.getElementById(id);
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -604,6 +631,7 @@ const DEVS = {
   cathode: { name: 'Cathode', factory: C_FACTORY, cats: C_CATS, normalize: normalizeC, def: C_DEFAULT, enums: C_ENUMS, kCur: 'cathode_cur', kUser: 'cathode_user', first: 'Plate Screamer' },
   dekatron: { name: 'Dekatron', factory: DRUM_FACTORY, cats: DRUM_CATS, normalize: normalizeDrum, def: DRUM_DEFAULT, enums: {}, kCur: 'dekatron_cur', kUser: 'dekatron_user', first: 'Relay' },
   lattice: { name: 'Lattice', factory: LATTICE_FACTORY, cats: LATTICE_CATS, normalize: normalizeLattice, def: LATTICE_DEFAULT, enums: {}, kCur: 'lattice_cur', kUser: 'lattice_user', first: 'Glass Pad' },
+  thyratron: { name: 'Thyratron', factory: THY_FACTORY, cats: THY_CATS, normalize: normalizeThy, def: THY_DEFAULT, enums: THY_ENUMS, kCur: 'thyratron_cur', kUser: 'thyratron_user', first: 'Walnut Bass' },
 };
 const D = () => DEVS[dev];
 function loadDevState(d) {
@@ -618,14 +646,17 @@ function loadDevState(d) {
   if (saved && saved.patch) { const base = all.find(x => x.key === curKey); edited = !!base && JSON.stringify(base.p) !== JSON.stringify(X.normalize(saved.patch)); }
   return { cur, curKey, edited, user };
 }
-const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron'), lattice: loadDevState('lattice') };
+const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron'), lattice: loadDevState('lattice'), thyratron: loadDevState('thyratron') };
 const savedDev = store.get('synth_dev', 'filament');
-let dev = savedDev === 'cathode' || savedDev === 'dekatron' || savedDev === 'lattice' ? savedDev : 'filament';
+let dev = savedDev === 'cathode' || savedDev === 'dekatron' || savedDev === 'lattice' || savedDev === 'thyratron' ? savedDev : 'filament';
 const drumHost = createDrumHost();
 const latticeHost = createLatticeHost();
-let drumPanel = null, latPanel = null;
+const thyHost = createThyHost();
+let drumPanel = null, latPanel = null, thyPanel = null;
+let bendV = 0, modV = 0;
 function drumPatch() { return dev === 'dekatron' ? cur : DS.dekatron.cur; }
 function latticePatch() { return dev === 'lattice' ? cur : DS.lattice.cur; }
+function thyPatch() { return dev === 'thyratron' ? cur : DS.thyratron.cur; }
 let { cur, curKey, edited, user } = DS[dev];
 document.body.dataset.dev = dev;
 
@@ -638,7 +669,7 @@ function ensureEngine() {
   initAudioSession();
   try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); }
   catch (e) { toast('This browser cannot start Web Audio.'); return Promise.reject(e); }
-  const bootPatch = dev === 'dekatron' || dev === 'lattice' ? DS.filament.cur : cur;
+  const bootPatch = dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' ? DS.filament.cur : cur;
   enginePromise = createEngine(ctx, {
     patch: bootPatch,
     tempo: bootProj && bootProj.tempo,
@@ -648,16 +679,21 @@ function ensureEngine() {
     E = e; E.master.gain.value = 1;
     // Dekatron joins the mixer and the master clock as soon as the engine exists.
     // Asleep until the rail selects it, so it adds nothing to the other devices.
-    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
+    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
       if (dev === 'dekatron') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         drumHost.setActive(true); drumHost.setPatch(cur);
-        latticeHost.setActive(false);
+        latticeHost.setActive(false); thyHost.setActive(false);
       } else if (dev === 'lattice') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         drumHost.setActive(false);
         latticeHost.setActive(true); latticeHost.setPatch(cur);
-      } else { drumHost.setActive(false); latticeHost.setActive(false); }
+        thyHost.setActive(false);
+      } else if (dev === 'thyratron') {
+        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        drumHost.setActive(false); latticeHost.setActive(false);
+        thyHost.setActive(true); thyHost.setPatch(cur); thyHost.bend(bendV); thyHost.mod(modV);
+      } else { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); }
     });
     return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); syncHostUI(); return E; });
   }).catch(err => { console.error(err); toast('Audio engine failed to load: ' + err.message, 6000); throw err; });
@@ -688,6 +724,7 @@ function pushPatch(load) {
     pushT = 0; const l = pushLoad; pushLoad = false;
     if (dev === 'dekatron') { cur = normalizeDrum(cur); withEngine(() => drumHost.setPatch(cur)); }
     else if (dev === 'lattice') { cur = normalizeLattice(cur); withEngine(() => latticeHost.setPatch(cur)); }
+    else if (dev === 'thyratron') { cur = normalizeThy(cur); withEngine(() => thyHost.setPatch(cur)); }
     else withEngine(() => E.setPatch(cur, l));
     store.set(D().kCur, { key: curKey, patch: cur });
   });
@@ -718,7 +755,7 @@ function syncHostUI() {
   if (document.activeElement !== $('hostTempo')) $('hostTempo').value = String(Math.round(st.tempo));
   paintHost(st);
   const mix = E.mix.all();
-  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L']].forEach(([id, s]) => {
+  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T']].forEach(([id, s]) => {
     const c = mix[id] || { level: 1, pan: 0, mute: false, solo: false };
     $('mix' + s + 'Lvl').value = String(c.level);
     $('mix' + s + 'Pan').value = String(c.pan);
@@ -745,6 +782,7 @@ function applyProject(raw) {
     cur = DS[dev].cur; curKey = '__project'; edited = true;
     refreshAll(); fillSelect();
     if (dev === 'dekatron') withEngine(() => drumHost.setPatch(cur));
+    else if (dev === 'thyratron') withEngine(() => thyHost.setPatch(cur));
     else withEngine(() => E.setPatch(cur, true));
   }
   withEngine(() => {
@@ -768,7 +806,7 @@ function commitTempo() {
   withEngine(() => { const t = E.transport.setTempo($('hostTempo').value); $('hostTempo').value = String(Math.round(t)); paintHost(); });
 }
 $('hostTempo').addEventListener('change', commitTempo);
-[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L']].forEach(([id, s]) => {
+[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T']].forEach(([id, s]) => {
   $('mix' + s + 'Lvl').addEventListener('input', () => pushStrip(id, s));
   $('mix' + s + 'Pan').addEventListener('input', () => pushStrip(id, s));
   ['Mute', 'Solo'].forEach(which => $('mix' + s + which).addEventListener('click', () => {
@@ -822,6 +860,7 @@ function noteOn(n, v, src) {
   if (!fresh) return;
   if (dev === 'dekatron') { const id = voiceForNote(n); if (id) withEngine(() => drumHost.trigger(id, v)); }
   else if (dev === 'lattice') withEngine(() => latticeHost.noteOn(n, v));
+  else if (dev === 'thyratron') withEngine(() => thyHost.noteOn(n, v));
   else withEngine(() => E.noteOn(n, v));
   rec({ t: 'on', n, v });
   paintKey(n, true);
@@ -836,6 +875,7 @@ function noteOff(n, src) {
   } else if (set) set.clear();
   holds.delete(n); paintKey(n, false);
   if (dev === 'lattice') withEngine(() => latticeHost.noteOff(n));
+  else if (dev === 'thyratron') withEngine(() => thyHost.noteOff(n));
   else if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
   rec({ t: 'off', n });
 }
@@ -846,15 +886,23 @@ function dropHolds() {
   notes.forEach(n => {
     paintKey(n, false);
     if (dev === 'lattice') withEngine(() => latticeHost.noteOff(n));
+    else if (dev === 'thyratron') withEngine(() => thyHost.noteOff(n));
     else if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
     rec({ t: 'off', n });
   });
   if (sustainOn) setSustain(false);
 }
 function perf(kind, v) {
+  if (kind === 'bend') bendV = v;
+  else if (kind === 'mw') modV = v;
   if (dev === 'lattice') {
     const t = kind === 'mw' ? 'mw' : kind === 'at' ? 'at' : 'bend';
     withEngine(() => latticeHost.send({ t, v }));
+    return;
+  }
+  if (dev === 'thyratron') {
+    if (kind === 'bend') withEngine(() => thyHost.bend(v));
+    else if (kind === 'mw') withEngine(() => thyHost.mod(v));
     return;
   }
   if (dev === 'dekatron') return;
@@ -867,6 +915,7 @@ function perf(kind, v) {
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
   if (dev === 'lattice') withEngine(() => latticeHost.send({ t: 'sus', on: sustainOn }));
+  else if (dev === 'thyratron') withEngine(() => thyHost.sustain(sustainOn));
   else withEngine(() => E.sustain(sustainOn));
   rec({ t: 'sus', on: sustainOn });
 }
@@ -889,8 +938,13 @@ function K(hostId, path, label, o) {
   const map = o.map || LIN, host = $(hostId), kd = o.dev || devOfEl(host), key = kd ? kd + ':' + path : path;
   const min = o.map ? (o.pmin || 0) : o.min, max = o.map ? 1 : o.max, step = o.step || (o.map ? 0.001 : (max - min) / 200);
   const def = map.from(getPath(DEVS[kd || 'filament'].def, path));
+  // Shared rack knobs belong to Filament's output patch. Dekatron copies those
+  // fields; Lattice and Thyratron do not, and a reload onto them would throw
+  // in the formatter before window.__synth exists.
+  const sharedOff = !kd && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron');
+  const src = sharedOff ? DS.filament.cur : patchOf(kd);
   const k = makeKnob(host, {
-    label, min, max, step, value: map.from(getPath(patchOf(kd), path)), def,
+    label, min, max, step, value: map.from(getPath(src, path)), def,
     fmt: p => (o.fmt || one)(map.to(p)), title: o.title || label,
     onChange: p => { let v = map.to(p); if (o.round) v = Math.round(v); setPath(cur, path, v); afterChange(path); pushPatch(false); },
   });
@@ -1061,7 +1115,12 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), tog
 
 // Whatever depends on more than one control.
 function afterChange(path) {
-  if (dev === 'dekatron' || dev === 'lattice') {
+  if (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron') {
+    if (dev === 'thyratron') {
+      $('nameV1').textContent = 'LADDER';
+      $('nameV2').textContent = 'DRIVE';
+      $('roleV2').textContent = 'V2 drive';
+    }
     if (path && path !== '__load') markEdited();
     return;
   }
@@ -1103,11 +1162,12 @@ function afterF() {
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
 }
 function refreshAll() {
-  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice')) return; e.k.set(e.map.from(getPath(cur, e.path))); });
+  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron')) return; e.k.set(e.map.from(getPath(cur, e.path))); });
   Object.keys(CH).forEach(refreshChips);
   afterChange('__load');
   if (dev === 'dekatron' && drumPanel) drumPanel.sync();
   if (dev === 'lattice' && latPanel) latPanel.sync();
+  if (dev === 'thyratron' && thyPanel) thyPanel.sync();
 }
 
 // ---------------------------------------------------------------- patch list
@@ -1154,7 +1214,7 @@ $('delP').addEventListener('click', () => {
 // ---------------------------------------------------------------- the rack rail
 // The keyboard, wheels and MIDI play the lit device; the panel, patch list and chassis show it.
 function setDevice(d) {
-  if (d !== 'cathode' && d !== 'dekatron' && d !== 'lattice') d = 'filament';
+  if (d !== 'cathode' && d !== 'dekatron' && d !== 'lattice' && d !== 'thyratron') d = 'filament';
   if (d === dev) return;
   const playbackBusy = (deck && deck.test && deck.test.playing()) || (player && player.test && player.test.playing());
   releaseInput();
@@ -1168,19 +1228,28 @@ function setDevice(d) {
   const tab = document.body.dataset.tab;
   if ((tab === 'patch' && d !== 'cathode') || (tab === 'voice' && d !== 'dekatron') || (d === 'dekatron' && tab !== 'play' && tab !== 'voice')) goTab('play');
   if (d === 'lattice' && (tab === 'stereo' || tab === 'voice' || tab === 'patch')) goTab('play');
+  if (d === 'thyratron' && (tab === 'stereo' || tab === 'voice' || tab === 'patch')) goTab('play');
   const run = () => {
     if (d === 'dekatron') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
-      latticeHost.setActive(false);
+      latticeHost.setActive(false); thyHost.setActive(false);
       return drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { drumHost.setActive(true); drumHost.setPatch(cur); });
     }
     if (d === 'lattice') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
-      drumHost.setActive(false);
+      drumHost.setActive(false); thyHost.setActive(false);
       return latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { latticeHost.setActive(true); latticeHost.setPatch(cur); });
+    }
+    if (d === 'thyratron') {
+      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      drumHost.setActive(false); latticeHost.setActive(false);
+      return thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => {
+        thyHost.setActive(true); thyHost.setPatch(cur); thyHost.bend(bendV); thyHost.mod(modV);
+      });
     }
     drumHost.setActive(false);
     latticeHost.setActive(false);
+    thyHost.setActive(false);
     E.setDevice(d, cur);
   };
   refreshAll(); fillSelect(); $('saveForm').classList.remove('open');
@@ -1193,7 +1262,8 @@ function showDevice() {
   $('devC').setAttribute('aria-pressed', String(dev === 'cathode'));
   $('devD').setAttribute('aria-pressed', String(dev === 'dekatron'));
   $('devL').setAttribute('aria-pressed', String(dev === 'lattice'));
-  $('devTitle').innerHTML = dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
+  $('devT').setAttribute('aria-pressed', String(dev === 'thyratron'));
+  $('devTitle').innerHTML = dev === 'thyratron' ? 'THYRA<span>TRON</span>' : dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
 }
 document.querySelectorAll('.devbtn').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.d)));
 showDevice();
@@ -1334,12 +1404,13 @@ function goTab(t) {
   if (t === 'voice' && dev !== 'dekatron') t = 'play';
   if (dev === 'dekatron' && t !== 'play' && t !== 'voice') t = 'play';
   if (dev === 'lattice' && (t === 'stereo' || t === 'voice' || t === 'patch')) t = 'play';
+  if (dev === 'thyratron' && (t === 'stereo' || t === 'patch' || t === 'voice')) t = 'play';
   document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables());
 }
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
 document.querySelectorAll('.tube[data-tab-go]').forEach(f => f.addEventListener('click', () => {
   const t = f.dataset.tabGo; goTab(t);
-  const sec = t === 'rack' ? $('mOut') : dev === 'dekatron' ? $('mDrumTr') : dev === 'cathode' ? $('mCTubes') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');
+  const sec = t === 'rack' ? $('mOut') : dev === 'dekatron' ? $('mDrumTr') : dev === 'thyratron' ? $('mThyLad') : dev === 'lattice' ? $('latticeRoot') : dev === 'cathode' ? $('mCTubes') : f.dataset.t === 'v1' ? $('mV1') : $('mFilt');
   sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }));
 goTab(store.get('filament_tab', 'play') || 'play');
@@ -1400,7 +1471,7 @@ $('keys').addEventListener('pointermove', e => {
   ptrs.set(e.pointerId, n);
   const src = ptrSrc(e.pointerId);
   // slide: in mono modes press the new key first so it glides; in poly let go first
-  if (dev === 'cathode' || (cur.voice && cur.voice.mode !== 'poly')) { noteOn(n, velAt(keyEls.get(n), e.clientY), src); noteOff(was, src); }
+  if (dev === 'thyratron' || dev === 'cathode' || (cur.voice && cur.voice.mode !== 'poly')) { noteOn(n, velAt(keyEls.get(n), e.clientY), src); noteOff(was, src); }
   else { noteOff(was, src); noteOn(n, velAt(keyEls.get(n), e.clientY), src); }
 });
 const ptrUp = e => { if (!ptrs.has(e.pointerId)) return; const n = ptrs.get(e.pointerId); ptrs.delete(e.pointerId); noteOff(n, ptrSrc(e.pointerId)); };
@@ -1473,7 +1544,7 @@ function releaseInput() {
 }
 function panic() {
   releaseInput();
-  withEngine(() => { E.panic(); latticeHost.send({ t: 'panic' }); });
+  withEngine(() => { E.panic(); latticeHost.send({ t: 'panic' }); thyHost.panic(); });
   if (deck && deck.silence) deck.silence();
   if (player && player.test && player.test.playing()) player.test.stop();
 }
@@ -1553,6 +1624,10 @@ player = createPlayer({
         DS[id] = Object.assign({}, DS[id], { cur: patch, curKey: key, edited: false });
         store.set(X.kCur, { key, patch });
         withEngine(() => drumHost.setPatch(patch));
+      } else if (id === 'thyratron') {
+        DS[id] = Object.assign({}, DS[id], { cur: patch, curKey: key, edited: false });
+        store.set(X.kCur, { key, patch });
+        withEngine(() => thyHost.setPatch(patch));
       } else {
         DS[id] = Object.assign({}, DS[id], { cur: patch, curKey: key, edited: false });
         store.set(X.kCur, { key, patch });
@@ -1637,10 +1712,17 @@ function frame(now) {
   if (E && E.C && E.C.anL && running) { const a = rms(E.C.anL), b = rms(E.C.anR); oL = a[0]; oR = b[0]; pk = Math.max(a[1], b[1]); }
   const drumOn = dev === 'dekatron';
   const latOn = dev === 'lattice';
+  const thyOn = dev === 'thyratron';
   const dm = drumOn ? drumHost.meter() : null;
   const lm = latOn ? latticeHost.meter() : null;
-  const cath = dev === 'cathode', valve = !drumOn && !latOn && !cath && cur.filt.model === 'valve12';
-  const tgt = (drumOn || latOn) ? {
+  const tm = thyOn ? thyHost.meter() : null;
+  const cath = dev === 'cathode', valve = !drumOn && !latOn && !thyOn && !cath && cur.filt.model === 'valve12';
+  const tgt = thyOn ? {
+    v1: { tube: '12AU7', drive: 4, bias: 0, lv: clampN((tm.v1 || 0) * 4, 0, 1.2), on: true },
+    v2: { tube: '12AU7', drive: 3, bias: 0, lv: clampN((tm.v1 || 0) * 2, 0, 1.2), on: true },
+    v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
+    v4: { tube: TUBE_ST.v4.shown || 'EL34', drive: TUBE_ST.v4.drive, bias: TUBE_ST.v4.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
+  } : (drumOn || latOn) ? {
     v1: { tube: TUBE_ST.v1.shown || '12AU7', drive: 2, bias: 0, lv: clampN(((drumOn ? dm.v1 : lm.peak) || 0) * 4, 0, 1.2), on: true },
     v2: { tube: TUBE_ST.v2.shown || '12AU7', drive: 2, bias: 0, lv: 0, on: false },
     v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
@@ -1671,7 +1753,7 @@ function frame(now) {
   drawEye(eyeLv);
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
   paintHost();
-  const cpuSrc = latOn ? lm : drumOn ? dm : m;
+  const cpuSrc = thyOn ? tm : latOn ? lm : drumOn ? dm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
 }
@@ -1712,11 +1794,15 @@ latPanel = mountLatticePanel($('latticeRoot'), {
   userTable: () => latticeHost.userTable(),
   toast,
 });
+thyPanel = mountThyPanel($('thyRoot'), {
+  patch: thyPatch,
+  edited() { if (dev !== 'thyratron') return; markEdited(); pushPatch(false); },
+});
 
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.9-pages',
+  version: '0.10-thyratron',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -1734,10 +1820,16 @@ window.__synth = {
       cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true);
       return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
     }
+    if (p && p.device === 'thyratron') {
+      const np = normalizeThy(p);
+      const switched = dev !== 'thyratron' ? setDevice('thyratron') : null;
+      cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true);
+      return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
+    }
     const np = normalizeAny(p); if (deviceOf(np) !== dev) setDevice(deviceOf(np)); cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur);
   },
   load: name => {
-    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : LATTICE_FACTORY.some(p => p.name === name) ? 'lattice' : dev;
+    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : LATTICE_FACTORY.some(p => p.name === name) ? 'lattice' : THY_FACTORY.some(p => p.name === name) ? 'thyratron' : dev;
     const switched = setDevice(d); loadKey('f:' + name); return switched;
   },
   factory: () => FACTORY.map(p => ({ name: p.name, cat: p.cat })),
@@ -1765,6 +1857,15 @@ window.__synth = {
   latticeTable: () => latticeHost.userTable(),
   latticeRender: async opts => {
     const buf = await renderLattice(Object.assign({ patch: dev === 'lattice' ? cur : LATTICE_DEFAULT }, opts));
+    return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
+  },
+  thyDevice: () => listDevices().find(d => d.id === 'thyratron') || null,
+  thyFactory: () => THY_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
+  thyPatch: name => clone(THY_FACTORY.find(p => p.name === name)),
+  thyMeter: () => Object.assign({}, thyHost.meter()),
+  thyNormalize: p => normalizeThy(p),
+  thyRender: async opts => {
+    const buf = await renderThyAudio(Object.assign({ patch: dev === 'thyratron' ? cur : THY_DEFAULT }, opts));
     return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
   },
   jacks: () => ({ src: C_SRC.slice(), inp: C_IN.slice(), norm: Object.assign({}, C_NORM) }),

@@ -16,6 +16,7 @@
 
 import { DEFAULT, RANGE, ENUMS } from './patches.js';
 import { C_DEFAULT, RANGE as C_RANGE, C_ENUMS } from './cathode.js';
+import { THY_DEFAULT, THY_RANGE, THY_ENUMS, normalizeThy } from './thyratron.js';
 
 export const RACK_API = 'dxrack/1';
 
@@ -86,4 +87,14 @@ registerDevice({
   instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true, midiOutput: false,
   processor: 'cathode',
   parameters: parameterTable(C_DEFAULT, C_RANGE, C_ENUMS),
+});
+
+registerDevice({
+  id: 'thyratron', name: 'Thyratron', version: '1',
+  description: 'Monophonic ladder-filter synthesizer',
+  instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true, midiOutput: false,
+  processor: 'thyratron', worklet: 'thyratron.worklet.js', channels: 2, oversample: 2,
+  messages: ['patch', 'on', 'off', 'bend', 'mw', 'sus', 'panic', 'active'],
+  parameters: parameterTable(THY_DEFAULT, THY_RANGE, THY_ENUMS),
+  normalize: normalizeThy,
 });

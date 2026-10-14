@@ -10,15 +10,18 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds four devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds five devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
-original design: own name, panel, jack names and voicing, not a copy of Korg's), **Dekatron**
-(an original analog-style drum machine: kick, snare, closed hat, open hat, clap, tom and rim, with
-a 16-step pattern), and **Lattice** (an original wavetable instrument: two morphing oscillators,
-warp, unison, a sub and noise, two filters, and a drag-and-drop modulation matrix). The rail above
-the chassis picks which device the keyboard, wheels and MIDI play. All four feed the shared
-ensemble and output rack. The rack takes its settings from the active device's patch. Dekatron
-registers on the device contract and follows the master clock. Lattice registers the same way.
+original design: own name, panel, jack names and voicing, not a copy of Korg's), **Thyratron**
+(a monophonic ladder-filter synthesizer: three oscillators, a mixer, a 24 dB/octave ladder that
+sings at full emphasis), **Dekatron** (an original analog-style drum machine: kick, snare,
+closed hat, open hat, clap, tom and rim, with a 16-step pattern), and **Lattice** (an original
+wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, two filters, and a
+drag-and-drop modulation matrix). The rail above the chassis picks which device the keyboard,
+wheels and MIDI play. Filament and Cathode feed the shared ensemble and output rack. Dekatron
+copies those output fields. Lattice and Thyratron have their own panels and sleep until the rail
+selects them; the shared output knobs stay on the Filament patch while either of those is showing.
+Dekatron and Lattice register when their nodes are hosted. Thyratron is registered in `device.js`.
 
 The rack framework (14 Oct) is what those devices plug into. Each device
 has one contract: a descriptor, a parameter table, MIDI in, a stereo output and a versioned patch.
@@ -77,7 +80,11 @@ task can read it).
 | `frontend/public/synth/lattice-dsp.js` | The wavetable engine: generated mipmapped tables, 2x with a half-band decimator, warp, unison, filters, envelopes, drawable LFOs, the mod matrix |
 | `frontend/public/synth/lattice.worklet.js` | AudioWorklet processor `lattice`. Imports the engine; no DSP of its own |
 | `frontend/public/synth/lattice-ui.js` | The flat panel, WAV import, and `createLatticeHost` / `renderLattice`. `attach` calls `registerDevice` and `addDevice` |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament and Cathode are registered here; Dekatron and Lattice register when their nodes are hosted |
+| `frontend/public/synth/thyratron.js` | Thyratron patch schema v1 (`device: 'thyratron'`), `normalizeThy`, six factory presets (Walnut Bass, Pilot Lead, Herald Brass, Arc Sweep, Crypt Wail, Bone Rattle) |
+| `frontend/public/synth/thyratron-dsp.js` | The monophonic voice: 2x oscillators, the ladder, two contours, glide, the half-band decimator |
+| `frontend/public/synth/thyratron.worklet.js` | AudioWorklet processor `thyratron`. Imports the engine; no DSP of its own |
+| `frontend/public/synth/thyratron-ui.js` | Wood-and-black panel, and `createThyHost` / `renderThyAudio` (the page adapter). `attach` calls `addDevice` |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode and Thyratron are registered here; Dekatron and Lattice register when their nodes are hosted |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
@@ -208,6 +215,27 @@ The patch stays on `lattice_cur`. A project may name Lattice as the keyboard dev
 | Patch | `normalizeLattice(patch)` → schema v1 JSON, `device: 'lattice'`. `parameters` is the dxrack/1 table |
 | Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}`, `{t:'table', data}`, `{t:'macro', i, v}`. Optional `at` is a frame time |
 | Meters | Worklet posts `{t:'meter'}` with voices, cpu, oscillator positions, LFO values, envelope values, slot amounts, peak |
+
+### Thyratron (monophonic ladder) - first version done 14 Oct 2026
+Original monophonic synthesizer. Three oscillators with footage and waveform, oscillator 3 able to
+leave the keyboard and run as the mod-wheel source, a mixer with noise and a short feedback path,
+and a 24 dB/octave ladder low-pass. Full emphasis lets the ladder sing on the cutoff; keyboard
+tracking can put that whistle on the note. Two contours are attack, decay and sustain, and letting
+go uses the decay time. Glide is an exponential slew in semitones whose time constant is the glide
+knob. The pitch wheel and the mod wheel are applied after the glide, so they move at once. The note
+stack is last-note priority: releasing a covered key does not release the voice. No third-party
+synth code. The ladder is four trapezoidal integrators with saturating feedback and one Newton step,
+written and tuned for this voice.
+- [x] `thyratron.worklet.js` at 2x with its own Kaiser half-band (27 taps). Asleep until the rail selects it.
+- [x] On the rack rail, with its own wood-and-black panel, patch list and mixer strip. The keys, pitch wheel, mod wheel and sustain pedal play it.
+- [x] Six factory presets: Walnut Bass, Pilot Lead, Herald Brass, Arc Sweep, Crypt Wail, Bone Rattle. The last two are Halloween.
+- [x] Tests in the T. section: non-silent presets, self-oscillation, glide timing, and no stuck notes.
+
+| | |
+|-|-|
+| Identity | `id: 'thyratron'`, `api: 'dxrack/1'`, `processor: 'thyratron'`, `worklet: 'thyratron.worklet.js'`, one stereo output, 2x oversampling |
+| Patch | `normalizeThy(patch)` → schema v1 JSON, `device: 'thyratron'`. Stored on `thyratron_cur`, the same way Dekatron keeps its pattern. A project may name Thyratron as the keyboard device. |
+| Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
 
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to

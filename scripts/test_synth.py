@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -633,6 +633,178 @@ with sync_playwright() as pw:
     pg.screenshot(path=os.path.join(SHOTS, "synth_dekatron_desktop.png"), full_page=True)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
     ck("D. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- T. Thyratron, the monophonic ladder
+    # Offline renders go through thyratron.worklet.js (2x, then the half-band).
+    def thy(patch, events, seconds=1.0):
+        return dec(pg.evaluate("a => __synth.thyRender(a)", {"patch": patch, "events": events, "seconds": seconds}))
+    def midi_of(x, t, half=0.018):
+        a = max(0, int((t - half) * SR)); b = min(len(x), int((t + half) * SR))
+        seg = x[a:b] - np.mean(x[a:b])
+        zc = np.where((seg[:-1] < 0) & (seg[1:] >= 0))[0]
+        if len(zc) < 2: return None
+        fr = seg[zc] / (seg[zc] - seg[zc + 1]); tz = (zc + fr) / SR
+        inst = 1 / np.diff(tz); f = float(np.median(inst))
+        return 69 + 12 * math.log2(f / 440)
+    devt = pg.evaluate("""() => { const d = __synth.thyDevice(); const p = d.parameters; return {
+      id: d.id, api: d.api, name: d.name, instrument: d.instrument, audioOutputs: d.audioOutputs,
+      midiInput: d.midiInput, channels: d.channels, oversample: d.oversample, processor: d.processor,
+      worklet: d.worklet, hasCreate: typeof d.create === 'function', messages: d.messages,
+      n: Object.keys(p).length, wave: p['osc1.wave'], lfo: p['osc3.lfo'], cut: p['filt.cutoff'] }; }""")
+    ck("T. adapter: dxrack/1, stereo, MIDI in, 2x worklet",
+       devt["id"] == "thyratron" and devt["name"] == "Thyratron" and devt["api"] == "dxrack/1" and devt["instrument"]
+       and devt["audioOutputs"] == 1 and devt["midiInput"] and devt["hasCreate"] and devt["channels"] == 2
+       and devt["oversample"] == 2 and devt["processor"] == "thyratron" and devt["worklet"] == "thyratron.worklet.js"
+       and devt["messages"] == ["patch", "on", "off", "bend", "mw", "sus", "panic", "active"]
+       and devt["n"] > 25 and devt["wave"]["type"] == "choice" and "saw" in devt["wave"]["choices"]
+       and devt["lfo"]["type"] == "boolean" and devt["cut"]["min"] == 20 and devt["cut"]["max"] == 16000, devt)
+    tf = pg.evaluate("__synth.thyFactory()")
+    cats = {f_["name"]: f_["cat"] for f_ in tf}
+    ck("T. six factory presets: bass, lead, brass, sweep, and two Halloween",
+       len(tf) == 6 and cats.get("Walnut Bass") == "Bass" and cats.get("Pilot Lead") == "Lead"
+       and cats.get("Herald Brass") == "Brass" and cats.get("Arc Sweep") == "FX"
+       and cats.get("Crypt Wail") == "Halloween" and cats.get("Bone Rattle") == "Halloween", tf)
+    for f_ in tf:
+        P = pg.evaluate("n => __synth.thyPatch(n)", f_["name"])
+        n0 = 40 if f_["cat"] == "Bass" else 60
+        L, R = thy(P, [{"at": 0.02, "t": "on", "n": n0, "v": 0.9}], 1.0)
+        pk = float(max(np.max(np.abs(L)), np.max(np.abs(R))))
+        early = float(np.sqrt(np.mean(L[int(0.02 * SR):int(0.12 * SR)] ** 2)))
+        rms = float(np.sqrt(np.mean(L[int(0.25 * SR):] ** 2)))
+        loud = early if f_["name"] == "Bone Rattle" else rms
+        ck(f"T. {f_['name']}: non-silent, finite, at or under 0 dBFS (peak {db(pk):.1f} dBFS)",
+           loud > 0.01 and pk <= 1.0 and pk > 0.05 and np.all(np.isfinite(L)) and np.all(np.isfinite(R))
+           and float(np.max(np.abs(L - R))) == 0.0, (loud, pk))
+    openf = {"cutoff": 440, "res": 1, "drive": 0.2, "track": 0, "env": 0}
+    quiet = {"device": "thyratron", "level": 0.8, "glide": 0, "tune": 0,
+             "osc1": {"wave": "tri", "range": "8", "level": 0}, "osc2": {"level": 0}, "osc3": {"level": 0, "lfo": False},
+             "mix": {"noise": 0, "fb": 0}, "filt": openf,
+             "loud": {"a": 0.001, "d": 0.2, "s": 1}, "cont": {"a": 0.001, "d": 0.05, "s": 0}}
+    L, _ = thy(quiet, [{"at": 0.05, "t": "on", "n": 60, "v": 0.8}], 1.5)
+    f = peak_freq(L[int(0.8 * SR):])
+    ck(f"T. full emphasis self-oscillates at the cutoff ({f:.2f} Hz, {1200 * math.log2(f / 440):+.2f} cents)",
+       abs(1200 * math.log2(f / 440)) < 12 and float(np.sqrt(np.mean(L[int(0.8 * SR):] ** 2))) > 0.05, f)
+    dead = dict(quiet); dead["filt"] = dict(openf, res=0)
+    L, _ = thy(dead, [{"at": 0.05, "t": "on", "n": 60, "v": 0.8}], 1.0)
+    ck("T. emphasis at zero, oscillators muted, stays silent", float(np.sqrt(np.mean(L[int(0.4 * SR):] ** 2))) < 1e-4, float(np.max(np.abs(L))))
+    tracked = []
+    for n, hz in ((48, 220), (60, 440), (72, 880)):
+        tp = dict(quiet); tp["filt"] = dict(openf, track=1)
+        L, _ = thy(tp, [{"at": 0.05, "t": "on", "n": n, "v": 0.8}], 1.3)
+        f = peak_freq(L[int(0.7 * SR):]); tracked.append(1200 * math.log2(f / hz))
+    ck(f"T. key tracking puts the singing ladder on the note (cents {[round(c, 2) for c in tracked]})", max(abs(c) for c in tracked) < 12, tracked)
+    lead = {"device": "thyratron", "level": 0.8, "glide": 0, "bend": 2, "tune": 0,
+            "osc1": {"wave": "tri", "range": "8", "tune": 0, "level": 1}, "osc2": {"level": 0},
+            "osc3": {"wave": "tri", "level": 0, "lfo": True, "rate": 5.5},
+            "mix": {"noise": 0, "fb": 0}, "filt": {"cutoff": 6000, "res": 0, "drive": 0, "track": 0, "env": 0},
+            "loud": {"a": 0.002, "d": 0.3, "s": 1}, "cont": {"a": 0.001, "d": 0.2, "s": 0},
+            "mod": {"src": "osc3", "pitch": 0, "cut": 0}}
+    L, _ = thy(lead, [{"at": 0.05, "t": "on", "n": 60, "v": 0.8}, {"at": 0.08, "t": "bend", "v": 1}], 1.0)
+    got = midi_of(L, 0.55)
+    ck(f"T. pitch wheel at full bend range is +2 semitones (MIDI {got:.2f})", got is not None and abs(got - 62) < 0.12, got)
+    vib = dict(lead); vib["mod"] = {"src": "osc3", "pitch": 5, "cut": 0}
+    L0, _ = thy(vib, [{"at": 0.05, "t": "on", "n": 60, "v": 0.8}], 1.2)
+    L1, _ = thy(vib, [{"at": 0.02, "t": "mw", "v": 1}, {"at": 0.05, "t": "on", "n": 60, "v": 0.8}], 1.2)
+    def swing(x):
+        zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0]
+        fr = x[zc] / (x[zc] - x[zc + 1]); tz = (zc + fr) / SR
+        inst = 1 / np.diff(tz); return float(np.max(inst) / np.min(inst))
+    d0, d1 = swing(L0[SR // 4:]), swing(L1[SR // 4:])
+    ck(f"T. mod wheel opens oscillator 3 onto pitch ({1200 * math.log2(d0):.0f} -> {1200 * math.log2(d1):.0f} cents)",
+       1200 * math.log2(d0) < 30 and 1200 * math.log2(d1) > 400, (d0, d1))
+    gl = dict(lead); gl["glide"] = 0.5
+    L, _ = thy(gl, [{"at": 0.05, "t": "on", "n": 60, "v": 0.8}, {"at": 0.40, "t": "on", "n": 72, "v": 0.8}], 2.2)
+    def expect(t, t0=0.40, a=60.0, b=72.0, tau=0.5):
+        if t <= t0: return a
+        return a + (b - a) * (1 - math.exp(-(t - t0) / tau))
+    glide_err = []
+    for t in (0.25, 0.55, 0.90, 1.80):
+        got = midi_of(L, t)
+        glide_err.append(None if got is None else (got - expect(t)) * 100)
+    ck(f"T. glide time constant matches the exponential (cents {[None if e is None else round(e, 1) for e in glide_err]})",
+       all(e is not None and abs(e) < 25 for e in glide_err) and abs(midi_of(L, 0.50) - 72) > 3, glide_err)
+    rel = dict(lead); rel["loud"] = {"a": 0.001, "d": 0.04, "s": 1}
+    L, _ = thy(rel, [{"at": 0.05, "t": "on", "n": 60, "v": 0.9}, {"at": 0.25, "t": "off", "n": 60}], 1.0)
+    ck("T. note off releases to silence", float(np.max(np.abs(L[int(0.7 * SR):]))) < 1e-3, float(np.max(np.abs(L[int(0.7 * SR):]))))
+    L, _ = thy(rel, [{"at": 0.05, "t": "on", "n": 60, "v": 0.9}, {"at": 0.20, "t": "on", "n": 67, "v": 0.9}, {"at": 0.40, "t": "off", "n": 60}], 1.1)
+    top = midi_of(L, 0.75)
+    ck(f"T. releasing a covered key keeps the latest note (MIDI {None if top is None else round(top, 2)})",
+       top is not None and abs(top - 67) < 0.2 and float(np.sqrt(np.mean(L[int(0.6 * SR):int(0.9 * SR)] ** 2))) > 0.02, top)
+    L, _ = thy(rel, [{"at": 0.05, "t": "on", "n": 60, "v": 0.9}, {"at": 0.20, "t": "on", "n": 67, "v": 0.9}, {"at": 0.40, "t": "off", "n": 67}], 1.1)
+    back = midi_of(L, 0.75)
+    ck(f"T. releasing the latest note falls back to the one under it (MIDI {None if back is None else round(back, 2)})",
+       back is not None and abs(back - 60) < 0.2, back)
+    L, _ = thy(rel, [{"at": 0.05, "t": "on", "n": 60, "v": 0.9}, {"at": 0.30, "t": "off", "n": 61}], 0.8)
+    stray = midi_of(L, 0.55)
+    ck("T. a note off for a key that is not held does not cut the sounding note",
+       stray is not None and abs(stray - 60) < 0.2 and float(np.sqrt(np.mean(L[int(0.4 * SR):] ** 2))) > 0.02, stray)
+    L, _ = thy(rel, [{"at": 0.05, "t": "on", "n": 60, "v": 0.9}, {"at": 0.22, "t": "off", "n": 60}, {"at": 0.30, "t": "off", "n": 60}], 0.9)
+    ck("T. a second note off stays silent", float(np.max(np.abs(L[int(0.6 * SR):]))) < 1e-3)
+    burst = [{"at": 0.05 + 0.03 * i, "t": "on", "n": n, "v": 0.9} for i, n in enumerate((60, 64, 67))]
+    burst += [{"at": 0.30 + 0.02 * i, "t": "off", "n": n} for i, n in enumerate((60, 64, 67))]
+    L, _ = thy(rel, burst, 1.0)
+    ck("T. a burst of notes, then every key up, leaves no stuck note", float(np.max(np.abs(L[int(0.7 * SR):]))) < 1e-3, float(np.max(np.abs(L[int(0.7 * SR):]))))
+    L, _ = thy(rel, [{"at": 0.02, "t": "sus", "on": True}, {"at": 0.05, "t": "on", "n": 60, "v": 0.9},
+                     {"at": 0.22, "t": "off", "n": 60}, {"at": 0.50, "t": "sus", "on": False}], 1.0)
+    held = float(np.max(np.abs(L[int(0.32 * SR):int(0.46 * SR)])))
+    tail = float(np.max(np.abs(L[int(0.8 * SR):])))
+    ck("T. sustain holds the note until the pedal lifts", held > 0.05 and tail < 1e-3, (held, tail))
+    rng = random.Random(4); bad = 0; pk = 0.0
+    waves = ["tri", "saw", "mix", "square", "wide", "narrow"]; ranges = ["lo", "32", "16", "8", "4", "2"]
+    for _ in range(8):
+        fp = {"device": "thyratron", "level": rng.random(), "glide": rng.uniform(0, 0.4), "bend": rng.randint(0, 12),
+              "osc1": {"wave": rng.choice(waves), "range": rng.choice(ranges), "tune": rng.uniform(-2, 2), "level": rng.random()},
+              "osc2": {"wave": rng.choice(waves), "range": rng.choice(ranges), "tune": rng.uniform(-2, 2), "level": rng.random()},
+              "osc3": {"wave": rng.choice(waves), "range": rng.choice(ranges), "level": rng.random(), "lfo": rng.random() < 0.5, "rate": rng.uniform(0.1, 12)},
+              "mix": {"noise": rng.random(), "fb": rng.random()},
+              "filt": {"cutoff": rng.uniform(40, 8000), "res": rng.random(), "drive": rng.random(), "track": rng.random(), "env": rng.random()},
+              "loud": {"a": rng.uniform(0.001, 0.2), "d": rng.uniform(0.05, 0.6), "s": rng.random()},
+              "cont": {"a": rng.uniform(0.001, 0.3), "d": rng.uniform(0.05, 0.8), "s": rng.random()},
+              "mod": {"src": rng.choice(["osc3", "noise"]), "pitch": rng.uniform(0, 5), "cut": rng.uniform(0, 2)}}
+        ev = [{"at": 0.02, "t": "on", "n": rng.randint(36, 84), "v": rng.random()}, {"at": 0.2, "t": "mw", "v": rng.random()}, {"at": 0.25, "t": "bend", "v": rng.uniform(-1, 1)}]
+        L, R = thy(fp, ev, 0.55)
+        bad += int(not (np.all(np.isfinite(L)) and np.all(np.isfinite(R)) and float(np.max(np.abs(L))) <= 1.0 and float(np.max(np.abs(R))) <= 1.0))
+        pk = max(pk, float(np.max(np.abs(L))))
+    ck(f"T. fuzz, 8 random patches: finite and at or under 0 dBFS (peak {db(pk):.2f} dBFS)", bad == 0, (bad, pk))
+    ms = pg.evaluate("""async () => { const t0 = performance.now();
+        await __synth.thyRender({patch: __synth.thyPatch('Walnut Bass'), events: [{at: 0.02, t: 'on', n: 40, v: 0.9}], seconds: 4});
+        return performance.now() - t0; }""")
+    info("T. CPU Thyratron Walnut Bass, one note", f"{100 * ms / 4000:.1f}% of real time in headless Chrome (offline render, voice only)")
+    banned = pg.evaluate("""async () => {
+      const files = ['index.html', 'thyratron.js', 'thyratron-dsp.js', 'thyratron-ui.js', 'thyratron.worklet.js', 'device.js'];
+      const hits = [];
+      for (const f of files) {
+        const text = await (await fetch('/synth/' + f)).text();
+        for (const w of ['Moog', 'Minimoog', 'Model D']) if (text.includes(w)) hits.push(f + ':' + w);
+      }
+      return hits;
+    }""")
+    ck("T. the page and the voice do not use those product names", banned == [], banned)
+    pg.evaluate("__synth.setDevice('thyratron')"); pg.wait_for_timeout(250)
+    ck("T. rail: Thyratron lit, its ladder shown, Filament's filter hidden",
+       pg.evaluate("__synth.device()") == "thyratron" and pg.is_visible("#mThyLad") and pg.is_visible("#mThyOsc")
+       and not pg.is_visible("#mFilt") and not pg.is_visible("#mCLpf") and pg.get_attribute("#devT", "aria-pressed") == "true"
+       and "THYRA" in pg.inner_text("#devTitle") and pg.inner_text("#nameV1") == "LADDER")
+    pg.click('#thyOsc .chip[data-path="osc1.wave"][data-val="square"]')
+    pg.click("#thyLfo"); pg.wait_for_timeout(150)
+    ck("T. a waveform chip and the low-oscillator switch edit the patch",
+       pg.evaluate("__synth.patch().osc1.wave") == "square" and pg.evaluate("__synth.patch().osc3.lfo") is True)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
+    ck("T. a reload comes back to Thyratron with the edited waveform",
+       pg.evaluate("__synth.device()") == "thyratron" and pg.evaluate("__synth.patch().osc1.wave") == "square")
+    pg.screenshot(path=os.path.join(SHOTS, "synth_thyratron_desktop.png"), full_page=True)
+    pg.evaluate("""async () => { await __synth.engine().ctx.resume(); await __synth.setPatch({device:'thyratron', loud:{a:0.001,d:0.04,s:0.8}, osc1:{wave:'saw', range:'8', level:0.8}, osc2:{level:0}, osc3:{level:0}, filt:{cutoff:4000, res:0.1, env:0, track:0}, glide:0}); }""")
+    pg.wait_for_timeout(150)
+    pg.evaluate("__synth.noteOn(60, 0.9)"); pg.wait_for_timeout(200)
+    pg.evaluate("__synth.noteOn(64, 0.9)"); pg.wait_for_timeout(100)
+    pg.evaluate("__synth.noteOff(60)"); pg.wait_for_timeout(120)
+    live_m = pg.evaluate("__synth.thyMeter()")
+    ck("T. on the page, letting go of a covered key leaves the voice up", (live_m.get("voices") or 0) >= 1, live_m)
+    pg.evaluate("__synth.noteOff(64)"); pg.wait_for_timeout(500)
+    live_m = pg.evaluate("__synth.thyMeter()")
+    ck("T. on the page, the last key up leaves no stuck note", (live_m.get("voices") or 0) == 0, live_m)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    ck("T. no page errors", not errs, errs)
     # ---------------------------------------------------------------- M. MIDI files: recorder, import, player, render WAV
     # Fixtures are built byte by byte here (not with smf.js), so the reader is checked against the format itself.
     def vlq(v):
@@ -1247,6 +1419,25 @@ with sync_playwright() as pw:
     ph.evaluate("__synth.setDevice('filament')")
     ck("D. 390px: no page errors", not perr, perr)
     ph.close()
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2); perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE); ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000); ph.wait_for_timeout(200)
+    ph.evaluate("__synth.setDevice('thyratron')"); ph.wait_for_timeout(250)
+    ck("T. 390px: no horizontal scroll", ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+    ck("T. 390px: the ladder is on screen and Filament's sections are not", ph.is_visible("#mThyLad") and ph.is_visible("#mThyPlay") and not ph.is_visible("#mFilt") and not ph.is_visible("#mStereo"))
+    ck("T. 390px: one section group at a time", ph.evaluate("[...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length") <= 4)
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #mThyPlay .knob')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.id || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("T. 390px: the rail, tabs and play knobs are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="osc"]'); ph.wait_for_timeout(200)
+    ck("T. 390px: the Osc tab shows the oscillators, still no horizontal scroll", ph.is_visible("#mThyOsc") and not ph.is_visible("#mThyPlay")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    small = ph.evaluate("""() => [...document.querySelectorAll('#thyOsc .chip, #thyLfo')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.textContent.trim() + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("T. 390px: waveform and footage chips are 44 px or more", not small, small)
+    ph.screenshot(path=os.path.join(SHOTS, "synth_thyratron_phone.png"))
+    ph.evaluate("__synth.setDevice('filament')")
+    ck("T. 390px: no page errors", not perr, perr)
+    ph.close()
 
 
     # ---------------------------------------------------------------- R. the rack framework
@@ -1279,7 +1470,7 @@ with sync_playwright() as pw:
     ck("R. beat 4 is the downbeat of the next bar in 4/4", pure["bar"] == 1, pure["bar"])
     ck("R. tempo clamps to 40..240", pure["tempo"] == 40, pure["tempo"])
     ck("R. centre pan is unity and a hard right pan drops the left", abs(pure["balL"] - 1) < 1e-12 and abs(pure["balR"] - 1) < 1e-12 and abs(pure["hard"]) < 1e-12 and abs(pure["half"] - 0.7071067811865476) < 1e-9, pure)
-    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "dekatron", "lattice"], pure)
+    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "thyratron", "dekatron", "lattice"], pure)
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
@@ -1581,7 +1772,7 @@ with sync_playwright() as pw:
        desc["id"] == "lattice" and desc["api"] == "dxrack/1" and desc["instrument"] is True and desc["outs"] == 1 and desc["midi"]
        and desc["processor"] == "lattice" and desc["worklet"] == "lattice.worklet.js" and desc["over"] == 2
        and desc["pos"] == "float" and all(w in desc["warp"] for w in ("bend", "sync", "pwm", "fm"))
-       and desc["ids"] == ["filament", "cathode", "dekatron", "lattice"], desc)
+       and desc["ids"] == ["filament", "cathode", "thyratron", "dekatron", "lattice"], desc)
     L, R = lat(lpatch(), [{"at": 0.02, "t": "on", "n": 69, "v": 0.9}], 0.55)
     seg = L[int(0.12 * SR):int(0.5 * SR)]
     got = peak_freq(seg); cents = abs(1200 * math.log2(got / 440.0))
