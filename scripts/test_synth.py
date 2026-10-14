@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -2700,6 +2700,159 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(150)
     ck("G. leaving the pad returns the keyboard to Filament", pg.evaluate("__synth.device()") == "filament" and not pg.is_visible("#gleamPad"))
     ck("G. no page errors", len(errs) == rack_before, errs[rack_before:])
+
+    # ---------------------------------------------------------------- H. Heptode, the MIDI-file instrument
+    def hrender(patch=None, events=None, seconds=0.6, midi=None, playing=False):
+        payload = {"seconds": seconds, "playing": playing, "events": events or []}
+        if patch is not None: payload["patch"] = patch
+        if midi is not None: payload["midi"] = midi
+        return dec(pg.evaluate("a => __synth.heptodeRender(a)", payload))
+    def hrms(x, a=0, b=None):
+        seg = x[a:b] if b is not None else x[a:]
+        if len(seg) == 0: return 0.0
+        return float(np.sqrt(np.mean(seg ** 2)))
+    devh = pg.evaluate("""() => { const d = __synth.heptodeDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput, proc: d.processor,
+      worklet: d.worklet, ch: d.channels, over: d.oversample, level: d.parameters.level && d.parameters.level.type,
+      poly: d.parameters.poly && d.parameters.poly.max, name: d.name }; }""")
+    ck("H. Heptode publishes a stereo MIDI dxrack/1 device",
+       devh["id"] == "heptode" and devh["api"] == "dxrack/1" and devh["inst"] and devh["outs"] == 1 and devh["midi"]
+       and devh["proc"] == "heptode" and devh["worklet"] == "heptode.worklet.js" and devh["ch"] == 2 and devh["over"] == 1
+       and devh["level"] == "float" and devh["poly"] == 32 and devh["name"] == "Heptode", devh)
+    plain = {"device": "heptode", "level": 0.85}
+    hL, hR = hrender(plain, [{"t": "on", "tr": 0, "n": 69, "v": 0.8}], 0.8)
+    hf = peak_freq(hL[int(0.2 * SR):int(0.7 * SR)])
+    hpeak = float(np.max(np.abs(hL)))
+    ck(f"H. a neutral A4 peaks near 440 Hz ({hf:.1f} Hz, {db(hpeak):.1f} dBFS)",
+       abs(hf - 440) < 8 and np.isfinite(hL).all() and hpeak <= 1.0 and hrms(hL, int(0.15 * SR), int(0.5 * SR)) > 1e-3, (hf, hpeak))
+    offL, offR = hrender(plain, [{"t": "on", "tr": 0, "n": 69, "v": 0.8, "at": 0}, {"t": "off", "tr": 0, "n": 69, "at": 0.25}], 1.2)
+    tail = hrms(offL, int(0.9 * SR), int(1.15 * SR))
+    ck(f"H. note off reaches silence and does not stick ({db(tail):.1f} dB)", tail < 1e-4 and hrms(offL, int(0.1 * SR), int(0.22 * SR)) > 1e-3, tail)
+    panL, panR = hrender({"device": "heptode", "level": 1, "tracks": [{"pan": -1, "space": 0, "reverb": 0, "delay": 0, "chorus": 0}]},
+                         [{"t": "on", "tr": 0, "n": 60, "v": 0.9}], 0.5)
+    ck("H. a hard left track stays on the left", hrms(panR, int(0.1 * SR)) < hrms(panL, int(0.1 * SR)) * 0.05 and hrms(panL, int(0.1 * SR)) > 1e-3,
+       (hrms(panL, int(0.1 * SR)), hrms(panR, int(0.1 * SR))))
+    muteL, muteR = hrender({"device": "heptode", "tracks": [{"mute": True}]}, [{"t": "on", "tr": 0, "n": 60, "v": 0.9}], 0.4)
+    ck("H. mute silences the track", hrms(muteL) < 1e-5 and hrms(muteR) < 1e-5, (hrms(muteL), hrms(muteR)))
+    quietL, _ = hrender(plain, [{"t": "cc", "tr": 0, "c": 11, "v": 0, "at": 0}, {"t": "on", "tr": 0, "n": 69, "v": 0.9, "at": 0}], 0.4)
+    ck("H. expression at zero is nearly silent", hrms(quietL, int(0.05 * SR)) < 1e-4, hrms(quietL, int(0.05 * SR)))
+    pianoL, _ = hrender({"device": "heptode", "tracks": [{"a": 0.004, "d": 0.34, "s": 0.18, "r": 0.3, "wave": 0.2}]}, [{"t": "on", "tr": 0, "n": 69, "v": 0.8}], 0.3)
+    strL, _ = hrender({"device": "heptode", "tracks": [{"a": 0.09, "d": 0.18, "s": 0.82, "r": 0.34, "wave": 0.3}]}, [{"t": "on", "tr": 0, "n": 69, "v": 0.8}], 0.3)
+    ck("H. a slower family attack is quieter in the first 30 ms",
+       hrms(strL, 0, int(0.03 * SR)) < hrms(pianoL, 0, int(0.03 * SR)) * 0.7, (hrms(pianoL, 0, int(0.03 * SR)), hrms(strL, 0, int(0.03 * SR))))
+    fix = pg.evaluate("__synth.heptodeFixture()")
+    info_s = pg.evaluate("b => __synth.heptodeScore(b)", fix)
+    ck("H. the complex fixture has two tracks, a tempo map and several notes",
+       info_s["notes"] >= 3 and info_s["tracks"] >= 2 and abs(info_s["bpm"] - 120) < 1, info_s)
+    fL, fR = hrender({"device": "heptode", "level": 0.85, "tracks": [{}, {"mute": True}]}, None, 1.0, midi=fix, playing=True)
+    bend_f = peak_freq(fL[int(0.55 * SR):int(0.95 * SR)])
+    ck(f"H. pitch bend lifts the lead by about two semitones ({bend_f:.1f} Hz)", abs(bend_f - 493.88) < 8 and hrms(fL, int(0.2 * SR), int(0.45 * SR)) > 1e-3, bend_f)
+    longL, longR = hrender(plain, None, 5.0, midi=fix, playing=True)
+    held = hrms(longL, int(3.4 * SR), int(3.6 * SR))
+    gone = hrms(longL, int(4.55 * SR), int(4.9 * SR))
+    ck(f"H. sustain holds the note and then lets it go ({db(held):.1f} dB, then {db(gone):.1f} dB)",
+       held > 1e-3 and gone < 1e-4, (held, gone))
+    cap = pg.evaluate("""() => __synth.heptodeProbe({ device: 'heptode', poly: 32 }, Array.from({length: 40}, (_, i) => ({ n: 48 + (i % 24), v: 0.7, tr: i % 4 })))""")
+    perf = pg.evaluate("""() => __synth.heptodeProbe({ device: 'heptode', poly: 32, performance: true }, Array.from({length: 40}, (_, i) => ({ n: 48 + (i % 24), v: 0.7, tr: i % 4 })))""")
+    ck("H. voice stealing stays inside the polyphony cap", cap["voices"] <= 32 and cap["voices"] >= 8 and cap["cap"] <= 32, cap)
+    ck("H. performance mode caps polyphony at 16", perf["voices"] <= 16 and perf["cap"] <= 16 and perf["peak"] > 0, perf)
+    culled = pg.evaluate("() => __synth.heptodeCull(120000, 16)")
+    ck(f"H. culling 120k notes stays fast and inside the cap ({culled['ms']:.0f} ms, overlap {culled['overlap']})",
+       culled["ms"] < 2000 and culled["kept"] > 0 and culled["overlap"] <= 16, culled)
+    lib = pg.evaluate("() => __synth.heptodeLibrary()")
+    names = " ".join((row["file"] + " " + row["title"]).lower() for row in lib)
+    by = {row["file"]: row for row in lib}
+    bee = by.get("rimsky-korsakov-bumblebee.mid") or {}
+    arcade = by.get("dx-glass-arcade.mid") or {}
+    dense = by.get("black-density.mid") or {}
+    ck("H. the library has the showpieces, the original tune, and the stress file",
+       len(lib) == 7 and bee.get("notes", 0) > 100 and bee.get("tracks", 0) >= 2
+       and arcade.get("tracks", 0) >= 4 and dense.get("notes", 0) >= 100000
+       and "axel" not in names and dense.get("ms", 9999) < 3000, (len(lib), bee.get("notes"), arcade.get("tracks"), dense.get("notes"), dense.get("ms")))
+    played = hrender({"device": "heptode", "performance": True, "poly": 16}, None, 0.3, midi=fix, playing=True)
+    stopL, stopR = hrender(plain, [{"t": "on", "tr": 0, "n": 64, "v": 0.8, "at": 0}, {"t": "stop", "at": 0.2}], 0.8)
+    ck("H. a file makes sound, and stop releases it",
+       hrms(played[0], int(0.05 * SR)) > 1e-4 and hrms(stopL, int(0.5 * SR)) < 1e-4, (hrms(played[0]), hrms(stopL, int(0.5 * SR))))
+    nudged = pg.evaluate("() => __synth.heptodeRandom(3)")
+    fm = nudged["tracks"][0]["fm"]
+    ck("H. a gentle randomize stays in range and does not slam the sends",
+       0 <= fm < 0.25 and all(0 <= nudged["tracks"][i]["delay"] <= 1 for i in range(16)) and nudged["morph"] == 0, fm)
+    morphed = pg.evaluate("""() => __synth.heptodeMorph([{ wave: 0, fm: 0 }], [{ wave: 1, fm: 1 }], 0.5)""")
+    ck("H. morph halfway sits between the two stored sounds",
+       abs(morphed["tracks"][0]["wave"] - 0.5) < 0.02 and abs(morphed["tracks"][0]["fm"] - 0.5) < 0.02, morphed["tracks"][0])
+
+    pg.evaluate("__synth.setDevice('heptode')")
+    pg.wait_for_timeout(300)
+    ck("H. the player is on screen and Filament's filter is not",
+       pg.evaluate("__synth.device()") == "heptode" and pg.is_visible("#hepRoll") and pg.is_visible("#heptodePlace") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    pg.evaluate("""() => {
+      const bytes = new Uint8Array(__synth.heptodeFixture());
+      const file = new File([bytes], 'phrase.mid', { type: 'audio/midi' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById('hepDrop').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+    }""")
+    pg.wait_for_function("() => __synth.heptodeState().notes >= 3", timeout=5000)
+    ck("H. dropping a .mid file loads its notes", pg.evaluate("__synth.heptodeState().notes") >= 3 and "phrase" in pg.evaluate("__synth.heptodeState().name").lower(), pg.evaluate("__synth.heptodeState()"))
+    pg.click("#hepPlay")
+    pg.wait_for_timeout(200)
+    ck("H. play starts the file", pg.evaluate("__synth.heptodeState().playing") is True)
+    box = pg.locator("#heptodePlace").bounding_box()
+    pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] - 30)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + 24, box["y"] + box["height"] * 0.75)
+    pg.mouse.up()
+    placed = pg.evaluate("__synth.patch().tracks[0]")
+    ck("H. dragging an orb moves that track in the field", placed["placed"] and placed["pan"] < -0.3, placed)
+    pg.click("#hepStop")
+    pg.wait_for_timeout(250)
+    ck("H. stop ends playback", pg.evaluate("__synth.heptodeState().playing") is False)
+    # The rack section leaves Cathode soloed. A soloed strip mutes every other
+    # device at the mixer, so the master recorder would hear silence even though
+    # Heptode is sounding. Clear that leftover before measuring the master path.
+    pg.evaluate("""() => {
+      const mix = __synth.mixer() || {};
+      Object.keys(mix).forEach(id => __synth.setMixer(id, { mute: false, solo: false, level: mix[id].level, pan: mix[id].pan }));
+      __synth.setMixer('heptode', { level: 1, pan: 0, mute: false, solo: false });
+    }""")
+    hep_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
+    pg.evaluate("__synth.noteOn(69, 0.8)")
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(700)
+    pg.evaluate("__synth.noteOff(69)")
+    rec = pg.evaluate("() => __synth.recordStop()")
+    rec_raw = base64.b64decode(rec["b64"]) if rec and rec.get("b64") else b""
+    rec_info = parse_wav(rec_raw) if rec_raw else None
+    rec_rms = hrms(pcm24(rec_info["data"])[0]) if rec_info and len(rec_info["data"]) >= 6 else 0
+    ck("H. the master recorder hears Heptode",
+       rec_info and rec_info["bits"] == 24 and rec_info["ch"] == 2 and rec_info["rate"] == hep_sr and rec.get("sr") == hep_sr
+       and rec_rms > 1e-3 and bool(_re2.fullmatch(r"Heptode-\d{8}-\d{6}\.wav", rec.get("name") or "")),
+       (rec_rms, None if not rec else rec.get("sr"), None if not rec else rec.get("name")))
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.evaluate("__synth.setDevice('heptode')")
+    ph.wait_for_timeout(300)
+    ck("H. 390px: no horizontal scroll, the roll is up, one section",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#hepRoll") and not ph.is_visible("#mFilt")
+       and ph.evaluate("[...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length") <= 4,
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #heptodeRoot .chip, #heptodeRoot .btn, #heptodeRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("H. 390px: rail, tabs and player controls are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="tracks"]')
+    ph.wait_for_timeout(200)
+    ck("H. 390px: the Tracks tab shows the channel strips", ph.is_visible("#mHepTracks") and not ph.is_visible("#hepRoll")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_heptode_phone.png"))
+    ck("H. 390px: no page errors", not perr, perr)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(150)
     b.close()
 
 print()

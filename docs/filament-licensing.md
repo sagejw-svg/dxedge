@@ -130,6 +130,21 @@ Glass Tine is a Cathode Halloween preset with no bundled file pointing at it. It
 | 2026-10-14 | [signalsmith-stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch) (MIT) | not shipped | Considered for Mote's pitch. A grain's pitch is the read rate of a short window, so a time stretcher was not needed and the library was not imported. |
 | 2026-10-14 | Original grain engine | `frontend/public/synth/mote-dsp.js`, `mote.worklet.js` | Written for this project from the description of a windowed buffer read. No granular-player source was copied or translated. The tail is a stereo delay plus a four-line mix with delays 23.0, 31.4, 37.8 and 47.2 ms. Those lengths are not the Freeverb set. |
 | 2026-10-14 | Generated sources, CC0 | `frontend/public/synth/sources/glass.wav`, `air.wav`, `bell.wav` | Original audio from `scripts/build_mote_sources.py`, dedicated CC0 in `sources/README.md`. Not taken from a sample library. |
+| 2026-10-14 | Julius O. Smith, [Schroeder reverberators](https://ccrma.stanford.edu/~jos/pasp/Schroeder_Reverberators.html) (published description) | `frontend/public/synth/heptode-dsp.js` | Original JavaScript for the published layout: parallel damped combs into series allpasses. Delay lengths are 19.7, 23.3, 27.1, 31.9 ms and 21.1, 25.7, 29.9, 34.3 ms, then allpasses at 5.7, 8.3, 6.4 and 9.1 ms. Not the Freeverb tuning and not a translation of that code. |
+| 2026-10-14 | webaudio-pianoroll (Apache-2.0) | not shipped | Considered for Heptode's piano roll. The roll is a canvas bitmap, so the library was not imported. |
+| 2026-10-14 | Heptode MIDI library, CC0 | `frontend/public/synth/heptode/midi/` | Sequenced in `scripts/build_heptode_library.mjs`. No MIDI file was copied. Glass Arcade is an original tune and does not quote the 1984 film theme. |
+
+### Heptode MIDI library
+
+| File | Composition | Sequence |
+|-|-|-|
+| `rimsky-korsakov-bumblebee.mid` | Public domain. Rimsky-Korsakov, Flight of the Bumblebee (1900). Chromatic semiquavers in A minor | CC0 sequence, 14 Oct 2026. Original reduction |
+| `liszt-la-campanella.mid` | Public domain. Liszt, Grandes études de Paganini No. 3 (1851) | CC0 sequence, 14 Oct 2026. Original reduction: repeated high bells and a short line |
+| `bach-fugue-gm.mid` | Public domain. Bach, Little Fugue in G minor, BWV 578 | CC0 sequence, 14 Oct 2026. Original voicing of the subject, the answer, and a third entry |
+| `wagner-ride-valkyries.mid` | Public domain. Wagner, Ride of the Valkyries (1856) | CC0 sequence, 14 Oct 2026. Original reduction of the opening call in 9/8 |
+| `liszt-hungarian-rhapsody-2.mid` | Public domain. Liszt, Hungarian Rhapsody No. 2 (1847) | CC0 sequence, 14 Oct 2026. Short excerpt. The file changes tempo |
+| `dx-glass-arcade.mid` | Original, DX Edge, 2026. A 1980s-style multitrack in D major | CC0, original. Six channels, including a drum kit on channel 10. Not a quotation of any commercial recording |
+| `black-density.mid` | Generated density test, DX Edge, 2026 | CC0. Sixteen channels, a tempo change, and more than 100,000 notes |
 
 ## Register: use with care (licenses vary inside the project)
 

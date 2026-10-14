@@ -1,0 +1,58 @@
+[
+  {
+    "file": "rimsky-korsakov-bumblebee.mid",
+    "title": "Flight of the Bumblebee",
+    "composer": "Nikolai Rimsky-Korsakov",
+    "year": 1900,
+    "status": "Public domain composition, original reduction",
+    "note": "Chromatic semiquavers in A minor."
+  },
+  {
+    "file": "liszt-la-campanella.mid",
+    "title": "La Campanella",
+    "composer": "Franz Liszt",
+    "year": 1851,
+    "status": "Public domain composition, original reduction",
+    "note": "Repeated high bells over a short G-sharp minor line."
+  },
+  {
+    "file": "bach-fugue-gm.mid",
+    "title": "Little Fugue in G minor",
+    "composer": "Johann Sebastian Bach",
+    "year": 1707,
+    "status": "Public domain composition, original voicing",
+    "note": "Subject, answer, and a third entry."
+  },
+  {
+    "file": "wagner-ride-valkyries.mid",
+    "title": "Ride of the Valkyries",
+    "composer": "Richard Wagner",
+    "year": 1856,
+    "status": "Public domain composition, original reduction",
+    "note": "The rising call in 9/8."
+  },
+  {
+    "file": "liszt-hungarian-rhapsody-2.mid",
+    "title": "Hungarian Rhapsody No. 2",
+    "composer": "Franz Liszt",
+    "year": 1847,
+    "status": "Public domain composition, original excerpt",
+    "note": "A slow opening, then a faster section. The file changes tempo."
+  },
+  {
+    "file": "dx-glass-arcade.mid",
+    "title": "Glass Arcade",
+    "composer": "DX Edge",
+    "year": 2026,
+    "status": "Original",
+    "note": "An original 1980s-style multitrack in D major."
+  },
+  {
+    "file": "black-density.mid",
+    "title": "Density",
+    "composer": "DX Edge",
+    "year": 2026,
+    "status": "Generated",
+    "note": "A generated stress file: sixteen channels and more than one hundred thousand notes."
+  }
+]

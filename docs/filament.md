@@ -292,6 +292,41 @@ registerDevice({
 | Sources | `glass`, `air`, `bell` are shipped files. `file`, `mic` and `rack` are buffers kept for the session, not in the JSON |
 | Meters | Worklet posts `{t:'meter', grains, voices, cpu, level, position, parts}` |
 
+### Heptode (MIDI-file instrument) - first version
+Original multitimbral player. A packed score runs inside the AudioWorklet, not on a page timer.
+Every channel starts as the same clean voice (a sine leaning toward a triangle, a gentle envelope,
+no drive and no effects). A program number may pick a family envelope only. The player then morphs
+that voice per channel: wave, FM amount, filter and envelope, drive, and sends into a delay, a chorus,
+and a short reverb. An XY field places each channel in the stereo image.
+- [x] Drag in any .mid, or pick a bundled file. Tempo, loop, mute, solo, and a performance cap for very dense files
+- [x] Piano roll drawn on a canvas, including files with more than 100,000 notes
+- [x] Gentle randomize, and a morph between two stored mixes
+- [x] Sixteen channels, pitch bend, mod, sustain, expression, pan, volume, program change, and tempo changes
+- [x] Voice stealing under a polyphony cap. Performance mode culls notes that cannot be heard
+- [x] Tests in the H. section
+
+`heptodeDevice` in `heptode.js` is the `dxrack/1` descriptor. `heptode.js` calls `registerDevice` when the page imports it. `createHeptodeHost.attach` calls `addDevice('heptode', node)`, so the master recorder hears it.
+
+```js
+registerDevice({
+  id: 'heptode', name: 'Heptode', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  processor: 'heptode', worklet: 'heptode.worklet.js',
+  parameters: { level: { id, label, type: 'float', default, min, max }, /* poly, tempo, fx.* */ },
+  async create(ctx, host) { /* stereo AudioWorkletNode, processor 'heptode' */ },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'heptode'`, `api: 'dxrack/1'`, `processor: 'heptode'`, `worklet: 'heptode.worklet.js'`, one stereo output |
+| Patch | `normalizeHeptode(patch)` → schema v1 JSON, `device: 'heptode'`. Sixteen `tracks`, each with wave, fm, filter, envelope, drive, sends, pan, space |
+| Start | Wave near a sine, fm 0, drive 0, sends 0. A program may change the envelope and the wave only |
+| Score | `smf.js` with `{ wide: true }` keeps program change and CC 7, 10, 11, 6, 100, 101, 120, 121, 123. The deck's default read is unchanged |
+| Voices | Pool of 32. Performance mode uses at most 16 and drops notes shorter than 12 ms or quieter than velocity 8 |
+| Messages | `{t:'patch', p}`, `{t:'score', score, bpm}`, `{t:'play'}`, `{t:'stop'}`, `{t:'seek', pos}`, `{t:'on', tr, n, v}`, `{t:'off', tr, n}`, `{t:'cc', tr, c, v}`, `{t:'bend', tr, v}`, `{t:'panic'}`, `{t:'active', on}` |
+| Library | Seven CC0 sequences in `frontend/public/synth/heptode/midi/`. Five are original reductions of public-domain pieces, one is an original tune, one is a generated density test |
+
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
 devices (so Filament and Cathode play at once); built by the nightly job. Two slices; if both do not

@@ -7,7 +7,10 @@
 //   events: [{ tick, ch, data: [status, d1, d2] }] - only the channel events Filament plays:
 //   note on and off (note on with velocity 0 becomes a note off), pitch bend, CC 1 (mod wheel),
 //   CC 64 (sustain), channel pressure and poly pressure. Sysex, unknown metas and other channel
-//   messages are skipped. Throws an Error with a plain message for a file it cannot play.
+//   messages are skipped. Pass { wide: true } to also keep program change, CC 7 (volume),
+//   CC 10 (pan), CC 11 (expression), the pitch-bend-range RPN (CC 101, 100, 6) and the
+//   all-notes-off controllers (CC 120, 121, 123). The deck leaves the option off.
+//   Throws an Error with a plain message for a file it cannot play.
 // songOf(smf) -> { parts: [{ name, chans, notes, lo, hi, mean, events: [{ time, data }] }], length, bpm }
 //   Times in seconds through the tempo map. A track that holds notes on several channels is
 //   split into one part per channel (format 0 files carry a whole band in one track).
@@ -30,7 +33,8 @@ const u16 = (b, p) => (b[p] << 8) | b[p + 1];
 const str = (b, p, n) => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[p + i]); return s; };
 const DATA_LEN = { 0x80: 2, 0x90: 2, 0xA0: 2, 0xB0: 2, 0xC0: 1, 0xD0: 1, 0xE0: 2 };
 
-export function readSMF(input) {
+export function readSMF(input, opts) {
+  const wide = !!(opts && opts.wide);
   const b = input instanceof Uint8Array ? input : new Uint8Array(input);
   if (b.length < 14 || str(b, 0, 4) !== 'MThd') throw new Error('This is not a Standard MIDI File (no MThd header).');
   const hlen = u32(b, 4), format = u16(b, 8), ntrks = u16(b, 10), div = u16(b, 12);
@@ -64,6 +68,9 @@ export function readSMF(input) {
       const d1 = b[p] & 0x7f, d2 = nd === 2 ? b[p + 1] & 0x7f : 0; p += nd;
       const ch = st & 0x0F;
       let keep = hi === 0x80 || hi === 0x90 || hi === 0xE0 || hi === 0xD0 || hi === 0xA0 || (hi === 0xB0 && (d1 === 1 || d1 === 64));
+      if (wide && !keep) {
+        keep = hi === 0xC0 || (hi === 0xB0 && (d1 === 7 || d1 === 10 || d1 === 11 || d1 === 6 || d1 === 100 || d1 === 101 || d1 === 120 || d1 === 121 || d1 === 123));
+      }
       if (!keep) continue;
       if (hi === 0x90 && d2 === 0) tr.events.push({ tick, ch, data: [0x80 | ch, d1, 0] });
       else tr.events.push({ tick, ch, data: nd === 2 ? [st, d1, d2] : [st, d1] });
