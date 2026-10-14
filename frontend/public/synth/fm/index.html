@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html ng-app="synthApp" lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#080808">
+	<title>Hexode - six-operator FM - DXEdge</title>
+	<meta name="description" content="Hexode: a six-operator FM synthesizer in the browser. Play from the computer keyboard or a MIDI keyboard, and load your own .syx voice bank.">
+	<link rel="stylesheet" type="text/css" href="synth.css">
+	<link rel="stylesheet" type="text/css" href="skin.css">
+</head>
+<body ng-controller="MidiCtrl as midiCtrl">
+	<header class="site-top">
+		<div>
+			<div class="site-label">dxedge.net / synth / fm</div>
+			<h1>HEX<span>ODE</span></h1>
+			<p class="site-intro">Six-operator FM. Computer keys play it, a MIDI keyboard plays it, and a .syx bank you load replaces the init voice.</p>
+		</div>
+		<div class="site-links">
+			<a href="/synth/">Filament rack</a>
+			<a href="/synth/acid/">Anode</a>
+			<a class="site-tip" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
+		</div>
+	</header>
+	<div class="dx7-container" ng-controller="PresetCtrl as presetCtrl">
+		<div class="dx7-top-panel">
+			<div class="mark">HEXODE<small>six-operator FM</small></div>
+			<div class="display">
+				<div class="lcd-text" ng-bind="presetCtrl.paramDisplayText"></div>
+				<div id="analysis" class="analysis" ng-click="midiCtrl.onVizClick()"></div>
+				<select ng-model="presetCtrl.selectedIndex"
+								ng-change="presetCtrl.onChange($event)"
+								ng-options="presetCtrl.presets.indexOf(preset) as preset.name for preset in presetCtrl.presets"
+								class="lcd" aria-label="Voice"></select>
+			</div>
+			<div class="dx7-buttons-row-1">
+				<button class="dx7-button purple" ng-click="midiCtrl.onVizClick()">Viz</button>
+				<button class="dx7-button teal" ng-click="midiCtrl.onDemoClick(0)">Demo 1</button>
+				<button class="dx7-button teal" ng-click="midiCtrl.onDemoClick(1)">Demo 2</button>
+				<button class="dx7-button pink" ng-click="presetCtrl.save()">Save</button>
+				<button class="dx7-button pink" ng-click="presetCtrl.reset()">Reset</button>
+			</div>
+			<div class="dx7-buttons-row-2">
+				<label>MIDI in <select class="dx7-button" id="midiIn" aria-label="MIDI input"></select></label>
+				<label class="syx-label">Bank <input type="file" id="syxIn" accept=".syx,application/octet-stream" aria-label="Load a 32-voice syx bank"></label>
+			</div>
+		</div>
+		<div class="dx7-operators">
+			<div class="algorithm-diagram" style="background-image: url(images/algorithm-{{ ('0' + presetCtrl.params.algorithm).slice(-2) }}.svg)"></div>
+			<div class="operator" ng-repeat="operator in presetCtrl.presets[presetCtrl.selectedIndex].operators | reverse" ng-controller="OperatorCtrl">
+				<div class="param-group">
+					<div ng-show="$first" class="param-group-heading heading-algorithm">Algorithm</div>
+					<div ng-show="$first" class="param-group-heading">Operator</div>
+					<div class="param">
+						<div class="param-label">On/Off</div>
+						<toggle-button ng-model="operator.enabled"></toggle-button>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Level" ng-model="operator.volume"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="-50" max="50" to-number label="Pan" ng-model="operator.pan"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="7" to-number label="Vel Sens" ng-model="operator.velocitySens"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="-3" max="3" to-number label="LFO Sens" ng-model="operator.lfoAmpModSens"></knob>
+					</div>
+				</div>
+				<div class="param-group">
+					<div ng-show="$first" class="param-group-heading">Frequency</div>
+					<div class="param">
+						<div class="param-label">Fixed</div>
+						<toggle-button ng-model="operator.oscMode"></toggle-button>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="31" to-number ng-if="operator.oscMode == 0" label="Coarse" ng-model="operator.freqCoarse"></knob>
+						<knob step="1" min="0" max="3" to-number ng-if="operator.oscMode == 1" label="Coarse" ng-model="operator.freqCoarse"></knob>
+					</div>
+					<div class="frequency-display" ng-bind="freqDisplay"></div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Fine" ng-model="operator.freqFine"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="-7" max="7" to-number label="Detune" ng-model="operator.detune"></knob>
+					</div>
+				</div>
+				<div class="param-group param-group-sliders">
+					<div ng-show="$first" class="param-group-heading">EG Rate</div>
+					<div class="param narrow" ng-repeat="i in [0,1,2,3]">
+						<slider step="1" min="0" max="99" to-number label="EG R{{i+1}}" ng-model="operator.rates[i]"></slider>
+					</div>
+				</div>
+				<div class="param-group param-group-sliders">
+					<div ng-show="$first" class="param-group-heading">EG Level</div>
+					<div class="param narrow" ng-repeat="i in [0,1,2,3]">
+						<slider step="1" min="0" max="99" to-number label="EG L{{i+1}}" ng-model="operator.levels[i]"></slider>
+					</div>
+				</div>
+				<div class="param-group">
+					<div ng-show="$first" class="param-group-heading">Keyboard Scaling <span style="opacity: 0.2">Not implemented</span></div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Rate" ng-model="operator.keyScaleRate"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Depth" ng-model="operator.keyScaleDepthL"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Curve" ng-model="operator.keyScaleCurveL"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Breakpt" ng-model="operator.keyScaleBreakpoint"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Curve" ng-model="operator.keyScaleCurveR"></knob>
+					</div>
+					<div class="param">
+						<knob step="1" min="0" max="99" to-number label="Depth" ng-model="operator.keyScaleDepthR"></knob>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="dx7-bottom-panel">
+			<div class="param wide">
+				<knob step="1" min="1" max="32" to-number label="Algorithm" ng-model="presetCtrl.params.algorithm"></knob>
+			</div>
+			<div class="param wide">
+				<knob step="1" min="0" max="7" to-number label="Feedback" ng-model="presetCtrl.params.feedback"></knob>
+			</div>
+			<div class="param extra-wide">
+				<div class="param-label">Waveform</div>
+				<select class="dx7-button"
+						ng-model="presetCtrl.presets[presetCtrl.selectedIndex].lfoWaveform"
+						ng-change="presetCtrl.onLFOChange()"
+						ng-options="presetCtrl.lfoWaveformOptions.indexOf(wave) as wave for wave in presetCtrl.lfoWaveformOptions"
+						aria-label="LFO waveform"></select>
+			</div>
+			<div class="param">
+				<knob step="1" min="0" max="99" to-number label="Speed" ng-model="presetCtrl.params.lfoSpeed"></knob>
+			</div>
+			<div class="param">
+				<knob step="1" min="0" max="99" to-number label="Delay" ng-model="presetCtrl.params.lfoDelay"></knob>
+			</div>
+			<div class="param">
+				<knob step="1" min="0" max="99" to-number label="Amp Mod" ng-model="presetCtrl.params.lfoAmpModDepth"></knob>
+			</div>
+			<div class="param">
+				<knob step="1" min="0" max="99" to-number label="Pitch Mod" ng-model="presetCtrl.params.lfoPitchModDepth"></knob>
+			</div>
+			<div class="param">
+				<knob step="1" min="0" max="7" to-number label="Pitch Sens" ng-model="presetCtrl.params.lfoPitchModSens"></knob>
+			</div>
+			<div class="param">
+				<div class="param-label">After Touch</div>
+				<toggle-button ng-true-value="1" ng-false-value="0" ng-model="presetCtrl.params.aftertouchEnabled"></toggle-button>
+			</div>
+			<div class="param">
+				<knob step="1" min="0" max="99" to-number label="Reverb" ng-model="presetCtrl.reverb"></knob>
+			</div>
+		</div>
+	</div>
+	<footer class="site-foot">
+		<p>Keys: the letter row is one octave from C, the row below is the octave under it. Space stops every note. Knobs and sliders drag up and down.</p>
+		<p>Hexode uses the FM engine by <a href="https://github.com/mmontag/dx7-synth-js">Matt Montag</a>, MIT license, commit <code>f269f0e</code>. A factory cartridge is not included. Load a 32-voice .syx of your own. Part of <a href="/synth/">the Filament rack</a> on <a href="/">DXEdge</a>.</p>
+	</footer>
+	<script src="bundle.js"></script>
+</body>
+</html>

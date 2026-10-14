@@ -84,6 +84,12 @@
   .devbtn i { width: 7px; height: 7px; border-radius: 50%; background: #333; align-self: center; }
   .devbtn[aria-pressed="true"] { color: var(--amber2); border-color: var(--amber); background: rgba(255,179,71,0.07); }
   .devbtn[aria-pressed="true"] i { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  .racklinks { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 8px; align-items: center; }
+  .racklinks .devlink { display: inline-flex; align-items: baseline; gap: 6px; color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; min-height: 36px; font-size: 12px; letter-spacing: 2px; font-weight: 600;
+    background: linear-gradient(180deg, #1a1a1a, #101010); }
+  .racklinks .devlink small { font-size: 9.5px; letter-spacing: 1px; font-weight: 400; color: var(--dim); text-transform: uppercase; }
+  .racklinks .devlink:hover { border-color: var(--amber); color: var(--amber2); text-decoration: none; }
   body[data-dev="cathode"] [data-dev="filament"], body[data-dev="filament"] [data-dev="cathode"] { display: none !important; }
 
   /* the patch panel */
@@ -228,6 +234,7 @@
     body[data-tab="mod"] .mod[data-tab~="mod"], body[data-tab="stereo"] .mod[data-tab~="stereo"], body[data-tab="rack"] .mod[data-tab~="rack"],
     body[data-tab="patch"] .mod[data-tab~="patch"] { display: block; }
     .rail { padding: 6px 6px 0; } .rail .label { display: none; } .devbtn small { display: none; } .devbtn { flex: 1 1 0; justify-content: center; min-height: 44px; }
+    .racklinks { padding: 6px 6px 0; } .racklinks .devlink { flex: 1 1 calc(50% - 6px); justify-content: center; min-width: 0; } .racklinks .devlink small { display: none; }
     .jackfield { gap: 8px; } .jgroup { flex: 1 1 100%; }
     .jack { width: calc((100% - 16px) / 5); min-width: 52px; min-height: 66px; font-size: 8px; }
     body[data-tab="stereo"] #mStereo { order: -2; } body[data-tab="stereo"] #mEns { order: -1; }
@@ -272,6 +279,10 @@
       <span class="label">rack</span>
       <button class="devbtn" id="devF" data-d="filament" aria-pressed="true"><i></i>FILAMENT<small>poly tube synth</small></button>
       <button class="devbtn" id="devC" data-d="cathode" aria-pressed="false"><i></i>CATHODE<small>mono semi-modular</small></button>
+    </div>
+    <div class="racklinks" aria-label="More devices, each on its own page">
+      <a class="devlink" href="/synth/fm/">HEXODE<small>six-operator FM</small></a>
+      <a class="devlink" href="/synth/acid/">ANODE<small>acid bass</small></a>
     </div>
     <div class="chassis" id="chassis" aria-label="Tube chassis">
       <div class="tgroup">
@@ -417,7 +428,7 @@
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.4: two devices in the rack, Filament and Cathode, and a MIDI deck to record, import and play files &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.4: two devices in the rack, Filament and Cathode, and a MIDI deck to record, import and play files. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -1,0 +1,49 @@
+{
+  "name": "dx7-synth-js",
+  "version": "0.0.1",
+  "description": "DX7 FM synthesis using the Web Audio and Web MIDI API.",
+  "main": "app.js",
+  "scripts": {
+    "start": "webpack",
+    "prod": "webpack --optimize-minimize --optimize-dedupe",
+    "dev": "webpack-dev-server --progress --colors --port 9090 --inline --hot",
+    "deploy": "git checkout master; git branch -D gh-pages; git checkout -b gh-pages; npm start; git add bundle.js; git commit -m'Deploy'; git push --force --set-upstream origin gh-pages; git checkout master"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmontag/dx7-synth-js.git"
+  },
+  "keywords": [
+    "yamaha",
+    "dx7",
+    "synth",
+    "synthesizer",
+    "midi",
+    "audio"
+  ],
+  "author": "Matt Montag",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mmontag/dx7-synth-js/issues"
+  },
+  "homepage": "https://github.com/mmontag/dx7-synth-js#readme",
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.5",
+    "json-loader": "^0.5.2",
+    "node-libs-browser": "^0.5.2",
+    "webpack": "^4.16.0",
+    "webpack-cli": "^3.0.8",
+    "webpack-dev-server": "^3.1.14"
+  },
+  "dependencies": {
+    "angular": "^1.4.1",
+    "axios": "^1.9.0",
+    "lodash": "^4.17.15",
+    "midifile": "^1.0.1",
+    "midiplayer": "0.0.2",
+    "mml-emitter": "git+https://github.com/mohayonao/mml-emitter.git#edd40ecf42141ca257c6cd8adc5073d570add1ee",
+    "ngstorage": "^0.3.6",
+    "pixi.js": "^3.0.6"
+  }
+}
