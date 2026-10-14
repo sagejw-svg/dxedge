@@ -1,7 +1,7 @@
 // MIDI library player. A song (a bundled file, or one the user opens or drops)
 // plays through the rack transport: play, stop and tempo are the host clock,
-// and each MIDI channel goes to a device (Filament, Cathode, Drums when that
-// device is registered, or off).
+// and each MIDI channel goes to a device (Filament, Cathode, Dekatron for
+// channel 10 when that device is registered, or off).
 //
 // Scheduling looks ahead 150 ms, the same idea as the deck, but the clock is
 // host.transport rather than a private timer tempo. Events are stamped with
@@ -9,6 +9,7 @@
 
 import { parseMidi, defaultRoute, scoreOf } from './midisong.js';
 import { midiEvent } from './engine.js';
+import { voiceForNote } from './drums.js';
 
 const LOOK = 0.15, TICK = 25;
 const $ = id => document.getElementById(id);
@@ -68,7 +69,13 @@ export function createPlayer(api) {
     const E = api.engine(), c = api.ctx();
     if (!E || !c) return;
     const framed = Object.assign({}, msg, { at: Math.round(audioTime * c.sampleRate), pb: true });
-    if (dev === 'filament' || dev === 'cathode') E.sendTo(dev, framed);
+    if (dev === 'dekatron') {
+      if (msg.t === 'on') {
+        const voice = voiceForNote(msg.n);
+        const node = E.nodes.dekatron;
+        if (voice && node && node.port) node.port.postMessage({ t: 'trig', voice, v: msg.v == null ? 0.9 : msg.v, at: framed.at });
+      }
+    } else if (dev === 'filament' || dev === 'cathode') E.sendTo(dev, framed);
     else if (E.devices[dev]) E.devices[dev].midi(framed);
     if (msg.t === 'on') {
       const s = sounding[dev] || (sounding[dev] = new Map());
@@ -93,6 +100,9 @@ export function createPlayer(api) {
         E.sendTo(d, { t: 'mw', v: 0 });
         E.sendTo(d, { t: 'at', v: 0 });
         E.playing(d, false);
+      } else if (d === 'dekatron') {
+        const node = E.nodes.dekatron;
+        if (node && node.port) node.port.postMessage({ t: 'panic' });
       } else if (E.devices[d]) {
         touched[d].forEach(n => E.devices[d].midi({ t: 'off', n }));
         E.devices[d].midi({ t: 'sus', on: false });

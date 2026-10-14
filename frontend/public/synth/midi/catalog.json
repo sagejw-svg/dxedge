@@ -158,7 +158,8 @@
     "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
     "presets": {
       "filament": "Horror Pad",
-      "cathode": "Cellar Drone"
+      "cathode": "Cellar Drone",
+      "dekatron": "Lantern"
     }
   },
   {
@@ -173,7 +174,7 @@
     "source": "MIDI sequence written for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0. The composition is public domain. The arrangement was not taken from another MIDI file.",
     "presets": {
       "filament": "Eerie Bells",
-      "cathode": "Glass Tine"
+      "cathode": "Bell Jar"
     }
   },
   {
@@ -248,7 +249,8 @@
     "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0.",
     "presets": {
       "filament": "Sub Heartbeat",
-      "cathode": "Creak Pulse"
+      "cathode": "Creak Pulse",
+      "dekatron": "Bones"
     }
   },
   {
@@ -263,7 +265,8 @@
     "source": "Original work sequenced for DX Edge on 14 Oct 2026 and dedicated to the public domain under CC0 1.0.",
     "presets": {
       "filament": "Theremin Wail",
-      "cathode": "Wail Glide"
+      "cathode": "Wail Glide",
+      "dekatron": "Lantern"
     }
   }
 ]

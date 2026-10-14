@@ -588,8 +588,8 @@ const library = [
   {
     id: 'grieg-mountain-king', file: 'grieg-mountain-king.mid',
     title: 'In the Hall of the Mountain King (opening)', composer: 'Edvard Grieg', year: 1875,
-    kind: 'halloween', bpm: 108, sig: [4, 4], build: mountainKing, notice: PD,
-    presets: { filament: 'Horror Pad', cathode: 'Cellar Drone' },
+    kind: 'halloween', bpm: 108, sig: [4, 4], build: mountainKing, notice: PD, hats: 4, bar: 4,
+    presets: { filament: 'Horror Pad', cathode: 'Cellar Drone', dekatron: 'Lantern' },
     composition: 'Public domain. Peer Gynt, Op. 23, "In the Hall of the Mountain King" (1875). Opening theme only, one sequence up a step. Not the later presto.',
   },
   {
@@ -630,15 +630,15 @@ const library = [
   {
     id: 'dx-cellar-stairs', file: 'dx-cellar-stairs.mid',
     title: 'Cellar Stairs', composer: 'DX Edge', year: 2026,
-    kind: 'halloween', original: true, bpm: 72, sig: [4, 4], build: cellar, notice: ORIG,
-    presets: { filament: 'Sub Heartbeat', cathode: 'Creak Pulse' },
+    kind: 'halloween', original: true, bpm: 72, sig: [4, 4], build: cellar, notice: ORIG, hats: 4, bar: 4,
+    presets: { filament: 'Sub Heartbeat', cathode: 'Creak Pulse', dekatron: 'Bones' },
     composition: 'Original spooky tune written for this library: a lub-dub under a chromatic descent.',
   },
   {
     id: 'dx-porch-ghost', file: 'dx-porch-ghost.mid',
     title: 'Porch Ghost', composer: 'DX Edge', year: 2026,
-    kind: 'halloween', original: true, bpm: 64, sig: [4, 4], build: porch, notice: ORIG,
-    presets: { filament: 'Theremin Wail', cathode: 'Wail Glide' },
+    kind: 'halloween', original: true, bpm: 64, sig: [4, 4], build: porch, notice: ORIG, hats: 7, bar: 4,
+    presets: { filament: 'Theremin Wail', cathode: 'Wail Glide', dekatron: 'Lantern' },
     composition: 'Original spooky tune written for this library: a slow wail over a two-note pulse.',
   },
 ];

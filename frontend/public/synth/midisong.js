@@ -80,18 +80,20 @@ export function parseMidi(input) {
 }
 
 // channels: 1-16 present in the file. ids: instrument ids that can take MIDI
-// (filament, cathode, drums, ...). Channel 10 goes to drums when that device
-// is registered, otherwise off. The first melodic channel goes to Filament,
-// the second to Cathode when both exist, and the rest to Filament.
+// (filament, cathode, dekatron, ...). Channel 10 goes to Dekatron when that
+// device is registered, otherwise to an id named drums, otherwise off. The
+// first melodic channel goes to Filament, the second to Cathode when both
+// exist, and the rest to Filament.
 export function defaultRoute(channels, ids) {
   const have = ids || [];
   const has = id => have.indexOf(id) >= 0;
   const musical = channels.filter(c => c !== 10);
   const route = {};
-  const lead = has('filament') ? 'filament' : (have.find(id => id !== 'drums') || 'off');
+  const lead = has('filament') ? 'filament' : (have.find(id => id !== 'drums' && id !== 'dekatron') || 'off');
   const second = has('filament') && has('cathode') ? 'cathode' : lead;
+  const drums = has('dekatron') ? 'dekatron' : (has('drums') ? 'drums' : 'off');
   channels.forEach(ch => {
-    if (ch === 10) route[ch] = has('drums') ? 'drums' : 'off';
+    if (ch === 10) route[ch] = drums;
     else route[ch] = musical.indexOf(ch) === 1 ? second : lead;
   });
   return route;

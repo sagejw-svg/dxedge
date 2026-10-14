@@ -62,7 +62,7 @@ advice; have an IP attorney review before a commercial launch.
 
 ## Bundled MIDI library (content, checked 14 Oct 2026)
 
-Every file under `frontend/public/synth/midi/` was sequenced in `scripts/build_midi_library.mjs` for this project. None was copied from another MIDI file. The MIDI data is dedicated to the public domain under CC0 1.0. A composition is included only when the composition itself is public domain (published 1930 or earlier, or a traditional tune), or when the tune is original to this project. `catalog.json` repeats the source line next to each file. Halloween songs also name a Filament factory preset and a Cathode factory preset; those presets are original patch data in `patches.js` and `cathode.js`, not samples. Dekatron is not in this build, so no Dekatron presets shipped.
+Every file under `frontend/public/synth/midi/` was sequenced in `scripts/build_midi_library.mjs` for this project. None was copied from another MIDI file. The MIDI data is dedicated to the public domain under CC0 1.0. A composition is included only when the composition itself is public domain (published 1930 or earlier, or a traditional tune), or when the tune is original to this project. `catalog.json` repeats the source line next to each file. Halloween songs also name a Filament factory preset and a Cathode factory preset; those presets are original patch data in `patches.js` and `cathode.js`, not samples. Mountain King, Cellar Stairs and Porch Ghost also name a Dekatron factory pattern (Lantern or Bones) in `drums.js`, and those three files include a channel-10 closed-hat part. The hat notes are original sequence data, the same as the rest of the file.
 
 | File | Composition | MIDI data |
 |-|-|-|
@@ -79,16 +79,22 @@ Every file under `frontend/public/synth/midi/` was sequenced in `scripts/build_m
 | `dx-neon-alley.mid` | Original synth-pop tune, DX Edge, 2026 | CC0, original |
 | `dx-dock-lamp.mid` | Original short chiptune, DX Edge, 2026 | CC0, original |
 | `bach-toccata-spooky.mid` | Public domain. Bach, BWV 565, a separate slow organ reduction for the Halloween pack | CC0 sequence, 14 Oct 2026. Presets: Haunted Organ, Chapel Organ |
-| `grieg-mountain-king.mid` | Public domain. Grieg, Peer Gynt, "In the Hall of the Mountain King" (1875). Opening theme | CC0 sequence, 14 Oct 2026. Presets: Horror Pad, Cellar Drone |
+| `grieg-mountain-king.mid` | Public domain. Grieg, Peer Gynt, "In the Hall of the Mountain King" (1875). Opening theme | CC0 sequence, 14 Oct 2026. Presets: Horror Pad, Cellar Drone, Lantern. Channel 10 is a closed hat |
 | `saint-saens-danse-macabre.mid` | Public domain. Saint-Saëns, Danse macabre, Op. 40 (1874). Tritone and a short waltz | CC0 sequence, 14 Oct 2026. Presets: Eerie Bells, Bell Jar |
 | `mussorgsky-bald-mountain.mid` | Public domain. Mussorgsky, Night on Bald Mountain (1867); the concert shape associated with Rimsky-Korsakov's 1886 arrangement is also public domain. Short opening reduction | CC0 sequence, 14 Oct 2026. Presets: Creaky Drone, Creak Pulse |
 | `chopin-funeral-march.mid` | Public domain. Chopin, Piano Sonata No. 2, Op. 35, movement 3 (1839). Bb minor theme | CC0 sequence, 14 Oct 2026. Presets: Haunted Organ, Heartbeat |
 | `traditional-dies-irae.mid` | Public domain. Dies irae, 13th-century sequence, set in a steady 4/4 | CC0 sequence, 14 Oct 2026. Presets: Ghost Choir, Choir Breath |
 | `dx-lantern-walk.mid` | Original spooky music-box tune, DX Edge, 2026 | CC0, original. Presets: Glass Music Box, Heartbeat |
-| `dx-cellar-stairs.mid` | Original, DX Edge, 2026. A lub-dub under a chromatic descent | CC0, original. Presets: Sub Heartbeat, Creak Pulse |
-| `dx-porch-ghost.mid` | Original, DX Edge, 2026. A slow wail over a two-note pulse | CC0, original. Presets: Theremin Wail, Wail Glide |
+| `dx-cellar-stairs.mid` | Original, DX Edge, 2026. A lub-dub under a chromatic descent | CC0, original. Presets: Sub Heartbeat, Creak Pulse, Bones. Channel 10 is a closed hat |
+| `dx-porch-ghost.mid` | Original, DX Edge, 2026. A slow wail over a two-note pulse | CC0, original. Presets: Theremin Wail, Wail Glide, Lantern. Channel 10 is a closed hat |
 
 Glass Tine is a Cathode Halloween preset with no bundled file pointing at it. It is still a factory patch.
+
+## Use log
+
+| Date | Resource | Where | What we did |
+|-|-|-|-|
+| 2026-10-14 | [Freeverb](https://ccrma.stanford.edu/~jos/pasp/Freeverb.html) (public domain, Jezar at Dreampoint, c. 2000) | `frontend/public/synth/master.worklet.js` | Original JavaScript for the published structure: eight damped combs into four allpasses per channel, and the published 44.1 kHz delay lengths, scaled with the sample rate. Not a copy or a line-by-line translation of the C++ sources. Notice in `THIRD_PARTY_NOTICES.md`. The delay and the bus compressor next to it are original; Airwindows was not used. |
 
 ## Register: use with care (licenses vary inside the project)
 
