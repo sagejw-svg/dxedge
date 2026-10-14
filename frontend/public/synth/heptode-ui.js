@@ -574,12 +574,19 @@ export function mountHeptodePanel(container, hooks) {
     const y = ev.clientY - rect.top;
     const p = patch();
     let best = -1;
-    let bestD = 28;
+    let bestRank = 1e9;
+    // Empty channels sit on the same point as a file's centered lead.
+    // Prefer a channel that is actually in the file, then the orb drawn on top.
     p.tracks.forEach((t, i) => {
       const ox = (t.pan + 1) * 0.5 * (rect.width - 36) + 18;
       const oy = (1 - t.space) * (rect.height - 36) + 18;
       const d = Math.hypot(ox - x, oy - y);
-      if (d < bestD) { bestD = d; best = i; }
+      if (d > 28) return;
+      const rank = d - (t.used ? 6 : 0);
+      if (rank < bestRank - 0.01 || (Math.abs(rank - bestRank) <= 0.01 && i > best)) {
+        bestRank = rank;
+        best = i;
+      }
     });
     return best;
   }
