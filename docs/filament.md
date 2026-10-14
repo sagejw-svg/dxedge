@@ -192,6 +192,6 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   first unchecked item (the graphic EQ).
 
 ## Nightly log
-- 2026-10-14: Master bus (delay, Freeverb-style reverb, compressor/limiter) and 24-bit 44.1 kHz WAV record/render. New modules plus the master-output hook in `engine.js`. Suite covers measurable effect, transparent bypass, and a valid non-silent WAV.
+- 2026-10-14: Master bus (delay, Freeverb-style reverb, compressor/limiter) and 24-bit 44.1 kHz WAV record/render. New modules plus the master-output hook in `engine.js`. Suite: ALL PASS (211 checks), including measurable effect, transparent bypass, and a valid non-silent WAV.
 - 2026-10-13 (just after midnight PT, interactive): Cathode, the second device, and the rack rail (see the Cathode section above). Suite: ALL PASS (190 checks). CPU: Cathode Plate Screamer about 17% of real time with the rack; Filament 8 voices 27 to 32% (this server varies run to run). No Filament patch changed; Filament now sleeps when silent for 100 ms, which only saves CPU.
 - 2026-10-13: Phase 0 and 0.1 shipped from an interactive session. Suite: ALL PASS (103 checks).
