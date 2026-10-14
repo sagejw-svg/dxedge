@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<title>Gleam - touch field - DXEdge</title>
+<meta name="description" content="Gleam: a touch field synthesizer. Each finger is a voice. Across is pitch, up is timbre, pressure is level.">
+<style>
+  html, body { margin: 0; height: 100%; background: #080808; color: #c8c8c8; }
+  body { min-height: 100dvh; display: flex; flex-direction: column; font: 13px/1.45 ui-sans-serif, system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 8px 12px; }
+  h1 { margin: 0; font-size: 18px; letter-spacing: 3px; font-weight: 600; }
+  h1 span { color: #ffb347; }
+  .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #6a6a6a; }
+  nav { display: flex; flex-wrap: wrap; gap: 12px; }
+  nav a { color: #ffb347; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
+  #gleamRoot { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="label">dxedge.net / synth / gleam</div>
+    <h1>GLE<span>AM</span></h1>
+  </div>
+  <nav>
+    <a href="/synth/">Rack</a>
+    <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
+  </nav>
+</header>
+<div id="gleamRoot"></div>
+<script type="module">
+import { createGleamHost, mountGleamPad, renderGleamBuffer } from '../gleam-ui.js';
+import { renderGleamFx } from '../gleam-fx.js';
+
+const host = createGleamHost();
+const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+let booted = false;
+const view = mountGleamPad(document.getElementById('gleamRoot'), host, {
+  standalone: true,
+  wake() { if (ctx.state !== 'running') ctx.resume().catch(() => {}); },
+});
+host.attach(ctx, ctx.destination, null, { standalone: true }).then(() => {
+  host.setActive(true);
+  host.setPatch(host.patch());
+  booted = true;
+}).catch(err => { console.error(err); booted = false; });
+
+function b64(f32) {
+  const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength);
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+window.__gleam = {
+  ready: () => booted && !!document.getElementById('gleamPad'),
+  voices: () => host.voices(),
+  playTape: snap => host.playTape(snap),
+  stopTape: () => host.stopTape(),
+  panic: () => host.panic(),
+  visual: () => view.visual(),
+  pad: () => document.getElementById('gleamPad'),
+  render: async opts => {
+    const buf = await renderGleamBuffer(opts || {});
+    return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
+  },
+  fxRender: async opts => {
+    const buf = await renderGleamFx(opts || {});
+    return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
+  },
+};
+</script>
+<script src="/lib/stat.js"></script>
+</body>
+</html>

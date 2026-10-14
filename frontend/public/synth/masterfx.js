@@ -160,6 +160,7 @@ export async function makeMasterFx(ctx, initial) {
     if (!ctx.__filamentMaster) { await ctx.audioWorklet.addModule(WORKLET); ctx.__filamentMaster = true; }
   }
   let node = null, source = null, dest = null, viaWorklet = null, force = false;
+  let insert = null, lastInsert = false;
   let cap = null, waitEnd = null, recording = false;
   function ensureNode() {
     if (node) return node;
@@ -183,22 +184,35 @@ export async function makeMasterFx(ctx, initial) {
     return node;
   }
   // Effects off and not recording: the source connects straight to the destination.
+  // An insert (Gleam's effect pad) sits in that path only while insert.on is set.
+  // insert.input is never disconnected: that node owns the effect's internal graph.
   function route() {
     const want = force || state.delay.on || state.reverb.on || state.comp.on;
-    if (!source || want === viaWorklet) return;
+    const useIns = !!(insert && insert.on);
+    if (!source || (want === viaWorklet && useIns === lastInsert)) return;
     try { source.disconnect(); } catch (e) {}
+    if (insert && insert.output) { try { insert.output.disconnect(); } catch (e) {} }
     if (node) try { node.disconnect(); } catch (e) {}
+    if (useIns) source.connect(insert.input);
+    const from = useIns ? insert.output : source;
     if (dest) {
-      if (want) { const n = ensureNode(); source.connect(n); n.connect(dest); }
-      else source.connect(dest);
+      if (want) { const n = ensureNode(); from.connect(n); n.connect(dest); }
+      else from.connect(dest);
     } else if (want) ensureNode();
     viaWorklet = want;
+    lastInsert = useIns;
   }
   if (needNow) ensureNode();
   const fx = {
     capSeconds: CAP_SECONDS,
     // Source is the master gain; dest is the context destination (or null to leave it unplugged).
-    install(src, dst) { source = src; dest = dst || null; viaWorklet = null; route(); },
+    install(src, dst) { source = src; dest = dst || null; viaWorklet = null; lastInsert = !lastInsert; route(); },
+    setInsert(ins) {
+      insert = ins && ins.input && ins.output ? ins : null;
+      viaWorklet = null;
+      lastInsert = !lastInsert;
+      route();
+    },
     state: () => masterView(state),
     set(partial) {
       state = mergeMaster(state, partial);

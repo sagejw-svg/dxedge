@@ -17,7 +17,7 @@ export default function Synth() {
   return (
     <div className="synth-panel">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; hexode &middot; anode</div>
+        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; hexode &middot; anode</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
           Two synthesizers in one rack. Filament is polyphonic and built around lit tubes that do real
           work: one drives the filters, one sits inside the Valve filter's resonance loop, and a
@@ -25,6 +25,7 @@ export default function Synth() {
           high-pass and low-pass pair and a patch panel you wire with cables.
           Play them with the keys on screen, your computer keyboard, or a MIDI keyboard.
           Full page version at <a href="/synth/">dxedge.net/synth</a>.
+          Gleam is a touch field on the same rack, and full screen at <a href="/synth/gleam/">/synth/gleam/</a>.
           Two more devices, each on its own page: <a href="/synth/fm/">Hexode</a> (six-operator FM)
           and <a href="/synth/acid/">Anode</a> (acid bass groovebox).
         </p>
