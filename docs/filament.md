@@ -589,6 +589,28 @@ registerDevice({
 | Conditions | `cond` 0–1. `/api/solar` `band_conditions` maps poor 0.15, fair 0.4, good 0.7, excellent 0.95 |
 | Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}` |
 
+### '73-style monosynth (fourth synth device) - queued 13 Oct 2026, after the tube show; NAME NEEDED
+James asked for "a mini moog 73". Like Cathode, this is an original device in that family, not a copy:
+own name (James chose **Anode** on 13 Oct, but the vendored acid page at /synth/acid/ took that name the same night, so James picks another before slice 1; the nightly job must not start it without a name), own panel, labels and voicing. Never use the
+other company's names (the product, the company or its model letters) in the UI, patches or code, and do
+not copy its panel layout or wood-cheek styling; the rack's look applies. The circuit ideas are fair game.
+Build it as two or three nightly slices, one per night, in this order:
+- [ ] Slice 1: processor `<name>` in voice.worklet.js (mono, 2x like the others): three oscillators (tri,
+      tri-saw, saw, square, wide and narrow pulse; 32' to 2' ranges; osc 2 and 3 detune; osc 3 can leave the
+      keyboard and run slow as a modulation source), white and pink noise, a mixer that can be driven into
+      soft saturation, a feedback loop knob (output back into the mixer, the classic overdrive trick, made
+      a knob of its own), our own 4-pole ladder (reuse Filament's Ladder 24 code; it is ours) with emphasis
+      to self-oscillation and keyboard tracking off, 1/3 or 2/3, two envelopes (attack, decay, sustain, and a
+      release switch that copies the decay), glide, a modulation mix (osc 3 against noise) on the wheel to
+      pitch and cutoff, a 440 Hz reference tone. `<name>.js` with schema v:1 (`device: '<name>'`), defaults and
+      ranges; the rail gets a third button; sections carry `data-dev="<name>"`.
+- [ ] Slice 2: about 10 factory patches (bass, leads, a sync-free lead from detuned saws, a feedback growl,
+      a self-oscillating filter whistle), levels near -14.5 dB like the others; the A. section of the suite
+      (ladder cutoff and self-oscillation tuning, osc ranges and detune, the feedback loop's harmonics, the
+      release switch, mono fold, fuzz); phone layout checks.
+- [ ] Slice 3 (if needed): the MIDI deck learns a third device (import chips, export track names), and the
+      tube show covers Anode's tubes.
+
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
 devices (so Filament and Cathode play at once); built by the nightly job. Two slices; if both do not
