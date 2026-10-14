@@ -14,7 +14,8 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
-project), a slashless /synth load through the service worker, and playing-it checks (keys,
+project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
+Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
@@ -581,7 +582,8 @@ with sync_playwright() as pw:
     open_rms, choke_rms = float(np.sqrt(np.mean(open_L[sl] ** 2))), float(np.sqrt(np.mean(choke_L[sl] ** 2)))
     ck(f"D. a closed hat cuts the open hat (tail {open_rms:.4f} -> {choke_rms:.4f})", choke_rms < open_rms * 0.25 and open_rms > 0.01, (open_rms, choke_rms))
     df = pg.evaluate("__synth.drumFactory()")
-    ck(f"D. {len(df)} factory patterns (6)", len(df) == 6, df)
+    ck(f"D. {len(df)} factory patterns (8), including Lantern and Bones",
+       len(df) == 8 and {f_["name"]: f_["cat"] for f_ in df}.get("Lantern") == "Halloween" and {f_["name"]: f_["cat"] for f_ in df}.get("Bones") == "Halloween", df)
     for f_ in df:
         P = pg.evaluate("n => __synth.drumPatch(n)", f_["name"])
         L, R = drum(P, [{"at": 0, "t": "transport", "playing": True}], 2.0)
@@ -1087,6 +1089,17 @@ with sync_playwright() as pw:
         small = ph.evaluate("""() => [...document.querySelectorAll('#deck .btn, #deck .chip, #tempoIn')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: the deck's buttons, chips and tempo slider are 44 px or more", not small, small)
         ph.locator("#deck").screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_deck.png"))
+        ph.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
+        ph.locator("#libBtn").scroll_into_view_if_needed(); ph.locator("#libBtn").tap()
+        ck(f"10. {w}px: the song library opens without horizontal scroll", ph.is_visible("#libBody")
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        ph.wait_for_function("() => [...document.querySelectorAll('#libPick option')].some(o => o.value === 'beethoven-sym5-i')")
+        ph.locator("#libPick").select_option("beethoven-sym5-i")
+        ph.wait_for_function("() => { const s = __synth.player().song(); return !!(s && s.name.indexOf('Symphony') >= 0); }", timeout=5000)
+        small = ph.evaluate("""() => [...document.querySelectorAll('#library .btn, #library .chip, #libPick')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
+        ck(f"10. {w}px: the library's buttons, chips and song list are 44 px or more", not small, small)
+        ck(f"10. {w}px: a library song lists its channels, still no horizontal scroll", ph.evaluate("document.querySelectorAll('#libChannels .trk').length") >= 1
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
         ph.tap('.tabs [data-go="rack"]'); ph.wait_for_timeout(150)
         ck(f"10. {w}px: the rack tab shows the mixer without horizontal scroll", ph.is_visible("#mHost") and ph.is_visible("#mixFLvl")
            and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
@@ -1216,6 +1229,190 @@ with sync_playwright() as pw:
     ck("R. the saved project restores tempo, mixer and name on reload", boot["tempo"] == 88 and abs(boot["mix"]["level"] - 0.25) < 1e-6 and boot["mix"]["solo"] and boot["name"] == "Uploaded", boot)
     ck("R. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
+    pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
+    WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",
+            "sousa-stars-and-stripes", "traditional-greensleeves", "foster-oh-susanna", "handy-st-louis-blues",
+            "traditional-frankie-and-johnny", "dx-pixel-march", "dx-neon-alley", "dx-dock-lamp",
+            "bach-toccata-spooky", "grieg-mountain-king", "saint-saens-danse-macabre", "mussorgsky-bald-mountain",
+            "chopin-funeral-march", "traditional-dies-irae", "dx-lantern-walk", "dx-cellar-stairs", "dx-porch-ghost"]
+    FIL_H = ["Haunted Organ", "Theremin Wail", "Horror Pad", "Creaky Drone", "Ghost Choir", "Sub Heartbeat", "Glass Music Box", "Eerie Bells"]
+    CAT_H = ["Chapel Organ", "Wail Glide", "Cellar Drone", "Creak Pulse", "Choir Breath", "Heartbeat", "Glass Tine", "Bell Jar"]
+    lib = pg.evaluate("""async () => {
+      const { Midi } = await import('/synth/vendor/tonejs-midi.js');
+      const library = __synth.player().library();
+      const out = [];
+      for (const item of library) {
+        const res = await fetch('/synth/midi/' + item.file);
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        const song = __synth.player().parse([...bytes]);
+        const midi = new Midi(bytes);
+        const toneNotes = midi.tracks.reduce((n, t) => n + t.notes.length, 0);
+        const ours = song.tracks.reduce((n, t) => n + t.notes, 0);
+        const ons = song.events.filter(e => e.ch === 1 && (e.data[0] & 0xf0) === 0x90).map(e => e.data[1]);
+        out.push({ id: item.id, license: item.license, kind: item.kind, presets: item.presets, bpm: song.bpm, channels: song.channels, toneNotes, ours, ons: ons.slice(0, 4), name: song.name, bytes: bytes.length });
+      }
+      return {
+        n: library.length, ids: library.map(i => i.id), out,
+        fil: __synth.factory().filter(p => p.cat === 'Halloween').map(p => p.name),
+        cat: __synth.cathodeFactory().filter(p => p.cat === 'Halloween').map(p => p.name),
+        devs: __synth.devices().map(d => d.id),
+      };
+    }""")
+    by = {row["id"]: row for row in lib["out"]}
+    ck("P. the library has the bundled songs, each CC0, and @tonejs/midi counts the same notes",
+       lib["n"] == 21 and lib["ids"] == WANT and all(by[i]["license"] == "CC0 1.0" and by[i]["bytes"] > 40 and by[i]["ours"] == by[i]["toneNotes"] and by[i]["ours"] > 0 for i in WANT),
+       (lib["n"], lib["ids"], [(r["id"], r["ours"], r["toneNotes"]) for r in lib["out"] if r["ours"] != r["toneNotes"]]))
+    ck("P. Beethoven's opening is G4 G4 G4 Eb4", by["beethoven-sym5-i"]["ons"] == [67, 67, 67, 63] and abs(by["beethoven-sym5-i"]["bpm"] - 108) < 0.02, by["beethoven-sym5-i"])
+    ck("P. Bach's toccata opens on A4", by["bach-toccata-fugue-dm"]["ons"][0] == 69, by["bach-toccata-fugue-dm"]["ons"][:2])
+    ck("P. Mountain King opens F# F# F# D", by["grieg-mountain-king"]["ons"] == [66, 66, 66, 62], by["grieg-mountain-king"]["ons"])
+    ck("P. Halloween presets are factory patches, and Dekatron is in the rack",
+       lib["fil"] == FIL_H and lib["cat"] == CAT_H and "dekatron" in lib["devs"], (lib["fil"], lib["cat"], lib["devs"]))
+    ck("P. Mountain King, Cellar Stairs and Porch Ghost carry a drum channel",
+       10 in by["grieg-mountain-king"]["channels"] and 10 in by["dx-cellar-stairs"]["channels"] and 10 in by["dx-porch-ghost"]["channels"]
+       and 10 not in by["saint-saens-danse-macabre"]["channels"] and 10 not in by["dx-lantern-walk"]["channels"]
+       and by["grieg-mountain-king"]["presets"].get("dekatron") == "Lantern"
+       and by["dx-cellar-stairs"]["presets"].get("dekatron") == "Bones"
+       and by["dx-porch-ghost"]["presets"].get("dekatron") == "Lantern",
+       [(i, by[i]["channels"], by[i]["presets"]) for i in ("grieg-mountain-king", "dx-cellar-stairs", "dx-porch-ghost", "saint-saens-danse-macabre")])
+    spooky = [r for r in lib["out"] if r["kind"] == "halloween"]
+    preset_ok = len(spooky) == 9 and all(r["presets"] and r["presets"].get("filament") in FIL_H and r["presets"].get("cathode") in CAT_H for r in spooky)
+    ck("P. each Halloween song names a Filament preset and a Cathode preset", preset_ok, [(r["id"], r["presets"]) for r in spooky])
+    junk = pg.evaluate("""() => { try { __synth.player().parse([82, 73, 70, 70]); return ''; } catch (e) { return String(e.message || e); } }""")
+    ck("P. a file that is not MIDI is refused", "not a MIDI file" in junk, junk)
+
+    route = pg.evaluate("""async () => {
+      const { Midi } = await import('/synth/vendor/tonejs-midi.js');
+      const m = new Midi();
+      m.name = 'route-test';
+      m.header.tempos = [{ ticks: 0, bpm: 120 }];
+      m.header.timeSignatures = [{ ticks: 0, timeSignature: [4, 4] }];
+      m.header.update();
+      const lead = m.addTrack(); lead.channel = 0; lead.name = 'Lead';
+      lead.addNote({ midi: 69, ticks: 0, durationTicks: 480, velocity: 0.8 });
+      lead.addNote({ midi: 76, ticks: 960, durationTicks: 480, velocity: 0.8 });
+      const bass = m.addTrack(); bass.channel = 1; bass.name = 'Bass';
+      bass.addNote({ midi: 36, ticks: 0, durationTicks: 960, velocity: 0.8 });
+      const ok = __synth.player().importBytes([...m.toArray()], 'route-test.mid');
+      const ons = __synth.player().score().filter(e => e.t === 'on').map(e => ({ at: e.at, n: e.n, dev: e.dev }));
+      __synth.transport().setTempo(60);
+      const slow = __synth.player().score().filter(e => e.t === 'on' && e.n === 76)[0];
+      __synth.transport().setTempo(120);
+      return { ok, name: __synth.player().song().name, route: __synth.player().routing(), ons, slowAt: slow.at, score: __synth.player().score() };
+    }""")
+    ons = route["ons"]
+    ck("P. channel 1 goes to Filament and channel 2 to Cathode",
+       route["ok"] and route["name"] == "route-test" and route["route"].get("1") == "filament" and route["route"].get("2") == "cathode", route["route"])
+    ck("P. the score follows the transport tempo (E5 at 1 s at 120 BPM, 2 s at 60)",
+       any(abs(e["at"] - 0) < 1e-6 and e["n"] == 69 and e["dev"] == "filament" for e in ons)
+       and any(abs(e["at"] - 0) < 1e-6 and e["n"] == 36 and e["dev"] == "cathode" for e in ons)
+       and any(abs(e["at"] - 1) < 1e-6 and e["n"] == 76 and e["dev"] == "filament" for e in ons)
+       and abs(route["slowAt"] - 2) < 1e-6, (ons, route["slowAt"]))
+    fast = patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.001, "d": 0.05, "s": 1, "r": 0.02}, ens={"on": False},
+                 voice={"mode": "poly", "unison": 1}, stereo={"pan": "center", "spread": 0}, out={"roomOn": False, "wOn": False, "spkOn": False, "drive": 0})
+    tri = cpatch(vco1={"wave": "tri", "scale": 8, "level": 0.85}, eg2={"a": 0.001, "d": 0.05, "s": 1, "r": 0.02},
+                 out={"roomOn": False, "wOn": False, "spkOn": False, "drive": 0})
+    def render_player(events, seconds=2.2):
+        body = {"patches": {"filament": fast, "cathode": tri}, "device": "filament", "events": events, "seconds": seconds, "rack": False}
+        return dec(pg.evaluate("a => __synth.render2(a)", body))
+    L, _R = render_player(route["score"])
+    head = L[int(0.08 * SR):int(0.40 * SR)]
+    a440, a65, a659 = tone_amp(head, 440.0), tone_amp(head, 65.406), tone_amp(head, 659.255)
+    late = L[int(1.12 * SR):int(1.42 * SR)]
+    e659, e65 = tone_amp(late, 659.255), tone_amp(late, 65.406)
+    oA = onset(L, 0.0, max(a440, 1e-6))
+    ck(f"P. playback renders A4 on Filament and C2 on Cathode (A4 onset {None if oA is None else round(1000 * oA, 2)} ms)",
+       oA is not None and oA <= 0.005 and a440 > 0.02 and a65 > 0.02 and a440 > 20 * a659, (oA, a440, a65, a659))
+    ck(f"P. E5 arrives at 1.000 s ({None if e659 < 0.01 else 'present'})", e659 > 0.02 and e659 > 10 * e65, (e659, e65))
+    pg.evaluate("__synth.player().route(2, 'off')")
+    off_score = pg.evaluate("__synth.player().score()")
+    L, _R = render_player(off_score)
+    head = L[int(0.08 * SR):int(0.40 * SR)]
+    b440, b65 = tone_amp(head, 440.0), tone_amp(head, 65.406)
+    ck("P. routing channel 2 off drops C2 by 30 dB or more and keeps A4", b65 < a65 / 31.6 and b440 > 0.02, (db(b65), db(a65), b440))
+
+    hats_on = pg.evaluate("""async () => {
+      await __synth.player().loadId('dx-pixel-march');
+      const hats = __synth.player().score().filter(e => e.n === 42);
+      return { route: __synth.player().routing(), choices: __synth.player().choices(), hats: hats.length, devs: [...new Set(hats.map(e => e.dev))] };
+    }""")
+    ck("P. channel 10 goes to Dekatron and the hat notes follow",
+       hats_on["route"].get("10") == "dekatron" and "dekatron" in hats_on["choices"] and hats_on["hats"] > 0 and hats_on["devs"] == ["dekatron"], hats_on)
+
+    pg.evaluate("() => { const b = document.getElementById('libBody'); if (b.hidden) document.getElementById('libBtn').click(); }")
+    pg.locator("#libPick").select_option("beethoven-sym5-i")
+    pg.wait_for_function("() => { const s = __synth.player().song(); return !!(s && s.name.indexOf('Symphony') >= 0); }", timeout=5000)
+    ck("P. picking a library song lists its tracks and channel chips",
+       pg.locator("#libTracks .trk").count() >= 2 and pg.locator('#libChannels .chip[data-ch="1"][data-dev="filament"]').count() == 1)
+    pg.click('#libChannels .chip[data-ch="2"][data-dev="off"]')
+    ck("P. a channel chip sets that channel off", pg.evaluate("__synth.player().routing()")["2"] == "off")
+    bare = pg.evaluate("""async () => {
+      const { Midi } = await import('/synth/vendor/tonejs-midi.js');
+      const m = new Midi();
+      m.header.tempos = [{ ticks: 0, bpm: 100 }];
+      m.header.update();
+      const t = m.addTrack(); t.channel = 0;
+      t.addNote({ midi: 64, ticks: 0, durationTicks: 480, velocity: 0.8 });
+      return [...m.toArray()];
+    }""")
+    pg.set_input_files("#libIn", files=[{"name": "uploaded.mid", "mimeType": "audio/midi", "buffer": bytes(bare)}])
+    pg.wait_for_function("() => { const s = __synth.player().song(); return !!(s && s.name === 'uploaded'); }", timeout=5000)
+    ck("P. opening a .mid file loads it under the file name", pg.evaluate("__synth.player().song()")["name"] == "uploaded")
+    dropped = pg.evaluate("""async (bytes) => {
+      const file = new File([new Uint8Array(bytes)], 'dropped.mid', { type: 'audio/midi' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById('library').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      return true;
+    }""", bare)
+    pg.wait_for_function("() => { const s = __synth.player().song(); return !!(s && s.name === 'dropped'); }", timeout=5000)
+    ck("P. dropping a .mid file on the library loads it", dropped and pg.evaluate("__synth.player().song()")["name"] == "dropped")
+
+    pg.evaluate("""() => __synth.setPatch({
+      osc1: { wave: 'sine', level: 0.8 }, osc2: { level: 0 }, sub: { level: 0 }, noise: { level: 0 },
+      filt: { cutoff: 8000, res: 0, env: 0, keytrack: 0 },
+      envA: { a: 0.001, d: 0.05, s: 1, r: 0.02, vel: 0 }, envF: { a: 0.001, d: 0.1, s: 0, r: 0.1 },
+      lfo1: { pitch: 0, cutoff: 0, amp: 0 }, voice: { mode: 'poly', unison: 1, level: 0.8 },
+      ens: { on: false }, stereo: { pan: 'center', spread: 0 },
+      out: { drive: 0, roomOn: false, wOn: false, spkOn: false }
+    })""")
+    pg.evaluate("""async () => { await __synth.player().loadId('dx-dock-lamp'); await __synth.engine().ctx.resume(); }""")
+    pg.click("#libPlay")
+    pg.wait_for_function("""() => {
+      const m = __synth.engine().meters.filament;
+      return !!(m && m.voices >= 1 && (m.notes || []).indexOf(78) >= 0 && __synth.player().playing());
+    }""", timeout=3000)
+    heard = pg.evaluate("""() => { const m = __synth.engine().meters.filament; return { voices: m.voices, notes: m.notes, playing: __synth.player().playing(), tempo: __synth.transport().state().tempo }; }""")
+    ck("P. play through the transport sounds the Dock Lamp lead (F#5) on Filament",
+       heard["playing"] and 78 in heard["notes"] and heard["voices"] >= 1 and abs(heard["tempo"] - 132) < 0.6, heard)
+    pg.click("#libStop")
+    pg.wait_for_function("""() => { const m = __synth.engine().meters.filament; return !__synth.player().playing() && !!m && (m.notes || []).length === 0; }""", timeout=2000)
+    ck("P. stop silences the note and the player", not pg.evaluate("__synth.player().playing()") and pg.evaluate("__synth.engine().meters.filament.notes").__len__() == 0)
+
+    pg.evaluate("""async () => { await __synth.player().loadId('chopin-funeral-march'); }""")
+    pg.wait_for_timeout(40)
+    hall = pg.evaluate("""() => ({ song: __synth.player().song(), patch: __synth.patch().name, dev: __synth.device() })""")
+    ck("P. the Funeral March loads Haunted Organ and Heartbeat",
+       hall["song"] and hall["song"]["name"].find("Funeral") >= 0 and hall["song"]["presets"]
+       and hall["song"]["presets"].get("filament") == "Haunted Organ" and hall["song"]["presets"].get("cathode") == "Heartbeat"
+       and ((hall["dev"] == "cathode" and hall["patch"] == "Heartbeat") or (hall["dev"] == "filament" and hall["patch"] == "Haunted Organ")), hall)
+    other = "filament" if hall["dev"] == "cathode" else "cathode"
+    pg.evaluate("d => __synth.setDevice(d)", other)
+    other_name = pg.evaluate("__synth.patch().name")
+    expect = "Haunted Organ" if other == "filament" else "Heartbeat"
+    ck("P. the other device took its Halloween preset too", other_name == expect, (other, other_name))
+    pg.evaluate("""async () => { await __synth.player().loadId('dx-cellar-stairs'); }""")
+    stairs = pg.evaluate("""() => { const s = __synth.player().song(); return { presets: s && s.presets, fil: __synth.device() === 'filament' ? __synth.patch().name : null }; }""")
+    pg.evaluate("__synth.setDevice('filament')")
+    stairs_fil = pg.evaluate("__synth.patch().name")
+    pg.evaluate("__synth.setDevice('cathode')")
+    stairs_cat = pg.evaluate("__synth.patch().name")
+    pg.evaluate("__synth.setDevice('dekatron')")
+    stairs_drum = pg.evaluate("__synth.patch().name")
+    ck("P. Cellar Stairs loads Sub Heartbeat, Creak Pulse and Bones",
+       stairs_fil == "Sub Heartbeat" and stairs_cat == "Creak Pulse" and stairs_drum == "Bones", (stairs_fil, stairs_cat, stairs_drum, stairs))
+    pg.evaluate("__synth.transport().stop()")
+    ck("P. no page errors", not errs, errs)
     # ---------------------------------------------------------------- slashless /synth
     # nginx 301s /synth to /synth/ because location ^~ /synth/ ends in a slash and
     # proxy_passes. The site service worker (registered from the main page, scope /)

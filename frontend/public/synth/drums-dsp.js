@@ -287,8 +287,10 @@ function handle(eng, m, frame) {
     return;
   }
   if (m.t === 'panic') {
-    eng.playing = false; eng.armed = false;
+    eng.playing = false; eng.armed = false; eng.clockMode = null;
+    eng.queue.length = 0;
     VOICES.forEach(id => { eng.voices[id].on = 0; });
+    if (eng.onStep) eng.onStep(-1, seqOf(eng).length);
     return;
   }
   if (m.t === 'active') {

@@ -88,7 +88,7 @@ function normVoice(id, src) {
   return out;
 }
 
-const DRUM_CATS_LIST = ['Groove', 'Shuffle', 'Sparse'];
+const DRUM_CATS_LIST = ['Groove', 'Shuffle', 'Sparse', 'Halloween'];
 export function normalizeDrum(p) {
   const out = clone(DRUM_DEFAULT);
   if (!p || typeof p !== 'object') return out;
@@ -217,6 +217,28 @@ export const DRUM_FACTORY = [
       clap: '...x.....x....', rim: 'x..x..x..x..x...', tom: '..........x.x...', hatO: '...........x....',
     },
     accent: 'x..x..x..x......',
+  }),
+  pat({
+    name: 'Lantern', cat: 'Halloween',
+    seq: { bpm: 84, swing: 0, length: 16, accentAmt: 0.35 },
+    level: 0.7,
+    steps: {
+      kick: 'x.......x.......', snare: '....x.......x...', hatC: 'x...x...x...x...',
+      hatO: '..............x.', rim: '..x.....x...x...', tom: '............x...', clap: '................',
+    },
+    accent: 'x.......x.......',
+    voices: { kick: { decay: 0.55, level: 0.8 }, hatC: { level: 0.22 }, rim: { level: 0.45 } },
+  }),
+  pat({
+    name: 'Bones', cat: 'Halloween',
+    seq: { bpm: 66, swing: 0, length: 16, accentAmt: 0.25 },
+    level: 0.68,
+    steps: {
+      kick: 'x...........x...', snare: '................', hatC: '....x.......x...',
+      hatO: '................', rim: 'x...x...x...x...', tom: '........x.......', clap: '....x...........',
+    },
+    accent: 'x...............',
+    voices: { kick: { tune: 42, decay: 0.7, level: 0.85 }, tom: { tune: 80, decay: 0.5, level: 0.6 }, rim: { level: 0.4 }, clap: { level: 0.35 } },
   }),
 ];
 
