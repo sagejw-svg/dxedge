@@ -13,7 +13,8 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
 panel, the rack rail), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
-with both devices at once, Render WAV) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
+with both devices at once, Render WAV), R. (the rack framework: device contract, mixer, clock,
+project) and playing-it checks (keys, computer keyboard, patches, knobs, persistence).
 
 Run:  python3 scripts/test_synth.py          (SYNTH_SHOTS=/dir to keep screenshots)
 """
@@ -89,8 +90,10 @@ with sync_playwright() as pw:
     pg = b.new_page(viewport={"width": 1366, "height": 1000}); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
-    def render(p, events, seconds, rack=True, mono=False):
-        return dec(pg.evaluate("a => __synth.render(a)", {"patch": p, "events": events, "seconds": seconds, "rack": rack, "mono": mono}))
+    def render(p, events, seconds, rack=True, mono=False, mixer=None):
+        body = {"patch": p, "events": events, "seconds": seconds, "rack": rack, "mono": mono}
+        if mixer is not None: body["mixer"] = mixer
+        return dec(pg.evaluate("a => __synth.render(a)", body))
     def note(n, at=0.0, off=None, v=0.8):
         e = [{"at": at, "t": "on", "n": n, "v": v}]
         if off is not None: e.append({"at": off, "t": "off", "n": n})
@@ -797,8 +800,109 @@ with sync_playwright() as pw:
         small = ph.evaluate("""() => [...document.querySelectorAll('#deck .btn, #deck .chip, #tempoIn')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: the deck's buttons, chips and tempo slider are 44 px or more", not small, small)
         ph.locator("#deck").screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_deck.png"))
+        ph.tap('.tabs [data-go="rack"]'); ph.wait_for_timeout(150)
+        ck(f"10. {w}px: the rack tab shows the mixer without horizontal scroll", ph.is_visible("#mHost") and ph.is_visible("#mixFLvl")
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        small = ph.evaluate("""() => [...document.querySelectorAll('#mHost .btn, #mHost .chip, #mHost input')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.getAttribute('aria-label') || e.textContent)""")
+        ck(f"10. {w}px: mixer, transport and project controls are 44 px or more", not small, small)
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
+
+    # ---------------------------------------------------------------- R. the rack framework
+    def rms(x):
+        seg = x[len(x) // 2:]
+        return float(np.sqrt(np.mean(seg ** 2)))
+    pure = pg.evaluate("""async () => {
+      const t = await import('/synth/transport.js');
+      const m = await import('/synth/mixer.js');
+      const d = await import('/synth/device.js');
+      const p = await import('/synth/project.js');
+      const ticks = t.clockTicks(0, 1);
+      const ev = ticks.map(n => t.describeTick(n, 120, [4, 4], 0, 0));
+      const gaps = ev.slice(1).map((e, i) => e.time - ev[i].time);
+      const proj = p.normalizeProject({ name: ' Night Shift ', tempo: 10, device: 'nope', mixer: { filament: { level: 2, pan: -3, mute: 1 } }, devices: { filament: { patch: { osc1: { wave: 'sine' } } } } });
+      const fil = d.getDevice('filament'), cat = d.getDevice('cathode');
+      return {
+        n: ticks.length, gap: gaps[0], same: gaps.every(g => Math.abs(g - gaps[0]) < 1e-9),
+        bar: t.describeTick(96, 120, [4, 4], 0, 0).bar, tempo: t.clampTempo(10),
+        balL: m.balanceGains(0).l, balR: m.balanceGains(0).r, hard: m.balanceGains(1).l, half: m.balanceGains(0.5).l,
+        api: fil.api, outs: fil.audioOutputs, midi: fil.midiInput, cut: fil.parameters['filt.cutoff'].default,
+        nParam: Object.keys(fil.parameters).length, catWave: cat.parameters['vco1.wave'].type,
+        catChoices: cat.parameters['vco1.wave'].choices,
+        name: proj.name, pTempo: proj.tempo, pDev: proj.device, pMix: proj.mixer.filament,
+        wave: proj.devices.filament.patch.osc1.wave, catDev: proj.devices.cathode.patch.device,
+        file: p.projectFileName(proj), both: d.listDevices().map(x => x.id),
+      };
+    }""")
+    ck("R. one quarter at 120 BPM is 24 clock pulses, 20.833 ms apart", pure["n"] == 24 and abs(pure["gap"] - 0.5 / 24) < 1e-9 and pure["same"], pure["gap"])
+    ck("R. beat 4 is the downbeat of the next bar in 4/4", pure["bar"] == 1, pure["bar"])
+    ck("R. tempo clamps to 40..240", pure["tempo"] == 40, pure["tempo"])
+    ck("R. centre pan is unity and a hard right pan drops the left", abs(pure["balL"] - 1) < 1e-12 and abs(pure["balR"] - 1) < 1e-12 and abs(pure["hard"]) < 1e-12 and abs(pure["half"] - 0.7071067811865476) < 1e-9, pure)
+    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode"], pure)
+    ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
+
+    tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
+    baseL, baseR = render(tone, note(69, 0.0, 1.0), 1.2, rack=False)
+    a = rms(baseL)
+    halfL, halfR = render(tone, note(69, 0.0, 1.0), 1.2, rack=False, mixer={"filament": {"level": 0.5}})
+    ck(f"R. mixer level 0.5 is -6 dB ({db(rms(halfL) / a):+.2f} dB)", abs(db(rms(halfL) / a) + 6) < 0.25 and abs(db(rms(halfR) / a) + 6) < 0.25, (db(rms(halfL) / a), db(rms(halfR) / a)))
+    muteL, muteR = render(tone, note(69, 0.0, 1.0), 1.2, rack=False, mixer={"filament": {"mute": True}})
+    ck("R. mute silences the device", rms(muteL) < 1e-6 and rms(muteR) < 1e-6, (rms(muteL), rms(muteR)))
+    soloL, soloR = render(tone, note(69, 0.0, 1.0), 1.2, rack=False, mixer={"cathode": {"solo": True}})
+    ck("R. solo on the other device mutes this one", rms(soloL) < 1e-6 and rms(soloR) < 1e-6, (rms(soloL), rms(soloR)))
+    panL, panR = render(tone, note(69, 0.0, 1.0), 1.2, rack=False, mixer={"filament": {"pan": 0.5}})
+    ck(f"R. pan 0.5 drops the left by 3 dB and keeps the right ({db(rms(panL) / rms(panR)):.2f} dB)", abs(db(rms(panL) / rms(panR)) + 3.0103) < 0.4 and abs(db(rms(panR) / rms(baseR))) < 0.4, (db(rms(panL) / rms(panR)), db(rms(panR) / rms(baseR))))
+    hardL, hardR = render(tone, note(69, 0.0, 1.0), 1.2, rack=False, mixer={"filament": {"pan": 1}})
+    ck("R. pan hard right keeps the right and silences the left", rms(hardL) < 1e-4 and rms(hardR) > a * 0.5, (rms(hardL), rms(hardR), a))
+    ck("R. a default strip leaves a centred voice identical on left and right", float(np.max(np.abs(baseL - baseR))) == 0.0, float(np.max(np.abs(baseL - baseR))))
+
+    live = pg.evaluate("""async () => {
+      await __synth.engine().ctx.resume();
+      const got = [];
+      const off = __synth.deviceApi('filament').subscribe(e => got.push(e.type));
+      __synth.transport().play();
+      await new Promise(r => setTimeout(r, 180));
+      const mid = __synth.transport().state();
+      __synth.transport().stop();
+      const held = __synth.transport().state();
+      __synth.transport().stop();
+      const home = __synth.transport().state();
+      off();
+      const cut = __synth.deviceApi('filament').setParameter('filt.cutoff', 1234);
+      const read = __synth.deviceApi('filament').getParameter('filt.cutoff');
+      __synth.registerDevice({ id: 'sequencer', name: 'Step Sequencer', instrument: false, midiInput: false, midiOutput: true, audioOutputs: 0, description: 'A device other code can register.' });
+      return { got, playing: mid.playing, beat: mid.beat, heldBeat: held.beat, heldPlaying: held.playing, home: home.beat, cut, read, ids: __synth.devices().map(d => d.id) };
+    }""")
+    ck("R. play emits clock events a device can subscribe to", live["playing"] and "play" in live["got"] and live["got"].count("clock") >= 2 and 0.1 < live["beat"] < 0.7, live)
+    ck("R. stop holds the beat and a second stop returns to the start", (not live["heldPlaying"]) and live["heldBeat"] > 0.1 and live["home"] == 0, live)
+    ck("R. a parameter id round-trips, and a new device can register", live["cut"] == 1234 and live["read"] == 1234 and "sequencer" in live["ids"], live)
+
+    pg.locator("#mHost").scroll_into_view_if_needed()
+    pg.fill("#hostTempo", "100"); pg.locator("#hostTempo").press("Tab"); pg.wait_for_timeout(40)
+    ck("R. the tempo field sets the clock", pg.evaluate("__synth.transport().state().tempo") == 100, pg.evaluate("__synth.transport().state().tempo"))
+    pg.click("#mixFMute")
+    ck("R. the mute button mutes Filament", pg.evaluate("__synth.mixer().filament.mute") is True)
+    pg.click("#projSave"); pg.wait_for_timeout(40)
+    pg.fill("#hostTempo", "140"); pg.locator("#hostTempo").press("Tab"); pg.wait_for_timeout(40)
+    pg.click("#projLoad"); pg.wait_for_timeout(80)
+    ck("R. load saved restores the tempo and the mute", pg.evaluate("__synth.transport().state().tempo") == 100 and pg.evaluate("__synth.mixer().filament.mute") is True, pg.evaluate("__synth.transport().state().tempo"))
+    with pg.expect_download() as dlinfo:
+        pg.click("#projDown")
+    saved = json.loads(dlinfo.value.path() and open(dlinfo.value.path(), encoding="utf-8").read())
+    ck("R. download is a dxrack project with both devices", saved.get("kind") == "dxrack" and saved.get("v") == 1 and saved.get("tempo") == 100 and "filament" in saved.get("devices", {}) and "cathode" in saved.get("devices", {}) and saved["devices"]["filament"]["patch"]["v"] == 1, saved.get("kind"))
+    up = dict(saved)
+    up["name"] = "Uploaded"
+    up["tempo"] = 88
+    up["device"] = "cathode"
+    up["mixer"] = {"filament": {"level": 1, "pan": 0, "mute": False, "solo": False}, "cathode": {"level": 0.25, "pan": -1, "mute": False, "solo": True}}
+    pg.set_input_files("#projFile", files=[{"name": "uploaded.json", "mimeType": "application/json", "buffer": json.dumps(up).encode()}])
+    pg.wait_for_function("__synth.device() === 'cathode' && __synth.transport().state().tempo === 88", timeout=3000)
+    got = pg.evaluate("""() => ({ dev: __synth.device(), tempo: __synth.transport().state().tempo, name: document.getElementById('projName').value, mix: __synth.mixer(), patch: __synth.patch().device })""")
+    ck("R. upload applies the device, tempo, name and mixer", got["dev"] == "cathode" and got["tempo"] == 88 and got["name"] == "Uploaded" and got["mix"]["cathode"]["level"] == 0.25 and got["mix"]["cathode"]["solo"] and got["mix"]["cathode"]["pan"] == -1 and got["patch"] == "cathode", got)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    boot = pg.evaluate("""() => ({ tempo: __synth.transport().state().tempo, mix: __synth.mixer().cathode, name: document.getElementById('projName').value })""")
+    ck("R. the saved project restores tempo, mixer and name on reload", boot["tempo"] == 88 and abs(boot["mix"]["level"] - 0.25) < 1e-6 and boot["mix"]["solo"] and boot["name"] == "Uploaded", boot)
+    ck("R. no page errors", not errs, errs)
     b.close()
 
 print()

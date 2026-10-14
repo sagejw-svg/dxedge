@@ -53,7 +53,7 @@ export const C_DEFAULT = {
   out: clone(F_DEFAULT.out),
 };
 
-const RANGE = {
+export const RANGE = {
   tune: [-100, 100], drift: [0, 8],
   'vco1.pw': [0.05, 0.95], 'vco1.level': [0, 1], 'vco2.semi': [-12, 12], 'vco2.fine': [-50, 50], 'vco2.level': [0, 1],
   'pm.a': [-24, 24], 'pm.b': [-24, 24],
