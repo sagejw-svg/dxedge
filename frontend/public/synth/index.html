@@ -188,6 +188,9 @@
   .dbody[hidden] { display: none; }
   .tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
   .tempo input { width: 130px; accent-color: var(--amber); min-height: 34px; }
+  .library { border-top: 1px solid #1a1a1a; }
+  .library select.btn { max-width: 100%; }
+  #libDrop { margin: 6px 0 0; }
   .tracks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
   .trk { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; border: 1px solid #222; border-radius: 6px; padding: 4px 8px; min-width: 0; }
   .trk .tn { color: var(--text); font-size: 12px; flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
@@ -246,6 +249,7 @@
     .tabs button { min-height: 44px; min-width: 44px; padding: 7px 3px; letter-spacing: 0; font-size: 11px; }
     .kctl .hide-s { display: none; }
     .deck { padding: 6px; } .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
+    #libPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
     #mHost input[type="range"], #hostTempo, #projName { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
@@ -436,6 +440,28 @@
       </div>
     </section>
 
+    <section class="deck library" id="library" aria-label="MIDI library: play a song through the rack transport">
+      <div class="drow">
+        <span class="label">songs</span>
+        <button class="btn small" id="libBtn" aria-expanded="false" aria-controls="libBody">songs &#9662;</button>
+        <button class="btn small" id="libPlay" aria-pressed="false" disabled title="Play the song from the start. Uses the rack transport.">&#9654; play</button>
+        <button class="btn small" id="libStop" title="Stop the rack transport">&#9632; stop</button>
+        <span class="dstat" id="libStat">Loading songs…</span>
+        <span class="dstat" id="libPos"></span>
+      </div>
+      <div class="dbody" id="libBody" hidden>
+        <div class="drow">
+          <select class="btn" id="libPick" aria-label="Sample MIDI library"></select>
+          <button class="btn small" id="libOpen" title="Open a MIDI file from this device">open .mid</button>
+          <input type="file" id="libIn" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
+          <button class="btn small" id="libLoop" aria-pressed="false">loop</button>
+        </div>
+        <p class="note" id="libDrop">Drop a .mid file here, or pick one from the list. Play and stop use the rack transport. The tempo box on the Rack tab sets the speed.</p>
+        <div class="tracks" id="libTracks" aria-label="Tracks in this file"></div>
+        <div class="tracks" id="libChannels" aria-label="MIDI channels: pick the device each one plays"></div>
+      </div>
+    </section>
+
     <div class="keybed" id="keybed">
       <div class="strips">
         <div class="strip" id="pbStrip" role="slider" aria-label="Pitch bend" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0" tabindex="0"><div class="thumb"></div><span class="sl">PITCH</span></div>
@@ -455,9 +481,10 @@
     <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Knobs: drag up or down (shift for fine), arrow keys, double click to reset.
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
+        <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, or off. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset from the Halloween category.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.5: two devices in a rack, with a mixer, a master clock and project files, and a MIDI deck &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.6: two devices in a rack, a MIDI deck, and a song library that plays on the master clock &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -468,6 +495,8 @@ import { TUBES, TUBE_BY } from './rack.js';
 import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
+import { createPlayer } from './player.js';
+import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
@@ -666,7 +695,7 @@ $('projFile').addEventListener('change', () => {
 
 // ---------------------------------------------------------------- notes
 const down = new Map();       // note -> source count
-let deck = null;              // the MIDI deck, built further down
+let deck = null, player = null;   // the MIDI deck and the library player, built further down
 let sustainOn = false;
 function noteOn(n, v) {
   if (n < 0 || n > 127) return;
@@ -1144,14 +1173,14 @@ function buildKeys() {
     if (black) { el.style.left = (x - bW / 2) + 'px'; el.style.width = bW + 'px'; }
     else { el.style.left = x + 'px'; el.style.width = wW + 'px'; x += wW; if (pc === 0) el.innerHTML = '<span class="kn">C' + (Math.floor(n / 12) - 1) + '</span>'; }
     host.appendChild(el); keyEls.set(n, el);
-    if (down.has(n) || (deck && deck.lit(n))) el.classList.add('down');
+    if (down.has(n) || (deck && deck.lit(n)) || (player && player.lit(n))) el.classList.add('down');
   }
   host.style.width = x + 'px';
   $('octV').textContent = 'C' + baseOct;
   // phones: start the scroll on the middle C of the visible range
   if (phone) { const w = $('keyswrap'); w.scrollLeft = Math.max(0, 7 * wW - w.clientWidth / 2 + 3 * wW); }
 }
-function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || down.has(n) || !!(deck && deck.lit(n))); }
+function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || down.has(n) || !!(deck && deck.lit(n)) || !!(player && player.lit(n))); }
 buildKeys();
 let lastW = window.innerWidth; window.addEventListener('resize', () => { if (Math.abs(window.innerWidth - lastW) > 40) { lastW = window.innerWidth; buildKeys(); } });
 function setOct(o) { baseOct = clampN(o, 0, 7); store.set('filament_oct', baseOct); buildKeys(); }
@@ -1274,6 +1303,39 @@ deck = createDeck({
   patchOf: d => (d === dev ? cur : DS[d].cur), patchName: d => (d === dev ? cur : DS[d].cur).name || DEVS[d].name,
   lit: n => paintKey(n, false),
 });
+player = createPlayer({
+  dev: () => dev, ctx: () => ctx, engine: () => E, wake, withEngine, toast,
+  patchOf: d => (d === dev ? cur : DS[d].cur),
+  devices: () => listDevices(),
+  lit: n => paintKey(n, false),
+  // A library song can name a factory preset per device. Dekatron is not in this
+  // build, so only Filament and Cathode are applied; an unknown name is skipped.
+  applyPresets: map => {
+    const applied = {};
+    if (!map || typeof map !== 'object') return applied;
+    Object.keys(map).forEach(id => {
+      const X = DEVS[id]; if (!X) return;
+      const found = X.factory.find(p => p.name === map[id]); if (!found) return;
+      const patch = clone(found), key = 'f:' + found.name;
+      if (id === dev) {
+        cur = patch; curKey = key; edited = false;
+        refreshAll(); fillSelect(); pushPatch(true);
+        DS[id] = { cur, curKey, edited, user };
+      } else {
+        DS[id] = Object.assign({}, DS[id], { cur: patch, curKey: key, edited: false });
+        store.set(X.kCur, { key, patch });
+        withEngine(() => E.setPatch(patch, true));
+      }
+      applied[id] = found.name;
+    });
+    return applied;
+  },
+  setClock: (bpm, sig) => {
+    E.transport.setTempo(bpm);
+    E.transport.setTimeSig(sig);
+    syncHostUI();
+  },
+});
 
 // ---------------------------------------------------------------- the chassis
 const TUBE_ST = {};
@@ -1376,7 +1438,7 @@ requestAnimationFrame(frame);
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.5-rack',
+  version: '0.6-midi',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -1397,6 +1459,7 @@ window.__synth = {
   engine: () => E,
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
   deck: () => deck.test,
+  player: () => player.test,
   smf: { write: o => [...writeSMF(o)], read: arr => { const f = readSMF(Uint8Array.from(arr)); return { format: f.format, ppq: f.ppq, tempos: f.tempos, timeSig: f.timeSig, song: songOf(f) }; }, bytesOf },
   // Two-device render: opts {patches:{filament, cathode}, device, events:[{at, dev, t, ...}], seconds}
   render2: async opts => { const buf = await renderOffline(opts); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },

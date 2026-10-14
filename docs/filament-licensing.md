@@ -51,12 +51,44 @@ advice; have an IP attorney review before a commercial launch.
 | [Elementary Audio](https://github.com/elemaudio/elementary) | MIT | A functional JS audio engine with a web renderer | Reference for graph design; an option for future devices. Not planned as our engine. |
 | [Tone.js](https://github.com/Tonejs/Tone.js) | MIT | Transport, scheduling, synths, effects | Reference for the transport and scheduling design; we keep our own sample-accurate worklet clock. |
 | [Web Audio Modules 2.0 API](https://github.com/webaudiomodules/api) | MIT (`@webaudiomodules/api`, package.json) | An open plugin standard for the web: parameters, automation, MIDI events, GUI, host groups | 14 Oct 2026: the rack device contract (`device.js`) follows the published ideas (descriptor, parameter info, MIDI, transport) and is our own code. The package was not copied, so there is no notice entry. Each WAM plugin still has its own license before we would host one. |
-| [@tonejs/midi](https://github.com/Tonejs/Midi) | MIT | Read and write MIDI files | Import and export .mid in the song sequencer. |
+| [@tonejs/midi](https://github.com/Tonejs/Midi) 2.0.28 | MIT. Copyright (c) 2016 Yotam Mann. Checked 14 Oct 2026 | Read and write MIDI files | Bundled at `frontend/public/synth/vendor/tonejs-midi.js` and used by the song library (`midisong.js`, `player.js`). The MIDI deck still uses our own `smf.js` and does not import this package. Notice in `THIRD_PARTY_NOTICES.md`. |
+| [midi-file](https://github.com/carter-thaxton/midi-file) 1.2.4 | MIT. Copyright (c) 2016 Carter Thaxton. Checked 14 Oct 2026 | Low-level MIDI file parser, a dependency of @tonejs/midi | Inside the same bundle. Not imported on its own. Notice in `THIRD_PARTY_NOTICES.md`. |
+| [array-flatten](https://github.com/blakeembrey/array-flatten) 3.0.0 | MIT. Copyright (c) 2014 Blake Embrey. Checked 14 Oct 2026 | Flatten nested arrays, a dependency of @tonejs/midi | Inside the same bundle. Notice in `THIRD_PARTY_NOTICES.md`. |
 | [webaudio-pianoroll](https://github.com/g200kg/webaudio-pianoroll) | Apache-2.0 | A piano roll editor component | Starting point or reference for the piano roll. |
 | [Yjs](https://github.com/yjs/yjs) | MIT | CRDT shared data types | Multiplayer and shared projects, much later. |
 | [AKWF waveforms](https://www.adventurekid.se/akrt/waveforms/adventure-kid-waveforms/) | CC0 1.0 | A large set of single-cycle waveforms (the author's page gives no count) | Wavetables for a wavetable device. |
 | [FluidR3_GM SoundFont](https://github.com/educandu/abcjs-soundfonts) | MIT (per that repository's notes; confirm at the original source before shipping) | A General MIDI instrument set | Default sounds for imported MIDI files and a GM fallback. |
 | Salamander Grand Piano | Public domain now (originally CC BY 3.0), per the same repository; confirm at source | A sampled grand piano | A piano preset for the sampler. |
+
+## Bundled MIDI library (content, checked 14 Oct 2026)
+
+Every file under `frontend/public/synth/midi/` was sequenced in `scripts/build_midi_library.mjs` for this project. None was copied from another MIDI file. The MIDI data is dedicated to the public domain under CC0 1.0. A composition is included only when the composition itself is public domain (published 1930 or earlier, or a traditional tune), or when the tune is original to this project. `catalog.json` repeats the source line next to each file. Halloween songs also name a Filament factory preset and a Cathode factory preset; those presets are original patch data in `patches.js` and `cathode.js`, not samples. Dekatron is not in this build, so no Dekatron presets shipped.
+
+| File | Composition | MIDI data |
+|-|-|-|
+| `beethoven-symphony-5-mvt1.mid` | Public domain. Beethoven, Symphony No. 5, Op. 67, movement 1 (1808). Opening only | CC0 sequence, 14 Oct 2026 |
+| `bach-toccata-fugue-dm.mid` | Public domain. Bach, Toccata and Fugue in D minor, BWV 565. Opening toccata | CC0 sequence, 14 Oct 2026 |
+| `joplin-maple-leaf-rag.mid` | Public domain. Joplin, Maple Leaf Rag (1899). A strain, short reduction | CC0 sequence, 14 Oct 2026 |
+| `joplin-the-entertainer.mid` | Public domain. Joplin, The Entertainer (1902). The famous strain | CC0 sequence, 14 Oct 2026 |
+| `sousa-stars-and-stripes.mid` | Public domain. Sousa, The Stars and Stripes Forever (1897). Trio theme. The descant is original to this file, not a copied obbligato | CC0 sequence, 14 Oct 2026 |
+| `traditional-greensleeves.mid` | Public domain. Traditional English tune, 16th century | CC0 sequence, 14 Oct 2026 |
+| `foster-oh-susanna.mid` | Public domain. Stephen Foster, Oh! Susanna (1848) | CC0 sequence, 14 Oct 2026 |
+| `handy-st-louis-blues.mid` | Public domain. W. C. Handy, St. Louis Blues (1914). Chorus only | CC0 sequence, 14 Oct 2026 |
+| `traditional-frankie-and-johnny.mid` | Public domain. Traditional American ballad | CC0 sequence, 14 Oct 2026 |
+| `dx-pixel-march.mid` | Original chiptune march, DX Edge, 2026 | CC0, original |
+| `dx-neon-alley.mid` | Original synth-pop tune, DX Edge, 2026 | CC0, original |
+| `dx-dock-lamp.mid` | Original short chiptune, DX Edge, 2026 | CC0, original |
+| `bach-toccata-spooky.mid` | Public domain. Bach, BWV 565, a separate slow organ reduction for the Halloween pack | CC0 sequence, 14 Oct 2026. Presets: Haunted Organ, Chapel Organ |
+| `grieg-mountain-king.mid` | Public domain. Grieg, Peer Gynt, "In the Hall of the Mountain King" (1875). Opening theme | CC0 sequence, 14 Oct 2026. Presets: Horror Pad, Cellar Drone |
+| `saint-saens-danse-macabre.mid` | Public domain. Saint-Saëns, Danse macabre, Op. 40 (1874). Tritone and a short waltz | CC0 sequence, 14 Oct 2026. Presets: Eerie Bells, Bell Jar |
+| `mussorgsky-bald-mountain.mid` | Public domain. Mussorgsky, Night on Bald Mountain (1867); the concert shape associated with Rimsky-Korsakov's 1886 arrangement is also public domain. Short opening reduction | CC0 sequence, 14 Oct 2026. Presets: Creaky Drone, Creak Pulse |
+| `chopin-funeral-march.mid` | Public domain. Chopin, Piano Sonata No. 2, Op. 35, movement 3 (1839). Bb minor theme | CC0 sequence, 14 Oct 2026. Presets: Haunted Organ, Heartbeat |
+| `traditional-dies-irae.mid` | Public domain. Dies irae, 13th-century sequence, set in a steady 4/4 | CC0 sequence, 14 Oct 2026. Presets: Ghost Choir, Choir Breath |
+| `dx-lantern-walk.mid` | Original spooky music-box tune, DX Edge, 2026 | CC0, original. Presets: Glass Music Box, Heartbeat |
+| `dx-cellar-stairs.mid` | Original, DX Edge, 2026. A lub-dub under a chromatic descent | CC0, original. Presets: Sub Heartbeat, Creak Pulse |
+| `dx-porch-ghost.mid` | Original, DX Edge, 2026. A slow wail over a two-note pulse | CC0, original. Presets: Theremin Wail, Wail Glide |
+
+Glass Tine is a Cathode Halloween preset with no bundled file pointing at it. It is still a factory patch.
 
 ## Register: use with care (licenses vary inside the project)
 
