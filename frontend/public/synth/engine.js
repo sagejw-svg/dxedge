@@ -9,6 +9,7 @@
 import { makeSynthChain, makeEnsemble, tubeData } from './rack.js';
 import { normalize, clone, getPath, setPath } from './patches.js';
 import { normalizeC } from './cathode.js';
+import { makeMasterFx } from './masterfx.js';
 import { createMixer } from './mixer.js';
 import { createTransport } from './transport.js';
 import { RACK_API, getDevice, listDevices, registerDevice } from './device.js';
@@ -43,7 +44,6 @@ export async function createEngine(ctx, opts = {}) {
     E.ens.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
-  if (opts.destination !== null) E.master.connect(opts.destination || ctx.destination);
   // Mixer in front of the shared ensemble (or the master, when the rack is off).
   // Default strips are a straight wire, so a project that never touches them
   // sounds the same as the two devices feeding the ensemble directly.
@@ -54,6 +54,19 @@ export async function createEngine(ctx, opts = {}) {
   if (opts.mixer) E.mix.load(opts.mixer);
   E.transport = createTransport(ctx, { tempo: opts.tempo, timeSig: opts.timeSig });
   E.api = RACK_API;
+  // Master bus after the mixer and the output chain:
+  // devices → mixer → ensemble/chain → master gain → FX → destination.
+  // masterFx:false leaves the master gain connected straight through. A bypassed
+  // bus does the same, and a bypassed offline render never builds the worklet.
+  const dest = opts.destination !== null ? (opts.destination || ctx.destination) : null;
+  if (opts.masterFx === false) {
+    if (dest) E.master.connect(dest);
+  } else {
+    E.fx = await makeMasterFx(ctx, opts.master);
+    E.fx.install(E.master, dest);
+  }
+  E.setMaster = partial => (E.fx ? E.fx.set(partial) : null);
+  E.masterState = () => (E.fx ? E.fx.state() : null);
   const ctl = { bend: 0, mw: 0, at: 0 };
   function nodeFor(dev, events, playing) {
     if (E.nodes[dev]) return E.nodes[dev];
@@ -205,7 +218,7 @@ export async function createEngine(ctx, opts = {}) {
 // the patch's device); an event with dev:'cathode' or dev:'filament' goes to that device, one
 // without dev to the rack's device. onProgress(fraction) is called as the render runs.
 // Returns the AudioBuffer.
-export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo }) {
+export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo, master = null, masterFx = true }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
   const frame = e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {});
   let main = patch, others = [];
@@ -217,7 +230,7 @@ export async function renderOffline({ patch, patches, device, events = [], secon
       .filter(o => o.events.length);
     events = events.filter(e => !e.dev || e.dev === dev0);
   }
-  const E = await createEngine(ctx, { patch: main, events: events.map(frame), rack, others, mixer, tempo });
+  const E = await createEngine(ctx, { patch: main, events: events.map(frame), rack, others, mixer, tempo, master, masterFx });
   if (mono) E.mono(true);
   if (onProgress) {
     const step = Math.max(1, Math.ceil(seconds / 50));

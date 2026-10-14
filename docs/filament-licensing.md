@@ -58,6 +58,12 @@ advice; have an IP attorney review before a commercial launch.
 | [FluidR3_GM SoundFont](https://github.com/educandu/abcjs-soundfonts) | MIT (per that repository's notes; confirm at the original source before shipping) | A General MIDI instrument set | Default sounds for imported MIDI files and a GM fallback. |
 | Salamander Grand Piano | Public domain now (originally CC BY 3.0), per the same repository; confirm at source | A sampled grand piano | A piano preset for the sampler. |
 
+## Use log
+
+| Date | Resource | Where | What we did |
+|-|-|-|-|
+| 2026-10-14 | [Freeverb](https://ccrma.stanford.edu/~jos/pasp/Freeverb.html) (public domain, Jezar at Dreampoint, c. 2000) | `frontend/public/synth/master.worklet.js` | Original JavaScript for the published structure: eight damped combs into four allpasses per channel, and the published 44.1 kHz delay lengths, scaled with the sample rate. Not a copy or a line-by-line translation of the C++ sources. Notice in `THIRD_PARTY_NOTICES.md`. The delay and the bus compressor next to it are original; Airwindows was not used. |
+
 ## Register: use with care (licenses vary inside the project)
 
 | Resource | Why care | Rule |
