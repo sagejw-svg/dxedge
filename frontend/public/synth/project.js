@@ -15,7 +15,7 @@ export const PROJECT_KEY = 'dxrack_project';
 
 export function normalizeProject(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
-  const device = src.device === 'cathode' || src.device === 'dekatron' ? src.device : 'filament';
+  const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' ? src.device : 'filament';
   const name = String(src.name == null ? 'Untitled' : src.name).trim().slice(0, 40) || 'Untitled';
   const mixerIn = src.mixer && typeof src.mixer === 'object' ? src.mixer : {};
   const ids = new Set(['filament', 'cathode']);

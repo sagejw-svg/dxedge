@@ -10,13 +10,15 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds three devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds four devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
-original design: own name, panel, jack names and voicing, not a copy of Korg's), and **Dekatron**
+original design: own name, panel, jack names and voicing, not a copy of Korg's), **Dekatron**
 (an original analog-style drum machine: kick, snare, closed hat, open hat, clap, tom and rim, with
-a 16-step pattern). The rail above the chassis picks which device the keyboard, wheels and MIDI
-play. All three feed the shared ensemble and output rack. The rack takes its settings from the
-active device's patch. Dekatron registers on the device contract and follows the master clock.
+a 16-step pattern), and **Lattice** (an original wavetable instrument: two morphing oscillators,
+warp, unison, a sub and noise, two filters, and a drag-and-drop modulation matrix). The rail above
+the chassis picks which device the keyboard, wheels and MIDI play. All four feed the shared
+ensemble and output rack. The rack takes its settings from the active device's patch. Dekatron
+registers on the device contract and follows the master clock. Lattice registers the same way.
 
 The rack framework (14 Oct) is what those devices plug into. Each device
 has one contract: a descriptor, a parameter table, MIDI in, a stereo output and a versioned patch.
@@ -71,7 +73,11 @@ task can read it).
 | `frontend/public/synth/drums-dsp.js` | The drum engine: 2x voices, the half-band decimator, the sample clock (`stepSeconds`) |
 | `frontend/public/synth/drums.worklet.js` | AudioWorklet processor `dekatron`. Imports the engine; no DSP of its own |
 | `frontend/public/synth/drums-ui.js` | The pattern panel, and `createDrumHost` / `renderDrums` (the page adapter). `attach` calls `registerDevice` and `addDevice`, and the pattern follows `host.transport` |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament and Cathode are registered here; Dekatron registers when its node is hosted |
+| `frontend/public/synth/lattice.js` | Lattice patch schema v1 (`device: 'lattice'`), the parameter table, eight factory presets, `latticeDevice` |
+| `frontend/public/synth/lattice-dsp.js` | The wavetable engine: generated mipmapped tables, 2x with a half-band decimator, warp, unison, filters, envelopes, drawable LFOs, the mod matrix |
+| `frontend/public/synth/lattice.worklet.js` | AudioWorklet processor `lattice`. Imports the engine; no DSP of its own |
+| `frontend/public/synth/lattice-ui.js` | The flat panel, WAV import, and `createLatticeHost` / `renderLattice`. `attach` calls `registerDevice` and `addDevice` |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament and Cathode are registered here; Dekatron and Lattice register when their nodes are hosted |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
@@ -177,6 +183,31 @@ registerDevice({
 | Messages | `{t:'patch', p}`, `{t:'trig', voice, v}`, `{t:'transport', playing, clock, step}`, `{t:'tick'}`, `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
 | Clock | With `host.transport`: play, stop, tempo, and `clock` pulses at 24 per quarter. A step is 6 pulses; swing delays an odd step by up to 2 pulses, and the next even step stays on the grid. Without a transport, the worklet fires step i at `stepSeconds(i, bpm, swing)`. |
 | Meters | Worklet posts `{t:'meter'}` and `{t:'step', step, length, playing}` |
+
+### Lattice (wavetable) - first version done 14 Oct 2026
+Original wavetable instrument for sound exploration. The panel is flat (slate, one blue accent),
+not the tube chassis. Vital and Surge XT were read for ideas only (wavetable position, warp,
+a modulation matrix). No line was copied or translated. The factory cycles are additive waveforms
+generated in `lattice-dsp.js`. AKWF (CC0) was not shipped.
+- [x] Two wavetable oscillators, position morph, animated 3D stack and 2D cycle
+- [x] Warp: bend, sync, PWM-style, FM from oscillator B
+- [x] Unison with detune and stereo spread; sub; noise
+- [x] Two multi-mode filters (low, high, band, notch), serial or parallel
+- [x] Modulation matrix, drag a source onto a destination: 4 drawable LFOs, 3 envelopes, velocity, mod wheel, 4 macros. The route bar shows the live amount
+- [x] Import a WAV file as oscillator A's table (period detection, then the same mipmaps)
+- [x] Eight factory presets: pads, a pluck, a bass, keys, a lead, evolving textures
+- [x] 2x oversampling, mipmapped tables, Kaiser half-band decimator. Tests in the W. section
+
+The host adapter is `latticeDevice` in `lattice.js` and `create` in `lattice-ui.js`. The page calls
+`engine.registerDevice(latticeDevice)` and `engine.addDevice('lattice', node)` when the node attaches.
+The patch stays on `lattice_cur`. A project may name Lattice as the keyboard device.
+
+| | |
+|-|-|
+| Identity | `id: 'lattice'`, `api: 'dxrack/1'`, `processor: 'lattice'`, `worklet: 'lattice.worklet.js'`, one stereo output, 2x oversampling |
+| Patch | `normalizeLattice(patch)` → schema v1 JSON, `device: 'lattice'`. `parameters` is the dxrack/1 table |
+| Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}`, `{t:'table', data}`, `{t:'macro', i, v}`. Optional `at` is a frame time |
+| Meters | Worklet posts `{t:'meter'}` with voices, cpu, oscillator positions, LFO values, envelope values, slot amounts, peak |
 
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to
@@ -365,6 +396,7 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-14 (interactive): Lattice, a wavetable device, on the rack rail. Two mipmapped oscillators, warp (bend, sync, PWM-style, FM from oscillator B), unison, sub, noise, two multi-mode filters, a drag-and-drop modulation matrix, and WAV import. The panel is flat. Factory cycles are generated in the repo; Vital and Surge were reference only, and AKWF was not shipped. Cache `dxedge-v79`. Suite: ALL PASS (442 checks, including the stuck-key checks that landed on main the same day). CPU (test 9, headless): Cathode 8.5%; Filament 8 voices 11.7% (Ladder 24) and 11.0% (Valve 12); stereo offset 12.8%; 16 voices with ensemble 17.9%. Dekatron Spark 4.6% (drums only). Lattice Glass Pad, one note, 13.3% (Lattice only). No Filament or Cathode voice code changed.
 - 2026-10-14 (interactive): Hexode and Anode on their own pages, linked from the rack. Hexode (`/synth/fm/`) is dx7-synth-js, MIT, Matt Montag, pinned `f269f0e`. Anode (`/synth/acid/`) is The Endless Acid Banger, CC BY 4.0, David Whiting (Vitling), pinned `bb93d97`; the page credits him, and the drums in this copy are synthesized. Cache `dxedge-v78`. Suite: ALL PASS (370 checks). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless): Cathode 8.4%; Filament 8 voices 12.6% (Ladder 24) and 10.8% (Valve 12); stereo offset 12.9%; 16 voices with ensemble 17.2%. Dekatron Spark 4.6% (drums only).
 - 2026-10-14 (interactive): song library merged onto the rack. Channel 10 routes to Dekatron (a note-on becomes a drum trigger). Mountain King, Cellar Stairs and Porch Ghost have a closed-hat part; those songs load Lantern or Bones. Dekatron's factory set is eight patterns, including those two. Cache `dxedge-v77`. Suite: ALL PASS (370 checks). CPU (test 9, headless): Cathode 8.6%; Filament 8 voices 11.6% (Ladder 24) and 11.0% (Valve 12); stereo offset 12.6%; 16 voices with ensemble 18.5%. Dekatron Spark 4.5% (drums only).
 - 2026-10-14 (interactive): song library and Halloween pack. A second strip plays MIDI on the rack transport (play, stop, tempo) with each channel routed to a device. The deck still uses `smf.js` and its own clock. `@tonejs/midi` 2.0.28 is vendored (MIT, with midi-file and array-flatten); notices are in `THIRD_PARTY_NOTICES.md`. 21 CC0 sequences: 12 library tunes (Beethoven 5, Bach toccata, two Joplin rags, Sousa, Greensleeves, Oh! Susanna, St. Louis Blues, Frankie and Johnny, and three original demos) plus a Halloween set (Bach organ reduction, Grieg Mountain King, Saint-Saëns Danse macabre, Mussorgsky Bald Mountain, Chopin Funeral March, Dies irae, and three original spooky tunes). Halloween songs load matching Filament and Cathode factory presets. Dekatron is not in this build. No Filament or Cathode voice code changed. Commits `7cd8b0e` and `2890077`. Suite: ALL PASS (308 checks). CPU (test 9, headless): Cathode 8.9%; Filament 8 voices 12.1% (Ladder 24) and 11.6% (Valve 12); stereo offset 13.2%; 16 voices with ensemble 18.4%.

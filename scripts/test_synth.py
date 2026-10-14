@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1279,7 +1279,7 @@ with sync_playwright() as pw:
     ck("R. beat 4 is the downbeat of the next bar in 4/4", pure["bar"] == 1, pure["bar"])
     ck("R. tempo clamps to 40..240", pure["tempo"] == 40, pure["tempo"])
     ck("R. centre pan is unity and a hard right pan drops the left", abs(pure["balL"] - 1) < 1e-12 and abs(pure["balR"] - 1) < 1e-12 and abs(pure["hard"]) < 1e-12 and abs(pure["half"] - 0.7071067811865476) < 1e-9, pure)
-    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "dekatron"], pure)
+    ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and pure["both"] == ["filament", "cathode", "dekatron", "lattice"], pure)
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
@@ -1546,6 +1546,226 @@ with sync_playwright() as pw:
        stairs_fil == "Sub Heartbeat" and stairs_cat == "Creak Pulse" and stairs_drum == "Bones", (stairs_fil, stairs_cat, stairs_drum, stairs))
     pg.evaluate("__synth.transport().stop()")
     ck("P. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- W. Lattice wavetable
+    def fold(freq, sr):
+        f = abs(freq) % sr
+        return sr - f if f > sr / 2 else f
+    def hz(note):
+        return 440.0 * (2 ** ((note - 69) / 12))
+    def lat(patch, events, seconds=0.5):
+        return dec(pg.evaluate("a => __synth.latticeRender(a)", {"patch": patch, "events": events, "seconds": seconds}))
+    def lpatch(**over):
+        p = {"device": "lattice", "level": 0.55, "bandlimit": True,
+             "osc1": {"table": "glass", "pos": 0, "level": 0.7, "warp": "off", "warpAmt": 0, "oct": 0, "semi": 0, "fine": 0},
+             "osc2": {"level": 0, "table": "glass", "pos": 0, "warp": "off", "warpAmt": 0},
+             "unison": {"count": 1, "detune": 0, "spread": 0},
+             "sub": {"level": 0}, "noise": {"level": 0, "color": 0.6},
+             "filt": {"route": "serial", "a": {"mode": "lp", "cutoff": 18000, "res": 0, "env": 0}, "b": {"mode": "lp", "cutoff": 18000, "res": 0, "env": 0}},
+             "envA": {"a": 0.001, "d": 0.05, "s": 1, "r": 0.02}, "envF": {"a": 0.001, "d": 0.05, "s": 0, "r": 0.05},
+             "matrix": []}
+        for k, v in over.items():
+            if isinstance(v, dict) and isinstance(p.get(k), dict):
+                p[k] = dict(p[k]); p[k].update(v)
+            else:
+                p[k] = v
+        return p
+    desc = pg.evaluate("""() => {
+      const d = __synth.latticeDevice();
+      const ids = __synth.devices().map(x => x.id);
+      return { id: d.id, api: d.api, instrument: d.instrument, outs: d.audioOutputs, midi: d.midiInput,
+        processor: d.processor, worklet: d.worklet, over: d.oversample,
+        warp: d.parameters['osc1.warp'].choices, pos: d.parameters['osc1.pos'].type, ids };
+    }""")
+    ck("W. Lattice publishes the dxrack/1 contract",
+       desc["id"] == "lattice" and desc["api"] == "dxrack/1" and desc["instrument"] is True and desc["outs"] == 1 and desc["midi"]
+       and desc["processor"] == "lattice" and desc["worklet"] == "lattice.worklet.js" and desc["over"] == 2
+       and desc["pos"] == "float" and all(w in desc["warp"] for w in ("bend", "sync", "pwm", "fm"))
+       and desc["ids"] == ["filament", "cathode", "dekatron", "lattice"], desc)
+    L, R = lat(lpatch(), [{"at": 0.02, "t": "on", "n": 69, "v": 0.9}], 0.55)
+    seg = L[int(0.12 * SR):int(0.5 * SR)]
+    got = peak_freq(seg); cents = abs(1200 * math.log2(got / 440.0))
+    ck(f"W. a glass cycle at A4 is 440 Hz ({got:.2f} Hz, {cents:.2f} cents)", cents < 5 and np.max(np.abs(L)) < 1, (got, cents))
+    f0 = hz(100); ff = fold(35 * f0, 96000)
+    edge = {"osc1": {"table": "edge", "pos": 1, "level": 0.8, "warp": "off"}, "osc2": {"level": 0}}
+    Lm, _ = lat(lpatch(bandlimit=True, **edge), [{"at": 0.01, "t": "on", "n": 100, "v": 1}], 0.4)
+    Lr, _ = lat(lpatch(bandlimit=False, **edge), [{"at": 0.01, "t": "on", "n": 100, "v": 1}], 0.4)
+    sm, sr_ = Lm[int(0.08 * SR):int(0.38 * SR)], Lr[int(0.08 * SR):int(0.38 * SR)]
+    mip_db = db(tone_amp(sm, ff) / tone_amp(sm, f0)); raw_db = db(tone_amp(sr_, ff) / tone_amp(sr_, f0))
+    ck(f"W. mipmaps drop the folded partial ({mip_db:.0f} dB with, {raw_db:.0f} dB without)", mip_db < -60 and raw_db > -50 and mip_db < raw_db - 40, (mip_db, raw_db, ff))
+    f0 = hz(60)
+    quiet, bright = [lat(lpatch(osc1={"table": "glass", "pos": pos, "level": 0.7, "warp": "off"}), [{"at": 0.01, "t": "on", "n": 60, "v": 0.9}], 0.4)[0] for pos in (0, 1)]
+    h0 = db(tone_amp(quiet[int(0.08 * SR):], 2 * f0) / tone_amp(quiet[int(0.08 * SR):], f0))
+    h1 = db(tone_amp(bright[int(0.08 * SR):], 2 * f0) / tone_amp(bright[int(0.08 * SR):], f0))
+    ck(f"W. position morphs the cycle (H2 {h0:.0f} dB at the start, {h1:.0f} dB at the end)", h0 < -80 and h1 > -45, (h0, h1))
+    f0 = hz(57)
+    def upper(x):
+        s = x[int(0.08 * SR):]
+        return sum(tone_amp(s, h * f0) for h in range(5, 11))
+    off = upper(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.7, "warp": "off", "warpAmt": 0}), [{"at": 0.01, "t": "on", "n": 57, "v": 0.9}], 0.45)[0])
+    on = upper(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.7, "warp": "sync", "warpAmt": 0.6}), [{"at": 0.01, "t": "on", "n": 57, "v": 0.9}], 0.45)[0])
+    ck(f"W. sync warp adds upper harmonics ({on:.3f} vs {off:.3f})", on > 0.05 and off < 0.01, (on, off))
+    f0 = hz(69)
+    side_off = tone_amp(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.7, "warp": "off", "warpAmt": 0}, osc2={"level": 0, "semi": 7}), [{"at": 0.01, "t": "on", "n": 69, "v": 0.9}], 0.45)[0][int(0.08 * SR):], 2.5 * f0)
+    side_on = tone_amp(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.7, "warp": "fm", "warpAmt": 0.65}, osc2={"level": 0, "semi": 7, "table": "glass"}), [{"at": 0.01, "t": "on", "n": 69, "v": 0.9}], 0.45)[0][int(0.08 * SR):], 2.5 * f0)
+    ck(f"W. FM from oscillator B makes a sideband ({side_on:.4f} vs {side_off:.4f})", side_on > 0.01 and side_off < 0.002, (side_on, side_off))
+    uL, uR = lat(lpatch(unison={"count": 4, "detune": 20, "spread": 1}, osc1={"table": "glass", "pos": 0.4, "level": 0.6}), [{"at": 0.01, "t": "on", "n": 60, "v": 0.8}], 0.4)
+    left, right = uL[int(0.1 * SR):], uR[int(0.1 * SR):]
+    spread = float(np.sqrt(np.mean((left - right) ** 2)) / max(1e-9, np.sqrt(np.mean(left ** 2))))
+    ck(f"W. unison detune and spread separate the channels ({spread:.2f})", spread > 0.4 and float(np.max(np.abs(uL))) <= 1, spread)
+    f0 = hz(48)
+    def h6(cut):
+        x = lat(lpatch(osc1={"table": "edge", "pos": 1, "level": 0.8}, filt={"route": "serial", "a": {"mode": "lp", "cutoff": cut, "res": 0, "env": 0}, "b": {"mode": "lp", "cutoff": 18000, "res": 0, "env": 0}}), [{"at": 0.01, "t": "on", "n": 48, "v": 0.9}], 0.45)[0]
+        return tone_amp(x[int(0.1 * SR):], 6 * f0)
+    low, high = h6(300), h6(8000)
+    ck(f"W. the lowpass moves a high harmonic ({low:.4f} at 300 Hz, {high:.4f} at 8 kHz)", high > low * 3 and low > 0, (low, high))
+    f0 = hz(60)
+    def fund(route):
+        x = lat(lpatch(osc1={"table": "edge", "pos": 1, "level": 0.75}, filt={"route": route, "a": {"mode": "hp", "cutoff": 900, "res": 0, "env": 0}, "b": {"mode": "lp", "cutoff": 400, "res": 0, "env": 0}}), [{"at": 0.01, "t": "on", "n": 60, "v": 0.9}], 0.4)[0]
+        return tone_amp(x[int(0.1 * SR):], f0)
+    ser, par = fund("serial"), fund("parallel")
+    ck(f"W. serial and parallel filters disagree ({ser:.4f} vs {par:.4f})", par > ser * 3, (ser, par))
+    half_off = tone_amp(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.35}, sub={"level": 0}), [{"at": 0.01, "t": "on", "n": 60, "v": 0.9}], 0.4)[0][int(0.1 * SR):], f0 / 2)
+    half_on = tone_amp(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.35}, sub={"level": 0.8}), [{"at": 0.01, "t": "on", "n": 60, "v": 0.9}], 0.4)[0][int(0.1 * SR):], f0 / 2)
+    ck(f"W. the sub adds the octave below ({half_on:.3f} vs {half_off:.3f})", half_on > 0.05 and half_on > half_off * 20, (half_on, half_off))
+    nL, nR = lat(lpatch(level=0.6, osc1={"level": 0}, osc2={"level": 0}, noise={"level": 0.7, "color": 0.8}), [{"at": 0.01, "t": "on", "n": 60, "v": 1}], 0.4)
+    ns = nL[int(0.08 * SR):]
+    nrms = float(np.sqrt(np.mean(ns ** 2)))
+    ck(f"W. noise is broadband and inside the ceiling ({db(nrms):.1f} dB)", nrms > 0.02 and float(np.max(np.abs(nL))) <= 1 and np.all(np.isfinite(nL)) and np.all(np.isfinite(nR)) and tone_amp(ns, 440) < nrms * 0.25, nrms)
+    pL, _ = lat(lpatch(osc1={"table": "edge", "pos": 0.6, "level": 0.8}, envA={"a": 0.001, "d": 0.04, "s": 0, "r": 0.02}), [{"at": 0.01, "t": "on", "n": 64, "v": 1}, {"at": 0.06, "t": "off", "n": 64}], 0.45)
+    head = float(np.sqrt(np.mean(pL[int(0.02 * SR):int(0.07 * SR)] ** 2)))
+    tail = float(np.sqrt(np.mean(pL[int(0.28 * SR):] ** 2)))
+    ck(f"W. a pluck dies away ({head:.3f} then {tail:.2e})", head > 0.02 and tail < head * 0.05, (head, tail))
+    vpatch = lpatch(level=0.4, osc1={"level": 0.6, "table": "glass", "pos": 0}, matrix=[{"src": "vel", "dest": "amp", "amt": 1}])
+    soft = float(np.sqrt(np.mean(lat(vpatch, [{"at": 0.01, "t": "on", "n": 60, "v": 0.2}], 0.4)[0][int(0.1 * SR):] ** 2)))
+    hard = float(np.sqrt(np.mean(lat(vpatch, [{"at": 0.01, "t": "on", "n": 60, "v": 1}], 0.4)[0][int(0.1 * SR):] ** 2)))
+    ck(f"W. velocity through the matrix changes level ({db(hard / soft):+.1f} dB)", db(hard / soft) > 2, (soft, hard))
+    wpatch = lpatch(osc1={"table": "edge", "pos": 1, "level": 0.75}, filt={"route": "serial", "a": {"mode": "lp", "cutoff": 280, "res": 0.1, "env": 0}, "b": {"mode": "lp", "cutoff": 18000, "res": 0, "env": 0}}, matrix=[{"src": "wheel", "dest": "cutA", "amt": 1}])
+    f0 = hz(72)
+    closed = tone_amp(lat(wpatch, [{"at": 0.01, "t": "on", "n": 72, "v": 0.9}], 0.4)[0][int(0.1 * SR):], 8 * f0)
+    opened = tone_amp(lat(wpatch, [{"at": 0, "t": "mw", "v": 1}, {"at": 0.01, "t": "on", "n": 72, "v": 0.9}], 0.4)[0][int(0.1 * SR):], 8 * f0)
+    ck(f"W. the mod wheel opens the filter ({opened:.4f} vs {closed:.4f})", opened > closed * 4, (opened, closed))
+    facts = pg.evaluate("__synth.latticeFactory()")
+    cats = {f_["name"]: f_["cat"] for f_ in facts}
+    ck("W. eight factory presets cover pads, plucks, basses and textures",
+       len(facts) == 8 and cats.get("Glass Pad") == "Pad" and cats.get("Soft Pluck") == "Pluck"
+       and cats.get("Root Bass") == "Bass" and cats.get("Drift Cloth") == "Texture" and cats.get("Night Fold") == "Texture", facts)
+    for f_ in facts:
+        P = pg.evaluate("n => __synth.latticePatch(n)", f_["name"])
+        L, R = lat(P, [{"at": 0.01, "t": "on", "n": 60, "v": 0.85}], 1.5)
+        pk = float(max(np.max(np.abs(L)), np.max(np.abs(R)))); body = float(np.sqrt(np.mean(L ** 2)))
+        ck(f"W. {f_['name']}: sounds, finite, peak {db(pk):.1f} dBFS", body > 1e-3 and pk <= 1.0 and np.all(np.isfinite(L)) and np.all(np.isfinite(R)), (body, pk))
+    rng = random.Random(7); bad = 0; pk = 0.0; loud = 0
+    tables = ["glass", "reed", "brass", "vowel", "edge", "hollow"]
+    warps = ["off", "bend", "sync", "pwm", "fm"]
+    modes = ["lp", "hp", "bp", "notch"]
+    for i in range(6):
+        fp = lpatch(
+            level=rng.random(), bandlimit=rng.random() > 0.2,
+            osc1={"table": tables[i % 6], "pos": rng.random(), "level": rng.random(), "warp": warps[i % 5], "warpAmt": rng.random(), "oct": rng.randint(-1, 1), "semi": rng.randint(-6, 6)},
+            osc2={"table": tables[(i + 2) % 6], "pos": rng.random(), "level": rng.random() * 0.6, "warp": warps[(i + 1) % 5], "warpAmt": rng.random(), "semi": rng.randint(0, 7)},
+            unison={"count": rng.randint(1, 4), "detune": rng.random() * 40, "spread": rng.random()},
+            sub={"level": rng.random() * 0.5}, noise={"level": rng.random() * 0.3, "color": rng.random()},
+            filt={"route": "serial" if rng.random() > 0.5 else "parallel",
+                  "a": {"mode": modes[i % 4], "cutoff": 40 + rng.random() * 8000, "res": rng.random() * 0.7, "env": rng.random()},
+                  "b": {"mode": modes[(i + 1) % 4], "cutoff": 80 + rng.random() * 10000, "res": rng.random() * 0.5, "env": rng.random() * 0.4}},
+            envA={"a": 0.001 + rng.random() * 0.2, "d": 0.05 + rng.random() * 0.4, "s": rng.random(), "r": 0.05 + rng.random() * 0.3},
+            matrix=[{"src": "lfo1", "dest": "osc1.pos", "amt": rng.random() * 2 - 1}, {"src": "vel", "dest": "amp", "amt": rng.random() * 2 - 1}],
+            lfo1={"rate": 0.05 + rng.random() * 8})
+        L, R = lat(fp, [{"at": 0.01, "t": "on", "n": 48 + rng.randint(0, 36), "v": 0.4 + rng.random() * 0.6}], 0.35)
+        bad += int(not (np.all(np.isfinite(L)) and np.all(np.isfinite(R))))
+        pk = max(pk, float(np.max(np.abs(L))), float(np.max(np.abs(R))))
+        loud += int(np.sqrt(np.mean(L ** 2)) > 1e-4)
+    ck(f"W. fuzz, 6 random patches: finite and at or under 0 dBFS (peak {db(pk):.2f} dBFS)", bad == 0 and pk <= 1.0 and loud == 6, (bad, pk, loud))
+    ms = pg.evaluate("""async () => { const t0 = performance.now();
+        await __synth.latticeRender({patch: __synth.latticePatch('Glass Pad'), events: [{at: 0.01, t: 'on', n: 60, v: 0.8}], seconds: 2});
+        return performance.now() - t0; }""")
+    info("W. CPU Lattice Glass Pad, one note", f"{100 * ms / 2000:.1f}% of real time in headless Chrome (offline render, Lattice only)")
+
+    pg.evaluate("__synth.setDevice('lattice')"); pg.wait_for_timeout(300)
+    ck("W. rail: Lattice lit, the wavetable shown, the tube filter hidden",
+       pg.evaluate("__synth.device()") == "lattice" and pg.is_visible("#latWave") and not pg.is_visible("#mFilt")
+       and not pg.is_visible("#chassis") and pg.get_attribute("#devL", "aria-pressed") == "true")
+    before = pg.evaluate("document.getElementById('latWave').toDataURL()")
+    pg.wait_for_timeout(280)
+    after = pg.evaluate("document.getElementById('latWave').toDataURL()")
+    ck("W. the wavetable display is moving", before != after and len(after) > 1000)
+    pg.click("#latView")
+    ck("W. the view switches between the stack and one cycle",
+       pg.get_attribute("#latView", "aria-pressed") == "false" and pg.inner_text("#latView").strip() == "2D")
+    pg.evaluate("document.getElementById('mLatMatrix').scrollIntoView()")
+    pg.wait_for_timeout(80)
+    src = pg.locator("[data-src='lfo1']").bounding_box(); dest = pg.locator("[data-dest='osc1.pos']").bounding_box()
+    pg.mouse.move(src["x"] + src["width"] / 2, src["y"] + src["height"] / 2); pg.mouse.down()
+    pg.mouse.move(dest["x"] + dest["width"] / 2, dest["y"] + 12, steps=8); pg.mouse.up()
+    pg.wait_for_timeout(40)
+    routed = pg.evaluate("__synth.patch().matrix.some(s => s.src === 'lfo1' && s.dest === 'osc1.pos')")
+    ck("W. dragging a source onto a destination adds a route", routed)
+    pg.evaluate("document.getElementById('latLfo0').scrollIntoView()"); pg.wait_for_timeout(40)
+    shape0 = pg.evaluate("__synth.patch().shapes[0].slice()")
+    box = pg.locator("#latLfo0").bounding_box()
+    pg.mouse.move(box["x"] + 8, box["y"] + 6); pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] * 0.45, box["y"] + 8, steps=6); pg.mouse.up()
+    shape1 = pg.evaluate("__synth.patch().shapes[0].slice()")
+    ck("W. drawing on an LFO changes its shape", shape0 != shape1 and max(shape1) > 0.5, (max(shape0), max(shape1)))
+    n = 256
+    samples = [int(max(-32767, min(32767, round(32767 * math.sin(2 * math.pi * i / n))))) for i in range(n * 8)]
+    wav = bytearray()
+    data = b"".join(int(s).to_bytes(2, "little", signed=True) for s in samples)
+    wav += b"RIFF" + (36 + len(data)).to_bytes(4, "little") + b"WAVE"
+    wav += b"fmt " + (16).to_bytes(4, "little") + (1).to_bytes(2, "little") + (1).to_bytes(2, "little")
+    wav += (48000).to_bytes(4, "little") + (48000 * 2).to_bytes(4, "little") + (2).to_bytes(2, "little") + (16).to_bytes(2, "little")
+    wav += b"data" + len(data).to_bytes(4, "little") + data
+    pg.set_input_files("#latWav", files=[{"name": "cycle.wav", "mimeType": "audio/wav", "buffer": bytes(wav)}])
+    pg.wait_for_function("() => __synth.patch().osc1.table === 'user'", timeout=4000)
+    user = pg.evaluate("""async () => {
+      const table = __synth.latticeTable();
+      return __synth.latticeRender({
+        patch: { device: 'lattice', level: 0.55, osc1: { table: 'user', pos: 0, level: 0.7, warp: 'off' }, osc2: { level: 0 },
+          sub: { level: 0 }, noise: { level: 0 }, unison: { count: 1, detune: 0, spread: 0 },
+          filt: { route: 'serial', a: { mode: 'lp', cutoff: 18000, res: 0, env: 0 }, b: { mode: 'lp', cutoff: 18000, res: 0, env: 0 } },
+          envA: { a: 0.001, d: 0.05, s: 1, r: 0.02 } },
+        events: [{ at: 0.02, t: 'on', n: 69, v: 0.9 }], seconds: 0.5, table });
+    }""")
+    uL, _ = dec(user)
+    uf = peak_freq(uL[int(0.12 * SR):]); uc = abs(1200 * math.log2(uf / 440.0))
+    ck(f"W. a dropped WAV becomes the cycle ({uf:.2f} Hz)", uc < 8 and pg.evaluate("() => __synth.latticeTable() && __synth.latticeTable().length") == 7 * 16 * 256, (uf, uc))
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'lattice', level: 0.5, osc1: { table: 'glass', pos: 0, level: 0.7, warp: 'off' }, osc2: { level: 0 },
+      sub: { level: 0 }, noise: { level: 0 }, unison: { count: 1 },
+      filt: { a: { cutoff: 8000, res: 0, env: 0 }, b: { cutoff: 12000, res: 0, env: 0 } },
+      envA: { a: 0.001, d: 0.2, s: 1, r: 0.05 },
+      matrix: [{ src: 'envA', dest: 'osc1.pos', amt: 1 }]
+    })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("""async () => { const c = __synth.engine().ctx; if (c.state !== 'running') await c.resume(); __synth.noteOn(64, 0.9); }""")
+    pg.wait_for_function("() => +document.getElementById('latPos').dataset.pos > 0.25", timeout=2000)
+    moved = float(pg.get_attribute("#latPos", "data-pos") or "0")
+    ck(f"W. the position readout follows the envelope ({moved:.2f})", moved > 0.25, moved)
+    pg.evaluate("__synth.noteOff(64)")
+    pg.screenshot(path=os.path.join(SHOTS, "synth_lattice_desktop.png"), full_page=True)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    ck("W. no page errors", not errs, errs)
+
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2); werr = []
+    ph.on("pageerror", lambda e: werr.append(str(e)))
+    ph.goto(BASE); ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000); ph.wait_for_timeout(200)
+    ph.evaluate("__synth.setDevice('lattice')"); ph.wait_for_timeout(250)
+    ck("W. 390px: no horizontal scroll", ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+    ck("W. 390px: the wavetable is on screen", ph.is_visible("#latWave") and not ph.is_visible("#mFilt") and not ph.is_visible("#chassis"))
+    small = ph.evaluate("""() => [...document.querySelectorAll('#latticeRoot button, #latticeRoot input[type=range], .devbtn, .tabs button')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("W. 390px: Lattice controls, the rail and the tabs are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="osc"]'); ph.wait_for_timeout(200)
+    ck("W. 390px: the Osc tab shows oscillator A, still no horizontal scroll", ph.is_visible("#mLatA") and not ph.is_visible("#mLatFilt")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    small = ph.evaluate("""() => [...document.querySelectorAll('#mLatA button, #mLatA input, .tabs button, .devbtn')].filter(e => e.id !== 'latWav' && e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("W. 390px: oscillator controls are 44 px or more", not small, small)
+    ph.screenshot(path=os.path.join(SHOTS, "synth_lattice_phone.png"))
+    ph.evaluate("__synth.setDevice('filament')")
+    ck("W. 390px: no page errors", not werr, werr)
+    ph.close()
+
     # ---------------------------------------------------------------- slashless /synth
     # nginx 301s /synth to /synth/ because location ^~ /synth/ ends in a slash and
     # proxy_passes. The site service worker (registered from the main page, scope /)

@@ -126,6 +126,7 @@ Glass Tine is a Cathode Halloween preset with no bundled file pointing at it. It
 | Date | Resource | Where | What we did |
 |-|-|-|-|
 | 2026-10-14 | [Freeverb](https://ccrma.stanford.edu/~jos/pasp/Freeverb.html) (public domain, Jezar at Dreampoint, c. 2000) | `frontend/public/synth/master.worklet.js` | Original JavaScript for the published structure: eight damped combs into four allpasses per channel, and the published 44.1 kHz delay lengths, scaled with the sample rate. Not a copy or a line-by-line translation of the C++ sources. Notice in `THIRD_PARTY_NOTICES.md`. The delay and the bus compressor next to it are original; Airwindows was not used. |
+| 2026-10-14 | Vital and Surge XT (reference only; see the copyleft table) | `frontend/public/synth/lattice-dsp.js`, `lattice-ui.js` | Ideas only: a wavetable position, warp, and a modulation matrix you drag. No source was copied or line-translated. Factory cycles are original additive waveforms generated in the repo. AKWF (CC0) was not vendored. |
 
 ## Register: use with care (licenses vary inside the project)
 
