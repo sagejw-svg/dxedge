@@ -167,6 +167,14 @@
   .corr .cv.warn { color: var(--amber); }
   .corr .scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); }
   .note { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
+  .hostbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 8px; }
+  .hostbar input[type="number"], .hostbar input[type="text"] { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 6.2em; font-size: 12px; }
+  .hostbar .pos { color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 8em; }
+  .mixrow { display: grid; grid-template-columns: 88px minmax(80px, 1fr) minmax(80px, 1fr) auto auto; gap: 6px 8px; align-items: center; margin: 3px 0; }
+  .mixrow .who { letter-spacing: 1px; color: var(--muted); font-size: 11px; }
+  .mixrow label { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; min-width: 0; }
+  .mixrow input[type="range"] { flex: 1; min-width: 0; accent-color: var(--amber); }
+  .filebtn input { display: none; }
 
   /* keybed */
   .keybed { display: flex; gap: 8px; align-items: stretch; padding: 8px 10px 10px; border-top: 1px solid #000; background: linear-gradient(180deg, #0b0b0b, #121212); }
@@ -186,6 +194,26 @@
   .kctl { display: flex; flex-direction: column; gap: 5px; font-size: 10px; color: var(--dim); min-width: 96px; }
   .kctl .row { gap: 4px; }
   .kctl b { color: var(--amber2); }
+
+  /* the MIDI deck: recorder, file import, player */
+  .deck { padding: 6px 10px; border-top: 1px solid #000; background: linear-gradient(180deg, #101010, #0c0c0c); }
+  .deck.drop { outline: 2px dashed var(--green); outline-offset: -4px; }
+  .drow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+  .drow + .drow { margin-top: 6px; }
+  .deck .label { margin-right: 2px; }
+  .dstat { font-size: 11px; color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+  .deck .btn:disabled { opacity: 0.4; cursor: default; }
+  #recBtn[aria-pressed="true"] { border-color: var(--red); color: var(--red); background: rgba(255,92,92,0.08); }
+  #recBtn.live { box-shadow: 0 0 8px rgba(255,92,92,0.45); }
+  .dbody { margin-top: 6px; border-top: 1px dashed #2c2c2c; padding-top: 6px; }
+  .dbody[hidden] { display: none; }
+  .tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .tempo input { width: 130px; accent-color: var(--amber); min-height: 34px; }
+  .tracks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+  .trk { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; border: 1px solid #222; border-radius: 6px; padding: 4px 8px; min-width: 0; }
+  .trk .tn { color: var(--text); font-size: 12px; flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+  .trk .tm { color: var(--dim); font-size: 10.5px; }
+  .trk .chips { margin: 0; }
 
   footer { margin-top: 14px; font-size: 11px; color: var(--dim); line-height: 1.7; }
   footer p { margin: 4px 0; max-width: 980px; }
@@ -245,6 +273,9 @@
     .chip { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 12px; }
     .tabs button { min-height: 44px; min-width: 44px; padding: 7px 3px; letter-spacing: 0; font-size: 11px; }
     .kctl .hide-s { display: none; }
+    .deck { padding: 6px; } .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
+    .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
+    #mHost input[type="range"], #hostTempo, #projName { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
@@ -378,7 +409,71 @@
       <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
       <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
       <div id="drumRoot"></div>
+      <section class="mod" data-tab="rack" id="mHost" data-wide><h3><span class="pilot" id="hostPilot"></span>Transport and mixer</h3>
+        <div class="hostbar">
+          <button class="btn small" id="trPlay" aria-pressed="false">play</button>
+          <button class="btn small" id="trStop">stop</button>
+          <label>tempo <input id="hostTempo" type="number" min="40" max="240" step="1" value="120" aria-label="Tempo in beats per minute"></label>
+          <span class="pos" id="trPos" aria-live="polite">1.1 · stopped</span>
+        </div>
+        <div class="mixrow" data-mix="filament">
+          <span class="who">Filament</span>
+          <label>level <input type="range" id="mixFLvl" min="0" max="1" step="0.01" value="1" aria-label="Filament level"></label>
+          <label>pan <input type="range" id="mixFPan" min="-1" max="1" step="0.01" value="0" aria-label="Filament pan"></label>
+          <button class="chip" id="mixFMute" aria-pressed="false">mute</button>
+          <button class="chip" id="mixFSolo" aria-pressed="false">solo</button>
+        </div>
+        <div class="mixrow" data-mix="cathode">
+          <span class="who">Cathode</span>
+          <label>level <input type="range" id="mixCLvl" min="0" max="1" step="0.01" value="1" aria-label="Cathode level"></label>
+          <label>pan <input type="range" id="mixCPan" min="-1" max="1" step="0.01" value="0" aria-label="Cathode pan"></label>
+          <button class="chip" id="mixCMute" aria-pressed="false">mute</button>
+          <button class="chip" id="mixCSolo" aria-pressed="false">solo</button>
+        </div>
+        <div class="mixrow" data-mix="dekatron">
+          <span class="who">Dekatron</span>
+          <label>level <input type="range" id="mixDLvl" min="0" max="1" step="0.01" value="1" aria-label="Dekatron level"></label>
+          <label>pan <input type="range" id="mixDPan" min="-1" max="1" step="0.01" value="0" aria-label="Dekatron pan"></label>
+          <button class="chip" id="mixDMute" aria-pressed="false">mute</button>
+          <button class="chip" id="mixDSolo" aria-pressed="false">solo</button>
+        </div>
+        <div class="hostbar">
+          <input id="projName" type="text" maxlength="40" value="Untitled" aria-label="Project name">
+          <button class="btn small" id="projSave">save project</button>
+          <button class="btn small" id="projLoad">load saved</button>
+          <button class="btn small" id="projDown">download</button>
+          <label class="btn small filebtn" for="projFile">upload<input id="projFile" type="file" accept="application/json,.json"></label>
+        </div>
+        <div class="note">Level, pan, mute and solo sit in front of the shared ensemble and output tubes. Centre pan and full level leave the sound alone. Play runs the master clock; Dekatron's pattern follows it. Save keeps the project in this browser. Download and upload move the same JSON.</div>
+      </section>
     </div>
+
+    <section class="deck" id="deck" aria-label="MIDI files: record a take, import a file, play it">
+      <div class="drow">
+        <span class="label">midi</span>
+        <button class="btn small" id="recBtn" aria-pressed="false" title="Arm the recorder: the first note starts the take">&#9679; rec</button>
+        <button class="btn small" id="stopBtn" title="Stop recording and playback">&#9632; stop</button>
+        <button class="btn small" id="playTake" aria-pressed="false" disabled title="Play the take through the devices it was played on">&#9654; take</button>
+        <button class="btn small" id="expBtn" disabled title="Download the take as a MIDI file">.mid</button>
+        <button class="btn small" id="clrBtn" disabled>clear</button>
+        <span class="dstat" id="takeStat">no take</span>
+        <button class="btn small" id="impBtn" title="Open a MIDI file (or drop one here)">import</button>
+        <input type="file" id="impIn" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
+        <button class="btn small" id="deckBtn" aria-expanded="false" aria-controls="deckBody">file &#9662;</button>
+      </div>
+      <div class="dbody" id="deckBody" hidden>
+        <div class="drow"><span class="dstat" id="fileStat"></span></div>
+        <div class="drow">
+          <button class="btn small" id="playFile" aria-pressed="false" disabled>&#9654; play</button>
+          <button class="btn small" id="loopBtn" aria-pressed="false">loop</button>
+          <label class="tempo">tempo <input type="range" id="tempoIn" min="50" max="200" step="5" value="100" aria-label="Playback tempo, percent of the file's tempo"><b id="tempoV">100%</b></label>
+          <span class="dstat" id="posV">0:00.0 / 0:00.0</span>
+          <button class="btn small" id="wavBtn" disabled title="Render the file (or the take) with both devices and the rack to a 48 kHz 16-bit WAV">render wav</button>
+          <span class="dstat" id="wavStat"></span>
+        </div>
+        <div class="tracks" id="trackList" aria-label="Tracks: pick the device each one plays"></div>
+      </div>
+    </section>
 
     <div class="keybed" id="keybed">
       <div class="strips">
@@ -398,9 +493,10 @@
   <footer>
     <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Knobs: drag up or down (shift for fine), arrow keys, double click to reset.
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
+    <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.4: Filament, Cathode, and Dekatron, a drum machine &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.6: Filament, Cathode, and Dekatron in one rack, with a mixer, a master clock, project files, and a MIDI deck &middot; part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -410,8 +506,11 @@ import { makeKnob } from './knob.js';
 import { TUBES, TUBE_BY } from './rack.js';
 import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
+import { createDeck } from './deck.js';
+import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
+import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
 import { drumDevice, normalizeDrum, DRUM_FACTORY, DRUM_CATS, DRUM_DEFAULT, voiceForNote, createHostClock } from './drums.js';
 import { createDrumHost, mountDrumPanel, renderDrums } from './drums-ui.js';
 
@@ -422,6 +521,9 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
 };
 function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms || 2600); }
+// Mixer and tempo come back with the saved project. Patches stay on their own keys
+// until Load saved or an uploaded file applies the whole document.
+const bootProj = loadLocal(localStorage);
 
 // ---------------------------------------------------------------- patch state
 // Two devices in the rack, each with its own current patch, edit flag and user patches. The
@@ -464,15 +566,22 @@ function ensureEngine() {
   try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); }
   catch (e) { toast('This browser cannot start Web Audio.'); return Promise.reject(e); }
   const bootPatch = dev === 'dekatron' ? DS.filament.cur : cur;
-  enginePromise = createEngine(ctx, { patch: bootPatch }).then(e => {
+  enginePromise = createEngine(ctx, {
+    patch: bootPatch,
+    tempo: bootProj && bootProj.tempo,
+    timeSig: bootProj && bootProj.timeSig,
+    mixer: bootProj && bootProj.mixer,
+  }).then(e => {
     E = e; E.master.gain.value = 1;
-    const ready = dev === 'dekatron'
-      ? drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => {
+    // Dekatron joins the mixer and the master clock as soon as the engine exists.
+    // Asleep until the rail selects it, so it adds nothing to the other devices.
+    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => {
+      if (dev === 'dekatron') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         drumHost.setActive(true); drumHost.setPatch(cur);
-      })
-      : Promise.resolve();
-    return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); return E; });
+      } else drumHost.setActive(false);
+    });
+    return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); syncHostUI(); return E; });
   }).catch(err => { console.error(err); toast('Audio engine failed to load: ' + err.message, 6000); throw err; });
   ctx.onstatechange = updateAudioLamp;
   return enginePromise;
@@ -505,25 +614,135 @@ function pushPatch(load) {
   });
 }
 
+// ---------------------------------------------------------------- transport, mixer, project
+function collectProject() {
+  const st = E ? E.transport.state() : null;
+  return normalizeProject({
+    name: $('projName').value,
+    tempo: st ? st.tempo : (bootProj ? bootProj.tempo : 120),
+    timeSig: st ? st.timeSig : (bootProj ? bootProj.timeSig : [4, 4]),
+    device: dev,
+    mixer: E ? E.mix.all() : (bootProj ? bootProj.mixer : null),
+    devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') } },
+  });
+}
+function paintHost(st) {
+  st = st || (E && E.transport.state());
+  if (!st || !$('trPos')) return;
+  $('trPos').textContent = (Math.floor(st.bar) + 1) + '.' + (Math.floor(st.beatInBar) + 1) + (st.playing ? ' · playing' : ' · stopped');
+  $('trPlay').setAttribute('aria-pressed', String(!!st.playing));
+  $('hostPilot').classList.toggle('off', !st.playing);
+}
+function syncHostUI() {
+  if (!E) return;
+  const st = E.transport.state();
+  if (document.activeElement !== $('hostTempo')) $('hostTempo').value = String(Math.round(st.tempo));
+  paintHost(st);
+  const mix = E.mix.all();
+  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D']].forEach(([id, s]) => {
+    const c = mix[id] || { level: 1, pan: 0, mute: false, solo: false };
+    $('mix' + s + 'Lvl').value = String(c.level);
+    $('mix' + s + 'Pan').value = String(c.pan);
+    $('mix' + s + 'Mute').setAttribute('aria-pressed', String(!!c.mute));
+    $('mix' + s + 'Solo').setAttribute('aria-pressed', String(!!c.solo));
+  });
+}
+function pushStrip(id, s) {
+  const mute = $('mix' + s + 'Mute').getAttribute('aria-pressed') === 'true';
+  const solo = $('mix' + s + 'Solo').getAttribute('aria-pressed') === 'true';
+  withEngine(() => E.mix.set(id, { level: +$('mix' + s + 'Lvl').value, pan: +$('mix' + s + 'Pan').value, mute, solo }));
+}
+function applyProject(raw) {
+  const proj = normalizeProject(raw);
+  $('projName').value = proj.name;
+  ['filament', 'cathode'].forEach(id => {
+    DS[id] = Object.assign({}, DS[id], { cur: proj.devices[id].patch, curKey: '__project', edited: true });
+    store.set(DEVS[id].kCur, { key: '__project', patch: DS[id].cur });
+  });
+  if (proj.device !== dev) {
+    cur = DS[dev].cur; curKey = '__project'; edited = true;
+    setDevice(proj.device);
+  } else {
+    cur = DS[dev].cur; curKey = '__project'; edited = true;
+    refreshAll(); fillSelect();
+    if (dev === 'dekatron') withEngine(() => drumHost.setPatch(cur));
+    else withEngine(() => E.setPatch(cur, true));
+  }
+  withEngine(() => {
+    E.transport.setTempo(proj.tempo);
+    E.transport.setTimeSig(proj.timeSig);
+    E.mix.load(proj.mixer);
+    ['filament', 'cathode'].forEach(id => {
+      if (id === dev) return;
+      E.patches[id] = DS[id].cur;
+      if (E.nodes[id]) E.setPatch(DS[id].cur, true);
+    });
+    syncHostUI();
+  });
+  saveLocal(localStorage, proj);
+  return proj;
+}
+if (bootProj) $('projName').value = bootProj.name;
+$('trPlay').addEventListener('click', () => { wake(); withEngine(() => { E.transport.play(); paintHost(); }); });
+$('trStop').addEventListener('click', () => withEngine(() => { E.transport.stop(); paintHost(); }));
+function commitTempo() {
+  withEngine(() => { const t = E.transport.setTempo($('hostTempo').value); $('hostTempo').value = String(Math.round(t)); paintHost(); });
+}
+$('hostTempo').addEventListener('change', commitTempo);
+[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D']].forEach(([id, s]) => {
+  $('mix' + s + 'Lvl').addEventListener('input', () => pushStrip(id, s));
+  $('mix' + s + 'Pan').addEventListener('input', () => pushStrip(id, s));
+  ['Mute', 'Solo'].forEach(which => $('mix' + s + which).addEventListener('click', () => {
+    const b = $('mix' + s + which);
+    b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+    pushStrip(id, s);
+  }));
+});
+$('projSave').addEventListener('click', () => { const p = collectProject(); saveLocal(localStorage, p); toast('Saved "' + p.name + '" in this browser.'); });
+$('projLoad').addEventListener('click', () => { const p = loadLocal(localStorage); if (!p) { toast('No project saved in this browser.'); return; } applyProject(p); toast('Loaded "' + p.name + '".'); });
+$('projDown').addEventListener('click', () => {
+  const p = collectProject();
+  const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = projectFileName(p);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  toast('Downloaded ' + a.download);
+});
+$('projFile').addEventListener('change', () => {
+  const f = $('projFile').files && $('projFile').files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { const p = applyProject(JSON.parse(String(reader.result))); toast('Loaded "' + p.name + '".'); }
+    catch (e) { toast('That file is not a project.'); }
+    $('projFile').value = '';
+  };
+  reader.readAsText(f);
+});
+
 // ---------------------------------------------------------------- notes
 const down = new Map();       // note -> source count
+let deck = null;              // the MIDI deck, built further down
 let sustainOn = false;
 function noteOn(n, v) {
   if (n < 0 || n > 127) return;
   wake();
   if (dev === 'dekatron') { const id = voiceForNote(n); if (id) withEngine(() => drumHost.trigger(id, v)); }
   else withEngine(() => E.noteOn(n, v));
+  rec({ t: 'on', n, v });
   down.set(n, (down.get(n) || 0) + 1); paintKey(n, true);
 }
+const rec = m => { if (deck) deck.rec(dev, m); };
 function noteOff(n) {
   const c = (down.get(n) || 0) - 1;
   if (c > 0) { down.set(n, c); return; }
   down.delete(n); paintKey(n, false);
   if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
+  rec({ t: 'off', n });
 }
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
-  withEngine(() => E.sustain(sustainOn));
+  withEngine(() => E.sustain(sustainOn)); rec({ t: 'sus', on: sustainOn });
 }
 
 // ---------------------------------------------------------------- controls
@@ -717,8 +936,6 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), tog
 // Whatever depends on more than one control.
 function afterChange(path) {
   if (dev === 'dekatron') {
-    $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
-    $('topoV4').textContent = cur.out.topology === 'pp' ? 'PP' : 'SE';
     if (path && path !== '__load') markEdited();
     return;
   }
@@ -760,7 +977,7 @@ function afterF() {
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
 }
 function refreshAll() {
-  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; e.k.set(e.map.from(getPath(cur, e.path))); });
+  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && dev === 'dekatron') return; e.k.set(e.map.from(getPath(cur, e.path))); });
   Object.keys(CH).forEach(refreshChips);
   afterChange('__load');
   if (dev === 'dekatron' && drumPanel) drumPanel.sync();
@@ -1008,14 +1225,14 @@ function buildKeys() {
     if (black) { el.style.left = (x - bW / 2) + 'px'; el.style.width = bW + 'px'; }
     else { el.style.left = x + 'px'; el.style.width = wW + 'px'; x += wW; if (pc === 0) el.innerHTML = '<span class="kn">C' + (Math.floor(n / 12) - 1) + '</span>'; }
     host.appendChild(el); keyEls.set(n, el);
-    if (down.has(n)) el.classList.add('down');
+    if (down.has(n) || (deck && deck.lit(n))) el.classList.add('down');
   }
   host.style.width = x + 'px';
   $('octV').textContent = 'C' + baseOct;
   // phones: start the scroll on the middle C of the visible range
   if (phone) { const w = $('keyswrap'); w.scrollLeft = Math.max(0, 7 * wW - w.clientWidth / 2 + 3 * wW); }
 }
-function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', on); }
+function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || down.has(n) || !!(deck && deck.lit(n))); }
 buildKeys();
 let lastW = window.innerWidth; window.addEventListener('resize', () => { if (Math.abs(window.innerWidth - lastW) > 40) { lastW = window.innerWidth; buildKeys(); } });
 function setOct(o) { baseOct = clampN(o, 0, 7); store.set('filament_oct', baseOct); buildKeys(); }
@@ -1056,13 +1273,13 @@ function strip(id, spring, onV) {
   requestAnimationFrame(show);
   return { set(x) { v = spring ? (x + 1) / 2 : x; show(); } };
 }
-const PB = strip('pbStrip', true, v => withEngine(() => E.bend(v)));
-const MW = strip('mwStrip', false, v => withEngine(() => E.modWheel(v)));
+const PB = strip('pbStrip', true, v => { withEngine(() => E.bend(v)); rec({ t: 'bend', v }); });
+const MW = strip('mwStrip', false, v => { withEngine(() => E.modWheel(v)); rec({ t: 'mw', v }); });
 
 // computer keyboard
 const KEYMAP = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15, ';': 16, "'": 17 };
 const keyDown = new Map();
-function typing(e) { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
+function typing(e) { const t = e.target; return t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
 window.addEventListener('keydown', e => {
   if (typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
@@ -1096,12 +1313,12 @@ function midiMsg(e) {
   switch (ev.t) {
     case 'on': noteOn(ev.n, ev.v); break;
     case 'off': noteOff(ev.n); break;
-    case 'bend': PB.set(ev.v); withEngine(() => E.bend(ev.v)); break;
-    case 'at': withEngine(() => E.aftertouch(ev.v)); break;
+    case 'bend': PB.set(ev.v); withEngine(() => E.bend(ev.v)); rec(ev); break;
+    case 'at': withEngine(() => E.aftertouch(ev.v)); rec(ev); break;
     case 'mw':
       if (learning && learnPath) return learnCC(1);
       if (ccMap[1]) return ccTo(1, ev.v);
-      MW.set(ev.v); withEngine(() => E.modWheel(ev.v)); break;
+      MW.set(ev.v); withEngine(() => E.modWheel(ev.v)); rec(ev); break;
     case 'sus': setSustain(ev.on); break;
     case 'panic': [...down.keys()].forEach(n => { down.set(n, 1); noteOff(n); }); withEngine(() => E.panic()); break;
     case 'cc':
@@ -1131,6 +1348,13 @@ function armLearn(key) { learnPath = key; document.querySelectorAll('.knob.learn
 $('learnBtn').addEventListener('click', () => { learning = !learning; learnPath = null; $('learnBtn').setAttribute('aria-pressed', String(learning));
   document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); toast(learning ? 'Learn: click a knob, then move a control on your keyboard.' : 'Learn off.'); });
 showCC();
+
+// ---------------------------------------------------------------- the MIDI deck (deck.js)
+deck = createDeck({
+  dev: () => dev, ctx: () => ctx, engine: () => E, wake, withEngine, toast,
+  patchOf: d => (d === dev ? cur : DS[d].cur), patchName: d => (d === dev ? cur : DS[d].cur).name || DEVS[d].name,
+  lit: n => paintKey(n, false),
+});
 
 // ---------------------------------------------------------------- the chassis
 const TUBE_ST = {};
@@ -1231,6 +1455,7 @@ function frame(now) {
   eyeLv += (clampN(pk / 0.89, 0, 1) - eyeLv) * (1 - Math.exp(-dt / (pk / 0.89 > eyeLv ? 0.03 : 0.4)));
   drawEye(eyeLv);
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
+  paintHost();
   const cpuSrc = drumOn ? dm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
@@ -1252,15 +1477,14 @@ drumPanel = mountDrumPanel($('drumRoot'), {
 drumHost.setTempoListener(bpm => {
   const p = drumPatch();
   const n = Math.max(40, Math.min(240, Math.round(+bpm || 0)));
-  if (!isFinite(n) || p.seq.bpm === n) return;
-  p.seq.bpm = n;
-  if (drumPanel) drumPanel.sync();
+  if (isFinite(n) && p.seq.bpm !== n) { p.seq.bpm = n; if (drumPanel) drumPanel.sync(); }
+  syncHostUI();
 });
 
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.4-dekatron',
+  version: '0.6-dekatron',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -1305,11 +1529,25 @@ window.__synth = {
   state: () => ({ ctx: ctx ? ctx.state : 'none', down: [...down.keys()], tab: document.body.dataset.tab, oct: baseOct, sustain: sustainOn }),
   engine: () => E,
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
+  deck: () => deck.test,
+  smf: { write: o => [...writeSMF(o)], read: arr => { const f = readSMF(Uint8Array.from(arr)); return { format: f.format, ppq: f.ppq, tempos: f.tempos, timeSig: f.timeSig, song: songOf(f) }; }, bytesOf },
+  // Two-device render: opts {patches:{filament, cathode}, device, events:[{at, dev, t, ...}], seconds}
+  render2: async opts => { const buf = await renderOffline(opts); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
   // Offline render: opts {patch, events:[{at (s), t, n, v, ...}], seconds, rack, mono}. Returns base64 float32 L and R.
   // MIDI bytes as a score: [{at (s), data:[status, d1, d2]}], mapped with the same midiEvent() as a keyboard.
   renderMidi: async opts => { const events = (opts.midi || []).map(m => Object.assign({ at: m.at }, midiEvent(m.data))).filter(e => e.t && e.t !== 'cc');
     const buf = await renderOffline(Object.assign({ patch: cur }, opts, { events })); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
   render: async opts => { const buf = await renderOffline(Object.assign({ patch: cur }, opts)); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
+  devices: () => (E ? E.listDevices() : []).map(d => ({ id: d.id, name: d.name, vendor: d.vendor, version: d.version, api: d.api, description: d.description, instrument: !!d.instrument, audioInputs: d.audioInputs, audioOutputs: d.audioOutputs, midiInput: !!d.midiInput, midiOutput: !!d.midiOutput, parameters: d.parameters })),
+  deviceApi: id => E && E.devices[id] || null,
+  registerDevice: desc => E && E.registerDevice(desc),
+  mixer: () => E ? E.mix.all() : null,
+  setMixer: (id, s) => { const r = E.mix.set(id, s); syncHostUI(); return r; },
+  transport: () => E ? E.transport : null,
+  project: () => collectProject(),
+  saveProject: () => { const p = collectProject(); saveLocal(localStorage, p); return p; },
+  loadProject: () => { const p = loadLocal(localStorage); if (p) applyProject(p); return p; },
+  applyProject: raw => applyProject(raw),
   timeRender: async opts => { const t0 = performance.now(); const buf = await renderOffline(Object.assign({ patch: cur }, opts)); return { ms: performance.now() - t0, seconds: buf.duration }; },
 };
 </script>

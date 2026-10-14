@@ -2,9 +2,8 @@
 //
 // create(ctx, host) returns the stereo worklet node. If host.transport is the
 // rack clock, the pattern follows its play, stop, tempo and 24 ppq pulses.
-// If there is no transport (the rack framework is not on this page yet), the
-// pattern button runs the worklet's own clock. The adapter does not import
-// Filament's engine.
+// If the engine has no transport, the pattern button runs the worklet's own
+// clock. The adapter does not import Filament's engine.
 
 import { makeKnob } from './knob.js';
 import { drumDevice, normalizeDrum, DRUM_DEFAULT, VOICES, VOICE_LABELS, createHostClock } from './drums.js';

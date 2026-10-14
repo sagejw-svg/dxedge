@@ -28,7 +28,10 @@
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
 //   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}. Any of them may carry at:<frame>
 //   (an absolute frame, as currentFrame counts) to land on an exact sample; offline tests
-//   pass a whole score that way in processorOptions.events.
+//   pass a whole score that way in processorOptions.events. The MIDI file player sends its
+//   events that way with pb:true, plus {t:'play',on} (playback holds the device awake and its
+//   notes survive the keyboard moving to the other device) and {t:'flush'} (drop every queued
+//   pb event that has not landed yet; sent on stop).
 // Messages out: {t:'meter', v1, v2, voices, cpu, notes} about 30 times a second.
 
 const OS = 2;
@@ -309,7 +312,7 @@ class Filament extends AudioWorkletProcessor {
     this.cc = new Float64Array(4);
     this.duck = 1; this.duckDir = 0; this.pendingPatch = null;
     this.events = [];
-    this.active = o.active !== false; this.idleN = 0;
+    this.active = o.active !== false; this.playing = !!o.playing; this.idleN = 0;
     this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
     this.P = null; this.S = new Float64Array(NP); this.Sp = new Float64Array(NP); this.T = new Float64Array(NP); this.CT = new Float64Array(NP * (128 / CTRL + 1));
     this.setPatch(o.patch || {}, true);
@@ -407,9 +410,11 @@ class Filament extends AudioWorkletProcessor {
       case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
       case 'sus': this.sus = !!m.on; if (!this.sus) this.releaseSustained(); break;
       case 'panic': this.held = []; this.voices.forEach(v => { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.pending = null; }); break;
+      case 'play': this.playing = !!m.on; break;
+      case 'flush': this.events = this.events.filter(e => !e.pb); break;
       case 'active':      // the rack moved the keyboard to another device: let go of every key, let the tails ring
         this.active = !!m.on;
-        if (!this.active) { this.held = []; this.sus = false; this.voices.forEach(v => { v.sust = false; v.pending = null; if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; } }); }
+        if (!this.active && !this.playing) { this.held = []; this.sus = false; this.voices.forEach(v => { v.sust = false; v.pending = null; if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; } }); }
         break;
     }
   }
@@ -895,7 +900,8 @@ registerProcessor('filament', Filament);
 // feedback loops included, be patched without a solver.
 //
 // Messages in: as Filament, plus {t:'active', on}. An inactive Cathode lets go of its
-// gate and fades out over 0.6 s, then sleeps. An active one sleeps too when its VCA is
+// gate and fades out over 0.6 s, then sleeps, unless the MIDI file player holds it awake
+// ({t:'play', on:true}). An active one sleeps too when its VCA is
 // closed by an idle envelope and nothing can open it without a key.
 
 // The panel (cathode.js) carries the same lists; the suite checks they match.
@@ -985,7 +991,7 @@ class Cathode extends AudioWorkletProcessor {
     this.e2 = 0; this.e2s = 0; this.e2h = 0; this.t2Hi = 0;
     this.dcx1 = 0; this.dcy1 = 0; this.dcx2 = 0; this.dcy2 = 0;
     this.drift = 0; this.driftT = 0; this.driftN = 0; this.drift2 = 0; this.drift2T = 0;
-    this.active = o.active !== false; this.actFade = this.active ? 1 : 0; this.quietN = 0; this.sleeping = false;
+    this.active = o.active !== false; this.playing = !!o.playing; this.actFade = this.active || this.playing ? 1 : 0; this.quietN = 0; this.sleeping = false;
     this.duck = 1; this.duckDir = 0; this.pendingPatch = null;
     this.events = [];
     this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
@@ -1065,9 +1071,11 @@ class Cathode extends AudioWorkletProcessor {
       case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
       case 'sus': this.sus = !!m.on; if (!this.sus && this.sust) { this.sust = false; if (!this.held.length) this.gate = false; } break;
       case 'panic': this.held = []; this.gate = false; this.sust = false; this.e1 = 0; this.e1s = 0; this.e2 = 0; this.e2s = 0; this.e2h = 0; break;
+      case 'play': this.playing = !!m.on; break;
+      case 'flush': this.events = this.events.filter(e => !e.pb); break;
       case 'active':
         this.active = !!m.on;
-        if (!this.active) { this.held = []; this.gate = false; this.sust = false; this.sus = false; }
+        if (!this.active && !this.playing) { this.held = []; this.gate = false; this.sust = false; this.sus = false; }
         break;
     }
   }
@@ -1100,7 +1108,7 @@ class Cathode extends AudioWorkletProcessor {
     const due = this.events.length && (this.events[0].at || 0) < base + n;
     // asleep: inactive and faded, or idle with nothing that could open the VCA
     const idle = this.canSleep && !this.gate && !this.retrig && (this.sleepEg === 1 ? this.e1s === 0 : this.e2s === 0) && this.quietN >= C_IDLE_FR;
-    if (!due && ((!this.active && this.actFade <= 0) || (idle && this.duckDir === 0 && !this.pendingPatch))) {
+    if (!due && ((!this.active && !this.playing && this.actFade <= 0) || (idle && this.duckDir === 0 && !this.pendingPatch))) {
       this.sleeping = true;
       L.fill(0); if (R !== L) R.fill(0);
       if (this.pendingPatch) { this.setPatch(this.pendingPatch); this.pendingPatch = null; this.duck = 1; this.duckDir = 0; }
@@ -1160,7 +1168,7 @@ class Cathode extends AudioWorkletProcessor {
       if (this.duckDir === 1 && this.duck >= 1) this.duckDir = 0;
     }
     const act0 = this.actFade;
-    this.actFade = this.active ? clamp(act0 + frames / (0.005 * sr), 0, 1) : clamp(act0 - frames / (0.6 * sr), 0, 1);
+    this.actFade = this.active || this.playing ? clamp(act0 + frames / (0.005 * sr), 0, 1) : clamp(act0 - frames / (0.6 * sr), 0, 1);
     const P = this.P, T = this.target(this.T), S = this.S;
     const ks = 1 - Math.exp(-CTRL / (0.02 * sr));
     const v1 = P.vco1 || {}, v2 = P.vco2 || {}, c = P.ctl || {}, e1p = P.eg1 || {}, e2p = P.eg2 || {}, pm = P.pm || {};

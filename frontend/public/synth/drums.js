@@ -287,8 +287,8 @@ export function createHostClock(readSeq) {
 // What a host can call. The shape is the dxrack/1 device contract (see the rack
 // framework): one stereo output, MIDI in, a parameter table, and create(ctx, host).
 // create is attached in drums-ui.js, because it builds an AudioWorklet. When the
-// host has a transport, the sequencer follows it. When it does not (this page,
-// until that framework is merged), the pattern keeps its own clock.
+// host has a transport, the sequencer follows it. When it does not, the
+// pattern keeps its own clock.
 export const RACK_API = 'dxrack/1';
 export const drumDevice = {
   id: DRUM_ID,
