@@ -799,6 +799,40 @@ with sync_playwright() as pw:
         ph.locator("#deck").screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_deck.png"))
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
+
+    # ---------------------------------------------------------------- slashless /synth
+    # nginx 301s /synth to /synth/ because location ^~ /synth/ ends in a slash and
+    # proxy_passes. The site service worker (registered from the main page, scope /)
+    # follows that redirect and, if it answers the navigation with the followed
+    # response, Chrome fails the load with net::ERR_FAILED. Anyone who has opened
+    # dxedge.net has that worker, so /synth without the slash never comes up.
+    # This registers the real sw.js and loads the slash-less URL.
+    sctx = b.new_context()
+    # Precache lists /favicon.svg. Production answers that with the SPA shell (200);
+    # this static server would 404 it and the worker would never install.
+    sctx.route("**/favicon.svg", lambda route: route.fulfill(
+        status=200, content_type="image/svg+xml", body="<svg xmlns='http://www.w3.org/2000/svg'/>"))
+    sp = sctx.new_page(); serr = []
+    sp.on("pageerror", lambda e: serr.append(str(e)))
+    sp.goto(BASE)
+    controlled = sp.evaluate("""async () => {
+      await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      return !!navigator.serviceWorker.controller;
+    }""")
+    ck("slashless /synth: the service worker is in control", controlled)
+    noslash = BASE[:-1] if BASE.endswith("/") else BASE
+    slash_detail = ""
+    try:
+        sp.goto(noslash, wait_until="domcontentloaded", timeout=20000)
+        sp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+        slash_ok = sp.url.endswith("/synth/") and sp.evaluate("__synth.ready()") and not serr
+        slash_detail = (sp.url, serr)
+    except Exception as e:
+        slash_ok = False
+        slash_detail = (sp.url, str(e).split("\n")[0], serr)
+    ck("slashless /synth redirects and the synth initializes", slash_ok, slash_detail)
+    sctx.close()
     b.close()
 
 print()
