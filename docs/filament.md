@@ -733,6 +733,8 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
 - [x] Six public-domain excerpts (Bach toccata, a slow organ reduction; Grieg, In the Hall of the Mountain King; Saint-Saëns, Danse macabre; Mussorgsky, Night on Bald Mountain; Chopin, Funeral March; the Dies irae sequence) and three original tunes (Lantern Walk, Cellar Stairs, Porch Ghost). Each loads its Filament and Cathode preset. Mountain King and Porch Ghost also load Lantern; Cellar Stairs loads Bones. Those three files have a channel-10 closed-hat part that plays on Dekatron. Sources are in `docs/filament-licensing.md` and `midi/catalog.json`
 
 ### 0.3 Delight
+- [ ] Tube show: exaggerated tube visuals (note flares, red-plating heat, arcs on clipping, blue glow,
+      visible resonance, voice lamps, off/subtle/full). Requested by James 13 Oct; see Notes from James.
 - [ ] 1939 mode (divide-down, LC resonators, seven envelope shapes, six-channel vibrato)
 - [ ] Punched paper roll step sequencer
 - [ ] Theremin mode with the magic eye as tuning indicator
@@ -776,6 +778,30 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
 
 ## Notes from James
 (write here; the nightly run reads this first)
+- 2026-10-13 (evening): **Next nightly run: build "more visual feedback on the tubes" instead of the next 0.2
+  item.** James: "I realize it isn't realistic, but we are building a tube synth in a web browser." So
+  exaggerate on purpose; it is a show. One night's slice, both devices (the chassis is shared). Ideas, in
+  priority order; ship what fits and list the rest under the new roadmap item "Tube show" in 0.3:
+  1. Every note-on flares the tubes it passes through (V1 first, then the output pair), scaled by velocity,
+     decaying over about 150 ms. Chords and fast runs should visibly flicker.
+  2. Drive shows as heat: as V1, V2 or the output drive and the actual signal level rise, the plates go
+     from dull grey through cherry red to orange ("red plating"), with a glow halo that spills onto the
+     chassis around the bulb.
+  3. Clipping shows as arcs: when a tube stage or the final ceiling is clipping hard, brief blue-white
+     sparks or flashes inside the glass (rate-limited so it never strobes).
+  4. Blue fluorescence on the power tubes (V3/V4) that follows the output level, the way real power tubes
+     glow blue, turned up well past real life.
+  5. Resonance you can see: on Valve 12, V2 brightens with resonance and shimmers when the filter
+     self-oscillates; on Cathode, V2 (the follower) does the same for the low-pass peak.
+  6. A row of small voice lamps (one per active voice, up to 16) on the chassis.
+  Rules: honour prefers-reduced-motion (no flicker, flashes or sparks; steady glow only) and add a
+  three-way "tube show" chip (off, subtle, full) remembered in localStorage, default full; keep drawing
+  inside the existing 30 fps frame loop; nothing new in the audio path (visuals read the meters and
+  analysers that already exist, or new meter fields the worklets post with the existing meter message);
+  phones keep no horizontal scroll and 44 px targets. Tests: expose the visual state on `__synth` and
+  check that a note-on raises the flare, more drive raises the heat, a clipping render triggers a flash,
+  reduced motion and "off" suppress flicker and sparks, the canvases are painted, and no page errors; log
+  the frame draw time.
 - 2026-10-13 (afternoon): **Tonight's run (Oct 13, 11:52 PM) builds MIDI files: recorder and player**,
   per the spec in its roadmap section above (James chose recorder and player with WAV render, tracks
   assigned to devices, built by the nightly job). Slice 1 first; slice 2 (Render WAV) the same night
