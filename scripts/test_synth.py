@@ -2092,10 +2092,12 @@ with sync_playwright() as pw:
        (g_rms(panL, 0.2, 0.5), g_rms(panR, 0.2, 0.5), g_rms(panL2, 0.2, 0.5), g_rms(panR2, 0.2, 0.5)))
     nearL, _nR = g_render({"device": "gleam", "mode": "room", "reverb": 0, "level": 0.85, "glide": 0}, [
         {"at": 0.02, "type": "on", "id": "o", "x": 0, "y": 0, "z": 1, "hz": 220, "room": True}], 0.6)
-    farL, _fR = g_render({"device": "gleam", "mode": "room", "reverb": 0, "level": 0.85, "glide": 0}, [
-        {"at": 0.02, "type": "on", "id": "o", "x": 1, "y": 1, "z": 1, "hz": 220, "room": True}], 0.6)
-    ck("G. a near orb is louder than the same orb in the corner",
-       g_rms(nearL, 0.2, 0.5) > g_rms(farL, 0.2, 0.5) * 2, (g_rms(nearL, 0.2, 0.5), g_rms(farL, 0.2, 0.5)))
+    farL, farR = g_render({"device": "gleam", "mode": "room", "reverb": 0, "level": 0.85, "glide": 0}, [
+        {"at": 0.02, "type": "on", "id": "o", "x": 0, "y": 1, "z": 1, "hz": 220, "room": True}], 0.6)
+    ck("G. a near orb is louder than the same orb farther from the listener",
+       g_rms(nearL, 0.2, 0.5) > g_rms(farL, 0.2, 0.5) * 2 and g_rms(farL, 0.2, 0.5) > 1e-3
+       and abs(g_rms(farL, 0.2, 0.5) - g_rms(farR, 0.2, 0.5)) / g_rms(farL, 0.2, 0.5) < 0.05,
+       (g_rms(nearL, 0.2, 0.5), g_rms(farL, 0.2, 0.5), g_rms(farR, 0.2, 0.5)))
     hL, hR = g_render(dict(base_p, hrtf=True, space=1, reverb=0), [{"at": 0.02, "type": "on", "id": "a", "x": 0, "y": 0.2, "z": 1}], 0.5)
     ck("G. HRTF keeps a left-hand finger on the left and inside full scale",
        g_rms(hL, 0.15, 0.4) > g_rms(hR, 0.15, 0.4) * 1.15 and g_rms(hL, 0.15, 0.4) > 1e-3

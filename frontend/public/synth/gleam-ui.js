@@ -145,7 +145,10 @@ export async function createGleamNode(ctx, { patch, events, active, destination 
 export async function renderGleamBuffer({ patch, events = [], seconds = 1, sampleRate = 48000 } = {}) {
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const p = normalizeGleam(patch);
-  const graph = await createGleamNode(ctx, { patch: p, active: true, destination: ctx.destination });
+  // Events go in the processor options. A message posted after the node exists
+  // can miss an offline render that finishes before the port delivers it.
+  const queued = [];
+  const places = [];
   const slots = new Map();
   let n = 0;
   function slotFor(id) {
@@ -157,22 +160,24 @@ export async function renderGleamBuffer({ patch, events = [], seconds = 1, sampl
   events.forEach(ev => {
     const at = Math.round((+ev.at || 0) * sampleRate);
     if (ev.type === 'panic') {
-      graph.node.port.postMessage({ t: 'panic', at });
+      queued.push({ t: 'panic', at });
       return;
     }
     const id = ev.id == null ? 'v' : String(ev.id);
     const slot = slotFor(id);
     if (ev.type === 'off' || ev.type === 'up' || ev.type === 'cancel') {
-      graph.node.port.postMessage({ t: 'voice', id, slot, on: false, at });
+      queued.push({ t: 'voice', id, slot, on: false, at });
       return;
     }
     const msg = voiceMessage(p, ev);
-    graph.node.port.postMessage({
+    queued.push({
       t: 'voice', id, slot, on: true, at,
       hz: msg.hz, y: msg.y, level: msg.level, pan: msg.pan, gain: msg.gain, send: msg.send,
     });
-    if (graph.hrtf && graph.slots[slot]) placePanner(graph.slots[slot].panner, msg.pan, msg.depth);
+    places.push({ slot, pan: msg.pan, depth: msg.depth });
   });
+  const graph = await createGleamNode(ctx, { patch: p, events: queued, active: true, destination: ctx.destination });
+  if (graph.hrtf) places.forEach(pl => graph.place(pl.slot, pl.pan, pl.depth));
   const buf = await ctx.startRendering();
   try { graph.node.disconnect(); } catch (e) { /* context is closing */ }
   try { graph.sum.disconnect(); } catch (e) { /* already torn down */ }
@@ -574,7 +579,7 @@ export function mountGleamPad(container, host, opts) {
   MODES.forEach(m => chip('gleamMode-' + m, m, false, m === 'field' ? 'Fingers are voices' : m === 'room' ? 'Orbs around a listener' : 'Effect on the master'));
   SCALES.forEach(s => chip('gleamScale-' + s, s === 'pentatonic' ? 'penta' : s, false));
   const root = document.createElement('select');
-  root.id = 'gleamRoot';
+  root.id = 'gleamKey';
   root.setAttribute('aria-label', 'Root key');
   ROOTS.forEach((name, i) => {
     const o = document.createElement('option');
