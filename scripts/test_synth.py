@@ -1610,8 +1610,8 @@ with sync_playwright() as pw:
     side_on = tone_amp(lat(lpatch(osc1={"table": "glass", "pos": 0, "level": 0.7, "warp": "fm", "warpAmt": 0.65}, osc2={"level": 0, "semi": 7, "table": "glass"}), [{"at": 0.01, "t": "on", "n": 69, "v": 0.9}], 0.45)[0][int(0.08 * SR):], 2.5 * f0)
     ck(f"W. FM from oscillator B makes a sideband ({side_on:.4f} vs {side_off:.4f})", side_on > 0.01 and side_off < 0.002, (side_on, side_off))
     uL, uR = lat(lpatch(unison={"count": 4, "detune": 20, "spread": 1}, osc1={"table": "glass", "pos": 0.4, "level": 0.6}), [{"at": 0.01, "t": "on", "n": 60, "v": 0.8}], 0.4)
-    a, b = uL[int(0.1 * SR):], uR[int(0.1 * SR):]
-    spread = float(np.sqrt(np.mean((a - b) ** 2)) / max(1e-9, np.sqrt(np.mean(a ** 2))))
+    left, right = uL[int(0.1 * SR):], uR[int(0.1 * SR):]
+    spread = float(np.sqrt(np.mean((left - right) ** 2)) / max(1e-9, np.sqrt(np.mean(left ** 2))))
     ck(f"W. unison detune and spread separate the channels ({spread:.2f})", spread > 0.4 and float(np.max(np.abs(uL))) <= 1, spread)
     f0 = hz(48)
     def h6(cut):
