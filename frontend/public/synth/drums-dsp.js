@@ -377,7 +377,7 @@ export function renderDrum(eng, outL, outR, start) {
     eng.onMeter({
       t: 'meter', dev: 'dekatron',
       step: eng.armed ? (eng.stepCount - 1) % s.length : -1,
-      length: s.length, playing: !!eng.playing || (eng.armed && s.clock === 'external'),
+      length: s.length, playing: !!eng.playing || (eng.armed && (eng.clockMode || s.clock) === 'external'),
       voices: sounding,
       v1: Math.sqrt(eng.lowAcc / Math.max(1, eng.accN)),
       v2: Math.sqrt(eng.highAcc / Math.max(1, eng.accN)),
