@@ -1303,6 +1303,18 @@ with sync_playwright() as pw:
             R[i] = s24(data[i * 6 + 3:i * 6 + 6]) / 8388607
         return L, R
 
+    def peak_at(x, sr):
+        x = np.asarray(x, np.float64)
+        if len(x) < 64 or not sr: return 0.0
+        x = x - np.mean(x)
+        n = len(x)
+        X = np.abs(np.fft.rfft(x * np.hanning(n)))
+        f = np.fft.rfftfreq(n, 1.0 / float(sr))
+        lo = int(np.searchsorted(f, 30))
+        if lo >= len(X) - 1: return 0.0
+        i = lo + int(np.argmax(X[lo:]))
+        return float(f[i])
+
     wsecs = 1.25
     wav = pg.evaluate("""async a => __synth.renderWav(a)""", {"seconds": wsecs, "rack": False, "patch": tone,
         "events": note(60, 0.0, 0.3), "master": {"reverb": {"on": True, "size": 0.8, "damp": 0.2, "mix": 0.7, "width": 1}}})
@@ -1325,8 +1337,10 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
-       dl.suggested_filename.endswith(".wav") and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
+       bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
+    live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
     pg.evaluate("__synth.noteOn(60, 0.8)")
     pg.evaluate("() => __synth.recordStart()")
     pg.wait_for_timeout(700)
@@ -1335,13 +1349,56 @@ with sync_playwright() as pw:
     rec_raw = base64.b64decode(rec["b64"]) if rec and rec.get("b64") else b""
     rec_info = parse_wav(rec_raw) if rec_raw else None
     rec_rms = rms(pcm24(rec_info["data"])[0]) if rec_info and len(rec_info["data"]) >= 6 else 0
-    ck(f"M. live recording is a non-silent 24-bit WAV ({rec['frames'] if rec else 0} frames, {db(rec_rms):.1f} dB)",
-       rec_info and rec_info["fmt"] == 1 and rec_info["rate"] == 44100 and rec_info["bits"] == 24 and rec_info["ch"] == 2
-       and rec["frames"] > 44100 * 0.3 and rec_rms > 1e-3, rec["frames"] if rec else None)
+    ck(f"M. live recording is a non-silent 24-bit WAV at the context rate ({rec['frames'] if rec else 0} frames, {db(rec_rms):.1f} dB, {live_sr} Hz)",
+       rec_info and rec_info["fmt"] == 1 and rec_info["rate"] == live_sr and rec["sr"] == live_sr and rec_info["bits"] == 24 and rec_info["ch"] == 2
+       and rec["frames"] > live_sr * 0.3 and rec_rms > 1e-3
+       and bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", rec.get("name") or "")), (rec["frames"] if rec else None, rec.get("sr") if rec else None, rec.get("name") if rec else None))
+    # A 48 kHz context must not be written as 44.1 kHz. That was the pitch error:
+    # the file played slow because the header did not match the samples.
+    native = pg.evaluate("""async () => {
+      const { makeMasterFx } = await import('./masterfx.js');
+      const { encodeWav24 } = await import('./wav.js');
+      const ctx = new AudioContext({ sampleRate: 48000 });
+      await ctx.resume();
+      const fx = await makeMasterFx(ctx, null);
+      const oscL = ctx.createOscillator(); oscL.type = 'sine'; oscL.frequency.value = 440;
+      const oscR = ctx.createOscillator(); oscR.type = 'sine'; oscR.frequency.value = 660;
+      const merge = ctx.createChannelMerger(2);
+      const gL = ctx.createGain(); gL.gain.value = 0.45;
+      const gR = ctx.createGain(); gR.gain.value = 0.45;
+      oscL.connect(gL); oscR.connect(gR);
+      gL.connect(merge, 0, 0); gR.connect(merge, 0, 1);
+      fx.install(merge, ctx.destination);
+      oscL.start(); oscR.start();
+      fx.recordStart();
+      await new Promise(r => setTimeout(r, 450));
+      const samples = await fx.recordStop();
+      oscL.stop(); oscR.stop();
+      const bytes = encodeWav24(samples.L, samples.R, samples.sampleRate);
+      const start = Math.min(2000, samples.L.length);
+      const take = Math.min(8192, samples.L.length - start);
+      let rs = 0;
+      for (let i = 0; i < samples.R.length; i++) rs += samples.R[i] * samples.R[i];
+      return {
+        ctxRate: ctx.sampleRate, sampleRate: samples.sampleRate, n: samples.L.length,
+        header: bytes[24] | (bytes[25] << 8) | (bytes[26] << 16) | (bytes[27] << 24),
+        L: Array.from(samples.L.subarray(start, start + take)),
+        R: Array.from(samples.R.subarray(start, start + take)),
+        rrms: Math.sqrt(rs / Math.max(1, samples.R.length)),
+      };
+    }""")
+    nL = np.asarray(native["L"], np.float64); nR = np.asarray(native["R"], np.float64)
+    fL, fR = peak_at(nL, native["sampleRate"]), peak_at(nR, native["sampleRate"])
+    ck(f"M. 48 kHz master records both channels at 48 kHz ({fL:.1f} Hz / {fR:.1f} Hz)",
+       native["ctxRate"] == 48000 and native["sampleRate"] == 48000 and native["header"] == 48000
+       and native["n"] > 48000 * 0.3 and native["rrms"] > 0.05
+       and abs(fL - 440) < 4 and abs(fR - 660) < 4,
+       (native["header"], native["n"], round(fL, 2), round(fR, 2), round(native["rrms"], 4)))
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
     DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -1366,13 +1423,156 @@ with sync_playwright() as pw:
         raw_dl = open(dl.path(), "rb").read()
         info_dl = parse_wav(raw_dl)
         ck(f"M. {dev}: recording downloads a non-empty 24-bit WAV ({dl.suggested_filename}, {len(raw_dl)} bytes)",
-           dl.suggested_filename.endswith(".wav") and info_dl and info_dl["fmt"] == 1 and info_dl["bits"] == 24 and info_dl["ch"] == 2 and info_dl["rate"] == 44100 and len(info_dl["data"]) > 0,
+           bool(_re2.fullmatch(WAV_LABEL[dev] + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and info_dl and info_dl["fmt"] == 1 and info_dl["bits"] == 24 and info_dl["ch"] == 2 and info_dl["rate"] == live_sr and len(info_dl["data"]) > 0,
            (dl.suggested_filename, len(raw_dl), None if not info_dl else {k: info_dl[k] for k in ("fmt", "bits", "ch", "rate")}))
         pg.wait_for_function("() => document.getElementById('mastRec').getAttribute('aria-pressed')==='false' && document.getElementById('fxRec').textContent==='record'", timeout=8000)
+    # Each device, played as a known tone, must land in the WAV at the same
+    # pitch and level the chain is sending to the speakers.
+    def arm_listen():
+        pg.evaluate("""() => {
+          const E = __synth.engine();
+          if (window.__recAn) return;
+          const split = E.ctx.createChannelSplitter(2);
+          const aL = E.ctx.createAnalyser(); const aR = E.ctx.createAnalyser();
+          aL.fftSize = aR.fftSize = 4096;
+          E.C.out.connect(split);
+          split.connect(aL, 0); split.connect(aR, 1);
+          window.__recAn = { aL, aR, bL: new Float32Array(4096), bR: new Float32Array(4096) };
+        }""")
+    def listen():
+        return pg.evaluate("""() => {
+          const a = window.__recAn;
+          a.aL.getFloatTimeDomainData(a.bL);
+          a.aR.getFloatTimeDomainData(a.bR);
+          const rms = b => { let s = 0; for (let i = 0; i < b.length; i++) s += b[i] * b[i]; return Math.sqrt(s / b.length); };
+          return { sr: __synth.engine().ctx.sampleRate, rmsL: rms(a.bL), rmsR: rms(a.bR), L: Array.from(a.bL) };
+        }""")
+    quiet = {"ens": {"on": False}, "out": {"tube": "12AU7", "topology": "se", "drive": 0, "bias": 0, "sag": 0, "spkOn": False, "roomOn": False, "wOn": False}}
+    tones = [
+        ("filament", 69, 440, dict(device="filament", osc1={"wave": "sine", "level": 0.85, "fixed": 440}, osc2={"level": 0}, sub={"level": 0}, noise={"level": 0},
+            envA={"a": 0.005, "d": 0.02, "s": 1, "r": 0.05}, filt={"cutoff": 18000, "res": 0, "model": "ladder24"}, v1={"drive": 0}, drift=0,
+            voice={"level": 0.8}, stereo={"pan": "center", "spread": 0}, **quiet)),
+        ("cathode", 69, 440, dict(device="cathode", vco1={"wave": "tri", "scale": 8, "level": 0.8}, vco2={"level": 0}, **quiet)),
+        ("thyratron", 69, 440, dict(device="thyratron", osc1={"wave": "tri", "range": "8", "tune": 0, "level": 0.85}, osc2={"level": 0}, osc3={"level": 0}, **quiet)),
+        ("lattice", 69, 440, dict(device="lattice", osc1={"table": "edge", "pos": 0, "oct": 0, "level": 0.9}, osc2={"level": 0},
+            filt={"route": "serial", "a": {"mode": "lp", "cutoff": 18000, "res": 0, "env": 0}, "b": {"mode": "lp", "cutoff": 18000, "res": 0, "env": 0}}, **quiet)),
+        ("gleam", 69, 440, dict(device="gleam", color=1, space=0, reverb=0, drift=0, glide=0, level=0.9, stutter=False)),
+        ("dekatron", 65, 220, dict(device="dekatron", level=1,
+            voices={"tom": {"tune": 220, "decay": 0.7, "color": 0, "attack": 0, "level": 1, "pan": 0},
+                    "kick": {"level": 0}, "snare": {"level": 0}, "hatC": {"level": 0}, "hatO": {"level": 0}, "clap": {"level": 0}, "rim": {"level": 0}},
+            steps={k: [0] * 16 for k in ("kick", "snare", "hatC", "hatO", "clap", "tom", "rim")}, **quiet)),
+        ("mote", None, 440, dict(device="mote", level=1,
+            grain={"size": 90, "density": 36, "position": 0.25, "spray": 0, "pitch": 0, "pitchRand": 0, "reverse": 0, "window": "hann", "spread": 0, "freeze": True, "keyboard": False},
+            lfo={"depth": 0, "rate": 0.1, "dest": "position"},
+            tail={"delay": 0.2, "feedback": 0.2, "reverb": 0, "mix": 0.15}, **quiet)),
+    ]
+    for dev, midi_note, expect, body in tones:
+        pg.evaluate("__synth.panic()")
+        pg.evaluate("(p) => __synth.setPatch(p)", body)
+        pg.wait_for_timeout(280)
+        if dev == "mote":
+            pg.evaluate("() => __synth.moteCaptureProbe(0.2, 440)")
+            pg.wait_for_timeout(80)
+        arm_listen()
+        if midi_note is not None:
+            pg.evaluate("(n) => __synth.noteOn(n, 0.9)", midi_note)
+        pg.wait_for_timeout(220 if dev != "dekatron" else 40)
+        pg.evaluate("() => __synth.recordStart()")
+        pg.wait_for_timeout(90 if dev == "dekatron" else 180)
+        live = listen()
+        pg.wait_for_timeout(420 if dev != "dekatron" else 280)
+        got = pg.evaluate("() => __synth.recordStop()")
+        if midi_note is not None:
+            pg.evaluate("(n) => __synth.noteOff(n)", midi_note)
+        raw_g = base64.b64decode(got["b64"]) if got and got.get("b64") else b""
+        info_g = parse_wav(raw_g) if raw_g else None
+        if not info_g:
+            ck(f"M. {dev}: recorded tone matches the live output", False, "no wav")
+            continue
+        gL, gR = pcm24(info_g["data"])
+        a0 = min(len(gL) // 5, max(0, len(gL) - 64))
+        seg = gL[a0:a0 + min(8192, len(gL) - a0)]
+        wf, lf = peak_at(seg, info_g["rate"]), peak_at(live["L"], live["sr"])
+        wr, lr = rms(seg), float(live["rmsL"] or 0)
+        ratio = wr / lr if lr > 1e-6 else 0
+        freq_ok = abs(wf - expect) < (20 if dev == "dekatron" else 12) and abs(wf - lf) < (24 if dev == "dekatron" else 12)
+        level_ok = wr > 1e-3 and lr > 1e-3 and (0.55 < ratio < 1.8 if dev == "dekatron" else 0.72 < ratio < 1.35)
+        both = rms(gR[a0:a0 + len(seg)]) > 1e-4 if dev != "dekatron" else True
+        ck(f"M. {dev}: recorded {wf:.1f} Hz matches live {lf:.1f} Hz (expect {expect}, level x{ratio:.2f})",
+           info_g["rate"] == live_sr and freq_ok and level_ok and both,
+           (info_g["rate"], round(wf, 2), round(lf, 2), round(wr, 4), round(lr, 4), round(ratio, 3)))
+
+    # Mote freeze: stop spawning grains and the delay/reverb tail must still be in the file.
+    pg.evaluate("__synth.panic()")
+    pg.evaluate("(d) => __synth.setDevice('mote')", "mote")
+    pg.wait_for_timeout(200)
+    pg.evaluate("() => __synth.moteCaptureProbe(0.25, 440)")
+    tail_on = {"device": "mote", "level": 1,
+        "grain": {"size": 60, "density": 30, "position": 0.3, "spray": 0, "pitch": 0, "pitchRand": 0, "reverse": 0, "window": "hann", "spread": 0, "freeze": True, "keyboard": False},
+        "lfo": {"depth": 0, "rate": 0.1, "dest": "position"},
+        "tail": {"delay": 0.2, "feedback": 0.7, "reverb": 0.45, "mix": 0.85},
+        "ens": {"on": False}, "out": {"drive": 0, "roomOn": False, "wOn": False, "spkOn": False, "topology": "se", "tube": "12AU7"}}
+    pg.evaluate("(p) => __synth.setPatch(p)", tail_on)
+    pg.wait_for_timeout(150)
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(220)
+    tail_off = dict(tail_on)
+    tail_off["grain"] = dict(tail_on["grain"], keyboard=True, density=0.5)
+    pg.evaluate("(p) => __synth.setPatch(p)", tail_off)
+    pg.wait_for_timeout(520)
+    tail_meter = pg.evaluate("__synth.moteMeter()")
+    pg.wait_for_timeout(260)
+    tail_rec = pg.evaluate("() => __synth.recordStop()")
+    tail_raw = base64.b64decode(tail_rec["b64"]) if tail_rec and tail_rec.get("b64") else b""
+    tail_info = parse_wav(tail_raw) if tail_raw else None
+    if not tail_info:
+        ck("M. Mote freeze delay tail is in the recording", False, "no wav")
+    else:
+        tL, tR = pcm24(tail_info["data"])
+        tsr = tail_info["rate"]
+        early = tL[int(0.05 * tsr):int(0.18 * tsr)]
+        late = tL[int(0.48 * tsr):int(0.82 * tsr)] if len(tL) > int(0.82 * tsr) else tL[len(tL)//2:]
+        late_r = tR[int(0.48 * tsr):int(0.82 * tsr)] if len(tR) > int(0.82 * tsr) else tR[len(tR)//2:]
+        ef = peak_at(early, tsr) if len(early) > 64 else 0
+        # The echo interval, measured on the tail after the grains have stopped.
+        lag = 0.0
+        if len(late) > int(0.28 * tsr):
+            a = late - np.mean(late)
+            corr = np.correlate(a, a, mode="full")
+            corr = corr[len(corr)//2:]
+            lo_i, hi_i = int(0.15 * tsr), min(len(corr) - 2, int(0.27 * tsr))
+            best_v = -1.0
+            for i in range(lo_i + 1, hi_i):
+                if corr[i] >= corr[i - 1] and corr[i] >= corr[i + 1] and corr[i] > best_v:
+                    best_v = float(corr[i])
+                    lag = i / tsr
+        grains_gone = (tail_meter.get("grains") or 0) == 0 and (tail_meter.get("voices") or 0) == 0
+        ck(f"M. Mote freeze keeps {ef:.1f} Hz, and the delay tail is still in the file ({rms(late):.4f}, echo {lag:.3f} s)",
+           tail_info["rate"] == live_sr and abs(ef - 440) < 15 and rms(early) > 1e-3
+           and grains_gone and rms(late) > 1e-3 and rms(late_r) > 5e-4 and 0.15 < lag < 0.26,
+           (round(ef, 2), round(rms(early), 4), round(rms(late), 4), round(lag, 3), tail_meter.get("grains"), tail_meter.get("voices"), len(tL)))
+    # Leave Mote on its factory grain settings. The panel tests toggle freeze and keys from there.
+    pg.evaluate("""() => __synth.setPatch({ device: 'mote', grain: { keyboard: false, freeze: true, density: 14 } })""")
+    pg.evaluate("__synth.panic()")
+
     help_txt = pg.evaluate("""() => [...document.querySelectorAll('#mMoteStage .note, .intro[data-dev="mote"]')].map(n => n.textContent).join(' ')""")
     ck("Mo. help says Capture rack is an input, not an export", "Capture rack is an input, not an export" in help_txt, help_txt)
     pg.evaluate("__synth.panic()")
     pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(200)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
+    pg.evaluate("__synth.deck().play('file')")
+    pg.wait_for_function("""() => __synth.deck().playing() && Object.keys(__synth.deck().sounding()).length >= 2""", timeout=5000)
+    pg.click("#trRec")
+    pg.wait_for_function("""() => document.getElementById('trRec').getAttribute('aria-pressed')==='true'""", timeout=8000)
+    pg.wait_for_timeout(350)
+    with pg.expect_download(timeout=20000) as di:
+        pg.click("#trRec")
+    rack_dl = di.value
+    ck("M. several devices playing: the WAV is named rack",
+       bool(_re2.fullmatch(r"rack-\d{8}-\d{6}\.wav", rack_dl.suggested_filename)) and len(open(rack_dl.path(), "rb").read()) > 44,
+       rack_dl.suggested_filename)
+    pg.evaluate("__synth.deck().stop()")
     pg.wait_for_timeout(200)
 
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)

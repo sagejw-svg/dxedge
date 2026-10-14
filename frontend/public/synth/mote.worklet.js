@@ -4,6 +4,23 @@
 
 import { createMoteEngine, postMote, renderMote, setMoteBuffer } from './mote-dsp.js';
 
+// True while the delay or the reverb still holds signal. An idle Mote keeps
+// rendering until this falls away, so a freeze-and-release tail is heard and
+// recorded instead of being replaced with silence.
+function tailEnergy(eng) {
+  const mix = eng.P && eng.P.tail && +eng.P.tail.mix;
+  if (!(mix > 0) || !eng.delayL) return false;
+  let e = Math.abs(eng.delayL.lp) + Math.abs(eng.delayR.lp);
+  const lines = [eng.delayL, eng.delayR].concat(eng.fdn || []);
+  for (let k = 0; k < lines.length; k++) {
+    const buf = lines[k] && lines[k].buf;
+    if (!buf) continue;
+    const step = Math.max(1, buf.length >> 5);
+    for (let i = 0; i < buf.length; i += step) e += Math.abs(buf[i]);
+  }
+  return e > 1e-4;
+}
+
 class Mote extends AudioWorkletProcessor {
   constructor(options) {
     super();
@@ -19,19 +36,24 @@ class Mote extends AudioWorkletProcessor {
     const out = outputs[0];
     if (!out || !out[0]) return true;
     const L = out[0];
-    const R = out[1] || L;
+    // A shared or missing right buffer used to drop the right-hand mix, and
+    // with it the delay and reverb, which are written into that buffer.
+    const stereo = !!(out[1] && out[1] !== L);
+    const R = stereo ? out[1] : new Float32Array(L.length);
     const eng = this.eng;
     if (eng.active === false) {
       let busy = false;
       for (let i = 0; i < eng.grains.length; i++) if (eng.grains[i].on) { busy = true; break; }
-      if (!busy && !eng.soon.length && !eng.queue.length) {
+      if (!busy && !eng.soon.length && !eng.queue.length && !tailEnergy(eng)) {
         L.fill(0);
-        if (R !== L) R.fill(0);
+        if (stereo) R.fill(0);
         return true;
       }
     }
-    const tmpR = R === L ? new Float32Array(L.length) : R;
-    renderMote(eng, L, tmpR, currentFrame);
+    renderMote(eng, L, R, currentFrame);
+    if (!stereo) {
+      for (let i = 0; i < L.length; i++) L[i] = 0.5 * (L[i] + R[i]);
+    }
     return true;
   }
 }

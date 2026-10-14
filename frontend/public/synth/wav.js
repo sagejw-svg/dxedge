@@ -1,5 +1,6 @@
-// 24-bit / 44.1 kHz stereo WAV. Live recording resamples the master worklet's blocks
-// (see masterfx.js). Offline render asks the engine for an OfflineAudioContext at
+// 24-bit stereo WAV. Live recording writes the master worklet's blocks at the
+// AudioContext rate (see masterfx.js), which is the rate the speakers are
+// playing. Offline render asks the engine for an OfflineAudioContext at
 // 44.1 kHz and encodes that buffer directly, so the length is exact.
 
 import { renderOffline } from './engine.js';
@@ -17,7 +18,9 @@ function sample24(x) {
 }
 
 // Interleaved little-endian 24-bit PCM. L and R are Float32Array, one frame each index.
-export function encodeWav24(L, R) {
+// `sampleRate` is the rate those frames were played at. Offline renders pass 44100.
+export function encodeWav24(L, R, sampleRate) {
+  const sr = sampleRate > 0 ? sampleRate | 0 : SR;
   const n = Math.min(L.length, R.length);
   const dataBytes = n * 6;
   const buf = new ArrayBuffer(44 + dataBytes);
@@ -29,8 +32,8 @@ export function encodeWav24(L, R) {
   v.setUint32(16, 16, true);
   v.setUint16(20, 1, true);             // PCM
   v.setUint16(22, 2, true);
-  v.setUint32(24, SR, true);
-  v.setUint32(28, SR * 6, true);
+  v.setUint32(24, sr, true);
+  v.setUint32(28, sr * 6, true);
   v.setUint16(32, 6, true);
   v.setUint16(34, 24, true);
   writeStr(v, 36, 'data');
@@ -76,7 +79,7 @@ export async function renderToWav(opts) {
     master: opts.master || null,
     masterFx: opts.masterFx !== false,
   });
-  const bytes = encodeWav24(buf.getChannelData(0), buf.getChannelData(1));
+  const bytes = encodeWav24(buf.getChannelData(0), buf.getChannelData(1), buf.sampleRate || SR);
   return { bytes, frames: buf.length, sampleRate: SR, bits: 24, channels: 2, seconds };
 }
 

@@ -388,6 +388,7 @@ export function createPlayer(api) {
     play: userPlay,
     stop: userStop,
     playing: () => playing,
+    devices: () => (playing && song ? [...new Set(routed().map(e => e.dev).filter(d => d && d !== 'off'))] : []),
     loop: on => { if (on != null) { loop = !!on; show(); } return loop; },
   };
   return { lit: n => (lit.get(n) || 0) > 0, test, ready: catalogP };
