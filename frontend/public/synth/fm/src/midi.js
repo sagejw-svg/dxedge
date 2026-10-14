@@ -38,6 +38,7 @@ var MIDI = function(synth) {
   }
 
   function setMidiIn(index) {
+    synth.panic();
     if (!selectMidi[index])
       return;
     var id = selectMidi[index].value;

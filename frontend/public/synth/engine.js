@@ -150,6 +150,9 @@ export async function createEngine(ctx, opts = {}) {
   E.modWheel = v => { ctl.mw = v; post({ t: 'mw', v }); };          // 0..1
   E.aftertouch = v => { ctl.at = v; post({ t: 'at', v }); };        // 0..1
   E.sustain = on => post({ t: 'sus', on: !!on });
+  // Let go of keys the page is holding on every device. Playback notes (pb:true) keep sounding.
+  // Dekatron ignores this message; a drum hit is already a one-shot.
+  E.releaseKeys = () => Object.keys(E.nodes).forEach(k => { const n = E.nodes[k]; if (n && n.port) n.port.postMessage({ t: 'release' }); });
   // The MIDI file player: send to a named device, whether or not the keyboard is on it (its node
   // is built if needed), and hold a device awake while playback runs.
   E.sendTo = (dev, m) => nodeFor(dev === 'cathode' ? 'cathode' : 'filament').port.postMessage(m);

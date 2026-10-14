@@ -86,7 +86,13 @@ def welch(x, n=8192):
     return np.mean([np.abs(np.fft.rfft(sg)) ** 2 for sg in segs], axis=0), np.fft.rfftfreq(n, 1 / SR)
 
 from playwright.sync_api import sync_playwright
-CHROME = os.environ.get("SYNTH_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
+_CANDIDATES = [
+    os.environ.get("SYNTH_CHROMIUM", ""),
+    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+    "/opt/google/chrome/chrome",
+    "/usr/local/bin/chrome",
+]
+CHROME = next(p for p in _CANDIDATES if p and os.path.exists(p))
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path=CHROME, args=["--autoplay-policy=no-user-gesture-required"])
     pg = b.new_page(viewport={"width": 1366, "height": 1000}); errs = []
@@ -886,6 +892,116 @@ with sync_playwright() as pw:
     pg.keyboard.press("z")
     pg.keyboard.down(" "); ck("space is the sustain pedal", pg.evaluate("__synth.state()")["sustain"]); pg.keyboard.up(" ")
     ck("sustain pedal up", not pg.evaluate("__synth.state()")["sustain"])
+
+    # ---------------------------------------------------------------- stuck keys
+    # A second keydown that is not marked repeat (Shift reissues the key this way) used to
+    # bump a refcount. One keyup left the key lit and the gate open.
+    def gates():
+        pg.wait_for_timeout(90)
+        return pg.evaluate("""() => {
+          const meters = (__synth.engine() && __synth.engine().meters) || {};
+          const notes = {};
+          ['filament', 'cathode'].forEach(k => { notes[k] = (meters[k] && meters[k].notes) || []; });
+          return { down: __synth.state().down.slice(), keys: document.querySelectorAll('.key.down').length, notes, sustain: __synth.state().sustain, dev: __synth.device() };
+        }""")
+    def quiet(label):
+        g = gates()
+        ck(label, g["down"] == [] and g["keys"] == 0 and g["notes"]["filament"] == [] and g["notes"]["cathode"] == [] and not g["sustain"], g)
+    pg.keyboard.down("d")
+    pg.evaluate("""() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', repeat: true, bubbles: true, cancelable: true }))""")
+    ck("key repeat does not stack a second hold", pg.evaluate("__synth.state().down").count(pg.evaluate("12 * (__synth.state().oct + 1) + 4")) == 1)
+    pg.keyboard.up("d")
+    quiet("key repeat still releases on keyup")
+    pg.keyboard.down("d")
+    pg.evaluate("""() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'D', code: 'KeyD', repeat: false, shiftKey: true, bubbles: true, cancelable: true }))""")
+    pg.keyboard.up("d")
+    quiet("a Shift reissue of a held key does not stick after keyup")
+    pg.keyboard.down("Shift"); pg.keyboard.down("a"); pg.keyboard.up("a"); pg.keyboard.up("Shift")
+    quiet("real Shift+A presses and releases")
+    pg.keyboard.down("Shift"); pg.keyboard.down(";"); pg.keyboard.up(";"); pg.keyboard.up("Shift")
+    quiet("real Shift+semicolon presses and releases")
+    pg.keyboard.down("f"); pg.keyboard.down("Control"); pg.keyboard.up("Control")
+    ck("Ctrl while a key is held does not drop or stick it", len(pg.evaluate("__synth.state().down")) == 1)
+    pg.keyboard.up("f")
+    quiet("releasing the key after Ctrl lets go")
+    k60 = pg.query_selector('.key[data-n="60"]'); k60.scroll_into_view_if_needed(); b60 = k60.bounding_box()
+    pg.mouse.move(b60["x"] + b60["width"] / 2, b60["y"] + b60["height"] / 2); pg.mouse.down()
+    pg.mouse.move(10, 10); pg.mouse.up(); quiet("drag off a key and release outside lets go")
+    k64 = pg.query_selector('.key[data-n="64"]'); k64.scroll_into_view_if_needed(); b64 = k64.bounding_box()
+    pg.mouse.move(b60["x"] + b60["width"] / 2, b60["y"] + b60["height"] / 2); pg.mouse.down()
+    pg.mouse.move(b64["x"] + b64["width"] / 2, b64["y"] + b64["height"] / 2)
+    ck("glissando moves the hold to the new key", 64 in pg.evaluate("__synth.state().down") and 60 not in pg.evaluate("__synth.state().down"))
+    pg.mouse.move(12, 12); pg.mouse.up(); quiet("glissando then release outside lets go")
+    pg.keyboard.down("g")
+    pg.evaluate("window.dispatchEvent(new Event('blur'))")
+    ck("blur releases a computer key before keyup", pg.evaluate("__synth.state().down") == [])
+    pg.keyboard.up("g"); quiet("keyup after blur does not stick the key")
+    pg.mouse.move(b64["x"] + b64["width"] / 2, b64["y"] + b64["height"] / 2); pg.mouse.down()
+    pg.evaluate("window.dispatchEvent(new Event('blur'))")
+    ck("blur releases a pointer-held key before mouseup", 64 not in pg.evaluate("__synth.state().down"))
+    pg.mouse.up(); quiet("mouseup after blur does not stick the key")
+    pg.keyboard.down("h")
+    pg.evaluate("""() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); }""")
+    ck("a hidden tab releases held keys", pg.evaluate("__synth.state().down") == [])
+    pg.evaluate("""() => { delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange')); }""")
+    pg.keyboard.up("h"); quiet("keyup after a tab hide does not stick the key")
+    pg.evaluate("__synth.midi([0x90, 67, 100])"); pg.wait_for_timeout(40)
+    pg.evaluate("window.dispatchEvent(new Event('blur'))")
+    quiet("blur releases a Web MIDI note")
+    pg.evaluate("__synth.midi([0x90, 60, 100])"); pg.evaluate("__synth.midi([0x90, 64, 110])"); pg.wait_for_timeout(40)
+    pg.evaluate("__synth.midi([0xB0, 123, 0])")
+    quiet("MIDI all-notes-off (CC 123) releases every note")
+    pg.keyboard.down("j"); pg.click("#devC"); pg.wait_for_timeout(120)
+    g = gates()
+    ck("switching device mid-note releases it on both devices", g["down"] == [] and g["notes"]["filament"] == [] and g["notes"]["cathode"] == [] and g["dev"] == "cathode", g)
+    pg.keyboard.up("j"); quiet("keyup after a device switch does not stick")
+    pg.keyboard.down("j"); pg.wait_for_timeout(40)
+    ck("a new key works on the device switched to", len(pg.evaluate("__synth.state().down")) == 1 and pg.evaluate("__synth.device()") == "cathode")
+    pg.keyboard.up("j"); pg.click("#devF"); pg.wait_for_timeout(120)
+    quiet("switching back to Filament leaves no note")
+    ck("the Filament patch is still the one that was playing", pg.evaluate("__synth.patch().name") == "Wide Novachord Strings")
+    pg.keyboard.down("k"); pg.click("#panicBtn"); pg.wait_for_timeout(40)
+    ck("panic silences a held key", pg.evaluate("__synth.state().down") == [])
+    pg.keyboard.up("k"); quiet("keyup after panic does not stick")
+    touch = pg.evaluate("""() => {
+      const fire = (el, type, id) => {
+        const r = el.getBoundingClientRect();
+        el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'touch', isPrimary: id === 1, button: 0, buttons: type === 'pointerdown' ? 1 : 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+      };
+      const a = document.querySelector('.key[data-n="60"]'), b = document.querySelector('.key[data-n="67"]');
+      fire(a, 'pointerdown', 11); fire(b, 'pointerdown', 12);
+      const both = __synth.state().down.slice().sort((x, y) => x - y);
+      fire(a, 'pointerup', 11);
+      const one = __synth.state().down.slice();
+      const ids = __synth.state().ptrs.slice();
+      return { both, one, ids };
+    }""")
+    ck("two touches hold two notes, and lifting one leaves the other", touch["both"] == [60, 67] and touch["one"] == [67] and 12 in touch["ids"], touch)
+    pg.evaluate("""() => { const id = __synth.state().ptrs[0]; window.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, cancelable: true, pointerId: id })); }""")
+    quiet("pointercancel releases the remaining touch")
+    pg.evaluate("""() => {
+      const el = document.querySelector('.key[data-n="72"]');
+      const r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 21, pointerType: 'touch', button: 0, buttons: 1, clientX: r.left + 4, clientY: r.top + 4 }));
+    }""")
+    ck("a touch that cannot capture the pointer still starts the note", 72 in pg.evaluate("__synth.state().down"))
+    pg.evaluate("window.dispatchEvent(new Event('blur'))")
+    quiet("blur releases that touch")
+    HOLD = mthd(0, 1, 96) + mtrk([0] + tempo(500000) + [0, 0x90, 60, 100] + vlq(768) + [0x80, 60, 0] + EOT)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'hold.mid')", HOLD)
+    pg.evaluate("() => { const t = document.getElementById('tempoIn'); t.value = 100; t.dispatchEvent(new Event('input')); }")
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(250)
+    ck("deck playback is holding the long note", pg.evaluate("__synth.deck().playing()") and 60 in pg.evaluate("__synth.engine().meters.filament.notes"))
+    pg.evaluate("() => { const t = document.getElementById('tempoIn'); t.value = 200; t.dispatchEvent(new Event('input')); }")
+    pg.wait_for_timeout(200)
+    pg.evaluate("__synth.deck().stop()"); pg.wait_for_timeout(150)
+    quiet("deck stop after a tempo change sends all-notes-off")
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(200)
+    pg.evaluate("() => { const t = document.getElementById('tempoIn'); t.value = 200; t.dispatchEvent(new Event('input')); }")
+    pg.wait_for_timeout(2600)
+    quiet("a tempo change still delivers the note off")
+    pg.evaluate("__synth.deck().stop()")
+    pg.evaluate("() => { const t = document.getElementById('tempoIn'); t.value = 100; t.dispatchEvent(new Event('input')); }")
     # knob drag changes the patch
     kn = pg.query_selector('.knob[data-path="filt.cutoff"]'); kn.scroll_into_view_if_needed(); bb = kn.bounding_box(); before = pg.evaluate("__synth.patch().filt.cutoff")
     pg.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + 20); pg.mouse.down(); pg.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] - 40, steps=6); pg.mouse.up()
@@ -1388,6 +1504,23 @@ with sync_playwright() as pw:
     pg.click("#libStop")
     pg.wait_for_function("""() => { const m = __synth.engine().meters.filament; return !__synth.player().playing() && !!m && (m.notes || []).length === 0; }""", timeout=2000)
     ck("P. stop silences the note and the player", not pg.evaluate("__synth.player().playing()") and pg.evaluate("__synth.engine().meters.filament.notes").__len__() == 0)
+    pg.evaluate("""async () => {
+      const { Midi } = await import('/synth/vendor/tonejs-midi.js');
+      const m = new Midi();
+      m.header.tempos = [{ ticks: 0, bpm: 120 }];
+      m.header.update();
+      const t = m.addTrack(); t.channel = 0;
+      t.addNote({ midi: 60, ticks: 0, durationTicks: 960 * 8, velocity: 0.9 });
+      __synth.player().importBytes([...m.toArray()], 'stuck-hold.mid');
+      __synth.transport().setTempo(120);
+      await __synth.engine().ctx.resume();
+    }""")
+    pg.evaluate("__synth.player().play()"); pg.wait_for_timeout(350)
+    ck("library playback is holding its note", pg.evaluate("__synth.player().playing()") and 60 in (pg.evaluate("__synth.engine().meters.filament.notes") or []))
+    pg.evaluate("__synth.transport().setTempo(90)"); pg.wait_for_timeout(200)
+    pg.evaluate("__synth.player().stop()"); pg.wait_for_timeout(200)
+    ck("library stop after a tempo change leaves no note",
+       not pg.evaluate("__synth.player().playing()") and pg.evaluate("__synth.engine().meters.filament.notes") == [])
 
     pg.evaluate("""async () => { await __synth.player().loadId('chopin-funeral-march'); }""")
     pg.wait_for_timeout(40)

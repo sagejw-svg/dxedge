@@ -236,16 +236,15 @@ export function createDeck(api) {
     });
     return true;
   }
-  function stop() {
-    if (T.rec || T.armed) stopRec();
+  function stopPlayback() {
     if (!P.playing) return;
     P.playing = false; clearInterval(P.timer); P.timer = 0;
     const E = api.engine();
     P.used.forEach(d => {
-      // The flush also drops note offs that were scheduled but had not landed, so the count in
-      // sounding (kept at schedule time) is not enough: let go of every note playback has touched.
+      // Flush drops note offs that were scheduled but had not landed. Panic is all-notes-off,
+      // so a note the tracker missed still goes silent. It does not stop a take being recorded.
       E.sendTo(d, { t: 'flush' });
-      P.touched[d].forEach(n => E.sendTo(d, { t: 'off', n }));
+      E.sendTo(d, { t: 'panic' });
       P.sounding[d].clear(); P.touched[d].clear();
       ['sus', 'bend', 'mw', 'at'].forEach(t => E.sendTo(d, t === 'sus' ? { t, on: false } : { t, v: 0 }));
       E.playing(d, false);
@@ -254,6 +253,10 @@ export function createDeck(api) {
     const lit = [...P.lit.keys()]; P.lit.clear(); lit.forEach(n => api.lit(n));
     $('posV').textContent = fmtT(0) + ' / ' + fmtT(P.length);
     showPlay();
+  }
+  function stop() {
+    if (T.rec || T.armed) stopRec();
+    stopPlayback();
   }
   function showPlay() {
     $('playTake').setAttribute('aria-pressed', String(P.playing && P.src === 'take'));
@@ -319,7 +322,7 @@ export function createDeck(api) {
   showTake(); showFile();
 
   return {
-    rec, stop, lit: n => (P.lit.get(n) || 0) > 0,
+    rec, stop, silence: stopPlayback, lit: n => (P.lit.get(n) || 0) > 0,
     // test hooks
     test: {
       importBytes: (arr, name) => importBytes(Uint8Array.from(arr), name),
