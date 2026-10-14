@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v72'
+const CACHE_NAME = 'dxedge-v73'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -81,8 +81,26 @@ self.addEventListener('fetch', (event) => {
     // later feature in its markup. curl could never see it, because curl has no
     // HTTP cache. 'reload' bypasses that cache for the request and rewrites the
     // stored entry with what the server actually has, so one visit repairs it.
+    //
+    // Navigations that 301 to add a trailing slash (/synth, /crane-cab, and any
+    // other directory index) must be handed back to the browser as a redirect.
+    // fetch() follows by default, and a navigation answered with that followed
+    // response is rejected by Chrome (net::ERR_FAILED), so /synth never loads
+    // for anyone who already has this worker. redirect:'manual' yields an
+    // opaqueredirect the browser is allowed to follow, which updates the URL
+    // to the slash form. Relative modules then resolve against the directory.
+    const fetchInit = { cache: 'reload', credentials: 'same-origin' }
+    if (request.mode === 'navigate') fetchInit.redirect = 'manual'
     event.respondWith(
-      fetch(request.url, { cache: 'reload', credentials: 'same-origin' }).then(response => {
+      fetch(request.url, fetchInit).then(response => {
+        if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+          return response
+        }
+        // redirect:'manual' is ignored by some clients; a followed redirect is
+        // not a legal navigation response. Rebuild one the browser can follow.
+        // Subresources keep the followed body: a script that 301s should still
+        // arrive as that script, not as another redirect.
+        if (request.mode === 'navigate' && response.redirected) return Response.redirect(response.url, 301)
         if (response.ok) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then(cache => cache.put(request, clone))

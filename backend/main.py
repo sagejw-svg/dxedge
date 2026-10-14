@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse, Response
 from ratelimit import lotw_limiter, api_limiter, compute_limiter, stat_limiter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 import asyncio
 import mimetypes
 import logging
@@ -816,17 +816,34 @@ async def get_stats_summary(request: Request, days: int = Query(30, ge=1, le=365
 
 # Serve React frontend - try real file first, fall back to index.html for SPA routing
 @app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
+async def serve_frontend(request: Request, full_path: str):
     import os
-    DIST = "/app/frontend/dist"
+    from urllib.parse import quote
+    DIST = os.environ.get("DXEDGE_DIST", "/app/frontend/dist")
     if full_path:
         # Try direct file match first
         static_path = os.path.join(DIST, full_path)
         if os.path.isfile(static_path):
             return FileResponse(static_path)
-        # Try {path}/index.html for directory-style URLs (/cyber, /aethersdr)
+        # Directory index (/synth, /crane-cab, /emulators, /cyber, ...).
+        # Relative module and asset URLs resolve against the document URL's
+        # directory, so /emulators makes fetch('emulators.json') request
+        # /emulators.json and the SPA shell answers it. nginx already 301s
+        # /synth and /crane-cab (a slash-terminated proxy location does that
+        # on its own); every other directory index is served from here.
         index_path = os.path.join(DIST, full_path, "index.html")
         if os.path.isfile(index_path):
+            path = request.scope.get("path") or "/"
+            if not path.endswith("/"):
+                location = quote(path + "/", safe="/")
+                qs = request.scope.get("query_string") or b""
+                if qs:
+                    location += "?" + qs.decode("latin-1")
+                # RedirectResponse percent-encodes '%' again, which would
+                # corrupt a query that is already encoded. Set Location after.
+                response = RedirectResponse(url=location, status_code=301)
+                response.headers["location"] = location
+                return response
             return FileResponse(index_path)
     # SPA fallback
     index = os.path.join(DIST, "index.html")
