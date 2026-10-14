@@ -262,21 +262,25 @@ function handle(eng, m, frame) {
   }
   if (m.t === 'transport') {
     const seq = seqOf(eng);
+    // A host may force the clock for this run without rewriting the saved patch.
+    if (m.clock === 'external' || m.clock === 'internal') eng.clockMode = m.clock;
+    const clock = eng.clockMode || seq.clock;
     if (m.playing) {
       eng.armed = true;
-      eng.stepCount = 0;
+      eng.stepCount = m.step == null ? 0 : (m.step | 0);
       eng.origin = frame;
       eng.nextFrame = frame;
-      eng.playing = seq.clock === 'internal';
+      eng.playing = clock === 'internal';
     } else {
-      eng.playing = false; eng.armed = false; eng.stepCount = 0;
+      eng.playing = false; eng.armed = false; eng.stepCount = 0; eng.clockMode = null;
       if (eng.onStep) eng.onStep(-1, seq.length);
     }
     return;
   }
   if (m.t === 'tick') {
     const seq = seqOf(eng);
-    if (!eng.armed || seq.clock !== 'external') return;
+    const clock = eng.clockMode || seq.clock;
+    if (!eng.armed || clock !== 'external') return;
     const index = eng.stepCount % seq.length;
     fireStep(eng, index);
     eng.stepCount++;

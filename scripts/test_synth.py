@@ -492,12 +492,21 @@ with sync_playwright() as pw:
         if len(got) != len(want): return False
         return all(abs(a - b) <= tol for a, b in zip(got, want))
     VOICE_IDS = ["kick", "snare", "hatC", "hatO", "clap", "tom", "rim"]
-    devd = pg.evaluate("__synth.drumDevice()")
-    ck("D. adapter: dekatron, stereo, 2x worklet, seven voices, a parameter table",
-       devd["id"] == "dekatron" and devd["channels"] == 2 and devd["oversample"] == 2
+    devd = pg.evaluate("""() => { const d = __synth.drumDevice(); return {
+      id: d.id, api: d.api, name: d.name, vendor: d.vendor, instrument: d.instrument,
+      audioInputs: d.audioInputs, audioOutputs: d.audioOutputs, midiInput: d.midiInput, midiOutput: d.midiOutput,
+      channels: d.channels, oversample: d.oversample, processor: d.processor, worklet: d.worklet,
+      voices: d.voices, parameters: d.parameters, clock: { modes: d.clock.modes, ppq: d.clock.ppq },
+      messages: d.messages, hasCreate: typeof d.create === 'function' }; }""")
+    plen = devd["parameters"]
+    ck("D. adapter: dxrack/1 device, stereo output, MIDI in, 2x worklet, seven voices",
+       devd["id"] == "dekatron" and devd["api"] == "dxrack/1" and devd["instrument"] is True
+       and devd["audioInputs"] == 0 and devd["audioOutputs"] == 1 and devd["midiInput"] is True and devd["midiOutput"] is False
+       and devd["hasCreate"] is True and devd["channels"] == 2 and devd["oversample"] == 2
        and devd["processor"] == "dekatron" and devd["worklet"] == "drums.worklet.js"
-       and devd["voices"] == VOICE_IDS and len(devd["parameters"]) >= 40
-       and devd["clock"]["modes"] == ["internal", "external"]
+       and devd["voices"] == VOICE_IDS and len(plen) >= 40
+       and plen["seq.length"]["type"] == "int" and plen["seq.bpm"]["type"] == "float"
+       and devd["clock"]["modes"] == ["internal", "external"] and devd["clock"]["ppq"] == 24
        and devd["messages"] == ["patch", "trig", "transport", "tick", "panic", "active"], devd)
     quiet = {vid: {"level": 0} for vid in VOICE_IDS}
     for vid in VOICE_IDS:
@@ -544,6 +553,22 @@ with sync_playwright() as pw:
     L, _ = drum(rim_score(ext, row), ticks, 1.0)
     got = onsets(L); want = [0.08 + 0.2 * i for i in range(4)]
     ck(f"D. external clock fires one step per tick, within 5 ms", near(got, want), (got, want))
+    # The rack transport is 24 pulses per quarter. Map those pulses onto the same
+    # step grid the internal clock uses, including swing, and render the result.
+    def host_events(bpm, n_ticks, sr=SR):
+        dt = (60 / bpm) / 24
+        ev = [{"type": "play", "tick": 0, "frame": 0, "tempo": bpm}]
+        for t in range(n_ticks):
+            ev.append({"type": "clock", "tick": t, "frame": int(round(t * dt * sr)), "tempo": bpm})
+        return ev
+    for swing, label in ((0, "straight"), (1, "triplet swing")):
+        seq = {"bpm": 120, "swing": swing, "length": 8, "accentAmt": 0, "clock": "internal"}
+        msgs = pg.evaluate("(a) => __synth.drumHostClock(a.ev, a.seq)", {"ev": host_events(120, 56), "seq": {"swing": swing, "length": 8}})
+        for m in msgs:
+            if m.get("at") is not None: m["at"] = m["at"] / SR
+        L, _ = drum(rim_score(seq, row), msgs, 1.05)
+        got, want = onsets(L), hit_times(seq, row, 1.05)
+        ck(f"D. rack transport at 24 ppq, {label}: steps match the internal grid within 5 ms", near(got, want), (["%.4f" % t for t in got], ["%.4f" % t for t in want]))
     hats = {"device": "dekatron", "level": 1, "voices": dict(quiet, hatO={"decay": 0.9, "level": 1, "tune": 400}, hatC={"decay": 0.03, "level": 1})}
     open_L, _ = drum(hats, [{"at": 0.05, "t": "trig", "voice": "hatO", "v": 1}], 0.4)
     choke_L, _ = drum(hats, [{"at": 0.05, "t": "trig", "voice": "hatO", "v": 1}, {"at": 0.12, "t": "trig", "voice": "hatC", "v": 1}], 0.4)

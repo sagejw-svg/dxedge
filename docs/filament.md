@@ -122,19 +122,33 @@ through a band, a handful of noise bursts, a short wood block). No third-party s
 - [ ] Dekatron on the shared host clock, once that clock exists. Until then the pattern clock is
       inside the worklet (`stepSeconds`), and a host can drive it with `{t:'tick'}` instead.
 
-The host adapter is `drumDevice` in `drums.js`, plus `createDrumHost` in `drums-ui.js`. A future
-rack calls `createDrumNode(ctx, {patch, destination})` and posts the messages below. It does not
-import Filament's engine. The page wires the node to the shared ensemble input and sleeps it when
-another device is selected.
+The host adapter is `drumDevice` in `drums.js` (the `dxrack/1` descriptor) and `create` in
+`drums-ui.js`. It does not import Filament's engine, and it does not import `device.js`, so the
+page still runs before the rack framework is merged. When the running engine has
+`api === 'dxrack/1'`, the page calls `engine.registerDevice(drumDevice)` and
+`engine.addDevice('dekatron', node)`, and the pattern follows `engine.transport`. Until then the
+node connects to the shared ensemble input and the pattern button is the clock.
+
+```js
+registerDevice({
+  id: 'dekatron', name: 'Dekatron', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  parameters: { 'seq.bpm': { id, label, type: 'float', default, min, max }, /* ... */ },
+  async create(ctx, host) {
+    const output = /* stereo AudioWorkletNode, processor 'dekatron' */;
+    host.transport.subscribe(ev => { /* play | stop | tempo | clock (24 ppq) */ });
+    return output;
+  },
+});
+```
 
 | | |
 |-|-|
-| Identity | `id: 'dekatron'`, `processor: 'dekatron'`, `worklet: 'drums.worklet.js'`, `channels: 2`, `oversample: 2` |
-| Patch | `normalize(patch)` → schema v1 JSON, `device: 'dekatron'`. `parameters` is the stable knob list (`level`, `seq.*`, `voices.<id>.<knob>`). Steps and the accent lane are pattern data, not knobs. |
-| Factory | `factory`, `defaults` |
-| Notes | `voiceForNote(midiNote)` → a voice id, or null |
-| Messages | `{t:'patch', p}`, `{t:'trig', voice, v}`, `{t:'transport', playing}`, `{t:'tick'}` (external clock only), `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
-| Clock | `clock.modes`: `internal` (the worklet fires step i at `clock.stepSeconds(i, bpm, swing)`) and `external` (one `{t:'tick'}` per step after transport starts). |
+| Identity | `id: 'dekatron'`, `api: 'dxrack/1'`, `processor: 'dekatron'`, `worklet: 'drums.worklet.js'`, one stereo output, 2x oversampling |
+| Patch | `normalize(patch)` → schema v1 JSON, `device: 'dekatron'`. `parameters` is the dxrack/1 table (`level`, `seq.*`, `voices.<id>.<knob>`). Steps and the accent lane are pattern data, not knobs. |
+| Notes | `voiceForNote(midiNote)` → a voice id, or null. `midi([0x90, note, vel])` is how a host plays a pad. |
+| Messages | `{t:'patch', p}`, `{t:'trig', voice, v}`, `{t:'transport', playing, clock, step}`, `{t:'tick'}`, `{t:'panic'}`, `{t:'active', on}`. Optional `at` is a frame time. |
+| Clock | With `host.transport`: play, stop, tempo, and `clock` pulses at 24 per quarter. A step is 6 pulses; swing delays an odd step by up to 2 pulses, and the next even step stays on the grid. Without a transport, the worklet fires step i at `stepSeconds(i, bpm, swing)`. |
 | Meters | Worklet posts `{t:'meter'}` and `{t:'step', step, length, playing}` |
 
 ### MIDI files: recorder and player (James, 13 Oct 2026) - next, ahead of the 0.2 list

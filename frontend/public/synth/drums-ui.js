@@ -1,12 +1,13 @@
-// Dekatron on the page: the panel, and the small host adapter a rack can call later.
+// Dekatron on the page: the panel, and the dxrack/1 adapter.
 //
-// The adapter does not know about Filament's engine. The page hands it an AudioContext
-// and a destination node (today, the shared ensemble input) and talks in patches and
-// messages. Wiring a future mixer is: createNode(..., destination) and send transport
-// ticks instead of pressing play.
+// create(ctx, host) returns the stereo worklet node. If host.transport is the
+// rack clock, the pattern follows its play, stop, tempo and 24 ppq pulses.
+// If there is no transport (the rack framework is not on this page yet), the
+// pattern button runs the worklet's own clock. The adapter does not import
+// Filament's engine.
 
 import { makeKnob } from './knob.js';
-import { drumDevice, normalizeDrum, DRUM_DEFAULT, VOICES, VOICE_LABELS } from './drums.js';
+import { drumDevice, normalizeDrum, DRUM_DEFAULT, VOICES, VOICE_LABELS, createHostClock } from './drums.js';
 import { createDrumEngine, postDrum, renderDrum } from './drums-dsp.js';
 
 const WORKLET = new URL('./drums.worklet.js', import.meta.url).href;
@@ -40,12 +41,50 @@ export async function renderDrums({ patch, events = [], seconds = 1, sampleRate 
   return buf;
 }
 
+function isRack(engine) {
+  return !!(engine && engine.api === 'dxrack/1' && typeof engine.registerDevice === 'function');
+}
+
+// Subscribe a node to a dxrack transport. Tempo messages stay on the main
+// thread (the worklet's step grid comes from the pulses, not from bpm).
+export function followTransport(node, transport, readSeq, onTempo, onMessage) {
+  const clock = createHostClock(readSeq);
+  const send = m => { if (m && node && node.port) node.port.postMessage(m); };
+  return transport.subscribe(ev => {
+    clock.push(ev).forEach(m => {
+      if (m.t === 'tempo') { if (onTempo) onTempo(m.bpm); return; }
+      send(m);
+      if (onMessage) onMessage(m);
+    });
+  });
+}
+
+// dxrack/1 entry. A host calls create(ctx, host) and gets the stereo node.
+drumDevice.create = async function create(ctx, host) {
+  host = host || {};
+  const transport = host.transport;
+  const hosted = !!(transport && typeof transport.subscribe === 'function');
+  const node = await createDrumNode(ctx, {
+    patch: host.patch, events: host.events, active: host.active !== false,
+    destination: hosted ? undefined : host.destination,
+  });
+  if (hosted) followTransport(node, transport, () => host.patch || {}, host.onTempo);
+  return node;
+};
+
 // Live node holder. attach() is idempotent per context.
+// Pass the engine as the third argument. When it speaks dxrack/1, Dekatron
+// registers and follows engine.transport. Otherwise the node connects to
+// `destination` and the pattern button is the clock.
 export function createDrumHost() {
   let node = null;
   const pending = [];
   const meter = { step: -1, playing: false, voices: 0, cpu: 0, v1: 0, v2: 0, length: 16 };
   let onMeter = null;
+  let onTempo = null;
+  let patch = normalizeDrum(DRUM_DEFAULT);
+  let rackTransport = null;
+  let unsub = null;
   function send(m) { if (node) node.port.postMessage(m); else pending.push(m); }
   function bind(n) {
     n.port.onmessage = e => {
@@ -59,21 +98,54 @@ export function createDrumHost() {
       }
     };
   }
+  function useTransport(transport) {
+    if (!transport || typeof transport.subscribe !== 'function' || rackTransport === transport) return;
+    if (unsub) unsub();
+    rackTransport = transport;
+    unsub = followTransport(node, transport, () => patch, bpm => { if (onTempo) onTempo(bpm); }, m => {
+      if (m.t !== 'transport') return;
+      meter.playing = !!m.playing;
+      if (!m.playing) meter.step = -1;
+      if (onMeter) onMeter(meter);
+    });
+  }
   return {
     meter: () => meter,
     setMeterListener(fn) { onMeter = fn; },
+    setTempoListener(fn) { onTempo = fn; },
     node: () => node,
-    async attach(audioCtx, destination) {
+    rack: () => !!rackTransport,
+    async attach(audioCtx, destination, engine) {
       if (node) return node;
-      node = await createDrumNode(audioCtx, { destination, active: true });
+      const rack = isRack(engine);
+      if (rack) engine.registerDevice(drumDevice);
+      const transport = rack && engine.transport;
+      node = await createDrumNode(audioCtx, { destination: transport ? undefined : destination, active: true });
       bind(node);
+      if (transport) useTransport(transport);
+      let mixed = false;
+      if (rack && typeof engine.addDevice === 'function') {
+        try { engine.addDevice(drumDevice.id, node, patch); mixed = true; }
+        catch (e) { mixed = false; }
+      }
+      if (!mixed && transport && destination) node.connect(destination);
       pending.splice(0).forEach(m => node.port.postMessage(m));
       return node;
     },
-    setPatch(p) { send({ t: 'patch', p: normalizeDrum(p) }); },
+    setPatch(p) { patch = normalizeDrum(p); send({ t: 'patch', p: patch }); },
     setActive(on) { send({ t: 'active', on: !!on }); if (!on) { meter.playing = false; meter.step = -1; if (onMeter) onMeter(meter); } },
     trigger(voice, vel) { if (voice) send({ t: 'trig', voice, v: vel == null ? 0.9 : vel }); },
-    transport(playing) { send({ t: 'transport', playing: !!playing }); meter.playing = !!playing; if (!playing) meter.step = -1; },
+    setTempo(bpm) { if (rackTransport && typeof rackTransport.setTempo === 'function') rackTransport.setTempo(bpm); },
+    transport(playing) {
+      if (rackTransport) {
+        if (playing && typeof rackTransport.play === 'function') rackTransport.play();
+        else if (!playing && typeof rackTransport.stop === 'function') rackTransport.stop();
+        return;
+      }
+      send({ t: 'transport', playing: !!playing });
+      meter.playing = !!playing;
+      if (!playing) meter.step = -1;
+    },
   };
 }
 
@@ -122,6 +194,7 @@ export function mountDrumPanel(container, hooks) {
         for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
         o[ks[ks.length - 1]] = ks[ks.length - 1] === 'length' ? Math.round(v) : v;
         hooks.edited();
+        if (path === 'seq.bpm' && hooks.setTempo) hooks.setTempo(v);
       },
     });
     k.el.dataset.path = path;

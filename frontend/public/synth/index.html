@@ -412,7 +412,7 @@ import { paintTubeState, fitCanvas } from './tubepaint.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
-import { drumDevice, normalizeDrum, DRUM_FACTORY, DRUM_CATS, DRUM_DEFAULT, voiceForNote } from './drums.js';
+import { drumDevice, normalizeDrum, DRUM_FACTORY, DRUM_CATS, DRUM_DEFAULT, voiceForNote, createHostClock } from './drums.js';
 import { createDrumHost, mountDrumPanel, renderDrums } from './drums-ui.js';
 
 const $ = id => document.getElementById(id);
@@ -467,7 +467,7 @@ function ensureEngine() {
   enginePromise = createEngine(ctx, { patch: bootPatch }).then(e => {
     E = e; E.master.gain.value = 1;
     const ready = dev === 'dekatron'
-      ? drumHost.attach(ctx, E.ens ? E.ens.input : E.master).then(() => {
+      ? drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         drumHost.setActive(true); drumHost.setPatch(cur);
       })
@@ -825,7 +825,7 @@ function setDevice(d) {
   const run = () => {
     if (d === 'dekatron') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
-      return drumHost.attach(ctx, E.ens ? E.ens.input : E.master).then(() => { drumHost.setActive(true); drumHost.setPatch(cur); });
+      return drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { drumHost.setActive(true); drumHost.setPatch(cur); });
     }
     drumHost.setActive(false);
     E.setDevice(d, cur);
@@ -1246,7 +1246,15 @@ drumPanel = mountDrumPanel($('drumRoot'), {
   wake,
   trigger(id) { drumHost.trigger(id, 0.9); },
   transport(on) { drumHost.transport(on); },
+  setTempo(bpm) { drumHost.setTempo(bpm); },
   playing: () => drumHost.meter().playing,
+});
+drumHost.setTempoListener(bpm => {
+  const p = drumPatch();
+  const n = Math.max(40, Math.min(240, Math.round(+bpm || 0)));
+  if (!isFinite(n) || p.seq.bpm === n) return;
+  p.seq.bpm = n;
+  if (drumPanel) drumPanel.sync();
 });
 
 // ---------------------------------------------------------------- test hook
@@ -1275,6 +1283,12 @@ window.__synth = {
   cathodeFactory: () => C_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
   cathodePatch: name => clone(C_FACTORY.find(p => p.name === name)),
   drumDevice: () => drumDevice,
+  drumHostClock: (events, seq) => {
+    const clock = createHostClock(() => seq || {});
+    const out = [];
+    (events || []).forEach(ev => clock.push(ev).forEach(m => out.push(m)));
+    return out;
+  },
   drumFactory: () => DRUM_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
   drumPatch: name => clone(DRUM_FACTORY.find(p => p.name === name)),
   drumMeter: () => Object.assign({}, drumHost.meter()),

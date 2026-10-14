@@ -220,23 +220,101 @@ export const DRUM_FACTORY = [
   }),
 ];
 
-// What a host (this page today, the rack framework later) can call.
+// dxrack/1 parameter info. Same ids as DRUM_PARAMETERS. A choice or boolean would
+// carry min/max as an index; every Dekatron knob is a number. Length is an int
+// (the span is small and whole); the rest are floats, matching parameterTable.
+const INT_PARAM = { 'seq.length': 1 };
+export const DRUM_PARAMETER_INFO = {};
+DRUM_PARAMETERS.forEach(p => {
+  DRUM_PARAMETER_INFO[p.id] = {
+    id: p.id, label: p.name, type: INT_PARAM[p.id] ? 'int' : 'float',
+    default: p.default, min: p.min, max: p.max,
+  };
+});
+
+// The rack transport pulses 24 times a quarter note. A step is a sixteenth, so
+// six pulses. Swing delays an odd step by up to two pulses (a third of a
+// sixteenth, a triplet at full swing). The next even step stays on the grid,
+// which is the same rule as stepSeconds.
+export const RACK_PPQ = 24;
+export const TICKS_PER_STEP = RACK_PPQ / 4;
+export function stepTick(i, swing) {
+  const s = Math.max(0, Math.min(1, +swing || 0));
+  return i * TICKS_PER_STEP + ((i & 1) ? s * (TICKS_PER_STEP / 3) : 0);
+}
+// First step whose pulse is still ahead of `tick` (or exactly on it).
+export function firstStepAt(tick, swing) {
+  const t = Math.max(0, +tick || 0);
+  let i = 0;
+  while (i < 100000 && stepTick(i, swing) < t - 1e-9) i++;
+  return i;
+}
+
+// Turn rack transport events into worklet messages. `readSeq` returns
+// {swing, length}. No transport object is required, so the page can follow a
+// host clock or keep its own.
+export function createHostClock(readSeq) {
+  let nextStep = 0;
+  let playing = false;
+  return {
+    get playing() { return playing; },
+    push(ev) {
+      const seq = (readSeq && readSeq()) || {};
+      const swing = Math.max(0, Math.min(1, +seq.swing || 0));
+      const out = [];
+      if (!ev || !ev.type) return out;
+      if (ev.type === 'play') {
+        playing = true;
+        nextStep = firstStepAt(ev.tick || 0, swing);
+        out.push({ t: 'transport', playing: true, clock: 'external', step: nextStep, at: ev.frame });
+      } else if (ev.type === 'stop') {
+        playing = false;
+        out.push({ t: 'transport', playing: false, at: ev.frame });
+      } else if (ev.type === 'tempo') {
+        out.push({ t: 'tempo', bpm: ev.tempo });
+      } else if (ev.type === 'clock' && playing) {
+        let guard = 0;
+        while (stepTick(nextStep, swing) <= (+ev.tick || 0) + 1e-9 && guard++ < 4) {
+          out.push({ t: 'tick', at: ev.frame });
+          nextStep++;
+        }
+      }
+      return out;
+    },
+  };
+}
+
+// What a host can call. The shape is the dxrack/1 device contract (see the rack
+// framework): one stereo output, MIDI in, a parameter table, and create(ctx, host).
+// create is attached in drums-ui.js, because it builds an AudioWorklet. When the
+// host has a transport, the sequencer follows it. When it does not (this page,
+// until that framework is merged), the pattern keeps its own clock.
+export const RACK_API = 'dxrack/1';
 export const drumDevice = {
   id: DRUM_ID,
   name: 'Dekatron',
-  version: DRUM_SCHEMA,
+  vendor: 'DX Edge',
+  version: String(DRUM_SCHEMA),
+  api: RACK_API,
+  description: 'Analog-style drum machine',
+  instrument: true,
+  audioInputs: 0,
+  audioOutputs: 1,
+  midiInput: true,
+  midiOutput: false,
   processor: 'dekatron',
   worklet: 'drums.worklet.js',
   channels: 2,
   oversample: 2,
   voices: VOICES.slice(),
-  parameters: DRUM_PARAMETERS,
+  parameters: DRUM_PARAMETER_INFO,
   voiceForNote,
   normalize: normalizeDrum,
   factory: DRUM_FACTORY,
   defaults: DRUM_DEFAULT,
-  // Internal clock fires step i at stepSeconds(i). External clock waits for {t:'tick'}
-  // (optional `at` frame) after {t:'transport', playing:true}, one tick per step.
-  clock: { modes: ['internal', 'external'], stepSeconds },
+  // Internal clock fires step i at stepSeconds(i). A host transport (24 ppq)
+  // is converted by createHostClock into {t:'tick'} at stepTick(i). Either way
+  // the worklet is the thing that makes the sound.
+  clock: { modes: ['internal', 'external'], stepSeconds, stepTick, ppq: RACK_PPQ },
   messages: ['patch', 'trig', 'transport', 'tick', 'panic', 'active'],
 };
