@@ -1,0 +1,194 @@
+/*
+  Copyright 2021 David Whiting
+  This work is licensed under a Creative Commons Attribution 4.0 International License
+  https://creativecommons.org/licenses/by/4.0/
+*/
+
+/* Reskin for DXEdge: the site mono stack and amber on black. The Orbitron
+   face was loaded from Google Fonts upstream and is not used here. */
+
+body {
+    background-color: #080808;
+    color: #e2e2e2;
+    font-family: 'SF Mono', 'Fira Code', Consolas, ui-monospace, monospace;
+}
+
+#ui {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+
+}
+
+p {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right:auto;
+    font-family: monospace;
+}
+
+a {
+    color: #00ff9d;
+}
+
+@media (max-width: 500px) {
+    p {
+        font-size: 0.8em;
+    }
+}
+
+.machine,.control-group {
+
+    background-color: black;
+    display: grid;
+    grid-template-columns: 20px auto;
+    border: 1px solid #323232;
+    margin:5px;
+}
+
+.label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: center;
+    /* left because we're 180 rotated */
+    border-left: 1px solid #323232;
+}
+
+.machine .group {
+    display: grid;
+    grid-template-columns: 25px auto 70px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    height: 100px;
+}
+
+.control-group .group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.control-group .group button {
+    flex-grow: 1;
+}
+
+.pattern {
+    width:100%;
+    height: 200px;
+    /*min-height: 150px;*/
+    /*border-right:1px solid rgba(255,255,255,0.3);*/
+}
+
+button {
+    color: #e2e2e2;
+    background-color: #141414;
+    border: 1px solid #323232;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'SF Mono', 'Fira Code', Consolas, ui-monospace, monospace;
+}
+
+button:hover {
+    background-color: #222;
+}
+
+.dial {
+    display: block;
+}
+.mutes button {
+    height: 50px;
+    display: block;
+}
+
+.mutes .on {
+    background-color: #6a3a22;
+}
+
+.trigger-button {
+    font-size:20px;
+    padding:0;
+    text-align: center;
+}
+
+.params.horizontal .dial {
+  display: inline-block;
+}
+
+.control-group .params {
+    height: 50px;
+    margin-top: auto;
+    margin-bottom: auto;
+    text-align: center;
+}
+.control-group {
+    flex-grow: 1;
+}
+
+.meter canvas {
+    object-fit: fill;
+    height: 100px;
+    width:100px;
+}
+
+
+@keyframes wait-animate {
+    0% { background-color: black }
+    50% { background-color: red }
+    100% { background-color: black }
+}
+
+button.waiting {
+    background-color: red;
+    animation: wait-animate 0.2s infinite;
+}
+
+.parameter-controlled {
+    background-color: #1a140c;
+}
+
+
+.notegen-note-display {
+    width: 200px;
+    height: 50px;
+    margin-left: auto;
+    margin-right: auto;
+    padding:5px;
+}
+.controls button {
+    width: 100%;
+}
+
+@keyframes autopilot-animate {
+    0% { background-color: #1a140c }
+    50% { background-color: #6a4a20 }
+    100% { background-color: #1a140c }
+}
+/*@keyframes autopilot-border-animate {*/
+/*    0% { border: 1px solid #444 }*/
+/*    50% { border: 1px solid #494 }*/
+/*    100% { border: 1px solid #444 }*/
+/*}*/
+
+.autopilot-button.on {
+    animation: autopilot-animate 2s infinite;
+}
+
+
+h2 {
+    text-align: center;
+    font-size:1.5em;
+}
+
+/*@media (max-width: 640px) {*/
+/*    h2 {*/
+/*        font-size: 1.2em;*/
+/*    }*/
+/*}*/
+
+

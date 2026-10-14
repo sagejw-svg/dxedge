@@ -84,6 +84,12 @@
   .devbtn i { width: 7px; height: 7px; border-radius: 50%; background: #333; align-self: center; }
   .devbtn[aria-pressed="true"] { color: var(--amber2); border-color: var(--amber); background: rgba(255,179,71,0.07); }
   .devbtn[aria-pressed="true"] i { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  .racklinks { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 8px; align-items: center; }
+  .racklinks .devlink { display: inline-flex; align-items: baseline; gap: 6px; color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; min-height: 36px; font-size: 12px; letter-spacing: 2px; font-weight: 600;
+    background: linear-gradient(180deg, #1a1a1a, #101010); }
+  .racklinks .devlink small { font-size: 9.5px; letter-spacing: 1px; font-weight: 400; color: var(--dim); text-transform: uppercase; }
+  .racklinks .devlink:hover { border-color: var(--amber); color: var(--amber2); text-decoration: none; }
   body[data-dev="cathode"] [data-dev="filament"], body[data-dev="filament"] [data-dev="cathode"] { display: none !important; }
   body[data-dev="dekatron"] [data-dev="filament"], body[data-dev="dekatron"] [data-dev="cathode"],
   body[data-dev="filament"] [data-dev="dekatron"], body[data-dev="cathode"] [data-dev="dekatron"] { display: none !important; }
@@ -275,6 +281,7 @@
     .dnum { flex-basis: 44px; width: 44px; }
     .dpad { min-height: 44px; min-width: 44px; }
     .rail { padding: 6px 6px 0; } .rail .label { display: none; } .devbtn small { display: none; } .devbtn { flex: 1 1 0; justify-content: center; min-height: 44px; }
+    .racklinks { padding: 6px 6px 0; } .racklinks .devlink { flex: 1 1 calc(50% - 6px); justify-content: center; min-width: 0; min-height: 44px; } .racklinks .devlink small { display: none; }
     .jackfield { gap: 8px; } .jgroup { flex: 1 1 100%; }
     .jack { width: calc((100% - 16px) / 5); min-width: 52px; min-height: 66px; font-size: 8px; }
     body[data-tab="stereo"] #mStereo { order: -2; } body[data-tab="stereo"] #mEns { order: -1; }
@@ -326,6 +333,10 @@
       <button class="devbtn" id="devF" data-d="filament" aria-pressed="true"><i></i>FILAMENT<small>poly tube synth</small></button>
       <button class="devbtn" id="devC" data-d="cathode" aria-pressed="false"><i></i>CATHODE<small>mono semi-modular</small></button>
       <button class="devbtn" id="devD" data-d="dekatron" aria-pressed="false"><i></i>DEKATRON<small>drum pattern</small></button>
+    </div>
+    <div class="racklinks" aria-label="More devices, each on its own page">
+      <a class="devlink" href="/synth/fm/">HEXODE<small>six-operator FM</small></a>
+      <a class="devlink" href="/synth/acid/">ANODE<small>acid bass</small></a>
     </div>
     <div class="chassis" id="chassis" aria-label="Tube chassis">
       <div class="tgroup">
@@ -534,7 +545,7 @@
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.8: Filament, Cathode, and Dekatron in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Record or render a 24-bit WAV from the master. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.9: Filament, Cathode, and Dekatron in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Record or render a 24-bit WAV from the master. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1570,7 +1581,7 @@ drumHost.setTempoListener(bpm => {
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.8-library',
+  version: '0.9-pages',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),

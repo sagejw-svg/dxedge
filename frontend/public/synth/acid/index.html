@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+  Anode, an acid bass groovebox for the Filament rack.
+  Built from The Endless Acid Banger by David Whiting (Vitling).
+  Copyright 2021 David Whiting
+  Licensed under Creative Commons Attribution 4.0 International.
+  https://creativecommons.org/licenses/by/4.0/
+  https://github.com/vitling/acid-banger commit bb93d972d9c656fe0acc861c94a492b56634d5e7
+  Changes: DXEdge colors, synthesized drums in place of the bundled recordings,
+  and the names on the panel. See CHANGES.md.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Anode - acid bass groovebox - DXEdge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080808">
+    <meta name="description" content="Anode: an acid bass groovebox in the browser. Two bass lines, a synthesized drum kit, and a delay, generated as you listen.">
+    <script type="module" src="js/app.js"></script>
+    <link rel="stylesheet" href="ui.css">
+    <style>
+      .site-top { max-width: 1200px; margin: 16px auto 8px; padding: 0 12px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: flex-end; justify-content: space-between; }
+      .site-label { font-size: 10px; color: #7c7c7c; letter-spacing: 3px; text-transform: uppercase; }
+      h1 { font-size: 22px; margin: 2px 0 0; font-weight: 600; letter-spacing: 4px; color: #fff; }
+      h1 span { color: #ffb347; }
+      .site-intro { color: #a6a6a6; margin: 3px 0 0; font-size: 12px; max-width: 680px; }
+      .site-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .site-links a { font-size: 12px; }
+      .site-tip { display: inline-flex; align-items: center; min-height: 34px; border: 1px solid rgba(255,179,71,0.42); border-radius: 999px; padding: 5px 13px; color: #ffd08a !important; font-weight: 600; text-decoration: none; }
+      .credit { max-width: 1200px; margin: 8px auto 18px; padding: 0 12px; color: #a6a6a6; font-size: 12px; line-height: 1.6; }
+      .credit a { color: #00ff9d; }
+    </style>
+</head>
+<body>
+<header class="site-top">
+    <div>
+        <div class="site-label">dxedge.net / synth / acid</div>
+        <h1>AN<span>ODE</span></h1>
+        <p class="site-intro">An acid bass groovebox. Two lines, a drum kit, and a delay, written while they play. Leave the autopilot switches on, or turn a dial yourself.</p>
+    </div>
+    <div class="site-links">
+        <a href="/synth/">Filament rack</a>
+        <a href="/synth/fm/">Hexode</a>
+        <a class="site-tip" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
+    </div>
+</header>
+<p class="credit">
+    Anode is <a href="https://github.com/vitling/acid-banger">The Endless Acid Banger</a> by
+    <a href="https://www.vitling.xyz">Vitling</a> (David Whiting),
+    used under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>,
+    commit <code>bb93d97</code>.
+    This copy is reskinned for DXEdge and replaces the original drum recordings with drums synthesized in the page.
+    <a href="https://github.com/sponsors/vitling">Sponsor Vitling</a>
+    or <a href="https://music.vitling.xyz">buy Vitling's music</a>.
+</p>
+</body>
+</html>

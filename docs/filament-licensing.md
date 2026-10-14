@@ -60,6 +60,37 @@ advice; have an IP attorney review before a commercial launch.
 | [FluidR3_GM SoundFont](https://github.com/educandu/abcjs-soundfonts) | MIT (per that repository's notes; confirm at the original source before shipping) | A General MIDI instrument set | Default sounds for imported MIDI files and a GM fallback. |
 | Salamander Grand Piano | Public domain now (originally CC BY 3.0), per the same repository; confirm at source | A sampled grand piano | A piano preset for the sampler. |
 
+## Register: vendored devices (checked 14 Oct 2026)
+
+These two are in the tree, pinned, and linked from `/synth/` and the Synth tab. Notices are in `THIRD_PARTY_NOTICES.md`. Each page names what was left out.
+
+| Resource | Commit | License | Notices | What shipped |
+|-|-|-|-|-|
+| [dx7-synth-js](https://github.com/mmontag/dx7-synth-js) by Matt Montag | `f269f0e02fc67b2f824b01a8416339cd5c4829e0` (2025-05-18) | MIT, from `LICENSE.txt` in that commit. `package.json` in the same commit says ISC; the license file is the grant we follow | `frontend/public/synth/fm/LICENSE.txt`, `UPSTREAM-README.md`, `PIN`, `CHANGES.md`, and `THIRD_PARTY_NOTICES.md` | Hexode at `/synth/fm/`. Six-operator FM, Web MIDI in, and 32-voice `.syx` loading. The page starts on the single "Init" voice from `default-presets.js`. |
+| [acid-banger](https://github.com/vitling/acid-banger) by David Whiting (Vitling) | `bb93d972d9c656fe0acc861c94a492b56634d5e7` (2021-05-28) | CC BY 4.0. The repo has no LICENSE file; the README and the source headers are the grant. Attribution is on the page | `frontend/public/synth/acid/LICENSE.txt` (the CC BY 4.0 legal code), `UPSTREAM-README.md`, `PIN`, `CHANGES.md`, and the credit on the page | Anode at `/synth/acid/`. Static JS compiled from the TypeScript. Visible credit: Vitling (David Whiting), the work's title, the license, and a note that this copy changed the drums and the skin. |
+
+Left out of Hexode, because the repo does not show a right to redistribute them:
+
+- `roms/ROM1A.SYX`. A 32-voice bulk dump (`F0 43 00 09 20 00`) whose names are the familiar factory set, and the page selected voice 11 of that set. Not included. A player loads their own `.syx`.
+- `midi/*.mid`. Files named for particular compositions, with no license of their own. The song-file player is not wired up. Web MIDI input stays.
+- `impulses/church-saint-laurentius.wav`. A recorded room, origin and license not stated. The reverb is a short noise tail generated in the page.
+- The two bundled fonts (Digital-7, and the 5x8 LCD face marked "Copyright vader381 2010"). No grant in the repo. The page uses the site's mono stack.
+- Product photographs and logo images. Not used. The device's name on the page is Hexode.
+
+Left out of Anode: `909BD.mp3`, `909SD.mp3`, `909CH.mp3`, `909OH.mp3`. The project license is CC BY 4.0, but nothing in the repo says those recordings are the author's to license, and the names point at a drum machine. The kit is synthesized in `audio.ts`. The page does not say 303 or 909.
+
+Bundled into `frontend/public/synth/fm/bundle.js` with the FM engine (each is MIT):
+
+| Library | Version we resolved | Role |
+|-|-|-|
+| [AngularJS](https://github.com/angular/angular.js) | 1.4.14 | The panel |
+| [lodash](https://github.com/lodash/lodash) | 4.17.21 | `throttle` on the knobs |
+| [ngstorage](https://github.com/gsklee/ngStorage) | 0.3.11 | Saved voices in this browser |
+| [mml-emitter](https://github.com/mohayonao/mml-emitter) | commit `edd40ecf42141ca257c6cd8adc5073d570add1ee` (the pin in dx7-synth-js's package.json) | The two demo tunes |
+| [pixi.js](https://github.com/pixijs/pixi.js) | 3.0.11, browser build `bin/pixi.min.js` | The little waveform view |
+
+`src/reverb.js` is the upstream helper (CC0, [Reverb.js](https://github.com/andigamesandmusic/Reverb.js) COPYING.md). The page does not call it.
+
 ## Bundled MIDI library (content, checked 14 Oct 2026)
 
 Every file under `frontend/public/synth/midi/` was sequenced in `scripts/build_midi_library.mjs` for this project. None was copied from another MIDI file. The MIDI data is dedicated to the public domain under CC0 1.0. A composition is included only when the composition itself is public domain (published 1930 or earlier, or a traditional tune), or when the tune is original to this project. `catalog.json` repeats the source line next to each file. Halloween songs also name a Filament factory preset and a Cathode factory preset; those presets are original patch data in `patches.js` and `cathode.js`, not samples. Mountain King, Cellar Stairs and Porch Ghost also name a Dekatron factory pattern (Lantern or Bones) in `drums.js`, and those three files include a channel-10 closed-hat part. The hat notes are original sequence data, the same as the rest of the file.
