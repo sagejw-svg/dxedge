@@ -1340,6 +1340,65 @@ with sync_playwright() as pw:
        and rec["frames"] > 44100 * 0.3 and rec_rms > 1e-3, rec["frames"] if rec else None)
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
+    # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote")
+    for dev in DEVICES:
+        pg.evaluate("(d) => __synth.setDevice(d)", dev)
+        pg.wait_for_timeout(250)
+        shown = pg.evaluate("""() => {
+          const box = id => { const el = document.getElementById(id); if (!el || !el.offsetParent) return null; const r = el.getBoundingClientRect(); return r.width > 8 && r.height > 8; };
+          return box('mastRec') && box('trRec') && box('mMaster') && box('fxRec') && box('wavGo') && box('fxRev');
+        }""")
+        ck(f"M. {dev}: rec is visible, and the Master panel is on the page", shown)
+        if pg.evaluate("() => document.getElementById('fxRec').getAttribute('aria-pressed')") == "true":
+            pg.evaluate("() => __synth.recordStop()")
+            pg.wait_for_timeout(300)
+        pg.evaluate("__synth.noteOn(60, 0.85)")
+        pg.click("#mastRec")
+        pg.wait_for_function("""() => ['mastRec','trRec','fxRec'].every(id => document.getElementById(id).getAttribute('aria-pressed')==='true')""", timeout=8000)
+        pg.wait_for_timeout(550)
+        synced = pg.evaluate("""() => ['mastRec','trRec','fxRec'].every(id => document.getElementById(id).getAttribute('aria-pressed')==='true') && /\\d/.test(document.getElementById('mastTime').textContent || '') && document.getElementById('mastTime').textContent === document.getElementById('trTime').textContent""")
+        ck(f"M. {dev}: the rec buttons stay in sync and show elapsed time", synced, pg.evaluate("() => [document.getElementById('mastTime').textContent, document.getElementById('trTime').textContent, document.getElementById('fxRec').textContent]"))
+        with pg.expect_download(timeout=20000) as di:
+            pg.click("#mastRec")
+        pg.evaluate("__synth.noteOff(60)")
+        dl = di.value
+        raw_dl = open(dl.path(), "rb").read()
+        info_dl = parse_wav(raw_dl)
+        ck(f"M. {dev}: recording downloads a non-empty 24-bit WAV ({dl.suggested_filename}, {len(raw_dl)} bytes)",
+           dl.suggested_filename.endswith(".wav") and info_dl and info_dl["fmt"] == 1 and info_dl["bits"] == 24 and info_dl["ch"] == 2 and info_dl["rate"] == 44100 and len(info_dl["data"]) > 0,
+           (dl.suggested_filename, len(raw_dl), None if not info_dl else {k: info_dl[k] for k in ("fmt", "bits", "ch", "rate")}))
+        pg.wait_for_function("() => document.getElementById('mastRec').getAttribute('aria-pressed')==='false' && document.getElementById('fxRec').textContent==='record'", timeout=8000)
+    help_txt = pg.evaluate("""() => [...document.querySelectorAll('#mMoteStage .note, .intro[data-dev="mote"]')].map(n => n.textContent).join(' ')""")
+    ck("Mo. help says Capture rack is an input, not an export", "Capture rack is an input, not an export" in help_txt, help_txt)
+    pg.evaluate("__synth.panic()")
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(200)
+
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.wait_for_timeout(200)
+    for dev in DEVICES:
+        ph.evaluate("(d) => __synth.setDevice(d)", dev)
+        ph.wait_for_timeout(220)
+        vis = ph.evaluate("""() => {
+          const b = document.getElementById('mastRec');
+          const r = b.getBoundingClientRect();
+          return !!(b.offsetParent && r.width >= 44 && r.height >= 44 && r.right <= innerWidth + 1);
+        }""")
+        ck(f"M. {dev} 390px: the header rec button is visible", vis, ph.evaluate("() => { const r = document.getElementById('mastRec').getBoundingClientRect(); return [r.width, r.height, r.right, innerWidth]; }"))
+        ck(f"M. {dev} 390px: the rec control does not widen the page",
+           ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+           ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        ph.locator("#mastJump").tap()
+        ph.wait_for_timeout(280)
+        ck(f"M. {dev} 390px: Master (effects, record, render) opens from the header",
+           ph.is_visible("#mMaster") and ph.is_visible("#fxRec") and ph.is_visible("#fxRev") and ph.is_visible("#wavGo")
+           and ph.evaluate("document.body.dataset.tab") == "rack"
+           and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+    ph.close()
+
     # ---------------------------------------------------------------- 10. layout (phone)
     for w, h in ((375, 667), (390, 844)):
         ph = b.new_page(viewport={"width": w, "height": h}, is_mobile=True, has_touch=True, device_scale_factor=2); perr = []

@@ -196,6 +196,7 @@ export function mountMotePanel(container, hooks) {
   mic.type = 'button'; mic.className = 'btn small'; mic.id = 'moteMic'; mic.textContent = 'Mic';
   const rack = document.createElement('button');
   rack.type = 'button'; rack.className = 'btn small'; rack.id = 'moteRack'; rack.textContent = 'Capture rack';
+  rack.title = 'Record the rack into the grain buffer. Capture rack is an input, not an export.';
   const freeze = document.createElement('button');
   freeze.type = 'button'; freeze.className = 'chip'; freeze.id = 'moteFreeze'; freeze.textContent = 'freeze';
   const keys = document.createElement('button');
@@ -207,7 +208,7 @@ export function mountMotePanel(container, hooks) {
   stage.appendChild(name);
   const hint = document.createElement('div');
   hint.className = 'note';
-  hint.textContent = 'Drag the highlighted region to move the grains. Drop a WAV or MP3, record the mic, or capture whatever the rack is playing. A loaded file stays for this session. Keys mode plays pitch from the keyboard, with C4 at the sample pitch.';
+  hint.textContent = 'Drag the highlighted region to move the grains. Drop a WAV or MP3, or record the mic. Capture rack is an input, not an export: it records the rack into this buffer. To save what you hear, use the red rec button; it downloads a 24-bit WAV. A loaded file stays for this session. Keys mode plays pitch from the keyboard, with C4 at the sample pitch.';
   stage.appendChild(hint);
 
   const grain = section('grain', 'mMoteGrain', 'Shape');
