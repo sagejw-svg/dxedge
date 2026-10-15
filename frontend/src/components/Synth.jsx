@@ -17,7 +17,7 @@ export default function Synth() {
   return (
     <div className="synth-panel">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; pentagrid &middot; orthicon &middot; trochotron &middot; gyrotron &middot; klystron &middot; hexode &middot; anode</div>
+        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; pentagrid &middot; orthicon &middot; trochotron &middot; gyrotron &middot; klystron &middot; phantastron &middot; hexode &middot; anode</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
           Filament is polyphonic and built around lit tubes that do real
           work: one drives the filters, one sits inside the Valve filter's resonance loop, and a
@@ -31,6 +31,7 @@ export default function Synth() {
           Trochotron grows a piece from a seed: the same seed and the same settings are the same piece.
           Gyrotron is a gravity sequencer: bodies orbit wells and ring notes when they collide or cross.
           Klystron is a talk box: a carrier shaped by a vowel pad, a file, or the microphone, then smeared or frozen as grains.
+          Phantastron is a circuit-bent toy: a clocked voice, and wires you drag across a board to bend the clock, the bits, a loop, or the feedback.
           Play them with the keys on screen, your computer keyboard, or a MIDI keyboard.
           Full page version at <a href="/synth/">dxedge.net/synth</a>.
           Gleam is a touch field on the same rack, and full screen at <a href="/synth/gleam/">/synth/gleam/</a>.

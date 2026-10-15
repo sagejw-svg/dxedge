@@ -15,7 +15,7 @@ const WORKLET = new URL('./geissler.worklet.js', import.meta.url).href;
 const ROUTE_LABEL = {
   self: 'meadow', filament: 'Filament', cathode: 'Cathode', thyratron: 'Thyratron',
   lattice: 'Lattice', gleam: 'Gleam', dekatron: 'Dekatron', mote: 'Mote', heptode: 'Heptode',
-  pentagrid: 'Pentagrid', orthicon: 'Orthicon', trochotron: 'Trochotron', gyrotron: 'Gyrotron',
+  pentagrid: 'Pentagrid', orthicon: 'Orthicon', trochotron: 'Trochotron', gyrotron: 'Gyrotron', phantastron: 'Phantastron',
 };
 const SCALE_LABEL = { major: 'major', minor: 'minor', penta: 'penta', dorian: 'dorian', chroma: 'chroma', season: 'season', free: 'free' };
 const GRID_LABEL = { free: 'free', 4: '1/4', 8: '1/8', 16: '1/16' };

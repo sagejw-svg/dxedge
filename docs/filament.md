@@ -10,7 +10,7 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds twelve devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds fifteen devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
 original design: own name, panel, jack names and voicing, not a copy of Korg's), **Thyratron**
 (a monophonic ladder-filter synthesizer: three oscillators, a mixer, a 24 dB/octave ladder that
@@ -23,14 +23,16 @@ waveform, grains, and a tail), **Heptode** (a MIDI-file instrument), **Geissler*
 meadow: reeds, grazers, stalks and flickers), **Pentagrid** (an original
 shortwave receiver: a tuning dial, band noise, Morse, FSK, formant speech, chimes and time pips,
 all synthesized), **Orthicon** (a spectral painter: a log-frequency picture scanned back into
-sound), and **Trochotron** (a fractal seed instrument: one seed and one set of settings grow one
-piece). The rail above the chassis picks which device the keyboard, wheels and MIDI play. Filament
+sound), **Trochotron** (a fractal seed instrument: one seed and one set of settings grow one
+piece), **Gyrotron** (a gravity sequencer: bodies orbit wells, and a collision or a crossing
+plays a note), **Klystron** (a talk box: a carrier shaped by a vowel, a recording, or the microphone), and **Phantastron** (a circuit-bent toy: a clocked voice and an on-screen board you drag
+wires across). The rail above the chassis picks which device the keyboard, wheels and MIDI play. Filament
 and Cathode feed the shared ensemble and output rack. Dekatron copies those output fields. Lattice,
-Thyratron, Gleam, Mote, Heptode, Geissler, Pentagrid, Orthicon and Trochotron have their own panels
+Thyratron, Gleam, Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron have their own panels
 and sleep until the rail selects them; the shared output knobs stay on the Filament patch while one
-of those is showing. Mote, Heptode, Geissler, Pentagrid, Orthicon and Trochotron hide the tube
+of those is showing. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron hide the tube
 chassis while lit. Dekatron and Lattice register when their nodes are hosted. Thyratron and Gleam
-are registered in `device.js`. Mote, Heptode, Geissler, Pentagrid, Orthicon and Trochotron register
+are registered in `device.js`. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron register
 when their modules load.
 Gleam is also a full-screen page at `/synth/gleam/`.
 
@@ -94,7 +96,7 @@ task can read it).
 | `frontend/public/synth/gleam-fx.js` | Effect pad nodes: lowpass sweep, stutter gate, feedback delay. Bypassed unless a finger is down |
 | `frontend/public/synth/gleam-ui.js` | Pad, host, and `renderGleamBuffer`. `attach` calls `addDevice` |
 | `frontend/public/synth/gleam/index.html` | Full-screen Gleam. Same modules as the rack |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler, Pentagrid, Orthicon and Trochotron register when their modules load |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron register when their modules load |
 | `frontend/public/synth/mote.js` | Mote patch schema v1 (`device: 'mote'`), `normalizeMote`, three factory patches, `moteDevice` |
 | `frontend/public/synth/mote-dsp.js` | The grain engine: windowed buffer reads, pitch as a read rate, LFO, delay and a short reverb tail |
 | `frontend/public/synth/mote.worklet.js` | AudioWorklet processors `mote` and `mote-capture` |
@@ -118,6 +120,10 @@ task can read it).
 | `frontend/public/synth/trochotron-dsp.js` | Additive voice, score clock, and note edges for routing |
 | `frontend/public/synth/trochotron.worklet.js` | AudioWorklet processor `trochotron` |
 | `frontend/public/synth/trochotron-ui.js` | Seed panel, fractal canvas, and `createTrochotronHost`. `attach` calls `addDevice` |
+| `frontend/public/synth/phantastron.js` | Phantastron patch schema v1 (`device: 'phantastron'`), `normalizePhantastron`, six factory patches, the bend pads, `phantastronDevice` |
+| `frontend/public/synth/phantastron-dsp.js` | Clocked source-filter toy: three resonators, a short DAC, sample-and-hold, a feedback comb |
+| `frontend/public/synth/phantastron.worklet.js` | AudioWorklet processor `phantastron` |
+| `frontend/public/synth/phantastron-ui.js` | The bend board and `createPhantastronHost`. `attach` calls `addDevice` |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
@@ -385,7 +391,7 @@ registerDevice({
 | World | `geissler-world.js`. xorshift32 from the seed. No `Math.random`, no `Date`. A tick is 1/30 s |
 | Voices | Pool of at most 16. Reed drone, graze pluck, stalk bass plus a noise burst, flicker motif. A death is a falling decaying tone |
 | Messages | `{t:'patch', p}`, `{t:'tap'}`, `{t:'food'}`, `{t:'spawn'}`, `{t:'herd'}`, `{t:'panic'}`, `{t:'active', on}`, `{t:'tempo', bpm}`, `{t:'reseed', seed}` |
-| Routes | `self`, or Filament, Cathode, Thyratron, Lattice, Gleam, Dekatron, Mote, Heptode, Pentagrid, Orthicon, Trochotron. Default is the meadow |
+| Routes | `self`, or Filament, Cathode, Thyratron, Lattice, Gleam, Dekatron, Mote, Heptode, Pentagrid, Orthicon, Trochotron, Gyrotron, Phantastron. Default is the meadow |
 
 ### Orthicon (spectral painter) - first version
 Original picture-to-sound device. The picture is a grid, time across and log frequency up.
@@ -457,8 +463,44 @@ registerDevice({
 | Piece | `pieceOf(patch)` is pure. Same seed and settings, same notes |
 | Share | `shareOf` / `parseShare`. The page reads `?tr=` |
 | MIDI | `midiOf(piece)` writes a format 1 file through `smf.js`. Bass, mid and lead are separate tracks |
-| Route | `internal`, or filament, cathode, thyratron, gleam, dekatron, lattice, mote, heptode, geissler, pentagrid, orthicon |
+| Route | `internal`, or filament, cathode, thyratron, gleam, dekatron, lattice, mote, heptode, geissler, pentagrid, orthicon, gyrotron, phantastron |
 | Messages | `{t:'patch', p}`, `{t:'piece', notes, bpm}`, `{t:'play'}`, `{t:'stop'}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'panic'}`, `{t:'active', on}` |
+
+### Phantastron (circuit-bent toy) - first version
+Original instrument. A phantastron is a vacuum-tube Miller timebase: a ramp that holds until
+something pulls it off. Here that ramp is the clock of a cheap talking toy. The voice is a
+made-up phrase (vowels, chirps, a beep, or a sine) through three resonators, a short DAC, and a
+sample-and-hold. Nothing is a sample and no speech ROM was copied. The board on screen is the
+bend: drag a wire from VCC, GND, CLK, NSE or OUT onto RATE, BITS, LOOP, FB, PITCH or FORM.
+One wire per bend. The same pair again lifts it.
+- [x] Six carts, clock, bits, loop, feedback, form, noise, pitch, seed, run
+- [x] On-screen board: touch and drag wires between bend points
+- [x] Clock speed, bit crush, a stuck loop, and feedback
+- [x] Keys, pitch and mod wheels, sustain, Panic
+- [x] Master recorder hears it
+- [x] Tests in the Ph. section
+
+`phantastronDevice` in `phantastron.js` is the `dxrack/1` descriptor. `phantastron.js` calls `registerDevice` when the page imports it. `createPhantastronHost.attach` calls `addDevice('phantastron', node)`, so the master recorder hears it.
+
+```js
+registerDevice({
+  id: 'phantastron', name: 'Phantastron', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  processor: 'phantastron', worklet: 'phantastron.worklet.js',
+  parameters: { bits: { id, label, type: 'int', default, min, max }, /* clock, cart, loop, feedback, run */ },
+  async create(ctx, host) { /* stereo AudioWorkletNode, processor 'phantastron' */ },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'phantastron'`, `api: 'dxrack/1'`, `processor: 'phantastron'`, `worklet: 'phantastron.worklet.js'`, one stereo output |
+| Patch | `normalizePhantastron(patch)` → schema v1 JSON, `device: 'phantastron'` |
+| Carts | `lull`, `count`, `chirp`, `bark`, `tone`, `babble`. Babble is a seeded phrase. Tone is a sine at the note times the clock |
+| Bends | `bendOf(patch, signals)`. VCC pulls a bend high, GND sticks it low, CLK and NSE and OUT follow the signal |
+| Board | Pads in `PADS`. `toggleWire` keeps one wire per destination |
+| Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}` |
+| Plate | Model 15. Klystron stays model 14. Gyrotron stays model 13. Trochotron stays model 12 |
 
 ### Pentagrid (shortwave receiver) - first version
 Original receiver. The dial is a frequency in kHz. A station is heard when its offset sits inside
