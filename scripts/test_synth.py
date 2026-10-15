@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron", "rhumbatron": "Rhumbatron"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron", "rhumbatron": "Rhumbatron", "resnatron": "Resnatron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron", "rhumbatron": "Rhumbatron"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron", "rhumbatron": "Rhumbatron", "resnatron": "Resnatron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -4434,6 +4434,193 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(150)
     ck("Rh. no page errors", not errs, errs)
+    # ---------------------------------------------------------------- Rn. Resnatron, the patch bay
+    def rn_render(patch, events, seconds=1.0):
+        return dec(pg.evaluate("a => __synth.resnatronRender(a)", {"patch": patch, "events": events, "seconds": seconds}))
+    def rn_rms(x, a, b):
+        seg = x[int(a * SR):int(b * SR)]
+        return float(np.sqrt(np.mean(np.square(seg)))) if len(seg) else 0.0
+    devk = pg.evaluate("""() => { const d = __synth.resnatronDevice(); return {
+      id: d.id, name: d.name, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput,
+      proc: d.processor, worklet: d.worklet, ch: d.channels, n: Object.keys(d.parameters).length,
+      listed: __synth.devices().some(x => x.id === 'resnatron') }; }""")
+    ck("Rn. Resnatron publishes a stereo MIDI dxrack/1 device",
+       devk["id"] == "resnatron" and devk["name"] == "Resnatron" and devk["api"] == "dxrack/1" and devk["inst"]
+       and devk["outs"] == 1 and devk["midi"] and devk["proc"] == "resnatron" and devk["worklet"] == "resnatron.worklet.js"
+       and devk["ch"] == 2 and devk["n"] > 20 and devk["listed"], devk)
+    norm = pg.evaluate("""() => {
+      const p = __synth.resnatronNormalize({
+        name: '  stray  ', level: 4, cat: 'nope',
+        vco1: { wave: 'nope', oct: 9, kbd: 0 },
+        cables: [
+          { from: 'ghost.out', to: 'out.in' },
+          { from: 'vco1.out', to: 'out.in' },
+          { from: 'noise.out', to: 'out.in' },
+          { from: 'vco2.out', to: 'not.an.input' },
+        ],
+      });
+      return { name: p.name, level: p.level, cat: p.cat, wave: p.vco1.wave, oct: p.vco1.oct, kbd: p.vco1.kbd, cables: p.cables };
+    }""")
+    ck("Rn. normalize clamps a patch and keeps one cable per input",
+       norm["name"] == "stray" and norm["level"] == 1 and norm["cat"] == "East" and norm["wave"] == "saw"
+       and norm["oct"] == 2 and norm["kbd"] is False and norm["cables"] == [{"from": "noise.out", "to": "out.in"}], norm)
+    names = pg.evaluate("""() => __synth.resnatronFactory()""")
+    ck("Rn. four starter patches",
+       [n["name"] for n in names] == ["Cavity Saw", "Bunch Glass", "Reed Drift", "Twin Cavity"] and len({n["cat"] for n in names}) >= 2, names)
+    shared = pg.evaluate("""() => {
+      const src = __synth.resnatronPatch('Bunch Glass');
+      const text = __synth.resnatronShare(src);
+      const back = __synth.resnatronParse(text);
+      const junk = __synth.resnatronParse('not a patch!!!');
+      return { text, same: JSON.stringify(back) === JSON.stringify(__synth.resnatronNormalize(src)), cables: back.cables.length, junk };
+    }""")
+    ck("Rn. a share link round-trips the cables",
+       shared["same"] and shared["cables"] >= 6 and shared["junk"] is None and len(shared["text"]) > 40, (shared["cables"], shared["junk"], len(shared["text"])))
+    quietL, quietR = rn_render({"device": "resnatron", "cables": []}, [{"at": 0, "t": "on", "n": 69, "v": 1}], 0.4)
+    ck("Rn. an unpatched bay is silent", rn_rms(quietL, 0.05, 0.35) < 1e-6 and rn_rms(quietR, 0.05, 0.35) < 1e-6, (rn_rms(quietL, 0.05, 0.35), rn_rms(quietR, 0.05, 0.35)))
+    sine = {"device": "resnatron", "level": 0.9, "vco1": {"wave": "sine", "oct": 0, "fine": 0, "kbd": True}, "out": {"level": 0.9, "pan": 0},
+            "cables": [{"from": "vco1.out", "to": "out.in"}]}
+    toneL, toneR = rn_render(sine, [{"at": 0.02, "t": "on", "n": 69, "v": 0.9}], 1.0)
+    seg = toneL[int(0.2 * SR):int(0.9 * SR)]
+    got = peak_freq(seg)
+    cents = abs(1200 * math.log2(got / 440.0))
+    ck(f"Rn. a sine patched to Out at A4 is 440 Hz ({got:.2f} Hz, {cents:.1f} cents)",
+       cents < 8 and rn_rms(toneL, 0.2, 0.9) > 0.02 and abs(rn_rms(toneL, 0.2, 0.9) - rn_rms(toneR, 0.2, 0.9)) < 0.01,
+       (got, cents, rn_rms(toneL, 0.2, 0.9), rn_rms(toneR, 0.2, 0.9)))
+    saw = {"device": "resnatron", "vco1": {"wave": "saw", "kbd": True}, "vcf": {"mode": "lp", "res": 0.05, "depth": 0}, "out": {"level": 0.9},
+           "cables": [{"from": "vco1.out", "to": "vcf.in"}, {"from": "vcf.out", "to": "out.in"}]}
+    openL, _ = rn_render(dict(saw, vcf={"mode": "lp", "cutoff": 10000, "res": 0.05, "depth": 0}), [{"at": 0, "t": "on", "n": 69, "v": 1}], 0.5)
+    shutL, _ = rn_render(dict(saw, vcf={"mode": "lp", "cutoff": 80, "res": 0.05, "depth": 0}), [{"at": 0, "t": "on", "n": 69, "v": 1}], 0.5)
+    open_e, shut_e = rn_rms(openL, 0.1, 0.45), rn_rms(shutL, 0.1, 0.45)
+    ck(f"Rn. an open filter is louder than a closed one ({open_e:.4f} vs {shut_e:.4f})",
+       open_e > shut_e * 4 and open_e > 0.02, (open_e, shut_e))
+    stackL, _ = rn_render(sine, [{"at": 0, "t": "on", "n": 60, "v": 1}, {"at": 0.35, "t": "on", "n": 72, "v": 1}], 1.0)
+    low = peak_freq(stackL[int(0.08 * SR):int(0.28 * SR)])
+    high = peak_freq(stackL[int(0.5 * SR):int(0.95 * SR)])
+    ck(f"Rn. the last note wins ({low:.1f} Hz then {high:.1f} Hz)",
+       abs(1200 * math.log2(low / 261.6256)) < 15 and abs(1200 * math.log2(high / 523.251)) < 15, (low, high))
+    gated = {"device": "resnatron", "vco1": {"wave": "sine", "kbd": True}, "env": {"a": 0.005, "d": 0.2, "s": 0.8, "r": 0.4, "kbd": True},
+             "vca": {"level": 0}, "out": {"level": 0.9},
+             "cables": [{"from": "vco1.out", "to": "vca.in"}, {"from": "env.out", "to": "vca.cv"}, {"from": "vca.out", "to": "out.in"}]}
+    liveL, _ = rn_render(gated, [{"at": 0, "t": "on", "n": 69, "v": 1}], 0.5)
+    deadL, _ = rn_render(gated, [{"at": 0, "t": "on", "n": 69, "v": 1}, {"at": 0.12, "t": "panic"}], 0.6)
+    ck("Rn. panic silences a sounding patch",
+       rn_rms(liveL, 0.05, 0.4) > 0.02 and rn_rms(deadL, 0.05, 0.1) > 0.01 and rn_rms(deadL, 0.2, 0.55) < 1e-5,
+       (rn_rms(liveL, 0.05, 0.4), rn_rms(deadL, 0.05, 0.1), rn_rms(deadL, 0.2, 0.55)))
+    echo = {"device": "resnatron", "level": 0.9, "vco1": {"wave": "sine", "kbd": True},
+            "env": {"a": 0.001, "d": 0.05, "s": 1, "r": 0.01, "kbd": True}, "vca": {"level": 0},
+            "delay": {"time": 0.3, "fb": 0, "mix": 1}, "out": {"level": 0.9},
+            "cables": [{"from": "vco1.out", "to": "vca.in"}, {"from": "env.out", "to": "vca.cv"},
+                       {"from": "vca.out", "to": "delay.in"}, {"from": "delay.out", "to": "out.in"}]}
+    echoL, _ = rn_render(echo, [{"at": 0, "t": "on", "n": 69, "v": 1}, {"at": 0.06, "t": "off", "n": 69}], 0.7)
+    gap_e, tail_e = rn_rms(echoL, 0.12, 0.24), rn_rms(echoL, 0.34, 0.48)
+    ck(f"Rn. delay returns the note after the dry gap ({gap_e:.5f} then {tail_e:.4f})",
+       gap_e < 1e-4 and tail_e > 0.01, (gap_e, tail_e))
+    pg.evaluate("__synth.setDevice('resnatron')")
+    pg.wait_for_timeout(200)
+    ck("Rn. the bay is on screen",
+       pg.evaluate("__synth.device()") == "resnatron" and pg.is_visible("#rnBay") and pg.is_visible("#mRnBay") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    pg.evaluate("""() => __synth.setPatch({ device: 'resnatron', name: 'Bare', cables: [] })""")
+    pg.click("#rnJ-vco1-out")
+    pg.click("#rnJ-out-in")
+    pg.wait_for_timeout(80)
+    clicked = pg.evaluate("__synth.patch().cables")
+    ck("Rn. click an output, click an input: one cable", clicked == [{"from": "vco1.out", "to": "out.in"}], clicked)
+    pg.click("#rnUnplug")
+    pg.wait_for_timeout(40)
+    pulled = pg.evaluate("__synth.patch().cables")
+    ck("Rn. unplug all clears the bay", pulled == [], pulled)
+    pg.click('[data-rn-factory="Reed Drift"]')
+    pg.wait_for_timeout(40)
+    reed = pg.evaluate("() => ({ name: __synth.patch().name, n: __synth.patch().cables.length, mode: __synth.patch().vcf.mode })")
+    ck("Rn. a starter chip loads that patch", reed["name"] == "Reed Drift" and reed["n"] >= 4 and reed["mode"] == "bp", reed)
+    pg.evaluate("__synth.noteOn(60, 0.9)")
+    pg.wait_for_function("() => (__synth.resnatronMeter().voices || 0) > 0", timeout=2000)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => (__synth.resnatronMeter().voices || 0) === 0", timeout=2000)
+    ck("Rn. Panic clears the held note", (pg.evaluate("__synth.resnatronMeter()").get("voices") or 0) == 0)
+    pg.evaluate("""() => {
+      const mix = __synth.mixer() || {};
+      Object.keys(mix).forEach(id => __synth.setMixer(id, { mute: false, solo: false, level: mix[id].level, pan: mix[id].pan }));
+      __synth.setMixer('resnatron', { level: 1, pan: 0, mute: false, solo: false });
+    }""")
+    pg.evaluate("""() => __synth.setPatch({ device: 'resnatron', level: 0.9, vco1: { wave: 'sine', kbd: true }, out: { level: 0.9, pan: 0 }, cables: [{ from: 'vco1.out', to: 'out.in' }] })""")
+    pg.evaluate("__synth.noteOn(69, 0.9)")
+    pg.wait_for_timeout(120)
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(500)
+    rec = pg.evaluate("() => __synth.recordStop()")
+    pg.evaluate("__synth.noteOff(69)")
+    rec_raw = base64.b64decode(rec["b64"]) if rec and rec.get("b64") else b""
+    import struct as _rn_st
+    def rn_parse(b):
+        if len(b) < 44 or b[0:4] != b"RIFF": return None
+        o, fmt, data = 12, None, None
+        while o + 8 <= len(b):
+            cid, sz = b[o:o + 4], int.from_bytes(b[o + 4:o + 8], "little")
+            body = b[o + 8:o + 8 + sz]
+            if cid == b"fmt ": fmt = body
+            elif cid == b"data": data = body
+            o += 8 + sz + (sz & 1)
+        if not fmt or data is None or len(fmt) < 16: return None
+        audio_fmt, ch, rate, byterate, align, bits = _rn_st.unpack("<HHIIHH", fmt[:16])
+        return {"fmt": audio_fmt, "ch": ch, "rate": rate, "bits": bits, "data": data}
+    rec_info = rn_parse(rec_raw) if rec_raw else None
+    if rec_info and rec_info["bits"] == 24 and len(rec_info["data"]) >= 6:
+        n = len(rec_info["data"]) // 6
+        recL = np.empty(n)
+        for i in range(n):
+            z = rec_info["data"][i * 6:i * 6 + 3]
+            v = z[0] | (z[1] << 8) | (z[2] << 16)
+            recL[i] = (v - 0x1000000 if v & 0x800000 else v) / 8388607
+        rec_rms = float(np.sqrt(np.mean(np.square(recL)))) if n else 0.0
+    else:
+        rec_rms = 0.0
+    ck("Rn. the master recorder hears Resnatron",
+       rec_info and rec_info["fmt"] == 1 and rec_info["bits"] == 24 and rec_info["ch"] == 2 and rec_rms > 1e-3
+       and bool(_re2.fullmatch(r"Resnatron-\d{8}-\d{6}\.wav", rec.get("name") or "")),
+       (None if not rec else rec.get("name"), rec_rms, None if not rec_info else rec_info["bits"]))
+    kept = pg.evaluate("""() => {
+      __synth.setPatch({ device: 'resnatron', name: 'Kept Bay', cables: [{ from: 'noise.out', to: 'out.in' }] });
+      const proj = __synth.project();
+      return proj.devices.resnatron.patch;
+    }""")
+    ck("Rn. a project keeps the bay", kept["name"] == "Kept Bay" and kept["cables"] == [{"from": "noise.out", "to": "out.in"}], kept.get("name"))
+    link = pg.evaluate("""() => { document.getElementById('rnLink').click(); return location.search; }""")
+    ck("Rn. copy link writes the share into the page address", "rn=" in link, link)
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE + "?rn=" + pg.evaluate("__synth.resnatronShare()"))
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.wait_for_function("() => __synth.device()==='resnatron' && __synth.patch().name === 'Kept Bay'", timeout=5000)
+    ph.wait_for_timeout(150)
+    phone_cables = ph.evaluate("__synth.patch().cables")
+    ck("Rn. the share address opens the same bay",
+       ph.evaluate("__synth.device()") == "resnatron" and phone_cables == [{"from": "noise.out", "to": "out.in"}], phone_cables)
+    ck("Rn. 390px: no horizontal scroll, the bay is up",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#rnBay") and not ph.is_visible("#mFilt") and not ph.is_visible("#chassis"),
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #rnRoot .chip, #rnRoot .btn, #rnRoot input, #rnRoot select, #rnRoot .rn-jack')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Rn. 390px: rail, tabs, jacks and knobs are 44 px or more", not small, small)
+    ph.locator("#rnJ-vco2-out").scroll_into_view_if_needed()
+    ph.tap("#rnJ-vco2-out")
+    ph.locator("#rnJ-mix-a").scroll_into_view_if_needed()
+    ph.tap("#rnJ-mix-a")
+    ph.wait_for_timeout(80)
+    tapped = ph.evaluate("__synth.patch().cables")
+    ck("Rn. 390px: tap an output, tap an input: patched",
+       {"from": "vco2.out", "to": "mix.a"} in tapped, tapped)
+    ph.screenshot(path=os.path.join(SHOTS, "synth_resnatron_phone.png"))
+    ck("Rn. 390px: no page errors", not perr, perr)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(80)
+    ck("Rn. no page errors", not errs, errs)
+
     b.close()
 
 print()

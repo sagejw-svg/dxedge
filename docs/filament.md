@@ -10,7 +10,7 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds fifteen devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds eighteen devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
 original design: own name, panel, jack names and voicing, not a copy of Korg's), **Thyratron**
 (a monophonic ladder-filter synthesizer: three oscillators, a mixer, a 24 dB/octave ladder that
@@ -25,14 +25,14 @@ shortwave receiver: a tuning dial, band noise, Morse, FSK, formant speech, chime
 all synthesized), **Orthicon** (a spectral painter: a log-frequency picture scanned back into
 sound), **Trochotron** (a fractal seed instrument: one seed and one set of settings grow one
 piece), **Gyrotron** (a gravity sequencer: bodies orbit wells, and a collision or a crossing
-plays a note), **Klystron** (a talk box: a carrier shaped by a vowel, a recording, or the microphone), and **Phantastron** (a circuit-bent toy: a clocked voice and an on-screen board you drag
-wires across). The rail above the chassis picks which device the keyboard, wheels and MIDI play. Filament
+plays a note), **Klystron** (a talk box: a carrier shaped by a vowel, a recording, or the microphone), **Phantastron** (a circuit-bent toy: a clocked voice and an on-screen board you drag
+wires across), **Additron** (an additive organ: drawn harmonics, stops, and a rotary speaker), **Rhumbatron** (a physical model: a string, a bore, or a plate), and **Resnatron** (a modular patch bay: modules are cavities, and you drag the cables between them). The rail above the chassis picks which device the keyboard, wheels and MIDI play. Filament
 and Cathode feed the shared ensemble and output rack. Dekatron copies those output fields. Lattice,
-Thyratron, Gleam, Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron have their own panels
+Thyratron, Gleam, Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron, Phantastron, Additron, Rhumbatron and Resnatron have their own panels
 and sleep until the rail selects them; the shared output knobs stay on the Filament patch while one
-of those is showing. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron hide the tube
+of those is showing. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron, Phantastron, Additron, Rhumbatron and Resnatron hide the tube
 chassis while lit. Dekatron and Lattice register when their nodes are hosted. Thyratron and Gleam
-are registered in `device.js`. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron register
+are registered in `device.js`. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron, Phantastron, Additron, Rhumbatron and Resnatron register
 when their modules load.
 Gleam is also a full-screen page at `/synth/gleam/`.
 
@@ -96,7 +96,7 @@ task can read it).
 | `frontend/public/synth/gleam-fx.js` | Effect pad nodes: lowpass sweep, stutter gate, feedback delay. Bypassed unless a finger is down |
 | `frontend/public/synth/gleam-ui.js` | Pad, host, and `renderGleamBuffer`. `attach` calls `addDevice` |
 | `frontend/public/synth/gleam/index.html` | Full-screen Gleam. Same modules as the rack |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron and Phantastron register when their modules load |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron, Phantastron, Additron, Rhumbatron and Resnatron register when their modules load |
 | `frontend/public/synth/mote.js` | Mote patch schema v1 (`device: 'mote'`), `normalizeMote`, three factory patches, `moteDevice` |
 | `frontend/public/synth/mote-dsp.js` | The grain engine: windowed buffer reads, pitch as a read rate, LFO, delay and a short reverb tail |
 | `frontend/public/synth/mote.worklet.js` | AudioWorklet processors `mote` and `mote-capture` |
@@ -124,6 +124,14 @@ task can read it).
 | `frontend/public/synth/phantastron-dsp.js` | Clocked source-filter toy: three resonators, a short DAC, sample-and-hold, a feedback comb |
 | `frontend/public/synth/phantastron.worklet.js` | AudioWorklet processor `phantastron` |
 | `frontend/public/synth/phantastron-ui.js` | The bend board and `createPhantastronHost`. `attach` calls `addDevice` |
+| `frontend/public/synth/rhumbatron.js` | Rhumbatron patch schema v1 (`device: 'rhumbatron'`), `normalizeRhumbatron`, factory bodies, `rhumbatronDevice` |
+| `frontend/public/synth/rhumbatron-dsp.js` | Plucked, struck, bowed, and blown cavities |
+| `frontend/public/synth/rhumbatron.worklet.js` | AudioWorklet processor `rhumbatron` |
+| `frontend/public/synth/rhumbatron-ui.js` | The cavity panel and `createRhumbatronHost`. `attach` calls `addDevice` |
+| `frontend/public/synth/resnatron.js` | Resnatron patch schema v1 (`device: 'resnatron'`), `normalizeResnatron`, four starter patches, `shareOf` / `parseShare`, `resnatronDevice` |
+| `frontend/public/synth/resnatron-dsp.js` | The patch bay voice. Each cable is a one-sample delay |
+| `frontend/public/synth/resnatron.worklet.js` | AudioWorklet processor `resnatron` |
+| `frontend/public/synth/resnatron-ui.js` | The bay, drag cables, and `createResnatronHost`. `attach` calls `addDevice` |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
@@ -502,6 +510,43 @@ registerDevice({
 | Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}` |
 | Plate | Model 15. Klystron stays model 14. Gyrotron stays model 13. Trochotron stays model 12 |
 
+### Resnatron (modular patch bay) - first version
+Original instrument. A resnatron is a cavity tetrode: the anode and the grids are resonant cavities.
+Here each cavity is a module, and a cable is the beam between them. Nothing is pre-wired. Drag a
+gold output onto a silver input, or tap one and then the other. One cable per input. Starters:
+Cavity Saw, Bunch Glass, Reed Drift, Twin Cavity. Copy link writes `?rn=`. Monophonic, last note
+wins, and every cable is a one-sample delay so a feedback loop stays finite. Panic clears the
+notes, the envelope and the delay, and holds the output quiet until the next note. The red rec
+button records it. Copyleft modular instruments were reference only; no code from them is here.
+- [x] Oscillators, noise, LFO, sample and hold, envelope, mixer, filter, VCA, delay, out
+- [x] Drag and click cables, touch and mouse
+- [x] Four starter patches and a share link
+- [x] Keys, pitch and mod wheels, sustain, Panic
+- [x] Master recorder hears it
+- [x] Tests in the Rn. section
+
+`resnatronDevice` in `resnatron.js` is the `dxrack/1` descriptor. `resnatron.js` calls `registerDevice` when the page imports it. `createResnatronHost.attach` calls `addDevice('resnatron', node)`, so the master recorder hears it.
+
+```js
+registerDevice({
+  id: 'resnatron', name: 'Resnatron', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  processor: 'resnatron', worklet: 'resnatron.worklet.js',
+  parameters: { 'vco1.wave': { id, label, type: 'choice', default }, /* cables, cutoff, delay */ },
+  async create(ctx, host) { /* stereo AudioWorkletNode, processor 'resnatron' */ },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'resnatron'`, `api: 'dxrack/1'`, `processor: 'resnatron'`, `worklet: 'resnatron.worklet.js'`, stereo, mixer letter S, plate model 18 |
+| Patch | `normalizeResnatron(patch)` → schema v1 JSON, `device: 'resnatron'` |
+| Cables | One per input. The last cable to a destination wins. Invalid ports are dropped |
+| Share | `shareOf` / `parseShare`. The page reads `?rn=` |
+| Voice | Last note. The envelope follows the keyboard gate when its gate jack is empty. A VCO with kbd off holds middle C |
+| Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}` |
+| Plate | Model 18. Rhumbatron stays model 17. Additron stays model 16. Phantastron stays model 15. Klystron stays model 14. Cache `dxedge-v95` |
+
 ### Pentagrid (shortwave receiver) - first version
 Original receiver. The dial is a frequency in kHz. A station is heard when its offset sits inside
 the bandwidth. CW, a bare carrier and a close pair become a tone at the beat with the BFO, so
@@ -726,6 +771,7 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-15 (interactive): Resnatron, a modular patch bay, on the rack rail beside Rhumbatron. Modules are cavities (two oscillators, noise, an LFO, sample and hold, an envelope, a mixer, a filter, a VCA, a delay, and the output). Nothing is pre-wired. Drag a gold jack onto a silver one, or tap one and then the other. One cable per input. Starters are Cavity Saw, Bunch Glass, Reed Drift, and Twin Cavity. Copy link writes `?rn=`. Monophonic, last note wins, and every cable is a one-sample delay. Panic clears the notes, the envelope and the delay, and holds the output quiet until the next note. The red rec button records Resnatron. Original engine; copyleft modular instruments were reference only. Rebased onto Rhumbatron. Plate is model 18; Rhumbatron stays model 17; Additron stays model 16; Phantastron stays model 15. Mixer letter S. Cache `dxedge-v95`. Suite: ALL PASS (948 checks). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless): Cathode 9.4%; Filament 8 voices 11.2% (Ladder 24) and 10.7% (Valve 12); stereo offset 12.3%; 16 voices with ensemble 17.0%. Dekatron Spark 4.9% (drums only). Thyratron Walnut Bass, one note, 2.9% (voice only). Mote Drift Glass 2.7% (grains only). Lattice Glass Pad, one note, 13.8% (Lattice only). Pentagrid, carrier plus one play note, 4 s offline in 82 ms (2.1% of real time, receiver only). No Filament or Cathode voice code changed.
 - 2026-10-15 (interactive): Phantastron, a circuit-bent toy, on the rack rail beside Gyrotron and Klystron. A clocked voice (made-up phrases, three resonators, a short DAC, a sample-and-hold) and an on-screen board: drag a wire to change clock speed, bit depth, a stuck loop, or feedback. Keys, wheels, sustain, and Panic. The red rec button records Phantastron. Rebased onto Klystron. Plate is model 15; Klystron stays model 14; Gyrotron stays model 13. Cache `dxedge-v92`. Suite: ALL PASS (857 checks). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless): Cathode 8.6%; Filament 8 voices 12.4% (Ladder 24) and 11.9% (Valve 12); stereo offset 12.7%; 16 voices with ensemble 17.7%. Dekatron Spark 4.7% (drums only). Thyratron Walnut Bass, one note, 2.9% (voice only). Mote Drift Glass 2.7% (grains only). Lattice Glass Pad, one note, 13.5% (Lattice only). No speech ROM and no sample.
 - 2026-10-15 (interactive): Trochotron, a fractal seed instrument, on the rack rail beside Geissler, Pentagrid, and Orthicon. A seed grows a piece (L-system, Mandelbrot, Julia, logistic map, Lorenz, or a digit sequence). The same seed and the same settings are the same notes. Drag and zoom on the Mandelbrot or Julia picture change the piece while it plays. Notes can stay on the built-in voice or go to another rack device, including Pentagrid and Orthicon. Export is a `.mid` file, and `?tr=` is the share link. The red rec button records Trochotron. Plate is model 12; Orthicon stays model 11; Pentagrid stays model 10. Rebased onto Orthicon. Cache `dxedge-v89`. Suite: ALL PASS (765 checks). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless): Cathode 9.7%; Filament 8 voices 14.2% (Ladder 24) and 14.5% (Valve 12); stereo offset 15.8%; 16 voices with ensemble 21.3%. Dekatron Spark 5.1% (drums only). Thyratron Walnut Bass, one note, 3.3% (voice only). Mote Drift Glass 3.4% (grains only). Lattice Glass Pad, one note, 16.7% (Lattice only). Pentagrid, carrier plus one play note, 4 s offline in 99 ms (2.5% of real time, receiver only). Recorded Orthicon 441.4 Hz matches live 441.4 Hz, level x1.00. No Filament or Cathode voice code changed.
 - 2026-10-15 (interactive): Orthicon, a spectral painter, on the rack rail beside Geissler and Pentagrid. A log-frequency picture is painted, dropped in as an image, or analysed from a file, the microphone, or the rack, then scanned back into sound. Additive resynthesis and an overlap-add inverse FFT. Brushes are soft, hard, harmonic, noise, and eraser. Smear, blur, shift, stretch, freeze, and quantize edit the picture. Keys mode transposes it, with C4 at the picture's own pitch. Five generated pictures. Capture rack is an input. The red rec button records Orthicon. Geissler can route a species to Orthicon or Pentagrid. Original engine; no spectral-paint source was copied. Rebased onto Pentagrid (model 11, mixer O). Cache `dxedge-v88`. Suite: ALL PASS (731 checks). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless): Cathode 8.7%; Filament 8 voices 11.4% (Ladder 24) and 11.0% (Valve 12); stereo offset 12.8%; 16 voices with ensemble 17.8%. Dekatron Spark 4.8% (drums only). Thyratron Walnut Bass, one note, 3.0% (voice only). Mote Drift Glass 3.1% (grains only). Lattice Glass Pad, one note, 13.8% (Lattice only). Pentagrid, carrier plus one play note, 4 s offline in 83 ms (2.1% of real time, receiver only). Recorded Orthicon 441.4 Hz matches live 441.4 Hz, level x1.00. No Filament or Cathode voice code changed.
