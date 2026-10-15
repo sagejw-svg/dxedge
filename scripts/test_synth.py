@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron", "additron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -1468,6 +1468,11 @@ with sync_playwright() as pw:
             tail={"delay": 0.2, "feedback": 0.2, "reverb": 0, "mix": 0.15}, **quiet)),
         ("orthicon", None, 440, dict(device="orthicon", picture="custom", keyboard=False, hold=True, engine="add",
             phase="coherent", width=0, level=1, curve=1, speed=2, loop=True, scale="off", fLo=80, fHi=8000, **quiet)),
+        ("additron", 69, 440, dict(device="additron", level=0.9, shape="hand", morph=0, edit="a",
+            draw=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            drawB=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            rotor=False, click=0, perc=0, percHarm="off", tilt=0, vib=0, drive=0, leak=0, spread=0,
+            attack=0.005, decay=0.2, sustain=1, release=0.05, **quiet)),
     ]
     for dev, midi_note, expect, body in tones:
         pg.evaluate("__synth.panic()")
@@ -4100,6 +4105,169 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(120)
     ck("Ph. no page errors", not errs, errs)
+    # ---------------------------------------------------------------- Ad. Additron, the additive organ
+    ad_before = len(errs)
+    def ad_render(patch, events=None, seconds=0.5):
+        payload = {"patch": patch, "events": events if events is not None else [{"t": "on", "n": 69, "v": 0.95, "at": 0}], "seconds": seconds}
+        return dec(pg.evaluate("a => __synth.additronRender(a)", payload))
+    def ad_rms(x):
+        return float(np.sqrt(np.mean(np.square(x)))) if len(x) else 0.0
+    z16 = [0.0] * 16
+    def draw_at(*pairs):
+        d = z16[:]
+        for i, v in pairs:
+            d[i] = v
+        return d
+    clean = dict(device="additron", shape="hand", morph=0, edit="a",
+        rotor=False, click=0, perc=0, percHarm="off", tilt=0, vib=0, drive=0, leak=0, spread=0,
+        attack=0.004, decay=0.3, sustain=1, release=0.05, level=0.9)
+    devp = pg.evaluate("""() => { const d = __synth.additronDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput,
+      proc: d.processor, worklet: d.worklet, ch: d.channels, over: d.oversample,
+      msgs: d.messages, name: d.name }; }""")
+    ck("Ad. the device publishes the dxrack/1 contract",
+       devp["id"] == "additron" and devp["name"] == "Additron" and devp["api"] == "dxrack/1"
+       and devp["inst"] and devp["outs"] == 1 and devp["midi"] and devp["proc"] == "additron"
+       and devp["worklet"] == "additron.worklet.js" and devp["ch"] == 2 and devp["over"] == 1
+       and {"patch", "on", "off", "bend", "mw", "sus", "panic", "active"} <= set(devp["msgs"]), devp)
+    names = pg.evaluate("__synth.additronFactory()")
+    ck("Ad. factory presets cover stops, a drawn reed and a morph",
+       len(names) >= 4 and any(n["name"] == "Copper Flute" for n in names) and any(n["cat"] == "Morph" for n in names)
+       and any(n["cat"] == "Draw" for n in names), names)
+    spec = pg.evaluate("""() => __synth.additronSpectrum({
+      device: 'additron', shape: 'stops', morph: 0,
+      draw: [1, 0.9, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      drawB: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    })""")
+    ck("Ad. stops mode keeps footage eighths and drops a free partial",
+       abs(spec[0] - 1) < 1e-6 and abs(spec[1] - 0.875) < 1e-6 and spec[4] == 0, spec)
+    eight = dict(clean, draw=draw_at((1, 1)), drawB=draw_at((1, 1)))
+    eL, eR = ad_render(eight, seconds=0.5)
+    seg = eL[len(eL) // 5:]
+    f8 = peak_freq(seg)
+    a440, a880 = tone_amp(seg, 440), tone_amp(seg, 880)
+    ck("Ad. the 8' stop is the note, and it does not invent the octave",
+       abs(f8 - 440) < 2 and ad_rms(seg) > 0.02 and float(np.max(np.abs(eL - eR))) < 1e-4
+       and bool(np.isfinite(eL).all()) and float(np.max(np.abs(eL))) <= 1.0
+       and a440 > 0.05 and a880 < a440 * 0.08,
+       (round(f8, 2), round(ad_rms(seg), 4), round(a440, 4), round(a880, 4)))
+    fL, _fR = ad_render(dict(clean, draw=draw_at((3, 1)), drawB=draw_at((3, 1))), seconds=0.45)
+    f4 = peak_freq(fL[len(fL) // 5:])
+    ck("Ad. the 4' stop is an octave up", abs(f4 - 880) < 3, round(f4, 2))
+    sL, _sR = ad_render(dict(clean, draw=draw_at((0, 1)), drawB=draw_at((0, 1))), seconds=0.5)
+    f16 = peak_freq(sL[len(sL) // 5:])
+    ck("Ad. the 16' stop is an octave down", abs(f16 - 220) < 2, round(f16, 2))
+    mL, _mR = ad_render(dict(clean, morph=1, draw=draw_at((1, 1)), drawB=draw_at((3, 1))), seconds=0.45)
+    fm = peak_freq(mL[len(mL) // 5:])
+    ck("Ad. morph 1 sounds snapshot B", abs(fm - 880) < 3, round(fm, 2))
+    midL, _midR = ad_render(dict(clean, morph=0.5, draw=draw_at((1, 1)), drawB=draw_at((3, 1))), seconds=0.5)
+    mid = midL[len(midL) // 5:]
+    b440, b880 = tone_amp(mid, 440), tone_amp(mid, 880)
+    ck("Ad. morph halfway keeps both snapshots",
+       b440 > 0.02 and b880 > 0.02 and abs(b440 - b880) / max(b440, b880) < 0.55,
+       (round(b440, 4), round(b880, 4)))
+    both = draw_at((1, 1), (7, 1))
+    tL, _tR = ad_render(dict(clean, draw=both, drawB=both[:], tilt=1, attack=0.004, decay=0.8, sustain=0, release=1.2, level=0.85), seconds=0.7)
+    early = tL[int(0.05 * SR):int(0.12 * SR)]
+    late = tL[int(0.48 * SR):int(0.62 * SR)]
+    e_lo, e_hi = tone_amp(early, 440), tone_amp(early, 1760)
+    l_lo, l_hi = tone_amp(late, 440), tone_amp(late, 1760)
+    e_ratio = e_hi / e_lo if e_lo > 1e-4 else 99
+    l_ratio = l_hi / l_lo if l_lo > 1e-4 else 99
+    ck("Ad. tilt decays the higher partial faster than the 8'",
+       e_lo > 0.02 and l_lo > 0.008 and l_ratio < e_ratio * 0.45,
+       (round(e_ratio, 3), round(l_ratio, 3), round(e_lo, 4), round(l_lo, 4), round(e_hi, 4), round(l_hi, 4)))
+    spL, spR = ad_render(dict(clean, rotor=True, speed="tremolo", spread=1, leak=0.15, drive=0, draw=draw_at((1, 1)), drawB=draw_at((1, 1))), seconds=0.6)
+    dseg = (spL - spR)[int(0.08 * SR):]
+    mseg = (spL + spR)[int(0.08 * SR):]
+    ck("Ad. the tremolo rotor spreads left and right",
+       ad_rms(dseg) > 0.04 * max(ad_rms(mseg), 1e-9) and ad_rms(spL) > 0.01,
+       (round(ad_rms(dseg), 4), round(ad_rms(mseg), 4)))
+    bL, bR = ad_render(dict(clean, rotor=True, speed="brake", spread=1, leak=0, drive=0, draw=draw_at((1, 1)), drawB=draw_at((1, 1))), seconds=0.4)
+    ck("Ad. brake holds the rotor still",
+       float(np.max(np.abs(bL - bR))) < 1e-3 and ad_rms(bL) > 0.01,
+       round(float(np.max(np.abs(bL - bR))), 6))
+    qL, qR = ad_render(dict(clean, level=0), seconds=0.3)
+    ck("Ad. level 0 is silent", ad_rms(qL) < 1e-5 and ad_rms(qR) < 1e-5, round(ad_rms(qL), 8))
+    pg.evaluate("__synth.setDevice('additron')")
+    pg.wait_for_timeout(300)
+    ck("Ad. the spectrum is on screen and Filament's filter is not",
+       pg.evaluate("__synth.device()") == "additron" and pg.is_visible("#adCanvas") and pg.is_visible("#adMorph")
+       and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    help_p = pg.evaluate("""() => [...document.querySelectorAll('#mAdStage .note, .intro[data-dev="additron"]')].map(n => n.textContent).join(' ')""")
+    ck("Ad. the panel explains drawing and the recorder", "Draw" in help_p and "WAV" in help_p, help_p[:160])
+    pg.evaluate("""() => __synth.setPatch({ device: 'additron', shape: 'hand', edit: 'a', morph: 0, rotor: false, click: 0, perc: 0,
+      draw: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], drawB: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] })""")
+    pg.wait_for_timeout(80)
+    box = pg.locator("#adCanvas").bounding_box()
+    x = box["x"] + (1.5 / 16) * box["width"]
+    y = box["y"] + box["height"] * 0.12
+    pg.mouse.move(x, y)
+    pg.mouse.down()
+    pg.mouse.move(x + 3, y + 2)
+    pg.mouse.up()
+    pg.wait_for_timeout(40)
+    drawn = pg.evaluate("__synth.patch().draw")
+    ck("Ad. a drag on the spectrum raises that partial", drawn[1] > 0.7 and max(drawn[8:]) < 0.2, [round(v, 3) for v in drawn])
+    pg.evaluate("""() => __synth.setPatch({ device: 'additron', shape: 'hand', morph: 0, rotor: false, click: 0, perc: 0, vib: 0, tilt: 0,
+      attack: 0.005, decay: 0.2, sustain: 1, release: 0.04, level: 0.8,
+      draw: [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0], drawB: [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0] })""")
+    pg.wait_for_timeout(150)
+    pg.evaluate("__synth.noteOn(60, 0.85)")
+    pg.evaluate("__synth.noteOn(64, 0.85)")
+    pg.wait_for_function("() => (__synth.additronMeter().voices || 0) >= 2", timeout=2500)
+    held = pg.evaluate("__synth.additronMeter()")
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => (__synth.additronMeter().voices || 0) === 0", timeout=2500)
+    released = pg.evaluate("__synth.additronMeter()")
+    ck("Ad. two keys sound and panic lets them go", (held.get("voices") or 0) >= 2 and (released.get("voices") or 0) == 0, (held, released))
+    pg.evaluate("__synth.midi([144, 67, 110])")
+    pg.wait_for_function("() => (__synth.additronMeter().voices || 0) >= 1", timeout=2500)
+    pg.evaluate("__synth.midi([128, 67, 0])")
+    pg.wait_for_function("() => (__synth.additronMeter().voices || 0) === 0", timeout=2500)
+    ck("Ad. a MIDI note speaks and then lets go", True)
+    saved = pg.evaluate("""() => __synth.applyProject({
+      name: 'Organ Bench', device: 'additron', tempo: 96,
+      devices: { additron: { patch: { name: 'Kept Flute', shape: 'hand', morph: 0.25,
+        draw: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } } }
+    })""")
+    kept = pg.evaluate("__synth.patch()")
+    ck("Ad. a project keeps the organ and the drawn spectrum",
+       saved["device"] == "additron" and pg.evaluate("__synth.device()") == "additron"
+       and kept["name"] == "Kept Flute" and abs(kept["morph"] - 0.25) < 1e-6 and abs(kept["draw"][1] - 1) < 1e-6,
+       (saved["device"], kept.get("name"), kept.get("morph")))
+    pg.screenshot(path=os.path.join(SHOTS, "synth_additron_desktop.png"), full_page=True)
+    adn = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    adn.on("pageerror", lambda e: perr.append(str(e)))
+    adn.goto(BASE)
+    adn.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    adn.wait_for_timeout(200)
+    adn.evaluate("__synth.setDevice('additron')")
+    adn.wait_for_timeout(300)
+    ck("Ad. 390px: no horizontal scroll, the spectrum is up",
+       adn.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and adn.is_visible("#adCanvas") and not adn.is_visible("#mFilt") and not adn.is_visible("#chassis"),
+       (adn.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = adn.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #adRoot .chip, #adRoot input, #adRoot .knob')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Ad. 390px: rail, tabs and spectrum controls are 44 px or more", not small, small)
+    adn.tap('.tabs [data-go="spin"]')
+    adn.wait_for_timeout(200)
+    spin_small = adn.evaluate("""() => [...document.querySelectorAll('#adRoot .chip, #adRoot .knob, #adRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Ad. 390px: the Spin tab fits and its controls are 44 px or more",
+       not spin_small and adn.is_visible("#adRotor") and adn.is_visible("#adKnobs") and not adn.is_visible("#adCanvas")
+       and adn.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       (spin_small, adn.evaluate("[document.documentElement.scrollWidth, innerWidth]")))
+    adn.screenshot(path=os.path.join(SHOTS, "synth_additron_phone.png"))
+    ck("Ad. 390px: no page errors", not perr, perr)
+    adn.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(120)
+    ck("Ad. no page errors", len(errs) == ad_before, errs[ad_before:])
     b.close()
 
 print()

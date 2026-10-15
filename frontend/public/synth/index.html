@@ -121,14 +121,16 @@
   body:not([data-dev="orthicon"]) [data-dev="orthicon"] { display: none !important; }
   body[data-dev="trochotron"] [data-dev]:not([data-dev="trochotron"]),
   body:not([data-dev="trochotron"]) [data-dev="trochotron"] { display: none !important; }
+  body[data-dev="additron"] [data-dev]:not([data-dev="additron"]),
+  body:not([data-dev="additron"]) [data-dev="additron"] { display: none !important; }
   body[data-dev="gyrotron"] [data-dev]:not([data-dev="gyrotron"]),
   body:not([data-dev="gyrotron"]) [data-dev="gyrotron"] { display: none !important; }
   body[data-dev="klystron"] [data-dev]:not([data-dev="klystron"]),
   body:not([data-dev="klystron"]) [data-dev="klystron"] { display: none !important; }
   body[data-dev="phantastron"] [data-dev]:not([data-dev="phantastron"]),
   body:not([data-dev="phantastron"]) [data-dev="phantastron"] { display: none !important; }
-  #drumRoot, #latticeRoot, #thyRoot, #gleamRoot, #moteRoot, #heptodeRoot, #geisslerRoot, #orthiconRoot, #trRoot, #gyRoot, #klRoot, #phRoot { display: contents; }
-  body[data-dev="filament"] #drumRoot, body[data-dev="cathode"] #drumRoot, body[data-dev="lattice"] #drumRoot, body[data-dev="thyratron"] #drumRoot, body[data-dev="gleam"] #drumRoot, body[data-dev="mote"] #drumRoot, body[data-dev="heptode"] #drumRoot, body[data-dev="geissler"] #drumRoot, body[data-dev="pentagrid"] #drumRoot, body[data-dev="orthicon"] #drumRoot, body[data-dev="trochotron"] #drumRoot, body[data-dev="gyrotron"] #drumRoot, body[data-dev="klystron"] #drumRoot, body[data-dev="phantastron"] #drumRoot { display: none !important; }
+  #drumRoot, #latticeRoot, #thyRoot, #gleamRoot, #moteRoot, #heptodeRoot, #geisslerRoot, #orthiconRoot, #trRoot, #gyRoot, #klRoot, #phRoot, #adRoot { display: contents; }
+  body[data-dev="filament"] #drumRoot, body[data-dev="cathode"] #drumRoot, body[data-dev="lattice"] #drumRoot, body[data-dev="thyratron"] #drumRoot, body[data-dev="gleam"] #drumRoot, body[data-dev="mote"] #drumRoot, body[data-dev="heptode"] #drumRoot, body[data-dev="geissler"] #drumRoot, body[data-dev="pentagrid"] #drumRoot, body[data-dev="orthicon"] #drumRoot, body[data-dev="trochotron"] #drumRoot, body[data-dev="gyrotron"] #drumRoot, body[data-dev="klystron"] #drumRoot, body[data-dev="phantastron"] #drumRoot, body[data-dev="additron"] #drumRoot { display: none !important; }
   body:not([data-dev="mote"]) #moteRoot { display: none !important; }
   body:not([data-dev="heptode"]) #heptodeRoot { display: none !important; }
   body:not([data-dev="geissler"]) #geisslerRoot { display: none !important; }
@@ -137,6 +139,7 @@
   body:not([data-dev="gyrotron"]) #gyRoot { display: none !important; }
   body:not([data-dev="klystron"]) #klRoot { display: none !important; }
   body:not([data-dev="phantastron"]) #phRoot { display: none !important; }
+  body:not([data-dev="additron"]) #adRoot { display: none !important; }
   body:not([data-dev="thyratron"]) #thyRoot { display: none !important; }
   body:not([data-dev="gleam"]) #gleamRoot { display: none !important; }
   body[data-dev="dekatron"] #mStereo, body[data-dev="dekatron"] #mEns, body[data-dev="dekatron"] #mOut,
@@ -249,6 +252,22 @@
   body[data-dev="phantastron"] .devbtn[aria-pressed="true"] { color: #f4f0d8; border-color: #c4894a; background: rgba(196, 137, 74, 0.14); }
   body[data-dev="phantastron"] .devbtn[aria-pressed="true"] i { background: #e7c56a; box-shadow: 0 0 7px #e7c56a; }
   body[data-dev="phantastron"] .tabs button[aria-selected="true"] { color: #f4f0d8; border-color: #c4894a; background: rgba(196, 137, 74, 0.14); }
+  body[data-dev="additron"] #mStereo, body[data-dev="additron"] #mEns, body[data-dev="additron"] #mOut,
+  body[data-dev="additron"] #mSpk, body[data-dev="additron"] #mRoom, body[data-dev="additron"] #chassis { display: none !important; }
+  #adCanvas { width: 100%; height: 260px; max-width: 100%; display: block; touch-action: none; border-radius: 8px; border: 1px solid #3a2a22; background: #140e0c; cursor: crosshair; }
+  .ad-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-width: 100%; }
+  .ad-morph { display: flex; align-items: center; gap: 8px; margin-top: 8px; max-width: 100%; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  .ad-morph input { flex: 1 1 auto; min-width: 0; }
+  #adMorphV { color: #f0c09a; min-width: 3em; }
+  body[data-dev="additron"] #adRoot .mod { background: #16100e; border-color: #3a2a22; }
+  body[data-dev="additron"] #adRoot h3 { color: #ffe1c4; letter-spacing: 1.6px; }
+  body[data-dev="additron"] #adRoot .chip[aria-pressed="true"] { background: #e7a06a; border-color: #e7a06a; color: #2a140c; }
+  body[data-dev="additron"] #adRoot .knob .val { stroke: #e7a06a; }
+  body[data-dev="additron"] #adRoot .knob .ptr { stroke: #ffe1c4; }
+  body[data-dev="additron"] #adRoot .knob .kv { color: #f0c09a; }
+  body[data-dev="additron"] .devbtn[aria-pressed="true"] { color: #ffe7d4; border-color: #e7a06a; background: rgba(231, 160, 106, 0.12); }
+  body[data-dev="additron"] .devbtn[aria-pressed="true"] i { background: #e7a06a; box-shadow: 0 0 7px #e7a06a; }
+  body[data-dev="additron"] .tabs button[aria-selected="true"] { color: #ffe7d4; border-color: #e7a06a; background: rgba(231, 160, 106, 0.12); }
   .hep-roll { position: relative; height: 150px; max-width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid #3a2a22; background: #14110e; }
   .hep-roll.over { outline: 2px dashed #e7c4a8; outline-offset: -3px; }
   #hepRoll, #heptodePlace { width: 100%; max-width: 100%; display: block; }
@@ -493,6 +512,7 @@
     body[data-tab="tone"] .mod[data-tab~="tone"] { display: block; }
     body[data-tab="mouth"] .mod[data-tab~="mouth"] { display: block; }
     body[data-tab="bend"] .mod[data-tab~="bend"] { display: block; }
+    body[data-tab="spin"] .mod[data-tab~="spin"] { display: block; }
     body[data-dev="dekatron"] .tabs [data-go="osc"], body[data-dev="dekatron"] .tabs [data-go="filter"],
     body[data-dev="dekatron"] .tabs [data-go="mod"], body[data-dev="dekatron"] .tabs [data-go="stereo"],
     body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
@@ -558,6 +578,14 @@
     body[data-dev="phantastron"] .tabs [data-go="shape"] { display: none !important; }
     #heptodeRoot input[type="range"], #hepSong, #pentagridText, #pentagridRoot input, #trRoot input, #trRoot select, #trSeed, #klRoot button, #klRoot input, #phRoot input, #phSeed { min-height: 44px; }
     #phRoot .ph-slide input { min-width: 44px; }
+    body[data-dev="additron"] .tabs [data-go="osc"], body[data-dev="additron"] .tabs [data-go="filter"],
+    body[data-dev="additron"] .tabs [data-go="mod"], body[data-dev="additron"] .tabs [data-go="stereo"],
+    body[data-dev="additron"] .tabs [data-go="patch"], body[data-dev="additron"] .tabs [data-go="voice"],
+    body[data-dev="additron"] .tabs [data-go="grain"], body[data-dev="additron"] .tabs [data-go="space"],
+    body[data-dev="additron"] .tabs [data-go="tracks"], body[data-dev="additron"] .tabs [data-go="place"],
+    body[data-dev="additron"] .tabs [data-go="life"], body[data-dev="additron"] .tabs [data-go="route"],
+    body[data-dev="additron"] .tabs [data-go="band"], body[data-dev="additron"] .tabs [data-go="scan"],
+    body[data-dev="additron"] .tabs [data-go="shape"] { display: none !important; }
     #pentagridDial { height: 180px; }
     #orthiconCanvas { height: 200px; }
     #trCanvas { height: 200px; }
@@ -565,6 +593,8 @@
     #klPad { height: 200px; }
     #phBoard { height: 200px; }
     #gyRoot input, #gyRoot select { min-height: 44px; min-width: 44px; }
+    #adCanvas { height: 180px; }
+    #adRoot input, #adRoot select { min-height: 44px; min-width: 44px; }
     body[data-dev="gleam"] { padding-bottom: 12px; }
     #thyOsc { grid-template-columns: 1fr; }
     .devbtn { letter-spacing: 0.5px; font-size: 10px; padding: 6px 4px; min-width: 0; overflow: hidden; }
@@ -616,6 +646,7 @@
       <p class="intro" data-dev="gyrotron">Gyrotron is a gravity sequencer. Bodies orbit wells the way electrons spiral in a cavity. A collision or a crossing of an orbit rings a note in the scale you chose. Touch places a well or a body, and a drag flings one. The red rec button saves what you hear as a WAV.</p>
       <p class="intro" data-dev="klystron">Klystron is a talk box. A carrier synth is shaped by a mouth: a vowel you drag on the pad, a recording, or the microphone (the browser asks permission). A filter bank does the speaking, and a grain cloud can smear or freeze it. The red rec button saves what you hear as a WAV.</p>
       <p class="intro" data-dev="phantastron">Phantastron is a circuit-bent toy. A cheap talking-toy voice runs on a clock you can drag a wire into. Touch a pad and pull a wire to another: clock speed, bit crush, a stuck loop, or feedback. The same bend is the same glitch. The red rec button saves what you hear as a WAV.</p>
+      <p class="intro" data-dev="additron">Additron is an additive organ. Draw the harmonics, or pull the stops, and morph between two spectra. Each partial keeps its own decay. A rotary speaker throws the sound around the room. The red rec button saves what you hear as a WAV.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
       <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
@@ -653,6 +684,7 @@
       <button class="devbtn" id="devY" data-d="gyrotron" aria-pressed="false"><i></i>GYROTRON<small>gravity wells</small></button>
       <button class="devbtn" id="devK" data-d="klystron" aria-pressed="false"><i></i>KLYSTRON<small>talk box</small></button>
       <button class="devbtn" id="devQ" data-d="phantastron" aria-pressed="false"><i></i>PHANTASTRON<small>bent toy</small></button>
+      <button class="devbtn" id="devN" data-d="additron" aria-pressed="false"><i></i>ADDITRON<small>additive organ</small></button>
     </div>
     <div class="racklinks" aria-label="More devices, each on its own page">
       <a class="devlink" href="/synth/fm/">HEXODE<small>six-operator FM</small></a>
@@ -667,7 +699,7 @@
         <figure class="tube" data-t="v3" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV3" aria-hidden="true"></canvas><figcaption><span class="role">V3 out</span><br><b id="nameV3">EL34</b></figcaption></figure>
         <figure class="tube" data-t="v4" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV4" aria-hidden="true"></canvas><figcaption><span class="role">V4 <span id="topoV4">PP</span></span><br><b id="nameV4">EL34</b></figcaption></figure>
       </div>
-      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span><span data-dev="gleam">GLEAM<small>touch field &middot; model 06</small></span><span data-dev="mote">MOTE<small>granular &middot; model 07</small></span><span data-dev="heptode">HEPTODE<small>midi files &middot; model 08</small></span><span data-dev="geissler">GEISSLER<small>meadow &middot; model 09</small></span><span data-dev="pentagrid">PENTAGRID<small>shortwave &middot; model 10</small></span><span data-dev="orthicon">ORTHICON<small>spectral painter &middot; model 11</small></span><span data-dev="trochotron">TROCHOTRON<small>fractal seed &middot; model 12</small></span><span data-dev="gyrotron">GYROTRON<small>gravity wells &middot; model 13</small></span><span data-dev="klystron">KLYSTRON<small>talk box &middot; model 14</small></span><span data-dev="phantastron">PHANTASTRON<small>bent toy &middot; model 15</small></span></div>
+      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span><span data-dev="gleam">GLEAM<small>touch field &middot; model 06</small></span><span data-dev="mote">MOTE<small>granular &middot; model 07</small></span><span data-dev="heptode">HEPTODE<small>midi files &middot; model 08</small></span><span data-dev="geissler">GEISSLER<small>meadow &middot; model 09</small></span><span data-dev="pentagrid">PENTAGRID<small>shortwave &middot; model 10</small></span><span data-dev="orthicon">ORTHICON<small>spectral painter &middot; model 11</small></span><span data-dev="trochotron">TROCHOTRON<small>fractal seed &middot; model 12</small></span><span data-dev="gyrotron">GYROTRON<small>gravity wells &middot; model 13</small></span><span data-dev="klystron">KLYSTRON<small>talk box &middot; model 14</small></span><span data-dev="phantastron">PHANTASTRON<small>bent toy &middot; model 15</small></span><span data-dev="additron">ADDITRON<small>additive organ &middot; model 16</small></span></div>
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="lamps">
@@ -693,6 +725,7 @@
       <button role="tab" data-go="tone" aria-selected="false" data-dev="gyrotron">Tone</button>
       <button role="tab" data-go="mouth" aria-selected="false" data-dev="klystron">Mouth</button>
       <button role="tab" data-go="bend" aria-selected="false" data-dev="phantastron">Bends</button>
+      <button role="tab" data-go="spin" aria-selected="false" data-dev="additron">Spin</button>
       <button role="tab" data-go="osc" aria-selected="false">Osc</button>
       <button role="tab" data-go="filter" aria-selected="false">Filter</button>
       <button role="tab" data-go="mod" aria-selected="false">Mod</button>
@@ -779,6 +812,7 @@
       <div id="gyRoot"></div>
       <div id="klRoot"></div>
       <div id="phRoot"></div>
+      <div id="adRoot"></div>
       <section class="mod" data-tab="rack" id="mHost" data-wide><h3><span class="pilot" id="hostPilot"></span>Transport and mixer</h3>
         <div class="hostbar">
           <button class="btn small" id="trPlay" aria-pressed="false">play</button>
@@ -871,6 +905,13 @@
           <label>pan <input type="range" id="mixYPan" min="-1" max="1" step="0.01" value="0" aria-label="Gyrotron pan"></label>
           <button class="chip" id="mixYMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixYSolo" aria-pressed="false">solo</button>
+        </div>
+        <div class="mixrow" data-mix="additron">
+          <span class="who">Additron</span>
+          <label>level <input type="range" id="mixNLvl" min="0" max="1" step="0.01" value="1" aria-label="Additron level"></label>
+          <label>pan <input type="range" id="mixNPan" min="-1" max="1" step="0.01" value="0" aria-label="Additron pan"></label>
+          <button class="chip" id="mixNMute" aria-pressed="false">mute</button>
+          <button class="chip" id="mixNSolo" aria-pressed="false">solo</button>
         </div>
         <div class="mixrow" data-mix="klystron">
           <span class="who">Klystron</span>
@@ -1027,6 +1068,8 @@ import { klystronDevice, normalizeKlystron, KLY_FACTORY, KLY_DEFAULT, KLY_CATS, 
 import { createKlystronHost, mountKlystronPanel, renderKlystronBuffer } from './klystron-ui.js';
 import { phantastronDevice, normalizePhantastron, PHANTA_FACTORY, PHANTA_DEFAULT, PHANTA_CATS, PADS, bendOf, phraseOf, walkFrames, crush, toggleWire } from './phantastron.js';
 import { createPhantastronHost, mountPhantastronPanel, renderPhantastronBuffer } from './phantastron-ui.js';
+import { additronDevice, normalizeAdditron, AD_FACTORY, AD_DEFAULT, AD_CATS, spectrumOf as additronSpectrum } from './additron.js';
+import { createAdditronHost, mountAdditronPanel, renderAdditronAudio } from './additron-ui.js';
 
 const $ = id => document.getElementById(id);
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1059,6 +1102,7 @@ const DEVS = {
   gyrotron: { name: 'Gyrotron', factory: GYRO_FACTORY, cats: GYRO_CATS, normalize: normalizeGyrotron, def: GYRO_DEFAULT, enums: {}, kCur: 'gyrotron_cur', kUser: 'gyrotron_user', first: 'Copper Orbit' },
   klystron: { name: 'Klystron', factory: KLY_FACTORY, cats: KLY_CATS, normalize: normalizeKlystron, def: KLY_DEFAULT, enums: {}, kCur: 'klystron_cur', kUser: 'klystron_user', first: 'Buncher Ah' },
   phantastron: { name: 'Phantastron', factory: PHANTA_FACTORY, cats: PHANTA_CATS, normalize: normalizePhantastron, def: PHANTA_DEFAULT, enums: {}, kCur: 'phantastron_cur', kUser: 'phantastron_user', first: 'Nursery Clock' },
+  additron: { name: 'Additron', factory: AD_FACTORY, cats: AD_CATS, normalize: normalizeAdditron, def: AD_DEFAULT, enums: {}, kCur: 'additron_cur', kUser: 'additron_user', first: 'Copper Flute' },
 };
 const D = () => DEVS[dev];
 function loadDevState(d) {
@@ -1073,9 +1117,9 @@ function loadDevState(d) {
   if (saved && saved.patch) { const base = all.find(x => x.key === curKey); edited = !!base && JSON.stringify(base.p) !== JSON.stringify(X.normalize(saved.patch)); }
   return { cur, curKey, edited, user };
 }
-const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron'), lattice: loadDevState('lattice'), thyratron: loadDevState('thyratron'), gleam: loadDevState('gleam'), mote: loadDevState('mote'), heptode: loadDevState('heptode'), geissler: loadDevState('geissler'), pentagrid: loadDevState('pentagrid'), orthicon: loadDevState('orthicon'), trochotron: loadDevState('trochotron'), gyrotron: loadDevState('gyrotron'), klystron: loadDevState('klystron'), phantastron: loadDevState('phantastron') };
+const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron'), lattice: loadDevState('lattice'), thyratron: loadDevState('thyratron'), gleam: loadDevState('gleam'), mote: loadDevState('mote'), heptode: loadDevState('heptode'), geissler: loadDevState('geissler'), pentagrid: loadDevState('pentagrid'), orthicon: loadDevState('orthicon'), trochotron: loadDevState('trochotron'), gyrotron: loadDevState('gyrotron'), klystron: loadDevState('klystron'), phantastron: loadDevState('phantastron'), additron: loadDevState('additron') };
 const savedDev = store.get('synth_dev', 'filament');
-let dev = savedDev === 'cathode' || savedDev === 'dekatron' || savedDev === 'lattice' || savedDev === 'thyratron' || savedDev === 'gleam' || savedDev === 'mote' || savedDev === 'heptode' || savedDev === 'geissler' || savedDev === 'pentagrid' || savedDev === 'orthicon' || savedDev === 'trochotron' || savedDev === 'gyrotron' || savedDev === 'klystron' || savedDev === 'phantastron' ? savedDev : 'filament';
+let dev = savedDev === 'cathode' || savedDev === 'dekatron' || savedDev === 'lattice' || savedDev === 'thyratron' || savedDev === 'gleam' || savedDev === 'mote' || savedDev === 'heptode' || savedDev === 'geissler' || savedDev === 'pentagrid' || savedDev === 'orthicon' || savedDev === 'trochotron' || savedDev === 'gyrotron' || savedDev === 'klystron' || savedDev === 'phantastron' || savedDev === 'additron' ? savedDev : 'filament';
 const drumHost = createDrumHost();
 const latticeHost = createLatticeHost();
 const thyHost = createThyHost();
@@ -1089,7 +1133,8 @@ const trHost = createTrochotronHost();
 const gyHost = createGyrotronHost();
 const klHost = createKlystronHost();
 const phHost = createPhantastronHost();
-let drumPanel = null, latPanel = null, thyPanel = null, gleamView = null, motePanel = null, heptodePanel = null, geisslerPanel = null, pentaPanel = null, orthiconPanel = null, trPanel = null, gyPanel = null, klPanel = null, phPanel = null;
+const adHost = createAdditronHost();
+let drumPanel = null, latPanel = null, thyPanel = null, gleamView = null, motePanel = null, heptodePanel = null, geisslerPanel = null, pentaPanel = null, orthiconPanel = null, trPanel = null, gyPanel = null, klPanel = null, phPanel = null, adPanel = null;
 let bendV = 0, modV = 0;
 function drumPatch() { return dev === 'dekatron' ? cur : DS.dekatron.cur; }
 function latticePatch() { return dev === 'lattice' ? cur : DS.lattice.cur; }
@@ -1103,6 +1148,7 @@ function trochotronPatch() { return dev === 'trochotron' ? cur : DS.trochotron.c
 function gyrotronPatch() { return dev === 'gyrotron' ? cur : DS.gyrotron.cur; }
 function klystronPatch() { return dev === 'klystron' ? cur : DS.klystron.cur; }
 function phantastronPatch() { return dev === 'phantastron' ? cur : DS.phantastron.cur; }
+function additronPatch() { return dev === 'additron' ? cur : DS.additron.cur; }
 let { cur, curKey, edited, user } = DS[dev];
 document.body.dataset.dev = dev;
 
@@ -1115,7 +1161,7 @@ function ensureEngine() {
   initAudioSession();
   try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); }
   catch (e) { toast('This browser cannot start Web Audio.'); return Promise.reject(e); }
-  const bootPatch = dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' ? DS.filament.cur : cur;
+  const bootPatch = dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' || dev === 'additron' ? DS.filament.cur : cur;
   enginePromise = createEngine(ctx, {
     patch: bootPatch,
     tempo: bootProj && bootProj.tempo,
@@ -1125,8 +1171,8 @@ function ensureEngine() {
     E = e; E.master.gain.value = 1;
     // Dekatron joins the mixer and the master clock as soon as the engine exists.
     // Asleep until the rail selects it, so it adds nothing to the other devices.
-    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
-      const sleep = () => { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); gleamHost.setActive(false); moteHost.setActive(false); heptodeHost.setActive(false); geisslerHost.setActive(false); pentaHost.setActive(false); orthiconHost.setActive(false); trHost.setActive(false); gyHost.setActive(false); klHost.setActive(false); phHost.setActive(false); };
+    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => adHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
+      const sleep = () => { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); gleamHost.setActive(false); moteHost.setActive(false); heptodeHost.setActive(false); geisslerHost.setActive(false); pentaHost.setActive(false); orthiconHost.setActive(false); trHost.setActive(false); gyHost.setActive(false); klHost.setActive(false); phHost.setActive(false); adHost.setActive(false); };
       if (dev === 'dekatron') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         sleep(); drumHost.setActive(true); drumHost.setPatch(cur);
@@ -1166,6 +1212,9 @@ function ensureEngine() {
       } else if (dev === 'phantastron') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         sleep(); phHost.setActive(true); phHost.setPatch(cur);
+      } else if (dev === 'additron') {
+        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        sleep(); adHost.setActive(true); adHost.setPatch(cur);
       } else { sleep(); }
     });
     return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); syncHostUI(); return E; });
@@ -1208,6 +1257,7 @@ function pushPatch(load) {
     else if (dev === 'gyrotron') { cur = normalizeGyrotron(cur); withEngine(() => gyHost.setPatch(cur)); }
     else if (dev === 'klystron') { cur = normalizeKlystron(cur); withEngine(() => klHost.setPatch(cur)); }
     else if (dev === 'phantastron') { cur = normalizePhantastron(cur); withEngine(() => phHost.setPatch(cur)); }
+    else if (dev === 'additron') { cur = normalizeAdditron(cur); withEngine(() => adHost.setPatch(cur)); }
     else withEngine(() => E.setPatch(cur, l));
     store.set(D().kCur, { key: curKey, patch: cur });
   });
@@ -1222,7 +1272,7 @@ function collectProject() {
     timeSig: st ? st.timeSig : (bootProj ? bootProj.timeSig : [4, 4]),
     device: dev,
     mixer: E ? E.mix.all() : (bootProj ? bootProj.mixer : null),
-    devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') }, geissler: { patch: patchOf('geissler') }, pentagrid: { patch: patchOf('pentagrid') }, orthicon: { patch: patchOf('orthicon') }, trochotron: { patch: patchOf('trochotron') }, gyrotron: { patch: patchOf('gyrotron') }, klystron: { patch: patchOf('klystron') }, phantastron: { patch: patchOf('phantastron') } },
+    devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') }, geissler: { patch: patchOf('geissler') }, pentagrid: { patch: patchOf('pentagrid') }, orthicon: { patch: patchOf('orthicon') }, trochotron: { patch: patchOf('trochotron') }, gyrotron: { patch: patchOf('gyrotron') }, klystron: { patch: patchOf('klystron') }, phantastron: { patch: patchOf('phantastron') }, additron: { patch: patchOf('additron') } },
   });
 }
 function paintHost(st) {
@@ -1238,7 +1288,7 @@ function syncHostUI() {
   if (document.activeElement !== $('hostTempo')) $('hostTempo').value = String(Math.round(st.tempo));
   paintHost(st);
   const mix = E.mix.all();
-  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z'], ['pentagrid', 'P'], ['orthicon', 'O'], ['trochotron', 'X'], ['gyrotron', 'Y'], ['klystron', 'K'], ['phantastron', 'Q']].forEach(([id, s]) => {
+  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z'], ['pentagrid', 'P'], ['orthicon', 'O'], ['trochotron', 'X'], ['gyrotron', 'Y'], ['klystron', 'K'], ['phantastron', 'Q'], ['additron', 'N']].forEach(([id, s]) => {
     const c = mix[id] || { level: 1, pan: 0, mute: false, solo: false };
     $('mix' + s + 'Lvl').value = String(c.level);
     $('mix' + s + 'Pan').value = String(c.pan);
@@ -1254,7 +1304,7 @@ function pushStrip(id, s) {
 function applyProject(raw) {
   const proj = normalizeProject(raw);
   $('projName').value = proj.name;
-  ['filament', 'cathode', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron'].forEach(id => {
+  ['filament', 'cathode', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron', 'additron'].forEach(id => {
     if (!proj.devices[id]) return;
     DS[id] = Object.assign({}, DS[id], { cur: proj.devices[id].patch, curKey: '__project', edited: true });
     store.set(DEVS[id].kCur, { key: '__project', patch: DS[id].cur });
@@ -1277,6 +1327,7 @@ function applyProject(raw) {
     else if (dev === 'gyrotron') withEngine(() => gyHost.setPatch(cur));
     else if (dev === 'klystron') withEngine(() => klHost.setPatch(cur));
     else if (dev === 'phantastron') withEngine(() => phHost.setPatch(cur));
+    else if (dev === 'additron') withEngine(() => adHost.setPatch(cur));
     else withEngine(() => E.setPatch(cur, true));
   }
   withEngine(() => {
@@ -1297,6 +1348,7 @@ function applyProject(raw) {
     if (proj.devices.gyrotron && dev !== 'gyrotron') gyHost.setPatch(DS.gyrotron.cur);
     if (proj.devices.klystron && dev !== 'klystron') klHost.setPatch(DS.klystron.cur);
     if (proj.devices.phantastron && dev !== 'phantastron') phHost.setPatch(DS.phantastron.cur);
+    if (proj.devices.additron && dev !== 'additron') adHost.setPatch(DS.additron.cur);
     syncHostUI();
   });
   saveLocal(localStorage, proj);
@@ -1309,7 +1361,7 @@ function commitTempo() {
   withEngine(() => { const t = E.transport.setTempo($('hostTempo').value); $('hostTempo').value = String(Math.round(t)); paintHost(); });
 }
 $('hostTempo').addEventListener('change', commitTempo);
-[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z'], ['pentagrid', 'P'], ['orthicon', 'O'], ['trochotron', 'X'], ['gyrotron', 'Y'], ['klystron', 'K'], ['phantastron', 'Q']].forEach(([id, s]) => {
+[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z'], ['pentagrid', 'P'], ['orthicon', 'O'], ['trochotron', 'X'], ['gyrotron', 'Y'], ['klystron', 'K'], ['phantastron', 'Q'], ['additron', 'N']].forEach(([id, s]) => {
   $('mix' + s + 'Lvl').addEventListener('input', () => pushStrip(id, s));
   $('mix' + s + 'Pan').addEventListener('input', () => pushStrip(id, s));
   ['Mute', 'Solo'].forEach(which => $('mix' + s + which).addEventListener('click', () => {
@@ -1374,6 +1426,7 @@ function noteOn(n, v, src) {
   else if (dev === 'gyrotron') withEngine(() => gyHost.noteOn(n, v));
   else if (dev === 'klystron') withEngine(() => klHost.noteOn(n, v));
   else if (dev === 'phantastron') withEngine(() => phHost.noteOn(n, v));
+  else if (dev === 'additron') withEngine(() => adHost.noteOn(n, v));
   else withEngine(() => E.noteOn(n, v));
   rec({ t: 'on', n, v });
   paintKey(n, true);
@@ -1399,6 +1452,7 @@ function noteOff(n, src) {
   else if (dev === 'gyrotron') withEngine(() => gyHost.noteOff(n));
   else if (dev === 'klystron') withEngine(() => klHost.noteOff(n));
   else if (dev === 'phantastron') withEngine(() => phHost.noteOff(n));
+  else if (dev === 'additron') withEngine(() => adHost.noteOff(n));
   else if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
   rec({ t: 'off', n });
 }
@@ -1420,6 +1474,7 @@ function dropHolds() {
     else if (dev === 'gyrotron') withEngine(() => gyHost.noteOff(n));
     else if (dev === 'klystron') withEngine(() => klHost.noteOff(n));
     else if (dev === 'phantastron') withEngine(() => phHost.noteOff(n));
+    else if (dev === 'additron') withEngine(() => adHost.noteOff(n));
     else if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
     rec({ t: 'off', n });
   });
@@ -1447,6 +1502,11 @@ function perf(kind, v) {
   if (dev === 'orthicon') {
     if (kind === 'at') return;
     withEngine(() => { if (kind === 'bend') orthiconHost.bend(v); else if (kind === 'mw') orthiconHost.mod(v); });
+    return;
+  }
+  if (dev === 'additron') {
+    if (kind === 'at') return;
+    withEngine(() => { if (kind === 'bend') adHost.bend(v); else if (kind === 'mw') adHost.mod(v); });
     return;
   }
   if (dev === 'trochotron') return;
@@ -1493,6 +1553,7 @@ function setSustain(on) {
   else if (dev === 'phantastron') withEngine(() => phHost.sustain(sustainOn));
   else if (dev === 'pentagrid') withEngine(() => pentaHost.sustain(sustainOn));
   else if (dev === 'orthicon') withEngine(() => orthiconHost.sustain(sustainOn));
+  else if (dev === 'additron') withEngine(() => adHost.sustain(sustainOn));
   else withEngine(() => E.sustain(sustainOn));
   rec({ t: 'sus', on: sustainOn });
 }
@@ -1518,7 +1579,7 @@ function K(hostId, path, label, o) {
   // Shared rack knobs belong to Filament's output patch. Dekatron copies those
   // fields; Lattice and Thyratron do not, and a reload onto them would throw
   // in the formatter before window.__synth exists.
-  const sharedOff = !kd && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron');
+  const sharedOff = !kd && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' || dev === 'additron');
   const src = sharedOff ? DS.filament.cur : patchOf(kd);
   const k = makeKnob(host, {
     label, min, max, step, value: map.from(getPath(src, path)), def,
@@ -1692,7 +1753,7 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), tog
 
 // Whatever depends on more than one control.
 function afterChange(path) {
-  if (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron') {
+  if (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' || dev === 'additron') {
     if (dev === 'thyratron') {
       $('nameV1').textContent = 'LADDER';
       $('nameV2').textContent = 'DRIVE';
@@ -1739,7 +1800,7 @@ function afterF() {
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
 }
 function refreshAll() {
-  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron')) return; e.k.set(e.map.from(getPath(cur, e.path))); });
+  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' || dev === 'additron')) return; e.k.set(e.map.from(getPath(cur, e.path))); });
   Object.keys(CH).forEach(refreshChips);
   afterChange('__load');
   if (dev === 'dekatron' && drumPanel) drumPanel.sync();
@@ -1755,6 +1816,7 @@ function refreshAll() {
   if (dev === 'gyrotron' && gyPanel) gyPanel.sync();
   if (dev === 'klystron' && klPanel) klPanel.sync();
   if (dev === 'phantastron' && phPanel) phPanel.sync();
+  if (dev === 'additron' && adPanel) adPanel.sync();
 }
 
 // ---------------------------------------------------------------- patch list
@@ -1801,7 +1863,7 @@ $('delP').addEventListener('click', () => {
 // ---------------------------------------------------------------- the rack rail
 // The keyboard, wheels and MIDI play the lit device; the panel, patch list and chassis show it.
 function setDevice(d) {
-  if (d !== 'cathode' && d !== 'dekatron' && d !== 'lattice' && d !== 'thyratron' && d !== 'gleam' && d !== 'mote' && d !== 'heptode' && d !== 'geissler' && d !== 'pentagrid' && d !== 'orthicon' && d !== 'trochotron' && d !== 'gyrotron' && d !== 'klystron' && d !== 'phantastron') d = 'filament';
+  if (d !== 'cathode' && d !== 'dekatron' && d !== 'lattice' && d !== 'thyratron' && d !== 'gleam' && d !== 'mote' && d !== 'heptode' && d !== 'geissler' && d !== 'pentagrid' && d !== 'orthicon' && d !== 'trochotron' && d !== 'gyrotron' && d !== 'klystron' && d !== 'phantastron' && d !== 'additron') d = 'filament';
   if (d === dev) return;
   const playbackBusy = (deck && deck.test && deck.test.playing()) || (player && player.test && player.test.playing());
   releaseInput();
@@ -1835,6 +1897,8 @@ function setDevice(d) {
   if (d === 'klystron' && tab !== 'play' && tab !== 'mouth' && tab !== 'rack') goTab('play');
   if (tab === 'bend' && d !== 'phantastron') goTab('play');
   if (d === 'phantastron' && tab !== 'play' && tab !== 'bend' && tab !== 'rack') goTab('play');
+  if (tab === 'spin' && d !== 'additron') goTab('play');
+  if (d === 'additron' && tab !== 'play' && tab !== 'spin' && tab !== 'rack') goTab('play');
   const run = () => {
     const sleepOthers = except => {
       if (except !== 'dekatron') drumHost.setActive(false);
@@ -1850,6 +1914,7 @@ function setDevice(d) {
       if (except !== 'gyrotron') gyHost.setActive(false);
       if (except !== 'klystron') klHost.setActive(false);
       if (except !== 'phantastron') phHost.setActive(false);
+      if (except !== 'additron') adHost.setActive(false);
     };
     if (d === 'dekatron') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
@@ -1913,6 +1978,11 @@ function setDevice(d) {
       sleepOthers('phantastron');
       return phHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { phHost.setActive(true); phHost.setPatch(cur); });
     }
+    if (d === 'additron') {
+      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      sleepOthers('additron');
+      return adHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { adHost.setActive(true); adHost.setPatch(cur); });
+    }
     sleepOthers('');
     if (d === 'gleam') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
@@ -1943,7 +2013,8 @@ function showDevice() {
   $('devY').setAttribute('aria-pressed', String(dev === 'gyrotron'));
   $('devK').setAttribute('aria-pressed', String(dev === 'klystron'));
   $('devQ').setAttribute('aria-pressed', String(dev === 'phantastron'));
-  $('devTitle').innerHTML = dev === 'phantastron' ? 'PHANTA<span>STRON</span>' : dev === 'klystron' ? 'KLYS<span>TRON</span>' : dev === 'gyrotron' ? 'GYRO<span>TRON</span>' : dev === 'trochotron' ? 'TROCHO<span>TRON</span>' : dev === 'orthicon' ? 'ORTH<span>ICON</span>' : dev === 'pentagrid' ? 'PENTA<span>GRID</span>' : dev === 'geissler' ? 'GEISS<span>LER</span>' : dev === 'heptode' ? 'HEP<span>TODE</span>' : dev === 'mote' ? 'MO<span>TE</span>' : dev === 'gleam' ? 'GLE<span>AM</span>' : dev === 'thyratron' ? 'THYRA<span>TRON</span>' : dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
+  $('devN').setAttribute('aria-pressed', String(dev === 'additron'));
+  $('devTitle').innerHTML = dev === 'additron' ? 'ADDI<span>TRON</span>' : dev === 'phantastron' ? 'PHANTA<span>STRON</span>' : dev === 'klystron' ? 'KLYS<span>TRON</span>' : dev === 'gyrotron' ? 'GYRO<span>TRON</span>' : dev === 'trochotron' ? 'TROCHO<span>TRON</span>' : dev === 'orthicon' ? 'ORTH<span>ICON</span>' : dev === 'pentagrid' ? 'PENTA<span>GRID</span>' : dev === 'geissler' ? 'GEISS<span>LER</span>' : dev === 'heptode' ? 'HEP<span>TODE</span>' : dev === 'mote' ? 'MO<span>TE</span>' : dev === 'gleam' ? 'GLE<span>AM</span>' : dev === 'thyratron' ? 'THYRA<span>TRON</span>' : dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
 }
 document.querySelectorAll('.devbtn').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.d)));
 showDevice();
@@ -2104,6 +2175,8 @@ function goTab(t) {
   if (dev === 'klystron' && t !== 'play' && t !== 'mouth' && t !== 'rack') t = 'play';
   if (t === 'bend' && dev !== 'phantastron') t = 'play';
   if (dev === 'phantastron' && t !== 'play' && t !== 'bend' && t !== 'rack') t = 'play';
+  if (t === 'spin' && dev !== 'additron') t = 'play';
+  if (dev === 'additron' && t !== 'play' && t !== 'spin' && t !== 'rack') t = 'play';
   document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables());
 }
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
@@ -2248,7 +2321,7 @@ function releaseInput() {
 }
 function panic() {
   releaseInput();
-  withEngine(() => { E.panic(); latticeHost.send({ t: 'panic' }); thyHost.panic(); gleamHost.panic(); moteHost.panic(); heptodeHost.panic(); geisslerHost.panic(); pentaHost.panic(); orthiconHost.panic(); trHost.panic(); gyHost.panic(); klHost.panic(); phHost.panic(); });
+  withEngine(() => { E.panic(); latticeHost.send({ t: 'panic' }); thyHost.panic(); gleamHost.panic(); moteHost.panic(); heptodeHost.panic(); geisslerHost.panic(); pentaHost.panic(); orthiconHost.panic(); trHost.panic(); gyHost.panic(); klHost.panic(); phHost.panic(); adHost.panic(); });
   if (deck && deck.silence) deck.silence();
   if (player && player.test && player.test.playing()) player.test.stop();
 }
@@ -2435,6 +2508,7 @@ function frame(now) {
   const gyOn = dev === 'gyrotron';
   const klOn = dev === 'klystron';
   const phOn = dev === 'phantastron';
+  const adOn = dev === 'additron';
   const dm = drumOn ? drumHost.meter() : null;
   const lm = latOn ? latticeHost.meter() : null;
   const tm = thyOn ? thyHost.meter() : null;
@@ -2448,14 +2522,15 @@ function frame(now) {
   const gym = gyOn ? gyHost.meter() : null;
   const klm = klOn ? klHost.meter() : null;
   const phm = phOn ? phHost.meter() : null;
-  const cath = dev === 'cathode', valve = !drumOn && !latOn && !thyOn && !gleamOn && !moteOn && !hepOn && !geissOn && !pentaOn && !orthOn && !trOn && !gyOn && !klOn && !phOn && !cath && cur.filt.model === 'valve12';
+  const adm = adOn ? adHost.meter() : null;
+  const cath = dev === 'cathode', valve = !drumOn && !latOn && !thyOn && !gleamOn && !moteOn && !hepOn && !geissOn && !pentaOn && !orthOn && !trOn && !gyOn && !klOn && !phOn && !adOn && !cath && cur.filt.model === 'valve12';
   const tgt = thyOn ? {
     v1: { tube: '12AU7', drive: 4, bias: 0, lv: clampN((tm.v1 || 0) * 4, 0, 1.2), on: true },
     v2: { tube: '12AU7', drive: 3, bias: 0, lv: clampN((tm.v1 || 0) * 2, 0, 1.2), on: true },
     v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
     v4: { tube: TUBE_ST.v4.shown || 'EL34', drive: TUBE_ST.v4.drive, bias: TUBE_ST.v4.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
-  } : (drumOn || latOn || gleamOn || moteOn || hepOn || geissOn || pentaOn || orthOn || trOn || gyOn || klOn || phOn) ? {
-    v1: { tube: TUBE_ST.v1.shown || '12AU7', drive: 2, bias: 0, lv: clampN(((drumOn ? dm.v1 : latOn ? lm.peak : moteOn ? (mm.level || 0) : hepOn ? (hm.peak || 0) : geissOn ? (zm.level || 0) : pentaOn ? (pm.level || 0) : orthOn ? (om.level || 0) : trOn ? (trm.peak || 0) : gyOn ? (gym.level || 0) : klOn ? (klm.level || 0) : phOn ? (phm.peak || 0) : gm.peak) || 0) * 4, 0, 1.2), on: true },
+  } : (drumOn || latOn || gleamOn || moteOn || hepOn || geissOn || pentaOn || orthOn || trOn || gyOn || klOn || phOn || adOn) ? {
+    v1: { tube: TUBE_ST.v1.shown || '12AU7', drive: 2, bias: 0, lv: clampN(((drumOn ? dm.v1 : latOn ? lm.peak : moteOn ? (mm.level || 0) : hepOn ? (hm.peak || 0) : geissOn ? (zm.level || 0) : pentaOn ? (pm.level || 0) : orthOn ? (om.level || 0) : trOn ? (trm.peak || 0) : gyOn ? (gym.level || 0) : klOn ? (klm.level || 0) : phOn ? (phm.peak || 0) : adOn ? (adm.peak || 0) : gm.peak) || 0) * 4, 0, 1.2), on: true },
     v2: { tube: TUBE_ST.v2.shown || '12AU7', drive: 2, bias: 0, lv: 0, on: false },
     v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
     v4: { tube: TUBE_ST.v4.shown || 'EL34', drive: TUBE_ST.v4.drive, bias: TUBE_ST.v4.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
@@ -2485,7 +2560,7 @@ function frame(now) {
   drawEye(eyeLv);
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
   paintHost();
-  const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : gyOn ? gym : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
+  const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
 }
@@ -2497,7 +2572,7 @@ requestAnimationFrame(frame);
 // one device plays during the take, the name is rack-….
 const WAV_LABEL = {
   filament: 'Filament', cathode: 'Cathode', thyratron: 'Thyratron', gleam: 'Gleam',
-  dekatron: 'Dekatron', lattice: 'Lattice', mote: 'Mote', heptode: 'Heptode', geissler: 'Geissler', pentagrid: 'Pentagrid', orthicon: 'Orthicon', trochotron: 'Trochotron', gyrotron: 'Gyrotron', klystron: 'Klystron', phantastron: 'Phantastron',
+  dekatron: 'Dekatron', lattice: 'Lattice', mote: 'Mote', heptode: 'Heptode', geissler: 'Geissler', pentagrid: 'Pentagrid', orthicon: 'Orthicon', trochotron: 'Trochotron', gyrotron: 'Gyrotron', klystron: 'Klystron', phantastron: 'Phantastron', additron: 'Additron',
 };
 let wavHeard = new Set();
 function meterOn(m) {
@@ -2518,6 +2593,7 @@ function meterOf(id) {
   if (id === 'gyrotron') return gyHost.meter();
   if (id === 'klystron') return klHost.meter();
   if (id === 'phantastron') return phHost.meter();
+  if (id === 'additron') return adHost.meter();
   return E && E.meters ? E.meters[id] : null;
 }
 function playingNow() {
@@ -2743,6 +2819,13 @@ const phHooks = {
   wake,
 };
 phPanel = mountPhantastronPanel($('phRoot'), phHooks);
+const adHooks = {
+  patch: additronPatch,
+  host: adHost,
+  edited() { if (dev !== 'additron') return; markEdited(); pushPatch(false); },
+  wake, toast,
+};
+adPanel = mountAdditronPanel($('adRoot'), adHooks);
 function applyTrochoShare() {
   let q = '';
   try { q = new URLSearchParams(location.search).get('tr') || ''; } catch (e) { q = ''; }
@@ -2761,7 +2844,7 @@ applyTrochoShare();
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.16-phantastron',
+  version: '0.17-additron',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -2849,10 +2932,17 @@ window.__synth = {
       if (phPanel) phPanel.sync();
       return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
     }
+    if (p && p.device === 'additron') {
+      const np = normalizeAdditron(p);
+      const switched = dev !== 'additron' ? setDevice('additron') : null;
+      cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true);
+      if (adPanel) adPanel.sync();
+      return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
+    }
     const np = normalizeAny(p); if (deviceOf(np) !== dev) setDevice(deviceOf(np)); cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur);
   },
   load: name => {
-    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : LATTICE_FACTORY.some(p => p.name === name) ? 'lattice' : THY_FACTORY.some(p => p.name === name) ? 'thyratron' : GLEAM_FACTORY.some(p => p.name === name) ? 'gleam' : MOTE_FACTORY.some(p => p.name === name) ? 'mote' : HEPTODE_FACTORY.some(p => p.name === name) ? 'heptode' : GEISSLER_FACTORY.some(p => p.name === name) ? 'geissler' : PENTA_FACTORY.some(p => p.name === name) ? 'pentagrid' : ORTH_FACTORY.some(p => p.name === name) ? 'orthicon' : TROCHO_FACTORY.some(p => p.name === name) ? 'trochotron' : GYRO_FACTORY.some(p => p.name === name) ? 'gyrotron' : KLY_FACTORY.some(p => p.name === name) ? 'klystron' : PHANTA_FACTORY.some(p => p.name === name) ? 'phantastron' : dev;
+    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : LATTICE_FACTORY.some(p => p.name === name) ? 'lattice' : THY_FACTORY.some(p => p.name === name) ? 'thyratron' : GLEAM_FACTORY.some(p => p.name === name) ? 'gleam' : MOTE_FACTORY.some(p => p.name === name) ? 'mote' : HEPTODE_FACTORY.some(p => p.name === name) ? 'heptode' : GEISSLER_FACTORY.some(p => p.name === name) ? 'geissler' : PENTA_FACTORY.some(p => p.name === name) ? 'pentagrid' : ORTH_FACTORY.some(p => p.name === name) ? 'orthicon' : TROCHO_FACTORY.some(p => p.name === name) ? 'trochotron' : GYRO_FACTORY.some(p => p.name === name) ? 'gyrotron' : KLY_FACTORY.some(p => p.name === name) ? 'klystron' : PHANTA_FACTORY.some(p => p.name === name) ? 'phantastron' : AD_FACTORY.some(p => p.name === name) ? 'additron' : dev;
     const switched = setDevice(d); loadKey('f:' + name); return switched;
   },
   factory: () => FACTORY.map(p => ({ name: p.name, cat: p.cat })),
@@ -3181,6 +3271,20 @@ window.__synth = {
       patch: opts.patch || (dev === 'gyrotron' ? cur : GYRO_DEFAULT),
       events: opts.events || [],
       seconds: opts.seconds || 1,
+      sampleRate: opts.sampleRate || 48000,
+    });
+    return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
+  },
+  additronDevice: () => additronDevice,
+  additronFactory: () => AD_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
+  additronMeter: () => Object.assign({}, adHost.meter()),
+  additronSpectrum: patch => additronSpectrum(patch || (dev === 'additron' ? cur : AD_DEFAULT)),
+  additronRender: async opts => {
+    opts = opts || {};
+    const buf = await renderAdditronAudio({
+      patch: opts.patch || (dev === 'additron' ? cur : AD_DEFAULT),
+      events: opts.events || [],
+      seconds: opts.seconds || 0.6,
       sampleRate: opts.sampleRate || 48000,
     });
     return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
