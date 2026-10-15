@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -3882,6 +3882,165 @@ with sync_playwright() as pw:
     }""")
     ck("Kl. a project round-trips the mouth",
        trip["dev"] == "klystron" and abs(trip["x"] - 0.2) < 1e-6 and abs(trip["y"] - 0.3) < 1e-6 and abs(trip["level"] - 0.4) < 1e-6 and trip["name"] == "Mouth", trip)
+    # ---------------------------------------------------------------- Ph. Phantastron, the circuit-bent toy
+    def ph_render(patch, seconds=1.0, events=None):
+        body = {"patch": patch, "seconds": seconds}
+        if events is not None:
+            body["events"] = events
+        return dec(pg.evaluate("a => __synth.phantastronRender(a)", body))
+    def ph_rms(x):
+        if len(x) == 0: return 0.0
+        return float(np.sqrt(np.mean(np.square(x))))
+    devp = pg.evaluate("""() => { const d = __synth.phantastronDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput, proc: d.processor,
+      worklet: d.worklet, ch: d.channels, name: d.name,
+      bits: d.parameters.bits && d.parameters.bits.type,
+      cart: d.parameters.cart && d.parameters.cart.choices,
+      run: d.parameters.run && d.parameters.run.type }; }""")
+    ck("Ph. Phantastron publishes a stereo MIDI dxrack/1 device",
+       devp["id"] == "phantastron" and devp["api"] == "dxrack/1" and devp["inst"] and devp["outs"] == 1 and devp["midi"]
+       and devp["proc"] == "phantastron" and devp["worklet"] == "phantastron.worklet.js" and devp["ch"] == 2
+       and devp["name"] == "Phantastron" and devp["bits"] == "int" and devp["run"] == "boolean"
+       and all(c in (devp["cart"] or []) for c in ("lull", "count", "chirp", "bark", "tone", "babble")), devp)
+    norm = pg.evaluate("""() => __synth.setPatch({
+      device: 'phantastron', bits: 99, clock: 9, cart: 'nope',
+      wires: [['bogus', 'rate'], ['vcc', 'bits'], ['gnd', 'bits'], ['clk', 'rate']]
+    })""")
+    ck("Ph. normalize clamps the knobs and keeps one wire per bend",
+       norm["bits"] == 12 and abs(norm["clock"] - 4) < 1e-9 and norm["cart"] == "lull"
+       and norm["wires"] == [["vcc", "bits"], ["clk", "rate"]], norm)
+    bends = pg.evaluate("""() => ({
+      bare: __synth.phantastronBend({ clock: 1, bits: 8, wires: [] }),
+      vcc: __synth.phantastronBend({ clock: 1, wires: [['vcc', 'rate']] }),
+      gnd: __synth.phantastronBend({ clock: 1, wires: [['gnd', 'rate']] }),
+      bits: __synth.phantastronBend({ bits: 12, wires: [['vcc', 'bits']] }),
+      loop: __synth.phantastronBend({ wires: [['gnd', 'loop']] }),
+      fb: __synth.phantastronBend({ wires: [['vcc', 'fb']] }),
+      clk1: __synth.phantastronBend({ clock: 1, wires: [['clk', 'rate']] }, { clk: 1 }),
+      clk0: __synth.phantastronBend({ clock: 1, wires: [['clk', 'rate']] }, { clk: 0 }),
+    })""")
+    ck("Ph. a wire pulls the clock, the bits, the loop and the feedback",
+       abs(bends["bare"]["clock"] - 1) < 1e-9 and bends["bare"]["bits"] == 8
+       and abs(bends["vcc"]["clock"] - 3.2) < 1e-6 and abs(bends["gnd"]["clock"] - 0.22) < 1e-6
+       and bends["bits"]["bits"] == 6 and bends["loop"]["loop"] == 1
+       and abs(bends["fb"]["feedback"] - 0.88) < 1e-6
+       and abs(bends["clk1"]["clock"] - 2.75) < 1e-6 and abs(bends["clk0"]["clock"] - 0.35) < 1e-6, bends)
+    phrases = pg.evaluate("""() => ({
+      a: __synth.phantastronPhrase({ cart: 'babble', seed: 17 }),
+      b: __synth.phantastronPhrase({ cart: 'babble', seed: 17 }),
+      c: __synth.phantastronPhrase({ cart: 'babble', seed: 99 }),
+    })""")
+    ck("Ph. a babble phrase is the same seed twice and a different seed apart",
+       phrases["a"] == phrases["b"] and phrases["a"] != phrases["c"] and 6 <= len(phrases["a"]) <= 11, phrases)
+    walked = pg.evaluate("""() => ({
+      full: __synth.phantastronWalk({ cart: 'lull', loop: 0, wires: [] }, 24),
+      stuck: __synth.phantastronWalk({ cart: 'count', wires: [['gnd', 'loop']] }, 8),
+    })""")
+    ck("Ph. an open loop walks the phrase and a ground wire sticks one frame",
+       walked["full"]["win"] == len(walked["full"]["phrase"]) and walked["full"]["frames"][:len(walked["full"]["phrase"])] == walked["full"]["phrase"]
+       and walked["stuck"]["win"] == 1 and len(set(walked["stuck"]["frames"])) == 1, walked)
+    crushed = pg.evaluate("""() => {
+      const xs = [];
+      for (let i = 0; i < 64; i++) xs.push(__synth.phantastronCrush(Math.sin(i), 2));
+      return [...new Set(xs.map(v => Math.round(v * 1000) / 1000))].sort((a, b) => a - b);
+    }""")
+    ck("Ph. two bits land on five signed steps", crushed == [-1, -0.5, 0, 0.5, 1], crushed)
+    tone_on = [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}]
+    tone_body = {"device": "phantastron", "cart": "tone", "clock": 1, "bits": 12, "feedback": 0, "noise": 0, "level": 1, "run": False, "wires": [], "pitch": 0}
+    tL, tR = ph_render(tone_body, 1.0, tone_on)
+    sl = tL[int(0.25 * SR):int(0.75 * SR)]
+    f_tone = peak_freq(sl)
+    ck(f"Ph. the tone cart at clock 1 peaks at A4 ({f_tone:.1f} Hz)",
+       abs(f_tone - 440) < 8 and ph_rms(tL) > 1e-3 and ph_rms(tR) > 1e-3, (round(f_tone, 2), round(ph_rms(tL), 4), round(ph_rms(tR), 4)))
+    cL, cR = ph_render(dict(tone_body, clock=2), 1.0, tone_on)
+    f_clock = peak_freq(cL[int(0.25 * SR):int(0.75 * SR)])
+    ck(f"Ph. clock 2 doubles the tone ({f_clock:.1f} Hz)", abs(f_clock - 880) < 12, round(f_clock, 2))
+    zL, zR = ph_render(dict(tone_body, level=0), 0.6, tone_on)
+    ck("Ph. level 0 is silence", ph_rms(zL) < 1e-5 and ph_rms(zR) < 1e-5, (ph_rms(zL), ph_rms(zR)))
+    howl_on = [{"t": "on", "n": 60, "v": 0.9, "at": 0.02}]
+    cleanL, _cleanR = ph_render({"device": "phantastron", "cart": "chirp", "feedback": 0, "noise": 0.2, "level": 1, "bits": 8, "wires": []}, 0.8, howl_on)
+    howlL, _howlR = ph_render({"device": "phantastron", "cart": "chirp", "feedback": 0.85, "noise": 0.2, "level": 1, "bits": 8, "wires": []}, 0.8, howl_on)
+    n = min(len(cleanL), len(howlL))
+    diff = ph_rms(cleanL[:n] - howlL[:n])
+    ck("Ph. feedback changes the voice",
+       ph_rms(cleanL) > 1e-3 and ph_rms(howlL) > 1e-3 and diff > 0.02, (round(ph_rms(cleanL), 4), round(ph_rms(howlL), 4), round(diff, 4)))
+    pL, _pR = ph_render(tone_body, 1.0, [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}, {"t": "panic", "at": 0.4}])
+    early = ph_rms(pL[int(0.12 * SR):int(0.32 * SR)])
+    late = ph_rms(pL[int(0.7 * SR):])
+    ck("Ph. panic leaves the tail silent", early > 1e-3 and late < 1e-4, (round(early, 4), round(late, 6)))
+    pg.evaluate("__synth.setDevice('phantastron')")
+    pg.wait_for_timeout(250)
+    pg.evaluate("""() => __synth.setPatch({ device: 'phantastron', cart: 'lull', wires: [], run: false })""")
+    pg.wait_for_timeout(80)
+    ck("Ph. the board is up and the tube filter is not",
+       pg.evaluate("__synth.device()") == "phantastron" and pg.is_visible("#phBoard") and pg.is_visible("#phCarts")
+       and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis")
+       and pg.evaluate("__synth.patch().wires") == [])
+    pg.locator("#phBoard").scroll_into_view_if_needed()
+    box = pg.locator("#phBoard").bounding_box()
+    def pad_at(pid):
+        pad = next(p for p in pg.evaluate("__synth.phantastronPads()") if p["id"] == pid)
+        return box["x"] + pad["x"] * box["width"], box["y"] + pad["y"] * box["height"]
+    x1, y1 = pad_at("vcc")
+    x2, y2 = pad_at("rate")
+    pg.mouse.move(x1, y1)
+    pg.mouse.down()
+    pg.mouse.move(x2, y2, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(80)
+    wired = pg.evaluate("__synth.patch().wires")
+    ck("Ph. dragging VCC to RATE lays that wire", wired == [["vcc", "rate"]], wired)
+    pg.mouse.move(x1, y1)
+    pg.mouse.down()
+    pg.mouse.move(x2, y2, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(80)
+    ck("Ph. the same drag lifts the wire", pg.evaluate("__synth.patch().wires") == [], pg.evaluate("__synth.patch().wires"))
+    pg.mouse.move(x1, y1)
+    pg.mouse.down()
+    pg.mouse.move(x2, y2, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(40)
+    pg.click("#phLift")
+    pg.wait_for_timeout(40)
+    ck("Ph. lift wires clears the board", pg.evaluate("__synth.patch().wires") == [])
+    pg.evaluate("__synth.panic()")
+    pg.evaluate("""() => __synth.setPatch({ device: 'phantastron', cart: 'tone', clock: 1, bits: 12, feedback: 0, noise: 0, level: 0.8, run: false, wires: [] })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.noteOn(60, 0.85)")
+    pg.wait_for_function("() => (__synth.phantastronMeter().voices || 0) > 0", timeout=3000)
+    pg.evaluate("__synth.noteOff(60)")
+    pg.wait_for_function("() => (__synth.phantastronMeter().voices || 0) === 0", timeout=4000)
+    ck("Ph. a key opens a voice and note-off lets it go", True)
+    pg.evaluate("__synth.noteOn(64, 0.85)")
+    pg.wait_for_function("() => (__synth.phantastronMeter().voices || 0) > 0", timeout=2000)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => (__synth.phantastronMeter().voices || 0) === 0", timeout=2000)
+    ck("Ph. Panic clears the voices", True)
+    pg.evaluate("""() => __synth.engine().devices.phantastron.midi([0x90, 67, 100])""")
+    pg.wait_for_function("() => (__synth.phantastronMeter().voices || 0) > 0", timeout=2000)
+    pg.evaluate("""() => __synth.engine().devices.phantastron.midi([0xB0, 123, 0])""")
+    pg.wait_for_function("() => (__synth.phantastronMeter().voices || 0) === 0", timeout=2000)
+    ck("Ph. MIDI note-on and all-notes-off reach the toy", True)
+    pg.evaluate("""() => {
+      const mix = __synth.mixer();
+      Object.keys(mix).forEach(id => __synth.setMixer(id, { mute: false, solo: false, level: mix[id].level, pan: mix[id].pan }));
+      __synth.setMixer('phantastron', { level: 1, pan: 0, mute: false, solo: false });
+    }""")
+    pg.evaluate("""() => __synth.setPatch({ device: 'phantastron', cart: 'tone', clock: 1, bits: 12, feedback: 0, noise: 0, level: 1, run: false, wires: [] })""")
+    pg.evaluate("__synth.noteOn(69, 0.9)")
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(700)
+    pg.evaluate("__synth.noteOff(69)")
+    recp = pg.evaluate("() => __synth.recordStop()")
+    recp_raw = base64.b64decode(recp["b64"]) if recp and recp.get("b64") else b""
+    recp_info = parse_wav(recp_raw) if recp_raw else None
+    recp_rms = rms(pcm24(recp_info["data"])[0]) if recp_info and len(recp_info["data"]) >= 6 else 0
+    ck("Ph. the master recorder names a non-silent Phantastron WAV",
+       recp_info and recp_info["fmt"] == 1 and recp_info["bits"] == 24 and recp_info["ch"] == 2
+       and recp_info["rate"] == int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
+       and recp_rms > 1e-3 and bool(_re2.fullmatch(r"Phantastron-\d{8}-\d{6}\.wav", recp.get("name") or "")),
+       (None if not recp else recp.get("name"), round(recp_rms, 4)))
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     perr = []
     ph.on("pageerror", lambda e: perr.append(str(e)))
@@ -3911,6 +4070,36 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(120)
     ck("Kl. no page errors", not errs, errs)
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.evaluate("__synth.setDevice('phantastron')")
+    ph.wait_for_timeout(250)
+    ck("Ph. 390px: no horizontal scroll, the board is up",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#phBoard") and not ph.is_visible("#mFilt"),
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #phRoot .chip, #phRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Ph. 390px: rail, tabs and board controls are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="bend"]')
+    ph.wait_for_timeout(200)
+    bend_small = ph.evaluate("""() => [...document.querySelectorAll('#phRoot .chip, #phRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Ph. 390px: the Bends tab fits and its controls are 44 px or more",
+       not bend_small and ph.is_visible("#phClock") and not ph.is_visible("#phBoard")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       (bend_small, ph.evaluate("[document.documentElement.scrollWidth, innerWidth]")))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_phantastron_phone.png"))
+    ck("Ph. 390px: no page errors", not perr, perr)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(120)
+    ck("Ph. no page errors", not errs, errs)
     b.close()
 
 print()
