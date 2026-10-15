@@ -10,7 +10,7 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds nine devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds ten devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
 original design: own name, panel, jack names and voicing, not a copy of Korg's), **Thyratron**
 (a monophonic ladder-filter synthesizer: three oscillators, a mixer, a 24 dB/octave ladder that
@@ -19,13 +19,15 @@ closed hat, open hat, clap, tom and rim, with a 16-step pattern), **Lattice** (a
 wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, two filters, and a
 drag-and-drop modulation matrix), **Gleam** (an original touch field: each finger is a voice,
 with a room of orbs and a master effect pad), **Mote** (an original granular instrument: a
-waveform, grains, and a tail), **Heptode** (a MIDI-file instrument), and **Geissler** (a generative
-meadow: reeds, grazers, stalks and flickers). The rail above the chassis picks which device the keyboard,
+waveform, grains, and a tail), **Heptode** (a MIDI-file instrument), **Geissler** (a generative
+meadow: reeds, grazers, stalks and flickers), and **Pentagrid** (an original
+shortwave receiver: a tuning dial, band noise, Morse, FSK, formant speech, chimes and time pips,
+all synthesized). The rail above the chassis picks which device the keyboard,
 wheels and MIDI play. Filament and Cathode feed the shared ensemble and output rack. Dekatron
-copies those output fields. Lattice, Thyratron, Gleam, Mote, Heptode and Geissler have their own panels and sleep until the rail
+copies those output fields. Lattice, Thyratron, Gleam, Mote, Heptode, Geissler and Pentagrid have their own panels and sleep until the rail
 selects them; the shared output knobs stay on the Filament patch while one of those is showing.
-Mote, Heptode and Geissler hide the tube chassis while lit. Dekatron and Lattice register when their nodes are hosted.
-Thyratron and Gleam are registered in `device.js`. Mote, Heptode and Geissler register when their modules load.
+Mote, Heptode, Geissler and Pentagrid hide the tube chassis while lit. Dekatron and Lattice register when their nodes are hosted.
+Thyratron and Gleam are registered in `device.js`. Mote, Heptode, Geissler and Pentagrid register when their modules load.
 Gleam is also a full-screen page at `/synth/gleam/`.
 
 The rack framework (14 Oct) is what those devices plug into. Each device
@@ -88,7 +90,7 @@ task can read it).
 | `frontend/public/synth/gleam-fx.js` | Effect pad nodes: lowpass sweep, stutter gate, feedback delay. Bypassed unless a finger is down |
 | `frontend/public/synth/gleam-ui.js` | Pad, host, and `renderGleamBuffer`. `attach` calls `addDevice` |
 | `frontend/public/synth/gleam/index.html` | Full-screen Gleam. Same modules as the rack |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode and Geissler register when their modules load |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler and Pentagrid register when their modules load |
 | `frontend/public/synth/mote.js` | Mote patch schema v1 (`device: 'mote'`), `normalizeMote`, three factory patches, `moteDevice` |
 | `frontend/public/synth/mote-dsp.js` | The grain engine: windowed buffer reads, pitch as a read rate, LFO, delay and a short reverb tail |
 | `frontend/public/synth/mote.worklet.js` | AudioWorklet processors `mote` and `mote-capture` |
@@ -98,6 +100,10 @@ task can read it).
 | `frontend/public/synth/geissler-dsp.js` | Original voices for reeds, grazers, stalks and flickers, plus the capped voice pool |
 | `frontend/public/synth/geissler.worklet.js` | AudioWorklet processor `geissler` |
 | `frontend/public/synth/geissler-ui.js` | Meadow canvas, life and route controls, `createGeisslerHost` |
+| `frontend/public/synth/pentagrid.js` | Pentagrid patch schema v1 (`device: 'pentagrid'`), the dial's stations, Morse timing, the call-sign exchange, `pentagridDevice` |
+| `frontend/public/synth/pentagrid-dsp.js` | The receiver: noise, crackle, fading, heterodynes, formants, Morse, FSK, chimes, time pips, playable beats |
+| `frontend/public/synth/pentagrid.worklet.js` | AudioWorklet processor `pentagrid`. Imports the engine; no DSP of its own |
+| `frontend/public/synth/pentagrid-ui.js` | The tuning dial, and `createPentagridHost` / `renderPentagridAudio`. `attach` calls `addDevice` |
 | `frontend/public/synth/sources/` | Glass, air and bell: original CC0 WAVs generated by `scripts/build_mote_sources.py` |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
@@ -367,6 +373,43 @@ registerDevice({
 | Voices | Pool of at most 16. Reed drone, graze pluck, stalk bass plus a noise burst, flicker motif. A death is a falling decaying tone |
 | Messages | `{t:'patch', p}`, `{t:'tap'}`, `{t:'food'}`, `{t:'spawn'}`, `{t:'herd'}`, `{t:'panic'}`, `{t:'active', on}`, `{t:'tempo', bpm}`, `{t:'reseed', seed}` |
 | Routes | `self`, or Filament, Cathode, Thyratron, Lattice, Gleam, Dekatron, Mote, Heptode. Default is the meadow |
+
+### Pentagrid (shortwave receiver) - first version
+Original receiver. The dial is a frequency in kHz. A station is heard when its offset sits inside
+the bandwidth. CW, a bare carrier and a close pair become a tone at the beat with the BFO, so
+tuning moves the pitch. AM audio (time pips, chimes, digit tones, the FSK warble) keeps its own
+pitch. Speech is three formant resonators on a pulse, slid by the tuning error: the off-tune
+single-sideband voice. Every sound is synthesized. No broadcast recording is used, and no station
+call from the air is copied. The Morse alphabet and the 1.2/WPM element are the published timing,
+written out in this file.
+- [x] Tuning dial, BFO, bandwidth, AGC, noise blanker, fading, band conditions
+- [x] Band noise, atmospheric crackle, QSB, heterodyne whistles
+- [x] User Morse at a set WPM, and a made-up call-sign exchange
+- [x] RTTY/FSK warble, original chime-and-digit groups, time pips
+- [x] Play mode: the keyboard is a carrier and a close beat
+- [x] Live conditions from `GET /api/solar` when that route answers; the knob remains the control
+- [x] Tests in the Pg. section
+
+`pentagridDevice` in `pentagrid.js` is the `dxrack/1` descriptor. `pentagrid.js` calls `registerDevice` when the page imports it. `createPentagridHost.attach` calls `addDevice('pentagrid', node)`, so the master recorder hears it.
+
+```js
+registerDevice({
+  id: 'pentagrid', name: 'Pentagrid', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  processor: 'pentagrid', worklet: 'pentagrid.worklet.js',
+  parameters: { tune: { id, label, type: 'float', default, min, max }, /* bfo, bandwidth, level */ },
+  async create(ctx, host) { /* stereo AudioWorkletNode, processor 'pentagrid' */ },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'pentagrid'`, `api: 'dxrack/1'`, `processor: 'pentagrid'`, `worklet: 'pentagrid.worklet.js'`, one stereo output |
+| Patch | `normalizePentagrid(patch)` → schema v1 JSON, `device: 'pentagrid'` |
+| Dial | 3500–30000 kHz. Stations are round frequencies with names written for this device |
+| Morse | Dit is 1.2/WPM seconds, dah three, intra-letter one, letter gap three, word gap seven |
+| Conditions | `cond` 0–1. `/api/solar` `band_conditions` maps poor 0.15, fair 0.4, good 0.7, excellent 0.95 |
+| Messages | `{t:'patch', p}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}` |
 
 ### MIDI files: recorder and player (James, 13 Oct 2026) - done 13 Oct 2026
 James chose: a recorder and player strip with a WAV render button; imported tracks are assigned to

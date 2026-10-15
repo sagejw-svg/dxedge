@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -1461,6 +1461,7 @@ with sync_playwright() as pw:
             voices={"tom": {"tune": 220, "decay": 0.7, "color": 0, "attack": 0, "level": 1, "pan": 0},
                     "kick": {"level": 0}, "snare": {"level": 0}, "hatC": {"level": 0}, "hatO": {"level": 0}, "clap": {"level": 0}, "rim": {"level": 0}},
             steps={k: [0] * 16 for k in ("kick", "snare", "hatC", "hatO", "clap", "tom", "rim")}, **quiet)),
+        ("pentagrid", 69, 440, dict(device="pentagrid", tune=8500, bfo=700, bandwidth=400, air=0, noise=0, crackle=0, fade=0, agc=0, blanker=0, text="", play=True, mode="cw", level=0.9, cond=1)),
         ("mote", None, 440, dict(device="mote", level=1,
             grain={"size": 90, "density": 36, "position": 0.25, "spray": 0, "pitch": 0, "pitchRand": 0, "reverse": 0, "window": "hann", "spread": 0, "freeze": True, "keyboard": False},
             lfo={"depth": 0, "rate": 0.1, "dest": "position"},
@@ -3050,6 +3051,192 @@ with sync_playwright() as pw:
     gp.screenshot(path=os.path.join(SHOTS, "synth_geissler_phone.png"))
     ck("Gs. 390px: no page errors", not gperr, gperr)
     gp.close()
+    # ---------------------------------------------------------------- Pg. Pentagrid, the shortwave receiver
+    def prender(patch=None, events=None, seconds=0.6):
+        payload = {"seconds": seconds, "events": events or []}
+        if patch is not None: payload["patch"] = patch
+        return dec(pg.evaluate("a => __synth.pentagridRender(a)", payload))
+    def prms(x, a=0, b=None):
+        seg = x[a:b] if b is not None else x[a:]
+        if len(seg) == 0: return 0.0
+        return float(np.sqrt(np.mean(seg ** 2)))
+    devp = pg.evaluate("""() => { const d = __synth.pentagridDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput, proc: d.processor,
+      worklet: d.worklet, ch: d.channels, over: d.oversample, tune: d.parameters.tune && d.parameters.tune.type,
+      play: d.parameters.play && d.parameters.play.type, name: d.name,
+      listed: __synth.devices().some(x => x.id === 'pentagrid') }; }""")
+    ck("Pg. Pentagrid publishes a stereo MIDI dxrack/1 device",
+       devp["id"] == "pentagrid" and devp["api"] == "dxrack/1" and devp["inst"] and devp["outs"] == 1 and devp["midi"]
+       and devp["proc"] == "pentagrid" and devp["worklet"] == "pentagrid.worklet.js" and devp["ch"] == 2 and devp["over"] == 1
+       and devp["tune"] == "float" and devp["play"] == "boolean" and devp["name"] == "Pentagrid" and devp["listed"], devp)
+    plan = pg.evaluate("() => __synth.pentagridPlan('A', 20)")
+    eplan = pg.evaluate("() => __synth.pentagridPlan('E', 20)")
+    tplan = pg.evaluate("() => __synth.pentagridPlan('T', 20)")
+    ck("Pg. Morse A at 20 WPM is a dit, a gap, and a dah",
+       len(plan) == 2 and plan[0]["el"] == "." and abs(plan[0]["t0"]) < 1e-9 and abs(plan[0]["t1"] - 0.06) < 1e-9
+       and plan[1]["el"] == "-" and abs(plan[1]["t0"] - 0.12) < 1e-9 and abs(plan[1]["t1"] - 0.30) < 1e-9, plan)
+    ck("Pg. E is one dit and T is one dah",
+       len(eplan) == 1 and abs(eplan[0]["t1"] - 0.06) < 1e-9 and len(tplan) == 1 and abs(tplan[0]["t1"] - 0.18) < 1e-9, (eplan, tplan))
+    side = {"device": "pentagrid", "tune": 8500, "air": 0, "noise": 0, "crackle": 0, "fade": 0, "agc": 0, "blanker": 0,
+            "text": "A", "wpm": 20, "bfo": 700, "mode": "cw", "play": False, "level": 0.9, "bandwidth": 400, "cond": 1}
+    mL, mR = prender(side, [], 0.8)
+    dit = prms(mL, int(0.015 * SR), int(0.045 * SR))
+    gap = prms(mL, int(0.075 * SR), int(0.105 * SR))
+    dah = prms(mL, int(0.15 * SR), int(0.27 * SR))
+    after = prms(mL, int(0.36 * SR), int(0.50 * SR))
+    ck(f"Pg. the keyed A follows dit, gap, dah, then silence ({dit:.3f} / {gap:.4f} / {dah:.3f} / {after:.4f})",
+       dit > 0.05 and gap < 0.01 and dah > 0.05 and after < 0.01 and abs(peak_freq(mL[int(0.16 * SR):int(0.26 * SR)]) - 700) < 12,
+       (dit, gap, dah, after))
+    carrier = {"device": "pentagrid", "tune": 14000, "bfo": 800, "bandwidth": 4000, "air": 1, "noise": 0, "crackle": 0,
+               "fade": 0, "agc": 0, "blanker": 0, "text": "", "cond": 1, "mode": "cw", "play": False, "level": 0.7}
+    c1, _ = prender(carrier, [], 0.5)
+    c2, _ = prender(dict(carrier, tune=14000.3), [], 0.5)
+    f1 = peak_freq(c1[int(0.1 * SR):int(0.45 * SR)])
+    f2 = peak_freq(c2[int(0.1 * SR):int(0.45 * SR)])
+    ck(f"Pg. tuning the carrier moves the beat from {f1:.1f} Hz to {f2:.1f} Hz",
+       abs(f1 - 800) < 8 and abs(f2 - 500) < 8 and prms(c1, int(0.1 * SR)) > 0.05, (f1, f2))
+    names = pg.evaluate("__synth.pentagridFactory()")
+    floors = []
+    for row in names:
+        body = pg.evaluate("(n) => __synth.pentagridPatch(n)", row["name"])
+        wave, _ = prender(body, [], 0.7)
+        floors.append((row["name"], prms(wave, int(0.05 * SR))))
+    ck("Pg. every factory preset makes a sound", all(v > 2e-4 for _, v in floors) and len(floors) == 6, floors)
+    play = {"device": "pentagrid", "tune": 8500, "air": 0, "noise": 0, "crackle": 0, "fade": 0, "agc": 0, "blanker": 0,
+            "text": "", "mode": "cw", "play": True, "level": 0.9, "bandwidth": 400, "cond": 1, "bfo": 0}
+    heldL, _ = prender(play, [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}], 0.5)
+    offL, _ = prender(play, [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}, {"t": "off", "n": 69, "at": 0.25}], 1.2)
+    panL, _ = prender(play, [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}, {"t": "panic", "at": 0.2}], 0.7)
+    susL, _ = prender(play, [{"t": "sus", "on": True, "at": 0}, {"t": "on", "n": 69, "v": 0.9, "at": 0.02},
+                             {"t": "off", "n": 69, "at": 0.2}, {"t": "sus", "on": False, "at": 0.55}], 1.4)
+    twoL, _ = prender(play, [{"t": "on", "n": 60, "v": 0.8, "at": 0.02}, {"t": "on", "n": 64, "v": 0.8, "at": 0.05},
+                             {"t": "off", "n": 60, "at": 0.3}, {"t": "off", "n": 64, "at": 0.6}], 1.3)
+    strayL, _ = prender(play, [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}, {"t": "off", "n": 70, "at": 0.2},
+                               {"t": "off", "n": 69, "at": 0.5}], 1.3)
+    muteL, _ = prender(dict(play, play=False), [{"t": "on", "n": 69, "v": 0.9, "at": 0.02}], 0.4)
+    ck(f"Pg. a play-mode A4 is near 440 Hz ({peak_freq(heldL[int(0.15 * SR):int(0.45 * SR)]):.1f} Hz)",
+       abs(peak_freq(heldL[int(0.15 * SR):int(0.45 * SR)]) - 440) < 8 and prms(heldL, int(0.15 * SR)) > 0.02)
+    ck("Pg. note off, panic, and a second off do not leave a stuck note",
+       prms(offL, int(0.08 * SR), int(0.2 * SR)) > 0.02 and prms(offL, int(0.9 * SR), int(1.15 * SR)) < 1e-4
+       and prms(panL, int(0.08 * SR), int(0.18 * SR)) > 0.02 and prms(panL, int(0.4 * SR), int(0.65 * SR)) < 1e-4
+       and prms(strayL, int(0.3 * SR), int(0.45 * SR)) > 0.02 and prms(strayL, int(1.05 * SR), int(1.25 * SR)) < 1e-4
+       and prms(muteL) < 1e-5,
+       (prms(offL, int(0.9 * SR)), prms(panL, int(0.4 * SR)), prms(strayL, int(1.05 * SR)), prms(muteL)))
+    ck("Pg. sustain holds the note until the pedal lifts, and two notes release one at a time",
+       prms(susL, int(0.35 * SR), int(0.5 * SR)) > 0.02 and prms(susL, int(1.15 * SR), int(1.35 * SR)) < 1e-4
+       and prms(twoL, int(0.4 * SR), int(0.55 * SR)) > 0.02 and prms(twoL, int(1.1 * SR), int(1.25 * SR)) < 1e-4,
+       (prms(susL, int(0.35 * SR)), prms(susL, int(1.15 * SR)), prms(twoL, int(0.4 * SR)), prms(twoL, int(1.1 * SR))))
+    timeL, _ = prender({"device": "pentagrid", "tune": 10000, "mode": "am", "bfo": 0, "bandwidth": 2000, "noise": 0,
+                        "crackle": 0, "fade": 0, "agc": 0, "air": 1, "cond": 1, "text": "", "level": 0.8, "play": False}, [], 0.4)
+    ck(f"Pg. the time mark is a 1000 Hz pip ({peak_freq(timeL[int(0.05 * SR):int(0.35 * SR)]):.1f} Hz)",
+       abs(peak_freq(timeL[int(0.05 * SR):int(0.35 * SR)]) - 1000) < 8 and prms(timeL, int(0.05 * SR), int(0.35 * SR)) > 0.05)
+    figL, _ = prender({"device": "pentagrid", "tune": 6175, "mode": "am", "bfo": 0, "bandwidth": 4000, "noise": 0,
+                       "crackle": 0, "fade": 0, "agc": 0, "air": 1, "cond": 1, "text": "", "level": 0.8, "play": False}, [], 0.4)
+    chimes = [tone_amp(figL[:int(0.35 * SR)], f) for f in (523.25, 659.25, 783.99)]
+    ck("Pg. the figure group opens with three chime tones", all(a > 0.02 for a in chimes), chimes)
+    rttyL, _ = prender({"device": "pentagrid", "tune": 14085, "mode": "rtty", "bfo": 0, "bandwidth": 3200, "noise": 0,
+                        "crackle": 0, "fade": 0, "agc": 0, "air": 1, "cond": 1, "text": "", "level": 0.8, "play": False}, [], 0.8)
+    mark = tone_amp(rttyL[int(0.05 * SR):int(0.7 * SR)], 2125)
+    space = tone_amp(rttyL[int(0.05 * SR):int(0.7 * SR)], 2295)
+    ck("Pg. the shift pair has both FSK tones", mark > 0.008 and space > 0.008, (mark, space))
+    hi, _ = prender(carrier, [], 0.4)
+    lo, _ = prender(dict(carrier, cond=0), [], 0.4)
+    solar = pg.evaluate("""() => ({
+      band: __synth.pentagridBand(14200),
+      good: __synth.pentagridCond(14200, [{ band: '20m', condition: 'good' }]),
+      none: __synth.pentagridCond(14200, []),
+      qso: __synth.pentagridQso(4)
+    })""")
+    ck("Pg. better conditions raise the carrier, and the solar map reads 20 m",
+       prms(hi, int(0.05 * SR)) > prms(lo, int(0.05 * SR)) * 3 and solar["band"] == "20m" and abs(solar["good"] - 0.7) < 1e-9
+       and solar["none"] is None and solar["qso"].startswith("CQ CQ DE ") and " 599 " in solar["qso"],
+       (prms(hi, int(0.05 * SR)), prms(lo, int(0.05 * SR)), solar))
+    open_air = {"device": "pentagrid", "tune": 8500, "air": 1, "noise": 0, "crackle": 1, "bandwidth": 200, "blanker": 0,
+                "text": "", "agc": 0, "fade": 0, "play": False, "level": 0.9, "mode": "am", "bfo": 0, "cond": 0.5}
+    rawC, _ = prender(open_air, [], 0.8)
+    blankC, _ = prender(dict(open_air, blanker=1), [], 0.8)
+    ck("Pg. the blanker cuts the crackle", float(np.max(np.abs(rawC))) > 0.05 and float(np.max(np.abs(blankC))) < 0.02,
+       (float(np.max(np.abs(rawC))), float(np.max(np.abs(blankC)))))
+    cpu = pg.evaluate("""async () => {
+      const t0 = performance.now();
+      await __synth.pentagridRender({ patch: { device: 'pentagrid', tune: 14000, bfo: 800, bandwidth: 2400, air: 1, noise: 0.3, crackle: 0.2, text: 'CQ DE TEST', wpm: 18, mode: 'cw', level: 0.8, play: true }, events: [{ t: 'on', n: 69, v: 0.8, at: 0.1 }], seconds: 4 });
+      return performance.now() - t0;
+    }""")
+    info("Pg. 4s offline render", f"{cpu:.0f} ms")
+
+    pg_before = len(errs)
+    pg.evaluate("__synth.setDevice('pentagrid')")
+    pg.wait_for_timeout(300)
+    ck("Pg. the dial is on screen and Filament's filter is not",
+       pg.evaluate("__synth.device()") == "pentagrid" and pg.is_visible("#pentagridDial") and pg.is_visible("#pentagridText")
+       and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    box = pg.locator("#pentagridDial").bounding_box()
+    pg.mouse.click(box["x"] + 12, box["y"] + box["height"] * 0.62)
+    left_tune = pg.evaluate("__synth.patch().tune")
+    pg.mouse.click(box["x"] + box["width"] - 12, box["y"] + box["height"] * 0.62)
+    right_tune = pg.evaluate("__synth.patch().tune")
+    ck("Pg. dragging the dial retunes from the low end to the high end", left_tune < 5000 and right_tune > 25000, (left_tune, right_tune))
+    before = pg.evaluate("__synth.patch().text")
+    pg.click("#pentagridQso")
+    qso_text = pg.evaluate("__synth.patch().text")
+    ck("Pg. QSO writes a made-up contact into the Morse box", qso_text != before and qso_text.startswith("CQ CQ DE ") and pg.locator("#pentagridText").input_value() == qso_text, qso_text)
+    pg.click("#pentagridLive")
+    pg.wait_for_function("() => (document.getElementById('pentagridCond').textContent || '').includes('not reachable')", timeout=5000)
+    ck("Pg. live conditions fail quietly when the solar route is absent", "not reachable" in pg.locator("#pentagridCond").inner_text())
+    pg.click('.tabs [data-go="band"]')
+    pg.wait_for_timeout(150)
+    ck("Pg. the Band tab shows the receiver knobs", pg.is_visible("#kPentaRx") and not pg.is_visible("#pentagridDial"))
+    pg.click('.tabs [data-go="play"]')
+    saved = pg.evaluate("""() => __synth.applyProject({
+      name: 'Dial Test', device: 'pentagrid', tempo: 120,
+      devices: { pentagrid: { patch: { tune: 14000, text: 'E', play: true, mode: 'cw', air: 0, noise: 0, crackle: 0 } } }
+    })""")
+    ck("Pg. a project keeps Pentagrid and its dial", saved["device"] == "pentagrid" and pg.evaluate("__synth.device()") == "pentagrid"
+       and abs(pg.evaluate("__synth.patch().tune") - 14000) < 1 and pg.evaluate("__synth.patch().text") == "E" and pg.evaluate("__synth.patch().play") is True, saved["device"])
+    pg.evaluate("""() => {
+      const mix = __synth.mixer() || {};
+      Object.keys(mix).forEach(id => __synth.setMixer(id, { mute: false, solo: false, level: mix[id].level, pan: mix[id].pan }));
+      __synth.setMixer('pentagrid', { level: 1, pan: 0, mute: false, solo: false });
+    }""")
+    pg.evaluate("(p) => __synth.setPatch(p)", play)
+    pg.wait_for_timeout(200)
+    p_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
+    pg.evaluate("__synth.noteOn(69, 0.85)")
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(700)
+    pg.evaluate("__synth.noteOff(69)")
+    rec = pg.evaluate("() => __synth.recordStop()")
+    rec_raw = base64.b64decode(rec["b64"]) if rec and rec.get("b64") else b""
+    rec_info = parse_wav(rec_raw) if rec_raw else None
+    rec_rms = prms(pcm24(rec_info["data"])[0]) if rec_info and len(rec_info["data"]) >= 6 else 0
+    ck("Pg. the master recorder hears Pentagrid",
+       rec_info and rec_info["bits"] == 24 and rec_info["ch"] == 2 and rec_info["rate"] == p_sr and rec.get("sr") == p_sr
+       and rec_rms > 1e-3 and bool(_re2.fullmatch(r"Pentagrid-\d{8}-\d{6}\.wav", rec.get("name") or "")),
+       (rec_rms, None if not rec else rec.get("sr"), None if not rec else rec.get("name")))
+    ck("Pg. no page errors", len(errs) == pg_before, errs[pg_before:])
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.evaluate("__synth.setDevice('pentagrid')")
+    ph.wait_for_timeout(300)
+    ck("Pg. 390px: no horizontal scroll, the dial is up, one section",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#pentagridDial") and not ph.is_visible("#mFilt")
+       and ph.evaluate("[...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length") <= 4,
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #pentagridRoot .chip, #pentagridRoot .btn, #pentagridRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Pg. 390px: rail, tabs and dial controls are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="band"]')
+    ph.wait_for_timeout(200)
+    ck("Pg. 390px: the Band tab shows the receiver", ph.is_visible("#kPentaRx") and not ph.is_visible("#pentagridDial")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_pentagrid_phone.png"))
+    ck("Pg. 390px: no page errors", not perr, perr)
+    ph.close()
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(150)
     b.close()
