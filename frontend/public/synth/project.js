@@ -17,6 +17,7 @@ import { normalizeGyrotron } from './gyrotron.js';
 import { normalizeKlystron } from './klystron.js';
 import { normalizePhantastron } from './phantastron.js';
 import { normalizeAdditron } from './additron.js';
+import { normalizeRhumbatron } from './rhumbatron.js';
 import { normalizeStrip } from './mixer.js';
 import { clampTempo, normalizeSig } from './transport.js';
 
@@ -25,7 +26,7 @@ export const PROJECT_KEY = 'dxrack_project';
 
 export function normalizeProject(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
-  const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' || src.device === 'thyratron' || src.device === 'gleam' || src.device === 'mote' || src.device === 'heptode' || src.device === 'geissler' || src.device === 'pentagrid' || src.device === 'orthicon' || src.device === 'trochotron' || src.device === 'gyrotron' || src.device === 'klystron' || src.device === 'phantastron' || src.device === 'additron' ? src.device : 'filament';
+  const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' || src.device === 'thyratron' || src.device === 'gleam' || src.device === 'mote' || src.device === 'heptode' || src.device === 'geissler' || src.device === 'pentagrid' || src.device === 'orthicon' || src.device === 'trochotron' || src.device === 'gyrotron' || src.device === 'klystron' || src.device === 'phantastron' || src.device === 'additron' || src.device === 'rhumbatron' ? src.device : 'filament';
   const name = String(src.name == null ? 'Untitled' : src.name).trim().slice(0, 40) || 'Untitled';
   const mixerIn = src.mixer && typeof src.mixer === 'object' ? src.mixer : {};
   const ids = new Set(['filament', 'cathode']);
@@ -49,6 +50,7 @@ export function normalizeProject(raw) {
   if (devs.klystron) devices.klystron = { patch: normalizeKlystron(devs.klystron.patch) };
   if (devs.phantastron) devices.phantastron = { patch: normalizePhantastron(devs.phantastron.patch) };
   if (devs.additron) devices.additron = { patch: normalizeAdditron(devs.additron.patch) };
+  if (devs.rhumbatron) devices.rhumbatron = { patch: normalizeRhumbatron(devs.rhumbatron.patch) };
   return {
     v: PROJECT_SCHEMA, kind: 'dxrack', name,
     tempo: clampTempo(src.tempo == null ? 120 : src.tempo),

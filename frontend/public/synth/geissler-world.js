@@ -20,7 +20,7 @@ export const SCALES = {
 export const SCALE_IDS = ['major', 'minor', 'penta', 'dorian', 'chroma', 'season', 'free'];
 export const GRID_IDS = ['free', '4', '8', '16'];
 export const TOOLS = ['food', 'spawn', 'herd'];
-export const ROUTES = ['self', 'filament', 'cathode', 'thyratron', 'lattice', 'gleam', 'dekatron', 'mote', 'heptode', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'phantastron'];
+export const ROUTES = ['self', 'filament', 'cathode', 'thyratron', 'lattice', 'gleam', 'dekatron', 'mote', 'heptode', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'phantastron', 'rhumbatron'];
 
 export const TICK = 1 / 30;
 

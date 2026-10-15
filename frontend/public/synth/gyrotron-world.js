@@ -19,7 +19,7 @@ export const SCALES = {
 };
 export const SCALE_IDS = ['major', 'minor', 'dorian', 'penta', 'whole', 'chroma', 'free'];
 export const TOOLS = ['well', 'body', 'fling'];
-export const ROUTES = ['self', 'filament', 'cathode', 'thyratron', 'lattice', 'gleam', 'dekatron', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron'];
+export const ROUTES = ['self', 'filament', 'cathode', 'thyratron', 'lattice', 'gleam', 'dekatron', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'rhumbatron'];
 
 export const GYRO_CORE = {
   level: 0.84,

@@ -13,7 +13,7 @@ const WORKLET = new URL('./gyrotron.worklet.js', import.meta.url).href;
 const ROUTE_LABEL = {
   self: 'orbit', filament: 'Filament', cathode: 'Cathode', thyratron: 'Thyratron',
   lattice: 'Lattice', gleam: 'Gleam', dekatron: 'Dekatron', mote: 'Mote', heptode: 'Heptode',
-  geissler: 'Geissler', pentagrid: 'Pentagrid', orthicon: 'Orthicon', trochotron: 'Trochotron',
+  geissler: 'Geissler', pentagrid: 'Pentagrid', orthicon: 'Orthicon', trochotron: 'Trochotron', rhumbatron: 'Rhumbatron',
 };
 const SCALE_LABEL = {
   major: 'major', minor: 'minor', dorian: 'dorian', penta: 'penta',
