@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron", "rhumbatron": "Rhumbatron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron", "additron")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron", "phantastron": "Phantastron", "additron": "Additron", "rhumbatron": "Rhumbatron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -1473,6 +1473,8 @@ with sync_playwright() as pw:
             drawB=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             rotor=False, click=0, perc=0, percHarm="off", tilt=0, vib=0, drive=0, leak=0, spread=0,
             attack=0.005, decay=0.2, sustain=1, release=0.05, **quiet)),
+        ("rhumbatron", 69, 440, dict(device="rhumbatron", body="string", exciter="bow", material=0.9, size=1,
+            damping=0.15, position=0.22, place=0.5, coupling=0, pressure=0.35, level=0.8)),
     ]
     for dev, midi_note, expect, body in tones:
         pg.evaluate("__synth.panic()")
@@ -4046,6 +4048,140 @@ with sync_playwright() as pw:
        and recp_info["rate"] == int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
        and recp_rms > 1e-3 and bool(_re2.fullmatch(r"Phantastron-\d{8}-\d{6}\.wav", recp.get("name") or "")),
        (None if not recp else recp.get("name"), round(recp_rms, 4)))
+    # ---------------------------------------------------------------- Rh. Rhumbatron, the physical model
+    def rh_render(patch, events, seconds=0.8):
+        return dec(pg.evaluate("a => __synth.rhumbatronRender(a)", {"patch": patch, "events": events, "seconds": seconds}))
+    def rh_rms(x):
+        return float(np.sqrt(np.mean(np.square(x)))) if len(x) else 0.0
+    devr = pg.evaluate("""() => { const d = __synth.rhumbatronDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput, proc: d.processor,
+      worklet: d.worklet, ch: d.channels, over: d.oversample, name: d.name,
+      body: d.parameters.body && d.parameters.body.choices,
+      exciter: d.parameters.exciter && d.parameters.exciter.choices,
+      pos: d.parameters.position && d.parameters.position.type,
+      listed: __synth.devices().some(x => x.id === 'rhumbatron') }; }""")
+    ck("Rh. Rhumbatron publishes a stereo MIDI dxrack/1 device",
+       devr["id"] == "rhumbatron" and devr["name"] == "Rhumbatron" and devr["api"] == "dxrack/1" and devr["inst"]
+       and devr["outs"] == 1 and devr["midi"] and devr["proc"] == "rhumbatron" and devr["worklet"] == "rhumbatron.worklet.js"
+       and devr["ch"] == 2 and devr["over"] == 1 and devr["listed"] and devr["pos"] == "float"
+       and all(b in (devr["body"] or []) for b in ("string", "tube", "membrane"))
+       and all(x in (devr["exciter"] or []) for x in ("pluck", "strike", "bow", "blow")), devr)
+    wire = {"device": "rhumbatron", "level": 0.85, "body": "string", "exciter": "pluck", "material": 0.9,
+            "size": 1, "damping": 0.15, "position": 0.18, "place": 0.5, "coupling": 0, "pressure": 0.05}
+    held = [{"at": 0, "t": "on", "n": 69, "v": 0.85}]
+    wL, wR = rh_render(wire, held, 1.0)
+    wseg = wL[int(0.12 * SR):int(0.55 * SR)]
+    wf = peak_freq(wseg)
+    ck(f"Rh. a plucked string at A4 peaks at {wf:.2f} Hz",
+       abs(wf - 440) < 8 and rh_rms(wseg) > 0.01 and np.isfinite(wL).all() and np.isfinite(wR).all() and rh_rms(wR[int(0.12 * SR):int(0.55 * SR)]) > 0.005,
+       (wf, rh_rms(wseg)))
+    sL, _sR = rh_render(dict(wire, size=2), held, 1.0)
+    sf = peak_freq(sL[int(0.15 * SR):int(0.6 * SR)])
+    ck(f"Rh. size 2 drops the string an octave ({sf:.2f} Hz)", abs(sf - 220) < 8, sf)
+    cL, _ = rh_render(dict(wire, position=0.5, material=0.95), held, 0.8)
+    bL, _ = rh_render(dict(wire, position=0.12, material=0.95), held, 0.8)
+    cs, bs = cL[int(0.08 * SR):int(0.5 * SR)], bL[int(0.08 * SR):int(0.5 * SR)]
+    cH = db(tone_amp(cs, 880) / tone_amp(cs, 440))
+    bH = db(tone_amp(bs, 880) / tone_amp(bs, 440))
+    ck(f"Rh. a center pluck hides the octave ({cH:.0f} dB) and a bridge pluck brings it back ({bH:.0f} dB)",
+       cH < bH - 12 and bH > -20, (cH, bH))
+    tL, _ = rh_render(dict(wire, body="tube", position=0.22), held, 0.8)
+    ts = tL[int(0.08 * SR):int(0.5 * SR)]
+    tH = db(tone_amp(ts, 880) / tone_amp(ts, 440))
+    tf = peak_freq(ts)
+    ck(f"Rh. a bore keeps the odd partials ({tf:.1f} Hz, H2 {tH:.0f} dB)",
+       abs(tf - 440) < 8 and tH < -40 and tH < cH - 20, (tf, tH))
+    mL, _ = rh_render(dict(wire, body="membrane", exciter="strike", position=0.5, place=0.5, material=0.7, damping=0.2), held, 0.7)
+    ms = mL[int(0.05 * SR):int(0.4 * SR)]
+    mf = peak_freq(ms)
+    mOct = db(tone_amp(ms, 880) / tone_amp(ms, 440))
+    ratio = pg.evaluate("__synth.rhumbatronRatio(2, 1)")
+    oL, _ = rh_render(dict(wire, body="membrane", exciter="strike", position=0.28, place=0.22, material=0.7, damping=0.15), held, 0.7)
+    os = oL[int(0.05 * SR):int(0.4 * SR)]
+    a_off = tone_amp(os, ratio * 440)
+    a_mid = tone_amp(ms, ratio * 440)
+    ck(f"Rh. a plate struck in the middle speaks the fundamental ({mf:.1f} Hz, octave {mOct:.0f} dB)",
+       abs(mf - 440) < 12 and mOct < -30 and a_off > a_mid * 4, (mf, mOct, a_off, a_mid, ratio))
+    lowL, _ = rh_render(dict(wire, damping=0.02), held, 1.0)
+    highL, _ = rh_render(dict(wire, damping=0.95), held, 1.0)
+    low_late = rh_rms(lowL[int(0.62 * SR):int(0.9 * SR)])
+    high_late = rh_rms(highL[int(0.62 * SR):int(0.9 * SR)])
+    ck(f"Rh. damping lets the string go ({low_late:.4f} against {high_late:.6f})",
+       low_late > 0.01 and high_late < 1e-4 and low_late > high_late * 20, (low_late, high_late))
+    dryL, _ = rh_render(dict(wire, coupling=0, damping=0.2), held, 0.8)
+    wetL, _ = rh_render(dict(wire, coupling=1, damping=0.2, material=0.85), held, 0.8)
+    dry_s, wet_s = dryL[int(0.05 * SR):int(0.55 * SR)], wetL[int(0.05 * SR):int(0.55 * SR)]
+    dry160, wet160 = tone_amp(dry_s, 160), tone_amp(wet_s, 160)
+    dryf = peak_freq(dry_s)
+    ck(f"Rh. coupling wakes the cavity at 160 Hz and the string is still there",
+       abs(dryf - 440) < 8 and wet160 > dry160 * 4 and wet160 > 0.02 and tone_amp(wet_s, 440) > 0.02,
+       (dryf, dry160, wet160, tone_amp(wet_s, 440)))
+    bowL, _ = rh_render(dict(wire, exciter="bow", damping=0.2, pressure=0.45, material=0.6, position=0.2), held, 1.2)
+    pluckL, _ = rh_render(dict(wire, exciter="pluck", damping=0.25), held, 1.2)
+    bow_ratio = rh_rms(bowL[int(0.7 * SR):int(1.05 * SR)]) / max(1e-9, rh_rms(bowL[int(0.05 * SR):int(0.2 * SR)]))
+    pluck_ratio = rh_rms(pluckL[int(0.7 * SR):int(1.05 * SR)]) / max(1e-9, rh_rms(pluckL[int(0.05 * SR):int(0.2 * SR)]))
+    ck(f"Rh. a bow holds ({bow_ratio:.2f}) and a pluck dies away ({pluck_ratio:.2f})",
+       bow_ratio > 0.65 and pluck_ratio < 0.5, (bow_ratio, pluck_ratio))
+    relL, _ = rh_render(wire, [{"at": 0, "t": "on", "n": 69, "v": 0.9}, {"at": 0.12, "t": "off", "n": 69}], 0.8)
+    ck("Rh. letting go of a key leaves the string quiet",
+       rh_rms(relL[int(0.02 * SR):int(0.1 * SR)]) > 0.02 and rh_rms(relL[int(0.45 * SR):]) < 1e-3,
+       (rh_rms(relL[int(0.02 * SR):int(0.1 * SR)]), rh_rms(relL[int(0.45 * SR):])))
+    panL, _ = rh_render(wire, [{"at": 0, "t": "on", "n": 60, "v": 0.9}, {"at": 0.05, "t": "panic"}], 0.4)
+    ck("Rh. panic in the render silences the cavity", rh_rms(panL[int(0.16 * SR):]) < 1e-4, rh_rms(panL[int(0.16 * SR):]))
+    bendL, _ = rh_render(wire, [{"at": 0, "t": "bend", "v": 1}, {"at": 0, "t": "on", "n": 69, "v": 0.85}], 0.7)
+    bf = peak_freq(bendL[int(0.2 * SR):int(0.55 * SR)])
+    ck(f"Rh. the pitch wheel lifts A4 by two semitones ({bf:.2f} Hz)", abs(bf - 440 * 2 ** (2 / 12)) < 10, bf)
+    susL, _ = rh_render(dict(wire, damping=0.2), [
+        {"at": 0, "t": "on", "n": 69, "v": 0.85},
+        {"at": 0.02, "t": "sus", "on": True},
+        {"at": 0.08, "t": "off", "n": 69},
+    ], 0.55)
+    freeL, _ = rh_render(dict(wire, damping=0.2), [
+        {"at": 0, "t": "on", "n": 69, "v": 0.85},
+        {"at": 0.08, "t": "off", "n": 69},
+    ], 0.55)
+    sus_e, free_e = rh_rms(susL[int(0.25 * SR):int(0.45 * SR)]), rh_rms(freeL[int(0.25 * SR):int(0.45 * SR)])
+    ck(f"Rh. the sustain pedal holds a released note ({sus_e:.4f} against {free_e:.6f})",
+       sus_e > 0.01 and sus_e > free_e * 8, (sus_e, free_e))
+    names = pg.evaluate("__synth.rhumbatronFactory()")
+    quiet_factory = []
+    for row in names:
+        body = pg.evaluate("(n) => __synth.rhumbatronPatch(n)", row["name"])
+        fl, _fr = rh_render(body, [{"at": 0, "t": "on", "n": 69, "v": 0.8}], 0.45)
+        level = rh_rms(fl[int(0.04 * SR):])
+        if level < 1e-3: quiet_factory.append((row["name"], level))
+    ck("Rh. every factory patch speaks", not quiet_factory, quiet_factory)
+    pg.evaluate("__synth.panic()")
+    pg.evaluate("__synth.setDevice('rhumbatron')")
+    pg.wait_for_timeout(250)
+    help_r = pg.evaluate("""() => [...document.querySelectorAll('#rhumNote, .intro[data-dev="rhumbatron"]')].map(n => n.textContent).join(' ')""")
+    ck("Rh. the cavity is on screen, and Filament's filter is not",
+       pg.evaluate("__synth.device()") == "rhumbatron" and pg.is_visible("#rhumCanvas") and pg.is_visible("#rhumBodies")
+       and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis")
+       and "Drag" in help_r and "rec" in help_r, help_r[:180])
+    box = pg.locator("#rhumCanvas").bounding_box()
+    pg.mouse.move(box["x"] + box["width"] * 0.2, box["y"] + box["height"] * 0.55)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] * 0.84, box["y"] + box["height"] * 0.4, steps=10)
+    pg.mouse.up()
+    pg.wait_for_timeout(80)
+    dragged = pg.evaluate("__synth.patch().position")
+    ck(f"Rh. dragging the string moves the strike point ({dragged:.2f})", dragged > 0.7, dragged)
+    pg.evaluate("__synth.noteOn(60, 0.9)")
+    pg.wait_for_function("() => (__synth.rhumbatronMeter().voices || 0) > 0", timeout=2000)
+    pg.evaluate("__synth.noteOn(64, 0.8)")
+    pg.wait_for_function("() => (__synth.rhumbatronMeter().voices || 0) >= 2", timeout=2000)
+    pg.evaluate("__synth.noteOff(60)")
+    pg.wait_for_function("() => (__synth.rhumbatronMeter().voices || 0) === 1", timeout=2000)
+    left = pg.evaluate("__synth.rhumbatronMeter()")
+    pg.evaluate("__synth.noteOff(64)")
+    pg.wait_for_function("() => (__synth.rhumbatronMeter().voices || 0) === 0", timeout=2000)
+    ck("Rh. two keys, then one, then none", (left.get("voices") or 0) == 1, left)
+    pg.evaluate("__synth.noteOn(67, 0.85)")
+    pg.wait_for_function("() => (__synth.rhumbatronMeter().voices || 0) > 0", timeout=2000)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => (__synth.rhumbatronMeter().voices || 0) === 0", timeout=2000)
+    ck("Rh. Panic clears the voices", (pg.evaluate("__synth.rhumbatronMeter()").get("voices") or 0) == 0)
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     perr = []
     ph.on("pageerror", lambda e: perr.append(str(e)))
@@ -4268,6 +4404,36 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(120)
     ck("Ad. no page errors", len(errs) == ad_before, errs[ad_before:])
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.evaluate("__synth.setDevice('rhumbatron')")
+    ph.wait_for_timeout(250)
+    ck("Rh. 390px: no horizontal scroll, the cavity is up",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#rhumCanvas") and not ph.is_visible("#mFilt"),
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #rhumRoot .chip, #rhumRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Rh. 390px: rail, tabs and cavity controls are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="cavity"]')
+    ph.wait_for_timeout(200)
+    cav_small = ph.evaluate("""() => [...document.querySelectorAll('#rhumRoot .chip, #rhumRoot input')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Rh. 390px: the Cavity tab fits and its controls are 44 px or more",
+       not cav_small and ph.is_visible("#rhumDamp") and not ph.is_visible("#rhumCanvas")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       (cav_small, ph.evaluate("[document.documentElement.scrollWidth, innerWidth]")))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_rhumbatron_phone.png"))
+    ck("Rh. 390px: no page errors", not perr, perr)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(150)
+    ck("Rh. no page errors", not errs, errs)
     b.close()
 
 print()
