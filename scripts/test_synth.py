@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -1466,6 +1466,8 @@ with sync_playwright() as pw:
             grain={"size": 90, "density": 36, "position": 0.25, "spray": 0, "pitch": 0, "pitchRand": 0, "reverse": 0, "window": "hann", "spread": 0, "freeze": True, "keyboard": False},
             lfo={"depth": 0, "rate": 0.1, "dest": "position"},
             tail={"delay": 0.2, "feedback": 0.2, "reverb": 0, "mix": 0.15}, **quiet)),
+        ("orthicon", None, 440, dict(device="orthicon", picture="custom", keyboard=False, hold=True, engine="add",
+            phase="coherent", width=0, level=1, curve=1, speed=2, loop=True, scale="off", fLo=80, fHi=8000, **quiet)),
     ]
     for dev, midi_note, expect, body in tones:
         pg.evaluate("__synth.panic()")
@@ -1474,6 +1476,9 @@ with sync_playwright() as pw:
         if dev == "mote":
             pg.evaluate("() => __synth.moteCaptureProbe(0.2, 440)")
             pg.wait_for_timeout(80)
+        if dev == "orthicon":
+            pg.evaluate("""async () => { const c = __synth.engine().ctx; if (c.state !== 'running') await c.resume(); return __synth.orthiconPaintLive(440); }""")
+            pg.wait_for_timeout(120)
         arm_listen()
         if midi_note is not None:
             pg.evaluate("(n) => __synth.noteOn(n, 0.9)", midi_note)
@@ -3211,6 +3216,129 @@ with sync_playwright() as pw:
        and rec_rms > 1e-3 and bool(_re2.fullmatch(r"Pentagrid-\d{8}-\d{6}\.wav", rec.get("name") or "")),
        (rec_rms, None if not rec else rec.get("sr"), None if not rec else rec.get("name")))
     ck("Pg. no page errors", len(errs) == pg_before, errs[pg_before:])
+
+    # ---------------------------------------------------------------- Or. Orthicon, the spectral painter
+    def orender(patch, events=None, seconds=0.5, **extra):
+        payload = {"patch": patch, "events": events or [], "seconds": seconds}
+        payload.update(extra)
+        return dec(pg.evaluate("a => __synth.orthiconRender(a)", payload))
+    def orms(x):
+        return float(np.sqrt(np.mean(np.square(x)))) if len(x) else 0.0
+    def ofinite(x):
+        return bool(np.isfinite(x).all()) and float(np.max(np.abs(x))) <= 1.0
+    devo = pg.evaluate("""() => { const d = __synth.orthiconDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput,
+      proc: d.processor, worklet: d.worklet, ch: d.channels, over: d.oversample
+    }; }""")
+    ck("Or. adapter is a dxrack/1 instrument",
+       devo["id"] == "orthicon" and devo["api"] == "dxrack/1" and devo["inst"] and devo["outs"] == 1 and devo["midi"]
+       and devo["proc"] == "orthicon" and devo["worklet"] == "orthicon.worklet.js" and devo["ch"] == 2 and devo["over"] == 1, devo)
+    painted = pg.evaluate("""() => __synth.orthiconRender({
+      patch: { device: 'orthicon', picture: 'custom', keyboard: false, hold: true, engine: 'add', phase: 'coherent', width: 0, level: 1, curve: 1, speed: 4, loop: true, scale: 'off', fLo: 80, fHi: 8000 },
+      toneHz: 440, seconds: 0.5
+    })""")
+    pL, pR = dec(painted)
+    pmid = pL[len(pL) // 5:]
+    fp = peak_freq(pmid)
+    expect_hz = painted["expect"]["hz"]
+    ck(f"Or. a painted line peaks at the painted frequency ({fp:.2f} Hz, row {expect_hz:.2f})",
+       abs(fp - expect_hz) < 8 and abs(fp - 440) < 12 and ofinite(pL) and ofinite(pR) and float(np.max(np.abs(pL - pR))) < 1e-3 and orms(pmid) > 0.05,
+       (round(fp, 2), round(expect_hz, 2), round(orms(pmid), 4)))
+    ifft = pg.evaluate("""() => __synth.orthiconRender({
+      patch: { device: 'orthicon', picture: 'custom', keyboard: false, hold: true, engine: 'ifft', phase: 'coherent', width: 0, level: 1, curve: 1, speed: 4, loop: true, scale: 'off' },
+      toneHz: 440, seconds: 0.55
+    })""")
+    iL, iR = dec(ifft)
+    fi = peak_freq(iL[len(iL) // 5:])
+    ck(f"Or. inverse FFT peaks at the painted frequency ({fi:.2f} Hz)",
+       abs(fi - ifft["expect"]["hz"]) < 12 and abs(fi - 440) < 12 and ofinite(iL) and ofinite(iR) and orms(iL[len(iL) // 5:]) > 0.02,
+       (round(fi, 2), ifft["expect"], round(orms(iL), 4)))
+    for name in ("Ember Ridge", "Lantern Stack", "Veil", "Fifth Drone"):
+        spec = pg.evaluate("(n) => __synth.orthiconPatch(n)", name)
+        aL, aR = orender(spec, seconds=0.45)
+        ck(f"Or. {name} is not silent", orms(aL) > 0.01 and orms(aR) > 0.01 and ofinite(aL) and ofinite(aR), round(orms(aL), 4))
+    glyph = pg.evaluate("() => __synth.orthiconPatch('Glyph Keys')")
+    gL, gR = orender(glyph, seconds=0.4)
+    ck("Or. Glyph Keys is silent until a note", orms(gL) < 1e-4 and orms(gR) < 1e-4, round(orms(gL), 6))
+    held = [{"t": "on", "n": 60, "v": 0.9, "at": 0.04}, {"t": "off", "n": 60, "at": 0.28}]
+    kL, kR = orender(glyph, held, 0.85)
+    kmid = kL[int(0.1 * SR):int(0.22 * SR)]
+    ktail = kL[int(0.55 * SR):]
+    ck("Or. a key sounds, then the release goes silent",
+       orms(kmid) > 0.02 and orms(ktail) < 1e-4 and ofinite(kL) and ofinite(kR),
+       (round(orms(kmid), 4), round(orms(ktail), 6)))
+    chord = [{"t": "on", "n": 60, "v": 0.8, "at": 0.02}, {"t": "on", "n": 64, "v": 0.8, "at": 0.04},
+             {"t": "off", "n": 60, "at": 0.22}, {"t": "off", "n": 64, "at": 0.42}]
+    cL, _cR = orender(glyph, chord, 0.9)
+    both = cL[int(0.08 * SR):int(0.18 * SR)]
+    one = cL[int(0.28 * SR):int(0.38 * SR)]
+    none = cL[int(0.65 * SR):]
+    ck("Or. releasing one note leaves the other, then both off is silent",
+       orms(both) > 0.02 and orms(one) > 0.01 and orms(none) < 1e-4,
+       (round(orms(both), 4), round(orms(one), 4), round(orms(none), 6)))
+    panL, _panR = orender(glyph, [{"t": "on", "n": 60, "v": 0.9, "at": 0.02}, {"t": "panic", "at": 0.16}], 0.6)
+    ck("Or. panic clears the note",
+       orms(panL[int(0.06 * SR):int(0.12 * SR)]) > 0.02 and orms(panL[int(0.35 * SR):]) < 1e-4,
+       (round(orms(panL[int(0.06 * SR):int(0.12 * SR)]), 4), round(orms(panL[int(0.35 * SR):]), 6)))
+    octave = pg.evaluate("""() => __synth.orthiconRender({
+      patch: { device: 'orthicon', picture: 'custom', keyboard: true, hold: true, engine: 'add', phase: 'coherent', width: 0, level: 1, scale: 'off' },
+      toneHz: 440, seconds: 0.45, events: [{ t: 'on', n: 72, v: 0.9, at: 0.02 }]
+    })""")
+    oL, _oR = dec(octave)
+    fo = peak_freq(oL[len(oL) // 5:])
+    ck(f"Or. keys mode transposes the picture ({fo:.1f} Hz, an octave above {octave['expect']['hz']:.1f})",
+       abs(fo - octave["expect"]["hz"] * 2) < 16 and ofinite(oL), (round(fo, 2), octave["expect"]))
+    q = pg.evaluate("() => __synth.orthiconQuantize(473, 'major', 60)")
+    ck("Or. quantize moves an off-scale tone onto the scale",
+       q["toRow"] != q["fromRow"] and abs(q["toHz"] - q["from"]) > 4, q)
+    az = pg.evaluate("() => __synth.orthiconAnalyze(440)")
+    ck(f"Or. analysing a 440 Hz tone lands on that row ({az['hz']:.1f} Hz)", abs(az["hz"] - 440) < 15, az)
+    pg.evaluate("__synth.setDevice('orthicon')")
+    pg.wait_for_timeout(300)
+    ck("Or. the picture is on screen",
+       pg.evaluate("__synth.device()") == "orthicon" and pg.is_visible("#orthiconCanvas") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    help_o = pg.evaluate("""() => [...document.querySelectorAll('#mOrthStage .note, .intro[data-dev="orthicon"]')].map(n => n.textContent).join(' ')""")
+    ck("Or. help says Capture rack is an input, not an export", "Capture rack is an input, not an export" in help_o, help_o)
+    pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'custom', brush: 'hard', brushSize: 1.2, keyboard: false, hold: true, engine: 'add', phase: 'coherent', width: 0, level: 1 })""")
+    pg.wait_for_timeout(150)
+    pg.evaluate("() => __synth.orthiconClear()")
+    box = pg.locator("#orthiconCanvas").bounding_box()
+    y = box["y"] + box["height"] * 0.62
+    pg.mouse.move(box["x"] + 8, y)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] - 8, y, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(80)
+    energy = pg.evaluate("__synth.orthiconState().energy")
+    ck("Or. painting the canvas puts energy in the picture", energy > 1, energy)
+    import struct as _st, zlib as _zl
+    def _png_chunk(tag, data):
+        return _st.pack(">I", len(data)) + tag + data + _st.pack(">I", _zl.crc32(tag + data) & 0xFFFFFFFF)
+    w_px, h_px, y_white = 96, 128, 80
+    raw = b""
+    for yy in range(h_px):
+        raw += b"\x00" + (b"\xff\xff\xff" * w_px if yy == y_white else b"\x00\x00\x00" * w_px)
+    png = b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", _st.pack(">IIBBBBB", w_px, h_px, 8, 2, 0, 0, 0)) + _png_chunk(b"IDAT", _zl.compress(raw)) + _png_chunk(b"IEND", b"")
+    img_path = os.path.join(SHOTS, "orthicon-line.png")
+    open(img_path, "wb").write(png)
+    pg.locator("#orthiconImage").set_input_files(img_path)
+    pg.wait_for_function("() => __synth.orthiconState().source === 'image' && __synth.orthiconState().energy > 10", timeout=5000)
+    img = pg.evaluate("""() => __synth.orthiconRender({
+      patch: { device: 'orthicon', picture: 'custom', keyboard: false, hold: true, engine: 'add', phase: 'coherent', width: 0, level: 1, curve: 1, scale: 'off', fLo: 80, fHi: 8000 },
+      useHost: true, seconds: 0.45
+    })""")
+    imL, imR = dec(img)
+    fimg = peak_freq(imL[len(imL) // 5:])
+    ck(f"Or. a dropped image plays the bright row ({fimg:.1f} Hz)",
+       abs(fimg - 440) < 12 and ofinite(imL) and ofinite(imR) and orms(imL) > 0.02, (round(fimg, 2), round(orms(imL), 4), pg.evaluate("__synth.orthiconState().energy")))
+    pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'glyph', keyboard: true, level: 0.8, engine: 'add', phase: 'coherent' })""")
+    pg.wait_for_timeout(120)
+    pg.evaluate("__synth.noteOn(60, 0.8)")
+    pg.wait_for_timeout(60)
+    pg.evaluate("__synth.noteOff(60)")
+    pg.wait_for_timeout(40)
+    ck("Or. a live note-off leaves no key held", pg.evaluate("__synth.state().down") == [], pg.evaluate("__synth.state()"))
+    pg.screenshot(path=os.path.join(SHOTS, "synth_orthicon_desktop.png"), full_page=True)
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     perr = []
     ph.on("pageerror", lambda e: perr.append(str(e)))
@@ -3233,6 +3361,26 @@ with sync_playwright() as pw:
        and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
     ph.screenshot(path=os.path.join(SHOTS, "synth_pentagrid_phone.png"))
     ck("Pg. 390px: no page errors", not perr, perr)
+    ph.evaluate("__synth.setDevice('orthicon')")
+    ph.wait_for_timeout(200)
+    ph.tap('.tabs [data-go="play"]')
+    ph.wait_for_timeout(200)
+    ck("Or. 390px: no horizontal scroll, the picture is up, one section",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#orthiconCanvas") and not ph.is_visible("#mFilt") and not ph.is_visible("#chassis")
+       and ph.evaluate("[...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length") <= 4,
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #orthiconRoot .chip, #orthiconRoot .btn, #orthiconRoot .knob')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Or. 390px: rail, tabs, brushes and knobs are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="scan"]')
+    ph.wait_for_timeout(200)
+    ck("Or. 390px: the Scan tab shows the scan controls",
+       ph.is_visible("#mOrthScan") and ph.is_visible("#kOrthScan") and not ph.is_visible("#orthiconCanvas")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_orthicon_phone.png"))
+    ck("Or. 390px: no page errors", not perr, perr)
     ph.close()
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(150)

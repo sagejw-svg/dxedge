@@ -10,7 +10,7 @@ Ko-fi tip link to https://ko-fi.com/oldtimeradio, /otr code is COPIED into `/syn
 Long-term goal: a rack of devices in the spirit of Reason (Propellerhead). Keep the synth a device
 with a clean boundary: parameter table, MIDI in, stereo out, versioned patch JSON.
 
-The rack now holds ten devices: **Filament** (poly, the tube synth), **Cathode** (mono,
+The rack now holds eleven devices: **Filament** (poly, the tube synth), **Cathode** (mono,
 semi-modular, with a patch panel; James asked for it on 13 Oct as "an MS-20 style" synth. It is an
 original design: own name, panel, jack names and voicing, not a copy of Korg's), **Thyratron**
 (a monophonic ladder-filter synthesizer: three oscillators, a mixer, a 24 dB/octave ladder that
@@ -20,14 +20,15 @@ wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, t
 drag-and-drop modulation matrix), **Gleam** (an original touch field: each finger is a voice,
 with a room of orbs and a master effect pad), **Mote** (an original granular instrument: a
 waveform, grains, and a tail), **Heptode** (a MIDI-file instrument), **Geissler** (a generative
-meadow: reeds, grazers, stalks and flickers), and **Pentagrid** (an original
+meadow: reeds, grazers, stalks and flickers), **Pentagrid** (an original
 shortwave receiver: a tuning dial, band noise, Morse, FSK, formant speech, chimes and time pips,
-all synthesized). The rail above the chassis picks which device the keyboard,
+all synthesized), and **Orthicon** (a spectral painter: a log-frequency
+picture scanned back into sound). The rail above the chassis picks which device the keyboard,
 wheels and MIDI play. Filament and Cathode feed the shared ensemble and output rack. Dekatron
-copies those output fields. Lattice, Thyratron, Gleam, Mote, Heptode, Geissler and Pentagrid have their own panels and sleep until the rail
+copies those output fields. Lattice, Thyratron, Gleam, Mote, Heptode, Geissler, Pentagrid and Orthicon have their own panels and sleep until the rail
 selects them; the shared output knobs stay on the Filament patch while one of those is showing.
-Mote, Heptode, Geissler and Pentagrid hide the tube chassis while lit. Dekatron and Lattice register when their nodes are hosted.
-Thyratron and Gleam are registered in `device.js`. Mote, Heptode, Geissler and Pentagrid register when their modules load.
+Mote, Heptode, Geissler, Pentagrid and Orthicon hide the tube chassis while lit. Dekatron and Lattice register when their nodes are hosted.
+Thyratron and Gleam are registered in `device.js`. Mote, Heptode, Geissler, Pentagrid and Orthicon register when their modules load.
 Gleam is also a full-screen page at `/synth/gleam/`.
 
 The rack framework (14 Oct) is what those devices plug into. Each device
@@ -90,7 +91,7 @@ task can read it).
 | `frontend/public/synth/gleam-fx.js` | Effect pad nodes: lowpass sweep, stutter gate, feedback delay. Bypassed unless a finger is down |
 | `frontend/public/synth/gleam-ui.js` | Pad, host, and `renderGleamBuffer`. `attach` calls `addDevice` |
 | `frontend/public/synth/gleam/index.html` | Full-screen Gleam. Same modules as the rack |
-| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler and Pentagrid register when their modules load |
+| `frontend/public/synth/device.js` | Device contract (`dxrack/1`): `registerDevice`, `getDevice`, `listDevices`, `parameterTable`. Filament, Cathode, Thyratron and Gleam are registered here; Dekatron and Lattice register when their nodes are hosted; Mote, Heptode, Geissler, Pentagrid and Orthicon register when their modules load |
 | `frontend/public/synth/mote.js` | Mote patch schema v1 (`device: 'mote'`), `normalizeMote`, three factory patches, `moteDevice` |
 | `frontend/public/synth/mote-dsp.js` | The grain engine: windowed buffer reads, pitch as a read rate, LFO, delay and a short reverb tail |
 | `frontend/public/synth/mote.worklet.js` | AudioWorklet processors `mote` and `mote-capture` |
@@ -104,6 +105,10 @@ task can read it).
 | `frontend/public/synth/pentagrid-dsp.js` | The receiver: noise, crackle, fading, heterodynes, formants, Morse, FSK, chimes, time pips, playable beats |
 | `frontend/public/synth/pentagrid.worklet.js` | AudioWorklet processor `pentagrid`. Imports the engine; no DSP of its own |
 | `frontend/public/synth/pentagrid-ui.js` | The tuning dial, and `createPentagridHost` / `renderPentagridAudio`. `attach` calls `addDevice` |
+| `frontend/public/synth/orthicon.js` | Orthicon patch schema v1 (`device: 'orthicon'`), `normalizeOrthicon`, five factory pictures, `orthiconDevice` |
+| `frontend/public/synth/orthicon-dsp.js` | The spectral engine: log-frequency grid, brushes, image and audio analysis, additive resynthesis and overlap-add inverse FFT |
+| `frontend/public/synth/orthicon.worklet.js` | AudioWorklet processors `orthicon` and `orthicon-capture` |
+| `frontend/public/synth/orthicon-ui.js` | The spectrogram panel, and `createOrthiconHost` / `renderOrthiconAudio`. `attach` calls `addDevice` |
 | `frontend/public/synth/sources/` | Glass, air and bell: original CC0 WAVs generated by `scripts/build_mote_sources.py` |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
@@ -372,7 +377,43 @@ registerDevice({
 | World | `geissler-world.js`. xorshift32 from the seed. No `Math.random`, no `Date`. A tick is 1/30 s |
 | Voices | Pool of at most 16. Reed drone, graze pluck, stalk bass plus a noise burst, flicker motif. A death is a falling decaying tone |
 | Messages | `{t:'patch', p}`, `{t:'tap'}`, `{t:'food'}`, `{t:'spawn'}`, `{t:'herd'}`, `{t:'panic'}`, `{t:'active', on}`, `{t:'tempo', bpm}`, `{t:'reseed', seed}` |
-| Routes | `self`, or Filament, Cathode, Thyratron, Lattice, Gleam, Dekatron, Mote, Heptode. Default is the meadow |
+| Routes | `self`, or Filament, Cathode, Thyratron, Lattice, Gleam, Dekatron, Mote, Heptode, Pentagrid, Orthicon. Default is the meadow |
+
+### Orthicon (spectral painter) - first version
+Original picture-to-sound device. The picture is a grid, time across and log frequency up.
+A playhead scans it. Additive resynthesis plays one sine per row. Inverse FFT is an overlap-add
+of the same rows, with phase advanced at the partial's own frequency. Brushes are soft, hard,
+harmonic (an overtone stack), noise, and eraser. Smear, blur, shift, stretch, freeze and quantize
+edit the grid. A dropped image or an analysed recording becomes the picture. The grid is not
+stored in the patch; a preset rebuilds its picture.
+- [x] Paint, drop a PNG or JPG, and analyse a file, the microphone, or the rack
+- [x] Scan speed, loop, hold, frequency range, brightness curve, coherent or random phase
+- [x] Keys mode: MIDI note 60 is the picture's own pitch
+- [x] Five generated pictures: Ember Ridge, Lantern Stack, Veil, Glyph Keys, Fifth Drone
+- [x] Tests in the Or. section. The master recorder names the file Orthicon when it is the device playing
+
+`orthiconDevice` in `orthicon.js` is the `dxrack/1` descriptor. `orthicon.js` calls `registerDevice` when the page imports it. `createOrthiconHost.attach` calls `addDevice('orthicon', node)`, so the master recorder hears it.
+
+```js
+registerDevice({
+  id: 'orthicon', name: 'Orthicon', vendor: 'DX Edge', version: '1',
+  api: 'dxrack/1', instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true,
+  processor: 'orthicon', worklet: 'orthicon.worklet.js',
+  parameters: { level: { id, label, type: 'float', default, min, max }, /* speed, fLo, fHi, curve, phase, engine */ },
+  async create(ctx, host) { /* stereo AudioWorkletNode, processor 'orthicon' */ },
+});
+```
+
+| | |
+|-|-|
+| Identity | `id: 'orthicon'`, `api: 'dxrack/1'`, `processor: 'orthicon'`, `worklet: 'orthicon.worklet.js'`, one stereo output |
+| Patch | `normalizeOrthicon(patch)` → schema v1 JSON, `device: 'orthicon'`. The picture id is stored. The grid is not |
+| Pictures | `ridge`, `lantern`, `veil`, `glyph`, `drone` are generated. `custom` keeps the session grid |
+| Scan | Columns per second, loop, hold (a frozen column). Frequency range is log, default 80 Hz to 8 kHz |
+| Resynthesis | `add` is one sine per row. `ifft` is a 4096-point overlap-add, hop 1024. Coherent phase steps at the partial's frequency. Random phase picks a new angle each column or hop |
+| Keys | Off: the picture plays itself. On: silent until a note. Note 60 does not transpose. Six voices |
+| Messages | `{t:'patch', p}`, `{t:'grid', data}`, `{t:'on', n, v}`, `{t:'off', n}`, `{t:'bend', v}`, `{t:'mw', v}`, `{t:'sus', on}`, `{t:'panic'}`, `{t:'active', on}` |
+| Capture | Capture rack is an input. It analyses the rack into the picture. The red rec button is the WAV export |
 
 ### Pentagrid (shortwave receiver) - first version
 Original receiver. The dial is a frequency in kHz. A station is heard when its offset sits inside
