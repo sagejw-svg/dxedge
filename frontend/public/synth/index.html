@@ -112,10 +112,16 @@
   body[data-dev="dekatron"] [data-dev="heptode"], body[data-dev="lattice"] [data-dev="heptode"],
   body[data-dev="thyratron"] [data-dev="heptode"], body[data-dev="gleam"] [data-dev="heptode"],
   body[data-dev="mote"] [data-dev="heptode"] { display: none !important; }
-  #drumRoot, #latticeRoot, #thyRoot, #gleamRoot, #moteRoot, #heptodeRoot { display: contents; }
+  body[data-dev="geissler"] [data-dev]:not([data-dev="geissler"]),
+  body[data-dev="filament"] [data-dev="geissler"], body[data-dev="cathode"] [data-dev="geissler"],
+  body[data-dev="dekatron"] [data-dev="geissler"], body[data-dev="lattice"] [data-dev="geissler"],
+  body[data-dev="thyratron"] [data-dev="geissler"], body[data-dev="gleam"] [data-dev="geissler"],
+  body[data-dev="mote"] [data-dev="geissler"], body[data-dev="heptode"] [data-dev="geissler"] { display: none !important; }
+  #drumRoot, #latticeRoot, #thyRoot, #gleamRoot, #moteRoot, #heptodeRoot, #geisslerRoot { display: contents; }
   body[data-dev="filament"] #drumRoot, body[data-dev="cathode"] #drumRoot, body[data-dev="lattice"] #drumRoot, body[data-dev="thyratron"] #drumRoot, body[data-dev="gleam"] #drumRoot, body[data-dev="mote"] #drumRoot, body[data-dev="heptode"] #drumRoot { display: none !important; }
   body:not([data-dev="mote"]) #moteRoot { display: none !important; }
   body:not([data-dev="heptode"]) #heptodeRoot { display: none !important; }
+  body:not([data-dev="geissler"]) #geisslerRoot { display: none !important; }
   body:not([data-dev="thyratron"]) #thyRoot { display: none !important; }
   body:not([data-dev="gleam"]) #gleamRoot { display: none !important; }
   body[data-dev="dekatron"] #mStereo, body[data-dev="dekatron"] #mEns, body[data-dev="dekatron"] #mOut,
@@ -131,6 +137,26 @@
   body[data-dev="mote"] #mSpk, body[data-dev="mote"] #mRoom, body[data-dev="mote"] #chassis { display: none !important; }
   body[data-dev="heptode"] #mStereo, body[data-dev="heptode"] #mEns, body[data-dev="heptode"] #mOut,
   body[data-dev="heptode"] #mSpk, body[data-dev="heptode"] #mRoom, body[data-dev="heptode"] #chassis { display: none !important; }
+  body[data-dev="geissler"] #mStereo, body[data-dev="geissler"] #mEns, body[data-dev="geissler"] #mOut,
+  body[data-dev="geissler"] #mSpk, body[data-dev="geissler"] #mRoom, body[data-dev="geissler"] #chassis { display: none !important; }
+  #geissWorld { width: 100%; max-width: 100%; height: 280px; display: block; touch-action: none; border-radius: 8px; border: 1px solid #1e3a34; background: #12160f; }
+  .geiss-bar, .geiss-seed { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 100%; margin: 0 0 8px; }
+  .geiss-lab { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+  .geiss-read { color: #d7fff4; font-variant-numeric: tabular-nums; }
+  .geiss-routes { display: flex; flex-direction: column; gap: 6px; max-width: 100%; }
+  .geiss-route { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+  .geiss-route span { width: 72px; flex: 0 0 auto; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .geiss-route select, #geissSeed { background: #101614; color: var(--text); border: 1px solid #1e3a34; border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  .geiss-route select { flex: 1 1 auto; max-width: 100%; }
+  body[data-dev="geissler"] #geisslerRoot .mod { background: #101614; border-color: #1e3a34; }
+  body[data-dev="geissler"] #geisslerRoot h3 { color: #d7fff4; letter-spacing: 1.6px; }
+  body[data-dev="geissler"] #geisslerRoot .chip[aria-pressed="true"] { background: #5ee0c5; border-color: #5ee0c5; color: #06221c; }
+  body[data-dev="geissler"] #geisslerRoot .knob .val { stroke: #5ee0c5; }
+  body[data-dev="geissler"] #geisslerRoot .knob .ptr { stroke: #f0c27a; }
+  body[data-dev="geissler"] #geisslerRoot .knob .kv { color: #b6ffe8; }
+  body[data-dev="geissler"] .devbtn[aria-pressed="true"] { color: #d7fff4; border-color: #5ee0c5; background: rgba(94, 224, 197, 0.1); }
+  body[data-dev="geissler"] .devbtn[aria-pressed="true"] i { background: #5ee0c5; box-shadow: 0 0 7px #5ee0c5; }
+  body[data-dev="geissler"] .tabs button[aria-selected="true"] { color: #d7fff4; border-color: #5ee0c5; background: rgba(94, 224, 197, 0.1); }
   .hep-roll { position: relative; height: 150px; max-width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid #3a2a22; background: #14110e; }
   .hep-roll.over { outline: 2px dashed #e7c4a8; outline-offset: -3px; }
   #hepRoll, #heptodePlace { width: 100%; max-width: 100%; display: block; }
@@ -350,7 +376,8 @@
     body[data-tab="mod"] .mod[data-tab~="mod"], body[data-tab="stereo"] .mod[data-tab~="stereo"], body[data-tab="rack"] .mod[data-tab~="rack"],
     body[data-tab="patch"] .mod[data-tab~="patch"], body[data-tab="voice"] .mod[data-tab~="voice"],
     body[data-tab="grain"] .mod[data-tab~="grain"], body[data-tab="space"] .mod[data-tab~="space"],
-    body[data-tab="tracks"] .mod[data-tab~="tracks"], body[data-tab="place"] .mod[data-tab~="place"] { display: block; }
+    body[data-tab="tracks"] .mod[data-tab~="tracks"], body[data-tab="place"] .mod[data-tab~="place"],
+    body[data-tab="life"] .mod[data-tab~="life"], body[data-tab="route"] .mod[data-tab~="route"] { display: block; }
     body[data-dev="dekatron"] .tabs [data-go="osc"], body[data-dev="dekatron"] .tabs [data-go="filter"],
     body[data-dev="dekatron"] .tabs [data-go="mod"], body[data-dev="dekatron"] .tabs [data-go="stereo"],
     body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
@@ -368,6 +395,11 @@
     body[data-dev="heptode"] .tabs [data-go="mod"], body[data-dev="heptode"] .tabs [data-go="stereo"],
     body[data-dev="heptode"] .tabs [data-go="patch"], body[data-dev="heptode"] .tabs [data-go="voice"] { display: none !important; }
     #heptodeRoot input[type="range"], #hepSong { min-height: 44px; }
+    body[data-dev="geissler"] .tabs [data-go="osc"], body[data-dev="geissler"] .tabs [data-go="filter"],
+    body[data-dev="geissler"] .tabs [data-go="mod"], body[data-dev="geissler"] .tabs [data-go="stereo"],
+    body[data-dev="geissler"] .tabs [data-go="patch"], body[data-dev="geissler"] .tabs [data-go="voice"] { display: none !important; }
+    #geissWorld { height: 220px; }
+    #geisslerRoot input, #geisslerRoot select { min-height: 44px; min-width: 44px; }
     body[data-dev="gleam"] { padding-bottom: 12px; }
     #thyOsc { grid-template-columns: 1fr; }
     .devbtn { letter-spacing: 0.5px; font-size: 10px; padding: 6px 4px; min-width: 0; overflow: hidden; }
@@ -412,6 +444,7 @@
       <p class="intro" data-dev="gleam">Gleam, a touch field. Each finger is a voice: across is pitch, up is timbre, pressure is level. A room view places sounding orbs around a listener, and the same pad can sweep the rack master.</p>
       <p class="intro" data-dev="mote">Mote, a granular instrument: load any sound, record the microphone, or capture the rack, then play it as a cloud of grains. Capture rack is an input, not an export. Drag the highlighted region to move through the waveform. The red rec button saves what you hear as a WAV.</p>
       <p class="intro" data-dev="heptode">Heptode plays a MIDI file, then lets you reshape it. Every channel starts as the same plain voice. Morph the wave, open the filter, and drag each track around the stereo field. The red rec button saves what you hear as a WAV.</p>
+      <p class="intro" data-dev="geissler">Geissler is a small meadow. Reeds hum, grazers pluck, stalks hit, and flickers chirp. They meet, eat, breed and die, and each event is a note. Tap the field to drop food or spawn a creature. Drag to herd them. The red rec button saves what you hear as a WAV.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
       <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
@@ -442,6 +475,7 @@
       <button class="devbtn" id="devL" data-d="lattice" aria-pressed="false"><i></i>LATTICE<small>wavetable</small></button>
       <button class="devbtn" id="devM" data-d="mote" aria-pressed="false"><i></i>MOTE<small>granular</small></button>
       <button class="devbtn" id="devH" data-d="heptode" aria-pressed="false"><i></i>HEPTODE<small>midi files</small></button>
+      <button class="devbtn" id="devZ" data-d="geissler" aria-pressed="false"><i></i>GEISSLER<small>meadow</small></button>
     </div>
     <div class="racklinks" aria-label="More devices, each on its own page">
       <a class="devlink" href="/synth/fm/">HEXODE<small>six-operator FM</small></a>
@@ -456,7 +490,7 @@
         <figure class="tube" data-t="v3" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV3" aria-hidden="true"></canvas><figcaption><span class="role">V3 out</span><br><b id="nameV3">EL34</b></figcaption></figure>
         <figure class="tube" data-t="v4" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV4" aria-hidden="true"></canvas><figcaption><span class="role">V4 <span id="topoV4">PP</span></span><br><b id="nameV4">EL34</b></figcaption></figure>
       </div>
-      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span><span data-dev="gleam">GLEAM<small>touch field &middot; model 06</small></span><span data-dev="mote">MOTE<small>granular &middot; model 07</small></span><span data-dev="heptode">HEPTODE<small>midi files &middot; model 08</small></span></div>
+      <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span><span data-dev="gleam">GLEAM<small>touch field &middot; model 06</small></span><span data-dev="mote">MOTE<small>granular &middot; model 07</small></span><span data-dev="heptode">HEPTODE<small>midi files &middot; model 08</small></span><span data-dev="geissler">GEISSLER<small>meadow &middot; model 09</small></span></div>
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="lamps">
@@ -473,6 +507,8 @@
       <button role="tab" data-go="space" aria-selected="false" data-dev="mote">Space</button>
       <button role="tab" data-go="tracks" aria-selected="false" data-dev="heptode">Tracks</button>
       <button role="tab" data-go="place" aria-selected="false" data-dev="heptode">Place</button>
+      <button role="tab" data-go="life" aria-selected="false" data-dev="geissler">Life</button>
+      <button role="tab" data-go="route" aria-selected="false" data-dev="geissler">Route</button>
       <button role="tab" data-go="osc" aria-selected="false">Osc</button>
       <button role="tab" data-go="filter" aria-selected="false">Filter</button>
       <button role="tab" data-go="mod" aria-selected="false">Mod</button>
@@ -552,6 +588,7 @@
       <div id="gleamRoot"></div>
       <div id="moteRoot"></div>
       <div id="heptodeRoot"></div>
+      <div id="geisslerRoot"></div>
       <section class="mod" data-tab="rack" id="mHost" data-wide><h3><span class="pilot" id="hostPilot"></span>Transport and mixer</h3>
         <div class="hostbar">
           <button class="btn small" id="trPlay" aria-pressed="false">play</button>
@@ -609,6 +646,13 @@
           <label>pan <input type="range" id="mixHPan" min="-1" max="1" step="0.01" value="0" aria-label="Heptode pan"></label>
           <button class="chip" id="mixHMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixHSolo" aria-pressed="false">solo</button>
+        </div>
+        <div class="mixrow" data-mix="geissler">
+          <span class="who">Geissler</span>
+          <label>level <input type="range" id="mixZLvl" min="0" max="1" step="0.01" value="1" aria-label="Geissler level"></label>
+          <label>pan <input type="range" id="mixZPan" min="-1" max="1" step="0.01" value="0" aria-label="Geissler pan"></label>
+          <button class="chip" id="mixZMute" aria-pressed="false">mute</button>
+          <button class="chip" id="mixZSolo" aria-pressed="false">solo</button>
         </div>
         <div class="mixrow" data-mix="lattice">
           <span class="who">Lattice</span>
@@ -700,7 +744,7 @@
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
-    <p>Filament v0.10: Filament, Cathode, Thyratron, Dekatron, Lattice, Gleam, Mote, and Heptode in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Gleam is the touch field; <a href="/synth/gleam/">full screen</a> uses the same voices. Heptode plays MIDI files. The red rec button records a 24-bit WAV of the master on every device. The file is named for the lit device, or rack when several are playing. The Master panel, on the Rack tab below the instrument, has the same recording plus the effects and render wav. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
+    <p>Filament v0.11: Filament, Cathode, Thyratron, Dekatron, Lattice, Gleam, Mote, Heptode, and Geissler in one rack, with a mixer, a master clock, project files, a song library, a MIDI deck, and a master delay, reverb and compressor. Gleam is the touch field; <a href="/synth/gleam/">full screen</a> uses the same voices. Heptode plays MIDI files. Geissler is a meadow of reeds, grazers, stalks and flickers. The red rec button records a 24-bit WAV of the master on every device. The file is named for the lit device, or rack when several are playing. The Master panel, on the Rack tab below the instrument, has the same recording plus the effects and render wav. Two more sit on their own pages: <a href="/synth/fm/">Hexode</a>, six-operator FM, and <a href="/synth/acid/">Anode</a>, an acid bass groovebox. Part of <a href="/" target="_top">DXEdge</a> &middot; tube voicings shared with the <a href="/otr/" target="_top">Old Time Radio</a> rack.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -732,6 +776,10 @@ import { createMoteHost, mountMotePanel, renderMote, recordNode } from './mote-u
 import { heptodeDevice, normalizeHeptode, HEPTODE_FACTORY, HEPTODE_DEFAULT, HEPTODE_CATS, randomizeGentle, morphTracks } from './heptode.js';
 import { createHeptodeHost, mountHeptodePanel, renderHeptodeBuffer, probeHeptode } from './heptode-ui.js';
 import { scoreFromBytes, prepareScore, cullPacked, maxOverlap, encodeFixture } from './heptode-score.js';
+import { geisslerDevice, normalizeGeissler, GEISSLER_FACTORY, GEISSLER_DEFAULT, GEISSLER_CATS } from './geissler.js';
+import { createGeisslerHost, mountGeisslerPanel, renderGeisslerBuffer } from './geissler-ui.js';
+import { probeGeissler } from './geissler-dsp.js';
+import { runWorld, worldSummary, seasonOf, quantizeTime, blendGene, midiOf, makeRng } from './geissler-world.js';
 
 const $ = id => document.getElementById(id);
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -757,6 +805,7 @@ const DEVS = {
   gleam: { name: 'Gleam', factory: GLEAM_FACTORY, cats: GLEAM_CATS, normalize: normalizeGleam, def: GLEAM_DEFAULT, enums: {}, kCur: 'gleam_cur', kUser: 'gleam_user', first: 'Amber Field' },
   mote: { name: 'Mote', factory: MOTE_FACTORY, cats: MOTE_CATS, normalize: normalizeMote, def: MOTE_DEFAULT, enums: {}, kCur: 'mote_cur', kUser: 'mote_user', first: 'Drift Glass' },
   heptode: { name: 'Heptode', factory: HEPTODE_FACTORY, cats: HEPTODE_CATS, normalize: normalizeHeptode, def: HEPTODE_DEFAULT, enums: {}, kCur: 'heptode_cur', kUser: 'heptode_user', first: 'Plain Voice' },
+  geissler: { name: 'Geissler', factory: GEISSLER_FACTORY, cats: GEISSLER_CATS, normalize: normalizeGeissler, def: GEISSLER_DEFAULT, enums: {}, kCur: 'geissler_cur', kUser: 'geissler_user', first: 'Glass Meadow' },
 };
 const D = () => DEVS[dev];
 function loadDevState(d) {
@@ -771,22 +820,24 @@ function loadDevState(d) {
   if (saved && saved.patch) { const base = all.find(x => x.key === curKey); edited = !!base && JSON.stringify(base.p) !== JSON.stringify(X.normalize(saved.patch)); }
   return { cur, curKey, edited, user };
 }
-const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron'), lattice: loadDevState('lattice'), thyratron: loadDevState('thyratron'), gleam: loadDevState('gleam'), mote: loadDevState('mote'), heptode: loadDevState('heptode') };
+const DS = { filament: loadDevState('filament'), cathode: loadDevState('cathode'), dekatron: loadDevState('dekatron'), lattice: loadDevState('lattice'), thyratron: loadDevState('thyratron'), gleam: loadDevState('gleam'), mote: loadDevState('mote'), heptode: loadDevState('heptode'), geissler: loadDevState('geissler') };
 const savedDev = store.get('synth_dev', 'filament');
-let dev = savedDev === 'cathode' || savedDev === 'dekatron' || savedDev === 'lattice' || savedDev === 'thyratron' || savedDev === 'gleam' || savedDev === 'mote' || savedDev === 'heptode' ? savedDev : 'filament';
+let dev = savedDev === 'cathode' || savedDev === 'dekatron' || savedDev === 'lattice' || savedDev === 'thyratron' || savedDev === 'gleam' || savedDev === 'mote' || savedDev === 'heptode' || savedDev === 'geissler' ? savedDev : 'filament';
 const drumHost = createDrumHost();
 const latticeHost = createLatticeHost();
 const thyHost = createThyHost();
 const gleamHost = createGleamHost();
 const moteHost = createMoteHost();
 const heptodeHost = createHeptodeHost();
-let drumPanel = null, latPanel = null, thyPanel = null, gleamView = null, motePanel = null, heptodePanel = null;
+const geisslerHost = createGeisslerHost();
+let drumPanel = null, latPanel = null, thyPanel = null, gleamView = null, motePanel = null, heptodePanel = null, geisslerPanel = null;
 let bendV = 0, modV = 0;
 function drumPatch() { return dev === 'dekatron' ? cur : DS.dekatron.cur; }
 function latticePatch() { return dev === 'lattice' ? cur : DS.lattice.cur; }
 function thyPatch() { return dev === 'thyratron' ? cur : DS.thyratron.cur; }
 function motePatch() { return dev === 'mote' ? cur : DS.mote.cur; }
 function heptodePatch() { return dev === 'heptode' ? cur : DS.heptode.cur; }
+function geisslerPatch() { return dev === 'geissler' ? cur : DS.geissler.cur; }
 let { cur, curKey, edited, user } = DS[dev];
 document.body.dataset.dev = dev;
 
@@ -799,7 +850,7 @@ function ensureEngine() {
   initAudioSession();
   try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); }
   catch (e) { toast('This browser cannot start Web Audio.'); return Promise.reject(e); }
-  const bootPatch = dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' ? DS.filament.cur : cur;
+  const bootPatch = dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' ? DS.filament.cur : cur;
   enginePromise = createEngine(ctx, {
     patch: bootPatch,
     tempo: bootProj && bootProj.tempo,
@@ -809,8 +860,8 @@ function ensureEngine() {
     E = e; E.master.gain.value = 1;
     // Dekatron joins the mixer and the master clock as soon as the engine exists.
     // Asleep until the rail selects it, so it adds nothing to the other devices.
-    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
-      const sleep = () => { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); gleamHost.setActive(false); moteHost.setActive(false); heptodeHost.setActive(false); };
+    const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
+      const sleep = () => { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); gleamHost.setActive(false); moteHost.setActive(false); heptodeHost.setActive(false); geisslerHost.setActive(false); };
       if (dev === 'dekatron') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         sleep(); drumHost.setActive(true); drumHost.setPatch(cur);
@@ -829,6 +880,9 @@ function ensureEngine() {
       } else if (dev === 'heptode') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
         sleep(); heptodeHost.setActive(true); heptodeHost.setPatch(cur);
+      } else if (dev === 'geissler') {
+        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        sleep(); geisslerHost.setActive(true); geisslerHost.setPatch(cur);
       } else { sleep(); }
     });
     return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); syncHostUI(); return E; });
@@ -864,6 +918,7 @@ function pushPatch(load) {
     else if (dev === 'gleam') { cur = normalizeGleam(cur); withEngine(() => gleamHost.setPatch(cur)); }
     else if (dev === 'mote') { cur = normalizeMote(cur); withEngine(() => moteHost.setPatch(cur)); }
     else if (dev === 'heptode') { cur = normalizeHeptode(cur); withEngine(() => heptodeHost.setPatch(cur)); }
+    else if (dev === 'geissler') { cur = normalizeGeissler(cur); withEngine(() => geisslerHost.setPatch(cur)); }
     else withEngine(() => E.setPatch(cur, l));
     store.set(D().kCur, { key: curKey, patch: cur });
   });
@@ -878,7 +933,7 @@ function collectProject() {
     timeSig: st ? st.timeSig : (bootProj ? bootProj.timeSig : [4, 4]),
     device: dev,
     mixer: E ? E.mix.all() : (bootProj ? bootProj.mixer : null),
-    devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') } },
+    devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') }, geissler: { patch: patchOf('geissler') } },
   });
 }
 function paintHost(st) {
@@ -894,7 +949,7 @@ function syncHostUI() {
   if (document.activeElement !== $('hostTempo')) $('hostTempo').value = String(Math.round(st.tempo));
   paintHost(st);
   const mix = E.mix.all();
-  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H']].forEach(([id, s]) => {
+  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z']].forEach(([id, s]) => {
     const c = mix[id] || { level: 1, pan: 0, mute: false, solo: false };
     $('mix' + s + 'Lvl').value = String(c.level);
     $('mix' + s + 'Pan').value = String(c.pan);
@@ -910,7 +965,7 @@ function pushStrip(id, s) {
 function applyProject(raw) {
   const proj = normalizeProject(raw);
   $('projName').value = proj.name;
-  ['filament', 'cathode', 'mote', 'heptode'].forEach(id => {
+  ['filament', 'cathode', 'mote', 'heptode', 'geissler'].forEach(id => {
     if (!proj.devices[id]) return;
     DS[id] = Object.assign({}, DS[id], { cur: proj.devices[id].patch, curKey: '__project', edited: true });
     store.set(DEVS[id].kCur, { key: '__project', patch: DS[id].cur });
@@ -926,6 +981,7 @@ function applyProject(raw) {
     else if (dev === 'gleam') withEngine(() => gleamHost.setPatch(cur));
     else if (dev === 'mote') withEngine(() => moteHost.setPatch(cur));
     else if (dev === 'heptode') withEngine(() => heptodeHost.setPatch(cur));
+    else if (dev === 'geissler') withEngine(() => geisslerHost.setPatch(cur));
     else withEngine(() => E.setPatch(cur, true));
   }
   withEngine(() => {
@@ -939,6 +995,7 @@ function applyProject(raw) {
     });
     if (proj.devices.mote && dev !== 'mote') moteHost.setPatch(DS.mote.cur);
     if (proj.devices.heptode && dev !== 'heptode') heptodeHost.setPatch(DS.heptode.cur);
+    if (proj.devices.geissler && dev !== 'geissler') geisslerHost.setPatch(DS.geissler.cur);
     syncHostUI();
   });
   saveLocal(localStorage, proj);
@@ -951,7 +1008,7 @@ function commitTempo() {
   withEngine(() => { const t = E.transport.setTempo($('hostTempo').value); $('hostTempo').value = String(Math.round(t)); paintHost(); });
 }
 $('hostTempo').addEventListener('change', commitTempo);
-[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H']].forEach(([id, s]) => {
+[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z']].forEach(([id, s]) => {
   $('mix' + s + 'Lvl').addEventListener('input', () => pushStrip(id, s));
   $('mix' + s + 'Pan').addEventListener('input', () => pushStrip(id, s));
   ['Mute', 'Solo'].forEach(which => $('mix' + s + which).addEventListener('click', () => {
@@ -1009,6 +1066,7 @@ function noteOn(n, v, src) {
   else if (dev === 'gleam') withEngine(() => gleamHost.noteOn(n, v));
   else if (dev === 'mote') withEngine(() => moteHost.noteOn(n, v));
   else if (dev === 'heptode') withEngine(() => heptodeHost.noteOn(n, v));
+  else if (dev === 'geissler') withEngine(() => geisslerHost.noteOn(n, v));
   else withEngine(() => E.noteOn(n, v));
   rec({ t: 'on', n, v });
   paintKey(n, true);
@@ -1027,7 +1085,7 @@ function noteOff(n, src) {
   else if (dev === 'gleam') withEngine(() => gleamHost.noteOff(n));
   else if (dev === 'mote') withEngine(() => moteHost.noteOff(n));
   else if (dev === 'heptode') withEngine(() => heptodeHost.noteOff(n));
-  else if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
+  else if (dev !== 'dekatron' && dev !== 'geissler') withEngine(() => E.noteOff(n));
   rec({ t: 'off', n });
 }
 function dropHolds() {
@@ -1041,7 +1099,7 @@ function dropHolds() {
     else if (dev === 'gleam') withEngine(() => gleamHost.noteOff(n));
     else if (dev === 'mote') withEngine(() => moteHost.noteOff(n));
     else if (dev === 'heptode') withEngine(() => heptodeHost.noteOff(n));
-    else if (dev !== 'dekatron') withEngine(() => E.noteOff(n));
+    else if (dev !== 'dekatron' && dev !== 'geissler') withEngine(() => E.noteOff(n));
     rec({ t: 'off', n });
   });
   if (sustainOn) setSustain(false);
@@ -1059,6 +1117,7 @@ function perf(kind, v) {
     withEngine(() => { if (kind === 'bend') heptodeHost.bend(v); else if (kind === 'mw') heptodeHost.mod(v); });
     return;
   }
+  if (dev === 'geissler') return;
   if (dev === 'lattice') {
     const t = kind === 'mw' ? 'mw' : kind === 'at' ? 'at' : 'bend';
     withEngine(() => latticeHost.send({ t, v }));
@@ -1082,6 +1141,7 @@ function setSustain(on) {
   else if (dev === 'thyratron') withEngine(() => thyHost.sustain(sustainOn));
   else if (dev === 'mote') withEngine(() => moteHost.sustain(sustainOn));
   else if (dev === 'heptode') withEngine(() => heptodeHost.sustain(sustainOn));
+  else if (dev === 'geissler') { /* a meadow note ends on its own */ }
   else withEngine(() => E.sustain(sustainOn));
   rec({ t: 'sus', on: sustainOn });
 }
@@ -1107,7 +1167,7 @@ function K(hostId, path, label, o) {
   // Shared rack knobs belong to Filament's output patch. Dekatron copies those
   // fields; Lattice and Thyratron do not, and a reload onto them would throw
   // in the formatter before window.__synth exists.
-  const sharedOff = !kd && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode');
+  const sharedOff = !kd && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler');
   const src = sharedOff ? DS.filament.cur : patchOf(kd);
   const k = makeKnob(host, {
     label, min, max, step, value: map.from(getPath(src, path)), def,
@@ -1281,7 +1341,7 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), tog
 
 // Whatever depends on more than one control.
 function afterChange(path) {
-  if (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode') {
+  if (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler') {
     if (dev === 'thyratron') {
       $('nameV1').textContent = 'LADDER';
       $('nameV2').textContent = 'DRIVE';
@@ -1328,7 +1388,7 @@ function afterF() {
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
 }
 function refreshAll() {
-  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode')) return; e.k.set(e.map.from(getPath(cur, e.path))); });
+  Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler')) return; e.k.set(e.map.from(getPath(cur, e.path))); });
   Object.keys(CH).forEach(refreshChips);
   afterChange('__load');
   if (dev === 'dekatron' && drumPanel) drumPanel.sync();
@@ -1337,6 +1397,7 @@ function refreshAll() {
   if (dev === 'gleam' && gleamView) gleamView.sync();
   if (dev === 'mote' && motePanel) motePanel.sync();
   if (dev === 'heptode' && heptodePanel) heptodePanel.sync();
+  if (dev === 'geissler' && geisslerPanel) geisslerPanel.sync();
 }
 
 // ---------------------------------------------------------------- patch list
@@ -1383,7 +1444,7 @@ $('delP').addEventListener('click', () => {
 // ---------------------------------------------------------------- the rack rail
 // The keyboard, wheels and MIDI play the lit device; the panel, patch list and chassis show it.
 function setDevice(d) {
-  if (d !== 'cathode' && d !== 'dekatron' && d !== 'lattice' && d !== 'thyratron' && d !== 'gleam' && d !== 'mote' && d !== 'heptode') d = 'filament';
+  if (d !== 'cathode' && d !== 'dekatron' && d !== 'lattice' && d !== 'thyratron' && d !== 'gleam' && d !== 'mote' && d !== 'heptode' && d !== 'geissler') d = 'filament';
   if (d === dev) return;
   const playbackBusy = (deck && deck.test && deck.test.playing()) || (player && player.test && player.test.playing());
   releaseInput();
@@ -1403,6 +1464,8 @@ function setDevice(d) {
   if (d === 'mote' && tab !== 'play' && tab !== 'grain' && tab !== 'space' && tab !== 'rack') goTab('play');
   if ((tab === 'tracks' || tab === 'place') && d !== 'heptode') goTab('play');
   if (d === 'heptode' && tab !== 'play' && tab !== 'tracks' && tab !== 'place' && tab !== 'rack') goTab('play');
+  if ((tab === 'life' || tab === 'route') && d !== 'geissler') goTab('play');
+  if (d === 'geissler' && tab !== 'play' && tab !== 'life' && tab !== 'route' && tab !== 'rack') goTab('play');
   const run = () => {
     const sleepOthers = except => {
       if (except !== 'dekatron') drumHost.setActive(false);
@@ -1411,6 +1474,7 @@ function setDevice(d) {
       if (except !== 'gleam') gleamHost.setActive(false);
       if (except !== 'mote') moteHost.setActive(false);
       if (except !== 'heptode') heptodeHost.setActive(false);
+      if (except !== 'geissler') geisslerHost.setActive(false);
     };
     if (d === 'dekatron') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
@@ -1439,6 +1503,11 @@ function setDevice(d) {
       sleepOthers('heptode');
       return heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { heptodeHost.setActive(true); heptodeHost.setPatch(cur); });
     }
+    if (d === 'geissler') {
+      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      sleepOthers('geissler');
+      return geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { geisslerHost.setActive(true); geisslerHost.setPatch(cur); });
+    }
     sleepOthers('');
     if (d === 'gleam') {
       const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
@@ -1462,7 +1531,8 @@ function showDevice() {
   $('devG').setAttribute('aria-pressed', String(dev === 'gleam'));
   $('devM').setAttribute('aria-pressed', String(dev === 'mote'));
   $('devH').setAttribute('aria-pressed', String(dev === 'heptode'));
-  $('devTitle').innerHTML = dev === 'heptode' ? 'HEP<span>TODE</span>' : dev === 'mote' ? 'MO<span>TE</span>' : dev === 'gleam' ? 'GLE<span>AM</span>' : dev === 'thyratron' ? 'THYRA<span>TRON</span>' : dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
+  $('devZ').setAttribute('aria-pressed', String(dev === 'geissler'));
+  $('devTitle').innerHTML = dev === 'geissler' ? 'GEISS<span>LER</span>' : dev === 'heptode' ? 'HEP<span>TODE</span>' : dev === 'mote' ? 'MO<span>TE</span>' : dev === 'gleam' ? 'GLE<span>AM</span>' : dev === 'thyratron' ? 'THYRA<span>TRON</span>' : dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
 }
 document.querySelectorAll('.devbtn').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.d)));
 showDevice();
@@ -1609,6 +1679,8 @@ function goTab(t) {
   if (dev === 'mote' && t !== 'play' && t !== 'grain' && t !== 'space' && t !== 'rack') t = 'play';
   if ((t === 'tracks' || t === 'place') && dev !== 'heptode') t = 'play';
   if (dev === 'heptode' && t !== 'play' && t !== 'tracks' && t !== 'place' && t !== 'rack') t = 'play';
+  if ((t === 'life' || t === 'route') && dev !== 'geissler') t = 'play';
+  if (dev === 'geissler' && t !== 'play' && t !== 'life' && t !== 'route' && t !== 'rack') t = 'play';
   document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables());
 }
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
@@ -1753,7 +1825,7 @@ function releaseInput() {
 }
 function panic() {
   releaseInput();
-  withEngine(() => { E.panic(); latticeHost.send({ t: 'panic' }); thyHost.panic(); gleamHost.panic(); moteHost.panic(); heptodeHost.panic(); });
+  withEngine(() => { E.panic(); latticeHost.send({ t: 'panic' }); thyHost.panic(); gleamHost.panic(); moteHost.panic(); heptodeHost.panic(); geisslerHost.panic(); });
   if (deck && deck.silence) deck.silence();
   if (player && player.test && player.test.playing()) player.test.stop();
 }
@@ -1929,20 +2001,22 @@ function frame(now) {
   const gleamOn = dev === 'gleam';
   const moteOn = dev === 'mote';
   const hepOn = dev === 'heptode';
+  const geissOn = dev === 'geissler';
   const dm = drumOn ? drumHost.meter() : null;
   const lm = latOn ? latticeHost.meter() : null;
   const tm = thyOn ? thyHost.meter() : null;
   const gm = gleamOn ? gleamHost.meter() : null;
   const mm = moteOn ? moteHost.meter() : null;
   const hm = hepOn ? heptodeHost.meter() : null;
-  const cath = dev === 'cathode', valve = !drumOn && !latOn && !thyOn && !gleamOn && !moteOn && !hepOn && !cath && cur.filt.model === 'valve12';
+  const zm = geissOn ? geisslerHost.meter() : null;
+  const cath = dev === 'cathode', valve = !drumOn && !latOn && !thyOn && !gleamOn && !moteOn && !hepOn && !geissOn && !cath && cur.filt.model === 'valve12';
   const tgt = thyOn ? {
     v1: { tube: '12AU7', drive: 4, bias: 0, lv: clampN((tm.v1 || 0) * 4, 0, 1.2), on: true },
     v2: { tube: '12AU7', drive: 3, bias: 0, lv: clampN((tm.v1 || 0) * 2, 0, 1.2), on: true },
     v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
     v4: { tube: TUBE_ST.v4.shown || 'EL34', drive: TUBE_ST.v4.drive, bias: TUBE_ST.v4.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
-  } : (drumOn || latOn || gleamOn || moteOn || hepOn) ? {
-    v1: { tube: TUBE_ST.v1.shown || '12AU7', drive: 2, bias: 0, lv: clampN(((drumOn ? dm.v1 : latOn ? lm.peak : moteOn ? (mm.level || 0) : hepOn ? (hm.peak || 0) : gm.peak) || 0) * 4, 0, 1.2), on: true },
+  } : (drumOn || latOn || gleamOn || moteOn || hepOn || geissOn) ? {
+    v1: { tube: TUBE_ST.v1.shown || '12AU7', drive: 2, bias: 0, lv: clampN(((drumOn ? dm.v1 : latOn ? lm.peak : moteOn ? (mm.level || 0) : hepOn ? (hm.peak || 0) : geissOn ? (zm.level || 0) : gm.peak) || 0) * 4, 0, 1.2), on: true },
     v2: { tube: TUBE_ST.v2.shown || '12AU7', drive: 2, bias: 0, lv: 0, on: false },
     v3: { tube: TUBE_ST.v3.shown || 'EL34', drive: TUBE_ST.v3.drive, bias: TUBE_ST.v3.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
     v4: { tube: TUBE_ST.v4.shown || 'EL34', drive: TUBE_ST.v4.drive, bias: TUBE_ST.v4.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
@@ -1972,7 +2046,7 @@ function frame(now) {
   drawEye(eyeLv);
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
   paintHost();
-  const cpuSrc = thyOn ? tm : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : m;
+  const cpuSrc = thyOn ? tm : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
 }
@@ -1984,7 +2058,7 @@ requestAnimationFrame(frame);
 // one device plays during the take, the name is rack-….
 const WAV_LABEL = {
   filament: 'Filament', cathode: 'Cathode', thyratron: 'Thyratron', gleam: 'Gleam',
-  dekatron: 'Dekatron', lattice: 'Lattice', mote: 'Mote', heptode: 'Heptode',
+  dekatron: 'Dekatron', lattice: 'Lattice', mote: 'Mote', heptode: 'Heptode', geissler: 'Geissler',
 };
 let wavHeard = new Set();
 function meterOn(m) {
@@ -1998,6 +2072,7 @@ function meterOf(id) {
   if (id === 'gleam') return gleamHost.meter();
   if (id === 'mote') return moteHost.meter();
   if (id === 'heptode') return heptodeHost.meter();
+  if (id === 'geissler') return geisslerHost.meter();
   return E && E.meters ? E.meters[id] : null;
 }
 function playingNow() {
@@ -2082,11 +2157,25 @@ const heptodeHooks = {
   wake, toast,
 };
 heptodePanel = mountHeptodePanel($('heptodeRoot'), heptodeHooks);
+geisslerHost.setDrums(drumHost);
+geisslerHost.setWaker('dekatron', on => drumHost.setActive(on));
+geisslerHost.setWaker('lattice', on => latticeHost.setActive(on));
+geisslerHost.setWaker('thyratron', on => thyHost.setActive(on));
+geisslerHost.setWaker('gleam', on => gleamHost.setActive(on));
+geisslerHost.setWaker('mote', on => moteHost.setActive(on));
+geisslerHost.setWaker('heptode', on => heptodeHost.setActive(on));
+const geisslerHooks = {
+  patch: geisslerPatch,
+  host: geisslerHost,
+  edited() { if (dev !== 'geissler') return; markEdited(); pushPatch(false); },
+  wake,
+};
+geisslerPanel = mountGeisslerPanel($('geisslerRoot'), geisslerHooks);
 
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
-  version: '0.10-thyratron',
+  version: '0.11-geissler',
   ready: () => !!E,
   device: () => dev,
   setDevice: d => setDevice(d),
@@ -2128,10 +2217,16 @@ window.__synth = {
       cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true);
       return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
     }
+    if (p && p.device === 'geissler') {
+      const np = normalizeGeissler(p);
+      const switched = dev !== 'geissler' ? setDevice('geissler') : null;
+      cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true);
+      return switched && switched.then ? switched.then(() => clone(cur)) : clone(cur);
+    }
     const np = normalizeAny(p); if (deviceOf(np) !== dev) setDevice(deviceOf(np)); cur = np; curKey = '__test'; edited = true; refreshAll(); fillSelect(); pushPatch(true); return clone(cur);
   },
   load: name => {
-    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : LATTICE_FACTORY.some(p => p.name === name) ? 'lattice' : THY_FACTORY.some(p => p.name === name) ? 'thyratron' : GLEAM_FACTORY.some(p => p.name === name) ? 'gleam' : MOTE_FACTORY.some(p => p.name === name) ? 'mote' : HEPTODE_FACTORY.some(p => p.name === name) ? 'heptode' : dev;
+    const d = FACTORY.some(p => p.name === name) ? 'filament' : C_FACTORY.some(p => p.name === name) ? 'cathode' : DRUM_FACTORY.some(p => p.name === name) ? 'dekatron' : LATTICE_FACTORY.some(p => p.name === name) ? 'lattice' : THY_FACTORY.some(p => p.name === name) ? 'thyratron' : GLEAM_FACTORY.some(p => p.name === name) ? 'gleam' : MOTE_FACTORY.some(p => p.name === name) ? 'mote' : HEPTODE_FACTORY.some(p => p.name === name) ? 'heptode' : GEISSLER_FACTORY.some(p => p.name === name) ? 'geissler' : dev;
     const switched = setDevice(d); loadKey('f:' + name); return switched;
   },
   factory: () => FACTORY.map(p => ({ name: p.name, cat: p.cat })),
@@ -2276,6 +2371,29 @@ window.__synth = {
     p.snapA = a; p.snapB = b;
     return morphTracks(p, morph);
   },
+  geisslerDevice: () => geisslerDevice,
+  geisslerFactory: () => GEISSLER_FACTORY.map(p => ({ name: p.name, cat: p.cat })),
+  geisslerMeter: () => Object.assign({}, geisslerHost.meter()),
+  geisslerMidi: () => geisslerHost.midiLog(),
+  geisslerSim: (patch, seconds) => {
+    const run = runWorld(patch || {}, seconds || 1);
+    return worldSummary(run.world, run.notes);
+  },
+  geisslerProbe: (patch, events, seconds) => probeGeissler(patch || {}, events || [], seconds || 1),
+  geisslerRender: async opts => {
+    opts = opts || {};
+    const buf = await renderGeisslerBuffer({
+      patch: opts.patch || (dev === 'geissler' ? cur : GEISSLER_DEFAULT),
+      events: opts.events || [],
+      seconds: opts.seconds || 1,
+      sampleRate: opts.sampleRate || 48000,
+    });
+    return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) };
+  },
+  geisslerQuant: (time, tempo, grid) => quantizeTime(time, tempo, grid),
+  geisslerSeason: (time, sec) => seasonOf(time, sec),
+  geisslerBlend: (a, b, mutation, seed) => blendGene(a, b, mutation, makeRng(seed || 1)),
+  geisslerNote: (gene, species, root, scale, shift) => midiOf(gene, species, root, scale, shift),
   moteCaptureProbe: async (seconds, freq) => {
     await ensureEngine();
     if (ctx.state !== 'running') await ctx.resume();

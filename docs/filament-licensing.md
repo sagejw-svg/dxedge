@@ -133,6 +133,7 @@ Glass Tine is a Cathode Halloween preset with no bundled file pointing at it. It
 | 2026-10-14 | Julius O. Smith, [Schroeder reverberators](https://ccrma.stanford.edu/~jos/pasp/Schroeder_Reverberators.html) (published description) | `frontend/public/synth/heptode-dsp.js` | Original JavaScript for the published layout: parallel damped combs into series allpasses. Delay lengths are 19.7, 23.3, 27.1, 31.9 ms and 21.1, 25.7, 29.9, 34.3 ms, then allpasses at 5.7, 8.3, 6.4 and 9.1 ms. Not the Freeverb tuning and not a translation of that code. |
 | 2026-10-14 | webaudio-pianoroll (Apache-2.0) | not shipped | Considered for Heptode's piano roll. The roll is a canvas bitmap, so the library was not imported. |
 | 2026-10-14 | Heptode MIDI library, CC0 | `frontend/public/synth/heptode/midi/` | Sequenced in `scripts/build_heptode_library.mjs`. No MIDI file was copied. Glass Arcade is an original tune and does not quote the 1984 film theme. |
+| 2026-10-15 | Original meadow | `frontend/public/synth/geissler-world.js`, `geissler-dsp.js` | Written for this project. Four species, a seeded xorshift field, and original oscillators (drone, pluck, bass-plus-noise, chirp). No ecosystem or synth source was copied or line-translated. signalsmith-stretch, DaisySP and STK were not used. |
 
 ### Heptode MIDI library
 
