@@ -3183,10 +3183,7 @@ with sync_playwright() as pw:
     pg.click("#pentagridLive")
     pg.wait_for_function("() => (document.getElementById('pentagridCond').textContent || '').includes('not reachable')", timeout=5000)
     ck("Pg. live conditions fail quietly when the solar route is absent", "not reachable" in pg.locator("#pentagridCond").inner_text())
-    pg.click('.tabs [data-go="band"]')
-    pg.wait_for_timeout(150)
-    ck("Pg. the Band tab shows the receiver knobs", pg.is_visible("#kPentaRx") and not pg.is_visible("#pentagridDial"))
-    pg.click('.tabs [data-go="play"]')
+    ck("Pg. the receiver knobs sit with the dial", pg.is_visible("#kPentaRx") and pg.is_visible("#pentagridDial"))
     saved = pg.evaluate("""() => __synth.applyProject({
       name: 'Dial Test', device: 'pentagrid', tempo: 120,
       devices: { pentagrid: { patch: { tune: 14000, text: 'E', play: true, mode: 'cw', air: 0, noise: 0, crackle: 0 } } }
