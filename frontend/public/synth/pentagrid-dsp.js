@@ -439,7 +439,7 @@ export function renderRadio(eng, outL, outR, start) {
       if (slot.ph >= 1) slot.ph -= 1;
       slot.ph2 += (hz * 1.004) / sr;
       if (slot.ph2 >= 1) slot.ph2 -= 1;
-      const y = (Math.sin(2 * Math.PI * slot.ph) * 0.72 + Math.sin(2 * Math.PI * slot.ph2) * 0.28) * slot.env * 0.4;
+      const y = (Math.sin(2 * Math.PI * slot.ph) * 0.9 + Math.sin(2 * Math.PI * slot.ph2) * 0.1) * slot.env * 0.4;
       L += y;
       R += y;
     }
