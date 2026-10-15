@@ -46,7 +46,7 @@ const TABS = [
   { id: 'predict',  label: 'Predict' },
   { id: 'grayline', label: 'Gray Line' },
   // Activity feeds
-  { id: 'pota',     label: 'POTA/SOTA' },
+  { id: 'pota',     label: 'POTA' },
   { id: 'contests', label: 'Contests' },
   { id: 'callsign', label: 'Callsign' },
   // Logbook
@@ -93,7 +93,7 @@ const TAB_GROUPS = [
   {
     label: 'Activity',
     tabs: [
-      { id: 'pota',     label: 'POTA/SOTA', icon: '🏕' },
+      { id: 'pota',     label: 'POTA', icon: '🏕' },
       { id: 'contests', label: 'Contests',  icon: '🏆' },
       { id: 'sats',     label: 'Satellites',icon: '🛰' },
       { id: 'aprs',     label: 'APRS',      icon: '📍' },
@@ -445,7 +445,6 @@ export default function App() {
       <footer style={{ marginTop: 28, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
         {[
           ['pskreporter', 'https://pskreporter.info'],
-          ['dx summit',   'https://www.dxsummit.fi'],
           ['hamqsl',      'https://hamqsl.com/solar.html'],
           ['voacap',      'https://voacap.com/hf/'],
           ['ng3k dxped',  'https://ng3k.com/misc/adxo.html'],
