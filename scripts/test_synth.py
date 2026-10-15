@@ -4097,8 +4097,8 @@ with sync_playwright() as pw:
     mOct = db(tone_amp(ms, 880) / tone_amp(ms, 440))
     ratio = pg.evaluate("__synth.rhumbatronRatio(2, 1)")
     oL, _ = rh_render(dict(wire, body="membrane", exciter="strike", position=0.28, place=0.22, material=0.7, damping=0.15), held, 0.7)
-    os = oL[int(0.05 * SR):int(0.4 * SR)]
-    a_off = tone_amp(os, ratio * 440)
+    off_seg = oL[int(0.05 * SR):int(0.4 * SR)]
+    a_off = tone_amp(off_seg, ratio * 440)
     a_mid = tone_amp(ms, ratio * 440)
     ck(f"Rh. a plate struck in the middle speaks the fundamental ({mf:.1f} Hz, octave {mOct:.0f} dB)",
        abs(mf - 440) < 12 and mOct < -30 and a_off > a_mid * 4, (mf, mOct, a_off, a_mid, ratio))
