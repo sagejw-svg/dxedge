@@ -19,7 +19,7 @@ export default function SpotChaser() {
       <div style={{ marginBottom: 16 }}>
         <div style={{ ...label, marginBottom: 8 }}>spot chaser</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 680 }}>
-          Stations spotted on the air in the last few minutes, from the same DX cluster, POTA and SOTA feeds
+          Stations spotted on the air in the last few minutes, from the same DX cluster and POTA feeds
           this site already carries. Each one is re-created as a signal you have to tune in: its call in CW,
           in real phonetics, or in genuine BPSK31. It sits a few hundred Hz off the spotted frequency the way
           spots always are, and how loud it arrives comes from the path model, run from your grid to that

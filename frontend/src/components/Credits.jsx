@@ -82,13 +82,6 @@ const SOURCES = [
         note: 'Free public API at api.pota.app. Updated in real time.',
         icon: '🌲',
       },
-      {
-        name: 'Summits on the Air (SOTA)',
-        url: 'https://www.sota.org.uk',
-        what: 'Live SOTA summit activator spots',
-        note: 'Free public API at api2.sota.org.uk.',
-        icon: '⛰️',
-      },
     ],
   },
   {

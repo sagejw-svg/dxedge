@@ -562,7 +562,6 @@ export default function Products() {
             { name: 'KiwiSDR Network',      url: 'https://sdr.hu',                      desc: 'Public KiwiSDR stations' },
             { name: 'WebSDR',               url: 'http://websdr.org',                   desc: 'Web-based SDR receivers' },
             { name: 'POTA',                 url: 'https://pota.app',                    desc: 'Parks on the Air program' },
-            { name: 'SOTA',                 url: 'https://www.sota.org.uk',             desc: 'Summits on the Air program' },
             { name: 'DX World',             url: 'https://www.dx-world.net',            desc: 'DXpedition news & info' },
             { name: 'ARRL',                 url: 'https://www.arrl.org',               desc: 'American Radio Relay League' },
             { name: 'eHam.net',             url: 'https://www.eham.net',               desc: 'Reviews, forums, classifieds' },

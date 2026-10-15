@@ -141,7 +141,7 @@
 
           <p class="hint"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> tune, hold shift for 10 Hz steps, click the waterfall to net.
             <kbd>R</kbd> repeats, <kbd>Enter</kbd> logs, <kbd>P</kbd> passes, <kbd>Esc</kbd> pauses.<br>
-            Callsigns and frequencies are live from the DX cluster, POTA and SOTA feeds this site already carries. The signals are synthesized here; nothing is transmitted.</p>
+            Callsigns and frequencies are live from the DX cluster and POTA feeds this site already carries. The signals are synthesized here; nothing is transmitted.</p>
         </div>
 
         <div id="vPause" class="view">
@@ -188,7 +188,7 @@
  * Spot Chaser v0.1
  *
  * Real stations, spotted on the air within the last few minutes, pulled
- * from the DX cluster, POTA and SOTA feeds this site already runs. Each
+ * from the DX cluster and POTA feeds this site already runs. Each
  * one is re-created here as a signal: its call in CW, in SSB phonetics,
  * or in real BPSK31. It sits a few hundred Hz off the spotted frequency
  * the way spots always are, so you tune it in before you can copy it,
@@ -331,10 +331,6 @@ async function fetchSpots() {
     }),
     fetch('/api/pota').then(r => r.json()).then(d => {
       for (const s of d.spots || []) add(s.callsign, s.freq, s.mode, 'POTA', { park: s.park_ref, place: s.park_name })
-    }),
-    fetch('/api/sota').then(r => r.json()).then(d => {
-      /* SOTA reports MHz where POTA reports kHz */
-      for (const s of d.spots || []) add(s.callsign, Number(s.freq) < 1000 ? Number(s.freq) * 1000 : s.freq, s.mode, 'SOTA', { park: s.summit_ref, place: s.summit_name })
     }),
   ]
   const res = await Promise.allSettled(jobs)

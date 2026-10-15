@@ -8,17 +8,14 @@ const BAND_COLOR = {
 }
 
 function SpotCard({ spot }) {
-  const isPOTA = spot.type === 'POTA'
-  const ref  = isPOTA ? spot.park_ref   : spot.summit_ref
-  const name = isPOTA ? spot.park_name  : spot.summit_name
-  const refUrl = isPOTA
-    ? `https://pota.app/#/park/${ref}`
-    : `https://sotl.as/summits/${ref}`
+  const ref  = spot.park_ref
+  const name = spot.park_name
+  const refUrl = `https://pota.app/#/park/${ref}`
 
   return (
     <div style={{
-      background: 'var(--bg1)', border: `1px solid ${isPOTA ? '#7affb233' : '#ffd60033'}`,
-      borderLeft: `3px solid ${isPOTA ? 'var(--teal)' : 'var(--yellow)'}`,
+      background: 'var(--bg1)', border: '1px solid #7affb233',
+      borderLeft: '3px solid var(--teal)',
       borderRadius: 8, padding: '10px 14px',
       display: 'flex', flexDirection: 'column', gap: 5,
       animation: 'fadeIn 0.3s ease both'
@@ -27,8 +24,8 @@ function SpotCard({ spot }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
-            color: isPOTA ? 'var(--teal)' : 'var(--yellow)',
-            background: isPOTA ? '#7affb215' : '#ffd60015',
+            color: 'var(--teal)',
+            background: '#7affb215',
             padding: '1px 6px', borderRadius: 3 }}>{spot.type}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
             {spot.callsign}
@@ -49,7 +46,7 @@ function SpotCard({ spot }) {
       </div>
 
       <a href={refUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: isPOTA ? 'var(--teal)' : 'var(--yellow)', opacity: 0.9 }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--teal)', opacity: 0.9 }}>
           {ref} {name && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {name}</span>}
         </div>
       </a>
@@ -72,7 +69,6 @@ function SpotCard({ spot }) {
 const Activations = memo(function Activations() {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
-  const [filter, setFilter]   = useState('all') // 'all' | 'pota' | 'sota'
   const [lastFetch, setLastFetch] = useState(null)
 
   const fetch = useCallback(async () => {
@@ -94,19 +90,8 @@ const Activations = memo(function Activations() {
     return () => clearInterval(t)
   }, [fetch])
 
-  const spots = !data ? [] :
-    filter === 'pota' ? data.pota :
-    filter === 'sota' ? data.sota :
-    [...(data.pota||[]), ...(data.sota||[])].sort((a,b) =>
-      (b.time_utc || '').localeCompare(a.time_utc || ''))
-
-  const btnStyle = (active) => ({
-    fontFamily: 'var(--font-mono)', fontSize: 11,
-    background: active ? '#7affb220' : 'var(--bg1)',
-    border: `1px solid ${active ? 'var(--teal)' : 'var(--border)'}`,
-    color: active ? 'var(--teal)' : 'var(--muted)',
-    padding: '6px 14px', borderRadius: 5, cursor: 'pointer'
-  })
+  const spots = [...(data?.pota || [])].sort((a, b) =>
+    (b.time_utc || '').localeCompare(a.time_utc || ''))
 
   return (
     <div>
@@ -118,50 +103,26 @@ const Activations = memo(function Activations() {
           </span>
           {data && (
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--muted)', marginLeft: 12 }}>
-              {data.pota?.length || 0} POTA · {data.sota?.length || 0} SOTA
+              {data.pota?.length || 0} POTA
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 5 }}>
-            <button onClick={() => setFilter('all')}  style={btnStyle(filter === 'all')}>All</button>
-            <button onClick={() => setFilter('pota')} style={btnStyle(filter === 'pota')}>
-              <span style={{ color: 'var(--teal)' }}>POTA</span>
-            </button>
-            <button onClick={() => setFilter('sota')} style={btnStyle(filter === 'sota')}>
-              <span style={{ color: 'var(--yellow)' }}>SOTA</span>
-            </button>
-          </div>
-          <button onClick={fetch} disabled={loading} style={{
-            fontFamily: 'var(--font-mono)', fontSize: 11,
-            background: 'var(--bg1)', border: `1px solid ${loading ? 'var(--border)' : '#7affb244'}`,
-            color: loading ? 'var(--dim)' : 'var(--teal)',
-            padding: '6px 12px', borderRadius: 5, cursor: loading ? 'default' : 'pointer'
-          }}>↺</button>
-        </div>
+        <button onClick={fetch} disabled={loading} style={{
+          fontFamily: 'var(--font-mono)', fontSize: 11,
+          background: 'var(--bg1)', border: `1px solid ${loading ? 'var(--border)' : '#7affb244'}`,
+          color: loading ? 'var(--dim)' : 'var(--teal)',
+          padding: '6px 12px', borderRadius: 5, cursor: loading ? 'default' : 'pointer'
+        }}>↺</button>
       </div>
 
-      {/* What is POTA/SOTA */}
       {!data && !loading && (
         <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 14 }}>
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--teal)', marginBottom: 6 }}>
-                POTA — Parks on the Air
-              </div>
-              <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
-                Operators activate from national parks, forests, and other designated areas. Chasers call from home. Free program, huge participation. <a href="https://pota.app" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>pota.app ↗</a>
-              </p>
-            </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--yellow)', marginBottom: 6 }}>
-                SOTA — Summits on the Air
-              </div>
-              <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
-                Operators hike to mountain summits and operate portable to earn summit points. One of the most active worldwide amateur radio programs. <a href="https://www.sota.org.uk" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>sota.org.uk ↗</a>
-              </p>
-            </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--teal)', marginBottom: 6 }}>
+            POTA — Parks on the Air
           </div>
+          <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
+            Operators activate from national parks, forests, and other designated areas. Chasers call from home. Free program, huge participation. <a href="https://pota.app" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>pota.app ↗</a>
+          </p>
         </div>
       )}
 
@@ -173,12 +134,12 @@ const Activations = memo(function Activations() {
 
       {spots.length === 0 && data && !loading && (
         <div style={{ padding: 40, textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--dim)' }}>
-          no active {filter === 'all' ? 'POTA/SOTA' : filter.toUpperCase()} spots right now
+          no active POTA spots right now
         </div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {spots.map((s, i) => <SpotCard key={`${s.callsign}-${s.type}-${i}`} spot={s} />)}
+        {spots.map((s, i) => <SpotCard key={`${s.callsign}-${s.park_ref}-${i}`} spot={s} />)}
       </div>
 
       {lastFetch && (

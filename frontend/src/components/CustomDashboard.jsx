@@ -23,7 +23,7 @@ const WIDGET_REGISTRY = [
   { id: 'psk',        label: 'Live RX (PSKReporter)',icon: '📻', desc: 'FT8/FT4 reception reports' },
   { id: 'predict',    label: 'VOACAP Predict',       icon: '📶', desc: 'Band opening heat map' },
   { id: 'grayline',   label: 'Gray Line Map',        icon: '🌍', desc: 'Live day/night terminator' },
-  { id: 'pota',       label: 'POTA/SOTA',            icon: '⛰️', desc: 'Live activations' },
+  { id: 'pota',       label: 'POTA',                 icon: '⛰️', desc: 'Live park activations' },
   { id: 'contests',   label: 'Contest Calendar',     icon: '🏆', desc: 'Upcoming and active contests' },
   { id: 'satellites', label: 'Satellites',           icon: '🛰️', desc: 'Ham satellite passes & map' },
 ]

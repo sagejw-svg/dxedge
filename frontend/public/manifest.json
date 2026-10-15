@@ -1,7 +1,7 @@
 {
   "name": "DXEdge - Propagation & DX Intelligence",
   "short_name": "DXEdge",
-  "description": "Live HF propagation, DX spots, POTA/SOTA and band conditions for ham radio operators",
+  "description": "Live HF propagation, DX spots, POTA and band conditions for ham radio operators",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#080808",
