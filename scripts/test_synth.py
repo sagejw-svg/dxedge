@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -3384,6 +3384,149 @@ with sync_playwright() as pw:
     ph.close()
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(150)
+
+    # ---------------------------------------------------------------- Fr. Trochotron, the fractal seed
+    def tr_notes(settings):
+        return pg.evaluate("s => __synth.trochotronPiece(s)", settings)
+    def tr_render(patch, seconds=1.2):
+        return dec(pg.evaluate("a => __synth.trochotronRender(a)", {"patch": patch, "seconds": seconds, "playing": True}))
+    def tr_rms(x):
+        if len(x) == 0: return 0.0
+        return float(np.sqrt(np.mean(np.square(x))))
+    devf = pg.evaluate("""() => { const d = __synth.trochotronDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, midi: d.midiInput, proc: d.processor,
+      worklet: d.worklet, ch: d.channels, name: d.name, gen: d.parameters.generator && d.parameters.generator.choices,
+      seed: d.parameters.seed && d.parameters.seed.type }; }""")
+    ck("Fr. Trochotron publishes a stereo MIDI dxrack/1 device",
+       devf["id"] == "trochotron" and devf["api"] == "dxrack/1" and devf["inst"] and devf["outs"] == 1 and devf["midi"]
+       and devf["proc"] == "trochotron" and devf["worklet"] == "trochotron.worklet.js" and devf["ch"] == 2
+       and devf["name"] == "Trochotron" and devf["seed"] == "float"
+       and all(g in (devf["gen"] or []) for g in ("lsystem", "mandelbrot", "julia", "logistic", "lorenz", "thue")), devf)
+    seed = {"device": "trochotron", "seed": 42, "generator": "mandelbrot", "depth": 3, "scale": "dorian", "key": 2, "tempo": 108, "density": 0.4, "chaos": 0.35, "voices": 3, "zoom": 1, "cx": -0.6, "cy": 0}
+    one = tr_notes(seed)
+    two = tr_notes(dict(seed))
+    ck("Fr. the same seed and settings grow the same notes",
+       one["notes"] == two["notes"] and len(one["notes"]) > 8 and one["seed"] == 42, (len(one["notes"]), one["seed"]))
+    other = tr_notes(dict(seed, seed=99))
+    ck("Fr. a different seed grows a different piece", other["notes"] != one["notes"], len(other["notes"]))
+    for gen in ("lsystem", "mandelbrot", "julia", "logistic", "lorenz", "thue"):
+        grown = tr_notes(dict(seed, generator=gen, voices=3))
+        layers = {row[4] for row in grown["notes"]}
+        ck(f"Fr. {gen} grows lead, mid and bass",
+           len(grown["notes"]) > 8 and layers == {"lead", "mid", "bass"} and bool(grown["rules"]),
+           (len(grown["notes"]), sorted(layers), (grown["rules"] or "")[:80]))
+    rules = tr_notes(dict(seed, generator="lsystem", chaos=0.2))
+    ck("Fr. the L-system shows an axiom and a rule",
+       "axiom" in rules["rules"] and "P  ->" in rules["rules"], rules["rules"])
+    calm = tr_notes(dict(seed, generator="logistic", chaos=0))
+    wild = tr_notes(dict(seed, generator="logistic", chaos=1))
+    ck("Fr. logistic chaos moves r from the ordered side toward 4",
+       abs(calm["r"] - 2.8) < 1e-6 and abs(wild["r"] - 4) < 1e-6 and calm["notes"] != wild["notes"],
+       (calm["r"], wild["r"]))
+    near = tr_notes(dict(seed, generator="julia", zoom=1))
+    far = tr_notes(dict(seed, generator="julia", zoom=8, cx=-0.2, cy=0.4))
+    ck("Fr. zoom and window change the orbit's notes", near["notes"] != far["notes"], (len(near["notes"]), len(far["notes"])))
+    shared = pg.evaluate("""() => {
+      const p = { device: 'trochotron', seed: 17, generator: 'thue', depth: 4, scale: 'minor', key: 9, tempo: 96, chaos: 0.2, voices: 2, route: 'lattice' };
+      const text = __synth.trochotronShare(p);
+      const back = __synth.trochotronParse(text);
+      const a = __synth.trochotronPiece(p).notes;
+      const b = __synth.trochotronPiece(back).notes;
+      return { text, same: JSON.stringify(a) === JSON.stringify(b), notes: a.length };
+    }""")
+    ck("Fr. a share string round-trips to the same notes", shared["same"] and shared["notes"] > 4 and "~" in shared["text"], shared)
+    mid = pg.evaluate("""() => {
+      const bytes = __synth.trochotronMidi({ device: 'trochotron', seed: 42, generator: 'mandelbrot', voices: 3, tempo: 108 });
+      const f = __synth.smf.read(bytes);
+      const notes = f.song.parts.reduce((n, p) => n + (p.notes || 0), 0);
+      return { notes, parts: f.song.parts.length, bpm: f.song.bpm };
+    }""")
+    ck("Fr. export is a MIDI file with the piece on more than one track",
+       mid["notes"] > 8 and mid["parts"] >= 2 and abs(mid["bpm"] - 108) < 0.2, mid)
+    loudL, loudR = tr_render(dict(seed, generator="thue", voices=2, tempo=132, level=0.9), 1.4)
+    ck("Fr. the piece is not silent", tr_rms(loudL) > 1e-3 and tr_rms(loudR) > 1e-3, (tr_rms(loudL), tr_rms(loudR)))
+    quietL, quietR = tr_render({"device": "trochotron", "level": 0, "seed": 42, "generator": "thue"}, 0.6)
+    ck("Fr. level 0 is silent", tr_rms(quietL) < 1e-5 and tr_rms(quietR) < 1e-5, (tr_rms(quietL), tr_rms(quietR)))
+    pg.evaluate("__synth.setDevice('trochotron')")
+    pg.wait_for_timeout(250)
+    ck("Fr. the seed panel is on screen and Filament's filter is not",
+       pg.evaluate("__synth.device()") == "trochotron" and pg.is_visible("#trCanvas") and pg.is_visible("#trSeed")
+       and pg.is_visible("#trRules") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    before_zoom = pg.evaluate("__synth.trochotronPiece().notes")
+    pg.click("#trZoomIn")
+    pg.wait_for_timeout(80)
+    after_zoom = pg.evaluate("__synth.trochotronPiece().notes")
+    ck("Fr. zoom in on the picture changes the notes", before_zoom != after_zoom and pg.evaluate("__synth.patch().zoom") > 1, pg.evaluate("__synth.patch().zoom"))
+    pg.evaluate("__synth.noteOn(60, 0.85)")
+    pg.wait_for_function("() => (__synth.trochotronMeter().voices || 0) > 0", timeout=2000)
+    held = pg.evaluate("__synth.trochotronMeter()")
+    pg.evaluate("__synth.noteOff(60)")
+    pg.wait_for_function("() => (__synth.trochotronMeter().voices || 0) === 0", timeout=2000)
+    released = pg.evaluate("__synth.trochotronMeter()")
+    ck("Fr. a key speaks and then lets go", (held.get("voices") or 0) > 0 and (released.get("voices") or 0) == 0, (held, released))
+    pg.evaluate("""() => __synth.setPatch({ device: 'trochotron', seed: 42, generator: 'thue', voices: 3, tempo: 140, route: 'internal' })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.trochotronPlay()")
+    pg.wait_for_timeout(280)
+    playing = pg.evaluate("__synth.trochotronState()")
+    pg.evaluate("__synth.trochotronStop()")
+    pg.wait_for_function("() => (__synth.trochotronMeter().voices || 0) === 0 && __synth.trochotronState().playing === false", timeout=2000)
+    stopped = pg.evaluate("__synth.trochotronMeter()")
+    ck("Fr. play starts the piece and stop leaves no stuck notes",
+       playing["playing"] is True and playing["notes"] > 8 and (stopped.get("voices") or 0) == 0 and pg.evaluate("__synth.trochotronState().playing") is False,
+       (playing, stopped))
+    pg.evaluate("""() => __synth.setPatch({ device: 'trochotron', seed: 7, generator: 'thue', voices: 1, tempo: 60, density: 0, route: 'filament', level: 0.2 })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.trochotronPlay()")
+    pg.wait_for_function("() => (__synth.engine().meters.filament.voices || 0) > 0", timeout=3000)
+    routed = pg.evaluate("() => __synth.engine().meters.filament")
+    pg.evaluate("__synth.trochotronStop()")
+    pg.wait_for_function("() => (__synth.engine().meters.filament.voices || 0) === 0 && (__synth.trochotronMeter().voices || 0) === 0", timeout=4000)
+    routed_off = pg.evaluate("() => ({ fil: __synth.engine().meters.filament, tr: __synth.trochotronMeter() })")
+    ck("Fr. routing plays Filament and stop releases both",
+       routed and (routed.get("voices") or 0) > 0 and (routed_off["fil"].get("voices") or 0) == 0 and (routed_off["tr"].get("voices") or 0) == 0,
+       (routed, routed_off))
+    pg.evaluate("__synth.panic()")
+    link = pg.evaluate("""() => {
+      document.getElementById('trLink').click();
+      return location.search;
+    }""")
+    ck("Fr. copy link writes the share into the page address", "tr=" in link, link)
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE + "?tr=" + pg.evaluate("__synth.trochotronShare()"))
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.wait_for_function("() => __synth.device()==='trochotron' && __synth.trochotronState().seed === __synth.patch().seed && __synth.trochotronState().generator === __synth.patch().generator", timeout=5000)
+    ph.wait_for_timeout(100)
+    phone_piece = ph.evaluate("__synth.trochotronPiece().notes")
+    desk_piece = pg.evaluate("__synth.trochotronPiece().notes")
+    ck("Fr. the share address opens the same piece",
+       ph.evaluate("__synth.device()") == "trochotron" and phone_piece == desk_piece and len(phone_piece) > 4,
+       (ph.evaluate("__synth.device()"), len(phone_piece), len(desk_piece)))
+    ck("Fr. 390px: no horizontal scroll, the picture is up",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#trCanvas") and not ph.is_visible("#mFilt"),
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #trRoot .chip, #trRoot .btn, #trRoot input, #trRoot select')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Fr. 390px: rail, tabs and seed controls are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="shape"]')
+    ph.wait_for_timeout(200)
+    shape_small = ph.evaluate("""() => [...document.querySelectorAll('#trRoot .chip, #trRoot .btn, #trRoot input, #trRoot select')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Fr. 390px: the Shape tab fits and its controls are 44 px or more",
+       not shape_small and ph.is_visible("#trDepth") and not ph.is_visible("#trCanvas")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       (shape_small, ph.evaluate("[document.documentElement.scrollWidth, innerWidth]")))
+    ph.screenshot(path=os.path.join(SHOTS, "synth_trochotron_phone.png"))
+    ck("Fr. 390px: no page errors", not perr, perr)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(120)
+    ck("Fr. no page errors", not errs, errs)
     b.close()
 
 print()
