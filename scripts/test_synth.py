@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron", "klystron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron", "klystron": "Klystron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -3708,6 +3708,209 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(120)
     ck("Fr. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Kl. Klystron, the granular vocoder
+    def kl_band(x, lo, hi):
+        if len(x) < 32:
+            return 0.0
+        n = len(x)
+        X = np.abs(np.fft.rfft(x * np.hanning(n))) ** 2
+        f = np.fft.rfftfreq(n, 1.0 / SR)
+        return float(np.sum(X[(f >= lo) & (f < hi)]))
+    def kl_rms(x):
+        if len(x) == 0:
+            return 0.0
+        return float(np.sqrt(np.mean(np.square(x))))
+    def kl_render(patch, events=None, seconds=0.8, buffer=None):
+        body = {"patch": patch, "events": events or [], "seconds": seconds}
+        if buffer is not None:
+            body["buffer"] = buffer
+        return dec(pg.evaluate("a => __synth.klystronRender(a)", body))
+    def klp(**over):
+        p = {
+            "device": "klystron", "level": 0.85, "source": "vowel",
+            "carrier": {"wave": "saw", "tune": 0, "noise": 0, "attack": 0.004, "release": 0.03},
+            "mouth": {"x": 0.34, "y": 0.9, "whisper": 0.04, "glottis": 120},
+            "bank": {"q": 3.2, "attack": 0.004, "release": 0.02, "gate": 0.01},
+            "grain": {"size": 80, "density": 4, "spray": 0, "mix": 0, "spread": 0, "freeze": False},
+        }
+        for k, v in over.items():
+            if isinstance(v, dict) and isinstance(p.get(k), dict):
+                p[k] = dict(p[k])
+                p[k].update(v)
+            else:
+                p[k] = v
+        return p
+    devk = pg.evaluate("""() => { const d = __synth.klystronDevice(); return {
+      id: d.id, api: d.api, inst: d.instrument, outs: d.audioOutputs, ins: d.audioInputs, midi: d.midiInput,
+      proc: d.processor, worklet: d.worklet, ch: d.channels, name: d.name,
+      src: d.parameters.source && d.parameters.source.choices, wave: d.parameters['carrier.wave'] && d.parameters['carrier.wave'].choices,
+      freeze: d.parameters['grain.freeze'] && d.parameters['grain.freeze'].type }; }""")
+    ck("Kl. Klystron publishes a stereo MIDI dxrack/1 vocoder",
+       devk["id"] == "klystron" and devk["api"] == "dxrack/1" and devk["inst"] and devk["outs"] == 1 and devk["ins"] == 1 and devk["midi"]
+       and devk["proc"] == "klystron" and devk["worklet"] == "klystron.worklet.js" and devk["ch"] == 2 and devk["name"] == "Klystron"
+       and devk["freeze"] == "boolean"
+       and all(s in (devk["src"] or []) for s in ("vowel", "file", "mic"))
+       and all(w in (devk["wave"] or []) for w in ("saw", "pulse", "sine", "noise")), devk)
+    norm = pg.evaluate("""() => __synth.klystronNormalize({ level: 9, source: 'laser', mouth: { x: 4, y: -2 }, grain: { freeze: 1, size: 9000 }, carrier: { wave: 'square' } })""")
+    ck("Kl. normalize clamps the mouth, the level and the wave",
+       norm["device"] == "klystron" and norm["level"] == 1 and norm["source"] == "vowel"
+       and norm["mouth"]["x"] == 1 and norm["mouth"]["y"] == 0 and norm["grain"]["freeze"] is True
+       and norm["grain"]["size"] == 500 and norm["carrier"]["wave"] == "saw", norm)
+    fm = pg.evaluate("""() => ({ front: __synth.klystronFormants(0.94, 0.08), back: __synth.klystronFormants(0.08, 0.1) })""")
+    ck("Kl. the front of the pad raises the second formant",
+       fm["front"]["f2"] > fm["back"]["f2"] + 800 and fm["front"]["f1"] < fm["back"]["f1"], fm)
+    held = [{"at": 0.02, "t": "on", "n": 69, "v": 0.9}, {"at": 0.7, "t": "off", "n": 69}]
+    sineL, sineR = kl_render(klp(carrier={"wave": "sine", "noise": 0, "attack": 0.004, "release": 0.02}), held, 0.85)
+    seg = sineL[int(0.22 * SR):int(0.62 * SR)]
+    got = peak_freq(seg)
+    cents = abs(1200 * math.log2(max(got, 1) / 440.0))
+    ck(f"Kl. a sine carrier at A4 peaks at 440 Hz ({got:.2f} Hz, {cents:.1f} cents)",
+       cents < 12 and np.max(np.abs(sineL)) < 1 and kl_rms(sineR[int(0.22 * SR):int(0.62 * SR)]) > 1e-3, (got, cents, kl_rms(seg)))
+    lowL, _ = kl_render(klp(carrier={"wave": "sine", "noise": 0}), [{"at": 0.02, "t": "on", "n": 57, "v": 0.9}, {"at": 0.7, "t": "off", "n": 57}], 0.85)
+    low = peak_freq(lowL[int(0.22 * SR):int(0.62 * SR)])
+    ck(f"Kl. a sine carrier at A3 peaks at 220 Hz ({low:.2f} Hz)", abs(1200 * math.log2(max(low, 1) / 220.0)) < 12, low)
+    quietL, quietR = kl_render(klp(level=0, carrier={"wave": "saw"}), held, 0.5)
+    ck("Kl. level 0 is silent", kl_rms(quietL) < 1e-5 and kl_rms(quietR) < 1e-5, (kl_rms(quietL), kl_rms(quietR)))
+    noneL, noneR = kl_render(klp(), [], 0.4)
+    ck("Kl. no note is silent", kl_rms(noneL) < 1e-5 and kl_rms(noneR) < 1e-5, (kl_rms(noneL), kl_rms(noneR)))
+    sawL, _ = kl_render(klp(carrier={"wave": "saw", "noise": 0.04}, grain={"mix": 0.22}), held, 0.7)
+    ck("Kl. the default saw vowel is audible", kl_rms(sawL[int(0.15 * SR):int(0.55 * SR)]) > 1e-3, kl_rms(sawL))
+    def vowel_hi(x, y):
+        L, _ = kl_render(klp(carrier={"wave": "noise", "noise": 0}, mouth={"x": x, "y": y, "whisper": 0.02}), held, 0.7)
+        return kl_band(L[int(0.18 * SR):int(0.55 * SR)], 1800, 3400)
+    hi_i, hi_u = vowel_hi(0.94, 0.08), vowel_hi(0.08, 0.1)
+    ck("Kl. a bright vowel puts more energy up high than a dark one", hi_i > hi_u * 2, (hi_i, hi_u))
+    files = pg.evaluate("""async () => {
+      function tone(freq) {
+        const sr = 48000, n = sr;
+        const L = new Float32Array(n);
+        for (let i = 0; i < n; i++) L[i] = Math.sin(2 * Math.PI * freq * i / sr) * 0.8;
+        return { L: Array.from(L), sr, name: String(freq) };
+      }
+      const patch = { device: 'klystron', source: 'file', level: 0.9,
+        carrier: { wave: 'saw', tune: 0, noise: 0, attack: 0.004, release: 0.03 },
+        mouth: { x: 0.5, y: 0.5, whisper: 0 }, bank: { q: 4, attack: 0.003, release: 0.02, gate: 0.005 },
+        grain: { mix: 0, freeze: false, density: 1, size: 40 } };
+      const ev = [{ at: 0.02, t: 'on', n: 48, v: 0.9 }, { at: 0.85, t: 'off', n: 48 }];
+      const hi = await __synth.klystronRender({ patch, buffer: tone(2000), events: ev, seconds: 0.9 });
+      const lo = await __synth.klystronRender({ patch, buffer: tone(280), events: ev, seconds: 0.9 });
+      return { hi, lo };
+    }""")
+    hiL, _ = dec(files["hi"])
+    loL, _ = dec(files["lo"])
+    hiE = kl_band(hiL[int(0.2 * SR):int(0.75 * SR)], 1400, 3200)
+    loE = kl_band(loL[int(0.2 * SR):int(0.75 * SR)], 1400, 3200)
+    ck("Kl. a high file modulator opens the high bands", hiE > loE * 8 and hiE > 0, (hiE, loE))
+    tail0 = int(0.95 * SR)
+    dryL, _ = kl_render(klp(grain={"mix": 0, "freeze": False, "density": 2}, carrier={"release": 0.02}),
+                        [{"at": 0.02, "t": "on", "n": 64, "v": 0.9}, {"at": 0.35, "t": "off", "n": 64}], 1.3)
+    frostL, _ = kl_render(klp(grain={"mix": 0.9, "freeze": True, "density": 18, "size": 180, "spray": 0.1}, carrier={"release": 0.02}),
+                          [{"at": 0.02, "t": "on", "n": 64, "v": 0.9}, {"at": 0.35, "t": "off", "n": 64}], 1.3)
+    ck("Kl. freeze holds the cloud after the key is let go",
+       kl_rms(frostL[tail0:]) > 1e-3 and kl_rms(frostL[tail0:]) > kl_rms(dryL[tail0:]) * 20,
+       (kl_rms(frostL[tail0:]), kl_rms(dryL[tail0:])))
+    panL, _ = kl_render(klp(carrier={"wave": "saw"}),
+                        [{"at": 0.02, "t": "on", "n": 60, "v": 0.9}, {"at": 0.2, "t": "panic"}], 0.7)
+    ck("Kl. panic silences the render", kl_rms(panL[int(0.4 * SR):]) < 1e-5, kl_rms(panL[int(0.4 * SR):]))
+    pg.evaluate("__synth.setDevice('klystron')")
+    pg.wait_for_timeout(300)
+    ck("Kl. the rail lights Klystron and hides Filament's filter",
+       pg.evaluate("__synth.device()") == "klystron" and pg.locator("#devK").get_attribute("aria-pressed") == "true"
+       and pg.is_visible("#klPad") and pg.is_visible("#klMic") and pg.is_visible("#klFileBtn") and pg.locator("#klFile").count() == 1 and not pg.is_visible("#mFilt")
+       and not pg.is_visible("#chassis"))
+    pg.locator("#klPad").scroll_into_view_if_needed()
+    box = pg.locator("#klPad").bounding_box()
+    pg.mouse.move(box["x"] + 16, box["y"] + box["height"] * 0.5)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] * 0.86, box["y"] + 18, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(60)
+    dragged = pg.evaluate("__synth.patch().mouth")
+    ck("Kl. dragging the pad moves the vowel", dragged["x"] > 0.7 and dragged["y"] > 0.7, dragged)
+    pg.locator('#klVowels [data-vowel="i"]').click()
+    pg.wait_for_timeout(40)
+    vowel = pg.evaluate("""() => { const p = __synth.patch(); return { x: p.mouth.x, y: p.mouth.y, source: p.source }; }""")
+    ck("Kl. a vowel chip sets the mouth", abs(vowel["x"] - 0.94) < 0.02 and abs(vowel["y"] - 0.08) < 0.02 and vowel["source"] == "vowel", vowel)
+    tiny = pg.evaluate("""() => {
+      const sr = 8000, n = 160;
+      const data = n * 2;
+      const buf = new ArrayBuffer(44 + data);
+      const v = new DataView(buf);
+      const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      s(0, 'RIFF'); v.setUint32(4, 36 + data, true); s(8, 'WAVE'); s(12, 'fmt '); v.setUint32(16, 16, true);
+      v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+      v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, data, true);
+      for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 440 * i / sr) * 8000), true);
+      let bin = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
+      return btoa(bin);
+    }""")
+    pg.set_input_files("#klFile", files=[{"name": "buncher-ah.wav", "mimeType": "audio/wav", "buffer": base64.b64decode(tiny)}])
+    pg.wait_for_timeout(500)
+    named = pg.locator("#klName").inner_text()
+    ck("Kl. a chosen file becomes the modulator", pg.evaluate("__synth.patch().source") == "file" and "buncher-ah" in (named or ""), named)
+    pg.evaluate("""() => {
+      window.__micAsked = 0;
+      if (!navigator.mediaDevices) navigator.mediaDevices = {};
+      navigator.mediaDevices.getUserMedia = () => { window.__micAsked++; return Promise.reject(new DOMException('denied', 'NotAllowedError')); };
+    }""")
+    pg.locator("#klMic").click()
+    pg.wait_for_timeout(200)
+    ck("Kl. Mic asks the browser and leaves the vowel if permission is refused",
+       pg.evaluate("window.__micAsked") == 1 and pg.evaluate("__synth.patch().source") != "mic",
+       (pg.evaluate("window.__micAsked"), pg.evaluate("__synth.patch().source")))
+    pg.evaluate("""() => __synth.setPatch({ device: 'klystron', source: 'vowel', carrier: { wave: 'sine', noise: 0 }, grain: { mix: 0, freeze: false } })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.midi([144, 60, 110])")
+    pg.wait_for_function("() => (__synth.klystronMeter().voices || 0) > 0", timeout=2500)
+    pg.evaluate("__synth.midi([128, 60, 0])")
+    pg.wait_for_function("() => (__synth.klystronMeter().voices || 0) === 0", timeout=2500)
+    ck("Kl. a MIDI note speaks and lets go", True)
+    pg.evaluate("__synth.noteOn(62, 0.8)")
+    pg.wait_for_function("() => (__synth.klystronMeter().voices || 0) > 0", timeout=2500)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => (__synth.klystronMeter().voices || 0) === 0 && !(__synth.klystronMeter().playing)", timeout=2500)
+    ck("Kl. Panic clears the voices", (pg.evaluate("__synth.klystronMeter().voices") or 0) == 0)
+    trip = pg.evaluate("""() => {
+      const raw = __synth.project();
+      raw.name = 'Mouth';
+      raw.device = 'klystron';
+      raw.devices.klystron = { patch: { device: 'klystron', name: 'Round', level: 0.4, source: 'vowel', mouth: { x: 0.2, y: 0.3 } } };
+      __synth.applyProject(raw);
+      const back = __synth.project();
+      return { dev: __synth.device(), x: back.devices.klystron.patch.mouth.x, y: back.devices.klystron.patch.mouth.y, level: back.devices.klystron.patch.level, name: back.name };
+    }""")
+    ck("Kl. a project round-trips the mouth",
+       trip["dev"] == "klystron" and abs(trip["x"] - 0.2) < 1e-6 and abs(trip["y"] - 0.3) < 1e-6 and abs(trip["level"] - 0.4) < 1e-6 and trip["name"] == "Mouth", trip)
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    perr = []
+    ph.on("pageerror", lambda e: perr.append(str(e)))
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.evaluate("__synth.setDevice('klystron')")
+    ph.wait_for_timeout(250)
+    ck("Kl. 390px: no horizontal scroll, the pad is up",
+       ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and ph.is_visible("#klPad") and not ph.is_visible("#mFilt") and not ph.is_visible("#chassis"),
+       (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), perr))
+    small = ph.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #klRoot .chip, #klRoot .btn, #klRoot .knob')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Kl. 390px: rail, tabs and mouth controls are 44 px or more", not small, small)
+    ph.tap('.tabs [data-go="mouth"]')
+    ph.wait_for_timeout(200)
+    mouth_small = ph.evaluate("""() => [...document.querySelectorAll('#klRoot .chip, #klRoot .btn, #klRoot .knob')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Kl. 390px: the Mouth tab fits and its controls are 44 px or more",
+       not mouth_small and ph.is_visible("#klFreeze") and not ph.is_visible("#klPad")
+       and ph.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"),
+       (mouth_small, ph.evaluate("[document.documentElement.scrollWidth, innerWidth]")))
+    ck("Kl. 390px: no page errors", not perr, perr)
+    ph.close()
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(120)
+    ck("Kl. no page errors", not errs, errs)
     b.close()
 
 print()
