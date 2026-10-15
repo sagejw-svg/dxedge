@@ -22,7 +22,7 @@ export const SCALES = {
   whole: [0, 2, 4, 6, 8, 10],
 };
 export const SCALE_NAMES = Object.keys(SCALES);
-export const ROUTES = ['internal', 'filament', 'cathode', 'thyratron', 'gleam', 'dekatron', 'lattice', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon'];
+export const ROUTES = ['internal', 'filament', 'cathode', 'thyratron', 'gleam', 'dekatron', 'lattice', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'gyrotron'];
 export const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 const LAYERS = [
