@@ -19,7 +19,8 @@ import { normalizePhantastron } from './phantastron.js';
 import { normalizeAdditron } from './additron.js';
 import { normalizeRhumbatron } from './rhumbatron.js';
 import { normalizeResnatron } from './resnatron.js';
-import { normalizeStrip } from './mixer.js';
+import { normalizeStrip, normalizeBus } from './mixer.js';
+import { normalizeArmed } from './mixsession.js';
 import { clampTempo, normalizeSig } from './transport.js';
 
 export const PROJECT_SCHEMA = 1;
@@ -59,6 +60,8 @@ export function normalizeProject(raw) {
     timeSig: normalizeSig(src.timeSig),
     device,
     mixer,
+    armed: normalizeArmed(src.armed),
+    bus: normalizeBus(src.bus),
     devices,
   };
 }

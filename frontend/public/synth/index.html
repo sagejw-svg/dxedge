@@ -444,10 +444,17 @@
   .hostbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 8px; }
   .hostbar input[type="number"], .hostbar input[type="text"] { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 6.2em; font-size: 12px; }
   .hostbar .pos { color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 8em; }
-  .mixrow { display: grid; grid-template-columns: 88px minmax(80px, 1fr) minmax(80px, 1fr) auto auto; gap: 6px 8px; align-items: center; margin: 3px 0; }
-  .mixrow .who { letter-spacing: 1px; color: var(--muted); font-size: 11px; }
+  .mixrow { display: grid; grid-template-columns: 88px minmax(80px, 1fr) minmax(80px, 1fr) auto auto; gap: 6px 8px; align-items: center; margin: 3px 0; min-width: 0; }
+  .mixrow .who { letter-spacing: 1px; color: var(--muted); font-size: 11px; min-width: 0; }
+  .mixrow .letter { color: var(--amber); font-weight: 700; margin-right: 6px; }
+  .mixrow.keys .letter { color: var(--green); }
+  .mixrow.armed { background: rgba(255, 179, 71, 0.05); border-radius: 6px; }
+  .mixmeter { grid-column: 1 / -1; width: 100%; max-width: 100%; height: 8px; display: block; background: #111; border-radius: 2px; }
   .mixrow label { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; min-width: 0; }
   .mixrow input[type="range"] { flex: 1; min-width: 0; accent-color: var(--amber); }
+  #mixName { width: 10em; max-width: 100%; }
+  body[data-mixdesk="1"] .panel .mod:not(#mHost):not(#mMaster) { display: none !important; }
+  body[data-mixdesk="1"] #mHost, body[data-mixdesk="1"] #mMaster { display: block !important; }
   .filebtn input { display: none; }
   #mMaster { min-width: 0; max-width: 100%; }
   #mMaster .fxrow { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin: 2px 0 6px; min-width: 0; max-width: 100%; }
@@ -555,7 +562,8 @@
     body[data-tab="scan"] .mod[data-tab~="scan"],
     body[data-tab="shape"] .mod[data-tab~="shape"],
     body[data-tab="orbit"] .mod[data-tab~="orbit"],
-    body[data-tab="tone"] .mod[data-tab~="tone"] { display: block; }
+    body[data-tab="tone"] .mod[data-tab~="tone"],
+    body[data-tab="mix"] .mod[data-tab~="mix"] { display: block; }
     body[data-tab="mouth"] .mod[data-tab~="mouth"] { display: block; }
     body[data-tab="bend"] .mod[data-tab~="bend"] { display: block; }
     body[data-tab="spin"] .mod[data-tab~="spin"] { display: block; }
@@ -685,7 +693,7 @@
     .deck { padding: 6px; } .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
     #libPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
-    #mHost input[type="range"], #hostTempo, #projName { min-height: 44px; height: 44px; }
+    #mHost input[type="range"], #hostTempo, #projName, #mixName { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
@@ -808,6 +816,7 @@
       <button role="tab" data-go="voice" aria-selected="false" data-dev="dekatron">Voice</button>
       <button role="tab" data-go="stereo" aria-selected="false">Stereo</button>
       <button role="tab" data-go="rack" aria-selected="false">Rack</button>
+      <button role="tab" data-go="mix" aria-selected="false">Mix</button>
     </nav>
 
     <div class="panel" id="panel">
@@ -890,7 +899,7 @@
       <div id="adRoot"></div>
       <div id="rhumRoot"></div>
       <div id="rnRoot"></div>
-      <section class="mod" data-tab="rack" id="mHost" data-wide><h3><span class="pilot" id="hostPilot"></span>Transport and mixer</h3>
+      <section class="mod" data-tab="rack mix" id="mHost" data-wide><h3><span class="pilot" id="hostPilot"></span>Mix</h3>
         <div class="hostbar">
           <button class="btn small" id="trPlay" aria-pressed="false">play</button>
           <button class="btn small" id="trStop">stop</button>
@@ -898,132 +907,212 @@
           <span class="rec-time" id="trTime" data-rec-time aria-live="polite"></span>
           <label>tempo <input id="hostTempo" type="number" min="40" max="240" step="1" value="120" aria-label="Tempo in beats per minute"></label>
           <span class="pos" id="trPos" aria-live="polite">1.1 · stopped</span>
+          <button type="button" class="btn small" id="mixView" aria-pressed="false" title="Show only the mixer and the master">mix view</button>
+        </div>
+        <div class="hostbar" id="mixBus">
+          <label>room <input type="range" id="mixRoom" min="0.2" max="2.5" step="0.01" value="1.1" aria-label="Shared reverb length"></label>
+          <label>delay <input type="range" id="mixDelay" min="0.05" max="1.5" step="0.01" value="0.32" aria-label="Shared delay time"></label>
+          <label>feedback <input type="range" id="mixFb" min="0" max="0.85" step="0.01" value="0.35" aria-label="Shared delay feedback"></label>
+          <button type="button" class="btn small" id="mixClear">clear arms</button>
+          <button type="button" class="btn small" id="mixFolder" hidden>recordings folder</button>
         </div>
         <div class="mixrow" data-mix="filament">
-          <span class="who">Filament</span>
+          <span class="who"><b class="letter">F</b> Filament</span>
           <label>level <input type="range" id="mixFLvl" min="0" max="1" step="0.01" value="1" aria-label="Filament level"></label>
           <label>pan <input type="range" id="mixFPan" min="-1" max="1" step="0.01" value="0" aria-label="Filament pan"></label>
           <button class="chip" id="mixFMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixFSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixFMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixFRev" min="0" max="1" step="0.01" value="0" aria-label="Filament reverb send"></label>
+          <label>delay <input type="range" id="mixFDly" min="0" max="1" step="0.01" value="0" aria-label="Filament delay send"></label>
+          <button class="chip" id="mixFArm" aria-pressed="false" aria-label="Arm Filament">arm</button>
         </div>
         <div class="mixrow" data-mix="cathode">
-          <span class="who">Cathode</span>
+          <span class="who"><b class="letter">C</b> Cathode</span>
           <label>level <input type="range" id="mixCLvl" min="0" max="1" step="0.01" value="1" aria-label="Cathode level"></label>
           <label>pan <input type="range" id="mixCPan" min="-1" max="1" step="0.01" value="0" aria-label="Cathode pan"></label>
           <button class="chip" id="mixCMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixCSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixCMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixCRev" min="0" max="1" step="0.01" value="0" aria-label="Cathode reverb send"></label>
+          <label>delay <input type="range" id="mixCDly" min="0" max="1" step="0.01" value="0" aria-label="Cathode delay send"></label>
+          <button class="chip" id="mixCArm" aria-pressed="false" aria-label="Arm Cathode">arm</button>
         </div>
         <div class="mixrow" data-mix="dekatron">
-          <span class="who">Dekatron</span>
+          <span class="who"><b class="letter">D</b> Dekatron</span>
           <label>level <input type="range" id="mixDLvl" min="0" max="1" step="0.01" value="1" aria-label="Dekatron level"></label>
           <label>pan <input type="range" id="mixDPan" min="-1" max="1" step="0.01" value="0" aria-label="Dekatron pan"></label>
           <button class="chip" id="mixDMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixDSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixDMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixDRev" min="0" max="1" step="0.01" value="0" aria-label="Dekatron reverb send"></label>
+          <label>delay <input type="range" id="mixDDly" min="0" max="1" step="0.01" value="0" aria-label="Dekatron delay send"></label>
+          <button class="chip" id="mixDArm" aria-pressed="false" aria-label="Arm Dekatron">arm</button>
         </div>
         <div class="mixrow" data-mix="thyratron">
-          <span class="who">Thyratron</span>
+          <span class="who"><b class="letter">T</b> Thyratron</span>
           <label>level <input type="range" id="mixTLvl" min="0" max="1" step="0.01" value="1" aria-label="Thyratron level"></label>
           <label>pan <input type="range" id="mixTPan" min="-1" max="1" step="0.01" value="0" aria-label="Thyratron pan"></label>
           <button class="chip" id="mixTMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixTSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixTMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixTRev" min="0" max="1" step="0.01" value="0" aria-label="Thyratron reverb send"></label>
+          <label>delay <input type="range" id="mixTDly" min="0" max="1" step="0.01" value="0" aria-label="Thyratron delay send"></label>
+          <button class="chip" id="mixTArm" aria-pressed="false" aria-label="Arm Thyratron">arm</button>
         </div>
         <div class="mixrow" data-mix="gleam">
-          <span class="who">Gleam</span>
+          <span class="who"><b class="letter">G</b> Gleam</span>
           <label>level <input type="range" id="mixGLvl" min="0" max="1" step="0.01" value="1" aria-label="Gleam level"></label>
           <label>pan <input type="range" id="mixGPan" min="-1" max="1" step="0.01" value="0" aria-label="Gleam pan"></label>
           <button class="chip" id="mixGMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixGSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixGMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixGRev" min="0" max="1" step="0.01" value="0" aria-label="Gleam reverb send"></label>
+          <label>delay <input type="range" id="mixGDly" min="0" max="1" step="0.01" value="0" aria-label="Gleam delay send"></label>
+          <button class="chip" id="mixGArm" aria-pressed="false" aria-label="Arm Gleam">arm</button>
         </div>
         <div class="mixrow" data-mix="mote">
-          <span class="who">Mote</span>
+          <span class="who"><b class="letter">M</b> Mote</span>
           <label>level <input type="range" id="mixMLvl" min="0" max="1" step="0.01" value="1" aria-label="Mote level"></label>
           <label>pan <input type="range" id="mixMPan" min="-1" max="1" step="0.01" value="0" aria-label="Mote pan"></label>
           <button class="chip" id="mixMMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixMSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixMMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixMRev" min="0" max="1" step="0.01" value="0" aria-label="Mote reverb send"></label>
+          <label>delay <input type="range" id="mixMDly" min="0" max="1" step="0.01" value="0" aria-label="Mote delay send"></label>
+          <button class="chip" id="mixMArm" aria-pressed="false" aria-label="Arm Mote">arm</button>
         </div>
         <div class="mixrow" data-mix="heptode">
-          <span class="who">Heptode</span>
+          <span class="who"><b class="letter">H</b> Heptode</span>
           <label>level <input type="range" id="mixHLvl" min="0" max="1" step="0.01" value="1" aria-label="Heptode level"></label>
           <label>pan <input type="range" id="mixHPan" min="-1" max="1" step="0.01" value="0" aria-label="Heptode pan"></label>
           <button class="chip" id="mixHMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixHSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixHMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixHRev" min="0" max="1" step="0.01" value="0" aria-label="Heptode reverb send"></label>
+          <label>delay <input type="range" id="mixHDly" min="0" max="1" step="0.01" value="0" aria-label="Heptode delay send"></label>
+          <button class="chip" id="mixHArm" aria-pressed="false" aria-label="Arm Heptode">arm</button>
         </div>
         <div class="mixrow" data-mix="geissler">
-          <span class="who">Geissler</span>
+          <span class="who"><b class="letter">Z</b> Geissler</span>
           <label>level <input type="range" id="mixZLvl" min="0" max="1" step="0.01" value="1" aria-label="Geissler level"></label>
           <label>pan <input type="range" id="mixZPan" min="-1" max="1" step="0.01" value="0" aria-label="Geissler pan"></label>
           <button class="chip" id="mixZMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixZSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixZMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixZRev" min="0" max="1" step="0.01" value="0" aria-label="Geissler reverb send"></label>
+          <label>delay <input type="range" id="mixZDly" min="0" max="1" step="0.01" value="0" aria-label="Geissler delay send"></label>
+          <button class="chip" id="mixZArm" aria-pressed="false" aria-label="Arm Geissler">arm</button>
         </div>
         <div class="mixrow" data-mix="pentagrid">
-          <span class="who">Pentagrid</span>
+          <span class="who"><b class="letter">P</b> Pentagrid</span>
           <label>level <input type="range" id="mixPLvl" min="0" max="1" step="0.01" value="1" aria-label="Pentagrid level"></label>
           <label>pan <input type="range" id="mixPPan" min="-1" max="1" step="0.01" value="0" aria-label="Pentagrid pan"></label>
           <button class="chip" id="mixPMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixPSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixPMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixPRev" min="0" max="1" step="0.01" value="0" aria-label="Pentagrid reverb send"></label>
+          <label>delay <input type="range" id="mixPDly" min="0" max="1" step="0.01" value="0" aria-label="Pentagrid delay send"></label>
+          <button class="chip" id="mixPArm" aria-pressed="false" aria-label="Arm Pentagrid">arm</button>
         </div>
         <div class="mixrow" data-mix="orthicon">
-          <span class="who">Orthicon</span>
+          <span class="who"><b class="letter">O</b> Orthicon</span>
           <label>level <input type="range" id="mixOLvl" min="0" max="1" step="0.01" value="1" aria-label="Orthicon level"></label>
           <label>pan <input type="range" id="mixOPan" min="-1" max="1" step="0.01" value="0" aria-label="Orthicon pan"></label>
           <button class="chip" id="mixOMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixOSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixOMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixORev" min="0" max="1" step="0.01" value="0" aria-label="Orthicon reverb send"></label>
+          <label>delay <input type="range" id="mixODly" min="0" max="1" step="0.01" value="0" aria-label="Orthicon delay send"></label>
+          <button class="chip" id="mixOArm" aria-pressed="false" aria-label="Arm Orthicon">arm</button>
         </div>
         <div class="mixrow" data-mix="trochotron">
-          <span class="who">Trochotron</span>
+          <span class="who"><b class="letter">X</b> Trochotron</span>
           <label>level <input type="range" id="mixXLvl" min="0" max="1" step="0.01" value="1" aria-label="Trochotron level"></label>
           <label>pan <input type="range" id="mixXPan" min="-1" max="1" step="0.01" value="0" aria-label="Trochotron pan"></label>
           <button class="chip" id="mixXMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixXSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixXMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixXRev" min="0" max="1" step="0.01" value="0" aria-label="Trochotron reverb send"></label>
+          <label>delay <input type="range" id="mixXDly" min="0" max="1" step="0.01" value="0" aria-label="Trochotron delay send"></label>
+          <button class="chip" id="mixXArm" aria-pressed="false" aria-label="Arm Trochotron">arm</button>
         </div>
         <div class="mixrow" data-mix="gyrotron">
-          <span class="who">Gyrotron</span>
+          <span class="who"><b class="letter">Y</b> Gyrotron</span>
           <label>level <input type="range" id="mixYLvl" min="0" max="1" step="0.01" value="1" aria-label="Gyrotron level"></label>
           <label>pan <input type="range" id="mixYPan" min="-1" max="1" step="0.01" value="0" aria-label="Gyrotron pan"></label>
           <button class="chip" id="mixYMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixYSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixYMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixYRev" min="0" max="1" step="0.01" value="0" aria-label="Gyrotron reverb send"></label>
+          <label>delay <input type="range" id="mixYDly" min="0" max="1" step="0.01" value="0" aria-label="Gyrotron delay send"></label>
+          <button class="chip" id="mixYArm" aria-pressed="false" aria-label="Arm Gyrotron">arm</button>
         </div>
         <div class="mixrow" data-mix="additron">
-          <span class="who">Additron</span>
+          <span class="who"><b class="letter">N</b> Additron</span>
           <label>level <input type="range" id="mixNLvl" min="0" max="1" step="0.01" value="1" aria-label="Additron level"></label>
           <label>pan <input type="range" id="mixNPan" min="-1" max="1" step="0.01" value="0" aria-label="Additron pan"></label>
           <button class="chip" id="mixNMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixNSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixNMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixNRev" min="0" max="1" step="0.01" value="0" aria-label="Additron reverb send"></label>
+          <label>delay <input type="range" id="mixNDly" min="0" max="1" step="0.01" value="0" aria-label="Additron delay send"></label>
+          <button class="chip" id="mixNArm" aria-pressed="false" aria-label="Arm Additron">arm</button>
         </div>
         <div class="mixrow" data-mix="klystron">
-          <span class="who">Klystron</span>
+          <span class="who"><b class="letter">K</b> Klystron</span>
           <label>level <input type="range" id="mixKLvl" min="0" max="1" step="0.01" value="1" aria-label="Klystron level"></label>
           <label>pan <input type="range" id="mixKPan" min="-1" max="1" step="0.01" value="0" aria-label="Klystron pan"></label>
           <button class="chip" id="mixKMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixKSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixKMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixKRev" min="0" max="1" step="0.01" value="0" aria-label="Klystron reverb send"></label>
+          <label>delay <input type="range" id="mixKDly" min="0" max="1" step="0.01" value="0" aria-label="Klystron delay send"></label>
+          <button class="chip" id="mixKArm" aria-pressed="false" aria-label="Arm Klystron">arm</button>
         </div>
         <div class="mixrow" data-mix="phantastron">
-          <span class="who">Phantastron</span>
+          <span class="who"><b class="letter">Q</b> Phantastron</span>
           <label>level <input type="range" id="mixQLvl" min="0" max="1" step="0.01" value="1" aria-label="Phantastron level"></label>
           <label>pan <input type="range" id="mixQPan" min="-1" max="1" step="0.01" value="0" aria-label="Phantastron pan"></label>
           <button class="chip" id="mixQMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixQSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixQMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixQRev" min="0" max="1" step="0.01" value="0" aria-label="Phantastron reverb send"></label>
+          <label>delay <input type="range" id="mixQDly" min="0" max="1" step="0.01" value="0" aria-label="Phantastron delay send"></label>
+          <button class="chip" id="mixQArm" aria-pressed="false" aria-label="Arm Phantastron">arm</button>
         </div>
         <div class="mixrow" data-mix="rhumbatron">
-          <span class="who">Rhumbatron</span>
+          <span class="who"><b class="letter">R</b> Rhumbatron</span>
           <label>level <input type="range" id="mixRLvl" min="0" max="1" step="0.01" value="1" aria-label="Rhumbatron level"></label>
           <label>pan <input type="range" id="mixRPan" min="-1" max="1" step="0.01" value="0" aria-label="Rhumbatron pan"></label>
           <button class="chip" id="mixRMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixRSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixRMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixRRev" min="0" max="1" step="0.01" value="0" aria-label="Rhumbatron reverb send"></label>
+          <label>delay <input type="range" id="mixRDly" min="0" max="1" step="0.01" value="0" aria-label="Rhumbatron delay send"></label>
+          <button class="chip" id="mixRArm" aria-pressed="false" aria-label="Arm Rhumbatron">arm</button>
         </div>
         <div class="mixrow" data-mix="resnatron">
-          <span class="who">Resnatron</span>
+          <span class="who"><b class="letter">S</b> Resnatron</span>
           <label>level <input type="range" id="mixSLvl" min="0" max="1" step="0.01" value="1" aria-label="Resnatron level"></label>
           <label>pan <input type="range" id="mixSPan" min="-1" max="1" step="0.01" value="0" aria-label="Resnatron pan"></label>
           <button class="chip" id="mixSMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixSSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixSMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixSRev" min="0" max="1" step="0.01" value="0" aria-label="Resnatron reverb send"></label>
+          <label>delay <input type="range" id="mixSDly" min="0" max="1" step="0.01" value="0" aria-label="Resnatron delay send"></label>
+          <button class="chip" id="mixSArm" aria-pressed="false" aria-label="Arm Resnatron">arm</button>
         </div>
         <div class="mixrow" data-mix="lattice">
-          <span class="who">Lattice</span>
+          <span class="who"><b class="letter">L</b> Lattice</span>
           <label>level <input type="range" id="mixLLvl" min="0" max="1" step="0.01" value="1" aria-label="Lattice level"></label>
           <label>pan <input type="range" id="mixLPan" min="-1" max="1" step="0.01" value="0" aria-label="Lattice pan"></label>
           <button class="chip" id="mixLMute" aria-pressed="false">mute</button>
           <button class="chip" id="mixLSolo" aria-pressed="false">solo</button>
+          <canvas class="mixmeter" id="mixLMeter" width="160" height="8" aria-hidden="true"></canvas>
+          <label>reverb <input type="range" id="mixLRev" min="0" max="1" step="0.01" value="0" aria-label="Lattice reverb send"></label>
+          <label>delay <input type="range" id="mixLDly" min="0" max="1" step="0.01" value="0" aria-label="Lattice delay send"></label>
+          <button class="chip" id="mixLArm" aria-pressed="false" aria-label="Arm Lattice">arm</button>
         </div>
         <div class="hostbar">
           <input id="projName" type="text" maxlength="40" value="Untitled" aria-label="Project name">
@@ -1032,9 +1121,16 @@
           <button class="btn small" id="projDown">download</button>
           <label class="btn small filebtn" for="projFile">upload<input id="projFile" type="file" accept="application/json,.json"></label>
         </div>
-        <div class="note">Level, pan, mute and solo sit in front of the shared ensemble and output tubes. Centre pan and full level leave the sound alone. Play runs the master clock; Dekatron's pattern follows it. The red record button next to play saves what you hear as a WAV, named for the device on screen, or rack when several are playing. The same recording is on the Master panel below. Save keeps the project in this browser. Download and upload move the same JSON.</div>
+        <div class="hostbar">
+          <input id="mixName" type="text" maxlength="40" value="Mix" aria-label="Mix session name">
+          <button class="btn small" id="mixSave">save mix</button>
+          <button class="btn small" id="mixLoad">load mix</button>
+          <button class="btn small" id="mixDown">download mix</button>
+          <label class="btn small filebtn" for="mixFile">upload mix<input id="mixFile" type="file" accept="application/json,.json"></label>
+        </div>
+        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. Save mix keeps this desk in the browser. The project buttons below keep the patches and the tempo as well.</div>
       </section>
-      <section class="mod" data-tab="rack" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
+      <section class="mod" data-tab="rack mix" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
     </div>
 
     <section class="deck" id="deck" aria-label="MIDI files: record a take, import a file, play it">
@@ -1126,6 +1222,7 @@ import { mountMaster } from './masterui.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
+import { MIX_CHANNELS, routeTargets, normalizeArmed, normalizeSession, saveSession, loadSession, sessionFileName } from './mixsession.js';
 import { drumDevice, normalizeDrum, DRUM_FACTORY, DRUM_CATS, DRUM_DEFAULT, voiceForNote, createHostClock } from './drums.js';
 import { createDrumHost, mountDrumPanel, renderDrums } from './drums-ui.js';
 import { normalizeLattice, LATTICE_FACTORY, LATTICE_CATS, LATTICE_DEFAULT, latticeDevice } from './lattice.js';
@@ -1275,40 +1372,40 @@ function ensureEngine() {
     const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => adHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rhumHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
       const sleep = () => { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); gleamHost.setActive(false); moteHost.setActive(false); heptodeHost.setActive(false); geisslerHost.setActive(false); pentaHost.setActive(false); orthiconHost.setActive(false); trHost.setActive(false); gyHost.setActive(false); klHost.setActive(false); phHost.setActive(false); adHost.setActive(false); rhumHost.setActive(false); rnHost.setActive(false); };
       if (dev === 'dekatron') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); drumHost.setActive(true); drumHost.setPatch(cur);
       } else if (dev === 'lattice') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); latticeHost.setActive(true); latticeHost.setPatch(cur);
       } else if (dev === 'thyratron') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); thyHost.setActive(true); thyHost.setPatch(cur); thyHost.bend(bendV); thyHost.mod(modV);
       } else if (dev === 'gleam') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); gleamHost.setActive(true); gleamHost.setPatch(cur);
       } else if (dev === 'mote') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); moteHost.setActive(true); moteHost.setPatch(cur);
       } else if (dev === 'heptode') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); heptodeHost.setActive(true); heptodeHost.setPatch(cur);
       } else if (dev === 'geissler') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); geisslerHost.setActive(true); geisslerHost.setPatch(cur);
       } else if (dev === 'pentagrid') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); pentaHost.setActive(true); pentaHost.setPatch(cur);
       } else if (dev === 'orthicon') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); orthiconHost.setActive(true); orthiconHost.setPatch(cur);
       } else if (dev === 'trochotron') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); trHost.setActive(true); trHost.setPatch(cur, false);
       } else if (dev === 'gyrotron') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); gyHost.setActive(true); gyHost.setPatch(cur);
       } else if (dev === 'klystron') {
-        const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+        releaseRailVoice();
         sleep(); klHost.setActive(true); klHost.setPatch(cur);
       } else if (dev === 'phantastron') {
         const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
@@ -1324,7 +1421,7 @@ function ensureEngine() {
         sleep(); rnHost.setActive(true); rnHost.setPatch(cur);
       } else { sleep(); }
     });
-    return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); syncHostUI(); return E; });
+    return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); restoreMixRouting(); syncHostUI(); return E; });
   }).catch(err => { console.error(err); toast('Audio engine failed to load: ' + err.message, 6000); throw err; });
   ctx.onstatechange = updateAudioLamp;
   return enginePromise;
@@ -1381,8 +1478,87 @@ function collectProject() {
     timeSig: st ? st.timeSig : (bootProj ? bootProj.timeSig : [4, 4]),
     device: dev,
     mixer: E ? E.mix.all() : (bootProj ? bootProj.mixer : null),
+    armed: mixArmed.slice(),
+    bus: E ? E.mix.bus() : (bootProj ? bootProj.bus : null),
     devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') }, geissler: { patch: patchOf('geissler') }, pentagrid: { patch: patchOf('pentagrid') }, orthicon: { patch: patchOf('orthicon') }, trochotron: { patch: patchOf('trochotron') }, gyrotron: { patch: patchOf('gyrotron') }, klystron: { patch: patchOf('klystron') }, phantastron: { patch: patchOf('phantastron') }, additron: { patch: patchOf('additron') }, rhumbatron: { patch: patchOf('rhumbatron') }, resnatron: { patch: patchOf('resnatron') } },
   });
+}
+const MIX_ROWS = MIX_CHANNELS.map(c => [c.id, c.letter]);
+let mixArmed = [];
+const noteRoutes = new Map();
+function releaseRailVoice() {
+  if (!E || mixArmed.includes(E.device)) return;
+  const node = E.nodes[E.device];
+  if (node) node.port.postMessage({ t: 'active', on: false });
+}
+function patchFor(id) { return id === dev ? cur : (DS[id] && DS[id].cur); }
+function hostOf(id) {
+  return {
+    dekatron: drumHost, lattice: latticeHost, thyratron: thyHost, gleam: gleamHost,
+    mote: moteHost, heptode: heptodeHost, geissler: geisslerHost, pentagrid: pentaHost,
+    orthicon: orthiconHost, trochotron: trHost, gyrotron: gyHost, klystron: klHost,
+    phantastron: phHost, additron: adHost, rhumbatron: rhumHost, resnatron: rnHost,
+  }[id] || null;
+}
+function wakeDevice(id) {
+  if (!E) return;
+  if (id === 'filament' || id === 'cathode') {
+    const p = patchFor(id);
+    if (p) E.setPatch(Object.assign({}, p, { device: id }), false);
+    E.sendTo(id, { t: 'active', on: true });
+    return;
+  }
+  const h = hostOf(id);
+  if (!h) return;
+  h.setActive(true);
+  const p = patchFor(id);
+  if (p && h.setPatch) h.setPatch(p, id === 'trochotron' ? false : undefined);
+}
+function sleepDevice(id) {
+  if (!E || id === dev || mixArmed.includes(id)) return;
+  if (id === 'filament' || id === 'cathode') {
+    if (id !== E.device) {
+      const node = E.nodes[id];
+      if (node) node.port.postMessage({ t: 'active', on: false });
+    }
+    return;
+  }
+  const h = hostOf(id);
+  if (h && h.setActive) h.setActive(false);
+}
+function holdArmed() { mixArmed.forEach(wakeDevice); }
+function setMixArmed(list) {
+  const armed = normalizeArmed(list);
+  const prev = mixArmed.slice();
+  mixArmed = armed;
+  prev.forEach(id => { if (!mixArmed.includes(id)) sleepDevice(id); });
+  mixArmed.forEach(wakeDevice);
+  syncHostUI();
+}
+function restoreMixRouting() {
+  if (!E || !bootProj) return;
+  if (bootProj.bus) E.mix.setBus(bootProj.bus);
+  if (bootProj.armed && bootProj.armed.length) setMixArmed(bootProj.armed);
+}
+function collectSession() {
+  return normalizeSession({
+    name: $('mixName').value,
+    armed: mixArmed,
+    bus: E ? E.mix.bus() : null,
+    channels: E ? E.mix.all() : null,
+  });
+}
+function applySession(raw) {
+  const s = normalizeSession(raw);
+  $('mixName').value = s.name;
+  withEngine(() => {
+    E.mix.load(s.channels);
+    E.mix.setBus(s.bus);
+    syncHostUI();
+  });
+  setMixArmed(s.armed);
+  saveSession(localStorage, s);
+  return s;
 }
 function paintHost(st) {
   st = st || (E && E.transport.state());
@@ -1397,18 +1573,36 @@ function syncHostUI() {
   if (document.activeElement !== $('hostTempo')) $('hostTempo').value = String(Math.round(st.tempo));
   paintHost(st);
   const mix = E.mix.all();
-  [['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z'], ['pentagrid', 'P'], ['orthicon', 'O'], ['trochotron', 'X'], ['gyrotron', 'Y'], ['klystron', 'K'], ['phantastron', 'Q'], ['additron', 'N'], ['rhumbatron', 'R'], ['resnatron', 'S']].forEach(([id, s]) => {
-    const c = mix[id] || { level: 1, pan: 0, mute: false, solo: false };
-    $('mix' + s + 'Lvl').value = String(c.level);
-    $('mix' + s + 'Pan').value = String(c.pan);
+  const keys = routeTargets(dev, mixArmed);
+  const bus = E.mix.bus();
+  if (document.activeElement !== $('mixRoom')) $('mixRoom').value = String(bus.reverbSeconds);
+  if (document.activeElement !== $('mixDelay')) $('mixDelay').value = String(bus.delayTime);
+  if (document.activeElement !== $('mixFb')) $('mixFb').value = String(bus.delayFeedback);
+  MIX_ROWS.forEach(([id, s]) => {
+    const c = mix[id] || { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 };
+    const row = document.querySelector('.mixrow[data-mix="' + id + '"]');
+    if (document.activeElement !== $('mix' + s + 'Lvl')) $('mix' + s + 'Lvl').value = String(c.level);
+    if (document.activeElement !== $('mix' + s + 'Pan')) $('mix' + s + 'Pan').value = String(c.pan);
+    if (document.activeElement !== $('mix' + s + 'Rev')) $('mix' + s + 'Rev').value = String(c.sendR || 0);
+    if (document.activeElement !== $('mix' + s + 'Dly')) $('mix' + s + 'Dly').value = String(c.sendD || 0);
     $('mix' + s + 'Mute').setAttribute('aria-pressed', String(!!c.mute));
     $('mix' + s + 'Solo').setAttribute('aria-pressed', String(!!c.solo));
+    $('mix' + s + 'Arm').setAttribute('aria-pressed', String(mixArmed.includes(id)));
+    if (row) { row.classList.toggle('armed', mixArmed.includes(id)); row.classList.toggle('keys', keys.includes(id)); }
   });
 }
 function pushStrip(id, s) {
   const mute = $('mix' + s + 'Mute').getAttribute('aria-pressed') === 'true';
   const solo = $('mix' + s + 'Solo').getAttribute('aria-pressed') === 'true';
-  withEngine(() => E.mix.set(id, { level: +$('mix' + s + 'Lvl').value, pan: +$('mix' + s + 'Pan').value, mute, solo }));
+  withEngine(() => E.mix.set(id, {
+    level: +$('mix' + s + 'Lvl').value, pan: +$('mix' + s + 'Pan').value,
+    sendR: +$('mix' + s + 'Rev').value, sendD: +$('mix' + s + 'Dly').value, mute, solo,
+  }));
+}
+function pushBus() {
+  withEngine(() => E.mix.setBus({
+    reverbSeconds: +$('mixRoom').value, delayTime: +$('mixDelay').value, delayFeedback: +$('mixFb').value,
+  }));
 }
 function applyProject(raw) {
   const proj = normalizeProject(raw);
@@ -1445,6 +1639,8 @@ function applyProject(raw) {
     E.transport.setTempo(proj.tempo);
     E.transport.setTimeSig(proj.timeSig);
     E.mix.load(proj.mixer);
+    E.mix.setBus(proj.bus);
+    setMixArmed(proj.armed);
     ['filament', 'cathode'].forEach(id => {
       if (id === dev) return;
       E.patches[id] = DS[id].cur;
@@ -1474,15 +1670,56 @@ function commitTempo() {
   withEngine(() => { const t = E.transport.setTempo($('hostTempo').value); $('hostTempo').value = String(Math.round(t)); paintHost(); });
 }
 $('hostTempo').addEventListener('change', commitTempo);
-[['filament', 'F'], ['cathode', 'C'], ['dekatron', 'D'], ['lattice', 'L'], ['thyratron', 'T'], ['gleam', 'G'], ['mote', 'M'], ['heptode', 'H'], ['geissler', 'Z'], ['pentagrid', 'P'], ['orthicon', 'O'], ['trochotron', 'X'], ['gyrotron', 'Y'], ['klystron', 'K'], ['phantastron', 'Q'], ['additron', 'N'], ['rhumbatron', 'R'], ['resnatron', 'S']].forEach(([id, s]) => {
+MIX_ROWS.forEach(([id, s]) => {
   $('mix' + s + 'Lvl').addEventListener('input', () => pushStrip(id, s));
   $('mix' + s + 'Pan').addEventListener('input', () => pushStrip(id, s));
+  $('mix' + s + 'Rev').addEventListener('input', () => pushStrip(id, s));
+  $('mix' + s + 'Dly').addEventListener('input', () => pushStrip(id, s));
   ['Mute', 'Solo'].forEach(which => $('mix' + s + which).addEventListener('click', () => {
     const b = $('mix' + s + which);
     b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
     pushStrip(id, s);
   }));
+  $('mix' + s + 'Arm').addEventListener('click', () => {
+    const on = !mixArmed.includes(id);
+    setMixArmed(on ? mixArmed.concat([id]) : mixArmed.filter(x => x !== id));
+  });
 });
+['mixRoom', 'mixDelay', 'mixFb'].forEach(id => $(id).addEventListener('input', pushBus));
+$('mixClear').addEventListener('click', () => setMixArmed([]));
+$('mixView').addEventListener('click', () => {
+  const on = document.body.dataset.mixdesk !== '1';
+  if (on) document.body.dataset.mixdesk = '1'; else delete document.body.dataset.mixdesk;
+  $('mixView').setAttribute('aria-pressed', String(on));
+});
+$('mixSave').addEventListener('click', () => { const s = collectSession(); saveSession(localStorage, s); toast('Saved mix "' + s.name + '" in this browser.'); });
+$('mixLoad').addEventListener('click', () => { const s = loadSession(localStorage); if (!s) { toast('No mix saved in this browser.'); return; } applySession(s); toast('Loaded mix "' + s.name + '".'); });
+$('mixDown').addEventListener('click', () => {
+  const s = collectSession();
+  const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = sessionFileName(s);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  toast('Downloaded ' + a.download);
+});
+$('mixFile').addEventListener('change', () => {
+  const f = $('mixFile').files && $('mixFile').files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { const s = applySession(JSON.parse(String(reader.result))); toast('Loaded mix "' + s.name + '".'); }
+    catch (e) { toast('That file is not a mix.'); }
+    $('mixFile').value = '';
+  };
+  reader.readAsText(f);
+});
+if (window.dxDesktop) {
+  $('mixFolder').hidden = false;
+  window.dxDesktop.recordingsFolder().then(dir => { if (dir) $('mixFolder').title = dir; }).catch(() => {});
+  $('mixFolder').addEventListener('click', () => {
+    window.dxDesktop.chooseRecordingsFolder().then(dir => { if (dir) { $('mixFolder').title = dir; toast('Recordings will save to ' + dir); } }).catch(() => {});
+  });
+}
 $('projSave').addEventListener('click', () => { const p = collectProject(); saveLocal(localStorage, p); toast('Saved "' + p.name + '" in this browser.'); });
 $('projLoad').addEventListener('click', () => { const p = loadLocal(localStorage); if (!p) { toast('No project saved in this browser.'); return; } applyProject(p); toast('Loaded "' + p.name + '".'); });
 $('projDown').addEventListener('click', () => {
@@ -1516,6 +1753,45 @@ let deck = null, player = null;   // the MIDI deck and the library player, built
 let sustainOn = false;
 function held(n) { const s = holds.get(n); return !!(s && s.size); }
 function heldNotes() { const out = []; holds.forEach((s, n) => { if (s && s.size) out.push(n); }); return out; }
+function voiceOn(id, n, v) {
+  if (id === 'dekatron') { const voice = voiceForNote(n); if (voice) drumHost.trigger(voice, v); return; }
+  if (id === 'lattice') { latticeHost.noteOn(n, v); return; }
+  if (id === 'thyratron') { thyHost.noteOn(n, v); return; }
+  if (id === 'gleam') { gleamHost.noteOn(n, v); return; }
+  if (id === 'mote') { moteHost.noteOn(n, v); return; }
+  if (id === 'heptode') { heptodeHost.noteOn(n, v); return; }
+  if (id === 'geissler') { geisslerHost.noteOn(n, v); return; }
+  if (id === 'pentagrid') { pentaHost.noteOn(n, v); return; }
+  if (id === 'orthicon') { orthiconHost.noteOn(n, v); return; }
+  if (id === 'trochotron') { trHost.noteOn(n, v); return; }
+  if (id === 'gyrotron') { gyHost.noteOn(n, v); return; }
+  if (id === 'klystron') { klHost.noteOn(n, v); return; }
+  if (id === 'phantastron') { phHost.noteOn(n, v); return; }
+  if (id === 'additron') { adHost.noteOn(n, v); return; }
+  if (id === 'rhumbatron') { rhumHost.noteOn(n, v); return; }
+  if (id === 'resnatron') { rnHost.noteOn(n, v); return; }
+  E.sendTo(id === 'cathode' ? 'cathode' : 'filament', { t: 'on', n, v });
+}
+function voiceOff(id, n) {
+  if (id === 'lattice') latticeHost.noteOff(n);
+  else if (id === 'thyratron') thyHost.noteOff(n);
+  else if (id === 'gleam') gleamHost.noteOff(n);
+  else if (id === 'mote') moteHost.noteOff(n);
+  else if (id === 'heptode') heptodeHost.noteOff(n);
+  else if (id === 'pentagrid') pentaHost.noteOff(n);
+  else if (id === 'orthicon') orthiconHost.noteOff(n);
+  else if (id === 'trochotron') trHost.noteOff(n);
+  else if (id === 'gyrotron') gyHost.noteOff(n);
+  else if (id === 'klystron') klHost.noteOff(n);
+  else if (id === 'phantastron') phHost.noteOff(n);
+  else if (id === 'additron') adHost.noteOff(n);
+  else if (id === 'rhumbatron') rhumHost.noteOff(n);
+  else if (id === 'resnatron') rnHost.noteOff(n);
+  else if (id === 'filament' || id === 'cathode') E.sendTo(id, { t: 'off', n });
+}
+function recDev(id, m) {
+  if (deck && (id === 'filament' || id === 'cathode')) deck.rec(id, m);
+}
 function noteOn(n, v, src) {
   if (n < 0 || n > 127) return;
   src = src || 'api';
@@ -1526,24 +1802,31 @@ function noteOn(n, v, src) {
   if (!set) { set = new Set(); holds.set(n, set); }
   set.add(src);
   if (!fresh) return;
-  if (dev === 'dekatron') { const id = voiceForNote(n); if (id) withEngine(() => drumHost.trigger(id, v)); }
-  else if (dev === 'lattice') withEngine(() => latticeHost.noteOn(n, v));
-  else if (dev === 'thyratron') withEngine(() => thyHost.noteOn(n, v));
-  else if (dev === 'gleam') withEngine(() => gleamHost.noteOn(n, v));
-  else if (dev === 'mote') withEngine(() => moteHost.noteOn(n, v));
-  else if (dev === 'heptode') withEngine(() => heptodeHost.noteOn(n, v));
-  else if (dev === 'geissler') withEngine(() => geisslerHost.noteOn(n, v));
-  else if (dev === 'pentagrid') withEngine(() => pentaHost.noteOn(n, v));
-  else if (dev === 'orthicon') withEngine(() => orthiconHost.noteOn(n, v));
-  else if (dev === 'trochotron') withEngine(() => trHost.noteOn(n, v));
-  else if (dev === 'gyrotron') withEngine(() => gyHost.noteOn(n, v));
-  else if (dev === 'klystron') withEngine(() => klHost.noteOn(n, v));
-  else if (dev === 'phantastron') withEngine(() => phHost.noteOn(n, v));
-  else if (dev === 'additron') withEngine(() => adHost.noteOn(n, v));
-  else if (dev === 'rhumbatron') withEngine(() => rhumHost.noteOn(n, v));
-  else if (dev === 'resnatron') withEngine(() => rnHost.noteOn(n, v));
-  else withEngine(() => E.noteOn(n, v));
-  rec({ t: 'on', n, v });
+  if (mixArmed.length) {
+    const targets = mixArmed.slice();
+    noteRoutes.set(n, targets);
+    withEngine(() => { targets.forEach(id => voiceOn(id, n, v)); });
+    targets.forEach(id => recDev(id, { t: 'on', n, v }));
+  } else {
+    if (dev === 'dekatron') { const id = voiceForNote(n); if (id) withEngine(() => drumHost.trigger(id, v)); }
+    else if (dev === 'lattice') withEngine(() => latticeHost.noteOn(n, v));
+    else if (dev === 'thyratron') withEngine(() => thyHost.noteOn(n, v));
+    else if (dev === 'gleam') withEngine(() => gleamHost.noteOn(n, v));
+    else if (dev === 'mote') withEngine(() => moteHost.noteOn(n, v));
+    else if (dev === 'heptode') withEngine(() => heptodeHost.noteOn(n, v));
+    else if (dev === 'geissler') withEngine(() => geisslerHost.noteOn(n, v));
+    else if (dev === 'pentagrid') withEngine(() => pentaHost.noteOn(n, v));
+    else if (dev === 'orthicon') withEngine(() => orthiconHost.noteOn(n, v));
+    else if (dev === 'trochotron') withEngine(() => trHost.noteOn(n, v));
+    else if (dev === 'gyrotron') withEngine(() => gyHost.noteOn(n, v));
+    else if (dev === 'klystron') withEngine(() => klHost.noteOn(n, v));
+    else if (dev === 'phantastron') withEngine(() => phHost.noteOn(n, v));
+    else if (dev === 'additron') withEngine(() => adHost.noteOn(n, v));
+    else if (dev === 'rhumbatron') withEngine(() => rhumHost.noteOn(n, v));
+    else if (dev === 'resnatron') withEngine(() => rnHost.noteOn(n, v));
+    else withEngine(() => E.noteOn(n, v));
+    rec({ t: 'on', n, v });
+  }
   paintKey(n, true);
 }
 const rec = m => { if (deck) deck.rec(dev, m); };
@@ -1555,6 +1838,13 @@ function noteOff(n, src) {
     if (set.size) return;
   } else if (set) set.clear();
   holds.delete(n); paintKey(n, false);
+  const routed = noteRoutes.get(n);
+  if (routed) {
+    noteRoutes.delete(n);
+    withEngine(() => routed.forEach(id => voiceOff(id, n)));
+    routed.forEach(id => recDev(id, { t: 'off', n }));
+    return;
+  }
   if (dev === 'lattice') withEngine(() => latticeHost.noteOff(n));
   else if (dev === 'thyratron') withEngine(() => thyHost.noteOff(n));
   else if (dev === 'gleam') withEngine(() => gleamHost.noteOff(n));
@@ -1579,6 +1869,13 @@ function dropHolds() {
   holds.clear();
   notes.forEach(n => {
     paintKey(n, false);
+    const routed = noteRoutes.get(n);
+    noteRoutes.delete(n);
+    if (routed) {
+      withEngine(() => routed.forEach(id => voiceOff(id, n)));
+      routed.forEach(id => recDev(id, { t: 'off', n }));
+      return;
+    }
     if (dev === 'lattice') withEngine(() => latticeHost.noteOff(n));
     else if (dev === 'thyratron') withEngine(() => thyHost.noteOff(n));
     else if (dev === 'gleam') withEngine(() => gleamHost.noteOff(n));
@@ -1599,9 +1896,104 @@ function dropHolds() {
   });
   if (sustainOn) setSustain(false);
 }
+function voicePerf(id, kind, v) {
+  if (id === 'filament' || id === 'cathode') {
+    if (id === E.device) {
+      if (kind === 'bend') E.bend(v);
+      else if (kind === 'mw') E.modWheel(v);
+      else E.aftertouch(v);
+    } else {
+      const t = kind === 'mw' ? 'mw' : kind === 'at' ? 'at' : 'bend';
+      E.sendTo(id, { t, v });
+    }
+    return;
+  }
+  if (id === 'mote') {
+    if (kind === 'at') return;
+    if (kind === 'bend') moteHost.bend(v); else if (kind === 'mw') moteHost.mod(v);
+    return;
+  }
+  if (id === 'heptode') {
+    if (kind === 'at') return;
+    if (kind === 'bend') heptodeHost.bend(v); else if (kind === 'mw') heptodeHost.mod(v);
+    return;
+  }
+  if (id === 'pentagrid') {
+    if (kind === 'at') return;
+    if (kind === 'bend') pentaHost.bend(v); else if (kind === 'mw') pentaHost.mod(v);
+    return;
+  }
+  if (id === 'orthicon') {
+    if (kind === 'at') return;
+    if (kind === 'bend') orthiconHost.bend(v); else if (kind === 'mw') orthiconHost.mod(v);
+    return;
+  }
+  if (id === 'gyrotron') {
+    if (kind === 'at') return;
+    if (kind === 'bend') gyHost.bend(v); else if (kind === 'mw') gyHost.mod(v);
+    return;
+  }
+  if (id === 'klystron') {
+    if (kind === 'at') return;
+    if (kind === 'bend') klHost.bend(v); else if (kind === 'mw') klHost.mod(v);
+    return;
+  }
+  if (id === 'phantastron') {
+    if (kind === 'at') return;
+    if (kind === 'bend') phHost.bend(v); else if (kind === 'mw') phHost.mod(v);
+    return;
+  }
+  if (id === 'additron') {
+    if (kind === 'at') return;
+    if (kind === 'bend') adHost.bend(v); else if (kind === 'mw') adHost.mod(v);
+    return;
+  }
+  if (id === 'rhumbatron') {
+    if (kind === 'at') return;
+    if (kind === 'bend') rhumHost.bend(v); else if (kind === 'mw') rhumHost.mod(v);
+    return;
+  }
+  if (id === 'resnatron') {
+    if (kind === 'at') return;
+    if (kind === 'bend') rnHost.bend(v); else if (kind === 'mw') rnHost.mod(v);
+    return;
+  }
+  if (id === 'lattice') {
+    const t = kind === 'mw' ? 'mw' : kind === 'at' ? 'at' : 'bend';
+    latticeHost.send({ t, v });
+    return;
+  }
+  if (id === 'thyratron') {
+    if (kind === 'bend') thyHost.bend(v);
+    else if (kind === 'mw') thyHost.mod(v);
+  }
+}
+function voiceSustain(id, on) {
+  if (id === 'filament' || id === 'cathode') {
+    if (id === E.device) E.sustain(on);
+    else E.sendTo(id, { t: 'sus', on: !!on });
+    return;
+  }
+  if (id === 'lattice') latticeHost.send({ t: 'sus', on: !!on });
+  else if (id === 'thyratron') thyHost.sustain(on);
+  else if (id === 'mote') moteHost.sustain(on);
+  else if (id === 'heptode') heptodeHost.sustain(on);
+  else if (id === 'klystron') klHost.sustain(on);
+  else if (id === 'phantastron') phHost.sustain(on);
+  else if (id === 'additron') adHost.sustain(on);
+  else if (id === 'rhumbatron') rhumHost.sustain(on);
+  else if (id === 'resnatron') rnHost.sustain(on);
+  else if (id === 'pentagrid') pentaHost.sustain(on);
+  else if (id === 'orthicon') orthiconHost.sustain(on);
+}
 function perf(kind, v) {
   if (kind === 'bend') bendV = v;
   else if (kind === 'mw') modV = v;
+  if (mixArmed.length) {
+    const targets = mixArmed.slice();
+    withEngine(() => targets.forEach(id => voicePerf(id, kind, v)));
+    return;
+  }
   if (dev === 'mote') {
     if (kind === 'at') return;
     withEngine(() => { if (kind === 'bend') moteHost.bend(v); else if (kind === 'mw') moteHost.mod(v); });
@@ -1673,6 +2065,12 @@ function perf(kind, v) {
 }
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
+  if (mixArmed.length) {
+    const targets = mixArmed.slice();
+    withEngine(() => targets.forEach(id => voiceSustain(id, sustainOn)));
+    targets.forEach(id => recDev(id, { t: 'sus', on: sustainOn }));
+    return;
+  }
   if (dev === 'lattice') withEngine(() => latticeHost.send({ t: 'sus', on: sustainOn }));
   else if (dev === 'thyratron') withEngine(() => thyHost.sustain(sustainOn));
   else if (dev === 'mote') withEngine(() => moteHost.sustain(sustainOn));
@@ -2006,141 +2404,145 @@ function setDevice(d) {
   DS[dev] = { cur, curKey, edited, user };
   dev = d; ({ cur, curKey, edited, user } = DS[d]);
   showDevice();
+  if (E) syncHostUI();
   store.set('synth_dev', d);
   const tab = document.body.dataset.tab;
-  if ((tab === 'patch' && d !== 'cathode') || (tab === 'voice' && d !== 'dekatron') || (d === 'dekatron' && tab !== 'play' && tab !== 'voice' && tab !== 'rack')) goTab('play');
+  if ((tab === 'patch' && d !== 'cathode') || (tab === 'voice' && d !== 'dekatron') || (d === 'dekatron' && tab !== 'play' && tab !== 'voice' && tab !== 'rack' && tab !== 'mix')) goTab('play');
   if (d === 'lattice' && (tab === 'stereo' || tab === 'voice' || tab === 'patch')) goTab('play');
   if (d === 'thyratron' && (tab === 'stereo' || tab === 'voice' || tab === 'patch')) goTab('play');
-  if (d === 'gleam' && tab !== 'play' && tab !== 'rack') goTab('play');
+  if (d === 'gleam' && tab !== 'play' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if ((tab === 'grain' || tab === 'space') && d !== 'mote') goTab('play');
-  if (d === 'mote' && tab !== 'play' && tab !== 'grain' && tab !== 'space' && tab !== 'rack') goTab('play');
+  if (d === 'mote' && tab !== 'play' && tab !== 'grain' && tab !== 'space' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if ((tab === 'tracks' || tab === 'place') && d !== 'heptode') goTab('play');
-  if (d === 'heptode' && tab !== 'play' && tab !== 'tracks' && tab !== 'place' && tab !== 'rack') goTab('play');
+  if (d === 'heptode' && tab !== 'play' && tab !== 'tracks' && tab !== 'place' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if ((tab === 'life' || tab === 'route') && d !== 'geissler') goTab('play');
-  if (d === 'geissler' && tab !== 'play' && tab !== 'life' && tab !== 'route' && tab !== 'rack') goTab('play');
+  if (d === 'geissler' && tab !== 'play' && tab !== 'life' && tab !== 'route' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'band' && d !== 'pentagrid') goTab('play');
-  if (d === 'pentagrid' && tab !== 'play' && tab !== 'band' && tab !== 'rack') goTab('play');
+  if (d === 'pentagrid' && tab !== 'play' && tab !== 'band' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'scan' && d !== 'orthicon') goTab('play');
-  if (d === 'orthicon' && tab !== 'play' && tab !== 'scan' && tab !== 'rack') goTab('play');
+  if (d === 'orthicon' && tab !== 'play' && tab !== 'scan' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'shape' && d !== 'trochotron') goTab('play');
-  if (d === 'trochotron' && tab !== 'play' && tab !== 'shape' && tab !== 'rack') goTab('play');
+  if (d === 'trochotron' && tab !== 'play' && tab !== 'shape' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if ((tab === 'orbit' || tab === 'tone') && d !== 'gyrotron') goTab('play');
-  if (d === 'gyrotron' && tab !== 'play' && tab !== 'orbit' && tab !== 'tone' && tab !== 'rack') goTab('play');
+  if (d === 'gyrotron' && tab !== 'play' && tab !== 'orbit' && tab !== 'tone' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'mouth' && d !== 'klystron') goTab('play');
-  if (d === 'klystron' && tab !== 'play' && tab !== 'mouth' && tab !== 'rack') goTab('play');
+  if (d === 'klystron' && tab !== 'play' && tab !== 'mouth' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'bend' && d !== 'phantastron') goTab('play');
-  if (d === 'phantastron' && tab !== 'play' && tab !== 'bend' && tab !== 'rack') goTab('play');
+  if (d === 'phantastron' && tab !== 'play' && tab !== 'bend' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'spin' && d !== 'additron') goTab('play');
-  if (d === 'additron' && tab !== 'play' && tab !== 'spin' && tab !== 'rack') goTab('play');
+  if (d === 'additron' && tab !== 'play' && tab !== 'spin' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (tab === 'cavity' && d !== 'rhumbatron') goTab('play');
-  if (d === 'rhumbatron' && tab !== 'play' && tab !== 'cavity' && tab !== 'rack') goTab('play');
-  if (d === 'resnatron' && tab !== 'play' && tab !== 'rack') goTab('play');
+  if (d === 'rhumbatron' && tab !== 'play' && tab !== 'cavity' && tab !== 'rack' && tab !== 'mix') goTab('play');
+  if (d === 'resnatron' && tab !== 'play' && tab !== 'rack' && tab !== 'mix') goTab('play');
   const run = () => {
     const sleepOthers = except => {
-      if (except !== 'dekatron') drumHost.setActive(false);
-      if (except !== 'lattice') latticeHost.setActive(false);
-      if (except !== 'thyratron') thyHost.setActive(false);
-      if (except !== 'gleam') gleamHost.setActive(false);
-      if (except !== 'mote') moteHost.setActive(false);
-      if (except !== 'heptode') heptodeHost.setActive(false);
-      if (except !== 'geissler') geisslerHost.setActive(false);
-      if (except !== 'pentagrid') pentaHost.setActive(false);
-      if (except !== 'orthicon') orthiconHost.setActive(false);
-      if (except !== 'trochotron') trHost.setActive(false);
-      if (except !== 'gyrotron') gyHost.setActive(false);
-      if (except !== 'klystron') klHost.setActive(false);
-      if (except !== 'phantastron') phHost.setActive(false);
-      if (except !== 'additron') adHost.setActive(false);
-      if (except !== 'rhumbatron') rhumHost.setActive(false);
-      if (except !== 'resnatron') rnHost.setActive(false);
+      const keep = id => id === except || mixArmed.includes(id);
+      if (!keep('dekatron')) drumHost.setActive(false);
+      if (!keep('lattice')) latticeHost.setActive(false);
+      if (!keep('thyratron')) thyHost.setActive(false);
+      if (!keep('gleam')) gleamHost.setActive(false);
+      if (!keep('mote')) moteHost.setActive(false);
+      if (!keep('heptode')) heptodeHost.setActive(false);
+      if (!keep('geissler')) geisslerHost.setActive(false);
+      if (!keep('pentagrid')) pentaHost.setActive(false);
+      if (!keep('orthicon')) orthiconHost.setActive(false);
+      if (!keep('trochotron')) trHost.setActive(false);
+      if (!keep('gyrotron')) gyHost.setActive(false);
+      if (!keep('klystron')) klHost.setActive(false);
+      if (!keep('phantastron')) phHost.setActive(false);
+      if (!keep('additron')) adHost.setActive(false);
+      if (!keep('rhumbatron')) rhumHost.setActive(false);
+      if (!keep('resnatron')) rnHost.setActive(false);
     };
     if (d === 'dekatron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('dekatron');
-      return drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { drumHost.setActive(true); drumHost.setPatch(cur); });
+      return drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { drumHost.setActive(true); drumHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'lattice') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('lattice');
-      return latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { latticeHost.setActive(true); latticeHost.setPatch(cur); });
+      return latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { latticeHost.setActive(true); latticeHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'thyratron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('thyratron');
       return thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => {
-        thyHost.setActive(true); thyHost.setPatch(cur); thyHost.bend(bendV); thyHost.mod(modV);
+        thyHost.setActive(true); thyHost.setPatch(cur); thyHost.bend(bendV); thyHost.mod(modV); holdArmed();
       });
     }
     if (d === 'mote') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('mote');
-      return moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { moteHost.setActive(true); moteHost.setPatch(cur); });
+      return moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { moteHost.setActive(true); moteHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'heptode') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('heptode');
-      return heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { heptodeHost.setActive(true); heptodeHost.setPatch(cur); });
+      return heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { heptodeHost.setActive(true); heptodeHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'geissler') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('geissler');
-      return geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { geisslerHost.setActive(true); geisslerHost.setPatch(cur); });
+      return geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { geisslerHost.setActive(true); geisslerHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'pentagrid') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('pentagrid');
-      return pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { pentaHost.setActive(true); pentaHost.setPatch(cur); });
+      return pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { pentaHost.setActive(true); pentaHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'orthicon') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('orthicon');
-      return orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { orthiconHost.setActive(true); orthiconHost.setPatch(cur); });
+      return orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { orthiconHost.setActive(true); orthiconHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'trochotron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('trochotron');
-      return trHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { trHost.setActive(true); trHost.setPatch(cur, false); });
+      return trHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { trHost.setActive(true); trHost.setPatch(cur, false); holdArmed(); });
     }
     if (d === 'gyrotron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('gyrotron');
-      return gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { gyHost.setActive(true); gyHost.setPatch(cur); });
+      return gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { gyHost.setActive(true); gyHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'klystron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('klystron');
-      return klHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { klHost.setActive(true); klHost.setPatch(cur); });
+      return klHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { klHost.setActive(true); klHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'phantastron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('phantastron');
-      return phHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { phHost.setActive(true); phHost.setPatch(cur); });
+      return phHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { phHost.setActive(true); phHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'additron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('additron');
-      return adHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { adHost.setActive(true); adHost.setPatch(cur); });
+      return adHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { adHost.setActive(true); adHost.setPatch(cur); holdArmed(); });
     }
     if (d === 'rhumbatron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('rhumbatron');
       return rhumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => {
-        rhumHost.setActive(true); rhumHost.setPatch(cur); rhumHost.bend(bendV); rhumHost.mod(modV);
+        rhumHost.setActive(true); rhumHost.setPatch(cur); rhumHost.bend(bendV); rhumHost.mod(modV); holdArmed();
       });
     }
     if (d === 'resnatron') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       sleepOthers('resnatron');
-      return rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { rnHost.setActive(true); rnHost.setPatch(cur); });
+      return rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => { rnHost.setActive(true); rnHost.setPatch(cur); holdArmed(); });
     }
     sleepOthers('');
     if (d === 'gleam') {
-      const node = E.nodes[E.device]; if (node) node.port.postMessage({ t: 'active', on: false });
+      releaseRailVoice();
       gleamHost.setActive(true); gleamHost.setPatch(cur);
+      holdArmed();
       return;
     }
-    gleamHost.setActive(false);
+    if (!mixArmed.includes('gleam')) gleamHost.setActive(false);
     E.setDevice(d, cur);
+    holdArmed();
   };
   refreshAll(); fillSelect(); $('saveForm').classList.remove('open');
   if (E) return run();
@@ -2305,33 +2707,33 @@ refreshAll(); fillSelect();
 function goTab(t) {
   if (t === 'patch' && dev !== 'cathode') t = 'play';
   if (t === 'voice' && dev !== 'dekatron') t = 'play';
-  if (dev === 'dekatron' && t !== 'play' && t !== 'voice' && t !== 'rack') t = 'play';
+  if (dev === 'dekatron' && t !== 'play' && t !== 'voice' && t !== 'rack' && t !== 'mix') t = 'play';
   if (dev === 'lattice' && (t === 'stereo' || t === 'voice' || t === 'patch')) t = 'play';
   if (dev === 'thyratron' && (t === 'stereo' || t === 'patch' || t === 'voice')) t = 'play';
-  if (dev === 'gleam' && t !== 'play' && t !== 'rack') t = 'play';
+  if (dev === 'gleam' && t !== 'play' && t !== 'rack' && t !== 'mix') t = 'play';
   if ((t === 'grain' || t === 'space') && dev !== 'mote') t = 'play';
-  if (dev === 'mote' && t !== 'play' && t !== 'grain' && t !== 'space' && t !== 'rack') t = 'play';
+  if (dev === 'mote' && t !== 'play' && t !== 'grain' && t !== 'space' && t !== 'rack' && t !== 'mix') t = 'play';
   if ((t === 'tracks' || t === 'place') && dev !== 'heptode') t = 'play';
-  if (dev === 'heptode' && t !== 'play' && t !== 'tracks' && t !== 'place' && t !== 'rack') t = 'play';
+  if (dev === 'heptode' && t !== 'play' && t !== 'tracks' && t !== 'place' && t !== 'rack' && t !== 'mix') t = 'play';
   if ((t === 'life' || t === 'route') && dev !== 'geissler') t = 'play';
-  if (dev === 'geissler' && t !== 'play' && t !== 'life' && t !== 'route' && t !== 'rack') t = 'play';
+  if (dev === 'geissler' && t !== 'play' && t !== 'life' && t !== 'route' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'band' && dev !== 'pentagrid') t = 'play';
-  if (dev === 'pentagrid' && t !== 'play' && t !== 'band' && t !== 'rack') t = 'play';
+  if (dev === 'pentagrid' && t !== 'play' && t !== 'band' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'scan' && dev !== 'orthicon') t = 'play';
-  if (dev === 'orthicon' && t !== 'play' && t !== 'scan' && t !== 'rack') t = 'play';
+  if (dev === 'orthicon' && t !== 'play' && t !== 'scan' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'shape' && dev !== 'trochotron') t = 'play';
-  if (dev === 'trochotron' && t !== 'play' && t !== 'shape' && t !== 'rack') t = 'play';
+  if (dev === 'trochotron' && t !== 'play' && t !== 'shape' && t !== 'rack' && t !== 'mix') t = 'play';
   if ((t === 'orbit' || t === 'tone') && dev !== 'gyrotron') t = 'play';
-  if (dev === 'gyrotron' && t !== 'play' && t !== 'orbit' && t !== 'tone' && t !== 'rack') t = 'play';
+  if (dev === 'gyrotron' && t !== 'play' && t !== 'orbit' && t !== 'tone' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'mouth' && dev !== 'klystron') t = 'play';
-  if (dev === 'klystron' && t !== 'play' && t !== 'mouth' && t !== 'rack') t = 'play';
+  if (dev === 'klystron' && t !== 'play' && t !== 'mouth' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'bend' && dev !== 'phantastron') t = 'play';
-  if (dev === 'phantastron' && t !== 'play' && t !== 'bend' && t !== 'rack') t = 'play';
+  if (dev === 'phantastron' && t !== 'play' && t !== 'bend' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'spin' && dev !== 'additron') t = 'play';
-  if (dev === 'additron' && t !== 'play' && t !== 'spin' && t !== 'rack') t = 'play';
+  if (dev === 'additron' && t !== 'play' && t !== 'spin' && t !== 'rack' && t !== 'mix') t = 'play';
   if (t === 'cavity' && dev !== 'rhumbatron') t = 'play';
-  if (dev === 'rhumbatron' && t !== 'play' && t !== 'cavity' && t !== 'rack') t = 'play';
-  if (dev === 'resnatron' && t !== 'play' && t !== 'rack') t = 'play';
+  if (dev === 'rhumbatron' && t !== 'play' && t !== 'cavity' && t !== 'rack' && t !== 'mix') t = 'play';
+  if (dev === 'resnatron' && t !== 'play' && t !== 'rack' && t !== 'mix') t = 'play';
   document.body.dataset.tab = t; document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === t))); store.set('filament_tab', t); requestAnimationFrame(() => drawCables());
 }
 document.querySelectorAll('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.go)));
@@ -2346,6 +2748,7 @@ document.querySelectorAll('.tube[data-tab-go]').forEach(f => f.addEventListener(
   sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }));
 goTab(store.get('filament_tab', 'play') || 'play');
+if (location.hash === '#mix') goTab('mix');
 
 // ---------------------------------------------------------------- keyboard on screen
 let baseOct = store.get('filament_oct', 3), vel = 0.8;
@@ -3040,6 +3443,25 @@ function applyRnShare() {
 }
 applyRnShare();
 
+function paintMixMeters() {
+  if (E && document.visibilityState !== 'hidden') {
+    const lv = E.mix.meters();
+    MIX_ROWS.forEach(([id, s]) => {
+      const c = $('mix' + s + 'Meter');
+      if (!c) return;
+      const g = c.getContext('2d');
+      if (!g) return;
+      const w = c.width, h = c.height, v = Math.max(0, Math.min(1, lv[id] || 0));
+      g.fillStyle = '#141414';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = v > 0.92 ? '#ff6b6b' : '#ffb347';
+      g.fillRect(0, 0, w * v, h);
+    });
+  }
+  requestAnimationFrame(paintMixMeters);
+}
+requestAnimationFrame(paintMixMeters);
+
 // ---------------------------------------------------------------- test hook
 function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 window.__synth = {
@@ -3583,6 +4005,19 @@ window.__synth = {
   registerDevice: desc => E && E.registerDevice(desc),
   mixer: () => E ? E.mix.all() : null,
   setMixer: (id, s) => { const r = E.mix.set(id, s); syncHostUI(); return r; },
+  mixTargets: () => routeTargets(dev, mixArmed),
+  mixArm: list => { setMixArmed(list); return mixArmed.slice(); },
+  mixSession: () => collectSession(),
+  saveMix: () => { const s = collectSession(); saveSession(localStorage, s); return s; },
+  loadMix: () => { const s = loadSession(localStorage); if (s) applySession(s); return s; },
+  applyMix: raw => applySession(raw),
+  stripMeters: () => (E ? E.mix.meters() : null),
+  voiceMeters: () => {
+    const o = {};
+    if (!E) return o;
+    Object.keys(E.meters).forEach(k => { o[k] = (E.meters[k] && E.meters[k].voices) || 0; });
+    return o;
+  },
   transport: () => E ? E.transport : null,
   project: () => collectProject(),
   saveProject: () => { const p = collectProject(); saveLocal(localStorage, p); return p; },

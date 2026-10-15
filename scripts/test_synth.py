@@ -1670,6 +1670,21 @@ with sync_playwright() as pw:
            ph.is_visible("#mMaster") and ph.is_visible("#fxRev") and not ph.is_visible("#mFilt")
            and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}") and not small,
            (ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"), small))
+        ph.locator('.tabs [data-go="mix"]').scroll_into_view_if_needed(); ph.locator('.tabs [data-go="mix"]').tap(); ph.wait_for_timeout(180)
+        ck(f"10. {w}px: the Mix tab is the desk, with letters, arms, meters and sends",
+           ph.is_visible("#mHost") and ph.is_visible("#mixFArm") and ph.is_visible("#mixFMeter") and ph.is_visible("#mixFRev")
+           and ph.is_visible("#mixCArm") and ph.is_visible("#mixKArm") and not ph.is_visible("#mFilt")
+           and ph.evaluate("document.body.dataset.tab") == "mix"
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"),
+           ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
+        small = ph.evaluate("""() => [...document.querySelectorAll('#mHost .btn, #mHost .chip, #mHost input')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.getAttribute('aria-label') || e.textContent)""")
+        ck(f"10. {w}px: the mix desk controls are 44 px or more", not small, small)
+        ph.locator("#mixFArm").scroll_into_view_if_needed(); ph.locator("#mixFArm").tap()
+        ph.locator("#mixCArm").scroll_into_view_if_needed(); ph.locator("#mixCArm").tap(); ph.wait_for_timeout(80)
+        armed = ph.evaluate("__synth.mixTargets()")
+        ck(f"10. {w}px: arming two devices routes the keys to both", armed == ["filament", "cathode"], armed)
+        ph.locator("#mixClear").scroll_into_view_if_needed(); ph.locator("#mixClear").tap(); ph.wait_for_timeout(40)
+        ck(f"10. {w}px: clear arms sends the keys back to the lit device", ph.evaluate("__synth.mixTargets()") == ["filament"])
         ck(f"10. {w}px: no page errors", not perr, perr)
         ph.close()
     # Dekatron on a phone, on its own page so the checks above keep starting from Filament.
@@ -1999,6 +2014,83 @@ with sync_playwright() as pw:
     boot = pg.evaluate("""() => ({ tempo: __synth.transport().state().tempo, mix: __synth.mixer().cathode, name: document.getElementById('projName').value })""")
     ck("R. the saved project restores tempo, mixer and name on reload", boot["tempo"] == 88 and abs(boot["mix"]["level"] - 0.25) < 1e-6 and boot["mix"]["solo"] and boot["name"] == "Uploaded", boot)
     ck("R. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Mx. the mix desk: arms, sends, one session
+    pure_mx = pg.evaluate("""async () => {
+      const s = await import('/synth/mixsession.js');
+      const m = await import('/synth/mixer.js');
+      const none = s.routeTargets('cathode', []);
+      const one = s.routeTargets('filament', ['cathode']);
+      const many = s.routeTargets('filament', ['klystron', 'filament', 'nope', 'filament']);
+      const ses = s.normalizeSession({ name: '  Night ', armed: ['cathode', 'bogus', 'mote'], bus: { delayTime: 9, delayFeedback: -1 }, channels: { filament: { level: 2, sendR: 0.4, sendD: 3 } } });
+      const strip = m.normalizeStrip({ sendR: 0.25, sendD: -2 });
+      return {
+        none, one, many, kind: ses.kind, v: ses.v, name: ses.name, armed: ses.armed,
+        delay: ses.bus.delayTime, fb: ses.bus.delayFeedback, sendR: ses.channels.filament.sendR, sendD: ses.channels.filament.sendD,
+        nch: Object.keys(ses.channels).length, file: s.sessionFileName(ses),
+        zeroR: strip.sendR, zeroD: strip.sendD, letters: s.MIX_CHANNELS.map(c => c.letter),
+      };
+    }""")
+    ck("Mx. no arm follows the lit device, one arm plays that device, several play together",
+       pure_mx["none"] == ["cathode"] and pure_mx["one"] == ["cathode"] and pure_mx["many"] == ["klystron", "filament"], pure_mx)
+    ck("Mx. a session normalizes the name, the arms, the sends and the shared bus",
+       pure_mx["kind"] == "dxmix" and pure_mx["v"] == 1 and pure_mx["name"] == "Night" and pure_mx["armed"] == ["cathode", "mote"]
+       and pure_mx["delay"] == 1.5 and pure_mx["fb"] == 0 and abs(pure_mx["sendR"] - 0.4) < 1e-9 and pure_mx["sendD"] == 1
+       and pure_mx["nch"] >= 18 and pure_mx["file"] == "mix-night.json" and abs(pure_mx["zeroR"] - 0.25) < 1e-9 and pure_mx["zeroD"] == 0
+       and pure_mx["letters"][:4] == ["F", "C", "D", "L"] and pure_mx["letters"][-4:] == ["Q", "N", "R", "S"], pure_mx)
+
+    def seg_rms(x, a, b):
+        i, j = int(a * SR), int(b * SR)
+        seg = x[i:j]
+        return float(np.sqrt(np.mean(seg ** 2))) if len(seg) else 0.0
+    mxp = patch(osc1={"wave": "sine", "level": 0.45}, stereo={"pan": "center", "spread": 0}, envA={"a": 0.001, "d": 0.02, "s": 1, "r": 0.004, "vel": 0})
+    dryL, dryR = render(mxp, note(69, 0.0, 0.2), 1.5, rack=False, masterFx=False)
+    zeroL, zeroR = render(mxp, note(69, 0.0, 0.2), 1.5, rack=False, masterFx=False, mixer={"filament": {"sendR": 0, "sendD": 0}})
+    body_d, body_z = seg_rms(dryL, 0.05, 0.15), seg_rms(zeroL, 0.05, 0.15)
+    ck("Mx. zero sends leave the dry level alone", body_d > 1e-4 and abs(db(body_z / body_d)) < 0.25, (body_d, body_z))
+    revL, revR = render(mxp, note(69, 0.0, 0.2), 1.5, rack=False, masterFx=False, mixer={"filament": {"sendR": 1}})
+    dlyL, dlyR = render(mxp, note(69, 0.0, 0.2), 1.5, rack=False, masterFx=False, mixer={"filament": {"sendD": 1}})
+    tail_d, tail_r, tail_y = seg_rms(dryL, 0.55, 1.35), seg_rms(revL, 0.55, 1.35), seg_rms(dlyL, 0.45, 1.2)
+    ck("Mx. a reverb send rings after the note", tail_r > tail_d * 4 and tail_r > 1e-4, (tail_d, tail_r))
+    ck("Mx. a delay send repeats after the note", tail_y > tail_d * 4 and tail_y > 1e-4, (tail_d, tail_y))
+    muteL, muteR = render(mxp, note(69, 0.0, 0.2), 1.2, rack=False, masterFx=False, mixer={"filament": {"mute": True, "sendR": 1, "sendD": 1}})
+    ck("Mx. mute silences the sends as well as the channel", seg_rms(muteL, 0.05, 1.0) < 1e-5 and seg_rms(muteR, 0.05, 1.0) < 1e-5, (seg_rms(muteL, 0.05, 1.0), seg_rms(muteR, 0.05, 1.0)))
+
+    pg.evaluate("""() => {
+      __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 });
+      __synth.setMixer('cathode', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 });
+      return __synth.mixArm(['filament', 'cathode']);
+    }""")
+    pg.evaluate("__synth.noteOn(60, 0.85)")
+    pg.wait_for_timeout(280)
+    both = pg.evaluate("() => ({ t: __synth.mixTargets(), v: __synth.voiceMeters(), m: __synth.stripMeters() })")
+    pg.evaluate("__synth.noteOff(60)")
+    pg.wait_for_timeout(80)
+    ck("Mx. arming Filament and Cathode plays the note on both",
+       both["t"] == ["filament", "cathode"] and both["v"].get("filament", 0) >= 1 and both["v"].get("cathode", 0) >= 1
+       and both["m"].get("filament", 0) > 0.01 and both["m"].get("cathode", 0) > 0.01, both)
+    pg.evaluate("__synth.setMixer('filament', { sendR: 0.5 })")
+    ck("Mx. the reverb send slider follows the strip", abs(float(pg.locator("#mixFRev").input_value()) - 0.5) < 1e-6, pg.locator("#mixFRev").input_value())
+    pg.fill("#mixName", "Desk")
+    pg.click("#mixSave")
+    pg.evaluate("__synth.mixArm([])")
+    pg.evaluate("__synth.setMixer('filament', { sendR: 0 })")
+    pg.click("#mixLoad")
+    pg.wait_for_timeout(80)
+    restored = pg.evaluate("""() => ({ armed: __synth.mixTargets(), send: __synth.mixer().filament.sendR, name: document.getElementById('mixName').value })""")
+    ck("Mx. save and load restore the arms, the send and the session name",
+       restored["armed"] == ["filament", "cathode"] and abs(restored["send"] - 0.5) < 1e-6 and restored["name"] == "Desk", restored)
+    with pg.expect_download() as mxdl:
+        pg.click("#mixDown")
+    mxfile = json.loads(open(mxdl.value.path(), encoding="utf-8").read())
+    ck("Mx. download is a dxmix session", mxfile.get("kind") == "dxmix" and mxfile.get("v") == 1 and "filament" in mxfile.get("channels", {}) and mxfile.get("armed") == ["filament", "cathode"], mxfile.get("kind"))
+    pg.evaluate("""() => {
+      __synth.mixArm([]);
+      __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 });
+      __synth.setMixer('cathode', { level: 0.25, pan: -1, mute: false, solo: true, sendR: 0, sendD: 0 });
+      __synth.noteOff(60);
+    }""")
+    ck("Mx. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
