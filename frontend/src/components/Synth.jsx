@@ -17,7 +17,7 @@ export default function Synth() {
   return (
     <div className="synth-panel">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; hexode &middot; anode</div>
+        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; hexode &middot; anode</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
           Filament is polyphonic and built around lit tubes that do real
           work: one drives the filters, one sits inside the Valve filter's resonance loop, and a
@@ -25,6 +25,7 @@ export default function Synth() {
           high-pass and low-pass pair and a patch panel you wire with cables.
           Lattice is a wavetable instrument. Mote is a granular instrument: load a file, record the mic, or capture the rack.
           Heptode plays MIDI files and lets you reshape each track.
+          Geissler is a meadow: reeds, grazers, stalks and flickers play when they meet, eat, breed or die.
           Play them with the keys on screen, your computer keyboard, or a MIDI keyboard.
           Full page version at <a href="/synth/">dxedge.net/synth</a>.
           Gleam is a touch field on the same rack, and full screen at <a href="/synth/gleam/">/synth/gleam/</a>.

@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -2851,6 +2851,205 @@ with sync_playwright() as pw:
     ph.screenshot(path=os.path.join(SHOTS, "synth_heptode_phone.png"))
     ck("H. 390px: no page errors", not perr, perr)
     ph.close()
+
+    # Geissler: a seeded meadow. The world is pure (same seed, same events) and the
+    # worklet speaks only when something happens. Population cannot run past the cap.
+    devg = pg.evaluate("""() => { const d = __synth.geisslerDevice(); return {
+      id: d.id, name: d.name, api: d.api, inst: d.instrument, outs: d.audioOutputs,
+      midiIn: d.midiInput, midiOut: d.midiOutput, proc: d.processor, worklet: d.worklet,
+      ch: d.channels, over: d.oversample,
+      cap: d.parameters.cap && d.parameters.cap.default, birth: d.parameters.birth && d.parameters.birth.type,
+      seed: d.parameters.seed && d.parameters.seed.default, scale: d.parameters.scale && d.parameters.scale.choices,
+    }; }""")
+    ck("Gs. Geissler is a stereo dxrack/1 instrument with MIDI in and out",
+       devg["id"] == "geissler" and devg["name"] == "Geissler" and devg["api"] == "dxrack/1" and devg["inst"]
+       and devg["outs"] == 1 and devg["midiIn"] and devg["midiOut"] and devg["proc"] == "geissler"
+       and devg["worklet"] == "geissler.worklet.js" and devg["ch"] == 2 and devg["over"] == 1
+       and devg["cap"] == 16 and devg["birth"] == "float" and devg["seed"] == 1701 and "penta" in (devg["scale"] or []) and "free" in (devg["scale"] or []),
+       devg)
+    busy = {"device": "geissler", "seed": 1701, "birth": 1, "death": 0.35, "mutation": 0, "food": 1,
+            "cap": 24, "capReed": 8, "capGraze": 8, "capStalk": 6, "capFlicker": 8,
+            "grid": "8", "tempo": 120, "scale": "major", "running": True}
+    sim_a = pg.evaluate("(p) => __synth.geisslerSim(p, 6)", busy)
+    sim_b = pg.evaluate("(p) => __synth.geisslerSim(p, 6)", busy)
+    kinds = {e["kind"] for e in sim_a["events"]}
+    ck("Gs. the same seed builds the same meadow", sim_a == sim_b and sim_a["popMax"] > 0, (sim_a["pop"], sim_a["stats"]))
+    other = pg.evaluate("(p) => __synth.geisslerSim(Object.assign({}, p, { seed: 1702 }), 6)", busy)
+    ck("Gs. a different seed is a different meadow", other != sim_a, other["stats"])
+    ck("Gs. meetings, meals, births and deaths each schedule a note",
+       {"meet", "eat", "breed", "die"} <= kinds and sim_a["stats"]["meet"] > 0 and sim_a["stats"]["eat"] > 0
+       and sim_a["stats"]["breed"] > 0 and sim_a["stats"]["die"] > 0, sim_a["stats"])
+    on_grid = all(abs(e["at"] / 0.25 - round(e["at"] / 0.25)) < 1e-6 for e in sim_a["events"])
+    ck("Gs. eighth notes at 120 BPM land on the grid", on_grid and len(sim_a["events"]) > 10, sim_a["events"][:3])
+    breed = next(e for e in sim_a["events"] if e["kind"] == "breed")
+    mean_p = (breed["parentPitch"][0] + breed["parentPitch"][1]) / 2
+    mean_r = (breed["parentRhythm"][0] + breed["parentRhythm"][1]) / 2
+    ck("Gs. a child with no mutation is the average of its parents",
+       abs(breed["childPitch"] - mean_p) < 1e-9 and abs(breed["childRhythm"] - mean_r) < 1e-9, breed)
+    mut = pg.evaluate("(p) => __synth.geisslerSim(Object.assign({}, p, { mutation: 1 }), 6)", busy)
+    mut_b = [e for e in mut["events"] if e["kind"] == "breed"]
+    drifted = [e for e in mut_b if abs(e["childPitch"] - (e["parentPitch"][0] + e["parentPitch"][1]) / 2) > 1e-6]
+    in_range = all(0 <= e["childPitch"] <= 1 and 0 <= e["childRhythm"] <= 1 for e in mut_b)
+    ck("Gs. mutation moves a child gene and keeps it inside 0..1", len(drifted) > 0 and in_range, (len(mut_b), len(drifted)))
+    capped = pg.evaluate("""() => __synth.geisslerSim({
+      device: 'geissler', seed: 1701, birth: 1, death: 0.2, mutation: 0.2, food: 1,
+      cap: 4, capReed: 4, capGraze: 4, capStalk: 4, capFlicker: 4, grid: '8', tempo: 120, running: true
+    }, 12)""")
+    ck("Gs. the population stays inside the cap", capped["popMax"] <= 4 and capped["pop"] <= 4, (capped["pop"], capped["popMax"], capped["stats"]))
+    ck("Gs. free time is not quantized", abs(pg.evaluate("() => __synth.geisslerQuant(0.31, 120, 'free')") - 0.31) < 1e-12)
+    spring = pg.evaluate("() => __synth.geisslerSeason(0, 8)")
+    summer = pg.evaluate("() => __synth.geisslerSeason(2, 8)")
+    ck("Gs. a season walks the key from spring to summer",
+       spring["name"] == "Spring" and spring["keyShift"] == 0 and abs(spring["mood"] - 0.5) < 1e-9
+       and summer["name"] == "Summer" and summer["keyShift"] == 5 and abs(summer["mood"] - 1) < 1e-9, (spring, summer))
+    major = pg.evaluate("() => __synth.geisslerNote(0.07, 'graze', 60, 'major', 0)")
+    free_n = pg.evaluate("() => __synth.geisslerNote(0.07, 'graze', 60, 'free', 0)")
+    ck("Gs. a scale snaps and free keeps the fractional pitch",
+       major["midi"] == int(major["midi"]) and abs(major["hz"] - 440 * (2 ** ((major["midi"] - 69) / 12))) < 1e-6
+       and abs(free_n["hz"] - major["hz"]) > 0.01, (major, free_n))
+    ck("Gs. mutation zero is an exact blend", abs(pg.evaluate("() => __synth.geisslerBlend(0.2, 0.8, 0, 1)") - 0.5) < 1e-12)
+
+    def grender(patch, events, seconds):
+        return dec(pg.evaluate("(a) => __synth.geisslerRender(a)", {"patch": patch, "events": events, "seconds": seconds, "sampleRate": 48000}))
+    world_patch = {"device": "geissler", "seed": 1701, "running": True, "level": 0.8, "grid": "8", "tempo": 120, "scale": "major"}
+    gL, gR = grender(world_patch, [], 1.2)
+    gL2, gR2 = grender(world_patch, [], 1.2)
+    gpeak = float(max(np.max(np.abs(gL)), np.max(np.abs(gR))))
+    ck("Gs. a meadow render is finite, audible and inside 0 dBFS",
+       np.isfinite(gL).all() and np.isfinite(gR).all() and hrms(gL) > 1e-3 and gpeak <= 1.0 + 1e-6, (hrms(gL), gpeak))
+    ck("Gs. two renders of one seed match", float(np.max(np.abs(gL - gL2))) == 0 and float(np.max(np.abs(gR - gR2))) == 0)
+
+    def zc(x):
+        s = np.sign(x)
+        s[s == 0] = 1
+        return int(np.sum(s[1:] * s[:-1] < 0))
+    quiet = {"device": "geissler", "running": False, "grid": "free", "scale": "free", "level": 0.9, "voices": 8,
+             "routeReed": "self", "routeGraze": "self", "routeStalk": "self", "routeFlicker": "self"}
+    def tap(species, n, **extra):
+        ev = {"t": "tap", "species": species, "n": n, "v": 0.9, "snap": False, "at": 0.02}
+        ev.update(extra)
+        return grender(quiet, [ev], 1.0)
+    reedL, _ = tap("reed", 60, pan=0)
+    grazeL, _ = tap("graze", 60, pan=0)
+    stalkL, _ = tap("stalk", 40, pan=0)
+    flickL, _ = tap("flicker", 84, pan=0)
+    ck("Gs. a reed holds and a grazer decays",
+       hrms(reedL, 20000, 40000) > hrms(reedL, 0, 800) * 0.4 and hrms(grazeL, 0, 8000) > hrms(grazeL, 30000, 40000) * 8,
+       (hrms(reedL, 20000, 40000), hrms(grazeL, 0, 8000), hrms(grazeL, 30000, 40000)))
+    ck("Gs. a stalk sits lower than a flicker",
+       peak_freq(stalkL[1000:8000]) < 220 and zc(flickL[1000:12000]) > zc(stalkL[1000:12000]) * 2,
+       (peak_freq(stalkL[1000:8000]), zc(stalkL[1000:12000]), zc(flickL[1000:12000])))
+    leftL, leftR = tap("graze", 60, pan=-1)
+    rightL, rightR = tap("graze", 60, pan=1)
+    ck("Gs. position pans the note",
+       hrms(leftL, 0, 8000) > 1e-3 and hrms(leftR, 0, 8000) < 1e-6 and hrms(rightR, 0, 8000) > 1e-3 and hrms(rightL, 0, 8000) < 1e-5,
+       (hrms(leftL, 0, 8000), hrms(leftR, 0, 8000), hrms(rightL, 0, 8000), hrms(rightR, 0, 8000)))
+    capv = pg.evaluate("""() => __synth.geisslerProbe(
+      { device: 'geissler', running: false, voices: 4, level: 0.8, grid: 'free', scale: 'free' },
+      Array.from({length: 20}, (_, i) => ({ t: 'tap', species: 'graze', n: 48 + i, v: 0.8, snap: false, at: 0.02 })),
+      0.6)""")
+    ck("Gs. the voice pool never passes the cap", capv["maxVoices"] <= 4 and capv["maxVoices"] >= 1, capv)
+    ended = pg.evaluate("""() => __synth.geisslerProbe(
+      { device: 'geissler', running: false, voices: 8, level: 0.8, grid: 'free', scale: 'free', routeGraze: 'filament' },
+      [{ t: 'tap', species: 'graze', n: 60, v: 0.8, snap: false, at: 0.02 }, { t: 'panic', at: 0.2 }],
+      0.8)""")
+    ck("Gs. panic releases the voice and closes the routed note",
+       ended["sounding"] == 0 and ended["tail"] < 1e-4 and ended["midiOn"] == ended["midiOff"] and ended["midiOn"] >= 1,
+       ended)
+    asleep = pg.evaluate("""() => __synth.geisslerProbe(
+      { device: 'geissler', running: true, level: 0.9 },
+      [{ t: 'active', on: false, at: 0 }, { t: 'tap', species: 'reed', n: 60, v: 0.9, at: 0.05 }],
+      0.5)""")
+    ck("Gs. a sleeping meadow is silent", asleep["rms"] < 1e-5 and asleep["sounding"] == 0, asleep)
+
+    gerr = []
+    pg.on("pageerror", lambda e: gerr.append(str(e)))
+    pg.evaluate("__synth.setDevice('geissler')")
+    pg.wait_for_timeout(250)
+    ck("Gs. the meadow is on screen and the tube chassis is hidden",
+       pg.evaluate("__synth.device()") == "geissler" and pg.is_visible("#geissWorld") and pg.is_visible("#mGeissWorld")
+       and not pg.is_visible("#chassis") and not pg.is_visible("#mFilt"), gerr)
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'geissler', seed: 4242, food: 0, running: true, tool: 'food', birth: 0, death: 0,
+      cap: 12, capReed: 4, capGraze: 4, capStalk: 2, capFlicker: 4, level: 0.7
+    })""")
+    pg.wait_for_function("() => document.getElementById('geissSeed').value === '4242'", timeout=4000)
+    pg.wait_for_timeout(350)
+    pg.wait_for_function("() => document.getElementById('geissFood').textContent === '0'", timeout=4000)
+    pg.click("#geissWorld")
+    pg.wait_for_function("() => +document.getElementById('geissFood').textContent >= 1", timeout=4000)
+    ck("Gs. a tap drops food", int(pg.evaluate("() => document.getElementById('geissFood').textContent")) >= 1)
+    pg.click("#geissTools button[data-id='herd']")
+    box = pg.locator("#geissWorld").bounding_box()
+    pg.mouse.move(box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.3)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] * 0.42, box["y"] + box["height"] * 0.63)
+    pg.mouse.up()
+    herd = pg.evaluate("() => document.getElementById('geissHerd').textContent")
+    hx, hy = [float(v) for v in herd.split(",")] if herd and "," in herd else (0, 0)
+    ck("Gs. a drag herds toward the pointer", abs(hx - 0.42) < 0.04 and abs(hy - 0.63) < 0.04, herd)
+    pg.evaluate("""() => {
+      const mix = __synth.mixer() || {};
+      Object.keys(mix).forEach(id => __synth.setMixer(id, { mute: false, solo: false, level: mix[id].level, pan: mix[id].pan }));
+      __synth.setMixer('geissler', { level: 1, pan: 0, mute: false, solo: false });
+      __synth.setPatch({ device: 'geissler', seed: 1701, running: true, birth: 1, death: 0.3, food: 1, level: 0.85, grid: '8', tempo: 120, scale: 'major',
+        routeReed: 'self', routeGraze: 'self', routeStalk: 'self', routeFlicker: 'self' });
+    }""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_timeout(80)
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'geissler', running: false, spawn: 'graze', routeGraze: 'filament', grid: 'free', scale: 'free', seed: 1701, level: 0.8
+    })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.noteOn(60, 0.9)")
+    pg.wait_for_function("() => ((__synth.engine().meters.filament || {}).voices || 0) > 0", timeout=4000)
+    ck("Gs. a grazer can play Filament", pg.evaluate("() => (__synth.engine().meters.filament || {}).voices") > 0)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => ((__synth.engine().meters.filament || {}).voices || 0) === 0", timeout=4000)
+    ck("Gs. the routed note does not stick", pg.evaluate("() => (__synth.engine().meters.filament || {}).voices") == 0)
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'geissler', seed: 1701, running: true, level: 0.85, birth: 0.8, food: 0.8, grid: '8', tempo: 108, scale: 'penta',
+      routeReed: 'self', routeGraze: 'self', routeStalk: 'self', routeFlicker: 'self'
+    })""")
+    pg.wait_for_timeout(100)
+    g_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(800)
+    grec = pg.evaluate("() => __synth.recordStop()")
+    grec_raw = base64.b64decode(grec["b64"]) if grec and grec.get("b64") else b""
+    grec_info = parse_wav(grec_raw) if grec_raw else None
+    grec_rms = hrms(pcm24(grec_info["data"])[0]) if grec_info and len(grec_info["data"]) >= 6 else 0
+    ck("Gs. the master recorder hears Geissler",
+       grec_info and grec_info["bits"] == 24 and grec_info["ch"] == 2 and grec_info["rate"] == g_sr and grec.get("sr") == g_sr
+       and grec_rms > 1e-3 and bool(_re2.fullmatch(r"Geissler-\d{8}-\d{6}\.wav", grec.get("name") or "")),
+       (grec_rms, None if not grec else grec.get("sr"), None if not grec else grec.get("name")))
+    ck("Gs. the page stayed quiet", not gerr, gerr)
+
+    gp = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    gperr = []
+    gp.on("pageerror", lambda e: gperr.append(str(e)))
+    gp.goto(BASE)
+    gp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    gp.evaluate("__synth.setDevice('geissler')")
+    gp.wait_for_timeout(300)
+    ck("Gs. 390px: no horizontal scroll, the meadow is up",
+       gp.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and gp.is_visible("#geissWorld") and not gp.is_visible("#mFilt") and not gp.is_visible("#chassis"),
+       (gp.evaluate("[document.documentElement.scrollWidth, innerWidth]"), gperr))
+    gsmall = gp.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #geisslerRoot .chip, #geisslerRoot .btn, #geisslerRoot input, #geisslerRoot select')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Gs. 390px: rail, tabs and meadow controls are 44 px or more", not gsmall, gsmall)
+    gp.tap('.tabs [data-go="life"]')
+    gp.wait_for_timeout(200)
+    ck("Gs. 390px: Life shows birth and the scale",
+       gp.is_visible("#mGeissLife") and gp.is_visible("#geissScale") and gp.is_visible("#kGeissLife")
+       and not gp.is_visible("#geissWorld")
+       and gp.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    gp.screenshot(path=os.path.join(SHOTS, "synth_geissler_phone.png"))
+    ck("Gs. 390px: no page errors", not gperr, gperr)
+    gp.close()
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(150)
     b.close()
