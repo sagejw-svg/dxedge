@@ -201,6 +201,7 @@ export function createKlystronEngine(sr, patch) {
     wasFreeze: false,
     locked: false,
     arm: 0,
+    loud: 0,
     grains: Array.from({ length: MAX_GRAINS }, () => ({ on: false, pos: 0, i: 0, len: 32, inc: 1, pan: 0 })),
     spawn: 0,
     queue: [],
@@ -280,6 +281,7 @@ export function silenceKlystron(eng) {
   eng.freezePos = 0;
   eng.locked = false;
   eng.arm = 0;
+  eng.loud = 0;
   eng.spawn = 0;
   for (let i = 0; i < eng.grains.length; i++) eng.grains[i].on = false;
   eng.r1.y1 = eng.r1.y2 = eng.r2.y1 = eng.r2.y2 = eng.r3.y1 = eng.r3.y2 = 0;
@@ -545,6 +547,7 @@ export function renderKlystron(eng, outL, outR, input, frame0) {
     if (!freeze) {
       eng.locked = false;
       eng.arm = 0;
+      eng.loud = 0;
     }
     eng.wasFreeze = freeze;
     if (!eng.locked) {
@@ -552,10 +555,13 @@ export function renderKlystron(eng, outL, outR, input, frame0) {
       eng.ringR[eng.write] = dry;
       eng.write++;
       if (eng.write >= ringN) eng.write = 0;
-      if (freeze && (dry > 0.02 || dry < -0.02)) {
+      if (freeze) {
         eng.arm++;
+        if (dry > 0.02 || dry < -0.02) eng.loud++;
         const need = Math.max(8, (eng.P.grain.size / 1000) * eng.sr);
-        if (eng.arm >= need) {
+        // A note shorter than the grain still freezes what was heard.
+        const heard = eng.loud > Math.min(need * 0.25, eng.sr * 0.03);
+        if (eng.arm >= need || (heard && !anyVoice(eng))) {
           eng.locked = true;
           eng.freezePos = eng.write;
         }
