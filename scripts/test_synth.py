@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), a slashless /synth load through the service worker, and playing-it checks (keys,
@@ -1337,7 +1337,7 @@ with sync_playwright() as pw:
     dl = di.value
     dl_bytes = open(dl.path(), "rb").read()
     dl_info = parse_wav(dl_bytes)
-    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron"}.get(pg.evaluate("__synth.device()"), "Filament")
+    wav_label = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron"}.get(pg.evaluate("__synth.device()"), "Filament")
     ck(f"M. render button downloads a WAV ({dl.suggested_filename}, {len(dl_bytes)} bytes)",
        bool(_re2.fullmatch(wav_label + r"-\d{8}-\d{6}\.wav", dl.suggested_filename)) and dl_info and dl_info["rate"] == 44100 and dl_info["bits"] == 24 and len(dl_info["data"]) == 44100 * 6, dl.suggested_filename)
     live_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
@@ -1397,8 +1397,8 @@ with sync_playwright() as pw:
     pg.evaluate("""() => __synth.setMaster({tempo:120, delay:{on:false}, reverb:{on:false}, comp:{on:false}})""")
 
     # The header rec button is on every device. Stopping it downloads the same 24-bit master WAV.
-    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron")
-    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron"}
+    DEVICES = ("filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon", "trochotron", "gyrotron")
+    WAV_LABEL = {"filament": "Filament", "cathode": "Cathode", "thyratron": "Thyratron", "gleam": "Gleam", "dekatron": "Dekatron", "lattice": "Lattice", "mote": "Mote", "heptode": "Heptode", "geissler": "Geissler", "pentagrid": "Pentagrid", "orthicon": "Orthicon", "trochotron": "Trochotron", "gyrotron": "Gyrotron"}
     for dev in DEVICES:
         pg.evaluate("(d) => __synth.setDevice(d)", dev)
         pg.wait_for_timeout(250)
@@ -3524,6 +3524,187 @@ with sync_playwright() as pw:
     ph.screenshot(path=os.path.join(SHOTS, "synth_trochotron_phone.png"))
     ck("Fr. 390px: no page errors", not perr, perr)
     ph.close()
+
+    # ---------------------------------------------------------------- Gy. Gyrotron, the gravity sequencer
+    devy = pg.evaluate("""() => { const d = __synth.gyrotronDevice(); return {
+      id: d.id, name: d.name, api: d.api, inst: d.instrument, outs: d.audioOutputs,
+      midiIn: d.midiInput, midiOut: d.midiOutput, proc: d.processor, worklet: d.worklet,
+      ch: d.channels, over: d.oversample,
+      scale: d.parameters.scale && d.parameters.scale.choices,
+      seed: d.parameters.seed && d.parameters.seed.default,
+      seedType: d.parameters.seed && d.parameters.seed.type,
+      bodies: d.parameters.bodyCount && d.parameters.bodyCount.type,
+      gravity: d.parameters.gravity && d.parameters.gravity.type,
+    }; }""")
+    ck("Gy. Gyrotron is a stereo dxrack/1 instrument with MIDI in and out",
+       devy["id"] == "gyrotron" and devy["name"] == "Gyrotron" and devy["api"] == "dxrack/1" and devy["inst"]
+       and devy["outs"] == 1 and devy["midiIn"] and devy["midiOut"] and devy["proc"] == "gyrotron"
+       and devy["worklet"] == "gyrotron.worklet.js" and devy["ch"] == 2 and devy["over"] == 1
+       and devy["seed"] == 1701 and devy["seedType"] == "float" and devy["bodies"] == "int" and devy["gravity"] == "float"
+       and "penta" in (devy["scale"] or []) and "free" in (devy["scale"] or []),
+       devy)
+    sky = {"device": "gyrotron", "seed": 1701, "running": True}
+    sim_a = pg.evaluate("(p) => __synth.gyrotronSim(p, 2)", sky)
+    sim_b = pg.evaluate("(p) => __synth.gyrotronSim(p, 2)", sky)
+    kinds = {e["kind"] for e in sim_a["events"]}
+    ck("Gy. the same seed builds the same sky", sim_a == sim_b and sim_a["stats"]["hit"] > 0 and sim_a["stats"]["cross"] > 0, sim_a["stats"])
+    other = pg.evaluate("(p) => __synth.gyrotronSim(Object.assign({}, p, { seed: 1702 }), 2)", sky)
+    ck("Gy. a different seed is a different sky", other != sim_a and other["stats"]["hit"] > 0, other["stats"])
+    ck("Gy. collisions and orbit crossings each schedule a note",
+       {"hit", "cross"} <= kinds and len(sim_a["events"]) > 8, sim_a["stats"])
+    hit = pg.evaluate("""() => __synth.gyrotronScript(
+      { device: 'gyrotron', gravity: 0, pull: 0, drag: 0, root: 60, scale: 'major', key: 0 },
+      [{ t: 'body', x: 0.35, y: 0.5, vx: 0.5, vy: 0, r: 0.04 },
+       { t: 'body', x: 0.65, y: 0.5, vx: -0.5, vy: 0, r: 0.04 }],
+      0.6)""")
+    ck("Gy. two bodies on a line collide once",
+       hit["stats"]["hit"] == 1 and hit["stats"]["cross"] == 0 and len(hit["events"]) == 1
+       and hit["events"][0]["kind"] == "hit" and abs(hit["events"][0]["at"] - 0.222222) < 1e-4
+       and hit["events"][0]["pan"] == 0 and hit["events"][0]["midi"] == int(hit["events"][0]["midi"]),
+       hit["events"])
+    cross = pg.evaluate("""() => __synth.gyrotronScript(
+      { device: 'gyrotron', gravity: 0, pull: 0, drag: 0, root: 60, scale: 'major', key: 0 },
+      [{ t: 'well', x: 0.5, y: 0.5, reach: 0.2 },
+       { t: 'body', x: 0.72, y: 0.48, vx: 0, vy: 0.45, r: 0.02 }],
+      0.5)""")
+    ck("Gy. a body crossing a well rings one note",
+       cross["stats"]["cross"] == 1 and cross["stats"]["hit"] == 0 and len(cross["events"]) == 1
+       and cross["events"][0]["kind"] == "cross" and cross["events"][0]["midi"] == 60
+       and abs(cross["events"][0]["at"] - 0.044444) < 1e-4,
+       cross["events"])
+    major = pg.evaluate("() => __synth.gyrotronPitch(0.07, 60, 'major', 0)")
+    free_n = pg.evaluate("() => __synth.gyrotronPitch(0.07, 60, 'free', 0)")
+    ck("Gy. a scale snaps and free keeps the fractional pitch",
+       major["midi"] == 48 and major["snapped"] is True
+       and abs(major["hz"] - 440 * (2 ** ((48 - 69) / 12))) < 1e-6
+       and free_n["snapped"] is False and abs(free_n["hz"] - major["hz"]) > 0.01,
+       (major, free_n))
+    def gyrender(patch, seconds):
+        return dec(pg.evaluate("(a) => __synth.gyrotronRender(a)", {"patch": patch, "seconds": seconds, "sampleRate": 48000}))
+    world_patch = {"device": "gyrotron", "seed": 1701, "running": True, "level": 0.84, "scale": "penta"}
+    yL, yR = gyrender(world_patch, 1.2)
+    yL2, yR2 = gyrender(world_patch, 1.2)
+    ypeak = float(max(np.max(np.abs(yL)), np.max(np.abs(yR))))
+    ck("Gy. an orbit render is finite, audible and inside 0 dBFS",
+       np.isfinite(yL).all() and np.isfinite(yR).all() and hrms(yL) > 1e-3 and hrms(yR) > 1e-3 and ypeak <= 1.0 + 1e-6,
+       (hrms(yL), hrms(yR), ypeak))
+    ck("Gy. two renders of one seed match", float(np.max(np.abs(yL - yL2))) == 0 and float(np.max(np.abs(yR - yR2))) == 0)
+    quietL, quietR = gyrender({"device": "gyrotron", "seed": 1701, "running": True, "level": 0}, 0.6)
+    ck("Gy. level 0 is silent", hrms(quietL) < 1e-5 and hrms(quietR) < 1e-5, (hrms(quietL), hrms(quietR)))
+    capv = pg.evaluate("""() => __synth.gyrotronProbe(
+      { device: 'gyrotron', running: false, voices: 4, level: 0.8, route: 'self' },
+      Array.from({length: 20}, (_, i) => ({ t: 'on', n: 48 + i, v: 0.8, at: 0.02 })),
+      0.5)""")
+    ck("Gy. the voice pool never passes the cap", capv["maxVoices"] <= 4 and capv["maxVoices"] >= 1, capv)
+    ended = pg.evaluate("""() => __synth.gyrotronProbe(
+      { device: 'gyrotron', running: false, voices: 8, level: 0.8, route: 'filament' },
+      [{ t: 'on', n: 60, v: 0.8, local: true, at: 0.02 }, { t: 'panic', at: 0.2 }],
+      0.8)""")
+    ck("Gy. panic releases the voice and closes the routed note",
+       ended["sounding"] == 0 and ended["tail"] < 1e-4 and ended["midiOn"] == ended["midiOff"] and ended["midiOn"] >= 1,
+       ended)
+    asleep = pg.evaluate("""() => __synth.gyrotronProbe(
+      { device: 'gyrotron', running: true, level: 0.9 },
+      [{ t: 'active', on: false, at: 0 }, { t: 'gesture', g: { t: 'well', x: 0.2, y: 0.2 }, at: 0.05 },
+       { t: 'on', n: 60, v: 0.9, local: true, at: 0.05 }],
+      0.5)""")
+    ck("Gy. a sleeping orbit is silent", asleep["rms"] < 1e-5 and asleep["sounding"] == 0, asleep)
+    mid = pg.evaluate("""() => {
+      const bytes = __synth.gyrotronMidi({ device: 'gyrotron', seed: 1701, running: true }, 2);
+      const f = __synth.smf.read(bytes);
+      const notes = f.song.parts.reduce((n, p) => n + (p.notes || 0), 0);
+      return { notes, parts: f.song.parts.length, bpm: f.song.bpm };
+    }""")
+    ck("Gy. export is a MIDI file of hits and crossings",
+       mid["notes"] > 0 and mid["parts"] >= 2 and abs(mid["bpm"] - 120) < 0.2, mid)
+
+    yerr = []
+    pg.on("pageerror", lambda e: yerr.append(str(e)))
+    pg.evaluate("__synth.setDevice('gyrotron')")
+    pg.wait_for_timeout(250)
+    ck("Gy. the orbit is on screen and the tube chassis is hidden",
+       pg.evaluate("__synth.device()") == "gyrotron" and pg.is_visible("#gyCanvas") and pg.is_visible("#mGyField")
+       and not pg.is_visible("#chassis") and not pg.is_visible("#mFilt"), yerr)
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'gyrotron', seed: 1701, tool: 'well', wellCount: 2, bodyCount: 5, running: true, level: 0.8, route: 'self'
+    })""")
+    pg.wait_for_function("() => (__synth.gyrotronMeter().wells || 0) === 2", timeout=4000)
+    box = pg.locator("#gyCanvas").bounding_box()
+    pg.mouse.click(box["x"] + box["width"] * 0.12, box["y"] + box["height"] * 0.5)
+    pg.wait_for_function("() => (__synth.gyrotronMeter().wells || 0) === 3", timeout=4000)
+    ck("Gy. a tap places a well", pg.evaluate("() => __synth.gyrotronMeter().wells") == 3)
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'gyrotron', seed: 1701, tool: 'fling', wellCount: 2, bodyCount: 5, running: false, level: 0.8, route: 'self'
+    })""")
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => (__synth.gyrotronMeter().voices || 0) === 0 && (__synth.gyrotronMeter().bodies || []).length > 0", timeout=4000)
+    body = pg.evaluate("() => __synth.gyrotronMeter().bodies[0]")
+    pg.mouse.move(box["x"] + box["width"] * body[1], box["y"] + box["height"] * body[2])
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + box["width"] * body[1] + box["width"] * 0.22, box["y"] + box["height"] * body[2])
+    pg.mouse.up()
+    flung = pg.evaluate("() => document.getElementById('gyFling').textContent")
+    parts = [float(v) for v in flung.split(",")] if flung and "," in flung else [0, 0]
+    ck("Gy. a drag flings a body", len(parts) == 2 and (abs(parts[0]) > 0.05 or abs(parts[1]) > 0.05), flung)
+    pg.evaluate("__synth.noteOn(64, 0.85)")
+    pg.wait_for_function("() => (__synth.gyrotronMeter().voices || 0) > 0", timeout=4000)
+    pg.evaluate("__synth.noteOff(64)")
+    pg.wait_for_function("() => (__synth.gyrotronMeter().voices || 0) === 0", timeout=4000)
+    ck("Gy. a key speaks and lets go", True)
+    pg.evaluate("""() => __synth.setPatch({
+      device: 'gyrotron', seed: 1701, running: false, route: 'filament', level: 0.7, bodyCount: 5, wellCount: 2
+    })""")
+    pg.wait_for_timeout(80)
+    pg.evaluate("__synth.noteOn(60, 0.9)")
+    pg.wait_for_function("() => ((__synth.engine().meters.filament || {}).voices || 0) > 0", timeout=4000)
+    ck("Gy. an orbit note can play Filament", pg.evaluate("() => (__synth.engine().meters.filament || {}).voices") > 0)
+    pg.evaluate("__synth.panic()")
+    pg.wait_for_function("() => ((__synth.engine().meters.filament || {}).voices || 0) === 0", timeout=4000)
+    ck("Gy. the routed note does not stick", pg.evaluate("() => (__synth.engine().meters.filament || {}).voices") == 0)
+    pg.evaluate("""() => {
+      const mix = __synth.mixer() || {};
+      Object.keys(mix).forEach(id => __synth.setMixer(id, { mute: false, solo: false, level: mix[id].level, pan: mix[id].pan }));
+      __synth.setMixer('gyrotron', { level: 1, pan: 0, mute: false, solo: false });
+      __synth.setPatch({ device: 'gyrotron', seed: 1701, running: true, level: 0.85, route: 'self', bodyCount: 5, wellCount: 2 });
+    }""")
+    pg.wait_for_timeout(100)
+    y_sr = int(pg.evaluate("() => __synth.engine().ctx.sampleRate"))
+    pg.evaluate("() => __synth.recordStart()")
+    pg.wait_for_timeout(800)
+    yrec = pg.evaluate("() => __synth.recordStop()")
+    yrec_raw = base64.b64decode(yrec["b64"]) if yrec and yrec.get("b64") else b""
+    yrec_info = parse_wav(yrec_raw) if yrec_raw else None
+    yrec_rms = hrms(pcm24(yrec_info["data"])[0]) if yrec_info and len(yrec_info["data"]) >= 6 else 0
+    ck("Gy. the master recorder hears Gyrotron",
+       yrec_info and yrec_info["bits"] == 24 and yrec_info["ch"] == 2 and yrec_info["rate"] == y_sr and yrec.get("sr") == y_sr
+       and yrec_rms > 1e-3 and bool(_re2.fullmatch(r"Gyrotron-\d{8}-\d{6}\.wav", yrec.get("name") or "")),
+       (yrec_rms, None if not yrec else yrec.get("sr"), None if not yrec else yrec.get("name")))
+    ck("Gy. the page stayed quiet", not yerr, yerr)
+
+    yp = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    yperr = []
+    yp.on("pageerror", lambda e: yperr.append(str(e)))
+    yp.goto(BASE)
+    yp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    yp.evaluate("__synth.setDevice('gyrotron')")
+    yp.wait_for_timeout(300)
+    ck("Gy. 390px: no horizontal scroll, the orbit is up",
+       yp.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390")
+       and yp.is_visible("#gyCanvas") and not yp.is_visible("#mFilt") and not yp.is_visible("#chassis"),
+       (yp.evaluate("[document.documentElement.scrollWidth, innerWidth]"), yperr))
+    ysmall = yp.evaluate("""() => [...document.querySelectorAll('.devbtn, .tabs button, #gyRoot .chip, #gyRoot .btn, #gyRoot input, #gyRoot select')]
+      .filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+      .map(e => (e.id || e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck("Gy. 390px: rail, tabs and orbit controls are 44 px or more", not ysmall, ysmall)
+    yp.tap('.tabs [data-go="tone"]')
+    yp.wait_for_timeout(200)
+    ck("Gy. 390px: Tone shows the voice and hides the sky",
+       yp.is_visible("#mGyTone") and yp.is_visible("#kGyTone") and yp.is_visible("#gyRoute")
+       and not yp.is_visible("#gyCanvas")
+       and yp.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 390"))
+    yp.screenshot(path=os.path.join(SHOTS, "synth_gyrotron_phone.png"))
+    ck("Gy. 390px: no page errors", not yperr, yperr)
+    yp.close()
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(120)
     ck("Fr. no page errors", not errs, errs)
