@@ -64,6 +64,11 @@
   .tube figcaption b { color: var(--amber2); font-weight: 600; letter-spacing: 0.5px; }
   .tube.off figcaption b { color: var(--dim); }
   .tgroup { display: flex; gap: 2px; align-items: flex-end; }
+  .chassis { position: relative; }
+  .vlamps { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(16, 5px); gap: 3px; pointer-events: none; }
+  .vlamps i { width: 5px; height: 5px; border-radius: 50%; background: #241c14; box-shadow: inset 0 0 1px #000; }
+  .vlamps i.on { background: #ffb347; box-shadow: 0 0 5px #ff9a2e, 0 0 9px rgba(255,140,40,0.55); }
+  .chassis[data-show="off"] .vlamps { display: none; }
   .eye { display: flex; flex-direction: column; align-items: center; }
   .eye canvas { width: 54px; height: 54px; display: block; }
   .vu canvas { width: 230px; height: 74px; display: block; }
@@ -792,6 +797,7 @@
       <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span><span data-dev="gleam">GLEAM<small>touch field &middot; model 06</small></span><span data-dev="mote">MOTE<small>granular &middot; model 07</small></span><span data-dev="heptode">HEPTODE<small>midi files &middot; model 08</small></span><span data-dev="geissler">GEISSLER<small>meadow &middot; model 09</small></span><span data-dev="pentagrid">PENTAGRID<small>shortwave &middot; model 10</small></span><span data-dev="orthicon">ORTHICON<small>spectral painter &middot; model 11</small></span><span data-dev="trochotron">TROCHOTRON<small>fractal seed &middot; model 12</small></span><span data-dev="gyrotron">GYROTRON<small>gravity wells &middot; model 13</small></span><span data-dev="klystron">KLYSTRON<small>talk box &middot; model 14</small></span><span data-dev="phantastron">PHANTASTRON<small>bent toy &middot; model 15</small></span><span data-dev="additron">ADDITRON<small>additive organ &middot; model 16</small></span><span data-dev="rhumbatron">RHUMBATRON<small>physical model &middot; model 17</small></span><span data-dev="resnatron">RESNATRON<small>patch bay &middot; model 18</small></span></div>
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
+      <div class="vlamps" id="vLamps" aria-hidden="true" title="Voice lamps: one per sounding voice"></div>
       <div class="lamps">
         <div class="lamp"><i id="lampAudio"></i><span id="audioState">audio off</span></div>
         <div class="lamp"><i id="lampCpu"></i>cpu <b id="cpuV">0%</b></div>
@@ -894,6 +900,10 @@
         <canvas id="eqCv" tabindex="0" aria-label="Graphic equalizer. Left and right arrows pick a band, up and down change its level (shift for 3 dB), 0 resets it."></canvas>
         <div class="knobs" id="kEq"></div>
         <div class="note">After the ensemble and before the output tubes, so a boost drives them harder. &plusmn;12 dB per band; double click a band to zero it. The LED ladders show the live spectrum.</div></section>
+      <section class="mod" data-tab="rack" id="mShow"><h3><span class="pilot"></span>Tube show</h3>
+        <div class="chips" id="showChips" role="group" aria-label="Tube show"><span class="cl">show</span></div>
+        <div class="eq-read"><span class="dim">flares, red plating, arcs and blue glow on the chassis tubes; reduced motion keeps the steady glow only</span></div>
+      </section>
       <section class="mod" data-tab="rack" id="mOut" data-wide><h3><span class="pilot"></span>Output tubes, V3 and V4</h3><div class="chips" data-chips="out.tube"></div><div class="chips" data-chips="out.topology"></div>
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
       <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
@@ -1227,7 +1237,8 @@
 <script type="module">
 import { makeKnob } from './knob.js';
 import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample } from './rack.js';
-import { paintTubeState, fitCanvas } from './tubepaint.js';
+import { paintTubeState, paintTubeShow, fitCanvas } from './tubepaint.js';
+import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
 import { createPlayer } from './player.js';
@@ -1817,6 +1828,7 @@ function noteOn(n, v, src) {
   if (!set) { set = new Set(); holds.set(n, set); }
   set.add(src);
   if (!fresh) return;
+  showKeyed.set(n, performance.now()); showNote(SHOW, v);
   if (mixArmed.length) {
     const targets = mixArmed.slice();
     noteRoutes.set(n, targets);
@@ -3148,6 +3160,26 @@ const TUBE_ST = {};
 ['v1', 'v2', 'v3', 'v4'].forEach(k => { TUBE_ST[k] = { shown: '12AX7', heat: 0, glow: 0, drive: 3, bias: 0, on: true, tubeOn: true, tvFilter: 'natural', tvBright: 100, tvFlicker: 35 }; });
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (reduceMotion) Object.values(TUBE_ST).forEach(s => s.tvFlicker = 0);
+// The tube show (James, 13 Oct): exaggerated flares, red plating, arcs, blue glow, resonance and voice
+// lamps. State in tubeshow.js, drawing in tubepaint.js; it reads the meters, never the audio path.
+let showSaved = 'full'; try { showSaved = localStorage.getItem(SHOW_KEY) || 'full'; } catch (e) {}
+const SHOW = makeShow(showSaved, reduceMotion);
+const showKeyed = new Map();                 // note -> when the page sent it (so a meter does not flare it twice)
+function refreshShowChips() { document.querySelectorAll('#showChips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === SHOW.mode))); $('chassis').dataset.show = SHOW.mode; }
+function setShow(mode) {
+  if (!setShowMode(SHOW, mode)) return false;
+  try { localStorage.setItem(SHOW_KEY, mode); } catch (e) {}
+  refreshShowChips(); return true;
+}
+SHOW_MODES.forEach(mo => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = mo; b.textContent = mo;
+  b.addEventListener('click', () => setShow(mo)); $('showChips').appendChild(b); });
+{ const vl = $('vLamps'); for (let i = 0; i < 16; i++) vl.appendChild(document.createElement('i')); }
+refreshShowChips();
+let lampsShown = -1;
+function paintVoiceLamps(n) {
+  if (n === lampsShown) return; lampsShown = n;
+  $('vLamps').querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', i < n));
+}
 let vuL = 0, vuR = 0, eyeLv = 0, anBuf = null, lastFrame = 0, lastNow = 0;
 function rms(an) { if (!anBuf || anBuf.length !== an.fftSize) anBuf = new Float32Array(an.fftSize); an.getFloatTimeDomainData(anBuf); let s = 0, p = 0; for (let i = 0; i < anBuf.length; i++) { const v = anBuf[i]; s += v * v; const a = Math.abs(v); if (a > p) p = a; } return [Math.sqrt(s / anBuf.length), p]; }
 function drawEye(lv) {
@@ -3260,6 +3292,22 @@ function frame(now) {
     v3: { tube: cur.out.tube, drive: cur.out.drive, bias: cur.out.bias, lv: clampN(oL * 5, 0, 1.2), on: true },
     v4: { tube: cur.out.tube, drive: cur.out.drive, bias: cur.out.bias, lv: clampN(oR * 5, 0, 1.2), on: true },
   };
+  // tube show inputs: the levels above, the drive knobs, hard clipping, V2's resonance, the voices
+  const keysOn = cath || dev === 'filament';  // Filament or Cathode lit: the meter carries note numbers
+  if (keysOn) { const tnow = performance.now(); showNotes(SHOW, m.notes, null, n => tnow - (showKeyed.get(n) || -1e9) < 250); }
+  // V1's meter sums every voice's power; per voice, a factory patch reads 0.19 to 0.46 RMS and V1 at
+  // drive 10 on a full saw 0.80, so above 0.6 per voice is hard clipping. The output ceiling is 0.99.
+  const ceil = pk >= 0.95, v1raw = keysOn ? (m.v1 || 0) / Math.sqrt(Math.max(1, m.voices || 0)) : 0;
+  const resV2 = valve ? cur.filt.res : cath ? cur.lpf.peak : 0;
+  stepShow(SHOW, dt, {
+    lv: { v1: tgt.v1.lv, v2: tgt.v2.lv, v3: tgt.v3.lv, v4: tgt.v4.lv },
+    drive: { v1: tgt.v1.drive, v2: tgt.v2.drive, v3: tgt.v3.drive, v4: tgt.v4.drive },
+    on: { v1: tgt.v1.on, v2: tgt.v2.on, v3: tgt.v3.on, v4: tgt.v4.on },
+    clip: { v1: v1raw > 0.6, v2: false, v3: ceil, v4: ceil },
+    res: resV2, osc: valve ? resV2 >= 0.92 : cath ? resV2 >= 0.88 : false,
+    voices: ((thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m) || {}).voices || 0,
+  });
+  const td0 = performance.now();
   ['v1', 'v2', 'v3', 'v4'].forEach(k => {
     const s = TUBE_ST[k], t = tgt[k];
     s.shown = t.tube; s.drive = t.drive; s.bias = t.bias; s.on = t.on; s.tubeOn = t.on;
@@ -3267,8 +3315,10 @@ function frame(now) {
     s.heat += (ht - s.heat) * (1 - Math.exp(-dt / (ht > s.heat ? 0.6 : 0.25)));
     const gt = 0.3 + 0.7 * t.lv;
     s.glow += (gt - s.glow) * (1 - Math.exp(-dt / 0.08));
-    try { paintTubeState($('tube' + k.toUpperCase()), now, s, 'rack'); } catch (e) {}
+    try { paintTubeShow($('tube' + k.toUpperCase()), now, s, 'rack', showFor(SHOW, k)); } catch (e) {}
   });
+  SHOW.drawMs += (performance.now() - td0 - SHOW.drawMs) * 0.1;
+  paintVoiceLamps(SHOW.lamps);
   // VU: 300 ms ballistics, 0 VU = -12 dBFS RMS (factory patches sit around -14)
   const vuOf = r => 20 * Math.log10(r + 1e-9) + 12;
   const kv = 1 - Math.exp(-dt / 0.3);
@@ -3635,6 +3685,8 @@ function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.by
 window.__synth = {
   version: '0.19-resnatron',
   ready: () => !!E,
+  tubeShow: () => showState(SHOW),
+  setTubeShow: mode => setShow(mode),
   device: () => dev,
   setDevice: d => setDevice(d),
   patch: () => clone(cur),

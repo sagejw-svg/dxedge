@@ -399,4 +399,40 @@ import { TUBES, TUBE_BY } from './rack.js';
 var ADV = null, TV = null;
 function tubeTick(){}                       // the synth advances heat and glow itself
 function paintTubeState(cv, now, st, view){ ADV = st; TV = st; return renderTube(cv, now, view||'rack'); }
-export { paintTubeState, TUBE_LOOKS, LOOK_BY, fitCanvas, rgba, mix };
+
+// ---- the tube show (James, 13 Oct 2026): an exaggerated overlay, drawn over a painted tube ----
+// sh comes from tubeshow.js showFor(): { k, flare, heat, arc, seed, blue, res, shimmer, reduced }, 0..1 each,
+// k the mode scale (subtle 0.45, full 1). Drawn in the same 120 x 200 tube space, added on top.
+var SHOW_GREY=[110,104,98], SHOW_CHERRY=[215,28,14], SHOW_ORANGE=[255,150,40], SHOW_FLARE=[255,226,170],
+  SHOW_BLUE=[70,125,255], SHOW_ARC=[200,226,255], SHOW_RES=[255,196,110], SHOW_EDGE=TW/2-1;   // halos fade out inside the canvas
+function paintTubeShow(cv, now, st, view, sh){
+  var o=paintTubeState(cv, now, st, view); if(!o || !sh || !(sh.k>0)) return o;
+  var any=sh.flare>0.01||sh.heat>0.02||sh.arc>0.01||sh.blue>0.02||sh.res>0.02; if(!any) return o;
+  var r=cv.width/o.w, s=o.s, c=cv.getContext('2d'), k=sh.k, cx=TW/2, tt=now/1000;
+  var t=TUBE_BY[st.shown]||TUBES[0], g=GEO[t.shape], mid=(g.pTop+g.pBot)/2, plH=g.pBot-g.pTop, hw=profAt(g, mid)-1.4, pw=hw*0.62;
+  c.save(); c.setTransform(r*s,0,0,r*s,r*o.tx,r*o.ty); c.globalCompositeOperation='lighter';
+  var rad=function(x,y,r0,r1,col,a){ var q=c.createRadialGradient(x,y,r0,x,y,r1); q.addColorStop(0,rgba(col,a)); q.addColorStop(1,rgba(col,0)); c.fillStyle=q; c.fillRect(x-r1,y-r1,r1*2,r1*2); };
+  // red plating: grey, then cherry, then orange, with a halo that spills onto the chassis
+  if(sh.heat>0.02){ var h=clampN(sh.heat,0,1), col=h<0.5?mix(SHOW_GREY,SHOW_CHERRY,h*2):mix(SHOW_CHERRY,SHOW_ORANGE,(h-0.5)*2);
+    var pg=c.createLinearGradient(cx-pw,0,cx+pw,0); pg.addColorStop(0,rgba(col,0)); pg.addColorStop(0.5,rgba(col,0.85*h*k)); pg.addColorStop(1,rgba(col,0));
+    c.fillStyle=pg; c.fillRect(cx-pw, g.pTop+2, pw*2, plH-4);
+    rad(cx, mid, hw*0.3, SHOW_EDGE, col, 0.38*h*h*k);
+    c.save(); c.translate(cx,g.chassis+4); c.scale(1,0.25); rad(0,0,2,SHOW_EDGE,col,0.45*h*k); c.restore(); }
+  // power tubes glow blue with the output
+  if(sh.blue>0.02){ var b=clampN(sh.blue,0,1), bg=c.createLinearGradient(0,g.pTop-10,0,g.pBot+6);
+    bg.addColorStop(0,rgba(SHOW_BLUE,0)); bg.addColorStop(0.35,rgba(SHOW_BLUE,0.7*b*k)); bg.addColorStop(0.7,rgba(SHOW_BLUE,0.5*b*k)); bg.addColorStop(1,rgba(SHOW_BLUE,0));
+    c.fillStyle=bg; c.fillRect(cx-hw, g.pTop-10, hw*2, plH+16); rad(cx, mid, hw*0.5, SHOW_EDGE, SHOW_BLUE, 0.22*b*k); }
+  // resonance on V2: brighter with resonance, shimmering when it self-oscillates
+  if(sh.res>0.02){ var sm=sh.shimmer ? 0.72+0.28*Math.sin(tt*29)*Math.sin(tt*7.7+0.6) : 1;
+    rad(cx, mid, 1, hw*1.6, SHOW_RES, 0.65*sh.res*sm*k); }
+  // note flare: a quick white-hot bloom
+  if(sh.flare>0.01) rad(cx, mid, 2, Math.min(hw*2.6, SHOW_EDGE), SHOW_FLARE, 0.9*clampN(sh.flare,0,1)*k);
+  // an arc: a jagged blue-white path from a plate to the glass, and a flash in the bulb
+  if(sh.arc>0.01){ var a=clampN(sh.arc,0,1), rs=(sh.seed>>>0)||1, rnd=function(){ rs=(Math.imul(rs,1664525)+1013904223)>>>0; return rs/4294967296; };
+    rad(cx, mid, 2, Math.min(hw*1.9, SHOW_EDGE), SHOW_ARC, 0.4*a*k);
+    for(var n=0;n<2;n++){ var side=rnd()<0.5?-1:1, y=g.pTop+plH*(0.15+0.7*rnd()), x=cx+side*pw*0.8, x1=cx+side*(profAt(g,y)-2);
+      c.beginPath(); c.moveTo(x,y); for(var j=1;j<=5;j++){ var f=j/5; c.lineTo(x+(x1-x)*f, y+(rnd()-0.5)*9*(j<5?1:0.3)); }
+      c.strokeStyle=rgba(SHOW_ARC,0.35*a*k); c.lineWidth=3; c.stroke(); c.strokeStyle=rgba([255,255,255],0.95*a*k); c.lineWidth=0.9; c.stroke(); } }
+  c.restore(); return o;
+}
+export { paintTubeState, paintTubeShow, TUBE_LOOKS, LOOK_BY, fitCanvas, rgba, mix };

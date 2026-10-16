@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -1160,6 +1160,113 @@ with sync_playwright() as pw:
     ck(f"Q. UI: the LED ladders read the live spectrum (loudest band {max(lv) if lv else -999:.0f} dBFS)", bool(lv) and max(lv) > -70, lv)
     ck("Q. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Tv. the tube show (James, 13 Oct)
+    # Visual state from __synth.tubeShow(), read in the page while the chassis frame loop runs. Peaks are
+    # sampled inside the page every 8 ms, so the round trips of evaluate() do not hide a 150 ms flare.
+    TV_PEAK = """async (a) => { const S = () => __synth.tubeShow(); await __synth.engine().ctx.resume();
+      const o0 = S().onsets; let pk = { v1: 0, v3: 0 }, t1 = -1, t3 = -1; const t0 = performance.now();
+      a.notes.forEach(n => __synth.noteOn(n, a.v));
+      while (performance.now() - t0 < a.ms) { const s = S();
+        if (s.flare.v1 > pk.v1) pk.v1 = s.flare.v1; if (s.flare.v3 > pk.v3) pk.v3 = s.flare.v3;
+        if (t1 < 0 && s.flare.v1 > 0.05) t1 = performance.now() - t0; if (t3 < 0 && s.flare.v3 > 0.05) t3 = performance.now() - t0;
+        await new Promise(r => setTimeout(r, 8)); }
+      const s = S(); a.notes.forEach(n => __synth.noteOff(n));
+      return { pk, t1, t3, onsets: s.onsets - o0, end: s }; }"""
+    pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("__synth.setTubeShow('full')"); pg.wait_for_timeout(100)
+    clean = patch(osc1={"wave": "saw", "level": 0.6}, v1={"tube": "12AX7", "drive": 2, "bias": 0}, envA={"a": 0.001, "d": 0.1, "s": 1, "r": 0.05, "vel": 0})
+    pg.evaluate("(p) => __synth.setPatch(p)", clean); pg.wait_for_timeout(200)
+    st = pg.evaluate("__synth.tubeShow()")
+    ck("Tv. the tube show defaults to full, its chip lit", st["mode"] == "full" and not st["reduced"] and pg.get_attribute('#showChips .chip[data-v="full"]', "aria-pressed") == "true", st)
+    hi = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 260}); pg.wait_for_timeout(700)
+    lo = pg.evaluate(TV_PEAK, {"notes": [62], "v": 0.3, "ms": 260}); pg.wait_for_timeout(200)
+    ck(f"Tv. a note-on flares V1 ({hi['pk']['v1']:.2f}) and then the output pair ({hi['pk']['v3']:.2f}), V1 first ({hi['t1']:.0f} ms, {hi['t3']:.0f} ms)",
+       hi["pk"]["v1"] > 0.5 and hi["pk"]["v3"] > 0.3 and 0 <= hi["t1"] <= hi["t3"], hi)
+    ck(f"Tv. the flare scales with velocity (peak {lo['pk']['v1']:.2f} at 0.3 against {hi['pk']['v1']:.2f} at 1.0)", lo["pk"]["v1"] < 0.5 * hi["pk"]["v1"] and lo["pk"]["v1"] > 0.05, (lo, hi))
+    ck(f"Tv. the flare decays (V1 {lo['end']['flare']['v1']:.3f} about 120 ms after a quiet note's peak; {hi['end']['flare']['v1']:.3f} after a loud one)", hi["end"]["flare"]["v1"] < 0.5 * hi["pk"]["v1"], hi)
+    ck(f"Tv. one key is one flare (onsets {hi['onsets']}), not one from the key and another from the meter", hi["onsets"] == 1, hi)
+    ch = pg.evaluate(TV_PEAK, {"notes": [48, 55, 60, 64], "v": 0.9, "ms": 400})
+    ck(f"Tv. a chord flares once per note ({ch['onsets']}) and lights one voice lamp per voice ({ch['end']['lamps']} lamps)",
+       ch["onsets"] == 4 and ch["end"]["lamps"] >= 4 and pg.evaluate("document.querySelectorAll('#vLamps i.on').length") == ch["end"]["lamps"], ch)
+    pg.wait_for_timeout(400)
+    ck("Tv. the voice lamps go dark when the notes end", pg.evaluate("document.querySelectorAll('#vLamps i.on').length") == 0 and pg.evaluate("__synth.tubeShow().lamps") == 0)
+    # drive and signal level heat the plates
+    HOLD = """async (a) => { await __synth.engine().ctx.resume(); a.notes.forEach(n => __synth.noteOn(n, a.v == null ? 0.9 : a.v));
+      await new Promise(r => setTimeout(r, a.ms)); const s = __synth.tubeShow(), m = __synth.meter(); a.notes.forEach(n => __synth.noteOff(n));
+      await new Promise(r => setTimeout(r, 250)); return { s, v1: m.v1 }; }"""
+    heats = []
+    for drv in (1, 9):
+        pg.evaluate("(p) => __synth.setPatch(p)", patch(osc1={"wave": "saw", "level": 0.8}, v1={"tube": "12AX7", "drive": drv, "bias": 0}))
+        pg.wait_for_timeout(150); heats.append(pg.evaluate(HOLD, {"notes": [48, 55], "ms": 1500}))
+    ck(f"Tv. more drive runs V1 hotter (heat {heats[0]['s']['heat']['v1']:.2f} at drive 1, {heats[1]['s']['heat']['v1']:.2f} at drive 9)",
+       heats[1]["s"]["heat"]["v1"] > heats[0]["s"]["heat"]["v1"] + 0.25 and heats[1]["s"]["heat"]["v1"] > 0.5, heats)
+    idle = pg.evaluate("__synth.tubeShow().heat.v1"); pg.wait_for_timeout(1500); idle2 = pg.evaluate("__synth.tubeShow().heat.v1")
+    ck(f"Tv. the plates cool when the playing stops ({idle:.2f}, then {idle2:.2f})", idle2 < 0.25, (idle, idle2))
+    # clipping fires an arc, rate limited
+    hot = patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, voice={"level": 1},
+                v1={"tube": "12AX7", "drive": 10, "bias": 0}, out={"tube": "EL34", "topology": "pp", "drive": 8, "level": 12})
+    pg.evaluate("(p) => __synth.setPatch(p)", hot); pg.wait_for_timeout(150)
+    a0 = pg.evaluate("__synth.tubeShow().arcs"); hr = pg.evaluate(HOLD, {"notes": [36, 48, 55, 60, 64, 67], "ms": 2000}); arcs = hr["s"]["arcs"] - a0
+    ck(f"Tv. a clipping chord fires arcs ({arcs} in 2 s), never more than five a second", 1 <= arcs <= 11, hr)
+    fa = []
+    for nm in ("Screaming 12AX7", "Black Light Pad", "Theremin Wail"):
+        pg.evaluate("n => __synth.load(n)", nm); pg.wait_for_timeout(150); a1 = pg.evaluate("__synth.tubeShow().arcs")
+        fa.append((nm, pg.evaluate(HOLD, {"notes": [48, 55, 60, 64], "v": 1.0, "ms": 900})["s"]["arcs"] - a1))
+    ck(f"Tv. factory patches played hard do not arc (only real clipping does): {fa}", all(x[1] == 0 for x in fa), fa)
+    ck(f"Tv. the power tubes glow blue with the output (V3 {hr['s']['blue']['v3']:.2f}) and V1 plates red (heat {hr['s']['heat']['v1']:.2f})", hr["s"]["blue"]["v3"] > 0.4 and hr["s"]["heat"]["v1"] > 0.6, hr)
+    # the canvases are painted: a held hot chord draws a brighter V1 with the show on than off
+    BRIGHT = """async () => { const cv = document.getElementById('tubeV1'), c = cv.getContext('2d'); await new Promise(r => setTimeout(r, 120));
+      const d = c.getImageData(0, 0, cv.width, cv.height).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return s / (d.length / 4); }"""
+    pg.evaluate("__synth.noteOn(48, 1); __synth.noteOn(55, 1)"); pg.wait_for_timeout(1200)
+    b_full = pg.evaluate(BRIGHT); pg.evaluate("__synth.setTubeShow('off')"); pg.wait_for_timeout(1500); b_off = pg.evaluate(BRIGHT)
+    st_off = pg.evaluate("__synth.tubeShow()")
+    pg.evaluate("__synth.noteOff(48); __synth.noteOff(55)"); pg.wait_for_timeout(250)
+    ck(f"Tv. the canvases are painted: V1 averages {b_full:.1f} with the show on and {b_off:.1f} off", b_full > b_off * 1.08 and b_off > 1, (b_full, b_off))
+    a0 = pg.evaluate("__synth.tubeShow().arcs"); ho = pg.evaluate(HOLD, {"notes": [36, 48, 55, 60], "ms": 1200})
+    ck("Tv. off: no flares, no arcs, no heat or blue glow, and the voice lamps are hidden",
+       ho["s"]["arcs"] == a0 and ho["s"]["flare"]["v1"] == 0 and ho["s"]["heat"]["v1"] < 0.02 and ho["s"]["blue"]["v3"] < 0.02 and st_off["lamps"] == 0
+       and not pg.is_visible("#vLamps") and pg.get_attribute('#showChips .chip[data-v="off"]', "aria-pressed") == "true", (ho, st_off))
+    pg.evaluate("__synth.setTubeShow('subtle')"); hs = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 200}); pg.wait_for_timeout(300)
+    ck(f"Tv. subtle: the same flare state, drawn at a lower scale (peak {hs['pk']['v1']:.2f})", hs["pk"]["v1"] > 0.5 and hs["end"]["mode"] == "subtle", hs)
+    pg.evaluate("__synth.setTubeShow('full')")
+    # resonance on V2: Valve 12 brightens with resonance and shimmers when it self-oscillates
+    res = []
+    for rv in (0.2, 0.97):
+        pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "valve12", "cutoff": 800, "res": rv, "keytrack": 0, "env": 0, "vel": 0, "drive": 3, "sag": 3}))
+        pg.wait_for_timeout(150); res.append(pg.evaluate(HOLD, {"notes": [57], "ms": 600})["s"])
+    ck(f"Tv. V2 shows the resonance ({res[0]['res']:.2f} at 0.2, {res[1]['res']:.2f} at 0.97) and shimmers only when it self-oscillates", res[1]["res"] > 0.85 and res[0]["res"] < 0.3 and res[1]["shimmer"] and not res[0]["shimmer"], res)
+    pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 800, "res": 0.97})); pg.wait_for_timeout(500)
+    ck("Tv. on Ladder 24, V2 is out of the path and shows nothing", pg.evaluate("__synth.tubeShow().res") < 0.05 and not pg.evaluate("__synth.tubeShow().shimmer"))
+    # Cathode: V2, the follower, shows the low-pass peak
+    pg.evaluate("__synth.setDevice('cathode')"); pg.evaluate("__synth.load('Plate Screamer')"); pg.wait_for_timeout(200)
+    pk_c = pg.evaluate("__synth.patch().lpf.peak"); cs = pg.evaluate(TV_PEAK, {"notes": [48], "v": 0.9, "ms": 700})
+    ck(f"Tv. Cathode: a note flares its tubes ({cs['pk']['v1']:.2f}) and V2 follows the low-pass peak (peak {pk_c}, shown {cs['end']['res']:.2f})",
+       cs["pk"]["v1"] > 0.3 and abs(cs["end"]["res"] - pk_c) < 0.1 and cs["end"]["shimmer"] == (pk_c >= 0.88), cs)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(300)
+    # the chip, remembered per browser; reduced motion keeps only the steady glow
+    tctx = b.new_context(viewport={"width": 1366, "height": 900}); tp = tctx.new_page(); terr = []; tp.on("pageerror", lambda e: terr.append(str(e)))
+    tp.goto(BASE); tp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    tp.locator("#mShow").scroll_into_view_if_needed(); tp.click('#showChips .chip[data-v="subtle"]'); tp.wait_for_timeout(100)
+    tp.reload(); tp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ck("Tv. the show chip is remembered in this browser (subtle after a reload)", tp.evaluate("__synth.tubeShow().mode") == "subtle"
+       and tp.get_attribute('#showChips .chip[data-v="subtle"]', "aria-pressed") == "true", tp.evaluate("__synth.tubeShow()"))
+    ck("Tv. the show's chips stay put: no page errors", not terr, terr)
+    tctx.close()
+    rctx = b.new_context(viewport={"width": 1366, "height": 900}, reduced_motion="reduce"); rp = rctx.new_page(); rerr = []; rp.on("pageerror", lambda e: rerr.append(str(e)))
+    rp.goto(BASE); rp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    rp.evaluate("(p) => __synth.setPatch(p)", hot); rp.wait_for_timeout(150)
+    rf = rp.evaluate(TV_PEAK, {"notes": [36, 48, 55, 60, 64], "v": 1.0, "ms": 1800})
+    rp.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "valve12", "cutoff": 800, "res": 0.97}))
+    rr = rp.evaluate(HOLD, {"notes": [57], "ms": 600})["s"]
+    ck(f"Tv. reduced motion: no flares and no arcs on a clipping chord (arcs {rf['end']['arcs']}, flare {rf['pk']['v1']})", rf["end"]["reduced"] and rf["end"]["arcs"] == 0 and rf["pk"]["v1"] == 0, rf)
+    ck(f"Tv. reduced motion keeps the steady glow (heat {rf['end']['heat']['v1']:.2f}, blue {rf['end']['blue']['v3']:.2f}) and no shimmer (resonance {rr['res']:.2f})",
+       rf["end"]["heat"]["v1"] > 0.4 and rf["end"]["blue"]["v3"] > 0.3 and rr["res"] > 0.8 and not rr["shimmer"], (rf, rr))
+    ck("Tv. reduced motion: no page errors", not rerr, rerr)
+    rctx.close()
+    dm = pg.evaluate("__synth.tubeShow().drawMs")
+    info("Tv. chassis draw time (four tubes with the show, smoothed, desktop)", f"{dm:.2f} ms per frame (the loop runs at 30 fps, 33 ms)")
+    ck(f"Tv. the four tubes with the show draw in under 12 ms a frame ({dm:.2f} ms)", 0 < dm < 12, dm)
+    ck("Tv. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
@@ -1852,6 +1959,11 @@ with sync_playwright() as pw:
         o = ph.evaluate("__synth.patch().out")
         ck(f"10. {w}px: a preset tap turns the EQ on; a tap on a fader sets it ({o['eqGains'][7]} dB at 4 kHz)", o["eqOn"] and o["eqGains"][7] >= 10 and o["eqPreset"] == "custom", o)
         ph.locator("#mEq").screenshot(path=os.path.join(SHOTS, f"synth_phone_{w}_eq.png"))
+        ph.locator("#mShow").scroll_into_view_if_needed()
+        small = ph.evaluate("""() => [...document.querySelectorAll('#showChips .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.textContent)""")
+        vb = ph.evaluate("(() => { const r = document.getElementById('vLamps').getBoundingClientRect(), c = document.getElementById('chassis').getBoundingClientRect(); return [r.left, r.right, c.left, c.right, innerWidth]; })()")
+        ck(f"10. {w}px: the tube show chips are 44 px or more and the voice lamps sit inside the chassis", ph.is_visible("#showChips") and not small and vb[0] >= vb[2] and vb[1] <= vb[3] <= vb[4]
+           and ph.evaluate(f"document.documentElement.scrollWidth <= innerWidth && innerWidth === {w}"), (small, vb))
         ph.locator('.tabs [data-go="mix"]').scroll_into_view_if_needed(); ph.locator('.tabs [data-go="mix"]').tap(); ph.wait_for_timeout(180)
         ck(f"10. {w}px: the Mix tab is the desk, with letters, arms, meters and sends",
            ph.is_visible("#mHost") and ph.is_visible("#mixFArm") and ph.is_visible("#mixFMeter") and ph.is_visible("#mixFRev")
