@@ -167,7 +167,13 @@ function handle(eng, m) {
     v.alive = true;
     v.born = ++eng.seq;
     v.hzT = Math.max(20, Math.min(8000, hz));
-    if (fresh) { v.hz = v.hzT; v.phase = 0; v.low = 0; v.env = 0; }
+    if (fresh || m.trig) {
+      v.hz = v.hzT;
+      v.phase = 0;
+      v.low = 0;
+      if (fresh) v.env = 0;
+      else v.env *= 0.05;
+    }
     const y = Number.isFinite(+m.y) ? +m.y : eng.color;
     v.y = Math.max(0, Math.min(1, y));
     const level = Number.isFinite(+m.level) ? +m.level : (m.v != null ? +m.v : 0.75);

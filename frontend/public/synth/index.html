@@ -715,7 +715,7 @@
       <p class="intro" data-dev="dekatron">Dekatron, a counting-tube drum machine: kick, snare, hats, clap, tom and rim, synthesized, with a 16-step pattern. The keys play the voices. Swing, accents and the pattern length live on the panel.</p>
       <p class="intro" data-dev="lattice">Lattice, a wavetable instrument: two morphing oscillators, warp, unison, a sub and noise, two filters, and a modulation matrix you drag into place. Draw LFO shapes, or drop a WAV file to play it as a cycle.</p>
       <p class="intro" data-dev="thyratron">Thyratron, a monophonic ladder synthesizer: three oscillators, a mixer with noise and feedback, and a 24 dB/octave ladder low-pass that will sing when the emphasis is full. Glide, two contours, and the pitch and mod wheels.</p>
-      <p class="intro" data-dev="gleam">Gleam, a touch field. Each finger is a voice: across is pitch, up is timbre, pressure is level. A room view places sounding orbs around a listener, and the same pad can sweep the rack master.</p>
+      <p class="intro" data-dev="gleam">Gleam, a touch field. Each finger is a voice: across is pitch, up is timbre, pressure is level. Hold latches that point, or a MIDI note, after you let go. A generator can walk, orbit, drift, or arpeggiate the scale while you play on top. Panic, or hold again, lets the latch go. A room view places sounding orbs around a listener, and the same pad can sweep the rack master.</p>
       <p class="intro" data-dev="mote">Mote, a granular instrument: load any sound, record the microphone, or capture the rack, then play it as a cloud of grains. Capture rack is an input, not an export. Drag the highlighted region to move through the waveform. The red rec button saves what you hear as a WAV.</p>
       <p class="intro" data-dev="heptode">Heptode plays a MIDI file, then lets you reshape it. Every channel starts as the same plain voice. Morph the wave, open the filter, and drag each track around the stereo field. The red rec button saves what you hear as a WAV.</p>
       <p class="intro" data-dev="geissler">Geissler is a small meadow. Reeds hum, grazers pluck, stalks hit, and flickers chirp. They meet, eat, breed and die, and each event is a note. Tap the field to drop food or spawn a creature. Drag to herd them. The red rec button saves what you hear as a WAV.</p>
@@ -3227,6 +3227,7 @@ thyPanel = mountThyPanel($('thyRoot'), {
 gleamView = mountGleamPad($('gleamRoot'), gleamHost, {
   wake,
   edited(next) { if (dev !== 'gleam') return; cur = next; markEdited(); pushPatch(false); },
+  panic() { panic(); },
 });
 const moteHooks = {
   patch: motePatch,
