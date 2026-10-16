@@ -6,6 +6,7 @@
 import {
   VOICE_COUNT, normalizeGleam, GLEAM_DEFAULT, gleamDevice, pitchOf, fieldPan, placeOf,
   pressureOf, effectOf, pointersAt, createTape, midiHz, ROOTS, SCALES, MODES,
+  GENERATORS, generatorPoint, generatorEvents,
 } from './gleam.js';
 import { createGleamFx } from './gleam-fx.js';
 
@@ -54,12 +55,13 @@ function listenAtOrigin(ctx) {
 // What a finger or an orb becomes, in worklet units.
 export function voiceMessage(patch, ev) {
   const p = normalizeGleam(patch);
+  const timbre = Number.isFinite(+ev.timbre) ? +ev.timbre : null;
   if (p.mode === 'room' || ev.room) {
     const place = placeOf(ev.x, ev.y);
     const hz = Number.isFinite(+ev.hz) ? +ev.hz : (ev.midi != null ? midiHz(+ev.midi) : pitchOf((place.x + 1) / 2, p).hz);
     const z = ev.z == null ? 0.8 : +ev.z;
     return {
-      hz, y: ev.y == null ? p.color : +ev.y,
+      hz, y: timbre != null ? timbre : (ev.y == null ? p.color : +ev.y),
       pan: place.pan,
       level: clamp(z, 0, 1) * p.level * 0.34,
       gain: place.gain,
@@ -157,21 +159,24 @@ export async function renderGleamBuffer({ patch, events = [], seconds = 1, sampl
     slots.set(id, s);
     return s;
   }
-  events.forEach(ev => {
+  const all = generatorEvents(p, seconds).concat(events);
+  all.forEach(ev => {
     const at = Math.round((+ev.at || 0) * sampleRate);
     if (ev.type === 'panic') {
       queued.push({ t: 'panic', at });
       return;
     }
     const id = ev.id == null ? 'v' : String(ev.id);
-    const slot = slotFor(id);
     if (ev.type === 'off' || ev.type === 'up' || ev.type === 'cancel') {
+      if (p.hold && ev.type !== 'cancel') return;
+      const slot = slotFor(id);
       queued.push({ t: 'voice', id, slot, on: false, at });
       return;
     }
+    const slot = slotFor(id);
     const msg = voiceMessage(p, ev);
     queued.push({
-      t: 'voice', id, slot, on: true, at,
+      t: 'voice', id, slot, on: true, at, trig: !!ev.trig,
       hz: msg.hz, y: msg.y, level: msg.level, pan: msg.pan, gain: msg.gain, send: msg.send,
     });
     places.push({ slot, pan: msg.pan, depth: msg.depth });
@@ -194,6 +199,12 @@ export function createGleamHost() {
   let ctx = null;
   const pending = [];
   const fingers = new Map();
+  const latched = new Map();
+  const midiHeld = new Set();
+  let genPoint = null;
+  let genLive = false;
+  let genStep = -1;
+  let onListen = null;
   const orbs = [];
   let orbSeq = 1;
   let selected = null;
@@ -232,7 +243,7 @@ export function createGleamHost() {
   function freeSlot(id) {
     if (slotOf.map) slotOf.map.delete(id);
   }
-  function sound(id, ev, on) {
+  function sound(id, ev, on, trig) {
     const slot = slotOf(id);
     if (!on) {
       send({ t: 'voice', id, slot, on: false });
@@ -241,7 +252,7 @@ export function createGleamHost() {
     }
     const msg = voiceMessage(patch.mode === 'room' || ev.room ? Object.assign({}, patch, { mode: 'room' }) : patch, ev);
     send({
-      t: 'voice', id, slot, on: true,
+      t: 'voice', id, slot, on: true, trig: !!trig,
       hz: msg.hz, y: msg.y, level: msg.level, pan: msg.pan, gain: msg.gain, send: msg.send,
     });
     if (graph) graph.place(slot, msg.pan, msg.depth);
@@ -249,7 +260,18 @@ export function createGleamHost() {
   function effectTarget() {
     let pt = null;
     fingers.forEach(p => { pt = p; });
+    if (!pt && patch.hold) latched.forEach(p => { pt = p; });
     return pt;
+  }
+  function liveEffectPoint() {
+    const finger = effectTarget();
+    if (patch.generator === 'off' || !genPoint) return finger;
+    if (!finger) return { x: genPoint.x, y: genPoint.y, z: genPoint.z };
+    return {
+      x: (finger.x + genPoint.x) * 0.5,
+      y: (finger.y + genPoint.y) * 0.5,
+      z: Math.max(+finger.z || 0, +genPoint.z || 0),
+    };
   }
   function applyEffect(pt) {
     if (!fx) return;
@@ -281,6 +303,19 @@ export function createGleamHost() {
     fingers.forEach((p, id) => sound('p' + id, p, false));
     fingers.clear();
     if (patch.mode === 'effect') applyEffect(null);
+  }
+  function releaseLatched() {
+    latched.forEach((p, id) => sound('p' + id, p, false));
+    latched.clear();
+    midiHeld.forEach(n => sound('m' + n, {}, false));
+    midiHeld.clear();
+    if (patch.mode === 'effect') applyEffect(liveEffectPoint());
+  }
+  function releaseGen() {
+    if (!genLive) return;
+    sound('gen', {}, false);
+    genLive = false;
+    genStep = -1;
   }
   function releaseTape() {
     if (!loop) return;
@@ -328,18 +363,53 @@ export function createGleamHost() {
     const y = orb.oy + Math.cos(t * s * 0.5 + orb.phase) * 0.18;
     return { x: clamp(x, -1, 1), y: clamp(y, -1, 1) };
   }
+  function stepGenerator(now) {
+    if (!active || patch.generator === 'off') {
+      if (genPoint || genLive) {
+        genPoint = null;
+        releaseGen();
+      }
+      return;
+    }
+    const g = generatorPoint(patch, (now - t0) / 1000);
+    if (!g) {
+      genPoint = null;
+      releaseGen();
+      return;
+    }
+    const trig = patch.generator === 'arp' && g.step !== genStep;
+    genStep = g.step;
+    genPoint = g;
+    if (patch.mode === 'effect') {
+      releaseGen();
+      ensureDrone();
+      applyEffect(liveEffectPoint());
+      return;
+    }
+    const ev = patch.mode === 'room'
+      ? { x: g.x * 2 - 1, y: g.y * 2 - 1, z: g.z, hz: g.hz, timbre: g.y, room: true }
+      : { x: g.x, y: g.y, z: g.z, hz: g.hz };
+    sound('gen', ev, true, trig);
+    genLive = true;
+  }
   function frame(now) {
     raf = requestAnimationFrame(frame);
     stepLoop(now);
     stepOrbs(now);
+    stepGenerator(now);
     if (onMeter) onMeter(meter);
   }
 
   const api = {
     patch: () => patch,
     setPatch(p) {
+      const prev = patch;
       patch = normalizeGleam(p);
       postPatch();
+      if (prev.hold && !patch.hold) releaseLatched();
+      if (patch.generator !== prev.generator) genStep = -1;
+      if (patch.generator === 'off') genPoint = null;
+      if (patch.generator === 'off' || patch.mode === 'effect') releaseGen();
       if (patch.mode !== 'effect') applyEffect(null);
       if (patch.mode !== 'room') orbs.forEach(o => sound(o.id, o, false));
       return patch;
@@ -348,11 +418,23 @@ export function createGleamHost() {
       active = !!on;
       send({ t: 'active', on: active });
       if (!active) {
+        genPoint = null;
         releaseFingers();
+        releaseLatched();
+        releaseGen();
         applyEffect(null);
         orbs.forEach(o => sound(o.id, o, false));
       }
     },
+    listen(fn) { onListen = fn; },
+    generator: () => genPoint ? Object.assign({}, genPoint) : null,
+    latched() {
+      const out = [];
+      latched.forEach((p, id) => out.push({ id, x: p.x, y: p.y, z: p.z }));
+      midiHeld.forEach(n => out.push({ id: 'm' + n, midi: n }));
+      return out;
+    },
+    ids() { return slotOf.map ? [...slotOf.map.keys()] : []; },
     meter: () => meter,
     setMeterListener(fn) { onMeter = fn; },
     node: () => node,
@@ -360,34 +442,59 @@ export function createGleamHost() {
       return slotOf.map ? slotOf.map.size : 0;
     },
     noteOn(n, v) {
+      midiHeld.delete(n);
       const hz = midiHz(n);
       const x = clamp((n - 48) / 24, 0, 1);
       sound('m' + n, { x, y: patch.color, z: v == null ? 0.8 : v, hz }, true);
     },
-    noteOff(n) { sound('m' + n, {}, false); },
+    noteOff(n) {
+      if (patch.hold) { midiHeld.add(n); return; }
+      midiHeld.delete(n);
+      sound('m' + n, {}, false);
+    },
     panic() {
+      patch = normalizeGleam(Object.assign({}, patch, { hold: false }));
+      genPoint = null;
+      genStep = -1;
       releaseFingers();
+      releaseLatched();
       releaseTape();
+      releaseGen();
       orbs.splice(0, orbs.length);
       if (slotOf.map) slotOf.map.clear();
       send({ t: 'panic' });
       applyEffect(null);
+      if (onListen) onListen(patch);
     },
     pointer(type, pt) {
       const id = pt.id;
       if (patch.mode === 'effect') {
-        if (type === 'up' || type === 'cancel') fingers.delete(id);
-        else fingers.set(id, pt);
+        if (type === 'up' && patch.hold) {
+          fingers.delete(id);
+          latched.set(id, pt);
+        } else if (type === 'up' || type === 'cancel') {
+          fingers.delete(id);
+          latched.delete(id);
+        } else {
+          latched.delete(id);
+          fingers.set(id, pt);
+        }
         ensureDrone();
-        applyEffect(fingers.size ? effectTarget() : null);
+        applyEffect(liveEffectPoint());
         return;
       }
       if (patch.mode === 'room') return;
       if (type === 'down' || type === 'move') {
+        latched.delete(id);
         fingers.set(id, pt);
+        sound('p' + id, pt, true);
+      } else if (type === 'up' && patch.hold) {
+        fingers.delete(id);
+        latched.set(id, pt);
         sound('p' + id, pt, true);
       } else {
         fingers.delete(id);
+        latched.delete(id);
         sound('p' + id, pt, false);
       }
     },
@@ -459,7 +566,7 @@ export function createGleamHost() {
     },
     loopOn: () => loopOn,
     effectAt(pt) {
-      if (!pt) { fingers.clear(); applyEffect(null); return fx ? fx.last : null; }
+      if (!pt) { fingers.clear(); latched.clear(); applyEffect(null); return fx ? fx.last : null; }
       patch = normalizeGleam(Object.assign({}, patch, { mode: 'effect' }));
       fingers.set('probe', pt);
       ensureDrone();
@@ -550,7 +657,7 @@ export function mountGleamPad(container, host, opts) {
   pad.id = 'gleamPad';
   pad.tabIndex = 0;
   pad.setAttribute('role', 'application');
-  pad.setAttribute('aria-label', 'Gleam touch field. Across is pitch, up is timbre, pressure is level. In the room, drag an orb around the listener.');
+  pad.setAttribute('aria-label', 'Gleam touch field. Across is pitch, up is timbre, pressure is level. Hold latches a finger or a note. The generator moves the point and can play a scale by itself.');
   const canvas = document.createElement('canvas');
   canvas.id = 'gleamCv';
   pad.appendChild(canvas);
@@ -594,6 +701,8 @@ export function mountGleamPad(container, host, opts) {
   chip('gleamAdd', 'add orb', false, 'Drop a sound in the room');
   chip('gleamRemove', 'remove', false, 'Remove the selected orb');
   chip('gleamStutter', 'stutter', false, 'Pressure chops the master while the effect pad is touched');
+  chip('gleamHold', 'hold', false, 'Latch the current fingers and notes. They keep sounding after you let go. Toggle off, or press panic, to release them.');
+  chip('gleamPanic', 'panic', false, 'Silence every Gleam voice and release hold');
   chip('gleamRec', 'rec', false, 'Record the gesture');
   chip('gleamLoop', 'loop', false, 'Play the gesture again');
   chip('gleamClear', 'clear', false, 'Forget the gesture');
@@ -603,6 +712,26 @@ export function mountGleamPad(container, host, opts) {
   link.href = standalone ? '/synth/' : '/synth/gleam/';
   link.textContent = standalone ? 'Rack' : 'Full screen';
   bar.appendChild(link);
+  const gen = document.createElement('select');
+  gen.id = 'gleamGen';
+  gen.setAttribute('aria-label', 'Generator');
+  GENERATORS.forEach(name => {
+    const o = document.createElement('option');
+    o.value = name;
+    o.textContent = name === 'off' ? 'generator off' : name;
+    gen.appendChild(o);
+  });
+  bar.appendChild(gen);
+  function slider(id, label, min, max, step, value) {
+    const lab = document.createElement('label');
+    lab.className = 'grow';
+    lab.innerHTML = label + ' <input id="' + id + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + value + '" aria-label="Generator ' + label + '">';
+    bar.appendChild(lab);
+    return lab;
+  }
+  slider('gleamRate', 'rate', '0.05', '8', '0.01', '0.8');
+  slider('gleamDepth', 'depth', '0', '1', '0.01', '0.75');
+  slider('gleamSeed', 'seed', '0', '9999', '1', '1');
   const levelLab = document.createElement('label');
   levelLab.className = 'grow';
   levelLab.innerHTML = 'level <input id="gleamLevel" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Gleam level">';
@@ -629,23 +758,52 @@ export function mountGleamPad(container, host, opts) {
     root.value = String(p.root);
     buttons.gleamHrtf.setAttribute('aria-pressed', String(!!p.hrtf));
     buttons.gleamStutter.setAttribute('aria-pressed', String(!!p.stutter));
-    const lv = document.getElementById('gleamLevel');
-    if (lv && document.activeElement !== lv) lv.value = String(p.level);
+    buttons.gleamHold.setAttribute('aria-pressed', String(!!p.hold));
+    if (gen && document.activeElement !== gen) gen.value = p.generator;
+    ['gleamLevel', 'gleamRate', 'gleamDepth', 'gleamSeed'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || document.activeElement === el) return;
+      const key = id === 'gleamLevel' ? 'level' : id === 'gleamRate' ? 'rate' : id === 'gleamDepth' ? 'depth' : 'seed';
+      el.value = String(p[key]);
+    });
     const info = host.tape();
     buttons.gleamRec.setAttribute('aria-pressed', String(!!info.recording));
     buttons.gleamLoop.setAttribute('aria-pressed', String(!!host.loopOn()));
+    const g = host.generator();
     const note = p.mode === 'effect'
       ? 'Effect. Across sweeps the filter, up raises delay feedback' + (p.stutter ? ', pressure stutters.' : '.')
       : p.mode === 'room'
         ? 'Room. Drag an orb around the listener. Farther is quieter and wetter.'
         : 'Field. Each finger is a voice. Across is pitch, up is timbre.';
-    read.textContent = note + (info.duration ? '  take ' + info.duration.toFixed(1) + 's' : '');
+    const heldN = host.latched().length;
+    const genNote = g && Number.isFinite(g.midi) ? ' ' + noteName(g.midi) : '';
+    const extra = (p.hold ? '  HOLD' + (heldN ? ' ' + heldN : '') : '')
+      + (p.generator === 'off' ? '' : '  ' + p.generator + genNote)
+      + (info.duration ? '  take ' + info.duration.toFixed(1) + 's' : '');
+    read.textContent = note + extra;
+  }
+  function noteName(midi) {
+    const n = Math.round(midi);
+    return ROOTS[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1);
   }
   MODES.forEach(m => buttons['gleamMode-' + m].addEventListener('click', () => edit({ mode: m })));
   SCALES.forEach(s => buttons['gleamScale-' + s].addEventListener('click', () => edit({ scale: s })));
   root.addEventListener('change', () => edit({ root: +root.value }));
   buttons.gleamHrtf.addEventListener('click', () => edit({ hrtf: !patch().hrtf }));
   buttons.gleamStutter.addEventListener('click', () => edit({ stutter: !patch().stutter }));
+  buttons.gleamHold.addEventListener('click', () => edit({ hold: !patch().hold }));
+  buttons.gleamPanic.addEventListener('click', () => {
+    if (opts && opts.panic) opts.panic();
+    else host.panic();
+  });
+  gen.addEventListener('change', () => edit({ generator: gen.value }));
+  document.getElementById('gleamRate').addEventListener('input', e => edit({ rate: +e.target.value }));
+  document.getElementById('gleamDepth').addEventListener('input', e => edit({ depth: +e.target.value }));
+  document.getElementById('gleamSeed').addEventListener('input', e => edit({ seed: +e.target.value }));
+  host.listen(next => {
+    sync();
+    if (opts && opts.edited) opts.edited(next);
+  });
   buttons.gleamOrbit.addEventListener('click', () => {
     const on = buttons.gleamOrbit.getAttribute('aria-pressed') !== 'true';
     buttons.gleamOrbit.setAttribute('aria-pressed', String(on));
@@ -764,7 +922,11 @@ export function mountGleamPad(container, host, opts) {
     if (k !== 'ArrowLeft' && k !== 'ArrowRight' && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'Escape') return;
     e.preventDefault();
     e.stopPropagation();
-    if (k === 'Escape') { host.panic(); return; }
+    if (k === 'Escape') {
+      if (opts && opts.panic) opts.panic();
+      else host.panic();
+      return;
+    }
     const id = 'key';
     const cur = pointers.get(id) || { id, x: 0.5, y: 0.4, z: 0.8 };
     const step = e.shiftKey ? 0.02 : 0.06;
@@ -801,6 +963,7 @@ export function mountGleamPad(container, host, opts) {
   }
   function draw(now) {
     requestAnimationFrame(draw);
+    sync();
     if (document.hidden) return;
     fit();
     const w = canvas.width;
@@ -837,20 +1000,51 @@ export function mountGleamPad(container, host, opts) {
         if (audioLevel > 0.02) spawnBits(x / w, 1 - y / h, audioLevel);
       });
     }
-    pointers.forEach(pt => {
+    function glow(pt, held) {
       const x = pt.x * w;
       const y = (1 - pt.y) * h;
-      const rad = 30 + pt.z * 40 + audioLevel * 90;
+      const rad = 30 + (pt.z || 0.7) * 40 + audioLevel * 90;
       const g = ctx2.createRadialGradient(x, y, 2, x, y, rad);
-      g.addColorStop(0, 'rgba(255, 214, 150, 0.9)');
+      g.addColorStop(0, held ? 'rgba(255, 214, 150, 0.45)' : 'rgba(255, 214, 150, 0.9)');
       g.addColorStop(0.45, 'rgba(255, 140, 40, 0.25)');
       g.addColorStop(1, 'rgba(255, 120, 20, 0)');
       ctx2.fillStyle = g;
       ctx2.beginPath();
       ctx2.arc(x, y, rad, 0, Math.PI * 2);
       ctx2.fill();
+      if (held) {
+        ctx2.strokeStyle = 'rgba(255, 179, 71, 0.9)';
+        ctx2.lineWidth = 2;
+        ctx2.stroke();
+      }
+    }
+    pointers.forEach(pt => {
+      glow(pt, false);
       spawnBits(pt.x, pt.y, Math.max(audioLevel, pt.z * 0.35));
     });
+    host.latched().forEach(pt => {
+      if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
+      glow(pt, true);
+    });
+    const moving = host.generator();
+    if (moving && Number.isFinite(moving.x)) {
+      const x = moving.x * w;
+      const y = (1 - moving.y) * h;
+      const rad = 26 + audioLevel * 70;
+      const g = ctx2.createRadialGradient(x, y, 2, x, y, rad);
+      g.addColorStop(0, 'rgba(0, 255, 157, 0.85)');
+      g.addColorStop(1, 'rgba(0, 255, 157, 0)');
+      ctx2.fillStyle = g;
+      ctx2.beginPath();
+      ctx2.arc(x, y, rad, 0, Math.PI * 2);
+      ctx2.fill();
+      ctx2.strokeStyle = 'rgba(0, 255, 157, 0.95)';
+      ctx2.lineWidth = 2;
+      ctx2.beginPath();
+      ctx2.arc(x, y, 10, 0, Math.PI * 2);
+      ctx2.stroke();
+      spawnBits(moving.x, moving.y, Math.max(audioLevel, 0.25));
+    }
     trails.forEach(trail => {
       if (trail.length < 2) return;
       ctx2.beginPath();

@@ -2613,6 +2613,63 @@ with sync_playwright() as pw:
        and pure_g["id"] == "gleam" and pure_g["api"] == "dxrack/1" and pure_g["proc"] == "gleam"
        and pure_g["worklet"] == "gleam.worklet.js", pure_g)
 
+    gen = pg.evaluate("""async () => {
+      const g = await import('/synth/gleam.js');
+      const pt = (over, t) => g.generatorPoint(Object.assign({ device: 'gleam', scale: 'major', root: 0, octaves: 1 }, over), t);
+      const orbit0 = pt({ generator: 'orbit', rate: 1, depth: 1, seed: 0 }, 0);
+      const orbitQ = pt({ generator: 'orbit', rate: 1, depth: 1, seed: 0 }, 0.25);
+      const orbitSeed = pt({ generator: 'orbit', rate: 1, depth: 1, seed: 157 }, 0);
+      const still = pt({ generator: 'orbit', rate: 1, depth: 0, seed: 4 }, 0.4);
+      const walkA = pt({ generator: 'walk', rate: 2, depth: 1, seed: 3 }, 0.4);
+      const walkA2 = pt({ generator: 'walk', rate: 2, depth: 1, seed: 3 }, 0.4);
+      const walkB = pt({ generator: 'walk', rate: 2, depth: 1, seed: 9 }, 0.4);
+      const walk0 = pt({ generator: 'walk', rate: 2, depth: 0, seed: 3 }, 0.4);
+      const lis0 = pt({ generator: 'lissajous', rate: 1, depth: 1, seed: 1 }, 0);
+      const lisH = pt({ generator: 'lissajous', rate: 1, depth: 1, seed: 1 }, 0.5);
+      const drift0 = pt({ generator: 'drift', rate: 1, depth: 0, seed: 2 }, 1.2);
+      const drift1 = pt({ generator: 'drift', rate: 1.2, depth: 1, seed: 2 }, 1.2);
+      const up = [0, 0.5, 1, 1.5, 2, 2.5, 3].map(t => pt({ generator: 'arp', rate: 2, depth: 1, seed: 0 }, t).midi);
+      const down0 = pt({ generator: 'arp', rate: 2, depth: 1, seed: 1 }, 0).midi;
+      const off = g.generatorPoint({ generator: 'off' }, 1);
+      const norm = g.normalizeGleam({ rate: 99, seed: -4, generator: 'nope', hold: 1, depth: 3 });
+      const bare = g.normalizeGleam({});
+      const params = g.gleamDevice.parameters;
+      return {
+        ox: orbit0.x, oy: orbit0.y, qx: orbitQ.x, qy: orbitQ.y, sx: orbitSeed.x, sy: orbitSeed.y,
+        stillX: still.x, stillY: still.y,
+        wax: walkA.x, way: walkA.y, same: walkA.x === walkA2.x && walkA.y === walkA2.y,
+        wbx: walkB.x, wby: walkB.y, w0x: walk0.x, w0y: walk0.y,
+        lx0: lis0.x, ly0: lis0.y, lx1: lisH.x, ly1: lisH.y,
+        d0x: drift0.x, d0y: drift0.y, d1x: drift1.x, d1y: drift1.y,
+        up, down0, off: off == null,
+        gen: norm.generator, rate: norm.rate, seed: norm.seed, hold: norm.hold, depth: norm.depth,
+        bareGen: bare.generator, bareHold: bare.hold,
+        holdType: params.hold.type, choices: params.generator.choices, api: g.gleamDevice.api,
+        msgs: g.gleamDevice.messages,
+      };
+    }""")
+    ck("G. orbit, lissajous, drift and a random walk are seeded and stay inside the pad",
+       abs(gen["ox"] - 0.98) < 1e-9 and abs(gen["oy"] - 0.5) < 1e-9
+       and abs(gen["qx"] - 0.5) < 1e-9 and abs(gen["qy"] - 0.98) < 1e-9
+       and abs(gen["sx"] - 0.5) < 0.02 and gen["sy"] > 0.9
+       and abs(gen["stillX"] - 0.5) < 1e-9 and abs(gen["stillY"] - 0.5) < 1e-9
+       and gen["same"] and (abs(gen["wax"] - gen["wbx"]) > 0.02 or abs(gen["way"] - gen["wby"]) > 0.02)
+       and abs(gen["w0x"] - 0.5) < 1e-9 and abs(gen["w0y"] - 0.5) < 1e-9
+       and 0 <= gen["wax"] <= 1 and 0 <= gen["way"] <= 1
+       and abs(gen["lx0"] - 0.5) < 1e-9 and abs(gen["ly0"] - 0.5) > 0.05
+       and abs(gen["lx1"] - 0.5) < 1e-6 and abs(gen["ly1"] - gen["ly0"]) > 0.05
+       and abs(gen["d0x"] - 0.5) < 1e-9 and abs(gen["d0y"] - 0.5) < 1e-9
+       and (abs(gen["d1x"] - 0.5) > 0.02 or abs(gen["d1y"] - 0.5) > 0.02)
+       and gen["off"] is True, gen)
+    ck("G. an arpeggio climbs the scale, and a different seed starts at the top",
+       gen["up"] == [48, 50, 52, 53, 55, 57, 59] and gen["down0"] == 59, gen)
+    ck("G. hold and the generator are patch parameters on the same dxrack/1 device",
+       gen["bareGen"] == "off" and gen["bareHold"] is False and gen["gen"] == "off"
+       and gen["rate"] == 8 and gen["seed"] == 0 and gen["hold"] is True and gen["depth"] == 1
+       and gen["holdType"] == "boolean" and gen["api"] == "dxrack/1"
+       and gen["choices"] == ["off", "walk", "orbit", "lissajous", "drift", "arp"]
+       and gen["msgs"] == ["patch", "voice", "on", "off", "panic", "active"], gen)
+
     base_p = {"device": "gleam", "mode": "field", "scale": "major", "root": 0, "octaves": 1,
               "glide": 0, "level": 0.85, "space": 0, "reverb": 0, "hrtf": False, "color": 0}
     held = [{"at": 0.02, "type": "on", "id": "a", "x": 0, "y": 0, "z": 1}]
@@ -2671,6 +2728,41 @@ with sync_playwright() as pw:
        and float(np.max(np.abs(rR))) <= 1.001 and g_rms(rL, 1.7, 1.95) > 1e-4, float(np.max(np.abs(rL))))
     panL, _ = g_render(dict(base_p), held + [{"at": 0.2, "type": "panic"}], 0.7)
     ck("G. panic silences every voice", g_rms(panL, 0.35, 0.6) < 1e-4, g_rms(panL, 0.35, 0.6))
+    silL, _silR = g_render(dict(base_p), [], 0.4)
+    ck("G. a generator that is off stays silent with no fingers", g_rms(silL, 0.05, 0.35) < 1e-4, g_rms(silL, 0.05, 0.35))
+    holdL, _holdR = g_render(dict(base_p, hold=True), held + [{"at": 0.2, "type": "off", "id": "a"}], 0.9)
+    freeL, _freeR = g_render(dict(base_p, hold=False), held + [{"at": 0.2, "type": "off", "id": "a"}], 0.9)
+    ck("G. hold keeps the note after the finger lifts, and hold off lets it go",
+       g_rms(holdL, 0.45, 0.8) > 0.02 and g_rms(freeL, 0.45, 0.8) < 1e-4, (g_rms(holdL, 0.45, 0.8), g_rms(freeL, 0.45, 0.8)))
+    bothHold, _bhR = g_render(dict(base_p, hold=True), [
+        {"at": 0.02, "type": "on", "id": "c", "x": 0, "y": 0, "z": 0.9},
+        {"at": 0.02, "type": "on", "id": "e", "x": 0.28, "y": 0.2, "z": 0.9},
+        {"at": 0.25, "type": "off", "id": "c"},
+        {"at": 0.25, "type": "up", "id": "e"},
+    ], 0.8)
+    bothSl = bothHold[int(0.4 * SR):int(0.7 * SR)]
+    ck("G. hold latches every finger that lifts",
+       tone_amp(bothSl, 130.8128) > 0.015 and tone_amp(bothSl, 164.8138) > 0.01, (tone_amp(bothSl, 130.8128), tone_amp(bothSl, 164.8138)))
+    panicHold, _phR = g_render(dict(base_p, hold=True), held + [{"at": 0.15, "type": "off", "id": "a"}, {"at": 0.4, "type": "panic"}], 0.9)
+    ck("G. panic releases a held note",
+       g_rms(panicHold, 0.2, 0.35) > 0.02 and g_rms(panicHold, 0.55, 0.8) < 1e-4,
+       (g_rms(panicHold, 0.2, 0.35), g_rms(panicHold, 0.55, 0.8)))
+    arp_p = dict(base_p, generator="arp", rate=2, depth=1, seed=0, glide=0, level=0.9)
+    arpL, arpR = g_render(arp_p, [], 1.2)
+    f_c = peak_freq(arpL[int(0.12 * SR):int(0.4 * SR)])
+    f_d = peak_freq(arpL[int(0.62 * SR):int(0.9 * SR)])
+    ck(f"G. an arpeggio plays the scale by itself ({f_c:.1f} Hz then {f_d:.1f} Hz)",
+       abs(cents(f_c, 130.8128)) < 20 and abs(cents(f_d, 146.8324)) < 20
+       and bool(np.isfinite(arpL).all() and np.isfinite(arpR).all()) and float(np.max(np.abs(arpL))) <= 1.001,
+       (f_c, f_d))
+    mixL, mixR = g_render(arp_p, [{"at": 0.0, "type": "on", "id": "finger", "x": 0, "y": 0.1, "z": 1}], 1.2)
+    mixSl = mixL[int(0.62 * SR):int(0.9 * SR)]
+    ck("G. the generator and a finger sound together",
+       tone_amp(mixSl, 130.8128) > 0.015 and tone_amp(mixSl, 146.8324) > 0.01
+       and float(np.max(np.abs(mixL))) <= 1.001 and bool(np.isfinite(mixR).all()),
+       (tone_amp(mixSl, 130.8128), tone_amp(mixSl, 146.8324)))
+    orbL, _orbR = g_render(dict(base_p, generator="orbit", rate=0.15, depth=1, seed=0, scale="free", octaves=2, glide=0), [], 0.35)
+    ck("G. orbit moves the point and is not silent", g_rms(orbL, 0.08, 0.3) > 0.02, g_rms(orbL, 0.08, 0.3))
 
     dullL, _dR = g_fx(hz=3000, x=0.02, y=0, z=0, seconds=0.5, on=True)
     openL, _oR = g_fx(hz=3000, x=0.95, y=0, z=0, seconds=0.5, on=True)
@@ -2766,6 +2858,54 @@ with sync_playwright() as pw:
         after = gp.evaluate("window.__gleam.voices()")
         ck(f"G. {gw}px: a held pointer glows and lets go",
            vis["voices"] >= 1 and vis["level"] > 0 and (vis["particles"] > 0 or vis["bright"] > 0) and after == 0, (vis, after))
+        latch = gp.evaluate("""() => {
+          document.getElementById('gleamHold').click();
+          const pad = document.getElementById('gleamPad');
+          const r = pad.getBoundingClientRect();
+          const fire = (type, id, x, y) => pad.dispatchEvent(new PointerEvent(type, {
+            pointerId: id, clientX: r.left + x, clientY: r.top + y, bubbles: true, cancelable: true,
+            pointerType: 'mouse', pressure: 0.8, buttons: type === 'pointerdown' ? 1 : 0,
+          }));
+          fire('pointerdown', 11, 40, 50);
+          fire('pointerup', 11, 40, 50);
+          const held = window.__gleam.voices();
+          const on = document.getElementById('gleamHold').getAttribute('aria-pressed');
+          document.getElementById('gleamHold').click();
+          const released = window.__gleam.voices();
+          return { held, on, released, off: document.getElementById('gleamHold').getAttribute('aria-pressed') };
+        }""")
+        ck(f"G. {gw}px: hold keeps the voice after the pointer lifts, and a second press releases it",
+           latch["held"] == 1 and latch["on"] == "true" and latch["released"] == 0 and latch["off"] == "false", latch)
+        gp.evaluate("""() => {
+          const sel = document.getElementById('gleamGen');
+          sel.value = 'orbit';
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }""")
+        gp.wait_for_timeout(120)
+        gen_voices = gp.evaluate("window.__gleam.voices()")
+        with_finger = gp.evaluate("""() => {
+          const pad = document.getElementById('gleamPad');
+          const r = pad.getBoundingClientRect();
+          pad.dispatchEvent(new PointerEvent('pointerdown', {
+            pointerId: 12, clientX: r.left + 30, clientY: r.top + 40, bubbles: true, cancelable: true,
+            pointerType: 'mouse', pressure: 0.8, buttons: 1,
+          }));
+          return window.__gleam.voices();
+        }""")
+        gp.evaluate("document.getElementById('gleamPanic').click()")
+        gp.wait_for_timeout(80)
+        after_panic = gp.evaluate("""() => ({
+          voices: window.__gleam.voices(),
+          hold: document.getElementById('gleamHold').getAttribute('aria-pressed'),
+          gen: document.getElementById('gleamGen').value,
+        })""")
+        ck(f"G. {gw}px: the generator plays by itself, a finger joins it, and panic clears hold",
+           gen_voices >= 1 and with_finger >= 2 and after_panic["hold"] == "false" and after_panic["gen"] == "orbit"
+           and after_panic["voices"] >= 1, (gen_voices, with_finger, after_panic))
+        controls = gp.evaluate("""() => ['gleamHold', 'gleamPanic', 'gleamGen', 'gleamRate', 'gleamDepth', 'gleamSeed']
+          .map(id => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return e.id + ' ' + Math.round(r.width) + 'x' + Math.round(r.height); })""")
+        ck(f"G. {gw}px: hold, panic and the generator controls are on the bar",
+           all(c.split(' ')[0] for c in controls) and len(controls) == 6, controls)
         gp.close()
 
     rack_before = len(errs)
@@ -2785,6 +2925,48 @@ with sync_playwright() as pw:
     ck("G. the effect pad inserts on the master only while a finger is down",
        fx["hasSet"] and fx["before"]["inserted"] and fx["before"]["on"] is False and fx["mid"]["on"] is True and fx["after"]["on"] is False
        and "gleam" in fx["ids"], fx)
+    midi_hold = pg.evaluate("""() => {
+      const h = __synth.gleam();
+      h.setPatch({ device: 'gleam', mode: 'field', hold: true, generator: 'off', scale: 'major', root: 0, octaves: 2, level: 0.85, reverb: 0, glide: 0 });
+      __synth.noteOn(64, 0.85);
+      __synth.noteOff(64);
+      const latched = { voices: h.voices(), n: h.latched().length, ids: h.ids() };
+      __synth.panic();
+      return { latched, after: { voices: h.voices(), hold: h.patch().hold, n: h.latched().length } };
+    }""")
+    ck("G. MIDI notes latch while hold is on, and the rack panic releases them",
+       midi_hold["latched"]["voices"] == 1 and midi_hold["latched"]["n"] == 1 and "m64" in midi_hold["latched"]["ids"]
+       and midi_hold["after"]["voices"] == 0 and midi_hold["after"]["hold"] is False and midi_hold["after"]["n"] == 0, midi_hold)
+    live_mix = pg.evaluate("""() => {
+      const h = __synth.gleam();
+      h.setPatch({ device: 'gleam', mode: 'field', hold: true, generator: 'drift', rate: 0.5, depth: 0.8, seed: 5, level: 0.85, reverb: 0 });
+      return new Promise(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          h.pointer('down', { id: 4, x: 0.15, y: 0.55, z: 0.9 });
+          h.pointer('up', { id: 4, x: 0.22, y: 0.4, z: 0.9 });
+          const both = { voices: h.voices(), ids: h.ids().slice(), held: h.latched().length, gen: !!h.generator() };
+          h.setPatch(Object.assign({}, h.patch(), { hold: false }));
+          const genOnly = { voices: h.voices(), ids: h.ids().slice(), held: h.latched().length };
+          h.setPatch(Object.assign({}, h.patch(), { generator: 'off' }));
+          resolve({ both, genOnly, off: h.voices() });
+        }));
+      });
+    }""")
+    ck("G. hold, the generator and a finger combine, and each one can stop on its own",
+       live_mix["both"]["voices"] >= 2 and live_mix["both"]["held"] == 1 and "gen" in live_mix["both"]["ids"] and "p4" in live_mix["both"]["ids"]
+       and live_mix["both"]["gen"] and live_mix["genOnly"]["voices"] == 1 and "gen" in live_mix["genOnly"]["ids"] and live_mix["genOnly"]["held"] == 0
+       and live_mix["off"] == 0, live_mix)
+    fx_hold = pg.evaluate("""() => {
+      const h = __synth.gleam();
+      h.setPatch({ device: 'gleam', mode: 'effect', hold: true, generator: 'off', stutter: false, level: 0.8 });
+      h.pointer('down', { id: 8, x: 0.25, y: 0.8, z: 0.6 });
+      h.pointer('up', { id: 8, x: 0.25, y: 0.8, z: 0.6 });
+      const mid = h.fxProbe();
+      h.setPatch(Object.assign({}, h.patch(), { hold: false }));
+      return { midOn: mid.on, after: h.fxProbe().on, hold: h.patch().hold };
+    }""")
+    ck("G. hold keeps the effect insert after the finger lifts",
+       fx_hold["midOn"] is True and fx_hold["after"] is False and fx_hold["hold"] is False, fx_hold)
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
     perr = []
     ph.on("pageerror", lambda e: perr.append(str(e)))

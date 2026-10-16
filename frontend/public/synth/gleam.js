@@ -12,6 +12,7 @@ export const VOICE_COUNT = 8;
 
 export const SCALES = ['major', 'minor', 'pentatonic', 'chromatic', 'free'];
 export const MODES = ['field', 'room', 'effect'];
+export const GENERATORS = ['off', 'walk', 'orbit', 'lissajous', 'drift', 'arp'];
 export const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 // Semitone offsets from the root. Pentatonic is the five-note major form.
@@ -46,6 +47,11 @@ export const GLEAM_DEFAULT = {
   drift: 0.35,
   color: 0.35,
   stutter: false,
+  hold: false,
+  generator: 'off',
+  rate: 0.8,
+  depth: 0.75,
+  seed: 1,
 };
 
 const RANGE = {
@@ -58,6 +64,9 @@ const RANGE = {
   orbit: [0, 1.5],
   drift: [0, 2],
   color: [0, 1],
+  rate: [0.05, 8],
+  depth: [0, 1],
+  seed: [0, 9999],
 };
 
 export function normalizeGleam(src) {
@@ -81,6 +90,11 @@ export function normalizeGleam(src) {
     drift: d.drift,
     color: d.color,
     stutter: p.stutter == null ? d.stutter : !!p.stutter,
+    hold: p.hold == null ? d.hold : !!p.hold,
+    generator: GENERATORS.includes(p.generator) ? p.generator : d.generator,
+    rate: d.rate,
+    depth: d.depth,
+    seed: d.seed,
   };
   Object.keys(RANGE).forEach(k => {
     const n = +p[k];
@@ -89,6 +103,7 @@ export function normalizeGleam(src) {
   });
   if (Number.isInteger(RANGE.root[0]) && Number.isInteger(RANGE.root[1])) out.root = Math.round(out.root);
   out.octaves = Math.round(out.octaves);
+  out.seed = Math.round(out.seed);
   return out;
 }
 
@@ -110,6 +125,11 @@ export const GLEAM_PARAMETERS = {
   drift: param('drift', 'Drift', 'float', 0.35, 0, 2),
   color: param('color', 'Color', 'float', 0.35, 0, 1),
   stutter: param('stutter', 'Stutter', 'boolean', false, 0, 1),
+  hold: param('hold', 'Hold', 'boolean', false, 0, 1),
+  generator: param('generator', 'Generator', 'choice', 'off', 0, GENERATORS.length - 1, { choices: GENERATORS.slice() }),
+  rate: param('rate', 'Rate', 'float', 0.8, 0.05, 8),
+  depth: param('depth', 'Depth', 'float', 0.75, 0, 1),
+  seed: param('seed', 'Seed', 'int', 1, 0, 9999),
 };
 
 // Pitch for a finger. x is 0 at the left and 1 at the right.
@@ -269,6 +289,153 @@ export function createTape() {
   };
 }
 
+// mulberry32. Seed 0 is a real sequence, not a stand-in for "unset".
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function walkCorner(seed, k) {
+  const rng = mulberry32((Math.imul(seed | 0, 10007) + Math.imul(k | 0, 97) + 0x9e3779b9) >>> 0);
+  return { x: rng(), y: rng() };
+}
+
+function scaleCount(p) {
+  if (p.scale === 'free') return p.octaves * 12;
+  return STEPS[p.scale].length * p.octaves;
+}
+
+function degreePitch(p, idx) {
+  const base = 48 + p.root;
+  const span = p.octaves * 12;
+  if (p.scale === 'free') {
+    const n = Math.max(1, p.octaves * 12);
+    const midi = base + (clamp(idx, 0, n - 1) / n) * span;
+    return { midi, hz: midiHz(midi), index: idx };
+  }
+  const steps = STEPS[p.scale];
+  const n = steps.length * p.octaves;
+  const i = clamp(Math.round(idx), 0, n);
+  const midi = i === n
+    ? base + span
+    : base + Math.floor(i / steps.length) * 12 + steps[i % steps.length];
+  return { midi, hz: midiHz(midi), index: i };
+}
+
+function arpOrder(count, seed) {
+  const n = Math.max(1, count | 0);
+  const order = [];
+  for (let i = 0; i < n; i++) order.push(i);
+  const rng = mulberry32((seed | 0) + 0xA5A5);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = order[i];
+    order[i] = order[j];
+    order[j] = tmp;
+  }
+  return order;
+}
+
+function arpIndex(step, count, seed) {
+  const n = Math.max(1, count | 0);
+  const s = Math.max(0, step | 0);
+  const kind = Math.abs(seed | 0) % 4;
+  if (kind === 1) return (n - 1) - (s % n);
+  if (kind === 2) {
+    const period = n < 2 ? 1 : n * 2 - 2;
+    const i = s % period;
+    return i < n ? i : period - i;
+  }
+  if (kind === 3) return arpOrder(n, seed)[s % n];
+  return s % n;
+}
+
+// Where the generator sits at time t (seconds). x and y are pad units, 0 to 1:
+// across is pitch, up is timbre, the same axes a finger uses. Null when the
+// generator is off. The same patch and the same time always return the same point.
+// Orbit: x = 0.5 + cos(2π rate t + seed/100) * 0.48 depth, y the sine of that angle.
+// Lissajous uses a y frequency of 2..5 from the seed. Arpeggio seed % 4 picks
+// up, down, up-down, or a shuffled order, and depth is how much of the scale it climbs.
+export function generatorPoint(patch, time) {
+  const p = normalizeGleam(patch);
+  if (p.generator === 'off') return null;
+  const t = Math.max(0, +time || 0);
+  const depth = p.depth;
+  const rate = p.rate;
+  const seed = p.seed | 0;
+  if (p.generator === 'arp') {
+    const span = scaleCount(p);
+    const count = Math.max(1, Math.round(depth * span));
+    const step = Math.floor(t * rate);
+    const idx = arpIndex(step, count, seed);
+    const pitch = degreePitch(p, idx);
+    const x = span <= 0 ? 0 : clamp((idx + 0.15) / span, 0, 1);
+    const y = clamp(0.2 + (count < 2 ? 0.3 : idx / (count - 1)) * 0.6, 0, 1);
+    return { x, y, z: 0.84, hz: pitch.hz, midi: pitch.midi, index: pitch.index, step, trig: true, on: true };
+  }
+  let x = 0.5;
+  let y = 0.5;
+  const amp = 0.48 * depth;
+  if (p.generator === 'orbit') {
+    const a = t * rate * Math.PI * 2 + (seed % 628) / 100;
+    x = 0.5 + Math.cos(a) * amp;
+    y = 0.5 + Math.sin(a) * amp;
+  } else if (p.generator === 'lissajous') {
+    const ratio = 2 + (Math.abs(seed) % 4);
+    const phase = ((Math.abs(seed) * 17) % 100) / 100 * Math.PI;
+    x = 0.5 + Math.sin(t * rate * Math.PI * 2) * amp;
+    y = 0.5 + Math.sin(t * rate * ratio * Math.PI * 2 + phase) * amp;
+  } else if (p.generator === 'drift') {
+    const s = Math.max(0.15, rate);
+    const k = seed * 0.17;
+    x = 0.5 + (Math.sin(t * s * 0.7 + k) * 0.62 + Math.sin(t * s * 0.19 + k * 1.7) * 0.38) * amp;
+    y = 0.5 + (Math.cos(t * s * 0.53 + k * 0.6) * 0.62 + Math.sin(t * s * 0.13 + k) * 0.38) * amp;
+  } else {
+    const hop = 1 / rate;
+    const k = Math.floor(t / hop);
+    const u = t / hop - k;
+    const smooth = u * u * (3 - 2 * u);
+    const a = walkCorner(seed, k);
+    const b = walkCorner(seed, k + 1);
+    const sx = a.x + (b.x - a.x) * smooth;
+    const sy = a.y + (b.y - a.y) * smooth;
+    x = 0.5 + (sx - 0.5) * depth;
+    y = 0.5 + (sy - 0.5) * depth;
+  }
+  x = clamp(x, 0, 1);
+  y = clamp(y, 0, 1);
+  const pitch = pitchOf(x, p);
+  return { x, y, z: 0.8, hz: pitch.hz, midi: pitch.midi, index: pitch.index, step: 0, trig: false, on: true };
+}
+
+// Voice events for an offline render. An arpeggio is one event per step.
+// Continuous motion is sampled often enough that the glide follows the path.
+export function generatorEvents(patch, seconds) {
+  const p = normalizeGleam(patch);
+  if (p.generator === 'off') return [];
+  const dur = Math.max(0, +seconds || 0);
+  const dt = p.generator === 'arp' ? 1 / p.rate : 1 / 40;
+  const events = [];
+  let prev = -1;
+  for (let t = 0; t < dur + 1e-9; t += dt) {
+    const at = Math.min(t, dur);
+    const g = generatorPoint(p, at);
+    if (!g) break;
+    const trig = p.generator === 'arp' && g.step !== prev;
+    prev = g.step;
+    events.push({
+      at, type: 'on', id: 'gen', x: g.x, y: g.y, z: g.z, hz: g.hz, trig,
+    });
+    if (at >= dur) break;
+  }
+  return events;
+}
+
 function factory(name, cat, over) {
   return normalizeGleam(Object.assign({ name, cat }, over));
 }
@@ -280,6 +447,7 @@ export const GLEAM_FACTORY = [
   factory('Open Room', 'Room', { mode: 'room', scale: 'pentatonic', root: 5, octaves: 2, reverb: 0.62, orbit: 0.12, drift: 0.4, color: 0.4 }),
   factory('Slow Orbit', 'Room', { mode: 'room', scale: 'major', root: 7, octaves: 1, reverb: 0.7, orbit: 0.22, drift: 0, color: 0.48, hrtf: false }),
   factory('Master Sweep', 'Effect', { mode: 'effect', stutter: true, scale: 'chromatic', color: 0.5 }),
+  factory('Self Orbit', 'Field', { mode: 'field', scale: 'pentatonic', root: 0, octaves: 2, generator: 'orbit', rate: 0.18, depth: 0.85, seed: 4, space: 0.7, reverb: 0.45, color: 0.4 }),
 ];
 
 export const GLEAM_CATS = ['Field', 'Room', 'Effect'];
@@ -290,7 +458,7 @@ export const gleamDevice = {
   vendor: 'DX Edge',
   version: String(GLEAM_SCHEMA),
   api: RACK_API,
-  description: 'Touch field: pitch across, timbre up, a room of orbs',
+  description: 'Touch field: pitch across, timbre up, a room of orbs, hold, and a generator',
   instrument: true,
   audioInputs: 0,
   audioOutputs: 1,
