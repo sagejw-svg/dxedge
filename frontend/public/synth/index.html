@@ -3301,15 +3301,16 @@ function frame(now) {
   // tube show inputs: the levels above, the drive knobs, hard clipping, V2's resonance, the voices
   const keysOn = cath || dev === 'filament';  // Filament or Cathode lit: the meter carries note numbers
   if (keysOn) { const tnow = performance.now(); showNotes(SHOW, m.notes, null, n => tnow - (showKeyed.get(n) || -1e9) < 250); }
-  // V1's meter sums every voice's power; per voice, a factory patch reads 0.19 to 0.46 RMS and V1 at
-  // drive 10 on a full saw 0.80, so above 0.6 per voice is hard clipping. The output ceiling is 0.99.
+  // V1's meter sums every voice's power. Per voice, factory patches average 0.19 to 0.46 RMS (Screaming
+  // 12AX7 swings up to 0.62 with its sweep), and V1 at drive 10 on three full oscillators reads 0.80 to
+  // 0.95, so above 0.7 per voice counts as hard clipping. The output ceiling is 0.99.
   const ceil = pk >= 0.95, v1raw = keysOn ? (m.v1 || 0) / Math.sqrt(Math.max(1, m.voices || 0)) : 0;
   const resV2 = valve ? cur.filt.res : cath ? cur.lpf.peak : 0;
   stepShow(SHOW, dt, {
     lv: { v1: tgt.v1.lv, v2: tgt.v2.lv, v3: tgt.v3.lv, v4: tgt.v4.lv },
     drive: { v1: tgt.v1.drive, v2: tgt.v2.drive, v3: tgt.v3.drive, v4: tgt.v4.drive },
     on: { v1: tgt.v1.on, v2: tgt.v2.on, v3: tgt.v3.on, v4: tgt.v4.on },
-    clip: { v1: v1raw > 0.6, v2: false, v3: ceil, v4: ceil },
+    clip: { v1: v1raw > 0.7, v2: false, v3: ceil, v4: ceil },
     res: resV2, osc: valve ? resV2 >= 0.92 : cath ? resV2 >= 0.88 : false,
     voices: ((thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m) || {}).voices || 0,
   });
