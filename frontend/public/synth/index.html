@@ -185,7 +185,8 @@
   body[data-dev="orthicon"] #mSpk, body[data-dev="orthicon"] #mRoom, body[data-dev="orthicon"] #chassis { display: none !important; }
   #orthiconCanvas { width: 100%; height: 280px; max-width: 100%; display: block; touch-action: none; border-radius: 8px; border: 1px solid #2a3328; background: #10141a; cursor: crosshair; }
   #orthiconCanvas.over { outline: 2px dashed #c6e38a; outline-offset: -3px; }
-  .orth-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-width: 100%; }
+  .orth-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-width: 100%; align-items: center; }
+  #orthiconSeed { width: 6.5em; min-width: 0; background: #10140e; color: #e7f0d4; border: 1px solid #2c3824; border-radius: 6px; padding: 4px 8px; font: inherit; }
   body[data-dev="orthicon"] #orthiconRoot .mod { background: #121610; border-color: #2c3824; }
   body[data-dev="orthicon"] #orthiconRoot h3 { color: #e7f0d4; letter-spacing: 1.6px; }
   body[data-dev="orthicon"] #orthiconRoot .chip[aria-pressed="true"] { background: #c6e38a; border-color: #c6e38a; color: #1a220c; }
@@ -653,7 +654,7 @@
     body[data-dev="resnatron"] .tabs [data-go="mouth"], body[data-dev="resnatron"] .tabs [data-go="bend"],
     body[data-dev="resnatron"] .tabs [data-go="spin"], body[data-dev="resnatron"] .tabs [data-go="cavity"] { display: none !important; }
     #rnRoot input, #rnRoot select, #rnRoot .rn-jack, #rnRoot .chip, #rnRoot .btn { min-height: 44px; min-width: 44px; }
-    #heptodeRoot input[type="range"], #hepSong, #pentagridText, #pentagridRoot input, #trRoot input, #trRoot select, #trSeed, #klRoot button, #klRoot input, #phRoot input, #phSeed, #rhumRoot input { min-height: 44px; }
+    #heptodeRoot input[type="range"], #hepSong, #pentagridText, #pentagridRoot input, #trRoot input, #trRoot select, #trSeed, #orthiconSeed, #klRoot button, #klRoot input, #phRoot input, #phSeed, #rhumRoot input { min-height: 44px; }
     #phRoot .ph-slide input { min-width: 44px; }
     body[data-dev="additron"] .tabs [data-go="osc"], body[data-dev="additron"] .tabs [data-go="filter"],
     body[data-dev="additron"] .tabs [data-go="mod"], body[data-dev="additron"] .tabs [data-go="stereo"],
@@ -1245,7 +1246,7 @@ import { pentagridDevice, normalizePentagrid, PENTA_FACTORY, PENTA_DEFAULT, PENT
 import { createPentagridHost, mountPentagridPanel, renderPentagridAudio } from './pentagrid-ui.js';
 import { orthiconDevice, normalizeOrthicon, ORTH_FACTORY, ORTH_DEFAULT, ORTH_CATS } from './orthicon.js';
 import { createOrthiconHost, mountOrthiconPanel, renderOrthiconAudio, recordOrthicon } from './orthicon-ui.js';
-import { paintTone, quantizeGrid, analyzeBuffer, rowHz, COLS as ORTH_COLS, ROWS as ORTH_ROWS } from './orthicon-dsp.js';
+import { paintTone, quantizeGrid, analyzeBuffer, rowHz, COLS as ORTH_COLS, ROWS as ORTH_ROWS, parsePictureShare } from './orthicon-dsp.js';
 import { trochotronDevice, normalizeTrochotron, TROCHO_FACTORY, TROCHO_DEFAULT, TROCHO_CATS } from './trochotron.js';
 import { createTrochotronHost, mountTrochotronPanel, renderTrochotronBuffer, pieceOf, shareOf, parseShare, midiOf as trochoMidiOf } from './trochotron-ui.js';
 import { gyrotronDevice, normalizeGyrotron, GYRO_FACTORY, GYRO_DEFAULT, GYRO_CATS, midiOf as gyroMidiOf } from './gyrotron.js';
@@ -3442,6 +3443,20 @@ function applyRnShare() {
   if (rnPanel) rnPanel.sync();
 }
 applyRnShare();
+function applyOrthiconShare() {
+  let q = '';
+  try { q = new URLSearchParams(location.search).get('or') || ''; } catch (e) { q = ''; }
+  if (!q) return;
+  const parsed = parsePictureShare(q);
+  if (!parsed) return;
+  const np = normalizeOrthicon(Object.assign({}, DS.orthicon.cur, { picture: 'custom', keyboard: false }));
+  DS.orthicon = Object.assign({}, DS.orthicon, { cur: np, curKey: 'share', edited: true });
+  if (dev !== 'orthicon') setDevice('orthicon');
+  else { cur = np; curKey = 'share'; edited = true; refreshAll(); fillSelect(); pushPatch(false); }
+  orthiconHost.generate(parsed.seed, { scale: parsed.scale, over: false });
+  if (orthiconPanel) orthiconPanel.sync();
+}
+applyOrthiconShare();
 
 function paintMixMeters() {
   if (E && document.visibilityState !== 'hidden') {
@@ -3768,11 +3783,12 @@ window.__synth = {
   orthiconPatch: name => clone(ORTH_FACTORY.find(p => p.name === name)),
   orthiconMeter: () => Object.assign({}, orthiconHost.meter()),
   orthiconState: () => {
-    const g = orthiconHost.grid();
-    let energy = 0;
-    if (g) for (let i = 0; i < g.length; i++) energy += g[i];
+    const s = orthiconHost.state();
     const m = orthiconHost.meter();
-    return { picture: orthiconPatch().picture, source: orthiconHost.source(), energy, column: m.column || 0, voices: m.voices || 0, level: m.level || 0 };
+    return Object.assign({}, s, {
+      picture: orthiconPatch().picture,
+      column: m.column || 0, voices: m.voices || 0, level: m.level || 0,
+    });
   },
   orthiconPaintLive: hz => {
     const p = orthiconPatch();
@@ -3782,8 +3798,32 @@ window.__synth = {
   orthiconClear: () => {
     orthiconPatch().picture = 'custom';
     orthiconHost.clearGrid();
+    if (orthiconPanel) orthiconPanel.sync();
     return orthiconHost.source();
   },
+  orthiconPictures: () => orthiconHost.pictures(),
+  orthiconDraw: (id, over) => {
+    orthiconPatch().picture = 'custom';
+    const info = orthiconHost.drawPicture(id, { over: !!over });
+    if (orthiconPanel) orthiconPanel.sync();
+    return info;
+  },
+  orthiconGenerate: (seed, scale, over) => {
+    orthiconPatch().picture = 'custom';
+    const p = orthiconHost.patch();
+    const sc = scale || (p.scale && p.scale !== 'off' ? p.scale : 'major');
+    const info = orthiconHost.generate(seed, { scale: sc, over: !!over });
+    if (orthiconPanel) orthiconPanel.sync();
+    return info;
+  },
+  orthiconUndo: () => {
+    const back = orthiconHost.undo();
+    if (back) orthiconPatch().picture = 'custom';
+    if (orthiconPanel) orthiconPanel.sync();
+    return back;
+  },
+  orthiconProbe: id => orthiconHost.probe(id),
+  orthiconShareParse: text => parsePictureShare(text),
   orthiconRender: async opts => {
     opts = opts || {};
     const patch = normalizeOrthicon(opts.patch || (dev === 'orthicon' ? cur : ORTH_DEFAULT));

@@ -370,6 +370,366 @@ export function pictureGrid(id, fLo = 80, fHi = 8000, cols = COLS, rows = ROWS) 
   return grid;
 }
 
+// Pre-drawn pictures. Each one is an original procedure in this file: a
+// spectrogram written so a left-to-right scan is a musical sound. No image
+// was traced from anyone else's art.
+export const DRAWN = [
+  { id: 'stack', name: 'Harmonic Stack' },
+  { id: 'sweep', name: 'Twin Sweep' },
+  { id: 'choir', name: 'Formant Choir' },
+  { id: 'bell', name: 'Bell Partials' },
+  { id: 'shimmer', name: 'Shimmer Pad' },
+  { id: 'rain', name: 'Rain' },
+  { id: 'spiral', name: 'Spiral' },
+  { id: 'stars', name: 'Starfield' },
+];
+
+const SHARE_SCALES = ['major', 'minor', 'pentatonic', 'whole', 'chromatic'];
+
+export function normalizeSeed(seed) {
+  const n = +seed;
+  if (!isFinite(n)) return 1;
+  return (n >>> 0) || 1;
+}
+
+export function pictureShare(seed, scale) {
+  const sc = SHARE_SCALES.includes(scale) ? scale : 'major';
+  return normalizeSeed(seed) + '.' + sc;
+}
+
+export function parsePictureShare(text) {
+  const m = String(text == null ? '' : text).trim().match(/^(\d{1,10})\.(major|minor|pentatonic|whole|chromatic)$/);
+  if (!m) return null;
+  return { seed: normalizeSeed(m[1]), scale: m[2] };
+}
+
+function paintHzSpan(grid, cols, rows, fLo, fHi, c0, c1, hzAt, ampAt, rad) {
+  const a = Math.max(0, c0 | 0);
+  const b = Math.min(cols - 1, c1 | 0);
+  if (b < a) return;
+  for (let c = a; c <= b; c++) {
+    const t = (c - a) / Math.max(1, b - a);
+    const hz = hzAt(t, c);
+    if (!(hz >= fLo && hz <= fHi)) continue;
+    const amp = ampAt(t, c);
+    if (amp <= 0.01) continue;
+    stampCell(grid, cols, rows, c, hzToRow(hz, rows, fLo, fHi), amp, false, false, rad);
+  }
+}
+
+function midiHz(note) {
+  return 440 * Math.pow(2, (note - 69) / 12);
+}
+
+// Drawn pictures use the current scan range so a line stays inside the picture.
+export function drawnGrid(id, fLo = 80, fHi = 8000, cols = COLS, rows = ROWS) {
+  const grid = new Float32Array(cols * rows);
+  const span = cols - 1;
+  if (id === 'stack') {
+    // C major, close position, each note with a falling harmonic series.
+    // Snap to a row centre so the partial is one tone, not a split between bins.
+    const chord = [130.81, 164.81, 196, 261.63].map(hz => nearestRowHz(hz, rows, fLo, fHi).hz);
+    const weight = [1, 0.72, 0.64, 0.5];
+    for (let i = 0; i < chord.length; i++) {
+      for (let n = 1; n <= 6; n++) {
+        const hz = chord[i] * n;
+        const amp = weight[i] * 0.92 / n;
+        paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => hz, t => amp * (0.78 + 0.22 * Math.sin(Math.PI * t)), n === 1 ? 0.72 : 0.55);
+      }
+    }
+    return grid;
+  }
+  if (id === 'sweep') {
+    // A rising line, a falling line, and a quieter fifth above the rise.
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => 110 * Math.pow(16, t), () => 0.96, 1.15);
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => 1760 * Math.pow(1 / 12, t), () => 0.5, 1.05);
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => 165 * Math.pow(16, t), () => 0.34, 0.85);
+    return grid;
+  }
+  if (id === 'choir') {
+    // A sung G with the first three formants walking ah → ee → oo → eh.
+    // The centres are ordinary vowel measurements, not a copied recording.
+    const vowels = [
+      [730, 1090, 2440],
+      [270, 2290, 3010],
+      [300, 870, 2240],
+      [530, 1840, 2480],
+    ];
+    const f0 = 196;
+    for (let n = 1; n <= 8; n++) {
+      paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, () => f0 * n, () => 0.62 / n, 0.6);
+    }
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => {
+      const x = t * (vowels.length - 1);
+      const i = Math.min(vowels.length - 2, Math.floor(x));
+      const f = x - i;
+      return vowels[i][0] * (1 - f) + vowels[i + 1][0] * f;
+    }, () => 0.9, 2.4);
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => {
+      const x = t * (vowels.length - 1);
+      const i = Math.min(vowels.length - 2, Math.floor(x));
+      const f = x - i;
+      return vowels[i][1] * (1 - f) + vowels[i + 1][1] * f;
+    }, () => 0.72, 2.1);
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => {
+      const x = t * (vowels.length - 1);
+      const i = Math.min(vowels.length - 2, Math.floor(x));
+      const f = x - i;
+      return vowels[i][2] * (1 - f) + vowels[i + 1][2] * f;
+    }, () => 0.42, 1.7);
+    return grid;
+  }
+  if (id === 'bell') {
+    // Inharmonic partials. Higher ones die first, the way a struck bar does.
+    const f0 = 247;
+    const partials = [
+      [0.5, 0.32, 0.85],
+      [1, 1, 1.15],
+      [1.19, 0.48, 1.7],
+      [1.51, 0.58, 1.45],
+      [2, 0.72, 2.05],
+      [2.57, 0.34, 2.7],
+      [3.02, 0.26, 3.1],
+      [4.16, 0.16, 3.7],
+      [5.43, 0.1, 4.3],
+    ];
+    const strike = (c0, scale) => {
+      partials.forEach(([ratio, amp, decay]) => {
+        const hz = f0 * ratio;
+        paintHzSpan(grid, cols, rows, fLo, fHi, c0, span, () => hz, t => {
+          const env = Math.exp(-decay * t * 5.2) * scale * amp;
+          return env;
+        }, 0.7);
+      });
+    };
+    strike(0, 1);
+    strike(Math.floor(cols * 0.42), 0.52);
+    return grid;
+  }
+  if (id === 'shimmer') {
+    // A G major pad. Each note is a slow detuned pair so the scan beats.
+    const tones = [392, 493.88, 587.33, 783.99];
+    tones.forEach((hz, i) => {
+      paintHzSpan(grid, cols, rows, fLo, fHi, 0, span,
+        t => hz * Math.pow(2, Math.sin(t * Math.PI * 2 + i) * 0.018),
+        () => 0.58, 0.85);
+      paintHzSpan(grid, cols, rows, fLo, fHi, 0, span,
+        t => hz * 1.007 * Math.pow(2, Math.sin(t * Math.PI * 2 + i + 1.4) * 0.014),
+        () => 0.4, 0.75);
+    });
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span,
+      t => 1568 * Math.pow(2, Math.sin(t * Math.PI * 4) * 0.03),
+      () => 0.2, 0.65);
+    return grid;
+  }
+  if (id === 'rain') {
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, t => 95 + 18 * Math.sin(t * Math.PI * 6), () => 0.28, 2.4);
+    const rng = rand(0x0A11);
+    for (let i = 0; i < 88; i++) {
+      const c = Math.floor(rng() * (cols - 4));
+      const hz = 1500 * Math.pow(4.5, rng());
+      const dur = 1 + Math.floor(rng() * 3);
+      const amp = 0.38 + rng() * 0.55;
+      paintHzSpan(grid, cols, rows, fLo, fHi, c, c + dur, () => hz, u => amp * (1 - u), 0.45);
+    }
+    for (let i = 0; i < 16; i++) {
+      const c = Math.floor(rng() * (cols - 6));
+      const hz = 420 * Math.pow(2.4, rng());
+      const dur = 3 + Math.floor(rng() * 4);
+      const amp = 0.45 + rng() * 0.4;
+      paintHzSpan(grid, cols, rows, fLo, fHi, c, c + dur, () => hz, u => amp * (1 - u), 0.6);
+    }
+    return grid;
+  }
+  if (id === 'spiral') {
+    // An Archimedean spiral in the picture, plus a soft octave so the scan
+    // has a tone instead of a bare curve. Four slow turns around the middle.
+    const turns = 4;
+    for (let i = 0; i < cols * 8; i++) {
+      const t = i / (cols * 8 - 1);
+      const ang = t * turns * TAU;
+      const rad = 0.08 + 0.34 * t;
+      const x = 0.5 + Math.cos(ang) * rad * 1.35;
+      const y = 0.5 + Math.sin(ang) * rad;
+      if (x <= 0 || x >= 1 || y <= 0 || y >= 1) continue;
+      const col = x * span;
+      const row = (1 - y) * (rows - 1);
+      stampCell(grid, cols, rows, col, row, 0.9, false, false, 1.15);
+      const oct = Math.log(2) / Math.log(fHi / Math.max(fLo, 1)) * (rows - 1);
+      stampCell(grid, cols, rows, col, row - oct, 0.28, false, false, 0.8);
+    }
+    paintHzSpan(grid, cols, rows, fLo, fHi, 0, span, () => 220, () => 0.16, 0.8);
+    return grid;
+  }
+  if (id === 'stars') {
+    // A pentatonic phrase, an octave echo, then scattered high sparks.
+    const phrase = [60, 64, 67, 72, 74, 72, 67, 64];
+    const step = Math.floor((cols - 8) / phrase.length);
+    phrase.forEach((note, i) => {
+      const c = 2 + i * step;
+      const hz = midiHz(note);
+      paintHzSpan(grid, cols, rows, fLo, fHi, c, c + 4, () => hz, u => 0.95 * (1 - u * 0.75), 0.65);
+      paintHzSpan(grid, cols, rows, fLo, fHi, c + 2, c + 5, () => hz * 2, u => 0.28 * (1 - u), 0.5);
+    });
+    const rng = rand(0x57A5);
+    const pcs = [0, 2, 4, 7, 9];
+    for (let i = 0; i < 22; i++) {
+      const c = Math.floor(rng() * (cols - 4));
+      const oct = 5 + Math.floor(rng() * 3);
+      const note = oct * 12 + pcs[Math.floor(rng() * pcs.length)];
+      const hz = midiHz(note);
+      const dur = 1 + Math.floor(rng() * 3);
+      const amp = 0.35 + rng() * 0.5;
+      paintHzSpan(grid, cols, rows, fLo, fHi, c, c + dur, () => hz, u => amp * (1 - u), 0.45);
+    }
+    paintHzSpan(grid, cols, rows, fLo, fHi, cols - 8, cols - 3, () => midiHz(84), u => 0.5 * (1 - u), 0.5);
+    return grid;
+  }
+  return grid;
+}
+
+function scaleNotes(scale, root, loHz, hiHz) {
+  const steps = SCALES[scale] || SCALES.major;
+  const allowed = new Uint8Array(12);
+  const r0 = ((root % 12) + 12) % 12;
+  steps.forEach(pc => { allowed[(r0 + pc) % 12] = 1; });
+  const notes = [];
+  const n0 = Math.ceil(69 + 12 * Math.log2(Math.max(20, loHz) / 440));
+  const n1 = Math.floor(69 + 12 * Math.log2(Math.max(loHz * 1.01, hiHz) / 440));
+  for (let n = n0; n <= n1; n++) {
+    if (!allowed[((n % 12) + 12) % 12]) continue;
+    notes.push({ n, hz: midiHz(n) });
+  }
+  return notes;
+}
+
+// A seeded picture: scale tones and their harmonics, a stepped glissando,
+// a quiet noise band, and a dotted rhythm. The same seed is the same grid.
+export function generatePicture(seed, opts) {
+  const o = opts || {};
+  const cols = o.cols || COLS;
+  const rows = o.rows || ROWS;
+  const fLo = o.fLo == null ? 80 : o.fLo;
+  const fHi = o.fHi == null ? 8000 : o.fHi;
+  const scale = SHARE_SCALES.includes(o.scale) ? o.scale : 'major';
+  const root = o.root == null ? 60 : (o.root | 0);
+  const s = normalizeSeed(seed);
+  const rng = rand(s);
+  const grid = new Float32Array(cols * rows);
+  const notes = scaleNotes(scale, root, Math.max(fLo, 100), Math.min(fHi, 1600));
+  const third = 2;
+  const start = Math.floor(rng() * Math.max(1, notes.length - third * 3 - 1));
+  const degrees = [0, third, third * 2];
+  if (rng() > 0.4 && notes.length > start + third * 3) degrees.push(third * 3);
+  const chord = degrees.map(k => notes[Math.min(notes.length - 1, start + k)]).filter(Boolean);
+  const weights = [1, 0.78, 0.7, 0.55];
+  for (let c = 0; c < cols; c++) {
+    const t = c / Math.max(1, cols - 1);
+    const swell = 0.75 + 0.25 * Math.sin(Math.PI * t);
+    for (let i = 0; i < chord.length; i++) {
+      const amps = [0.88, 0.46, 0.26, 0.14, 0.08];
+      for (let h = 0; h < amps.length; h++) {
+        const hz = chord[i].hz * (h + 1);
+        if (hz < fLo || hz > fHi) continue;
+        stampCell(grid, cols, rows, c, hzToRow(hz, rows, fLo, fHi), amps[h] * swell * weights[i], false, false, h === 0 ? 0.7 : 0.5);
+      }
+    }
+  }
+  const walkN = 5 + Math.floor(rng() * 4);
+  const walk0 = Math.floor(rng() * Math.max(1, notes.length - walkN));
+  const dir = rng() > 0.5 ? 1 : -1;
+  const c0 = Math.floor(cols * (0.12 + rng() * 0.18));
+  const c1 = Math.min(cols - 1, c0 + Math.floor(cols * (0.38 + rng() * 0.28)));
+  for (let c = c0; c <= c1; c++) {
+    const u = (c - c0) / Math.max(1, c1 - c0);
+    const step = Math.min(walkN - 1, Math.floor(u * walkN));
+    const idx = dir > 0 ? walk0 + step : walk0 + (walkN - 1 - step);
+    const note = notes[Math.max(0, Math.min(notes.length - 1, idx))];
+    const above = notes[Math.max(0, Math.min(notes.length - 1, idx + third))];
+    if (note) stampCell(grid, cols, rows, c, hzToRow(note.hz, rows, fLo, fHi), 0.82, false, false, 0.8);
+    if (above) stampCell(grid, cols, rows, c, hzToRow(above.hz, rows, fLo, fHi), 0.4, false, false, 0.65);
+  }
+  const bandHz = Math.max(fLo, Math.min(fHi, fLo * Math.pow(fHi / fLo, 0.18 + rng() * 0.62)));
+  const bandRow = hzToRow(bandHz, rows, fLo, fHi);
+  const bandAmp = 0.1 + rng() * 0.08;
+  for (let c = 0; c < cols; c++) {
+    const wob = Math.sin(c * 0.21 + s) * 1.2;
+    stampCell(grid, cols, rows, c, bandRow + wob, bandAmp, false, false, 1.8);
+  }
+  const period = 6 + Math.floor(rng() * 5);
+  const dots = [];
+  for (let i = 0; i < 4; i++) dots.push(notes[Math.floor(rng() * notes.length)]);
+  for (let c = 2; c < cols - 2; c += period) {
+    if (rng() < 0.2) continue;
+    const note = dots[Math.floor(rng() * dots.length)];
+    if (!note) continue;
+    const dur = 2 + Math.floor(rng() * 2);
+    const amp = 0.5 + rng() * 0.4;
+    for (let dc = 0; dc < dur && c + dc < cols; dc++) {
+      stampCell(grid, cols, rows, c + dc, hzToRow(note.hz, rows, fLo, fHi), amp * (1 - dc / dur), false, false, 0.55);
+    }
+  }
+  const balance = scaleEnergy(grid, scale, root, fLo, fHi, cols, rows);
+  return {
+    grid, seed: s, scale, root, share: pictureShare(s, scale),
+    onScale: balance.on, offScale: balance.off,
+  };
+}
+
+export function overGrid(base, add) {
+  const n = Math.min(base.length, add.length);
+  const out = new Float32Array(base.length);
+  out.set(base);
+  for (let i = 0; i < n; i++) out[i] = Math.max(base[i], add[i]);
+  return out;
+}
+
+export function gridDigest(grid) {
+  let h = 2166136261;
+  for (let i = 0; i < grid.length; i++) {
+    h ^= (Math.round(grid[i] * 1000) + i) >>> 0;
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+export function scaleEnergy(grid, scale, root, fLo, fHi, cols = COLS, rows = ROWS) {
+  const onMask = scaleMask(rows, scale, root, fLo, fHi);
+  const offMask = scaleMask(rows, scale, root + 1, fLo, fHi);
+  let on = 0, off = 0;
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const v = grid[c * rows + r] || 0;
+      if (onMask[r]) on += v;
+      if (offMask[r]) off += v;
+    }
+  }
+  return { on, off };
+}
+
+export function summarizeGrid(grid, fLo = 80, fHi = 8000, cols = COLS, rows = ROWS) {
+  let energy = 0, head = 0, tail = 0, lit = 0;
+  const loud = col => {
+    let best = 0, mag = 0;
+    const c = Math.max(0, Math.min(cols - 1, col | 0));
+    for (let r = 0; r < rows; r++) {
+      const v = grid[c * rows + r] || 0;
+      if (v > mag) { mag = v; best = r; }
+    }
+    return rowHz(best, rows, fLo, fHi);
+  };
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const v = grid[c * rows + r] || 0;
+      energy += v;
+      if (c < 8) head += v;
+      if (c >= cols - 8) tail += v;
+      if (v > 0.2) lit++;
+    }
+  }
+  return { energy, head, tail, lit, startHz: loud(0), endHz: loud(cols - 1), digest: gridDigest(grid) };
+}
+
 function fftRadix(re, im, inverse) {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
