@@ -1,0 +1,53 @@
+{
+  "name": "dxedge-synth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DXEdge synth rack and mix desk, offline on the desktop",
+  "main": "main.cjs",
+  "author": "DXEdge",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64",
+    "test": "node --test test/server.test.mjs"
+  },
+  "devDependencies": {
+    "electron": "44.7.2",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "net.dxedge.synth",
+    "productName": "DXEdge Synth",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "server.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/public",
+        "to": "public"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "DXEdge-Synth-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "DXEdge-Synth-Setup-${version}.exe"
+    }
+  }
+}
