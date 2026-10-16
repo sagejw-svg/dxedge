@@ -26,8 +26,27 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "public"))
 PORT = int(os.environ.get("SYNTH_PORT", "8796"))
 SHOTS = os.environ.get("SYNTH_SHOTS", "/tmp")
-handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT)
-handler.log_message = lambda *a, **k: None
+FAVICON = b"<svg xmlns='http://www.w3.org/2000/svg'/>"
+class SynthHandler(http.server.SimpleHTTPRequestHandler):
+    """Static files, plus the two answers production gives that this tree has no file for.
+
+    sw.js precaches /favicon.svg; production answers it with the SPA shell (200). A 404 here
+    fails cache.addAll, the worker never installs, and navigator.serviceWorker.ready never
+    resolves. context.route() does not see service-worker fetches, so the server answers it.
+    lib/stat.js POSTs /api/stat; production answers 204."""
+    def log_message(self, *a, **k): pass
+    def do_GET(self):
+        if self.path.split("?")[0] == "/favicon.svg":
+            self.send_response(200); self.send_header("Content-Type", "image/svg+xml")
+            self.send_header("Content-Length", str(len(FAVICON))); self.end_headers(); self.wfile.write(FAVICON); return
+        return super().do_GET()
+    def do_POST(self):
+        if self.path.split("?")[0] == "/api/stat":
+            n = int(self.headers.get("Content-Length") or 0)
+            if n: self.rfile.read(n)
+            self.send_response(204); self.end_headers(); return
+        self.send_error(501)
+handler = functools.partial(SynthHandler, directory=ROOT)
 socketserver.TCPServer.allow_reuse_address = True
 httpd = socketserver.TCPServer(("127.0.0.1", PORT), handler)
 threading.Thread(target=httpd.serve_forever, daemon=True).start()
@@ -2520,17 +2539,31 @@ with sync_playwright() as pw:
     # response, Chrome fails the load with net::ERR_FAILED. Anyone who has opened
     # dxedge.net has that worker, so /synth without the slash never comes up.
     # This registers the real sw.js and loads the slash-less URL.
+    # Every precache asset must load, or cache.addAll rejects and the worker never installs.
+    # (context.route() does not see service-worker fetches, so the test server answers
+    # /favicon.svg itself; see SynthHandler.)
+    import re as _re, urllib.request as _ur
+    with open(os.path.join(ROOT, "sw.js"), encoding="utf-8") as fh:
+        _m = _re.search(r"STATIC_ASSETS\s*=\s*\[(.*?)\]", fh.read(), _re.S)
+    precache = _re.findall(r"'([^']+)'", _m.group(1)) if _m else []
+    bad = []
+    for a in precache:
+        try:
+            with _ur.urlopen(f"http://127.0.0.1:{PORT}{a}", timeout=10) as r:
+                if r.status != 200: bad.append((a, r.status))
+        except Exception as e:
+            bad.append((a, str(e)[:80]))
+    ck("slashless /synth: every sw.js precache asset loads (200)", precache and not bad, (precache, bad))
     sctx = b.new_context()
-    # Precache lists /favicon.svg. Production answers that with the SPA shell (200);
-    # this static server would 404 it and the worker would never install.
-    sctx.route("**/favicon.svg", lambda route: route.fulfill(
-        status=200, content_type="image/svg+xml", body="<svg xmlns='http://www.w3.org/2000/svg'/>"))
     sp = sctx.new_page(); serr = []
     sp.on("pageerror", lambda e: serr.append(str(e)))
     sp.goto(BASE)
     controlled = sp.evaluate("""async () => {
       await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
+      // A failed install leaves ready pending forever; give up after 15 s instead of hanging the suite.
+      const ok = await Promise.race([navigator.serviceWorker.ready.then(() => true),
+                                     new Promise(r => setTimeout(() => r(false), 15000))]);
+      if (!ok) return false;
       if (!navigator.serviceWorker.controller) {
         await new Promise(resolve => {
           const t = setTimeout(resolve, 3000);

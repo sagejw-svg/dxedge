@@ -60,6 +60,15 @@ advice; have an IP attorney review before a commercial launch.
 | [FluidR3_GM SoundFont](https://github.com/educandu/abcjs-soundfonts) | MIT (per that repository's notes; confirm at the original source before shipping) | A General MIDI instrument set | Default sounds for imported MIDI files and a GM fallback. |
 | Salamander Grand Piano | Public domain now (originally CC BY 3.0), per the same repository; confirm at source | A sampled grand piano | A piano preset for the sampler. |
 
+## Register: desktop app (added 15 Oct 2026 by the nightly check, after the fact)
+
+`desktop/` (commit `6e178d4`) added these two dev dependencies without a row, against rule 7. License fields below are from `desktop/package-lock.json`; the projects' own pages were not re-checked from this environment. Neither is imported by the website.
+
+| Resource | License | What it gives us | Where it lives |
+|-|-|-|-|
+| [Electron](https://github.com/electron/electron) 44.7.2 | MIT (package-lock). The runtime it ships bundles Chromium and other third-party code under their own licenses | The Windows app shell: Chromium for worklets, Web MIDI and the microphone | `desktop/package.json` devDependency; redistributed inside the installer. Before the first public release, confirm the installer carries Electron's license and Chromium's third-party license file, and add an Electron entry to `THIRD_PARTY_NOTICES.md`. |
+| [electron-builder](https://github.com/electron-userland/electron-builder) 26.15.3 | MIT (package-lock) | Builds the NSIS installer | Build tool only, run by `.github/workflows/desktop-release.yml`; not shipped in the app. |
+
 ## Register: vendored devices (checked 14 Oct 2026)
 
 These two are in the tree, pinned, and linked from `/synth/` and the Synth tab. Notices are in `THIRD_PARTY_NOTICES.md`. Each page names what was left out.
