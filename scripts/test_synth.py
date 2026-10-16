@@ -2937,20 +2937,17 @@ with sync_playwright() as pw:
     ck("G. MIDI notes latch while hold is on, and the rack panic releases them",
        midi_hold["latched"]["voices"] == 1 and midi_hold["latched"]["n"] == 1 and "m64" in midi_hold["latched"]["ids"]
        and midi_hold["after"]["voices"] == 0 and midi_hold["after"]["hold"] is False and midi_hold["after"]["n"] == 0, midi_hold)
+    pg.evaluate("""() => __synth.setPatch({ device: 'gleam', mode: 'field', hold: true, generator: 'drift', rate: 0.5, depth: 0.8, seed: 5, level: 0.85, reverb: 0, glide: 0 })""")
+    pg.wait_for_timeout(100)
     live_mix = pg.evaluate("""() => {
       const h = __synth.gleam();
-      h.setPatch({ device: 'gleam', mode: 'field', hold: true, generator: 'drift', rate: 0.5, depth: 0.8, seed: 5, level: 0.85, reverb: 0 });
-      return new Promise(resolve => {
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          h.pointer('down', { id: 4, x: 0.15, y: 0.55, z: 0.9 });
-          h.pointer('up', { id: 4, x: 0.22, y: 0.4, z: 0.9 });
-          const both = { voices: h.voices(), ids: h.ids().slice(), held: h.latched().length, gen: !!h.generator() };
-          h.setPatch(Object.assign({}, h.patch(), { hold: false }));
-          const genOnly = { voices: h.voices(), ids: h.ids().slice(), held: h.latched().length };
-          h.setPatch(Object.assign({}, h.patch(), { generator: 'off' }));
-          resolve({ both, genOnly, off: h.voices() });
-        }));
-      });
+      h.pointer('down', { id: 4, x: 0.15, y: 0.55, z: 0.9 });
+      h.pointer('up', { id: 4, x: 0.22, y: 0.4, z: 0.9 });
+      const both = { voices: h.voices(), ids: h.ids().slice(), held: h.latched().length, gen: !!h.generator() };
+      h.setPatch(Object.assign({}, h.patch(), { hold: false }));
+      const genOnly = { voices: h.voices(), ids: h.ids().slice(), held: h.latched().length };
+      h.setPatch(Object.assign({}, h.patch(), { generator: 'off' }));
+      return { both, genOnly, off: h.voices() };
     }""")
     ck("G. hold, the generator and a finger combine, and each one can stop on its own",
        live_mix["both"]["voices"] >= 2 and live_mix["both"]["held"] == 1 and "gen" in live_mix["both"]["ids"] and "p4" in live_mix["both"]["ids"]
