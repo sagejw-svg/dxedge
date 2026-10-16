@@ -153,6 +153,9 @@
   body:not([data-dev="resnatron"]) #rnRoot { display: none !important; }
   body:not([data-dev="thyratron"]) #thyRoot { display: none !important; }
   body:not([data-dev="gleam"]) #gleamRoot { display: none !important; }
+  /* the graphic EQ is a Filament and Cathode patch field; the tube show needs the chassis */
+  body:not([data-dev="filament"]):not([data-dev="cathode"]) #mEq { display: none !important; }
+  body:not([data-dev="filament"]):not([data-dev="cathode"]):not([data-dev="thyratron"]):not([data-dev="dekatron"]):not([data-dev="gleam"]) #mShow { display: none !important; }
   body[data-dev="dekatron"] #mStereo, body[data-dev="dekatron"] #mEns, body[data-dev="dekatron"] #mOut,
   body[data-dev="dekatron"] #mSpk, body[data-dev="dekatron"] #mRoom { display: none !important; }
   body[data-dev="lattice"] #chassis, body[data-dev="lattice"] #mStereo, body[data-dev="lattice"] #mEns,
@@ -2400,7 +2403,9 @@ function eqChip(host, label, v, fn) {
 EQ_N.forEach(n => eqChip($('eqBandChips'), String(n), n, () => setEqBands(n)));
 EQ_PRESETS.forEach(p => eqChip($('eqPresetChips'), p.name, p.id, () => setEqPreset(p.id)));
 eqChip($('eqPresetChips'), 'custom', 'custom', () => {}).title = 'Your own curve: drag the faders';
+const eqHere = () => !!(cur && cur.out && Array.isArray(cur.out.eqGains));   // Filament and Cathode patches only
 function refreshEqChips() {
+  if (!eqHere()) return;
   const o = cur.out;
   $('eqBandChips').querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === o.eqBands)));
   $('eqPresetChips').querySelectorAll('.chip').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.v === o.eqPreset)); if (b.dataset.v === 'custom') b.style.visibility = o.eqPreset === 'custom' ? '' : 'hidden'; });
@@ -2439,6 +2444,7 @@ function eqLevels(dt, now) {
   }
 }
 function drawEq(now) {
+  if (!eqHere()) return;
   const f = fitCanvas($('eqCv')); if (!f) return; const c = f.c, G = eqGeom(f.w, f.h), n = G.n, cen = eqCentres(n), gains = cur.out.eqGains;
   const dt = Math.min(0.1, (now - (EQV.last || now)) / 1000); EQV.last = now;
   eqLevels(dt, now);
@@ -2482,7 +2488,7 @@ function drawEq(now) {
   c.textAlign = 'start';
 }
 function eqRead(i) {
-  const r = $('eqRead');
+  const r = $('eqRead'); if (!eqHere()) return;
   if (i < 0) { r.innerHTML = '<span class="dim">drag the faders, or sweep across to draw a curve</span>'; return; }
   const f = eqCentres(cur.out.eqBands)[i];
   r.innerHTML = fmtF(f) + 'Hz &nbsp;<b>' + sgnDb(cur.out.eqGains[i] || 0) + '</b> <span class="dim">&middot; curve ' + sgnDb(eqResp(f)) + '</span>';

@@ -1200,7 +1200,8 @@ with sync_playwright() as pw:
     ck(f"Tv. more drive runs V1 hotter (heat {heats[0]['s']['heat']['v1']:.2f} at drive 1, {heats[1]['s']['heat']['v1']:.2f} at drive 9)",
        heats[1]["s"]["heat"]["v1"] > heats[0]["s"]["heat"]["v1"] + 0.25 and heats[1]["s"]["heat"]["v1"] > 0.5, heats)
     idle = pg.evaluate("__synth.tubeShow().heat.v1"); pg.wait_for_timeout(1500); idle2 = pg.evaluate("__synth.tubeShow().heat.v1")
-    ck(f"Tv. the plates cool when the playing stops ({idle:.2f}, then {idle2:.2f})", idle2 < 0.25, (idle, idle2))
+    # (drive alone keeps a little warmth: 0.18 x drive/10, so 0.16 at drive 9)
+    ck(f"Tv. the plates cool when the playing stops ({idle:.2f}, then {idle2:.2f} 1.5 s later)", idle2 < 0.5 * idle and idle2 < 0.35, (idle, idle2))
     # clipping fires an arc, rate limited
     hot = patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, voice={"level": 1},
                 v1={"tube": "12AX7", "drive": 10, "bias": 0}, out={"tube": "EL34", "topology": "pp", "drive": 8, "level": 12})
@@ -1214,13 +1215,24 @@ with sync_playwright() as pw:
     ck(f"Tv. factory patches played hard do not arc (only real clipping does): {fa}", all(x[1] == 0 for x in fa), fa)
     ck(f"Tv. the power tubes glow blue with the output (V3 {hr['s']['blue']['v3']:.2f}) and V1 plates red (heat {hr['s']['heat']['v1']:.2f})", hr["s"]["blue"]["v3"] > 0.4 and hr["s"]["heat"]["v1"] > 0.6, hr)
     # the canvases are painted: a held hot chord draws a brighter V1 with the show on than off
-    BRIGHT = """async () => { const cv = document.getElementById('tubeV1'), c = cv.getContext('2d'); await new Promise(r => setTimeout(r, 120));
-      const d = c.getImageData(0, 0, cv.width, cv.height).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return s / (d.length / 4); }"""
-    pg.evaluate("__synth.noteOn(48, 1); __synth.noteOn(55, 1)"); pg.wait_for_timeout(1200)
-    b_full = pg.evaluate(BRIGHT); pg.evaluate("__synth.setTubeShow('off')"); pg.wait_for_timeout(1500); b_off = pg.evaluate(BRIGHT)
+    # the painter, on its own: the same tube at the same instant, with and without each part of the show
+    PAINT = """async () => { const m = await import('./tubepaint.js'); const cv = document.createElement('canvas');
+      cv.style.cssText = 'width:78px;height:130px;position:fixed;left:0;top:0;z-index:-1'; document.body.appendChild(cv);
+      const st = { shown: '12AX7', heat: 1, glow: 0.6, drive: 5, bias: 0, on: true, tubeOn: true, tvFilter: 'natural', tvBright: 100, tvFlicker: 0 };
+      const sum = sh => { m.paintTubeShow(cv, 1000, st, 'rack', sh); const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+        let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } const n = d.length / 4; return [r / n, g / n, b / n]; };
+      const z = { k: 1, flare: 0, heat: 0, arc: 0, seed: 1, blue: 0, res: 0, shimmer: false };
+      const o = { none: sum(null), off: sum(Object.assign({}, z, { heat: 0.9, k: 0 })), heat: sum(Object.assign({}, z, { heat: 0.9 })), subtle: sum(Object.assign({}, z, { heat: 0.9, k: 0.45 })),
+        blue: sum(Object.assign({}, z, { blue: 1 })), flare: sum(Object.assign({}, z, { flare: 1 })), arc: sum(Object.assign({}, z, { arc: 1, seed: 7 })), res: sum(Object.assign({}, z, { res: 1 })) };
+      cv.remove(); return o; }"""
+    pt = pg.evaluate(PAINT); d_ = lambda k: [round(pt[k][i] - pt["none"][i], 1) for i in range(3)]
+    ck(f"Tv. painter: red plating adds mostly red {d_('heat')}, subtle less {d_('subtle')}, off nothing {d_('off')}",
+       d_("heat")[0] > 3 and d_("heat")[0] > 2 * d_("heat")[2] and 0 < d_("subtle")[0] < d_("heat")[0] and max(abs(x) for x in d_("off")) < 0.01, pt)
+    ck(f"Tv. painter: blue glow adds mostly blue {d_('blue')}; a flare brightens all three {d_('flare')}; an arc adds blue-white {d_('arc')}; resonance adds warm light {d_('res')}",
+       d_("blue")[2] > 3 and d_("blue")[2] > 2 * d_("blue")[0] and min(d_("flare")) > 2 and d_("arc")[2] > 1 and d_("res")[0] > 1, pt)
+    pg.evaluate("__synth.noteOn(48, 1); __synth.noteOn(55, 1)"); pg.wait_for_timeout(600); pg.evaluate("__synth.setTubeShow('off')"); pg.wait_for_timeout(1200)
     st_off = pg.evaluate("__synth.tubeShow()")
     pg.evaluate("__synth.noteOff(48); __synth.noteOff(55)"); pg.wait_for_timeout(250)
-    ck(f"Tv. the canvases are painted: V1 averages {b_full:.1f} with the show on and {b_off:.1f} off", b_full > b_off * 1.08 and b_off > 1, (b_full, b_off))
     a0 = pg.evaluate("__synth.tubeShow().arcs"); ho = pg.evaluate(HOLD, {"notes": [36, 48, 55, 60], "ms": 1200})
     ck("Tv. off: no flares, no arcs, no heat or blue glow, and the voice lamps are hidden",
        ho["s"]["arcs"] == a0 and ho["s"]["flare"]["v1"] == 0 and ho["s"]["heat"]["v1"] < 0.02 and ho["s"]["blue"]["v3"] < 0.02 and st_off["lamps"] == 0
