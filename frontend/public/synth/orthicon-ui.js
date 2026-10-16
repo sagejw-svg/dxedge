@@ -10,6 +10,7 @@ import { orthiconDevice, normalizeOrthicon, ORTH_DEFAULT, BRUSHES, PHASES, ENGIN
 import {
   COLS, ROWS, pictureGrid, paintStroke, paintTone, imageToGrid, analyzeBuffer,
   smearGrid, blurGrid, shiftGrid, stretchGrid, freezeColumn, quantizeGrid,
+  DRAWN, drawnGrid, generatePicture, overGrid, summarizeGrid, pictureShare,
 } from './orthicon-dsp.js';
 
 const WORKLET = new URL('./orthicon.worklet.js', import.meta.url).href;
@@ -89,7 +90,24 @@ export function createOrthiconHost() {
   let patch = normalizeOrthicon(ORTH_DEFAULT);
   let grid = pictureGrid(patch.picture, patch.fLo, patch.fHi);
   let source = patch.picture;
+  let label = '';
+  let gen = { seed: 1, scale: 'major' };
+  const undo = [];
   let rack = false;
+  function remember() {
+    undo.push({ grid: new Float32Array(grid), source, label });
+    if (undo.length > 24) undo.shift();
+  }
+  function report() {
+    const sum = summarizeGrid(grid, patch.fLo, patch.fHi);
+    return {
+      source, label, seed: gen.seed, scale: gen.scale,
+      share: pictureShare(gen.seed, gen.scale),
+      canUndo: undo.length > 0,
+      energy: sum.energy, head: sum.head, tail: sum.tail, lit: sum.lit,
+      startHz: sum.startHz, endHz: sum.endHz, digest: sum.digest,
+    };
+  }
   function send(m) {
     if (!m) return;
     let msg = m;
@@ -98,20 +116,30 @@ export function createOrthiconHost() {
     node.port.postMessage(msg);
   }
   function pushGrid() { send({ t: 'grid', data: grid }); }
-  function adopt(next, name) {
+  function adopt(next, name, caption) {
     // The page owns the patch. Sending one from here would race a knob change.
     // The caller marks the picture custom; the next setPatch keeps this grid.
     grid = next instanceof Float32Array ? next : Float32Array.from(next);
     source = name || 'custom';
+    label = caption == null ? '' : caption;
     pushGrid();
     if (onGrid) onGrid();
     return grid;
+  }
+  function place(next, name, caption, over) {
+    remember();
+    const drawn = next instanceof Float32Array ? next : Float32Array.from(next);
+    const mixed = over ? overGrid(grid, drawn) : drawn;
+    adopt(mixed, name, caption);
+    return report();
   }
   return {
     meter: () => meter,
     grid: () => grid,
     source: () => source,
+    label: () => label,
     patch: () => patch,
+    canUndo: () => undo.length > 0,
     setMeterListener(fn) { onMeter = fn; },
     setGridListener(fn) { onGrid = fn; },
     node: () => node,
@@ -139,14 +167,19 @@ export function createOrthiconHost() {
     },
     setPatch(p) {
       const next = normalizeOrthicon(p);
+      const pictureChanged = next.picture !== 'custom' && next.picture !== patch.picture;
       const regen = next.picture !== 'custom' && (
         next.picture !== patch.picture || next.fLo !== patch.fLo || next.fHi !== patch.fHi
       );
+      // A factory picture replaces the canvas. Remember the one that was here
+      // so Undo can put it back. A frequency tweak of the same picture does not.
+      if (pictureChanged) remember();
       patch = next;
       send({ t: 'patch', p: patch });
       if (regen) {
         grid = pictureGrid(patch.picture, patch.fLo, patch.fHi);
         source = patch.picture;
+        label = '';
         pushGrid();
         if (onGrid) onGrid();
       }
@@ -164,7 +197,46 @@ export function createOrthiconHost() {
       adopt(hit.grid, 'paint');
       return { hz: hit.hz, row: hit.row };
     },
-    clearGrid() { return adopt(new Float32Array(COLS * ROWS), 'custom'); },
+    clearGrid() {
+      remember();
+      adopt(new Float32Array(COLS * ROWS), 'custom', 'Cleared');
+      return report();
+    },
+    pictures: () => DRAWN.map(d => ({ id: d.id, name: d.name })),
+    drawPicture(id, opts) {
+      const spec = DRAWN.find(d => d.id === id);
+      if (!spec) return null;
+      const over = !!(opts && opts.over);
+      const next = drawnGrid(id, patch.fLo, patch.fHi);
+      const caption = spec.name + (over ? ' · over' : '');
+      return place(next, id, caption, over);
+    },
+    generate(seed, opts) {
+      const o = opts || {};
+      const scale = o.scale && o.scale !== 'off' ? o.scale : 'major';
+      const made = generatePicture(seed, {
+        scale, root: o.root == null ? patch.root : o.root, fLo: patch.fLo, fHi: patch.fHi,
+      });
+      gen = { seed: made.seed, scale: made.scale };
+      const over = !!o.over;
+      const caption = 'Generated ' + made.seed + ' · ' + made.scale + (over ? ' · over' : '');
+      const info = place(made.grid, 'gen', caption, over);
+      return Object.assign(info, { onScale: made.onScale, offScale: made.offScale });
+    },
+    undo() {
+      const prev = undo.pop();
+      if (!prev) return null;
+      adopt(prev.grid, prev.source, prev.label);
+      return report();
+    },
+    state: report,
+    probe(id) {
+      const spec = DRAWN.find(d => d.id === id);
+      if (!spec) return null;
+      const next = drawnGrid(id, 80, 8000);
+      const sum = summarizeGrid(next, 80, 8000);
+      return Object.assign({ id, name: spec.name }, sum);
+    },
     async capture(audioCtx, sourceNode, seconds) {
       return recordOrthicon(audioCtx, sourceNode, seconds);
     },
@@ -240,7 +312,7 @@ export function mountOrthiconPanel(container, hooks) {
   stage.appendChild(name);
   const hint = document.createElement('div');
   hint.className = 'note';
-  hint.textContent = 'Paint time across and frequency up. The playhead scans the picture and resynthesizes it. Drop a PNG or JPG to play the picture, or load audio, the mic, or the rack. Capture rack is an input, not an export: it analyses the rack into this picture. A painting stays for this session. Presets are generated pictures. Keys mode: C4 is the picture\'s own pitch. The red rec button saves what you hear as a WAV.';
+  hint.textContent = 'Paint time across and frequency up. The playhead scans the picture and resynthesizes it. Drop a PNG or JPG to play the picture, or load audio, the mic, or the rack. Capture rack is an input, not an export: it analyses the rack into this picture. Clear wipes the canvas. The pictures are drawn to be played: a harmonic stack, rising and falling sweeps, a formant choir, bell partials, a shimmer, rain, a spiral, and a starfield. Generate builds a new one from the seed, and the same seed is the same picture. Over paints on top of the canvas. Undo puts the previous picture back. A painting stays for this session. Keys mode: C4 is the picture\'s own pitch. The red rec button saves what you hear as a WAV.';
   stage.appendChild(hint);
 
   const scan = section('scan', 'mOrthScan', 'Scan');
@@ -341,6 +413,104 @@ export function mountOrthiconPanel(container, hooks) {
     hooks.edited();
     sync();
   });
+  const clearBtn = chip(edits, 'clear', false, () => {
+    hooks.wake();
+    const p = hooks.patch();
+    p.picture = 'custom';
+    host.clearGrid();
+    hooks.edited();
+    sync();
+  });
+  clearBtn.id = 'orthiconClear';
+  clearBtn.title = 'Wipe the canvas';
+  const undoBtn = chip(edits, 'undo', false, () => {
+    if (!host.canUndo()) return;
+    const back = host.undo();
+    if (!back) return;
+    const p = hooks.patch();
+    p.picture = 'custom';
+    hooks.edited();
+    sync();
+  });
+  undoBtn.id = 'orthiconUndo';
+  undoBtn.title = 'Put back the picture from before the last clear, picture, or generate';
+
+  const pics = document.createElement('div');
+  pics.className = 'orth-tools';
+  pics.id = 'orthiconPictures';
+  stage.insertBefore(pics, hint);
+  const picBtns = {};
+  host.pictures().forEach(spec => {
+    const b = chip(pics, spec.name, false, () => loadDrawn(spec.id));
+    b.dataset.picture = spec.id;
+    b.title = spec.name;
+    picBtns[spec.id] = b;
+  });
+
+  const genRow = document.createElement('div');
+  genRow.className = 'orth-tools';
+  genRow.id = 'orthiconGenerateRow';
+  stage.insertBefore(genRow, hint);
+  const seedInput = document.createElement('input');
+  seedInput.type = 'number';
+  seedInput.id = 'orthiconSeed';
+  seedInput.min = '1';
+  seedInput.step = '1';
+  seedInput.value = '1';
+  seedInput.setAttribute('aria-label', 'Generate seed');
+  seedInput.title = 'Seed. The same seed draws the same picture.';
+  const genBtn = document.createElement('button');
+  genBtn.type = 'button';
+  genBtn.className = 'btn small';
+  genBtn.id = 'orthiconGenerate';
+  genBtn.textContent = 'Generate';
+  genRow.append(seedInput, genBtn);
+  let paintOver = false;
+  const overBtn = chip(genRow, 'over', false, () => {
+    paintOver = !paintOver;
+    sync();
+  });
+  overBtn.id = 'orthiconOver';
+  overBtn.title = 'Paint the picture on top of the canvas instead of replacing it';
+  const linkBtn = document.createElement('button');
+  linkBtn.type = 'button';
+  linkBtn.className = 'btn small';
+  linkBtn.id = 'orthiconLink';
+  linkBtn.textContent = 'Copy link';
+  linkBtn.title = 'Copy a link that rebuilds this generated picture';
+  genRow.append(linkBtn);
+
+  function loadDrawn(id) {
+    hooks.wake();
+    const p = hooks.patch();
+    const info = host.drawPicture(id, { over: paintOver });
+    if (!info) return;
+    p.picture = 'custom';
+    hooks.edited();
+    sync();
+  }
+  function runGenerate() {
+    hooks.wake();
+    const p = hooks.patch();
+    const scale = p.scale && p.scale !== 'off' ? p.scale : 'major';
+    const info = host.generate(seedInput.value, { scale, root: p.root, over: paintOver });
+    p.picture = 'custom';
+    if (document.activeElement !== seedInput) seedInput.value = String(info.seed);
+    hooks.edited();
+    sync();
+  }
+  genBtn.addEventListener('click', runGenerate);
+  seedInput.addEventListener('change', () => { seedInput.value = String(Math.max(1, Math.floor(+seedInput.value || 1))); });
+  seedInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runGenerate(); } e.stopPropagation(); });
+  linkBtn.addEventListener('click', () => {
+    const info = host.state();
+    const url = new URL(location.href);
+    url.searchParams.set('or', info.share);
+    try { history.replaceState(null, '', url); } catch (e) { /* keep the string */ }
+    const text = url.toString();
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(() => {});
+    if (hooks.toast) hooks.toast('Link copied. Seed ' + info.share + ' draws the same picture.');
+  });
 
   const choiceBtns = [];
   function choices(path, values, labels) {
@@ -424,7 +594,12 @@ export function mountOrthiconPanel(container, hooks) {
     toggleBtns.keyboard.setAttribute('aria-pressed', String(!!p.keyboard));
     toggleBtns.keyboard.textContent = p.keyboard ? 'keys on' : 'keys';
     const src = host.source();
-    name.textContent = src === 'image' ? 'Image' : src === 'audio' ? 'Analysed audio' : src === 'mic' ? 'Microphone' : src === 'rack' ? 'Rack capture' : src === 'paint' || src === 'edit' || src === 'custom' || src === 'freeze' || src === 'quantize' ? 'Painted picture' : (p.name || 'Orthicon');
+    const caption = host.label();
+    name.textContent = caption ? caption : src === 'image' ? 'Image' : src === 'audio' ? 'Analysed audio' : src === 'mic' ? 'Microphone' : src === 'rack' ? 'Rack capture' : src === 'paint' || src === 'edit' || src === 'custom' || src === 'freeze' || src === 'quantize' ? 'Painted picture' : (p.name || 'Orthicon');
+    Object.keys(picBtns).forEach(id => picBtns[id].setAttribute('aria-pressed', String(src === id)));
+    overBtn.setAttribute('aria-pressed', String(paintOver));
+    undoBtn.disabled = !host.canUndo();
+    if (document.activeElement !== seedInput) seedInput.value = String(host.state().seed);
     draw();
   }
 
@@ -587,7 +762,7 @@ export function mountOrthiconPanel(container, hooks) {
     playCol = m.column || 0;
     if (canvas.offsetParent) draw();
   });
-  host.setGridListener(() => { if (!last) draw(); });
+  host.setGridListener(() => { if (!last) sync(); });
   window.addEventListener('resize', draw);
   sync();
   return { sync, draw };

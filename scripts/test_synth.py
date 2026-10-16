@@ -3430,6 +3430,105 @@ with sync_playwright() as pw:
     fimg = peak_freq(imL[len(imL) // 5:])
     ck(f"Or. a dropped image plays the bright row ({fimg:.1f} Hz)",
        abs(fimg - 440) < 12 and ofinite(imL) and ofinite(imR) and orms(imL) > 0.02, (round(fimg, 2), round(orms(imL), 4), pg.evaluate("__synth.orthiconState().energy")))
+    pics = pg.evaluate("__synth.orthiconPictures()")
+    pic_ids = [p["id"] for p in pics]
+    ck("Or. eight drawn pictures", pic_ids == ["stack", "sweep", "choir", "bell", "shimmer", "rain", "spiral", "stars"]
+       and all(p.get("name") for p in pics), pic_ids)
+    probes = pg.evaluate("""() => {
+      const ids = __synth.orthiconPictures().map(p => p.id);
+      const out = {};
+      ids.forEach(id => { out[id] = __synth.orthiconProbe(id); });
+      return out;
+    }""")
+    ck("Or. every drawn picture has energy",
+       all(probes[i]["energy"] > 20 and probes[i]["digest"] > 0 for i in pic_ids),
+       {i: round(probes[i]["energy"], 1) for i in pic_ids})
+    ck("Or. the twin sweep rises",
+       probes["sweep"]["startHz"] < 140 and probes["sweep"]["endHz"] > 1500, (probes["sweep"]["startHz"], probes["sweep"]["endHz"]))
+    ck("Or. the choir walks from ah toward eh",
+       abs(probes["choir"]["startHz"] - 730) < 40 and abs(probes["choir"]["endHz"] - 530) < 40,
+       (probes["choir"]["startHz"], probes["choir"]["endHz"]))
+    ck("Or. the bell is bright at the strike and quiet at the end",
+       probes["bell"]["head"] > 12 and probes["bell"]["tail"] < 1 and 220 < probes["bell"]["startHz"] < 280,
+       (probes["bell"]["head"], probes["bell"]["tail"], probes["bell"]["startHz"]))
+    ck("Or. the stack is a held chord and the starfield is sparse",
+       probes["stack"]["energy"] > 400 and probes["stack"]["lit"] > 700
+       and probes["stars"]["lit"] < 500 and probes["stars"]["energy"] > 30
+       and probes["spiral"]["lit"] > 1000 and probes["shimmer"]["energy"] > 200 and probes["rain"]["energy"] > 100,
+       (probes["stack"]["lit"], probes["stars"]["lit"], probes["spiral"]["lit"]))
+    same = pg.evaluate("""() => {
+      const a = __synth.orthiconGenerate(42, 'major', false);
+      const b = __synth.orthiconGenerate(42, 'major', false);
+      const c = __synth.orthiconGenerate(99, 'major', false);
+      const bad = __synth.orthiconShareParse('nope');
+      const ok = __synth.orthiconShareParse('42.major');
+      return { a: a.digest, b: b.digest, c: c.digest, share: a.share, on: a.onScale, off: a.offScale, bad, ok };
+    }""")
+    ck("Or. the same seed draws the same picture, and another seed does not",
+       same["a"] == same["b"] and same["a"] != same["c"] and same["share"] == "42.major"
+       and same["on"] > same["off"] * 1.3 and same["bad"] is None and same["ok"]["seed"] == 42 and same["ok"]["scale"] == "major",
+       same)
+    stack = pg.evaluate("""() => __synth.orthiconDraw('stack', false)""")
+    stL, stR = orender({"device": "orthicon", "picture": "custom", "keyboard": False, "hold": True, "engine": "add",
+                        "phase": "coherent", "width": 0, "level": 1, "curve": 1, "scale": "off", "fLo": 80, "fHi": 8000},
+                       seconds=0.4, useHost=True)
+    fst = peak_freq(stL[len(stL) // 5:])
+    ck(f"Or. the harmonic stack peaks on its root ({fst:.1f} Hz)",
+       abs(fst - 132.9) < 12 and ofinite(stL) and ofinite(stR) and orms(stL) > 0.02, (round(fst, 2), round(orms(stL), 4)))
+    stars = pg.evaluate("""() => __synth.orthiconDraw('stars', false)""")
+    over = pg.evaluate("""() => __synth.orthiconGenerate(7, 'pentatonic', true)""")
+    ck("Or. Over keeps the picture underneath",
+       over["energy"] + 0.05 >= stars["energy"] and over["digest"] != stars["digest"] and over["source"] == "gen",
+       (round(stars["energy"], 1), round(over["energy"], 1)))
+    undone = pg.evaluate("""() => __synth.orthiconUndo()""")
+    ck("Or. Undo restores the picture under a generate",
+       undone and undone["digest"] == stars["digest"] and undone["source"] == "stars",
+       None if not undone else (undone["digest"], undone["source"]))
+    pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'custom', scale: 'major', root: 60, keyboard: false, hold: true })""")
+    pg.wait_for_timeout(80)
+    pg.fill("#orthiconSeed", "42")
+    pg.click("#orthiconGenerate")
+    pg.wait_for_timeout(80)
+    gen_ui = pg.evaluate("__synth.orthiconState()")
+    ck("Or. Generate uses the seed box",
+       gen_ui["source"] == "gen" and gen_ui["digest"] == same["a"] and gen_ui["seed"] == 42 and "42" in (gen_ui["label"] or ""),
+       gen_ui)
+    pg.click("#orthiconLink")
+    share_q = pg.evaluate("() => new URL(location.href).searchParams.get('or')")
+    ck("Or. Copy link shares the seed", share_q == "42.major", share_q)
+    pg.evaluate("""() => { const u = new URL(location.href); u.searchParams.delete('or'); history.replaceState(null, '', u); }""")
+    before_clear = pg.evaluate("__synth.orthiconState().digest")
+    pg.click("#orthiconClear")
+    cleared = pg.evaluate("__synth.orthiconState()")
+    ck("Or. Clear wipes the canvas",
+       pg.is_visible("#orthiconClear") and cleared["energy"] < 0.01 and cleared["picture"] == "custom" and cleared["canUndo"],
+       cleared)
+    pg.click("#orthiconUndo")
+    restored = pg.evaluate("__synth.orthiconState()")
+    ck("Or. Undo puts back the picture Clear removed",
+       restored["digest"] == before_clear and restored["energy"] > 10, (restored["digest"], round(restored["energy"], 1)))
+    held_stack = pg.evaluate("""() => __synth.orthiconDraw('stack', false)""")
+    pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'lantern', keyboard: false, hold: true, level: 0.7 })""")
+    pg.wait_for_function("() => __synth.orthiconState().source === 'lantern'", timeout=3000)
+    pg.click("#orthiconUndo")
+    pg.wait_for_timeout(80)
+    back = pg.evaluate("__synth.orthiconState()")
+    ck("Or. Undo restores the canvas after a preset picture",
+       back["digest"] == held_stack["digest"] and back["source"] == "stack" and back["picture"] == "custom",
+       (back["source"], back["picture"], back["digest"]))
+    share_pg = b.new_page(viewport={"width": 1366, "height": 900})
+    share_err = []
+    share_pg.on("pageerror", lambda e: share_err.append(str(e)))
+    share_pg.goto(BASE + "?or=42.major")
+    share_pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    share_pg.wait_for_function("() => __synth.device() === 'orthicon' && __synth.orthiconState().source === 'gen'", timeout=5000)
+    shared = share_pg.evaluate("__synth.orthiconState()")
+    ck("Or. a shared seed opens the same picture",
+       shared["digest"] == same["a"] and shared["seed"] == 42 and not share_err, (shared.get("digest"), shared.get("seed"), share_err))
+    share_pg.close()
+    ck("Or. Clear, Generate, and the pictures are on the panel",
+       pg.is_visible("#orthiconClear") and pg.is_visible("#orthiconUndo") and pg.is_visible("#orthiconGenerate")
+       and pg.is_visible("#orthiconOver") and pg.is_visible("#orthiconSeed") and pg.locator("#orthiconPictures button").count() == 8)
     pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'glyph', keyboard: true, level: 0.8, engine: 'add', phase: 'coherent' })""")
     pg.wait_for_timeout(120)
     pg.evaluate("__synth.noteOn(60, 0.8)")
