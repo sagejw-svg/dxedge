@@ -62,11 +62,30 @@ EXPLOIT_RE = re.compile(
     re.I,
 )
 MONEY_BAD = re.compile(r"\b(you should buy|guaranteed return|wire the funds)\b", re.I)
+CANCER_BAD = re.compile(
+    r"\b(you should (take|start|stop|use|ask)|dosage|dosages|milligrams|"
+    r"\d+\s*mg\b|this patient|her diagnosis|his diagnosis|patient stor(?:y|ies)|"
+    r"i was diagnosed|my oncologist|infusion protocol|chemo regimen|"
+    r"treatment protocol)\b",
+    re.I,
+)
 BIO_SAFE = (
     "Researchers and lawmakers are debating gene editing and synthetic biology "
     "in public. This note stays at that level: what changed, why it matters, "
     "and which rules apply. It does not describe how to build or alter an organism."
 )
+CANCER_SAFE = (
+    "Cancer research and treatment news, at explainer level. This note says "
+    "what was reported and where to read it. It is not medical advice, and it "
+    "does not tell someone's story or give a procedure."
+)
+# The fourteen subject sections. The lead, AI & the World, is separate.
+REQUIRED_LIVE = (
+    "world", "comics", "ai-editorial", "biology", "cancer", "education",
+    "sleep", "ai-security", "cybersecurity", "company", "money", "life",
+    "space", "weird",
+)
+LIFE_TITLE = "Life improvement & thinking tools"
 IMG_HOSTS = {
     "xkcd": ("imgs.xkcd.com",),
     "pepper": ("www.peppercarrot.com", "peppercarrot.com"),
@@ -122,10 +141,22 @@ def _validate_config(data: dict) -> None:
     ids = [s["id"] for s in data["sections"]]
     if len(ids) != len(set(ids)):
         raise ValueError("duplicate section id")
-    if "ai-world" not in ids or "world" not in ids:
+    by_id = {s["id"]: s for s in data["sections"]}
+    lead = by_id.get("ai-world")
+    if not lead or not lead.get("lead") or lead.get("coming_soon") or not lead.get("prompt"):
+        raise ValueError("lead section is required")
+    if "world" not in by_id:
         raise ValueError("lead and world sections are required")
+    for sid in REQUIRED_LIVE:
+        sec = by_id.get(sid)
+        if not sec or sec.get("coming_soon") or not sec.get("prompt"):
+            raise ValueError(f"section {sid} must be live")
+    if by_id["life"].get("title") != LIFE_TITLE:
+        raise ValueError("life section title")
+    if by_id["ai-security"].get("prompt") == by_id["cybersecurity"].get("prompt"):
+        raise ValueError("cybersecurity must be its own section")
     for s in data["sections"]:
-        blob = f"{s['id']} {s.get('title','')} {s.get('brief','')}".lower()
+        blob = f"{s['id']} {s.get('title','')} {s.get('brief','')} {s.get('prompt','')}".lower()
         if "ham radio" in blob or "amateur radio" in blob or "dilbert" in blob:
             raise ValueError("section config crosses a hard rule")
         if not s.get("coming_soon") and not s.get("prompt"):
@@ -217,6 +248,12 @@ def build_prompt(section: dict, day: str, topic_bias: list[tuple[str, int]]) -> 
         f"Section: {section['title']}.",
         section.get("prompt") or "",
     ]
+    if section.get("lead"):
+        lines.append(
+            'Also include a top-level string "progress": one sentence of at most '
+            "18 words on the AI progress in this edition. Do not name a person, "
+            "a patient, or an employer. If nothing in AI moved, say what held steady."
+        )
     liked = [name for name, score in topic_bias if score > 0][:8]
     if liked:
         lines.append(
@@ -225,6 +262,51 @@ def build_prompt(section: dict, day: str, topic_bias: list[tuple[str, int]]) -> 
         )
     lines.append("Use recent, real reporting. Every highlight needs a real https source.")
     return preamble(), "\n".join(lines)
+
+
+def ai_progress_line(raw) -> str:
+    """A short thread line. Empty when the text is missing or crosses a rule."""
+    if not isinstance(raw, str):
+        return ""
+    text = clip(raw, 160)
+    if not text:
+        return ""
+    if HAM_RE.search(text) or EXPLOIT_RE.search(text) or WEIRD_BAD.search(text):
+        return ""
+    return text
+
+
+def capture_ai_progress(parsed: dict, highlights: list[dict]) -> str:
+    """Take the progress line from the lead response already in hand.
+
+    The lead call is asked for a progress sentence. If that field is missing
+    or unusable, the first highlight's dek or title — from the same response —
+    stands in. No second model call.
+    """
+    candidates = []
+    if isinstance(parsed, dict) and isinstance(parsed.get("progress"), str):
+        candidates.append(parsed["progress"])
+    first = highlights[0] if highlights else None
+    if first and first.get("title") != "Held at the desk":
+        if first.get("dek"):
+            candidates.append(first["dek"])
+        if first.get("title"):
+            candidates.append(first["title"])
+    for raw in candidates:
+        line = ai_progress_line(raw)
+        if line:
+            return line
+    return ""
+
+
+def stored_progress(payload: dict | None) -> str:
+    """Progress already saved with a lead. Does not generate."""
+    if not payload or payload.get("stub"):
+        return ""
+    line = ai_progress_line(payload.get("ai_progress") or "")
+    if line:
+        return line
+    return capture_ai_progress({}, payload.get("highlights") or [])
 
 
 def clip(text: str, limit: int) -> str:
@@ -331,13 +413,18 @@ def scrub_highlight(section_id: str, raw: dict, citations: list[str]) -> dict | 
         return None
     if section_id == "weird" and WEIRD_BAD.search(text):
         return None
-    if section_id in {"ai-security", "company"} and EXPLOIT_RE.search(text):
+    if section_id in {"ai-security", "cybersecurity", "company"} and EXPLOIT_RE.search(text):
         return None
     if section_id in {"money", "picks"} and MONEY_BAD.search(text):
         return None
     if section_id == "biology" and BIO_BAD.search(text):
         body = BIO_SAFE
         dek = "An explainer, not a procedure."
+    if section_id == "cancer" and (CANCER_BAD.search(text) or BIO_BAD.search(text)):
+        if CANCER_BAD.search(title) or BIO_BAD.search(title):
+            title = "Cancer research, at explainer level"
+        body = CANCER_SAFE
+        dek = "An explainer, not advice."
     return {
         "title": title,
         "dek": dek,
@@ -950,7 +1037,13 @@ class Paper:
             payload = self.store.get_section(day, "ai-world")
             if payload and payload.get("highlights"):
                 lead = payload["highlights"][0].get("title") or ""
-            days.append({"day": day, "ready": have.get(day, []), "lead": lead})
+            # Read the line already stored with the lead. No model call.
+            days.append({
+                "day": day,
+                "ready": have.get(day, []),
+                "lead": lead,
+                "progress": stored_progress(payload),
+            })
         return days
 
     def wake(self) -> dict:
@@ -990,6 +1083,9 @@ class Paper:
             "needed_secret": payload.get("needed_secret"),
             "highlights": [],
         }
+        progress = stored_progress(payload) if sec.get("lead") else ""
+        if progress:
+            out["ai_progress"] = progress
         for h in payload.get("highlights") or []:
             item = dict(h)
             item["votes"] = self.store.counts(item["id"])
@@ -1078,6 +1174,11 @@ class Paper:
         for i, item in enumerate(highlights):
             item["id"] = f"{day}:{sid}:{i}"
         payload = {"day": day, "highlights": highlights, "stub": False}
+        if sec.get("lead"):
+            # Same response as the highlights. capture_ai_progress does not call out.
+            line = capture_ai_progress(parsed, highlights)
+            if line:
+                payload["ai_progress"] = line
         self.store.put_section(day, sid, payload, self.provider.name, self.now())
         stored = self.store.get_section(day, sid)
         decorated = self.decorate(sid, stored, user_id)

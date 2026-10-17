@@ -14,12 +14,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from ratelimit import RateLimiter
 from news import (
-    BIO_SAFE, CONFIG_PATH, LAYOUT_KEYS, LCG, LiveNet, NewsError, Paper, Store, XAIProvider,
-    accept_image, blend, build_prompt, classic_for_day, clip, commons_api_url,
-    extract_completion, framing_allowed, load_config, owner_secret, parse_commons,
-    parse_model_json, parse_seed, parse_user, pepper_image_urls, persona_weights,
-    preamble, public_domain, public_section, safe_frame_url, scrub_highlight,
-    section_map, strip_page_url, vote_mix, xkcd_skipped, _validate_config,
+    BIO_SAFE, CANCER_SAFE, CONFIG_PATH, LAYOUT_KEYS, LCG, LIFE_TITLE, LiveNet,
+    NewsError, Paper, REQUIRED_LIVE, Store, XAIProvider, accept_image, blend,
+    build_prompt, classic_for_day, clip, commons_api_url, extract_completion,
+    framing_allowed, load_config, owner_secret, parse_commons, parse_model_json,
+    parse_seed, parse_user, pepper_image_urls, persona_weights, preamble,
+    public_domain, public_section, safe_frame_url, scrub_highlight, section_map,
+    strip_page_url, vote_mix, xkcd_skipped, _validate_config,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,10 +56,11 @@ class FakeNet:
 class FakeProvider:
     name = "fake"
 
-    def __init__(self, highlights=None, ready=True):
+    def __init__(self, highlights=None, ready=True, extra=None):
         self.ready = ready
         self.calls = 0
         self.last = None
+        self.extra = extra or {}
         self.highlights = highlights or [{
             "title": "A real change",
             "dek": "Act on this.",
@@ -70,7 +72,9 @@ class FakeProvider:
     async def complete(self, system, user):
         self.calls += 1
         self.last = (system, user)
-        return {"output_text": json.dumps({"highlights": self.highlights})}
+        body = {"highlights": self.highlights}
+        body.update(self.extra)
+        return {"output_text": json.dumps(body)}
 
 
 def uid(n):
@@ -129,9 +133,20 @@ def paper(env):
 def test_config_is_the_paper():
     cfg = load_config()
     ids = [s["id"] for s in cfg["sections"]]
+    by_id = {s["id"]: s for s in cfg["sections"]}
     assert ids[0] == "ai-world"
+    assert by_id["ai-world"]["lead"] is True
     assert "world" in ids
-    assert "cancer" in ids and "education" in ids
+    assert len(REQUIRED_LIVE) == 14
+    for sid in REQUIRED_LIVE:
+        assert sid in by_id
+        assert not by_id[sid].get("coming_soon")
+        assert by_id[sid].get("prompt")
+    assert not any(s.get("coming_soon") for s in cfg["sections"])
+    assert by_id["life"]["title"] == LIFE_TITLE
+    assert by_id["cybersecurity"]["title"] == "Cybersecurity"
+    assert by_id["ai-security"]["prompt"] != by_id["cybersecurity"]["prompt"]
+    assert "cancer" in ids and "education" in ids and "cybersecurity" in ids
     assert "ham" not in ids
     blob = json.dumps(cfg).lower()
     assert "dilbert" not in blob
@@ -158,6 +173,12 @@ def test_config_is_the_paper():
     })
     with pytest.raises(ValueError):
         _validate_config(bad)
+    stubbed = json.loads(json.dumps(cfg))
+    cancer = next(s for s in stubbed["sections"] if s["id"] == "cancer")
+    cancer["coming_soon"] = True
+    cancer.pop("prompt", None)
+    with pytest.raises(ValueError):
+        _validate_config(stubbed)
 
 
 def test_prompts_carry_the_hard_rules():
@@ -180,6 +201,15 @@ def test_prompts_carry_the_hard_rules():
     assert "anonymous" in build_prompt(section_map()["sleep"], DAY, [])[1].lower()
     assert "anti-government" in build_prompt(section_map()["weird"], DAY, [])[1].lower()
     assert "employer" in build_prompt(section_map()["company"], DAY, [])[1].lower()
+    cancer_user = build_prompt(section_map()["cancer"], DAY, [])[1].lower()
+    assert "medical advice" in cancer_user and "patient" in cancer_user
+    assert "teaching" in build_prompt(section_map()["education"], DAY, [])[1].lower()
+    cyber_user = build_prompt(section_map()["cybersecurity"], DAY, [])[1].lower()
+    ai_sec_user = build_prompt(section_map()["ai-security"], DAY, [])[1].lower()
+    assert "attack" in cyber_user
+    assert cyber_user != ai_sec_user
+    assert '"progress"' in build_prompt(section_map()["ai-world"], DAY, [])[1]
+    assert '"progress"' not in build_prompt(section_map()["space"], DAY, [])[1]
     assert "prompt" not in public_section(section_map()["biology"])
 
 
@@ -205,6 +235,20 @@ def test_safety_filters():
         "title": "Bug", "dek": "Here is shellcode.", "body": "Run it.",
         "topics": ["security"], "sources": [],
     }, []) is None
+    assert scrub_highlight("cybersecurity", {
+        "title": "Bug", "dek": "Here is shellcode.", "body": "Run it.",
+        "topics": ["cyber"], "sources": [],
+    }, []) is None
+    cancer = scrub_highlight("cancer", {
+        "title": "This patient got a new dose",
+        "dek": "You should take 40 mg.",
+        "body": "A treatment protocol, told as a patient story.",
+        "topics": ["cancer"],
+        "sources": [{"title": "Journal", "url": "https://www.nature.com/articles/example"}],
+    }, [])
+    assert cancer["body"] == CANCER_SAFE
+    assert cancer["title"] == "Cancer research, at explainer level"
+    assert "patient" not in cancer["title"].lower()
     dropped = scrub_highlight("space", {
         "title": "Noted", "dek": "See the link.", "body": "Real.",
         "topics": ["space"],
@@ -375,17 +419,89 @@ def test_status_does_not_keep_the_paper_awake(paper):
     assert paper.status()["last_click"] is None
     assert paper.status()["last_click"] is None
     assert paper.provider.calls == 0
-
-
-def test_coming_soon_and_day_window(paper):
-    soon = asyncio.run(paper.open_section(DAY, "cancer", "1.1.1.1", None, False))
-    assert soon["coming_soon"] is True
+    assert paper.status()["days"][0]["progress"] == ""
     assert paper.provider.calls == 0
+
+
+def test_ai_progress_is_captured_from_the_lead_call(paper):
+    paper.provider.extra = {"progress": "Models took a clearer step on planning."}
+    opened = asyncio.run(paper.open_section(DAY, "ai-world", "1.1.1.1", None, False))
+    assert paper.provider.calls == 1
+    assert opened["ai_progress"] == "Models took a clearer step on planning."
+    today = next(d for d in paper.status()["days"] if d["day"] == DAY)
+    assert today["progress"] == "Models took a clearer step on planning."
+    again = asyncio.run(paper.open_section(DAY, "ai-world", "1.1.1.1", None, False))
+    assert again["cached"] is True
+    assert again["ai_progress"] == opened["ai_progress"]
+    assert paper.provider.calls == 1
+    space = asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    assert "ai_progress" not in space
+    assert paper.provider.calls == 2
+
+
+def test_ai_progress_falls_back_inside_the_same_response(paper):
+    paper.provider.highlights = [{
+        "title": "A planning step",
+        "dek": "Models planned a longer task.",
+        "body": "Readers can wait for the writeup.",
+        "topics": ["ai"],
+        "sources": [{"title": "Wire", "url": "https://www.nasa.gov/example"}],
+    }]
+    opened = asyncio.run(paper.open_section(DAY, "ai-world", "1.1.1.1", None, False))
+    assert paper.provider.calls == 1
+    assert opened["ai_progress"] == "Models planned a longer task."
+
+
+def test_ai_progress_drops_a_forbidden_line(paper):
+    paper.provider.extra = {"progress": "Ham radio nets got an AI tool."}
+    paper.provider.highlights = [{
+        "title": "A planning step",
+        "dek": "Models planned a longer task.",
+        "body": "Readers can wait for the writeup.",
+        "topics": ["ai"],
+        "sources": [{"title": "Wire", "url": "https://www.nasa.gov/example"}],
+    }]
+    opened = asyncio.run(paper.open_section(DAY, "ai-world", "1.1.1.1", None, False))
+    assert opened["ai_progress"] == "Models planned a longer task."
+    assert "ham" not in opened["ai_progress"].lower()
+    paper.provider.extra = {"progress": "Here is shellcode for the new model."}
+    paper.store.touch(paper.now())
+    other = asyncio.run(paper.open_section("2026-10-16", "ai-world", "1.1.1.1", None, False))
+    assert other["ai_progress"] == "Models planned a longer task."
+    assert paper.provider.calls == 2
+
+
+def test_dormant_paper_does_not_mint_a_progress_line(paper):
+    paper.store.touch(paper.now() - timedelta(days=15))
+    paper.provider.extra = {"progress": "Should not be stored."}
+    blocked = asyncio.run(paper.open_section(DAY, "ai-world", "1.1.1.1", None, False))
+    assert blocked["dormant"] is True
+    assert paper.provider.calls == 0
+    assert paper.status()["days"][0]["progress"] == ""
+    assert paper.provider.calls == 0
+
+
+def test_required_sections_are_live_and_day_window_holds(paper, monkeypatch):
+    opened = asyncio.run(paper.open_section(DAY, "cancer", "1.1.1.1", None, False))
+    assert opened["coming_soon"] is False
+    assert opened["stub"] is False
+    edu = asyncio.run(paper.open_section(DAY, "education", "1.1.1.1", None, False))
+    assert edu["section"]["title"] == "Education"
+    cyber = asyncio.run(paper.open_section(DAY, "cybersecurity", "1.1.1.1", None, False))
+    assert cyber["section"]["title"] == "Cybersecurity"
+    assert paper.provider.calls == 3
     with pytest.raises(NewsError):
         asyncio.run(paper.open_section("2026-10-18", "space", "1.1.1.1", None, False))
     with pytest.raises(NewsError):
         asyncio.run(paper.open_section("2026-10-03", "space", "1.1.1.1", None, False))
-    assert paper.provider.calls == 0
+    assert paper.provider.calls == 3
+    real = section_map()
+    stub = dict(real)
+    stub["later"] = {"id": "later", "title": "Later", "coming_soon": True, "brief": "Later."}
+    monkeypatch.setattr("news.section_map", lambda config=None: stub)
+    soon = asyncio.run(paper.open_section(DAY, "later", "1.1.1.1", None, False))
+    assert soon["coming_soon"] is True
+    assert paper.provider.calls == 3
 
 
 def test_comics_shelf_is_legal(paper):
@@ -480,8 +596,9 @@ def test_seed_reorders_without_generation(paper):
     assert plain["show"][0] == "ai-world"
     assert seeded["show"][0] == "ai-world"
     assert plain["show"][1] == "world"
-    assert "cancer" in plain["coming_soon"] and "cancer" not in plain["show"]
-    assert "education" in plain["coming_soon"]
+    assert plain["coming_soon"] == []
+    for sid in ("cancer", "education", "cybersecurity"):
+        assert sid in plain["show"] or sid in plain["more"]
     assert seeded["show"] != other["show"] or seeded["more"] != other["more"]
     assert "owner" not in json.dumps(seeded).lower()
     assert "james" not in json.dumps(seeded).lower()
@@ -599,6 +716,9 @@ def test_page_wires_match_the_desk():
     assert "james" not in html.lower()
     assert "k6wrj" not in html.lower()
     assert 'id="seed-examples"' in html
+    assert 'id="thread"' in html
+    assert "AI progress" in html
+    assert "day.progress" in html
     assert 'aria-label="Example readers"' in html
     assert 'class: "chip"' in html
     assert "status.examples" in html
@@ -608,6 +728,12 @@ def test_page_wires_match_the_desk():
     assert "location ^~ /news/" in nginx
     assert "XAI_API_KEY" in compose
     assert "NEWS_OWNER_SEED" in compose
+    deploy = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
+    assert "secrets.XAI_API_KEY" in deploy
+    assert "envs: XAI_API_KEY" in deploy
+    assert "unset XAI_API_KEY" in deploy
+    assert 'echo "$XAI_API_KEY"' not in deploy
+    assert "echo ${XAI_API_KEY}" not in deploy
     for path in ("/api/news/status", "/api/news/day", "/api/news/section",
                  "/api/news/layout", "/api/news/vote", "/api/news/wake", "/api/news/forget"):
         assert path in main

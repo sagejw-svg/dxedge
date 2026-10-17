@@ -40,6 +40,15 @@
     font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; letter-spacing: .04em;
     border-bottom: 1px solid var(--rule); padding: 6px 0 8px; margin: 0; }
   .days { display: flex; gap: 10px; overflow-x: auto; padding: 12px 0 4px; scroll-snap-type: x mandatory; }
+  .thread { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    padding: 8px 0 10px; margin: 4px 0 0; }
+  .thread #thread-line { margin: 2px 0 0; }
+  .thread ol { list-style: none; display: flex; gap: 16px; overflow-x: auto; padding: 8px 0 0; margin: 0; }
+  .thread li { flex: 0 0 auto; max-width: 32ch; }
+  .thread button { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+  .thread button small { display: block; font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+    letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--red); }
+  .thread button[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 3px; }
   .day { flex: 0 0 auto; width: 112px; scroll-snap-align: start; background: transparent; border: 0;
     padding: 0; cursor: pointer; text-align: left; }
   .day svg { width: 112px; height: 146px; display: block; background: var(--card);
@@ -113,6 +122,11 @@
   </header>
   <p class="dateline"><span id="when">Evening edition</span><span id="vol">Written when opened</span></p>
   <div class="days" id="days" aria-label="Editions"></div>
+  <section class="thread" id="thread" aria-label="AI progress" hidden>
+    <p class="kicker">AI progress</p>
+    <p id="thread-line"></p>
+    <ol id="thread-days"></ol>
+  </section>
   <div class="tools">
     <label for="seed-input">Seed</label>
     <input id="seed-input" inputmode="numeric" pattern="[0-9]*" min="0" max="1000000000" placeholder="A number">
@@ -340,18 +354,46 @@ async function vote(targetId, kind, sectionId) {
   }
   render();
 }
+function rememberProgress(day, line) {
+  if (!line || !state.status || !state.status.days) return;
+  const row = state.status.days.find((d) => d.day === day);
+  if (row) row.progress = line;
+}
 function renderDays() {
   const wrap = document.getElementById("days");
   clear(wrap);
   (state.status.days || []).forEach((day) => {
+    const note = day.progress || day.lead || "";
     const btn = el("button", {
       class: "day", type: "button", "aria-pressed": day.day === state.day ? "true" : "false",
-      "aria-label": "Edition of " + longDate(day.day),
+      "aria-label": "Edition of " + longDate(day.day) + (note ? ". " + note : ""),
       onclick: () => selectDay(day.day)
     });
-    btn.innerHTML = thumb(day.day, day.lead);
+    btn.innerHTML = thumb(day.day, day.progress || day.lead);
     btn.appendChild(el("span", null, shortWd(day.day) + " " + day.day.slice(5)));
     wrap.appendChild(btn);
+  });
+}
+function renderThread() {
+  const node = document.getElementById("thread");
+  const days = (state.status && state.status.days) || [];
+  const today = days.find((d) => d.day === state.day);
+  const text = (today && today.progress) || "";
+  node.hidden = false;
+  document.getElementById("thread-line").textContent = text || "Open AI & the World and this day's line joins the thread.";
+  const list = document.getElementById("thread-days");
+  clear(list);
+  days.filter((d) => d.progress).forEach((d) => {
+    const li = el("li");
+    const btn = el("button", {
+      type: "button",
+      "aria-pressed": d.day === state.day ? "true" : "false",
+      onclick: () => selectDay(d.day)
+    });
+    btn.appendChild(el("small", null, shortWd(d.day) + " " + d.day.slice(5)));
+    btn.appendChild(document.createTextNode(d.progress));
+    li.appendChild(btn);
+    list.appendChild(li);
   });
 }
 function renderSeeds() {
@@ -480,6 +522,7 @@ function render() {
   document.getElementById("when").textContent = state.day ? longDate(state.day) : "Evening edition";
   document.getElementById("vol").textContent = status.dormant && !state.awake ? "Asleep" : "On demand";
   renderDays();
+  renderThread();
   renderSeeds();
   const cookie = document.getElementById("cookie");
   cookie.hidden = state.decision === "yes" || state.decision === "no";
@@ -541,6 +584,8 @@ async function selectDay(day) {
     const data = await getJSON("/api/news/day?day=" + encodeURIComponent(day) + (state.awake ? "&wake=1" : ""));
     if (data.dormant && !state.awake) { state.status.dormant = true; render(); return; }
     state.editions[day] = data.sections || {};
+    const lead = state.editions[day]["ai-world"];
+    if (lead && lead.ai_progress) rememberProgress(day, lead.ai_progress);
     await refreshLayout();
   } catch (e) {
     state.errors._day = e.message;
@@ -559,6 +604,7 @@ async function openSection(id) {
     else {
       if (!state.editions[state.day]) state.editions[state.day] = {};
       state.editions[state.day][id] = data;
+      if (id === "ai-world" && data.ai_progress) rememberProgress(state.day, data.ai_progress);
       await refreshLayout();
     }
   } catch (e) {

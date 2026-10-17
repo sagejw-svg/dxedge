@@ -1,3 +1,6 @@
+# Compose interpolation for local and droplet secrets. Never commit.
+.env
+
 __pycache__/
 *.pyc
 *.pyo

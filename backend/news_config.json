@@ -6,17 +6,17 @@
   "topics": [
     "ai", "space", "biology", "security", "money", "sleep", "comics",
     "weird", "sailing", "synth", "games", "ranch", "transport", "math",
-    "markets", "life"
+    "markets", "life", "cancer", "education", "cyber"
   ],
   "example_seeds": [
-    {"seed": 266, "label": "Space nerd"},
-    {"seed": 1658, "label": "College freshman"},
-    {"seed": 1751, "label": "Startup founder"},
-    {"seed": 354, "label": "Biology buff"},
-    {"seed": 243, "label": "Retired tinkerer"},
-    {"seed": 836, "label": "Weird-news fan"},
-    {"seed": 425, "label": "Security lead"},
-    {"seed": 156, "label": "Weekend sailor"}
+    {"seed": 371, "label": "Space nerd"},
+    {"seed": 46575, "label": "College freshman"},
+    {"seed": 4345, "label": "Startup founder"},
+    {"seed": 279, "label": "Biology buff"},
+    {"seed": 236, "label": "Retired tinkerer"},
+    {"seed": 288, "label": "Weird-news fan"},
+    {"seed": 155, "label": "Security lead"},
+    {"seed": 15, "label": "Weekend sailor"}
   ],
   "sections": [
     {
@@ -57,6 +57,20 @@
       "prompt": "New CRISPR news and the public conversation about designing biological systems from DNA, including ideas that do not start from a human genome. Explainer and legal or ethical framing only."
     },
     {
+      "id": "cancer",
+      "title": "Cancer",
+      "kicker": "Research",
+      "brief": "Treatment and research news, at explainer level.",
+      "prompt": "Cancer treatment and research news at explainer level. What was reported, why it matters, and the source. No medical advice, no dosages, no treatment protocols, and no patient stories."
+    },
+    {
+      "id": "education",
+      "title": "Education",
+      "kicker": "Learning",
+      "brief": "AI in teaching and learning.",
+      "prompt": "AI in teaching and learning, for an adult reader. What changed in classrooms, tutoring, and how people study. No product pitches and no story about a particular student."
+    },
+    {
       "id": "sleep",
       "title": "Narcolepsy & sleep",
       "kicker": "Explainer",
@@ -67,8 +81,15 @@
       "id": "ai-security",
       "title": "AI security",
       "kicker": "Defenders",
-      "brief": "AI security and cybersecurity, at briefing level.",
-      "prompt": "AI security and cybersecurity discoveries a defender can use. High level: what changed and what to check. No attack procedures."
+      "brief": "Security of models and the systems around them.",
+      "prompt": "AI security only: models, agents, data they can reach, and the systems around them. What changed for someone defending an AI deployment. High level: what to check. No attack procedures. General cybersecurity belongs in its own section."
+    },
+    {
+      "id": "cybersecurity",
+      "title": "Cybersecurity",
+      "kicker": "Defenders",
+      "brief": "Defender briefing, separate from AI security.",
+      "prompt": "Cybersecurity for a defender, as its own section, not AI-model security. What changed in breaches, patches, and defensive practice, at briefing level: what to check. No attack procedures, no exploit steps, and no payloads."
     },
     {
       "id": "company",
@@ -86,10 +107,10 @@
     },
     {
       "id": "life",
-      "title": "Life & organizing",
+      "title": "Life improvement & thinking tools",
       "kicker": "How to think",
-      "brief": "Ways to think about and organize ordinary life.",
-      "prompt": "Ways to think about and organize ordinary life. Short and usable. No lectures."
+      "brief": "Tools and habits for thinking more clearly and organizing ordinary life.",
+      "prompt": "Life improvement and thinking tools: ways to think more clearly and organize ordinary life. Short and usable. No lectures."
     },
     {
       "id": "space",
@@ -111,20 +132,6 @@
       "kicker": "Interests",
       "brief": "Games, synths, markets, boats, and ranch life.",
       "prompt": "A short mix, without naming any person: retro and clean-room game recodes, music synthesizers and sound design, prediction markets and trading ideas with no advice to buy or sell, sailing and boating, rural ranch life."
-    },
-    {
-      "id": "cancer",
-      "title": "Cancer treatments",
-      "kicker": "Later",
-      "coming_soon": true,
-      "brief": "Coming soon."
-    },
-    {
-      "id": "education",
-      "title": "Education",
-      "kicker": "Later",
-      "coming_soon": true,
-      "brief": "AI teaching. Coming soon."
     }
   ],
   "strips": [
