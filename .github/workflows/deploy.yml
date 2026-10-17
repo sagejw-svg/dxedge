@@ -149,7 +149,7 @@ jobs:
           # GET, not HEAD: these paths proxy to the backend, which answers 405
           # to HEAD, and a 405 carries no cache-control at all - the check would
           # pass by finding nothing.
-          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js; do
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/; do
             CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
             if [ -z "$CC" ]; then
               echo "ERROR: $U returned no cache-control header at all."

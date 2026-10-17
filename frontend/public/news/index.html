@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Edge — dxedge.net/news</title>
+<meta name="description" content="The Edge, a general-audience daily. Sections are written when you open them, then cached.">
+<style>
+  :root {
+    --paper: #f4efe4;
+    --ink: #1b140e;
+    --muted: #5e5348;
+    --rule: #1b140e;
+    --red: #8e1d18;
+    --soft: #e7dfd0;
+    --card: #fbf7ef;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #d9d0c0;
+    color: var(--ink);
+    font-family: Palatino, "Palatino Linotype", "Iowan Old Style", Georgia, serif;
+    line-height: 1.45;
+  }
+  a { color: var(--red); }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .sheet { max-width: 1100px; margin: 0 auto; background: var(--paper); min-height: 100vh;
+    padding: 22px 22px 64px; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+  .skip { position: absolute; left: -999px; }
+  .skip:focus { left: 12px; top: 12px; background: #fff; padding: 6px 10px; z-index: 5; }
+  .mast { text-align: center; border-bottom: 4px double var(--rule); padding-bottom: 10px; }
+  .eyebrow { font-family: "Gill Sans", "Trebuchet MS", sans-serif; letter-spacing: .22em;
+    text-transform: uppercase; font-size: 12px; color: var(--muted); margin: 0; }
+  .eyebrow a { color: var(--muted); text-decoration: none; }
+  h1 { font-weight: 500; font-size: clamp(56px, 10vw, 92px); line-height: .85; margin: 6px 0 4px;
+    letter-spacing: -1px; }
+  .dateline { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; letter-spacing: .04em;
+    border-bottom: 1px solid var(--rule); padding: 6px 0 8px; margin: 0; }
+  .days { display: flex; gap: 10px; overflow-x: auto; padding: 12px 0 4px; scroll-snap-type: x mandatory; }
+  .day { flex: 0 0 auto; width: 112px; scroll-snap-align: start; background: transparent; border: 0;
+    padding: 0; cursor: pointer; text-align: left; }
+  .day svg { width: 112px; height: 146px; display: block; background: var(--card);
+    border: 1px solid var(--ink); }
+  .day span { display: block; font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 11px;
+    letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
+  .day[aria-pressed="true"] svg { box-shadow: inset 0 0 0 2px var(--red); }
+  .day[aria-pressed="true"] span { color: var(--red); }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0;
+    font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 14px; }
+  .tools label { letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
+  .tools input { width: 9rem; background: var(--card); border: 1px solid var(--ink); padding: 6px 8px; }
+  .chip, .btn { background: var(--card); border: 1px solid var(--ink); padding: 6px 10px; cursor: pointer; }
+  .chip { border-radius: 999px; }
+  .chip[aria-pressed="true"], .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  #seed-examples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .notice, .cookie, .wire, .soon-note { border: 1px solid var(--ink); background: var(--card);
+    padding: 10px 12px; margin: 10px 0; }
+  .cookie p, .notice p, .wire p { margin: 0 0 8px; }
+  .fresh { position: fixed; right: 16px; bottom: 16px; max-width: 260px; background: var(--paper);
+    border: 1px solid var(--ink); padding: 12px; box-shadow: 3px 3px 0 var(--ink); z-index: 4; }
+  .fresh p { margin: 0 0 8px; }
+  .paper { display: grid; grid-template-columns: 1.35fr 1fr 1fr; border-top: 1px solid var(--rule); }
+  .box { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 12px 14px 16px;
+    min-width: 0; }
+  .box.lead { grid-column: 1 / -1; border-right: 0; background: var(--card); }
+  .kicker { font-family: "Gill Sans", "Trebuchet MS", sans-serif; letter-spacing: .16em;
+    text-transform: uppercase; font-size: 11px; color: var(--red); margin: 0; }
+  .box h2 { font-size: 28px; font-weight: 500; margin: 2px 0 6px; line-height: 1.05; }
+  .box.lead h2 { font-size: clamp(32px, 5vw, 46px); }
+  .brief { color: var(--muted); margin: 0 0 8px; }
+  .hl { margin: 0 0 12px; }
+  .hl h3 { font-size: 20px; font-weight: 600; margin: 0; }
+  .open-hl { background: none; border: 0; padding: 0; text-align: left; cursor: pointer;
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .dek { margin: 4px 0; }
+  .votes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .votes button { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 12px;
+    background: transparent; border: 1px solid var(--ink); padding: 3px 7px; cursor: pointer; }
+  .votes button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .card { display: block; border: 1px solid var(--ink); padding: 8px 10px; margin: 8px 0; text-decoration: none;
+    color: inherit; background: var(--card); }
+  .card b { display: block; }
+  .card small { color: var(--muted); }
+  .frame { width: 100%; height: 460px; border: 1px solid var(--ink); background: #fff; margin-top: 8px; }
+  figure { margin: 10px 0; }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--ink); background: #fff; }
+  figcaption { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .story { border-bottom: 4px double var(--rule); margin-bottom: 12px; padding-bottom: 12px; }
+  .story h2 { font-size: clamp(32px, 5vw, 48px); font-weight: 500; margin: 4px 0; line-height: 1.05; }
+  .more, .hidden { margin-top: 8px; grid-column: 1 / -1; }
+  .soon { display: grid; grid-template-columns: 1fr 1fr; }
+  .err { color: var(--red); }
+  footer { margin-top: 18px; font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px;
+    color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer button { background: none; border: 0; padding: 0; color: var(--red); cursor: pointer; text-decoration: underline; }
+  @media (max-width: 800px) {
+    .sheet { padding: 14px 12px 72px; }
+    .paper, .soon { grid-template-columns: 1fr; }
+    .box { border-right: 0; }
+    h1 { font-size: 64px; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#paper">Skip to the edition</a>
+<div class="sheet">
+  <header class="mast">
+    <p class="eyebrow"><a href="/">dxedge.net</a> · a general-audience daily</p>
+    <h1>The Edge</h1>
+  </header>
+  <p class="dateline"><span id="when">Evening edition</span><span id="vol">Written when opened</span></p>
+  <div class="days" id="days" aria-label="Editions"></div>
+  <div class="tools">
+    <label for="seed-input">Seed</label>
+    <input id="seed-input" inputmode="numeric" pattern="[0-9]*" min="0" max="1000000000" placeholder="A number">
+    <button class="btn" type="button" id="seed-apply">Apply</button>
+    <button class="btn" type="button" id="seed-clear">Clear</button>
+    <div id="seed-examples" role="group" aria-label="Example readers"></div>
+  </div>
+  <div class="cookie" id="cookie" hidden>
+    <p>Would you like to set up a persistent cookie on your machine to remember your news preferences?</p>
+    <button class="btn" type="button" id="cookie-yes">Yes</button>
+    <button class="btn" type="button" id="cookie-no">No thanks</button>
+  </div>
+  <div class="notice" id="dormant" hidden>
+    <p>This paper has been quiet for 14 days, so it has stopped fetching new editions.</p>
+    <button class="btn" type="button" id="wake">Open the paper</button>
+  </div>
+  <div class="wire" id="wire" hidden></div>
+  <article class="story" id="story" hidden></article>
+  <div class="paper" id="paper"></div>
+  <div class="soon" id="soon"></div>
+  <footer>
+    <span>No standing wire. A section is written the first time it is opened, then kept.</span>
+    <button type="button" id="forget">Forget me</button>
+  </footer>
+  <noscript>
+    <p>The shelf links to official pages. Nothing here copies a syndicated drawing.</p>
+    <ul>
+      <li><a href="https://www.gocomics.com/calvinandhobbes">Calvin and Hobbes on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/peanuts">Peanuts on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/pearlsbeforeswine">Pearls Before Swine on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/frazz">Frazz on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/garfield">Garfield on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/bignate">Big Nate on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/pickles">Pickles on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/babyblues">Baby Blues on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/zits">Zits on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/wizardofid">Wizard of Id on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/bc">B.C. on GoComics</a></li>
+      <li><a href="https://www.gocomics.com/nonsequitur">Non Sequitur on GoComics</a></li>
+      <li><a href="https://comicskingdom.com/hagar-the-horrible">Hagar the Horrible on Comics Kingdom</a></li>
+      <li><a href="https://xkcd.com/">xkcd</a>, CC BY-NC 2.5, by Randall Munroe</li>
+      <li><a href="https://www.peppercarrot.com/">Pepper &amp; Carrot</a> by David Revoy, CC BY 4.0</li>
+    </ul>
+  </noscript>
+</div>
+<div class="fresh" id="fresh" hidden>
+  <p>News page is up to date.</p>
+  <button class="btn" type="button" id="fresh-dismiss">Dismiss</button>
+</div>
+<script>
+const IMAGE_HOSTS = ["imgs.xkcd.com", "www.peppercarrot.com", "peppercarrot.com", "upload.wikimedia.org"];
+const state = {
+  status: null, day: null, editions: {}, layout: null, reader: null, seed: null,
+  decision: null, story: null, loading: null, errors: {}, awake: false
+};
+
+function el(tag, attrs, text) {
+  const node = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (k === "class") node.className = v;
+    else if (k.slice(0, 2) === "on" && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else if (v != null) node.setAttribute(k, String(v));
+  });
+  if (text != null) node.textContent = text;
+  return node;
+}
+function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+function esc(s) {
+  return String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function mint() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  const hex = () => Math.floor(Math.random() * 16).toString(16);
+  const block = (n) => Array.from({ length: n }, hex).join("");
+  return block(8) + "-" + block(4) + "-4" + block(3) + "-a" + block(3) + "-" + block(12);
+}
+function readCookie(name) {
+  const parts = document.cookie ? document.cookie.split("; ") : [];
+  for (const part of parts) {
+    const i = part.indexOf("=");
+    if (part.slice(0, i) === name) return decodeURIComponent(part.slice(i + 1));
+  }
+  return "";
+}
+function writeCookie(name, value) {
+  let c = name + "=" + encodeURIComponent(value) + "; Path=/; Max-Age=31536000; SameSite=Lax";
+  if (location.protocol === "https:") c += "; Secure";
+  document.cookie = c;
+}
+function clearCookie(name) {
+  document.cookie = name + "=; Path=/; Max-Age=0; SameSite=Lax";
+}
+function loadIdentity() {
+  state.decision = localStorage.getItem("dxedge-news-cookie");
+  if (state.decision === "yes") {
+    state.reader = readCookie("dxn") || mint();
+    writeCookie("dxn", state.reader);
+    const saved = readCookie("dxn_seed");
+    if (saved !== "") state.seed = Number(saved);
+  } else {
+    state.reader = sessionStorage.getItem("dxedge-news-reader") || mint();
+    sessionStorage.setItem("dxedge-news-reader", state.reader);
+    const saved = sessionStorage.getItem("dxedge-news-seed");
+    if (saved !== "" && saved != null) state.seed = Number(saved);
+    clearCookie("dxn");
+    clearCookie("dxn_seed");
+  }
+}
+function saveSeed() {
+  if (state.decision === "yes") {
+    if (state.seed == null || Number.isNaN(state.seed)) clearCookie("dxn_seed");
+    else writeCookie("dxn_seed", String(state.seed));
+  } else if (state.seed == null || Number.isNaN(state.seed)) {
+    sessionStorage.removeItem("dxedge-news-seed");
+  } else {
+    sessionStorage.setItem("dxedge-news-seed", String(state.seed));
+  }
+}
+async function getJSON(path) {
+  const res = await fetch(path, { headers: { "Accept": "application/json" } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "The desk could not answer.");
+  return data;
+}
+async function postJSON(path, body) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "The desk could not answer.");
+  return data;
+}
+function longDate(day) {
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const wd = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const [y, m, d] = day.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return wd[date.getUTCDay()] + ", " + months[m - 1] + " " + d + ", " + y;
+}
+function shortWd(day) {
+  return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(day + "T12:00:00Z").getUTCDay()];
+}
+function imageOk(url) {
+  try {
+    const host = new URL(url).hostname;
+    return new URL(url).protocol === "https:" && IMAGE_HOSTS.indexOf(host) !== -1;
+  } catch (e) { return false; }
+}
+function frameOk(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && (u.hostname === "www.gocomics.com" || u.hostname === "comicskingdom.com");
+  } catch (e) { return false; }
+}
+function thumb(day, title) {
+  let n = 0;
+  for (const c of day) n = (n * 33 + c.charCodeAt(0)) >>> 0;
+  const scene = n % 4;
+  const sky = ["#d7e4ef", "#f3d7b0", "#1d2433", "#e7efe4"][scene];
+  const hill = ["#6e8b73", "#8d6a45", "#2c3a4a", "#7f9168"][scene];
+  const orb = scene === 2 ? "#f4e7c5" : "#f2c14e";
+  const mark = scene === 0
+    ? '<path d="M18 108 h28 l8 -10 h22 l6 10 h20" fill="none" stroke="#1b140e" stroke-width="1.4"/>'
+    : scene === 1
+    ? '<path d="M70 96 v-16 h14 v16" fill="#fbf7ef" stroke="#1b140e"/><path d="M68 80 h18 l-9 -8 z" fill="#8e1d18"/>'
+    : scene === 2
+    ? '<circle cx="86" cy="58" r="2" fill="#f4e7c5"/><circle cx="96" cy="48" r="1.4" fill="#f4e7c5"/>'
+    : '<rect x="24" y="100" width="22" height="8" fill="#1b140e"/><circle cx="30" cy="110" r="3" fill="#1b140e"/><circle cx="42" cy="110" r="3" fill="#1b140e"/>';
+  const line = esc((title || "The Edge").slice(0, 42));
+  return '<svg viewBox="0 0 120 156" aria-hidden="true">' +
+    '<rect width="120" height="156" fill="#fbf7ef"/>' +
+    '<rect x="8" y="28" width="104" height="78" fill="' + sky + '"/>' +
+    '<circle cx="92" cy="46" r="10" fill="' + orb + '"/>' +
+    '<path d="M8 106 L40 78 L62 98 L90 70 L112 106 Z" fill="' + hill + '"/>' +
+    mark +
+    '<text x="8" y="16" font-family="Palatino, Georgia, serif" font-size="9">THE EDGE</text>' +
+    '<text x="8" y="128" font-family="Georgia, serif" font-size="7">' + line + "</text>" +
+    '<text x="8" y="146" font-family="Georgia, serif" font-size="8">' + esc(shortWd(day) + " " + day.slice(8)) + "</text>" +
+    "</svg>";
+}
+function edition() { return state.editions[state.day] || {}; }
+function orderedHighlights(sec) {
+  const items = (sec && sec.highlights) || [];
+  const order = (state.layout && state.layout.order && state.layout.order[sec.section.id]) || [];
+  const hidden = new Set((state.layout && state.layout.hidden) || []);
+  const byId = new Map(items.map((h) => [h.id, h]));
+  const seen = [];
+  order.forEach((id) => { if (byId.has(id) && !hidden.has(id)) seen.push(byId.get(id)); });
+  items.forEach((h) => { if (!hidden.has(h.id) && seen.indexOf(h) === -1 && order.length === 0) seen.push(h); });
+  if (order.length) return seen;
+  return items.filter((h) => !hidden.has(h.id));
+}
+function voteButtons(target, sectionId, labels) {
+  const row = el("div", { class: "votes" });
+  labels.forEach(([kind, label]) => {
+    const n = target.votes ? target.votes[kind] || 0 : 0;
+    const pressed = target.mine && target.mine[kind];
+    row.appendChild(el("button", {
+      type: "button", "aria-pressed": pressed ? "true" : "false",
+      onclick: (ev) => { ev.stopPropagation(); vote(target.id, kind, sectionId); }
+    }, label + (n ? " " + n : "")));
+  });
+  return row;
+}
+async function vote(targetId, kind, sectionId) {
+  try {
+    const data = await postJSON("/api/news/vote", {
+      user_id: state.reader, target_id: targetId, kind: kind, day: state.day, section: sectionId
+    });
+    const sec = edition()[sectionId];
+    ["highlights", "shelf", "inline"].forEach((key) => {
+      ((sec && sec[key]) || []).forEach((item) => {
+        if (item.id === data.target_id) { item.votes = data.votes; item.mine = data.mine; }
+      });
+    });
+    if (state.story && state.story.item.id === data.target_id) {
+      state.story.item.votes = data.votes;
+      state.story.item.mine = data.mine;
+    }
+    await refreshLayout();
+  } catch (e) {
+    state.errors[sectionId] = e.message;
+  }
+  render();
+}
+function renderDays() {
+  const wrap = document.getElementById("days");
+  clear(wrap);
+  (state.status.days || []).forEach((day) => {
+    const btn = el("button", {
+      class: "day", type: "button", "aria-pressed": day.day === state.day ? "true" : "false",
+      "aria-label": "Edition of " + longDate(day.day),
+      onclick: () => selectDay(day.day)
+    });
+    btn.innerHTML = thumb(day.day, day.lead);
+    btn.appendChild(el("span", null, shortWd(day.day) + " " + day.day.slice(5)));
+    wrap.appendChild(btn);
+  });
+}
+function renderSeeds() {
+  const wrap = document.getElementById("seed-examples");
+  clear(wrap);
+  document.getElementById("seed-input").value = state.seed == null || Number.isNaN(state.seed) ? "" : String(state.seed);
+  (state.status.examples || []).forEach((ex) => {
+    wrap.appendChild(el("button", {
+      class: "chip", type: "button", "aria-pressed": Number(state.seed) === ex.seed ? "true" : "false",
+      onclick: () => applySeed(ex.seed)
+    }, ex.label));
+  });
+}
+function renderStory() {
+  const pane = document.getElementById("story");
+  clear(pane);
+  if (!state.story) { pane.hidden = true; return; }
+  const item = state.story.item;
+  pane.hidden = false;
+  pane.appendChild(el("button", { class: "btn", type: "button", onclick: () => { state.story = null; render(); } }, "Back to the front page"));
+  pane.appendChild(el("p", { class: "kicker" }, state.story.kicker || ""));
+  pane.appendChild(el("h2", null, item.title));
+  if (item.dek) pane.appendChild(el("p", { class: "dek" }, item.dek));
+  (item.body || "").split(/\n+/).forEach((para) => { if (para.trim()) pane.appendChild(el("p", null, para.trim())); });
+  const sources = el("p", null, "");
+  (item.sources || []).forEach((src, i) => {
+    if (i) sources.appendChild(document.createTextNode(" · "));
+    const a = el("a", { href: src.url, rel: "noopener noreferrer" }, src.title || "Source");
+    a.target = "_blank";
+    sources.appendChild(a);
+  });
+  if (!(item.sources || []).length) sources.textContent = "No source returned with this item.";
+  pane.appendChild(sources);
+  pane.appendChild(voteButtons(item, state.story.sectionId, [["liked", "Liked it"], ["useful", "Useful"], ["hide", "Hide"]]));
+}
+function linkCard(strip) {
+  const a = el("a", { class: "card", href: strip.url, rel: "noopener noreferrer" });
+  a.target = "_blank";
+  a.appendChild(el("b", null, strip.name + (strip.favorite ? " · shelf favorite" : "")));
+  a.appendChild(el("small", null, strip.host_label + " · " + strip.url.replace(/^https:\/\//, "")));
+  return a;
+}
+function renderComics(sec, box) {
+  const hidden = new Set((state.layout && state.layout.hidden) || []);
+  let shelf = sec.shelf || [];
+  if (state.layout && state.layout.shelf && state.layout.shelf.length) {
+    const byId = new Map(shelf.map((s) => [s.id, s]));
+    const ordered = state.layout.shelf.map((id) => byId.get(id)).filter(Boolean);
+    shelf.forEach((s) => { if (ordered.indexOf(s) === -1 && !hidden.has(s.id)) ordered.push(s); });
+    shelf = ordered;
+  } else {
+    shelf = shelf.filter((s) => !hidden.has(s.id));
+  }
+  shelf.forEach((strip) => {
+    if (hidden.has(strip.id)) return;
+    if (strip.frame && frameOk(strip.frame_url)) {
+      const frame = el("iframe", {
+        class: "frame", src: strip.frame_url, title: strip.name + " on " + strip.host_label,
+        loading: "lazy", referrerpolicy: "no-referrer"
+      });
+      box.appendChild(frame);
+    }
+    box.appendChild(linkCard(strip));
+    box.appendChild(voteButtons(strip, "comics", [["liked", "Like"], ["useful", "Useful"], ["hide", "Hide"]]));
+  });
+  (sec.inline || []).forEach((comic) => {
+    if (hidden.has(comic.id)) return;
+    const fig = el("figure");
+    const pages = comic.pages && comic.pages.length ? comic.pages : [comic.img];
+    pages.forEach((src) => {
+      if (!imageOk(src)) return;
+      fig.appendChild(el("img", { src: src, alt: comic.alt || comic.title || comic.credit, loading: "lazy" }));
+    });
+    const cap = el("figcaption");
+    cap.appendChild(document.createTextNode((comic.credit || "") + " · " + (comic.license || "") + " · "));
+    const page = el("a", { href: comic.page || comic.source, rel: "noopener noreferrer" }, "Source");
+    page.target = "_blank";
+    cap.appendChild(page);
+    if (comic.license_url) {
+      cap.appendChild(document.createTextNode(" · "));
+      const lic = el("a", { href: comic.license_url, rel: "noopener noreferrer" }, "License");
+      lic.target = "_blank";
+      cap.appendChild(lic);
+    }
+    fig.appendChild(cap);
+    box.appendChild(fig);
+    box.appendChild(voteButtons(comic, "comics", [["liked", "Like"], ["useful", "Useful"], ["hide", "Hide"]]));
+  });
+}
+function renderBox(meta, lead) {
+  const payload = edition()[meta.id];
+  const box = el("section", { class: "box" + (lead ? " lead" : ""), id: "sec-" + meta.id });
+  box.appendChild(el("p", { class: "kicker" }, meta.kicker || ""));
+  box.appendChild(el("h2", null, meta.title));
+  if (!payload) box.appendChild(el("p", { class: "brief" }, meta.brief || ""));
+  if (state.errors[meta.id]) box.appendChild(el("p", { class: "err" }, state.errors[meta.id]));
+  if (state.loading === meta.id) box.appendChild(el("p", null, "The desk is setting this box."));
+  if (payload && payload.stub) {
+    box.appendChild(el("p", null, payload.highlights[0].dek));
+    box.appendChild(el("p", null, payload.highlights[0].body));
+  } else if (payload && meta.shelf) {
+    renderComics(payload, box);
+  } else if (payload) {
+    orderedHighlights(payload).forEach((h) => {
+      const block = el("div", { class: "hl" });
+      const h3 = el("h3");
+      h3.appendChild(el("button", { class: "open-hl", type: "button", onclick: () => openStory(meta, h) }, h.title));
+      block.appendChild(h3);
+      if (h.dek) block.appendChild(el("p", { class: "dek" }, h.dek));
+      block.appendChild(voteButtons(h, meta.id, [["liked", "Liked it"], ["useful", "Useful"], ["hide", "Hide"]]));
+      box.appendChild(block);
+    });
+  }
+  if (!payload || payload.stub) {
+    if (!meta.coming_soon) {
+      box.appendChild(el("button", {
+        class: "btn", type: "button", onclick: () => openSection(meta.id)
+      }, payload && payload.stub ? "Try the wire again" : "Open this section"));
+    }
+  }
+  return box;
+}
+function render() {
+  const status = state.status;
+  if (!status) return;
+  document.getElementById("when").textContent = state.day ? longDate(state.day) : "Evening edition";
+  document.getElementById("vol").textContent = status.dormant && !state.awake ? "Asleep" : "On demand";
+  renderDays();
+  renderSeeds();
+  const cookie = document.getElementById("cookie");
+  cookie.hidden = state.decision === "yes" || state.decision === "no";
+  const dormant = document.getElementById("dormant");
+  dormant.hidden = !(status.dormant && !state.awake);
+  const wire = document.getElementById("wire");
+  if (status.provider && !status.provider.ready) {
+    wire.hidden = false;
+    clear(wire);
+    wire.appendChild(el("p", null, "The desks are built. Generation needs the server secret " + (status.provider.needed_secret || "XAI_API_KEY") + ". The comics shelf still opens."));
+  } else wire.hidden = true;
+  renderStory();
+  const paper = document.getElementById("paper");
+  clear(paper);
+  const soon = document.getElementById("soon");
+  clear(soon);
+  const byId = new Map((status.sections || []).map((s) => [s.id, s]));
+  const show = (state.layout && state.layout.show) || (status.sections || []).filter((s) => !s.coming_soon).map((s) => s.id);
+  const more = (state.layout && state.layout.more) || [];
+  const coming = (state.layout && state.layout.coming_soon) || (status.sections || []).filter((s) => s.coming_soon).map((s) => s.id);
+  show.forEach((id) => { const meta = byId.get(id); if (meta) paper.appendChild(renderBox(meta, meta.lead)); });
+  if (more.length) {
+    const details = el("details", { class: "more" });
+    details.appendChild(el("summary", null, "More sections"));
+    const grid = el("div", { class: "paper" });
+    more.forEach((id) => { const meta = byId.get(id); if (meta) grid.appendChild(renderBox(meta, false)); });
+    details.appendChild(grid);
+    paper.appendChild(details);
+  }
+  coming.forEach((id) => {
+    const meta = byId.get(id);
+    if (!meta) return;
+    const box = el("section", { class: "box" });
+    box.appendChild(el("p", { class: "kicker" }, "Coming soon"));
+    box.appendChild(el("h2", null, meta.title));
+    box.appendChild(el("p", { class: "brief" }, meta.brief || "Coming soon."));
+    soon.appendChild(box);
+  });
+  const fresh = document.getElementById("fresh");
+  const dismissed = localStorage.getItem("dxedge-news-fresh") === (status.today || "");
+  fresh.hidden = dismissed || (status.dormant && !state.awake);
+}
+function openStory(meta, item) {
+  state.story = { sectionId: meta.id, kicker: meta.kicker, item: item };
+  render();
+  document.getElementById("story").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function refreshLayout() {
+  state.layout = await postJSON("/api/news/layout", {
+    day: state.day, user_id: state.reader,
+    ...(state.seed == null || Number.isNaN(state.seed) ? {} : { seed: state.seed })
+  });
+}
+async function selectDay(day) {
+  state.day = day;
+  state.story = null;
+  if (state.status.dormant && !state.awake) { render(); return; }
+  try {
+    const data = await getJSON("/api/news/day?day=" + encodeURIComponent(day) + (state.awake ? "&wake=1" : ""));
+    if (data.dormant && !state.awake) { state.status.dormant = true; render(); return; }
+    state.editions[day] = data.sections || {};
+    await refreshLayout();
+  } catch (e) {
+    state.errors._day = e.message;
+  }
+  render();
+}
+async function openSection(id) {
+  state.loading = id;
+  state.errors[id] = "";
+  render();
+  try {
+    const data = await postJSON("/api/news/section", {
+      day: state.day, id: id, user_id: state.reader, wake: state.awake ? 1 : 0
+    });
+    if (data.dormant) { state.status.dormant = true; state.awake = false; }
+    else {
+      if (!state.editions[state.day]) state.editions[state.day] = {};
+      state.editions[state.day][id] = data;
+      await refreshLayout();
+    }
+  } catch (e) {
+    state.errors[id] = e.message;
+  }
+  state.loading = null;
+  render();
+}
+async function applySeed(seed) {
+  state.seed = seed;
+  saveSeed();
+  try { await refreshLayout(); } catch (e) { state.errors._seed = e.message; }
+  render();
+}
+async function wake() {
+  try {
+    state.status = await postJSON("/api/news/wake", {});
+    state.awake = true;
+    await selectDay(state.status.today);
+  } catch (e) {
+    state.errors._wake = e.message;
+    render();
+  }
+}
+function acceptCookie() {
+  localStorage.setItem("dxedge-news-cookie", "yes");
+  state.decision = "yes";
+  writeCookie("dxn", state.reader);
+  saveSeed();
+  render();
+}
+function declineCookie() {
+  localStorage.setItem("dxedge-news-cookie", "no");
+  state.decision = "no";
+  clearCookie("dxn");
+  clearCookie("dxn_seed");
+  render();
+}
+async function forget() {
+  const old = state.reader;
+  clearCookie("dxn");
+  clearCookie("dxn_seed");
+  sessionStorage.removeItem("dxedge-news-reader");
+  sessionStorage.removeItem("dxedge-news-seed");
+  if (localStorage.getItem("dxedge-news-cookie") === "yes") localStorage.removeItem("dxedge-news-cookie");
+  state.seed = null;
+  state.reader = mint();
+  sessionStorage.setItem("dxedge-news-reader", state.reader);
+  state.decision = localStorage.getItem("dxedge-news-cookie");
+  try { await postJSON("/api/news/forget", { user_id: old }); } catch (e) {}
+  try { await refreshLayout(); } catch (e) {}
+  render();
+}
+document.getElementById("seed-apply").addEventListener("click", () => {
+  const raw = document.getElementById("seed-input").value.trim();
+  if (raw === "") return applySeed(null);
+  if (!/^\d+$/.test(raw)) { state.errors._seed = "Seed must be a whole number."; render(); return; }
+  applySeed(Number(raw));
+});
+document.getElementById("seed-clear").addEventListener("click", () => applySeed(null));
+document.getElementById("cookie-yes").addEventListener("click", acceptCookie);
+document.getElementById("cookie-no").addEventListener("click", declineCookie);
+document.getElementById("wake").addEventListener("click", wake);
+document.getElementById("forget").addEventListener("click", forget);
+document.getElementById("fresh-dismiss").addEventListener("click", () => {
+  if (state.status) localStorage.setItem("dxedge-news-fresh", state.status.today || "");
+  document.getElementById("fresh").hidden = true;
+});
+async function boot() {
+  loadIdentity();
+  try {
+    state.status = await getJSON("/api/news/status");
+    state.day = state.status.today;
+    render();
+    if (!(state.status.dormant && !state.awake)) await selectDay(state.status.today);
+    else render();
+  } catch (e) {
+    document.getElementById("paper").appendChild(el("p", { class: "err" }, e.message));
+  }
+}
+boot();
+</script>
+</body>
+</html>

@@ -467,6 +467,11 @@ export default function App() {
           border: '1px solid var(--teal)', padding: '6px 14px', borderRadius: 5,
           letterSpacing: 1, textTransform: 'uppercase', textDecoration: 'none'
         }}>DX//EDGE · AETHERSDR →</a>
+        <a href="/news/" style={{
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--teal)',
+          border: '1px solid var(--teal)', padding: '6px 14px', borderRadius: 5,
+          letterSpacing: 1, textTransform: 'uppercase', textDecoration: 'none'
+        }}>THE EDGE · NEWS →</a>
       </div>
       <div style={{ marginTop: 14, textAlign: 'center' }}>
         <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noreferrer"
