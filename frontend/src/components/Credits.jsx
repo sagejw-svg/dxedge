@@ -4,14 +4,14 @@ const SOURCES = [
     items: [
       {
         name: 'NOAA Space Weather Prediction Center',
-        url: 'https://www.swpc.noaa.gov',
+        url: 'https://www.spaceweather.gov',
         what: 'Solar flux index, K-index, A-index, sunspot number, X-ray flux',
         note: 'Primary real-time solar data source. Free public API.',
         icon: '☀️',
       },
       {
         name: 'NOAA GOES X-Ray Imager',
-        url: 'https://www.swpc.noaa.gov/products/goes-x-ray-flux',
+        url: 'https://www.spaceweather.gov/products/goes-x-ray-flux',
         what: 'X-ray flux for solar flare detection',
         icon: '⚡',
       },
@@ -175,7 +175,7 @@ const SOURCES = [
       },
       {
         name: 'Vite',
-        url: 'https://vitejs.dev',
+        url: 'https://vite.dev',
         what: 'Frontend build tool',
         icon: '⚡',
       },
