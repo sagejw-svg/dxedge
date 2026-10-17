@@ -48,6 +48,15 @@
     letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
   .day[aria-pressed="true"] svg { box-shadow: inset 0 0 0 2px var(--red); }
   .day[aria-pressed="true"] span { color: var(--red); }
+  .thread { border-bottom: 1px solid var(--rule); padding: 8px 0 12px; }
+  .thread h2 { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--red); font-weight: 600; margin: 0 0 8px; }
+  .thread ol { list-style: none; display: flex; gap: 12px; overflow-x: auto; margin: 0; padding: 0 0 4px; }
+  .thread li { flex: 0 0 240px; border-left: 2px solid var(--red); padding: 0 10px; }
+  .thread time { display: block; font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .thread a { color: inherit; }
+  .ai-note { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; color: var(--muted); margin: 2px 0 0; }
   .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0;
     font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 14px; }
   .tools label { letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
@@ -108,11 +117,12 @@
 <a class="skip" href="#paper">Skip to the edition</a>
 <div class="sheet">
   <header class="mast">
-    <p class="eyebrow"><a href="/">dxedge.net</a> · a general-audience daily</p>
+    <p class="eyebrow">A general-audience daily</p>
     <h1>The Edge</h1>
   </header>
   <p class="dateline"><span id="when">Evening edition</span><span id="vol">Written when opened</span></p>
   <div class="days" id="days" aria-label="Editions"></div>
+  <section class="thread" id="ai-progress" hidden aria-label="AI progress"></section>
   <div class="tools">
     <label for="seed-input">Seed</label>
     <input id="seed-input" inputmode="numeric" pattern="[0-9]*" min="0" max="1000000000" placeholder="A number">
@@ -340,6 +350,49 @@ async function vote(targetId, kind, sectionId) {
   }
   render();
 }
+function renderProgress() {
+  const pane = document.getElementById("ai-progress");
+  clear(pane);
+  const notes = (state.status && state.status.ai_progress) || [];
+  if (!notes.length) { pane.hidden = true; return; }
+  pane.hidden = false;
+  pane.appendChild(el("h2", null, "AI progress"));
+  const list = el("ol");
+  notes.forEach((note) => {
+    const meta = (state.status.sections || []).find((s) => s.id === note.section);
+    const item = el("li");
+    item.appendChild(el("time", { datetime: note.day }, note.day + (meta ? " · " + meta.title : "")));
+    if (note.url && note.url.indexOf("https://") === 0) {
+      const a = el("a", { href: note.url, rel: "noopener noreferrer" }, note.note || "");
+      a.target = "_blank";
+      item.appendChild(a);
+    } else {
+      item.appendChild(el("p", null, note.note || ""));
+    }
+    list.appendChild(item);
+  });
+  pane.appendChild(list);
+}
+function rememberProgress(data) {
+  if (!data || data.stub || data.dormant || !state.status) return;
+  const sid = data.section && data.section.id;
+  const notes = state.status.ai_progress || [];
+  const seen = new Set(notes.map((n) => n.day + "\n" + n.section + "\n" + n.note));
+  (data.highlights || []).forEach((h) => {
+    if (!h.ai_progress) return;
+    const day = data.day || state.day;
+    const key = day + "\n" + sid + "\n" + h.ai_progress;
+    if (seen.has(key)) return;
+    const url = (h.sources && h.sources[0] && h.sources[0].url) || "";
+    notes.push({
+      day: day, section: sid, title: h.title || "", note: h.ai_progress,
+      url: url.indexOf("https://") === 0 ? url : ""
+    });
+    seen.add(key);
+  });
+  notes.sort((a, b) => a.day < b.day ? 1 : a.day > b.day ? -1 : 0);
+  state.status.ai_progress = notes;
+}
 function renderDays() {
   const wrap = document.getElementById("days");
   clear(wrap);
@@ -461,6 +514,7 @@ function renderBox(meta, lead) {
       h3.appendChild(el("button", { class: "open-hl", type: "button", onclick: () => openStory(meta, h) }, h.title));
       block.appendChild(h3);
       if (h.dek) block.appendChild(el("p", { class: "dek" }, h.dek));
+      if (h.ai_progress) block.appendChild(el("p", { class: "ai-note" }, h.ai_progress));
       block.appendChild(voteButtons(h, meta.id, [["liked", "Liked it"], ["useful", "Useful"], ["hide", "Hide"]]));
       box.appendChild(block);
     });
@@ -480,6 +534,7 @@ function render() {
   document.getElementById("when").textContent = state.day ? longDate(state.day) : "Evening edition";
   document.getElementById("vol").textContent = status.dormant && !state.awake ? "Asleep" : "On demand";
   renderDays();
+  renderProgress();
   renderSeeds();
   const cookie = document.getElementById("cookie");
   cookie.hidden = state.decision === "yes" || state.decision === "no";
@@ -559,6 +614,7 @@ async function openSection(id) {
     else {
       if (!state.editions[state.day]) state.editions[state.day] = {};
       state.editions[state.day][id] = data;
+      rememberProgress(data);
       await refreshLayout();
     }
   } catch (e) {

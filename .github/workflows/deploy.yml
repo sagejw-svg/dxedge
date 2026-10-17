@@ -82,16 +82,40 @@ jobs:
 
       - name: Deploy to droplet
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: XAI_API_KEY,GROK_API_KEY
           script: |
             set -e
             BACKEND_CHANGED="${{ steps.changes.outputs.backend }}"
             cd /opt/dxedge
             LOG=/var/log/dxedge_deploy.log
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Actions deploy starting" >> $LOG
+            # Forward a model key only when the Actions secret is actually set.
+            # An empty value must not clobber a key already on the host.
+            KEY_SET=0
+            if [ -n "${XAI_API_KEY:-}" ]; then
+              export XAI_API_KEY
+              KEY_SET=1
+            else
+              unset XAI_API_KEY
+            fi
+            if [ -n "${GROK_API_KEY:-}" ]; then
+              export GROK_API_KEY
+              KEY_SET=1
+            else
+              unset GROK_API_KEY
+            fi
+            if [ "$KEY_SET" = "1" ]; then
+              echo "[$(date)] news model key is set for this deploy" >> $LOG
+            else
+              echo "[$(date)] news model key is unset; generation stays on the stub" >> $LOG
+            fi
             # fetch + reset rather than pull: a pull needs the droplet's branch to
             # fast-forward, and it stopped doing that after main was rewritten on
             # Sep 7 2026 (author identity fix). Every deploy since exited 128 here,
