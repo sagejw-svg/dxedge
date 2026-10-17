@@ -793,6 +793,10 @@ def test_page_wires_match_the_desk():
     assert "secrets.GROK_API_KEY" in deploy
     assert "unset XAI_API_KEY" in deploy
     assert "news model key is unset" in deploy
+    assert "/opt/dxedge/.env" in deploy
+    assert 'echo "$XAI_API_KEY"' not in deploy
+    assert "echo ${XAI_API_KEY}" not in deploy
+    assert "Droplet value left unchanged" in deploy
     for path in ("/api/news/status", "/api/news/day", "/api/news/section",
                  "/api/news/layout", "/api/news/vote", "/api/news/wake", "/api/news/forget"):
         assert path in main

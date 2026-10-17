@@ -6,8 +6,9 @@ services:
     environment:
       - PORT=8000
       # The newspaper calls xAI only when a section is opened. The deploy
-      # workflow forwards XAI_API_KEY or GROK_API_KEY when that Actions
-      # secret is set. With neither, the desk stays on the stub.
+      # workflow writes XAI_API_KEY or GROK_API_KEY into this directory's
+      # .env when that Actions secret is set, and leaves an existing value
+      # alone when it is not. With neither, the desk stays on the stub.
       # NEWS_OWNER_SEED is the private seed for one reader's votes. It is never
       # sent to the browser. NEWS_OWNER_READER is that reader's anonymous id.
       - XAI_API_KEY=${XAI_API_KEY:-}
