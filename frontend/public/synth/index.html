@@ -3104,6 +3104,7 @@ showCC();
 deck = createDeck({
   dev: () => dev, ctx: () => ctx, engine: () => E, wake, withEngine, toast,
   patchOf: d => (d === dev ? cur : DS[d].cur), patchName: d => (d === dev ? cur : DS[d].cur).name || DEVS[d].name,
+  master: () => master.get(),
   lit: n => paintKey(n, false),
 });
 player = createPlayer({

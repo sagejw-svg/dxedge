@@ -87,6 +87,12 @@ export function createDeck(api) {
   DEVS.forEach(d => { T.ctl[d] = { bend: 0, mw: 0, sus: false, at: 0 }; });
   function rec(dev, m) {
     const c = T.ctl[dev];
+    // The recorder takes Filament and Cathode only. Anything else the keys play is not recorded,
+    // and must not throw: the page calls rec() after every note, wheel and pedal on every device.
+    if (!c) {
+      if (m.t === 'on' && T.armed && !T.rec) $('takeStat').textContent = 'armed: the recorder takes Filament and Cathode only';
+      return;
+    }
     if (m.t === 'bend') c.bend = m.v; else if (m.t === 'mw') c.mw = m.v; else if (m.t === 'sus') c.sus = !!m.on; else if (m.t === 'at') c.at = m.v;
     if (!T.armed && !T.rec) return;
     const t = now();
@@ -275,6 +281,7 @@ export function createDeck(api) {
     const len = (src === 'take' ? T.length : Fi.song.length) / rate;
     return {
       patches: { filament: api.patchOf('filament'), cathode: api.patchOf('cathode') }, device: api.dev(),
+      master: api.master ? api.master() : null,      // the master bus you hear (delay, reverb, comp)
       events: ev.map(e => Object.assign({ at: e.time / rate, dev: e.dev }, e.m)).filter(e => e.at < MAX_S),
       seconds: Math.min(MAX_S, len + 2), capped: len + 2 > MAX_S, sampleRate: 48000,
     };

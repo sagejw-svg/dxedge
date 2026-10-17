@@ -1013,6 +1013,39 @@ with sync_playwright() as pw:
     ck("M. Render WAV: both devices are in it (the C4 chord root and the D2 bass)", tone_amp(seg, 261.63) > 30 * tone_amp(seg, 480.0) and tone_amp(seg, 73.42) > 30 * tone_amp(seg, 480.0)
        and float(np.max(np.abs(pcm))) <= 1.0, (db(tone_amp(seg, 261.63)), db(tone_amp(seg, 73.42)), db(tone_amp(seg, 480.0))))
     ck("M. Render WAV: a progress note, then the result", "rendered" in pg.inner_text("#wavStat"), pg.inner_text("#wavStat"))
+
+    # Review 17 Oct: Render WAV went through no master bus, so a reverb you could hear was missing
+    # from the file. The deck now hands the master state to the offline render.
+    pg.evaluate("a => __synth.deck().importBytes(a, 'melody.mid')", MEL)
+    pg.evaluate("__synth.setMaster({delay:{on:false}, reverb:{on:false}, comp:{on:false}})")
+    a_dry = pg.evaluate("__synth.deck().renderArgs('file')")
+    pg.evaluate("__synth.setMaster({reverb:{on:true, size:0.9, mix:0.6}})")
+    a_wet = pg.evaluate("__synth.deck().renderArgs('file')")
+    pg.evaluate("__synth.setMaster({reverb:{on:false}})")
+    for a_ in (a_dry, a_wet): a_["patches"] = {"filament": sine, "cathode": tri}; a_["seconds"] = 3.0
+    Ld, _ = dec(pg.evaluate("a => __synth.render2(a)", a_dry)); Lw, _ = dec(pg.evaluate("a => __synth.render2(a)", a_wet))
+    gap = slice(int(0.9 * SR), int(2.4 * SR))     # between the A4 (ends at 0.75 s) and the E5 (starts at 3 s)
+    td, tw = float(np.sqrt(np.mean(Ld[gap] ** 2))), float(np.sqrt(np.mean(Lw[gap] ** 2)))
+    ck(f"M. Render WAV carries the master bus: reverb on fills the gap after a note ({db(tw):.1f} dBFS against {db(td):.1f} dBFS dry)",
+       (a_wet.get("master") or {}).get("reverb", {}).get("on") is True and tw > 10 * max(td, 1e-5), (a_wet.get("master"), td, tw))
+
+    # Review 17 Oct: the recorder only knows Filament and Cathode, and its rec() threw on every note,
+    # wheel and pedal from any other device (and, armed, before the key could light).
+    n_err = len(errs)
+    pg.evaluate("__synth.setDevice('thyratron')"); pg.wait_for_timeout(200)
+    pg.evaluate("__synth.deck().arm()")
+    thrown = pg.evaluate("""() => { const out = [];
+      const tryIt = f => { try { f(); } catch (e) { out.push(String(e.message || e)); } };
+      tryIt(() => __synth.midi([0xE0, 0, 96])); tryIt(() => __synth.midi([0xB0, 1, 90])); tryIt(() => __synth.midi([0xB0, 64, 127]));
+      tryIt(() => __synth.midi([0xB0, 64, 0])); tryIt(() => __synth.midi([0xE0, 0, 64])); tryIt(() => __synth.noteOn(62, 0.8));
+      return out; }""")
+    pg.wait_for_timeout(100)
+    lit62 = pg.evaluate("!!document.querySelector('#keys .key.down[data-n=\"62\"]')")
+    tk_ = pg.evaluate("__synth.deck().take()"); stat_ = pg.inner_text("#takeStat")
+    pg.evaluate("__synth.noteOff(62)"); pg.evaluate("__synth.deck().stopRec()"); pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
+    ck("M. recorder on a device it cannot record (Thyratron): wheels, pedal and an armed note throw nothing, the key lights, nothing is recorded and the deck says why",
+       not thrown and len(errs) == n_err and lit62 and tk_["armed"] and not tk_["rec"] and not any(e["dev"] == "thyratron" for e in tk_["events"])
+       and "Filament and Cathode" in stat_, (thrown, errs[n_err:], lit62, tk_, stat_))
     ck("M. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Q. the graphic EQ (rack-wide)
