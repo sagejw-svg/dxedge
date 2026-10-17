@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import re
 import sys
 import threading
 from datetime import datetime, timedelta, timezone
@@ -19,7 +20,7 @@ from news import (
     extract_completion, framing_allowed, load_config, owner_secret, parse_commons,
     parse_model_json, parse_seed, parse_user, pepper_image_urls, persona_weights,
     preamble, public_domain, public_section, safe_frame_url, scrub_highlight,
-    section_map, strip_page_url, vote_mix, xkcd_skipped, _validate_config,
+    section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE, _validate_config,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -126,18 +127,59 @@ def paper(env):
     return desk
 
 
+REQUIRED = [
+    "comics", "ai-editorial", "biology", "cancer", "education", "sleep",
+    "ai-security", "cyber", "company", "money", "life", "space", "weird", "world",
+]
+REQUIRED_TITLES = {
+    "comics": "Comics",
+    "ai-editorial": "AI editorial",
+    "biology": "Biology",
+    "cancer": "Cancer",
+    "education": "Education",
+    "sleep": "Narcolepsy & sleep",
+    "ai-security": "AI security",
+    "cyber": "Cybersecurity",
+    "company": "Protecting your company",
+    "money": "AI money-making",
+    "life": "Life improvement & thinking tools",
+    "space": "Space & aliens",
+    "weird": "Weird side",
+    "world": "Big World News",
+}
+PROFILE_WORDS = (
+    "from the desk", "weekend sailor", "sailing", "sailor", "ranch",
+    "synth", "synthesizer", "recode", "prediction market",
+)
+
+
 def test_config_is_the_paper():
     cfg = load_config()
     ids = [s["id"] for s in cfg["sections"]]
     assert ids[0] == "ai-world"
-    assert "world" in ids
-    assert "cancer" in ids and "education" in ids
+    assert ids[1:] == REQUIRED
+    by_id = {s["id"]: s for s in cfg["sections"]}
+    for sid, title in REQUIRED_TITLES.items():
+        assert by_id[sid]["title"] == title
+        assert not by_id[sid].get("coming_soon")
+        assert by_id[sid].get("prompt")
+    assert by_id["ai-security"]["id"] != by_id["cyber"]["id"]
+    assert "cybersecurity belongs in its own section" in by_id["ai-security"]["prompt"]
+    assert "separate from AI-only security" in by_id["cyber"]["prompt"]
+    assert "medical advice" in by_id["cancer"]["prompt"].lower()
+    assert "teaching and learning" in by_id["education"]["prompt"].lower()
+    assert "picks" not in ids
     assert "ham" not in ids
     blob = json.dumps(cfg).lower()
     assert "dilbert" not in blob
     assert "ham radio" not in blob
     assert "james" not in blob
     assert "k6wrj" not in blob
+    assert PROFILE_RE.search(blob) is None
+    for word in PROFILE_WORDS:
+        assert re.search(rf"\b{word}\b", blob, re.I) is None
+    for topic in ("sailing", "synth", "games", "ranch", "markets"):
+        assert topic not in cfg["topics"]
     hagar = next(s for s in cfg["strips"] if s["id"] == "hagar")
     assert hagar["host"] == "comicskingdom"
     assert hagar["frame"] == "never"
@@ -149,8 +191,10 @@ def test_config_is_the_paper():
     labels = [e["label"] for e in cfg["example_seeds"]]
     assert 5 <= len(labels) <= 8
     for name in ("Space nerd", "College freshman", "Startup founder",
-                 "Biology buff", "Retired tinkerer", "Weird-news fan"):
+                 "Biology buff", "Weird-news fan", "Security lead"):
         assert name in labels
+    assert "Weekend sailor" not in labels
+    assert "Retired tinkerer" not in labels
     bad = json.loads(json.dumps(cfg))
     bad["strips"].append({
         "id": "dilbert", "name": "Dilbert", "host": "gocomics", "slug": "dilbert",
@@ -158,23 +202,35 @@ def test_config_is_the_paper():
     })
     with pytest.raises(ValueError):
         _validate_config(bad)
+    profiled = json.loads(json.dumps(cfg))
+    profiled["topics"].append("sailing")
+    with pytest.raises(ValueError):
+        _validate_config(profiled)
+    desk = json.loads(json.dumps(cfg))
+    desk["sections"].append({
+        "id": "picks", "title": "From the desk", "kicker": "Interests",
+        "brief": "A mix.", "prompt": "A short mix.",
+    })
+    with pytest.raises(ValueError):
+        _validate_config(desk)
 
 
 def test_prompts_carry_the_hard_rules():
     head = preamble()
     assert "Where AI progress" in head
+    assert "ai_progress" in head
+    assert "Two or three highlights" in head
     assert "ham radio" in head.lower()
     assert "protocols" in head.lower()
     assert "employer" in head.lower()
     assert "children" in head.lower()
     for sec in load_config()["sections"]:
-        if sec.get("coming_soon"):
-            assert "prompt" not in public_section(sec)
-            continue
+        assert not sec.get("coming_soon")
         system, user = build_prompt(sec, DAY, [("space", 3)])
         assert system == head
         assert "space" in user
         assert "18421" not in system + user
+        assert PROFILE_RE.search(system + user) is None
     assert "Cybercab" in build_prompt(section_map()["world"], DAY, [])[1]
     assert "Roadster" in build_prompt(section_map()["world"], DAY, [])[1]
     assert "anonymous" in build_prompt(section_map()["sleep"], DAY, [])[1].lower()
@@ -203,7 +259,38 @@ def test_safety_filters():
     }, []) is None
     assert scrub_highlight("ai-security", {
         "title": "Bug", "dek": "Here is shellcode.", "body": "Run it.",
-        "topics": ["security"], "sources": [],
+        "topics": ["security"],
+        "sources": [{"title": "Wire", "url": "https://www.example.com/sec"}],
+    }, []) is None
+    assert scrub_highlight("cyber", {
+        "title": "Bug", "dek": "Here is shellcode.", "body": "Run it.",
+        "topics": ["cyber"],
+        "sources": [{"title": "Wire", "url": "https://www.example.com/sec"}],
+    }, []) is None
+    assert scrub_highlight("cancer", {
+        "title": "Take this", "dek": "You should take the new pill.",
+        "body": "A recommended dose is 50 mg per day.",
+        "topics": ["cancer"],
+        "sources": [{"title": "NEJM", "url": "https://www.nejm.org/a"}],
+    }, []) is None
+    kept = scrub_highlight("cancer", {
+        "title": "A trial reported a longer response",
+        "dek": "A phase 3 study compared two regimens.",
+        "body": "The paper reports a difference. It is not a treatment plan.",
+        "topics": ["cancer"],
+        "ai_progress": "A model helped screen the trial records.",
+        "sources": [{"title": "NEJM", "url": "https://www.nejm.org/a"}],
+    }, [])
+    assert kept["sources"][0]["url"].startswith("https://")
+    assert kept["ai_progress"] == "A model helped screen the trial records."
+    assert scrub_highlight("space", {
+        "title": "Noted", "dek": "See the link.", "body": "Real.",
+        "topics": ["space"], "sources": [],
+    }, []) is None
+    assert scrub_highlight("life", {
+        "title": "A weekend", "dek": "Sailing the bay.", "body": "Bring the boat.",
+        "topics": ["life"],
+        "sources": [{"title": "Wire", "url": "https://www.example.com/sail"}],
     }, []) is None
     dropped = scrub_highlight("space", {
         "title": "Noted", "dek": "See the link.", "body": "Real.",
@@ -377,15 +464,19 @@ def test_status_does_not_keep_the_paper_awake(paper):
     assert paper.provider.calls == 0
 
 
-def test_coming_soon_and_day_window(paper):
-    soon = asyncio.run(paper.open_section(DAY, "cancer", "1.1.1.1", None, False))
-    assert soon["coming_soon"] is True
-    assert paper.provider.calls == 0
+def test_open_sections_and_day_window(paper):
+    opened = asyncio.run(paper.open_section(DAY, "cancer", "1.1.1.1", None, False))
+    assert opened["coming_soon"] is False
+    assert opened["stub"] is False
+    assert paper.provider.calls == 1
+    edu = asyncio.run(paper.open_section(DAY, "education", "1.1.1.1", None, False))
+    assert edu["coming_soon"] is False
+    assert paper.provider.calls == 2
     with pytest.raises(NewsError):
         asyncio.run(paper.open_section("2026-10-18", "space", "1.1.1.1", None, False))
     with pytest.raises(NewsError):
         asyncio.run(paper.open_section("2026-10-03", "space", "1.1.1.1", None, False))
-    assert paper.provider.calls == 0
+    assert paper.provider.calls == 2
 
 
 def test_comics_shelf_is_legal(paper):
@@ -479,17 +570,20 @@ def test_seed_reorders_without_generation(paper):
     assert paper.provider.calls == before
     assert plain["show"][0] == "ai-world"
     assert seeded["show"][0] == "ai-world"
-    assert plain["show"][1] == "world"
-    assert "cancer" in plain["coming_soon"] and "cancer" not in plain["show"]
-    assert "education" in plain["coming_soon"]
+    assert plain["show"][1:] == REQUIRED
+    assert plain["coming_soon"] == []
+    assert plain["more"] == []
+    assert "picks" not in plain["show"]
     assert seeded["show"] != other["show"] or seeded["more"] != other["more"]
-    assert "owner" not in json.dumps(seeded).lower()
-    assert "james" not in json.dumps(seeded).lower()
+    dumped = json.dumps(seeded).lower()
+    assert "owner" not in dumped
+    assert "james" not in dumped
+    assert PROFILE_RE.search(dumped) is None
 
 
 def test_example_seeds_match_their_labels():
     cfg = load_config()
-    ids = [s["id"] for s in cfg["sections"] if not s.get("coming_soon")]
+    ids = [s["id"] for s in cfg["sections"]]
     topics = cfg["topics"]
     by_label = {ex["label"]: ex["seed"] for ex in cfg["example_seeds"]}
 
@@ -510,12 +604,10 @@ def test_example_seeds_match_their_labels():
     life, life_topics = top(by_label["College freshman"])
     assert life[0] == "life" and "comics" in life[:4] and "world" in life[:4]
     assert life_topics[0] == "life"
-    picks, pick_topics = top(by_label["Retired tinkerer"])
-    assert picks[0] == "picks" and pick_topics[0] in ("synth", "games")
     security, security_topics = top(by_label["Security lead"])
     assert security[0] == "ai-security" and security_topics[0] == "security"
-    sailor, sailor_topics = top(by_label["Weekend sailor"])
-    assert sailor[0] == "picks" and sailor_topics[0] == "sailing"
+    assert "Weekend sailor" not in by_label
+    assert "Retired tinkerer" not in by_label
 
 
 def test_status_publishes_example_personas(paper):
@@ -524,9 +616,17 @@ def test_status_publishes_example_personas(paper):
     assert 5 <= len(examples) <= 8
     labels = [ex["label"] for ex in examples]
     for name in ("Space nerd", "College freshman", "Startup founder",
-                 "Biology buff", "Retired tinkerer", "Weird-news fan"):
+                 "Biology buff", "Weird-news fan", "Security lead"):
         assert name in labels
+    assert "Weekend sailor" not in labels
+    assert "Retired tinkerer" not in labels
+    ids = [s["id"] for s in status["sections"]]
+    assert ids[0] == "ai-world"
+    assert ids[1:] == REQUIRED
+    assert all(not s["coming_soon"] for s in status["sections"])
+    assert status["ai_progress"] == []
     blob = json.dumps(examples).lower()
+    assert PROFILE_RE.search(blob) is None
     assert "owner" not in blob
     assert "james" not in blob
     assert "child" not in blob
@@ -577,6 +677,85 @@ def test_provider_reports_the_missing_key(monkeypatch):
     assert provider.model
 
 
+def test_generated_section_keeps_two_or_three_sourced_notes(paper):
+    paper.provider.highlights = [
+        {"title": "One", "dek": "d", "body": "b", "topics": ["ai"],
+         "ai_progress": "A model beat the previous benchmark.",
+         "sources": [{"title": "Wire", "url": "https://www.example.com/a"}]},
+        {"title": "Two", "dek": "d", "body": "b", "topics": ["ai"],
+         "ai_progress": "",
+         "sources": [{"title": "Wire", "url": "https://www.example.com/b"}]},
+        {"title": "No source", "dek": "d", "body": "b", "topics": ["ai"],
+         "sources": [{"title": "bad", "url": "http://nope.example/a"}]},
+        {"title": "Ham note", "dek": "d", "body": "b", "topics": ["ai"],
+         "ai_progress": "Ham radio nets now use a model.",
+         "sources": [{"title": "Wire", "url": "https://www.example.com/c"}]},
+        {"title": "Four", "dek": "d", "body": "b", "topics": ["ai"],
+         "sources": [{"title": "Wire", "url": "https://www.example.com/d"}]},
+    ]
+    out = asyncio.run(paper.open_section(DAY, "cyber", "1.1.1.1", None, False))
+    assert [h["title"] for h in out["highlights"]] == ["One", "Two", "Four"]
+    assert out["highlights"][0]["ai_progress"] == "A model beat the previous benchmark."
+    assert "ai_progress" not in out["highlights"][1]
+    assert all(h["sources"][0]["url"].startswith("https://") for h in out["highlights"])
+    assert paper.provider.calls == 1
+    again = asyncio.run(paper.open_section(DAY, "cyber", "1.1.1.1", None, False))
+    assert again["cached"] is True
+    assert paper.provider.calls == 1
+
+
+def test_ai_progress_thread_reads_cached_notes_only(paper):
+    paper.store.put_section(DAY, "space", {
+        "day": DAY,
+        "highlights": [
+            {"id": f"{DAY}:space:0", "title": "A step", "dek": "d", "body": "b",
+             "topics": ["space"], "ai_progress": "Models planned a rover route.",
+             "sources": [{"title": "NASA", "url": "https://www.nasa.gov/a"}]},
+            {"id": f"{DAY}:space:1", "title": "No note", "dek": "d", "body": "b",
+             "topics": ["space"],
+             "sources": [{"title": "NASA", "url": "https://www.nasa.gov/b"}]},
+        ],
+    }, "fake", paper.now())
+    paper.store.put_section("2026-10-16", "biology", {
+        "day": "2026-10-16",
+        "highlights": [{
+            "id": "2026-10-16:biology:0", "title": "Earlier", "dek": "d", "body": "b",
+            "topics": ["biology"], "ai_progress": "A model read a genome paper.",
+            "sources": [{"title": "Nature", "url": "https://www.nature.com/a"}],
+        }],
+    }, "fake", paper.now())
+    paper.store.put_section("2026-10-01", "money", {
+        "day": "2026-10-01",
+        "highlights": [{
+            "id": "2026-10-01:money:0", "title": "Old", "dek": "d", "body": "b",
+            "topics": ["money"], "ai_progress": "Too old to show.",
+            "sources": [{"title": "Wire", "url": "https://www.example.com/old"}],
+        }],
+    }, "fake", paper.now())
+    paper.store.put_section("2026-10-15", "sleep", {
+        "day": "2026-10-15",
+        "highlights": [{
+            "id": "2026-10-15:sleep:0", "title": "Skip", "dek": "d", "body": "b",
+            "topics": ["sleep"], "ai_progress": "Sailing is not a progress note.",
+            "sources": [{"title": "Wire", "url": "https://www.example.com/sail"}],
+        }],
+    }, "fake", paper.now())
+    before = paper.provider.calls
+    status = paper.status()
+    notes = status["ai_progress"]
+    assert paper.provider.calls == before
+    assert status["last_click"] is None
+    assert [n["day"] for n in notes] == [DAY, "2026-10-16"]
+    assert notes[0]["section"] == "space"
+    assert notes[0]["note"] == "Models planned a rover route."
+    assert notes[0]["url"] == "https://www.nasa.gov/a"
+    assert notes[1]["note"] == "A model read a genome paper."
+    blob = json.dumps(notes).lower()
+    assert PROFILE_RE.search(blob) is None
+    assert "james" not in blob
+    assert "ham radio" not in blob
+
+
 def test_page_wires_match_the_desk():
     html = (ROOT / "frontend/public/news/index.html").read_text(encoding="utf-8")
     sw = (ROOT / "frontend/public/sw.js").read_text(encoding="utf-8")
@@ -607,12 +786,26 @@ def test_page_wires_match_the_desk():
     assert "url.pathname.startsWith('/news/')" in sw
     assert "location ^~ /news/" in nginx
     assert "XAI_API_KEY" in compose
+    assert "GROK_API_KEY" in compose
     assert "NEWS_OWNER_SEED" in compose
+    deploy = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
+    assert "secrets.XAI_API_KEY" in deploy
+    assert "secrets.GROK_API_KEY" in deploy
+    assert "unset XAI_API_KEY" in deploy
+    assert "news model key is unset" in deploy
     for path in ("/api/news/status", "/api/news/day", "/api/news/section",
                  "/api/news/layout", "/api/news/vote", "/api/news/wake", "/api/news/forget"):
         assert path in main
     assert 'Cache-Control": "no-store"' in main or "no-store" in main
-    assert "/news/" in app
+    assert "/news/" not in app
+    assert "THE EDGE" not in app
+    assert 'id="ai-progress"' in html
+    assert 'aria-label="AI progress"' in html
+    assert "status.ai_progress" in html
+    assert 'href="/"' not in html
+    assert PROFILE_RE.search(html) is None
+    for word in PROFILE_WORDS:
+        assert re.search(rf"\b{word}\b", html, re.I) is None
     assert CONFIG_PATH.is_file()
     assert clip("hello", 10) == "hello"
     assert clip("one two three", 10) == "one two…"

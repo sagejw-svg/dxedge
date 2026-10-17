@@ -2,21 +2,18 @@
   "paper": "The Edge",
   "timezone": "America/Los_Angeles",
   "dormant_days": 14,
-  "show_count": 8,
+  "show_count": 14,
   "topics": [
     "ai", "space", "biology", "security", "money", "sleep", "comics",
-    "weird", "sailing", "synth", "games", "ranch", "transport", "math",
-    "markets", "life"
+    "weird", "transport", "math", "life", "cancer", "education", "cyber"
   ],
   "example_seeds": [
-    {"seed": 266, "label": "Space nerd"},
-    {"seed": 1658, "label": "College freshman"},
-    {"seed": 1751, "label": "Startup founder"},
-    {"seed": 354, "label": "Biology buff"},
-    {"seed": 243, "label": "Retired tinkerer"},
-    {"seed": 836, "label": "Weird-news fan"},
-    {"seed": 425, "label": "Security lead"},
-    {"seed": 156, "label": "Weekend sailor"}
+    {"seed": 100207, "label": "Space nerd"},
+    {"seed": 102128, "label": "College freshman"},
+    {"seed": 100721, "label": "Startup founder"},
+    {"seed": 100041, "label": "Biology buff"},
+    {"seed": 100180, "label": "Weird-news fan"},
+    {"seed": 100321, "label": "Security lead"}
   ],
   "sections": [
     {
@@ -26,13 +23,6 @@
       "lead": true,
       "brief": "What AI progress changes for work, science, money, and ordinary life.",
       "prompt": "Lead of the paper. Concrete AI progress and its effects on work, science, money, safety, and daily life. Decision-oriented: what a general reader should know or do. Two or three items."
-    },
-    {
-      "id": "world",
-      "title": "Big World News",
-      "kicker": "Tech, transport, science, business",
-      "brief": "Major developments a careful reader might otherwise miss.",
-      "prompt": "Cool major developments in technology, transport, science, and business. The kind of item a reader misses: a Tesla Cybercab milestone, a new Roadster, a shift in shipping, aviation, energy, or materials. Skip celebrity gossip and partisan politics."
     },
     {
       "id": "comics",
@@ -46,8 +36,8 @@
       "id": "ai-editorial",
       "title": "AI editorial",
       "kicker": "Argument",
-      "brief": "Multiverse, mathematics, and cybersecurity discoveries.",
-      "prompt": "A short editorial on AI, the multiverse as a serious idea, mathematics, and cybersecurity discoveries. Argumentative, sourced, and useful to someone deciding what to read next."
+      "brief": "An argument about AI, the multiverse, and mathematics.",
+      "prompt": "A short editorial on AI, the multiverse as a serious idea, and mathematics. Argumentative, sourced, and useful to someone deciding what to read next. Leave defender briefings to the security sections."
     },
     {
       "id": "biology",
@@ -55,6 +45,20 @@
       "kicker": "Explainer",
       "brief": "CRISPR news and the public debate over designed life.",
       "prompt": "New CRISPR news and the public conversation about designing biological systems from DNA, including ideas that do not start from a human genome. Explainer and legal or ethical framing only."
+    },
+    {
+      "id": "cancer",
+      "title": "Cancer",
+      "kicker": "Research",
+      "brief": "Treatment and research news, evidence-based, with no medical advice.",
+      "prompt": "Cancer treatment and research news for a general adult reader. Report what a study, trial, or review found, in plain language, and what is still uncertain. Evidence-based. No medical advice, no dosing, no personal treatment plans, and no named patients."
+    },
+    {
+      "id": "education",
+      "title": "Education",
+      "kicker": "Learning",
+      "brief": "How AI is changing teaching and learning.",
+      "prompt": "How AI is being used in teaching and learning: classrooms, tutoring, assessment, and teacher workload. Say what the evidence supports. No product pitches and no stories about a named student."
     },
     {
       "id": "sleep",
@@ -67,8 +71,15 @@
       "id": "ai-security",
       "title": "AI security",
       "kicker": "Defenders",
-      "brief": "AI security and cybersecurity, at briefing level.",
-      "prompt": "AI security and cybersecurity discoveries a defender can use. High level: what changed and what to check. No attack procedures."
+      "brief": "AI-specific security, at briefing level.",
+      "prompt": "AI security only: model abuse, data exposure, and defender checks at briefing level. No attack procedures. General cybersecurity belongs in its own section, not this one."
+    },
+    {
+      "id": "cyber",
+      "title": "Cybersecurity",
+      "kicker": "Networks",
+      "brief": "Incidents, patches, and what a defender should check.",
+      "prompt": "Cybersecurity for a general reader and a defender: incidents, patches, and what to check. High level. No attack procedures and no payloads. Keep this separate from AI-only security."
     },
     {
       "id": "company",
@@ -79,17 +90,17 @@
     },
     {
       "id": "money",
-      "title": "Making money with AI",
+      "title": "AI money-making",
       "kicker": "Work",
       "brief": "Legal ways people are using AI to earn.",
       "prompt": "Practical, legal ways people are using AI to earn a living. No get-rich claims, no investment advice, and no schemes."
     },
     {
       "id": "life",
-      "title": "Life & organizing",
+      "title": "Life improvement & thinking tools",
       "kicker": "How to think",
-      "brief": "Ways to think about and organize ordinary life.",
-      "prompt": "Ways to think about and organize ordinary life. Short and usable. No lectures."
+      "brief": "Clearer thinking and ways to organize ordinary life.",
+      "prompt": "Tools and habits for thinking more clearly and organizing ordinary life. Short and usable. No lectures and no personal diary."
     },
     {
       "id": "space",
@@ -106,25 +117,11 @@
       "prompt": "Aliens, mysteries, and conspiracy theories as light curiosity. Friendly. Nothing anti-government, nothing partisan, nothing offensive. Label speculation as speculation."
     },
     {
-      "id": "picks",
-      "title": "From the desk",
-      "kicker": "Interests",
-      "brief": "Games, synths, markets, boats, and ranch life.",
-      "prompt": "A short mix, without naming any person: retro and clean-room game recodes, music synthesizers and sound design, prediction markets and trading ideas with no advice to buy or sell, sailing and boating, rural ranch life."
-    },
-    {
-      "id": "cancer",
-      "title": "Cancer treatments",
-      "kicker": "Later",
-      "coming_soon": true,
-      "brief": "Coming soon."
-    },
-    {
-      "id": "education",
-      "title": "Education",
-      "kicker": "Later",
-      "coming_soon": true,
-      "brief": "AI teaching. Coming soon."
+      "id": "world",
+      "title": "Big World News",
+      "kicker": "Tech, transport, science, business",
+      "brief": "Major developments a careful reader might otherwise miss.",
+      "prompt": "Cool major developments in technology, transport, science, and business. The kind of item a reader misses: a Tesla Cybercab milestone, a new Roadster, a shift in shipping, aviation, energy, or materials. Skip celebrity gossip and partisan politics."
     }
   ],
   "strips": [

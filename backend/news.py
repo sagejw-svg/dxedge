@@ -62,6 +62,21 @@ EXPLOIT_RE = re.compile(
     re.I,
 )
 MONEY_BAD = re.compile(r"\b(you should buy|guaranteed return|wire the funds)\b", re.I)
+CANCER_ADVICE = re.compile(
+    r"\b(you should (take|start|stop)|recommended dose|"
+    r"\d+\s*mg per day|this (cures|will cure)|guaranteed remission)\b",
+    re.I,
+)
+# The lead box is extra. These fourteen are the paper.
+REQUIRED_SECTIONS = (
+    "comics", "ai-editorial", "biology", "cancer", "education", "sleep",
+    "ai-security", "cyber", "company", "money", "life", "space", "weird", "world",
+)
+PROFILE_RE = re.compile(
+    r"\b(sailing|sailors?|ranch|synths?|synthesizers?|recodes?|"
+    r"prediction markets?|weekend sailor|from the desk)\b",
+    re.I,
+)
 BIO_SAFE = (
     "Researchers and lawmakers are debating gene editing and synthetic biology "
     "in public. This note stays at that level: what changed, why it matters, "
@@ -124,10 +139,19 @@ def _validate_config(data: dict) -> None:
         raise ValueError("duplicate section id")
     if "ai-world" not in ids or "world" not in ids:
         raise ValueError("lead and world sections are required")
+    missing = [sid for sid in REQUIRED_SECTIONS if sid not in ids]
+    if missing:
+        raise ValueError("paper is missing a section")
+    if PROFILE_RE.search(json.dumps(data)):
+        raise ValueError("paper config profiles a person")
     for s in data["sections"]:
         blob = f"{s['id']} {s.get('title','')} {s.get('brief','')}".lower()
         if "ham radio" in blob or "amateur radio" in blob or "dilbert" in blob:
             raise ValueError("section config crosses a hard rule")
+        if s["id"] == "picks":
+            raise ValueError("picks is not a section of this paper")
+        if s["id"] in REQUIRED_SECTIONS and s.get("coming_soon"):
+            raise ValueError(f"section {s['id']} must be open")
         if not s.get("coming_soon") and not s.get("prompt"):
             raise ValueError(f"section {s['id']} needs a prompt")
     examples = data["example_seeds"]
@@ -196,6 +220,9 @@ def preamble() -> str:
         "https sources that you actually used. No walls of text. "
         "Where AI progress genuinely changes the story, say so in one clause. "
         "Do not invent an AI connection. "
+        "ai_progress is optional: one sentence of at most 25 words when the item "
+        "is a real step in what AI can do or a real change in how people use it. "
+        "Otherwise leave ai_progress as an empty string. "
         "Never write about amateur radio or ham radio, call signs, or radio contesting. "
         "Never name a site owner, a publisher, a patient, or any employer. "
         "Do not identify a person. No financial advice and no trading instructions. "
@@ -207,7 +234,7 @@ def preamble() -> str:
         "Security items stay at defender briefing level. No exploit steps and no payloads. "
         "Return JSON only, no markdown, in this shape: "
         '{"highlights":[{"title":"","dek":"","body":"","topics":[""],'
-        '"sources":[{"title":"","url":"https://"}]}'
+        '"ai_progress":"","sources":[{"title":"","url":"https://"}]}'
     )
 
 
@@ -326,25 +353,35 @@ def scrub_highlight(section_id: str, raw: dict, citations: list[str]) -> dict | 
             topics.append(t)
         if len(topics) >= 3:
             break
-    text = f"{title} {dek} {body}"
-    if HAM_RE.search(text):
+    note = clip(str(raw.get("ai_progress") or ""), 180)
+    text = f"{title} {dek} {body} {note}"
+    if HAM_RE.search(text) or PROFILE_RE.search(text):
         return None
     if section_id == "weird" and WEIRD_BAD.search(text):
         return None
-    if section_id in {"ai-security", "company"} and EXPLOIT_RE.search(text):
+    if section_id in {"ai-security", "cyber", "company"} and EXPLOIT_RE.search(text):
         return None
-    if section_id in {"money", "picks"} and MONEY_BAD.search(text):
+    if section_id == "money" and MONEY_BAD.search(text):
+        return None
+    if section_id == "cancer" and CANCER_ADVICE.search(text):
         return None
     if section_id == "biology" and BIO_BAD.search(text):
         body = BIO_SAFE
         dek = "An explainer, not a procedure."
-    return {
+        note = ""
+    sources = _sources(raw.get("sources"), citations)
+    if not sources:
+        return None
+    out = {
         "title": title,
         "dek": dek,
         "body": body,
         "topics": topics,
-        "sources": _sources(raw.get("sources"), citations),
+        "sources": sources,
     }
+    if note:
+        out["ai_progress"] = note
+    return out
 
 
 def framing_allowed(headers: dict) -> bool:
@@ -937,7 +974,45 @@ class Paper:
             "sections": [public_section(s) for s in config["sections"]],
             "examples": examples,
             "days": ready,
+            "ai_progress": self.progress_notes(),
         }
+
+    def progress_notes(self) -> list[dict]:
+        """Short notes already stored on highlights. Reading them does not generate."""
+        config = load_config()
+        order = {s["id"]: i for i, s in enumerate(config["sections"])}
+        today = datetime.strptime(self.today(), "%Y-%m-%d").date()
+        window = {(today - timedelta(days=offset)).isoformat() for offset in range(DORMANT_DAYS)}
+        notes = []
+        for day, sids in self.store.ready_map().items():
+            if day not in window:
+                continue
+            for sid in sids:
+                payload = self.store.get_section(day, sid) or {}
+                for h in payload.get("highlights") or []:
+                    note = h.get("ai_progress") or ""
+                    if not isinstance(note, str) or not note.strip():
+                        continue
+                    if PROFILE_RE.search(note) or HAM_RE.search(note):
+                        continue
+                    url = ""
+                    sources = h.get("sources") or []
+                    if sources and isinstance(sources[0], dict):
+                        raw = sources[0].get("url") or ""
+                        if isinstance(raw, str) and raw.startswith("https://"):
+                            url = raw
+                    notes.append({
+                        "day": day,
+                        "section": sid,
+                        "title": h.get("title") or "",
+                        "note": note.strip(),
+                        "url": url,
+                    })
+        notes.sort(key=lambda n: (
+            -datetime.strptime(n["day"], "%Y-%m-%d").toordinal(),
+            order.get(n["section"], 99),
+        ))
+        return notes
 
     def ready_days(self, config: dict | None = None) -> list[dict]:
         config = config or load_config()
@@ -992,6 +1067,9 @@ class Paper:
         }
         for h in payload.get("highlights") or []:
             item = dict(h)
+            note = item.get("ai_progress") or ""
+            if not isinstance(note, str) or PROFILE_RE.search(note) or HAM_RE.search(note):
+                item.pop("ai_progress", None)
             item["votes"] = self.store.counts(item["id"])
             if user_id:
                 item["mine"] = self.store.mine(user_id, item["id"])
@@ -1063,7 +1141,9 @@ class Paper:
         text, citations = extract_completion(data)
         parsed = parse_model_json(text)
         highlights = []
-        for raw in parsed["highlights"][:3]:
+        for raw in parsed["highlights"]:
+            if len(highlights) >= 3:
+                break
             clean = scrub_highlight(sid, raw, citations)
             if clean:
                 highlights.append(clean)
