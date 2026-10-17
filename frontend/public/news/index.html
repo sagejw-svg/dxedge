@@ -40,15 +40,6 @@
     font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; letter-spacing: .04em;
     border-bottom: 1px solid var(--rule); padding: 6px 0 8px; margin: 0; }
   .days { display: flex; gap: 10px; overflow-x: auto; padding: 12px 0 4px; scroll-snap-type: x mandatory; }
-  .thread { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-    padding: 8px 0 10px; margin: 4px 0 0; }
-  .thread #thread-line { margin: 2px 0 0; }
-  .thread ol { list-style: none; display: flex; gap: 16px; overflow-x: auto; padding: 8px 0 0; margin: 0; }
-  .thread li { flex: 0 0 auto; max-width: 32ch; }
-  .thread button { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
-  .thread button small { display: block; font-family: "Gill Sans", "Trebuchet MS", sans-serif;
-    letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--red); }
-  .thread button[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 3px; }
   .day { flex: 0 0 auto; width: 112px; scroll-snap-align: start; background: transparent; border: 0;
     padding: 0; cursor: pointer; text-align: left; }
   .day svg { width: 112px; height: 146px; display: block; background: var(--card);
@@ -57,6 +48,15 @@
     letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
   .day[aria-pressed="true"] svg { box-shadow: inset 0 0 0 2px var(--red); }
   .day[aria-pressed="true"] span { color: var(--red); }
+  .thread { border-bottom: 1px solid var(--rule); padding: 8px 0 12px; }
+  .thread h2 { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--red); font-weight: 600; margin: 0 0 8px; }
+  .thread ol { list-style: none; display: flex; gap: 12px; overflow-x: auto; margin: 0; padding: 0 0 4px; }
+  .thread li { flex: 0 0 240px; border-left: 2px solid var(--red); padding: 0 10px; }
+  .thread time { display: block; font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .thread a { color: inherit; }
+  .ai-note { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; color: var(--muted); margin: 2px 0 0; }
   .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0;
     font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 14px; }
   .tools label { letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
@@ -117,16 +117,12 @@
 <a class="skip" href="#paper">Skip to the edition</a>
 <div class="sheet">
   <header class="mast">
-    <p class="eyebrow"><a href="/">dxedge.net</a> · a general-audience daily</p>
+    <p class="eyebrow">A general-audience daily</p>
     <h1>The Edge</h1>
   </header>
   <p class="dateline"><span id="when">Evening edition</span><span id="vol">Written when opened</span></p>
   <div class="days" id="days" aria-label="Editions"></div>
-  <section class="thread" id="thread" aria-label="AI progress" hidden>
-    <p class="kicker">AI progress</p>
-    <p id="thread-line"></p>
-    <ol id="thread-days"></ol>
-  </section>
+  <section class="thread" id="ai-progress" hidden aria-label="AI progress"></section>
   <div class="tools">
     <label for="seed-input">Seed</label>
     <input id="seed-input" inputmode="numeric" pattern="[0-9]*" min="0" max="1000000000" placeholder="A number">
@@ -354,46 +350,61 @@ async function vote(targetId, kind, sectionId) {
   }
   render();
 }
-function rememberProgress(day, line) {
-  if (!line || !state.status || !state.status.days) return;
-  const row = state.status.days.find((d) => d.day === day);
-  if (row) row.progress = line;
+function renderProgress() {
+  const pane = document.getElementById("ai-progress");
+  clear(pane);
+  const notes = (state.status && state.status.ai_progress) || [];
+  if (!notes.length) { pane.hidden = true; return; }
+  pane.hidden = false;
+  pane.appendChild(el("h2", null, "AI progress"));
+  const list = el("ol");
+  notes.forEach((note) => {
+    const meta = (state.status.sections || []).find((s) => s.id === note.section);
+    const item = el("li");
+    item.appendChild(el("time", { datetime: note.day }, note.day + (meta ? " · " + meta.title : "")));
+    if (note.url && note.url.indexOf("https://") === 0) {
+      const a = el("a", { href: note.url, rel: "noopener noreferrer" }, note.note || "");
+      a.target = "_blank";
+      item.appendChild(a);
+    } else {
+      item.appendChild(el("p", null, note.note || ""));
+    }
+    list.appendChild(item);
+  });
+  pane.appendChild(list);
+}
+function rememberProgress(data) {
+  if (!data || data.stub || data.dormant || !state.status) return;
+  const sid = data.section && data.section.id;
+  const notes = state.status.ai_progress || [];
+  const seen = new Set(notes.map((n) => n.day + "\n" + n.section + "\n" + n.note));
+  (data.highlights || []).forEach((h) => {
+    if (!h.ai_progress) return;
+    const day = data.day || state.day;
+    const key = day + "\n" + sid + "\n" + h.ai_progress;
+    if (seen.has(key)) return;
+    const url = (h.sources && h.sources[0] && h.sources[0].url) || "";
+    notes.push({
+      day: day, section: sid, title: h.title || "", note: h.ai_progress,
+      url: url.indexOf("https://") === 0 ? url : ""
+    });
+    seen.add(key);
+  });
+  notes.sort((a, b) => a.day < b.day ? 1 : a.day > b.day ? -1 : 0);
+  state.status.ai_progress = notes;
 }
 function renderDays() {
   const wrap = document.getElementById("days");
   clear(wrap);
   (state.status.days || []).forEach((day) => {
-    const note = day.progress || day.lead || "";
     const btn = el("button", {
       class: "day", type: "button", "aria-pressed": day.day === state.day ? "true" : "false",
-      "aria-label": "Edition of " + longDate(day.day) + (note ? ". " + note : ""),
+      "aria-label": "Edition of " + longDate(day.day),
       onclick: () => selectDay(day.day)
     });
-    btn.innerHTML = thumb(day.day, day.progress || day.lead);
+    btn.innerHTML = thumb(day.day, day.lead);
     btn.appendChild(el("span", null, shortWd(day.day) + " " + day.day.slice(5)));
     wrap.appendChild(btn);
-  });
-}
-function renderThread() {
-  const node = document.getElementById("thread");
-  const days = (state.status && state.status.days) || [];
-  const today = days.find((d) => d.day === state.day);
-  const text = (today && today.progress) || "";
-  node.hidden = false;
-  document.getElementById("thread-line").textContent = text || "Open AI & the World and this day's line joins the thread.";
-  const list = document.getElementById("thread-days");
-  clear(list);
-  days.filter((d) => d.progress).forEach((d) => {
-    const li = el("li");
-    const btn = el("button", {
-      type: "button",
-      "aria-pressed": d.day === state.day ? "true" : "false",
-      onclick: () => selectDay(d.day)
-    });
-    btn.appendChild(el("small", null, shortWd(d.day) + " " + d.day.slice(5)));
-    btn.appendChild(document.createTextNode(d.progress));
-    li.appendChild(btn);
-    list.appendChild(li);
   });
 }
 function renderSeeds() {
@@ -503,6 +514,7 @@ function renderBox(meta, lead) {
       h3.appendChild(el("button", { class: "open-hl", type: "button", onclick: () => openStory(meta, h) }, h.title));
       block.appendChild(h3);
       if (h.dek) block.appendChild(el("p", { class: "dek" }, h.dek));
+      if (h.ai_progress) block.appendChild(el("p", { class: "ai-note" }, h.ai_progress));
       block.appendChild(voteButtons(h, meta.id, [["liked", "Liked it"], ["useful", "Useful"], ["hide", "Hide"]]));
       box.appendChild(block);
     });
@@ -522,7 +534,7 @@ function render() {
   document.getElementById("when").textContent = state.day ? longDate(state.day) : "Evening edition";
   document.getElementById("vol").textContent = status.dormant && !state.awake ? "Asleep" : "On demand";
   renderDays();
-  renderThread();
+  renderProgress();
   renderSeeds();
   const cookie = document.getElementById("cookie");
   cookie.hidden = state.decision === "yes" || state.decision === "no";
@@ -584,8 +596,6 @@ async function selectDay(day) {
     const data = await getJSON("/api/news/day?day=" + encodeURIComponent(day) + (state.awake ? "&wake=1" : ""));
     if (data.dormant && !state.awake) { state.status.dormant = true; render(); return; }
     state.editions[day] = data.sections || {};
-    const lead = state.editions[day]["ai-world"];
-    if (lead && lead.ai_progress) rememberProgress(day, lead.ai_progress);
     await refreshLayout();
   } catch (e) {
     state.errors._day = e.message;
@@ -604,7 +614,7 @@ async function openSection(id) {
     else {
       if (!state.editions[state.day]) state.editions[state.day] = {};
       state.editions[state.day][id] = data;
-      if (id === "ai-world" && data.ai_progress) rememberProgress(state.day, data.ai_progress);
+      rememberProgress(data);
       await refreshLayout();
     }
   } catch (e) {

@@ -83,19 +83,40 @@ jobs:
       - name: Deploy to droplet
         uses: appleboy/ssh-action@v1.0.3
         env:
-          # Optional. Empty when the secret is unset. The script never prints it.
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          envs: XAI_API_KEY
+          envs: XAI_API_KEY,GROK_API_KEY
           script: |
             set -e
             BACKEND_CHANGED="${{ steps.changes.outputs.backend }}"
             cd /opt/dxedge
             LOG=/var/log/dxedge_deploy.log
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Actions deploy starting" >> $LOG
+            # Forward a model key only when the Actions secret is actually set.
+            # An empty value must not clobber a key already on the host.
+            # A set value is stored in the droplet .env after reset, then removed
+            # from this shell so nothing later can print it. The next deploy with
+            # no secret leaves that file alone.
+            KEY_SET=0
+            if [ -n "${XAI_API_KEY:-}" ]; then
+              KEY_SET=1
+            else
+              unset XAI_API_KEY
+            fi
+            if [ -n "${GROK_API_KEY:-}" ]; then
+              KEY_SET=1
+            else
+              unset GROK_API_KEY
+            fi
+            if [ "$KEY_SET" = "1" ]; then
+              echo "[$(date)] news model key is set for this deploy" >> $LOG
+            else
+              echo "[$(date)] news model key is unset; generation stays on the stub" >> $LOG
+            fi
             # fetch + reset rather than pull: a pull needs the droplet's branch to
             # fast-forward, and it stopped doing that after main was rewritten on
             # Sep 7 2026 (author identity fix). Every deploy since exited 128 here,
@@ -105,41 +126,42 @@ jobs:
             # working copy: whatever origin/main is, is what it should be.
             git fetch origin main
             git reset --hard origin/main
-            # XAI_API_KEY is optional. When the Actions secret is set, write it
-            # into the droplet .env that compose already interpolates, then
-            # drop it from this shell so later commands cannot print it.
-            # When the secret is absent, the action still exports an empty
-            # value, which would override a key already on the droplet.
-            # Unset that empty value and leave the file alone.
-            KEY_UPDATED=0
-            if [ -n "${XAI_API_KEY:-}" ]; then
-              case "$XAI_API_KEY" in
+            # Store a present secret without printing it. Refuse values that
+            # would break a dotenv line. An absent secret does not touch the file.
+            write_secret() {
+              local name="$1"
+              local value="$2"
+              case "$value" in
                 *[!A-Za-z0-9_.:+=/-]*)
-                  echo "[$(date)] ERROR: XAI_API_KEY has characters this deploy will not write. Droplet value left unchanged." >> $LOG
-                  echo "ERROR: XAI_API_KEY has characters this deploy will not write. Droplet value left unchanged."
+                  echo "[$(date)] ERROR: $name has characters this deploy will not write. Droplet value left unchanged." >> $LOG
+                  echo "ERROR: $name has characters this deploy will not write. Droplet value left unchanged."
                   exit 1
                   ;;
               esac
               umask 077
-              ENV_FILE=/opt/dxedge/.env
-              TMP_ENV=$(mktemp)
-              if [ -f "$ENV_FILE" ]; then
-                grep -v -E '^(export )?XAI_API_KEY=' "$ENV_FILE" > "$TMP_ENV" || true
+              local env_file=/opt/dxedge/.env
+              local tmp
+              tmp=$(mktemp)
+              if [ -f "$env_file" ]; then
+                grep -v -E "^(export )?${name}=" "$env_file" > "$tmp" || true
               fi
-              printf 'XAI_API_KEY=%s\n' "$XAI_API_KEY" >> "$TMP_ENV"
-              mv "$TMP_ENV" "$ENV_FILE"
-              chmod 600 "$ENV_FILE"
+              printf '%s=%s\n' "$name" "$value" >> "$tmp"
+              mv "$tmp" "$env_file"
+              chmod 600 "$env_file"
+            }
+            if [ -n "${XAI_API_KEY:-}" ]; then
+              write_secret XAI_API_KEY "$XAI_API_KEY"
               unset XAI_API_KEY
-              KEY_UPDATED=1
-              echo "[$(date)] XAI_API_KEY stored for the backend" >> $LOG
-            else
-              unset XAI_API_KEY
+            fi
+            if [ -n "${GROK_API_KEY:-}" ]; then
+              write_secret GROK_API_KEY "$GROK_API_KEY"
+              unset GROK_API_KEY
             fi
             if [ "$BACKEND_CHANGED" = "true" ]; then
               echo "[$(date)] Backend changed - rebuilding container" >> $LOG
               docker compose build backend
               docker compose up -d
-            elif [ "$KEY_UPDATED" = "1" ]; then
+            elif [ "$KEY_SET" = "1" ]; then
               echo "[$(date)] Backend key updated - recreating backend" >> $LOG
               docker compose up -d backend
             else
@@ -162,7 +184,7 @@ jobs:
             # container keeps running, which is exactly what happened on
             # 2026-08-31: the frontend SCP lands before this SSH step, so a
             # stale backend serves a fresh frontend and nothing reports it.
-            if [ "$BACKEND_CHANGED" = "true" ] || [ "$KEY_UPDATED" = "1" ]; then
+            if [ "$BACKEND_CHANGED" = "true" ] || [ "$KEY_SET" = "1" ]; then
               sleep 10
               RUNNING_SINCE=$(docker inspect -f '{{.State.StartedAt}}' dxedge-backend)
               echo "[$(date)] backend container started at $RUNNING_SINCE" >> $LOG
