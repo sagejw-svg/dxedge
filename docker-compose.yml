@@ -5,6 +5,14 @@ services:
     restart: unless-stopped
     environment:
       - PORT=8000
+      # The newspaper calls xAI only when a section is opened. Leave the key
+      # empty until it is set on the host; the desk then stays on the stub.
+      # NEWS_OWNER_SEED is the private seed for one reader's votes. It is never
+      # sent to the browser. NEWS_OWNER_READER is that reader's anonymous id.
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - XAI_MODEL=${XAI_MODEL:-grok-4.7}
+      - NEWS_OWNER_SEED=${NEWS_OWNER_SEED:-}
+      - NEWS_OWNER_READER=${NEWS_OWNER_READER:-}
     expose:
       - "8000"
     volumes:

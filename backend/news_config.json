@@ -1,0 +1,291 @@
+{
+  "paper": "The Edge",
+  "timezone": "America/Los_Angeles",
+  "dormant_days": 14,
+  "show_count": 8,
+  "topics": [
+    "ai", "space", "biology", "security", "money", "sleep", "comics",
+    "weird", "sailing", "synth", "games", "ranch", "transport", "math",
+    "markets", "life"
+  ],
+  "example_seeds": [
+    {"seed": 266, "label": "Space nerd"},
+    {"seed": 1658, "label": "College freshman"},
+    {"seed": 1751, "label": "Startup founder"},
+    {"seed": 354, "label": "Biology buff"},
+    {"seed": 243, "label": "Retired tinkerer"},
+    {"seed": 836, "label": "Weird-news fan"},
+    {"seed": 425, "label": "Security lead"},
+    {"seed": 156, "label": "Weekend sailor"}
+  ],
+  "sections": [
+    {
+      "id": "ai-world",
+      "title": "AI & the World",
+      "kicker": "Lead",
+      "lead": true,
+      "brief": "What AI progress changes for work, science, money, and ordinary life.",
+      "prompt": "Lead of the paper. Concrete AI progress and its effects on work, science, money, safety, and daily life. Decision-oriented: what a general reader should know or do. Two or three items."
+    },
+    {
+      "id": "world",
+      "title": "Big World News",
+      "kicker": "Tech, transport, science, business",
+      "brief": "Major developments a careful reader might otherwise miss.",
+      "prompt": "Cool major developments in technology, transport, science, and business. The kind of item a reader misses: a Tesla Cybercab milestone, a new Roadster, a shift in shipping, aviation, energy, or materials. Skip celebrity gossip and partisan politics."
+    },
+    {
+      "id": "comics",
+      "title": "Comics",
+      "kicker": "The shelf",
+      "brief": "Today's general-audience strips, official links, and a few comics we can print.",
+      "shelf": true,
+      "prompt": "One or two original sentences on which general-audience strip is worth opening today. Do not describe copyrighted panels. Do not include image URLs. No political cartoons."
+    },
+    {
+      "id": "ai-editorial",
+      "title": "AI editorial",
+      "kicker": "Argument",
+      "brief": "Multiverse, mathematics, and cybersecurity discoveries.",
+      "prompt": "A short editorial on AI, the multiverse as a serious idea, mathematics, and cybersecurity discoveries. Argumentative, sourced, and useful to someone deciding what to read next."
+    },
+    {
+      "id": "biology",
+      "title": "Biology",
+      "kicker": "Explainer",
+      "brief": "CRISPR news and the public debate over designed life.",
+      "prompt": "New CRISPR news and the public conversation about designing biological systems from DNA, including ideas that do not start from a human genome. Explainer and legal or ethical framing only."
+    },
+    {
+      "id": "sleep",
+      "title": "Narcolepsy & sleep",
+      "kicker": "Explainer",
+      "brief": "Sleep and narcolepsy, written for any reader.",
+      "prompt": "Narcolepsy and sleep, as a general explainer for any adult reader. Fully anonymous. No names, no personal history, and no reference to a publisher or a site."
+    },
+    {
+      "id": "ai-security",
+      "title": "AI security",
+      "kicker": "Defenders",
+      "brief": "AI security and cybersecurity, at briefing level.",
+      "prompt": "AI security and cybersecurity discoveries a defender can use. High level: what changed and what to check. No attack procedures."
+    },
+    {
+      "id": "company",
+      "title": "Protecting your company",
+      "kicker": "Any company",
+      "brief": "Generic enterprise security guidance.",
+      "prompt": "Generic enterprise security guidance any company could use. Never name or hint at a specific employer, workplace, product line, or industry in a way that would identify one organization."
+    },
+    {
+      "id": "money",
+      "title": "Making money with AI",
+      "kicker": "Work",
+      "brief": "Legal ways people are using AI to earn.",
+      "prompt": "Practical, legal ways people are using AI to earn a living. No get-rich claims, no investment advice, and no schemes."
+    },
+    {
+      "id": "life",
+      "title": "Life & organizing",
+      "kicker": "How to think",
+      "brief": "Ways to think about and organize ordinary life.",
+      "prompt": "Ways to think about and organize ordinary life. Short and usable. No lectures."
+    },
+    {
+      "id": "space",
+      "title": "Space & aliens",
+      "kicker": "Out there",
+      "brief": "Space news, the search for life, and minds we are building.",
+      "prompt": "Space news and the scientific search for life. Include, when it fits, the idea that AI is a new kind of mind we are building, a sort of alien of our own making. Separate evidence from speculation."
+    },
+    {
+      "id": "weird",
+      "title": "Weird side",
+      "kicker": "Curiosity",
+      "brief": "Mysteries and odd stories, lightly held.",
+      "prompt": "Aliens, mysteries, and conspiracy theories as light curiosity. Friendly. Nothing anti-government, nothing partisan, nothing offensive. Label speculation as speculation."
+    },
+    {
+      "id": "picks",
+      "title": "From the desk",
+      "kicker": "Interests",
+      "brief": "Games, synths, markets, boats, and ranch life.",
+      "prompt": "A short mix, without naming any person: retro and clean-room game recodes, music synthesizers and sound design, prediction markets and trading ideas with no advice to buy or sell, sailing and boating, rural ranch life."
+    },
+    {
+      "id": "cancer",
+      "title": "Cancer treatments",
+      "kicker": "Later",
+      "coming_soon": true,
+      "brief": "Coming soon."
+    },
+    {
+      "id": "education",
+      "title": "Education",
+      "kicker": "Later",
+      "coming_soon": true,
+      "brief": "AI teaching. Coming soon."
+    }
+  ],
+  "strips": [
+    {
+      "id": "calvin",
+      "name": "Calvin and Hobbes",
+      "host": "gocomics",
+      "slug": "calvinandhobbes",
+      "home": "https://www.gocomics.com/calvinandhobbes",
+      "favorite": true,
+      "frame": "try",
+      "base_rank": 6
+    },
+    {
+      "id": "peanuts",
+      "name": "Peanuts",
+      "host": "gocomics",
+      "slug": "peanuts",
+      "home": "https://www.gocomics.com/peanuts",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "pearls",
+      "name": "Pearls Before Swine",
+      "host": "gocomics",
+      "slug": "pearlsbeforeswine",
+      "home": "https://www.gocomics.com/pearlsbeforeswine",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "frazz",
+      "name": "Frazz",
+      "host": "gocomics",
+      "slug": "frazz",
+      "home": "https://www.gocomics.com/frazz",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "garfield",
+      "name": "Garfield",
+      "host": "gocomics",
+      "slug": "garfield",
+      "home": "https://www.gocomics.com/garfield",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "bignate",
+      "name": "Big Nate",
+      "host": "gocomics",
+      "slug": "bignate",
+      "home": "https://www.gocomics.com/bignate",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "pickles",
+      "name": "Pickles",
+      "host": "gocomics",
+      "slug": "pickles",
+      "home": "https://www.gocomics.com/pickles",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "babyblues",
+      "name": "Baby Blues",
+      "host": "gocomics",
+      "slug": "babyblues",
+      "home": "https://www.gocomics.com/babyblues",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "zits",
+      "name": "Zits",
+      "host": "gocomics",
+      "slug": "zits",
+      "home": "https://www.gocomics.com/zits",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "wizard",
+      "name": "Wizard of Id",
+      "host": "gocomics",
+      "slug": "wizardofid",
+      "home": "https://www.gocomics.com/wizardofid",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "bc",
+      "name": "B.C.",
+      "host": "gocomics",
+      "slug": "bc",
+      "home": "https://www.gocomics.com/bc",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "nonsequitur",
+      "name": "Non Sequitur",
+      "host": "gocomics",
+      "slug": "nonsequitur",
+      "home": "https://www.gocomics.com/nonsequitur",
+      "frame": "try",
+      "base_rank": 0
+    },
+    {
+      "id": "hagar",
+      "name": "Hagar the Horrible",
+      "host": "comicskingdom",
+      "slug": "hagar-the-horrible",
+      "home": "https://comicskingdom.com/hagar-the-horrible",
+      "frame": "never",
+      "base_rank": 0,
+      "note": "King Features. Link only."
+    }
+  ],
+  "xkcd": {
+    "license": "CC BY-NC 2.5",
+    "license_url": "https://creativecommons.org/licenses/by-nc/2.5/",
+    "credit": "xkcd by Randall Munroe",
+    "home": "https://xkcd.com/",
+    "skip_title": "\\b(election|senator|congress|president|republican|democrat|trump|biden|porn|nude|nsfw)\\b"
+  },
+  "peppercarrot": {
+    "index": "https://www.peppercarrot.com/0_sources/episodes.json",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "credit": "Pepper & Carrot by David Revoy",
+    "home": "https://www.peppercarrot.com/"
+  },
+  "classics": [
+    {
+      "id": "nemo-1905-10-15",
+      "file": "Little Nemo 1905-10-15.jpg",
+      "year": 1905,
+      "title": "Little Nemo in Slumberland",
+      "credit": "Little Nemo in Slumberland by Winsor McCay, 15 October 1905",
+      "page": "https://commons.wikimedia.org/wiki/File:Little_Nemo_1905-10-15.jpg"
+    },
+    {
+      "id": "nemo-1905-11-26",
+      "file": "Little Nemo 1905-11-26.jpg",
+      "year": 1905,
+      "title": "Little Nemo in Slumberland",
+      "credit": "Little Nemo in Slumberland by Winsor McCay, 26 November 1905",
+      "page": "https://commons.wikimedia.org/wiki/File:Little_Nemo_1905-11-26.jpg"
+    },
+    {
+      "id": "nemo-1909-04-18",
+      "file": "Little Nemo 1909-04-18.jpg",
+      "year": 1909,
+      "title": "Little Nemo in Slumberland",
+      "credit": "Little Nemo in Slumberland by Winsor McCay, 18 April 1909",
+      "page": "https://commons.wikimedia.org/wiki/File:Little_Nemo_1909-04-18.jpg"
+    }
+  ]
+}

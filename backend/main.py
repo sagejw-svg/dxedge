@@ -24,6 +24,7 @@ from alerts import run_alert_loop
 from database import save_subscription, delete_subscription
 from usage import (init_usage_db, record as usage_record, summary as usage_summary,
                    prune_and_rollup as usage_prune)
+import news as newsdesk
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -74,6 +75,10 @@ async def lifespan(app: FastAPI):
     ]
     init_db()
     init_usage_db()
+    try:
+        newsdesk.init_db()
+    except Exception as e:
+        logger.warning(f"news db init failed: {e}")
     asyncio.create_task(run_alert_loop())
     asyncio.create_task(_usage_maintenance())
     logger.info("DXEdge pollers started")
@@ -806,6 +811,92 @@ async def get_stats_summary(request: Request, days: int = Query(30, ge=1, le=365
     except Exception as e:
         logger.warning(f"usage summary failed: {e}")
         raise HTTPException(503, "Stats unavailable")
+
+
+def _client_ip(request: Request) -> str:
+    return request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+
+
+def _news_out(data):
+    return JSONResponse(data, headers={"Cache-Control": "no-store"})
+
+
+def _news_fail(exc: Exception):
+    if isinstance(exc, newsdesk.NewsError):
+        raise HTTPException(exc.status, exc.message)
+    logger.exception("news")
+    raise HTTPException(503, "The paper is unavailable.")
+
+
+async def _news_body(request: Request) -> dict:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        raise HTTPException(400, "expected JSON")
+    return body
+
+
+# The Edge. Generation happens inside these handlers, never on a timer.
+@app.get("/api/news/status")
+async def news_status():
+    try:
+        return _news_out(newsdesk.status())
+    except Exception as e:
+        _news_fail(e)
+
+
+@app.get("/api/news/day")
+async def news_day(day: str = Query(..., max_length=10), wake: int = Query(0)):
+    try:
+        return _news_out(newsdesk.read_day(day, bool(wake)))
+    except Exception as e:
+        _news_fail(e)
+
+
+@app.post("/api/news/wake")
+async def news_wake():
+    try:
+        return _news_out(newsdesk.wake())
+    except Exception as e:
+        _news_fail(e)
+
+
+@app.post("/api/news/section")
+async def news_open_section(request: Request):
+    body = await _news_body(request)
+    try:
+        return _news_out(await newsdesk.open_section(body, _client_ip(request)))
+    except Exception as e:
+        _news_fail(e)
+
+
+@app.post("/api/news/layout")
+async def news_layout(request: Request):
+    body = await _news_body(request)
+    try:
+        return _news_out(newsdesk.layout(body))
+    except Exception as e:
+        _news_fail(e)
+
+
+@app.post("/api/news/vote")
+async def news_vote(request: Request):
+    body = await _news_body(request)
+    try:
+        return _news_out(newsdesk.cast_vote(body, _client_ip(request)))
+    except Exception as e:
+        _news_fail(e)
+
+
+@app.post("/api/news/forget")
+async def news_forget(request: Request):
+    body = await _news_body(request)
+    try:
+        return _news_out(newsdesk.forget_reader(body))
+    except Exception as e:
+        _news_fail(e)
 
 
 # Serve React frontend - try real file first, fall back to index.html for SPA routing
