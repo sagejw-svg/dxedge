@@ -543,9 +543,9 @@
       "escalations_sent": [
         "contest-mode-key-shadowing"
       ],
-      "commit_pushed": "State-only commit, see deploy_result.",
-      "deploy_result": "See post_deploy_health.",
-      "post_deploy_health": "See post_deploy_health at top level after the push."
+      "commit_pushed": "867f6eb on main, state-file only (scripts/health/state.json). Pushed with the http.extraHeader auth form; no token in output or .git/config.",
+      "deploy_result": "SUCCESS, no regression. Allowed ~4 minutes (state-only change, so no --no-cache backend rebuild expected). /api/health returned status ok with a fresh post-push timestamp 2026-10-18T04:19:03Z, up from the pre-push 04:02:36Z. sat_tles now warm at 9; pota_spots back to 0, which is the ttl=120 cold-cache behaviour and expected. The sw.js tripwire is NOT a valid signal for this push because the commit does not touch frontend/public/sw.js, so CACHE_NAME stays dxedge-v101; it was already confirmed equal to repo HEAD earlier in the run.",
+      "post_deploy_health": "GREEN. /api/health ok and live. Both standalone page shells serve HTTP-healthy HTML with correct titles (DX//EDGE . CYBER and DX//EDGE . AETHERSDR), zero \"failed:\" strings and zero allorigins references. Their panels read \"loading...\" in the fetched HTML, which is expected and carries no information: WebFetch does not execute JavaScript and both pages render client-side, exactly as the brief states. Feed proxy re-probed after the deploy and still healthy: hamqsl through /api/feed returned 200 with solarflux 132 updated 18 Oct 2026 0404 GMT. No revert needed."
     }
   ],
   "known_issues_do_not_re_report": [
