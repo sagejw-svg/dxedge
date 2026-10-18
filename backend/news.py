@@ -18,9 +18,16 @@ A seed reorders the boxes and highlights already on the desk. It never
 asks for more copy. One seed number, read only from the server
 environment or /data/news_owner.json, follows a single reader's votes.
 That number is never put in a response.
+
+The HTTP routes that call into this module require basic auth before
+they get here. The username is edge. The password is NEWS_PASSWORD.
+When that variable is empty, every request is refused.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -1458,6 +1465,120 @@ class Paper:
             raise NewsError(400, "Reader id must be an anonymous id.")
         self.store.forget(user_id)
         return {"forgotten": True}
+
+
+# HTTP basic auth for /news and /api/news. The username is edge.
+# NEWS_PASSWORD empty means locked: strangers and authenticated-looking
+# requests are both refused, and nothing below is asked to generate.
+NEWS_AUTH_USER = "edge"
+_NEWS_COOKIE = "dxedge_news"
+_NEWS_COOKIE_PATH = "/api/news"
+
+
+def news_password() -> str:
+    return (os.environ.get("NEWS_PASSWORD") or "").strip()
+
+
+def is_news_page(path: str) -> bool:
+    return path == "/news" or path.startswith("/news/")
+
+
+def is_news_api(path: str) -> bool:
+    return path == "/api/news" or path.startswith("/api/news/")
+
+
+def is_news_path(path: str) -> bool:
+    return is_news_page(path) or is_news_api(path)
+
+
+def _basic_parts(header: str | None) -> tuple[str, str] | None:
+    if not header:
+        return None
+    scheme, _, param = header.strip().partition(" ")
+    if scheme.lower() != "basic" or not param.strip():
+        return None
+    try:
+        decoded = base64.b64decode(param.strip(), validate=True)
+    except Exception:
+        return None
+    try:
+        text = decoded.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    user, sep, password = text.partition(":")
+    if not sep:
+        return None
+    return user, password
+
+
+def _password_digest(user: str, password: str) -> bytes:
+    return hashlib.sha256(b"\0".join([user.encode("utf-8"), password.encode("utf-8")])).digest()
+
+
+def news_basic_ok(header: str | None) -> bool:
+    """True only for user edge and the current NEWS_PASSWORD.
+
+    An empty password never matches, including a request that sends an
+    empty password. The digest compare does not reveal which half failed.
+    """
+    expected = news_password()
+    if not expected:
+        return False
+    parts = _basic_parts(header)
+    if parts is None:
+        return False
+    user, password = parts
+    got = _password_digest(user, password)
+    want = _password_digest(NEWS_AUTH_USER, expected)
+    return hmac.compare_digest(got, want)
+
+
+def news_session_token() -> str | None:
+    """Proof of the same password, so /api/news requests can proceed after
+    the browser has signed in at /news/. Browsers keep basic credentials on
+    the /news/ path and do not attach them to /api/news/. The token is not
+    a second password and is useless when NEWS_PASSWORD is empty.
+    """
+    password = news_password()
+    if not password:
+        return None
+    return hmac.new(password.encode("utf-8"), b"dxedge-news-v1", hashlib.sha256).hexdigest()
+
+
+def news_session_cookie() -> str | None:
+    token = news_session_token()
+    if not token:
+        return None
+    return (
+        f"{_NEWS_COOKIE}={token}; HttpOnly; Secure; SameSite=Strict; "
+        f"Path={_NEWS_COOKIE_PATH}; Max-Age=1209600"
+    )
+
+
+def _cookie_value(header: str | None, name: str) -> str:
+    if not header:
+        return ""
+    for part in header.split(";"):
+        key, sep, value = part.strip().partition("=")
+        if sep and key == name:
+            return value.strip()
+    return ""
+
+
+def news_cookie_ok(cookie_header: str | None) -> bool:
+    expected = news_session_token()
+    if not expected:
+        return False
+    got = _cookie_value(cookie_header, _NEWS_COOKIE)
+    if not got:
+        return False
+    return hmac.compare_digest(got, expected)
+
+
+def news_credentials_ok(authorization: str | None, cookie_header: str | None) -> bool:
+    if news_basic_ok(authorization):
+        return True
+    return news_cookie_ok(cookie_header)
 
 
 _api: Paper | None = None

@@ -14,13 +14,16 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from ratelimit import RateLimiter
+import news as newsdesk
 from news import (
     BIO_SAFE, CONFIG_PATH, LAYOUT_KEYS, LCG, LiveNet, NewsError, Paper, Store, XAIProvider,
-    accept_image, blend, build_prompt, classic_for_day, clip, commons_api_url,
-    extract_completion, framing_allowed, load_config, owner_secret, parse_commons,
-    parse_model_json, parse_seed, parse_user, pepper_image_urls, persona_weights,
-    preamble, public_domain, public_section, safe_frame_url, scrub_highlight,
-    section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE, _validate_config,
+    NEWS_AUTH_USER, accept_image, blend, build_prompt, classic_for_day, clip, commons_api_url,
+    extract_completion, framing_allowed, is_news_path, load_config, news_basic_ok,
+    news_cookie_ok, news_credentials_ok, news_password, news_session_cookie, owner_secret,
+    parse_commons, parse_model_json, parse_seed, parse_user, pepper_image_urls,
+    persona_weights, preamble, public_domain, public_section, safe_frame_url,
+    scrub_highlight, section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE,
+    _validate_config,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -782,24 +785,48 @@ def test_page_wires_match_the_desk():
     assert 'class: "chip"' in html
     assert "status.examples" in html
     assert "Space nerd" not in html
-    assert "CACHE_NAME = 'dxedge-v101'" in sw
+    assert "CACHE_NAME = 'dxedge-v102'" in sw
     assert "url.pathname.startsWith('/news/')" in sw
+    # The paper is not intercepted. A service worker response hides the dialog.
+    before_mutable, _, after_mutable = sw.partition("const mutable")
+    assert "url.pathname.startsWith('/news/')" in before_mutable
+    assert "url.pathname.startsWith('/news/')" not in after_mutable
     assert "location ^~ /news/" in nginx
+    assert 'add_header Cache-Control "no-cache, must-revalidate" always;' in nginx
+    assert "location = /news" in nginx
     assert "XAI_API_KEY" in compose
     assert "GROK_API_KEY" in compose
     assert "NEWS_OWNER_SEED" in compose
+    assert "NEWS_PASSWORD" in compose
+    assert "username is edge" in compose
     deploy = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
     assert "secrets.XAI_API_KEY" in deploy
     assert "secrets.GROK_API_KEY" in deploy
+    assert "secrets.NEWS_PASSWORD" in deploy
     assert "unset XAI_API_KEY" in deploy
+    assert "unset NEWS_PASSWORD" in deploy
     assert "news model key is unset" in deploy
     assert "/opt/dxedge/.env" in deploy
     assert 'echo "$XAI_API_KEY"' not in deploy
     assert "echo ${XAI_API_KEY}" not in deploy
+    assert 'echo "$NEWS_PASSWORD"' not in deploy
+    assert "echo ${NEWS_PASSWORD}" not in deploy
     assert "Droplet value left unchanged" in deploy
+    assert "write_secret NEWS_PASSWORD" in deploy
+    assert "openssl rand -hex 24" in deploy
+    assert "keeping the existing droplet password" in deploy
+    assert "generated a droplet password without logging it" in deploy
+    assert "Basic auth user is edge" in deploy
+    assert "Fail closed" in deploy
+    assert 'envs: XAI_API_KEY,GROK_API_KEY,NEWS_PASSWORD' in deploy
+    assert "--force-recreate --no-deps backend" in deploy
+    assert NEWS_AUTH_USER == "edge"
     for path in ("/api/news/status", "/api/news/day", "/api/news/section",
                  "/api/news/layout", "/api/news/vote", "/api/news/wake", "/api/news/forget"):
         assert path in main
+    assert "class NewsGate" in main
+    assert "_require_news" in main
+    assert "news_credentials_ok" in main
     assert 'Cache-Control": "no-store"' in main or "no-store" in main
     assert "/news/" not in app
     assert "THE EDGE" not in app
@@ -813,3 +840,194 @@ def test_page_wires_match_the_desk():
     assert CONFIG_PATH.is_file()
     assert clip("hello", 10) == "hello"
     assert clip("one two three", 10) == "one two…"
+
+
+NEWS_PATHS = (
+    "/news",
+    "/news/",
+    "/api/news",
+    "/api/news/status",
+    "/api/news/day",
+    "/api/news/section",
+    "/api/news/layout",
+    "/api/news/vote",
+    "/api/news/wake",
+    "/api/news/forget",
+)
+
+
+def test_news_paths_are_only_the_paper():
+    assert is_news_path("/news")
+    assert is_news_path("/news/")
+    assert is_news_path("/news/index.html")
+    assert is_news_path("/api/news")
+    assert is_news_path("/api/news/status")
+    assert not is_news_path("/")
+    assert not is_news_path("/api/health")
+    assert not is_news_path("/api/solar")
+    assert not is_news_path("/api/feed")
+    assert not is_news_path("/synth/")
+    assert not is_news_path("/crane-cab/")
+
+
+def test_basic_auth_fails_closed_and_accepts_edge(monkeypatch):
+    monkeypatch.delenv("NEWS_PASSWORD", raising=False)
+    assert news_password() == ""
+    assert news_basic_ok("Basic ZWRnZTpzZWNyZXQ=") is False  # edge:secret
+    assert news_session_cookie() is None
+    assert news_cookie_ok("dxedge_news=abc") is False
+    monkeypatch.setenv("NEWS_PASSWORD", "secret")
+    assert news_basic_ok(None) is False
+    assert news_basic_ok("Basic bm9ib2R5OnNlY3JldA==") is False  # nobody:secret
+    assert news_basic_ok("Basic ZWRnZTp3cm9uZw==") is False  # edge:wrong
+    assert news_basic_ok("Bearer ZWRnZTpzZWNyZXQ=") is False
+    token = news_session_cookie()
+    assert token.startswith("dxedge_news=")
+    assert "HttpOnly" in token and "Secure" in token and "Path=/api/news" in token
+    assert news_credentials_ok(_basic("edge", "secret"), None)
+    assert news_cookie_ok(token.split(";", 1)[0])
+    assert news_cookie_ok("dxn=1; " + token.split(";", 1)[0])
+    assert not news_cookie_ok("dxedge_news=nope")
+    monkeypatch.setenv("NEWS_PASSWORD", "other")
+    assert not news_cookie_ok(token.split(";", 1)[0])
+    assert not news_basic_ok(_basic("edge", "secret"))
+
+
+def _basic(user, password):
+    import base64
+    raw = base64.b64encode(f"{user}:{password}".encode()).decode()
+    return f"Basic {raw}"
+
+
+@pytest.fixture
+def http(tmp_path, monkeypatch):
+    dist = tmp_path / "dist"
+    (dist / "news").mkdir(parents=True)
+    (dist / "news" / "index.html").write_text("<!doctype html><title>The Edge</title><p>edition</p>", encoding="utf-8")
+    (dist / "index.html").write_text("<!doctype html><title>DXEdge</title>", encoding="utf-8")
+    monkeypatch.setenv("DXEDGE_DIST", str(dist))
+    monkeypatch.setenv("DXEDGE_NEWS_DB", str(tmp_path / "news.db"))
+    monkeypatch.setenv("NEWS_OWNER_FILE", str(tmp_path / "no-owner.json"))
+    monkeypatch.setenv("NEWS_PASSWORD", "test-news-password")
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    monkeypatch.delenv("GROK_API_KEY", raising=False)
+    monkeypatch.delenv("NEWS_OWNER_SEED", raising=False)
+    monkeypatch.delenv("NEWS_OWNER_READER", raising=False)
+    newsdesk._api = None
+    import main
+    from fastapi.testclient import TestClient
+    client = TestClient(main.app)
+    yield client
+    client.close()
+    newsdesk._api = None
+
+
+def _auth():
+    return ("edge", "test-news-password")
+
+
+def test_news_rejects_strangers(http):
+    for path in NEWS_PATHS:
+        res = http.get(path, follow_redirects=False)
+        assert res.status_code in (401, 403), path
+        assert "www-authenticate" in {k.lower() for k in res.headers}
+        assert "cache-control" in {k.lower() for k in res.headers}
+        assert "immutable" not in res.headers.get("cache-control", "").lower()
+    for path, method in (
+        ("/api/news/section", "post"),
+        ("/api/news/layout", "post"),
+        ("/api/news/vote", "post"),
+        ("/api/news/wake", "post"),
+        ("/api/news/forget", "post"),
+    ):
+        res = getattr(http, method)(path, json={})
+        assert res.status_code in (401, 403), path
+    page = http.get("/news/")
+    assert "This paper is private." in page.text
+    assert page.status_code == 401
+
+
+def test_generation_does_not_run_without_auth(http, monkeypatch):
+    calls = []
+
+    async def fake(body, ip):
+        calls.append((body, ip))
+        return {"ok": True}
+
+    monkeypatch.setattr(newsdesk, "open_section", fake)
+    res = http.post("/api/news/section", json={"day": DAY, "id": "space", "wake": 1})
+    assert res.status_code in (401, 403)
+    assert calls == []
+    bad = http.post(
+        "/api/news/section",
+        json={"day": DAY, "id": "space"},
+        headers={"Authorization": _basic("edge", "nope")},
+    )
+    assert bad.status_code in (401, 403)
+    assert calls == []
+    minted = news_session_cookie()
+    assert minted is not None
+    stale = http.post(
+        "/api/news/section",
+        json={"day": DAY, "id": "space"},
+        headers={"Cookie": "dxedge_news=not-the-token"},
+    )
+    assert stale.status_code in (401, 403)
+    assert calls == []
+
+
+def test_authenticated_requests_work_and_can_generate(http, monkeypatch):
+    calls = []
+
+    async def fake(body, ip):
+        calls.append((body, ip))
+        return {"ok": True, "highlights": []}
+
+    monkeypatch.setattr(newsdesk, "open_section", fake)
+    status = http.get("/api/news/status", auth=_auth())
+    assert status.status_code == 200
+    assert status.json()["paper"]
+    assert status.headers["cache-control"] == "no-store"
+    page = http.get("/news/", auth=_auth())
+    assert page.status_code == 200
+    assert "edition" in page.text
+    cookie = page.headers.get("set-cookie", "")
+    assert cookie.startswith("dxedge_news=")
+    assert "HttpOnly" in cookie
+    generated = http.post(
+        "/api/news/section",
+        json={"day": DAY, "id": "space", "wake": 1},
+        auth=_auth(),
+    )
+    assert generated.status_code == 200
+    assert generated.json()["ok"] is True
+    assert len(calls) == 1
+    via_cookie = http.get("/api/news/status", headers={"Cookie": cookie.split(";", 1)[0]})
+    assert via_cookie.status_code == 200
+    # An unknown path under the paper is still gated. It must not be a way
+    # around the password, whatever the router would answer once signed in.
+    missing = http.get("/api/news/does-not-exist", auth=_auth())
+    assert missing.status_code != 401
+    stranger = http.get("/api/news/does-not-exist")
+    assert stranger.status_code in (401, 403)
+
+
+def test_empty_password_locks_even_with_credentials(http, monkeypatch):
+    monkeypatch.setenv("NEWS_PASSWORD", "")
+    res = http.get("/api/news/status", auth=_auth())
+    assert res.status_code in (401, 403)
+    page = http.get("/news/", auth=("edge", "test-news-password"))
+    assert page.status_code in (401, 403)
+    assert "set-cookie" not in {k.lower() for k in page.headers}
+
+
+def test_rest_of_the_site_stays_open(http):
+    home = http.get("/")
+    assert home.status_code == 200
+    assert "DXEdge" in home.text
+    assert "www-authenticate" not in {k.lower() for k in home.headers}
+    health = http.get("/api/health")
+    assert health.status_code == 200
+    assert health.json()["status"] == "ok"
+    solar = http.get("/api/solar")
+    assert solar.status_code != 401

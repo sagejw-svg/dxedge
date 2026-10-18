@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v101'
+const CACHE_NAME = 'dxedge-v102'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -38,12 +38,17 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Never cache API calls, WebSocket, health reports, or external resources
+  // Never cache API calls, WebSocket, health reports, or external resources.
+  // /news is private. Leave it to the browser so the basic-auth dialog can
+  // appear. A service worker that answers /news/ itself never shows one,
+  // and it must not keep a copy of the paper for a later visit.
   if (url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/ws/') ||
       url.pathname.startsWith('/health/') ||
+      url.pathname === '/news' ||
+      url.pathname.startsWith('/news/') ||
       url.origin !== location.origin) {
-    return // Let network handle it
+    return // Let the browser handle it
   }
 
   if (request.method !== 'GET') return
@@ -66,7 +71,6 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/emulators/') ||
     url.pathname.startsWith('/otr/') ||
     url.pathname.startsWith('/synth/') ||
-    url.pathname.startsWith('/news/') ||
     (!isVersionedAsset(url) && url.pathname.endsWith('.js'))
 
   if (mutable) {

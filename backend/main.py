@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from ratelimit import lotw_limiter, api_limiter, compute_limiter, stat_limiter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 import asyncio
 import mimetypes
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from solar import SolarPoller
@@ -79,6 +80,11 @@ async def lifespan(app: FastAPI):
         newsdesk.init_db()
     except Exception as e:
         logger.warning(f"news db init failed: {e}")
+    # The password itself is never logged. Empty means the paper stays shut.
+    if newsdesk.news_password():
+        logger.info("news gate: basic auth configured for user edge")
+    else:
+        logger.warning("news gate: NEWS_PASSWORD unset, /news is locked")
     asyncio.create_task(run_alert_loop())
     asyncio.create_task(_usage_maintenance())
     logger.info("DXEdge pollers started")
@@ -106,6 +112,69 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+# The paper. Username is edge. Password is NEWS_PASSWORD. An empty
+# password locks every /news and /api/news path, including generation.
+_NEWS_AUTH_HEADERS = {
+    "WWW-Authenticate": 'Basic realm="The Edge", charset="UTF-8"',
+    "Cache-Control": "no-cache, must-revalidate",
+}
+_NEWS_PRIVATE_HTML = (
+    "<!doctype html><meta charset=\"utf-8\"><title>The Edge</title>"
+    "<p>This paper is private.</p>"
+)
+
+
+def _news_denied(page: bool) -> Response:
+    if page:
+        return HTMLResponse(_NEWS_PRIVATE_HTML, status_code=401, headers=_NEWS_AUTH_HEADERS)
+    return JSONResponse(
+        {"detail": "Authentication required"},
+        status_code=401,
+        headers=_NEWS_AUTH_HEADERS,
+    )
+
+
+def _require_news(request: Request) -> None:
+    if newsdesk.news_credentials_ok(
+        request.headers.get("authorization"), request.headers.get("cookie")
+    ):
+        return
+    raise HTTPException(401, "Authentication required", headers=_NEWS_AUTH_HEADERS)
+
+
+def _scope_header(scope, name: str) -> str | None:
+    target = name.lower().encode("latin-1")
+    for key, value in scope.get("headers") or []:
+        if key.lower() == target:
+            return value.decode("latin-1")
+    return None
+
+
+class NewsGate:
+    """Refuse /news and /api/news before a route can generate a story."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        path = scope.get("path") or "/"
+        if not newsdesk.is_news_path(path):
+            await self.app(scope, receive, send)
+            return
+        if not newsdesk.news_credentials_ok(
+            _scope_header(scope, "authorization"), _scope_header(scope, "cookie")
+        ):
+            await _news_denied(newsdesk.is_news_page(path))(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(NewsGate)
 
 
 
@@ -472,7 +541,13 @@ for _ext, _type in (
 ):
     mimetypes.add_type(_type, _ext)
 
-app.mount("/assets", StaticFiles(directory="/app/frontend/dist/assets"), name="assets")
+# The asset directory is the frontend volume, present when the container
+# starts. Tests import this module without that volume; skip the mount
+# rather than refusing to load. A missing directory in production leaves
+# /assets unanswered, which a deploy notices.
+_assets_dir = os.environ.get("DXEDGE_ASSETS", "/app/frontend/dist/assets")
+if os.path.isdir(_assets_dir):
+    app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
 
 
 
@@ -838,9 +913,11 @@ async def _news_body(request: Request) -> dict:
     return body
 
 
-# The Edge. Generation happens inside these handlers, never on a timer.
+# The Edge. Generation happens inside these handlers, never on a timer,
+# and never unless the gate above and this check both pass.
 @app.get("/api/news/status")
-async def news_status():
+async def news_status(request: Request):
+    _require_news(request)
     try:
         return _news_out(newsdesk.status())
     except Exception as e:
@@ -848,7 +925,8 @@ async def news_status():
 
 
 @app.get("/api/news/day")
-async def news_day(day: str = Query(..., max_length=10), wake: int = Query(0)):
+async def news_day(request: Request, day: str = Query(..., max_length=10), wake: int = Query(0)):
+    _require_news(request)
     try:
         return _news_out(newsdesk.read_day(day, bool(wake)))
     except Exception as e:
@@ -856,7 +934,8 @@ async def news_day(day: str = Query(..., max_length=10), wake: int = Query(0)):
 
 
 @app.post("/api/news/wake")
-async def news_wake():
+async def news_wake(request: Request):
+    _require_news(request)
     try:
         return _news_out(newsdesk.wake())
     except Exception as e:
@@ -865,6 +944,7 @@ async def news_wake():
 
 @app.post("/api/news/section")
 async def news_open_section(request: Request):
+    _require_news(request)
     body = await _news_body(request)
     try:
         return _news_out(await newsdesk.open_section(body, _client_ip(request)))
@@ -874,6 +954,7 @@ async def news_open_section(request: Request):
 
 @app.post("/api/news/layout")
 async def news_layout(request: Request):
+    _require_news(request)
     body = await _news_body(request)
     try:
         return _news_out(newsdesk.layout(body))
@@ -883,6 +964,7 @@ async def news_layout(request: Request):
 
 @app.post("/api/news/vote")
 async def news_vote(request: Request):
+    _require_news(request)
     body = await _news_body(request)
     try:
         return _news_out(newsdesk.cast_vote(body, _client_ip(request)))
@@ -892,6 +974,7 @@ async def news_vote(request: Request):
 
 @app.post("/api/news/forget")
 async def news_forget(request: Request):
+    _require_news(request)
     body = await _news_body(request)
     try:
         return _news_out(newsdesk.forget_reader(body))
@@ -902,14 +985,26 @@ async def news_forget(request: Request):
 # Serve React frontend - try real file first, fall back to index.html for SPA routing
 @app.get("/{full_path:path}")
 async def serve_frontend(request: Request, full_path: str):
-    import os
     from urllib.parse import quote
     DIST = os.environ.get("DXEDGE_DIST", "/app/frontend/dist")
+    news_page = full_path == "news" or full_path.startswith("news/")
+    if news_page:
+        _require_news(request)
+
+    def finish(response: Response) -> Response:
+        if not news_page:
+            return response
+        cookie = newsdesk.news_session_cookie()
+        if cookie:
+            response.headers["set-cookie"] = cookie
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
+
     if full_path:
         # Try direct file match first
         static_path = os.path.join(DIST, full_path)
         if os.path.isfile(static_path):
-            return FileResponse(static_path)
+            return finish(FileResponse(static_path))
         # Directory index (/synth, /crane-cab, /emulators, /cyber, ...).
         # Relative module and asset URLs resolve against the document URL's
         # directory, so /emulators makes fetch('emulators.json') request
@@ -928,8 +1023,11 @@ async def serve_frontend(request: Request, full_path: str):
                 # corrupt a query that is already encoded. Set Location after.
                 response = RedirectResponse(url=location, status_code=301)
                 response.headers["location"] = location
-                return response
-            return FileResponse(index_path)
+                return finish(response)
+            return finish(FileResponse(index_path))
+        # A missing paper file must not fall through to the ham shell.
+        if news_page:
+            raise HTTPException(404, "Not found")
     # SPA fallback
     index = os.path.join(DIST, "index.html")
     if os.path.isfile(index):
