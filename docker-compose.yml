@@ -11,11 +11,15 @@ services:
       # alone when it is not. With neither, the desk stays on the stub.
       # NEWS_OWNER_SEED is the private seed for one reader's votes. It is never
       # sent to the browser. NEWS_OWNER_READER is that reader's anonymous id.
+      # NEWS_PASSWORD is the paper's HTTP basic password. The username is edge.
+      # The deploy workflow writes it into this directory's .env. When it is
+      # empty the paper stays locked and will not call the model.
       - XAI_API_KEY=${XAI_API_KEY:-}
       - GROK_API_KEY=${GROK_API_KEY:-}
       - XAI_MODEL=${XAI_MODEL:-grok-4.7}
       - NEWS_OWNER_SEED=${NEWS_OWNER_SEED:-}
       - NEWS_OWNER_READER=${NEWS_OWNER_READER:-}
+      - NEWS_PASSWORD=${NEWS_PASSWORD:-}
     expose:
       - "8000"
     volumes:

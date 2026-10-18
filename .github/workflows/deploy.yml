@@ -85,11 +85,12 @@ jobs:
         env:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          NEWS_PASSWORD: ${{ secrets.NEWS_PASSWORD }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          envs: XAI_API_KEY,GROK_API_KEY
+          envs: XAI_API_KEY,GROK_API_KEY,NEWS_PASSWORD
           script: |
             set -e
             BACKEND_CHANGED="${{ steps.changes.outputs.backend }}"
@@ -157,13 +158,39 @@ jobs:
               write_secret GROK_API_KEY "$GROK_API_KEY"
               unset GROK_API_KEY
             fi
+            # The paper password. Same rules as the model key: a set secret is
+            # written, an empty one must not clobber a password already on the
+            # host, and the value is removed from this shell before anything
+            # can print it. Basic auth user is edge. If the secret is absent
+            # and the droplet has no password yet, generate one and do not log
+            # it. Fail closed: the app locks /news whenever NEWS_PASSWORD is
+            # empty, so a missing secret cannot leave the paper open.
+            NEWS_PW_WRITTEN=0
+            if [ -n "${NEWS_PASSWORD:-}" ]; then
+              write_secret NEWS_PASSWORD "$NEWS_PASSWORD"
+              unset NEWS_PASSWORD
+              NEWS_PW_WRITTEN=1
+            else
+              unset NEWS_PASSWORD
+              if [ -f /opt/dxedge/.env ] && grep -qE '^(export )?NEWS_PASSWORD=.+' /opt/dxedge/.env; then
+                echo "[$(date)] NEWS_PASSWORD secret unset; keeping the existing droplet password" >> $LOG
+              else
+                if ! generated=$(openssl rand -hex 24 2>/dev/null); then
+                  generated=$(python3 -c 'import secrets; print(secrets.token_hex(24))')
+                fi
+                write_secret NEWS_PASSWORD "$generated"
+                unset generated
+                NEWS_PW_WRITTEN=1
+                echo "[$(date)] NEWS_PASSWORD secret unset; generated a droplet password without logging it" >> $LOG
+              fi
+            fi
             if [ "$BACKEND_CHANGED" = "true" ]; then
               echo "[$(date)] Backend changed - rebuilding container" >> $LOG
               docker compose build backend
               docker compose up -d
-            elif [ "$KEY_SET" = "1" ]; then
-              echo "[$(date)] Backend key updated - recreating backend" >> $LOG
-              docker compose up -d backend
+            elif [ "$KEY_SET" = "1" ] || [ "$NEWS_PW_WRITTEN" = "1" ]; then
+              echo "[$(date)] Backend env updated - recreating backend" >> $LOG
+              docker compose up -d --force-recreate --no-deps backend
             else
               echo "[$(date)] Frontend-only - restarting nginx" >> $LOG
             fi
@@ -184,7 +211,7 @@ jobs:
             # container keeps running, which is exactly what happened on
             # 2026-08-31: the frontend SCP lands before this SSH step, so a
             # stale backend serves a fresh frontend and nothing reports it.
-            if [ "$BACKEND_CHANGED" = "true" ] || [ "$KEY_SET" = "1" ]; then
+            if [ "$BACKEND_CHANGED" = "true" ] || [ "$KEY_SET" = "1" ] || [ "$NEWS_PW_WRITTEN" = "1" ]; then
               sleep 10
               RUNNING_SINCE=$(docker inspect -f '{{.State.StartedAt}}' dxedge-backend)
               echo "[$(date)] backend container started at $RUNNING_SINCE" >> $LOG
@@ -245,3 +272,19 @@ jobs:
           print(f'Health: {d[\"status\"]} | SFI={d[\"sfi\"]} | spots={d[\"spots\"]}')
           assert d['status'] == 'ok', 'Health check failed'
           "
+
+      # The paper must stay locked for strangers. The homepage stays open.
+      - name: Verify the paper is private
+        run: |
+          news=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/news/)
+          status=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/api/news/status)
+          home=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/)
+          echo "/news/ $news"
+          echo "/api/news/status $status"
+          echo "/ $home"
+          case "$news" in 401|403) ;; *) echo "ERROR: /news/ is not locked"; exit 1 ;; esac
+          case "$status" in 401|403) ;; *) echo "ERROR: /api/news/status is not locked"; exit 1 ;; esac
+          if [ "$home" != "200" ]; then
+            echo "ERROR: homepage is not open"
+            exit 1
+          fi
