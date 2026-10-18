@@ -196,9 +196,13 @@ class Osc {
 // Both models keep their state in a Float64Array and read their input from it, for the same
 // reason as the oscillators: nothing boxed per sample. A voice has two (left and right).
 const F_S1 = 0, F_S2 = 1, F_S3 = 2, F_S4 = 3, F_ZI = 4, F_BP = 5, F_SH = 6, F_SAG = 7, F_IN = 8, F_OUT = 9,
-  F_G = 10, F_K = 11, F_COMP = 12, F_GH = 13, F_AH = 14, F_SAGA = 15, F_LG = 16, F_V2 = 17, F_N = 18;
+  F_G = 10, F_K = 11, F_COMP = 12, F_GH = 13, F_AH = 14, F_SAGA = 15, F_LG = 16, F_V2 = 17,
+  // fcoef() inputs that produced the coefficients now in F_G..F_AH (cutoff Hz, resonance, and
+  // the model with the patch epoch). They live in the same array so frs.set(fl) copies them with
+  // the coefficients they describe.
+  F_MFC = 18, F_MRES = 19, F_MKEY = 20, F_N = 21;
 class Filt {
-  constructor() { this.s = new Float64Array(F_N); this.s[F_COMP] = 1; this.s[F_AH] = 1; this.s[F_LG] = 1.3; this.s[F_G] = 0.1; }
+  constructor() { this.s = new Float64Array(F_N); this.s[F_COMP] = 1; this.s[F_AH] = 1; this.s[F_LG] = 1.3; this.s[F_G] = 0.1; this.s[F_MKEY] = -1; }
   reset() { const s = this.s; s[F_S1] = s[F_S2] = s[F_S3] = s[F_S4] = s[F_ZI] = s[F_BP] = s[F_SH] = s[F_SAG] = 0; }
   bad() { const s = this.s; return !(Math.abs(s[F_S1]) < 1e6 && Math.abs(s[F_S2]) < 1e6 && Math.abs(s[F_S3]) < 1e6 && Math.abs(s[F_S4]) < 1e6 && Math.abs(s[F_BP]) < 1e6); }
   flush() { const s = this.s; for (let i = 0; i < 4; i++) if (Math.abs(s[i]) < 1e-20) s[i] = 0; }
@@ -315,6 +319,7 @@ class Filament extends AudioWorkletProcessor {
     this.events = [];
     this.active = o.active !== false; this.playing = !!o.playing; this.idleN = 0;
     this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
+    this.coefEpoch = 0;
     this.P = null; this.S = new Float64Array(NP); this.Sp = new Float64Array(NP); this.T = new Float64Array(NP); this.CT = new Float64Array(NP * (128 / CTRL + 1));
     this.setPatch(o.patch || {}, true);
     this.target(this.S); this.Sp.set(this.S);
@@ -333,6 +338,7 @@ class Filament extends AudioWorkletProcessor {
       nb0: 0, nb1: 0, nb2: 0,
       drift: 0, driftT: 0, driftN: 0, drift2: 0, drift2T: 0,
       lp: Float64Array.from([Math.random(), Math.random()]), lsh: new Float64Array(10), lfoAge: 0,
+      cm: Float64Array.of(NaN, 1, NaN, 1, NaN, 1, NaN, 1),   // exponent memos for the control tick
       // control-rate values
       dt1: 0, dt2: 0, dts: 0, fg: 0, kres: 0, lvl: 0, lvlT: 0, pw1: 0.5, pw2: 0.5,
     };
@@ -352,6 +358,7 @@ class Filament extends AudioWorkletProcessor {
   }
   buildTables() {
     const P = this.P, v1 = P.v1 || {}, f = P.filt || {};
+    this.coefEpoch++;                     // lTube and vComp may change: fcoef() memos are stale
     this.v1Tube = this.tubes[v1.tube] || this.tubes['12AX7'] || { gain: 0.774, hp: 25 };
     this.v1Tab = this.table(v1.tube || '12AX7', +v1.bias || 0);
     this.lTube = this.tubes[f.tube] || this.tubes['12AT7'] || { gain: 0.701, hp: 25 };
@@ -614,8 +621,12 @@ class Filament extends AudioWorkletProcessor {
 
   // Cutoff calibration and coefficients for one filter, at control rate. fc and res come in
   // through this.cc so nothing is boxed: cc[0] = fc (Hz), cc[1] = resonance 0..1.
+  // Skipped when the inputs match the last call for this filter, which is every tick of a held
+  // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
   fcoef(F, model) {
-    const sr = this.sr, fs = this.fs, res = this.cc[1];
+    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 2 + model;
+    if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
+    s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
     let fc = clamp(this.cc[0], 16, sr * 0.45);
     if (model === 1) {
       // Ladder: the tanh stages pull a self-oscillating filter flat, by an amount set by how
@@ -633,7 +644,6 @@ class Filament extends AudioWorkletProcessor {
       fc *= Math.pow(2, -(vCal[0] * ws + vCal[1] * e + vCal[2] * e * e) / 1200);
     }
     fc = clamp(fc, 16, sr * 0.45);
-    const s = F.s;
     s[F_G] = Math.tan(Math.PI * fc / fs);
     if (model === 1) { s[F_K] = res * 4.45; s[F_COMP] = 1 + s[F_K] * 0.45; }
     else {
@@ -715,6 +725,7 @@ class Filament extends AudioWorkletProcessor {
     for (let t = 0; t < nt; t++) { const kk = t * CTRL / frames, o = t * NP; for (let j = 0; j < NP; j++) CT[o + j] = Sp[j] + (S[j] - Sp[j]) * kk; }
 
     let v1Acc = 0, v2Acc = 0;
+    let fdK = NaN, fdGk = 1, fdCk = 1;    // filter drive gain is shared by every voice: one pow per change
     for (let vi = 0; vi < NV; vi++) {
       const v = this.voices[vi];
       if (!v.on) continue;
@@ -781,8 +792,13 @@ class Filament extends AudioWorkletProcessor {
           const vib = ((CT[cb + K_LP] + this.mw * mwv + this.at * atv) * l1L + CT[cb + K_L2P] * l2L) / 100;
           const det = v.uPos * CT[cb + K_DET] / 100;
           const pn = v.pitch + this.bend * bendR + sx + vib + det + driftC * v.drift / 100;
-          const f1 = fix1 > 0 ? fix1 * Math.pow(2, (vib + det + driftC * v.drift / 100) / 12) : 440 * Math.pow(2, (pn + off1 - 69) / 12);
-          const f2 = fix2 > 0 ? fix2 : 440 * Math.pow(2, (pn + off2 + driftC * 0.5 * v.drift2 / 100 - 69) / 12);
+          // cm[4..7]: the same memo for the two oscillator pitches (they move every tick under drift)
+          const cm = v.cm;
+          let f1, f2;
+          if (fix1 > 0) f1 = fix1 * Math.pow(2, (vib + det + driftC * v.drift / 100) / 12);
+          else { const e1 = (pn + off1 - 69) / 12; if (e1 !== cm[4]) { cm[4] = e1; cm[5] = Math.pow(2, e1); } f1 = 440 * cm[5]; }
+          if (fix2 > 0) f2 = fix2;
+          else { const e2 = (pn + off2 + driftC * 0.5 * v.drift2 / 100 - 69) / 12; if (e2 !== cm[6]) { cm[6] = e2; cm[7] = Math.pow(2, e2); } f2 = 440 * cm[7]; }
           dt1 = Math.min(f1 / fs, 0.45); dt2 = Math.min(f2 / fs, 0.45); dts = dt1 / subDiv;
           const pwm = (CT[cb + K_LPW] * l1L + CT[cb + K_L2PW] * l2L) * 0.5;
           pw1 = clamp(CT[cb + K_PW1] + pwm, 0.03, 0.97); pw2 = clamp(CT[cb + K_PW2] + pwm, 0.03, 0.97);
@@ -791,12 +807,20 @@ class Filament extends AudioWorkletProcessor {
             + this.mw * mwc + this.at * atc;
           const res = clamp(CT[cb + K_RES], 0, 1), half = CT[cb + K_OFF] * 0.5;
           cc[1] = res;
-          cc[0] = CT[cb + K_CUT] * Math.pow(2, oct + CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L - (st2 ? half : 0));
+          // cm[0..3]: the last cutoff exponent and its power of two for each side: a still cutoff costs no pow
+          const eL = oct + CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L - (st2 ? half : 0);
+          if (eL !== cm[0]) { cm[0] = eL; cm[1] = Math.pow(2, eL); }
+          cc[0] = CT[cb + K_CUT] * cm[1];
           this.fcoef(FL, model);
-          if (st2) { cc[0] = CT[cb + K_CUT] * Math.pow(2, oct + CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R + half); this.fcoef(FR, model); }
+          if (st2) {
+            const eR = oct + CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R + half;
+            if (eR !== cm[2]) { cm[2] = eR; cm[3] = Math.pow(2, eR); }
+            cc[0] = CT[cb + K_CUT] * cm[3]; this.fcoef(FR, model);
+          }
           const sagA = clamp(CT[cb + K_SAG], 0, 10) / 10; fl[F_SAGA] = sagA; frs[F_SAGA] = sagA;
           const fd = clamp(CT[cb + K_FDRV], 0, 10);
-          fdG = Math.pow(2, (fd - 3) / 3); fdC = 1 / Math.sqrt(fdG);
+          if (fd !== fdK) { fdK = fd; fdGk = Math.pow(2, (fd - 3) / 3); fdCk = 1 / Math.sqrt(fdGk); }
+          fdG = fdGk; fdC = fdCk;
           // amplitude: tremolo per side
           const la1 = clamp(CT[cb + K_LA], 0, 1), la2 = clamp(CT[cb + K_L2A], 0, 1);
           ampL = (1 - la1 * (0.5 - 0.5 * l1L)) * (1 - la2 * (0.5 - 0.5 * l2L));
@@ -873,8 +897,9 @@ class Filament extends AudioWorkletProcessor {
         if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U, pnd.pb); }
       }
     }
-    // a stale NaN would poison the decimator forever
-    for (let i = a * OS; i < b * OS; i++) { if (!(Math.abs(L2[i]) < 1e3)) L2[i] = 0; if (!(Math.abs(R2[i]) < 1e3)) R2[i] = 0; }
+    // a stale NaN would poison the decimator forever (written as two compares: same result as
+    // !(Math.abs(x) < 1e3) for every x, NaN included, and measurably cheaper here)
+    for (let i = a * OS; i < b * OS; i++) { const l = L2[i], r = R2[i]; if (!(l < 1e3 && l > -1e3)) L2[i] = 0; if (!(r < 1e3 && r > -1e3)) R2[i] = 0; }
     this.v1Acc += v1Acc; this.v2Acc += v2Acc; this.accN += frames * OS;
   }
 }

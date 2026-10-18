@@ -141,6 +141,7 @@ task can read it).
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx`. Links Hexode and Anode |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
 | `scripts/test_synth_imported.py` | Smoke test for Hexode and Anode: they load, stay quiet, and make a sound |
+| `scripts/bench_filament_voice.mjs` | Filament voice worklet in Node with a seeded random: CPU per case, and with `--ref <git ref>` an A/B that says whether the output is bit-identical. For CPU work; not part of the suite |
 | `docs/filament-licensing.md` | Licensing rules, the register of approved and reference-only resources, notes on our own rights |
 
 ## Roadmap
@@ -781,6 +782,39 @@ Done when: share link round trip test passes.
 ### Master bus (14 Oct 2026)
 Delay, reverb and a compressor/limiter on the master, after Filament, Cathode and the rack. Each one bypasses on its own; with all three off the master is a straight wire (the worklet is not in the path). The delay syncs to a tempo on the strip (40–240 BPM, straight, dotted and triplet divisions, or a free time) and can ping-pong. The reverb is our own code for the public-domain Freeverb structure (see `docs/filament-licensing.md`). The compressor is original, with an optional ceiling limiter. Record and Render WAV write a 24-bit, 44.1 kHz stereo file, capped at 10 minutes. Nothing in a device patch changed, so factory patches sound the same until a master effect is switched on.
 
+## Improvement backlog
+The 5:30 AM improvement job (scheduled task) ships one engineering improvement a night, no new
+features, in this order: a review finding marked broken, CPU (test 9's hottest path, sound unchanged
+and proven by measurement), test suite health, load time and memory, code health, robustness.
+"Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
+
+- Done 18 Oct: Filament voice control tick. Profiled test 9's patches in Node: `fcoef()` (two `tan`, a
+  `pow`) was 13.5% of the worklet's self time, rerun every 8 frames per voice even with the cutoff
+  still. Now it returns early when its inputs match the last call; the cutoff, oscillator pitch and
+  filter-drive `pow`s are memoized the same way; the NaN scrub on the 2x sum uses two compares instead
+  of `Math.abs`. Output bit-identical on 9 cases (measured, `scripts/bench_filament_voice.mjs --ref`).
+- CPU, Filament: the Valve 12 per-sample solve is now the largest single cost (about 36% of the
+  worklet's self time in the Node profile, measured). Anything there changes the output in the last
+  bits, so it needs a tolerance check (for example null depth against the old render) instead of a hash.
+- CPU, Filament: LFO-heavy patches gained nothing tonight (every input moves every tick, measured
+  -0.4% to -5%). A table `exp2` like Cathode's would help them but changes low bits: same tolerance
+  question as above.
+- CPU, Cathode: its control tick lives in the same file and was not profiled. Inferred from reading:
+  it recomputes coefficients at control rate the same way and may take the same memo.
+- Test health: test 9's CPU lines are wall clock in headless Chrome. On the 2-core build box they moved
+  from 20% (in the suite) to 30-44% (a separate bench under load) for the same tree tonight, measured.
+  They are INFO lines and cannot fail the suite, but they cannot show a 10% change either. Use the Node
+  bench (CPU time, seeded) for A/B work. Suite wall time on main tonight: 8 min 11 s.
+- Test health: on 18 Oct one suite run hung for more than 6 minutes inside "G. HRTF keeps a left-hand
+  finger on the left" (the offline render with the HRTF panner; the renderer sat at 90% CPU, no output).
+  The rerun of the same tree passed it in seconds, and so did main earlier the same night (measured).
+  Not caused by tonight's change (Gleam does not use the Filament worklet). If it recurs, give that
+  render a timeout so a hang fails one check instead of stalling the suite.
+- Load time: `synth/index.html` is one 316 KB file (measured). Worth checking which device panels could
+  load on first use instead of at first paint.
+- Robustness: R1017-9 (no output protection with the compressor off) changes the sound, so it is a call
+  for James, not this job.
+
 ## Open items for James
 - Play it on the new keyboard and on a phone: is the Novachord Strings default the right first sound?
 - CPU on a real mid-range phone (headless Chrome on the build server: about 20% of real time for
@@ -857,6 +891,7 @@ Delay, reverb and a compressor/limiter on the master, after Filament, Cathode an
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-18 (improvement, scheduled task, about 5:25 to 6:30 AM PT): CPU, the Filament voice's control tick. Profiled test 9's patches in Node: `fcoef()` was 13.5% of the worklet's self time, recomputing two `tan` and a `pow` every 8 frames per voice with the cutoff still. It now returns early when its inputs (cutoff, resonance, model, a patch epoch) match the last call; the cutoff, oscillator pitch and filter-drive `pow`s are memoized; the NaN scrub on the 2x sum uses two compares. Sound unchanged: bit-identical output on 9 cases (test 9's four plus LFOs, sync, FM and ring, a still note, and patch changes mid-note), measured with the new `scripts/bench_filament_voice.mjs --ref origin/main`. Worklet CPU time in Node, best of 4, before and after: Ladder 24 30.6 to 25.7% (-16%), Valve 12 47.6 to 36.0% (-24%), stereo offset 65.8 to 50.5% (-23%), 16 voices 80.0 to 63.0% (-21%), a still note -35%, LFO-heavy -7%. Test 9 in headless Chrome (wall clock, rack included) did not resolve it: this run read Ladder 24 24.9%, Valve 12 21.1%, stereo offset 21.1%, 16 voices with ensemble 34.3%, EQ 31 bands 26.7%, Cathode 17.6%, against 20.2, 19.5, 22.8, 28.2, 23.3 and 13.7% on main earlier, while the untouched Dekatron and Thyratron lines also rose 26 to 62%, so the box was slower (inference: noise, not a regression). Cache `dxedge-v103`. Suite: ALL PASS (1073 checks; one earlier run hung in the Gleam HRTF check, see the Improvement backlog). `scripts/test_synth_imported.py`: ALL PASS (25). Commit: this one.
 - 2026-10-18 (check and debug, scheduled task, about 2:10 to 2:45 AM PT): reviewed 6 commits since 17 Oct 6 PM PT on origin/main `f2c2a31`: health state `867f6eb` and `26c813e` (DXEdge Health Bot), and the /news basic-auth work `c746042`, `998cc80`, `c5294a7`, `f2c2a31` (Cursor Agent). None touch `/synth`, `/otr` or the licensing file; `sw.js` went to `dxedge-v102` and stops caching `/news` (no effect on `/synth`); no test removed (the news test's import list was reshaped, not cut). No commit from the 12:28 AM nightly build tonight, and no nightly build line since 16 Oct. Suite: ALL PASS (1073 checks). `scripts/test_synth_imported.py`: ALL PASS (25). Live `/synth/`, `/synth/fm/`, `/synth/acid/` at 1366 and 375 px: no page errors, no console errors, `__synth.ready()` true; the only failed request was the `/api/stat` beacon aborted on page close (it answers 204 to a direct POST; inference: not a fault). Offline renders on the live page: Filament peak 0.25, Cathode 0.73, Dekatron 0.35 (one kick) and 0.57 (pattern). Live `sw.js` `dxedge-v102` and `synth/index.html`, `engine.js`, `deck.js`, `drums-ui.js` match the repo byte for byte. Hexode still scrolls sideways at 375 px (779 px, already an open item). CPU (test 9, headless, this container): Cathode 13.9%; Filament 8 voices 21.2% (Ladder 24) and 22.0% (Valve 12). Defects found: none. Fixes: none; this log line is the only change.
 - 2026-10-17 (review, scheduled task, about 4:20 AM PT): areas c (keys, computer keys, sustain, octave, strips, MIDI), d (mixer, master clock, master bus) and e (MIDI deck), live at 1366 and 375 px against origin/main `12e3dc7`. Findings: 2 broken (both fixed), 1 missing, 8 confusing; details in `docs/filament-review.md`. Fixes: the deck recorder no longer throws on the 16 devices it does not record (wheels, pedal and an armed note threw from `deck.js` `rec()`), and the deck's Render WAV now carries the master bus. Two new M. checks. Commit: this one.
 - 2026-10-16 (check and debug, scheduled task, about 2:10 AM PT): reviewed 12 commits since 15 Oct 6 PM PT on origin/main `0bcc921` (health state `b55da75`; Orthicon pictures `37f8bf3` and Gleam hold `7fc9e47` by sagejw-svg; the rest by the Claude nightly: `2883b84`, the EQ landing `a6fb7d0` `a741882` `1b18825` `85d3b73` `c61a717`, the tube show `65b0ed8` `77b74e0` `0bcc921`). Diff read: no edit under `/otr`, no new vendored code or licence, no trademark names added, no test removed; two Tv. checks were changed with stated reasons (the cooling bound now allows drive warmth; the live V1 brightness check became a painter-only check, and the real tube canvas paint check at the end of the suite still runs). Suite: ALL PASS (1071 checks). `scripts/test_synth_imported.py`: ALL PASS. Live `/synth/`, `/synth/fm/`, `/synth/acid/` at 1366 and 375 px: no page errors, no console errors, `__synth.ready()` true; the only failed request was the `/api/stat` beacon aborted on page close (inference: not a fault). All 18 rack devices played a note live with a non-zero strip meter, and an offline Filament render peaked at 0.36. Live `sw.js` `dxedge-v100` matches the repo. Hexode still scrolls sideways at 375 px (already an open item). Defects found: none. Fixes: none; this log line is the only change.
