@@ -1,0 +1,102 @@
+/* Control size shared by the rack, Hexode, Anode, and Gleam.
+   M matches the sizes the pages already used. L and XL are for a wide monitor.
+   A phone keeps its own targets, whatever size was saved on a desktop. */
+
+html[data-ui="s"] { --kb-h: 132px; }
+html[data-ui="l"] { --kb-h: 168px; }
+html[data-ui="xl"] { --kb-h: 188px; }
+
+.uisize { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.uisize button {
+  font: inherit; color: #e2e2e2; background: #161616; border: 1px solid #3a3a3a;
+  border-radius: 6px; min-width: 34px; min-height: 34px; padding: 4px 8px; cursor: pointer;
+}
+.uisize button[aria-pressed="true"] { color: #1a1206; background: #ffb347; border-color: #ffb347; font-weight: 700; }
+.uisize button:focus-visible { outline: 2px solid #ffb347; outline-offset: 2px; }
+
+html[data-ui="l"] .knob { width: 76px; }
+html[data-ui="l"] .knob svg { width: 58px; height: 58px; }
+html[data-ui="l"] .knob .kl { font-size: 12px; }
+html[data-ui="l"] .knob .kv { font-size: 13px; }
+html[data-ui="l"] .btn { min-height: 42px; font-size: 14px; padding: 8px 14px; }
+html[data-ui="l"] .btn.small { min-height: 36px; font-size: 13px; padding: 6px 12px; }
+html[data-ui="l"] .chip { min-height: 36px; font-size: 13px; padding: 6px 10px; }
+html[data-ui="l"] .strip { width: 36px; }
+html[data-ui="l"] body { font-size: 15px; }
+html[data-ui="l"] .label { font-size: 11px; }
+html[data-ui="l"] input[type="range"] { min-height: 28px; }
+
+html[data-ui="xl"] .knob { width: 92px; }
+html[data-ui="xl"] .knob svg { width: 70px; height: 70px; }
+html[data-ui="xl"] .knob .kl { font-size: 13px; }
+html[data-ui="xl"] .knob .kv { font-size: 15px; }
+html[data-ui="xl"] .btn { min-height: 48px; font-size: 15px; padding: 10px 16px; }
+html[data-ui="xl"] .btn.small { min-height: 42px; font-size: 14px; padding: 8px 12px; }
+html[data-ui="xl"] .chip { min-height: 42px; font-size: 14px; padding: 8px 12px; }
+html[data-ui="xl"] .strip { width: 44px; }
+html[data-ui="xl"] body { font-size: 16px; }
+html[data-ui="xl"] .label { font-size: 12px; }
+html[data-ui="xl"] input[type="range"] { min-height: 34px; }
+
+html[data-ui="s"] .knob { width: 48px; }
+html[data-ui="s"] .knob svg { width: 36px; height: 36px; }
+html[data-ui="s"] .btn { min-height: 32px; }
+html[data-ui="s"] .chip { min-height: 24px; }
+
+html[data-ui="l"] .gleam-bar .gchip,
+html[data-ui="l"] .gleam-bar button,
+html[data-ui="l"] .gleam-bar select { min-height: 40px; font-size: 14px; }
+html[data-ui="l"] .gleam-bar label.grow { font-size: 12px; color: #d0d0d0; }
+html[data-ui="xl"] .gleam-bar .gchip,
+html[data-ui="xl"] .gleam-bar button,
+html[data-ui="xl"] .gleam-bar select { min-height: 46px; font-size: 15px; }
+html[data-ui="xl"] .gleam-bar label.grow { font-size: 13px; color: #d0d0d0; }
+
+/* Hexode's panel is a fixed drawing. Scale the whole drawing instead of restacking it. */
+@media (max-width: 1500px) {
+  html[data-ui="l"] .dx7-container { zoom: 1.05; }
+  html[data-ui="xl"] .dx7-container { zoom: 1.08; }
+}
+@media (min-width: 1501px) and (max-width: 1800px) {
+  html[data-ui="l"] .dx7-container { zoom: 1.18; }
+  html[data-ui="xl"] .dx7-container { zoom: 1.26; }
+}
+@media (min-width: 1801px) {
+  html[data-ui="l"] .dx7-container { zoom: 1.32; }
+  html[data-ui="xl"] .dx7-container { zoom: 1.46; }
+}
+html[data-ui="s"] .dx7-container { zoom: 0.92; }
+
+html[data-ui="l"] .dial { width: 92px; height: 66px; }
+html[data-ui="xl"] .dial { width: 112px; height: 80px; }
+
+.dx7-container .knob:focus-visible,
+.dx7-container .slider:focus-visible,
+.dial:focus-visible {
+  outline: 2px solid #ffb347;
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  html[data-ui] { --kb-h: 128px; }
+  html[data-ui] .knob { width: 52px; }
+  html[data-ui] .knob svg { width: 40px; height: 40px; }
+  html[data-ui] .btn, html[data-ui] .btn.small, html[data-ui] .chip, html[data-ui] .uisize button {
+    min-height: 44px; min-width: 44px;
+  }
+  html[data-ui] .strip { width: 22px; }
+  html[data-ui="s"] .dx7-container,
+  html[data-ui="m"] .dx7-container,
+  html[data-ui="l"] .dx7-container,
+  html[data-ui="xl"] .dx7-container { zoom: 1; }
+  html[data-ui] #ui { zoom: 1; }
+  html[data-ui] .gleam-bar .gchip,
+  html[data-ui] .gleam-bar button,
+  html[data-ui] .gleam-bar select,
+  html[data-ui] .gleam-bar a,
+  html[data-ui] .gleam-bar input { min-height: 44px; min-width: 44px; }
+  /* The XL range rule is more specific than a plain input, so a saved XL
+     size was leaving the master volume 34px tall on a phone. */
+  html[data-ui] .volab input,
+  html[data-ui] #mastVol { min-height: 44px; height: 44px; }
+}

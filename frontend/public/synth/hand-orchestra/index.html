@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<script>
+(function () {
+  try {
+    var s = localStorage.getItem('dxedge_ui_size');
+    if (s !== 's' && s !== 'm' && s !== 'l' && s !== 'xl') s = window.innerWidth >= 1600 ? 'l' : 'm';
+    document.documentElement.setAttribute('data-ui', s);
+  } catch (e) { document.documentElement.setAttribute('data-ui', 'm'); }
+})();
+</script>
+<link rel="stylesheet" href="/synth/desk.css">
+<title>Hand Orchestra - DXEdge</title>
+<meta name="description" content="Hand Orchestra: each fingertip is a voice. The camera stays in the browser. Raise a finger to play a chord tone, lift the hand to change octave, and count fingers on the other hand for chords I through vii.">
+<style>
+  :root {
+    --bg: #080808; --bg1: #0f0f0f; --bg2: #161616; --border: #232323; --border2: #323232;
+    --text: #e2e2e2; --muted: #a6a6a6; --dim: #7c7c7c;
+    --green: #00ff9d; --amber: #ffb347; --amber2: #ffd08a; --red: #ff5c5c; --blue: #7a9fff;
+    --font-mono: 'SF Mono', 'Fira Code', 'Consolas', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font-family: var(--font-mono); font-size: 13px; line-height: 1.45; padding: 14px 12px 40px; }
+  a { color: var(--green); }
+  button, select, input { font-family: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .top { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; justify-content: space-between; }
+  .label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--dim); }
+  h1 { margin: 2px 0 0; font-size: 22px; font-weight: 600; letter-spacing: 3px; color: #fff; }
+  h1 span { color: var(--amber); }
+  .intro { color: var(--muted); margin: 4px 0 0; max-width: 680px; font-size: 12px; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  nav a { color: var(--amber); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  nav a:hover { text-decoration: underline; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0; }
+  .btn { background: var(--bg2); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 8px 12px; min-height: 44px; cursor: pointer; }
+  .btn:hover { border-color: var(--amber); }
+  .btn[aria-pressed="true"] { border-color: var(--amber); color: var(--amber2); background: rgba(255,179,71,0.1); }
+  .stage { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #050505; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  #cam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); background: #050505; }
+  #overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage[data-cam="off"] #cam, .stage[data-cam="missing"] #cam, .stage[data-cam="denied"] #cam, .stage[data-cam="error"] #cam, .stage[data-cam="gesture"] #cam { display: none; }
+  .cam-prompt { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center; background: rgba(8, 8, 8, 0.78); }
+  .cam-prompt[hidden] { display: none !important; }
+  .cam-prompt .cam-go { min-height: 72px; min-width: min(320px, 100%); padding: 16px 22px; font-size: 22px; letter-spacing: 0.4px; background: #1c140c; border-color: var(--amber); color: var(--amber2); }
+  .cam-prompt p { margin: 0; max-width: 34em; color: var(--text); font-size: 14px; line-height: 1.4; }
+  .cam-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+  .readout { margin: 10px 0; color: var(--amber2); letter-spacing: 0.5px; min-height: 1.4em; }
+  .axes { color: var(--dim); font-size: 12px; margin: 0 0 12px; }
+  .layout { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 14px; align-items: start; }
+  .panel { background: var(--bg1); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  h2 { margin: 0 0 8px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .hands { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fingers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .finger { flex: 1 1 70px; }
+  .meters { display: flex; gap: 6px; margin-top: 10px; }
+  .meter { flex: 1; background: #101010; border: 1px solid var(--border); border-radius: 6px; padding: 6px 4px 8px; text-align: center; min-height: 64px; }
+  .meter i { display: block; height: 36px; margin: 0 auto 4px; width: 8px; background: #1c1c1c; border-radius: 4px; position: relative; overflow: hidden; }
+  .meter i::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--lv, 0) * 100%); background: var(--green); }
+  .meter b { font-weight: 600; color: var(--amber2); font-size: 11px; }
+  .meter span { display: block; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  label.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; color: var(--muted); }
+  label.row input[type="range"] { flex: 1 1 140px; min-height: 28px; }
+  .chart { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .chart th, .chart td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .chart th { color: var(--dim); font-weight: 600; }
+  #controller[hidden] { display: none; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  #rackHost { margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #000; min-height: 180px; }
+  #rackHost[hidden] { display: none; }
+  #rackFrame { width: 100%; height: 280px; border: 0; background: #080808; }
+  #toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: #1a140c; color: var(--amber2); border: 1px solid var(--amber); border-radius: 8px; padding: 8px 14px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  #toast[data-show="1"] { opacity: 1; }
+  .how p { margin: 0 0 8px; color: var(--muted); }
+  footer { margin-top: 18px; color: var(--dim); font-size: 12px; }
+  footer a { color: var(--green); }
+  html[data-ui="l"] body { font-size: 15px; }
+  html[data-ui="l"] .intro, html[data-ui="l"] .cam-note, html[data-ui="l"] .chart { font-size: 14px; }
+  html[data-ui="xl"] body { font-size: 16px; }
+  html[data-ui="xl"] .intro, html[data-ui="xl"] .cam-note, html[data-ui="xl"] .chart { font-size: 15px; }
+  html[data-ui="xl"] .finger { flex-basis: 100px; }
+  html[data-ui="s"] body { font-size: 12px; }
+  @media (max-width: 800px) {
+    .layout, .hands, .grid2 { grid-template-columns: 1fr; }
+    .btn, .finger, .uisize button { min-height: 44px; min-width: 44px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="label">dxedge.net / synth / hand orchestra</div>
+      <h1>HAND <span>ORCHESTRA</span></h1>
+      <p class="intro">Each fingertip is a voice. Raise or curl a finger to play that chord tone. The height of the hand chooses the octave. The other hand counts fingers for chords I through vii. The camera stays in this browser. No video is uploaded.</p>
+    </div>
+    <nav>
+      <div class="uisize" id="uiSize" role="group" aria-label="Control size">
+        <button type="button" data-ui-size="s" title="Small controls">S</button>
+        <button type="button" data-ui-size="m" title="Medium controls">M</button>
+        <button type="button" data-ui-size="l" title="Large controls">L</button>
+        <button type="button" data-ui-size="xl" title="Extra large controls">XL</button>
+      </div>
+      <a href="/synth/">Rack</a>
+      <a href="/synth/gleam/">Gleam</a>
+      <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
+    </nav>
+  </header>
+
+  <div class="bar" role="group" aria-label="Play mode">
+    <button class="btn" id="modeOrchestra" type="button" aria-pressed="true">Orchestra</button>
+    <button class="btn" id="modeController" type="button" aria-pressed="false">Controller</button>
+    <button class="btn" id="camBtn" type="button" aria-pressed="false">Use camera</button>
+    <button class="btn" id="panic" type="button">Panic</button>
+    <label class="row">Key
+      <select id="key" class="btn" aria-label="Key"></select>
+    </label>
+    <label class="row">Level
+      <input id="level" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Orchestra level">
+      <b id="levelV">80%</b>
+    </label>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="stage" id="stage" data-cam="off">
+        <video id="cam" playsinline muted autoplay></video>
+        <canvas id="overlay" aria-hidden="true"></canvas>
+        <div class="cam-prompt" id="camPrompt">
+          <button class="btn cam-go" id="turnOnCamera" type="button">Turn on camera</button>
+          <p id="camExplain">The picture stays in this browser and is not uploaded. The mouse hand plays until then.</p>
+        </div>
+      </div>
+      <p class="cam-note" id="camNote" role="status"></p>
+      <p class="readout" id="readout" aria-live="polite">I  Cmaj7</p>
+      <p class="axes" id="axes"></p>
+      <div class="meters" aria-label="Fingertip levels">
+        <div class="meter" data-meter="thumb" data-level="0"><span>Thumb</span><i></i><b>—</b></div>
+        <div class="meter" data-meter="index" data-level="0"><span>Index</span><i></i><b>—</b></div>
+        <div class="meter" data-meter="middle" data-level="0"><span>Middle</span><i></i><b>—</b></div>
+        <div class="meter" data-meter="ring" data-level="0"><span>Ring</span><i></i><b>—</b></div>
+        <div class="meter" data-meter="pinky" data-level="0"><span>Pinky</span><i></i><b>—</b></div>
+      </div>
+    </div>
+
+    <div class="panel how">
+      <h2>How to play</h2>
+      <p>Right hand, or the mouse keys marked Play: each raised finger is one voice of the chord. Thumb is the root an octave down, index the root, middle the 3rd, ring the 5th, pinky the 7th. Curl a finger and that voice stops.</p>
+      <p>Lift the play hand for a higher octave. The slider does the same thing with the mouse. Keys 1–5 toggle the play fingers. Arrow up and down move the octave.</p>
+      <p>Left hand, or the Chord buttons: count fingers.</p>
+      <table class="chart">
+        <thead><tr><th>Hold up</th><th>Chord</th></tr></thead>
+        <tbody>
+          <tr><td>1 finger, thumb in</td><td>I</td></tr>
+          <tr><td>2 fingers, thumb in</td><td>ii</td></tr>
+          <tr><td>3 fingers, thumb in</td><td>iii</td></tr>
+          <tr><td>4 fingers, thumb in</td><td>IV</td></tr>
+          <tr><td>Thumb and 1 finger</td><td>V</td></tr>
+          <tr><td>Thumb and 2</td><td>vi</td></tr>
+          <tr><td>Thumb and 3</td><td>vii</td></tr>
+          <tr><td>Open hand</td><td>V</td></tr>
+        </tbody>
+      </table>
+      <p>Keys Q W E R T toggle the chord-hand thumb, index, middle, ring and pinky. Space is panic. If the camera swaps your hands, turn on Swap hands.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <h2>Mouse hand</h2>
+    <p class="intro">Use this when the camera is off, or when you would rather click. It plays the same voices.</p>
+    <div class="hands">
+      <div>
+        <h2>Chord hand</h2>
+        <div class="fingers" role="group" aria-label="Chord hand fingers">
+          <button class="btn finger" type="button" data-hand="chord" data-finger="thumb" aria-pressed="false">Thumb</button>
+          <button class="btn finger" type="button" data-hand="chord" data-finger="index" aria-pressed="false">Index</button>
+          <button class="btn finger" type="button" data-hand="chord" data-finger="middle" aria-pressed="false">Middle</button>
+          <button class="btn finger" type="button" data-hand="chord" data-finger="ring" aria-pressed="false">Ring</button>
+          <button class="btn finger" type="button" data-hand="chord" data-finger="pinky" aria-pressed="false">Pinky</button>
+        </div>
+      </div>
+      <div>
+        <h2>Play hand</h2>
+        <div class="fingers" role="group" aria-label="Play hand fingers">
+          <button class="btn finger" type="button" data-hand="play" data-finger="thumb" aria-pressed="false">Thumb bass</button>
+          <button class="btn finger" type="button" data-hand="play" data-finger="index" aria-pressed="false">Index root</button>
+          <button class="btn finger" type="button" data-hand="play" data-finger="middle" aria-pressed="false">Middle 3rd</button>
+          <button class="btn finger" type="button" data-hand="play" data-finger="ring" aria-pressed="false">Ring 5th</button>
+          <button class="btn finger" type="button" data-hand="play" data-finger="pinky" aria-pressed="false">Pinky 7th</button>
+        </div>
+      </div>
+    </div>
+    <label class="row">Hand height
+      <input id="height" type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Hand height">
+      <b id="heightV">0.55</b>
+    </label>
+    <label class="row">Pinch
+      <input id="pinch" type="range" min="0" max="1" step="0.01" value="0.15" aria-label="Pinch">
+    </label>
+    <label class="row">Depth
+      <input id="depth" type="range" min="0" max="1" step="0.01" value="0.5" aria-label="Depth">
+    </label>
+    <label class="row">Tilt
+      <input id="tilt" type="range" min="0" max="1" step="0.01" value="0.5" aria-label="Tilt">
+    </label>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <h2>Camera, calibration, smoothing</h2>
+    <p class="intro">The camera starts when the page opens. The picture is mirrored so it feels like a mirror, and the dots sit on the fingertips. If you turn the camera off, it stays off until you press Turn on camera. MediaPipe reads the frames here. They are not uploaded and there is no account.</p>
+    <div class="bar">
+      <button class="btn" id="markLow" type="button">Mark low</button>
+      <button class="btn" id="markHigh" type="button">Mark high</button>
+      <button class="btn" id="calReset" type="button">Reset calibration</button>
+      <label class="row"><input id="swap" type="checkbox" aria-label="Swap left and right hands"> Swap hands</label>
+    </div>
+    <label class="row">Smoothing
+      <input id="smooth" type="range" min="0.05" max="1" step="0.01" value="0.35" aria-label="Smoothing">
+    </label>
+    <label class="row">Curl sensitivity
+      <input id="margin" type="range" min="0.03" max="0.3" step="0.01" value="0.08" aria-label="Curl sensitivity">
+    </label>
+  </div>
+
+  <div id="controller" class="panel" style="margin-top:14px" hidden>
+    <h2>Controller</h2>
+    <p class="intro">The same gestures leave as MIDI notes and control changes, and they can play a synth in the DXEdge rack. Pinch, height, depth and tilt each get a CC number and a knob.</p>
+    <div class="grid2">
+      <label class="row">Channel <input id="channel" type="number" min="1" max="16" value="1" aria-label="MIDI channel" style="width:4.5em"></label>
+      <label class="row"><input id="monitor" type="checkbox" checked aria-label="Monitor on the built-in voices"> Monitor on the built-in voices</label>
+      <label class="row">Pinch CC <input data-cc="pinch" type="number" min="0" max="127" aria-label="Pinch control change" style="width:4.5em"></label>
+      <label class="row">Height CC <input data-cc="height" type="number" min="0" max="127" aria-label="Height control change" style="width:4.5em"></label>
+      <label class="row">Depth CC <input data-cc="depth" type="number" min="0" max="127" aria-label="Depth control change" style="width:4.5em"></label>
+      <label class="row">Tilt CC <input data-cc="tilt" type="number" min="0" max="127" aria-label="Tilt control change" style="width:4.5em"></label>
+    </div>
+    <div class="bar">
+      <button class="btn" id="midiBtn" type="button">Open MIDI output</button>
+      <select id="midiOut" class="btn" hidden aria-label="MIDI output"></select>
+    </div>
+    <p id="midiState" class="intro">Web MIDI is off until you open an output. Safari has no Web MIDI. The built-in orchestra still plays.</p>
+    <h2>Rack</h2>
+    <div class="bar">
+      <label class="row">Target
+        <select id="target" class="btn" aria-label="Target synth"></select>
+      </label>
+      <label class="row"><input id="drive" type="checkbox" aria-label="Drive the rack synth"> Drive this synth</label>
+    </div>
+    <div class="grid2">
+      <label class="row">Pinch knob <select data-knob="pinch" class="btn" aria-label="Pinch knob"></select></label>
+      <label class="row">Height knob <select data-knob="height" class="btn" aria-label="Height knob"></select></label>
+      <label class="row">Depth knob <select data-knob="depth" class="btn" aria-label="Depth knob"></select></label>
+      <label class="row">Tilt knob <select data-knob="tilt" class="btn" aria-label="Tilt knob"></select></label>
+    </div>
+    <p id="rackStatus" class="intro">The rack stays quiet until you drive it. Saved patches on this browser are put back after each gesture.</p>
+    <div id="rackHost" hidden></div>
+  </div>
+
+  <footer>
+    <p>Finger tracking uses <a href="https://developers.google.com/mediapipe/solutions/vision/hand_landmarker">MediaPipe Hand Landmarker</a> by Google, Apache License 2.0. The model is downloaded into this browser the first time you use the camera. Camera frames are processed here and are not uploaded. Part of <a href="/synth/">the Filament rack</a> on <a href="/">DXEdge</a>.</p>
+  </footer>
+</div>
+<div id="toast" role="status"></div>
+<script type="module" src="./app.js"></script>
+<script src="/lib/stat.js"></script>
+</body>
+</html>

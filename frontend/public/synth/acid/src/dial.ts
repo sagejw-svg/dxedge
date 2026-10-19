@@ -12,6 +12,12 @@ function clamp(n: number): number {
 export function Dial(bounds: [number, number], text?: string, dialColor: string = "red", textColor: string="white"){
     const element = document.createElement("canvas");
     element.classList.add("dial");
+    element.tabIndex = 0;
+    element.setAttribute("role", "slider");
+    element.setAttribute("aria-label", text || "Dial");
+    element.setAttribute("aria-valuemin", String(bounds[0]));
+    element.setAttribute("aria-valuemax", String(bounds[1]));
+    element.title = (text || "Dial") + ". Drag to turn. Hold Shift for a finer move. Arrow keys and the mouse wheel work while it is focused.";
     const w = element.width = 70;
     const h = element.height = 50;
     const size = 20;
@@ -74,6 +80,7 @@ export function Dial(bounds: [number, number], text?: string, dialColor: string 
 
     function setValue(n: number) {
         normalizedValue = normalise(n);
+        element.setAttribute("aria-valuenow", String(denormalise(normalizedValue)));
         paint();
         if (Math.abs(normalizedValue - previousNormalisedValue) > 0.002) {
             fade(4 + Math.floor(Math.abs(normalizedValue - previousNormalisedValue) / 0.001));
@@ -85,30 +92,52 @@ export function Dial(bounds: [number, number], text?: string, dialColor: string 
         return denormalise(normalizedValue);
     }
 
-    const state = {isDragging: false, handler: [(v: number) => {}]};
+    const state: {isDragging: boolean, fine: boolean, handler: Array<(v: number) => void>} = {isDragging: false, fine: false, handler: [(v: number) => {}]};
 
 
     function bind(h: (v: number) => void) {
         state.handler.push(h);
     }
 
+    function turn(delta: number) {
+        normalizedValue = clamp(normalizedValue + delta);
+        const actualValue = denormalise(normalizedValue);
+        setValue(actualValue);
+        state.handler.forEach(h => h(actualValue));
+    }
+
     element.addEventListener("mousedown", (e) => {
         state.isDragging = true;
+        state.fine = e.shiftKey;
+        element.focus();
     });
 
     window.addEventListener("mousemove", (e) => {
         if (state.isDragging) {
-            const delta = (e.movementX - e.movementY)/100;
-            normalizedValue = clamp(normalizedValue+delta);
-            const actualValue = denormalise(normalizedValue);
-            setValue(actualValue);
-            state.handler.forEach(h => h(actualValue));
+            const scale = (e.shiftKey || state.fine) ? 400 : 100;
+            turn((e.movementX - e.movementY) / scale);
         }
     })
 
-    window.addEventListener("mouseup", (e) => {
+    window.addEventListener("mouseup", () => {
         state.isDragging = false;
+        state.fine = false;
     })
+
+    element.addEventListener("wheel", (e) => {
+        if (document.activeElement !== element) return;
+        e.preventDefault();
+        const step = e.shiftKey ? 0.01 : 0.04;
+        turn(e.deltaY > 0 ? -step : step);
+    }, { passive: false });
+
+    element.addEventListener("keydown", (e) => {
+        const dir = ({ ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 } as {[k: string]: number})[e.key];
+        if (!dir) return;
+        e.preventDefault();
+        e.stopPropagation();
+        turn(dir * (e.shiftKey ? 0.01 : 0.04));
+    });
 
     paint();
 

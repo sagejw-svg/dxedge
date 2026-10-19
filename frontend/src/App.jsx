@@ -38,6 +38,7 @@ import Stats from './components/Stats'
 import Otr from './components/Otr'
 import Synth from './components/Synth'
 import Sculpt from './components/Sculpt'
+import Aether from './components/Aether'
 
 const TABS = [
   // Propagation & operating
@@ -137,6 +138,7 @@ const TAB_GROUPS = [
     tabs: [
       { id: 'synth', label: 'Filament', icon: '🎹' },
       { id: 'sculpt', label: 'Sculpt', icon: '✋' },
+      { id: 'aether', label: 'Aether', icon: '✋' },
     ],
   },
   {
@@ -440,6 +442,7 @@ export default function App() {
           {tab === 'otr' && <Otr />}
           {tab === 'synth' && <Synth />}
           {tab === 'sculpt' && <Sculpt />}
+          {tab === 'aether' && <Aether />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}

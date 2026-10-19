@@ -18,7 +18,7 @@ The page is a light reskin (near-black ground, amber type, the site mono stack) 
 - `src/app.js`: no cartridge fetch, no song-file player, generated reverb tail, `.syx` file input, test hook `window.__hexode`.
 - `src/visualizer.js`: defines `global` for the browser bundle.
 - `synth.css`: the `@font-face` rules and the logo image are gone.
-- `index.html`, `skin.css`: the DXEdge frame and the name Hexode.
+- `index.html`, `skin.css`: the DXEdge frame and the name Hexode. A remembered S/M/L/XL control size (shared with the rack), a hold latch (` and a button; panic clears it), a page volume that starts at unity, and a limiter that stays off until it is switched on. Shift-drag and a focused mouse wheel make the knobs and sliders finer. The panel drawing scales up on a wide screen.
 
 ## How bundle.js was built
 

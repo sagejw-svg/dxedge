@@ -19,7 +19,11 @@ html, body {
   margin: 0;
 }
 body { padding: 14px 12px 32px; }
-.site-top, .site-foot { max-width: 1140px; margin: 0 auto; }
+.site-top, .site-foot { max-width: 1880px; margin: 0 auto; }
+.hex-tools { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; color: #c8c8c8; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.hex-tools input[type="range"] { width: 110px; accent-color: #ffb347; }
+.hex-tools b { color: #ffd08a; letter-spacing: 0; text-transform: none; min-width: 3em; }
+.hex-tools button, .hex-tools label { font: inherit; }
 .site-top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
 .site-label { font-size: 10px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
 h1 { font-size: 22px; margin: 2px 0 0; font-weight: 600; letter-spacing: 4px; color: #fff; }
