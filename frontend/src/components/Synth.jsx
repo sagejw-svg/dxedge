@@ -17,7 +17,7 @@ export default function Synth() {
   return (
     <div className="synth-panel">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; pentagrid &middot; orthicon &middot; trochotron &middot; gyrotron &middot; klystron &middot; phantastron &middot; additron &middot; rhumbatron &middot; resnatron &middot; hexode &middot; anode &middot; hand orchestra &middot; aether</div>
+        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; pentagrid &middot; orthicon &middot; trochotron &middot; gyrotron &middot; klystron &middot; phantastron &middot; additron &middot; rhumbatron &middot; resnatron &middot; hexode &middot; anode &middot; hand orchestra &middot; aether &middot; iris</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
           Filament is polyphonic and built around lit tubes that do real
           work: one drives the filters, one sits inside the Valve filter's resonance loop, and a
@@ -42,6 +42,7 @@ export default function Synth() {
           and <a href="/synth/acid/">Anode</a> (acid bass groovebox).
           <a href="/synth/hand-orchestra/">Hand Orchestra</a> plays chord tones from the fingertips.
           <a href="/synth/hand-aether/">Aether</a> is a two-hand theremin. The camera picture stays in the browser.
+          <a href="/synth/iris/">Iris</a> plays the camera: a scan line, the color, the motion, and the edges, with nothing uploaded.
         </p>
       </div>
 

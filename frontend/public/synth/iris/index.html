@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" data-size="M">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<title>Iris - camera synth - DXEdge</title>
+<meta name="description" content="Iris plays whatever the camera sees. A scan line, the color, the motion, and the edges become sound in the browser. Nothing is uploaded.">
+<link rel="stylesheet" href="./iris.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="label">dxedge.net / synth / iris</div>
+      <h1>IR<span>IS</span></h1>
+      <p class="intro">Iris plays whatever the camera sees. A line sweeps the picture and turns each row's brightness into a pitch. Hue picks a chord, motion fires notes where the frame changes, and edges stir a noise texture. The picture stays in this browser. Nothing is uploaded.</p>
+    </div>
+    <div class="bar">
+      <div class="sizes" id="irisSizes" role="group" aria-label="Size">
+        <button type="button" data-size="S" aria-pressed="false">S</button>
+        <button type="button" data-size="M" aria-pressed="true">M</button>
+        <button type="button" data-size="L" aria-pressed="false">L</button>
+        <button type="button" data-size="XL" aria-pressed="false">XL</button>
+      </div>
+      <a class="navlink" href="/synth/">Rack</a>
+      <a class="navlink" href="/synth/fm/">Hexode</a>
+      <a class="navlink" href="/synth/acid/">Anode</a>
+      <a class="sup" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
+    </div>
+  </header>
+
+  <div class="inst"><div class="inst-in" id="irisRoot"></div></div>
+
+  <section class="how" id="irisHelp">
+    <h2>How to play</h2>
+    <ol>
+      <li>Allow the camera, or press <b>Turn on camera</b> if the browser asks for a gesture. Prefer a still? Choose <b>Use a picture</b>. The file is read locally.</li>
+      <li><b>Scanline</b> sweeps left to right. Bright rows sing higher. <b>Speed</b> is how fast the line moves. <b>Snap to scale</b> and the <b>root key</b> lock the pitches.</li>
+      <li><b>Color</b> listens to the whole frame. The dominant hue chooses the chord, saturation opens the filter, and overall brightness is the volume.</li>
+      <li><b>Motion</b> is quiet until something moves. Each cell of the grid is a pitch, and a hit marks the attack. Wave, or walk through the frame.</li>
+      <li><b>Edges</b> turns contrast into a grainy texture. A busy picture is thick. A flat wall is nearly silent.</li>
+      <li><b>Freeze</b> holds the current frame. <b>Rec</b> writes a WAV of the master output. <b>S M L XL</b> changes how big the panel is. <b>Reverb</b> and <b>Volume</b> sit on the master.</li>
+    </ol>
+  </section>
+
+  <div class="foot">dx//edge &middot; <a href="/">dxedge.net</a> &middot; <a href="/synth/">filament rack</a> &middot; camera stays on this machine</div>
+</div>
+<script type="module" src="./iris-ui.js"></script>
+<script src="/lib/stat.js"></script>
+</body>
+</html>
