@@ -21712,6 +21712,8 @@ var global = window;
             voice.down = false;
             if (this.sustainPedalDown === false)
               voice.noteOff();
+            else
+              voice.latched = true;
           }
         }
       };
@@ -28052,6 +28054,13 @@ void main(void){
     },
     hold: function() {
       return hexodeHoldLatch;
+    },
+    latched: function() {
+      return synth.voices.filter(function(v) {
+        return v && v.latched === true;
+      }).map(function(v) {
+        return v.note;
+      });
     },
     loadSysex: function(list) {
       var bytes = list instanceof Uint8Array ? list : new Uint8Array(list);

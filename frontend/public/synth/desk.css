@@ -95,4 +95,8 @@ html[data-ui="xl"] .dial { width: 112px; height: 80px; }
   html[data-ui] .gleam-bar select,
   html[data-ui] .gleam-bar a,
   html[data-ui] .gleam-bar input { min-height: 44px; min-width: 44px; }
+  /* The XL range rule is more specific than a plain input, so a saved XL
+     size was leaving the master volume 34px tall on a phone. */
+  html[data-ui] .volab input,
+  html[data-ui] #mastVol { min-height: 44px; height: 44px; }
 }

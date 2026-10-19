@@ -33,7 +33,10 @@ export function makeShow(mode, reduced) {
 }
 export const showScale = S => SCALE[S.mode] || 0;
 export function setShowMode(S, mode) { if (SCALE[mode] == null) return false; S.mode = mode; if (mode === 'off') clearFlicker(S); return true; }
-function clearFlicker(S) { TUBES.forEach(k => { S.flare[k] = 0; S.arc[k] = 0; }); S.pend.length = 0; }
+function clearFlicker(S) {
+  TUBES.forEach(k => { S.flare[k] = 0; S.arc[k] = 0; S.heat[k] = 0; S.blue[k] = 0; });
+  S.pend.length = 0; S.res = 0; S.shimmer = false;
+}
 
 // A note-on, with velocity 0..1. Flicker, so off and reduced motion skip it.
 export function showNote(S, vel) {
@@ -73,13 +76,17 @@ export function stepShow(S, dt, inp) {
     // heat: drive alone warms a little; drive with signal plates red, then orange
     const dn = clamp(inp.drive[t] / 10, 0, 1), lv = clamp(inp.lv[t], 0, 1.2);
     const tgt = !inp.on[t] || k === 0 ? 0 : clamp(0.18 * dn + 1.05 * dn * Math.min(1, lv) + 0.3 * Math.max(0, lv - 0.85), 0, 1);
-    const tau = tgt > S.heat[t] ? 0.35 : 0.9;
-    S.heat[t] += (tgt - S.heat[t]) * (1 - Math.exp(-dt / tau));
+    if (k === 0) S.heat[t] = 0;
+    else {
+      const tau = tgt > S.heat[t] ? 0.35 : 0.9;
+      S.heat[t] += (tgt - S.heat[t]) * (1 - Math.exp(-dt / tau));
+    }
     if (inp.clip[t] && inp.on[t] && (!fire || lv > fire.lv)) fire = { t, lv };
   });
   ['v3', 'v4'].forEach(t => {
     const tgt = k === 0 ? 0 : clamp(inp.lv[t] * 1.15, 0, 1);
-    S.blue[t] += (tgt - S.blue[t]) * (1 - Math.exp(-dt / (tgt > S.blue[t] ? 0.06 : 0.25)));
+    if (k === 0) S.blue[t] = 0;
+    else S.blue[t] += (tgt - S.blue[t]) * (1 - Math.exp(-dt / (tgt > S.blue[t] ? 0.06 : 0.25)));
   });
   S.blue.v1 = S.blue.v2 = 0;
   const rt = k === 0 || !inp.on.v2 ? 0 : clamp(inp.res, 0, 1);

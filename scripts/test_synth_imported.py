@@ -117,7 +117,7 @@ with sync_playwright() as pw:
     pg.evaluate("__hexode.noteOn(62, 0.8)")
     pg.evaluate("document.getElementById('holdBtn').click()")
     pg.evaluate("__hexode.noteOff(62)")
-    ck("Hexode: hold keeps the note after note-off", 62 in pg.evaluate("__hexode.held()") and pg.evaluate("__hexode.hold()") is True)
+    ck("Hexode: hold keeps the note after note-off", 62 in pg.evaluate("__hexode.latched()") and pg.evaluate("__hexode.hold()") is True)
     pg.click("#panicBtn")
     ck("Hexode: panic clears hold", pg.evaluate("__hexode.held()") == [] and pg.evaluate("__hexode.hold()") is False)
     pg.close()

@@ -5374,8 +5374,9 @@ with sync_playwright() as pw:
     ck("Desk. master volume is the output gain and is not a patch",
        abs(vol["g"] - 0.5) < 1e-6 and abs(vol["gain"] - 0.5) < 1e-6 and abs(vol["restored"] - 1) < 1e-6 and vol["patch"] == vol["name"], vol)
     ck("Desk. the safety limiter is off", pg.evaluate("__synth.master().comp.safety") is False)
-    safeL, _ = render(patch(osc1={"wave": "sine", "level": 1}, filt={"cutoff": 18000}, out={"level": 8, "drive": 0}), note(60, 0.02), 0.8, rack=False, master={"comp": {"on": False, "safety": True, "ceiling": -18, "limit": False}})
-    bareL, _ = render(patch(osc1={"wave": "sine", "level": 1}, filt={"cutoff": 18000}, out={"level": 8, "drive": 0}), note(60, 0.02), 0.8, rack=False, master={"comp": {"on": False, "safety": False}})
+    loud = patch(osc1={"wave": "sine", "level": 1}, osc2={"wave": "sine", "level": 1}, filt={"model": "ladder24", "cutoff": 18000}, out={"level": 12, "drive": 6})
+    safeL, _ = render(loud, note(60, 0.02, v=1), 0.8, rack=False, master={"comp": {"on": False, "safety": True, "ceiling": -18, "limit": False}})
+    bareL, _ = render(loud, note(60, 0.02, v=1), 0.8, rack=False, master={"comp": {"on": False, "safety": False}})
     spk, bpk = float(np.max(np.abs(safeL[int(0.2 * SR):]))), float(np.max(np.abs(bareL[int(0.2 * SR):])))
     ck("Desk. the safety limiter holds a loud note near a low ceiling",
        bpk > 0.2 and spk < bpk * 0.85 and spk < 0.2, (spk, bpk))
