@@ -12,58 +12,123 @@ from cache import cache
 
 logger = logging.getLogger(__name__)
 
-# Major contests with their metadata
-# Keyed by lowercase name fragment -> metadata
-MAJOR_CONTESTS = {
-    "cq ww wpx":    {"mode": "CW/SSB", "bands": "All HF",  "sponsor": "CQ Magazine",    "tier": 1},
-    "cq ww dx":     {"mode": "CW/SSB", "bands": "All HF",  "sponsor": "CQ Magazine",    "tier": 1},
-    "arrl dx":      {"mode": "CW/SSB", "bands": "HF",      "sponsor": "ARRL",           "tier": 1},
-    "arrl sweepstakes": {"mode": "CW/SSB", "bands": "HF",  "sponsor": "ARRL",           "tier": 1},
-    "arrl 10m":     {"mode": "CW/SSB/Digital", "bands": "10m", "sponsor": "ARRL",       "tier": 1},
-    "arrl 160m":    {"mode": "CW",     "bands": "160m",    "sponsor": "ARRL",           "tier": 1},
-    "arrl field day": {"mode": "All", "bands": "All HF/VHF", "sponsor": "ARRL",         "tier": 1},
-    "jidx":         {"mode": "CW/Phone", "bands": "HF",    "sponsor": "JARL",           "tier": 1},
-    "cqwpx":        {"mode": "CW",     "bands": "All HF",  "sponsor": "CQ Magazine",    "tier": 1},
-    "iota":         {"mode": "CW/SSB", "bands": "HF",      "sponsor": "RSGB",           "tier": 1},
-    "rsgb iota":    {"mode": "CW/SSB", "bands": "HF",      "sponsor": "RSGB",           "tier": 1},
-    "dx contest":   {"mode": "CW",     "bands": "HF",      "sponsor": "Various",        "tier": 2},
-    "sprint":       {"mode": "CW",     "bands": "HF",      "sponsor": "Various",        "tier": 3},
-    "cwops":        {"mode": "CW",     "bands": "HF",      "sponsor": "CWops",          "tier": 3},
-    "cwt":          {"mode": "CW",     "bands": "HF",      "sponsor": "CWops",          "tier": 3},
-    "skcc":         {"mode": "CW",     "bands": "HF",      "sponsor": "SKCC",           "tier": 3},
-    "ft4":          {"mode": "FT4",    "bands": "HF",      "sponsor": "Various",        "tier": 3},
-    "ft8":          {"mode": "FT8",    "bands": "HF",      "sponsor": "Various",        "tier": 3},
-    "rtty":         {"mode": "RTTY",   "bands": "HF",      "sponsor": "Various",        "tier": 2},
-    "psk":          {"mode": "PSK31",  "bands": "HF",      "sponsor": "Various",        "tier": 3},
-    "qrp":          {"mode": "CW",     "bands": "HF",      "sponsor": "QRP ARCI",       "tier": 3},
-    "sideband":     {"mode": "SSB",    "bands": "HF",      "sponsor": "Various",        "tier": 3},
-    "phone":        {"mode": "SSB",    "bands": "HF",      "sponsor": "Various",        "tier": 3},
-    "80m":          {"mode": "Various","bands": "80m",     "sponsor": "Various",        "tier": 3},
-    "40m":          {"mode": "Various","bands": "40m",     "sponsor": "Various",        "tier": 3},
-    "nccc":         {"mode": "CW/FT4", "bands": "HF",      "sponsor": "NCCC",           "tier": 3},
-    "k1usn":        {"mode": "CW",     "bands": "HF",      "sponsor": "K1USN",          "tier": 3},
-    "romanian":     {"mode": "SSB",    "bands": "HF",      "sponsor": "Romanian Diaspora", "tier": 3},
-    "rsgb":         {"mode": "CW/Data","bands": "80m",     "sponsor": "RSGB",           "tier": 2},
-    "worldwide":    {"mode": "SSB",    "bands": "HF",      "sponsor": "Various",        "tier": 2},
-    "ok1wc":        {"mode": "CW",     "bands": "HF",      "sponsor": "OK1WC",          "tier": 3},
-    "icwc":         {"mode": "CW",     "bands": "HF",      "sponsor": "ICWC",           "tier": 3},
-    "qcx":          {"mode": "CW",     "bands": "HF",      "sponsor": "QRP Labs",       "tier": 3},
-    "a1club":       {"mode": "CW",     "bands": "HF",      "sponsor": "A1 Club",        "tier": 3},
+# Contest metadata, split into two tables on purpose.
+#
+# SPECIFIC_CONTESTS holds named events with curated metadata. GENERIC_FRAGMENTS
+# holds band, mode and club hints for everything else. Specific is matched
+# FIRST, so a broad fragment can never shadow a real event: "dx contest" is a
+# substring of "JIDX Contest", and a single flat table resolved that to the
+# generic tier-2 CW entry instead of JARL's tier-1 one.
+#
+# Within each table the LONGEST matching key wins, not the first, so key order
+# carries no meaning and adding a key cannot silently re-point an existing one.
+#
+# Keys must match what contestcalendar.com actually emits, which spells names
+# out: "CQ Worldwide DX Contest", not "CQ WW DX". Both spellings are listed,
+# because the abbreviated ones are what a human or another source would write.
+SPECIFIC_CONTESTS = {
+    "cq worldwide wpx":      {"mode": "CW/SSB", "bands": "All HF", "sponsor": "CQ Magazine", "tier": 1},
+    "cq ww wpx":             {"mode": "CW/SSB", "bands": "All HF", "sponsor": "CQ Magazine", "tier": 1},
+    "cqwpx":                 {"mode": "CW",     "bands": "All HF", "sponsor": "CQ Magazine", "tier": 1},
+    "cq worldwide dx":       {"mode": "CW/SSB", "bands": "All HF", "sponsor": "CQ Magazine", "tier": 1},
+    "cq ww dx":              {"mode": "CW/SSB", "bands": "All HF", "sponsor": "CQ Magazine", "tier": 1},
+    "arrl international dx": {"mode": "CW/SSB", "bands": "HF",     "sponsor": "ARRL",        "tier": 1},
+    "arrl dx":               {"mode": "CW/SSB", "bands": "HF",     "sponsor": "ARRL",        "tier": 1},
+    "arrl sweepstakes":      {"mode": "CW/SSB", "bands": "HF",     "sponsor": "ARRL",        "tier": 1},
+    "arrl 10m":              {"mode": "CW/SSB/Digital", "bands": "10m", "sponsor": "ARRL",   "tier": 1},
+    "arrl 160m":             {"mode": "CW",     "bands": "160m",   "sponsor": "ARRL",        "tier": 1},
+    "arrl field day":        {"mode": "All",    "bands": "All HF/VHF", "sponsor": "ARRL",    "tier": 1},
+    "jidx":                  {"mode": "CW/Phone", "bands": "HF",   "sponsor": "JARL",        "tier": 1},
+    "rsgb iota":             {"mode": "CW/SSB", "bands": "HF",     "sponsor": "RSGB",        "tier": 1},
+    "iota":                  {"mode": "CW/SSB", "bands": "HF",     "sponsor": "RSGB",        "tier": 1},
 }
 
+# Consulted only when nothing in SPECIFIC_CONTESTS matched. These are hints,
+# not identities, so their "mode" is a default that MODE_TOKENS may override.
+GENERIC_FRAGMENTS = {
+    "dx contest": {"mode": "CW",      "bands": "HF",   "sponsor": "Various",           "tier": 2},
+    "worldwide":  {"mode": "SSB",     "bands": "HF",   "sponsor": "Various",           "tier": 2},
+    "rtty":       {"mode": "RTTY",    "bands": "HF",   "sponsor": "Various",           "tier": 2},
+    "rsgb":       {"mode": "CW/Data", "bands": "80m",  "sponsor": "RSGB",              "tier": 2},
+    "sprint":     {"mode": "CW",      "bands": "HF",   "sponsor": "Various",           "tier": 3},
+    "cwops":      {"mode": "CW",      "bands": "HF",   "sponsor": "CWops",             "tier": 3},
+    "cwt":        {"mode": "CW",      "bands": "HF",   "sponsor": "CWops",             "tier": 3},
+    "skcc":       {"mode": "CW",      "bands": "HF",   "sponsor": "SKCC",              "tier": 3},
+    "ft4":        {"mode": "FT4",     "bands": "HF",   "sponsor": "Various",           "tier": 3},
+    "ft8":        {"mode": "FT8",     "bands": "HF",   "sponsor": "Various",           "tier": 3},
+    "psk":        {"mode": "PSK31",   "bands": "HF",   "sponsor": "Various",           "tier": 3},
+    "qrp":        {"mode": "CW",      "bands": "HF",   "sponsor": "QRP ARCI",          "tier": 3},
+    "sideband":   {"mode": "SSB",     "bands": "HF",   "sponsor": "Various",           "tier": 3},
+    "phone":      {"mode": "SSB",     "bands": "HF",   "sponsor": "Various",           "tier": 3},
+    "80m":        {"mode": "Various", "bands": "80m",  "sponsor": "Various",           "tier": 3},
+    "40m":        {"mode": "Various", "bands": "40m",  "sponsor": "Various",           "tier": 3},
+    "nccc":       {"mode": "CW/FT4",  "bands": "HF",   "sponsor": "NCCC",              "tier": 3},
+    "k1usn":      {"mode": "CW",      "bands": "HF",   "sponsor": "K1USN",             "tier": 3},
+    "romanian":   {"mode": "SSB",     "bands": "HF",   "sponsor": "Romanian Diaspora", "tier": 3},
+    "ok1wc":      {"mode": "CW",      "bands": "HF",   "sponsor": "OK1WC",             "tier": 3},
+    "icwc":       {"mode": "CW",      "bands": "HF",   "sponsor": "ICWC",              "tier": 3},
+    "qcx":        {"mode": "CW",      "bands": "HF",   "sponsor": "QRP Labs",          "tier": 3},
+    "a1club":     {"mode": "CW",      "bands": "HF",   "sponsor": "A1 Club",           "tier": 3},
+}
+
+# An explicit mode designator in the name is the most reliable mode signal
+# there is: contestcalendar emits one running per row, as in "CQ Worldwide DX
+# Contest, SSB" or "NCCC FT4 Sprint". It therefore overrides the table mode,
+# including for a specific contest, whose curated mode describes the whole
+# family ("CW/SSB") rather than the running in this row.
+MODE_TOKENS = (
+    ("ft4", "FT4"),
+    ("ft8", "FT8"),
+    ("rtty", "RTTY"),
+    ("psk31", "PSK31"),
+    ("psk", "PSK31"),
+    ("sideband", "SSB"),
+    ("ssb", "SSB"),
+    ("phone", "SSB"),
+    ("cw", "CW"),
+)
+_SSB_TOKENS = ("ssb", "sideband", "phone")
+
+
+def mode_from_name(name_lower: str) -> str | None:
+    """Return the mode a contest name states outright, or None if it states none."""
+    # A row naming both, e.g. "... Contest, CW/SSB", is both and not whichever
+    # token happens to be tested first.
+    if "cw" in name_lower and any(t in name_lower for t in _SSB_TOKENS):
+        return "CW/SSB"
+    for token, mode in MODE_TOKENS:
+        if token in name_lower:
+            return mode
+    return None
+
+
+def _longest_match(name_lower: str, table: dict) -> dict | None:
+    """Return the metadata of the longest key in table contained in name_lower."""
+    best_key = None
+    best_meta = None
+    for key, meta in table.items():
+        if key in name_lower and (best_key is None or len(key) > len(best_key)):
+            best_key, best_meta = key, meta
+    return best_meta
+
+
 def enrich_contest(name: str) -> dict:
-    """Look up metadata for a contest by name."""
+    """Look up metadata for a contest by name.
+
+    Specific contests first, then generic fragments, then an explicit mode
+    token in the name overriding whichever mode the table supplied. Always
+    returns a fresh dict, so a caller cannot mutate the tables.
+    """
     name_lower = name.lower()
-    for key, meta in MAJOR_CONTESTS.items():
-        if key in name_lower:
-            return meta
-    # Guess mode from name
-    mode = "CW" if "cw" in name_lower else \
-           "SSB" if any(x in name_lower for x in ["ssb","phone","sideband"]) else \
-           "FT8" if "ft8" in name_lower else \
-           "FT4" if "ft4" in name_lower else \
-           "RTTY" if "rtty" in name_lower else "Various"
-    return {"mode": mode, "bands": "HF", "sponsor": "", "tier": 3}
+    meta = (_longest_match(name_lower, SPECIFIC_CONTESTS)
+            or _longest_match(name_lower, GENERIC_FRAGMENTS))
+    mode = mode_from_name(name_lower)
+    if meta is None:
+        return {"mode": mode or "Various", "bands": "HF", "sponsor": "", "tier": 3}
+    result = dict(meta)
+    if mode:
+        result["mode"] = mode
+    return result
 
 
 def parse_date(date_str: str, year: int) -> tuple[str, str]:
