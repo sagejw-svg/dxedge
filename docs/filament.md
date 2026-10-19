@@ -34,7 +34,7 @@ of those is showing. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, G
 chassis while lit. Dekatron and Lattice register when their nodes are hosted. Thyratron and Gleam
 are registered in `device.js`. Mote, Heptode, Geissler, Pentagrid, Orthicon, Trochotron, Gyrotron, Klystron, Phantastron, Additron, Rhumbatron and Resnatron register
 when their modules load.
-Gleam is also a full-screen page at `/synth/gleam/`.
+Gleam is also a full-screen page at `/synth/gleam/`. Iris is a camera instrument at `/synth/iris/`, linked from the rack the way Hexode and Anode are: the picture stays in the browser, and a scan line, the color, the motion, or the edges become the sound.
 
 The rack framework (14 Oct) is what those devices plug into. Each device
 has one contract: a descriptor, a parameter table, MIDI in, a stereo output and a versioned patch.
@@ -132,6 +132,7 @@ task can read it).
 | `frontend/public/synth/resnatron-dsp.js` | The patch bay voice. Each cable is a one-sample delay |
 | `frontend/public/synth/resnatron.worklet.js` | AudioWorklet processor `resnatron` |
 | `frontend/public/synth/resnatron-ui.js` | The bay, drag cables, and `createResnatronHost`. `attach` calls `addDevice` |
+| `frontend/public/synth/iris/` | Iris, a camera instrument on its own page. `iris.js` is the patch and the pixel measurements, `iris-dsp.js` the voice, `iris.worklet.js` the processor, `iris-ui.js` the panel |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |

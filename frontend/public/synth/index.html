@@ -732,7 +732,7 @@
     .dnum { flex-basis: 44px; width: 44px; }
     .dpad { min-height: 44px; min-width: 44px; }
     .rail { padding: 4px 4px 0; gap: 4px; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; min-width: 0; } .rail .label { display: none; } .devbtn small { display: none; } .devbtn { flex: 0 0 auto; justify-content: center; min-width: 44px; min-height: 44px; }
-    .racklinks { padding: 6px 6px 0; } .racklinks .devlink { flex: 1 1 calc(50% - 6px); justify-content: center; min-width: 0; min-height: 44px; } .racklinks .devlink small { display: none; }
+    .racklinks { padding: 6px 6px 0; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; min-width: 0; } .racklinks .devlink { flex: 0 0 auto; justify-content: center; min-width: 44px; min-height: 44px; letter-spacing: 0.4px; font-size: 10px; padding: 6px 8px; white-space: nowrap; } .racklinks .devlink small { display: none; }
     .jackfield { gap: 8px; } .jgroup { flex: 1 1 100%; }
     .jack { width: calc((100% - 16px) / 5); min-width: 52px; min-height: 66px; font-size: 8px; }
     body[data-tab="stereo"] #mStereo { order: -2; } body[data-tab="stereo"] #mEns { order: -1; }
@@ -841,6 +841,7 @@
       <a class="devlink" href="/synth/acid/">ANODE<small>acid bass</small></a>
       <a class="devlink" href="/synth/hand-orchestra/">HAND ORCHESTRA<small>air keyboard</small></a>
       <a class="devlink" href="/synth/hand-aether/">AETHER<small>hand theremin</small></a>
+      <a class="devlink" href="/synth/iris/">IRIS<small>camera score</small></a>
     </div>
     <div class="chassis" id="chassis" aria-label="Tube chassis">
       <div class="tgroup">
