@@ -6,6 +6,16 @@
 	<meta name="theme-color" content="#080808">
 	<title>Hexode - six-operator FM - DXEdge</title>
 	<meta name="description" content="Hexode: a six-operator FM synthesizer in the browser. Play from the computer keyboard or a MIDI keyboard, and load your own .syx voice bank.">
+	<script>
+	(function () {
+		try {
+			var s = localStorage.getItem('dxedge_ui_size');
+			if (s !== 's' && s !== 'm' && s !== 'l' && s !== 'xl') s = window.innerWidth >= 1600 ? 'l' : 'm';
+			document.documentElement.setAttribute('data-ui', s);
+		} catch (e) { document.documentElement.setAttribute('data-ui', 'm'); }
+	})();
+	</script>
+	<link rel="stylesheet" href="/synth/desk.css">
 	<link rel="stylesheet" type="text/css" href="synth.css">
 	<link rel="stylesheet" type="text/css" href="skin.css">
 </head>
@@ -17,6 +27,17 @@
 			<p class="site-intro">Six-operator FM. Computer keys play it, a MIDI keyboard plays it, and a .syx bank you load replaces the init voice.</p>
 		</div>
 		<div class="site-links">
+			<span class="hex-tools">
+				<button type="button" class="dx7-button" id="holdBtn" aria-pressed="false" title="Hold notes after you let go. The ` key does the same while it is down. Panic clears it.">Hold</button>
+				<label title="Output level for this page. It is not stored in a voice.">vol <input id="hexVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Hexode volume"><b id="hexVolV">100%</b></label>
+				<label title="Hard ceiling at about -1 dB. Off leaves the voice exactly as it was."><input id="hexLim" type="checkbox" aria-label="Hexode limiter"> limit</label>
+			</span>
+			<div class="uisize" id="uiSize" role="group" aria-label="Control size">
+				<button type="button" data-ui-size="s" title="Small controls">S</button>
+				<button type="button" data-ui-size="m" title="Medium controls">M</button>
+				<button type="button" data-ui-size="l" title="Large controls">L</button>
+				<button type="button" data-ui-size="xl" title="Extra large controls">XL</button>
+			</div>
 			<a href="/synth/">Filament rack</a>
 			<a href="/synth/acid/">Anode</a>
 			<a class="site-tip" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
@@ -162,9 +183,13 @@
 		</div>
 	</div>
 	<footer class="site-foot">
-		<p>Keys: the letter row is one octave from C, the row below is the octave under it. Space or Panic stops every note. Knobs and sliders drag up and down.</p>
+		<p>Keys: the letter row is one octave from C, the row below is the octave under it. Space or Panic stops every note. Hold, or the ` key, keeps notes sounding. Knobs and sliders drag up and down; hold Shift for a finer drag, and use the arrows or the mouse wheel while a control is focused. S M L XL is remembered for the whole site.</p>
 		<p>Hexode uses the FM engine by <a href="https://github.com/mmontag/dx7-synth-js">Matt Montag</a>, MIT license, commit <code>f269f0e</code>. A factory cartridge is not included. Load a 32-voice .syx of your own. Part of <a href="/synth/">the Filament rack</a> on <a href="/">DXEdge</a>.</p>
 	</footer>
 	<script src="bundle.js"></script>
+	<script type="module">
+	import { mountUiSize } from '../desk.js';
+	mountUiSize(document.getElementById('uiSize'));
+	</script>
 </body>
 </html>

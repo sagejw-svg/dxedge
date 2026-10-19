@@ -17,7 +17,7 @@ export default function Synth() {
   return (
     <div className="synth-panel">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; pentagrid &middot; orthicon &middot; trochotron &middot; gyrotron &middot; klystron &middot; phantastron &middot; additron &middot; rhumbatron &middot; resnatron &middot; hexode &middot; anode &middot; aether</div>
+        <div style={{ ...label, marginBottom: 8 }}>filament &middot; cathode &middot; thyratron &middot; dekatron &middot; lattice &middot; gleam &middot; mote &middot; heptode &middot; geissler &middot; pentagrid &middot; orthicon &middot; trochotron &middot; gyrotron &middot; klystron &middot; phantastron &middot; additron &middot; rhumbatron &middot; resnatron &middot; hexode &middot; anode &middot; hand orchestra &middot; aether</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 660 }}>
           Filament is polyphonic and built around lit tubes that do real
           work: one drives the filters, one sits inside the Valve filter's resonance loop, and a
@@ -40,6 +40,7 @@ export default function Synth() {
           Gleam is a touch field on the same rack, and full screen at <a href="/synth/gleam/">/synth/gleam/</a>.
           Two more devices, each on its own page: <a href="/synth/fm/">Hexode</a> (six-operator FM)
           and <a href="/synth/acid/">Anode</a> (acid bass groovebox).
+          <a href="/synth/hand-orchestra/">Hand Orchestra</a> plays chord tones from the fingertips.
           <a href="/synth/hand-aether/">Aether</a> is a two-hand theremin. The camera picture stays in the browser.
         </p>
       </div>

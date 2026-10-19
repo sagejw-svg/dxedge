@@ -9,7 +9,8 @@
 import {Clock, pressToStart} from "./boilerplate.js";
 import {Audio, AudioT} from './audio.js';
 import {NineOhGen, ThreeOhGen} from "./pattern.js";
-import {UI} from "./ui.js";
+import {UI, resetDesk} from "./ui.js";
+import {mountUiSize, bindFineControls} from "../../desk.js";
 import {
     DrumPattern,
     genericParameter,
@@ -256,6 +257,8 @@ async function start() {
     const autoPilot = AutoPilot(programState);
     const ui = UI(programState, autoPilot, audio.master.analyser);
     document.body.append(ui);
+    mountUiSize(document.getElementById("uiSize"));
+    bindFineControls(document);
 
     const probe = audio.ThreeOh("sawtooth", audio.master.in);
     const analyser = audio.master.analyser;
@@ -275,7 +278,9 @@ async function start() {
                 s += v * v;
             }
             return Math.sqrt(s / a.length);
-        }
+        },
+        reset: () => resetDesk(programState, autoPilot),
+        cutoff: () => programState.notes[0].parameters.cutoff.value
     };
 }
 

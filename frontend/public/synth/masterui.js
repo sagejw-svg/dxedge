@@ -98,6 +98,8 @@ export function mountMaster(api) {
     set('fxRev', r.on, r.on ? 'on' : 'off');
     set('fxComp', c.on, c.on ? 'on' : 'off');
     set('fxLim', c.limit);
+    const safe = document.getElementById('safeLim');
+    if (safe) { safe.setAttribute('aria-pressed', String(!!c.safety)); safe.textContent = c.safety ? 'limit on' : 'limit'; }
     divSel.value = d.div;
     divSel.disabled = !d.sync;
     knobs['delay.time'].el.style.opacity = d.sync ? '0.45' : '';
@@ -120,6 +122,8 @@ export function mountMaster(api) {
   toggle('fxRev', () => { state.reverb.on = !state.reverb.on; });
   toggle('fxComp', () => { state.comp.on = !state.comp.on; });
   toggle('fxLim', () => { state.comp.limit = !state.comp.limit; });
+  const safeBtn = document.getElementById('safeLim');
+  if (safeBtn) safeBtn.addEventListener('click', () => { state.comp.safety = !state.comp.safety; commit(); });
   divSel.addEventListener('change', () => { state.delay.div = divSel.value; commit(); });
 
   // Touching a bypassed effect's knobs switches it on, same rule as the rest of the rack.

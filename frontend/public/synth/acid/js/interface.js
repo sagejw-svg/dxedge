@@ -26,5 +26,5 @@ export function trigger(name, value = false) {
     return genericParameter(name, value);
 }
 export function parameter(name, bounds, value) {
-    return Object.assign(genericParameter(name, value), { bounds });
+    return Object.assign(genericParameter(name, value), { bounds, home: value });
 }

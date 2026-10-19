@@ -30,7 +30,7 @@ export const MASTER_DEFAULT = {
   tempo: 120,
   delay: { on: false, sync: true, div: '1/8', time: 375, feedback: 0.35, mix: 0.35, ping: false, offset: 0 },
   reverb: { on: false, size: 0.55, damp: 0.35, mix: 0.28, width: 1 },
-  comp: { on: false, threshold: -18, ratio: 4, attack: 10, release: 120, knee: 6, makeup: 0, limit: true, ceiling: -1 },
+  comp: { on: false, threshold: -18, ratio: 4, attack: 10, release: 120, knee: 6, makeup: 0, limit: true, ceiling: -1, safety: false },
 };
 
 const RANGE = {
@@ -161,7 +161,11 @@ export async function makeMasterFx(ctx, initial) {
   // A bypassed offline render never builds the worklet. Constructing one, even left
   // unplugged, shifts the context against a render that has no master bus at all.
   // The live page still loads the module up front so switching an effect on is synchronous.
-  const needNow = state.delay.on || state.reverb.on || state.comp.on;
+  // The safety limiter is a real processor even while the compressor is bypassed.
+  // Leaving it out of this check wired the master straight through, so a loud note
+  // was never held to the ceiling.
+  const busActive = s => !!(s && (s.delay.on || s.reverb.on || s.comp.on || s.comp.safety));
+  const needNow = busActive(state);
   if (!offlineContext(ctx) || needNow) {
     if (!ctx.__filamentMaster) { await ctx.audioWorklet.addModule(WORKLET); ctx.__filamentMaster = true; }
   }
@@ -196,7 +200,7 @@ export async function makeMasterFx(ctx, initial) {
   // An insert (Gleam's effect pad) sits in that path only while insert.on is set.
   // insert.input is never disconnected: that node owns the effect's internal graph.
   function route() {
-    const want = force || state.delay.on || state.reverb.on || state.comp.on;
+    const want = force || busActive(state);
     const useIns = !!(insert && insert.on);
     if (!source || (want === viaWorklet && useIns === lastInsert)) return;
     try { source.disconnect(); } catch (e) {}

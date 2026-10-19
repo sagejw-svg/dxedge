@@ -16,4 +16,5 @@ The page is a light reskin (near-black ground, amber type, the site mono stack).
 - Panel labels are "LINE 1", "LINE 2", and "KIT". Mute buttons say bass, open hat, closed hat, and snare.
 - Dial and meter text use the site mono stack instead of Orbitron.
 - `window.__anode` plays one bass note and reports the output level, for the smoke test.
+- Dials take keyboard and mouse-wheel focus, and Shift makes the drag finer. Reset puts every dial back to its starting value and turns off "Twiddle With Knobs". The two lines and the kit sit side by side on a wide screen. S M L XL is the same remembered control size as the rest of the synths.
 - The start screen and the paragraph under the title both name Vitling, the original title, and CC BY 4.0, and say that the drums in this copy are synthesized.

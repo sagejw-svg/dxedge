@@ -113,6 +113,8 @@ Synth.prototype.noteOff = function(note) {
 			voice.down = false;
 			if (this.sustainPedalDown === false)
 				voice.noteOff();
+			else
+				voice.latched = true;
 		}
 	}
 };

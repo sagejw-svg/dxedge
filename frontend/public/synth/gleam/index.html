@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#080808">
+<script>
+(function () {
+  try {
+    var s = localStorage.getItem('dxedge_ui_size');
+    if (s !== 's' && s !== 'm' && s !== 'l' && s !== 'xl') s = window.innerWidth >= 1600 ? 'l' : 'm';
+    document.documentElement.setAttribute('data-ui', s);
+  } catch (e) { document.documentElement.setAttribute('data-ui', 'm'); }
+})();
+</script>
+<link rel="stylesheet" href="/synth/desk.css">
 <title>Gleam - touch field - DXEdge</title>
 <meta name="description" content="Gleam: a touch field synthesizer. Each finger is a voice. Across is pitch, up is timbre, pressure is level. Hold latches a note, and a generator can play the pad by itself.">
 <style>
@@ -25,6 +35,12 @@
     <h1>GLE<span>AM</span></h1>
   </div>
   <nav>
+    <div class="uisize" id="uiSize" role="group" aria-label="Control size">
+      <button type="button" data-ui-size="s" title="Small controls">S</button>
+      <button type="button" data-ui-size="m" title="Medium controls">M</button>
+      <button type="button" data-ui-size="l" title="Large controls">L</button>
+      <button type="button" data-ui-size="xl" title="Extra large controls">XL</button>
+    </div>
     <a href="/synth/">Rack</a>
     <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
   </nav>
@@ -33,14 +49,17 @@
 <script type="module">
 import { createGleamHost, mountGleamPad, renderGleamBuffer } from '../gleam-ui.js';
 import { renderGleamFx } from '../gleam-fx.js';
+import { mountUiSize, bindFineControls } from '../desk.js';
 
 const host = createGleamHost();
 const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 let booted = false;
+mountUiSize(document.getElementById('uiSize'));
 const view = mountGleamPad(document.getElementById('gleamRoot'), host, {
   standalone: true,
   wake() { if (ctx.state !== 'running') ctx.resume().catch(() => {}); },
 });
+bindFineControls(document);
 host.attach(ctx, ctx.destination, null, { standalone: true }).then(() => {
   host.setActive(true);
   host.setPatch(host.patch());

@@ -17,7 +17,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { Clock, pressToStart } from "./boilerplate.js";
 import { Audio } from './audio.js';
 import { NineOhGen, ThreeOhGen } from "./pattern.js";
-import { UI } from "./ui.js";
+import { UI, resetDesk } from "./ui.js";
+import { mountUiSize, bindFineControls } from "../../desk.js";
 import { genericParameter, parameter, trigger } from "./interface.js";
 function WanderingParameter(param, scaleFactor = 1 / 400) {
     const [min, max] = param.bounds;
@@ -229,6 +230,8 @@ function start() {
         const autoPilot = AutoPilot(programState);
         const ui = UI(programState, autoPilot, audio.master.analyser);
         document.body.append(ui);
+        mountUiSize(document.getElementById("uiSize"));
+        bindFineControls(document);
         const probe = audio.ThreeOh("sawtooth", audio.master.in);
         const analyser = audio.master.analyser;
         window.__anode = {
@@ -247,9 +250,11 @@ function start() {
                     const v = (a[i] - 128) / 128;
                     s += v * v;
                 }
-                return Math.sqrt(s / a.length);
-            }
-        };
+            return Math.sqrt(s / a.length);
+        },
+        reset: () => resetDesk(programState, autoPilot),
+        cutoff: () => programState.notes[0].parameters.cutoff.value
+    };
     });
 }
 pressToStart(start, "Anode", "Acid bass groovebox. The Endless Acid Banger by Vitling (David Whiting), CC BY 4.0. Drums in this copy are synthesized.");

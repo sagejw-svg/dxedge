@@ -25,7 +25,8 @@ export type GeneralisedParameter<T> = {
 export type Trigger = GeneralisedParameter<boolean>
 
 export type NumericParameter = GeneralisedParameter<number> & {
-    bounds: [number,number]
+    bounds: [number,number],
+    home: number
 }
 
 export type PatternParameter = GeneralisedParameter<Pattern>;
@@ -99,7 +100,7 @@ export function trigger(name: string, value: boolean = false): Trigger {
 }
 
 export function parameter(name: string, bounds: [number, number], value: number): NumericParameter {
-    return Object.assign(genericParameter<number>(name, value), {bounds});
+    return Object.assign(genericParameter<number>(name, value), {bounds, home: value});
 }
 
 export type ProgramState = {

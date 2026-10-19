@@ -210,3 +210,11 @@ Inferences and recommendations (James decides; none are done):
   repo stays public; run a proper trademark search; choose a product name that does not collide
   with Forma Labs' filament (the device can keep its name inside a differently named product,
   subject to that search); have an IP attorney review this file.
+
+## Register: Hand Orchestra camera model (19 Oct 2026)
+
+Hand Orchestra at `frontend/public/synth/hand-orchestra/` does not vendor MediaPipe. The page loads
+[MediaPipe Tasks Vision](https://github.com/google-ai-edge/mediapipe) 0.10.21 and the Hand Landmarker
+float16 model in the browser, from jsDelivr and Google storage, only after Use camera. Both are
+Apache License 2.0. Camera frames are read locally and are not uploaded. The page names MediaPipe
+and links the license. The gesture, chord and voice code in that folder is original.

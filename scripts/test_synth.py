@@ -5340,6 +5340,128 @@ with sync_playwright() as pw:
     ph.screenshot(path=os.path.join(SHOTS, "synth_resnatron_phone.png"))
     ck("Rn. 390px: no page errors", not perr, perr)
     ph.close()
+
+    # Wide desk: remembered control size, undo, init, master volume, safety limiter.
+    pg.evaluate("__synth.setDevice('filament')")
+    pg.wait_for_timeout(80)
+    ck("Desk. 1366 starts at medium when nothing is saved", pg.evaluate("document.documentElement.getAttribute('data-ui')") == "m")
+    ck("Desk. undo, init, volume, limiter and size controls are on the page",
+       pg.locator("#undoBtn").count() == 1 and pg.locator("#initBtn").count() == 1
+       and pg.locator("#mastVol").count() == 1 and pg.locator("#safeLim").count() == 1
+       and pg.locator("#uiSize [data-ui-size]").count() == 4)
+    moved = pg.evaluate("""() => {
+      const k = [...document.querySelectorAll('#kFilt .knob')].find(el => el.getAttribute('aria-label') === 'cutoff');
+      k.focus();
+      const before = __synth.patch().filt.cutoff;
+      k.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+      const after = __synth.patch().filt.cutoff;
+      __synth.undo();
+      const back = __synth.patch().filt.cutoff;
+      return { before, after, back };
+    }""")
+    ck("Desk. arrow-up on cutoff can be undone",
+       moved["after"] != moved["before"] and abs(moved["back"] - moved["before"]) < 1e-4, moved)
+    pg.evaluate("__synth.resetDevice()")
+    pg.wait_for_timeout(40)
+    ck("Desk. init loads the plain Init patch", pg.evaluate("__synth.patch().name") == "Init")
+    vol = pg.evaluate("""() => {
+      const name = __synth.patch().name;
+      const g = __synth.setMasterVol(0.5);
+      const gain = __synth.engine().master.gain.value;
+      __synth.setMasterVol(1);
+      return { g, gain, name, restored: __synth.engine().master.gain.value, patch: __synth.patch().name };
+    }""")
+    ck("Desk. master volume is the output gain and is not a patch",
+       abs(vol["g"] - 0.5) < 1e-6 and abs(vol["gain"] - 0.5) < 1e-6 and abs(vol["restored"] - 1) < 1e-6 and vol["patch"] == vol["name"], vol)
+    ck("Desk. the safety limiter is off", pg.evaluate("__synth.master().comp.safety") is False)
+    loud = patch(osc1={"wave": "sine", "level": 1}, osc2={"wave": "sine", "level": 1}, filt={"model": "ladder24", "cutoff": 18000}, out={"level": 12, "drive": 6})
+    safeL, _ = render(loud, note(60, 0.02, v=1), 0.8, rack=False, master={"comp": {"on": False, "safety": True, "ceiling": -18, "limit": False}})
+    bareL, _ = render(loud, note(60, 0.02, v=1), 0.8, rack=False, master={"comp": {"on": False, "safety": False}})
+    spk, bpk = float(np.max(np.abs(safeL[int(0.2 * SR):]))), float(np.max(np.abs(bareL[int(0.2 * SR):])))
+    ck("Desk. the safety limiter holds a loud note near a low ceiling",
+       bpk > 0.2 and spk < bpk * 0.85 and spk < 0.2, (spk, bpk))
+    pg.evaluate("__synth.setMaster({comp:{safety:false, on:false}})")
+    wide = b.new_page(viewport={"width": 1920, "height": 1080})
+    wide.add_init_script("try { localStorage.removeItem('dxedge_ui_size'); localStorage.removeItem('dxedge_master_vol'); } catch (e) {}")
+    werr = []
+    wide.on("pageerror", lambda e: werr.append(str(e)))
+    wide.goto(BASE)
+    wide.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    wide.wait_for_timeout(200)
+    desk = wide.evaluate("""() => {
+      const k = document.getElementById('keybed');
+      const s = getComputedStyle(k);
+      const r = k.getBoundingClientRect();
+      const knob = document.querySelector('.knob');
+      return {
+        ui: document.documentElement.getAttribute('data-ui'),
+        pos: s.position,
+        bottom: r.bottom,
+        h: innerHeight,
+        scroll: document.documentElement.scrollWidth <= innerWidth + 1,
+        knob: knob ? knob.getBoundingClientRect().width : 0,
+      };
+    }""")
+    ck("Desk. 1920 starts large, the keys stay on screen, and the page does not scroll sideways",
+       desk["ui"] == "l" and desk["pos"] == "fixed" and abs(desk["bottom"] - desk["h"]) < 3
+       and desk["scroll"] and desk["knob"] >= 70 and not werr, (desk, werr))
+    def key_fill(page):
+        return page.evaluate("""() => {
+          const wrap = document.getElementById('keyswrap').getBoundingClientRect();
+          const keys = document.getElementById('keys').getBoundingClientRect();
+          const kb = document.getElementById('keybed').getBoundingClientRect();
+          const box = e => { const r = e.getBoundingClientRect(); return { t: (e.innerText || e.textContent || '').replace(/\\s+/g, ' ').trim(), top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+          const labs = [...document.querySelectorAll('.stripcol .sl')].map(box);
+          const lines = [...document.querySelectorAll('.kctl div')].filter(e => e.offsetParent).map(box);
+          const inside = rows => rows.every(r => r.top >= kb.top - 1 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1 && r.left >= -1);
+          const overlap = labs.length >= 2 && labs[0].right > labs[1].left + 0.5;
+          const ww = document.querySelector('.key.w');
+          return {
+            gap: Math.round((wrap.right - keys.right) * 10) / 10,
+            fill: keys.width >= wrap.width - 2,
+            whites: document.querySelectorAll('.key.w').length,
+            keyW: ww ? Math.round(ww.getBoundingClientRect().width * 10) / 10 : 0,
+            overlap, labelsIn: inside(labs), linesIn: inside(lines), labs, lines,
+          };
+        }""")
+    fill = key_fill(wide)
+    ck("Desk. 1920 keys fill the bar and the bottom labels stay on screen",
+       fill["fill"] and fill["gap"] <= 2 and fill["whites"] >= 29 and not fill["overlap"] and fill["labelsIn"] and fill["linesIn"], fill)
+    huge = b.new_page(viewport={"width": 2048, "height": 1080})
+    huge.add_init_script("try { localStorage.setItem('dxedge_ui_size', 'l'); } catch (e) {}")
+    huge.goto(BASE)
+    huge.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    huge.wait_for_timeout(200)
+    fill2 = key_fill(huge)
+    ck("Desk. 2048 keys fill the bar and the bottom labels stay on screen",
+       fill2["fill"] and fill2["gap"] <= 2 and fill2["whites"] >= 36 and fill2["keyW"] >= 28
+       and not fill2["overlap"] and fill2["labelsIn"] and fill2["linesIn"], fill2)
+    mid = b.new_page(viewport={"width": 1280, "height": 800})
+    mid.add_init_script("try { localStorage.removeItem('dxedge_ui_size'); } catch (e) {}")
+    mid.goto(BASE)
+    mid.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ck("Desk. 1280 stays medium", mid.evaluate("document.documentElement.getAttribute('data-ui')") == "m")
+    ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    ph.add_init_script("try { localStorage.setItem('dxedge_ui_size', 'xl'); } catch (e) {}")
+    ph.goto(BASE)
+    ph.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    ph.wait_for_timeout(200)
+    phone_fit = ph.evaluate("""() => {
+      const small = [...document.querySelectorAll('#undoBtn, #initBtn, #safeLim, #uiSize button, #mastVol')]
+        .filter(e => e.offsetParent)
+        .filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; })
+        .map(e => (e.id || e.textContent || '').trim() + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height));
+      return { scroll: document.documentElement.scrollWidth <= innerWidth && innerWidth === 390, small };
+    }""")
+    ck("Desk. a saved XL size still fits a phone", phone_fit["scroll"] and not phone_fit["small"], phone_fit)
+    phone_keys = ph.evaluate("""() => {
+      const ww = document.querySelector('.key.w');
+      const r = ww ? ww.getBoundingClientRect() : { width: 0, height: 0 };
+      return { w: r.width, h: r.height, n: document.querySelectorAll('.key.w').length };
+    }""")
+    ck("Desk. a phone keeps 44px keys", phone_keys["w"] >= 44 and phone_keys["h"] >= 44 and phone_keys["n"] <= 20, phone_keys)
+    wide.close(); mid.close(); ph.close(); huge.close()
+
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(80)
     ck("Rn. no page errors", not errs, errs)
