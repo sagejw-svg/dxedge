@@ -4,7 +4,7 @@
 import {
   AXES, DEFAULT_CC, DEFAULT_CAL, FINGERS, NOTE_NAMES, RACK_TARGETS, VOICE,
   analyzeHand, ccBytes, createSession, degreeFromFingers, knobPlan, landmarksFromPose,
-  midiPlan, setPath, spanCal,
+  midiPlan, placeFingerLabels, setPath, spanCal,
 } from './theory.js';
 import { createOrchestra } from './audio.js';
 import { mountUiSize, bindFineControls } from '../desk.js';
@@ -40,6 +40,7 @@ let cal = {
 };
 let smooth = 0.35;
 let margin = 0.08;
+let cameraOff = false;
 const session = createSession({ key: 0, smooth, cal, chordFrames: 4 });
 
 let audioCtx = null;
@@ -62,6 +63,8 @@ let pendingRack = null;
 let sentCc = {};
 let storageSnap = null;
 let lastRaw = null;
+let camGen = 0;
+let lastLabels = [];
 
 function loadSettings() {
   try {
@@ -79,6 +82,7 @@ function loadSettings() {
     if (Number.isFinite(raw.smooth)) smooth = Math.max(0.05, Math.min(1, raw.smooth));
     if (Number.isFinite(raw.margin)) margin = Math.max(0.02, Math.min(0.35, raw.margin));
     if (raw.mode === 'controller' || raw.mode === 'orchestra') mode = raw.mode;
+    if (typeof raw.cameraOff === 'boolean') cameraOff = raw.cameraOff;
   } catch (e) { /* keep defaults */ }
   session.setKey(keyRoot);
   session.setAlpha(smooth);
@@ -89,7 +93,7 @@ function loadSettings() {
 function saveSettings() {
   const data = {
     key: keyRoot, channel, cc: ccMap, target: targetId, knobs: knobAssign,
-    monitor, swap: swapHands, cal, smooth, margin, mode,
+    monitor, swap: swapHands, cal, smooth, margin, mode, cameraOff,
   };
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (e) { /* private mode */ }
 }
@@ -336,6 +340,7 @@ function drawOverlay(state, fromCamera) {
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, w, h);
+  lastLabels = [];
   if (!fromCamera) {
     ctx.fillStyle = '#100e0c';
     ctx.fillRect(0, 0, w, h);
@@ -365,7 +370,7 @@ function drawOverlay(state, fromCamera) {
       });
       ctx.stroke();
     });
-    FINGERS.forEach(id => {
+    const tips = FINGERS.map(id => {
       const tip = pt(VOICE_TIP[id]);
       const on = hand.role === 'play' ? state.play[id] : state.chordFingers[id];
       ctx.globalAlpha = 1;
@@ -373,20 +378,42 @@ function drawOverlay(state, fromCamera) {
       ctx.arc(tip.x, tip.y, on ? 9 : 5, 0, Math.PI * 2);
       ctx.fillStyle = on ? hand.color : 'rgba(226,226,226,0.55)';
       ctx.fill();
-      if (hand.role === 'play') {
-        const voice = state.voices.find(v => v.finger === id);
-        const lv = voice ? 0.9 : 0.08;
-        ctx.fillStyle = '#00ff9d';
-        ctx.fillRect(tip.x + 12, tip.y + 14 - 32 * lv, 4, 32 * lv);
-        ctx.fillStyle = '#ffd08a';
-        ctx.font = '12px ui-monospace, monospace';
-        ctx.fillText(voice ? voice.name : VOICE[id].label, tip.x + 8, tip.y - 12);
-      }
+      const voice = hand.role === 'play' ? state.voices.find(v => v.finger === id) : null;
+      return { id, x: tip.x, y: tip.y, on, voice, text: voice ? voice.name : VOICE[id].label };
     });
+    if (hand.role === 'play') {
+      ctx.font = '12px ui-monospace, monospace';
+      const placed = placeFingerLabels(tips.map(t => ({
+        id: t.id, x: t.x, y: t.y, text: t.text, w: ctx.measureText(t.text).width,
+      })), { width: w, height: h, font: 12, gap: 8 });
+      lastLabels = placed;
+      const side = placed.length ? placed[0].side : 'right';
+      tips.forEach(t => {
+        const lv = t.voice ? 0.9 : 0.08;
+        const barX = side === 'right' ? t.x - 16 : t.x + 12;
+        ctx.fillStyle = '#00ff9d';
+        ctx.fillRect(barX, t.y + 14 - 32 * lv, 4, 32 * lv);
+      });
+      ctx.strokeStyle = 'rgba(255, 208, 138, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#ffd08a';
+      ctx.font = '12px ui-monospace, monospace';
+      placed.forEach(lab => {
+        const edgeX = lab.side === 'right' ? lab.x : lab.x + lab.w;
+        ctx.beginPath();
+        ctx.moveTo(lab.tipX, lab.tipY);
+        ctx.lineTo(edgeX, lab.top + lab.h * 0.5);
+        ctx.stroke();
+        ctx.fillText(lab.text, lab.x, lab.y);
+      });
+    }
     const wrist = pt(0);
     ctx.fillStyle = hand.color;
     ctx.font = '11px ui-monospace, monospace';
-    ctx.fillText(hand.role === 'chord' ? state.roman : 'play', wrist.x - 16, wrist.y + 16);
+    const tag = hand.role === 'chord' ? state.roman : 'play';
+    const playSide = hand.role === 'play' && lastLabels.length ? lastLabels[0].side : '';
+    const tagX = playSide === 'right' ? Math.max(4, wrist.x - 40) : wrist.x + 8;
+    ctx.fillText(tag, tagX, wrist.y + 16);
   });
   ctx.globalAlpha = 1;
 }
@@ -426,50 +453,109 @@ function setCamStatus(state, detail) {
     asking: 'Asking for the camera. Allow it and the picture stays on this machine. Nothing is uploaded.',
     loading: 'Camera is on. Loading the hand model into this browser. Frames are not sent anywhere.',
     live: 'Camera is live in this browser. Frames are not uploaded. Raise a finger to play. Curl it to stop.',
-    denied: 'Camera permission was blocked. Allow the camera for this site in the browser bar, or keep playing with the mouse.',
+    denied: 'Camera permission was blocked. Allow the camera for this site in the browser bar, then press Turn on camera. The mouse hand still plays.',
+    gesture: 'The browser wants a click before it opens the camera. Press Turn on camera. The picture stays in this browser and is not uploaded. The mouse hand plays until then.',
     missing: 'This browser has no camera API. The mouse hand still plays.',
-    error: 'The camera or the hand model did not start. The mouse hand still plays.',
+    error: 'The camera or the hand model did not start. The mouse hand still plays. Nothing from the camera is uploaded.',
+  };
+  const explain = {
+    off: 'The picture stays in this browser and is not uploaded. The mouse hand plays until then.',
+    denied: 'The browser blocked the camera. Allow it in the address bar, then press this button. The mouse hand plays until then.',
+    gesture: 'This browser wants a click before it opens the camera. The picture stays here and is not uploaded. The mouse hand plays until then.',
+    missing: 'This browser has no camera. The mouse hand still plays. Nothing is uploaded.',
+    error: 'The camera did not start. Press to try again. The picture is not uploaded, and the mouse hand still plays.',
   };
   el.textContent = messages[state] || messages.error;
   if (detail && (state === 'error' || state === 'denied')) el.textContent += ' ' + detail;
-  $('camBtn').textContent = state === 'live' ? 'Stop camera' : 'Use camera';
+  const running = state === 'live' || state === 'loading' || state === 'asking';
+  $('camBtn').textContent = running ? 'Stop camera' : 'Use camera';
   $('camBtn').setAttribute('aria-pressed', String(state === 'live'));
   $('stage').dataset.cam = state;
+  const prompt = $('camPrompt');
+  if (prompt) prompt.hidden = running;
+  const line = $('camExplain');
+  if (line && explain[state]) line.textContent = explain[state];
 }
 
-async function startCamera() {
+function cameraPermission() {
+  try {
+    if (!navigator.permissions || !navigator.permissions.query) return Promise.resolve('unknown');
+    return navigator.permissions.query({ name: 'camera' }).then(q => (q && q.state) || 'unknown').catch(() => 'unknown');
+  } catch (e) {
+    return Promise.resolve('unknown');
+  }
+}
+
+function dropStream(media) {
+  if (media && media.getTracks) media.getTracks().forEach(t => t.stop());
+}
+
+async function startCamera(opts) {
+  const gen = ++camGen;
+  const user = !!(opts && opts.user);
+  if (user) {
+    cameraOff = false;
+    saveSettings();
+  }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     setCamStatus('missing');
+    pushMouse();
     return;
   }
   setCamStatus('asking');
   ensureAudio();
+  let media = null;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    media = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
     });
   } catch (e) {
-    const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
-    setCamStatus(denied ? 'denied' : 'error', e && e.message ? e.message : '');
+    if (gen !== camGen) return;
+    const blocked = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+    if (!blocked) {
+      setCamStatus('error', e && e.message ? e.message : '');
+      pushMouse();
+      return;
+    }
+    const perm = await cameraPermission();
+    if (gen !== camGen) return;
+    setCamStatus(perm === 'denied' ? 'denied' : 'gesture');
+    pushMouse();
     return;
   }
+  if (gen !== camGen) {
+    dropStream(media);
+    return;
+  }
+  stream = media;
   const video = $('cam');
   video.srcObject = stream;
   video.muted = true;
   video.playsInline = true;
   try { await video.play(); } catch (e) { /* a later gesture will play it */ }
+  if (gen !== camGen) return;
   setCamStatus('loading');
   try {
     landmarker = await loadLandmarker('GPU');
   } catch (e) {
     try { landmarker = await loadLandmarker('CPU'); }
     catch (e2) {
-      stopCamera();
+      if (gen !== camGen) return;
+      stopCamera({ user: false });
       setCamStatus('error', 'The hand model could not be loaded. Check the network once, then try again. The picture itself is not uploaded.');
       return;
     }
   }
+  if (gen !== camGen) {
+    if (landmarker && landmarker.close) {
+      try { landmarker.close(); } catch (e) { /* already stopped */ }
+    }
+    landmarker = null;
+    return;
+  }
+  cameraOff = false;
+  saveSettings();
   setCamStatus('live');
   track();
 }
@@ -487,14 +573,34 @@ async function loadLandmarker(delegate) {
   });
 }
 
-function stopCamera() {
-  if (stream) stream.getTracks().forEach(t => t.stop());
+function stopCamera(opts) {
+  const user = !!(opts && opts.user);
+  camGen += 1;
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
+  dropStream(stream);
   stream = null;
   const video = $('cam');
   if (video) video.srcObject = null;
+  if (landmarker && landmarker.close) {
+    try { landmarker.close(); } catch (e) { /* already closed */ }
+  }
   landmarker = null;
-  if (camState === 'live' || camState === 'loading' || camState === 'asking') setCamStatus('off');
+  if (user) {
+    cameraOff = true;
+    saveSettings();
+    setCamStatus('off');
+  }
   pushMouse();
+}
+
+function bootCamera() {
+  if (cameraOff) {
+    setCamStatus('off');
+    pushMouse();
+    return;
+  }
+  startCamera();
 }
 
 function track() {
@@ -614,7 +720,6 @@ function wire() {
   fillTargets();
   fillCc();
   setMode(mode);
-  setCamStatus('off');
 
   $('modeOrchestra').addEventListener('click', () => setMode('orchestra'));
   $('modeController').addEventListener('click', () => setMode('controller'));
@@ -660,9 +765,10 @@ function wire() {
   });
 
   $('camBtn').addEventListener('click', () => {
-    if (camState === 'live' || camState === 'loading' || camState === 'asking') stopCamera();
-    else startCamera();
+    if (camState === 'live' || camState === 'loading' || camState === 'asking') stopCamera({ user: true });
+    else startCamera({ user: true });
   });
+  $('turnOnCamera').addEventListener('click', () => startCamera({ user: true }));
 
   $('markLow').addEventListener('click', () => markCal('low'));
   $('markHigh').addEventListener('click', () => markCal('high'));
@@ -727,6 +833,7 @@ function wire() {
   window.addEventListener('keydown', onKey);
   window.addEventListener('pointerdown', () => ensureAudio(), { capture: true });
   pushMouse();
+  bootCamera();
 }
 
 function markCal(which) {
@@ -878,6 +985,8 @@ window.__handOrchestra = {
   setMode,
   size: () => document.documentElement.getAttribute('data-ui'),
   cam: () => camState,
+  labels: () => lastLabels.map(l => Object.assign({}, l)),
+  cameraOff: () => cameraOff,
   audio: () => orchestra ? { sounding: orchestra.sounding(), meters: orchestra.tick() } : null,
   panic,
   rack: () => ({ ready: rackReady, target: targetId, driving: driveRack, frame: rackFrame }),
