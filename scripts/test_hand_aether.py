@@ -129,6 +129,14 @@ with sync_playwright() as pw:
     high = pg.evaluate("""() => { __aether.pointer(0.86, 0.18); return __aether.settle(10, 0.05); }""")
     ck("right-hand X raises the pitch", high["hz"] > low["hz"] * 1.4, (low["hz"], high["hz"], low["note"], high["note"]))
     ck("right-hand Y raises the volume", high["volume"] > low["volume"] + 0.35, (low["volume"], high["volume"]))
+    box = pg.locator("#view").bounding_box()
+    pg.mouse.move(box["x"] + box["width"] * 0.22, box["y"] + box["height"] * 0.82)
+    pg.wait_for_timeout(120)
+    edge_low = pg.evaluate("() => __aether.raw()")
+    pg.mouse.move(box["x"] + box["width"] * 0.84, box["y"] + box["height"] * 0.16)
+    pg.wait_for_timeout(120)
+    edge_high = pg.evaluate("() => __aether.raw()")
+    ck("the picture tracks the mouse", edge_high["x"] > edge_low["x"] + 0.4 and edge_high["y"] < edge_low["y"] - 0.4, (edge_low["x"], edge_low["y"], edge_high["x"], edge_high["y"]))
 
     pg.evaluate("""() => { document.getElementById('snapBtn').click(); }""")
     # snap starts on; one click turns it off
@@ -242,6 +250,7 @@ with sync_playwright() as pw:
     ck("swap hands exchanges which hand plays pitch", swapped["normal"] > 0.7 and swapped["flipped"] < 0.4, swapped)
 
     ink = pg.evaluate("""() => {
+      __aether.paint();
       const c = document.getElementById('view');
       const data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
       let n = 0;

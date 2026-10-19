@@ -292,7 +292,7 @@ function drawGuides(g, rect, pose) {
     const pitch01 = (midi - map.PITCH_LOW) / (map.PITCH_HIGH - map.PITCH_LOW);
     const xNorm = cal.x0 + pitch01 * (cal.x1 - cal.x0);
     const x = rect.x + xNorm * rect.w;
-    g.strokeStyle = 'rgba(255,179,71,0.28)';
+    g.strokeStyle = 'rgba(255,179,71,0.5)';
     g.beginPath();
     g.moveTo(x, rect.y);
     g.lineTo(x, rect.y + rect.h);
@@ -305,7 +305,7 @@ function drawGuides(g, rect, pose) {
   [0, 0.25, 0.5, 0.75, 1].forEach((v) => {
     const yNorm = cal.y0 - v * (cal.y0 - cal.y1);
     const y = rect.y + yNorm * rect.h;
-    g.strokeStyle = 'rgba(122,255,178,0.22)';
+    g.strokeStyle = 'rgba(122,255,178,0.4)';
     g.beginPath();
     g.moveTo(rect.x, y);
     g.lineTo(rect.x + rect.w, y);
@@ -426,9 +426,14 @@ function parseHands(result) {
 
 function loop(now) {
   raf = requestAnimationFrame(loop);
-  if (mode === 'camera') detect(now);
-  step(now);
-  draw(now);
+  try {
+    if (mode === 'camera') detect(now);
+    step(now);
+    draw(now);
+  } catch (err) {
+    // One bad frame must not stop the instrument.
+    console.error(err);
+  }
 }
 
 function hideGate() { $('gate').hidden = true; }
@@ -520,9 +525,28 @@ function cancelCalibration() {
 
 function pointerNorm(event) {
   const bounds = $('view').getBoundingClientRect();
-  const x = (event.clientX - bounds.left - viewRect.x) / (viewRect.w || bounds.width);
-  const y = (event.clientY - bounds.top - viewRect.y) / (viewRect.h || bounds.height);
-  return { x: map.clamp(x, 0, 1), y: map.clamp(y, 0, 1) };
+  if (mode !== 'camera' || !cssW || !cssH) {
+    return {
+      x: map.clamp((event.clientX - bounds.left) / (bounds.width || 1), 0, 1),
+      y: map.clamp((event.clientY - bounds.top) / (bounds.height || 1), 0, 1),
+    };
+  }
+  const scaleX = bounds.width / cssW;
+  const scaleY = bounds.height / cssH;
+  const rx = viewRect.x * scaleX;
+  const ry = viewRect.y * scaleY;
+  const rw = viewRect.w * scaleX || bounds.width;
+  const rh = viewRect.h * scaleY || bounds.height;
+  return {
+    x: map.clamp((event.clientX - bounds.left - rx) / rw, 0, 1),
+    y: map.clamp((event.clientY - bounds.top - ry) / rh, 0, 1),
+  };
+}
+
+function hear() {
+  // A real pointer can arrive while a stepped clock is ahead of the frame.
+  // Advance from that clock so the pose lands immediately.
+  step((simTime || clockNow()) + 1);
 }
 
 function onPointer(event) {
@@ -531,6 +555,7 @@ function onPointer(event) {
   const p = pointerNorm(event);
   mouse.x = p.x;
   mouse.y = p.y;
+  hear();
 }
 
 function bind() {
@@ -651,8 +676,9 @@ window.__aether = {
   setMouse: (partial) => { Object.assign(mouse, partial || {}); },
   ingest: (hands) => {
     held = { hands: hands || [] };
-    heldUntil = clockNow() + 5000;
+    heldUntil = (simTime || clockNow()) + 60000;
   },
+  paint: () => { draw(simTime || clockNow()); return { cssW, cssH, width: $('view').width, height: $('view').height }; },
   release: () => { held = null; },
   settle: (n = 8, dt = 0.05) => {
     let t = simTime || clockNow();
