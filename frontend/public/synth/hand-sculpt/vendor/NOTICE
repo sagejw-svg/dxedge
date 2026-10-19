@@ -1,0 +1,18 @@
+MediaPipe Tasks Vision 0.10.21
+Copyright Google LLC
+Licensed under the Apache License, Version 2.0. See LICENSE in this folder.
+
+Files:
+  vision_bundle.mjs
+  wasm/vision_wasm_internal.js
+  wasm/vision_wasm_internal.wasm
+  wasm/vision_wasm_nosimd_internal.js
+  wasm/vision_wasm_nosimd_internal.wasm
+
+Hand landmarker model:
+  hand_landmarker.task
+  float16, from the MediaPipe model catalog
+  https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+
+Sculpt loads these files from this site and runs them in the browser.
+Camera frames are not uploaded.

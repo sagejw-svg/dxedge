@@ -37,6 +37,7 @@ import Emulators from './components/Emulators'
 import Stats from './components/Stats'
 import Otr from './components/Otr'
 import Synth from './components/Synth'
+import Sculpt from './components/Sculpt'
 
 const TABS = [
   // Propagation & operating
@@ -69,6 +70,7 @@ const TABS = [
   { id: 'otr',      label: 'OTR' },
   // Synth
   { id: 'synth',    label: 'Synth' },
+  { id: 'sculpt',   label: 'Sculpt' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
@@ -134,6 +136,7 @@ const TAB_GROUPS = [
     label: 'Synth',
     tabs: [
       { id: 'synth', label: 'Filament', icon: '🎹' },
+      { id: 'sculpt', label: 'Sculpt', icon: '✋' },
     ],
   },
   {
@@ -436,6 +439,7 @@ export default function App() {
           {tab === 'emulators' && <Emulators />}
           {tab === 'otr' && <Otr />}
           {tab === 'synth' && <Synth />}
+          {tab === 'sculpt' && <Sculpt />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}

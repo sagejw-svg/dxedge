@@ -40,6 +40,7 @@ export default function Synth() {
           Gleam is a touch field on the same rack, and full screen at <a href="/synth/gleam/">/synth/gleam/</a>.
           Two more devices, each on its own page: <a href="/synth/fm/">Hexode</a> (six-operator FM)
           and <a href="/synth/acid/">Anode</a> (acid bass groovebox).
+          Sculpt is a hand instrument in 3D: pinch a glowing orb and move it. Full screen at <a href="/synth/hand-sculpt/">/synth/hand-sculpt/</a>.
         </p>
       </div>
 
