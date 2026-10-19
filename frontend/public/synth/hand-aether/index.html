@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-size="m">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<title>Aether - hand theremin - DXEdge</title>
+<meta name="description" content="Aether: a two-hand theremin in the browser. The camera stays on your device. Right hand sets pitch and volume, distance sets the filter, left hand sets vibrato and reverb. A fist mutes.">
+<link rel="stylesheet" href="aether.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="label">dxedge.net / synth / aether</div>
+      <h1>AE<span>THER</span></h1>
+      <p class="intro">A two-hand theremin. Move in the air, or play it with the mouse. The camera picture is processed in this browser. It is not recorded and it is not uploaded.</p>
+    </div>
+    <nav class="nav" aria-label="Site">
+      <a href="/synth/">Filament rack</a>
+      <a href="/">DXEdge</a>
+      <a class="tip" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>
+    </nav>
+  </header>
+
+  <div class="inst"><div class="inst-in">
+    <div class="toolbar">
+      <div class="row">
+        <span class="label">size</span>
+        <div class="sizes" role="group" aria-label="Size">
+          <button type="button" data-size="s" aria-pressed="false">S</button>
+          <button type="button" data-size="m" aria-pressed="true">M</button>
+          <button type="button" data-size="l" aria-pressed="false">L</button>
+          <button type="button" data-size="xl" aria-pressed="false">XL</button>
+        </div>
+      </div>
+      <div class="row" aria-label="Status">
+        <span class="lamp"><i id="audioLamp"></i><span id="audioState">audio off</span></span>
+        <span class="lamp"><i id="camLamp"></i><span id="camState">camera off</span></span>
+        <span class="lamp"><i id="muteLamp"></i><span id="muteState">open</span></span>
+      </div>
+    </div>
+
+    <div id="gate" class="card ask">
+      <h2>Camera</h2>
+      <p id="gateText">Aether uses your camera to see both hands. The picture stays in this browser. It is not recorded or uploaded. You can play with the mouse instead, with no camera at all.</p>
+      <div class="row">
+        <button type="button" class="btn" id="cameraBtn">Use the camera</button>
+        <button type="button" class="btn" id="mouseBtn">Play with the mouse</button>
+      </div>
+    </div>
+    <div id="calBanner" class="card ask" hidden>
+      <h2>Calibrate</h2>
+      <p id="calText">Move your right hand through the lowest, highest, quietest, and loudest places you want to play. Come close to the camera and back away. Pinch and spread the left hand, or move the sliders. Then press Done.</p>
+      <div class="row">
+        <button type="button" class="btn" id="calDone">Done</button>
+        <button type="button" class="btn" id="calCancel">Cancel</button>
+      </div>
+    </div>
+    <div id="stage" class="stage">
+      <video id="cam" playsinline muted autoplay aria-hidden="true"></video>
+      <canvas id="view" aria-label="Mirrored camera preview with hand skeleton, pitch zones left to right, volume zones bottom to top"></canvas>
+    </div>
+
+    <p class="status" id="status" role="status">Choose the camera or the mouse.</p>
+    <p class="label" id="zoneLegend">Pitch runs left to right. Volume runs from quiet at the bottom to loud at the top. The lines on the picture are those zones.</p>
+
+    <div class="readout">
+      <div class="note"><span id="noteName">—</span><small id="hzRead">move to play</small></div>
+      <span id="noteLive" class="sr" aria-live="polite"></span>
+      <div>
+        <canvas id="scope" width="640" height="48" aria-hidden="true"></canvas>
+        <div class="meters">
+          <div class="meter vol"><span>volume</span><i><b id="volMeter"></b></i></div>
+          <div class="meter"><span>filter</span><i><b id="cutMeter"></b></i></div>
+          <div class="meter"><span>vibrato</span><i><b id="vibMeter"></b></i></div>
+          <div class="meter room"><span>reverb</span><i><b id="revMeter"></b></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label class="field">Scale
+        <span class="row">
+          <button type="button" class="btn" id="snapBtn" aria-pressed="true">Snap to scale</button>
+        </span>
+        <select id="scalePick" class="btn" aria-label="Scale"></select>
+      </label>
+      <label class="field">Root
+        <select id="rootPick" class="btn" aria-label="Scale root"></select>
+      </label>
+      <label class="field">Smoothing <span id="smoothOut"></span>
+        <input id="smooth" type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Smoothing">
+      </label>
+      <label class="field">Latency <span id="latencyOut"></span>
+        <input id="latency" type="range" min="5" max="180" step="1" value="36" aria-label="Latency, pitch glide in milliseconds">
+      </label>
+      <label class="field">Distance / filter
+        <input id="filterSlider" type="range" min="0" max="1" step="0.01" value="0.58" aria-label="Distance from the camera, filter">
+      </label>
+      <label class="field">Pinch / vibrato
+        <input id="vibSlider" type="range" min="0" max="1" step="0.01" value="0" aria-label="Left-hand pinch, vibrato">
+      </label>
+      <label class="field">Spread / reverb
+        <input id="revSlider" type="range" min="0" max="1" step="0.01" value="0.12" aria-label="Left-hand spread, reverb">
+      </label>
+      <div class="field">Hands
+        <span class="row">
+          <button type="button" class="btn" id="cameraLaunch">Use the camera</button>
+          <button type="button" class="btn" id="calBtn">Calibrate</button>
+          <button type="button" class="btn" id="swapBtn" aria-pressed="false">Swap hands</button>
+          <button type="button" class="btn warn" id="muteBtn" aria-pressed="false">Mute</button>
+          <button type="button" class="btn" id="stopCam" hidden>Stop camera</button>
+        </span>
+      </div>
+    </div>
+  </div></div>
+
+  <section class="how" id="howTo">
+    <h2>How to play</h2>
+    <ul>
+      <li>Right hand, left to right: pitch. Up is louder, down is quiet. That is the volume.</li>
+      <li>Right hand closer to the camera opens the filter. Farther away darkens it.</li>
+      <li>Left-hand pinch adds vibrato. Spread fingers add reverb.</li>
+      <li>A fist, on either hand, mutes. The Mute button and the space bar do the same.</li>
+      <li>Snap to scale locks the pitch. Pick a scale and a root, or turn snap off for a continuous glide.</li>
+      <li>Smoothing steadies a shaky hand. Latency is how quickly the note glides to where your hand is.</li>
+      <li>Calibrate so the corners of the picture match your reach.</li>
+      <li>With the mouse: move in the picture for pitch and volume, use the wheel or the distance slider for the filter, and use the pinch and spread sliders for the left hand.</li>
+    </ul>
+  </section>
+  <p class="credit">Hand tracking uses <a href="https://developers.google.com/mediapipe/solutions/vision/hand_landmarker">MediaPipe Tasks Vision</a> by Google, <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>. The hand model is downloaded only after you allow the camera. The picture itself never leaves this browser. Part of the <a href="/synth/">Filament rack</a> on <a href="/">DXEdge</a>.</p>
+</div>
+<script type="module" src="app.js"></script>
+<script src="/lib/stat.js"></script>
+</body>
+</html>
