@@ -3434,6 +3434,10 @@ with sync_playwright() as pw:
     pg.click("#hepPlay")
     pg.wait_for_timeout(200)
     ck("H. play starts the file", pg.evaluate("__synth.heptodeState().playing") is True)
+    # The wide-screen keyboard is fixed over the bottom of the page. The field
+    # already has a scroll margin for that bar; the drag has to land on the
+    # canvas, not on the keys.
+    pg.locator("#heptodePlace").scroll_into_view_if_needed()
     box = pg.locator("#heptodePlace").bounding_box()
     pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] - 30)
     pg.mouse.down()

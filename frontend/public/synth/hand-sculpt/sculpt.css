@@ -105,6 +105,27 @@ h1 span { color: var(--amber); }
 }
 .olabel.hot { color: var(--green); }
 
+.stage-cam {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  width: min(320px, calc(100% - 28px));
+  min-height: 72px;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  background: var(--amber);
+  color: #1a1004;
+  font-weight: 700;
+  font-size: calc(20px * var(--s));
+  letter-spacing: 0.4px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+}
+.stage-cam:hover { background: var(--amber2); }
+
 .hud, .gate, .cal {
   position: absolute;
   z-index: 2;

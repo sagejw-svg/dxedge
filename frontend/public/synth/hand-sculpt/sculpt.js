@@ -12,9 +12,9 @@ import { createScene } from './scene.js';
 const SIZES = ['s', 'm', 'l', 'xl'];
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const INPUT_KEY = 'sculpt-input';
 const canvas = document.getElementById('view');
-const stage = document.getElementById('stage');
-const gate = document.getElementById('gate');
+const stageCam = document.getElementById('stageCam');
 const calPanel = document.getElementById('cal');
 const statusEl = document.getElementById('status');
 const video = document.getElementById('cam');
@@ -32,8 +32,10 @@ let orbs = freshOrbs();
 let grab = { held: null, hand: null };
 let cal = loadCal() || defaultCal();
 let calibrated = !!loadCal();
-let mode = 'gate';
+let mode = 'mouse';
 let audio = null;
+let camGen = 0;
+let inputSettled = false;
 let analyser = null;
 let tracker = null;
 let stream = null;
@@ -101,13 +103,20 @@ async function ensureAudio() {
   if (audio.ctx.state !== 'running') await audio.ctx.resume();
 }
 
-function showGate() {
-  gate.hidden = false;
-  calPanel.hidden = true;
+function prefersMouse() {
+  try { return JSON.parse(localStorage.getItem(INPUT_KEY) || 'null') === 'mouse'; }
+  catch (e) { return false; }
 }
 
-function hideGate() {
-  gate.hidden = true;
+function rememberMouse(on) {
+  try {
+    if (on) localStorage.setItem(INPUT_KEY, JSON.stringify('mouse'));
+    else localStorage.removeItem(INPUT_KEY);
+  } catch (e) { /* private mode */ }
+}
+
+function showStageCam(show) {
+  if (stageCam) stageCam.hidden = !show;
 }
 
 function showCal(on) {
@@ -306,18 +315,64 @@ function tick(t) {
 }
 
 let camMod = null;
+
+function stopCamera() {
+  if (tracker && tracker.close) {
+    try { tracker.close(); } catch (e) { /* already closed */ }
+  }
+  tracker = null;
+  if (camMod && stream) camMod.stopStream(stream);
+  else if (stream) {
+    for (const track of stream.getTracks()) track.stop();
+  }
+  stream = null;
+  if (video) {
+    video.srcObject = null;
+    video.hidden = true;
+  }
+}
+
 async function enterCamera() {
-  status('Asking for the camera. The picture stays in this browser. It is not uploaded.');
+  const gen = ++camGen;
+  inputSettled = false;
+  rememberMouse(false);
+  showStageCam(false);
+  showCal(false);
+  mode = 'camera';
+  status('Asking the browser for the camera. The picture stays in this browser and is not uploaded.');
   try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw Object.assign(new Error('no camera'), { name: 'NotFoundError' });
+    }
+    const next = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+    });
+    if (gen !== camGen) {
+      next.getTracks().forEach(track => track.stop());
+      return;
+    }
     await ensureAudio();
     camMod = await import('./camera.js');
     window.__sculptTracker = camMod;
-    stream = await camMod.openCamera(video);
-    status('Loading the hand tracker on this device.');
+    stream = next;
+    video.srcObject = stream;
+    video.muted = true;
+    video.playsInline = true;
+    try { await video.play(); } catch (e) { /* a later gesture can play it */ }
+    if (gen !== camGen) {
+      stopCamera();
+      return;
+    }
+    status('Loading the hand tracker on this device. The picture is not uploaded.');
     tracker = await camMod.loadTracker();
+    if (gen !== camGen) {
+      stopCamera();
+      return;
+    }
     mode = 'camera';
-    hideGate();
     video.hidden = false;
+    showStageCam(false);
     if (!calibrated) {
       showCal(true);
       status('Hold your open hand in the ring, then pinch. That sets your reach.');
@@ -326,22 +381,45 @@ async function enterCamera() {
       status('Camera on. The picture stays in this browser. Pinch an orb.');
     }
   } catch (err) {
-    mode = 'gate';
-    showGate();
-    video.hidden = true;
-    const why = err && err.message ? err.message : 'permission denied';
-    status(`Camera unavailable (${why}). The picture would have stayed in this browser. Play with the mouse instead.`);
+    if (gen !== camGen) return;
+    stopCamera();
+    const denied = err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError');
+    const message = denied
+      ? 'The browser did not allow the camera. Nothing was recorded. The mouse is playing. Press Turn on camera to try again.'
+      : 'The camera did not start. Nothing was uploaded. The mouse is playing. Press Turn on camera to try again.';
+    await enterMouse(message, false);
+  } finally {
+    if (gen === camGen) inputSettled = true;
   }
 }
 
-async function enterMouse() {
+async function enterMouse(message, cancel) {
+  if (cancel !== false) camGen += 1;
+  stopCamera();
   mode = 'mouse';
   mouse.pinch = 0;
-  hideGate();
   showCal(false);
-  video.hidden = true;
-  try { await ensureAudio(); } catch (err) { status(err.message || 'Audio unavailable'); return; }
-  status('Mouse. Drag an orb, wheel for depth, right-click plants the other hand.');
+  showStageCam(true);
+  status(message || 'Mouse. Drag an orb, wheel for depth, right-click plants the other hand.');
+  try { await ensureAudio(); } catch (err) { status(err.message || 'Audio unavailable'); }
+  inputSettled = true;
+}
+
+function chooseMouse() {
+  rememberMouse(true);
+  return enterMouse('Playing with the mouse. That choice is remembered on this browser. Turn on the camera when you want your hands.');
+}
+
+async function bootInput() {
+  try {
+    if (prefersMouse()) {
+      await enterMouse('Playing with the mouse, as you chose last time. Turn on the camera when you want your hands.');
+    } else {
+      await enterCamera();
+    }
+  } finally {
+    inputSettled = true;
+  }
 }
 
 function normEvent(e) {
@@ -437,8 +515,8 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-document.getElementById('camBtn').addEventListener('click', () => { enterCamera(); });
-document.getElementById('mouseBtn').addEventListener('click', () => { enterMouse(); });
+stageCam.addEventListener('click', () => { enterCamera(); });
+document.getElementById('mouseBtn').addEventListener('click', () => { chooseMouse(); });
 document.getElementById('calSkip').addEventListener('click', () => {
   calibrated = true;
   showCal(false);
@@ -459,14 +537,16 @@ roomIn.addEventListener('input', () => { reverb = Number(roomIn.value); reverbFr
 
 setSize(document.documentElement.dataset.size || 'm');
 if (!scene.ok) status('This browser could not start WebGL, so the hand view is unavailable.');
-else status('Allow the camera, or play with the mouse. Video is not uploaded.');
+else status('Starting the camera. The picture stays in this browser and is not uploaded.');
 
 window.__sculpt = {
   ready: () => !!(scene.ok && canvas),
+  settled: () => inputSettled,
   mode: () => mode,
   size: () => document.documentElement.dataset.size || 'm',
   setSize,
   useMouse: () => enterMouse(),
+  chooseMouse: () => chooseMouse(),
   useCamera: () => enterCamera(),
   setControl: (partial) => { Object.assign(mouse, partial || {}); },
   gl: () => !!scene.ok,
@@ -505,3 +585,4 @@ window.__sculpt = {
 };
 
 requestAnimationFrame(tick);
+bootInput();

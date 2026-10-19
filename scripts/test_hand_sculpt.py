@@ -100,12 +100,26 @@ with sync_playwright() as pw:
         };
       }
     """)
+    requests = []
+    pg.on("request", lambda r: requests.append(r.url))
     pg.goto(BASE)
-    pg.wait_for_function("window.__sculpt && __sculpt.ready()", timeout=20000)
+    pg.wait_for_function("window.__sculpt && __sculpt.ready() && __sculpt.settled()", timeout=20000)
     text = pg.locator("body").inner_text()
     ck("page names Sculpt", "SCULPT" in text and "hand" in text.lower(), text[:180])
-    ck("camera promise is on the page", "not uploaded" in text.lower() and "stays in this browser" in text.lower(), text[:400])
-    ck("camera is not requested on load", pg.evaluate("window.__gum") == 0, pg.evaluate("window.__gum"))
+    ck("camera promise is on the page", "not uploaded" in text.lower() and "stays in this browser" in text.lower(), text[:500])
+    ck("page load asks for the camera", pg.evaluate("window.__gum") == 1, pg.evaluate("window.__gum"))
+    ck("a refused camera falls back to the mouse", pg.evaluate("() => __sculpt.mode() === 'mouse'") and "did not allow" in pg.locator("#status").inner_text())
+    stage_box = pg.locator("#stage").bounding_box()
+    cam_box = pg.locator("#stageCam").bounding_box()
+    ck("Turn on camera sits on the picture",
+       pg.locator("#stageCam").inner_text().strip() == "Turn on camera" and cam_box and stage_box
+       and cam_box["width"] >= 160 and cam_box["height"] >= 64
+       and cam_box["x"] >= stage_box["x"] - 1 and cam_box["y"] >= stage_box["y"] - 1
+       and cam_box["x"] + cam_box["width"] <= stage_box["x"] + stage_box["width"] + 1
+       and cam_box["y"] + cam_box["height"] <= stage_box["y"] + stage_box["height"] + 1,
+       (cam_box, stage_box))
+    leaked = [u for u in requests if "hand_landmarker" in u or "vision_wasm" in u or "vision_bundle" in u]
+    ck("a refused camera does not load the hand model", not leaked, leaked)
     ck("WebGL scene started", pg.evaluate("__sculpt.gl()"))
     ck("no page errors on load", not errs["page"] and not errs["console"], errs)
     ck("size defaults to M", pg.evaluate("__sculpt.size()") == "m")
@@ -254,6 +268,20 @@ with sync_playwright() as pw:
     wet_tail = rms(wL[sl]) + rms(wR[sl])
     ck("open hands leave a wider reverb tail", wet_tail > dry_tail * 2.2, (dry_tail, wet_tail))
 
+    pg.evaluate("() => { window.__gum = 0 }")
+    pg.click("#mouseBtn")
+    pg.wait_for_function("() => __sculpt.mode() === 'mouse'")
+    ck("choosing the mouse leaves the camera alone", pg.evaluate("window.__gum") == 0, pg.evaluate("window.__gum"))
+    ck("choosing the mouse is remembered", pg.evaluate("""() => localStorage.getItem('sculpt-input') === '"mouse"'"""))
+    pg.reload()
+    pg.wait_for_function("window.__sculpt && __sculpt.ready() && __sculpt.settled()", timeout=20000)
+    ck("a remembered mouse choice does not ask again",
+       pg.evaluate("() => !window.__gum && __sculpt.mode() === 'mouse' && !document.getElementById('stageCam').hidden"))
+    pg.evaluate("() => { window.__gum = 0 }")
+    pg.click("#stageCam")
+    pg.wait_for_function("() => window.__gum === 1 && __sculpt.settled() && __sculpt.mode() === 'mouse'", timeout=20000)
+    ck("Turn on camera asks again and stays on the mouse if refused",
+       pg.locator("#stageCam").is_visible() and "did not allow" in pg.locator("#status").inner_text())
     pg.evaluate("() => __sculpt.useMouse()")
     pg.wait_for_function("() => __sculpt.mode() === 'mouse'")
     pg.evaluate("""() => __sculpt.setControl({ x: 0.5, y: 0.55, z: 0.15, roll: 0.2, spread: 0.9, pinch: 1, second: null })""")

@@ -21,7 +21,7 @@ try {
   <div class="brand">
     <div class="label">dxedge.net / synth / hand-sculpt</div>
     <h1>SCUL<span>PT</span></h1>
-    <p class="intro">Reach into a field of glowing orbs. Pinch one and move it. Up is pitch, across is pan, depth is the filter.</p>
+    <p class="intro">Reach into a field of glowing orbs. Pinch one and move it. Up is pitch, across is pan, depth is the filter. The camera starts when the page opens. The picture stays in this browser and is not uploaded.</p>
   </div>
   <div class="bar">
     <div class="sizes" role="group" aria-label="Size">
@@ -38,14 +38,7 @@ try {
   <canvas id="view" aria-label="Sculpt, a three dimensional field of sound orbs"></canvas>
   <div id="labels"></div>
   <video id="cam" hidden muted playsinline aria-label="Camera preview. The picture stays in this browser and is not uploaded."></video>
-  <section class="gate" id="gate">
-    <h2>CAMERA</h2>
-    <p>Sculpt uses your camera to see your hands. The picture stays in this browser. It is not recorded and it is not uploaded.</p>
-    <div class="row">
-      <button type="button" class="btn" id="camBtn">Allow camera</button>
-      <button type="button" class="btn" id="mouseBtn">Play with the mouse</button>
-    </div>
-  </section>
+  <button type="button" class="stage-cam" id="stageCam" hidden>Turn on camera</button>
   <section class="cal" id="cal" hidden>
     <div class="ring" aria-hidden="true"></div>
     <h2>CALIBRATE</h2>
@@ -54,7 +47,7 @@ try {
   </section>
   <div class="hud">
     <div>
-      <div id="status" role="status" aria-live="polite">Allow the camera, or play with the mouse. Video is not uploaded.</div>
+      <div id="status" role="status" aria-live="polite">Starting the camera. The picture stays in this browser and is not uploaded.</div>
       <div class="readout" id="readout"></div>
     </div>
     <div class="sliders">
@@ -64,11 +57,12 @@ try {
       <label>room <input id="room" type="range" min="0" max="1" step="0.01" value="0.22" aria-label="Reverb width"></label>
     </div>
     <div class="meter" title="Level"><i id="level"></i></div>
+    <button type="button" class="btn" id="mouseBtn">Play with the mouse</button>
     <button type="button" class="btn" id="recal">Calibrate</button>
   </div>
 </main>
 <section class="help">
-  <p><b>How to play.</b> Allow the camera, then pinch an orb between thumb and index. Move it left and right to pan, up and down for pitch, and closer or farther for the filter. Twist your wrist to brighten the tone. Spread the other fingers to explode it into grains. Open both hands and draw them apart to widen the reverb. Your hand is the skeleton in the scene.</p>
+  <p><b>How to play.</b> The camera starts when the page opens. Pinch an orb between thumb and index. Move it left and right to pan, up and down for pitch, and closer or farther for the filter. Twist your wrist to brighten the tone. Spread the other fingers to explode it into grains. Open both hands and draw them apart to widen the reverb. Your hand is the skeleton in the scene. If the browser needs a click, or you decline the camera, press Turn on camera. The mouse plays until then. Play with the mouse remembers that choice on this browser.</p>
   <p><b>Mouse.</b> Drag to pinch and move. The wheel is depth. <kbd>Alt</kbd> drag twists. <kbd>Shift</kbd> drag, or <kbd>[</kbd> <kbd>]</kbd>, spreads the fingers. Right-click plants the other hand; the gap widens the room. <kbd>Q</kbd> <kbd>E</kbd> twist. Arrow keys nudge.</p>
   <p>Hand tracking is MediaPipe, running in this page. Apache 2.0. No server, and no video leaves the browser. Part of <a href="/synth/">the Filament rack</a> on <a href="/">DXEdge</a>.</p>
 </section>

@@ -15,7 +15,7 @@ export default function Sculpt() {
           Sculpt is a field of glowing orbs. Pinch one and move it: across is pan,
           up is pitch, depth is the filter. Twist your wrist for timbre, spread
           your fingers to turn it into grains, and open both hands apart to widen
-          the reverb. The camera picture stays in the browser and is not uploaded.
+          the reverb. The camera starts when the page opens. The picture stays in the browser and is not uploaded.
           Full page at <a href="/synth/hand-sculpt/">/synth/hand-sculpt/</a>.
         </p>
       </div>
