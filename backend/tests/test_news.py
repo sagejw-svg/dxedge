@@ -785,7 +785,7 @@ def test_page_wires_match_the_desk():
     assert 'class: "chip"' in html
     assert "status.examples" in html
     assert "Space nerd" not in html
-    assert "CACHE_NAME = 'dxedge-v106'" in sw
+    assert "CACHE_NAME = 'dxedge-v107'" in sw
     assert "url.pathname.startsWith('/news/')" in sw
     # The paper is not intercepted. A service worker response hides the dialog.
     before_mutable, _, after_mutable = sw.partition("const mutable")

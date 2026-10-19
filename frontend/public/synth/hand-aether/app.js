@@ -10,9 +10,10 @@ const KEYS = {
   size: 'dxedge-aether-size',
   cal: 'dxedge-aether-cal',
   set: 'dxedge-aether-settings',
+  input: 'dxedge-aether-input',
 };
 
-let mode = 'gate';
+let mode = 'mouse';
 let armed = false;
 let ctx = null;
 let graph = null;
@@ -39,6 +40,8 @@ let cssW = 10;
 let cssH = 10;
 let silent = false;
 let booted = false;
+let inputSettled = false;
+let camGen = 0;
 
 function readJSON(key) {
   try {
@@ -132,6 +135,20 @@ function fillSelects() {
 }
 
 function saveSettings() { writeJSON(KEYS.set, settings); }
+
+function prefersMouse() { return readJSON(KEYS.input) === 'mouse'; }
+
+function rememberMouse(on) {
+  if (on) writeJSON(KEYS.input, 'mouse');
+  else {
+    try { localStorage.removeItem(KEYS.input); } catch (e) { /* private mode */ }
+  }
+}
+
+function showStageCam(show) {
+  $('stageCam').hidden = !show;
+  $('cameraLaunch').hidden = !show;
+}
 
 function sources(now) {
   if (mode === 'camera' && lastDetect && lastDetect.hands && lastDetect.hands.length) return lastDetect;
@@ -436,45 +453,78 @@ function loop(now) {
   }
 }
 
-function hideGate() { $('gate').hidden = true; }
-
-function playMouse() {
+function engageMouse(status) {
+  camGen += 1;
+  stopCamera(false);
   mode = 'mouse';
-  hideGate();
+  showStageCam(true);
   arm();
-  $('stopCam').hidden = !stream;
-  setStatus('Mouse. Left to right is pitch, up is louder. The wheel, or the distance slider, is the filter.');
+  setStatus(status || 'Mouse. Left to right is pitch, up is louder. The wheel, or the distance slider, is the filter.');
+}
+
+function chooseMouse() {
+  rememberMouse(true);
+  engageMouse('Playing with the mouse. That choice is remembered on this browser. Turn on the camera when you want your hands.');
 }
 
 async function useCamera() {
-  hideGate();
+  const gen = ++camGen;
+  rememberMouse(false);
+  showStageCam(false);
   mode = 'camera';
   arm();
   $('camState').textContent = 'asking';
   setStatus('Asking the browser for the camera. The picture stays on this device.');
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw Object.assign(new Error('no camera'), { name: 'NotFoundError' });
+    }
+    const next = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
     });
+    if (gen !== camGen) {
+      next.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    stream = next;
     const video = $('cam');
     video.srcObject = stream;
     video.muted = true;
     video.playsInline = true;
     await video.play();
+    if (gen !== camGen) {
+      stopCamera(false);
+      return;
+    }
     setStatus('Loading the hand model. Your picture is not uploaded.');
-    tracker = await createHandLandmarker();
+    const created = await createHandLandmarker();
+    if (gen !== camGen) {
+      created.close();
+      stopCamera(false);
+      return;
+    }
+    tracker = created;
     $('stopCam').hidden = false;
+    showStageCam(false);
     setStatus('Camera on. Right hand sets pitch and volume. Left hand sets vibrato and reverb. A fist mutes.');
   } catch (err) {
+    if (gen !== camGen) return;
     stopCamera(false);
-    mode = 'gate';
-    $('gate').hidden = false;
-    const denied = err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
-    $('gateText').textContent = denied
-      ? 'The browser did not allow the camera. Nothing was recorded. Play with the mouse, or try the camera again.'
-      : 'The camera or the hand model did not start. Nothing was uploaded. Play with the mouse, or try the camera again.';
-    setStatus($('gateText').textContent);
+    const denied = err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError');
+    const message = denied
+      ? 'The browser did not allow the camera. Nothing was recorded. The mouse is playing. Press Turn on camera to try again.'
+      : 'The camera or the hand model did not start. Nothing was uploaded. The mouse is playing. Press Turn on camera to try again.';
+    engageMouse(message);
+  }
+}
+
+async function startInput() {
+  try {
+    if (prefersMouse()) engageMouse('Playing with the mouse, as you chose last time. Turn on the camera when you want your hands.');
+    else await useCamera();
+  } finally {
+    inputSettled = true;
   }
 }
 
@@ -500,7 +550,7 @@ function beginCalibration() {
   extents = map.emptyExtents();
   calibrating = true;
   $('calBanner').hidden = false;
-  if (mode === 'gate') playMouse();
+  if (mode !== 'camera' && mode !== 'mouse') engageMouse();
   setStatus('Calibration is listening. Visit the corners, then press Done.');
 }
 
@@ -550,8 +600,9 @@ function hear() {
 }
 
 function onPointer(event) {
+  if (event.target && event.target.closest && event.target.closest('#stageCam')) return;
   if (mode !== 'mouse' && !calibrating) return;
-  if (mode === 'gate') playMouse();
+  arm();
   const p = pointerNorm(event);
   mouse.x = p.x;
   mouse.y = p.y;
@@ -562,10 +613,12 @@ function bind() {
   document.querySelectorAll('.sizes button').forEach((btn) => {
     btn.addEventListener('click', () => setSize(btn.dataset.size));
   });
-  $('cameraBtn').addEventListener('click', () => { useCamera(); });
+  $('stageCam').addEventListener('click', () => { useCamera(); });
   $('cameraLaunch').addEventListener('click', () => { useCamera(); });
-  $('mouseBtn').addEventListener('click', playMouse);
-  $('stopCam').addEventListener('click', () => stopCamera(true));
+  $('mouseBtn').addEventListener('click', chooseMouse);
+  $('stopCam').addEventListener('click', () => {
+    engageMouse('Camera off. The mouse still plays. Turn on the camera when you want your hands.');
+  });
   $('calBtn').addEventListener('click', beginCalibration);
   $('calDone').addEventListener('click', endCalibration);
   $('calCancel').addEventListener('click', cancelCalibration);
@@ -611,11 +664,11 @@ function bind() {
   $('muteBtn').addEventListener('click', () => {
     mouse.mute = !mouse.mute;
     $('muteBtn').setAttribute('aria-pressed', mouse.mute ? 'true' : 'false');
-    if (mode === 'gate') playMouse();
   });
   const stage = $('stage');
   stage.addEventListener('pointerdown', (event) => {
     if (mode === 'camera') return;
+    if (event.target && event.target.closest && event.target.closest('#stageCam')) return;
     stage.setPointerCapture(event.pointerId);
     onPointer(event);
   });
@@ -625,7 +678,6 @@ function bind() {
     event.preventDefault();
     mouse.filter = map.clamp(mouse.filter - Math.sign(event.deltaY) * 0.05, 0, 1);
     setSlider($('filterSlider'), mouse.filter);
-    if (mode === 'gate') playMouse();
   }, { passive: false });
   document.addEventListener('keydown', (event) => {
     if (event.code !== 'Space') return;
@@ -634,7 +686,6 @@ function bind() {
     if (event.repeat) return;
     event.preventDefault();
     mouse.space = true;
-    if (mode === 'gate') playMouse();
   });
   document.addEventListener('keyup', (event) => {
     if (event.code === 'Space') mouse.space = false;
@@ -646,6 +697,7 @@ function bind() {
 function clockNow() { return performance.now(); }
 
 function boot() {
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   smoothers = makeSmoothers();
   const savedSize = readJSON(KEYS.size);
   setSize(typeof savedSize === 'string' ? savedSize : 'm');
@@ -654,12 +706,13 @@ function boot() {
   resize();
   booted = true;
   raf = requestAnimationFrame(loop);
+  startInput();
 }
 
 boot();
 
 window.__aether = {
-  ready: () => booted && !!$('view') && !!$('gate'),
+  ready: () => booted && inputSettled && !!$('view') && !!$('stageCam'),
   mode: () => mode,
   size: () => document.documentElement.dataset.size,
   setSize,
@@ -667,9 +720,9 @@ window.__aether = {
   raw: () => Object.assign({}, raw || {}),
   calibration: () => Object.assign({}, cal),
   settings: () => Object.assign({}, settings),
-  playMouse,
+  playMouse: chooseMouse,
   pointer: (x, y) => {
-    if (mode !== 'mouse') playMouse();
+    if (mode !== 'mouse') engageMouse();
     mouse.x = map.clamp(+x || 0, 0, 1);
     mouse.y = map.clamp(+y || 0, 0, 1);
   },

@@ -77,6 +77,17 @@ h1 span { color: var(--amber); }
 }
 #view { display: block; width: 100%; height: 100%; }
 #cam { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.stage-cam {
+  position: absolute; z-index: 3; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(320px, calc(100% - 28px));
+  min-height: 72px; padding: 16px 18px;
+  border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--amber); color: #1a1004;
+  font-weight: 700; font-size: 1.25em; letter-spacing: 0.5px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+}
+.stage-cam:hover { background: var(--amber2); }
 
 .card {
   background: #121212; border: 1px solid var(--border2); border-radius: 10px;
