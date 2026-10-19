@@ -105,6 +105,30 @@ def welch(x, n=8192):
     w = np.hanning(n); segs = [x[i:i + n] * w for i in range(0, len(x) - n, n // 2)]
     return np.mean([np.abs(np.fft.rfft(sg)) ** 2 for sg in segs], axis=0), np.fft.rfftfreq(n, 1 / SR)
 
+# Licensing rule 7: no dependency without a register row. Every vendor/ folder under /synth
+# must be named in docs/filament-licensing.md, and every npm package a /synth page loads from
+# jsDelivr must appear there with its version and the folder that loads it.
+def _register_check():
+    import re as _re
+    repo = os.path.abspath(os.path.join(ROOT, "..", ".."))
+    with open(os.path.join(repo, "docs", "filament-licensing.md"), encoding="utf-8") as fh:
+        reg = fh.read()
+    vend, cdn = [], []
+    for d, _subs, files in os.walk(os.path.join(ROOT, "synth")):
+        rel = os.path.relpath(d, ROOT).replace(os.sep, "/")
+        if os.path.basename(d) == "vendor": vend.append(f"frontend/public/{rel}/")
+        if "vendor" in rel.split("/"): continue
+        for f in files:
+            if not f.endswith((".js", ".mjs", ".html")): continue
+            with open(os.path.join(d, f), encoding="utf-8", errors="ignore") as fh:
+                for name, ver in _re.findall(r"cdn\.jsdelivr\.net/npm/(@?[\w.-]+(?:/[\w.-]+)?)@([\d.]+)", fh.read()):
+                    cdn.append((name, ver, f"frontend/public/{rel}/"))
+    miss_v = sorted(set(v for v in vend if v not in reg))
+    miss_c = sorted(set(c for c in cdn if not all(x in reg for x in c)))
+    ck("licensing: every /synth vendor/ folder has a register row", not miss_v, miss_v)
+    ck("licensing: every CDN package a /synth page loads is in the register with its version and folder", not miss_c, miss_c)
+_register_check()
+
 from playwright.sync_api import sync_playwright
 _CANDIDATES = [
     os.environ.get("SYNTH_CHROMIUM", ""),

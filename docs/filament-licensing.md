@@ -212,7 +212,20 @@ Inferences and recommendations (James decides; none are done):
   with Forma Labs' filament (the device can keep its name inside a differently named product,
   subject to that search); have an IP attorney review this file.
 
-## Register: Hand Orchestra camera model (19 Oct 2026)
+## Register: MediaPipe for the hand pages (19 Oct 2026)
+
+Three pages track hands with [MediaPipe Tasks Vision](https://github.com/google-ai-edge/mediapipe)
+(npm `@mediapipe/tasks-vision`) and the Hand Landmarker float16 model. All of it is Apache License 2.0,
+Copyright Google LLC. Camera frames are read locally and are not uploaded on any of them.
+
+| Page | Folder | Version | How it gets MediaPipe |
+|-|-|-|-|
+| Hand Orchestra | `frontend/public/synth/hand-orchestra/` | 0.10.21 | Loaded from jsDelivr and Google storage after Use camera (details below). |
+| Aether | `frontend/public/synth/hand-aether/` | 0.10.17 | Loaded from jsDelivr (`vision_bundle.mjs`, `wasm/`) and the model from Google storage, after the camera is allowed. Not vendored. The page credit names MediaPipe and links the license. |
+| Sculpt | `frontend/public/synth/hand-sculpt/vendor/` | 0.10.21 | Vendored and served from this site: `vision_bundle.mjs`, `wasm/vision_wasm_internal.{js,wasm}`, `wasm/vision_wasm_nosimd_internal.{js,wasm}`, `hand_landmarker.task`. `LICENSE` (Apache 2.0) and `NOTICE` sit in that folder; the notice is in `THIRD_PARTY_NOTICES.md`. Checked 19 Oct 2026 by the check and debug job: the SIMD wasm, its loader and the model match jsDelivr 0.10.21 and Google storage byte for byte (sha256); `vision_bundle.mjs` differs only by its removed `sourceMappingURL` comment line. |
+
+Added by the 19 Oct check and debug job: Sculpt and Aether landed without a row (rule 7). The two
+pages use different versions (0.10.17 and 0.10.21); aligning them is optional.
 
 Hand Orchestra at `frontend/public/synth/hand-orchestra/` does not vendor MediaPipe. The page loads
 [MediaPipe Tasks Vision](https://github.com/google-ai-edge/mediapipe) 0.10.21 and the Hand Landmarker

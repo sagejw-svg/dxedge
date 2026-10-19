@@ -145,3 +145,15 @@ A description is at <https://ccrma.stanford.edu/~jos/pasp/Freeverb.html>.
 The JavaScript in `frontend/public/synth/master.worklet.js` was written for this project
 from that published description. It is not a copy of the Freeverb C++ sources.
 Public domain does not require attribution; this notice is here because the design is used.
+
+## MediaPipe Tasks Vision 0.10.21 (Sculpt, `frontend/public/synth/hand-sculpt/vendor/`)
+
+MediaPipe Tasks Vision and the Hand Landmarker float16 model.
+https://github.com/google-ai-edge/mediapipe
+Copyright Google LLC
+Apache License, Version 2.0. The full text is `frontend/public/synth/hand-sculpt/vendor/LICENSE`,
+and the NOTICE text is `frontend/public/synth/hand-sculpt/vendor/NOTICE`.
+Changed here: `vision_bundle.mjs` has its `sourceMappingURL` comment removed. The other files are as published.
+
+Hand Orchestra (`/synth/hand-orchestra/`, 0.10.21) and Aether (`/synth/hand-aether/`, 0.10.17)
+load the same library and model from jsDelivr and Google storage in the browser; they do not ship it.
