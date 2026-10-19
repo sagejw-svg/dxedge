@@ -45,7 +45,11 @@
   .stage { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #050505; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   #cam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); background: #050505; }
   #overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .stage[data-cam="off"] #cam, .stage[data-cam="missing"] #cam, .stage[data-cam="denied"] #cam, .stage[data-cam="error"] #cam { display: none; }
+  .stage[data-cam="off"] #cam, .stage[data-cam="missing"] #cam, .stage[data-cam="denied"] #cam, .stage[data-cam="error"] #cam, .stage[data-cam="gesture"] #cam { display: none; }
+  .cam-prompt { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center; background: rgba(8, 8, 8, 0.78); }
+  .cam-prompt[hidden] { display: none !important; }
+  .cam-prompt .cam-go { min-height: 72px; min-width: min(320px, 100%); padding: 16px 22px; font-size: 22px; letter-spacing: 0.4px; background: #1c140c; border-color: var(--amber); color: var(--amber2); }
+  .cam-prompt p { margin: 0; max-width: 34em; color: var(--text); font-size: 14px; line-height: 1.4; }
   .cam-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
   .readout { margin: 10px 0; color: var(--amber2); letter-spacing: 0.5px; min-height: 1.4em; }
   .axes { color: var(--dim); font-size: 12px; margin: 0 0 12px; }
@@ -128,6 +132,10 @@
       <div class="stage" id="stage" data-cam="off">
         <video id="cam" playsinline muted autoplay></video>
         <canvas id="overlay" aria-hidden="true"></canvas>
+        <div class="cam-prompt" id="camPrompt">
+          <button class="btn cam-go" id="turnOnCamera" type="button">Turn on camera</button>
+          <p id="camExplain">The picture stays in this browser and is not uploaded. The mouse hand plays until then.</p>
+        </div>
       </div>
       <p class="cam-note" id="camNote" role="status"></p>
       <p class="readout" id="readout" aria-live="polite">I  Cmaj7</p>
@@ -205,7 +213,7 @@
 
   <div class="panel" style="margin-top:14px">
     <h2>Camera, calibration, smoothing</h2>
-    <p class="intro">Use camera asks once. The picture is mirrored so it feels like a mirror, and the dots sit on the fingertips. MediaPipe reads the frames here. They are not uploaded and there is no account.</p>
+    <p class="intro">The camera starts when the page opens. The picture is mirrored so it feels like a mirror, and the dots sit on the fingertips. If you turn the camera off, it stays off until you press Turn on camera. MediaPipe reads the frames here. They are not uploaded and there is no account.</p>
     <div class="bar">
       <button class="btn" id="markLow" type="button">Mark low</button>
       <button class="btn" id="markHigh" type="button">Mark high</button>
