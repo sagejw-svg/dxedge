@@ -364,6 +364,68 @@ export function landmarksFromPose(pose) {
   return lm;
 }
 
+// Stack fingertip captions so neighbouring fingers do not share one line of
+// text. Labels sit in a column beside the hand, with a gap between boxes.
+// `w` may be a measured text width; otherwise a monospace estimate is used.
+export function placeFingerLabels(tips, bounds) {
+  const width = bounds && bounds.width > 0 ? bounds.width : 640;
+  const height = bounds && bounds.height > 0 ? bounds.height : 480;
+  const font = bounds && bounds.font > 0 ? bounds.font : 12;
+  const gap = bounds && Number.isFinite(bounds.gap) ? bounds.gap : 8;
+  const charW = font * 0.75;
+  const textH = Math.ceil(font * 1.35);
+  const items = (tips || []).map(t => {
+    const text = String(t && t.text || '');
+    const tw = t && Number.isFinite(t.w) && t.w > 0 ? Math.ceil(t.w) : Math.max(8, Math.ceil(text.length * charW));
+    return {
+      id: t && t.id,
+      text,
+      tipX: t ? t.x : NaN,
+      tipY: t ? t.y : NaN,
+      tw,
+      th: textH,
+    };
+  }).filter(t => Number.isFinite(t.tipX) && Number.isFinite(t.tipY));
+  if (!items.length) return [];
+  const maxTw = Math.max.apply(null, items.map(t => t.tw));
+  const minX = Math.min.apply(null, items.map(t => t.tipX));
+  const maxX = Math.max.apply(null, items.map(t => t.tipX));
+  const pad = 6;
+  const rightRoom = width - (maxX + 20);
+  const leftRoom = minX - pad;
+  const side = rightRoom >= maxTw + pad || rightRoom >= leftRoom ? 'right' : 'left';
+  const colX = side === 'right'
+    ? Math.max(pad, Math.min(width - maxTw - pad, maxX + 22))
+    : Math.max(pad, Math.min(minX - maxTw - 22, width - maxTw - pad));
+  const ordered = items.slice().sort((a, b) => a.tipY - b.tipY || a.tipX - b.tipX);
+  const minStep = textH + gap;
+  let tops = ordered.map(it => it.tipY - textH * 0.72);
+  for (let i = 1; i < tops.length; i++) {
+    if (tops[i] < tops[i - 1] + minStep) tops[i] = tops[i - 1] + minStep;
+  }
+  const bottom = height - pad;
+  const overflow = tops[tops.length - 1] + textH - bottom;
+  if (overflow > 0) tops = tops.map(t => t - overflow);
+  if (tops[0] < pad) tops = tops.map(t => t + (pad - tops[0]));
+  if (tops[0] < pad || tops[tops.length - 1] + textH > bottom) {
+    const room = Math.max(textH, bottom - pad - textH);
+    const step = ordered.length > 1 ? Math.min(minStep, room / (ordered.length - 1)) : 0;
+    tops = ordered.map((_, i) => pad + i * step);
+  }
+  return ordered.map((it, i) => ({
+    id: it.id,
+    text: it.text,
+    x: colX,
+    y: tops[i] + font,
+    w: it.tw,
+    h: it.th,
+    top: tops[i],
+    side,
+    tipX: it.tipX,
+    tipY: it.tipY,
+  }));
+}
+
 export function pinchAmount(ratio) {
   const open = 1.15;
   const closed = 0.22;
