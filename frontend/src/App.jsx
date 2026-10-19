@@ -37,6 +37,7 @@ import Emulators from './components/Emulators'
 import Stats from './components/Stats'
 import Otr from './components/Otr'
 import Synth from './components/Synth'
+import Aether from './components/Aether'
 
 const TABS = [
   // Propagation & operating
@@ -134,6 +135,7 @@ const TAB_GROUPS = [
     label: 'Synth',
     tabs: [
       { id: 'synth', label: 'Filament', icon: '🎹' },
+      { id: 'aether', label: 'Aether', icon: '✋' },
     ],
   },
   {
@@ -436,6 +438,7 @@ export default function App() {
           {tab === 'emulators' && <Emulators />}
           {tab === 'otr' && <Otr />}
           {tab === 'synth' && <Synth />}
+          {tab === 'aether' && <Aether />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}
