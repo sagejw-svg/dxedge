@@ -39,6 +39,7 @@ import Otr from './components/Otr'
 import Synth from './components/Synth'
 import Sculpt from './components/Sculpt'
 import Aether from './components/Aether'
+import Iris from './components/Iris'
 
 const TABS = [
   // Propagation & operating
@@ -72,6 +73,7 @@ const TABS = [
   // Synth
   { id: 'synth',    label: 'Synth' },
   { id: 'sculpt',   label: 'Sculpt' },
+  { id: 'iris',     label: 'Iris' },
   { id: 'tools',    label: 'Tools' },
   { id: 'windows',  label: 'DX Windows' },
   { id: 'products', label: 'Gear' },
@@ -139,6 +141,7 @@ const TAB_GROUPS = [
       { id: 'synth', label: 'Filament', icon: '🎹' },
       { id: 'sculpt', label: 'Sculpt', icon: '✋' },
       { id: 'aether', label: 'Aether', icon: '✋' },
+      { id: 'iris', label: 'Iris', icon: '👁' },
     ],
   },
   {
@@ -443,6 +446,7 @@ export default function App() {
           {tab === 'synth' && <Synth />}
           {tab === 'sculpt' && <Sculpt />}
           {tab === 'aether' && <Aether />}
+          {tab === 'iris' && <Iris />}
           {tab === 'tools'   && <HamClock />}
           {tab === 'callsign' && <CallsignLookup callsign={callsign} />}
           {tab === 'products' && <Products />}
