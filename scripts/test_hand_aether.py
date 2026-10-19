@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Aether (/synth/hand-aether/) — a two-hand theremin in the browser.
 
-The camera is never required here. Mapping, scale snap, calibration, the
-mouse fallback, mute, vibrato, reverb and the filter are measured. A page
-load must not request MediaPipe or call getUserMedia.
+The camera is requested on load. If that is refused, the mouse plays and a
+Turn on camera button sits on the picture. Choosing the mouse is remembered.
+Mapping, scale snap, calibration, mute, vibrato, reverb and the filter are
+measured. A refused camera must not download the hand model.
 
 Run: python3 scripts/test_hand_aether.py
 """
@@ -82,11 +83,20 @@ app = open(os.path.join(REPO, "frontend", "src", "App.jsx"), encoding="utf-8").r
 ck("nav has an Aether tab", "id: 'aether'" in app and "label: 'Aether'" in app and "<Aether />" in app)
 sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
 ck("service worker still treats /synth/ as mutable", "url.pathname.startsWith('/synth/')" in sw)
-ck("service worker cache bumped for this frontend change", "dxedge-v107" in sw)
+ck("service worker cache bumped for this frontend change", "dxedge-v108" in sw)
 
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=CHROME, args=["--autoplay-policy=no-user-gesture-required"])
-    pg = browser.new_page(viewport={"width": 1280, "height": 900})
+    context = browser.new_context(viewport={"width": 1280, "height": 900})
+    context.add_init_script("""
+      window.__camCalls = 0;
+      const md = navigator.mediaDevices || (navigator.mediaDevices = {});
+      md.getUserMedia = () => {
+        window.__camCalls = (window.__camCalls || 0) + 1;
+        return Promise.reject(Object.assign(new Error('denied'), { name: 'NotAllowedError' }));
+      };
+    """)
+    pg = context.new_page()
     errors = []
     requests = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
@@ -95,25 +105,33 @@ with sync_playwright() as pw:
     pg.goto(BASE + "/synth/hand-aether/")
     pg.wait_for_function("window.__aether && __aether.ready()", timeout=20000)
     body = pg.locator("body").inner_text()
-    ck("page names Aether and asks before the camera", "Aether" in body and "not recorded" in body and "not uploaded" in body)
+    ck("page names Aether and says the picture stays here", "Aether" in body and "not recorded" in body and "not uploaded" in body)
     ck("how to play is on the page", "Right hand" in body and "vibrato" in body.lower() and "reverb" in body.lower() and "fist" in body.lower())
     ck("mouse fallback is offered", pg.locator("#mouseBtn").count() == 1 and "Play with the mouse" in body)
     ck("size control is S M L XL", [pg.locator(f'.sizes button[data-size="{s}"]').count() for s in "s m l xl".split()] == [1, 1, 1, 1])
-    ck("getUserMedia was not called on load", pg.evaluate("() => !window.__camCalls"))
+    ck("page load asks for the camera", pg.evaluate("() => window.__camCalls === 1"))
+    ck("a refused camera falls back to the mouse", pg.evaluate("() => __aether.mode() === 'mouse'") and "did not allow" in pg.locator("#status").inner_text())
+    stage_box = pg.locator("#stage").bounding_box()
+    cam_box = pg.locator("#stageCam").bounding_box()
+    ck("Turn on camera sits on the picture",
+       pg.locator("#stageCam").inner_text().strip() == "Turn on camera" and cam_box and stage_box
+       and cam_box["width"] >= 160 and cam_box["height"] >= 64
+       and cam_box["x"] >= stage_box["x"] - 1 and cam_box["y"] >= stage_box["y"] - 1
+       and cam_box["x"] + cam_box["width"] <= stage_box["x"] + stage_box["width"] + 1
+       and cam_box["y"] + cam_box["height"] <= stage_box["y"] + stage_box["height"] + 1,
+       (cam_box, stage_box))
     leaked = [u for u in requests if "mediapipe" in u or "googleapis" in u or "jsdelivr" in u]
-    ck("loading the page does not fetch the hand model", not leaked, leaked)
+    ck("a refused camera does not fetch the hand model", not leaked, leaked)
     ck("no page errors on load", not errors, errors)
 
-    pg.evaluate("""() => {
-      window.__camCalls = 0;
-      const md = navigator.mediaDevices || (navigator.mediaDevices = {});
-      md.getUserMedia = () => { window.__camCalls++; return Promise.reject(Object.assign(new Error('denied'), { name: 'NotAllowedError' })); };
-    }""")
-    ck("camera permission is still untouched", pg.evaluate("() => window.__camCalls === 0"))
-
+    pg.evaluate("() => { window.__camCalls = 0 }")
     pg.click("#mouseBtn")
     pg.wait_for_function("() => __aether.mode() === 'mouse'")
     ck("choosing the mouse leaves the camera alone", pg.evaluate("() => window.__camCalls === 0"))
+    ck("choosing the mouse is remembered", pg.evaluate("""() => localStorage.getItem('dxedge-aether-input') === '"mouse"'"""))
+    pg.reload()
+    pg.wait_for_function("window.__aether && __aether.ready()", timeout=20000)
+    ck("a remembered mouse choice does not ask again", pg.evaluate("() => !window.__camCalls && __aether.mode() === 'mouse' && !document.getElementById('stageCam').hidden"))
     ck("the video element has no uploaded source", pg.evaluate("() => !document.getElementById('cam').srcObject && !document.getElementById('cam').getAttribute('src')"))
 
     pg.evaluate("""() => {
@@ -129,6 +147,7 @@ with sync_playwright() as pw:
     high = pg.evaluate("""() => { __aether.pointer(0.86, 0.18); return __aether.settle(10, 0.05); }""")
     ck("right-hand X raises the pitch", high["hz"] > low["hz"] * 1.4, (low["hz"], high["hz"], low["note"], high["note"]))
     ck("right-hand Y raises the volume", high["volume"] > low["volume"] + 0.35, (low["volume"], high["volume"]))
+    pg.locator("#view").scroll_into_view_if_needed()
     box = pg.locator("#view").bounding_box()
     pg.mouse.move(box["x"] + box["width"] * 0.22, box["y"] + box["height"] * 0.82)
     pg.wait_for_timeout(120)
@@ -293,7 +312,8 @@ with sync_playwright() as pw:
     ck("no page errors after playing", not errors, errors)
     pg.screenshot(path="/tmp/aether-desktop.png")
 
-    phone = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    phone = context.new_page()
+    phone.set_viewport_size({"width": 390, "height": 844})
     perr = []
     phone.on("pageerror", lambda e: perr.append(str(e)))
     phone.goto(BASE + "/synth/hand-aether/")
@@ -309,9 +329,10 @@ with sync_playwright() as pw:
     ck("390px: no page errors", not perr, perr)
     phone.screenshot(path="/tmp/aether-phone.png")
 
-    pg.click("#cameraLaunch")
-    pg.wait_for_function("() => window.__camCalls === 1 && document.getElementById('gateText').textContent.includes('did not allow')")
-    ck("Use the camera asks getUserMedia and does not upload on denial", pg.evaluate("() => window.__camCalls === 1") and "did not allow" in pg.locator("#gateText").inner_text())
+    pg.evaluate("() => { window.__camCalls = 0 }")
+    pg.click("#stageCam")
+    pg.wait_for_function("() => window.__camCalls === 1 && document.getElementById('status').textContent.includes('did not allow')")
+    ck("Turn on camera asks again and stays on the mouse if refused", pg.evaluate("() => window.__camCalls === 1 && __aether.mode() === 'mouse'") and pg.locator("#stageCam").is_visible() and "did not allow" in pg.locator("#status").inner_text())
     leaked = [u for u in requests if "mediapipe" in u or "googleapis" in u]
     ck("a denied camera does not upload video", not leaked, leaked)
 
