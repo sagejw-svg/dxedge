@@ -30,7 +30,7 @@ export const MASTER_DEFAULT = {
   tempo: 120,
   delay: { on: false, sync: true, div: '1/8', time: 375, feedback: 0.35, mix: 0.35, ping: false, offset: 0 },
   reverb: { on: false, size: 0.55, damp: 0.35, mix: 0.28, width: 1 },
-  comp: { on: false, threshold: -18, ratio: 4, attack: 10, release: 120, knee: 6, makeup: 0, limit: true, ceiling: -1 },
+  comp: { on: false, threshold: -18, ratio: 4, attack: 10, release: 120, knee: 6, makeup: 0, limit: true, ceiling: -1, safety: false },
 };
 
 const RANGE = {

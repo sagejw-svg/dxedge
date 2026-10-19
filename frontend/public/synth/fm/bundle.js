@@ -27422,6 +27422,46 @@ void main(void){
   }
   var hexodePeak = 0;
   var hexodeReady = false;
+  var hexodeGain = 1;
+  var hexodeLimit = false;
+  var hexodeHoldLatch = false;
+  function readHexVol() {
+    try {
+      var raw = localStorage.getItem("hexode_volume");
+      if (raw == null || raw === "") return 1;
+      var v = Number(raw);
+      return isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+    } catch (e) {
+      return 1;
+    }
+  }
+  hexodeGain = readHexVol();
+  function paintHexDesk() {
+    var slider = document.getElementById("hexVol");
+    var lab = document.getElementById("hexVolV");
+    var lim = document.getElementById("hexLim");
+    var hold = document.getElementById("holdBtn");
+    if (slider) slider.value = String(hexodeGain);
+    if (lab) lab.textContent = Math.round(hexodeGain * 100) + "%";
+    if (lim) lim.checked = !!hexodeLimit;
+    if (hold) {
+      hold.setAttribute("aria-pressed", hexodeHoldLatch ? "true" : "false");
+      hold.textContent = hexodeHoldLatch ? "Hold on" : "Hold";
+    }
+  }
+  function setHexGain(v, persist) {
+    v = Math.max(0, Math.min(1, Number(v)));
+    if (!isFinite(v)) v = 1;
+    hexodeGain = v;
+    if (persist) {
+      try {
+        localStorage.setItem("hexode_volume", String(v));
+      } catch (e) {
+      }
+    }
+    paintHexDesk();
+    return v;
+  }
   function setupAudioGraph() {
     var reverbNode = generatedRoom(audioContext);
     reverbGainNode = audioContext.createGain();
@@ -27445,11 +27485,19 @@ void main(void){
       for (var i = 0, length = buffer.length; i < length; i++) {
         sampleTime += msPerSample;
         synth.processQueuedEventsUpToSampleTime(sampleTime);
-        var output = synth.render();
-        outputL[i] = output[0];
-        outputR[i] = output[1];
-        var a = output[0] < 0 ? -output[0] : output[0];
-        if (a > bufPeak) bufPeak = a;
+      var output = synth.render();
+      var ol = output[0] * hexodeGain;
+      var orr = output[1] * hexodeGain;
+      if (hexodeLimit) {
+        if (ol > 0.89) ol = 0.89;
+        else if (ol < -0.89) ol = -0.89;
+        if (orr > 0.89) orr = 0.89;
+        else if (orr < -0.89) orr = -0.89;
+      }
+      outputL[i] = ol;
+      outputR[i] = orr;
+      var a = ol < 0 ? -ol : ol;
+      if (a > bufPeak) bufPeak = a;
       }
       hexodePeak *= 0.82;
       if (bufPeak > hexodePeak) hexodePeak = bufPeak;
@@ -27537,12 +27585,14 @@ void main(void){
         }
       });
       element.on("wheel", function(e) {
+        var knob = element[0].querySelector(".knob");
+        if (document.activeElement !== knob) return;
         e.preventDefault();
-        element[0].focus();
+        var step = e.shiftKey ? 1 : increment;
         if (e.deltaY > 0) {
-          scope.ngModel = Math.max(scope.ngModel - increment, min);
+          scope.ngModel = Math.max(scope.ngModel - step, min);
         } else {
-          scope.ngModel = Math.min(scope.ngModel + increment, max);
+          scope.ngModel = Math.min(scope.ngModel + step, max);
         }
         apply();
       });
@@ -27551,7 +27601,7 @@ void main(void){
           var clientY = e.clientY;
           if (e.targetTouches && e.targetTouches[0])
             clientY = e.targetTouches[0].clientY;
-          var dy = (startY - clientY) * (max - min) / pixelRange;
+          var dy = (startY - clientY) * (max - min) / (pixelRange * (e.shiftKey ? 4 : 1));
           scope.ngModel = Math.round(Math.max(min, Math.min(max, dy + startModel)));
           apply();
         }
@@ -27577,7 +27627,7 @@ void main(void){
       replace: true,
       require: "ngModel",
       scope: { ngModel: "=", label: "@" },
-      template: `<div><div class="param-label">{{ label }}</div><div class="knob" tabindex="0"><div class="knob-foreground" ng-style="{'transform': 'rotate(' + getDegrees() + 'deg)'}"></div></div></div>`,
+      template: `<div><div class="param-label">{{ label }}</div><div class="knob" tabindex="0" title="{{ label }}. Drag up or down. Hold Shift for a finer drag. Arrow keys move one step. The mouse wheel works while the knob is focused."><div class="knob-foreground" ng-style="{'transform': 'rotate(' + getDegrees() + 'deg)'}"></div></div></div>`,
       link
     };
   });
@@ -27631,12 +27681,14 @@ void main(void){
         }
       });
       element.on("wheel", function(e) {
+        var slider = element[0].querySelector(".slider");
+        if (document.activeElement !== slider) return;
         e.preventDefault();
-        element[0].querySelector(".slider").focus();
+        var step = e.shiftKey ? 1 : increment;
         if (e.deltaY > 0) {
-          scope.ngModel = Math.max(scope.ngModel - increment, min);
+          scope.ngModel = Math.max(scope.ngModel - step, min);
         } else {
-          scope.ngModel = Math.min(scope.ngModel + increment, max);
+          scope.ngModel = Math.min(scope.ngModel + step, max);
         }
         apply();
       });
@@ -27645,7 +27697,7 @@ void main(void){
           var clientY = e.clientY;
           if (e.targetTouches && e.targetTouches[0])
             clientY = e.targetTouches[0].clientY;
-          var dy = (startY - clientY) * (max - min) / pixelRange;
+          var dy = (startY - clientY) * (max - min) / (pixelRange * (e.shiftKey ? 4 : 1));
           scope.ngModel = Math.round(Math.max(min, Math.min(max, dy + startModel)));
           apply();
         }
@@ -27671,7 +27723,7 @@ void main(void){
       replace: true,
       require: "ngModel",
       scope: { ngModel: "=", label: "@" },
-      template: `<div><div class="slider" tabindex="0"><div class="slider-foreground" ng-style="{'top': getTop() + 'px'}"></div></div><div class="slider-meter"></div></div>`,
+      template: `<div><div class="slider" tabindex="0" title="{{ label }}. Drag up or down. Hold Shift for a finer drag. Arrow keys move one step. The mouse wheel works while the slider is focused."><div class="slider-foreground" ng-style="{'top': getTop() + 'px'}"></div></div><div class="slider-meter"></div></div>`,
       link
     };
   });
@@ -27752,6 +27804,8 @@ void main(void){
     var heldCodes = new Set();
     function releaseKeys() {
       heldCodes.clear();
+      hexodeHoldLatch = false;
+      paintHexDesk();
       if (mml) {
         mml.stop();
         mml = null;
@@ -27768,6 +27822,15 @@ void main(void){
         ev.preventDefault();
         return false;
       }
+      if (ev.keyCode === 192) {
+        var typing = ev.target && (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT" || ev.target.tagName === "TEXTAREA");
+        if (!typing && !ev.repeat) synth.sustainPedal(true);
+        if (!typing) {
+          ev.stopPropagation();
+          ev.preventDefault();
+        }
+        return false;
+      }
       if (note) {
         if (!ev.repeat && !heldCodes.has(ev.keyCode)) {
           heldCodes.add(ev.keyCode);
@@ -27779,6 +27842,10 @@ void main(void){
       return false;
     };
     this.onKeyUp = function(ev) {
+      if (ev.keyCode === 192) {
+        synth.sustainPedal(hexodeHoldLatch);
+        return false;
+      }
       var note = qwertyNotes[ev.keyCode];
       if (note && heldCodes.has(ev.keyCode)) {
         heldCodes.delete(ev.keyCode);
@@ -27974,6 +28041,18 @@ void main(void){
     peak: function() {
       return hexodePeak;
     },
+    gain: function() {
+      return hexodeGain;
+    },
+    setGain: function(v) {
+      return setHexGain(v, true);
+    },
+    limit: function() {
+      return hexodeLimit;
+    },
+    hold: function() {
+      return hexodeHoldLatch;
+    },
     loadSysex: function(list) {
       var bytes = list instanceof Uint8Array ? list : new Uint8Array(list);
       var buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
@@ -27986,6 +28065,21 @@ void main(void){
       return name;
     }
   };
+  paintHexDesk();
+  var hexVol = document.getElementById("hexVol");
+  if (hexVol) hexVol.addEventListener("input", function() {
+    setHexGain(hexVol.value, true);
+  });
+  var hexLim = document.getElementById("hexLim");
+  if (hexLim) hexLim.addEventListener("change", function() {
+    hexodeLimit = !!hexLim.checked;
+  });
+  var holdBtn = document.getElementById("holdBtn");
+  if (holdBtn) holdBtn.addEventListener("click", function() {
+    hexodeHoldLatch = !hexodeHoldLatch;
+    synth.sustainPedal(hexodeHoldLatch);
+    paintHexDesk();
+  });
 })();
 /*! Bundled license information:
 

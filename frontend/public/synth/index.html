@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(function () {
+  try {
+    var s = localStorage.getItem('dxedge_ui_size');
+    if (s !== 's' && s !== 'm' && s !== 'l' && s !== 'xl') s = window.innerWidth >= 1600 ? 'l' : 'm';
+    document.documentElement.setAttribute('data-ui', s);
+  } catch (e) { document.documentElement.setAttribute('data-ui', 'm'); }
+})();
+</script>
+<link rel="stylesheet" href="/synth/desk.css">
 <meta name="theme-color" content="#080808">
 <title>Filament - a tube synthesizer - DXEdge</title>
 <meta name="description" content="Filament: a playable polyphonic tube synthesizer in the browser, and Cathode, a one-voice semi-modular with a patch panel, in the same rack. Lit tubes that do real work, filters with character, and stereo you can play. Touch, computer keyboard or MIDI. No ads, no cookies, no accounts.">
@@ -23,8 +33,8 @@
   a:hover { text-decoration: underline; }
   button, select, input { font-family: var(--font-mono); }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-  .wrap { max-width: 1320px; margin: 0 auto; }
-  .label { font-size: 10px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; }
+  .wrap { max-width: 1880px; margin: 0 auto; }
+  .label { font-size: 10px; color: #b5b5b5; letter-spacing: 3px; text-transform: uppercase; }
 
   /* header */
   .top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
@@ -430,10 +440,11 @@
   .chip[aria-pressed="true"] { color: #1a1206; background: var(--amber); border-color: var(--amber); font-weight: 600; }
   .chips .cl { font-size: 9.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; align-self: center; margin-right: 2px; }
   .knobs { display: flex; flex-wrap: wrap; gap: 4px 5px; margin-top: 4px; }
-  .knob { display: flex; flex-direction: column; align-items: center; gap: 0; width: 56px; cursor: ns-resize; user-select: none; touch-action: none; outline: none; position: relative; }
+  .knob { display: flex; flex-direction: column; align-items: center; gap: 0; width: 56px; cursor: ns-resize; user-select: none; touch-action: none; position: relative; border-radius: 8px; }
   .knob svg { width: 42px; height: 42px; display: block; }
-  .knob .kl { font-size: 9px; color: var(--dim); letter-spacing: 0.5px; text-transform: uppercase; text-align: center; line-height: 1.2; }
-  .knob .kv { font-size: 10px; color: var(--amber2); font-variant-numeric: tabular-nums; min-height: 1.3em; white-space: nowrap; }
+  .knob .kl { font-size: 10px; color: #c8c8c8; letter-spacing: 0.4px; text-transform: uppercase; text-align: center; line-height: 1.2; }
+  .knob .kv { font-size: 11px; color: #ffe0b0; font-variant-numeric: tabular-nums; min-height: 1.3em; white-space: nowrap; }
+  .knob:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
   .knob:focus-visible svg { filter: drop-shadow(0 0 4px var(--amber)); }
   .knob.learn svg { filter: drop-shadow(0 0 6px var(--green)); }
   .knob .cc { position: absolute; top: -2px; right: 2px; font-size: 8px; color: var(--green); }
@@ -484,6 +495,10 @@
   .keybed { display: flex; gap: 8px; align-items: stretch; padding: 8px 10px 10px; border-top: 1px solid #000; background: linear-gradient(180deg, #0b0b0b, #121212); }
   .strips { display: flex; gap: 6px; }
   .strip { width: 26px; position: relative; border-radius: 6px; background: linear-gradient(90deg, #070707, #1b1b1b, #070707); border: 1px solid #2a2a2a; touch-action: none; cursor: ns-resize; }
+  .strip:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .volab { display: inline-flex; align-items: center; gap: 6px; color: #c8c8c8; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+  .volab input { width: 120px; accent-color: var(--amber); }
+  #mastVolV { color: var(--amber2); min-width: 3em; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
   .strip .thumb { position: absolute; left: 2px; right: 2px; height: 14px; border-radius: 4px; background: linear-gradient(180deg, #4a3a2a, #1e140c); border: 1px solid #6a5238; box-shadow: 0 0 6px rgba(255,179,71,0.25); }
   .strip .sl { position: absolute; bottom: -15px; left: -4px; right: -4px; text-align: center; font-size: 8.5px; color: var(--dim); letter-spacing: 1px; }
   .keyswrap { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
@@ -535,9 +550,29 @@
   .toast.show { opacity: 1; }
   .start { position: absolute; inset: 0; display: none; }
 
-  /* desktop: everything visible */
+  /* desktop: everything visible, and a wide monitor uses the width */
   @media (min-width: 761px) {
     .mod[data-wide] { grid-column: span 2; }
+    input[type="range"] { min-height: 22px; }
+  }
+  @media (min-width: 1100px) {
+    body { padding-bottom: calc(var(--kb-h) + 28px); }
+    body[data-dev="gleam"] { padding-bottom: 20px; }
+    .keybed {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      border-top: 1px solid #333; box-shadow: 0 -12px 28px rgba(0,0,0,.6);
+    }
+    .toast { bottom: calc(var(--kb-h) + 18px); }
+    .knob, .btn, .chip, .jack, .mod, input, select, .strip, .devbtn, .devlink, canvas { scroll-margin-bottom: calc(var(--kb-h) + 28px); scroll-margin-top: 12px; }
+    #mHost, #mMaster { grid-column: 1 / -1; }
+    #mHost { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; align-items: start; }
+    #mHost > h3, #mHost > .hostbar, #mHost > .note { grid-column: 1 / -1; }
+    .tr-grid, .ph-grid, .rhum-grid, .rn-grid, .hep-sliders { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 1680px) {
+    #mHost { grid-template-columns: 1fr 1fr 1fr; }
+    .tr-grid, .ph-grid, .rhum-grid { grid-template-columns: 1fr 1fr 1fr; }
+    .panel { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   }
   /* phone: one section at a time, keyboard pinned */
   @media (max-width: 760px) {
@@ -708,6 +743,8 @@
     .deck { padding: 6px; } .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
     #libPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
+    .volab { flex: 1 1 100%; min-width: 0; }
+    .volab input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; }
     #mHost input[type="range"], #hostTempo, #projName, #mixName { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
     canvas#eqCv { height: 170px; }
@@ -749,7 +786,11 @@
       <select class="btn" id="patchSel" aria-label="Patch"></select>
       <button class="btn small" id="nextP" aria-label="Next patch">&rsaquo;</button>
       <button class="btn small" id="saveP">save</button>
+      <button class="btn small" id="undoBtn" type="button" title="Undo the last change on this device. Ctrl+Z or Cmd+Z does the same.">undo</button>
+      <button class="btn small" id="initBtn" type="button" title="Reset this device to its Init patch.">init</button>
       <button class="btn small" id="delP" hidden>delete</button>
+      <label class="volab" title="Master volume for everything in the rack. It is not stored in a patch.">vol <input id="mastVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><b id="mastVolV">100%</b></label>
+      <button class="btn small" id="safeLim" type="button" aria-pressed="false" title="Safety limiter on the master, after the mix. Off leaves the sound exactly as it was.">limit</button>
       <span class="mastrec" id="mastRecWrap">
         <button type="button" class="btn small rec-master" id="mastRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV named for this device, or rack when several are playing.">&#9679; rec</button>
         <span class="rec-time" id="mastTime" data-rec-time aria-live="polite"></span>
@@ -758,6 +799,12 @@
       <span class="saveform" id="saveForm"><input id="saveName" maxlength="40" aria-label="Patch name"><button class="btn small" id="saveOk">ok</button><button class="btn small" id="saveNo">cancel</button></span>
       <button class="btn small" id="midiBtn"><span class="long">Connect </span>MIDI</button>
       <button class="btn small" id="learnBtn" aria-pressed="false" hidden title="MIDI learn: press, click a knob, move a knob on your keyboard">learn</button>
+      <div class="uisize" id="uiSize" role="group" aria-label="Control size">
+        <button type="button" class="btn small" data-ui-size="s" title="Small controls">S</button>
+        <button type="button" class="btn small" data-ui-size="m" title="Medium controls">M</button>
+        <button type="button" class="btn small" data-ui-size="l" title="Large controls">L</button>
+        <button type="button" class="btn small" data-ui-size="xl" title="Extra large controls">XL</button>
+      </div>
     </div>
     <a class="sup" href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener" title="Tip the developer: Helps cover hosting and development.">Tip the developer</a>
   </header>
@@ -1226,7 +1273,7 @@
   </div></div>
 
   <footer>
-    <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Panic silences every note. Knobs: drag up or down (shift for fine), arrow keys, double click to reset.
+    <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Panic silences every note. Knobs: drag up or down (shift for fine), arrow keys, the mouse wheel while the knob is focused (shift for a single step), double click to reset. Undo (or Ctrl+Z) steps back on the lit device. Init loads that device's plain patch. S M L XL, remembered in this browser, sizes the controls. On a wide screen the keyboard stays along the bottom.
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
@@ -1239,6 +1286,7 @@
 
 <script type="module">
 import { makeKnob } from './knob.js';
+import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
 import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample } from './rack.js';
 import { paintTubeState, paintTubeShow, fitCanvas } from './tubepaint.js';
 import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, stepShow, showFor, showState } from './tubeshow.js';
@@ -1381,6 +1429,28 @@ document.body.dataset.dev = dev;
 
 // ---------------------------------------------------------------- audio
 let ctx = null, E = null, enginePromise = null, started = false;
+const VOL_KEY = 'dxedge_master_vol';
+function readMasterVol() {
+  try {
+    const raw = localStorage.getItem(VOL_KEY);
+    if (raw == null || raw === '') return 1;
+    const v = Number(raw);
+    return isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+  } catch (e) { return 1; }
+}
+let masterVol = readMasterVol();
+function setMasterVol(v, persist) {
+  v = Math.max(0, Math.min(1, Number(v)));
+  if (!isFinite(v)) v = 1;
+  masterVol = v;
+  const slider = $('mastVol');
+  if (slider && slider.value !== String(v)) slider.value = String(v);
+  const lab = $('mastVolV');
+  if (lab) lab.textContent = Math.round(v * 100) + '%';
+  if (persist) { try { localStorage.setItem(VOL_KEY, String(v)); } catch (e) {} }
+  if (E && E.master) E.master.gain.value = v;
+  return v;
+}
 const queue = [];
 function initAudioSession() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
 function ensureEngine() {
@@ -1395,7 +1465,7 @@ function ensureEngine() {
     timeSig: bootProj && bootProj.timeSig,
     mixer: bootProj && bootProj.mixer,
   }).then(e => {
-    E = e; E.master.gain.value = 1;
+    E = e; E.master.gain.value = masterVol;
     // Dekatron joins the mixer and the master clock as soon as the engine exists.
     // Asleep until the rail selects it, so it adds nothing to the other devices.
     const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => adHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rhumHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
@@ -2143,7 +2213,7 @@ function K(hostId, path, label, o) {
   const k = makeKnob(host, {
     label, min, max, step, value: map.from(getPath(src, path)), def,
     fmt: p => (o.fmt || one)(map.to(p)), title: o.title || label,
-    onChange: p => { let v = map.to(p); if (o.round) v = Math.round(v); setPath(cur, path, v); afterChange(path); pushPatch(false); },
+    onChange: p => { if (!undoArmed) rememberUndo(); let v = map.to(p); if (o.round) v = Math.round(v); setPath(cur, path, v); afterChange(path); pushPatch(false); },
   });
   k.el.dataset.path = path;
   if (o.dev) k.el.dataset.dev = o.dev;
@@ -2159,7 +2229,7 @@ function chips(el, path, opts, labels) {
   list.forEach(v => {
     const b = document.createElement('button'); b.className = 'chip'; b.type = 'button';
     b.textContent = (labels && labels[v]) || String(v); b.dataset.v = String(v);
-    b.addEventListener('click', () => { const val = typeof getPath(X.def, p) === 'number' ? +v : v; setPath(cur, p, val); refreshChips(key); afterChange(p); pushPatch(false); });
+    b.addEventListener('click', () => { if (!undoArmed) rememberUndo(); const val = typeof getPath(X.def, p) === 'number' ? +v : v; setPath(cur, p, val); refreshChips(key); afterChange(p); pushPatch(false); });
     el.appendChild(b);
   });
   CH[key] = { el, path: p, dev: kd }; refreshChips(key);
@@ -2515,10 +2585,67 @@ function eqRead(i) {
     else if (k === 'ArrowUp') setBandGain(EQV.sel, (cur.out.eqGains[EQV.sel] || 0) + st, true); else if (k === 'ArrowDown') setBandGain(EQV.sel, (cur.out.eqGains[EQV.sel] || 0) - st, true);
     else if (k === 'Home') EQV.sel = 0; else if (k === 'End') EQV.sel = n - 1; else if (k === '0' || k === 'Delete') setBandGain(EQV.sel, 0);
     else used = false;
-    if (used) { e.preventDefault(); e.stopPropagation(); if (!cur.out.eqOn) { cur.out.eqOn = true; afterChange('out.eqOn'); pushPatch(false); } eqRead(EQV.sel); }
+    if (used) { e.preventDefault(); e.stopPropagation(); if (!undoArmed) rememberUndo(); if (!cur.out.eqOn) { cur.out.eqOn = true; afterChange('out.eqOn'); pushPatch(false); } eqRead(EQV.sel); }
   });
   cv.addEventListener('blur', () => { EQV.sel = -1; eqRead(-1); });
 }
+
+// ---------------------------------------------------------------- undo, init, master volume
+// One stack per device. A drag is one step: pointerdown stores the patch, and the
+// knob's own onChange does not store again until the pointer is up.
+let undoArmed = false;
+let undoLock = false;
+const undoStacks = {};
+function paintUndo() {
+  const stack = undoStacks[dev] || [];
+  const btn = $('undoBtn');
+  if (btn) btn.disabled = stack.length === 0;
+}
+function rememberUndo() {
+  if (undoLock) return;
+  const snap = JSON.stringify(cur);
+  const stack = undoStacks[dev] || (undoStacks[dev] = []);
+  if (stack.length && stack[stack.length - 1] === snap) return;
+  stack.push(snap);
+  if (stack.length > 40) stack.shift();
+  paintUndo();
+}
+function undoPatch() {
+  const stack = undoStacks[dev] || [];
+  const now = JSON.stringify(cur);
+  while (stack.length && stack[stack.length - 1] === now) stack.pop();
+  if (!stack.length) { paintUndo(); toast('Nothing to undo'); return; }
+  undoLock = true;
+  cur = D().normalize(JSON.parse(stack.pop()));
+  edited = true;
+  refreshAll(); fillSelect(); pushPatch(false);
+  undoLock = false;
+  paintUndo();
+  toast('Undid the last change on ' + D().name);
+}
+function resetDevice() {
+  rememberUndo();
+  cur = clone(D().def);
+  curKey = '__init';
+  edited = true;
+  refreshAll(); fillSelect(); pushPatch(true);
+  toast(D().name + ' reset to Init');
+}
+document.addEventListener('pointerdown', e => {
+  if (e.target.closest('#undoBtn, #initBtn, #saveP, #safeLim, .uisize')) return;
+  if (e.target.closest('.knob, #eqCv, .chip')) { rememberUndo(); undoArmed = true; }
+}, true);
+document.addEventListener('pointerup', () => { undoArmed = false; }, true);
+document.addEventListener('pointercancel', () => { undoArmed = false; }, true);
+$('undoBtn').addEventListener('click', undoPatch);
+$('initBtn').addEventListener('click', resetDevice);
+$('mastVol').addEventListener('input', () => setMasterVol($('mastVol').value, true));
+setMasterVol(masterVol, false);
+paintUndo();
+const uiSizeCtl = mountUiSize(document.getElementById('uiSize'));
+bindFineControls(document);
+const fineWatch = new MutationObserver(() => bindFineControls(document));
+fineWatch.observe(document.body, { childList: true, subtree: true });
 
 // ---------------------------------------------------------------- patch list
 function markEdited() { if (!edited) { edited = true; fillSelect(); } }
@@ -2538,6 +2665,7 @@ function fillSelect() {
 }
 function loadKey(key) {
   const e = allPatches().find(x => x.key === key); if (!e) return;
+  rememberUndo();
   cur = clone(e.p); curKey = key; edited = false;
   refreshAll(); fillSelect(); pushPatch(true);
 }
@@ -2739,6 +2867,7 @@ function showDevice() {
   $('devR').setAttribute('aria-pressed', String(dev === 'rhumbatron'));
   $('devS').setAttribute('aria-pressed', String(dev === 'resnatron'));
   $('devTitle').innerHTML = dev === 'resnatron' ? 'RESNA<span>TRON</span>' : dev === 'rhumbatron' ? 'RHUMBA<span>TRON</span>' : dev === 'additron' ? 'ADDI<span>TRON</span>' : dev === 'phantastron' ? 'PHANTA<span>STRON</span>' : dev === 'klystron' ? 'KLYS<span>TRON</span>' : dev === 'gyrotron' ? 'GYRO<span>TRON</span>' : dev === 'trochotron' ? 'TROCHO<span>TRON</span>' : dev === 'orthicon' ? 'ORTH<span>ICON</span>' : dev === 'pentagrid' ? 'PENTA<span>GRID</span>' : dev === 'geissler' ? 'GEISS<span>LER</span>' : dev === 'heptode' ? 'HEP<span>TODE</span>' : dev === 'mote' ? 'MO<span>TE</span>' : dev === 'gleam' ? 'GLE<span>AM</span>' : dev === 'thyratron' ? 'THYRA<span>TRON</span>' : dev === 'lattice' ? 'LATT<span>ICE</span>' : dev === 'dekatron' ? 'DEKA<span>TRON</span>' : dev === 'cathode' ? 'CATH<span>ODE</span>' : 'FILA<span>MENT</span>';
+  paintUndo();
 }
 document.querySelectorAll('.devbtn').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.d)));
 showDevice();
@@ -2994,8 +3123,16 @@ function strip(id, spring, onV) {
   el.addEventListener('pointermove', e => { if (act === e.pointerId) setY(e.clientY); });
   const up = e => { if (act !== e.pointerId) return; act = null; if (spring) { v = 0.5; show(); onV(0); } };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
-  el.addEventListener('keydown', e => { const d = { ArrowUp: 0.05, ArrowDown: -0.05 }[e.key]; if (d) { e.preventDefault(); e.stopPropagation(); v = clampN(v + d, 0, 1); show(); onV(spring ? v * 2 - 1 : v); } });
+  el.addEventListener('keydown', e => { const step = e.shiftKey ? 0.01 : 0.05; const d = { ArrowUp: step, ArrowDown: -step }[e.key]; if (d) { e.preventDefault(); e.stopPropagation(); v = clampN(v + d, 0, 1); show(); onV(spring ? v * 2 - 1 : v); } });
   el.addEventListener('keyup', e => { if (spring && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { v = 0.5; show(); onV(0); } });
+  el.addEventListener('wheel', e => {
+    if (document.activeElement !== el) return;
+    e.preventDefault();
+    const step = e.shiftKey ? 0.01 : 0.05;
+    v = clampN(v + (e.deltaY > 0 ? -step : step), 0, 1);
+    show(); onV(spring ? v * 2 - 1 : v);
+  }, { passive: false });
+  if (!el.title) el.title = (el.getAttribute('aria-label') || 'Slider') + '. Drag, or use the arrow keys. Hold Shift for a finer step. The mouse wheel works while this strip is focused.';
   requestAnimationFrame(show);
   return { set(x) { v = spring ? (x + 1) / 2 : x; show(); }, active: () => act != null, release() { if (act == null) return; act = null; if (spring) { v = 0.5; show(); onV(0); } } };
 }
@@ -3008,6 +3145,7 @@ const keyDown = new Map();   // code -> note
 function typing(e) { const t = e.target; return t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
 window.addEventListener('keydown', e => {
   if (typing(e)) return;
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undoPatch(); return; }
   if (e.code === 'Space') { if (e.metaKey || e.ctrlKey || e.altKey) return; e.preventDefault(); if (!e.repeat) setSustain(true); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const semi = CODEMAP[e.code];
@@ -4287,6 +4425,12 @@ window.__synth = {
   timeRender: async opts => { const t0 = performance.now(); const buf = await renderOffline(Object.assign({ patch: cur }, opts)); return { ms: performance.now() - t0, seconds: buf.duration }; },
   master: () => master.get(),
   setMaster: s => master.set(s),
+  undo: () => undoPatch(),
+  resetDevice: () => resetDevice(),
+  setMasterVol: v => setMasterVol(v, true),
+  masterVol: () => masterVol,
+  uiSize: () => document.documentElement.getAttribute('data-ui'),
+  setUiSize: s => { const n = applyUiSize(s); try { localStorage.setItem('dxedge_ui_size', n); } catch (e) {} if (uiSizeCtl) document.querySelectorAll('#uiSize [data-ui-size]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-ui-size') === n))); return n; },
   renderWav: opts => master.renderWav(opts || {}),
   recordStart: () => master.recordStart(),
   recordStop: () => master.recordStop(),

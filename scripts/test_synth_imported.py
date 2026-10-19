@@ -113,6 +113,13 @@ with sync_playwright() as pw:
     loaded = pg.evaluate("(a) => __hexode.loadSysex(a)", list(bank))
     ck("Hexode: a .syx bank loads and names the first voice", isinstance(loaded, str) and loaded.startswith("HEXODE TST"), loaded)
     ck("Hexode: still no console errors after the note and the bank", quiet(errs), errs)
+    ck("Hexode: volume starts at unity and the limiter is off", pg.evaluate("__hexode.gain()") == 1 and pg.evaluate("__hexode.limit()") is False)
+    pg.evaluate("__hexode.noteOn(62, 0.8)")
+    pg.evaluate("document.getElementById('holdBtn').click()")
+    pg.evaluate("__hexode.noteOff(62)")
+    ck("Hexode: hold keeps the note after note-off", 62 in pg.evaluate("__hexode.held()") and pg.evaluate("__hexode.hold()") is True)
+    pg.click("#panicBtn")
+    ck("Hexode: panic clears hold", pg.evaluate("__hexode.held()") == [] and pg.evaluate("__hexode.hold()") is False)
     pg.close()
 
     # ---------------------------------------------------------------- Anode
@@ -142,6 +149,11 @@ with sync_playwright() as pw:
     rms = pg.evaluate("__anode.rms()")
     ck("Anode: blur and a tab hide do not silence the groovebox", rms > 0.005, rms)
     pg.evaluate("__anode.noteOff()")
+    home = pg.evaluate("__anode.cutoff()")
+    pg.evaluate("() => { const c = document.querySelector('.dial'); c.focus(); c.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); }")
+    turned = pg.evaluate("__anode.cutoff()")
+    pg.click("#anodeReset")
+    ck("Anode: a focused dial moves, and Reset puts it back", turned != home and abs(pg.evaluate("__anode.cutoff()") - home) < 1e-6, (home, turned, pg.evaluate("__anode.cutoff()")))
     ck("Anode: no console errors", quiet(errs), errs)
     pg.close()
 

@@ -91,10 +91,26 @@ async function askFolderOnce() {
   writeSettings({ asked: true });
 }
 
+function windowBounds() {
+  const saved = readSettings().window || {};
+  const width = Number.isFinite(+saved.width) && +saved.width >= 900 ? Math.round(+saved.width) : 1680;
+  const height = Number.isFinite(+saved.height) && +saved.height >= 640 ? Math.round(+saved.height) : 1000;
+  const bounds = { width, height };
+  if (Number.isFinite(+saved.x) && Number.isFinite(+saved.y)) {
+    bounds.x = Math.round(+saved.x);
+    bounds.y = Math.round(+saved.y);
+  }
+  return bounds;
+}
+
+function rememberWindow() {
+  if (!mainWindow || mainWindow.isMaximized() || mainWindow.isMinimized() || mainWindow.isFullScreen()) return;
+  const b = mainWindow.getBounds();
+  writeSettings({ window: { x: b.x, y: b.y, width: b.width, height: b.height } });
+}
+
 function createWindow(startUrl) {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
+  mainWindow = new BrowserWindow(Object.assign(windowBounds(), {
     minWidth: 900,
     minHeight: 640,
     backgroundColor: '#14110e',
@@ -107,7 +123,7 @@ function createWindow(startUrl) {
       sandbox: true,
       backgroundThrottling: false,
     },
-  });
+  }));
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
@@ -121,6 +137,8 @@ function createWindow(startUrl) {
     }
   });
   mainWindow.loadURL(startUrl);
+  mainWindow.on('resize', rememberWindow);
+  mainWindow.on('move', rememberWindow);
 }
 
 app.on('second-instance', () => {

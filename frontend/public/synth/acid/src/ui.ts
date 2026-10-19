@@ -295,16 +295,38 @@ function AudioMeter(analyser: AnalyserNode) {
 }
 
 
+export function resetDesk(state: ProgramState, autoPilot: AutoPilotUnit) {
+    const seen = new Set<object>();
+    function walk(node: any) {
+        if (!node || typeof node !== "object" || seen.has(node)) return;
+        if (typeof AudioNode !== "undefined" && node instanceof AudioNode) return;
+        if (typeof AudioParam !== "undefined" && node instanceof AudioParam) return;
+        seen.add(node);
+        if (Array.isArray(node.bounds) && typeof node.home === "number" && typeof node.value === "number") node.value = node.home;
+        const list = Array.isArray(node) ? node : Object.values(node);
+        list.forEach((v: any) => { if (v && typeof v === "object") walk(v); });
+    }
+    walk(state);
+    ((autoPilot && autoPilot.switches) || []).forEach(s => { if (s && s.name === "Twiddle With Knobs") s.value = false; });
+}
+
 export function UI(state: ProgramState, autoPilot: AutoPilotUnit, analyser: AnalyserNode) {
     const ui = document.createElement("div");
     ui.id = "ui";
 
+    const resetBtn = document.createElement("button");
+    resetBtn.id = "anodeReset";
+    resetBtn.type = "button";
+    resetBtn.textContent = "Reset";
+    resetBtn.title = "Put every dial back to where this page started, and stop the autopilot from turning them.";
+    resetBtn.addEventListener("click", () => resetDesk(state, autoPilot));
     const otherControls = controls(
         AutopilotControls(autoPilot),
         NoteGen(state.gen),
         DelayControls(state.delay),
         controlGroup(label("Clock"), DialSet([state.clock.bpm], "horizontal")),
         controlGroup(label("Volume"), DialSet([state.masterVolume], "horizontal")),
+        controlGroup(label("Reset"), resetBtn),
         controlGroup(label("Meter"), group(AudioMeter(analyser)), "meter")
     )
 

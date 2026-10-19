@@ -167,14 +167,18 @@ class FilamentMaster extends AudioWorkletProcessor {
 
   comp(l, r) {
     const c = this.s.comp || {};
-    if (!c.on) { this.yL = l; this.yR = r; return; }
-    const peak = Math.max(Math.abs(l), Math.abs(r));
-    this.env += (peak - this.env) * (peak > this.env ? this.att : this.rel);
-    const levelDb = 20 * Math.log10(this.env + 1e-12);
-    const ratio = c.ratio > 1 ? c.ratio : 1;
-    const g = Math.pow(10, (grDb(levelDb, +c.threshold || 0, ratio, +c.knee || 0) + (+c.makeup || 0)) / 20);
-    let ol = l * g, orr = r * g;
-    if (c.limit) {
+    const safety = !!c.safety;
+    if (!c.on && !safety) { this.yL = l; this.yR = r; return; }
+    let ol = l, orr = r;
+    if (c.on) {
+      const peak = Math.max(Math.abs(l), Math.abs(r));
+      this.env += (peak - this.env) * (peak > this.env ? this.att : this.rel);
+      const levelDb = 20 * Math.log10(this.env + 1e-12);
+      const ratio = c.ratio > 1 ? c.ratio : 1;
+      const g = Math.pow(10, (grDb(levelDb, +c.threshold || 0, ratio, +c.knee || 0) + (+c.makeup || 0)) / 20);
+      ol = l * g; orr = r * g;
+    }
+    if ((c.on && c.limit) || safety) {
       const pk = Math.max(Math.abs(ol), Math.abs(orr), 1e-12);
       const want = pk > this.ceil ? this.ceil / pk : 1;
       this.lim += (want - this.lim) * (want < this.lim ? this.limAtt : this.limRel);
@@ -189,7 +193,8 @@ class FilamentMaster extends AudioWorkletProcessor {
     const n = outL.length;
     const inL = input && input[0], inR = input && (input[1] || input[0]);
     const s = this.s || {};
-    const bypass = !(s.delay && s.delay.on) && !(s.reverb && s.reverb.on) && !(s.comp && s.comp.on);
+    const safety = !!(s.comp && s.comp.safety);
+    const bypass = !(s.delay && s.delay.on) && !(s.reverb && s.reverb.on) && !(s.comp && s.comp.on) && !safety;
     for (let i = 0; i < n; i++) {
       let l = inL ? inL[i] : 0, r = inR ? inR[i] : l;
       if (!bypass) {
