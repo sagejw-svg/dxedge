@@ -5405,6 +5405,37 @@ with sync_playwright() as pw:
     ck("Desk. 1920 starts large, the keys stay on screen, and the page does not scroll sideways",
        desk["ui"] == "l" and desk["pos"] == "fixed" and abs(desk["bottom"] - desk["h"]) < 3
        and desk["scroll"] and desk["knob"] >= 70 and not werr, (desk, werr))
+    def key_fill(page):
+        return page.evaluate("""() => {
+          const wrap = document.getElementById('keyswrap').getBoundingClientRect();
+          const keys = document.getElementById('keys').getBoundingClientRect();
+          const kb = document.getElementById('keybed').getBoundingClientRect();
+          const box = e => { const r = e.getBoundingClientRect(); return { t: (e.innerText || e.textContent || '').replace(/\\s+/g, ' ').trim(), top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+          const labs = [...document.querySelectorAll('.stripcol .sl')].map(box);
+          const lines = [...document.querySelectorAll('.kctl div')].filter(e => e.offsetParent).map(box);
+          const inside = rows => rows.every(r => r.top >= kb.top - 1 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1 && r.left >= -1);
+          const overlap = labs.length >= 2 && labs[0].right > labs[1].left + 0.5;
+          const ww = document.querySelector('.key.w');
+          return {
+            gap: Math.round((wrap.right - keys.right) * 10) / 10,
+            fill: keys.width >= wrap.width - 2,
+            whites: document.querySelectorAll('.key.w').length,
+            keyW: ww ? Math.round(ww.getBoundingClientRect().width * 10) / 10 : 0,
+            overlap, labelsIn: inside(labs), linesIn: inside(lines), labs, lines,
+          };
+        }""")
+    fill = key_fill(wide)
+    ck("Desk. 1920 keys fill the bar and the bottom labels stay on screen",
+       fill["fill"] and fill["gap"] <= 2 and fill["whites"] >= 29 and not fill["overlap"] and fill["labelsIn"] and fill["linesIn"], fill)
+    huge = b.new_page(viewport={"width": 2048, "height": 1080})
+    huge.add_init_script("try { localStorage.setItem('dxedge_ui_size', 'l'); } catch (e) {}")
+    huge.goto(BASE)
+    huge.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    huge.wait_for_timeout(200)
+    fill2 = key_fill(huge)
+    ck("Desk. 2048 keys fill the bar and the bottom labels stay on screen",
+       fill2["fill"] and fill2["gap"] <= 2 and fill2["whites"] >= 36 and fill2["keyW"] >= 28
+       and not fill2["overlap"] and fill2["labelsIn"] and fill2["linesIn"], fill2)
     mid = b.new_page(viewport={"width": 1280, "height": 800})
     mid.add_init_script("try { localStorage.removeItem('dxedge_ui_size'); } catch (e) {}")
     mid.goto(BASE)
@@ -5423,7 +5454,13 @@ with sync_playwright() as pw:
       return { scroll: document.documentElement.scrollWidth <= innerWidth && innerWidth === 390, small };
     }""")
     ck("Desk. a saved XL size still fits a phone", phone_fit["scroll"] and not phone_fit["small"], phone_fit)
-    wide.close(); mid.close(); ph.close()
+    phone_keys = ph.evaluate("""() => {
+      const ww = document.querySelector('.key.w');
+      const r = ww ? ww.getBoundingClientRect() : { width: 0, height: 0 };
+      return { w: r.width, h: r.height, n: document.querySelectorAll('.key.w').length };
+    }""")
+    ck("Desk. a phone keeps 44px keys", phone_keys["w"] >= 44 and phone_keys["h"] >= 44 and phone_keys["n"] <= 20, phone_keys)
+    wide.close(); mid.close(); ph.close(); huge.close()
 
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(80)
