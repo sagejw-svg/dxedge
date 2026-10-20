@@ -15,6 +15,12 @@
     {"seed": 100180, "label": "Weird-news fan"},
     {"seed": 100321, "label": "Security lead"}
   ],
+  "example_personas": [
+    "Retired teacher in Ohio who loves birds",
+    "Nurse in Manila into astronomy",
+    "Gardener in Lisbon who likes cooking",
+    "Bus driver in Chicago who follows transport"
+  ],
   "sections": [
     {
       "id": "ai-world",
