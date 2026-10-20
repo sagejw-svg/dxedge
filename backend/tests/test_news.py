@@ -1448,6 +1448,9 @@ def test_page_wires_match_the_desk():
     assert "Basic auth user is edge" in deploy
     assert "Fail closed" in deploy
     assert 'envs: XAI_API_KEY,GROK_API_KEY,ANTHROPIC_API_KEY,NEWS_PASSWORD' in deploy
+    assert "python3 news_status.py" in deploy
+    import yaml
+    yaml.safe_load(deploy)
     assert "--force-recreate --no-deps backend" in deploy
     assert NEWS_AUTH_USER == "edge"
     for path in ("/api/news/status", "/api/news/day", "/api/news/section",
@@ -2100,6 +2103,49 @@ def test_status_reports_anthropic_ready_without_the_key(http, monkeypatch):
     stranger = http.get("/api/news/status")
     assert stranger.status_code in (401, 403)
     newsdesk._api = None
+
+
+def test_news_status_script_prints_ready_flags_only(monkeypatch, capsys):
+    import io
+    import news_status
+    secret = "sk-ant-should-not-print"
+    password = "paper-password-should-not-print"
+    payload = json.dumps({
+        "provider": {
+            "name": "anthropic",
+            "ready": True,
+            "needed_secret": None,
+            "leak": secret,
+            "providers": {
+                "anthropic": {"ready": True, "model": "claude-sonnet-5-5"},
+                "xai": {"ready": True},
+            },
+        },
+        "password": password,
+    }).encode()
+
+    class Body(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_open(request, timeout=20):
+        assert request.full_url == "http://127.0.0.1:8000/api/news/status"
+        assert request.get_header("Authorization", "").startswith("Basic ")
+        return Body(payload)
+
+    monkeypatch.setenv("NEWS_PASSWORD", password)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", secret)
+    monkeypatch.setattr(news_status.urllib.request, "urlopen", fake_open)
+    assert news_status.main() == 0
+    printed = capsys.readouterr().out
+    assert printed.strip() == (
+        "news status provider name=anthropic ready=True anthropic=True xai=True"
+    )
+    assert secret not in printed
+    assert password not in printed
 
 
 def test_hashed_assets_get_a_long_cache_and_news_json_does_not(http, tmp_path):
