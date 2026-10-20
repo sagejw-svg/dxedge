@@ -63,18 +63,35 @@
     font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .thread a { color: inherit; }
   .ai-note { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; color: var(--muted); margin: 2px 0 0; }
-  .tools { display: grid; grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
-    gap: 10px 22px; align-items: start; margin: 12px 0;
-    font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 14px; }
+  .tools { margin: 12px 0; font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 14px; }
   .tool-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
   .tools label { letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
   .tools input { width: 9rem; background: var(--card); border: 1px solid var(--ink); padding: 6px 8px; }
   #persona-input { width: min(32rem, 100%); }
   .chip, .btn { background: var(--card); border: 1px solid var(--ink); padding: 6px 10px; cursor: pointer; }
+  .btn:disabled { opacity: .55; cursor: progress; }
   .chip { border-radius: 999px; }
   .chip[aria-pressed="true"], .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-  #seed-examples, #persona-examples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .persona-carousel { flex: 1 0 100%; display: flex; gap: 8px; overflow-x: auto;
+    overscroll-behavior-x: contain; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+    padding: 2px 2px 8px; }
+  .persona-carousel .chip { flex: 0 0 auto; max-width: 18rem; scroll-snap-align: start;
+    text-align: left; white-space: normal; }
+  .tools label.remember { flex-basis: 100%; display: flex; align-items: center; gap: 8px; margin: 0;
+    letter-spacing: 0; text-transform: none; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .remember input { width: auto; }
+  .plan-status { flex-basis: 100%; display: flex; align-items: center; gap: 8px; margin: 0; }
+  .plan-status[hidden] { display: none; }
+  .plan-elapsed { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .spinner { width: .9em; height: .9em; border: 2px solid var(--ink); border-right-color: transparent;
+    border-radius: 50%; display: inline-block; animation: plan-spin .8s linear infinite; }
   .persona-note { flex-basis: 100%; margin: 0; }
+  .paper.swap-in { animation: paper-in .28s ease; }
+  @keyframes plan-spin { to { transform: rotate(360deg); } }
+  @keyframes paper-in { from { opacity: .4; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner, .paper.swap-in { animation: none; }
+  }
   .interests { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 12px;
     letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
   .wait-note { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 14px;
@@ -140,19 +157,21 @@
   <section class="thread" id="ai-progress" hidden aria-label="AI progress"></section>
   <div class="tools">
     <div class="tool-group">
-      <label for="seed-input">Seed</label>
-      <input id="seed-input" inputmode="numeric" pattern="[0-9]*" min="0" max="1000000000" placeholder="A number">
-      <button class="btn" type="button" id="seed-apply">Apply</button>
-      <button class="btn" type="button" id="seed-clear">Clear</button>
-      <div id="seed-examples" role="group" aria-label="Example readers"></div>
-    </div>
-    <div class="tool-group">
       <label for="persona-input">Describe a reader</label>
       <input id="persona-input" type="text" maxlength="200" autocomplete="off" spellcheck="false"
         placeholder="45-year-old woman living in Argentina who likes orchids and spiders">
       <button class="btn" type="button" id="persona-apply">Apply</button>
       <button class="btn" type="button" id="persona-clear">Clear persona</button>
-      <div id="persona-examples" role="group" aria-label="Example personas"></div>
+      <label class="remember" for="persona-remember">
+        <input id="persona-remember" type="checkbox">
+        Remember this reader on this device
+      </label>
+      <p class="plan-status" id="plan-status" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="plan-label">Planning an edition for this reader…</span>
+        <span class="plan-elapsed" id="plan-elapsed">0:00</span>
+      </p>
+      <div id="persona-carousel" class="persona-carousel" role="region" aria-roledescription="carousel" aria-label="Example personas" tabindex="0"></div>
       <p class="err persona-note" id="persona-note" hidden></p>
     </div>
   </div>
@@ -202,10 +221,16 @@
 const IMAGE_HOSTS = ["imgs.xkcd.com", "www.peppercarrot.com", "peppercarrot.com", "upload.wikimedia.org"];
 const state = {
   status: null, day: null, editions: {}, layout: null, reader: null, seed: null,
-  persona: "", decision: null, story: null, loading: null, loadingStarted: null,
-  errors: {}, awake: false
+  persona: "", remember: false, decision: null, story: null, loading: null, loadingStarted: null,
+  planning: false, planningStarted: null, errors: {}, awake: false
 };
 let waitTimer = null;
+let planTimer = null;
+let planController = null;
+const planCache = new Map();
+const PERSONA_COOKIE = "dxedge_reader";
+const PLAN_STORE = "dxedge-news-plan";
+const PERSONA_MAX_AGE = 15552000;
 
 function el(tag, attrs, text) {
   const node = document.createElement(tag);
@@ -243,35 +268,85 @@ function writeCookie(name, value) {
 function clearCookie(name) {
   document.cookie = name + "=; Path=/; Max-Age=0; SameSite=Lax";
 }
+function cleanPersona(text) {
+  return String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
+}
 function loadIdentity() {
   state.decision = localStorage.getItem("dxedge-news-cookie");
+  localStorage.removeItem("dxedge-news-persona");
   if (state.decision === "yes") {
     state.reader = readCookie("dxn") || mint();
     writeCookie("dxn", state.reader);
     const saved = readCookie("dxn_seed");
     if (saved !== "") state.seed = Number(saved);
-    state.persona = localStorage.getItem("dxedge-news-persona") || "";
   } else {
     state.reader = sessionStorage.getItem("dxedge-news-reader") || mint();
     sessionStorage.setItem("dxedge-news-reader", state.reader);
     const saved = sessionStorage.getItem("dxedge-news-seed");
     if (saved !== "" && saved != null) state.seed = Number(saved);
-    state.persona = "";
-    localStorage.removeItem("dxedge-news-persona");
     clearCookie("dxn");
     clearCookie("dxn_seed");
   }
+  const remembered = readCookie(PERSONA_COOKIE);
+  if (state.decision === "yes" && remembered) {
+    state.persona = cleanPersona(remembered);
+    state.remember = !!state.persona;
+  } else {
+    state.persona = "";
+    state.remember = false;
+    clearPersonaCookie();
+  }
+}
+function writePersonaCookie(value) {
+  // Path is /news so the description is not attached to /api requests.
+  // It is never put in the page URL. About 180 days.
+  document.cookie = PERSONA_COOKIE + "=" + encodeURIComponent(value)
+    + "; Path=/news; Max-Age=" + PERSONA_MAX_AGE + "; SameSite=Lax; Secure";
+}
+function clearPersonaCookie() {
+  document.cookie = PERSONA_COOKIE + "=; Path=/news; Max-Age=0; SameSite=Lax; Secure";
+}
+function planStamp(persona) {
+  let n = 2166136261;
+  for (let i = 0; i < persona.length; i++) n = Math.imul(n ^ persona.charCodeAt(i), 16777619);
+  return (n >>> 0).toString(16);
+}
+function cachedPlan(persona, day) {
+  if (!persona || !day) return null;
+  const mem = planCache.get(day + "\n" + persona);
+  if (mem) return mem;
+  if (!state.remember) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(PLAN_STORE) || "null");
+    if (!saved || saved.stamp !== planStamp(persona) || saved.day !== day) return null;
+    return saved.layout || null;
+  } catch (e) {
+    return null;
+  }
+}
+function storePlan(persona, day, layout) {
+  if (!persona || !day || !layout) return;
+  planCache.set(day + "\n" + persona, layout);
+  if (!state.remember) return;
+  try {
+    localStorage.setItem(PLAN_STORE, JSON.stringify({
+      day: day, stamp: planStamp(persona), layout: layout
+    }));
+  } catch (e) {}
+}
+function clearPlanStore() {
+  try { localStorage.removeItem(PLAN_STORE); } catch (e) {}
 }
 function savePersona() {
-  // The description stays on this machine, and only after the visitor
-  // accepts the preference prompt. It is not a cookie, so it is not sent
-  // on every request, and it is never put in the page URL.
-  if (state.decision !== "yes") {
-    localStorage.removeItem("dxedge-news-persona");
+  // The description is stored only when this device opted in, using the
+  // same cookie decision as the preference prompt. Nothing is written otherwise.
+  localStorage.removeItem("dxedge-news-persona");
+  if (!(state.remember && state.decision === "yes" && state.persona)) {
+    clearPersonaCookie();
+    if (!state.remember) clearPlanStore();
     return;
   }
-  if (!state.persona) localStorage.removeItem("dxedge-news-persona");
-  else localStorage.setItem("dxedge-news-persona", state.persona);
+  writePersonaCookie(state.persona);
 }
 function saveSeed() {
   if (state.decision === "yes") {
@@ -289,15 +364,28 @@ async function getJSON(path) {
   if (!res.ok) throw new Error(data.detail || "The desk could not answer.");
   return data;
 }
-async function postJSON(path, body) {
+async function postJSON(path, body, signal) {
   const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: signal || undefined
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || "The desk could not answer.");
   return data;
+}
+function isAbort(err) {
+  return !!(err && err.name === "AbortError");
+}
+function planFailure(err) {
+  const msg = String((err && err.message) || "");
+  if (/not for this paper|too many reader|must be text|outside this paper/i.test(msg)) return msg;
+  return "The desk could not plan this edition.";
+}
+function abortPlan() {
+  if (planController) planController.abort();
+  planController = null;
 }
 function longDate(day) {
   const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -386,7 +474,10 @@ async function vote(targetId, kind, sectionId) {
       state.story.item.votes = data.votes;
       state.story.item.mine = data.mine;
     }
-    await refreshLayout();
+    if (!state.planning) {
+      state.layout = await refreshLayout();
+      if (state.persona) storePlan(state.persona, state.day, state.layout);
+    }
   } catch (e) {
     state.errors[sectionId] = e.message;
   }
@@ -449,38 +540,71 @@ function renderDays() {
     wrap.appendChild(btn);
   });
 }
+function formatElapsed(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return m + ":" + String(s).padStart(2, "0");
+}
+function paintPlanElapsed() {
+  const node = document.getElementById("plan-elapsed");
+  if (!node || !state.planningStarted) return;
+  node.textContent = formatElapsed(Date.now() - state.planningStarted);
+}
+function startPlanning() {
+  state.planning = true;
+  state.planningStarted = Date.now();
+  paintPlanStatus();
+  if (planTimer) clearInterval(planTimer);
+  planTimer = setInterval(paintPlanElapsed, 1000);
+}
+function stopPlanning() {
+  state.planning = false;
+  state.planningStarted = null;
+  if (planTimer) clearInterval(planTimer);
+  planTimer = null;
+}
+function paintPlanStatus() {
+  const apply = document.getElementById("persona-apply");
+  if (apply) apply.disabled = !!state.planning;
+  const box = document.getElementById("persona-remember");
+  if (box) box.checked = !!state.remember;
+  const status = document.getElementById("plan-status");
+  if (status) {
+    status.hidden = !state.planning;
+    if (state.planning) paintPlanElapsed();
+  }
+  const note = document.getElementById("persona-note");
+  if (!note) return;
+  clear(note);
+  if (state.errors._persona) {
+    note.hidden = false;
+    note.appendChild(document.createTextNode(state.errors._persona + " "));
+    note.appendChild(el("button", {
+      class: "btn", type: "button", id: "persona-retry",
+      onclick: () => applyPersona(document.getElementById("persona-input").value)
+    }, "Retry"));
+  } else note.hidden = true;
+}
 function renderPersonas() {
   const input = document.getElementById("persona-input");
-  if (document.activeElement !== input) input.value = state.persona || "";
-  const wrap = document.getElementById("persona-examples");
+  if (document.activeElement !== input && !state.planning) input.value = state.persona || "";
+  const wrap = document.getElementById("persona-carousel");
+  const left = wrap.scrollLeft;
   clear(wrap);
   const current = (state.persona || "").toLowerCase();
   (state.status.personas || []).forEach((label) => {
     wrap.appendChild(el("button", {
       class: "chip", type: "button",
       "aria-pressed": current === String(label).toLowerCase() ? "true" : "false",
-      onclick: () => applyPersona(label)
+      onclick: () => {
+        document.getElementById("persona-input").value = label;
+        applyPersona(label);
+      }
     }, label));
   });
-  const note = document.getElementById("persona-note");
-  if (state.errors._persona) {
-    note.hidden = false;
-    note.textContent = state.errors._persona;
-  } else {
-    note.hidden = true;
-    note.textContent = "";
-  }
-}
-function renderSeeds() {
-  const wrap = document.getElementById("seed-examples");
-  clear(wrap);
-  document.getElementById("seed-input").value = state.seed == null || Number.isNaN(state.seed) ? "" : String(state.seed);
-  (state.status.examples || []).forEach((ex) => {
-    wrap.appendChild(el("button", {
-      class: "chip", type: "button", "aria-pressed": Number(state.seed) === ex.seed ? "true" : "false",
-      onclick: () => applySeed(ex.seed)
-    }, ex.label));
-  });
+  wrap.scrollLeft = left;
+  paintPlanStatus();
 }
 function renderStory() {
   const pane = document.getElementById("story");
@@ -608,7 +732,6 @@ function render() {
   document.getElementById("vol").textContent = status.dormant && !state.awake ? "Asleep" : "On demand";
   renderDays();
   renderProgress();
-  renderSeeds();
   renderPersonas();
   const cookie = document.getElementById("cookie");
   cookie.hidden = state.decision === "yes" || state.decision === "no";
@@ -621,6 +744,14 @@ function render() {
     wire.appendChild(el("p", null, "The desks are built. Generation needs the server secret " + (status.provider.needed_secret || "XAI_API_KEY") + ". The comics shelf still opens."));
   } else wire.hidden = true;
   renderStory();
+  fillPaper();
+  const fresh = document.getElementById("fresh");
+  const dismissed = localStorage.getItem("dxedge-news-fresh") === (status.today || "");
+  fresh.hidden = dismissed || (status.dormant && !state.awake);
+}
+function fillPaper() {
+  const status = state.status;
+  if (!status) return;
   const paper = document.getElementById("paper");
   clear(paper);
   const soon = document.getElementById("soon");
@@ -647,36 +778,76 @@ function render() {
     box.appendChild(el("p", { class: "brief" }, meta.brief || "Coming soon."));
     soon.appendChild(box);
   });
-  const fresh = document.getElementById("fresh");
-  const dismissed = localStorage.getItem("dxedge-news-fresh") === (status.today || "");
-  fresh.hidden = dismissed || (status.dormant && !state.awake);
+}
+function swapPaper(instant) {
+  const paper = document.getElementById("paper");
+  fillPaper();
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (instant || reduce) {
+    paper.classList.remove("swap-in");
+    return;
+  }
+  paper.classList.remove("swap-in");
+  void paper.offsetWidth;
+  paper.classList.add("swap-in");
 }
 function openStory(meta, item) {
   state.story = { sectionId: meta.id, kicker: meta.kicker, item: item };
   render();
   document.getElementById("story").scrollIntoView({ behavior: "smooth", block: "start" });
 }
-async function refreshLayout() {
+async function refreshLayout(persona, signal) {
   const body = {
     day: state.day, user_id: state.reader,
     ...(state.seed == null || Number.isNaN(state.seed) ? {} : { seed: state.seed })
   };
-  if (state.persona) body.persona = state.persona;
-  state.layout = await postJSON("/api/news/layout", body);
+  if (persona === undefined) {
+    if (state.persona) body.persona = state.persona;
+  } else if (persona) body.persona = persona;
+  return postJSON("/api/news/layout", body, signal);
 }
 async function selectDay(day) {
   state.day = day;
   state.story = null;
   if (state.status.dormant && !state.awake) { render(); return; }
+  const hit = state.persona ? cachedPlan(state.persona, day) : null;
+  if (hit) state.layout = hit;
+  abortPlan();
+  const controller = new AbortController();
+  planController = controller;
+  render();
+  const waiting = !!(state.persona && !hit);
+  if (waiting) startPlanning();
   try {
     const data = await getJSON("/api/news/day?day=" + encodeURIComponent(day) + (state.awake ? "&wake=1" : ""));
-    if (data.dormant && !state.awake) { state.status.dormant = true; render(); return; }
-    state.editions[day] = data.sections || {};
-    await refreshLayout();
+    if (data && data.sections) state.editions[day] = data.sections;
+    if (controller !== planController) {
+      if (day === state.day && !state.planning) fillPaper();
+      return;
+    }
+    if (data.dormant && !state.awake) {
+      state.status.dormant = true;
+      stopPlanning();
+      render();
+      return;
+    }
+    const before = JSON.stringify(state.layout || null);
+    const layout = await refreshLayout(state.persona || "", controller.signal);
+    if (controller !== planController) return;
+    state.layout = layout;
+    if (state.persona) storePlan(state.persona, day, layout);
+    stopPlanning();
+    if (JSON.stringify(layout) !== before) swapPaper(false);
+    else fillPaper();
+    paintPlanStatus();
+    renderDays();
   } catch (e) {
-    state.errors._day = e.message;
+    if (controller !== planController || isAbort(e)) return;
+    stopPlanning();
+    if (waiting) state.errors._persona = planFailure(e);
+    else state.errors._day = e.message;
+    render();
   }
-  render();
 }
 function measuredSeconds() {
   const n = state.status && state.status.generation_seconds;
@@ -739,7 +910,10 @@ async function openSection(id) {
       if (!state.editions[state.day]) state.editions[state.day] = {};
       state.editions[state.day][id] = data;
       rememberProgress(data);
-      await refreshLayout();
+      if (!state.planning) {
+        state.layout = await refreshLayout();
+        if (state.persona) storePlan(state.persona, state.day, state.layout);
+      }
     }
   } catch (e) {
     state.errors[id] = e.message;
@@ -749,28 +923,87 @@ async function openSection(id) {
   stopWaitTimer();
   render();
 }
-async function applySeed(seed) {
-  state.seed = seed;
-  saveSeed();
-  try { await refreshLayout(); } catch (e) { state.errors._seed = e.message; }
-  render();
-}
 async function applyPersona(text) {
-  const next = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
-  const previous = state.persona || "";
-  if (next === previous && !state.errors._persona) { render(); return; }
-  state.errors._persona = "";
-  state.persona = next;
-  try {
-    await refreshLayout();
-    savePersona();
-  } catch (e) {
-    state.persona = previous;
-    state.errors._persona = e.message;
-    try { await refreshLayout(); } catch (err) {}
+  const next = cleanPersona(text);
+  const input = document.getElementById("persona-input");
+  abortPlan();
+  if (!next) {
+    state.persona = "";
+    state.errors._persona = "";
+    stopPlanning();
+    clearPersonaCookie();
+    clearPlanStore();
+    planCache.clear();
+    if (input) input.value = "";
+    paintPlanStatus();
+    renderPersonas();
+    const controller = new AbortController();
+    planController = controller;
+    try {
+      const layout = await refreshLayout("", controller.signal);
+      if (controller !== planController) return;
+      state.layout = layout;
+      swapPaper(false);
+    } catch (e) {
+      if (controller !== planController || isAbort(e)) return;
+      state.errors._persona = planFailure(e);
+      paintPlanStatus();
+    }
+    return;
   }
-  render();
-  if (state.errors._persona) document.getElementById("persona-input").value = next;
+  const hit = cachedPlan(next, state.day);
+  if (hit && next === (state.persona || "") && !state.errors._persona) {
+    state.layout = hit;
+    stopPlanning();
+    paintPlanStatus();
+    return;
+  }
+  if (hit) {
+    state.persona = next;
+    state.errors._persona = "";
+    state.layout = hit;
+    stopPlanning();
+    savePersona();
+    paintPlanStatus();
+    renderPersonas();
+    swapPaper(true);
+    return;
+  }
+  state.errors._persona = "";
+  if (input && document.activeElement !== input) input.value = next;
+  startPlanning();
+  const controller = new AbortController();
+  planController = controller;
+  try {
+    const layout = await refreshLayout(next, controller.signal);
+    if (controller !== planController) return;
+    state.persona = next;
+    state.layout = layout;
+    storePlan(next, state.day, layout);
+    stopPlanning();
+    savePersona();
+    paintPlanStatus();
+    renderPersonas();
+    swapPaper(false);
+  } catch (e) {
+    if (controller !== planController || isAbort(e)) return;
+    stopPlanning();
+    state.errors._persona = planFailure(e);
+    paintPlanStatus();
+    if (input) input.value = next;
+  }
+}
+function onRemember(checked) {
+  state.remember = !!checked;
+  if (state.remember) {
+    if (state.persona && state.layout && state.day) storePlan(state.persona, state.day, state.layout);
+    if (state.decision !== "yes") acceptCookie();
+    else savePersona();
+  } else {
+    clearPersonaCookie();
+    clearPlanStore();
+  }
+  paintPlanStatus();
 }
 async function wake() {
   try {
@@ -787,42 +1020,46 @@ function acceptCookie() {
   state.decision = "yes";
   writeCookie("dxn", state.reader);
   saveSeed();
-  savePersona();
+  if (state.remember) savePersona();
   render();
 }
 function declineCookie() {
   localStorage.setItem("dxedge-news-cookie", "no");
   state.decision = "no";
+  state.remember = false;
   clearCookie("dxn");
   clearCookie("dxn_seed");
+  clearPersonaCookie();
+  clearPlanStore();
   localStorage.removeItem("dxedge-news-persona");
   render();
 }
 async function forget() {
   const old = state.reader;
+  abortPlan();
+  stopPlanning();
   clearCookie("dxn");
   clearCookie("dxn_seed");
+  clearPersonaCookie();
+  clearPlanStore();
+  planCache.clear();
   sessionStorage.removeItem("dxedge-news-reader");
   sessionStorage.removeItem("dxedge-news-seed");
   localStorage.removeItem("dxedge-news-persona");
   if (localStorage.getItem("dxedge-news-cookie") === "yes") localStorage.removeItem("dxedge-news-cookie");
   state.seed = null;
   state.persona = "";
+  state.remember = false;
   state.errors._persona = "";
   state.reader = mint();
   sessionStorage.setItem("dxedge-news-reader", state.reader);
   state.decision = localStorage.getItem("dxedge-news-cookie");
   try { await postJSON("/api/news/forget", { user_id: old }); } catch (e) {}
-  try { await refreshLayout(); } catch (e) {}
+  try {
+    state.layout = await refreshLayout();
+  } catch (e) {}
   render();
 }
-document.getElementById("seed-apply").addEventListener("click", () => {
-  const raw = document.getElementById("seed-input").value.trim();
-  if (raw === "") return applySeed(null);
-  if (!/^\d+$/.test(raw)) { state.errors._seed = "Seed must be a whole number."; render(); return; }
-  applySeed(Number(raw));
-});
-document.getElementById("seed-clear").addEventListener("click", () => applySeed(null));
 document.getElementById("persona-apply").addEventListener("click", () => {
   applyPersona(document.getElementById("persona-input").value.trim());
 });
@@ -831,6 +1068,14 @@ document.getElementById("persona-input").addEventListener("keydown", (ev) => {
   if (ev.key !== "Enter") return;
   ev.preventDefault();
   applyPersona(ev.target.value.trim());
+});
+document.getElementById("persona-remember").addEventListener("change", (ev) => {
+  onRemember(ev.target.checked);
+});
+document.getElementById("persona-carousel").addEventListener("keydown", (ev) => {
+  if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+  ev.preventDefault();
+  ev.currentTarget.scrollBy({ left: ev.key === "ArrowRight" ? 240 : -240, behavior: "smooth" });
 });
 document.getElementById("cookie-yes").addEventListener("click", acceptCookie);
 document.getElementById("cookie-no").addEventListener("click", declineCookie);
@@ -845,6 +1090,8 @@ async function boot() {
   try {
     state.status = await getJSON("/api/news/status");
     state.day = state.status.today;
+    const hit = state.persona ? cachedPlan(state.persona, state.day) : null;
+    if (hit) state.layout = hit;
     render();
     if (!(state.status.dormant && !state.awake)) await selectDay(state.status.today);
     else render();

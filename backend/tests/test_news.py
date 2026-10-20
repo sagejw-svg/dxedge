@@ -24,7 +24,7 @@ from news import (
     extract_completion, framing_allowed, is_news_path, load_config, make_provider, news_basic_ok,
     news_cookie_ok, news_credentials_ok, news_password, news_session_cookie, owner_secret,
     parse_commons, parse_model_json, parse_seed, parse_user, pepper_image_urls,
-    GENERATION_MAX_SECONDS, persona_blocked, persona_hash, persona_weights,
+    GENERATION_MAX_SECONDS, lexicon_weights, persona_blocked, persona_hash, persona_weights,
     median_seconds, normalize_persona, preamble, prompt_blocks,
     public_domain, public_section, safe_frame_url,
     scrub_highlight, section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE,
@@ -1289,17 +1289,53 @@ def test_persona_payload_is_weights_only():
 
 def test_example_personas_are_generic(paper):
     labels = load_config()["example_personas"]
-    assert 3 <= len(labels) <= 6
-    assert "Retired teacher in Ohio who loves birds" in labels
-    assert "Nurse in Manila into astronomy" in labels
+    assert 18 <= len(labels) <= 24
     blob = " ".join(labels).lower()
+    assert "retired teacher in ohio who loves birds" in blob
+    assert "nurse in manila into astronomy" in blob
+    for word in ("farmer", "nurse", "retired", "student", "business", "musician",
+                 "chef", "trucker", "engineer", "parent"):
+        assert word in blob
     for word in ("sailing", "sailor", "ham radio", "amateur radio", "sleep",
-                 "narcolepsy", "security", "synth", "child", "teen", "james"):
+                 "narcolepsy", "security", "synth", "child", "teen", "james",
+                 "boy", "girl", "kid", "election", "protest", "activist"):
         assert word not in blob
     assert PROFILE_RE.search(blob) is None
+    ages = [int(n) for n in re.findall(r"(\d+)-year-old", blob)]
+    assert len(ages) == len(labels)
+    assert ages == sorted(set(ages), key=ages.index)
+    assert all(age >= 21 for age in ages)
+    assert len(set(ages)) >= 10
+    places = ("ohio", "manila", "nakuru", "seoul", "porto", "orleans", "oaxaca",
+              "manitoba", "osaka", "dubai", "edinburgh", "hanoi", "accra",
+              "patagonia", "mumbai", "ljubljana", "zurich", "amsterdam", "melbourne")
+    assert sum(1 for place in places if place in blob) >= 15
+    short = json.loads(json.dumps(load_config()))
+    short["example_personas"] = short["example_personas"][:4]
+    with pytest.raises(ValueError, match="about 20"):
+        _validate_config(short)
     status = paper.status()
     assert status["personas"] == labels
     assert "prompt" not in json.dumps(status["personas"])
+
+
+def test_carousel_personas_rank_without_a_model_call():
+    cfg = load_config()
+    labels = cfg["example_personas"]
+    ids = [s["id"] for s in cfg["sections"] if not s.get("coming_soon")]
+    topics = list(cfg["topics"])
+    tops = []
+    extras = []
+    for label in labels:
+        text = normalize_persona(label)
+        assert text and len(text) <= 200
+        assert persona_blocked(text) is False
+        weights = lexicon_weights(text, ids, topics)
+        ranked = sorted(ids, key=lambda sid: (-weights["sections"][sid], ids.index(sid)))
+        tops.append(ranked[0])
+        extras.append(tuple(item["topic"] for item in weights["extra"]))
+    assert len(set(tops)) >= 5
+    assert len(set(extras)) >= 12
 
 
 def test_persona_layout_requires_auth(http, monkeypatch, caplog):
@@ -1363,22 +1399,55 @@ def test_page_wires_match_the_desk():
     assert "ham radio" not in html.lower()
     assert "james" not in html.lower()
     assert "k6wrj" not in html.lower()
-    assert 'id="seed-examples"' in html
-    assert 'aria-label="Example readers"' in html
+    visible = html.split("<script>", 1)[0]
+    assert "seed" not in visible.lower()
+    assert 'id="seed-input"' not in html
+    assert 'id="seed-apply"' not in html
+    assert 'id="seed-clear"' not in html
+    assert 'id="seed-examples"' not in html
+    assert "Example readers" not in html
+    assert "status.examples" not in html
     assert 'class: "chip"' in html
-    assert "status.examples" in html
     assert "Space nerd" not in html
     assert 'id="persona-input"' in html
     assert 'for="persona-input"' in html
     assert "Describe a reader" in html
     assert "Clear persona" in html
     assert 'id="persona-clear"' in html
-    assert 'id="persona-examples"' in html
+    assert 'id="persona-carousel"' in html
+    assert 'aria-roledescription="carousel"' in html
     assert 'aria-label="Example personas"' in html
+    assert "scroll-snap-type: x mandatory" in html
+    assert "overflow-x: auto" in html
     assert "45-year-old woman living in Argentina who likes orchids and spiders" in html
     assert "status.personas" in html
-    assert "dxedge-news-persona" in html
+    assert 'localStorage.setItem("dxedge-news-persona"' not in html
+    assert 'localStorage.removeItem("dxedge-news-persona")' in html
     assert "dxn_persona" not in html
+    assert "Remember this reader on this device" in html
+    assert 'id="persona-remember"' in html
+    assert html.count("Would you like to set up a persistent cookie") == 1
+    assert "PERSONA_MAX_AGE = 15552000" in html
+    assert "SameSite=Lax; Secure" in html
+    assert "Path=/news" in html
+    assert "dxedge_reader" in html
+    assert "Planning an edition for this reader…" in html
+    assert 'id="plan-elapsed"' in html
+    assert "setInterval(paintPlanElapsed, 1000)" in html
+    assert "apply.disabled = !!state.planning" in html
+    assert "The desk could not plan this edition." in html
+    assert 'id: "persona-retry"' in html
+    assert "prefers-reduced-motion" in html
+    plan_fn = html.split("async function applyPersona")[1].split("async function wake")[0]
+    assert plan_fn.index("abortPlan()") < plan_fn.index("new AbortController(")
+    assert "cachedPlan(" in plan_fn and "swapPaper(true)" in plan_fn
+    assert plan_fn.index("cachedPlan(") < plan_fn.index("startPlanning()")
+    assert plan_fn.index("swapPaper(true)") < plan_fn.index("startPlanning()")
+    assert "clearPersonaCookie()" in plan_fn
+    assert 'state.remember && state.decision === "yes" && state.persona' in html
+    remember_fn = html.split("function onRemember")[1].split("function acceptCookie")[0]
+    assert "acceptCookie()" in remember_fn
+    assert "clearPersonaCookie()" in remember_fn
     for label in load_config()["example_personas"]:
         assert label not in html
     day_fetch = html.split("/api/news/day?day=")[1].split(";")[0]
@@ -1399,7 +1468,7 @@ def test_page_wires_match_the_desk():
     assert "setInterval(paintWait, 1000)" in html
     assert "startWaitTimer()" in html
     assert "stopWaitTimer()" in html
-    assert "CACHE_NAME = 'dxedge-v112'" in sw
+    assert "CACHE_NAME = 'dxedge-v113'" in sw
     assert "url.pathname.startsWith('/news/')" in sw
     # The paper is not intercepted. A service worker response hides the dialog.
     before_mutable, _, after_mutable = sw.partition("const mutable")
