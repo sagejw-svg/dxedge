@@ -1845,7 +1845,13 @@ $('projFile').addEventListener('change', () => {
   const f = $('projFile').files && $('projFile').files[0]; if (!f) return;
   const reader = new FileReader();
   reader.onload = () => {
-    try { const p = applyProject(JSON.parse(String(reader.result))); toast('Loaded "' + p.name + '".'); }
+    // normalizeProject turns any JSON into a default project, so a mix file or a patch
+    // picked here by mistake would reset every device and overwrite the saved project.
+    try {
+      const raw = JSON.parse(String(reader.result));
+      if (!raw || raw.kind !== 'dxrack') throw new Error('not a project');
+      const p = applyProject(raw); toast('Loaded "' + p.name + '".');
+    }
     catch (e) { toast('That file is not a project.'); }
     $('projFile').value = '';
   };

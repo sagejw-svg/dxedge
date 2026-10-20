@@ -197,6 +197,7 @@ export function createPlayer(api) {
     if (!song.name) song.name = (fileName || 'MIDI file').replace(/\.(mid|midi)$/i, '');
     route = defaultRoute(song.channels, ids());
     api.withEngine(() => {
+      bind();
       api.setClock(song.bpm, song.timeSig);
       show();
     });
@@ -329,6 +330,9 @@ export function createPlayer(api) {
     if (!song) { api.toast('Pick a song, or drop a .mid file.'); return false; }
     api.wake();
     api.withEngine(() => {
+      // The engine exists before every rack device has attached, and the queued bind
+      // waits for all of them. Subscribe now so the first press is not lost.
+      bind();
       const t = api.engine().transport;
       if (t.state().playing) t.stop();
       t.locate(0);

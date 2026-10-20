@@ -2381,6 +2381,13 @@ with sync_playwright() as pw:
     pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
     boot = pg.evaluate("""() => ({ tempo: __synth.transport().state().tempo, mix: __synth.mixer().cathode, name: document.getElementById('projName').value })""")
     ck("R. the saved project restores tempo, mixer and name on reload", boot["tempo"] == 88 and abs(boot["mix"]["level"] - 0.25) < 1e-6 and boot["mix"]["solo"] and boot["name"] == "Uploaded", boot)
+    # Review R1020-2: upload took any JSON (a mix file, a patch) as an empty project, reset the devices and overwrote the saved one.
+    for wrong_name, wrong in (("a-mix.json", {"v": 1, "kind": "dxmix", "name": "Mix"}), ("patch.json", {"v": 1, "device": "filament", "name": "Glass Music Box"})):
+        pg.set_input_files("#projFile", files=[{"name": wrong_name, "mimeType": "application/json", "buffer": json.dumps(wrong).encode()}])
+        pg.wait_for_function("document.getElementById('toast').textContent.length > 0", timeout=3000); pg.wait_for_timeout(150)
+        kept = pg.evaluate("""() => ({ toast: document.getElementById('toast').textContent, tempo: __synth.transport().state().tempo, name: document.getElementById('projName').value,
+          saved: JSON.parse(localStorage.getItem('dxrack_project') || '{}').name, dev: __synth.device() })""")
+        ck(f"R. upload refuses {wrong_name} and keeps the project", "not a project" in kept["toast"] and kept["tempo"] == 88 and kept["name"] == "Uploaded" and kept["saved"] == "Uploaded" and kept["dev"] == "cathode", kept)
     ck("R. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Mx. the mix desk: arms, sends, one session
@@ -2636,6 +2643,30 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.player().stop()"); pg.wait_for_timeout(200)
     ck("library stop after a tempo change leaves no note",
        not pg.evaluate("__synth.player().playing()") and pg.evaluate("__synth.engine().meters.filament.notes") == [])
+    # Review R1020-1: the library bound to the transport only after every rack device attached, so a
+    # Play pressed in that window ran the transport and played nothing. Hold the last device's worklet back.
+    hctx = b.new_context(viewport={"width": 1366, "height": 900})
+    hctx.add_init_script("""(() => {
+      const add = AudioWorklet.prototype.addModule; let go; const gate = new Promise(r => { go = r; });
+      window.__held = 0; window.__release = () => go();
+      AudioWorklet.prototype.addModule = function (url, o) {
+        if (String(url).includes('resnatron.worklet')) { window.__held++; return gate.then(() => add.call(this, url, o)); }
+        return add.call(this, url, o);
+      };
+    })()""")
+    hp = hctx.new_page(); herr = []; hp.on("pageerror", lambda e: herr.append(str(e)))
+    hp.goto(BASE); hp.wait_for_function("window.__synth && __synth.ready() && __synth.player().ready()", timeout=20000)
+    hp.wait_for_function("__synth.player().library().length > 0", timeout=5000)
+    hp.evaluate("""async () => { await __synth.player().loadId('dx-dock-lamp'); await __synth.engine().ctx.resume(); }""")
+    hp.wait_for_function("window.__held >= 1", timeout=20000)
+    early = {"held": hp.evaluate("window.__held")}
+    hp.click("#libPlay"); hp.wait_for_timeout(500)
+    early.update(hp.evaluate("""() => ({ playing: __synth.player().playing(), transport: __synth.transport().state().playing, pressed: document.getElementById('libPlay').getAttribute('aria-pressed') })"""))
+    ck("P. Play before every device has attached starts the song", early["held"] >= 1 and early["playing"] and early["pressed"] == "true", early)
+    hp.click("#libStop"); hp.wait_for_timeout(100)
+    hp.evaluate("window.__release()"); hp.wait_for_timeout(300)
+    ck("P. no page errors with a late device", not herr, herr)
+    hctx.close()
 
     pg.evaluate("""async () => { await __synth.player().loadId('chopin-funeral-march'); }""")
     pg.wait_for_timeout(40)
