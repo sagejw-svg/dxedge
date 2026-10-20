@@ -59,9 +59,10 @@ CONFIG_PATH = Path(__file__).with_name("news_config.json")
 PAPER_TZ = ZoneInfo("America/Los_Angeles")
 DORMANT_DAYS = 14
 SEED_MAX = 1_000_000_000
-# Shown until a real section has been written. Web search usually lands
-# well inside the 45s wire timeout, so 20s is the prior, not a measurement.
-DEFAULT_GENERATION_SECONDS = 20
+# First opens have been measured around 100–120s (116.7s and 97.6s).
+# A cached open is about 0.3s and is not recorded. Until a median exists,
+# the page says "Usually 1–2 minutes." Runs past the proxy window are junk.
+GENERATION_MAX_SECONDS = 180
 GENERATION_SAMPLE_LIMIT = 30
 USER_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 TARGET_RE = re.compile(r"^[A-Za-z0-9:._-]{1,80}$")
@@ -950,14 +951,14 @@ def blend(base: dict, signals: dict, t: float) -> dict:
     return out
 
 
-def median_seconds(samples: list[float], default: int = DEFAULT_GENERATION_SECONDS) -> int:
-    """Nearest second of the median. Empty means the default, not a model call."""
+def median_seconds(samples: list[float], default: int | None = None) -> int | None:
+    """Nearest second of the median. Empty means no estimate, not a model call."""
     usable = []
     for sample in samples:
         if isinstance(sample, bool) or not isinstance(sample, (int, float)):
             continue
         number = float(sample)
-        if number != number or number < 0 or number > 120:
+        if number != number or number < 0 or number > GENERATION_MAX_SECONDS:
             continue
         usable.append(number)
     if not usable:
@@ -971,8 +972,8 @@ def median_seconds(samples: list[float], default: int = DEFAULT_GENERATION_SECON
     rounded = int(round(value))
     if rounded < 1:
         return 1
-    if rounded > 60:
-        return 60
+    if rounded > GENERATION_MAX_SECONDS:
+        return GENERATION_MAX_SECONDS
     return rounded
 
 
@@ -1327,7 +1328,7 @@ class Store:
         if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
             return
         number = float(seconds)
-        if number != number or number < 0 or number > 120:
+        if number != number or number < 0 or number > GENERATION_MAX_SECONDS:
             return
         iso = datetime.now(timezone.utc).isoformat()
         with self._lock, self.connect() as conn:
