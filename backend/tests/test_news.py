@@ -18,14 +18,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from ratelimit import RateLimiter
 import news as newsdesk
 from news import (
-    BIO_SAFE, CONFIG_PATH, LAYOUT_KEYS, LCG, LiveNet, NewsError, Paper, Store, XAIProvider,
-    AnthropicProvider, NEWS_AUTH_USER, PLAN_SCHEMA, PLAN_SYSTEM, PLAN_TTL_DAYS,
+    ANTHROPIC_MODEL_DEFAULT, BIO_SAFE, CONFIG_PATH, LAYOUT_KEYS, LCG, LiveNet, NewsError,
+    AnthropicProvider, FallbackProvider, Paper, Store, XAIProvider,
+    NEWS_AUTH_USER, PLAN_SCHEMA, PLAN_SYSTEM, PLAN_TTL_DAYS,
     accept_image, blend, build_planned_prompt, build_prompt, classic_for_day, clip,
     commons_api_url, extract_completion, framing_allowed, is_news_path, load_config,
-    news_basic_ok, news_cookie_ok, news_credentials_ok, news_password, news_session_cookie,
-    owner_secret, parse_commons, parse_model_json, parse_section_plan, parse_seed, parse_user,
-    pepper_image_urls, GENERATION_MAX_SECONDS, persona_blocked, persona_hash, persona_weights,
-    median_seconds, normalize_persona, preamble, schema_valid,
+    make_provider, news_basic_ok, news_cookie_ok, news_credentials_ok, news_password,
+    news_session_cookie, owner_secret, parse_commons, parse_model_json, parse_section_plan,
+    parse_seed, parse_user, pepper_image_urls, GENERATION_MAX_SECONDS, persona_blocked,
+    persona_hash, persona_weights, median_seconds, normalize_persona, preamble,
+    prompt_blocks, schema_valid,
     public_domain, public_section, safe_frame_url,
     scrub_highlight, section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE,
     _validate_config,
@@ -166,6 +168,8 @@ def env(tmp_path, monkeypatch):
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.delenv("GROK_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    monkeypatch.delenv("NEWS_PROVIDER", raising=False)
     return tmp_path
 
 
@@ -1678,9 +1682,14 @@ def test_page_wires_match_the_desk():
     news_api = nginx.split("location /api/news {", 1)[1].split("location /api/ {", 1)[0]
     assert "proxy_read_timeout 180s;" in news_api
     assert "proxy_send_timeout 180s;" in news_api
+    assert 'Cache-Control "no-store"' in news_api
+    assert "location ^~ /assets/" in nginx
+    assert 'Cache-Control "public, max-age=31536000, immutable"' in nginx
     assert "XAI_API_KEY" in compose
     assert "GROK_API_KEY" in compose
     assert "ANTHROPIC_API_KEY" in compose
+    assert "claude-sonnet-5-5" in compose
+    assert "NEWS_PROVIDER" in compose
     assert "NEWS_OWNER_SEED" in compose
     assert "NEWS_PASSWORD" in compose
     assert "username is edge" in compose
@@ -1691,6 +1700,7 @@ def test_page_wires_match_the_desk():
     assert "secrets.NEWS_PASSWORD" in deploy
     assert "unset XAI_API_KEY" in deploy
     assert "unset ANTHROPIC_API_KEY" in deploy
+    assert "write_secret ANTHROPIC_API_KEY" in deploy
     assert "unset NEWS_PASSWORD" in deploy
     assert "news model key is unset" in deploy
     assert "/opt/dxedge/.env" in deploy
@@ -1708,6 +1718,9 @@ def test_page_wires_match_the_desk():
     assert "Basic auth user is edge" in deploy
     assert "Fail closed" in deploy
     assert 'envs: XAI_API_KEY,GROK_API_KEY,ANTHROPIC_API_KEY,NEWS_PASSWORD' in deploy
+    assert "python3 news_status.py" in deploy
+    import yaml
+    yaml.safe_load(deploy)
     assert "--force-recreate --no-deps backend" in deploy
     assert NEWS_AUTH_USER == "edge"
     for path in ("/api/news/status", "/api/news/day", "/api/news/section",
@@ -1801,6 +1814,7 @@ def http(tmp_path, monkeypatch):
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.delenv("GROK_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("NEWS_PROVIDER", raising=False)
     monkeypatch.delenv("NEWS_OWNER_SEED", raising=False)
     monkeypatch.delenv("NEWS_OWNER_READER", raising=False)
     newsdesk._api = None
@@ -2030,3 +2044,394 @@ def test_rest_of_the_site_stays_open(http):
     assert health.json()["status"] == "ok"
     solar = http.get("/api/solar")
     assert solar.status_code != 401
+
+
+def test_provider_choice_uses_anthropic_when_its_key_is_set(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    monkeypatch.delenv("GROK_API_KEY", raising=False)
+    monkeypatch.delenv("NEWS_PROVIDER", raising=False)
+    desk = make_provider()
+    assert isinstance(desk, XAIProvider)
+    assert desk.ready is False
+    assert desk.status_report()["needed_secret"] == "XAI_API_KEY"
+    assert desk.status_report()["providers"]["anthropic"]["ready"] is False
+
+    monkeypatch.setenv("XAI_API_KEY", "xai-test-key")
+    desk = make_provider()
+    assert isinstance(desk, XAIProvider)
+    assert desk.status_report()["name"] == "xai"
+    assert desk.status_report()["ready"] is True
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-key")
+    desk = make_provider()
+    assert isinstance(desk, FallbackProvider)
+    report = desk.status_report()
+    assert report["name"] == "anthropic"
+    assert report["ready"] is True
+    assert report["needed_secret"] is None
+    assert report["providers"]["anthropic"]["ready"] is True
+    assert report["providers"]["anthropic"]["selected"] is True
+    assert report["providers"]["anthropic"]["model"] == ANTHROPIC_MODEL_DEFAULT
+    assert report["providers"]["xai"]["ready"] is True
+    assert "sk-ant-test-key" not in json.dumps(report)
+    assert "xai-test-key" not in json.dumps(report)
+
+    monkeypatch.setenv("NEWS_PROVIDER", "xai")
+    chosen = make_provider()
+    assert isinstance(chosen, XAIProvider)
+    assert chosen.status_report()["name"] == "xai"
+    assert chosen.status_report()["providers"]["anthropic"]["selected"] is False
+
+    monkeypatch.setenv("NEWS_PROVIDER", "anthropic")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    empty = make_provider()
+    assert isinstance(empty, FallbackProvider)
+    assert empty.ready is False
+    assert empty.needed_secret == "ANTHROPIC_API_KEY"
+    assert empty.status_report()["ready"] is False
+
+
+def test_anthropic_caches_stable_rules_and_puts_the_day_last():
+    assert ANTHROPIC_MODEL_DEFAULT == "claude-sonnet-5-5"
+    sec = section_map()["biology"]
+    system, user = build_prompt(sec, DAY, [("biology", 2)])
+    blocks = prompt_blocks(sec, DAY, [("biology", 2)], persona="orchids and spiders")
+    assert blocks["rules"] == preamble()
+    assert (blocks["xai_system"], blocks["xai_user"]) == (system, user)
+    assert sec["prompt"] in blocks["section_rules"]
+    assert "No protocols, no sequences" in blocks["rules"]
+    assert "No exploit steps and no payloads" in blocks["rules"]
+    assert "No financial advice" in blocks["rules"]
+    assert "Nothing aimed at children" in blocks["rules"]
+    assert "Never title a source" in blocks["rules"]
+    assert DAY not in blocks["rules"]
+    assert DAY not in blocks["section_rules"]
+    assert "orchids and spiders" not in blocks["rules"] + blocks["section_rules"]
+    assert blocks["variable"].index(DAY) < blocks["variable"].index("Section:")
+    assert blocks["variable"].rstrip().endswith("orchids and spiders")
+    bare = prompt_blocks(sec, DAY, [])
+    assert "Reader focus" not in bare["variable"]
+    provider = AnthropicProvider(key="sk-ant-test-key")
+    assert provider.model == "claude-sonnet-5-5"
+    assert provider.max_tokens == 2048
+    assert provider.web_max_uses == 5
+    assert provider.timeout_s == 150
+    body = provider.request_body(blocks)
+    assert body["model"] == "claude-sonnet-5-5"
+    assert body["max_tokens"] == 2048
+    assert body["output_config"] == {"effort": "low"}
+    assert body["tools"] == [{
+        "type": "web_search_20250305",
+        "name": "web_search",
+        "max_uses": 5,
+    }]
+    assert body["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert body["system"][1]["cache_control"] == {"type": "ephemeral"}
+    assert body["system"][0]["text"] == preamble()
+    assert "cache_control" not in body["messages"][0]
+    assert body["messages"][0]["content"] == blocks["variable"]
+    assert "sk-ant-test-key" not in json.dumps(body)
+    capped = AnthropicProvider(key="sk-ant-test-key", max_tokens=999999, web_max_uses=40)
+    assert capped.max_tokens == 4096
+    assert capped.web_max_uses == 8
+
+
+def test_anthropic_search_urls_stay_off_the_highlight():
+    data = {
+        "content": [
+            {"type": "server_tool_use", "name": "web_search", "input": {"query": "space"}},
+            {
+                "type": "web_search_tool_result",
+                "content": [{
+                    "type": "web_search_result",
+                    "url": "https://example.com/unrelated",
+                    "title": "Other",
+                }],
+            },
+            {
+                "type": "text",
+                "text": json.dumps({"highlights": [{
+                    "title": "A real change",
+                    "dek": "Act.",
+                    "body": "Short.",
+                    "topics": ["space"],
+                    "sources": [{"title": "NASA", "url": "https://www.nasa.gov/example"}],
+                }]}),
+                "citations": [{
+                    "type": "web_search_result_location",
+                    "url": "https://example.com/unrelated",
+                    "title": "Other",
+                }],
+            },
+        ],
+    }
+    text, cites = extract_completion(data)
+    assert "https://example.com/unrelated" in cites
+    clean = scrub_highlight("space", parse_model_json(text)["highlights"][0], cites)
+    assert clean["sources"] == [{"title": "NASA", "url": "https://www.nasa.gov/example"}]
+
+
+def test_section_cache_is_shared_across_visitors_personas_and_restarts(paper):
+    first = asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", uid(1), False))
+    second = asyncio.run(paper.open_section(DAY, "space", "2.2.2.2", uid(2), False))
+    assert paper.provider.calls == 1
+    assert second["cached"] is True
+    assert first["highlights"][0]["id"] == second["highlights"][0]["id"]
+    persona_a = {"sections": {"space": 1}, "topics": {"space": 1}, "extra": []}
+    persona_b = {
+        "sections": {"world": 1},
+        "topics": {},
+        "extra": [{"topic": "orchids", "sections": ["biology", "life"]}],
+    }
+    layout_a = paper.layout(DAY, None, uid(1), persona_a)
+    layout_b = paper.layout(DAY, None, uid(2), persona_b)
+    assert paper.provider.calls == 1
+    assert layout_a["order"]["space"] == layout_b["order"]["space"]
+    assert "orchids" not in json.dumps(paper.store.get_section(DAY, "space"))
+    fresh = FakeProvider()
+    revived = Paper(Store(paper.store.path), fresh, paper.net, paper.clock)
+    again = asyncio.run(revived.open_section(DAY, "space", "8.8.8.8", uid(9), False))
+    assert fresh.calls == 0
+    assert again["cached"] is True
+    assert again["highlights"][0]["title"] == first["highlights"][0]["title"]
+    assert again["highlights"][0]["id"] == first["highlights"][0]["id"]
+
+
+def test_anthropic_error_falls_back_to_xai_once(paper):
+    highlights = paper.provider.highlights
+
+    class Anth:
+        name = "anthropic"
+        ready = True
+        calls = 0
+
+        async def complete_blocks(self, blocks):
+            self.calls += 1
+            self.last = blocks
+            raise NewsError(504, "The wire is slow; try again in a minute.")
+
+    class Xai:
+        name = "xai"
+        ready = True
+        calls = 0
+
+        async def complete(self, system, user):
+            self.calls += 1
+            self.last = (system, user)
+            return {"output_text": json.dumps({"highlights": highlights})}
+
+    anth, xai = Anth(), Xai()
+    paper.provider = FallbackProvider(anth, xai)
+    out = asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", uid(1), False))
+    assert anth.calls == 1
+    assert xai.calls == 1
+    assert out["stub"] is False
+    assert out["highlights"][0]["sources"][0]["url"].startswith("https://")
+    assert DAY not in anth.last["rules"]
+    assert "No exploit steps" in anth.last["rules"]
+    assert paper.store.get_section(DAY, "space")["provider"] == "xai"
+    again = asyncio.run(paper.open_section(DAY, "space", "9.9.9.9", uid(2), False))
+    assert again["cached"] is True
+    assert anth.calls == 1
+    assert xai.calls == 1
+
+
+def test_anthropic_success_does_not_call_xai(paper):
+    highlights = paper.provider.highlights
+
+    class Anth:
+        name = "anthropic"
+        ready = True
+        calls = 0
+
+        async def complete_blocks(self, blocks):
+            self.calls += 1
+            return {
+                "content": [{"type": "text", "text": json.dumps({"highlights": highlights})}],
+                "_desk_provider": "anthropic",
+            }
+
+    class Xai:
+        name = "xai"
+        ready = True
+        calls = 0
+
+        async def complete(self, system, user):
+            self.calls += 1
+            return {"output_text": "{}"}
+
+    anth, xai = Anth(), Xai()
+    paper.provider = FallbackProvider(anth, xai)
+    out = asyncio.run(paper.open_section(DAY, "world", "1.1.1.1", None, False))
+    assert anth.calls == 1
+    assert xai.calls == 0
+    assert out["highlights"][0]["title"] == highlights[0]["title"]
+    assert paper.store.get_section(DAY, "world")["provider"] == "anthropic"
+
+
+def test_anthropic_http_error_redacts_the_key_and_falls_back(caplog):
+    secret = "sk-ant-test-secret-value"
+    xai_secret = "xai-test-secret-value"
+    seen = {}
+
+    class Err(BaseHTTPRequestHandler):
+        def do_POST(self):
+            seen["anthropic"] = seen.get("anthropic", 0) + 1
+            seen["header"] = self.headers.get("x-api-key")
+            seen["version"] = self.headers.get("anthropic-version")
+            n = int(self.headers.get("Content-Length") or 0)
+            seen["body"] = self.rfile.read(n)
+            raw = ("nope " + secret + " " + ("z" * 400)).encode()
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def log_message(self, fmt, *args):
+            return
+
+    class Ok(BaseHTTPRequestHandler):
+        def do_POST(self):
+            seen["xai"] = seen.get("xai", 0) + 1
+            n = int(self.headers.get("Content-Length") or 0)
+            self.rfile.read(n)
+            payload = json.dumps({
+                "output_text": json.dumps({"highlights": [{
+                    "title": "From the fallback",
+                    "dek": "A sourced note.",
+                    "body": "The xAI desk wrote this.",
+                    "topics": ["space"],
+                    "sources": [{"title": "NASA", "url": "https://www.nasa.gov/fallback"}],
+                }]}),
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, fmt, *args):
+            return
+
+    err = _serve(Err)
+    ok = _serve(Ok)
+    try:
+        anth = AnthropicProvider(
+            key=secret,
+            base=f"http://127.0.0.1:{err.server_address[1]}",
+            timeout_s=5,
+        )
+        xai = XAIProvider(
+            key=xai_secret,
+            base=f"http://127.0.0.1:{ok.server_address[1]}",
+            timeout_s=5,
+        )
+        desk = FallbackProvider(anth, xai)
+        blocks = prompt_blocks(section_map()["space"], DAY, [])
+        with caplog.at_level(logging.WARNING):
+            data = asyncio.run(desk.complete_blocks(blocks))
+        assert data["_desk_provider"] == "xai"
+        text, _cites = extract_completion(data)
+        assert parse_model_json(text)["highlights"][0]["title"] == "From the fallback"
+        assert seen["anthropic"] == 1
+        assert seen["xai"] == 1
+        assert seen["header"] == secret
+        assert seen["version"] == "2023-06-01"
+        posted = json.loads(seen["body"])
+        assert posted["system"][0]["cache_control"]["type"] == "ephemeral"
+        assert posted["tools"][0]["max_uses"] == 5
+        assert secret not in caplog.text
+        assert xai_secret not in caplog.text
+        assert "400" in caplog.text
+        assert "nope [redacted]" in caplog.text
+        assert "z" * 300 not in caplog.text
+    finally:
+        err.shutdown()
+        ok.shutdown()
+
+
+def test_status_reports_anthropic_ready_without_the_key(http, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-status-secret")
+    monkeypatch.setenv("XAI_API_KEY", "xai-status-secret")
+    monkeypatch.delenv("NEWS_PROVIDER", raising=False)
+    newsdesk._api = None
+    status = http.get("/api/news/status", auth=_auth())
+    assert status.status_code == 200
+    assert status.headers["cache-control"] == "no-store"
+    body = status.json()["provider"]
+    assert body["name"] == "anthropic"
+    assert body["ready"] is True
+    assert body["providers"]["anthropic"]["ready"] is True
+    assert body["providers"]["xai"]["ready"] is True
+    blob = json.dumps(status.json())
+    assert "sk-ant-status-secret" not in blob
+    assert "xai-status-secret" not in blob
+    stranger = http.get("/api/news/status")
+    assert stranger.status_code in (401, 403)
+    newsdesk._api = None
+
+
+def test_news_status_script_prints_ready_flags_only(monkeypatch, capsys):
+    import io
+    import news_status
+    secret = "sk-ant-should-not-print"
+    password = "paper-password-should-not-print"
+    payload = json.dumps({
+        "provider": {
+            "name": "anthropic",
+            "ready": True,
+            "needed_secret": None,
+            "leak": secret,
+            "providers": {
+                "anthropic": {"ready": True, "model": "claude-sonnet-5-5"},
+                "xai": {"ready": True},
+            },
+        },
+        "password": password,
+    }).encode()
+
+    class Body(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_open(request, timeout=20):
+        assert request.full_url == "http://127.0.0.1:8000/api/news/status"
+        assert request.get_header("Authorization", "").startswith("Basic ")
+        return Body(payload)
+
+    monkeypatch.setenv("NEWS_PASSWORD", password)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", secret)
+    monkeypatch.setattr(news_status.urllib.request, "urlopen", fake_open)
+    assert news_status.main() == 0
+    printed = capsys.readouterr().out
+    assert printed.strip() == (
+        "news status provider name=anthropic ready=True anthropic=True xai=True"
+    )
+    assert secret not in printed
+    assert password not in printed
+
+
+def test_hashed_assets_get_a_long_cache_and_news_json_does_not(http, tmp_path):
+    asset = tmp_path / "dist" / "assets"
+    asset.mkdir(parents=True)
+    (asset / "index-Abcd1234.js").write_text("console.log(1)\n", encoding="utf-8")
+    (tmp_path / "dist" / "plain.js").write_text("console.log(2)\n", encoding="utf-8")
+    hashed = http.get("/assets/index-Abcd1234.js")
+    assert hashed.status_code == 200
+    assert hashed.headers["cache-control"] == "public, max-age=31536000, immutable"
+    plain = http.get("/plain.js")
+    assert plain.status_code == 200
+    assert "immutable" not in plain.headers.get("cache-control", "").lower()
+    assert "max-age=31536000" not in plain.headers.get("cache-control", "").lower()
+    status = http.get("/api/news/status", auth=_auth())
+    assert status.headers["cache-control"] == "no-store"
+    page = http.get("/news/")
+    assert page.status_code == 401
+    assert "immutable" not in page.headers.get("cache-control", "").lower()

@@ -8,6 +8,7 @@ import asyncio
 import mimetypes
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 
 from solar import SolarPoller
@@ -896,6 +897,20 @@ def _news_out(data):
     return JSONResponse(data, headers={"Cache-Control": "no-store"})
 
 
+# Vite writes content-hashed bundles under /assets/<name>-<hash>.<ext>.
+# The URL changes when the bytes change, so a year-long cache is safe.
+_VERSIONED_ASSET = re.compile(
+    r"(?:^|/)assets/.+-[A-Za-z0-9_-]{8,}\.[A-Za-z0-9]+$",
+    re.I,
+)
+
+
+def static_cache_control(path: str) -> str | None:
+    if _VERSIONED_ASSET.search(path or ""):
+        return "public, max-age=31536000, immutable"
+    return None
+
+
 def _news_fail(exc: Exception):
     if isinstance(exc, newsdesk.NewsError):
         raise HTTPException(exc.status, exc.message)
@@ -1004,7 +1019,11 @@ async def serve_frontend(request: Request, full_path: str):
         # Try direct file match first
         static_path = os.path.join(DIST, full_path)
         if os.path.isfile(static_path):
-            return finish(FileResponse(static_path))
+            headers = {}
+            control = static_cache_control(full_path)
+            if control and not news_page:
+                headers["Cache-Control"] = control
+            return finish(FileResponse(static_path, headers=headers))
         # Directory index (/synth, /crane-cab, /emulators, /cyber, ...).
         # Relative module and asset URLs resolve against the document URL's
         # directory, so /emulators makes fetch('emulators.json') request

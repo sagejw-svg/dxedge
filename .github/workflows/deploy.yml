@@ -164,9 +164,11 @@ jobs:
               write_secret GROK_API_KEY "$GROK_API_KEY"
               unset GROK_API_KEY
             fi
+            ANTHROPIC_WRITTEN=0
             if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
               write_secret ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
               unset ANTHROPIC_API_KEY
+              ANTHROPIC_WRITTEN=1
             fi
             # The paper password. Same rules as the model key: a set secret is
             # written, an empty one must not clobber a password already on the
@@ -229,6 +231,26 @@ jobs:
               if ! docker compose ps backend | grep -qi 'up\|running'; then
                 echo "[$(date)] ERROR: backend container is not running" >> $LOG
                 exit 1
+              fi
+              # Ready flags only. The password and the model keys stay in the
+              # container. news_status.py prints the provider line and nothing else.
+              if ! NEWS_STATUS=$(docker compose exec -T backend python3 news_status.py); then
+                echo "$NEWS_STATUS" >> $LOG
+                echo "$NEWS_STATUS"
+                echo "[$(date)] ERROR: news status check failed" >> $LOG
+                exit 1
+              fi
+              echo "$NEWS_STATUS" >> $LOG
+              echo "$NEWS_STATUS"
+              if [ "$ANTHROPIC_WRITTEN" = "1" ]; then
+                case "$NEWS_STATUS" in
+                  *anthropic=True*) ;;
+                  *)
+                    echo "[$(date)] ERROR: ANTHROPIC_API_KEY was set but status does not show anthropic ready" >> $LOG
+                    echo "ERROR: ANTHROPIC_API_KEY was set but status does not show anthropic ready"
+                    exit 1
+                    ;;
+                esac
               fi
             fi
 
