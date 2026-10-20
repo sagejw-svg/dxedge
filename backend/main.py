@@ -957,7 +957,7 @@ async def news_layout(request: Request):
     _require_news(request)
     body = await _news_body(request)
     try:
-        return _news_out(newsdesk.layout(body))
+        return _news_out(await newsdesk.layout(body, _client_ip(request)))
     except Exception as e:
         _news_fail(e)
 
