@@ -112,6 +112,33 @@
   figure { margin: 10px 0; }
   figure img { max-width: 100%; height: auto; border: 1px solid var(--ink); background: #fff; }
   figcaption { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .comic-open { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: transparent;
+    cursor: zoom-in; text-align: left; color: inherit; }
+  .comic-open img { display: block; max-width: 100%; height: auto; border: 1px solid var(--ink); background: #fff; }
+  .frame-wrap { position: relative; margin-top: 8px; }
+  .frame-wrap .frame { display: block; margin-top: 0; pointer-events: none; }
+  .frame-wrap .comic-open { position: absolute; inset: 0; height: 100%; }
+  .frame-wrap .comic-open span { position: absolute; right: 8px; bottom: 8px; background: var(--paper);
+    border: 1px solid var(--ink); padding: 4px 8px; font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 12px; }
+  .comic-box { position: fixed; inset: 0; z-index: 30; }
+  .comic-box[hidden] { display: none; }
+  .comic-backdrop { position: absolute; inset: 0; z-index: 0; background: rgba(27, 20, 14, .78); }
+  .comic-dialog { position: absolute; z-index: 1; inset: 12px; background: var(--paper); color: var(--ink);
+    border: 1px solid var(--ink); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .comic-bar { display: flex; gap: 8px; align-items: center; padding: 8px 8px 0; flex: 0 0 auto; }
+  .comic-bar .spacer { flex: 1 1 auto; }
+  .comic-x, .comic-nav { font-family: "Gill Sans", "Trebuchet MS", sans-serif; background: var(--card);
+    border: 1px solid var(--ink); min-width: 44px; min-height: 44px; padding: 6px 12px; cursor: pointer; }
+  .comic-stage { position: relative; flex: 1 1 auto; min-height: 0; min-width: 0; max-width: 100%; overflow: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; background: #fff;
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; }
+  .comic-stage img { flex: 0 0 auto; display: block; background: #fff; touch-action: pan-x pan-y; }
+  .comic-stage iframe { border: 0; background: #fff; flex: 1 1 auto; }
+  .comic-meta { flex: 0 0 auto; padding: 8px 12px 12px; border-top: 1px solid var(--ink); }
+  .comic-meta h2 { font-size: 22px; font-weight: 500; margin: 0 0 4px; line-height: 1.15; }
+  .comic-alt { margin: 0 0 4px; }
+  .comic-credit { font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px; color: var(--muted); margin: 0; }
+  body.comic-open { overflow: hidden; position: fixed; width: 100%; }
   .story { border-bottom: 4px double var(--rule); margin-bottom: 12px; padding-bottom: 12px; }
   .story h2 { font-size: clamp(32px, 5vw, 48px); font-weight: 500; margin: 4px 0; line-height: 1.05; }
   .more, .hidden { margin-top: 8px; grid-column: 1 / -1; }
@@ -196,6 +223,23 @@
       <li><a href="https://www.peppercarrot.com/">Pepper &amp; Carrot</a> by David Revoy, CC BY 4.0</li>
     </ul>
   </noscript>
+</div>
+<div class="comic-box" id="comic-box" hidden>
+  <div class="comic-backdrop" id="comic-backdrop"></div>
+  <div class="comic-dialog" role="dialog" aria-modal="true" aria-labelledby="comic-title">
+    <div class="comic-bar">
+      <button class="comic-nav" id="comic-prev" type="button" hidden>Previous</button>
+      <button class="comic-nav" id="comic-next" type="button" hidden>Next</button>
+      <span class="spacer"></span>
+      <button class="comic-x" id="comic-x" type="button" aria-label="Close">X</button>
+    </div>
+    <div class="comic-stage" id="comic-stage"></div>
+    <div class="comic-meta" aria-live="polite">
+      <h2 id="comic-title"></h2>
+      <p class="comic-alt" id="comic-alt" hidden></p>
+      <p class="comic-credit" id="comic-credit"></p>
+    </div>
+  </div>
 </div>
 <div class="fresh" id="fresh" hidden>
   <p>News page is up to date.</p>
@@ -526,9 +570,41 @@ function linkCard(strip) {
   a.appendChild(el("small", null, strip.host_label + " · " + strip.url.replace(/^https:\/\//, "")));
   return a;
 }
-function renderComics(sec, box) {
+// Largest box that keeps the drawing's aspect ratio. A wide strip on a
+// phone is as tall as the stage and scrolls sideways; pinch changes zoom.
+function fitComicBox(naturalW, naturalH, stageW, stageH, mobile, zoom) {
+  const z = Math.min(4, Math.max(0.25, Number(zoom) || 1));
+  const nw = Number(naturalW) || 0;
+  const nh = Number(naturalH) || 0;
+  const sw = Number(stageW) || 0;
+  const sh = Number(stageH) || 0;
+  if (nw <= 0 || nh <= 0 || sw <= 0 || sh <= 0) return { width: 0, height: 0, wide: false, zoom: z };
+  const ratio = nw / nh;
+  const wide = ratio >= 1.6;
+  let width;
+  let height;
+  if (mobile && wide) {
+    // As tall as the stage. A strip wider than the screen scrolls sideways.
+    height = sh;
+    width = height * ratio;
+  } else {
+    const scale = Math.min(sw / nw, sh / nh);
+    width = nw * scale;
+    height = nh * scale;
+  }
+  width *= z;
+  height *= z;
+  return {
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+    wide: !!(mobile && wide && width > sw + 1),
+    zoom: z
+  };
+}
+const comicView = { slides: [], index: 0, page: 0, zoom: 1, opener: null, pinch: null, scrollY: 0 };
+function orderedShelf(sec) {
   const hidden = new Set((state.layout && state.layout.hidden) || []);
-  let shelf = sec.shelf || [];
+  let shelf = (sec && sec.shelf) || [];
   if (state.layout && state.layout.shelf && state.layout.shelf.length) {
     const byId = new Map(shelf.map((s) => [s.id, s]));
     const ordered = state.layout.shelf.map((id) => byId.get(id)).filter(Boolean);
@@ -537,25 +613,296 @@ function renderComics(sec, box) {
   } else {
     shelf = shelf.filter((s) => !hidden.has(s.id));
   }
-  shelf.forEach((strip) => {
-    if (hidden.has(strip.id)) return;
+  return { shelf: shelf, hidden: hidden };
+}
+function buildComicSlides(sec) {
+  const packed = orderedShelf(sec);
+  const slides = [];
+  packed.shelf.forEach((strip) => {
+    if (packed.hidden.has(strip.id)) return;
+    if (!(strip.frame && frameOk(strip.frame_url))) return;
+    slides.push({
+      key: strip.id,
+      title: strip.name || "Comic",
+      alt: "",
+      credit: strip.host_label || "",
+      license: "",
+      source: strip.url || "",
+      licenseUrl: "",
+      frame: strip.frame_url,
+      images: []
+    });
+  });
+  ((sec && sec.inline) || []).forEach((comic) => {
+    if (packed.hidden.has(comic.id)) return;
+    const pages = (comic.pages && comic.pages.length ? comic.pages : [comic.img]).filter((src) => imageOk(src));
+    if (!pages.length) return;
+    slides.push({
+      key: comic.id,
+      title: comic.title || comic.credit || "Comic",
+      alt: comic.alt || "",
+      credit: comic.credit || "",
+      license: comic.license || "",
+      source: comic.page || comic.source || "",
+      licenseUrl: comic.license_url || "",
+      frame: "",
+      images: pages
+    });
+  });
+  return slides;
+}
+function httpsLink(url) {
+  return typeof url === "string" && url.indexOf("https://") === 0;
+}
+function setPageQuiet(on) {
+  document.querySelectorAll(".sheet, .fresh, .skip").forEach((node) => {
+    if ("inert" in node) node.inert = on;
+    if (on) node.setAttribute("aria-hidden", "true");
+    else node.removeAttribute("aria-hidden");
+  });
+  document.body.classList.toggle("comic-open", on);
+  if (on) {
+    comicView.scrollY = window.scrollY || 0;
+    document.body.style.top = "-" + comicView.scrollY + "px";
+  } else {
+    document.body.style.top = "";
+    window.scrollTo(0, comicView.scrollY || 0);
+  }
+}
+function layoutComicImage(img) {
+  const stage = document.getElementById("comic-stage");
+  const mobile = window.matchMedia("(max-width: 800px)").matches;
+  const fit = fitComicBox(img.naturalWidth, img.naturalHeight, stage.clientWidth, stage.clientHeight, mobile, comicView.zoom);
+  if (!fit.width) return;
+  img.style.width = fit.width + "px";
+  img.style.height = fit.height + "px";
+  img.style.maxWidth = "none";
+  img.style.maxHeight = "none";
+  const overflows = fit.width > stage.clientWidth + 1 || fit.height > stage.clientHeight + 1;
+  img.style.margin = overflows ? "0" : "auto";
+}
+function layoutComicFrame(frame) {
+  const stage = document.getElementById("comic-stage");
+  frame.style.width = stage.clientWidth + "px";
+  frame.style.height = stage.clientHeight + "px";
+}
+function layoutOpenComic() {
+  const stage = document.getElementById("comic-stage");
+  if (!stage) return;
+  stage.querySelectorAll("img").forEach(layoutComicImage);
+  const frame = stage.querySelector("iframe");
+  if (frame) layoutComicFrame(frame);
+}
+function showComicSlide() {
+  const slides = comicView.slides;
+  const slide = slides[comicView.index];
+  if (!slide) return;
+  document.getElementById("comic-title").textContent = slide.title;
+  const alt = document.getElementById("comic-alt");
+  if (slide.alt) {
+    alt.hidden = false;
+    alt.textContent = slide.alt;
+  } else {
+    alt.hidden = true;
+    alt.textContent = "";
+  }
+  const credit = document.getElementById("comic-credit");
+  clear(credit);
+  const bits = [slide.credit, slide.license].filter(Boolean);
+  if (bits.length) credit.appendChild(document.createTextNode(bits.join(" · ")));
+  if (httpsLink(slide.source)) {
+    if (credit.childNodes.length) credit.appendChild(document.createTextNode(" · "));
+    const source = el("a", { href: slide.source, rel: "noopener noreferrer" }, "Source");
+    source.target = "_blank";
+    credit.appendChild(source);
+  }
+  if (httpsLink(slide.licenseUrl)) {
+    if (credit.childNodes.length) credit.appendChild(document.createTextNode(" · "));
+    const lic = el("a", { href: slide.licenseUrl, rel: "noopener noreferrer" }, "License");
+    lic.target = "_blank";
+    credit.appendChild(lic);
+  }
+  const several = slides.length > 1;
+  const prev = document.getElementById("comic-prev");
+  const next = document.getElementById("comic-next");
+  prev.hidden = !several;
+  next.hidden = !several;
+  prev.disabled = !several;
+  next.disabled = !several;
+  const stage = document.getElementById("comic-stage");
+  clear(stage);
+  comicView.zoom = 1;
+  if (slide.frame && frameOk(slide.frame)) {
+    const frame = el("iframe", {
+      class: "comic-frame", src: slide.frame, title: slide.title, referrerpolicy: "no-referrer"
+    });
+    stage.appendChild(frame);
+    layoutComicFrame(frame);
+    return;
+  }
+  slide.images.forEach((src, i) => {
+    const img = el("img", { src: src, alt: slide.alt || slide.title, class: "comic-fit" });
+    if (slide.alt) img.title = slide.alt;
+    const place = () => {
+      layoutComicImage(img);
+      if (i === comicView.page && i > 0) stage.scrollTop = img.offsetTop;
+    };
+    img.addEventListener("load", place);
+    stage.appendChild(img);
+    if (img.complete && img.naturalWidth) place();
+  });
+}
+function openComic(index, page, opener) {
+  if (!comicView.slides.length || index == null || index < 0 || index >= comicView.slides.length) return;
+  comicView.index = index;
+  comicView.page = page || 0;
+  comicView.zoom = 1;
+  comicView.opener = opener || document.activeElement;
+  const box = document.getElementById("comic-box");
+  box.hidden = false;
+  setPageQuiet(true);
+  showComicSlide();
+  document.getElementById("comic-x").focus();
+}
+function closeComic() {
+  const box = document.getElementById("comic-box");
+  if (!box || box.hidden) return;
+  box.hidden = true;
+  clear(document.getElementById("comic-stage"));
+  setPageQuiet(false);
+  comicView.pinch = null;
+  const opener = comicView.opener;
+  comicView.opener = null;
+  if (opener && opener.focus && document.contains(opener)) opener.focus();
+}
+function stepComic(delta) {
+  const n = comicView.slides.length;
+  if (n < 2) return;
+  comicView.index = (comicView.index + delta + n) % n;
+  comicView.page = 0;
+  comicView.zoom = 1;
+  showComicSlide();
+}
+function setComicZoom(next) {
+  const z = Math.min(4, Math.max(0.25, next));
+  if (z === comicView.zoom) return;
+  comicView.zoom = z;
+  layoutOpenComic();
+}
+function touchSpan(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+function onComicTouchStart(ev) {
+  if (document.getElementById("comic-box").hidden) return;
+  if (ev.touches && ev.touches.length === 2) comicView.pinch = { dist: touchSpan(ev.touches), zoom: comicView.zoom };
+}
+function onComicTouchMove(ev) {
+  if (!comicView.pinch || !ev.touches || ev.touches.length < 2) return;
+  if (comicView.pinch.dist > 0) setComicZoom(comicView.pinch.zoom * (touchSpan(ev.touches) / comicView.pinch.dist));
+}
+function onComicTouchEnd(ev) {
+  if (!ev.touches || ev.touches.length < 2) comicView.pinch = null;
+}
+function onComicWheel(ev) {
+  if (document.getElementById("comic-box").hidden) return;
+  if (!ev.ctrlKey && !ev.metaKey) return;
+  ev.preventDefault();
+  setComicZoom(comicView.zoom * (ev.deltaY < 0 ? 1.08 : 1 / 1.08));
+}
+function comicFocusable() {
+  const dialog = document.querySelector(".comic-dialog");
+  if (!dialog) return [];
+  return Array.from(dialog.querySelectorAll("a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex='-1'])"))
+    .filter((node) => !node.hidden && !node.closest("[hidden]") && node.getAttribute("aria-hidden") !== "true");
+}
+function onComicKey(ev) {
+  const box = document.getElementById("comic-box");
+  if (!box || box.hidden) return;
+  if (ev.key === "Escape") { ev.preventDefault(); closeComic(); return; }
+  if (ev.key === "ArrowLeft") { ev.preventDefault(); stepComic(-1); return; }
+  if (ev.key === "ArrowRight") { ev.preventDefault(); stepComic(1); return; }
+  if (ev.key !== "Tab") return;
+  const focusable = comicFocusable();
+  if (!focusable.length) { ev.preventDefault(); return; }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const dialog = document.querySelector(".comic-dialog");
+  if (ev.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+    ev.preventDefault();
+    last.focus();
+  } else if (!ev.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+    ev.preventDefault();
+    first.focus();
+  }
+}
+function bindComicBox() {
+  const box = document.getElementById("comic-box");
+  const stage = document.getElementById("comic-stage");
+  document.getElementById("comic-x").addEventListener("click", closeComic);
+  document.getElementById("comic-backdrop").addEventListener("click", closeComic);
+  document.getElementById("comic-prev").addEventListener("click", () => stepComic(-1));
+  document.getElementById("comic-next").addEventListener("click", () => stepComic(1));
+  box.addEventListener("click", (ev) => {
+    if (ev.target === box || ev.target.id === "comic-backdrop") closeComic();
+  });
+  document.addEventListener("keydown", onComicKey);
+  stage.addEventListener("touchstart", onComicTouchStart, { passive: true });
+  stage.addEventListener("touchmove", onComicTouchMove, { passive: true });
+  stage.addEventListener("touchend", onComicTouchEnd);
+  stage.addEventListener("wheel", onComicWheel, { passive: false });
+  window.addEventListener("resize", () => {
+    if (!document.getElementById("comic-box").hidden) layoutOpenComic();
+  });
+}
+function renderComics(sec, box) {
+  const packed = orderedShelf(sec);
+  const slides = buildComicSlides(sec);
+  comicView.slides = slides;
+  const indexByKey = new Map();
+  slides.forEach((slide, i) => indexByKey.set(slide.key, i));
+  packed.shelf.forEach((strip) => {
+    if (packed.hidden.has(strip.id)) return;
     if (strip.frame && frameOk(strip.frame_url)) {
-      const frame = el("iframe", {
+      const wrap = el("div", { class: "frame-wrap" });
+      wrap.appendChild(el("iframe", {
         class: "frame", src: strip.frame_url, title: strip.name + " on " + strip.host_label,
-        loading: "lazy", referrerpolicy: "no-referrer"
+        loading: "lazy", referrerpolicy: "no-referrer", tabindex: "-1", "aria-hidden": "true"
+      }));
+      const open = el("button", {
+        type: "button", class: "comic-open", "aria-haspopup": "dialog",
+        "aria-label": "Expand " + (strip.name || "comic"),
+        onclick: (ev) => openComic(indexByKey.get(strip.id), 0, ev.currentTarget)
       });
-      box.appendChild(frame);
+      open.appendChild(el("span", null, "Expand"));
+      wrap.appendChild(open);
+      box.appendChild(wrap);
     }
     box.appendChild(linkCard(strip));
     box.appendChild(voteButtons(strip, "comics", [["liked", "Like"], ["useful", "Useful"], ["hide", "Hide"]]));
   });
   (sec.inline || []).forEach((comic) => {
-    if (hidden.has(comic.id)) return;
+    if (packed.hidden.has(comic.id)) return;
     const fig = el("figure");
     const pages = comic.pages && comic.pages.length ? comic.pages : [comic.img];
+    const shown = pages.filter((src) => imageOk(src));
+    let pageNo = 0;
     pages.forEach((src) => {
       if (!imageOk(src)) return;
-      fig.appendChild(el("img", { src: src, alt: comic.alt || comic.title || comic.credit, loading: "lazy" }));
+      const here = pageNo;
+      pageNo += 1;
+      const attrs = { src: src, alt: comic.alt || comic.title || comic.credit, loading: "lazy" };
+      if (comic.alt) attrs.title = comic.alt;
+      const img = el("img", attrs);
+      const label = "Expand " + (comic.title || comic.credit || "comic") + (shown.length > 1 ? ", page " + (here + 1) : "");
+      const open = el("button", {
+        type: "button", class: "comic-open", "aria-haspopup": "dialog",
+        "aria-label": label,
+        onclick: (ev) => openComic(indexByKey.get(comic.id), here, ev.currentTarget)
+      });
+      open.appendChild(img);
+      fig.appendChild(open);
     });
     const cap = el("figcaption");
     cap.appendChild(document.createTextNode((comic.credit || "") + " · " + (comic.license || "") + " · "));
@@ -861,6 +1208,7 @@ document.getElementById("fresh-dismiss").addEventListener("click", () => {
   if (state.status) localStorage.setItem("dxedge-news-fresh", state.status.today || "");
   document.getElementById("fresh").hidden = true;
 });
+bindComicBox();
 async function boot() {
   loadIdentity();
   try {
