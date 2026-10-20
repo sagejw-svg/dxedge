@@ -7,8 +7,11 @@ Fourteen days with no clicks and the desk stops calling the model until
 someone opens the paper again.
 
 The model wire is xAI's Responses API with web search when XAI_API_KEY
-(or GROK_API_KEY) is set. With no key the desk returns a stub and does
-not invent stories and does not cache the stub.
+(or GROK_API_KEY) is set. The call waits XAI_TIMEOUT_S seconds (150 by
+default). A slow wire is a 504. One generation is shared per day and
+section, and a failure waits about a minute before the next call. With
+no key the desk returns a stub and does not invent stories and does
+not cache the stub.
 
 Comics that are still in copyright are links or official frames only.
 xkcd, Pepper & Carrot, and pre-1929 public-domain pages may be shown,
@@ -173,7 +176,32 @@ FETCH_HOSTS = {
 }
 VOTE_KINDS = {"liked", "useful", "hide"}
 KIND_WEIGHT = {"liked": 1, "useful": 2, "hide": -2}
+# One-shot cache repair. Response-wide citations were stored as untitled
+# "Source" links on every highlight. These two sections regenerate; the
+# rest of the cache only loses those placeholder links.
+SOURCE_LEAK_MIGRATION = "2026-10-20-highlight-source-leak"
+SOURCE_LEAK_DAY = "2026-10-20"
+SOURCE_LEAK_SECTIONS = ("ai-editorial", "sleep")
 LAYOUT_KEYS = {"day", "show", "more", "coming_soon", "order", "shelf", "hidden", "mine", "interests"}
+# grok-4.7 is a current Responses API model id and accepts web_search.
+XAI_MODEL_DEFAULT = "grok-4.7"
+XAI_TIMEOUT_DEFAULT = 150.0
+# After a failed generation, ignore repeat clicks for this long.
+FAIL_COOLDOWN_S = 60.0
+WIRE_SLOW = "The wire is slow; try again in a minute."
+
+
+def xai_timeout_s() -> float:
+    raw = os.environ.get("XAI_TIMEOUT_S")
+    if raw is None or not str(raw).strip():
+        return XAI_TIMEOUT_DEFAULT
+    try:
+        value = float(raw)
+    except ValueError:
+        return XAI_TIMEOUT_DEFAULT
+    if value <= 0:
+        return XAI_TIMEOUT_DEFAULT
+    return value
 
 _config_cache: dict | None = None
 _config_mtime: float | None = None
@@ -311,7 +339,11 @@ def preamble() -> str:
         "Be concise and decision-oriented. Two or three highlights. "
         "Each highlight has a title of at most 12 words, a one-sentence dek, "
         "a body of at most 90 words, one to three topic tags, and one or more "
-        "https sources that you actually used. No walls of text. "
+        "https sources that support that highlight alone. "
+        "Cite reputable reporting, a paper, or an official page, and use the page title. "
+        "Do not attach unrelated pages, search leftovers, or another highlight's sources. "
+        "Omit a URL you cannot title. Never title a source \"Source\". "
+        "No walls of text. "
         "Where AI progress genuinely changes the story, say so in one clause. "
         "Do not invent an AI connection. "
         "ai_progress is optional: one sentence of at most 25 words when the item "
@@ -328,7 +360,7 @@ def preamble() -> str:
         "Security items stay at defender briefing level. No exploit steps and no payloads. "
         "Return JSON only, no markdown, in this shape: "
         '{"highlights":[{"title":"","dek":"","body":"","topics":[""],'
-        '"ai_progress":"","sources":[{"title":"","url":"https://"}]}'
+        '"ai_progress":"","sources":[{"title":"Page title","url":"https://"}]}'
     )
 
 
@@ -344,7 +376,10 @@ def build_prompt(section: dict, day: str, topic_bias: list[tuple[str, int]]) -> 
             "Readers have favored these topics. Prefer them when they genuinely "
             "fit this section: " + ", ".join(liked) + "."
         )
-    lines.append("Use recent, real reporting. Every highlight needs a real https source.")
+    lines.append(
+        "Use recent, real reporting. Every highlight needs its own titled https "
+        "sources. Do not add links that are not about that highlight."
+    )
     return preamble(), "\n".join(lines)
 
 
@@ -414,10 +449,24 @@ def extract_completion(data: dict) -> tuple[str, list[str]]:
     return "\n".join(texts).strip(), citations
 
 
-def _sources(items, extra: list[str]) -> list[dict]:
+def _source_title(raw) -> str:
+    """A link label a reader can use. The placeholder 'Source' is not one."""
+    text = " ".join(str(raw or "").split())
+    if not text or text.casefold() == "source":
+        return ""
+    return clip(text, 140)
+
+
+def _sources(items) -> list[dict]:
+    """Sources this highlight named, titled and de-duplicated.
+
+    Response-wide web_search citations are not added here. They are not
+    this highlight's sources, and labeling them 'Source' pasted the same
+    unrelated links onto every item in the section.
+    """
     out = []
     seen = set()
-    for item in list(items or []) + [{"title": "Source", "url": u} for u in extra]:
+    for item in items or []:
         if not isinstance(item, dict):
             continue
         url = item.get("url")
@@ -425,14 +474,35 @@ def _sources(items, extra: list[str]) -> list[dict]:
             continue
         if url in seen:
             continue
+        title = _source_title(item.get("title"))
+        if not title:
+            continue
         seen.add(url)
-        out.append({"title": clip(item.get("title") or "Source", 140), "url": url})
+        out.append({"title": title, "url": url})
         if len(out) >= 4:
             break
     return out
 
 
-def scrub_highlight(section_id: str, raw: dict, citations: list[str]) -> dict | None:
+def _clean_cached_payload(payload: dict) -> bool:
+    highlights = payload.get("highlights")
+    if not isinstance(highlights, list):
+        return False
+    changed = False
+    for item in highlights:
+        if not isinstance(item, dict):
+            continue
+        before = item.get("sources")
+        cleaned = _sources(before)
+        if cleaned != (before or []):
+            item["sources"] = cleaned
+            changed = True
+    return changed
+
+
+def scrub_highlight(section_id: str, raw: dict, _citations: list[str] | None = None) -> dict | None:
+    # ``_citations`` is every web_search URL on the xAI response. Do not attach
+    # them: each highlight keeps only the sources it listed.
     if not isinstance(raw, dict):
         return None
     title = clip(str(raw.get("title") or ""), 140)
@@ -463,7 +533,7 @@ def scrub_highlight(section_id: str, raw: dict, citations: list[str]) -> dict | 
         body = BIO_SAFE
         dek = "An explainer, not a procedure."
         note = ""
-    sources = _sources(raw.get("sources"), citations)
+    sources = _sources(raw.get("sources"))
     if not sources:
         return None
     out = {
@@ -977,6 +1047,42 @@ class Store:
                     recorded_at TEXT NOT NULL
                 );
             """)
+            self._repair_source_leak(conn)
+
+    def _repair_source_leak(self, conn) -> None:
+        """Clear the edition that repeated unrelated 'Source' links.
+
+        Runs once. Cached highlights elsewhere drop untitled 'Source'
+        entries and duplicate URLs. The 2026-10-20 AI editorial and
+        narcolepsy sections are deleted so the next open writes them again.
+        """
+        conn.execute("CREATE TABLE IF NOT EXISTS migrations (id TEXT PRIMARY KEY)")
+        if conn.execute(
+            "SELECT 1 FROM migrations WHERE id = ?",
+            (SOURCE_LEAK_MIGRATION,),
+        ).fetchone():
+            return
+        rows = conn.execute("SELECT day, section, payload FROM sections").fetchall()
+        for row in rows:
+            if row["day"] == SOURCE_LEAK_DAY and row["section"] in SOURCE_LEAK_SECTIONS:
+                continue
+            try:
+                payload = json.loads(row["payload"])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict) and _clean_cached_payload(payload):
+                conn.execute(
+                    "UPDATE sections SET payload = ? WHERE day = ? AND section = ?",
+                    (json.dumps(payload), row["day"], row["section"]),
+                )
+        conn.execute(
+            "DELETE FROM sections WHERE day = ? AND section IN (?, ?)",
+            (SOURCE_LEAK_DAY, *SOURCE_LEAK_SECTIONS),
+        )
+        conn.execute(
+            "INSERT INTO migrations (id) VALUES (?)",
+            (SOURCE_LEAK_MIGRATION,),
+        )
 
     def last_click(self) -> datetime | None:
         with self.connect() as conn:
@@ -1247,16 +1353,27 @@ class Store:
 class XAIProvider:
     name = "xai"
 
-    def __init__(self, key: str | None = None, model: str | None = None, base: str | None = None):
+    def __init__(self, key: str | None = None, model: str | None = None, base: str | None = None,
+                 timeout_s: float | None = None):
         if key is None:
             key = os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY") or ""
         self.key = key.strip()
-        self.model = model or os.environ.get("XAI_MODEL") or "grok-4.7"
+        self.model = model or os.environ.get("XAI_MODEL") or XAI_MODEL_DEFAULT
         self.base = (base or os.environ.get("XAI_API_BASE") or "https://api.x.ai/v1").rstrip("/")
+        self.timeout_s = xai_timeout_s() if timeout_s is None else float(timeout_s)
+        # complete() applies timeout_s itself, so the desk does not wrap it again.
+        self.enforces_timeout = True
 
     @property
     def ready(self) -> bool:
         return bool(self.key)
+
+    def _snippet(self, text: str) -> str:
+        if not isinstance(text, str):
+            text = str(text or "")
+        if self.key:
+            text = text.replace(self.key, "[redacted]")
+        return text[:300]
 
     async def complete(self, system: str, user: str) -> dict:
         if not self.ready:
@@ -1270,21 +1387,38 @@ class XAIProvider:
             ],
             "tools": [{"type": "web_search"}],
         }
-        timeout = aiohttp.ClientTimeout(total=45)
+        timeout = aiohttp.ClientTimeout(total=self.timeout_s)
         url = self.base + "/responses"
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(
-                url,
-                json=payload,
-                headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"},
-            ) as resp:
-                body = await resp.text()
-                if resp.status >= 400:
-                    logger.warning("news model http %s", resp.status)
-                    raise NewsError(502, "The desk could not reach the wire.")
+        body = ""
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    url,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"},
+                ) as resp:
+                    body = await resp.text()
+                    if resp.status >= 400:
+                        logger.warning("news model http %s %s", resp.status, self._snippet(body))
+                        raise NewsError(502, "The desk could not reach the wire.")
+        except NewsError:
+            raise
+        except asyncio.TimeoutError as exc:
+            logger.warning("news model http timeout %s", self._snippet(str(exc)))
+            raise NewsError(504, WIRE_SLOW) from exc
+        except aiohttp.ClientError as exc:
+            code = getattr(exc, "status", None)
+            detail = getattr(exc, "message", None) or str(exc)
+            logger.warning(
+                "news model http %s %s",
+                code if code is not None else "error",
+                self._snippet(detail),
+            )
+            raise NewsError(504, WIRE_SLOW) from exc
         try:
             return json.loads(body)
         except json.JSONDecodeError as e:
+            logger.warning("news model http bad-json %s", self._snippet(body))
             raise NewsError(502, "The desk could not reach the wire.") from e
 
     def persona_payload(self, description: str, section_ids: list[str], topics: list[str]) -> dict:
@@ -1399,6 +1533,12 @@ class Paper:
         self.persona_limiter = persona_limiter or RateLimiter(5, 86400)
         self._persona_flights: dict[str, _Flight] = {}
         self._persona_flight_lock = threading.Lock()
+        self.fail_cooldown_s = FAIL_COOLDOWN_S
+        self._section_flights: dict[tuple[str, str], asyncio.Task] = {}
+        self._section_flight_lock = threading.Lock()
+        # key -> (until, status, message). A failed wire is not called again
+        # until the clock passes `until`.
+        self._section_cooldown: dict[tuple[str, str], tuple[datetime, int, str]] = {}
 
     def now(self) -> datetime:
         current = self.clock.now()
@@ -1614,35 +1754,11 @@ class Paper:
             return decorated
         if not self.provider.ready:
             return self.stub(day, sec)
-        allowed, retry = self.gen_limiter.is_allowed(ip or "unknown")
-        if not allowed:
-            raise NewsError(429, f"Too many sections. Try again in {retry}s.")
-        system, user = build_prompt(sec, day, self.store.topic_scores())
-        started = time.monotonic()
-        data = await self.provider.complete(system, user)
-        text, citations = extract_completion(data)
-        parsed = parse_model_json(text)
-        highlights = []
-        for raw in parsed["highlights"]:
-            if len(highlights) >= 3:
-                break
-            clean = scrub_highlight(sid, raw, citations)
-            if clean:
-                highlights.append(clean)
-        if not highlights:
-            highlights = [{
-                "title": "Held at the desk",
-                "dek": "This edition did not pass the desk's checks.",
-                "body": "Nothing from this pass was published. Open the section again tomorrow.",
-                "topics": [],
-                "sources": [],
-            }]
-        for i, item in enumerate(highlights):
-            item["id"] = f"{day}:{sid}:{i}"
-        payload = {"day": day, "highlights": highlights, "stub": False}
-        self.store.put_section(day, sid, payload, self.provider.name, self.now())
-        self._remember_generation(started)
+        task = self._begin_section(day, sid, ip)
+        await task
         stored = self.store.get_section(day, sid)
+        if not stored:
+            raise NewsError(502, "The desk could not reach the wire.")
         decorated = self.decorate(sid, stored, user_id)
         decorated["cached"] = False
         return decorated
@@ -1653,6 +1769,90 @@ class Paper:
             self.store.record_generation(time.monotonic() - started)
         except Exception:
             logger.warning("news generation time was not recorded")
+
+    def _generation_timeout(self) -> float:
+        timeout = getattr(self.provider, "timeout_s", None)
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or timeout <= 0:
+            return xai_timeout_s()
+        return float(timeout)
+
+    def _remember_failure(self, key: tuple[str, str], status: int, message: str) -> None:
+        until = self.now() + timedelta(seconds=self.fail_cooldown_s)
+        with self._section_flight_lock:
+            self._section_cooldown[key] = (until, status, message)
+
+    def _begin_section(self, day: str, sid: str, ip: str) -> asyncio.Task:
+        """One in-flight model call per day and section. Joiners share it."""
+        key = (day, sid)
+        with self._section_flight_lock:
+            cooled = self._section_cooldown.get(key)
+            if cooled is not None:
+                until, status, message = cooled
+                if self.now() < until:
+                    raise NewsError(status, message)
+                self._section_cooldown.pop(key, None)
+            task = self._section_flights.get(key)
+            if task is not None and not task.done():
+                return task
+            allowed, retry = self.gen_limiter.is_allowed(ip or "unknown")
+            if not allowed:
+                raise NewsError(429, f"Too many sections. Try again in {retry}s.")
+            task = asyncio.create_task(self._generate_section(day, sid))
+            self._section_flights[key] = task
+            return task
+
+    async def _complete(self, system: str, user: str):
+        try:
+            if getattr(self.provider, "enforces_timeout", False):
+                return await self.provider.complete(system, user)
+            return await asyncio.wait_for(
+                self.provider.complete(system, user),
+                self._generation_timeout(),
+            )
+        except asyncio.TimeoutError as exc:
+            logger.warning("news model http timeout")
+            raise NewsError(504, WIRE_SLOW) from exc
+
+    async def _generate_section(self, day: str, sid: str) -> None:
+        key = (day, sid)
+        started = time.monotonic()
+        try:
+            sec = self._section(sid)
+            system, user = build_prompt(sec, day, self.store.topic_scores())
+            data = await self._complete(system, user)
+            text, citations = extract_completion(data)
+            parsed = parse_model_json(text)
+            highlights = []
+            for raw in parsed["highlights"]:
+                if len(highlights) >= 3:
+                    break
+                clean = scrub_highlight(sid, raw, citations)
+                if clean:
+                    highlights.append(clean)
+            if not highlights:
+                highlights = [{
+                    "title": "Held at the desk",
+                    "dek": "This edition did not pass the desk's checks.",
+                    "body": "Nothing from this pass was published. Open the section again tomorrow.",
+                    "topics": [],
+                    "sources": [],
+                }]
+            for i, item in enumerate(highlights):
+                item["id"] = f"{day}:{sid}:{i}"
+            payload = {"day": day, "highlights": highlights, "stub": False}
+            self.store.put_section(day, sid, payload, self.provider.name, self.now())
+            self._remember_generation(started)
+        except NewsError as exc:
+            self._remember_failure(key, exc.status, exc.message)
+            raise
+        except Exception:
+            self._remember_failure(key, 503, "The paper is unavailable.")
+            raise
+        finally:
+            with self._section_flight_lock:
+                current = self._section_flights.get(key)
+                if current is asyncio.current_task():
+                    self._section_flights.pop(key, None)
 
     def stub(self, day: str, sec: dict) -> dict:
         return {

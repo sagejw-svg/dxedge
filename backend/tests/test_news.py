@@ -1,10 +1,12 @@
 """The Edge newspaper: on-demand sections, legal comics, votes, seeds."""
 import asyncio
 import json
+import logging
 import os
 import re
 import sys
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -236,6 +238,10 @@ def test_prompts_carry_the_hard_rules():
     assert "Where AI progress" in head
     assert "ai_progress" in head
     assert "Two or three highlights" in head
+    assert "that highlight alone" in head
+    assert "reputable" in head
+    assert "unrelated" in head
+    assert 'Never title a source "Source"' in head
     assert "ham radio" in head.lower()
     assert "protocols" in head.lower()
     assert "employer" in head.lower()
@@ -326,6 +332,37 @@ def test_safety_filters():
     assert cites == ["https://www.example.com/one", "https://www.example.com/two"]
     fenced = parse_model_json("```json\n{\"highlights\": []}\n```")
     assert fenced["highlights"] == []
+    stray = [
+        "https://podcasts.example.com/weird-side-multiverse",
+        "https://www.youtube.com/watch?v=unrelated",
+        "https://36kr.com/p/unrelated",
+    ]
+    editorial = scrub_highlight("ai-editorial", {
+        "title": "A sourced argument",
+        "dek": "Read this next.",
+        "body": "The claim and the evidence.",
+        "topics": ["ai"],
+        "sources": [
+            {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+            {"title": "Source", "url": "https://www.youtube.com/watch?v=listed-untitled"},
+            {"title": "", "url": "https://www.example.com/blank"},
+            {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+            {"title": "  source  ", "url": "https://36kr.com/p/also-untitled"},
+        ],
+    }, stray)
+    assert editorial["sources"] == [
+        {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+    ]
+    other = scrub_highlight("ai-editorial", {
+        "title": "A different claim",
+        "dek": "Another item.",
+        "body": "Its own evidence.",
+        "topics": ["math"],
+        "sources": [{"title": "Nature", "url": "https://www.nature.com/articles/math"}],
+    }, stray)
+    assert [s["url"] for s in other["sources"]] == ["https://www.nature.com/articles/math"]
+    assert "36kr.com" not in json.dumps([editorial, other])
+    assert "youtube.com" not in json.dumps([editorial, other])
 
 
 def test_framing_and_image_rules():
@@ -777,11 +814,147 @@ def test_vote_rate_limit(paper):
 def test_provider_reports_the_missing_key(monkeypatch):
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.delenv("GROK_API_KEY", raising=False)
+    monkeypatch.delenv("XAI_MODEL", raising=False)
+    monkeypatch.delenv("XAI_TIMEOUT_S", raising=False)
     provider = XAIProvider(key="")
     assert provider.ready is False
     provider = XAIProvider(key="test-key")
     assert provider.ready is True
-    assert provider.model
+    assert provider.model == "grok-4.7"
+    assert provider.timeout_s == 150
+    monkeypatch.setenv("XAI_MODEL", "grok-4.7")
+    monkeypatch.setenv("XAI_TIMEOUT_S", "180")
+    tuned = XAIProvider(key="test-key")
+    assert tuned.model == "grok-4.7"
+    assert tuned.timeout_s == 180
+
+
+def test_response_citations_are_not_pasted_onto_every_highlight(paper):
+    paper.provider.highlights = [
+        {
+            "title": "Models and proofs",
+            "dek": "A claim.",
+            "body": "The argument.",
+            "topics": ["ai"],
+            "sources": [
+                {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+                {"title": "Source", "url": "https://www.youtube.com/watch?v=listed-untitled"},
+                {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+            ],
+        },
+        {
+            "title": "A different claim",
+            "dek": "Another.",
+            "body": "Its own case.",
+            "topics": ["math"],
+            "sources": [{"title": "Nature", "url": "https://www.nature.com/articles/math"}],
+        },
+    ]
+
+    async def complete(system, user):
+        paper.provider.calls += 1
+        paper.provider.last = (system, user)
+        return {
+            "citations": [
+                "https://podcasts.example.com/weird-side-multiverse",
+                "https://www.youtube.com/watch?v=unrelated",
+                "https://36kr.com/p/unrelated",
+            ],
+            "output": [{
+                "type": "message",
+                "content": [{
+                    "type": "output_text",
+                    "text": json.dumps({"highlights": paper.provider.highlights}),
+                    "annotations": [
+                        {"url": "https://podcasts.example.com/weird-side-multiverse"},
+                        {"url_citation": {"url": "https://36kr.com/p/unrelated"}},
+                    ],
+                }],
+            }],
+        }
+
+    paper.provider.complete = complete
+    out = asyncio.run(paper.open_section(DAY, "ai-editorial", "1.1.1.1", None, False))
+    assert [h["title"] for h in out["highlights"]] == ["Models and proofs", "A different claim"]
+    assert out["highlights"][0]["sources"] == [
+        {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+    ]
+    assert out["highlights"][1]["sources"] == [
+        {"title": "Nature", "url": "https://www.nature.com/articles/math"},
+    ]
+    blob = json.dumps(out["highlights"])
+    assert "36kr" not in blob
+    assert "youtube" not in blob
+    assert "podcast" not in blob
+    assert '"Source"' not in blob
+    assert "unrelated" in paper.provider.last[0]
+    assert "that highlight" in paper.provider.last[1]
+
+
+def test_startup_clears_the_leaked_edition_once(env):
+    store = Store(env / "news.db")
+    store.init()
+    when = datetime(2026, 10, 20, 18, tzinfo=timezone.utc)
+    store.put_section("2026-10-20", "ai-editorial", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:ai-editorial:0",
+            "title": "Argument",
+            "sources": [
+                {"title": "Quanta", "url": "https://www.quantamagazine.org/a"},
+                {"title": "Source", "url": "https://www.youtube.com/watch?v=1"},
+                {"title": "Source", "url": "https://36kr.com/p/1"},
+            ],
+        }],
+    }, "xai", when)
+    store.put_section("2026-10-20", "sleep", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:sleep:0",
+            "title": "Rest",
+            "sources": [{"title": "Source", "url": "https://36kr.com/p/1"}],
+        }],
+    }, "xai", when)
+    store.put_section("2026-10-19", "space", {
+        "day": "2026-10-19",
+        "highlights": [{
+            "id": "2026-10-19:space:0",
+            "title": "Orbit",
+            "sources": [
+                {"title": "NASA", "url": "https://www.nasa.gov/a"},
+                {"title": "Source", "url": "https://www.youtube.com/watch?v=1"},
+                {"title": "NASA", "url": "https://www.nasa.gov/a"},
+            ],
+        }],
+    }, "xai", when)
+    with store.connect() as conn:
+        conn.execute("DELETE FROM migrations WHERE id = ?", (newsdesk.SOURCE_LEAK_MIGRATION,))
+    store.init()
+    assert store.get_section("2026-10-20", "ai-editorial") is None
+    assert store.get_section("2026-10-20", "sleep") is None
+    kept = store.get_section("2026-10-19", "space")
+    assert kept["highlights"][0]["sources"] == [
+        {"title": "NASA", "url": "https://www.nasa.gov/a"},
+    ]
+    store.put_section("2026-10-20", "ai-editorial", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:ai-editorial:0",
+            "title": "Fresh",
+            "sources": [{"title": "Quanta", "url": "https://www.quantamagazine.org/a"}],
+        }],
+    }, "xai", when)
+    store.put_section("2026-10-20", "sleep", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:sleep:0",
+            "title": "Fresh rest",
+            "sources": [{"title": "NIH", "url": "https://www.nih.gov/sleep"}],
+        }],
+    }, "xai", when)
+    store.init()
+    assert store.get_section("2026-10-20", "ai-editorial")["highlights"][0]["title"] == "Fresh"
+    assert store.get_section("2026-10-20", "sleep")["highlights"][0]["title"] == "Fresh rest"
 
 
 def test_generated_section_keeps_two_or_three_sourced_notes(paper):
@@ -809,6 +982,66 @@ def test_generated_section_keeps_two_or_three_sourced_notes(paper):
     again = asyncio.run(paper.open_section(DAY, "cyber", "1.1.1.1", None, False))
     assert again["cached"] is True
     assert paper.provider.calls == 1
+
+
+def test_concurrent_opens_share_one_generation(paper):
+    gate = FakeProvider()
+    gate.timeout_s = 5
+    gate.started = None
+    gate.release = None
+
+    async def complete(system, user):
+        gate.calls += 1
+        gate.started.set()
+        await gate.release.wait()
+        return {"output_text": json.dumps({"highlights": gate.highlights})}
+
+    gate.complete = complete
+    paper.provider = gate
+
+    async def both():
+        gate.started = asyncio.Event()
+        gate.release = asyncio.Event()
+        first = asyncio.create_task(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+        await gate.started.wait()
+        second = asyncio.create_task(paper.open_section(DAY, "space", "9.9.9.9", None, False))
+        await asyncio.sleep(0)
+        assert gate.calls == 1
+        gate.release.set()
+        return await asyncio.gather(first, second)
+
+    one, two = asyncio.run(both())
+    assert gate.calls == 1
+    assert one["highlights"][0]["id"] == two["highlights"][0]["id"]
+    assert one["cached"] is False and two["cached"] is False
+
+
+def test_failure_cooldown_blocks_another_model_call(paper):
+    class Boom(FakeProvider):
+        async def complete(self, system, user):
+            self.calls += 1
+            raise NewsError(504, "The wire is slow; try again in a minute.")
+
+    paper.provider = Boom()
+    with pytest.raises(NewsError) as first:
+        asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    assert first.value.status == 504
+    assert first.value.message == "The wire is slow; try again in a minute."
+    with pytest.raises(NewsError) as again:
+        asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    assert again.value.status == 504
+    assert paper.provider.calls == 1
+    with pytest.raises(NewsError):
+        asyncio.run(paper.open_section(DAY, "world", "1.1.1.1", None, False))
+    assert paper.provider.calls == 2
+    paper.clock.now_dt += timedelta(seconds=59)
+    with pytest.raises(NewsError):
+        asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    assert paper.provider.calls == 2
+    paper.clock.now_dt += timedelta(seconds=2)
+    with pytest.raises(NewsError):
+        asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    assert paper.provider.calls == 3
 
 
 def test_ai_progress_thread_reads_cached_notes_only(paper):
@@ -1163,6 +1396,10 @@ def test_page_wires_match_the_desk():
     assert "location ^~ /news/" in nginx
     assert 'add_header Cache-Control "no-cache, must-revalidate" always;' in nginx
     assert "location = /news" in nginx
+    assert '"Retry"' in html
+    news_api = nginx.split("location /api/news {", 1)[1].split("location /api/ {", 1)[0]
+    assert "proxy_read_timeout 180s;" in news_api
+    assert "proxy_send_timeout 180s;" in news_api
     assert "XAI_API_KEY" in compose
     assert "GROK_API_KEY" in compose
     assert "NEWS_OWNER_SEED" in compose
@@ -1314,6 +1551,115 @@ def test_news_rejects_strangers(http):
     page = http.get("/news/")
     assert "This paper is private." in page.text
     assert page.status_code == 401
+
+
+def test_slow_provider_mock_is_a_clean_504(http):
+    class Slow:
+        name = "slow"
+        ready = True
+        timeout_s = 0.2
+
+        def __init__(self):
+            self.calls = 0
+
+        async def complete(self, system, user):
+            self.calls += 1
+            await asyncio.sleep(5)
+
+    newsdesk._api = None
+    status = http.get("/api/news/status", auth=_auth())
+    assert status.status_code == 200
+    day = status.json()["today"]
+    slow = Slow()
+    newsdesk.get_api().provider = slow
+    res = http.post(
+        "/api/news/section",
+        json={"day": day, "id": "space", "wake": 1},
+        auth=_auth(),
+    )
+    assert res.status_code == 504
+    assert res.json()["detail"] == "The wire is slow; try again in a minute."
+    assert "The paper is unavailable." not in res.text
+    assert slow.calls == 1
+
+
+def _serve(handler):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server
+
+
+def test_xai_timeout_and_error_body(caplog):
+    secret = "sk-test-secret-value"
+
+    class Err(BaseHTTPRequestHandler):
+        def do_POST(self):
+            raw = ("nope " + secret + " " + ("z" * 400)).encode()
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def log_message(self, fmt, *args):
+            return
+
+    class Hang(BaseHTTPRequestHandler):
+        def do_POST(self):
+            time.sleep(2)
+            body = b"{}"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, fmt, *args):
+            return
+
+    err = _serve(Err)
+    try:
+        provider = XAIProvider(
+            key=secret,
+            base=f"http://127.0.0.1:{err.server_address[1]}",
+            timeout_s=5,
+        )
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(NewsError) as caught:
+                asyncio.run(provider.complete("system", "user"))
+        assert caught.value.status == 502
+        assert secret not in caplog.text
+        assert "400" in caplog.text
+        assert "nope [redacted]" in caplog.text
+        assert "z" * 300 not in caplog.text
+    finally:
+        err.shutdown()
+
+    hang = _serve(Hang)
+    try:
+        provider = XAIProvider(
+            key=secret,
+            base=f"http://127.0.0.1:{hang.server_address[1]}",
+            timeout_s=0.3,
+        )
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(NewsError) as caught:
+                asyncio.run(provider.complete("system", "user"))
+        assert caught.value.status == 504
+        assert caught.value.message == "The wire is slow; try again in a minute."
+        assert secret not in caplog.text
+    finally:
+        hang.shutdown()
+
+    refused = XAIProvider(key=secret, base="http://127.0.0.1:1", timeout_s=2)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(NewsError) as caught:
+            asyncio.run(refused.complete("system", "user"))
+    assert caught.value.status == 504
+    assert secret not in caplog.text
 
 
 def test_generation_does_not_run_without_auth(http, monkeypatch):

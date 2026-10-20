@@ -110,6 +110,7 @@
   .more, .hidden { margin-top: 8px; grid-column: 1 / -1; }
   .soon { display: grid; grid-template-columns: 1fr 1fr; }
   .err { color: var(--red); }
+  .err .btn { margin-left: 8px; }
   footer { margin-top: 18px; font-family: "Gill Sans", "Trebuchet MS", sans-serif; font-size: 13px;
     color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   footer button { background: none; border: 0; padding: 0; color: var(--red); cursor: pointer; text-decoration: underline; }
@@ -559,7 +560,14 @@ function renderBox(meta, lead) {
   const interests = (state.layout && state.layout.interests && state.layout.interests[meta.id]) || [];
   if (interests.length) box.appendChild(el("p", { class: "interests" }, interests.join(" · ")));
   if (!payload) box.appendChild(el("p", { class: "brief" }, meta.brief || ""));
-  if (state.errors[meta.id]) box.appendChild(el("p", { class: "err" }, state.errors[meta.id]));
+  if (state.errors[meta.id]) {
+    const errLine = el("p", { class: "err" });
+    errLine.appendChild(document.createTextNode(state.errors[meta.id]));
+    errLine.appendChild(el("button", {
+      class: "btn", type: "button", onclick: () => openSection(meta.id)
+    }, "Retry"));
+    box.appendChild(errLine);
+  }
   if (state.loading === meta.id) box.appendChild(loadingNote());
   if (payload && payload.stub) {
     box.appendChild(el("p", null, payload.highlights[0].dek));
@@ -578,7 +586,7 @@ function renderBox(meta, lead) {
       box.appendChild(block);
     });
   }
-  if (!payload || payload.stub) {
+  if ((!payload || payload.stub) && !state.errors[meta.id]) {
     if (!meta.coming_soon) {
       box.appendChild(el("button", {
         class: "btn", type: "button", onclick: () => openSection(meta.id)
