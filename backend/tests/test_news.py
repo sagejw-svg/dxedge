@@ -237,6 +237,10 @@ def test_prompts_carry_the_hard_rules():
     assert "Where AI progress" in head
     assert "ai_progress" in head
     assert "Two or three highlights" in head
+    assert "that highlight alone" in head
+    assert "reputable" in head
+    assert "unrelated" in head
+    assert 'Never title a source "Source"' in head
     assert "ham radio" in head.lower()
     assert "protocols" in head.lower()
     assert "employer" in head.lower()
@@ -327,6 +331,37 @@ def test_safety_filters():
     assert cites == ["https://www.example.com/one", "https://www.example.com/two"]
     fenced = parse_model_json("```json\n{\"highlights\": []}\n```")
     assert fenced["highlights"] == []
+    stray = [
+        "https://podcasts.example.com/weird-side-multiverse",
+        "https://www.youtube.com/watch?v=unrelated",
+        "https://36kr.com/p/unrelated",
+    ]
+    editorial = scrub_highlight("ai-editorial", {
+        "title": "A sourced argument",
+        "dek": "Read this next.",
+        "body": "The claim and the evidence.",
+        "topics": ["ai"],
+        "sources": [
+            {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+            {"title": "Source", "url": "https://www.youtube.com/watch?v=listed-untitled"},
+            {"title": "", "url": "https://www.example.com/blank"},
+            {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+            {"title": "  source  ", "url": "https://36kr.com/p/also-untitled"},
+        ],
+    }, stray)
+    assert editorial["sources"] == [
+        {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+    ]
+    other = scrub_highlight("ai-editorial", {
+        "title": "A different claim",
+        "dek": "Another item.",
+        "body": "Its own evidence.",
+        "topics": ["math"],
+        "sources": [{"title": "Nature", "url": "https://www.nature.com/articles/math"}],
+    }, stray)
+    assert [s["url"] for s in other["sources"]] == ["https://www.nature.com/articles/math"]
+    assert "36kr.com" not in json.dumps([editorial, other])
+    assert "youtube.com" not in json.dumps([editorial, other])
 
 
 def test_framing_and_image_rules():
@@ -700,6 +735,134 @@ def test_provider_reports_the_missing_key(monkeypatch):
     tuned = XAIProvider(key="test-key")
     assert tuned.model == "grok-4.7"
     assert tuned.timeout_s == 180
+
+
+def test_response_citations_are_not_pasted_onto_every_highlight(paper):
+    paper.provider.highlights = [
+        {
+            "title": "Models and proofs",
+            "dek": "A claim.",
+            "body": "The argument.",
+            "topics": ["ai"],
+            "sources": [
+                {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+                {"title": "Source", "url": "https://www.youtube.com/watch?v=listed-untitled"},
+                {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+            ],
+        },
+        {
+            "title": "A different claim",
+            "dek": "Another.",
+            "body": "Its own case.",
+            "topics": ["math"],
+            "sources": [{"title": "Nature", "url": "https://www.nature.com/articles/math"}],
+        },
+    ]
+
+    async def complete(system, user):
+        paper.provider.calls += 1
+        paper.provider.last = (system, user)
+        return {
+            "citations": [
+                "https://podcasts.example.com/weird-side-multiverse",
+                "https://www.youtube.com/watch?v=unrelated",
+                "https://36kr.com/p/unrelated",
+            ],
+            "output": [{
+                "type": "message",
+                "content": [{
+                    "type": "output_text",
+                    "text": json.dumps({"highlights": paper.provider.highlights}),
+                    "annotations": [
+                        {"url": "https://podcasts.example.com/weird-side-multiverse"},
+                        {"url_citation": {"url": "https://36kr.com/p/unrelated"}},
+                    ],
+                }],
+            }],
+        }
+
+    paper.provider.complete = complete
+    out = asyncio.run(paper.open_section(DAY, "ai-editorial", "1.1.1.1", None, False))
+    assert [h["title"] for h in out["highlights"]] == ["Models and proofs", "A different claim"]
+    assert out["highlights"][0]["sources"] == [
+        {"title": "Quanta", "url": "https://www.quantamagazine.org/proof"},
+    ]
+    assert out["highlights"][1]["sources"] == [
+        {"title": "Nature", "url": "https://www.nature.com/articles/math"},
+    ]
+    blob = json.dumps(out["highlights"])
+    assert "36kr" not in blob
+    assert "youtube" not in blob
+    assert "podcast" not in blob
+    assert '"Source"' not in blob
+    assert "unrelated" in paper.provider.last[0]
+    assert "that highlight" in paper.provider.last[1]
+
+
+def test_startup_clears_the_leaked_edition_once(env):
+    store = Store(env / "news.db")
+    store.init()
+    when = datetime(2026, 10, 20, 18, tzinfo=timezone.utc)
+    store.put_section("2026-10-20", "ai-editorial", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:ai-editorial:0",
+            "title": "Argument",
+            "sources": [
+                {"title": "Quanta", "url": "https://www.quantamagazine.org/a"},
+                {"title": "Source", "url": "https://www.youtube.com/watch?v=1"},
+                {"title": "Source", "url": "https://36kr.com/p/1"},
+            ],
+        }],
+    }, "xai", when)
+    store.put_section("2026-10-20", "sleep", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:sleep:0",
+            "title": "Rest",
+            "sources": [{"title": "Source", "url": "https://36kr.com/p/1"}],
+        }],
+    }, "xai", when)
+    store.put_section("2026-10-19", "space", {
+        "day": "2026-10-19",
+        "highlights": [{
+            "id": "2026-10-19:space:0",
+            "title": "Orbit",
+            "sources": [
+                {"title": "NASA", "url": "https://www.nasa.gov/a"},
+                {"title": "Source", "url": "https://www.youtube.com/watch?v=1"},
+                {"title": "NASA", "url": "https://www.nasa.gov/a"},
+            ],
+        }],
+    }, "xai", when)
+    with store.connect() as conn:
+        conn.execute("DELETE FROM migrations WHERE id = ?", (newsdesk.SOURCE_LEAK_MIGRATION,))
+    store.init()
+    assert store.get_section("2026-10-20", "ai-editorial") is None
+    assert store.get_section("2026-10-20", "sleep") is None
+    kept = store.get_section("2026-10-19", "space")
+    assert kept["highlights"][0]["sources"] == [
+        {"title": "NASA", "url": "https://www.nasa.gov/a"},
+    ]
+    store.put_section("2026-10-20", "ai-editorial", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:ai-editorial:0",
+            "title": "Fresh",
+            "sources": [{"title": "Quanta", "url": "https://www.quantamagazine.org/a"}],
+        }],
+    }, "xai", when)
+    store.put_section("2026-10-20", "sleep", {
+        "day": "2026-10-20",
+        "highlights": [{
+            "id": "2026-10-20:sleep:0",
+            "title": "Fresh rest",
+            "sources": [{"title": "NIH", "url": "https://www.nih.gov/sleep"}],
+        }],
+    }, "xai", when)
+    store.init()
+    assert store.get_section("2026-10-20", "ai-editorial")["highlights"][0]["title"] == "Fresh"
+    assert store.get_section("2026-10-20", "sleep")["highlights"][0]["title"] == "Fresh rest"
 
 
 def test_generated_section_keeps_two_or_three_sourced_notes(paper):

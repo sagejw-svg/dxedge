@@ -171,6 +171,12 @@ FETCH_HOSTS = {
 }
 VOTE_KINDS = {"liked", "useful", "hide"}
 KIND_WEIGHT = {"liked": 1, "useful": 2, "hide": -2}
+# One-shot cache repair. Response-wide citations were stored as untitled
+# "Source" links on every highlight. These two sections regenerate; the
+# rest of the cache only loses those placeholder links.
+SOURCE_LEAK_MIGRATION = "2026-10-20-highlight-source-leak"
+SOURCE_LEAK_DAY = "2026-10-20"
+SOURCE_LEAK_SECTIONS = ("ai-editorial", "sleep")
 LAYOUT_KEYS = {"day", "show", "more", "coming_soon", "order", "shelf", "hidden", "mine", "interests"}
 # grok-4.7 is a current Responses API model id and accepts web_search.
 XAI_MODEL_DEFAULT = "grok-4.7"
@@ -328,7 +334,11 @@ def preamble() -> str:
         "Be concise and decision-oriented. Two or three highlights. "
         "Each highlight has a title of at most 12 words, a one-sentence dek, "
         "a body of at most 90 words, one to three topic tags, and one or more "
-        "https sources that you actually used. No walls of text. "
+        "https sources that support that highlight alone. "
+        "Cite reputable reporting, a paper, or an official page, and use the page title. "
+        "Do not attach unrelated pages, search leftovers, or another highlight's sources. "
+        "Omit a URL you cannot title. Never title a source \"Source\". "
+        "No walls of text. "
         "Where AI progress genuinely changes the story, say so in one clause. "
         "Do not invent an AI connection. "
         "ai_progress is optional: one sentence of at most 25 words when the item "
@@ -345,7 +355,7 @@ def preamble() -> str:
         "Security items stay at defender briefing level. No exploit steps and no payloads. "
         "Return JSON only, no markdown, in this shape: "
         '{"highlights":[{"title":"","dek":"","body":"","topics":[""],'
-        '"ai_progress":"","sources":[{"title":"","url":"https://"}]}'
+        '"ai_progress":"","sources":[{"title":"Page title","url":"https://"}]}'
     )
 
 
@@ -361,7 +371,10 @@ def build_prompt(section: dict, day: str, topic_bias: list[tuple[str, int]]) -> 
             "Readers have favored these topics. Prefer them when they genuinely "
             "fit this section: " + ", ".join(liked) + "."
         )
-    lines.append("Use recent, real reporting. Every highlight needs a real https source.")
+    lines.append(
+        "Use recent, real reporting. Every highlight needs its own titled https "
+        "sources. Do not add links that are not about that highlight."
+    )
     return preamble(), "\n".join(lines)
 
 
@@ -431,10 +444,24 @@ def extract_completion(data: dict) -> tuple[str, list[str]]:
     return "\n".join(texts).strip(), citations
 
 
-def _sources(items, extra: list[str]) -> list[dict]:
+def _source_title(raw) -> str:
+    """A link label a reader can use. The placeholder 'Source' is not one."""
+    text = " ".join(str(raw or "").split())
+    if not text or text.casefold() == "source":
+        return ""
+    return clip(text, 140)
+
+
+def _sources(items) -> list[dict]:
+    """Sources this highlight named, titled and de-duplicated.
+
+    Response-wide web_search citations are not added here. They are not
+    this highlight's sources, and labeling them 'Source' pasted the same
+    unrelated links onto every item in the section.
+    """
     out = []
     seen = set()
-    for item in list(items or []) + [{"title": "Source", "url": u} for u in extra]:
+    for item in items or []:
         if not isinstance(item, dict):
             continue
         url = item.get("url")
@@ -442,14 +469,35 @@ def _sources(items, extra: list[str]) -> list[dict]:
             continue
         if url in seen:
             continue
+        title = _source_title(item.get("title"))
+        if not title:
+            continue
         seen.add(url)
-        out.append({"title": clip(item.get("title") or "Source", 140), "url": url})
+        out.append({"title": title, "url": url})
         if len(out) >= 4:
             break
     return out
 
 
-def scrub_highlight(section_id: str, raw: dict, citations: list[str]) -> dict | None:
+def _clean_cached_payload(payload: dict) -> bool:
+    highlights = payload.get("highlights")
+    if not isinstance(highlights, list):
+        return False
+    changed = False
+    for item in highlights:
+        if not isinstance(item, dict):
+            continue
+        before = item.get("sources")
+        cleaned = _sources(before)
+        if cleaned != (before or []):
+            item["sources"] = cleaned
+            changed = True
+    return changed
+
+
+def scrub_highlight(section_id: str, raw: dict, _citations: list[str] | None = None) -> dict | None:
+    # ``_citations`` is every web_search URL on the xAI response. Do not attach
+    # them: each highlight keeps only the sources it listed.
     if not isinstance(raw, dict):
         return None
     title = clip(str(raw.get("title") or ""), 140)
@@ -480,7 +528,7 @@ def scrub_highlight(section_id: str, raw: dict, citations: list[str]) -> dict | 
         body = BIO_SAFE
         dek = "An explainer, not a procedure."
         note = ""
-    sources = _sources(raw.get("sources"), citations)
+    sources = _sources(raw.get("sources"))
     if not sources:
         return None
     out = {
@@ -963,6 +1011,42 @@ class Store:
                     created_at TEXT NOT NULL
                 );
             """)
+            self._repair_source_leak(conn)
+
+    def _repair_source_leak(self, conn) -> None:
+        """Clear the edition that repeated unrelated 'Source' links.
+
+        Runs once. Cached highlights elsewhere drop untitled 'Source'
+        entries and duplicate URLs. The 2026-10-20 AI editorial and
+        narcolepsy sections are deleted so the next open writes them again.
+        """
+        conn.execute("CREATE TABLE IF NOT EXISTS migrations (id TEXT PRIMARY KEY)")
+        if conn.execute(
+            "SELECT 1 FROM migrations WHERE id = ?",
+            (SOURCE_LEAK_MIGRATION,),
+        ).fetchone():
+            return
+        rows = conn.execute("SELECT day, section, payload FROM sections").fetchall()
+        for row in rows:
+            if row["day"] == SOURCE_LEAK_DAY and row["section"] in SOURCE_LEAK_SECTIONS:
+                continue
+            try:
+                payload = json.loads(row["payload"])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict) and _clean_cached_payload(payload):
+                conn.execute(
+                    "UPDATE sections SET payload = ? WHERE day = ? AND section = ?",
+                    (json.dumps(payload), row["day"], row["section"]),
+                )
+        conn.execute(
+            "DELETE FROM sections WHERE day = ? AND section IN (?, ?)",
+            (SOURCE_LEAK_DAY, *SOURCE_LEAK_SECTIONS),
+        )
+        conn.execute(
+            "INSERT INTO migrations (id) VALUES (?)",
+            (SOURCE_LEAK_MIGRATION,),
+        )
 
     def last_click(self) -> datetime | None:
         with self.connect() as conn:
