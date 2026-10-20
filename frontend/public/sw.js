@@ -1,11 +1,18 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v111'
+const CACHE_NAME = 'dxedge-v112'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
-  '/favicon.svg',
+  '/favicon.ico?v=112',
+  '/favicon.svg?v=112',
+  '/favicon-16.png?v=112',
+  '/favicon-32.png?v=112',
+  '/apple-touch-icon.png?v=112',
+  '/icon-192.png?v=112',
+  '/icon-512.png?v=112',
+  '/icon-maskable-512.png?v=112',
 ]
 
 self.addEventListener('install', (event) => {
