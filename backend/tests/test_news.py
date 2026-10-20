@@ -23,7 +23,7 @@ from news import (
     extract_completion, framing_allowed, is_news_path, load_config, news_basic_ok,
     news_cookie_ok, news_credentials_ok, news_password, news_session_cookie, owner_secret,
     parse_commons, parse_model_json, parse_seed, parse_user, pepper_image_urls,
-    DEFAULT_GENERATION_SECONDS, persona_blocked, persona_hash, persona_weights,
+    GENERATION_MAX_SECONDS, persona_blocked, persona_hash, persona_weights,
     median_seconds, normalize_persona, preamble,
     public_domain, public_section, safe_frame_url,
     scrub_highlight, section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE,
@@ -486,27 +486,33 @@ def test_section_generates_once_then_caches(paper):
 
 
 def test_median_seconds_uses_a_default_and_ignores_junk():
-    assert DEFAULT_GENERATION_SECONDS == 20
-    assert median_seconds([]) == 20
+    assert GENERATION_MAX_SECONDS == 180
+    assert median_seconds([]) is None
     assert median_seconds([10, 30, 14]) == 14
     assert median_seconds([30, 10]) == 20
     assert median_seconds([0.2]) == 1
-    assert median_seconds([90]) == 60
-    assert median_seconds([120]) == 60
-    assert median_seconds([120.1, -1, float("nan"), True, "12", None]) == 20
+    assert median_seconds([90]) == 90
+    assert median_seconds([120]) == 120
+    assert median_seconds([97.6, 116.7]) == 107
+    assert median_seconds([116.7]) == 117
+    assert median_seconds([180]) == 180
+    assert median_seconds([180.1, -1, float("nan"), True, "12", None]) is None
     assert median_seconds([1.4, 1.6]) == 2
 
 
 def test_status_estimate_is_a_median_and_does_not_call_the_model(paper):
-    assert paper.status()["generation_seconds"] == 20
+    assert paper.status()["generation_seconds"] is None
     assert paper.store.recent_generations() == []
+    paper.store.record_generation(97.6)
+    paper.store.record_generation(116.7)
+    assert paper.status()["generation_seconds"] == 107
     paper.store.record_generation(10)
     paper.store.record_generation(30)
     paper.store.record_generation(14)
-    assert paper.status()["generation_seconds"] == 14
-    for n in (True, float("nan"), -3, 121, "no"):
+    assert paper.status()["generation_seconds"] == 30
+    for n in (True, float("nan"), -3, 181, "no"):
         paper.store.record_generation(n)
-    assert paper.status()["generation_seconds"] == 14
+    assert paper.status()["generation_seconds"] == 30
     for i in range(40):
         paper.store.record_generation(float(i + 1))
     recent = paper.store.recent_generations()
@@ -1379,11 +1385,13 @@ def test_page_wires_match_the_desk():
     assert "/api/news/layout?" not in layout_fn
     assert "location.search" not in layout_fn
     assert "The desk is setting this box." in html
+    assert "Usually 1–2 minutes." in html
     assert "Usually about " in html
     assert " so far." in html
     assert "Taking longer than usual." in html
     assert "generation_seconds" in html
-    assert "return elapsed >= typical * 2;" in html
+    assert "return elapsed >= 150;" in html
+    assert "typical * 2" not in html
     assert "setInterval(paintWait, 1000)" in html
     assert "startWaitTimer()" in html
     assert "stopWaitTimer()" in html

@@ -672,37 +672,41 @@ async function selectDay(day) {
   }
   render();
 }
-function generationSeconds() {
+function measuredSeconds() {
   const n = state.status && state.status.generation_seconds;
   if (typeof n === "number" && n >= 1) return Math.round(n);
-  return 20;
+  return null;
 }
 function secondsLabel(n, tail) {
   return n + " second" + (n === 1 ? "" : "s") + tail;
+}
+function usualLabel() {
+  const n = measuredSeconds();
+  if (n == null) return "Usually 1–2 minutes.";
+  return "Usually about " + secondsLabel(n, ".");
 }
 function elapsedSeconds() {
   if (!state.loadingStarted) return 0;
   return Math.max(0, Math.floor((Date.now() - state.loadingStarted) / 1000));
 }
-function takingLonger(elapsed, typical) {
-  return elapsed >= typical * 2;
+function takingLonger(elapsed) {
+  return elapsed >= 150;
 }
 function paintWait() {
   const elapsedNode = document.getElementById("wait-elapsed");
   const slowNode = document.getElementById("wait-slow");
   if (!elapsedNode) return;
-  const typical = generationSeconds();
   const elapsed = elapsedSeconds();
   elapsedNode.textContent = secondsLabel(elapsed, " so far.");
-  if (slowNode) slowNode.hidden = !takingLonger(elapsed, typical);
+  if (slowNode) slowNode.hidden = !takingLonger(elapsed);
 }
 function loadingNote() {
   const wrap = el("div", { class: "loading-note" });
   wrap.appendChild(el("p", null, "The desk is setting this box."));
-  wrap.appendChild(el("p", { class: "wait-note", id: "wait-usual" }, "Usually about " + secondsLabel(generationSeconds(), ".")));
+  wrap.appendChild(el("p", { class: "wait-note", id: "wait-usual" }, usualLabel()));
   wrap.appendChild(el("p", { class: "wait-note", id: "wait-elapsed" }, secondsLabel(elapsedSeconds(), " so far.")));
   const slow = el("p", { class: "wait-note", id: "wait-slow" }, "Taking longer than usual.");
-  slow.hidden = !takingLonger(elapsedSeconds(), generationSeconds());
+  slow.hidden = !takingLonger(elapsedSeconds());
   wrap.appendChild(slow);
   return wrap;
 }
