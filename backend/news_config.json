@@ -16,10 +16,26 @@
     {"seed": 100321, "label": "Security lead"}
   ],
   "example_personas": [
-    "Retired teacher in Ohio who loves birds",
-    "Nurse in Manila into astronomy",
-    "Gardener in Lisbon who likes cooking",
-    "Bus driver in Chicago who follows transport"
+    "68-year-old retired teacher in Ohio who loves birds",
+    "34-year-old nurse in Manila into astronomy",
+    "51-year-old wheat farmer in Nakuru who watches the weather",
+    "22-year-old university student in Seoul who likes mathematics and comics",
+    "41-year-old shopkeeper in Porto who runs a small business",
+    "29-year-old jazz musician in New Orleans who follows local music",
+    "45-year-old chef in Oaxaca who likes markets and home cooking",
+    "38-year-old long-haul trucker in Manitoba who follows roads and transport",
+    "47-year-old bridge engineer in Osaka who likes infrastructure and cities",
+    "36-year-old parent working in Dubai who follows world news and schools",
+    "72-year-old retired librarian in Edinburgh who loves novels and museums",
+    "31-year-old marine biologist in Cape Town who likes reefs and wildlife",
+    "44-year-old carpenter in Hanoi who builds furniture and likes handmade goods",
+    "53-year-old family physician in Accra who follows public health research",
+    "27-year-old park ranger in Patagonia who likes trails and wildlife",
+    "39-year-old accountant in Mumbai who follows household budgets and companies",
+    "58-year-old beekeeper in Ljubljana who likes orchids and insects",
+    "33-year-old train driver in Zurich who follows railways and transport",
+    "26-year-old florist in Amsterdam who likes tulips and garden design",
+    "49-year-old architect in Melbourne who likes public buildings and cities"
   ],
   "sections": [
     {

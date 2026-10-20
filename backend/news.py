@@ -174,6 +174,66 @@ _INTERESTS = (
     ("cooking", "cooking", ("life",), ("life",)),
     ("cook", "cooking", ("life",), ("life",)),
     ("transport", "transport", ("world",), ("transport",)),
+    ("farmer", "farming", ("biology", "money"), ("biology", "money")),
+    ("wheat", "wheat", ("biology",), ("biology",)),
+    ("weather", "weather", ("world",), ()),
+    ("student", "studying", ("education", "comics"), ("education",)),
+    ("mathematics", "mathematics", ("education",), ("math",)),
+    ("comics", "comics", ("comics",), ("comics",)),
+    ("business", "business", ("company", "money"), ("money",)),
+    ("bakery", "baking", ("company", "life"), ("life",)),
+    ("musician", "music", ("life",), ("life",)),
+    ("jazz", "jazz", ("life",), ("life",)),
+    ("music", "music", ("life",), ("life",)),
+    ("chef", "cooking", ("life",), ("life",)),
+    ("trucker", "trucking", ("world",), ("transport",)),
+    ("roads", "roads", ("world",), ("transport",)),
+    ("engineer", "engineering", ("world", "education"), ("math",)),
+    ("bridge", "bridges", ("world",), ()),
+    ("infrastructure", "infrastructure", ("world",), ()),
+    ("cities", "cities", ("world",), ()),
+    ("parent", "parenting", ("education", "life"), ("education", "life")),
+    ("schools", "schools", ("education",), ("education",)),
+    ("librarian", "libraries", ("education", "life"), ("education",)),
+    ("novels", "novels", ("education", "life"), ("education",)),
+    ("museums", "museums", ("education", "life"), ("education",)),
+    ("biologist", "biology", ("biology",), ("biology",)),
+    ("reefs", "reefs", ("biology",), ("biology",)),
+    ("wildlife", "wildlife", ("biology", "weird"), ("biology", "weird")),
+    ("carpenter", "carpentry", ("life",), ("life",)),
+    ("furniture", "furniture", ("life",), ("life",)),
+    ("physician", "medicine", ("biology", "life"), ("biology", "life")),
+    ("health", "health", ("biology", "life"), ("biology", "life")),
+    ("ranger", "trails", ("biology", "life"), ("biology",)),
+    ("trails", "trails", ("biology",), ("biology",)),
+    ("accountant", "budgets", ("money", "company"), ("money",)),
+    ("budgets", "budgets", ("money",), ("money",)),
+    ("beekeeper", "bees", ("biology",), ("biology",)),
+    ("insects", "insects", ("biology", "weird"), ("biology", "weird")),
+    ("railways", "railways", ("world",), ("transport",)),
+    ("train", "railways", ("world",), ("transport",)),
+    ("florist", "flowers", ("biology", "life"), ("biology", "life")),
+    ("tulips", "tulips", ("biology",), ("biology",)),
+    ("architect", "buildings", ("world",), ()),
+    ("buildings", "buildings", ("world",), ()),
+    ("nakuru", "nakuru", ("world",), ()),
+    ("seoul", "seoul", ("world",), ()),
+    ("porto", "porto", ("world",), ()),
+    ("orleans", "new-orleans", ("world",), ()),
+    ("oaxaca", "oaxaca", ("world",), ()),
+    ("manitoba", "manitoba", ("world",), ()),
+    ("osaka", "osaka", ("world",), ()),
+    ("dubai", "dubai", ("world",), ()),
+    ("edinburgh", "edinburgh", ("world",), ()),
+    ("hanoi", "hanoi", ("world",), ()),
+    ("accra", "accra", ("world",), ()),
+    ("patagonia", "patagonia", ("world",), ()),
+    ("mumbai", "mumbai", ("world",), ()),
+    ("ljubljana", "ljubljana", ("world",), ()),
+    ("zurich", "zurich", ("world",), ()),
+    ("amsterdam", "amsterdam", ("world",), ()),
+    ("melbourne", "melbourne", ("world",), ()),
+    ("cape", "cape-town", ("world",), ()),
 )
 BIO_SAFE = (
     "Researchers and lawmakers are debating gene editing and synthetic biology "
@@ -392,8 +452,8 @@ def _validate_config(data: dict) -> None:
         if not isinstance(ex["seed"], int) or not 0 <= ex["seed"] <= SEED_MAX:
             raise ValueError("example seed out of range")
     personas = data.get("example_personas") or []
-    if not 3 <= len(personas) <= 6:
-        raise ValueError("example personas must be 3 to 6")
+    if not 18 <= len(personas) <= 24:
+        raise ValueError("example personas must be about 20")
     seen_personas = set()
     for text in personas:
         if not isinstance(text, str):
