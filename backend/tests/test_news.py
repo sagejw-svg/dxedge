@@ -23,7 +23,8 @@ from news import (
     extract_completion, framing_allowed, is_news_path, load_config, news_basic_ok,
     news_cookie_ok, news_credentials_ok, news_password, news_session_cookie, owner_secret,
     parse_commons, parse_model_json, parse_seed, parse_user, pepper_image_urls,
-    persona_blocked, persona_hash, persona_weights, normalize_persona, preamble,
+    DEFAULT_GENERATION_SECONDS, persona_blocked, persona_hash, persona_weights,
+    median_seconds, normalize_persona, preamble,
     public_domain, public_section, safe_frame_url,
     scrub_highlight, section_map, strip_page_url, vote_mix, xkcd_skipped, PROFILE_RE,
     _validate_config,
@@ -482,6 +483,97 @@ def test_section_generates_once_then_caches(paper):
     assert paper.provider.calls == 1
     paper.read_day(DAY)
     assert paper.provider.calls == 1
+
+
+def test_median_seconds_uses_a_default_and_ignores_junk():
+    assert DEFAULT_GENERATION_SECONDS == 20
+    assert median_seconds([]) == 20
+    assert median_seconds([10, 30, 14]) == 14
+    assert median_seconds([30, 10]) == 20
+    assert median_seconds([0.2]) == 1
+    assert median_seconds([90]) == 60
+    assert median_seconds([120]) == 60
+    assert median_seconds([120.1, -1, float("nan"), True, "12", None]) == 20
+    assert median_seconds([1.4, 1.6]) == 2
+
+
+def test_status_estimate_is_a_median_and_does_not_call_the_model(paper):
+    assert paper.status()["generation_seconds"] == 20
+    assert paper.store.recent_generations() == []
+    paper.store.record_generation(10)
+    paper.store.record_generation(30)
+    paper.store.record_generation(14)
+    assert paper.status()["generation_seconds"] == 14
+    for n in (True, float("nan"), -3, 121, "no"):
+        paper.store.record_generation(n)
+    assert paper.status()["generation_seconds"] == 14
+    for i in range(40):
+        paper.store.record_generation(float(i + 1))
+    recent = paper.store.recent_generations()
+    assert len(recent) == 30
+    assert recent[0] == 40.0
+    assert 1.0 not in recent
+    paper.layout(DAY, None, None)
+    paper.read_day(DAY)
+    paper.status()
+    assert paper.provider.calls == 0
+    assert paper.provider.interpret_calls == 0
+
+
+def test_only_a_finished_section_records_a_generation_time(paper):
+    async def slow(system, user):
+        paper.provider.calls += 1
+        paper.provider.last = (system, user)
+        await asyncio.sleep(0.05)
+        return {"output_text": json.dumps({"highlights": paper.provider.highlights})}
+
+    paper.provider.complete = slow
+    asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    samples = paper.store.recent_generations()
+    assert len(samples) == 1
+    assert samples[0] >= 0.04
+    assert paper.provider.calls == 1
+    asyncio.run(paper.open_section(DAY, "space", "1.1.1.1", None, False))
+    assert len(paper.store.recent_generations()) == 1
+    assert paper.provider.calls == 1
+
+    paper.provider.ready = False
+    asyncio.run(paper.open_section(DAY, "biology", "1.1.1.1", None, False))
+    assert paper.store.recent_generations() == samples
+    assert paper.provider.calls == 1
+
+    paper.provider.ready = True
+    paper.store.touch(paper.now() - timedelta(days=15))
+    blocked = asyncio.run(paper.open_section(DAY, "world", "1.1.1.1", None, False))
+    assert blocked["dormant"] is True
+    assert paper.store.recent_generations() == samples
+
+    paper.wake()
+
+    async def boom(system, user):
+        paper.provider.calls += 1
+        raise RuntimeError("wire down")
+
+    paper.provider.complete = boom
+    with pytest.raises(RuntimeError):
+        asyncio.run(paper.open_section(DAY, "world", "1.1.1.1", None, False))
+    assert paper.store.recent_generations() == samples
+    assert paper.provider.calls == 2
+    assert paper.provider.interpret_calls == 0
+
+
+def test_comics_records_a_time_without_a_model_call(paper):
+    out = asyncio.run(paper.open_section(DAY, "comics", "1.1.1.1", uid(1), False))
+    assert out["cached"] is False
+    assert paper.provider.calls == 0
+    assert paper.provider.interpret_calls == 0
+    samples = paper.store.recent_generations()
+    assert len(samples) == 1
+    assert 0 <= samples[0] <= 120
+    asyncio.run(paper.open_section(DAY, "comics", "1.1.1.1", uid(1), False))
+    assert len(paper.store.recent_generations()) == 1
+    assert paper.provider.calls == 0
+    assert paper.status()["generation_seconds"] >= 1
 
 
 def test_stub_is_not_cached_and_names_the_secret(paper):
@@ -1286,6 +1378,15 @@ def test_page_wires_match_the_desk():
     assert "postJSON(\"/api/news/layout\"" in layout_fn
     assert "/api/news/layout?" not in layout_fn
     assert "location.search" not in layout_fn
+    assert "The desk is setting this box." in html
+    assert "Usually about " in html
+    assert " so far." in html
+    assert "Taking longer than usual." in html
+    assert "generation_seconds" in html
+    assert "return elapsed >= typical * 2;" in html
+    assert "setInterval(paintWait, 1000)" in html
+    assert "startWaitTimer()" in html
+    assert "stopWaitTimer()" in html
     assert "CACHE_NAME = 'dxedge-v111'" in sw
     assert "url.pathname.startsWith('/news/')" in sw
     # The paper is not intercepted. A service worker response hides the dialog.

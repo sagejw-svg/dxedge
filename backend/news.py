@@ -38,6 +38,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import time
 import hmac
 import json
 import logging
@@ -58,6 +59,10 @@ CONFIG_PATH = Path(__file__).with_name("news_config.json")
 PAPER_TZ = ZoneInfo("America/Los_Angeles")
 DORMANT_DAYS = 14
 SEED_MAX = 1_000_000_000
+# Shown until a real section has been written. Web search usually lands
+# well inside the 45s wire timeout, so 20s is the prior, not a measurement.
+DEFAULT_GENERATION_SECONDS = 20
+GENERATION_SAMPLE_LIMIT = 30
 USER_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 TARGET_RE = re.compile(r"^[A-Za-z0-9:._-]{1,80}$")
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -945,6 +950,32 @@ def blend(base: dict, signals: dict, t: float) -> dict:
     return out
 
 
+def median_seconds(samples: list[float], default: int = DEFAULT_GENERATION_SECONDS) -> int:
+    """Nearest second of the median. Empty means the default, not a model call."""
+    usable = []
+    for sample in samples:
+        if isinstance(sample, bool) or not isinstance(sample, (int, float)):
+            continue
+        number = float(sample)
+        if number != number or number < 0 or number > 120:
+            continue
+        usable.append(number)
+    if not usable:
+        return default
+    usable.sort()
+    mid = len(usable) // 2
+    if len(usable) % 2:
+        value = usable[mid]
+    else:
+        value = (usable[mid - 1] + usable[mid]) / 2
+    rounded = int(round(value))
+    if rounded < 1:
+        return 1
+    if rounded > 60:
+        return 60
+    return rounded
+
+
 def vote_mix(n: int) -> float:
     if n <= 0:
         return 0.0
@@ -1009,6 +1040,11 @@ class Store:
                     hash TEXT PRIMARY KEY,
                     weights TEXT NOT NULL,
                     created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS generation_times (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    seconds REAL NOT NULL,
+                    recorded_at TEXT NOT NULL
                 );
             """)
             self._repair_source_leak(conn)
@@ -1286,6 +1322,33 @@ class Store:
                 (digest, blob, iso),
             )
 
+    def record_generation(self, seconds: float) -> None:
+        """Keep a short list of how long a section actually took. No story text."""
+        if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+            return
+        number = float(seconds)
+        if number != number or number < 0 or number > 120:
+            return
+        iso = datetime.now(timezone.utc).isoformat()
+        with self._lock, self.connect() as conn:
+            conn.execute(
+                "INSERT INTO generation_times (seconds, recorded_at) VALUES (?, ?)",
+                (number, iso),
+            )
+            conn.execute(
+                "DELETE FROM generation_times WHERE id NOT IN ("
+                "SELECT id FROM generation_times ORDER BY id DESC LIMIT ?)",
+                (GENERATION_SAMPLE_LIMIT,),
+            )
+
+    def recent_generations(self) -> list[float]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT seconds FROM generation_times ORDER BY id DESC LIMIT ?",
+                (GENERATION_SAMPLE_LIMIT,),
+            ).fetchall()
+        return [float(row["seconds"]) for row in rows]
+
 
 class XAIProvider:
     name = "xai"
@@ -1530,6 +1593,7 @@ class Paper:
             "personas": list(config.get("example_personas") or []),
             "days": ready,
             "ai_progress": self.progress_notes(),
+            "generation_seconds": median_seconds(self.store.recent_generations()),
         }
 
     def progress_notes(self) -> list[dict]:
@@ -1680,8 +1744,10 @@ class Paper:
         if cached:
             return self.decorate(sid, cached, user_id)
         if sid == "comics":
+            started = time.monotonic()
             payload = await self.build_comics(day)
             self.store.put_section(day, sid, payload, "shelf", self.now())
+            self._remember_generation(started)
             stored = self.store.get_section(day, sid)
             decorated = self.decorate(sid, stored, user_id)
             decorated["cached"] = False
@@ -1696,6 +1762,13 @@ class Paper:
         decorated = self.decorate(sid, stored, user_id)
         decorated["cached"] = False
         return decorated
+
+    def _remember_generation(self, started: float) -> None:
+        """One finished section, timed locally. This does not call the model."""
+        try:
+            self.store.record_generation(time.monotonic() - started)
+        except Exception:
+            logger.warning("news generation time was not recorded")
 
     def _generation_timeout(self) -> float:
         timeout = getattr(self.provider, "timeout_s", None)
@@ -1742,6 +1815,7 @@ class Paper:
 
     async def _generate_section(self, day: str, sid: str) -> None:
         key = (day, sid)
+        started = time.monotonic()
         try:
             sec = self._section(sid)
             system, user = build_prompt(sec, day, self.store.topic_scores())
@@ -1767,6 +1841,7 @@ class Paper:
                 item["id"] = f"{day}:{sid}:{i}"
             payload = {"day": day, "highlights": highlights, "stub": False}
             self.store.put_section(day, sid, payload, self.provider.name, self.now())
+            self._remember_generation(started)
         except NewsError as exc:
             self._remember_failure(key, exc.status, exc.message)
             raise
