@@ -1669,7 +1669,7 @@ def test_page_wires_match_the_desk():
     assert "setInterval(paintWait, 1000)" in html
     assert "startWaitTimer()" in html
     assert "stopWaitTimer()" in html
-    assert "CACHE_NAME = 'dxedge-v112'" in sw
+    assert "CACHE_NAME = 'dxedge-v113'" in sw
     assert "url.pathname.startsWith('/news/')" in sw
     # The paper is not intercepted. A service worker response hides the dialog.
     before_mutable, _, after_mutable = sw.partition("const mutable")
