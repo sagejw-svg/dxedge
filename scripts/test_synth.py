@@ -332,14 +332,19 @@ with sync_playwright() as pw:
     padp = patch(osc1={"wave": "saw", "level": 0.8}, filt={"cutoff": 3000}, envA={"a": 0.01, "s": 1, "r": 0.1}, stereo=sp, out={"tube": "12AU7", "drive": 0})
     chord = [e for n_ in (48, 55, 60, 64) for e in note(n_, 0.02)]
     seg = slice(SR // 2, 3 * SR - 1000)
+    # Each voice starts its oscillators at a random phase (on purpose), so one render of this saw chord
+    # swings about 1.5 dB from the next. The level comparison averages three renders a side; a single
+    # pair drifted past the 2.5 dB bound on 20 Oct with no code change (-2.51 dB).
+    def pw_(L, R): return (np.mean(L[seg] ** 2) + np.mean(R[seg] ** 2)) / 2
     padp["ens"] = {"on": False}; L0, R0 = render(padp, chord, 3.0)
-    st0 = math.sqrt((np.mean(L0[seg] ** 2) + np.mean(R0[seg] ** 2)) / 2)
+    st0 = math.sqrt((pw_(L0, R0) + sum(pw_(*render(padp, chord, 3.0)) for _ in range(2))) / 3)
     ck("S. ensemble off: a centred patch stays identical left and right", float(np.max(np.abs(L0 - R0))) < 1e-6, float(np.max(np.abs(L0 - R0))))
     for mode in ("I", "II", "I+II", "strings"):
         padp["ens"] = {"on": True, "mode": mode, "mix": 60}; L, R = render(padp, chord, 3.0)
         st = math.sqrt((np.mean(L[seg] ** 2) + np.mean(R[seg] ** 2)) / 2); mo = math.sqrt(np.mean(((L[seg] + R[seg]) / 2) ** 2)); c = corr(L[seg], R[seg])
-        ck(f"S. ensemble {mode}: stereo (corr {c:.2f}), mono fold loses {db(st) - db(mo):.1f} dB, level {db(st) - db(st0):+.1f} dB",
-           c < 0.97 and db(st) - db(mo) <= 3 and abs(db(st) - db(st0)) < 2.5, (c, db(st) - db(mo), db(st) - db(st0)))
+        stv = math.sqrt((pw_(L, R) + sum(pw_(*render(padp, chord, 3.0)) for _ in range(2))) / 3)
+        ck(f"S. ensemble {mode}: stereo (corr {c:.2f}), mono fold loses {db(st) - db(mo):.1f} dB, level {db(stv) - db(st0):+.1f} dB (3 renders a side)",
+           c < 0.97 and db(st) - db(mo) <= 3 and abs(db(stv) - db(st0)) < 2.5, (c, db(st) - db(mo), db(stv) - db(st0)))
     sn = patch(osc1={"wave": "sine", "level": 0.8, "fixed": 440}, stereo=sp, out={"tube": "12AU7", "drive": 0})
     sb = {}
     for on in (False, True):
@@ -3461,8 +3466,15 @@ with sync_playwright() as pw:
     # The wide-screen keyboard is fixed over the bottom of the page. The field
     # already has a scroll margin for that bar; the drag has to land on the
     # canvas, not on the keys.
-    pg.locator("#heptodePlace").scroll_into_view_if_needed()
+    # scroll_into_view_if_needed does nothing while the field is partly on screen, and with a file
+    # loaded its bottom sits under the keys (the drag then landed on a key). Scroll it clear of the bar.
+    pg.evaluate("""() => { const r = document.getElementById('heptodePlace').getBoundingClientRect();
+      const kb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kb-h')) || 0;
+      const over = r.bottom - (innerHeight - kb - 28); if (over > 0) window.scrollBy(0, over); }""")
+    pg.wait_for_timeout(100)
     box = pg.locator("#heptodePlace").bounding_box()
+    hit = pg.evaluate("([x, y]) => (document.elementFromPoint(x, y) || {}).id || ''", [box["x"] + box["width"] / 2, box["y"] + box["height"] - 30])
+    ck("H. the drag starts on the field, not on the docked keys", hit == "heptodePlace", hit)
     pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] - 30)
     pg.mouse.down()
     pg.mouse.move(box["x"] + 24, box["y"] + box["height"] * 0.75)
