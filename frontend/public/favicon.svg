@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img">
+  <title>DXEdge</title>
+  <rect width="32" height="32" rx="7" fill="#101614"/>
+  <g fill="none" stroke="#7affb2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1.35" y="1.35" width="29.3" height="29.3" rx="6.2" stroke-width="2.5"/>
+    <path d="M5.80 16.50 C6.93 12.89 8.07 9.60 9.20 9.60 C10.33 9.60 11.47 12.89 12.60 16.50 C13.73 20.11 14.87 23.40 16.00 23.40 C17.13 23.40 18.27 20.11 19.40 16.50 C20.53 12.89 21.67 9.60 22.80 9.60 C23.93 9.60 25.07 12.89 26.20 16.50" stroke-width="3.5"/>
+  </g>
+</svg>

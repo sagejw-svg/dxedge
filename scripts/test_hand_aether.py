@@ -83,7 +83,7 @@ app = open(os.path.join(REPO, "frontend", "src", "App.jsx"), encoding="utf-8").r
 ck("nav has an Aether tab", "id: 'aether'" in app and "label: 'Aether'" in app and "<Aether />" in app)
 sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
 ck("service worker still treats /synth/ as mutable", "url.pathname.startsWith('/synth/')" in sw)
-ck("service worker cache bumped for this frontend change", "dxedge-v111" in sw)
+ck("service worker cache bumped for this frontend change", "dxedge-v112" in sw)
 
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=CHROME, args=["--autoplay-policy=no-user-gesture-required"])
