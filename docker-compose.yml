@@ -9,6 +9,8 @@ services:
       # workflow writes XAI_API_KEY or GROK_API_KEY into this directory's
       # .env when that Actions secret is set, and leaves an existing value
       # alone when it is not. With neither, the desk stays on the stub.
+      # ANTHROPIC_API_KEY plans a reader edition. If it is unset, that plan
+      # falls back to xAI. The value is never logged.
       # NEWS_OWNER_SEED is the private seed for one reader's votes. It is never
       # sent to the browser. NEWS_OWNER_READER is that reader's anonymous id.
       # NEWS_PASSWORD is the paper's HTTP basic password. The username is edge.
@@ -16,6 +18,8 @@ services:
       # empty the paper stays locked and will not call the model.
       - XAI_API_KEY=${XAI_API_KEY:-}
       - GROK_API_KEY=${GROK_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5}
       - XAI_MODEL=${XAI_MODEL:-grok-4.7}
       - XAI_TIMEOUT_S=${XAI_TIMEOUT_S:-150}
       - NEWS_OWNER_SEED=${NEWS_OWNER_SEED:-}

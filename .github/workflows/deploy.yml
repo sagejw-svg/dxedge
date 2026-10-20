@@ -85,12 +85,13 @@ jobs:
         env:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NEWS_PASSWORD: ${{ secrets.NEWS_PASSWORD }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          envs: XAI_API_KEY,GROK_API_KEY,NEWS_PASSWORD
+          envs: XAI_API_KEY,GROK_API_KEY,ANTHROPIC_API_KEY,NEWS_PASSWORD
           script: |
             set -e
             BACKEND_CHANGED="${{ steps.changes.outputs.backend }}"
@@ -112,6 +113,11 @@ jobs:
               KEY_SET=1
             else
               unset GROK_API_KEY
+            fi
+            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+              KEY_SET=1
+            else
+              unset ANTHROPIC_API_KEY
             fi
             if [ "$KEY_SET" = "1" ]; then
               echo "[$(date)] news model key is set for this deploy" >> $LOG
@@ -157,6 +163,10 @@ jobs:
             if [ -n "${GROK_API_KEY:-}" ]; then
               write_secret GROK_API_KEY "$GROK_API_KEY"
               unset GROK_API_KEY
+            fi
+            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+              write_secret ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+              unset ANTHROPIC_API_KEY
             fi
             # The paper password. Same rules as the model key: a set secret is
             # written, an empty one must not clobber a password already on the
