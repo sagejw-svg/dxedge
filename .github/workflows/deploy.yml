@@ -233,23 +233,8 @@ jobs:
                 exit 1
               fi
               # Ready flags only. The password and the model keys stay in the
-              # container and are not printed.
-              if ! NEWS_STATUS=$(docker compose exec -T backend python3 -c 'import json,os,base64,urllib.request
-pw=os.environ.get("NEWS_PASSWORD") or ""
-token=base64.b64encode(("edge:"+pw).encode()).decode()
-req=urllib.request.Request("http://127.0.0.1:8000/api/news/status", headers={"Authorization":"Basic "+token})
-try:
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        data=json.load(resp)
-except Exception as exc:
-    print("news status check failed", type(exc).__name__)
-    raise SystemExit(1)
-p=data.get("provider") or {}
-ps=p.get("providers") or {}
-anth=(ps.get("anthropic") or {}).get("ready")
-xai=(ps.get("xai") or {}).get("ready")
-print("news status provider name=%s ready=%s anthropic=%s xai=%s" % (p.get("name"), p.get("ready"), anth, xai))
-'); then
+              # container. news_status.py prints the provider line and nothing else.
+              if ! NEWS_STATUS=$(docker compose exec -T backend python3 news_status.py); then
                 echo "$NEWS_STATUS" >> $LOG
                 echo "$NEWS_STATUS"
                 echo "[$(date)] ERROR: news status check failed" >> $LOG
