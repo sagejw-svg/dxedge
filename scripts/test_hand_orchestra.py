@@ -310,7 +310,7 @@ with sync_playwright() as pw:
     ck("Ho. no page errors", not errs, errs)
 
     sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
-    ck("Ho. service worker cache is bumped", "CACHE_NAME = 'dxedge-v110'" in sw)
+    ck("Ho. service worker cache is bumped", "CACHE_NAME = 'dxedge-v111'" in sw)
 
     held, held_pg = open_page(b, cam_stub(clear=False, mode="pending"), viewport={"width": 1280, "height": 900})
     held_pg.goto(BASE + "/synth/hand-orchestra/")
