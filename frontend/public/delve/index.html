@@ -67,7 +67,7 @@
   header .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .vol { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.82rem; }
   #vol { width: 92px; accent-color: var(--ember); }
-  header button, .row button, .diffs button, #pad button, .actions button, .spell {
+  header button, header select, .row button, .diffs button, #pad button, .actions button, .spell {
     background: var(--bg2);
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -87,9 +87,10 @@
     position: relative;
     min-height: 0;
     background: #070605;
-    border: 1px solid var(--line);
+    border: 1px solid #6a5038;
     border-radius: 12px;
     overflow: hidden;
+    box-shadow: inset 0 0 0 1px #2a2018, inset 0 0 48px rgba(0,0,0,0.35);
   }
   #view { width: 100%; height: 100%; display: block; }
   #hurt {
@@ -120,14 +121,23 @@
   }
   .champ {
     text-align: left;
-    background: var(--bg1);
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    background:
+      linear-gradient(180deg, #241c16, #14110e) padding-box,
+      linear-gradient(155deg, #e7a15a, #3a3028 42%, #a86a32) border-box;
+    border: 2px solid transparent;
+    border-radius: 12px;
     padding: 8px 10px 10px;
     display: grid;
-    gap: 4px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: start;
   }
-  .champ.sel { border-color: var(--ember); box-shadow: inset 0 0 0 1px var(--ember); }
+  .champ-main { display: grid; gap: 4px; min-width: 0; }
+  .portrait {
+    width: 72px; height: 96px; display: block;
+    border-radius: 6px; background: #100c0a;
+  }
+  .champ.sel { box-shadow: inset 0 0 0 1px var(--ember), 0 0 0 1px #6a4424; }
   .champ.down { opacity: 0.45; }
   .champ-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .name { font-size: 1.15rem; font-weight: 650; }
@@ -154,7 +164,7 @@
   }
   .gear { color: var(--dim); font-size: 0.82rem; }
   .items { display: flex; gap: 6px; flex-wrap: wrap; }
-  .items button {
+  .items button, .vial {
     background: var(--bg2);
     border: 1px solid var(--line);
     border-radius: 6px;
@@ -162,7 +172,18 @@
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
   }
+  .vial i {
+    width: 12px; height: 16px; display: block;
+    border-radius: 6px 6px 4px 4px;
+    background: linear-gradient(#f6efe4 0 5px, #d15a48 5px);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
+  }
+  .vial-sta i { background: linear-gradient(#f6efe4 0 5px, #e0b15a 5px); }
+  .vial-mana i { background: linear-gradient(#f6efe4 0 5px, #6aaed6 5px); }
   #bottom {
     display: grid;
     grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) minmax(300px, 480px);
@@ -270,7 +291,7 @@
     margin: 4px 0 8px;
   }
   #overlay-body {
-    width: min(720px, 100%);
+    width: min(860px, 100%);
     background: var(--bg1);
     border: 1px solid var(--line);
     border-radius: 16px;
@@ -292,7 +313,26 @@
     margin: 4px 0 10px;
   }
   .lead { color: var(--muted); font-size: 1.05rem; line-height: 1.45; max-width: 40rem; }
-  .diffs, .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .diffs, .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .opt { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+  .opt > span {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ember);
+    min-width: 6.5rem;
+  }
+  #title-art {
+    width: 100%;
+    height: 168px;
+    display: block;
+    margin: 8px 0 12px;
+    border-radius: 12px;
+    border: 1px solid #6a5038;
+    background: #070605;
+  }
+  #overlay-body { width: min(860px, 100%); }
   .diffs button.on { border-color: var(--ember); color: var(--ember); }
   .help { margin-top: 16px; padding-left: 1.1rem; color: var(--muted); }
   .help li { margin: 6px 0; line-height: 1.4; }
@@ -324,6 +364,15 @@
     <div id="meta-label"></div>
     <div class="tools">
       <button type="button" id="help-btn">Help (H)</button>
+      <select id="gfx" aria-label="Graphics quality">
+        <option value="low">Low</option>
+        <option value="medium">Med</option>
+        <option value="high">High</option>
+      </select>
+      <select id="motion" aria-label="Movement">
+        <option value="smooth">Smooth</option>
+        <option value="step">Step</option>
+      </select>
       <button type="button" id="save">Save</button>
       <button type="button" id="load">Load</button>
       <label class="vol">Vol <input id="vol" type="range" min="0" max="100" value="70" aria-label="Volume"></label>
@@ -362,7 +411,7 @@
     <div><a href="/">dxedge.net</a></div>
     <details id="credits-wrap">
       <summary>Credits</summary>
-      <p id="credits">Delve is original code written for DXEdge. The walls, sprites, runes, and this page's favicon are drawn in the browser. The favicon is the DXEdge mark in an ember tint. Sound is synthesized here. There are no ads and no third-party trackers. It is a grid dungeon in the spirit of late-1980s first-person crawlers, and it does not use their art, names, or code.</p>
+      <p id="credits">Delve is original code written for DXEdge. The walls, sprites, portraits, particles, runes, and this page's favicon are drawn in the browser. The favicon is the DXEdge mark in an ember tint. Sound is synthesized here. There are no ads and no third-party trackers. It is a grid dungeon in the spirit of late-1980s first-person crawlers, and it does not use their art, names, or code.</p>
     </details>
   </footer>
 </div>
@@ -380,6 +429,7 @@
       <li><b>F</b> or Enter uses a door, a chest, a lever, or the stairs. Click a champion to select them. Click a vial to drink it.</li>
       <li><b>1</b> to <b>5</b> speak Kael, Sera, Veth, Orin, and Nim. <b>Tab</b> cycles the selected champion.</li>
       <li><b>H</b> or <b>?</b> opens this list. <b>M</b> mutes the hum and the effects. The volume slider is in the header. <b>Esc</b> pauses.</li>
+      <li>Graphics (low, medium, high) and movement (smooth or step) sit on the title card and in the header.</li>
     </ul>
     <p class="lead">Seven floors. A warden holds the fifth stair. The seal at the bottom is the last fight.</p>
   </div>

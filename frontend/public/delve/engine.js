@@ -248,7 +248,41 @@ function makeMonster(kind, x, y, floor, diff, rng) {
     cool: 400 + rng.int(600),
     slowMs: 0,
     alive: true,
+    anim: 'idle',
+    animMs: 0,
+    fromX: x,
+    fromY: y,
+    moveMs: 0,
   };
+}
+
+function burst(game, x, y, color, count, lightMs) {
+  if (!game.particles) game.particles = [];
+  const n = count | 0;
+  for (let i = 0; i < n; i++) {
+    const a = game.rng.next() * Math.PI * 2;
+    const sp = 0.55 + game.rng.next() * 1.7;
+    game.particles.push({
+      x, y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: 240 + game.rng.int(260),
+      r: color[0], g: color[1], b: color[2],
+      floor: game.floor,
+    });
+  }
+  if (game.particles.length > 96) game.particles.splice(0, game.particles.length - 96);
+  if (lightMs > 0) {
+    if (!game.lights) game.lights = [];
+    game.lights.push({
+      x, y,
+      r: color[0], g: color[1], b: color[2],
+      life: lightMs,
+      radius: 3.8,
+      floor: game.floor,
+    });
+    if (game.lights.length > 12) game.lights.splice(0, game.lights.length - 12);
+  }
 }
 
 function cellFree(floor, x, y) {
@@ -521,6 +555,8 @@ export function createGame(seed, difficulty) {
     hurtMs: 0,
     shake: 0,
     floaters: [],
+    particles: [],
+    lights: [],
     levelPing: 0,
     rng,
     diff,
@@ -635,6 +671,9 @@ function killMonster(game, m, who) {
   if (!m.alive) return;
   m.alive = false;
   m.hp = 0;
+  m.anim = 'death';
+  m.animMs = 900;
+  burst(game, m.x + 0.5, m.y + 0.5, [0.95, 0.55, 0.28], 12, 480);
   game.kills += 1;
   const xp = { seal: 60, warden: 40, knight: 16, brute: 14, chanter: 12, hound: 10 }[m.sub] || 8;
   log(game, (who ? who.name : 'The party') + ' fells ' + m.name + '.', 'good');
@@ -694,6 +733,8 @@ function monsterAct(game, m) {
     const c = pool[game.rng.int(pool.length)];
     let dmg = m.atk - armorDef(c);
     if (game.wardMs > 0) dmg -= 4;
+    m.anim = 'attack';
+    m.animMs = 340;
     applyDamageTo(game, c, dmg, m.name);
     sap(m, c);
     return;
@@ -705,6 +746,8 @@ function monsterAct(game, m) {
     const c = pool[game.rng.int(pool.length)];
     let dmg = m.atk - Math.floor(armorDef(c) / 2);
     if (game.wardMs > 0) dmg -= 3;
+    m.anim = 'attack';
+    m.animMs = 340;
     applyDamageTo(game, c, dmg, m.name);
     sap(m, c);
     return;
@@ -713,8 +756,11 @@ function monsterAct(game, m) {
   if (!step) return;
   if (step[0] === game.x && step[1] === game.y) return;
   if (livingMonsterAt(floor, step[0], step[1])) return;
+  m.fromX = m.x;
+  m.fromY = m.y;
   m.x = step[0];
   m.y = step[1];
+  m.moveMs = 150;
 }
 
 function nextStep(tiles, floor, x, y, tx, ty) {
@@ -845,6 +891,11 @@ function champAttack(game, c, m) {
   log(game, c.name + ' hits ' + m.name + ' for ' + dmg + '.', 'info');
   floater(game, String(dmg), 'hit');
   if (m.hp <= 0) killMonster(game, m, c);
+  else {
+    m.anim = 'hurt';
+    m.animMs = 240;
+    burst(game, m.x + 0.5, m.y + 0.5, [1, 0.84, 0.5], 7, 180);
+  }
   return { ok: true, dmg };
 }
 
@@ -990,8 +1041,11 @@ export function cast(game, spellId) {
     m.hp -= dmg;
     if (spellId === 'nim') m.slowMs = 5000;
     floater(game, String(dmg), 'spell');
+    const hue = spellId === 'kael' ? [1, 0.38, 0.06] : [0.42, 0.74, 1];
+    burst(game, m.x + 0.5, m.y + 0.5, hue, 16, 640);
     log(game, c.name + ' speaks ' + spell.name + '. ' + m.name + ' takes ' + dmg + '.', 'good');
     if (m.hp <= 0) killMonster(game, m, c);
+    else { m.anim = 'hurt'; m.animMs = 280; }
     return { ok: true };
   }
   if (spellId === 'sera') {
@@ -1004,18 +1058,21 @@ export function cast(game, spellId) {
     const amount = 12 + (c.role === 'priest' ? c.level * 2 : 0);
     if (hurt.hp <= 0) hurt.hp = Math.min(hurt.maxHp, amount);
     else hurt.hp = Math.min(hurt.maxHp, hurt.hp + amount);
+    burst(game, game.x + 0.5, game.y + 0.5, [0.45, 0.95, 0.55], 10, 420);
     log(game, c.name + ' speaks Sera. ' + hurt.name + ' steadies.', 'good');
     return { ok: true };
   }
   if (spellId === 'veth') {
     c.mana -= spell.cost;
     game.wardMs = 12000;
+    burst(game, game.x + 0.5, game.y + 0.5, [0.4, 0.85, 0.5], 8, 900);
     log(game, c.name + ' speaks Veth. A ward settles on the party.', 'good');
     return { ok: true };
   }
   if (spellId === 'orin') {
     c.mana -= spell.cost;
     game.gleamMs = 20000;
+    burst(game, game.x + 0.5, game.y + 0.5, [0.85, 0.9, 1], 12, 700);
     reveal(game);
     log(game, c.name + ' speaks Orin. The dark pulls back.', 'good');
     return { ok: true };
@@ -1109,6 +1166,18 @@ export function tick(game, ms) {
     for (const f of game.floaters) f.life -= dt;
     if (game.floaters.some(f => f.life <= 0)) game.floaters = game.floaters.filter(f => f.life > 0);
   }
+  if (game.particles && game.particles.length) {
+    for (const p of game.particles) {
+      p.life -= dt;
+      p.x += p.vx * dt * 0.001;
+      p.y += p.vy * dt * 0.001;
+    }
+    if (game.particles.some(p => p.life <= 0)) game.particles = game.particles.filter(p => p.life > 0);
+  }
+  if (game.lights && game.lights.length) {
+    for (const L of game.lights) L.life -= dt;
+    if (game.lights.some(L => L.life <= 0)) game.lights = game.lights.filter(L => L.life > 0);
+  }
   if (game.gleamMs > 0) {
     const before = game.gleamMs;
     game.gleamMs = Math.max(0, game.gleamMs - dt);
@@ -1127,7 +1196,13 @@ export function tick(game, ms) {
   }
   const floor = currentFloor(game);
   for (const e of floor.entities) {
-    if (e.kind !== 'monster' || !e.alive) continue;
+    if (e.kind !== 'monster') continue;
+    if (e.animMs > 0) {
+      e.animMs = Math.max(0, e.animMs - dt);
+      if (e.animMs === 0 && e.alive) e.anim = 'idle';
+    }
+    if (e.moveMs > 0) e.moveMs = Math.max(0, e.moveMs - dt);
+    if (!e.alive) continue;
     if (e.slowMs > 0) e.slowMs = Math.max(0, e.slowMs - dt);
     e.cool -= dt;
     if (e.cool > 0) continue;
@@ -1253,6 +1328,8 @@ export function hydrate(data) {
     hurtMs: 0,
     shake: 0,
     floaters: [],
+    particles: [],
+    lights: [],
     levelPing: 0,
     rng: makeRng(1),
     diff: DIFF[diffName],

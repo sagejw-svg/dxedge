@@ -150,7 +150,7 @@ Public domain does not require attribution; this notice is here because the desi
 
 Delve is original code written for this site. It does not ship a third-party engine, tileset, font, or sample.
 
-The pictures (wall textures, sprites, rune marks, and the page favicon) are drawn in the browser when the page loads. The favicon is the DXEdge mark redrawn with an ember stroke (`#e7a15a`) instead of the site green. Sound is synthesized with the Web Audio oscillator. Nothing is fetched from another host.
+The pictures (wall, floor, and ceiling textures, monster frames, portraits, particles, rune marks, and the page favicon) are drawn in the browser when the page loads. No tileset or sprite sheet is shipped. The favicon is the DXEdge mark redrawn with an ember stroke (`#e7a15a`) instead of the site green. Sound is synthesized with the Web Audio oscillator. Nothing is fetched from another host.
 
 The game is a grid dungeon in the manner of late-1980s first-person crawlers. It does not use their names, levels, monsters, or art.
 

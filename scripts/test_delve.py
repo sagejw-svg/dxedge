@@ -54,7 +54,7 @@ def main():
 
     ok('id: \'delve\'' in app and "label: 'Delve'" in app and '<Delve />' in app, 'games nav has a Delve tab')
     ok('href="/delve/"' in shell, 'shell links to the standalone page')
-    ok("CACHE_NAME = 'dxedge-v116'" in sw, 'service worker cache bumped')
+    ok("CACHE_NAME = 'dxedge-v117'" in sw, 'service worker cache bumped')
     ok("url.pathname.startsWith('/delve/')" in sw, 'service worker treats /delve/ as mutable')
     ok('location ^~ /delve/' in nginx, 'nginx does not pin the delve modules for a year')
     ok('href="/delve/favicon.svg"' in page_html, 'page uses its own favicon')
@@ -88,6 +88,8 @@ def main():
         ok('Four champions' in pg.inner_text('#overlay-body'), 'title explains the party')
         ok('Q' in pg.inner_text('#overlay-body') and 'strafe' in pg.inner_text('#overlay-body'), 'controls are on the title')
         ok('H lists every key' in pg.inner_text('#title-hint'), 'title card has a controls hint')
+        ok(pg.query_selector('#title-art') is not None, 'title has a rendered scene')
+        ok(pg.query_selector('[data-gfx="high"]') and pg.query_selector('[data-motion="step"]'), 'quality and step mode are on the title')
         pg.click('#help-btn')
         ok(pg.evaluate('() => document.getElementById("help").hidden === false'), 'Help (H) opens the overlay')
         help_text = pg.inner_text('#help')
@@ -108,6 +110,7 @@ def main():
         ok([c['row'] for c in party] == ['front', 'front', 'back', 'back'], party)
         ok(pg.evaluate('__delve.spells.length') == 5, 'five runes')
         ok(pg.evaluate('__delve.explored()') > 8, 'automap starts revealed around the party')
+        ok(pg.eval_on_selector_all('.portrait', 'els => els.length') == 4, 'each champion has a portrait')
 
         names = pg.inner_text('#party')
         ok('Bryn' in names and 'Senn' in names, 'party panel is on the page')
@@ -298,12 +301,18 @@ def main():
                   {text: '14', kind: 'hit', life: 900},
                   {text: '9', kind: 'spell', life: 900},
                 ];
+                g.lights = [{x: x + 2.4, y: y + 0.5, r: 0.45, g: 0.16, b: 0.04, life: 200, radius: 2.2, floor: 0}];
+                g.particles = [];
+                for (let i = 0; i < 6; i++) {
+                  g.particles.push({x: x + 1.05, y: y + 0.42, vx: 0.1 * i, vy: -0.15, life: 360, r: 1, g: 0.72, b: 0.3, floor: 0});
+                }
                 return;
               }
             }
           }
         }''')
-        pg.wait_for_timeout(400)
+        pg.evaluate('__delve.setQuality("high")')
+        pg.wait_for_timeout(500)
         shot = os.path.join('/tmp', 'delve-gameplay.png')
         pg.screenshot(path=shot, full_page=False)
         ok(os.path.getsize(shot) > 20000, 'screenshot written')
