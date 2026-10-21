@@ -14,9 +14,10 @@ export default function Delve() {
         <div style={{ ...label, marginBottom: 8 }}>delve</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 680 }}>
           A first-person grid dungeon for a party of four. Walk with W and S, turn with A and D,
-          strafe with Q and E. The arrow keys match the turns and the steps. Attack, speak a rune,
-          and use what is in front of you. Five floors, a map that fills in as you see it, and a
-          save that stays in this browser. Full screen at <a href="/delve/">dxedge.net/delve</a>.
+          strafe with Q and E. The arrow keys match the turns and the steps. Space swings the front
+          rank, Z X C V send one champion, and H lists every key. Seven floors, a warden on the fifth
+          stair, a map that fills in as you see it, and a save that stays in this browser. Full screen
+          at <a href="/delve/">dxedge.net/delve</a>.
         </p>
       </div>
 
@@ -33,7 +34,7 @@ export default function Delve() {
       </div>
 
       <div style={{ ...mono, fontSize: 10, color: 'var(--dim)', textAlign: 'center', margin: '9px 0 16px' }}>
-        W forward, S back, A D turn, Q E strafe. Space attacks, F uses, 1–5 speak runes. Click the game once so the keys land in it.
+        W forward, S back, A D turn, Q E strafe. Space swings the front rank. Z X C V attack one champion. H lists keys. Click the game once so the keys land in it.
       </div>
     </div>
   )

@@ -46,6 +46,7 @@
   }
   header {
     display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    position: relative; z-index: 8;
   }
   .brand {
     font-family: var(--mono);
@@ -63,7 +64,9 @@
     font-size: 0.95rem;
   }
   #meta-label { color: var(--muted); font-size: 0.95rem; margin-left: auto; }
-  header .tools { display: flex; gap: 8px; }
+  header .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .vol { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.82rem; }
+  #vol { width: 92px; accent-color: var(--ember); }
   header button, .row button, .diffs button, #pad button, .actions button, .spell {
     background: var(--bg2);
     border: 1px solid var(--line);
@@ -95,6 +98,19 @@
     background: radial-gradient(circle at center, transparent 40%, rgba(180, 30, 20, 0.85) 100%);
     opacity: 0;
   }
+  #floaters { pointer-events: none; position: absolute; inset: 0; overflow: hidden; }
+  .floater {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-weight: 750;
+    font-size: 1.55rem;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 0 #000, 0 0 8px #000;
+  }
+  .floater.hit { color: #f3eadc; }
+  .floater.hurt { color: #ff6a55; }
+  .floater.miss { color: #a89880; }
+  .floater.spell { color: #e7a15a; }
   #party {
     min-height: 0;
     overflow: auto;
@@ -229,7 +245,30 @@
     padding: 24px;
     z-index: 5;
   }
-  #overlay[hidden] { display: none; }
+  #overlay[hidden], #help[hidden] { display: none; }
+  #help {
+    position: fixed; inset: 0;
+    background: rgba(10, 8, 7, 0.82);
+    display: grid; place-items: center;
+    padding: 24px;
+    z-index: 7;
+  }
+  #help-body {
+    width: min(720px, 100%);
+    max-height: min(86vh, 820px);
+    overflow: auto;
+    background: var(--bg1);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+  }
+  #help h2 {
+    font-family: var(--mono);
+    font-size: 2.4rem;
+    font-weight: 500;
+    margin: 4px 0 8px;
+  }
   #overlay-body {
     width: min(720px, 100%);
     background: var(--bg1);
@@ -284,8 +323,10 @@
     <div id="face-label"></div>
     <div id="meta-label"></div>
     <div class="tools">
+      <button type="button" id="help-btn">Help (H)</button>
       <button type="button" id="save">Save</button>
       <button type="button" id="load">Load</button>
+      <label class="vol">Vol <input id="vol" type="range" min="0" max="100" value="70" aria-label="Volume"></label>
       <button type="button" id="mute" aria-pressed="false">Sound on</button>
       <button type="button" id="pause">Pause</button>
     </div>
@@ -294,6 +335,7 @@
     <div id="view-wrap">
       <canvas id="view" aria-label="Dungeon view"></canvas>
       <div id="hurt"></div>
+      <div id="floaters"></div>
     </div>
     <aside id="party" aria-label="Party"></aside>
   </div>
@@ -325,6 +367,23 @@
   </footer>
 </div>
 <div id="overlay"><div id="overlay-body"></div></div>
+<div id="help" hidden>
+  <div id="help-body">
+    <p class="kicker">controls</p>
+    <h2>Help</h2>
+    <ul class="help">
+      <li><b>W</b> or <b>↑</b> forward. <b>S</b> or <b>↓</b> back.</li>
+      <li><b>A</b> or <b>←</b> turn left. <b>D</b> or <b>→</b> turn right.</li>
+      <li><b>Q</b> strafe left. <b>E</b> strafe right. The pad under the view does the same by mouse or touch.</li>
+      <li><b>Space</b> swings every living champion in the front rank, and also the selected champion if they stand in the back.</li>
+      <li><b>Z</b> Bryn, <b>X</b> Cara, <b>C</b> Ivo, <b>V</b> Senn. Each attacks alone. Shift+1 through Shift+4 do the same.</li>
+      <li><b>F</b> or Enter uses a door, a chest, a lever, or the stairs. Click a champion to select them. Click a vial to drink it.</li>
+      <li><b>1</b> to <b>5</b> speak Kael, Sera, Veth, Orin, and Nim. <b>Tab</b> cycles the selected champion.</li>
+      <li><b>H</b> or <b>?</b> opens this list. <b>M</b> mutes the hum and the effects. The volume slider is in the header. <b>Esc</b> pauses.</li>
+    </ul>
+    <p class="lead">Seven floors. A warden holds the fifth stair. The seal at the bottom is the last fight.</p>
+  </div>
+</div>
 <div id="toast" hidden></div>
 <script src="/lib/stat.js"></script>
 <script type="module" src="./main.js"></script>

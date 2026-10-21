@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  TILE, MAP, FLOORS, createGame, move, attack, cast, interact, tick,
+  TILE, MAP, FLOORS, createGame, move, attack, attackOne, cast, interact, tick,
   summarize, saveGame, loadGame, clearSave, debug, living, SPELLS, floodReachable,
 } from '../public/delve/engine.js';
 
@@ -89,7 +89,7 @@ assert.equal(blocked.ok, false);
 assert.equal(wall.x, 0);
 
 const fight = createGame(1, 'normal');
-const m = debug.spawn(fight, 'crawler', fight.x + 1, fight.y);
+const m = debug.spawn(fight, 'brute', fight.x + 1, fight.y);
 fight.facing = 1;
 const hp0 = m.hp;
 const atk = attack(fight);
@@ -100,7 +100,7 @@ fight.selected = 3;
 const casted = cast(fight, 'kael');
 assert.equal(casted.ok, true);
 assert.ok(fight.party[3].mana < mana0);
-while (m.alive) attack(fight);
+for (let i = 0; i < 20 && m.alive; i++) attack(fight);
 assert.equal(m.alive, false);
 assert.ok(fight.party.some(c => c.xp > 0 || c.level > 1));
 
@@ -171,10 +171,51 @@ debug.setPos(stairs, down.x, down.y, 0, 0);
 interact(stairs);
 assert.equal(stairs.floor, 1);
 
+const gate = createGame(6, 'easy');
+const warden = gate.floors[4].entities.find(e => e.sub === 'warden' && e.alive);
+assert.ok(warden, 'a warden waits on floor 5');
+assert.equal(gate.floors[4].tiles[warden.y][warden.x], TILE.STAIRS_DOWN);
+debug.setPos(gate, warden.x, warden.y, 4, 0);
+if (warden.y > 0) gate.floors[4].tiles[warden.y - 1][warden.x] = TILE.WALL;
+interact(gate);
+assert.equal(gate.floor, 4, 'the warden blocks the stair');
+debug.killAll(gate);
+assert.equal(gate.phase, 'play', 'felling the warden does not end the delve');
+interact(gate);
+assert.equal(gate.floor, 5, 'the stair opens once the warden falls');
+
 const boss = createGame(6, 'easy');
-debug.setPos(boss, boss.x, boss.y, 4, 1);
+const last = FLOORS - 1;
+const seal = boss.floors[last].entities.find(e => e.sub === 'seal');
+assert.ok(seal, 'the seal is the last floor');
+debug.setPos(boss, seal.x, seal.y, last, 1);
 debug.killAll(boss);
 assert.equal(boss.phase, 'won');
+
+const solo = createGame(1, 'normal');
+const sm = debug.spawn(solo, 'brute', solo.x + 1, solo.y);
+solo.facing = 1;
+const staOther = solo.party[1].sta;
+const soloHp = sm.hp;
+const one = attackOne(solo, 0);
+assert.equal(one.ok, true);
+assert.ok(sm.hp < soloHp, 'Z-equivalent attack hits');
+assert.equal(solo.party[1].sta, staOther, 'one champion spends only their own stamina');
+assert.ok(solo.party[0].sta < solo.party[0].maxSta);
+assert.ok(solo.floaters.some(f => f.kind === 'hit'));
+const both0 = solo.party[0].sta;
+const both1 = solo.party[1].sta;
+const partySwing = attack(solo);
+assert.equal(partySwing.ok, true);
+assert.ok(solo.party[0].sta < both0 && solo.party[1].sta < both1, 'space swings the front rank');
+
+const oldBox = memory();
+const fresh = createGame(3, 'normal');
+saveGame(fresh, oldBox);
+const raw = JSON.parse(oldBox.getItem('dxedge_delve_save'));
+raw.v = 1;
+oldBox.setItem('dxedge_delve_save', JSON.stringify(raw));
+assert.equal(loadGame(oldBox), null, 'a five-floor save does not load');
 
 const dead = createGame(6, 'easy');
 debug.wipe(dead);

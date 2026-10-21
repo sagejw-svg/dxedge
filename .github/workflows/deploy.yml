@@ -267,7 +267,7 @@ jobs:
           # GET, not HEAD: these paths proxy to the backend, which answers 405
           # to HEAD, and a 405 carries no cache-control at all - the check would
           # pass by finding nothing.
-          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/; do
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js; do
             CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
             if [ -z "$CC" ]; then
               echo "ERROR: $U returned no cache-control header at all."
@@ -280,6 +280,18 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Verify Delve is live
+        run: |
+          html=$(curl -sf https://dxedge.net/delve/)
+          echo "$html" | grep -q 'Help (H)' || { echo "ERROR: /delve/ is not the current game"; exit 1; }
+          echo "$html" | grep -q 'Delve' || { echo "ERROR: /delve/ missing the title"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/delve/engine.js)
+          echo "/delve/engine.js $code"
+          if [ "$code" != "200" ]; then
+            echo "ERROR: /delve/engine.js is not 200"
+            exit 1
+          fi
 
       - name: Verify feed proxy is live
         run: |
