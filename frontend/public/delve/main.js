@@ -5,6 +5,9 @@ import {
   createGame, move, attack, attackOne, cast, interact, tick, useItem,
   saveGame, loadGame, hasSave, clearSave, summarize, tileAt, debug,
 } from './engine.js';
+
+const GFX_KEY = 'dxedge_delve_quality';
+const MOTION_KEY = 'dxedge_delve_motion';
 import { createView } from './render.js';
 import { createAudio } from './audio.js';
 
@@ -54,6 +57,7 @@ function snapCam() {
 
 function easeCam(dt) {
   if (!game) return;
+  if (view.motion() === 'step') { snapCam(); return; }
   const tx = game.x + 0.5;
   const ty = game.y + 0.5;
   let da = game.facing * Math.PI / 2 - cam.ang;
@@ -71,6 +75,35 @@ function diffPref() {
 
 function setDiffPref(d) {
   try { localStorage.setItem(DIFF_KEY, d); } catch (e) { /* ignore */ }
+}
+
+function gfxPref() {
+  try {
+    const v = localStorage.getItem(GFX_KEY);
+    if (v === 'low' || v === 'medium' || v === 'high') return v;
+  } catch (e) { /* ignore */ }
+  return 'medium';
+}
+
+function setGfxPref(v) {
+  const q = v === 'low' || v === 'high' ? v : 'medium';
+  try { localStorage.setItem(GFX_KEY, q); } catch (e) { /* ignore */ }
+  view.setQuality(q);
+  const sel = document.getElementById('gfx');
+  if (sel && sel.value !== q) sel.value = q;
+}
+
+function motionPref() {
+  try { return localStorage.getItem(MOTION_KEY) === 'step' ? 'step' : 'smooth'; }
+  catch (e) { return 'smooth'; }
+}
+
+function setMotionPref(v) {
+  const m = v === 'step' ? 'step' : 'smooth';
+  try { localStorage.setItem(MOTION_KEY, m); } catch (e) { /* ignore */ }
+  view.setMotion(m);
+  const sel = document.getElementById('motion');
+  if (sel && sel.value !== m) sel.value = m;
 }
 
 function start(seed, difficulty) {
@@ -108,6 +141,18 @@ function showOverlay(html) {
       overlayBody.querySelectorAll('[data-diff]').forEach(b => b.classList.toggle('on', b === btn));
     });
   });
+  overlayBody.querySelectorAll('[data-gfx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setGfxPref(btn.getAttribute('data-gfx'));
+      overlayBody.querySelectorAll('[data-gfx]').forEach(b => b.classList.toggle('on', b === btn));
+    });
+  });
+  overlayBody.querySelectorAll('[data-motion]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setMotionPref(btn.getAttribute('data-motion'));
+      overlayBody.querySelectorAll('[data-motion]').forEach(b => b.classList.toggle('on', b === btn));
+    });
+  });
   const begin = overlayBody.querySelector('#begin');
   if (begin) begin.addEventListener('click', () => {
     const diff = overlayBody.querySelector('[data-diff].on');
@@ -137,14 +182,23 @@ function diffButtons(current) {
   ).join('');
 }
 
+function choiceButtons(attr, values, current) {
+  return values.map(d =>
+    '<button type="button" data-' + attr + '="' + d + '" class="' + (d === current ? 'on' : '') + '">' + d + '</button>'
+  ).join('');
+}
+
 function showTitle() {
   const saved = hasSave();
   showOverlay(
     '<p class="kicker">dxedge · a grid crypt</p>' +
     '<h1>Delve</h1>' +
+    '<canvas id="title-art" width="720" height="180" aria-hidden="true"></canvas>' +
     '<p class="lead">Four champions, one lantern, and seven floors that are never quite the same. Walk the grid, fight what moves, and take the stairs. A warden holds the fifth stair. The seal waits at the bottom. Keys and levers open the side rooms. The way down does not need them.</p>' +
     '<p class="lead" id="title-hint">W S move, A D turn, Q E strafe. Space swings the front rank. H lists every key.</p>' +
-    '<div class="diffs" role="group" aria-label="Difficulty">' + diffButtons(diffPref()) + '</div>' +
+    '<div class="opt"><span>Difficulty</span><div class="diffs" role="group" aria-label="Difficulty">' + diffButtons(diffPref()) + '</div></div>' +
+    '<div class="opt"><span>Graphics</span><div class="diffs" role="group" aria-label="Graphics quality">' + choiceButtons('gfx', ['low', 'medium', 'high'], gfxPref()) + '</div></div>' +
+    '<div class="opt"><span>Movement</span><div class="diffs" role="group" aria-label="Movement">' + choiceButtons('motion', ['smooth', 'step'], motionPref()) + '</div></div>' +
     '<div class="row">' +
       '<button type="button" id="begin" class="primary">New delve</button>' +
       (saved ? '<button type="button" id="continue">Continue</button>' : '') +
@@ -267,15 +321,20 @@ function paintParty() {
   if (partyEl.childElementCount !== game.party.length) {
     partyEl.innerHTML = game.party.map((c, i) => (
       '<button type="button" class="champ" data-champ="' + i + '">' +
-        '<div class="champ-top"><span class="name"></span><span class="role"></span></div>' +
-        '<div class="bar hp"><i></i><em></em><span>hp</span></div>' +
-        '<div class="bar sta"><i></i><em></em><span>sta</span></div>' +
-        '<div class="bar mana"><i></i><em></em><span>mana</span></div>' +
-        '<div class="gear"></div>' +
-        '<div class="items"></div>' +
+        '<canvas class="portrait" width="72" height="96" aria-hidden="true"></canvas>' +
+        '<div class="champ-main">' +
+          '<div class="champ-top"><span class="name"></span><span class="role"></span></div>' +
+          '<div class="bar hp"><i></i><em></em><span>hp</span></div>' +
+          '<div class="bar sta"><i></i><em></em><span>sta</span></div>' +
+          '<div class="bar mana"><i></i><em></em><span>mana</span></div>' +
+          '<div class="gear"></div>' +
+          '<div class="items"></div>' +
+        '</div>' +
       '</button>'
     )).join('');
     partyEl.querySelectorAll('[data-champ]').forEach(btn => {
+      const face = btn.querySelector('.portrait');
+      if (face) view.paintPortrait(face, Number(btn.getAttribute('data-champ')));
       btn.addEventListener('click', (ev) => {
         if (ev.target.closest('[data-item]')) return;
         game.selected = Number(btn.getAttribute('data-champ'));
@@ -304,7 +363,7 @@ function paintParty() {
     if (items.getAttribute('data-sig') !== sig) {
       items.setAttribute('data-sig', sig);
       items.innerHTML = c.items.map((it, n) =>
-        '<button type="button" data-item="' + n + '">' + it.potion + '</button>'
+        '<button type="button" class="vial vial-' + it.potion + '" data-item="' + n + '"><i></i><b>' + it.potion + '</b></button>'
       ).join('');
       items.querySelectorAll('[data-item]').forEach(b => {
         b.addEventListener('click', (ev) => {
@@ -413,6 +472,8 @@ function frame(now) {
     view.drawMap(mapCanvas, game);
     paintAll();
   }
+  const art = document.getElementById('title-art');
+  if (art) view.paintTitle(art);
   requestAnimationFrame(frame);
 }
 
@@ -612,8 +673,22 @@ window.__delve = {
     }
   },
   showTitle,
+  setQuality(q) { setGfxPref(q); },
+  setMotion(m) { setMotionPref(m); },
 };
 
+view.setQuality(gfxPref());
+view.setMotion(motionPref());
+const gfxSel = document.getElementById('gfx');
+const motionSel = document.getElementById('motion');
+if (gfxSel) {
+  gfxSel.value = gfxPref();
+  gfxSel.addEventListener('change', () => setGfxPref(gfxSel.value));
+}
+if (motionSel) {
+  motionSel.value = motionPref();
+  motionSel.addEventListener('change', () => setMotionPref(motionSel.value));
+}
 paintSpells();
 showTitle();
 requestAnimationFrame(frame);

@@ -227,6 +227,20 @@ regen.party[0].sta = 0;
 tick(regen, 800);
 assert.ok(regen.party[0].sta > 0);
 
+const fx = createGame(1, 'normal');
+const fm = debug.spawn(fx, 'brute', fx.x + 1, fx.y);
+fx.facing = 1;
+attackOne(fx, 0);
+assert.equal(fm.anim, 'hurt');
+assert.ok(fm.animMs > 0);
+assert.ok(fx.particles.length >= 4, 'a hit throws sparks');
+cast(fx, 'kael');
+assert.ok(fx.lights.some(L => L.life > 0 && L.r > 0.5), 'Kael leaves a colored light');
+fm.cool = 999999;
+tick(fx, 2000);
+assert.equal(fm.anim, 'idle');
+assert.equal(fx.particles.length, 0);
+
 const seen = floodReachable(g.floors[0].tiles, g.x, g.y);
 assert.ok(seen.size > 20);
 assert.ok(walkableCount(g, 0) > 40);
