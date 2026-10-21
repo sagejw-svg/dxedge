@@ -10,6 +10,7 @@ Run:  python3 scripts/test_hand_orchestra.py
 """
 import http.server
 import os
+import re
 import socketserver
 import functools
 import threading
@@ -310,7 +311,9 @@ with sync_playwright() as pw:
     ck("Ho. no page errors", not errs, errs)
 
     sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
-    ck("Ho. service worker cache is bumped", "CACHE_NAME = 'dxedge-v119'" in sw)
+    # At or past the bump that shipped this change: a later cache bump must not fail this check.
+    _cache = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
+    ck("Ho. service worker cache is bumped", _cache is not None and int(_cache.group(1)) >= 119, _cache and _cache.group(0))
 
     held, held_pg = open_page(b, cam_stub(clear=False, mode="pending"), viewport={"width": 1280, "height": 900})
     held_pg.goto(BASE + "/synth/hand-orchestra/")

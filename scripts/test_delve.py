@@ -9,6 +9,7 @@ Run from the repo root:  python3 scripts/test_delve.py
 Needs: pip install playwright && python3 -m playwright install chromium
 """
 import os
+import re
 import socket
 import socketserver
 import threading
@@ -54,7 +55,9 @@ def main():
 
     ok('id: \'delve\'' in app and "label: 'Delve'" in app and '<Delve />' in app, 'games nav has a Delve tab')
     ok('href="/delve/"' in shell, 'shell links to the standalone page')
-    ok("CACHE_NAME = 'dxedge-v119'" in sw, 'service worker cache bumped')
+    # At or past the bump that shipped Delve: a later cache bump must not fail this check.
+    cache = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
+    ok(cache is not None and int(cache.group(1)) >= 119, 'service worker cache bumped')
     ok("url.pathname.startsWith('/delve/')" in sw, 'service worker treats /delve/ as mutable')
     ok('location ^~ /delve/' in nginx, 'nginx does not pin the delve modules for a year')
     ok('href="/delve/favicon.svg"' in page_html, 'page uses its own favicon')

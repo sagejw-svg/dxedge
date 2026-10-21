@@ -8,7 +8,7 @@ measured. A refused camera must not download the hand model.
 
 Run: python3 scripts/test_hand_aether.py
 """
-import base64, http.server, math, os, socketserver, threading, functools
+import base64, http.server, math, os, re, socketserver, threading, functools
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "public"))
@@ -83,7 +83,9 @@ app = open(os.path.join(REPO, "frontend", "src", "App.jsx"), encoding="utf-8").r
 ck("nav has an Aether tab", "id: 'aether'" in app and "label: 'Aether'" in app and "<Aether />" in app)
 sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
 ck("service worker still treats /synth/ as mutable", "url.pathname.startsWith('/synth/')" in sw)
-ck("service worker cache bumped for this frontend change", "dxedge-v119" in sw)
+# At or past the bump that shipped this change: a later cache bump must not fail this check.
+_cache = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
+ck("service worker cache bumped for this frontend change", _cache is not None and int(_cache.group(1)) >= 119, _cache and _cache.group(0))
 
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=CHROME, args=["--autoplay-policy=no-user-gesture-required"])
