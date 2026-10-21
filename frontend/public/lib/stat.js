@@ -1,7 +1,7 @@
 /* DXEdge usage beacon.
  *
  * Loaded by the React shell and by every standalone page under /invaders/,
- * /morse-invaders/, /skip/, /spot-chaser/, /crane-cab/ and /emulators/.
+ * /morse-invaders/, /skip/, /spot-chaser/, /crane-cab/, /delve/ and /emulators/.
  * One file, one session, whichever of those the visitor is looking at.
  *
  * What it does not do, deliberately:

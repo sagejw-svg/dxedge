@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a120c">
+<meta name="description" content="Delve. A first-person grid dungeon for four champions. Runs in the browser. No account, no ads.">
+<link rel="icon" type="image/svg+xml" href="/delve/favicon.svg">
+<title>Delve · DXEdge</title>
+<link rel="canonical" href="https://dxedge.net/delve/">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #100e0c;
+    --bg1: #1a1612;
+    --bg2: #261f19;
+    --line: #3c3229;
+    --text: #f4ecdf;
+    --muted: #c4b5a2;
+    --dim: #8a7d70;
+    --ember: #e3924a;
+    --ember-dim: #a86a32;
+    --hp: #d15a48;
+    --sta: #e0b15a;
+    --mana: #6aaed6;
+    --good: #9dcc86;
+    --bad: #e07a6a;
+    --font: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    --mono: "SF Mono", "Iowan Old Style", Palatino, Georgia, serif;
+  }
+  html { font-size: 18px; }
+  @media (min-width: 1400px) { html { font-size: 19px; } }
+  @media (min-width: 1700px) { html { font-size: 20px; } }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); }
+  body { overflow: hidden; }
+  button, input { font-family: inherit; color: inherit; }
+  button { cursor: pointer; }
+  #app {
+    height: 100%;
+    max-width: 1760px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+    gap: 8px;
+    padding: 10px 14px 8px;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  .brand {
+    font-family: var(--mono);
+    font-size: 1.7rem;
+    letter-spacing: 0.12em;
+    color: var(--ember);
+  }
+  .brand a { color: inherit; text-decoration: none; }
+  #floor-label { font-size: 1.15rem; }
+  #face-label {
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ember);
+    font-size: 0.95rem;
+  }
+  #meta-label { color: var(--muted); font-size: 0.95rem; margin-left: auto; }
+  header .tools { display: flex; gap: 8px; }
+  header button, .row button, .diffs button, #pad button, .actions button, .spell {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+  }
+  header button:hover, .row button:hover, .diffs button:hover, #pad button:hover, .actions button:hover, .spell:hover {
+    border-color: var(--ember-dim);
+  }
+  #stage {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+    gap: 10px;
+  }
+  #view-wrap {
+    position: relative;
+    min-height: 0;
+    background: #070605;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #view { width: 100%; height: 100%; display: block; }
+  #hurt {
+    pointer-events: none;
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at center, transparent 40%, rgba(180, 30, 20, 0.85) 100%);
+    opacity: 0;
+  }
+  #party {
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .champ {
+    text-align: left;
+    background: var(--bg1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px 10px;
+    display: grid;
+    gap: 4px;
+  }
+  .champ.sel { border-color: var(--ember); box-shadow: inset 0 0 0 1px var(--ember); }
+  .champ.down { opacity: 0.45; }
+  .champ-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .name { font-size: 1.15rem; font-weight: 650; }
+  .role { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .bar {
+    position: relative;
+    height: 22px;
+    background: #120f0c;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .bar i { display: block; height: 100%; width: 0; }
+  .bar.hp i { background: var(--hp); }
+  .bar.sta i { background: var(--sta); }
+  .bar.mana i { background: var(--mana); }
+  .bar em, .bar span {
+    position: absolute; top: 0; height: 22px; line-height: 22px;
+    font-style: normal; font-size: 0.82rem; font-variant-numeric: tabular-nums;
+  }
+  .bar em { right: 8px; color: #fff; text-shadow: 0 1px 1px #000; }
+  .bar span {
+    left: 8px; color: #fff; text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.68rem; opacity: 0.85;
+  }
+  .gear { color: var(--dim); font-size: 0.82rem; }
+  .items { display: flex; gap: 6px; flex-wrap: wrap; }
+  .items button {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  #bottom {
+    display: grid;
+    grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) minmax(300px, 480px);
+    min-height: 210px;
+    gap: 10px;
+    align-items: stretch;
+  }
+  #map {
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    background: #120f0c;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  #log {
+    background: var(--bg1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    overflow: auto;
+    max-height: 220px;
+    min-height: 120px;
+  }
+  #log p { font-size: 0.98rem; line-height: 1.35; color: var(--muted); }
+  #log p.good { color: var(--good); }
+  #log p.bad { color: var(--bad); }
+  #log p.info { color: var(--text); }
+  .actions { display: flex; flex-direction: column; gap: 8px; }
+  #spells { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .spell {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    min-height: 64px;
+    padding: 6px 8px;
+  }
+  .spell b { font-size: 0.92rem; font-weight: 650; }
+  .spell small { color: var(--mana); font-size: 0.75rem; }
+  .rune {
+    width: 18px; height: 18px; display: block;
+    border: 2px solid var(--ember);
+  }
+  .rune.r0 { border-radius: 50% 50% 40% 40%; background: #e3924a; }
+  .rune.r1 { border-radius: 50%; background: transparent; }
+  .rune.r2 { transform: rotate(45deg) scale(0.8); background: #6a5038; }
+  .rune.r3 { border-radius: 50%; box-shadow: inset 0 0 0 4px var(--bg2); }
+  .rune.r4 { clip-path: polygon(50% 0, 100% 100%, 0 100%); border: 0; background: #9ec4de; }
+  .fight { display: flex; gap: 8px; }
+  .fight button { flex: 1; min-height: 48px; font-size: 1.05rem; }
+  .fight button.primary, .row button.primary, #begin {
+    background: #3a2616;
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  #pad {
+    display: grid;
+    grid-template-columns: repeat(3, 72px);
+    grid-template-areas: "q w e" "a s d";
+    gap: 6px;
+    justify-content: center;
+  }
+  #pad button { min-height: 56px; font-size: 1.15rem; font-weight: 650; }
+  #pad [data-cmd="strafeLeft"] { grid-area: q; }
+  #pad [data-cmd="forward"] { grid-area: w; }
+  #pad [data-cmd="strafeRight"] { grid-area: e; }
+  #pad [data-cmd="turnLeft"] { grid-area: a; }
+  #pad [data-cmd="back"] { grid-area: s; }
+  #pad [data-cmd="turnRight"] { grid-area: d; }
+  footer {
+    display: flex; justify-content: space-between; gap: 12px; align-items: center;
+    color: var(--dim); font-size: 0.82rem;
+  }
+  footer a { color: var(--muted); }
+  footer details { max-width: 70%; }
+  footer summary { cursor: pointer; color: var(--muted); }
+  #credits { color: var(--muted); line-height: 1.45; padding-top: 4px; }
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(10, 8, 7, 0.82);
+    display: grid; place-items: center;
+    padding: 24px;
+    z-index: 5;
+  }
+  #overlay[hidden] { display: none; }
+  #overlay-body {
+    width: min(720px, 100%);
+    background: var(--bg1);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+  }
+  .kicker {
+    font-family: var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ember);
+    font-size: 0.78rem;
+  }
+  #overlay h1 {
+    font-family: var(--mono);
+    font-size: 3.2rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    margin: 4px 0 10px;
+  }
+  .lead { color: var(--muted); font-size: 1.05rem; line-height: 1.45; max-width: 40rem; }
+  .diffs, .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .diffs button.on { border-color: var(--ember); color: var(--ember); }
+  .help { margin-top: 16px; padding-left: 1.1rem; color: var(--muted); }
+  .help li { margin: 6px 0; line-height: 1.4; }
+  #toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--bg2); border: 1px solid var(--ember);
+    padding: 8px 14px; border-radius: 8px; z-index: 6;
+  }
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    #app { height: auto; min-height: 100%; grid-template-rows: auto auto auto auto auto; }
+    #stage { grid-template-columns: 1fr; }
+    #view-wrap { height: 46vh; min-height: 240px; }
+    #bottom { grid-template-columns: 1fr; }
+    #map { width: 100%; height: 180px; }
+    #meta-label { margin-left: 0; }
+    footer { flex-direction: column; align-items: flex-start; }
+    footer details { max-width: 100%; }
+    #spells { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><a href="/">Delve</a></div>
+    <div id="floor-label">The crypt</div>
+    <div id="face-label"></div>
+    <div id="meta-label"></div>
+    <div class="tools">
+      <button type="button" id="save">Save</button>
+      <button type="button" id="load">Load</button>
+      <button type="button" id="mute" aria-pressed="false">Sound on</button>
+      <button type="button" id="pause">Pause</button>
+    </div>
+  </header>
+  <div id="stage">
+    <div id="view-wrap">
+      <canvas id="view" aria-label="Dungeon view"></canvas>
+      <div id="hurt"></div>
+    </div>
+    <aside id="party" aria-label="Party"></aside>
+  </div>
+  <div id="bottom">
+    <canvas id="map" width="220" height="220" aria-label="Automap"></canvas>
+    <div id="log" aria-live="polite"></div>
+    <div class="actions">
+      <div id="spells" role="group" aria-label="Runes"></div>
+      <div class="fight">
+        <button type="button" id="attack" class="primary">Attack</button>
+        <button type="button" id="use">Use</button>
+      </div>
+    </div>
+  </div>
+  <div id="pad" aria-label="Movement">
+    <button type="button" data-cmd="strafeLeft">Q</button>
+    <button type="button" data-cmd="forward">W</button>
+    <button type="button" data-cmd="strafeRight">E</button>
+    <button type="button" data-cmd="turnLeft">A</button>
+    <button type="button" data-cmd="back">S</button>
+    <button type="button" data-cmd="turnRight">D</button>
+  </div>
+  <footer>
+    <div><a href="/">dxedge.net</a></div>
+    <details id="credits-wrap">
+      <summary>Credits</summary>
+      <p id="credits">Delve is original code written for DXEdge. The walls, sprites, runes, and this page's favicon are drawn in the browser. The favicon is the DXEdge mark in an ember tint. Sound is synthesized here. There are no ads and no third-party trackers. It is a grid dungeon in the spirit of late-1980s first-person crawlers, and it does not use their art, names, or code.</p>
+    </details>
+  </footer>
+</div>
+<div id="overlay"><div id="overlay-body"></div></div>
+<div id="toast" hidden></div>
+<script src="/lib/stat.js"></script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
