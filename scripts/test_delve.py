@@ -54,7 +54,7 @@ def main():
 
     ok('id: \'delve\'' in app and "label: 'Delve'" in app and '<Delve />' in app, 'games nav has a Delve tab')
     ok('href="/delve/"' in shell, 'shell links to the standalone page')
-    ok("CACHE_NAME = 'dxedge-v117'" in sw, 'service worker cache bumped')
+    ok("CACHE_NAME = 'dxedge-v118'" in sw, 'service worker cache bumped')
     ok("url.pathname.startsWith('/delve/')" in sw, 'service worker treats /delve/ as mutable')
     ok('location ^~ /delve/' in nginx, 'nginx does not pin the delve modules for a year')
     ok('href="/delve/favicon.svg"' in page_html, 'page uses its own favicon')
@@ -282,6 +282,45 @@ def main():
         ok(pg.inner_text('#mute') == 'Sound off', 'M mutes')
         pg.evaluate('__delve.press("KeyM")')
         ok(pg.inner_text('#mute') == 'Sound on', 'M unmutes')
+
+        pg.evaluate('''() => {
+          __delve.newGame(1, "normal");
+          const g = __delve.game;
+          const tiles = g.floors[0].tiles;
+          for (let i = 0; i <= 4; i++) tiles[10][8 + i] = 1;
+          g.floors[0].entities = g.floors[0].entities.filter(e => e.y !== 10 || e.x < 8 || e.x > 12);
+          g.floors[0].entities.push({kind:"chest", x:9, y:10, opened:false, loot:{type:"gold", amount:9}});
+          __delve.setPos(8, 10, 0, 1);
+        }''')
+        gold = pg.evaluate('__delve.state().gold')
+        pg.keyboard.press('f')
+        pg.wait_for_timeout(80)
+        ok(pg.evaluate('__delve.state().gold') == gold + 9, 'F opens the chest in the next tile')
+        ok(pg.evaluate('''() => __delve.game.floors[0].entities.some(e => e.kind==="chest" && e.x===9 && e.opened)'''), 'the adjacent chest is open')
+        pg.evaluate('''() => {
+          const g = __delve.game;
+          for (let i = 0; i <= 4; i++) g.floors[0].tiles[12][8 + i] = 1;
+          g.floors[0].entities = g.floors[0].entities.filter(e => e.y !== 12 || e.x < 8 || e.x > 12);
+          g.floors[0].entities.push({kind:"chest", x:10, y:12, opened:false, loot:{type:"gold", amount:3}});
+          __delve.setPos(8, 12, 0, 1);
+        }''')
+        far_gold = pg.evaluate('__delve.state().gold')
+        pg.keyboard.press('f')
+        pg.wait_for_timeout(120)
+        log_text = pg.inner_text('#log')
+        ok('The chest is 2 steps ahead.' in log_text, log_text)
+        ok(pg.evaluate('__delve.state().gold') == far_gold, 'a chest two tiles away does not open')
+        pg.keyboard.press(' ')
+        pg.wait_for_timeout(80)
+        ok('The chest is 2 steps ahead.' in pg.inner_text('#log'), 'attack names the chest too')
+        pg.evaluate('__delve.setQuality("high")')
+        pg.wait_for_timeout(400)
+        pg.screenshot(path='/tmp/delve-chest-far.png', full_page=False)
+        pg.evaluate('__delve.move("forward")')
+        pg.wait_for_timeout(350)
+        pg.screenshot(path='/tmp/delve-chest-near.png', full_page=False)
+        ok(os.path.getsize('/tmp/delve-chest-far.png') > 20000, 'far chest screenshot')
+        ok(os.path.getsize('/tmp/delve-chest-near.png') > 20000, 'near chest screenshot')
 
         # A gameplay frame for the eye: party, a creature, the map, the runes.
         pg.evaluate('''() => {

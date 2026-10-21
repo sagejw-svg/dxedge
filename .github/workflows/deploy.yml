@@ -292,6 +292,8 @@ jobs:
             echo "ERROR: /delve/engine.js is not 200"
             exit 1
           fi
+          eng=$(curl -sf https://dxedge.net/delve/engine.js)
+          echo "$eng" | grep -q 'steps ahead' || { echo "ERROR: /delve/engine.js is not the chest-distance build"; exit 1; }
 
       - name: Verify feed proxy is live
         run: |

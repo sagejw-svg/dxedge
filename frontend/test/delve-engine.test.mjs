@@ -241,6 +241,59 @@ tick(fx, 2000);
 assert.equal(fm.anim, 'idle');
 assert.equal(fx.particles.length, 0);
 
+function clearLane(game, x, y, n) {
+  const tiles = game.floors[0].tiles;
+  for (let i = 0; i <= n; i++) tiles[y][x + i] = TILE.FLOOR;
+  game.floors[0].entities = game.floors[0].entities.filter(e => e.y !== y || e.x < x || e.x > x + n);
+  debug.setPos(game, x, y, 0, 1);
+}
+
+const near = createGame(1, 'normal');
+clearLane(near, 8, 8, 3);
+near.floors[0].entities.push({ kind: 'chest', x: 9, y: 8, opened: false, loot: { type: 'gold', amount: 7 } });
+const gold0 = near.gold;
+const opened = interact(near);
+assert.equal(opened.ok, true);
+assert.equal(opened.sound, 'chest');
+assert.equal(near.gold, gold0 + 7);
+assert.equal(near.floors[0].entities.find(e => e.kind === 'chest' && e.x === 9 && e.y === 8).opened, true);
+interact(near);
+assert.equal(near.gold, gold0 + 7, 'an open chest stays open');
+
+const far = createGame(1, 'normal');
+clearLane(far, 8, 10, 4);
+far.floors[0].entities.push({ kind: 'chest', x: 10, y: 10, opened: false, loot: { type: 'gold', amount: 4 } });
+const farGold = far.gold;
+const missed = interact(far);
+assert.equal(missed.ok, false);
+assert.equal(far.floors[0].entities.find(e => e.kind === 'chest' && e.x === 10 && e.y === 10).opened, false);
+assert.equal(far.gold, farGold);
+assert.equal(far.log[far.log.length - 1].text, 'The chest is 2 steps ahead.');
+attack(far);
+assert.equal(far.log[far.log.length - 1].text, 'The chest is 2 steps ahead.');
+assert.equal(far.floors[0].entities.find(e => e.kind === 'chest' && e.x === 10 && e.y === 10).opened, false);
+
+const three = createGame(1, 'normal');
+clearLane(three, 8, 12, 4);
+three.floors[0].entities.push({ kind: 'chest', x: 11, y: 12, opened: false, loot: { type: 'gold', amount: 1 } });
+attack(three);
+assert.equal(three.log[three.log.length - 1].text, 'The chest is 3 steps ahead.');
+
+const hidden = createGame(1, 'normal');
+clearLane(hidden, 8, 14, 3);
+hidden.floors[0].tiles[14][9] = TILE.WALL;
+hidden.floors[0].entities.push({ kind: 'chest', x: 10, y: 14, opened: false, loot: { type: 'gold', amount: 1 } });
+attack(hidden);
+assert.equal(hidden.log[hidden.log.length - 1].text, 'Nothing ahead.');
+interact(hidden);
+assert.equal(hidden.log[hidden.log.length - 1].text, 'Nothing to use.');
+
+const outOfReach = createGame(1, 'normal');
+clearLane(outOfReach, 8, 16, 4);
+debug.spawn(outOfReach, 'crawler', 11, 16);
+attack(outOfReach);
+assert.equal(outOfReach.log[outOfReach.log.length - 1].text, 'The ash crawler is 3 steps ahead.');
+
 const seen = floodReachable(g.floors[0].tiles, g.x, g.y);
 assert.ok(seen.size > 20);
 assert.ok(walkableCount(g, 0) > 40);

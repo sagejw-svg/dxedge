@@ -310,21 +310,45 @@ function buildSprites() {
   const sprites = {};
   for (const kind of monsters) sprites[kind] = monsterFrames(kind);
   sprites.chest = sheet(96, 128, (g) => {
-    g.fillStyle = '#6a4630';
-    g.fillRect(18, 54, 60, 42);
-    g.fillStyle = '#8a6240';
-    g.beginPath(); g.ellipse(48, 54, 30, 14, 0, Math.PI, 0); g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.55)';
+    g.beginPath(); g.ellipse(48, 122, 36, 6, 0, 0, 7); g.fill();
+    g.fillStyle = '#3a2416';
+    g.fillRect(8, 58, 80, 60);
+    g.fillStyle = '#6b4228';
+    g.fillRect(8, 58, 80, 16);
+    g.fillStyle = '#8d5a34';
+    g.beginPath(); g.ellipse(48, 58, 40, 20, 0, Math.PI, 0); g.fill();
     g.fillStyle = '#e7a15a';
-    g.fillRect(18, 68, 60, 6);
-    g.fillRect(42, 74, 12, 12);
+    g.fillRect(8, 78, 80, 8);
+    g.fillRect(42, 46, 12, 70);
+    g.fillStyle = '#f0d7a4';
+    g.fillRect(10, 60, 6, 6);
+    g.fillRect(80, 60, 6, 6);
+    g.fillRect(10, 108, 6, 6);
+    g.fillRect(80, 108, 6, 6);
+    g.fillStyle = '#a56a32';
+    g.fillRect(38, 92, 20, 16);
+    g.fillStyle = '#fff6d4';
+    g.fillRect(44, 48, 8, 6);
+    g.fillRect(14, 64, 14, 3);
   });
   sprites.chestOpen = sheet(96, 128, (g) => {
-    g.fillStyle = '#4a3424';
-    g.fillRect(18, 70, 60, 32);
-    g.fillStyle = '#2a2018';
-    g.fillRect(26, 76, 44, 16);
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.beginPath(); g.ellipse(48, 122, 36, 6, 0, 0, 7); g.fill();
+    g.fillStyle = '#2c1c12';
+    g.fillRect(8, 78, 80, 40);
+    g.fillStyle = '#120e0c';
+    g.fillRect(16, 86, 64, 22);
     g.fillStyle = '#e7a15a';
-    g.fillRect(38, 80, 20, 8);
+    g.fillRect(34, 92, 28, 8);
+    g.fillStyle = '#8d5a34';
+    g.save();
+    g.translate(48, 70);
+    g.transform(1, 0, 0, 0.7, 0, -18);
+    g.beginPath(); g.ellipse(0, 0, 40, 18, 0, Math.PI, 0); g.fill();
+    g.restore();
+    g.fillStyle = '#fff6d4';
+    g.fillRect(30, 40, 10, 4);
   });
   sprites.key = sheet(96, 128, (g) => {
     g.strokeStyle = '#e7a15a';
@@ -444,7 +468,7 @@ function lightAt(grid, x, y) {
 const SCALE = {
   crawler: 0.78, spitter: 1.05, brute: 1.2, wisp: 0.9, warden: 1.55,
   moth: 0.78, hound: 1, chanter: 1.12, knight: 1.28, seal: 1.7,
-  chest: 0.55, chestOpen: 0.5, key: 0.42, potion: 0.38, lever: 0.72,
+  chest: 0.84, chestOpen: 0.78, key: 0.42, potion: 0.38, lever: 0.72,
   stairsDown: 0.58, stairsUp: 0.58,
 };
 
@@ -548,6 +572,12 @@ export function createView() {
     const H = tiles.length;
     const W = tiles[0].length;
     const horizon = (h * 0.46) | 0;
+    const faceDx = [0, 1, 0, -1];
+    const faceDy = [-1, 0, 1, 0];
+    const face = (game.facing | 0) & 3;
+    const aheadX = game.x + faceDx[face];
+    const aheadY = game.y + faceDy[face];
+    const glowTile = aheadX >= 0 && aheadY >= 0 && aheadX < W && aheadY < H && tileUsable(game, tiles, aheadX, aheadY);
     const grid = buildLight(cam, game, flick, quality);
     const rayX0 = dirX - planeX;
     const rayY0 = dirY - planeY;
@@ -585,6 +615,11 @@ export function createView() {
           if (cellX >= 0 && cellY >= 0 && cellX < W && cellY < H) {
             const tile = tiles[cellY][cellX];
             if (tile === 4 || tile === 5) { rr *= 0.55; gg *= 0.5; bb *= 0.45; }
+            if (glowTile && cellX === aheadX && cellY === aheadY) {
+              rr = Math.min(255, rr + 34);
+              gg = Math.min(255, gg + 16);
+              bb = Math.min(255, bb + 4);
+            }
           }
         }
         const lit = lightAt(grid, floorX, floorY);
@@ -639,12 +674,18 @@ export function createView() {
       const tx = (wallX * TEX) & MASK;
       const lit = lightAt(grid, mapX + 0.5, mapY + 0.5);
       const span = Math.max(1, drawEnd - drawStart);
+      const facingDoor = mapX === aheadX && mapY === aheadY && (tile === 2 || tile === 3);
       for (let y = drawStart; y < drawEnd; y++) {
         const ty = (((y - ((h - lineH) / 2 + wallShift)) * TEX) / lineH) & MASK;
         const s = sample(texPick, tx, ty);
         const v = (y - drawStart) / span;
         const vg = 0.78 + 0.34 * (1 - Math.min(1, Math.abs(v - 0.62) * 1.6));
         const c = shade(s[0] * vg, s[1] * vg, s[2] * vg, dist, lit[0], lit[1], lit[2], side === 1, false, gleam);
+        if (facingDoor) {
+          c[0] = clampByte(c[0] + 42);
+          c[1] = clampByte(c[1] + 22);
+          c[2] = clampByte(c[2] + 6);
+        }
         const i = (y * w + x) * 4;
         data[i] = c[0]; data[i + 1] = c[1]; data[i + 2] = c[2]; data[i + 3] = 255;
       }
@@ -652,11 +693,16 @@ export function createView() {
 
     const list = [];
     const floor = game.floors[game.floor];
+    const usable = { chest: 1, lever: 1, key: 1, potion: 1, stairsDown: 1, stairsUp: 1 };
+    const onGround = { chest: 1, chestOpen: 1, key: 1, potion: 1, lever: 1, stairsDown: 1, stairsUp: 1 };
     for (const e of floor.entities) {
       if (e.taken) continue;
       if (e.kind === 'monster' && !e.alive && !(e.anim === 'death' && e.animMs > 0)) continue;
       if (e.kind === 'chest' && e.opened) {
-        list.push({ x: e.x + 0.5, y: e.y + 0.5, sub: 'chestOpen', scale: SCALE.chestOpen });
+        list.push({
+          x: e.x + 0.5, y: e.y + 0.5, sub: 'chestOpen', scale: SCALE.chestOpen,
+          ground: true, cellX: e.x, cellY: e.y,
+        });
         continue;
       }
       const sub = e.kind === 'monster' ? e.sub : e.kind === 'potion' ? 'potion' : e.kind;
@@ -669,13 +715,22 @@ export function createView() {
       }
       if (e.sub === 'wisp' || e.sub === 'moth') wy += Math.sin(t / 180 + e.x) * 0.08;
       const scale = (SCALE[sub] || 0.6) * (e.anim === 'death' ? 0.92 : 1);
-      list.push({ x: wx, y: wy, sub, scale, ent: e.kind === 'monster' ? e : null });
+      list.push({
+        x: wx, y: wy, sub, scale, ent: e.kind === 'monster' ? e : null,
+        ground: !!onGround[sub],
+        highlight: !!usable[sub] && e.x === aheadX && e.y === aheadY,
+        cellX: e.x, cellY: e.y,
+      });
     }
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const tile = tiles[y][x];
-        if (tile === 5) list.push({ x: x + 0.5, y: y + 0.5, sub: 'stairsDown', scale: SCALE.stairsDown });
-        else if (tile === 4) list.push({ x: x + 0.5, y: y + 0.5, sub: 'stairsUp', scale: SCALE.stairsUp });
+        if (tile !== 5 && tile !== 4) continue;
+        const sub = tile === 5 ? 'stairsDown' : 'stairsUp';
+        list.push({
+          x: x + 0.5, y: y + 0.5, sub, scale: SCALE[sub],
+          ground: true, highlight: x === aheadX && y === aheadY, cellX: x, cellY: y,
+        });
       }
     }
     if (quality !== 'low' && game.particles) {
@@ -722,9 +777,18 @@ export function createView() {
       const lit = lightAt(grid, sp.x, sp.y);
       const spriteH = Math.abs(h / transY) * sp.scale;
       const spriteW = spriteH * (frame.w / frame.h);
-      const y0 = ((h - spriteH) / 2 + h * 0.08) | 0;
+      const feetY = horizon + (0.5 * h) / transY;
+      const y0 = sp.ground ? feetY - spriteH : ((h - spriteH) / 2 + h * 0.08);
+      if (sp.ground) {
+        const rx = Math.max(5, spriteW * 0.34);
+        const ry = Math.max(2, rx * 0.28);
+        paintEllipse(data, w, h, screenX, feetY, rx, ry, transY, zbuf, 'shadow');
+        if (sp.highlight) paintEllipse(data, w, h, screenX, feetY, rx * 1.35, ry * 1.55, transY, zbuf, 'ring');
+      }
       const x0 = (screenX - spriteW / 2) | 0;
       const x1 = (x0 + spriteW) | 0;
+      const glint = sp.sub === 'chest' || sp.sub === 'chestOpen';
+      const pulse = 0.62 + 0.38 * Math.sin(t / 80);
       for (let stripe = x0; stripe < x1; stripe++) {
         if (stripe < 0 || stripe >= w) continue;
         if (transY >= zbuf[stripe]) continue;
@@ -737,8 +801,26 @@ export function createView() {
           if (ty < 0 || ty >= frame.h) continue;
           const si = (ty * frame.w + tx) * 4;
           const a = frame.data[si + 3];
-          if (a < 16) continue;
-          const c = shade(frame.data[si], frame.data[si + 1], frame.data[si + 2], transY, lit[0], lit[1], lit[2], false, false, gleam);
+          if (a < 16) {
+            if (sp.highlight && spriteEdge(frame, tx, ty)) {
+              const i = (y * w + stripe) * 4;
+              data[i] = clampByte(data[i] * 0.35 + 210);
+              data[i + 1] = clampByte(data[i + 1] * 0.35 + 130);
+              data[i + 2] = clampByte(data[i + 2] * 0.35 + 48);
+            }
+            continue;
+          }
+          let sr = frame.data[si];
+          let sg = frame.data[si + 1];
+          let sb = frame.data[si + 2];
+          if (glint && sr > 236 && sg > 210 && sb > 170) {
+            sr *= pulse; sg *= pulse; sb *= pulse;
+          }
+          if (sp.highlight) {
+            sr = Math.min(255, sr + 28);
+            sg = Math.min(255, sg + 14);
+          }
+          const c = shade(sr, sg, sb, transY, lit[0], lit[1], lit[2], false, false, gleam);
           const i = (y * w + stripe) * 4;
           const aa = a / 255;
           data[i] = data[i] * (1 - aa) + c[0] * aa;
@@ -887,6 +969,62 @@ export function createView() {
     quality: () => quality,
     motion: () => motion,
   };
+}
+
+function tileUsable(game, tiles, x, y) {
+  const tile = tiles[y][x];
+  if (tile === 2 || tile === 3 || tile === 4 || tile === 5) return true;
+  const ents = game.floors[game.floor] && game.floors[game.floor].entities;
+  if (!ents) return false;
+  return ents.some(e => e.x === x && e.y === y && !e.taken && (
+    (e.kind === 'chest' && !e.opened) || e.kind === 'lever' || e.kind === 'key' || e.kind === 'potion'
+  ));
+}
+
+function spriteEdge(frame, tx, ty) {
+  const fw = frame.w;
+  const fh = frame.h;
+  const d = frame.data;
+  for (let oy = -2; oy <= 2; oy++) {
+    for (let ox = -2; ox <= 2; ox++) {
+      if (!ox && !oy) continue;
+      const x = tx + ox;
+      const y = ty + oy;
+      if (x < 0 || y < 0 || x >= fw || y >= fh) continue;
+      if (d[(y * fw + x) * 4 + 3] >= 16) return true;
+    }
+  }
+  return false;
+}
+
+function paintEllipse(data, w, h, cx, cy, rx, ry, z, zbuf, mode) {
+  if (rx < 1 || ry < 1) return;
+  const x0 = Math.max(0, (cx - rx) | 0);
+  const x1 = Math.min(w - 1, Math.ceil(cx + rx));
+  const y0 = Math.max(0, (cy - ry) | 0);
+  const y1 = Math.min(h - 1, Math.ceil(cy + ry));
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (z >= zbuf[x]) continue;
+      const nx = (x - cx) / rx;
+      const ny = (y - cy) / ry;
+      const d2 = nx * nx + ny * ny;
+      if (d2 > 1) continue;
+      const i = (y * w + x) * 4;
+      const k = 1 - d2;
+      if (mode === 'shadow') {
+        const s = 1 - 0.62 * k * k;
+        data[i] *= s;
+        data[i + 1] *= s;
+        data[i + 2] *= s;
+      } else if (d2 > 0.42) {
+        const a = (d2 - 0.42) / 0.58;
+        data[i] = clampByte(data[i] * (1 - a) + 232 * a);
+        data[i + 1] = clampByte(data[i + 1] * (1 - a) + 148 * a);
+        data[i + 2] = clampByte(data[i + 2] * (1 - a) + 60 * a);
+      }
+    }
+  }
 }
 
 function pickFrame(sheetOrFrames, ent, time) {
