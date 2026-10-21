@@ -48,6 +48,26 @@ export const FLOOR_NAMES = [
   'The Seal',
 ];
 
+/** crypt, cave, flooded halls, lava forge. The waystation between floors is camp. */
+export const FLOOR_THEMES = ['crypt', 'cave', 'flood', 'crypt', 'forge', 'cave', 'forge'];
+
+export const HUB_ENTRY = { x: 14, y: 16 };
+export const HUB_GATE = { x: 20, y: 16 };
+
+const QUEST_DEFS = {
+  'story-0': { kind: 'main', title: 'The Cinder Gate', detail: 'Take the first stair. A waystation waits between floors.', xp: 8, gold: 4 },
+  'story-1': { kind: 'main', title: 'Through the ash', detail: 'Leave the ash galleries by the stair.', xp: 10, gold: 6 },
+  'story-2': { kind: 'main', title: 'The low water', detail: 'Cross the flooded halls and take the stair.', xp: 12, gold: 8 },
+  'story-3': { kind: 'main', title: 'Names in the crypt', detail: 'The crypt stair leads toward the warden.', xp: 12, gold: 8 },
+  'story-4': { kind: 'main', title: 'The Warden', detail: 'The warden stands on the fifth stair. Fell them.', xp: 24, gold: 0 },
+  'story-5': { kind: 'main', title: 'The black stair', detail: 'Descend the black stair. The seal is below.', xp: 14, gold: 10 },
+  'story-6': { kind: 'main', title: 'Break the seal', detail: 'The last guardian is the seal.', xp: 30, gold: 0 },
+  rescue: { kind: 'side', title: 'A lost lantern', detail: 'Pell is turned around in the ash galleries. Speak with them.', xp: 14, gold: 12, item: { type: 'armor', name: "traveler's wrap", def: 2 } },
+  fetch: { kind: 'side', title: "Sable's shard", detail: 'Find the ember shard in the low vault and bring it to Sable at the waystation.', xp: 16, gold: 10, item: { type: 'weapon', name: 'shard knife', atk: 4 } },
+  lair: { kind: 'side', title: 'The bone nest', detail: 'A nest holds a side room of the crypt. Clear it.', xp: 18, gold: 14, item: { type: 'weapon', name: 'nest spike', atk: 3 } },
+  hidden: { kind: 'side', title: 'The cracked wall', detail: 'A niche is cut into the black stair. Step into it.', xp: 12, gold: 16 },
+};
+
 const DIFF = {
   easy:   { hp: 0.75, dmg: 0.7,  count: 0.6,  pace: 1.3,  potions: 0.5,  party: 1.12, startPots: 2 },
   normal: { hp: 1,    dmg: 1,    count: 1,    pace: 1,    potions: 0.32, party: 1,    startPots: 1 },
@@ -409,7 +429,119 @@ function generateFloor(floorIndex, diff, rng) {
     }
   }
 
-  return { tiles, entities };
+  placeQuests(floorIndex, tiles, entities, rooms, diff, rng);
+  placeProps(floorIndex, tiles, entities, rooms, rng);
+  return { tiles, entities, theme: FLOOR_THEMES[floorIndex] };
+}
+
+function freeSpot(tiles, entities, room) {
+  const spots = [
+    [room.x + 1, room.y + 1],
+    [room.x + 1, room.y + room.h - 2],
+    [room.x + room.w - 2, room.y + room.h - 2],
+    [room.mx, room.my],
+  ];
+  for (const [x, y] of spots) {
+    if (x < 1 || y < 1 || x >= MAP - 1 || y >= MAP - 1) continue;
+    if (tiles[y][x] !== TILE.FLOOR) continue;
+    if (!cellFree({ tiles, entities }, x, y)) continue;
+    return { x, y };
+  }
+  return null;
+}
+
+function placeQuests(floorIndex, tiles, entities, rooms, diff, rng) {
+  const side = rooms.filter(r => !(r.cx === 0 && r.cy === 0));
+  if (floorIndex === 1) {
+    const spot = freeSpot(tiles, entities, side[0] || rooms[1]);
+    if (spot) entities.push({ kind: 'npc', id: 'pell', name: 'Pell', x: spot.x, y: spot.y, q: 'rescue' });
+  }
+  if (floorIndex === 2) {
+    const spot = freeSpot(tiles, entities, side[side.length - 1] || rooms[1]);
+    if (spot) entities.push({ kind: 'relic', id: 'shard', name: 'ember shard', x: spot.x, y: spot.y, q: 'fetch', taken: false });
+  }
+  if (floorIndex === 3) {
+    const room = side[1] || side[0] || rooms[1];
+    let n = 0;
+    for (const e of entities) {
+      if (e.kind === 'monster' && e.alive && e.x >= room.x && e.x < room.x + room.w && e.y >= room.y && e.y < room.y + room.h) {
+        e.lair = true;
+        e.q = 'lair';
+        n += 1;
+      }
+    }
+    for (let y = room.y; y < room.y + room.h && n < 3; y++) {
+      for (let x = room.x; x < room.x + room.w && n < 3; x++) {
+        if (tiles[y][x] !== TILE.FLOOR || !cellFree({ tiles, entities }, x, y)) continue;
+        const m = makeMonster('hound', x, y, floorIndex, diff, rng);
+        m.lair = true;
+        m.q = 'lair';
+        entities.push(m);
+        n += 1;
+      }
+    }
+  }
+  if (floorIndex === 5) {
+    const room = side[0] || rooms[1];
+    const nx = room.x + room.w;
+    const ny = room.my;
+    if (nx < MAP - 1 && ny > 0 && tiles[ny][nx] === TILE.WALL && tiles[ny][room.x + room.w - 1] === TILE.FLOOR) {
+      tiles[ny][nx] = TILE.FLOOR;
+      entities.push({ kind: 'mark', id: 'crack', name: 'cracked niche', x: nx, y: ny, q: 'hidden' });
+    } else {
+      const spot = freeSpot(tiles, entities, room);
+      if (spot) entities.push({ kind: 'mark', id: 'crack', name: 'cracked niche', x: spot.x, y: spot.y, q: 'hidden' });
+    }
+  }
+}
+
+function placeProps(floorIndex, tiles, entities, rooms, rng) {
+  const theme = FLOOR_THEMES[floorIndex];
+  const kinds = theme === 'forge'
+    ? ['torch', 'statue', 'banner', 'torch']
+    : theme === 'flood'
+      ? ['web', 'bones', 'banner', 'web']
+      : theme === 'cave'
+        ? ['bones', 'torch', 'web', 'bones']
+        : ['bones', 'web', 'statue', 'banner'];
+  let n = 0;
+  for (const room of rooms) {
+    if (n >= 8) break;
+    if (rng.next() > 0.7) continue;
+    const spot = freeSpot(tiles, entities, room);
+    if (!spot) continue;
+    entities.push({ kind: 'prop', sub: kinds[n % kinds.length], x: spot.x, y: spot.y });
+    n += 1;
+  }
+}
+
+function buildHub() {
+  const tiles = emptyFloor();
+  for (let y = 13; y <= 19; y++) {
+    for (let x = 12; x <= 21; x++) tiles[y][x] = TILE.FLOOR;
+  }
+  tiles[HUB_ENTRY.y][12] = TILE.STAIRS_UP;
+  tiles[HUB_GATE.y][HUB_GATE.x] = TILE.STAIRS_DOWN;
+  return {
+    tiles,
+    theme: 'camp',
+    entities: [
+      { kind: 'npc', id: 'sable', name: 'Sable', x: 14, y: 14 },
+      { kind: 'npc', id: 'nell', name: 'Nell', x: 17, y: 14 },
+      { kind: 'prop', sub: 'banner', x: 13, y: 18 },
+      { kind: 'prop', sub: 'torch', x: 12, y: 14 },
+      { kind: 'prop', sub: 'torch', x: 19, y: 18 },
+      { kind: 'prop', sub: 'bones', x: 15, y: 18 },
+    ],
+  };
+}
+
+function freshQuests() {
+  const q = {};
+  for (const id of Object.keys(QUEST_DEFS)) {
+    q[id] = id.startsWith('story-') && id !== 'story-0' ? 'later' : 'active';
+  }
+  return q;
 }
 
 function rollLoot(floor, diff, rng) {
@@ -558,6 +690,11 @@ export function createGame(seed, difficulty) {
     particles: [],
     lights: [],
     levelPing: 0,
+    inHub: false,
+    hub: buildHub(),
+    quests: freshQuests(),
+    talk: null,
+    nellPaid: false,
     rng,
     diff,
   };
@@ -577,7 +714,12 @@ function findTile(tiles, tile) {
 }
 
 export function currentFloor(game) {
+  if (game.inHub && game.hub) return game.hub;
   return game.floors[game.floor];
+}
+
+export function exploredKey(game, x, y) {
+  return (game.inHub ? 'hub' : game.floor) + ':' + x + ',' + y;
 }
 
 export function tileAt(game, x, y, floor) {
@@ -615,7 +757,7 @@ export function reveal(game) {
       const d2 = (x - game.x) * (x - game.x) + (y - game.y) * (y - game.y);
       if (d2 > (r + 0.2) * (r + 0.2)) continue;
       if (!los(tiles, game.x, game.y, x, y)) continue;
-      game.explored.add(game.floor + ':' + x + ',' + y);
+      game.explored.add(exploredKey(game, x, y));
     }
   }
 }
@@ -650,6 +792,14 @@ function labelAt(game, x, y, tile) {
   if (floor.entities.some(e => e.kind === 'lever' && e.x === x && e.y === y)) return 'lever';
   if (floor.entities.some(e => e.kind === 'key' && !e.taken && e.x === x && e.y === y)) return 'key';
   if (floor.entities.some(e => e.kind === 'potion' && !e.taken && e.x === x && e.y === y)) return 'vial';
+  const npc = floor.entities.find(e => e.kind === 'npc' && !e.taken && e.x === x && e.y === y);
+  if (npc) return npc.name;
+  const relic = floor.entities.find(e => e.kind === 'relic' && !e.taken && e.x === x && e.y === y);
+  if (relic) return relic.name;
+  const mark = floor.entities.find(e => e.kind === 'mark' && e.x === x && e.y === y);
+  if (mark) return mark.name;
+  const prop = floor.entities.find(e => e.kind === 'prop' && e.x === x && e.y === y);
+  if (prop) return prop.sub === 'web' ? 'cobweb' : prop.sub;
   if (tile === TILE.LOCKED) return 'door';
   if (tile === TILE.GATE) return 'gate';
   if (tile === TILE.STAIRS_DOWN || tile === TILE.STAIRS_UP) return 'stairs';
@@ -679,6 +829,7 @@ function seenAhead(game, maxDist) {
 function aheadLine(hit) {
   const steps = hit.dist === 1 ? '1 step' : hit.dist + ' steps';
   if (hit.label === 'stairs') return 'The stairs are ' + steps + ' ahead.';
+  if (/^[A-Z]/.test(hit.label)) return hit.label + ' is ' + steps + ' ahead.';
   if (/^the /i.test(hit.label)) {
     const name = hit.label.charAt(0).toUpperCase() + hit.label.slice(1);
     return name + ' is ' + steps + ' ahead.';
@@ -734,9 +885,11 @@ function killMonster(game, m, who) {
     game.phase = 'won';
     game.gold += 80;
     log(game, 'The seal cracks. The last guardian falls, and the crypt exhales.', 'good');
+    finishQuest(game, 'story-6');
   } else if (m.sub === 'warden') {
     game.gold += 20;
     log(game, 'The Warden falls. The stair down is clear.', 'good');
+    finishQuest(game, 'story-4');
   } else if (game.rng.next() < 0.35) {
     const pot = game.rng.pick(['hp', 'sta', 'mana']);
     const c = who && who.hp > 0 ? who : living(game)[0];
@@ -747,6 +900,7 @@ function killMonster(game, m, who) {
       game.gold += 3;
     }
   }
+  if (m.lair) checkLair(game);
 }
 
 function applyDamageTo(game, c, amount, source) {
@@ -910,6 +1064,8 @@ export function move(game, cmd) {
   game.x = nx;
   game.y = ny;
   pickupAt(game, nx, ny);
+  const stepped = currentFloor(game).entities.find(e => e.kind === 'mark' && e.x === nx && e.y === ny);
+  if (stepped) finishQuest(game, stepped.q || 'hidden');
   reveal(game);
   const t = floor.tiles[ny][nx];
   if (t === TILE.STAIRS_DOWN) log(game, 'Stairs down. Use them when you are ready.', 'info');
@@ -1136,6 +1292,177 @@ export function cast(game, spellId) {
   return { ok: false };
 }
 
+function giveUnique(game, item) {
+  const c = selectedChamp(game);
+  if (!c || !item) return;
+  if (item.type === 'weapon') {
+    c.weapon = { name: item.name, atk: item.atk };
+    log(game, c.name + ' equips ' + item.name + '.', 'good');
+  } else if (item.type === 'armor') {
+    c.armor = { name: item.name, def: item.def };
+    log(game, c.name + ' equips ' + item.name + '.', 'good');
+  }
+}
+
+function finishQuest(game, id) {
+  if (!game.quests || !QUEST_DEFS[id] || game.quests[id] === 'done') return;
+  const def = QUEST_DEFS[id];
+  game.quests[id] = 'done';
+  if (def.xp) grantXp(game, def.xp);
+  if (def.gold) {
+    game.gold += def.gold;
+    log(game, def.title + ' is done. ' + def.gold + ' coins.', 'good');
+  } else {
+    log(game, def.title + ' is done.', 'good');
+  }
+  if (def.item) giveUnique(game, def.item);
+  const n = Number(id.slice(6));
+  if (id.startsWith('story-') && QUEST_DEFS['story-' + (n + 1)] && game.quests['story-' + (n + 1)] === 'later') {
+    game.quests['story-' + (n + 1)] = 'active';
+  }
+}
+
+function checkLair(game) {
+  if (!game.quests || game.quests.lair === 'done') return;
+  const floor = game.floors[3];
+  if (!floor) return;
+  if (floor.entities.some(e => e.lair && e.alive)) return;
+  if (!floor.entities.some(e => e.lair)) return;
+  finishQuest(game, 'lair');
+}
+
+function enterHub(game) {
+  game.inHub = true;
+  game.x = HUB_ENTRY.x;
+  game.y = HUB_ENTRY.y;
+  game.facing = 1;
+  game.talk = null;
+  log(game, 'The waystation. A fire between floors, and the next stair ahead.', 'good');
+  reveal(game);
+  return 'stairs';
+}
+
+function leaveHub(game) {
+  if (game.floor >= FLOORS - 1) {
+    log(game, 'There is no floor below the seal.', 'info');
+    return 'blocked';
+  }
+  const left = game.floor;
+  if (left !== WARDEN_FLOOR && left !== FLOORS - 1) finishQuest(game, 'story-' + left);
+  game.inHub = false;
+  game.talk = null;
+  game.floor += 1;
+  const up = findTile(currentFloor(game).tiles, TILE.STAIRS_UP);
+  game.x = up.x;
+  game.y = up.y;
+  log(game, FLOOR_NAMES[game.floor] + '.', 'good');
+  reveal(game);
+  return 'stairs';
+}
+
+function linesFor(game, id) {
+  if (id === 'sable') {
+    if (game.quests.fetch === 'have') return ['Sable catches the shard light. "That is the one. The fire keeps its bargains."'];
+    if (game.quests.fetch === 'done') return ['Sable nods at the shard by the fire.'];
+    return ['Sable turns a coin. "An ember shard sits in the low vault. Bring it back here."'];
+  }
+  if (id === 'pell') {
+    if (game.quests.rescue === 'done') return ['Pell is by the fire. "The wrap is yours. I can find my own stair from here."'];
+    return [
+      'Pell is on the floor, soot on their face. "The ash galleries turned me around."',
+      '"Get me out of this room and I can reach the waystation."',
+    ];
+  }
+  if (id === 'nell') {
+    if (game.quests.hidden === 'done' && !game.nellPaid) return ['Nell listens. "You found the niche. Take the cloak. The fire is for anyone who comes back."'];
+    if (game.nellPaid) return ['Nell tends the pots. "The black stair is still on the map."'];
+    return ['Nell keeps the waystation. "A cracked niche opens on the black stair. Find it, so we know the deep is open."'];
+  }
+  return ['The fire pops.'];
+}
+
+function openTalk(game, id) {
+  const lines = linesFor(game, id);
+  game.talk = { id, i: 0, lines, name: id === 'pell' ? 'Pell' : id === 'sable' ? 'Sable' : 'Nell' };
+  log(game, lines[0], 'info');
+}
+
+function applyTalk(game, id) {
+  if (id === 'pell' && game.quests.rescue !== 'done') {
+    for (const f of game.floors) {
+      const e = f.entities.find(x => x.kind === 'npc' && x.id === 'pell');
+      if (e) e.taken = true;
+    }
+    if (!game.hub.entities.some(e => e.id === 'pell')) {
+      game.hub.entities.push({ kind: 'npc', id: 'pell', name: 'Pell', x: 18, y: 18 });
+    }
+    finishQuest(game, 'rescue');
+  }
+  if (id === 'sable' && game.quests.fetch === 'have') finishQuest(game, 'fetch');
+  if (id === 'nell' && game.quests.hidden === 'done' && !game.nellPaid) {
+    game.nellPaid = true;
+    giveUnique(game, { type: 'armor', name: 'waystation cloak', def: 2 });
+    game.gold += 6;
+    log(game, 'Nell folds a cloak into your hands.', 'good');
+  }
+}
+
+export function advanceTalk(game) {
+  if (!game || !game.talk) return { ok: false };
+  const talk = game.talk;
+  if (talk.i >= talk.lines.length - 1) {
+    applyTalk(game, talk.id);
+    game.talk = null;
+    return { ok: true, closed: true };
+  }
+  talk.i += 1;
+  log(game, talk.lines[talk.i], 'info');
+  return { ok: true };
+}
+
+export function questLog(game) {
+  if (!game || !game.quests) return [];
+  return Object.keys(QUEST_DEFS).map(id => {
+    const d = QUEST_DEFS[id];
+    return { id, kind: d.kind, title: d.title, detail: d.detail, status: game.quests[id] || 'later' };
+  }).filter(q => q.status !== 'later');
+}
+
+export function questMarkers(game) {
+  const out = [];
+  if (!game || !game.quests) return out;
+  const show = (id) => game.quests[id] === 'active' || game.quests[id] === 'have';
+  for (let fi = 0; fi < game.floors.length; fi++) {
+    for (const e of game.floors[fi].entities) {
+      if (!e.q || e.taken) continue;
+      if (e.kind === 'relic' && game.quests.fetch === 'have') continue;
+      if (!show(e.q)) continue;
+      out.push({ floor: fi, x: e.x, y: e.y, id: e.q });
+    }
+  }
+  for (let fi = 0; fi < FLOORS; fi++) {
+    const id = 'story-' + fi;
+    if (!show(id)) continue;
+    if (fi === FLOORS - 1) {
+      const seal = game.floors[fi].entities.find(e => e.sub === 'seal' && e.alive);
+      if (seal) out.push({ floor: fi, x: seal.x, y: seal.y, id });
+      continue;
+    }
+    if (fi === WARDEN_FLOOR) {
+      const warden = game.floors[fi].entities.find(e => e.sub === 'warden' && e.alive);
+      if (warden) out.push({ floor: fi, x: warden.x, y: warden.y, id });
+      continue;
+    }
+    const down = findTile(game.floors[fi].tiles, TILE.STAIRS_DOWN);
+    out.push({ floor: fi, x: down.x, y: down.y, id });
+  }
+  if (game.inHub && game.quests.fetch === 'have') {
+    const sable = game.hub.entities.find(e => e.id === 'sable');
+    if (sable) out.push({ floor: -1, hub: true, x: sable.x, y: sable.y, id: 'fetch' });
+  }
+  return out;
+}
+
 export function interact(game) {
   if (!game || game.phase !== 'play' || game.paused) return { ok: false, reason: 'busy' };
   const fx = game.x + DX[game.facing];
@@ -1169,16 +1496,20 @@ function useCell(game, x, y) {
       log(game, 'Something stands on the stair.', 'info');
       return 'blocked';
     }
+    if (game.inHub) return leaveHub(game);
     if (game.floor >= FLOORS - 1) return false;
-    game.floor += 1;
-    const up = findTile(currentFloor(game).tiles, TILE.STAIRS_UP);
-    game.x = up.x;
-    game.y = up.y;
-    log(game, FLOOR_NAMES[game.floor] + '.', 'good');
-    reveal(game);
-    return 'stairs';
+    return enterHub(game);
   }
   if (t === TILE.STAIRS_UP) {
+    if (game.inHub) {
+      game.inHub = false;
+      const down = findTile(currentFloor(game).tiles, TILE.STAIRS_DOWN);
+      game.x = down.x;
+      game.y = down.y;
+      log(game, 'Back into ' + FLOOR_NAMES[game.floor] + '.', 'info');
+      reveal(game);
+      return 'stairs';
+    }
     if (game.floor <= 0) {
       log(game, 'The way you came in is shut.', 'info');
       return 'blocked';
@@ -1190,6 +1521,23 @@ function useCell(game, x, y) {
     log(game, FLOOR_NAMES[game.floor] + '.', 'info');
     reveal(game);
     return 'stairs';
+  }
+  const npc = floor.entities.find(e => e.kind === 'npc' && !e.taken && e.x === x && e.y === y);
+  if (npc) {
+    openTalk(game, npc.id);
+    return 'talk';
+  }
+  const relic = floor.entities.find(e => e.kind === 'relic' && !e.taken && e.x === x && e.y === y);
+  if (relic) {
+    relic.taken = true;
+    if (game.quests && game.quests.fetch === 'active') game.quests.fetch = 'have';
+    log(game, 'The ember shard is warm. Sable keeps a fire at the waystation.', 'good');
+    return 'chest';
+  }
+  const mark = floor.entities.find(e => e.kind === 'mark' && e.x === x && e.y === y);
+  if (mark) {
+    finishQuest(game, mark.q || 'hidden');
+    return 'chest';
   }
   const lever = floor.entities.find(e => e.kind === 'lever' && e.x === x && e.y === y);
   if (lever) {
@@ -1341,6 +1689,9 @@ export function serialize(game) {
     phase: game.phase,
     gleamMs: game.gleamMs,
     wardMs: game.wardMs,
+    inHub: !!game.inHub,
+    quests: game.quests,
+    nellPaid: !!game.nellPaid,
     explored: [...game.explored],
     log: game.log.slice(-20),
     rng: game.rng.state(),
@@ -1388,10 +1739,18 @@ export function hydrate(data) {
     particles: [],
     lights: [],
     levelPing: 0,
+    inHub: !!data.inHub,
+    hub: buildHub(),
+    quests: data.quests && data.quests['story-0'] ? data.quests : freshQuests(),
+    talk: null,
+    nellPaid: !!data.nellPaid,
     rng: makeRng(1),
     diff: DIFF[diffName],
   };
   game.rng.set(data.rng >>> 0);
+  if (game.quests.rescue === 'done' && !game.hub.entities.some(e => e.id === 'pell')) {
+    game.hub.entities.push({ kind: 'npc', id: 'pell', name: 'Pell', x: 18, y: 18 });
+  }
   return game;
 }
 

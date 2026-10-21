@@ -266,15 +266,33 @@
     padding: 24px;
     z-index: 5;
   }
-  #overlay[hidden], #help[hidden] { display: none; }
-  #help {
+  #overlay[hidden], #help[hidden], #quests[hidden], #talk[hidden] { display: none; }
+  #help, #quests {
     position: fixed; inset: 0;
     background: rgba(10, 8, 7, 0.82);
     display: grid; place-items: center;
     padding: 24px;
     z-index: 7;
   }
-  #help-body {
+  #talk {
+    position: absolute;
+    left: 12px; right: 12px; bottom: 12px;
+    z-index: 4;
+    background: rgba(16, 12, 10, 0.94);
+    border: 1px solid #a86a32;
+    border-radius: 12px;
+    padding: 12px 14px 10px;
+  }
+  #talk .who { color: var(--ember); font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.82rem; }
+  #talk p { margin: 6px 0; line-height: 1.35; }
+  #talk small { color: var(--dim); }
+  #quests h3 { margin: 14px 0 6px; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ember); }
+  .qlog { list-style: none; display: grid; gap: 8px; }
+  .qlog li { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .qlog li.done { opacity: 0.62; }
+  .qlog li span { color: var(--dim); font-size: 0.82rem; }
+  .qlog li p { color: var(--muted); margin-top: 4px; }
+  #help-body, #quest-body {
     width: min(720px, 100%);
     max-height: min(86vh, 820px);
     overflow: auto;
@@ -364,6 +382,7 @@
     <div id="meta-label"></div>
     <div class="tools">
       <button type="button" id="help-btn">Help (H)</button>
+      <button type="button" id="quest-btn">Quests (J)</button>
       <select id="gfx" aria-label="Graphics quality">
         <option value="low">Low</option>
         <option value="medium">Med</option>
@@ -385,6 +404,7 @@
       <canvas id="view" aria-label="Dungeon view"></canvas>
       <div id="hurt"></div>
       <div id="floaters"></div>
+    <div id="talk" hidden></div>
     </div>
     <aside id="party" aria-label="Party"></aside>
   </div>
@@ -426,14 +446,17 @@
       <li><b>Q</b> strafe left. <b>E</b> strafe right. The pad under the view does the same by mouse or touch.</li>
       <li><b>Space</b> swings every living champion in the front rank, and also the selected champion if they stand in the back.</li>
       <li><b>Z</b> Bryn, <b>X</b> Cara, <b>C</b> Ivo, <b>V</b> Senn. Each attacks alone. Shift+1 through Shift+4 do the same.</li>
-      <li><b>F</b> or Enter uses a door, a chest, a lever, or the stairs in the next tile. If it is further down the hall, the log says how many steps. Click a champion to select them. Click a vial to drink it.</li>
+      <li><b>F</b> or Enter uses a door, a chest, a lever, or the stairs in the next tile, and talks to someone standing there. If it is further down the hall, the log says how many steps. Click a champion to select them. Click a vial to drink it.</li>
+      <li><b>J</b> opens the quest log. The story runs down the seven floors. Side work is marked on the map: a lost adventurer, a shard to bring back, a monster nest, and a cracked niche.</li>
+      <li>The stair down stops at the waystation, a safe camp between floors. Talk to Sable and Nell there, then take the far stair to go deeper. The near stair returns you to the floor you left.</li>
       <li><b>1</b> to <b>5</b> speak Kael, Sera, Veth, Orin, and Nim. <b>Tab</b> cycles the selected champion.</li>
-      <li><b>H</b> or <b>?</b> opens this list. <b>M</b> mutes the hum and the effects. The volume slider is in the header. <b>Esc</b> pauses.</li>
-      <li>Graphics (low, medium, high) and movement (smooth or step) sit on the title card and in the header.</li>
+      <li><b>H</b> or <b>?</b> opens this list. <b>M</b> mutes the hum and the effects. The volume slider is in the header. <b>Esc</b> pauses, and closes this list or the quest log first.</li>
+      <li>Graphics (low, medium, high) and movement (smooth or step) sit on the title card and in the header. Low skips the extra torch lights.</li>
     </ul>
-    <p class="lead">Seven floors. A warden holds the fifth stair. The seal at the bottom is the last fight.</p>
+    <p class="lead">Seven floors, each with its own stone: crypt, caves, flooded halls, and a lava forge. A warden holds the fifth stair. The seal at the bottom is the last fight.</p>
   </div>
 </div>
+<div id="quests" hidden><div id="quest-body"></div></div>
 <div id="toast" hidden></div>
 <script src="/lib/stat.js"></script>
 <script type="module" src="./main.js"></script>

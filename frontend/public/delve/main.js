@@ -4,6 +4,7 @@ import {
   FLOOR_NAMES, FLOORS, FACING_NAME, SPELLS, DIFF_KEY,
   createGame, move, attack, attackOne, cast, interact, tick, useItem,
   saveGame, loadGame, hasSave, clearSave, summarize, tileAt, debug,
+  questLog, advanceTalk,
 } from './engine.js';
 
 const GFX_KEY = 'dxedge_delve_quality';
@@ -28,6 +29,8 @@ const metaEl = document.getElementById('meta-label');
 const muteBtn = document.getElementById('mute');
 const volInput = document.getElementById('vol');
 const helpEl = document.getElementById('help');
+const questEl = document.getElementById('quests');
+const talkEl = document.getElementById('talk');
 const viewWrap = document.getElementById('view-wrap');
 const floatersEl = document.getElementById('floaters');
 
@@ -195,7 +198,7 @@ function showTitle() {
     '<h1>Delve</h1>' +
     '<canvas id="title-art" width="720" height="180" aria-hidden="true"></canvas>' +
     '<p class="lead">Four champions, one lantern, and seven floors that are never quite the same. Walk the grid, fight what moves, and take the stairs. A warden holds the fifth stair. The seal waits at the bottom. Keys and levers open the side rooms. The way down does not need them.</p>' +
-    '<p class="lead" id="title-hint">W S move, A D turn, Q E strafe. Space swings the front rank. H lists every key.</p>' +
+    '<p class="lead" id="title-hint">W S move, A D turn, Q E strafe. Space swings the front rank. J is the quest log. H lists every key.</p>' +
     '<div class="opt"><span>Difficulty</span><div class="diffs" role="group" aria-label="Difficulty">' + diffButtons(diffPref()) + '</div></div>' +
     '<div class="opt"><span>Graphics</span><div class="diffs" role="group" aria-label="Graphics quality">' + choiceButtons('gfx', ['low', 'medium', 'high'], gfxPref()) + '</div></div>' +
     '<div class="opt"><span>Movement</span><div class="diffs" role="group" aria-label="Movement">' + choiceButtons('motion', ['smooth', 'step'], motionPref()) + '</div></div>' +
@@ -206,7 +209,7 @@ function showTitle() {
     '<ul class="help">' +
       '<li><b>W</b> forward, <b>S</b> back, <b>A</b> and <b>D</b> turn. Arrow keys do the same.</li>' +
       '<li><b>Q</b> and <b>E</b> strafe. The buttons under the view do all of this by mouse or touch.</li>' +
-      '<li><b>Space</b> swings the front rank. <b>Z X C V</b> send Bryn, Cara, Ivo, and Senn alone. <b>F</b> uses. <b>1</b> to <b>5</b> speak the runes.</li>' +
+      '<li><b>Space</b> swings the front rank. <b>Z X C V</b> send Bryn, Cara, Ivo, and Senn alone. <b>F</b> uses and talks. <b>J</b> opens the quest log. <b>1</b> to <b>5</b> speak the runes.</li>' +
     '</ul>' +
     '<p class="lead" id="title-credits">Original code. Pictures and the ember favicon are drawn in the page. Sound is synthesized here. Nothing is loaded from another site, and nothing here is taken from another dungeon game.</p>'
   );
@@ -309,11 +312,13 @@ function doCast(id) {
 }
 
 function doUse() {
-  if (!game || game.phase !== 'play' || game.paused || helpOpen()) return;
+  if (!game || game.phase !== 'play' || game.paused || helpOpen() || questOpen()) return;
+  if (game.talk) { advanceTalk(game); paintTalk(); return; }
   const r = interact(game);
   if (r && (r.sound === 'door' || r.sound === 'lever')) audio.door();
   else if (r && r.sound === 'stairs') audio.step();
-  else if (r && (r.sound === 'chest' || r.sound === 'locked')) audio.pickup();
+  else if (r && (r.sound === 'chest' || r.sound === 'locked' || r.sound === 'talk')) audio.pickup();
+  paintTalk();
 }
 
 function paintParty() {
@@ -334,7 +339,7 @@ function paintParty() {
     )).join('');
     partyEl.querySelectorAll('[data-champ]').forEach(btn => {
       const face = btn.querySelector('.portrait');
-      if (face) view.paintPortrait(face, Number(btn.getAttribute('data-champ')));
+      if (face) view.paintPortrait(face, Number(btn.getAttribute('data-champ')), game.party[Number(btn.getAttribute('data-champ'))]);
       btn.addEventListener('click', (ev) => {
         if (ev.target.closest('[data-item]')) return;
         game.selected = Number(btn.getAttribute('data-champ'));
@@ -358,6 +363,12 @@ function paintParty() {
     if (c.weapon) gear.push(c.weapon.name);
     if (c.armor) gear.push(c.armor.name);
     el.querySelector('.gear').textContent = gear.join(' · ') || 'unarmed';
+    const gearSig = gear.join(' · ');
+    if (el.getAttribute('data-gear') !== gearSig) {
+      el.setAttribute('data-gear', gearSig);
+      const face = el.querySelector('.portrait');
+      if (face) view.paintPortrait(face, i, c);
+    }
     const items = el.querySelector('.items');
     const sig = c.items.map(it => it.potion).join(',');
     if (items.getAttribute('data-sig') !== sig) {
@@ -390,7 +401,9 @@ function escapeHtml(s) {
 
 function paintHud() {
   if (!game) return;
-  floorEl.textContent = FLOOR_NAMES[game.floor] + '  ·  ' + (game.floor + 1) + ' / ' + FLOORS;
+  floorEl.textContent = game.inHub
+    ? 'The Waystation  ·  between floors'
+    : FLOOR_NAMES[game.floor] + '  ·  ' + (game.floor + 1) + ' / ' + FLOORS;
   faceEl.textContent = FACING_NAME[game.facing];
   const ward = game.wardMs > 0 ? '  ·  ward' : '';
   const gleam = game.gleamMs > 0 ? '  ·  gleam' : '';
@@ -437,6 +450,7 @@ function paintAll() {
   paintHud();
   paintSpells();
   paintFx();
+  paintTalk();
 }
 
 function heldCommand() {
@@ -481,6 +495,47 @@ function helpOpen() {
   return !!(helpEl && !helpEl.hidden);
 }
 
+function questOpen() {
+  return !!(questEl && !questEl.hidden);
+}
+
+function paintQuest() {
+  if (!questEl) return;
+  const body = questEl.querySelector('#quest-body');
+  if (!body || !game) return;
+  const rows = questLog(game);
+  const main = rows.filter(q => q.kind === 'main');
+  const side = rows.filter(q => q.kind === 'side');
+  const line = (q) => '<li class="' + q.status + '"><b>' + escapeHtml(q.title) + '</b> <span>' + q.status + '</span><p>' + escapeHtml(q.detail) + '</p></li>';
+  body.innerHTML = '<p class="kicker">quests</p><h2>Quest log</h2>' +
+    '<h3>Story</h3><ul class="qlog">' + main.map(line).join('') + '</ul>' +
+    '<h3>Side</h3><ul class="qlog">' + side.map(line).join('') + '</ul>' +
+    '<p class="lead">J closes this. F talks to someone in the next tile. The waystation sits between floors.</p>';
+}
+
+function toggleQuest() {
+  if (!questEl) return;
+  if (!questEl.hidden) {
+    questEl.hidden = true;
+    if (game && game.phase === 'play' && !helpWasPaused) game.paused = false;
+    return;
+  }
+  if (helpOpen()) toggleHelp();
+  helpWasPaused = !!(game && game.paused);
+  if (game && game.phase === 'play') game.paused = true;
+  held.clear();
+  paintQuest();
+  questEl.hidden = false;
+}
+
+function paintTalk() {
+  if (!talkEl) return;
+  if (!game || !game.talk) { talkEl.hidden = true; return; }
+  const t = game.talk;
+  talkEl.hidden = false;
+  talkEl.innerHTML = '<div class="who">' + escapeHtml(t.name || 'Someone') + '</div><p>' + escapeHtml(t.lines[t.i] || '') + '</p><small>F or Space continues</small>';
+}
+
 function toggleHelp() {
   if (!helpEl) return;
   if (!helpEl.hidden) {
@@ -513,8 +568,27 @@ window.addEventListener('keydown', (e) => {
     toggleHelp();
     return;
   }
+  if (e.code === 'KeyJ') {
+    if (typingTarget(e)) return;
+    e.preventDefault();
+    audio.start();
+    toggleQuest();
+    return;
+  }
   if (helpOpen()) {
     if (e.code === 'Escape') { e.preventDefault(); toggleHelp(); }
+    return;
+  }
+  if (questOpen()) {
+    if (e.code === 'Escape' || e.code === 'KeyJ') { e.preventDefault(); toggleQuest(); }
+    return;
+  }
+  if (game && game.talk && (e.code === 'Space' || e.code === 'KeyF' || e.code === 'Enter')) {
+    if (typingTarget(e)) return;
+    e.preventDefault();
+    audio.start();
+    advanceTalk(game);
+    paintTalk();
     return;
   }
   if (e.code === 'KeyM') {
@@ -616,6 +690,8 @@ if (volInput) {
 syncMute();
 const helpBtn = document.getElementById('help-btn');
 if (helpBtn) helpBtn.addEventListener('click', () => { audio.start(); toggleHelp(); });
+const questBtn = document.getElementById('quest-btn');
+if (questBtn) questBtn.addEventListener('click', () => { audio.start(); toggleQuest(); });
 
 mapCanvas.width = 220;
 mapCanvas.height = 220;
@@ -629,6 +705,7 @@ window.__delve = {
       x: game.x, y: game.y, facing: game.facing, floor: game.floor,
       phase: game.phase, seed: game.seed, difficulty: game.difficulty,
       kills: game.kills, keys: game.keys, gold: game.gold, paused: !!game.paused,
+      inHub: !!game.inHub,
       gleam: game.gleamMs, ward: game.wardMs,
     };
   },
@@ -660,6 +737,7 @@ window.__delve = {
   killAll() { if (game) { debug.killAll(game); if (game.phase !== 'play') showEnd(); } },
   press(code) {
     if (code === 'KeyH' || code === 'Slash') { toggleHelp(); return; }
+    if (code === 'KeyJ') { toggleQuest(); return; }
     if (code === 'KeyM') { audio.toggle(); syncMute(); return; }
     const solo = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 }[code];
     if (solo != null) { doAttackOne(solo); return; }

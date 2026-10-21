@@ -285,6 +285,7 @@ jobs:
         run: |
           html=$(curl -sf https://dxedge.net/delve/)
           echo "$html" | grep -q 'Help (H)' || { echo "ERROR: /delve/ is not the current game"; exit 1; }
+          echo "$html" | grep -q 'Quests (J)' || { echo "ERROR: /delve/ is missing the quest log"; exit 1; }
           echo "$html" | grep -q 'Delve' || { echo "ERROR: /delve/ missing the title"; exit 1; }
           code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/delve/engine.js)
           echo "/delve/engine.js $code"

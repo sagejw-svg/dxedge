@@ -54,13 +54,15 @@ def main():
 
     ok('id: \'delve\'' in app and "label: 'Delve'" in app and '<Delve />' in app, 'games nav has a Delve tab')
     ok('href="/delve/"' in shell, 'shell links to the standalone page')
-    ok("CACHE_NAME = 'dxedge-v118'" in sw, 'service worker cache bumped')
+    ok("CACHE_NAME = 'dxedge-v119'" in sw, 'service worker cache bumped')
     ok("url.pathname.startsWith('/delve/')" in sw, 'service worker treats /delve/ as mutable')
     ok('location ^~ /delve/' in nginx, 'nginx does not pin the delve modules for a year')
     ok('href="/delve/favicon.svg"' in page_html, 'page uses its own favicon')
     ok('#e7a15a' in fav and '#7affb2' not in fav, 'favicon is the ember tint, not the site green')
     ok('id="credits"' in page_html and 'original code' in page_html, 'page has a credits section')
     ok('Help (H)' in page_html and 'id="help"' in page_html, 'help button and overlay are on the page')
+    ok('Quests (J)' in page_html and 'id="quests"' in page_html, 'quest log is on the page')
+    ok('waystation' in page_html, 'help mentions the waystation')
     ok('## Delve' in notices and 'original code' in notices, 'third-party notice covers Delve')
     ok('cdn.' not in page_html and 'googletag' not in page_html and 'analytics' not in page_html, 'no third-party tags in the page')
 
@@ -223,7 +225,10 @@ def main():
           }
         }''')
         pg.evaluate('__delve.interact()')
-        ok(pg.evaluate('__delve.state().floor') == 1, 'stairs go down a floor')
+        ok(pg.evaluate('__delve.state().inHub') is True, 'stairs reach the waystation')
+        ok(pg.evaluate('__delve.state().floor') == 0, 'the floor waits while you are in camp')
+        pg.evaluate('__delve.setPos(20, 16, 0, 1); __delve.interact()')
+        ok(pg.evaluate('__delve.state().floor') == 1 and pg.evaluate('__delve.state().inHub') is False, 'the far stair leaves the waystation')
 
         pg.evaluate('localStorage.removeItem("dxedge_delve_save")')
         pg.evaluate('__delve.newGame(8, "normal")')
@@ -313,6 +318,34 @@ def main():
         pg.keyboard.press(' ')
         pg.wait_for_timeout(80)
         ok('The chest is 2 steps ahead.' in pg.inner_text('#log'), 'attack names the chest too')
+        pg.evaluate('__delve.press("KeyJ")')
+        pg.wait_for_timeout(80)
+        quest_text = pg.inner_text('#quests')
+        ok('The Cinder Gate' in quest_text and 'A lost lantern' in quest_text, quest_text[:240])
+        ok(pg.locator('#quests').is_visible(), 'J opens the quest log')
+        pg.screenshot(path='/tmp/delve-quests.png', full_page=False)
+        pg.evaluate('__delve.press("KeyJ")')
+        pg.evaluate('''() => {
+          __delve.newGame(3, "normal");
+          const g = __delve.game;
+          const tiles = g.floors[4].tiles;
+          for (let y = 0; y < tiles.length; y++) {
+            for (let x = 0; x < tiles[y].length; x++) if (tiles[y][x] === 4) { __delve.setPos(x, y, 4, 1); return; }
+          }
+        }''')
+        pg.evaluate('__delve.setQuality("high")')
+        pg.wait_for_timeout(350)
+        pg.screenshot(path='/tmp/delve-forge.png', full_page=False)
+        pg.evaluate('''() => {
+          const g = __delve.game;
+          g.inHub = true;
+          const nell = g.hub.entities.find(e => e.id === "nell");
+          __delve.setPos(nell.x, nell.y + 1, g.floor, 0);
+          __delve.interact();
+        }''')
+        pg.wait_for_timeout(250)
+        ok('Nell' in pg.inner_text('#talk'), 'Nell speaks at the waystation')
+        pg.screenshot(path='/tmp/delve-hub.png', full_page=False)
         pg.evaluate('__delve.setQuality("high")')
         pg.wait_for_timeout(400)
         pg.screenshot(path='/tmp/delve-chest-far.png', full_page=False)
