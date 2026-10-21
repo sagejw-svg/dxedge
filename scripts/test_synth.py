@@ -153,7 +153,7 @@ with sync_playwright() as pw:
         return e
 
     # ---------------------------------------------------------------- 1. self oscillation tracks pitch
-    cases = [("ladder24", "12AT7"), ("valve12", "12AX7"), ("valve12", "300B"), ("valve12", "EL34"), ("valve12", "KT88")]
+    cases = [("ladder24", "12AT7"), ("diode18", "12AT7"), ("valve12", "12AX7"), ("valve12", "300B"), ("valve12", "EL34"), ("valve12", "KT88")]
     for model, tube in cases:
         devs = []
         for n in (48, 60, 72, 84, 96):
@@ -166,11 +166,18 @@ with sync_playwright() as pw:
         info(f"1. {model} ({tube}) cents from pitch", [round(d, 2) for d in devs])
 
     # ---------------------------------------------------------------- 2. cutoff accuracy (zero resonance)
+    def diode_h(s, b=0.5):
+        # Diode 18's linear response: three coupled nodes, each loading the one before by b
+        A = np.array([[s + 1 + b, -b, 0], [-1, s + 1 + b, -b], [0, -1, s + 1]], dtype=complex)
+        return np.linalg.solve(A, np.array([1, 0, 0], dtype=complex))[2]
     def H(model, f, fc):
         fs = 2 * SR; g = math.tan(math.pi * fc / fs); W = math.tan(math.pi * f / fs) / g
         if model == "ladder24": return abs(1 / (1 + 1j * W)) ** 4
+        if model == "diode18":   # node frequency: the knob x 2.94 (zero resonance) / sqrt(17)/2, clamped like the engine
+            gd = math.tan(math.pi * min(fc * 2.94, SR * 0.45) / fs) / 2.0615528128088303
+            return abs(diode_h(1j * math.tan(math.pi * f / fs) / gd))
         return abs(1 / (1 - W * W + 2j * 0.70710678 * W))
-    for model in ("valve12", "ladder24"):
+    for model in ("valve12", "ladder24", "diode18"):
         for fc in (100, 440, 1000, 4000):
             pt = lambda cut: patch(osc1={"wave": "sine", "level": 0.05, "fixed": fc}, filt={"model": model, "cutoff": cut})
             a = tone_amp(render(pt(fc), note(60), 1.0, rack=False)[0][SR // 2:], fc)
@@ -179,6 +186,55 @@ with sync_playwright() as pw:
             cs = np.linspace(fc * 0.85, fc * 1.15, 3001)
             ce = cs[np.argmin([abs(db(H(model, fc, c) / H(model, fc, 20000)) - meas) for c in cs])]
             ck(f"2. {model} cutoff at {fc} Hz is within 3% (measured {100 * (ce / fc - 1):+.2f}%)", abs(ce / fc - 1) <= 0.03, (meas, ce))
+
+    # ---------------------------------------------------------------- Df. Diode 18 (three coupled poles)
+    # Below the threshold (resonance 0.9) it must not ring on its own; past it, test 1 checks the pitch.
+    L, _ = render(patch(osc1={"level": 0}, filt={"model": "diode18", "cutoff": 262, "res": 0.85, "keytrack": 1}), note(60), 1.5, rack=False)
+    q = float(np.sqrt(np.mean(L[SR // 2:] ** 2)))
+    ck(f"Df. Diode 18 at resonance 0.85 stays quiet with no input ({db(q):.1f} dBFS, want below -80)", db(q) < -80, db(q))
+    L, _ = render(patch(osc1={"level": 0}, filt={"model": "diode18", "cutoff": 262, "res": 1, "keytrack": 1}), note(60), 1.5, rack=False)
+    q = float(np.sqrt(np.mean(L[SR // 2:] ** 2)))
+    ck(f"Df. Diode 18 at full resonance sings on its own ({db(q):.1f} dBFS, want -30 to -3)", -30 < db(q) < -3, db(q))
+    # The slope: three poles, about 18 dB an octave well past the cutoff (measured 2 to 4 kHz with the knob at 250 Hz)
+    def dio_tone(f, cut, lvl=0.05, res=0):
+        L, _ = render(patch(osc1={"wave": "sine", "level": lvl, "fixed": f}, filt={"model": "diode18", "cutoff": cut, "res": res}), note(60), 1.0, rack=False)
+        return tone_amp(L[SR // 2:], f)
+    # The 20 kHz reference is itself a Diode 18 (its node sits near 10 kHz), so both sides divide it out.
+    slope = db(dio_tone(6000, 100) / dio_tone(3000, 100)) - db(dio_tone(6000, 20000) / dio_tone(3000, 20000))
+    s_model = db(H("diode18", 6000, 100) / H("diode18", 3000, 100)); want = s_model - db(H("diode18", 6000, 20000) / H("diode18", 3000, 20000))
+    ck(f"Df. Diode 18 rolls off like three poles: 3 to 6 kHz with the knob at 100 Hz measures {slope:.1f} dB against the model's {want:.1f} (within 1), and the model is {s_model:.1f} dB an octave",
+       abs(slope - want) <= 1 and -19 <= s_model <= -17, (slope, want, s_model))
+    # Squelch: a loud input fights the resonance. The gain at the peak drops when the input is loud.
+    pk_q = dio_tone(500, 500, 0.01, 0.85) / 0.01; pk_l = dio_tone(500, 500, 0.6, 0.85) / 0.6
+    ck(f"Df. Diode 18: a loud input fights the peak (peak gain {db(pk_q):.1f} dB quiet, {db(pk_l):.1f} dB loud, want 6 dB or more apart)", db(pk_q) - db(pk_l) >= 6, (db(pk_q), db(pk_l)))
+    pk_up = db(pk_q) - db(dio_tone(500, 20000, 0.01) / 0.01)
+    ck(f"Df. Diode 18 resonance 0.85 makes a peak at the cutoff ({pk_up:.1f} dB above the open filter, want 10 or more)", pk_up >= 10, pk_up)
+    # Passband make-up: a saw at resonance 0.5 and 0.85 stays within 3 dB of resonance 0
+    lv = {}
+    for rv in (0, 0.5, 0.85):
+        L, _ = render(patch(filt={"model": "diode18", "cutoff": 800, "res": rv}), note(36), 1.0, rack=False)
+        lv[rv] = db(float(np.sqrt(np.mean(L[SR // 2:] ** 2))))
+    ck(f"Df. Diode 18 keeps its level as resonance rises (0.5: {lv[0.5] - lv[0]:+.1f} dB, 0.85: {lv[0.85] - lv[0]:+.1f} dB; within 3)",
+       abs(lv[0.5] - lv[0]) <= 3 and abs(lv[0.85] - lv[0]) <= 3, lv)
+    # Extremes: full resonance, both ends of the cutoff, full drive, a hot chord: finite and bounded
+    worst, bad = 0.0, 0
+    for cut in (16, 262, 20000):
+        L, R = render(patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, v1={"drive": 10},
+                            filt={"model": "diode18", "cutoff": cut, "res": 1, "drive": 10, "env": 1}), [e for k in (24, 48, 72, 96) for e in note(k, 0.0)], 1.0, rack=False)
+        bad += int(np.sum(~np.isfinite(L)) + np.sum(~np.isfinite(R))); worst = max(worst, float(np.max(np.abs(L))))
+    ck(f"Df. Diode 18 at full resonance and drive, cutoff 16 Hz to 20 kHz: finite and bounded (peak {worst:.2f}, want under 8)", bad == 0 and worst < 8, (bad, worst))
+    # Stereo offset runs two Diode 18 filters per voice
+    L, R = render(patch(filt={"model": "diode18", "cutoff": 600, "offset": 1}, stereo={"pan": "center", "spread": 0}), note(45), 1.5, rack=False)
+    def _cen(x):
+        X = np.abs(np.fft.rfft(x * np.hanning(len(x)))); f_ = np.fft.rfftfreq(len(x), 1 / SR); return float(np.sum(X * f_) / np.sum(X))
+    cl, cr = _cen(L[SR // 2:]), _cen(R[SR // 2:])
+    ck(f"Df. diode18 stereo offset +1 oct: the right side is brighter (centroid {cl:.0f} -> {cr:.0f} Hz)", cr > cl * 1.25, (cl, cr))
+    # The schema: diode18 is a model; an unknown one still falls back; the factory Diode Squelch is on it
+    nz = pg.evaluate("""() => { const N = __synth.eq.normalize;
+      return { d: N({ filt: { model: 'diode18' } }).filt.model, x: N({ filt: { model: 'diode99' } }).filt.model,
+               sq: __synth.factoryPatch('Diode Squelch').filt.model }; }""")
+    ck(f"Df. a patch with filt.model diode18 keeps it; an unknown model loads as Valve 12; Diode Squelch is on Diode 18 ({nz})",
+       nz == {"d": "diode18", "x": "valve12", "sq": "diode18"}, nz)
 
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
@@ -1344,7 +1400,7 @@ with sync_playwright() as pw:
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
-    for model in ("ladder24", "valve12"):
+    for model in ("ladder24", "valve12", "diode18"):
         big["filt"]["model"] = model
         r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
         info(f"9. CPU {model}, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time in headless Chrome (offline render, rack included)")
@@ -1537,6 +1593,12 @@ with sync_playwright() as pw:
     ck("choosing a patch loads it", pg.evaluate("__synth.patch().name") == "Plate Bass" and pg.evaluate("__synth.patch().filt.model") == "ladder24")
     ck("the Ladder hides the Valve-only loop tube row", not pg.is_visible("#loopChips"))
     pg.click('.chip[data-v="valve12"]'); ck("model chip switches to Valve 12", pg.evaluate("__synth.patch().filt.model") == "valve12" and pg.is_visible("#loopChips"))
+    pg.click('.chip[data-v="diode18"]')
+    ck("model chip switches to Diode 18 and hides the Valve-only loop tube row", pg.evaluate("__synth.patch().filt.model") == "diode18" and not pg.is_visible("#loopChips"))
+    ck("the filter note names Diode 18", "Diode 18" in pg.inner_text("#filtNote"), pg.inner_text("#filtNote"))
+    bb = pg.query_selector('#mFilt .chip[data-v="diode18"]').bounding_box()
+    ck(f"the Diode 18 chip is on screen and sits on one row with the others ({bb['height']:.0f} px tall)", bb["width"] > 0 and abs(bb["y"] - pg.query_selector('#mFilt .chip[data-v="valve12"]').bounding_box()["y"]) < 2, bb)
+    pg.click('.chip[data-v="valve12"]')
     pg.click('#mFilt .chip[data-v="EL34"]'); ck("loop tube chip sets V2 and the chassis label", pg.evaluate("__synth.patch().filt.tube") == "EL34" and pg.inner_text("#nameV2") == "EL34")
     # save a user patch, reload, still there
     pg.click("#saveP"); pg.fill("#saveName", "Test Bass"); pg.click("#saveOk"); pg.wait_for_timeout(100)
@@ -1979,6 +2041,8 @@ with sync_playwright() as pw:
         ck(f"10. {w}px: the Filter tab shows the filter", ph.is_visible("#mFilt") and not ph.is_visible("#mOsc1"))
         small = ph.evaluate("""() => [...document.querySelectorAll('.tabs button, .key.w, .btn, .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: touch targets are 44 px or more", not small, small)
+        ck(f"10. {w}px: the Filter tab shows the Diode 18 chip with no horizontal scroll",
+           ph.is_visible('#mFilt .chip[data-v="diode18"]') and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
         kk = ph.query_selector('.key.w'); bb = kk.bounding_box()
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")

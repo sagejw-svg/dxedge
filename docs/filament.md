@@ -171,7 +171,14 @@ task can read it).
 - [x] LFO 2 (adds auto-pan), and stereo phase (0-180 degrees) for both LFOs - 13 Oct, stereo round
 - [x] Unison 1-8 copies per note with detune and spread (copies come from the 16-voice pool) - 13 Oct, stereo round
 - [x] Filter stereo offset (left and right cutoffs apart by up to +/-1 octave; two filters per voice only when in use) - 13 Oct, stereo round
-- [ ] Diode 18 filter model (then move the Diode Squelch patch onto it)
+- [x] Diode 18 filter model (then move the Diode Squelch patch onto it) - 21 Oct 2026 (nightly).
+      Three coupled poles: each node charges through a diode pair (tanh of the voltage across it) and
+      loads the node before it by half; negative feedback from the last pole. Our own nodal equations,
+      trapezoidal, solved per sample as one 3x3 system with the diode slopes taken at the last estimate
+      (no iteration, no allocation). Self-oscillates from 0.9 on resonance and tracks the keys (test 1);
+      below that the node frequency is lifted so the zero-resonance passband sits near Ladder 24's for the
+      same knob. Diode Squelch now uses it (retuned: cutoff 240, resonance 0.86, envelope 0.6, voice
+      level 0.5 to keep its level).
 - [ ] Sallen-Key 12 (aggressive LP/HP pair, hard-clipping resonance)
 - [ ] Poly 24 (OTA cascade)
 - [ ] State variable 12 multimode with morph (LP, BP, HP, notch)
@@ -817,6 +824,7 @@ and proven by measurement), test suite health, load time and memory, code health
   for James, not this job.
 
 ## Open items for James
+- Nightly 21 Oct: listen to Diode 18, and to Diode Squelch, which moved onto it (its sound changed on purpose; level matched to within 0.2 dB in a Node render of a bass riff). Calls made, any of which can change: each stage loads the one before by half (0 would be three buffered poles, 1 a plain RC ladder); it sings from 0.9 on resonance like Ladder 24; at low resonance the cutoff is lifted (2.94x at zero, easing out by 0.9) so switching a patch from Ladder 24 to Diode 18 keeps roughly the same brightness, which means the resonant peak moves up a little as resonance comes down; passband make-up 1 + 0.62k, so a saw loses about 2 dB at resonance 0.3 to 0.5 (Ladder 24 loses about 2.5).
 - Play it on the new keyboard and on a phone: is the Novachord Strings default the right first sound?
 - CPU on a real mid-range phone (headless Chrome on the build server: about 20% of real time for
   8 voices including the rack). The budget is 40%. WebAssembly is the fallback if a phone misses it.

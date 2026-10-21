@@ -2263,7 +2263,7 @@ const WAVE_L = { saw: 'saw', pulse: 'pulse', tri: 'tri', sine: 'sine' };
 document.querySelectorAll('[data-chips]').forEach(el => {
   const p = el.dataset.chips;
   const labels = {
-    'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24' },
+    'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18' },
     'lfo1.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' },
     'lfo1.mode': { global: 'global', voice: 'per voice' }, 'lfo2.mode': { global: 'global', voice: 'per voice' },
     'lfo2.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' }, 'stereo.pan': { center: 'centre', alt: 'alternate', key: 'keyboard', random: 'random' },
@@ -2447,6 +2447,8 @@ function afterF() {
   ['filt.sag', 'filt.bias'].forEach(p => { kn(p).k.el.style.display = valve ? '' : 'none'; });
   $('filtNote').textContent = valve
     ? 'Valve 12: 2-pole lowpass with V2 in its resonance loop. Triodes sing, power tubes scream.'
+    : cur.filt.model === 'diode18'
+    ? 'Diode 18: three coupled poles through diode pairs. Rubbery and squelchy; it sings from about 9 on resonance. Loud input fights the peak.'
     : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
   const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
   $('lfo2Pilot').classList.toggle('off', !l2on);

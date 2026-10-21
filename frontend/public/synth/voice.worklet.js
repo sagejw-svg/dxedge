@@ -7,7 +7,7 @@
 // the only decimators are the two on the sum.
 //
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
-//   -> filter (Valve 12 or Ladder 24) -> VCA -> pan -> L/R (2x) -> half-band -> out
+//   -> filter (Valve 12, Ladder 24 or Diode 18) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
@@ -24,6 +24,10 @@
 //   Valve 12:  a 2-pole state variable lowpass whose resonance is positive feedback of
 //              the band-pass through a tube curve (the same g(u) voicings as the rack),
 //              a coupling-capacitor high-pass, and a supply-sag follower.
+//   Diode 18:  three coupled poles. Each stage is a capacitor charged through a diode pair
+//              (a tanh of the voltage across it) that also loads the stage before it by half
+//              (DIO_B), with negative feedback from the last pole. Our own formulation: the
+//              coupled nodal equations, trapezoidal, solved as one 3x3 tridiagonal system.
 //
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
 //   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}, {t:'release'}. Any of them may carry
@@ -225,6 +229,25 @@ class Filt {
     s1 += 2 * fq * (xx - y0); s2 += 2 * fq * (y0 - yy1); s3 += 2 * fq * (yy1 - yy2); s4 += 2 * fq * (yy2 - t4 * y3);
     s[F_S1] = s1; s[F_S2] = s2; s[F_S3] = s3; s[F_S4] = s4;
     s[F_OUT] = y3 * s[F_COMP];
+  }
+  // Diode 18: three capacitor nodes v1..v3. Node i charges from node i-1 through a diode pair,
+  // current t_i (v_{i-1} - v_i) with t_i = tanh(d)/d at the last estimate of d, and node i+1's
+  // current pulls it back by DIO_B of the same. v0 is the input less k times v3. With the t_i
+  // fixed for this sample the trapezoidal equations are linear and tridiagonal (plus the
+  // feedback term), solved exactly by elimination: no iteration, no allocation.
+  diode() {
+    const s = this.s, y = s[F_IN], g = s[F_G], k = s[F_K], B = DIO_B;
+    const s1 = s[F_S1], s2 = s[F_S2], s3 = s[F_S3];
+    const ih = 0.5 * (y + s[F_ZI]); s[F_ZI] = y;
+    const t1 = tdx(ih - k * s3 - s1), t2 = tdx(s1 - s2), t3 = tdx(s2 - s3);
+    const a = g * t1, b = g * t2, c = g * t3;
+    const d1 = 1 / (1 + a + B * b), r1 = s1 + a * ih;
+    const A2 = 1 + b + B * c - B * b * b * d1, B2 = a * b * k * d1 - B * c, R2 = s2 + b * r1 * d1;
+    const v3 = (A2 * s3 + c * R2) / (A2 * (1 + c) + c * B2);
+    const v2 = (R2 - B2 * v3) / A2;
+    const v1 = (r1 + B * b * v2 - a * k * v3) * d1;
+    s[F_S1] = 2 * v1 - s1; s[F_S2] = 2 * v2 - s2; s[F_S3] = 2 * v3 - s3;
+    s[F_OUT] = v3 * s[F_COMP];
   }
   // Valve 12: a 2-pole SVF lowpass whose resonance is positive feedback of the band-pass through
   // the loop tube's curve, a coupling-cap high-pass and a supply-sag follower, linearised at the
@@ -624,11 +647,22 @@ class Filament extends AudioWorkletProcessor {
   // Skipped when the inputs match the last call for this filter, which is every tick of a held
   // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
   fcoef(F, model) {
-    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 2 + model;
+    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 3 + model;
     if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
     s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
     let fc = clamp(this.cc[0], 16, sr * 0.45);
-    if (model === 1) {
+    if (model === 2) {
+      // Diode: below the oscillation point the node frequency is lifted (DIO_LIFT at zero
+      // resonance, easing out by the threshold) so the passband sits near Ladder 24's for the same
+      // knob; at and past it the loop oscillates at the knob. Past it the diodes pull the pitch
+      // flat by a measured amount per unit of loop gain over the threshold (DIO_CAL, cents).
+      const u = res * DIO_KMAX / DIO_K0;
+      if (u < 1) { const e = 1 - u; fc *= 1 + (DIO_LIFT - 1) * e * e; }
+      else {
+        const g0 = Math.PI * fc / fs, e = Math.min(1, (u - 1) / (DIO_KMAX / DIO_K0 - 1));
+        fc *= Math.pow(2, (DIO_CAL[0] + (DIO_CAL[1] + DIO_CAL[2] * g0) * g0) * (1.47 - 0.47 * e) * e / 1200);
+      }
+    } else if (model === 1) {
       // Ladder: the tanh stages pull a self-oscillating filter flat, by an amount set by how
       // far the loop gain is past 4 (measured: about 86 cents per unit, a little less up high).
       const over = res * 4.45 - 4;
@@ -645,7 +679,8 @@ class Filament extends AudioWorkletProcessor {
     }
     fc = clamp(fc, 16, sr * 0.45);
     s[F_G] = Math.tan(Math.PI * fc / fs);
-    if (model === 1) { s[F_K] = res * 4.45; s[F_COMP] = 1 + s[F_K] * 0.45; }
+    if (model === 2) { s[F_G] /= DIO_W0; s[F_K] = res * DIO_KMAX; s[F_COMP] = 1 + s[F_K] * DIO_COMP; }
+    else if (model === 1) { s[F_K] = res * 4.45; s[F_COMP] = 1 + s[F_K] * 0.45; }
     else {
       // The coupling cap in the Valve loop sits a fixed ratio below the cutoff (each tube's hp/400),
       // so its phase lead, and the pitch shift that comes with it, is the same on every key.
@@ -700,7 +735,7 @@ class Filament extends AudioWorkletProcessor {
     const off2 = num(o2.oct, 0) * 12 + num(o2.semi, 0) + num(o2.fine, 0) / 100;
     const fix1 = num(o1.fixed, 0), fix2 = num(o2.fixed, 0);
     const sync = !!o2.sync, pink = nz.color === 'pink';
-    const model = f.model === 'ladder24' ? 1 : 0;
+    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : 0;
     const ea = P.envA || {}, ef = P.envF || {};
     const aA = coef(Math.max(0.001, num(ea.a, 0.005)) / 1.466, sr), aD = coef(Math.max(0.001, num(ea.d, 0.3)) / 4.6, sr), aS = clamp(num(ea.s, 0.8), 0, 1), aR = coef(Math.max(0.003, num(ea.r, 0.3)) / 4.6, sr);
     const fA = coef(Math.max(0.001, num(ef.a, 0.005)) / 1.466, sr), fD = coef(Math.max(0.001, num(ef.d, 0.3)) / 4.6, sr), fS = clamp(num(ef.s, 0.5), 0, 1), fR = coef(Math.max(0.003, num(ef.r, 0.3)) / 4.6, sr);
@@ -718,7 +753,7 @@ class Filament extends AudioWorkletProcessor {
     // Two filters per voice only when something makes left and right differ.
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
-    const cc = this.cc, isLadder = model === 1;
+    const cc = this.cc, isLadder = model === 1, isDiode = model === 2;
 
     // smoothed parameters at each control tick, shared by every voice
     const CT = this.CT, nt = Math.ceil(frames / CTRL);
@@ -876,10 +911,10 @@ class Filament extends AudioWorkletProcessor {
           dcy = y - dcx + dcA * dcy; dcx = y; y = dcy * fdG;
           // filter(s)
           fl[F_IN] = y;
-          if (isLadder) FL.ladder(); else FL.valve(lTab);
+          if (isLadder) FL.ladder(); else if (isDiode) FL.diode(); else FL.valve(lTab);
           const yl = fl[F_OUT];
           let yr = yl;
-          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else FR.valve(lTab); yr = frs[F_OUT]; }
+          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isDiode) FR.diode(); else FR.valve(lTab); yr = frs[F_OUT]; }
           const idx = i * OS + s;
           L2[idx] += yl * aLg; R2[idx] += yr * aRg;
         }
@@ -918,6 +953,16 @@ const VCAL0 = [0, 0, 0];
 // that the power tubes' odd harmonics come through.
 const KMAX = 2.2, KEXP = 2.7, RES_T = Math.pow(1.41421356 / KMAX, 1 / KEXP);
 const LGX = 0.3;   // how much of each tube's own gain reaches the Valve loop (0 = all the same)
+// Diode 18. DIO_B: how hard each stage loads the one before it (0 is three buffered one-poles,
+// 1 a plain RC ladder). With 0.5 the linear loop rings at DIO_W0 = sqrt(17)/2 times the node
+// frequency and oscillates once k passes DIO_K0 = 16 (worked out from the nodal equations, and
+// checked numerically). Full resonance takes k 11% past it. DIO_LIFT puts the zero-resonance
+// -3 dB point near Ladder 24's (0.435 of the knob). DIO_COMP makes up most of the passband the
+// feedback takes away (1 / (1 + k) at DC). DIO_CAL: the cents the cutoff is raised by past the threshold,
+// a + b g0 + c g0^2 with g0 = pi fc / fs at full resonance, shaped by 1.47 e - 0.47 e^2 as e runs
+// 0..1 from the threshold to full (measured in Node renders of the voice, 36 to 108, cutoff 262 Hz).
+const DIO_B = 0.5, DIO_W0 = 2.0615528128088303, DIO_K0 = 16, DIO_KMAX = 16 / 0.9, DIO_LIFT = 2.94, DIO_COMP = 0.62;
+const DIO_CAL = [209, -1209, 2775];
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };
 // tanh(x)/x, Pade approximant (exact enough for |x| < 3, still monotone and bounded beyond)
