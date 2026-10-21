@@ -2,7 +2,7 @@
 
 import {
   FLOOR_NAMES, FLOORS, FACING_NAME, SPELLS, DIFF_KEY,
-  createGame, move, attack, cast, interact, tick, useItem,
+  createGame, move, attack, attackOne, cast, interact, tick, useItem,
   saveGame, loadGame, hasSave, clearSave, summarize, tileAt, debug,
 } from './engine.js';
 import { createView } from './render.js';
@@ -23,10 +23,15 @@ const floorEl = document.getElementById('floor-label');
 const faceEl = document.getElementById('face-label');
 const metaEl = document.getElementById('meta-label');
 const muteBtn = document.getElementById('mute');
+const volInput = document.getElementById('vol');
+const helpEl = document.getElementById('help');
+const viewWrap = document.getElementById('view-wrap');
+const floatersEl = document.getElementById('floaters');
 
 let game = null;
 let reported = false;
 let logSeen = -1;
+let helpWasPaused = false;
 let cam = { x: 1.5, y: 1.5, ang: 0 };
 let nextAct = 0;
 const held = new Set();
@@ -137,7 +142,8 @@ function showTitle() {
   showOverlay(
     '<p class="kicker">dxedge · a grid crypt</p>' +
     '<h1>Delve</h1>' +
-    '<p class="lead">Four champions, one lantern, and five floors that are never quite the same. Walk the grid, fight what moves, and take the stairs. Keys and levers open the side rooms. The way down does not need them.</p>' +
+    '<p class="lead">Four champions, one lantern, and seven floors that are never quite the same. Walk the grid, fight what moves, and take the stairs. A warden holds the fifth stair. The seal waits at the bottom. Keys and levers open the side rooms. The way down does not need them.</p>' +
+    '<p class="lead" id="title-hint">W S move, A D turn, Q E strafe. Space swings the front rank. H lists every key.</p>' +
     '<div class="diffs" role="group" aria-label="Difficulty">' + diffButtons(diffPref()) + '</div>' +
     '<div class="row">' +
       '<button type="button" id="begin" class="primary">New delve</button>' +
@@ -146,7 +152,7 @@ function showTitle() {
     '<ul class="help">' +
       '<li><b>W</b> forward, <b>S</b> back, <b>A</b> and <b>D</b> turn. Arrow keys do the same.</li>' +
       '<li><b>Q</b> and <b>E</b> strafe. The buttons under the view do all of this by mouse or touch.</li>' +
-      '<li><b>Space</b> attacks. <b>F</b> uses a door, a chest, a lever, or the stairs. <b>1</b> to <b>5</b> speak the runes.</li>' +
+      '<li><b>Space</b> swings the front rank. <b>Z X C V</b> send Bryn, Cara, Ivo, and Senn alone. <b>F</b> uses. <b>1</b> to <b>5</b> speak the runes.</li>' +
     '</ul>' +
     '<p class="lead" id="title-credits">Original code. Pictures and the ember favicon are drawn in the page. Sound is synthesized here. Nothing is loaded from another site, and nothing here is taken from another dungeon game.</p>'
   );
@@ -165,7 +171,7 @@ function showPause() {
       '<button type="button" id="again">Title</button>' +
     '</div>' +
     '<ul class="help">' +
-      '<li>W S move, A D turn, Q E strafe. Space attacks, F uses, 1–5 are runes.</li>' +
+      '<li>W S move, A D turn, Q E strafe. Space swings the front rank. Z X C V attack one champion. F uses, 1–5 are runes. H lists every key.</li>' +
       '<li>The save is only in this browser. Nothing is sent with it.</li>' +
     '</ul>'
   );
@@ -196,9 +202,14 @@ function note(text) {
   note._t = setTimeout(() => { el.hidden = true; }, 1600);
 }
 
+function noteLevel(ping) {
+  if (game && (game.levelPing || 0) > ping) audio.level();
+}
+
 function act(cmd) {
-  if (!game || game.phase !== 'play' || game.paused) return;
+  if (!game || game.phase !== 'play' || game.paused || helpOpen()) return;
   const before = game.hurtMs;
+  const ping = game.levelPing || 0;
   const r = move(game, cmd);
   if (!r) return;
   if (r.moved) audio.step();
@@ -206,31 +217,49 @@ function act(cmd) {
   else if (r.bumped) audio.hit();
   else if (r.reason === 'blocked') audio.wall();
   if (game.hurtMs > before) audio.hurt();
+  noteLevel(ping);
+  if (game.phase !== 'play') showEnd();
+}
+
+function finishStrike(r, before, ping) {
+  if (r && r.ok) audio.hit();
+  else if (r && r.reason === 'none') audio.miss();
+  if (game.hurtMs > before) audio.hurt();
+  noteLevel(ping);
+  if (game.phase === 'won') audio.win();
   if (game.phase !== 'play') showEnd();
 }
 
 function doAttack() {
-  if (!game || game.phase !== 'play' || game.paused) return;
+  if (!game || game.phase !== 'play' || game.paused || helpOpen()) return;
   const before = game.hurtMs;
-  const r = attack(game);
-  if (r && r.ok) audio.hit();
-  if (game.hurtMs > before) audio.hurt();
-  if (game.phase !== 'play') showEnd();
+  const ping = game.levelPing || 0;
+  finishStrike(attack(game), before, ping);
+}
+
+function doAttackOne(index) {
+  if (!game || game.phase !== 'play' || game.paused || helpOpen()) return;
+  const before = game.hurtMs;
+  const ping = game.levelPing || 0;
+  finishStrike(attackOne(game, index), before, ping);
 }
 
 function doCast(id) {
-  if (!game || game.phase !== 'play' || game.paused) return;
+  if (!game || game.phase !== 'play' || game.paused || helpOpen()) return;
+  const ping = game.levelPing || 0;
   const r = cast(game, id);
   if (r && r.ok) audio.spell();
-  if (game.phase !== 'play') { audio.win(); showEnd(); }
+  noteLevel(ping);
+  if (game.phase === 'won') audio.win();
+  if (game.phase !== 'play') showEnd();
 }
 
 function doUse() {
-  if (!game || game.phase !== 'play' || game.paused) return;
-  const floorBefore = game.floor;
-  interact(game);
-  if (game.floor !== floorBefore) audio.spell();
-  else audio.pickup();
+  if (!game || game.phase !== 'play' || game.paused || helpOpen()) return;
+  const r = interact(game);
+  if (r && (r.sound === 'door' || r.sound === 'lever')) audio.door();
+  else if (r && r.sound === 'stairs') audio.step();
+  else if (r && (r.sound === 'chest' || r.sound === 'locked')) audio.pickup();
 }
 
 function paintParty() {
@@ -259,7 +288,7 @@ function paintParty() {
     el.classList.toggle('sel', i === game.selected);
     el.classList.toggle('down', c.hp <= 0);
     el.querySelector('.name').textContent = c.name;
-    el.querySelector('.role').textContent = c.role + ' · lv ' + c.level;
+    el.querySelector('.role').textContent = c.role + ' · ' + ['Z', 'X', 'C', 'V'][i] + ' · lv ' + c.level;
     const bars = [['.hp', c.hp, c.maxHp], ['.sta', c.sta, c.maxSta], ['.mana', c.mana, c.maxMana]];
     for (const [sel, v, max] of bars) {
       const bar = el.querySelector(sel);
@@ -324,11 +353,31 @@ function paintSpells() {
   });
 }
 
+function paintFx() {
+  if (!viewWrap) return;
+  if (!game || !game.shake) viewWrap.style.transform = '';
+  else {
+    const s = Math.min(1, game.shake / 220);
+    const x = (Math.random() - 0.5) * 12 * s;
+    const y = (Math.random() - 0.5) * 8 * s;
+    viewWrap.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+  }
+  if (!floatersEl) return;
+  const items = (game && game.floaters) || [];
+  floatersEl.innerHTML = items.map((f, i) => {
+    const t = 1 - Math.max(0, f.life) / 900;
+    const y = 46 - t * 30;
+    const x = 50 + ((i % 5) - 2) * 7;
+    return '<span class="floater ' + (f.kind || 'hit') + '" style="left:' + x + '%;top:' + y + '%;opacity:' + Math.max(0, 1 - t * 0.85).toFixed(2) + '">' + escapeHtml(f.text) + '</span>';
+  }).join('');
+}
+
 function paintAll() {
   paintParty();
   paintLog();
   paintHud();
   paintSpells();
+  paintFx();
 }
 
 function heldCommand() {
@@ -367,12 +416,60 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+function helpOpen() {
+  return !!(helpEl && !helpEl.hidden);
+}
+
+function toggleHelp() {
+  if (!helpEl) return;
+  if (!helpEl.hidden) {
+    helpEl.hidden = true;
+    if (game && game.phase === 'play' && !helpWasPaused) game.paused = false;
+    return;
+  }
+  helpWasPaused = !!(game && game.paused);
+  if (game && game.phase === 'play') game.paused = true;
+  held.clear();
+  helpEl.hidden = false;
+}
+
+function typingTarget(e) {
+  const t = e.target;
+  return !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'));
+}
+
+function syncMute() {
+  const on = audio.muted();
+  muteBtn.textContent = on ? 'Sound off' : 'Sound on';
+  muteBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
 window.addEventListener('keydown', (e) => {
-  if (e.repeat && (e.code === 'Space' || /^Digit/.test(e.code) || e.code === 'KeyF')) return;
+  if (e.code === 'KeyH' || e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
+    if (typingTarget(e)) return;
+    e.preventDefault();
+    audio.start();
+    toggleHelp();
+    return;
+  }
+  if (helpOpen()) {
+    if (e.code === 'Escape') { e.preventDefault(); toggleHelp(); }
+    return;
+  }
+  if (e.code === 'KeyM') {
+    if (typingTarget(e)) return;
+    e.preventDefault();
+    audio.start();
+    audio.toggle();
+    syncMute();
+    return;
+  }
+  if (e.repeat && (e.code === 'Space' || /^Digit/.test(e.code) || e.code === 'KeyF' || /^Key[ZXCV]$/.test(e.code))) return;
   const cmd = KEYS[e.code];
   if (cmd) {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (typingTarget(e)) return;
     e.preventDefault();
+    audio.start();
     held.add(cmd);
     if (!e.repeat) {
       act(cmd);
@@ -380,8 +477,17 @@ window.addEventListener('keydown', (e) => {
     }
     return;
   }
-  if (e.code === 'Space') { e.preventDefault(); doAttack(); }
-  else if (e.code === 'KeyF' || e.code === 'Enter') { e.preventDefault(); doUse(); }
+  if (typingTarget(e)) return;
+  const solo = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 }[e.code];
+  if (solo != null) { e.preventDefault(); audio.start(); doAttackOne(solo); return; }
+  if (e.shiftKey && /^Digit[1-4]$/.test(e.code)) {
+    e.preventDefault();
+    audio.start();
+    doAttackOne(Number(e.code.slice(5)) - 1);
+    return;
+  }
+  if (e.code === 'Space') { e.preventDefault(); audio.start(); doAttack(); }
+  else if (e.code === 'KeyF' || e.code === 'Enter') { e.preventDefault(); audio.start(); doUse(); }
   else if (e.code === 'Escape') { e.preventDefault(); if (game && game.phase === 'play' && !game.paused) showPause(); else if (game && game.paused) { game.paused = false; hideOverlay(); } }
   else if (e.code === 'Tab') {
     e.preventDefault();
@@ -391,7 +497,7 @@ window.addEventListener('keydown', (e) => {
     paintParty();
   } else if (/^Digit[1-5]$/.test(e.code)) {
     const n = Number(e.code.slice(5)) - 1;
-    if (SPELLS[n]) doCast(SPELLS[n].id);
+    if (SPELLS[n]) { audio.start(); doCast(SPELLS[n].id); }
   }
 });
 
@@ -436,10 +542,19 @@ document.getElementById('load').addEventListener('click', () => {
   note('Save loaded.');
 });
 muteBtn.addEventListener('click', () => {
-  const on = audio.toggle();
-  muteBtn.textContent = on ? 'Sound off' : 'Sound on';
-  muteBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  audio.start();
+  audio.toggle();
+  syncMute();
 });
+if (volInput) {
+  volInput.value = String(Math.round(audio.volume() * 100));
+  volInput.addEventListener('input', () => {
+    audio.setVolume(Number(volInput.value) / 100);
+  });
+}
+syncMute();
+const helpBtn = document.getElementById('help-btn');
+if (helpBtn) helpBtn.addEventListener('click', () => { audio.start(); toggleHelp(); });
 
 mapCanvas.width = 220;
 mapCanvas.height = 220;
@@ -459,6 +574,7 @@ window.__delve = {
   party() { return game ? game.party : []; },
   move(cmd) { return game ? move(game, cmd) : null; },
   attack() { return game ? attack(game) : null; },
+  attackOne(i) { return game ? attackOne(game, i) : null; },
   cast(id) { return game ? cast(game, id) : null; },
   interact() { return game ? interact(game) : null; },
   useItem(i, n) { return game ? useItem(game, i, n) : null; },
@@ -482,6 +598,10 @@ window.__delve = {
   wipe() { if (game) { debug.wipe(game); if (game.phase !== 'play') showEnd(); } },
   killAll() { if (game) { debug.killAll(game); if (game.phase !== 'play') showEnd(); } },
   press(code) {
+    if (code === 'KeyH' || code === 'Slash') { toggleHelp(); return; }
+    if (code === 'KeyM') { audio.toggle(); syncMute(); return; }
+    const solo = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 }[code];
+    if (solo != null) { doAttackOne(solo); return; }
     const cmd = KEYS[code];
     if (cmd) act(cmd);
     else if (code === 'Space') doAttack();

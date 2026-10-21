@@ -27,7 +27,10 @@ export const COLS = 4;
 export const ROWS = 4;
 export const CELL = 8;
 export const MAP = COLS * CELL + 1; // 33
-export const FLOORS = 5;
+export const FLOORS = 7;
+export const SAVE_V = 2;
+/** Display floor 5. The Warden stands on the stair and does not end the delve. */
+const WARDEN_FLOOR = 4;
 export const SAVE_KEY = 'dxedge_delve_save';
 export const DIFF_KEY = 'dxedge_delve_difficulty';
 
@@ -40,6 +43,8 @@ export const FLOOR_NAMES = [
   'Ash Galleries',
   'The Low Vault',
   'Ember Crypt',
+  "The Warden's Hall",
+  'The Black Stair',
   'The Seal',
 ];
 
@@ -203,9 +208,13 @@ function emptyFloor() {
 
 function monsterKind(floor, rng) {
   const roll = rng.next();
-  if (floor >= 2 && roll < 0.18) return 'brute';
-  if (floor >= 1 && roll < 0.40) return 'spitter';
-  if (floor >= 1 && roll < 0.55) return 'wisp';
+  if (floor >= 3 && roll < 0.14) return 'knight';
+  if (floor >= 2 && roll < 0.28) return 'chanter';
+  if (floor >= 2 && roll < 0.42) return 'hound';
+  if (floor >= 1 && roll < 0.56) return 'moth';
+  if (floor >= 2 && roll < 0.70) return 'brute';
+  if (floor >= 1 && roll < 0.84) return 'spitter';
+  if (floor >= 1 && roll < 0.92) return 'wisp';
   return 'crawler';
 }
 
@@ -215,9 +224,15 @@ function makeMonster(kind, x, y, floor, diff, rng) {
     spitter: { name: 'crypt spitter', hp: 11, atk: 4, def: 0, speed: 1300, range: 4 },
     brute:   { name: 'vault brute', hp: 28, atk: 8, def: 2, speed: 1500, range: 1 },
     wisp:    { name: 'ember wisp', hp: 8, atk: 4, def: 0, speed: 720, range: 1 },
+    moth:    { name: 'grave moth', hp: 9, atk: 3, def: 0, speed: 560, range: 1, drain: 'sta' },
+    hound:   { name: 'bone hound', hp: 16, atk: 6, def: 1, speed: 780, range: 1 },
+    chanter: { name: 'ash chanter', hp: 13, atk: 5, def: 0, speed: 1400, range: 5, drain: 'mana' },
+    knight:  { name: 'cinder knight', hp: 36, atk: 9, def: 3, speed: 1200, range: 1 },
     warden:  { name: 'the Warden', hp: 96, atk: 11, def: 3, speed: 880, range: 2 },
+    seal:    { name: 'the Seal', hp: 140, atk: 13, def: 4, speed: 760, range: 2 },
   }[kind];
-  const hp = Math.max(1, Math.round((base.hp + floor * (kind === 'wisp' ? 2 : 4)) * diff.hp));
+  const grown = base.hp + floor * (kind === 'wisp' || kind === 'moth' ? 2 : 4);
+  const hp = Math.max(1, Math.round(grown * diff.hp));
   return {
     kind: 'monster',
     sub: kind,
@@ -229,6 +244,7 @@ function makeMonster(kind, x, y, floor, diff, rng) {
     def: base.def,
     speed: Math.round(base.speed * diff.pace),
     range: base.range,
+    drain: base.drain || null,
     cool: 400 + rng.int(600),
     slowMs: 0,
     alive: true,
@@ -270,8 +286,8 @@ function generateFloor(floorIndex, diff, rng) {
     const d = Math.abs(r.mx - start.mx) + Math.abs(r.my - start.my);
     if (d > farD) { farD = d; far = r; }
   }
-  const boss = floorIndex === FLOORS - 1;
-  if (!boss) tiles[far.my][far.mx] = TILE.STAIRS_DOWN;
+  const last = floorIndex === FLOORS - 1;
+  if (!last) tiles[far.my][far.mx] = TILE.STAIRS_DOWN;
 
   const doorCell = loops[0] ? findGapFloor(tiles, loops[0]) : null;
   if (doorCell) tiles[doorCell.y][doorCell.x] = TILE.LOCKED;
@@ -279,7 +295,7 @@ function generateFloor(floorIndex, diff, rng) {
   if (gateCell) tiles[gateCell.y][gateCell.x] = TILE.GATE;
   // A misplaced door must not be able to trap the exit. If the check fails,
   // the barriers come back out and the floor stays a plain loop.
-  if (!boss) {
+  if (!last) {
     const seen = floodReachable(tiles, start.mx, start.my);
     let downOk = false;
     for (let y = 0; y < MAP && !downOk; y++) {
@@ -331,13 +347,15 @@ function generateFloor(floorIndex, diff, rng) {
     }
     if (!cellFree({ tiles, entities }, x, y)) continue;
     if (blocksMove(tiles[y][x])) continue;
-    const kind = r === far && boss ? 'warden' : monsterKind(floorIndex, rng);
-    entities.push(makeMonster(kind === 'warden' ? 'crawler' : kind, x, y, floorIndex, diff, rng));
+    entities.push(makeMonster(monsterKind(floorIndex, rng), x, y, floorIndex, diff, rng));
     skip.add(x + ',' + y);
   }
 
-  if (boss) {
+  if (floorIndex === WARDEN_FLOOR) {
     entities.push(makeMonster('warden', far.mx, far.my, floorIndex, diff, rng));
+  }
+  if (last) {
+    entities.push(makeMonster('seal', far.mx, far.my, floorIndex, diff, rng));
   }
 
   // A few loose vials, never on the first step.
@@ -456,9 +474,16 @@ function grantXp(game, amount) {
       if (c.role === 'mage' || c.role === 'priest') c.maxMana += 4;
       else c.maxMana += 1;
       c.mana = Math.min(c.maxMana, c.mana + 2);
+      game.levelPing = (game.levelPing || 0) + 1;
       log(game, c.name + ' reaches level ' + c.level + '.', 'good');
     }
   }
+}
+
+function floater(game, text, kind) {
+  if (!game.floaters) game.floaters = [];
+  game.floaters.push({ text: String(text), kind: kind || 'hit', life: 900 });
+  if (game.floaters.length > 12) game.floaters.splice(0, game.floaters.length - 12);
 }
 
 export function createGame(seed, difficulty) {
@@ -470,7 +495,7 @@ export function createGame(seed, difficulty) {
   for (let i = 0; i < FLOORS; i++) floors.push(generateFloor(i, diff, rng));
   const start = findTile(floors[0].tiles, TILE.STAIRS_UP);
   const game = {
-    v: 1,
+    v: SAVE_V,
     seed: usedSeed,
     difficulty: diffName,
     floors,
@@ -494,6 +519,9 @@ export function createGame(seed, difficulty) {
     regenSta: 0,
     regenMana: 0,
     hurtMs: 0,
+    shake: 0,
+    floaters: [],
+    levelPing: 0,
     rng,
     diff,
   };
@@ -608,13 +636,16 @@ function killMonster(game, m, who) {
   m.alive = false;
   m.hp = 0;
   game.kills += 1;
-  const xp = m.sub === 'warden' ? 40 : m.sub === 'brute' ? 14 : 8;
+  const xp = { seal: 60, warden: 40, knight: 16, brute: 14, chanter: 12, hound: 10 }[m.sub] || 8;
   log(game, (who ? who.name : 'The party') + ' fells ' + m.name + '.', 'good');
   grantXp(game, xp);
-  if (m.sub === 'warden') {
+  if (m.sub === 'seal') {
     game.phase = 'won';
-    game.gold += 50;
-    log(game, 'The seal cracks. The Warden falls, and the crypt exhales.', 'good');
+    game.gold += 80;
+    log(game, 'The seal cracks. The last guardian falls, and the crypt exhales.', 'good');
+  } else if (m.sub === 'warden') {
+    game.gold += 20;
+    log(game, 'The Warden falls. The stair down is clear.', 'good');
   } else if (game.rng.next() < 0.35) {
     const pot = game.rng.pick(['hp', 'sta', 'mana']);
     const c = who && who.hp > 0 ? who : living(game)[0];
@@ -631,9 +662,17 @@ function applyDamageTo(game, c, amount, source) {
   const dmg = Math.max(1, amount);
   c.hp = Math.max(0, c.hp - dmg);
   game.hurtMs = 180;
+  game.shake = Math.min(420, (game.shake || 0) + 90 + dmg * 8);
+  floater(game, '-' + dmg, 'hurt');
   log(game, source + ' hits ' + c.name + ' for ' + dmg + '.', 'bad');
   if (c.hp <= 0) log(game, c.name + ' drops.', 'bad');
   checkDefeat(game);
+}
+
+function sap(m, c) {
+  if (!c || c.hp <= 0 || !m.drain) return;
+  if (m.drain === 'sta') c.sta = Math.max(0, c.sta - 3);
+  if (m.drain === 'mana') c.mana = Math.max(0, c.mana - 4);
 }
 
 function frontTargets(game) {
@@ -647,16 +686,16 @@ function monsterAct(game, m) {
   const man = Math.abs(m.x - game.x) + Math.abs(m.y - game.y);
   const tiles = floor.tiles;
   const canSee = los(tiles, m.x, m.y, game.x, game.y);
-  const aggro = m.sub === 'warden' ? 10 : 6;
+  const aggro = m.sub === 'seal' ? 12 : m.sub === 'warden' ? 10 : m.sub === 'hound' ? 8 : 6;
   if (!canSee || man > aggro) return;
-  if (man <= 1 || (m.range <= 1 && man <= 1)) {
-    const targets = m.range > 1 ? living(game).filter(c => c.row === 'back') : frontTargets(game);
-    const pool = targets.length ? targets : living(game);
+  if (man <= 1) {
+    const pool = frontTargets(game);
     if (!pool.length) return;
     const c = pool[game.rng.int(pool.length)];
     let dmg = m.atk - armorDef(c);
     if (game.wardMs > 0) dmg -= 4;
     applyDamageTo(game, c, dmg, m.name);
+    sap(m, c);
     return;
   }
   if (m.range > 1 && man <= m.range && canSee) {
@@ -667,6 +706,7 @@ function monsterAct(game, m) {
     let dmg = m.atk - Math.floor(armorDef(c) / 2);
     if (game.wardMs > 0) dmg -= 3;
     applyDamageTo(game, c, dmg, m.name);
+    sap(m, c);
     return;
   }
   const step = nextStep(tiles, floor, m.x, m.y, game.x, game.y);
@@ -759,7 +799,7 @@ export function move(game, cmd) {
   const m = livingMonsterAt(floor, nx, ny);
   if (m && (cmd === 'forward' || cmd === 'back')) {
     attackMonster(game, m);
-    return { ok: true, bumped: true };
+    return { ok: true, bumped: true, sound: 'hit' };
   }
   if (ny < 0 || nx < 0 || ny >= MAP || nx >= MAP || blocksMove(floor.tiles[ny][nx]) || m) {
     const t = ny >= 0 && nx >= 0 && ny < MAP && nx < MAP ? floor.tiles[ny][nx] : TILE.WALL;
@@ -779,15 +819,23 @@ export function move(game, cmd) {
   return { ok: true, moved: true };
 }
 
-function attackMonster(game, m) {
-  const c = selectedChamp(game);
-  if (!c) return { ok: false, reason: 'down' };
+function swingOrder(game) {
+  const out = [];
+  for (const c of game.party) if (c.hp > 0 && c.row === 'front') out.push(c);
+  const sel = game.party[game.selected];
+  if (sel && sel.hp > 0 && !out.includes(sel)) out.push(sel);
+  if (!out.length) {
+    const c = selectedChamp(game);
+    if (c) out.push(c);
+  }
+  return out;
+}
+
+function champAttack(game, c, m) {
+  if (!c || c.hp <= 0) return { ok: false, reason: 'down' };
   const melee = c.row === 'front';
   const cost = melee ? 3 : 4;
-  if (c.sta < cost) {
-    log(game, c.name + ' is out of breath.', 'info');
-    return { ok: false, reason: 'stamina' };
-  }
+  if (c.sta < cost) return { ok: false, reason: 'stamina' };
   c.sta -= cost;
   let dmg = weaponAtk(c) - m.def;
   if (!melee) dmg -= 1;
@@ -795,21 +843,61 @@ function attackMonster(game, m) {
   dmg = Math.max(1, dmg);
   m.hp -= dmg;
   log(game, c.name + ' hits ' + m.name + ' for ' + dmg + '.', 'info');
+  floater(game, String(dmg), 'hit');
   if (m.hp <= 0) killMonster(game, m, c);
   return { ok: true, dmg };
 }
 
+function attackMonster(game, m) {
+  const champs = swingOrder(game);
+  if (!champs.length) return { ok: false, reason: 'down' };
+  let any = false;
+  let total = 0;
+  const breath = [];
+  for (const c of champs) {
+    if (!m.alive) break;
+    const r = champAttack(game, c, m);
+    if (r.reason === 'stamina') breath.push(c.name);
+    else if (r.ok) {
+      any = true;
+      total += r.dmg || 0;
+    }
+  }
+  if (!any && breath.length) {
+    log(game, breath.join(' and ') + (breath.length > 1 ? ' are' : ' is') + ' out of breath.', 'info');
+    return { ok: false, reason: 'stamina' };
+  }
+  return { ok: any, dmg: total };
+}
+
 export function attack(game) {
   if (!game || game.phase !== 'play' || game.paused) return { ok: false, reason: 'busy' };
-  const c = selectedChamp(game);
-  if (!c) return { ok: false, reason: 'down' };
+  const champs = swingOrder(game);
+  if (!champs.length) return { ok: false, reason: 'down' };
+  const max = champs.some(c => c.row === 'front') ? 1 : 5;
+  const m = firstAlong(game, max);
+  if (!m) {
+    log(game, 'Nothing ahead.', 'info');
+    floater(game, 'miss', 'miss');
+    return { ok: false, reason: 'none' };
+  }
+  return attackMonster(game, m);
+}
+
+export function attackOne(game, index) {
+  if (!game || game.phase !== 'play' || game.paused) return { ok: false, reason: 'busy' };
+  const c = game.party[index];
+  if (!c || c.hp <= 0) return { ok: false, reason: 'down' };
   const max = c.row === 'front' ? 1 : 5;
   const m = firstAlong(game, max);
   if (!m) {
     log(game, 'Nothing ahead.', 'info');
+    floater(game, 'miss', 'miss');
     return { ok: false, reason: 'none' };
   }
-  return attackMonster(game, m);
+  const r = champAttack(game, c, m);
+  if (r.reason === 'stamina') log(game, c.name + ' is out of breath.', 'info');
+  return r;
 }
 
 function applyLoot(game, loot, who) {
@@ -901,6 +989,7 @@ export function cast(game, spellId) {
     dmg = Math.max(1, dmg);
     m.hp -= dmg;
     if (spellId === 'nim') m.slowMs = 5000;
+    floater(game, String(dmg), 'spell');
     log(game, c.name + ' speaks ' + spell.name + '. ' + m.name + ' takes ' + dmg + '.', 'good');
     if (m.hp <= 0) killMonster(game, m, c);
     return { ok: true };
@@ -938,8 +1027,10 @@ export function interact(game) {
   if (!game || game.phase !== 'play' || game.paused) return { ok: false, reason: 'busy' };
   const fx = game.x + DX[game.facing];
   const fy = game.y + DY[game.facing];
-  if (useCell(game, fx, fy)) return { ok: true };
-  if (useCell(game, game.x, game.y)) return { ok: true };
+  const ahead = useCell(game, fx, fy);
+  if (ahead) return { ok: true, sound: ahead };
+  const here = useCell(game, game.x, game.y);
+  if (here) return { ok: true, sound: here };
   log(game, 'Nothing to use.', 'info');
   return { ok: false, reason: 'none' };
 }
@@ -951,15 +1042,19 @@ function useCell(game, x, y) {
   if (t === TILE.LOCKED) {
     if (game.keys <= 0) {
       log(game, 'The lock holds. You need a key.', 'info');
-      return true;
+      return 'locked';
     }
     game.keys -= 1;
     floor.tiles[y][x] = TILE.DOOR_OPEN;
     log(game, 'The key turns. The door opens.', 'good');
     reveal(game);
-    return true;
+    return 'door';
   }
   if (t === TILE.STAIRS_DOWN) {
+    if (livingMonsterAt(floor, x, y)) {
+      log(game, 'Something stands on the stair.', 'info');
+      return 'blocked';
+    }
     if (game.floor >= FLOORS - 1) return false;
     game.floor += 1;
     const up = findTile(currentFloor(game).tiles, TILE.STAIRS_UP);
@@ -967,12 +1062,12 @@ function useCell(game, x, y) {
     game.y = up.y;
     log(game, FLOOR_NAMES[game.floor] + '.', 'good');
     reveal(game);
-    return true;
+    return 'stairs';
   }
   if (t === TILE.STAIRS_UP) {
     if (game.floor <= 0) {
       log(game, 'The way you came in is shut.', 'info');
-      return true;
+      return 'blocked';
     }
     game.floor -= 1;
     const down = findTile(currentFloor(game).tiles, TILE.STAIRS_DOWN);
@@ -980,7 +1075,7 @@ function useCell(game, x, y) {
     game.y = down.y;
     log(game, FLOOR_NAMES[game.floor] + '.', 'info');
     reveal(game);
-    return true;
+    return 'stairs';
   }
   const lever = floor.entities.find(e => e.kind === 'lever' && e.x === x && e.y === y);
   if (lever) {
@@ -993,13 +1088,13 @@ function useCell(game, x, y) {
       log(game, 'The lever clanks. A gate drops.', 'info');
     }
     reveal(game);
-    return true;
+    return 'lever';
   }
   const chest = floor.entities.find(e => e.kind === 'chest' && e.x === x && e.y === y && !e.opened);
   if (chest) {
     chest.opened = true;
     applyLoot(game, chest.loot, selectedChamp(game));
-    return true;
+    return 'chest';
   }
   return false;
 }
@@ -1009,6 +1104,11 @@ export function tick(game, ms) {
   const dt = Math.max(0, Math.min(4000, ms | 0));
   game.time += dt;
   if (game.hurtMs > 0) game.hurtMs = Math.max(0, game.hurtMs - dt);
+  if (game.shake > 0) game.shake = Math.max(0, game.shake - dt);
+  if (game.floaters && game.floaters.length) {
+    for (const f of game.floaters) f.life -= dt;
+    if (game.floaters.some(f => f.life <= 0)) game.floaters = game.floaters.filter(f => f.life > 0);
+  }
   if (game.gleamMs > 0) {
     const before = game.gleamMs;
     game.gleamMs = Math.max(0, game.gleamMs - dt);
@@ -1093,7 +1193,7 @@ export function summarize(game) {
 
 export function serialize(game) {
   return {
-    v: 1,
+    v: SAVE_V,
     seed: game.seed,
     difficulty: game.difficulty,
     floor: game.floor,
@@ -1120,11 +1220,11 @@ export function serialize(game) {
 }
 
 export function hydrate(data) {
-  if (!data || data.v !== 1 || !Array.isArray(data.party) || data.party.length !== 4) return null;
+  if (!data || data.v !== SAVE_V || !Array.isArray(data.party) || data.party.length !== 4) return null;
   if (!Array.isArray(data.floors) || data.floors.length !== FLOORS) return null;
   const diffName = DIFF[data.difficulty] ? data.difficulty : 'normal';
   const game = {
-    v: 1,
+    v: SAVE_V,
     seed: data.seed >>> 0,
     difficulty: diffName,
     floors: data.floors.map(f => ({
@@ -1151,6 +1251,9 @@ export function hydrate(data) {
     regenSta: 0,
     regenMana: 0,
     hurtMs: 0,
+    shake: 0,
+    floaters: [],
+    levelPing: 0,
     rng: makeRng(1),
     diff: DIFF[diffName],
   };
@@ -1182,9 +1285,7 @@ export function loadGame(storage) {
 }
 
 export function hasSave(storage) {
-  const box = storage || (typeof localStorage !== 'undefined' ? localStorage : null);
-  if (!box) return false;
-  try { return !!box.getItem(SAVE_KEY); } catch (e) { return false; }
+  return loadGame(storage) != null;
 }
 
 export function clearSave(storage) {

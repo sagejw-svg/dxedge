@@ -164,6 +164,73 @@ function buildSprites() {
     g.fillStyle = '#fff6e0';
     g.beginPath(); g.arc(48, 70, 8, 0, 7); g.fill();
   });
+  sheet.moth = spriteSheet((g) => {
+    g.fillStyle = 'rgba(196, 176, 150, 0.85)';
+    g.beginPath(); g.ellipse(28, 70, 22, 14, -0.4, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(68, 70, 22, 14, 0.4, 0, 7); g.fill();
+    g.fillStyle = '#6a5038';
+    g.beginPath(); g.ellipse(48, 74, 8, 18, 0, 0, 7); g.fill();
+    g.fillStyle = '#f0d080';
+    g.beginPath(); g.arc(44, 64, 3, 0, 7); g.arc(52, 64, 3, 0, 7); g.fill();
+  });
+  sheet.hound = spriteSheet((g) => {
+    g.fillStyle = '#e4d8c4';
+    g.beginPath(); g.ellipse(50, 86, 30, 14, 0, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(74, 70, 14, 12, 0, 0, 7); g.fill();
+    g.fillStyle = '#b7a890';
+    g.fillRect(28, 92, 6, 20);
+    g.fillRect(42, 94, 6, 18);
+    g.fillRect(58, 94, 6, 18);
+    g.fillRect(70, 90, 6, 22);
+    g.fillStyle = '#2a2018';
+    g.beginPath(); g.arc(80, 66, 3, 0, 7); g.fill();
+    g.strokeStyle = '#2a2018';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(86, 72); g.lineTo(92, 78); g.stroke();
+  });
+  sheet.chanter = spriteSheet((g) => {
+    g.fillStyle = '#3a3058';
+    g.beginPath();
+    g.moveTo(48, 18);
+    g.lineTo(78, 118);
+    g.lineTo(18, 118);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#241c38';
+    g.beginPath(); g.arc(48, 40, 14, 0, 7); g.fill();
+    g.fillStyle = '#c9b6ff';
+    g.beginPath(); g.ellipse(48, 58, 8, 12, 0, 0, 7); g.fill();
+    g.fillStyle = '#9ec4de';
+    g.fillRect(40, 78, 16, 4);
+  });
+  sheet.knight = spriteSheet((g) => {
+    g.fillStyle = '#4a4038';
+    g.fillRect(26, 40, 44, 62);
+    g.fillStyle = '#2a241e';
+    g.fillRect(30, 18, 36, 28);
+    g.fillStyle = '#e3924a';
+    g.fillRect(36, 28, 24, 6);
+    g.fillStyle = '#8a7560';
+    g.fillRect(18, 48, 12, 28);
+    g.fillRect(66, 48, 12, 28);
+    g.fillStyle = '#1a120c';
+    g.fillRect(30, 98, 14, 18);
+    g.fillRect(52, 98, 14, 18);
+    g.fillStyle = '#e7a15a';
+    g.fillRect(44, 62, 8, 16);
+  });
+  sheet.seal = spriteSheet((g) => {
+    g.fillStyle = '#140e0c';
+    g.beginPath(); g.arc(48, 70, 40, 0, 7); g.fill();
+    g.strokeStyle = '#e3924a';
+    g.lineWidth = 6;
+    g.beginPath(); g.arc(48, 70, 28, 0.4, 5.4); g.stroke();
+    g.fillStyle = '#e7a15a';
+    g.beginPath(); g.arc(48, 70, 8, 0, 7); g.fill();
+    g.strokeStyle = '#f3eadc';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(48, 22); g.lineTo(48, 40); g.moveTo(20, 78); g.lineTo(34, 70); g.moveTo(76, 78); g.lineTo(62, 70); g.stroke();
+  });
   sheet.warden = spriteSheet((g) => {
     g.fillStyle = '#1c1614';
     g.beginPath();
@@ -400,9 +467,10 @@ export function createView() {
       const sub = e.kind === 'monster' ? e.sub : e.kind === 'potion' ? 'potion' : e.kind;
       const scale = {
         crawler: 0.72, spitter: 1, brute: 1.15, wisp: 0.85, warden: 1.5,
+        moth: 0.7, hound: 0.95, chanter: 1.05, knight: 1.25, seal: 1.65,
         chest: 0.55, key: 0.4, potion: 0.36, lever: 0.7,
       }[sub] || 0.6;
-      const bob = e.sub === 'wisp' ? Math.sin(game.time / 180 + e.x) * 0.08 : 0;
+      const bob = (e.sub === 'wisp' || e.sub === 'moth') ? Math.sin(game.time / 180 + e.x) * 0.08 : 0;
       list.push({ x: e.x + 0.5, y: e.y + 0.5 + bob, sub, scale });
     }
     for (let y = 0; y < H; y++) {
