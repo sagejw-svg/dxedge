@@ -15,7 +15,7 @@ export default function Delve() {
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, maxWidth: 680 }}>
           A first-person grid dungeon for a party of four. Walk with W and S, turn with A and D,
           strafe with Q and E. The arrow keys match the turns and the steps. Space swings the front
-          rank, Z X C V send one champion, and H lists every key. Graphics can drop to low, and movement can stay smooth or snap a step at a time. Seven floors, a warden on the fifth
+          rank, Z X C V send one champion, J opens the quest log, and H lists every key. Graphics can drop to low, and movement can stay smooth or snap a step at a time. Seven floors with a waystation between them, a warden on the fifth
           stair, a map that fills in as you see it, and a save that stays in this browser. Full screen
           at <a href="/delve/">dxedge.net/delve</a>.
         </p>

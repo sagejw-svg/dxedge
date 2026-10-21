@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   TILE, MAP, FLOORS, createGame, move, attack, attackOne, cast, interact, tick,
   summarize, saveGame, loadGame, clearSave, debug, living, SPELLS, floodReachable,
+  questLog, questMarkers, advanceTalk, HUB_GATE,
 } from '../public/delve/engine.js';
 
 const memory = () => {
@@ -169,6 +170,11 @@ for (let y = 0; y < MAP && !down; y++) {
 }
 debug.setPos(stairs, down.x, down.y, 0, 0);
 interact(stairs);
+assert.equal(stairs.inHub, true, 'the stair opens the waystation');
+assert.equal(stairs.floor, 0);
+debug.setPos(stairs, HUB_GATE.x, HUB_GATE.y, 0, 1);
+interact(stairs);
+assert.equal(stairs.inHub, false);
 assert.equal(stairs.floor, 1);
 
 const gate = createGame(6, 'easy');
@@ -181,6 +187,11 @@ interact(gate);
 assert.equal(gate.floor, 4, 'the warden blocks the stair');
 debug.killAll(gate);
 assert.equal(gate.phase, 'play', 'felling the warden does not end the delve');
+assert.equal(gate.quests['story-4'], 'done');
+interact(gate);
+assert.equal(gate.inHub, true, 'the cleared stair reaches the waystation');
+assert.equal(gate.floor, 4);
+debug.setPos(gate, HUB_GATE.x, HUB_GATE.y, 4, 1);
 interact(gate);
 assert.equal(gate.floor, 5, 'the stair opens once the warden falls');
 
@@ -293,6 +304,58 @@ clearLane(outOfReach, 8, 16, 4);
 debug.spawn(outOfReach, 'crawler', 11, 16);
 attack(outOfReach);
 assert.equal(outOfReach.log[outOfReach.log.length - 1].text, 'The ash crawler is 3 steps ahead.');
+
+const log0 = questLog(g);
+assert.ok(log0.some(q => q.id === 'story-0' && q.status === 'active'));
+assert.ok(log0.some(q => q.kind === 'side' && q.status === 'active'));
+assert.equal(log0.some(q => q.id === 'story-1'), false);
+assert.ok(questMarkers(g).some(m => m.id === 'rescue' && m.floor === 1));
+
+const rescue = createGame(4, 'normal');
+const pell = rescue.floors[1].entities.find(e => e.id === 'pell');
+assert.ok(pell, 'Pell waits in the ash galleries');
+debug.setPos(rescue, pell.x, pell.y, 1, 0);
+const goldBefore = rescue.gold;
+interact(rescue);
+assert.ok(rescue.talk && rescue.talk.id === 'pell');
+advanceTalk(rescue);
+advanceTalk(rescue);
+assert.equal(rescue.talk, null);
+assert.equal(rescue.quests.rescue, 'done');
+assert.ok(rescue.gold > goldBefore);
+assert.equal(rescue.party[0].armor.name, "traveler's wrap");
+
+const fetchQ = createGame(4, 'normal');
+const shard = fetchQ.floors[2].entities.find(e => e.id === 'shard');
+assert.ok(shard, 'the ember shard is in the low vault');
+debug.setPos(fetchQ, shard.x, shard.y, 2, 1);
+interact(fetchQ);
+assert.equal(shard.taken, true);
+assert.equal(fetchQ.quests.fetch, 'have');
+fetchQ.inHub = true;
+const sable = fetchQ.hub.entities.find(e => e.id === 'sable');
+debug.setPos(fetchQ, sable.x, sable.y, 2, 1);
+interact(fetchQ);
+advanceTalk(fetchQ);
+assert.equal(fetchQ.quests.fetch, 'done');
+assert.equal(fetchQ.party[0].weapon.name, 'shard knife');
+
+const nest = createGame(4, 'normal');
+assert.ok(nest.floors[3].entities.filter(e => e.lair && e.alive).length >= 3, 'the bone nest is stocked');
+debug.setPos(nest, nest.x, nest.y, 3, 1);
+debug.killAll(nest);
+assert.equal(nest.quests.lair, 'done');
+
+const niche = createGame(4, 'normal');
+const crack = niche.floors[5].entities.find(e => e.q === 'hidden');
+assert.ok(crack, 'the black stair has a niche');
+debug.setPos(niche, crack.x, crack.y, 5, 0);
+move(niche, 'forward');
+if (niche.quests.hidden !== 'done') {
+  debug.setPos(niche, crack.x, crack.y, 5, 0);
+  interact(niche);
+}
+assert.equal(niche.quests.hidden, 'done');
 
 const seen = floodReachable(g.floors[0].tiles, g.x, g.y);
 assert.ok(seen.size > 20);

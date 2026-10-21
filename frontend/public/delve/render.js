@@ -1,9 +1,21 @@
 /* Delve view.
  *
  * A raycaster with textured floor, ceiling, and walls, a torch that
- * flickers, and colored light where a spell just landed. Sprites are
- * drawn in memory when the page loads. Nothing is fetched from the network.
+ * flickers, and colored light where a spell just landed. Each floor has
+ * a theme. Sprites are drawn in memory when the page loads. Nothing is
+ * fetched from the network.
  */
+
+import { currentFloor, questMarkers, exploredKey, FLOOR_THEMES } from './engine.js';
+
+const LOOK = {
+  crypt: { id: 'crypt', mul: [1, 0.9, 0.78], fog: [18, 12, 10], torch: [1.15, 0.7, 0.32], amb: 0.36 },
+  cave: { id: 'cave', mul: [0.7, 0.82, 0.68], fog: [12, 18, 14], torch: [0.82, 0.9, 0.5], amb: 0.34 },
+  flood: { id: 'flood', mul: [0.55, 0.74, 0.9], fog: [8, 18, 28], torch: [0.5, 0.75, 1.05], amb: 0.32 },
+  forge: { id: 'forge', mul: [1.08, 0.58, 0.36], fog: [34, 12, 6], torch: [1.4, 0.42, 0.1], amb: 0.42 },
+  camp: { id: 'camp', mul: [1.02, 0.88, 0.7], fog: [22, 16, 12], torch: [1.25, 0.82, 0.4], amb: 0.5 },
+};
+let look = LOOK.crypt;
 
 const TEX = 128;
 const MASK = TEX - 1;
@@ -386,6 +398,73 @@ function buildSprites() {
     g.fillStyle = '#c4b09a';
     for (let i = 0; i < 5; i++) g.fillRect(22 + (4 - i) * 4, 46 + i * 12, 20 + i * 8, 7);
   });
+  sprites.banner = sheet(96, 128, (g) => {
+    g.fillStyle = '#5a4030';
+    g.fillRect(30, 8, 8, 110);
+    g.fillRect(58, 8, 8, 110);
+    g.fillStyle = '#8a3030';
+    g.beginPath();
+    g.moveTo(38, 16); g.lineTo(58, 16); g.lineTo(50, 78); g.lineTo(38, 70); g.fill();
+    g.fillStyle = '#e7a15a';
+    g.fillRect(40, 28, 12, 4);
+  });
+  sprites.bones = sheet(96, 128, (g) => {
+    g.strokeStyle = '#e4d2b8';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(24, 96); g.lineTo(48, 78); g.lineTo(74, 100);
+    g.moveTo(30, 108); g.lineTo(60, 90);
+    g.stroke();
+    g.fillStyle = '#f3eadc';
+    g.beginPath(); g.arc(24, 96, 6, 0, 7); g.arc(74, 100, 6, 0, 7); g.fill();
+  });
+  sprites.torch = sheet(96, 128, (g) => {
+    g.fillStyle = '#4a3424';
+    g.fillRect(42, 70, 12, 46);
+    g.fillStyle = '#e7a15a';
+    g.beginPath(); g.ellipse(48, 62, 14, 18, 0, 0, 7); g.fill();
+    g.fillStyle = '#fff1c4';
+    g.beginPath(); g.ellipse(48, 56, 6, 10, 0, 0, 7); g.fill();
+  });
+  sprites.web = sheet(96, 128, (g) => {
+    g.strokeStyle = 'rgba(230, 224, 210, 0.75)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.moveTo(48, 6); g.lineTo(18, 70); g.lineTo(78, 64); g.closePath();
+    g.moveTo(48, 6); g.lineTo(48, 78);
+    g.moveTo(20, 40); g.lineTo(76, 36);
+    g.stroke();
+  });
+  sprites.statue = sheet(96, 128, (g) => {
+    g.fillStyle = '#6a645c';
+    g.fillRect(28, 88, 40, 28);
+    g.fillRect(40, 48, 16, 44);
+    g.beginPath(); g.arc(48, 40, 14, 0, 7); g.fill();
+    g.fillStyle = '#8a847c';
+    g.fillRect(30, 108, 36, 8);
+  });
+  sprites.npc = sheet(96, 128, (g) => {
+    g.fillStyle = '#243038';
+    g.beginPath(); g.ellipse(48, 96, 26, 28, 0, 0, 7); g.fill();
+    g.fillStyle = '#d8b89a';
+    g.beginPath(); g.arc(48, 52, 16, 0, 7); g.fill();
+    g.fillStyle = '#e7a15a';
+    g.fillRect(40, 78, 16, 6);
+  });
+  sprites.relic = sheet(96, 128, (g) => {
+    g.fillStyle = '#ffb45a';
+    g.beginPath();
+    g.moveTo(48, 48); g.lineTo(64, 78); g.lineTo(48, 96); g.lineTo(32, 78); g.fill();
+    g.fillStyle = '#fff6d4';
+    g.fillRect(45, 68, 6, 10);
+  });
+  sprites.crack = sheet(96, 128, (g) => {
+    g.strokeStyle = '#d8c8a8';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(30, 96); g.lineTo(46, 78); g.lineTo(42, 70); g.lineTo(58, 86); g.lineTo(70, 74);
+    g.stroke();
+  });
   return sprites;
 }
 
@@ -401,7 +480,7 @@ function clampByte(v) {
 }
 
 function shade(r, g, b, dist, lr, lg, lb, side, above, gleam) {
-  const amb = above ? 0.42 : 0.36;
+  const amb = above ? look.amb + 0.08 : look.amb;
   let rr = r * (amb + lr) + lr * 26;
   let gg = g * (amb + lg) + lg * 16;
   let bb = b * (amb + lb) + lb * 10;
@@ -410,9 +489,9 @@ function shade(r, g, b, dist, lr, lg, lb, side, above, gleam) {
   const t = dist / reach;
   const f = t < 0 ? 0 : t > 1 ? 0.72 : t * t * 0.72;
   return [
-    clampByte(rr * (1 - f) + 16 * f),
-    clampByte(gg * (1 - f) + 11 * f),
-    clampByte(bb * (1 - f) + 9 * f),
+    clampByte(rr * (1 - f) + look.fog[0] * f),
+    clampByte(gg * (1 - f) + look.fog[1] * f),
+    clampByte(bb * (1 - f) + look.fog[2] * f),
   ];
 }
 
@@ -421,9 +500,23 @@ function buildLight(cam, game, flick, quality) {
   const reach = (game.gleamMs > 0 ? 10 : 7) * (0.92 + flick * 0.12);
   const lights = [{
     x: cam.x, y: cam.y,
-    r: 1.2 * flick, g: 0.74 * flick, b: 0.36 * flick,
+    r: look.torch[0] * flick, g: look.torch[1] * flick, b: look.torch[2] * flick,
     radius: reach,
   }];
+  if (quality !== 'low' && game) {
+    const here = currentFloor(game);
+    if (here && here.entities) {
+      for (const e of here.entities) {
+        if (e.kind === 'prop' && e.sub === 'torch') {
+          lights.push({
+            x: e.x + 0.5, y: e.y + 0.5,
+            r: 0.9 * flick, g: 0.4 * flick, b: 0.1 * flick,
+            radius: 2.5,
+          });
+        }
+      }
+    }
+  }
   if (game.wardMs > 0) {
     lights.push({ x: cam.x, y: cam.y, r: 0.12, g: 0.42, b: 0.22, radius: 3.6 });
   }
@@ -470,9 +563,10 @@ const SCALE = {
   moth: 0.78, hound: 1, chanter: 1.12, knight: 1.28, seal: 1.7,
   chest: 0.84, chestOpen: 0.78, key: 0.42, potion: 0.38, lever: 0.72,
   stairsDown: 0.58, stairsUp: 0.58,
+  banner: 0.95, bones: 0.48, torch: 0.7, web: 0.9, statue: 1, npc: 0.92, relic: 0.46, crack: 0.4,
 };
 
-export function paintPortrait(canvas, index) {
+export function paintPortrait(canvas, index, champ) {
   const g = canvas.getContext('2d');
   if (!g) return;
   const w = canvas.width;
@@ -518,6 +612,28 @@ export function paintPortrait(canvas, index) {
   g.fillStyle = pal.mark;
   g.fillRect(w * 0.36, h * 0.482, 3, 3);
   g.fillRect(w * 0.58, h * 0.482, 3, 3);
+  const armor = champ && champ.armor;
+  if (armor && armor.def > 0) {
+    g.fillStyle = armor.def >= 3 ? '#d7c4a4' : armor.def >= 2 ? '#8d734c' : '#5c4636';
+    g.fillRect(w * 0.08, h * 0.7, w * 0.2, h * 0.1);
+    g.fillRect(w * 0.72, h * 0.7, w * 0.2, h * 0.1);
+    g.fillStyle = pal.mark;
+    g.fillRect(w * 0.14, h * 0.73, w * 0.08, h * 0.025);
+  }
+  const weapon = champ && champ.weapon;
+  if (weapon && weapon.atk >= 0) {
+    g.strokeStyle = weapon.atk >= 4 ? '#f0d7a4' : pal.mark;
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(w * 0.8, h * 0.66);
+    g.lineTo(w * 0.92, h * 0.34);
+    g.stroke();
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(w * 0.76, h * 0.7);
+    g.lineTo(w * 0.84, h * 0.62);
+    g.stroke();
+  }
   g.strokeStyle = '#e7a15a';
   g.lineWidth = 2;
   g.strokeRect(1, 1, w - 2, h - 2);
@@ -568,7 +684,9 @@ export function createView() {
     const t = game.time || 0;
     let flick = 0.9 + Math.sin(t / 70) * 0.07 + Math.sin(t / 23) * 0.05;
     if (Math.sin(t / 11) > 0.985) flick -= 0.14;
-    const tiles = game.floors[game.floor].tiles;
+    const themeName = game.inHub ? 'camp' : ((currentFloor(game) && currentFloor(game).theme) || FLOOR_THEMES[game.floor] || 'crypt');
+    look = LOOK[themeName] || LOOK.crypt;
+    const tiles = currentFloor(game).tiles;
     const H = tiles.length;
     const W = tiles[0].length;
     const horizon = (h * 0.46) | 0;
@@ -606,9 +724,16 @@ export function createView() {
         const tx = (floorX * TEX) & MASK;
         const ty = (floorY * TEX) & MASK;
         const s = sample(src, tx, ty);
-        let rr = s[0];
-        let gg = s[1];
-        let bb = s[2];
+        let rr = s[0] * look.mul[0];
+        let gg = s[1] * look.mul[1];
+        let bb = s[2] * look.mul[2];
+        if (!above && look.id === 'forge' && ((tx + ty * 3) & 31) === 0) {
+          rr = 210; gg = 72; bb = 16;
+        }
+        if (!above && look.id === 'flood' && (ty & 15) < 2) {
+          bb = Math.min(255, bb + 36);
+          gg = Math.min(255, gg + 10);
+        }
         if (!above) {
           const cellX = floorX | 0;
           const cellY = floorY | 0;
@@ -680,7 +805,7 @@ export function createView() {
         const s = sample(texPick, tx, ty);
         const v = (y - drawStart) / span;
         const vg = 0.78 + 0.34 * (1 - Math.min(1, Math.abs(v - 0.62) * 1.6));
-        const c = shade(s[0] * vg, s[1] * vg, s[2] * vg, dist, lit[0], lit[1], lit[2], side === 1, false, gleam);
+        const c = shade(s[0] * look.mul[0] * vg, s[1] * look.mul[1] * vg, s[2] * look.mul[2] * vg, dist, lit[0], lit[1], lit[2], side === 1, false, gleam);
         if (facingDoor) {
           c[0] = clampByte(c[0] + 42);
           c[1] = clampByte(c[1] + 22);
@@ -692,9 +817,12 @@ export function createView() {
     }
 
     const list = [];
-    const floor = game.floors[game.floor];
-    const usable = { chest: 1, lever: 1, key: 1, potion: 1, stairsDown: 1, stairsUp: 1 };
-    const onGround = { chest: 1, chestOpen: 1, key: 1, potion: 1, lever: 1, stairsDown: 1, stairsUp: 1 };
+    const floor = currentFloor(game);
+    const usable = { chest: 1, lever: 1, key: 1, potion: 1, stairsDown: 1, stairsUp: 1, npc: 1, relic: 1, crack: 1 };
+    const onGround = {
+      chest: 1, chestOpen: 1, key: 1, potion: 1, lever: 1, stairsDown: 1, stairsUp: 1,
+      banner: 1, bones: 1, torch: 1, web: 1, statue: 1, npc: 1, relic: 1, crack: 1,
+    };
     for (const e of floor.entities) {
       if (e.taken) continue;
       if (e.kind === 'monster' && !e.alive && !(e.anim === 'death' && e.animMs > 0)) continue;
@@ -705,7 +833,13 @@ export function createView() {
         });
         continue;
       }
-      const sub = e.kind === 'monster' ? e.sub : e.kind === 'potion' ? 'potion' : e.kind;
+      const sub = e.kind === 'monster' ? e.sub
+        : e.kind === 'prop' ? e.sub
+        : e.kind === 'potion' ? 'potion'
+        : e.kind === 'npc' ? 'npc'
+        : e.kind === 'relic' ? 'relic'
+        : e.kind === 'mark' ? 'crack'
+        : e.kind;
       let wx = e.x + 0.5;
       let wy = e.y + 0.5;
       if (motion === 'smooth' && e.moveMs > 0 && e.fromX != null) {
@@ -888,6 +1022,11 @@ export function createView() {
           { kind: 'monster', sub: 'knight', alive: true, x: 5, y: 8, anim: 'idle' },
           { kind: 'monster', sub: 'moth', alive: true, x: 7, y: 7, anim: 'idle' },
           { kind: 'chest', x: 8, y: 9, opened: false },
+          { kind: 'prop', sub: 'torch', x: 3, y: 8 },
+          { kind: 'prop', sub: 'banner', x: 4, y: 7 },
+          { kind: 'prop', sub: 'bones', x: 6, y: 9 },
+          { kind: 'prop', sub: 'statue', x: 9, y: 8 },
+          { kind: 'prop', sub: 'web', x: 10, y: 7 },
         ],
       }],
       time: 0,
@@ -906,7 +1045,12 @@ export function createView() {
     const prevM = motion;
     if (quality === 'low') quality = 'medium';
     motion = 'smooth';
-    draw(canvas, scene, { x: 1.55, y: 8.5, ang: Math.PI / 2 });
+    const sway = Math.sin(scene.time / 1400) * 1.15;
+    draw(canvas, scene, {
+      x: 2.6 + sway,
+      y: 8.5 + Math.sin(scene.time / 900) * 0.12,
+      ang: Math.PI / 2 + Math.sin(scene.time / 2200) * 0.06,
+    });
     quality = prevQ;
     motion = prevM;
   }
@@ -925,10 +1069,10 @@ export function createView() {
     const cell = Math.floor(Math.min(w, h) / map);
     const ox = ((w - cell * map) / 2) | 0;
     const oy = ((h - cell * map) / 2) | 0;
-    const tiles = game.floors[game.floor].tiles;
+    const tiles = currentFloor(game).tiles;
     for (let y = 0; y < map; y++) {
       for (let x = 0; x < map; x++) {
-        if (!game.explored.has(game.floor + ':' + x + ',' + y)) continue;
+        if (!game.explored.has(exploredKey(game, x, y))) continue;
         const tile = tiles[y][x];
         let color = '#3a332c';
         if (tile === 0) color = '#1a1613';
@@ -941,15 +1085,29 @@ export function createView() {
         ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
       }
     }
-    const floor = game.floors[game.floor];
+    const floor = currentFloor(game);
     ctx.fillStyle = '#d15a48';
     for (const e of floor.entities) {
       if (e.kind !== 'monster' || !e.alive) continue;
-      const key = game.floor + ':' + e.x + ',' + e.y;
+      const key = exploredKey(game, e.x, e.y);
       if (!game.explored.has(key)) continue;
       const near = (e.x - game.x) * (e.x - game.x) + (e.y - game.y) * (e.y - game.y) <= 36;
       if (!near) continue;
       ctx.fillRect(ox + e.x * cell, oy + e.y * cell, cell, cell);
+    }
+    ctx.fillStyle = '#e7a15a';
+    for (const m of questMarkers(game)) {
+      const onThis = game.inHub ? !!m.hub : m.floor === game.floor;
+      if (!onThis) continue;
+      const mx = ox + (m.x + 0.5) * cell;
+      const my = oy + (m.y + 0.5) * cell;
+      ctx.beginPath();
+      ctx.moveTo(mx, my - cell * 0.46);
+      ctx.lineTo(mx + cell * 0.36, my);
+      ctx.lineTo(mx, my + cell * 0.46);
+      ctx.lineTo(mx - cell * 0.36, my);
+      ctx.closePath();
+      ctx.fill();
     }
     const cx = ox + (game.x + 0.5) * cell;
     const cy = oy + (game.y + 0.5) * cell;
@@ -974,7 +1132,8 @@ export function createView() {
 function tileUsable(game, tiles, x, y) {
   const tile = tiles[y][x];
   if (tile === 2 || tile === 3 || tile === 4 || tile === 5) return true;
-  const ents = game.floors[game.floor] && game.floors[game.floor].entities;
+  const here = currentFloor(game);
+  const ents = here && here.entities;
   if (!ents) return false;
   return ents.some(e => e.x === x && e.y === y && !e.taken && (
     (e.kind === 'chest' && !e.opened) || e.kind === 'lever' || e.kind === 'key' || e.kind === 'potion'
