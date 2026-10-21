@@ -29,6 +29,10 @@ export function makeShow(mode, reduced) {
     mode: SCALE[mode] != null ? mode : 'full', reduced: !!reduced,
     flare: z(), heat: z(), arc: z(), seed: z(), blue: z(), res: 0, shimmer: false,
     pend: [], arcs: 0, lastArc: -1e9, lamps: 0, notes: new Set(), t: 0, drawMs: 0, onsets: 0,
+    // the last flare each tube took (its level before any decay) and how long after its note-on, on the
+    // show's own clock. For the test hook: unlike the decayed flare, these do not depend on when a
+    // starved frame loop happens to run.
+    fired: z(), firedLag: { v1: -1, v2: -1, v3: -1, v4: -1 },
   };
 }
 export const showScale = S => SCALE[S.mode] || 0;
@@ -43,7 +47,7 @@ export function showNote(S, vel) {
   if (S.mode === 'off' || S.reduced) return;
   const v = clamp(vel == null ? 0.8 : vel, 0.05, 1);
   S.onsets++;
-  TUBES.forEach(k => S.pend.push({ k, at: S.t + FLARE_LAG[k], v: k === 'v1' ? v : v * 0.85 }));
+  TUBES.forEach(k => S.pend.push({ k, t0: S.t, at: S.t + FLARE_LAG[k], v: k === 'v1' ? v : v * 0.85 }));
   if (S.pend.length > 64) S.pend.splice(0, S.pend.length - 64);
 }
 // Note numbers from a meter; anything new since the last one is a note-on (keys, MIDI, the deck).
@@ -66,7 +70,10 @@ export function stepShow(S, dt, inp) {
   // pending flares
   for (let i = S.pend.length - 1; i >= 0; i--) {
     const p = S.pend[i];
-    if (p.at <= S.t) { if (inp.on[p.k]) S.flare[p.k] = Math.max(S.flare[p.k], p.v); S.pend.splice(i, 1); }
+    if (p.at <= S.t) {
+      if (inp.on[p.k]) { S.flare[p.k] = Math.max(S.flare[p.k], p.v); S.fired[p.k] = p.v; S.firedLag[p.k] = S.t - p.t0; }
+      S.pend.splice(i, 1);
+    }
   }
   const fd = Math.exp(-dt / FLARE_TAU), ad = Math.exp(-dt / ARC_TAU);
   let fire = null;
@@ -113,5 +120,6 @@ export function showState(S) {
   const r = o => Object.fromEntries(Object.entries(o).map(([a, b]) => [a, Math.round(b * 1000) / 1000]));
   return { mode: S.mode, reduced: S.reduced, flare: r(S.flare), heat: r(S.heat), arc: r(S.arc), blue: r(S.blue),
     res: Math.round(S.res * 1000) / 1000, shimmer: S.shimmer, arcs: S.arcs, lamps: S.lamps, onsets: S.onsets,
+    fired: r(S.fired), firedLag: Object.fromEntries(TUBES.map(k => [k, S.firedLag[k] < 0 ? -1 : Math.round(S.firedLag[k] * 1e4) / 10])),
     drawMs: Math.round(S.drawMs * 1000) / 1000 };
 }

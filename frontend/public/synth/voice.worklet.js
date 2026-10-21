@@ -1320,6 +1320,14 @@ class Cathode extends AudioWorkletProcessor {
     let basePitch = 0, mgInc = 0, mgS = 0.5, l1 = 0, l2 = 0, pw = 0.5, pmA = 0, pmB = 0, semi2 = 0;
     let hcut = 20, hkt = 0, ha = 0, hb = 0, lcut = 2000, lkt = 0, la = 0, lb = 0, G1 = 1, MK1 = 1, G2 = 1, MK2 = 1, ampK = 0, bias = 0, whl = 0;
     const kbdT = this.kbdT;
+    // Memos for the costly maths below (exp2, tan, pow). Each keeps the exact inputs of its last call
+    // and reruns only when one of them changes, so the output is bit-identical to computing every
+    // time. Most of the time most inputs sit still: an unmodulated HPF, a pitch that moves only at
+    // the control tick (drift), a peak knob at rest. They start empty (NaN never matches) in every
+    // render() call, so nothing carries over a patch change.
+    let kP1 = NaN, kD1 = 0, kP2 = NaN, kD2 = 0;                       // VCO pitch (octaves) -> phase step
+    let kHc = NaN, kHx = NaN, kHg = 0, kLc = NaN, kLx = NaN, kLg = 0;  // filter base Hz and CV -> tan(pi fc / fs)
+    let kHk = NaN, kHK = 0, kHq = 1, kLk = NaN, kLK = 0, kLq = 1;      // peak knob -> loop gain, cutoff correction
     for (let i = a; i < b; i++) {
       const fr = i - a;
       if (fr % CTRL === 0) {
@@ -1332,8 +1340,10 @@ class Cathode extends AudioWorkletProcessor {
         l1 = S[C_L1]; l2 = S[C_L2]; pw = S[C_PW]; pmA = S[C_PMA] / 12; pmB = S[C_PMB] / 12;
         hcut = S[C_HCUT]; hkt = S[C_HKT]; ha = S[C_HA] * 5; hb = S[C_HB] * 5;
         lcut = S[C_LCUT]; lkt = S[C_LKT]; la = S[C_LA] * 5; lb = S[C_LB] * 5;
-        hpS[D_K] = KC * Math.pow(S[C_HPK], KCX); lpS[D_K] = KC * Math.pow(S[C_LPK], KCX);
-        hcut *= peakCorr(S[C_HPK]); lcut *= peakCorr(S[C_LPK]);
+        if (S[C_HPK] !== kHk) { kHk = S[C_HPK]; kHK = KC * Math.pow(kHk, KCX); kHq = peakCorr(kHk); }
+        if (S[C_LPK] !== kLk) { kLk = S[C_LPK]; kLK = KC * Math.pow(kLk, KCX); kLq = peakCorr(kLk); }
+        hpS[D_K] = kHK; lpS[D_K] = kLK;
+        hcut *= kHq; lcut *= kLq;
         G1 = S[C_G1]; MK1 = S[C_MK1]; G2 = S[C_G2]; MK2 = S[C_MK2];
         ampK = S[C_VLVL] * (1 - S[C_VVEL] * (1 - this.vel)); bias = S[C_VBIAS];
         whl = this.mw * S[C_WHL] / 1200;
@@ -1380,9 +1390,11 @@ class Cathode extends AudioWorkletProcessor {
         const p1 = pin + sc1 + (both ? pm : 0), p2 = pin + sc2 + semi2 + pm + SRC[eV2];
         let x1;
         if (w1 < 0) { x1 = wn; o1[O_WRAP] = -1; }
-        else { let d = C4 * exp2(p1); if (d > 0.45) d = 0.45; o1[O_DT] = d; o1[O_PW] = pw; osc1.step(w1); x1 = o1[O_Y]; }
+        else { if (p1 !== kP1) { kP1 = p1; kD1 = C4 * exp2(p1); if (kD1 > 0.45) kD1 = 0.45; }
+          o1[O_DT] = kD1; o1[O_PW] = pw; osc1.step(w1); x1 = o1[O_Y]; }
         let x2;
-        { let d = C4 * exp2(p2); if (d > 0.45) d = 0.45; o2[O_DT] = d; o2[O_PW] = pw2; osc2.step(w2);
+        { if (p2 !== kP2) { kP2 = p2; kD2 = C4 * exp2(p2); if (kD2 > 0.45) kD2 = 0.45; }
+          o2[O_DT] = kD2; o2[O_PW] = pw2; osc2.step(w2);
           if (sync && o1[O_WRAP] >= 0) { o2[O_X] = o1[O_WRAP]; osc2.sync(w2); }
           x2 = o2[O_Y]; if (ring) x2 *= x1; }
         SRC[CS_VCO1] = x1; SRC[CS_VCO2] = x2;
@@ -1397,15 +1409,23 @@ class Cathode extends AudioWorkletProcessor {
           y = y / G1 * MK1; }
         dcy1 = y - dcx1 + dcA * dcy1; dcx1 = y;
         // ---- HPF ----
-        { let fc = hcut * exp2(hkt * kbd + ha * SRC[eHA] + hb * SRC[eHB] + SRC[eHC]);
-          if (fc < 10) fc = 10; else if (fc > fcMax) fc = fcMax;
-          hpS[D_G] = Math.tan(PIfs * fc); hpS[D_IN] = dcy1; svfDiode(hpS, dTab);
+        { const hx = hkt * kbd + ha * SRC[eHA] + hb * SRC[eHB] + SRC[eHC];
+          if (hx !== kHx || hcut !== kHc) {
+            kHx = hx; kHc = hcut; let fc = hcut * exp2(hx);
+            if (fc < 10) fc = 10; else if (fc > fcMax) fc = fcMax;
+            kHg = Math.tan(PIfs * fc);
+          }
+          hpS[D_G] = kHg; hpS[D_IN] = dcy1; svfDiode(hpS, dTab);
           let hv = hpS[D_HP]; if (!(hv > -8 && hv < 8)) { hv = 0; hpS.fill(0, 0, 3); }
           SRC[CS_HPF] = hv; }
         // ---- LPF, then V2 (a cathode follower) ----
-        { let fc = lcut * exp2(lkt * kbd + la * SRC[eLA] + lb * SRC[eLB] + SRC[eLC]);
-          if (fc < 10) fc = 10; else if (fc > fcMax) fc = fcMax;
-          lpS[D_G] = Math.tan(PIfs * fc); lpS[D_IN] = SRC[eLI]; svfDiode(lpS, dTab);
+        { const lx = lkt * kbd + la * SRC[eLA] + lb * SRC[eLB] + SRC[eLC];
+          if (lx !== kLx || lcut !== kLc) {
+            kLx = lx; kLc = lcut; let fc = lcut * exp2(lx);
+            if (fc < 10) fc = 10; else if (fc > fcMax) fc = fcMax;
+            kLg = Math.tan(PIfs * fc);
+          }
+          lpS[D_G] = kLg; lpS[D_IN] = SRC[eLI]; svfDiode(lpS, dTab);
           let lv = lpS[D_LP]; if (!(lv > -8 && lv < 8)) { lv = 0; lpS.fill(0, 0, 3); }
           v2Acc += lv * lv;
           let z;

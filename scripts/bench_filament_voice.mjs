@@ -3,7 +3,7 @@
 // so two versions of the engine can be compared sample for sample and by CPU time.
 //
 //   node scripts/bench_filament_voice.mjs                 this tree: CPU per case and an output hash
-//   node scripts/bench_filament_voice.mjs --ref origin/main [--rounds 4]
+//   node scripts/bench_filament_voice.mjs --ref origin/main [--rounds 4] [--cases cathode|filament|c_plate,...]
 //                                                         A/B against a git ref: CPU change per case,
 //                                                         and whether the output is bit-identical
 //
@@ -13,6 +13,7 @@
 // four (8 voices, Ladder 24 and Valve 12, stereo offset, 16 voices), Diode 18 at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, and patch changes mid-note (stereo offset on, loop tube, model, drive).
+// The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
 // Numbers are relative: headless Chrome in test 9 is the figure the log quotes.
 import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto'; import path from 'path';
 import os from 'os'; import { spawnSync, execSync } from 'child_process'; import { fileURLToPath } from 'url';
@@ -45,10 +46,21 @@ const CASES = {
   change: big('valve12', p => { p.drift = 0; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
+// Cathode (the mono device in the same worklet file): factory patches by name, a held line with glide,
+// bends and the mod wheel. 'c_plate' is test 9's Cathode line; the rest cover each modulation path
+// into the two filters (none, EG 2, MG, a patched audio-rate source, key tracking) and patch changes.
+const C_CASES = {
+  c_plate: 'Plate Screamer', c_init: 'Init', c_wind: 'Night Wind', c_growl: 'Growl FM', c_reed: 'Hollow Reed',
+  c_trill: 'Trill Gate', c_kick: 'Filter Kick', c_change: 'Plate Screamer',
+};
+const C_EV = [{ at: 0, t: 'on', n: 60, v: 0.8 }, { at: 48000 * 1.5, t: 'on', n: 67, v: 0.7 }, { at: 48000 * 2, t: 'off', n: 67 },
+  { at: 48000 * 2.5, t: 'bend', v: 0.4 }, { at: 48000 * 3, t: 'mw', v: 0.6 }, { at: 48000 * 3.5, t: 'bend', v: 0 },
+  { at: 48000 * 4, t: 'off', n: 60 }, { at: 48000 * 4.2, t: 'on', n: 55, v: 0.9 }];
 
 // one render of one case from one synth directory: { cpu (% of real time), hash }
 async function one(dir, name) {
   const { normalize } = await import(path.join(dir, 'patches.js'));
+  const { normalizeC, C_FACTORY } = await import(path.join(dir, 'cathode.js'));
   const { tubeData } = await import(path.join(dir, 'rack.js'));
   const procs = {};
   const ctx = { sampleRate: 48000, currentFrame: 0, console,
@@ -70,7 +82,18 @@ async function one(dir, name) {
       { at: 192000, t: 'patch', p: normalize(q4) }, { at: 200000, t: 'off', n: 48 }, { at: 210000, t: 'on', n: 50, v: 0.5 });
     events.sort((a, b) => a.at - b.at);
   }
-  const pr = new procs.filament({ processorOptions: { tubes: tubeData(), patch: normalize(CASES[name]), events, active: true } });
+  let pr;
+  if (C_CASES[name]) {
+    const cp = n => normalizeC(JSON.parse(JSON.stringify(C_FACTORY.find(p => p.name === n) || {})));
+    const cev = C_EV.map(e => Object.assign({}, e));
+    if (name === 'c_change') {
+      const q1 = cp('Plate Screamer'); q1.hpf.a = 0.3; q1.lpf.peak = 0.95;
+      const q2 = cp('Night Wind'), q3 = cp('Growl FM');
+      cev.push({ at: 48000, t: 'patch', p: q1 }, { at: 48000 * 2.2, t: 'patch', p: q2 }, { at: 48000 * 3.7, t: 'patch', p: q3 });
+      cev.sort((a, b) => a.at - b.at);
+    }
+    pr = new procs.cathode({ processorOptions: { tubes: tubeData(), patch: cp(C_CASES[name]), events: cev, active: true } });
+  } else pr = new procs.filament({ processorOptions: { tubes: tubeData(), patch: normalize(CASES[name]), events, active: true } });
   const secs = 6, N = secs * 48000, B = 128, CF = vm.runInContext('Float32Array', ctx);
   const outL = new Float32Array(N), outR = new Float32Array(N), L = new CF(B), R = new CF(B);
   const c0 = process.cpuUsage();
@@ -92,7 +115,9 @@ if (process.argv[2] === '--one') {
     trees.unshift({ label: ref, dir: path.join(tmp, 'frontend/public/synth') });
   }
   const best = {};
-  for (let r = 0; r < rounds; r++) for (const name of Object.keys(CASES)) for (const t of trees) {
+  const want = arg('--cases', null), NAMES = Object.keys(CASES).concat(Object.keys(C_CASES))
+    .filter(n => !want || want.split(',').some(w => n === w || (w === 'cathode' && C_CASES[n]) || (w === 'filament' && CASES[n])));
+  for (let r = 0; r < rounds; r++) for (const name of NAMES) for (const t of trees) {
     const p = spawnSync(process.execPath, [ME, '--one', t.dir, name], { encoding: 'utf8' });
     if (p.status !== 0) { console.error(p.stderr); process.exit(1); }
     const x = JSON.parse(p.stdout), k = t.label + '|' + name;
@@ -100,9 +125,9 @@ if (process.argv[2] === '--one') {
     if (best[k].hash !== x.hash) best[k].unstable = true;
   }
   let differ = 0;
-  for (const name of Object.keys(CASES)) {
+  for (const name of NAMES) {
     const row = trees.map(t => best[t.label + '|' + name]);
-    let line = name.padEnd(9) + row.map((b, i) => `${trees[i].label}: ${b.cpu.toFixed(1)}%`).join('   ');
+    let line = name.padEnd(10) + row.map((b, i) => `${trees[i].label}: ${b.cpu.toFixed(1)}%`).join('   ');
     if (row.length === 2) {
       const same = row[0].hash === row[1].hash;
       if (!same) differ++;

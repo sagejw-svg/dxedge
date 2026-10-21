@@ -1297,9 +1297,14 @@ with sync_playwright() as pw:
     ck("Tv. the tube show defaults to full, its chip lit", st["mode"] == "full" and not st["reduced"] and pg.get_attribute('#showChips .chip[data-v="full"]', "aria-pressed") == "true", st)
     hi = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 260}); pg.wait_for_timeout(700)
     lo = pg.evaluate(TV_PEAK, {"notes": [62], "v": 0.3, "ms": 260}); pg.wait_for_timeout(200)
-    ck(f"Tv. a note-on flares V1 ({hi['pk']['v1']:.2f}) and then the output pair ({hi['pk']['v3']:.2f}), V1 first ({hi['t1']:.0f} ms, {hi['t3']:.0f} ms)",
-       hi["pk"]["v1"] > 0.5 and hi["pk"]["v3"] > 0.3 and 0 <= hi["t1"] <= hi["t3"], hi)
-    ck(f"Tv. the flare scales with velocity (peak {lo['pk']['v1']:.2f} at 0.3 against {hi['pk']['v1']:.2f} at 1.0)", lo["pk"]["v1"] < 0.5 * hi["pk"]["v1"] and lo["pk"]["v1"] > 0.05, (lo, hi))
+    # The flare each tube took and its lag after the note-on come from the show itself (its own clock),
+    # so a starved page cannot hide them. Sampling from outside every 8 ms missed the 150 ms peak twice on
+    # 21 Oct with the box loaded (first sample at 74 and 145 ms); the sampled peaks stay in the names.
+    hf, hl = hi["end"]["fired"], hi["end"]["firedLag"]
+    ck(f"Tv. a note-on flares V1 ({hf['v1']:.2f}) and then the output pair ({hf['v3']:.2f}), V1 first (lag {hl['v1']:.0f} ms, {hl['v3']:.0f} ms on the show clock; sampled peaks {hi['pk']['v1']:.2f}, {hi['pk']['v3']:.2f})",
+       hf["v1"] > 0.5 and hf["v3"] > 0.3 and 0 <= hl["v1"] <= hl["v3"] and hl["v3"] >= 45 and hi["pk"]["v1"] > 0, hi)
+    lf = lo["end"]["fired"]
+    ck(f"Tv. the flare scales with velocity ({lf['v1']:.2f} at 0.3 against {hf['v1']:.2f} at 1.0; sampled peaks {lo['pk']['v1']:.2f}, {hi['pk']['v1']:.2f})", lf["v1"] < 0.5 * hf["v1"] and lf["v1"] > 0.05 and lo["pk"]["v1"] > 0, (lo, hi))
     ck(f"Tv. the flare decays (V1 {lo['end']['flare']['v1']:.3f} about 120 ms after a quiet note's peak; {hi['end']['flare']['v1']:.3f} after a loud one)", hi["end"]["flare"]["v1"] < 0.5 * hi["pk"]["v1"], hi)
     ck(f"Tv. one key is one flare (onsets {hi['onsets']}), not one from the key and another from the meter", hi["onsets"] == 1, hi)
     ch = pg.evaluate(TV_PEAK, {"notes": [48, 55, 60, 64], "v": 0.9, "ms": 400})
