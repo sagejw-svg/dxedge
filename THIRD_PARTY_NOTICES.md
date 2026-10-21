@@ -146,6 +146,14 @@ The JavaScript in `frontend/public/synth/master.worklet.js` was written for this
 from that published description. It is not a copy of the Freeverb C++ sources.
 Public domain does not require attribution; this notice is here because the design is used.
 
+## Delve (`frontend/public/delve/`)
+
+Delve is original code written for this site. It does not ship a third-party engine, tileset, font, or sample.
+
+The pictures (wall textures, sprites, rune marks, and the page favicon) are drawn in the browser when the page loads. The favicon is the DXEdge mark redrawn with an ember stroke (`#e7a15a`) instead of the site green. Sound is synthesized with the Web Audio oscillator. Nothing is fetched from another host.
+
+The game is a grid dungeon in the manner of late-1980s first-person crawlers. It does not use their names, levels, monsters, or art.
+
 ## MediaPipe Tasks Vision 0.10.21 (Sculpt, `frontend/public/synth/hand-sculpt/vendor/`)
 
 MediaPipe Tasks Vision and the Hand Landmarker float16 model.

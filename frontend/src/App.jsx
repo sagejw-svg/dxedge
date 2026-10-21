@@ -33,6 +33,7 @@ import MorseInvaders from './components/MorseInvaders'
 import Skip from './components/Skip'
 import SpotChaser from './components/SpotChaser'
 import CraneCab from './components/CraneCab'
+import Delve from './components/Delve'
 import Emulators from './components/Emulators'
 import Stats from './components/Stats'
 import Otr from './components/Otr'
@@ -66,6 +67,7 @@ const TABS = [
   { id: 'morseinv', label: 'Morse Invaders' },
   { id: 'skip', label: 'Skip' },
   { id: 'spotchase', label: 'Spot Chaser' },
+  { id: 'delve', label: 'Delve' },
   // Emulators
   { id: 'emulators', label: 'Emulators' },
   // Radio
@@ -121,6 +123,7 @@ const TAB_GROUPS = [
       { id: 'morseinv', label: 'Morse Invaders', icon: '〰️' },
       { id: 'skip', label: 'Skip', icon: '🌅' },
       { id: 'spotchase', label: 'Spot Chaser', icon: '📡' },
+      { id: 'delve', label: 'Delve', icon: '🕯' },
     ],
   },
   {
@@ -440,6 +443,7 @@ export default function App() {
           {tab === 'morseinv' && <MorseInvaders />}
           {tab === 'skip' && <Skip />}
           {tab === 'spotchase' && <SpotChaser />}
+          {tab === 'delve' && <Delve />}
           {tab === 'cranecab' && <CraneCab />}
           {tab === 'emulators' && <Emulators />}
           {tab === 'otr' && <Otr />}

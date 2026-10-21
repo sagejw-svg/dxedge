@@ -281,7 +281,7 @@ def test_lightbox_contract_and_fit_math():
     assert "class NewsGate" in main
     assert "location ^~ /news/" in nginx
     assert "url.pathname.startsWith('/news/')" in sw
-    assert "CACHE_NAME = 'dxedge-v114'" in sw
+    assert "CACHE_NAME = 'dxedge-v115'" in sw
     script = r"""
 const fs = require("fs");
 const html = fs.readFileSync(process.argv[1], "utf8");
