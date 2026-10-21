@@ -288,6 +288,16 @@ function drawKind(g, kind, phase) {
     g.strokeStyle = '#e7a15a';
     g.lineWidth = 3;
     g.beginPath(); g.arc(56, 78, 12, 0, 7); g.stroke();
+  } else if (kind === 'ghost') {
+    g.fillStyle = 'rgba(214, 228, 236, 0.28)';
+    g.beginPath(); g.ellipse(56, 88, 28, 40, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(236, 244, 248, 0.85)';
+    g.beginPath(); g.ellipse(56, 48 + bob, 16, 18, 0, 0, 7); g.fill();
+    g.fillStyle = '#1a2830';
+    g.beginPath(); g.arc(50, 46, 3, 0, 7); g.arc(62, 46, 3, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(220, 236, 244, 0.7)';
+    g.lineWidth = 3;
+    g.beginPath(); g.moveTo(34, 70); g.lineTo(28, 120); g.moveTo(78, 70); g.lineTo(84, 118); g.stroke();
   } else if (kind === 'seal') {
     g.fillStyle = '#120c0a';
     g.beginPath(); g.arc(56, 78, 46, 0, 7); g.fill();
@@ -318,7 +328,7 @@ function monsterFrames(kind) {
 }
 
 function buildSprites() {
-  const monsters = ['crawler', 'spitter', 'brute', 'wisp', 'moth', 'hound', 'chanter', 'knight', 'warden', 'seal'];
+  const monsters = ['crawler', 'spitter', 'brute', 'wisp', 'moth', 'hound', 'chanter', 'knight', 'ghost', 'warden', 'seal'];
   const sprites = {};
   for (const kind of monsters) sprites[kind] = monsterFrames(kind);
   sprites.chest = sheet(96, 128, (g) => {
@@ -377,6 +387,19 @@ function buildSprites() {
     g.fillStyle = '#e7a15a';
     g.fillRect(41, 50, 14, 10);
   });
+  sprites.gear = sheet(96, 128, (g) => {
+    g.fillStyle = '#4a3424';
+    g.beginPath(); g.ellipse(48, 96, 22, 16, 0, 0, 7); g.fill();
+    g.fillStyle = '#6a5038';
+    g.fillRect(30, 78, 36, 22);
+    g.fillStyle = '#e7a15a';
+    g.fillRect(40, 84, 16, 5);
+    g.strokeStyle = '#f0d7a4';
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(34, 74); g.lineTo(70, 42); g.stroke();
+    g.fillStyle = '#cfc6ba';
+    g.fillRect(62, 36, 14, 8);
+  });
   sprites.lever = sheet(96, 128, (g) => {
     g.fillStyle = '#5a5148';
     g.fillRect(44, 58, 8, 52);
@@ -399,14 +422,27 @@ function buildSprites() {
     for (let i = 0; i < 5; i++) g.fillRect(22 + (4 - i) * 4, 46 + i * 12, 20 + i * 8, 7);
   });
   sprites.banner = sheet(96, 128, (g) => {
-    g.fillStyle = '#5a4030';
-    g.fillRect(30, 8, 8, 110);
-    g.fillRect(58, 8, 8, 110);
-    g.fillStyle = '#8a3030';
+    g.fillStyle = '#4a3424';
+    g.fillRect(10, 6, 8, 118);
+    g.fillStyle = '#c4a06a';
+    g.fillRect(8, 6, 12, 6);
+    g.fillStyle = '#8d2e2e';
     g.beginPath();
-    g.moveTo(38, 16); g.lineTo(58, 16); g.lineTo(50, 78); g.lineTo(38, 70); g.fill();
-    g.fillStyle = '#e7a15a';
-    g.fillRect(40, 28, 12, 4);
+    g.moveTo(18, 16);
+    g.lineTo(88, 20);
+    g.quadraticCurveTo(84, 52, 86, 86);
+    g.lineTo(18, 78);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#6a2020';
+    g.fillRect(18, 70, 66, 8);
+    g.strokeStyle = '#e7a15a';
+    g.lineWidth = 3;
+    g.strokeRect(40, 34, 28, 24);
+    g.beginPath();
+    g.moveTo(54, 38); g.lineTo(54, 54);
+    g.moveTo(44, 46); g.lineTo(64, 46);
+    g.stroke();
   });
   sprites.bones = sheet(96, 128, (g) => {
     g.strokeStyle = '#e4d2b8';
@@ -450,6 +486,55 @@ function buildSprites() {
     g.beginPath(); g.arc(48, 52, 16, 0, 7); g.fill();
     g.fillStyle = '#e7a15a';
     g.fillRect(40, 78, 16, 6);
+  });
+  sprites.sable = sheet(96, 128, (g) => {
+    g.fillStyle = '#3a2418';
+    g.fillRect(28, 70, 40, 52);
+    g.fillStyle = '#e7a15a';
+    g.fillRect(24, 78, 48, 8);
+    g.fillStyle = '#d8b89a';
+    g.beginPath(); g.arc(48, 46, 16, 0, 7); g.fill();
+    g.fillStyle = '#2a1c14';
+    g.fillRect(34, 32, 28, 8);
+    g.fillStyle = '#1a120c';
+    g.fillRect(40, 44, 5, 4);
+    g.fillRect(52, 44, 5, 4);
+  });
+  sprites.nell = sheet(96, 128, (g) => {
+    g.fillStyle = '#24382e';
+    g.beginPath(); g.moveTo(48, 62); g.lineTo(82, 124); g.lineTo(14, 124); g.closePath(); g.fill();
+    g.fillStyle = '#9dcc86';
+    g.fillRect(36, 88, 24, 6);
+    g.fillStyle = '#e0b090';
+    g.beginPath(); g.arc(48, 48, 16, 0, 7); g.fill();
+    g.fillStyle = '#6a5038';
+    g.beginPath(); g.arc(48, 40, 16, Math.PI, 0); g.fill();
+    g.fillStyle = '#1a120c';
+    g.fillRect(40, 46, 5, 4);
+    g.fillRect(52, 46, 5, 4);
+  });
+  sprites.pell = sheet(96, 128, (g) => {
+    g.fillStyle = '#4a3428';
+    g.fillRect(30, 72, 36, 50);
+    g.fillStyle = '#c4b09a';
+    g.fillRect(22, 80, 12, 28);
+    g.fillRect(64, 80, 12, 28);
+    g.fillStyle = '#c89878';
+    g.beginPath(); g.arc(48, 48, 16, 0, 7); g.fill();
+    g.fillStyle = '#120e0c';
+    g.fillRect(32, 34, 32, 10);
+  });
+  sprites.fire = sheet(96, 128, (g) => {
+    g.fillStyle = '#5a5148';
+    g.beginPath(); g.ellipse(48, 108, 34, 10, 0, 0, 7); g.fill();
+    g.fillStyle = '#3a342c';
+    g.beginPath(); g.arc(22, 104, 8, 0, 7); g.arc(48, 108, 9, 0, 7); g.arc(74, 104, 8, 0, 7); g.fill();
+    g.fillStyle = '#e05a20';
+    g.beginPath(); g.moveTo(48, 28); g.lineTo(70, 100); g.lineTo(26, 100); g.closePath(); g.fill();
+    g.fillStyle = '#f0a040';
+    g.beginPath(); g.moveTo(48, 44); g.lineTo(62, 100); g.lineTo(34, 100); g.closePath(); g.fill();
+    g.fillStyle = '#fff1c4';
+    g.beginPath(); g.moveTo(48, 62); g.lineTo(56, 100); g.lineTo(40, 100); g.closePath(); g.fill();
   });
   sprites.relic = sheet(96, 128, (g) => {
     g.fillStyle = '#ffb45a';
@@ -497,21 +582,29 @@ function shade(r, g, b, dist, lr, lg, lb, side, above, gleam) {
 
 function buildLight(cam, game, flick, quality) {
   const grid = new Float32Array(33 * 33 * 3);
-  const reach = (game.gleamMs > 0 ? 10 : 7) * (0.92 + flick * 0.12);
+  const carry = game.torch ? 1.45 : 1;
+  const reach = (game.gleamMs > 0 ? 10 : 7) * carry * (0.99 + (flick - 1) * 0.4);
   const lights = [{
     x: cam.x, y: cam.y,
     r: look.torch[0] * flick, g: look.torch[1] * flick, b: look.torch[2] * flick,
     radius: reach,
   }];
-  if (quality !== 'low' && game) {
+  if (game) {
     const here = currentFloor(game);
     if (here && here.entities) {
       for (const e of here.entities) {
-        if (e.kind === 'prop' && e.sub === 'torch') {
+        if (quality !== 'low' && e.kind === 'prop' && e.sub === 'torch' && !e.taken) {
           lights.push({
             x: e.x + 0.5, y: e.y + 0.5,
             r: 0.9 * flick, g: 0.4 * flick, b: 0.1 * flick,
             radius: 2.5,
+          });
+        }
+        if (e.kind === 'prop' && e.sub === 'fire' && !e.taken) {
+          lights.push({
+            x: e.x + 0.5, y: e.y + 0.5,
+            r: 1.25 * flick, g: 0.55 * flick, b: 0.16 * flick,
+            radius: 4.4,
           });
         }
       }
@@ -560,10 +653,11 @@ function lightAt(grid, x, y) {
 
 const SCALE = {
   crawler: 0.78, spitter: 1.05, brute: 1.2, wisp: 0.9, warden: 1.55,
-  moth: 0.78, hound: 1, chanter: 1.12, knight: 1.28, seal: 1.7,
+  moth: 0.78, hound: 1, chanter: 1.12, knight: 1.28, ghost: 1.05, seal: 1.7,
   chest: 0.84, chestOpen: 0.78, key: 0.42, potion: 0.38, lever: 0.72,
   stairsDown: 0.58, stairsUp: 0.58,
-  banner: 0.95, bones: 0.48, torch: 0.7, web: 0.9, statue: 1, npc: 0.92, relic: 0.46, crack: 0.4,
+  banner: 1.15, bones: 0.55, torch: 0.95, web: 0.9, statue: 1.05, fire: 1.05, gear: 0.5,
+  npc: 1.05, sable: 1.08, nell: 1.08, pell: 1.05, relic: 0.5, crack: 0.55,
 };
 
 export function paintPortrait(canvas, index, champ) {
@@ -681,9 +775,13 @@ export function createView() {
     const planeX = Math.sin(ang + Math.PI / 2) * planeScale;
     const planeY = -Math.cos(ang + Math.PI / 2) * planeScale;
     const gleam = game.gleamMs > 0;
+    const fireCells = new Set();
+    const hereEnts = (currentFloor(game) && currentFloor(game).entities) || [];
+    for (const e of hereEnts) {
+      if (e.kind === 'prop' && e.sub === 'fire' && !e.taken) fireCells.add(e.x + ',' + e.y);
+    }
     const t = game.time || 0;
-    let flick = 0.9 + Math.sin(t / 70) * 0.07 + Math.sin(t / 23) * 0.05;
-    if (Math.sin(t / 11) > 0.985) flick -= 0.14;
+    let flick = 1 + Math.sin(t / 1600) * 0.012 + Math.sin(t / 2400) * 0.008;
     const themeName = game.inHub ? 'camp' : ((currentFloor(game) && currentFloor(game).theme) || FLOOR_THEMES[game.floor] || 'crypt');
     look = LOOK[themeName] || LOOK.crypt;
     const tiles = currentFloor(game).tiles;
@@ -739,7 +837,30 @@ export function createView() {
           const cellY = floorY | 0;
           if (cellX >= 0 && cellY >= 0 && cellX < W && cellY < H) {
             const tile = tiles[cellY][cellX];
-            if (tile === 4 || tile === 5) { rr *= 0.55; gg *= 0.5; bb *= 0.45; }
+            if (tile === 4 || tile === 5) {
+              const fx = floorX - cellX;
+              const fy = floorY - cellY;
+              const rim = fx < 0.1 || fy < 0.1 || fx > 0.9 || fy > 0.9;
+              const step = fy > 0.18 && fy < 0.82 && fx > 0.22 && fx < 0.78 && ((fy * 4) % 1) < 0.22;
+              if (tile === 5) {
+                if (rim) { rr = 214; gg = 148; bb = 64; }
+                else if (step) { rr = 168; gg = 118; bb = 72; }
+                else { rr = 24; gg = 16; bb = 12; }
+              } else if (rim) { rr = 196; gg = 164; bb = 112; }
+              else if (step) { rr = 150; gg = 124; bb = 86; }
+              else { rr = 92; gg = 74; bb = 54; }
+            }
+            if (fireCells.has(cellX + ',' + cellY)) {
+              const fx = floorX - cellX - 0.5;
+              const fy = floorY - cellY - 0.5;
+              const d = Math.sqrt(fx * fx + fy * fy);
+              if (d < 0.42) {
+                const hot = d < 0.16;
+                rr = hot ? 255 : 210;
+                gg = hot ? 170 : 72;
+                bb = hot ? 60 : 18;
+              }
+            }
             if (glowTile && cellX === aheadX && cellY === aheadY) {
               rr = Math.min(255, rr + 34);
               gg = Math.min(255, gg + 16);
@@ -818,11 +939,16 @@ export function createView() {
 
     const list = [];
     const floor = currentFloor(game);
-    const usable = { chest: 1, lever: 1, key: 1, potion: 1, stairsDown: 1, stairsUp: 1, npc: 1, relic: 1, crack: 1 };
-    const onGround = {
-      chest: 1, chestOpen: 1, key: 1, potion: 1, lever: 1, stairsDown: 1, stairsUp: 1,
-      banner: 1, bones: 1, torch: 1, web: 1, statue: 1, npc: 1, relic: 1, crack: 1,
+    const usable = {
+      chest: 1, lever: 1, key: 1, potion: 1, gear: 1, npc: 1, sable: 1, nell: 1, pell: 1,
+      relic: 1, crack: 1, torch: 1, fire: 1,
     };
+    const onGround = {
+      chest: 1, chestOpen: 1, key: 1, potion: 1, gear: 1, lever: 1,
+      banner: 1, bones: 1, torch: 1, web: 1, statue: 1, fire: 1,
+      npc: 1, sable: 1, nell: 1, pell: 1, relic: 1, crack: 1,
+    };
+    const labels = [];
     for (const e of floor.entities) {
       if (e.taken) continue;
       if (e.kind === 'monster' && !e.alive && !(e.anim === 'death' && e.animMs > 0)) continue;
@@ -833,13 +959,15 @@ export function createView() {
         });
         continue;
       }
-      const sub = e.kind === 'monster' ? e.sub
+      let sub = e.kind === 'monster' ? e.sub
         : e.kind === 'prop' ? e.sub
         : e.kind === 'potion' ? 'potion'
-        : e.kind === 'npc' ? 'npc'
+        : e.kind === 'item' ? ((e.item && (e.item.type === 'potion' || e.item.type === 'food' || e.item.type === 'drink')) ? 'potion' : 'gear')
+        : e.kind === 'npc' ? (e.id || 'npc')
         : e.kind === 'relic' ? 'relic'
         : e.kind === 'mark' ? 'crack'
         : e.kind;
+      if (e.kind === 'npc' && !sprites[sub]) sub = 'npc';
       let wx = e.x + 0.5;
       let wy = e.y + 0.5;
       if (motion === 'smooth' && e.moveMs > 0 && e.fromX != null) {
@@ -847,25 +975,15 @@ export function createView() {
         wx += (e.fromX - e.x) * k;
         wy += (e.fromY - e.y) * k;
       }
-      if (e.sub === 'wisp' || e.sub === 'moth') wy += Math.sin(t / 180 + e.x) * 0.08;
+      if (e.sub === 'wisp' || e.sub === 'moth' || e.sub === 'ghost') wy += Math.sin(t / 180 + e.x) * 0.08;
       const scale = (SCALE[sub] || 0.6) * (e.anim === 'death' ? 0.92 : 1);
       list.push({
         x: wx, y: wy, sub, scale, ent: e.kind === 'monster' ? e : null,
         ground: !!onGround[sub],
         highlight: !!usable[sub] && e.x === aheadX && e.y === aheadY,
         cellX: e.x, cellY: e.y,
+        name: e.kind === 'npc' ? e.name : '',
       });
-    }
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const tile = tiles[y][x];
-        if (tile !== 5 && tile !== 4) continue;
-        const sub = tile === 5 ? 'stairsDown' : 'stairsUp';
-        list.push({
-          x: x + 0.5, y: y + 0.5, sub, scale: SCALE[sub],
-          ground: true, highlight: x === aheadX && y === aheadY, cellX: x, cellY: y,
-        });
-      }
     }
     if (quality !== 'low' && game.particles) {
       for (const p of game.particles) {
@@ -919,6 +1037,7 @@ export function createView() {
         paintEllipse(data, w, h, screenX, feetY, rx, ry, transY, zbuf, 'shadow');
         if (sp.highlight) paintEllipse(data, w, h, screenX, feetY, rx * 1.35, ry * 1.55, transY, zbuf, 'ring');
       }
+      if (sp.name && transY < 10) labels.push({ x: screenX, y: Math.max(16, y0 - 6), text: sp.name });
       const x0 = (screenX - spriteW / 2) | 0;
       const x1 = (x0 + spriteW) | 0;
       const glint = sp.sub === 'chest' || sp.sub === 'chestOpen';
@@ -966,7 +1085,18 @@ export function createView() {
 
     const ctx = canvas.getContext('2d');
     ctx.putImageData(image, 0, 0);
-    const glowA = Math.max(0.08, Math.min(0.34, 0.16 + flick * 0.12));
+    if (labels.length) {
+      ctx.font = '15px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      for (const lab of labels) {
+        const tw = ctx.measureText(lab.text).width;
+        ctx.fillStyle = 'rgba(16, 12, 10, 0.82)';
+        ctx.fillRect(lab.x - tw / 2 - 6, lab.y - 14, tw + 12, 20);
+        ctx.fillStyle = '#e7a15a';
+        ctx.fillText(lab.text, lab.x, lab.y);
+      }
+    }
+    const glowA = 0.2 + Math.sin(t / 1600) * 0.012;
     const glow = ctx.createRadialGradient(w * 0.5, h * 0.9, 8, w * 0.5, h * 0.92, w * 0.55);
     glow.addColorStop(0, 'rgba(255, 176, 90, ' + glowA + ')');
     glow.addColorStop(1, 'rgba(255, 140, 50, 0)');
@@ -1065,13 +1195,22 @@ export function createView() {
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, w - 2, h - 2);
     if (!game) return;
-    const map = 33;
-    const cell = Math.floor(Math.min(w, h) / map);
-    const ox = ((w - cell * map) / 2) | 0;
-    const oy = ((h - cell * map) / 2) | 0;
     const tiles = currentFloor(game).tiles;
-    for (let y = 0; y < map; y++) {
-      for (let x = 0; x < map; x++) {
+    const floor = currentFloor(game);
+    let x0 = 0;
+    let y0 = 0;
+    let x1 = 32;
+    let y1 = 32;
+    if (game.inHub) {
+      x0 = 11; y0 = 12; x1 = 22; y1 = 20;
+    }
+    const spanX = x1 - x0 + 1;
+    const spanY = y1 - y0 + 1;
+    const cell = Math.floor(Math.min(w / spanX, h / spanY));
+    const ox = ((w - cell * spanX) / 2) | 0;
+    const oy = ((h - cell * spanY) / 2) | 0;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
         if (!game.explored.has(exploredKey(game, x, y))) continue;
         const tile = tiles[y][x];
         let color = '#3a332c';
@@ -1082,25 +1221,35 @@ export function createView() {
         else if (tile === 6) color = '#3e4a44';
         else if (tile === 4 || tile === 5) color = '#e7a15a';
         ctx.fillStyle = color;
-        ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
+        ctx.fillRect(ox + (x - x0) * cell, oy + (y - y0) * cell, cell, cell);
       }
     }
-    const floor = currentFloor(game);
-    ctx.fillStyle = '#d15a48';
+    const mxOf = (x) => ox + (x - x0) * cell;
+    const myOf = (y) => oy + (y - y0) * cell;
     for (const e of floor.entities) {
-      if (e.kind !== 'monster' || !e.alive) continue;
-      const key = exploredKey(game, e.x, e.y);
-      if (!game.explored.has(key)) continue;
-      const near = (e.x - game.x) * (e.x - game.x) + (e.y - game.y) * (e.y - game.y) <= 36;
-      if (!near) continue;
-      ctx.fillRect(ox + e.x * cell, oy + e.y * cell, cell, cell);
+      if (e.taken) continue;
+      if (!game.explored.has(exploredKey(game, e.x, e.y))) continue;
+      if (e.kind === 'monster' && e.alive) {
+        const near = (e.x - game.x) * (e.x - game.x) + (e.y - game.y) * (e.y - game.y) <= 36;
+        if (!near && !game.inHub) continue;
+        ctx.fillStyle = '#d15a48';
+        ctx.fillRect(mxOf(e.x), myOf(e.y), cell, cell);
+      } else if (e.kind === 'npc') {
+        ctx.fillStyle = '#9ec4de';
+        ctx.fillRect(mxOf(e.x) + 1, myOf(e.y) + 1, Math.max(2, cell - 2), Math.max(2, cell - 2));
+      } else if (e.kind === 'prop' && e.sub === 'fire') {
+        ctx.fillStyle = '#e3924a';
+        ctx.beginPath();
+        ctx.arc(mxOf(e.x) + cell / 2, myOf(e.y) + cell / 2, Math.max(2, cell * 0.35), 0, 7);
+        ctx.fill();
+      }
     }
     ctx.fillStyle = '#e7a15a';
     for (const m of questMarkers(game)) {
       const onThis = game.inHub ? !!m.hub : m.floor === game.floor;
       if (!onThis) continue;
-      const mx = ox + (m.x + 0.5) * cell;
-      const my = oy + (m.y + 0.5) * cell;
+      const mx = mxOf(m.x) + cell / 2;
+      const my = myOf(m.y) + cell / 2;
       ctx.beginPath();
       ctx.moveTo(mx, my - cell * 0.46);
       ctx.lineTo(mx + cell * 0.36, my);
@@ -1109,8 +1258,8 @@ export function createView() {
       ctx.closePath();
       ctx.fill();
     }
-    const cx = ox + (game.x + 0.5) * cell;
-    const cy = oy + (game.y + 0.5) * cell;
+    const cx = mxOf(game.x) + cell / 2;
+    const cy = myOf(game.y) + cell / 2;
     const ang = game.facing * Math.PI / 2;
     ctx.fillStyle = '#f3eadc';
     ctx.beginPath();
@@ -1137,6 +1286,9 @@ function tileUsable(game, tiles, x, y) {
   if (!ents) return false;
   return ents.some(e => e.x === x && e.y === y && !e.taken && (
     (e.kind === 'chest' && !e.opened) || e.kind === 'lever' || e.kind === 'key' || e.kind === 'potion'
+    || e.kind === 'item'
+    || e.kind === 'npc' || e.kind === 'relic' || e.kind === 'mark'
+    || (e.kind === 'prop' && (e.sub === 'torch' || e.sub === 'fire'))
   ));
 }
 

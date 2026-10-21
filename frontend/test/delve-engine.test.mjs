@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {
-  TILE, MAP, FLOORS, createGame, move, attack, attackOne, cast, interact, tick,
+  TILE, MAP, FLOORS, createGame, move, attack, attackOne, cast, castRunes, interact, tick,
   summarize, saveGame, loadGame, clearSave, debug, living, SPELLS, floodReachable,
   questLog, questMarkers, advanceTalk, HUB_GATE,
+  saveAuto, loadAuto, saveSlot, loadSlot, listSaves,
+  moveItem, dropItem, activateItem, useItem, weaponAtk, armorDef, handoffItem, SAVE_KEY,
 } from '../public/delve/engine.js';
 
 const memory = () => {
@@ -356,6 +358,177 @@ if (niche.quests.hidden !== 'done') {
   interact(niche);
 }
 assert.equal(niche.quests.hidden, 'done');
+
+assert.ok(createGame(1, 'normal').log.some(l => /entry stair/i.test(l.text)), 'the entry stair is named');
+
+const runeGame = createGame(1, 'normal');
+runeGame.selected = 3;
+const runeBefore = runeGame.party[3].rune;
+assert.equal(castRunes(runeGame, 'spark', 'glim', 'bolt').ok, true);
+assert.ok(runeGame.gleamMs > 0, 'light rune');
+assert.ok(runeGame.party[3].rune > runeBefore, 'casting raises skill');
+runeGame.selected = 2;
+debug.hurt(runeGame, 0, 8);
+const mendHp = runeGame.party[0].hp;
+assert.equal(castRunes(runeGame, 'spark', 'vita', 'mend').ok, true);
+assert.ok(runeGame.party[0].hp > mendHp, 'heal rune');
+assert.equal(castRunes(runeGame, 'spark', 'glim', 'shell').ok, true);
+assert.ok(runeGame.wardMs > 0, 'shield rune');
+const spirit = debug.spawn(runeGame, 'ghost', runeGame.x + 1, runeGame.y);
+runeGame.facing = 1;
+const ghostHp = spirit.hp;
+attack(runeGame);
+assert.equal(spirit.hp, ghostHp, 'steel misses a ghost');
+assert.equal(castRunes(runeGame, 'brand', 'ash', 'bolt').ok, true);
+assert.ok(spirit.hp < ghostHp, 'magic hits a ghost');
+
+const doorAi = createGame(1, 'normal');
+for (let y = 8; y <= 12; y++) {
+  for (let x = 0; x < 8; x++) doorAi.floors[0].tiles[y][x] = y === 10 ? TILE.FLOOR : TILE.WALL;
+}
+doorAi.floors[0].tiles[10][3] = TILE.LOCKED;
+debug.setPos(doorAi, 1, 10, 0, 1);
+const ghostDoor = debug.spawn(doorAi, 'ghost', 5, 10);
+ghostDoor.cool = 1;
+ghostDoor.alertMs = 9000;
+tick(doorAi, 30);
+assert.equal(ghostDoor.x, 5, 'a door stops a ghost');
+assert.equal(doorAi.floors[0].tiles[10][3], TILE.LOCKED, 'a ghost does not open the door');
+ghostDoor.alive = false;
+const bruteDoor = debug.spawn(doorAi, 'brute', 4, 10);
+bruteDoor.cool = 1;
+bruteDoor.alertMs = 9000;
+tick(doorAi, 30);
+assert.equal(doorAi.floors[0].tiles[10][3], TILE.DOOR_OPEN, 'a brute forces the door');
+
+const runner = createGame(1, 'normal');
+for (let x = 0; x < 8; x++) runner.floors[0].tiles[12][x] = TILE.FLOOR;
+debug.setPos(runner, 2, 12, 0, 1);
+const coward = debug.spawn(runner, 'crawler', 3, 12);
+coward.hp = 1;
+coward.maxHp = 20;
+coward.cool = 1;
+coward.alertMs = 9000;
+const runnerHp = runner.party[0].hp;
+tick(runner, 30);
+assert.ok(coward.x !== 3 || coward.y !== 12, 'a hurt crawler runs');
+assert.equal(runner.party[0].hp, runnerHp, 'fleeing skips the bite');
+
+const camp = createGame(3, 'normal');
+let campDown = null;
+for (let y = 0; y < MAP && !campDown; y++) {
+  for (let x = 0; x < MAP; x++) if (camp.floors[0].tiles[y][x] === TILE.STAIRS_DOWN) campDown = { x, y };
+}
+debug.setPos(camp, campDown.x, campDown.y, 0, 0);
+interact(camp);
+assert.equal(camp.wantAutosave, true, 'the waystation asks for an autosave');
+assert.ok(camp.hub.entities.some(e => e.sub === 'fire'), 'the camp has a fire');
+const autoBox = memory();
+assert.equal(saveAuto(camp, autoBox), true);
+assert.equal(loadAuto(autoBox).inHub, true);
+camp.gold = 42;
+assert.equal(saveSlot(camp, 2, autoBox), true);
+assert.equal(loadSlot(2, autoBox).gold, 42);
+const listed = listSaves(autoBox);
+assert.equal(listed.find(s => s.id === 'auto').empty, false);
+assert.equal(listed.find(s => s.id === '2').where, 'The Waystation');
+const torch = camp.hub.entities.find(e => e.sub === 'torch');
+debug.setPos(camp, torch.x, torch.y + 1, 0, 0);
+interact(camp);
+assert.equal(camp.torch, true, 'F takes the torch');
+assert.equal(torch.taken, true);
+assert.equal(camp.log.some(l => l.text.indexOf('1 step ahead') >= 0 && l.text.indexOf('torch') >= 0), false);
+interact(camp);
+const banner = camp.hub.entities.find(e => e.sub === 'banner');
+debug.setPos(camp, banner.x, banner.y + 1, 0, 0);
+interact(camp);
+interact(camp);
+const bannerLine = camp.log.find(l => l.text === 'A tattered banner.');
+assert.ok(bannerLine && bannerLine.n >= 2, 'a repeated line collapses');
+const fire = camp.hub.entities.find(e => e.sub === 'fire');
+debug.hurt(camp, 0, 10);
+const restHp = camp.party[0].hp;
+debug.setPos(camp, fire.x - 1, fire.y, 0, 1);
+interact(camp);
+assert.ok(camp.party[0].hp > restHp, 'the campfire heals');
+
+const sheet = createGame(1, 'normal');
+const bryn = sheet.party[0];
+assert.equal(bryn.equip.weapon.name, 'ash knife');
+assert.equal(bryn.equip.body.name, 'quilted coat');
+assert.equal(bryn.equip.head.name, 'leather hood');
+assert.equal(bryn.pack.length, 16);
+assert.equal(bryn.weapon.name, 'ash knife');
+assert.equal(armorDef(bryn), bryn.def + 1);
+assert.equal(weaponAtk(bryn), bryn.atk + 1);
+const packSlot = bryn.pack.findIndex(it => !it);
+assert.equal(moveItem(sheet, { champ: 0, where: 'equip', slot: 'body' }, { champ: 0, where: 'pack', index: packSlot }).ok, true);
+assert.equal(bryn.equip.body, null);
+assert.equal(bryn.armor, null);
+assert.equal(bryn.pack[packSlot].name, 'quilted coat');
+assert.equal(moveItem(sheet, { champ: 0, where: 'pack', index: packSlot }, { champ: 0, where: 'equip', slot: 'body' }).ok, true);
+assert.equal(bryn.armor.name, 'quilted coat');
+assert.equal(moveItem(sheet, { champ: 0, where: 'pack', index: 0 }, { champ: 0, where: 'equip', slot: 'weapon' }).ok, false);
+debug.hurt(sheet, 0, 8);
+const vialHp = bryn.hp;
+assert.equal(useItem(sheet, 0, 0).ok, true);
+assert.ok(bryn.hp > vialHp, 'a vial drinks from the pack');
+debug.hurt(sheet, 1, 6);
+const caraHp = sheet.party[1].hp;
+assert.equal(useItem(sheet, 1, 0).ok, true);
+assert.ok(sheet.party[1].hp > caraHp, 'food is eaten');
+sheet.party[2].sta = 1;
+assert.equal(useItem(sheet, 2, 0).ok, true);
+assert.ok(sheet.party[2].sta > 1, 'a drink restores stamina');
+const foodFrom = sheet.party[1].pack.findIndex(it => it && it.type === 'food');
+if (foodFrom < 0) {
+  const spare = sheet.party[3].pack.findIndex(it => !it);
+  assert.equal(handoffItem(sheet, { champ: 0, where: 'equip', slot: 'head' }, 3).ok, true);
+  assert.equal(sheet.party[3].pack[spare].name, 'leather hood');
+} else {
+  const spare = bryn.pack.findIndex(it => !it);
+  assert.equal(moveItem(sheet, { champ: 1, where: 'pack', index: foodFrom }, { champ: 0, where: 'pack', index: spare }).ok, true);
+  assert.equal(bryn.pack[spare].type, 'food');
+}
+bryn.equip.offhand = { type: 'weapon', name: 'dagger', slot: 'offhand', atk: 2, def: 0, potion: '', amount: 0 };
+assert.equal(weaponAtk(bryn), bryn.atk + (bryn.equip.weapon ? bryn.equip.weapon.atk : 0) + 2);
+
+const bag = createGame(9, 'normal');
+clearLane(bag, 8, 6, 3);
+assert.equal(dropItem(bag, { champ: 0, where: 'equip', slot: 'weapon' }).ok, true);
+assert.equal(bag.party[0].weapon, null);
+const lying = bag.floors[0].entities.find(e => e.kind === 'item' && e.name === 'ash knife');
+assert.ok(lying && lying.x === 8 && lying.y === 6, 'a drop lands on the floor');
+move(bag, 'forward');
+move(bag, 'turnLeft');
+move(bag, 'turnLeft');
+const picked = interact(bag);
+assert.equal(picked.ok, true);
+assert.equal(lying.taken, true);
+assert.ok(bag.party[0].pack.some(it => it && it.name === 'ash knife'), 'F picks the drop back up');
+
+const kept = memory();
+const round = createGame(2, 'normal');
+assert.equal(saveGame(round, kept), true);
+const again = loadGame(kept);
+assert.equal(again.party[0].equip.head.name, 'leather hood');
+assert.ok(again.party[1].pack.some(it => it && it.type === 'food'));
+const stripped = JSON.parse(kept.getItem(SAVE_KEY));
+for (const c of stripped.party) {
+  delete c.equip;
+  delete c.pack;
+}
+kept.setItem(SAVE_KEY, JSON.stringify(stripped));
+const migrated = loadGame(kept);
+assert.equal(migrated.party[0].equip.weapon.name, 'ash knife');
+assert.equal(migrated.party[0].equip.body.name, 'quilted coat');
+assert.equal(migrated.party[0].weapon.name, 'ash knife');
+assert.ok(migrated.party[0].pack.some(it => it && it.type === 'potion'), 'an old save still has its vials');
+
+const feet = createGame(5, 'normal');
+assert.equal(activateItem(feet, { champ: 0, where: 'equip', slot: 'feet' }).ok, true);
+assert.equal(feet.party[0].equip.feet, null);
+assert.ok(feet.party[0].pack.some(it => it && it.name === 'road boots'));
 
 const seen = floodReachable(g.floors[0].tiles, g.x, g.y);
 assert.ok(seen.size > 20);
