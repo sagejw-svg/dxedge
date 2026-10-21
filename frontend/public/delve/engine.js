@@ -642,6 +642,58 @@ function firstAlong(game, maxDist) {
   return null;
 }
 
+function labelAt(game, x, y, tile) {
+  const floor = currentFloor(game);
+  const m = livingMonsterAt(floor, x, y);
+  if (m) return m.name;
+  if (floor.entities.some(e => e.kind === 'chest' && !e.opened && e.x === x && e.y === y)) return 'chest';
+  if (floor.entities.some(e => e.kind === 'lever' && e.x === x && e.y === y)) return 'lever';
+  if (floor.entities.some(e => e.kind === 'key' && !e.taken && e.x === x && e.y === y)) return 'key';
+  if (floor.entities.some(e => e.kind === 'potion' && !e.taken && e.x === x && e.y === y)) return 'vial';
+  if (tile === TILE.LOCKED) return 'door';
+  if (tile === TILE.GATE) return 'gate';
+  if (tile === TILE.STAIRS_DOWN || tile === TILE.STAIRS_UP) return 'stairs';
+  return null;
+}
+
+/** Nearest thing you can see straight ahead, in steps. Walls hide what is past them. */
+function seenAhead(game, maxDist) {
+  const tiles = currentFloor(game).tiles;
+  let x = game.x;
+  let y = game.y;
+  const dx = DX[game.facing];
+  const dy = DY[game.facing];
+  const reach = maxDist == null ? 6 : maxDist;
+  for (let i = 1; i <= reach; i++) {
+    x += dx;
+    y += dy;
+    if (x < 0 || y < 0 || x >= MAP || y >= MAP) return null;
+    const tile = tiles[y][x];
+    const label = labelAt(game, x, y, tile);
+    if (label) return { dist: i, label };
+    if (blocksSight(tile)) return null;
+  }
+  return null;
+}
+
+function aheadLine(hit) {
+  const steps = hit.dist === 1 ? '1 step' : hit.dist + ' steps';
+  if (hit.label === 'stairs') return 'The stairs are ' + steps + ' ahead.';
+  if (/^the /i.test(hit.label)) {
+    const name = hit.label.charAt(0).toUpperCase() + hit.label.slice(1);
+    return name + ' is ' + steps + ' ahead.';
+  }
+  return 'The ' + hit.label + ' is ' + steps + ' ahead.';
+}
+
+function noteAhead(game) {
+  const hit = seenAhead(game, 6);
+  if (!hit) return false;
+  log(game, aheadLine(hit), 'info');
+  floater(game, hit.dist === 1 ? '1 step' : hit.dist + ' steps', 'miss');
+  return true;
+}
+
 function selectedChamp(game) {
   const c = game.party[game.selected];
   if (c && c.hp > 0) return c;
@@ -928,8 +980,10 @@ export function attack(game) {
   const max = champs.some(c => c.row === 'front') ? 1 : 5;
   const m = firstAlong(game, max);
   if (!m) {
-    log(game, 'Nothing ahead.', 'info');
-    floater(game, 'miss', 'miss');
+    if (!noteAhead(game)) {
+      log(game, 'Nothing ahead.', 'info');
+      floater(game, 'miss', 'miss');
+    }
     return { ok: false, reason: 'none' };
   }
   return attackMonster(game, m);
@@ -942,8 +996,10 @@ export function attackOne(game, index) {
   const max = c.row === 'front' ? 1 : 5;
   const m = firstAlong(game, max);
   if (!m) {
-    log(game, 'Nothing ahead.', 'info');
-    floater(game, 'miss', 'miss');
+    if (!noteAhead(game)) {
+      log(game, 'Nothing ahead.', 'info');
+      floater(game, 'miss', 'miss');
+    }
     return { ok: false, reason: 'none' };
   }
   const r = champAttack(game, c, m);
@@ -1088,6 +1144,7 @@ export function interact(game) {
   if (ahead) return { ok: true, sound: ahead };
   const here = useCell(game, game.x, game.y);
   if (here) return { ok: true, sound: here };
+  if (noteAhead(game)) return { ok: false, reason: 'far' };
   log(game, 'Nothing to use.', 'info');
   return { ok: false, reason: 'none' };
 }
