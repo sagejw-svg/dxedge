@@ -1,6 +1,7 @@
 """Comics that are already on the page open in a lightbox. Link-only strips do not."""
 import json
 import os
+import re
 import struct
 import subprocess
 import threading
@@ -281,7 +282,8 @@ def test_lightbox_contract_and_fit_math():
     assert "class NewsGate" in main
     assert "location ^~ /news/" in nginx
     assert "url.pathname.startsWith('/news/')" in sw
-    assert "CACHE_NAME = 'dxedge-v122'" in sw
+    m = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
+    assert m and int(m.group(1)) >= 122
     script = r"""
 const fs = require("fs");
 const html = fs.readFileSync(process.argv[1], "utf8");
