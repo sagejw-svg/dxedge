@@ -151,9 +151,12 @@ export function bendRaw(p, signals) {
       else if (src === 'vcc') clock *= 3.2;
       else clock *= 0.35 + 2.4 * x;
     } else if (dst === 'bits') {
+      // VCC and the moving sources pull the DAC down but stop at 3 bits: below that the
+      // toy DAC rounds a speaking cart to silence (Market Bits and Solder Bridge went quiet).
+      // A wire never adds bits the patch did not have. GND pins it at 2 on purpose.
       if (src === 'gnd') bits = 2;
-      else if (src === 'vcc') bits = Math.max(1, bits - 6);
-      else bits = Math.max(1, Math.round(bits - 5 * x));
+      else if (src === 'vcc') bits = Math.min(bits, Math.max(3, bits - 6));
+      else bits = Math.min(bits, Math.max(3, Math.round(bits - 5 * x)));
     } else if (dst === 'loop') {
       if (src === 'gnd') loop = 1;
       else if (src === 'vcc') loop = Math.max(loop, 0.92);

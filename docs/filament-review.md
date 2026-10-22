@@ -19,6 +19,10 @@ Newest severity first. IDs are `R<date>-<n>`.
 |-|-|-|-|-|
 | R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends) | measured |
+| R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03 | measured |
+| R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
+| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound | measured |
+| R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring | measured |
@@ -34,7 +38,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px) | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4 | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -238,3 +242,81 @@ device, inferred for the others.
 ### Not covered tonight
 Areas a, b. Suggested next: a (each device's controls against offline renders) and b (every factory
 patch on every device, user patch save, reload and delete).
+
+## 2026-10-22 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `61b1e1b`, sw.js
+`dxedge-v122`. Chromium headless at 1366 x 900, plus 375 x 812 (touch, 2x) for the patch bar on every
+device. No page errors and no console errors through about 300 patch loads, 36 saves and deletes, and
+three reloads. Level figures are the master recorder (24-bit WAV, live audio) for a C4 held 0.7 s,
+or C1 (note 36) on Dekatron; generative devices also play on their own, so their figures are not only
+the key.
+
+### What worked (measured)
+
+- Patches, all 18 devices: every factory patch in every list (124 in all) loads from the select with the
+  right name and has no NaN and no sample at or above 0 dBFS; 122 sound (the other two are R1022-1). Highest peak 0.96 (Geissler, Glass
+  Meadow), then Plate Bass 0.94 and Filter Kick 0.93.
+- User patches: save ("Review Probe") on each of the 18 devices shows the toast and selects it; after a
+  reload all 18 are listed and load, delete is offered on each and removes it; after another reload none
+  is left.
+- Old patches: a user list holding only `{ name, device }`, or only `{ name }`, loads on every device with
+  no errors and sounds on 17 of 18. Resnatron's stub is silent, which is correct: a bay with no cables
+  makes no sound.
+- Phone 375 px: no sideways scroll on any of the 18 devices; the patch select is 100 px wide at x 56.
+- Controls against offline renders. Thyratron, Init patch, 26 panel knobs from min to max: every knob
+  changes its own patch field. 20 change the render of one held note. The 6 that do not are the ones a
+  single held note cannot show: glide, bend range, osc 2 and osc 3 tune (their levels are 0 at Init),
+  osc 3 rate (LFO mode only), and the two mod wheel amounts. Additron, 13 knobs: 12 change the sound
+  (perc is R1022-2). Rhumbatron, 6 sliders and Phantastron, 7 sliders: all change their field and the
+  sound.
+
+### Findings
+
+**R1022-1. Two Phantastron factory patches make no sound.** Area b. Broken. Measured. Fixed tonight.
+- Steps: pick Phantastron, choose Market Bits or Solder Bridge, hold a key.
+- Expected: the toy speaks.
+- Actual: exact silence, live (master recorder peak 0.0) and offline (RMS 0.0 for 1.2 s). Both patches
+  wire VCC to BITS, which took 5 or 6 bits down to 1, and the toy DAC rounds a speaking cart (a signal
+  well under 0.5) to zero at 1 bit.
+- Fix: a wire into BITS now stops at 3 bits and never adds bits the patch did not have; GND to BITS
+  still pins 2. VCC on a 12-bit patch still gives 6 (the existing check). Both patches now speak.
+  Check: "Ph. every factory patch speaks when a key is held" and "Ph. a wire into BITS stops at three
+  bits and never adds any" (both fail on the live site, `[1, 1]` and RMS 0.0).
+
+**R1022-2. Additron's perc knob does nothing at first.** Area a. Broken. Measured. Fixed tonight.
+- Steps: Additron, Init (or any patch on "perc off"), turn perc up to 100%.
+- Expected: a percussive attack on the note.
+- Actual: the knob reads 100% and the render does not change at all (difference RMS 0.0), because the
+  harmonic chips still sit on "perc off". Nothing on the panel says so.
+- Fix: turning perc above 0 while the chips read "perc off" picks perc 3 and lights that chip, the same
+  way a rotor speed chip turns the rotor on. Check: "Ad. turning the perc knob up from perc off turns
+  the percussion on and it sounds".
+
+**R1022-3. Phantastron is very quiet next to the rest of the rack.** Areas a, b. Confusing. Measured.
+- Same C4 into the master recorder: Nursery Clock (its first patch) peaks 0.03, Grounded Syllable 0.03,
+  Howl Cart 0.17, Slow Drag 0.39. Filament patches peak 0.18 to 0.94 and Cathode 0.28 to 0.93.
+  Also quiet: Klystron Buncher Ah (its first patch) 0.08, Filament Horror Pad 0.06, Resnatron Reed
+  Drift 0.08. A first-time user on Phantastron hears almost nothing. Inferred cause: the toy DAC sits
+  on an absolute -1..1 scale and the speaking carts run far below it. A design call: see Open items.
+
+**R1022-4. Phantastron's bits slider goes silent below 4.** Area a. Confusing. Measured.
+- Offline, no wires, RMS by bits (1, 2, 3, 4, 8): Nursery Clock 0, 0, 0, 0.0019, 0.0060; Solder Bridge
+  0, 0, 0.074, 0.072, 0.073; Howl Cart 0, 0.0008, 0.042, 0.043, 0.043. Only the tone cart survives 1 bit.
+  A GND to BITS wire pins 2 bits, so it silences most carts too. Not fixed: the DAC's shape is pinned by
+  a check ("two bits land on five signed steps"), and the cure (gain into the DAC, or a mid-rise step)
+  changes how every patch sounds.
+
+**R1022-5. Delete lands on a different patch than the device opens with.** Area b. Confusing. Measured.
+- Delete a user patch on Filament: the rack loads Plate Bass (first in list order), not Wide Novachord
+  Strings, the device's first sound. Same on Cathode (Grid Bias Bass, not Plate Screamer). There is no
+  confirm and no way back to the deleted patch (undo restores its settings but not the list entry).
+
+**R1022-6. Saving under an existing user name overwrites it silently.** Area b. Confusing. Inferred
+from `doSave` in `index.html`: a user patch with the same name is filtered out and replaced; the toast
+says "Saved" with no mention that one was replaced. Factory names are refused, so factory patches are safe.
+
+### Not covered tonight
+Areas c to h. Area a covered Thyratron, Additron, Rhumbatron and Phantastron; the other 14 devices'
+controls are still to do. Chips and switches were not swept. Suggested next: c (keyboard and MIDI on the
+newer devices), e (the deck), and a on Lattice, Mote and Klystron.

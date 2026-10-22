@@ -194,6 +194,12 @@ export function mountAdditronPanel(container, hooks) {
       fmt, title: label,
       onChange: v => {
         hooks.patch()[path] = v;
+        // The perc knob was silent while the harmonic chips sat on "perc off". Turning it up
+        // picks perc 3, the way a speed chip turns the rotor on.
+        if (path === 'perc' && v > 0 && hooks.patch().percHarm === 'off') {
+          hooks.patch().percHarm = '3';
+          sync();
+        }
         hooks.edited();
       },
     });

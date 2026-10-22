@@ -4840,6 +4840,17 @@ with sync_playwright() as pw:
     ck("Ph. panic leaves the tail silent", early > 1e-3 and late < 1e-4, (round(early, 4), round(late, 6)))
     pg.evaluate("__synth.setDevice('phantastron')")
     pg.wait_for_timeout(250)
+    # Review 22 Oct (R1022-1): a wire into BITS took Market Bits and Solder Bridge to one bit,
+    # and the toy DAC rounds a speaking voice to zero there. Every factory patch must speak.
+    ph_fac = {}
+    for nm in [f["name"] for f in pg.evaluate("__synth.phantastronFactory()")]:
+        pg.evaluate("n => __synth.load(n)", nm)
+        pg.wait_for_timeout(30)
+        fL, _fR = ph_render(pg.evaluate("__synth.patch()"), 1.2, [{"t": "on", "n": 60, "v": 0.9, "at": 0.02}, {"t": "off", "n": 60, "at": 1.0}])
+        ph_fac[nm] = round(ph_rms(fL), 5)
+    ck("Ph. every factory patch speaks when a key is held", len(ph_fac) >= 6 and min(ph_fac.values()) > 1e-3, ph_fac)
+    wired_bits = pg.evaluate("""() => [5, 2].map(b => __synth.phantastronBend({ bits: b, wires: [['vcc', 'bits']] }).bits)""")
+    ck("Ph. a wire into BITS stops at three bits and never adds any", wired_bits == [3, 2], wired_bits)
     pg.evaluate("""() => __synth.setPatch({ device: 'phantastron', cart: 'lull', wires: [], run: false })""")
     pg.wait_for_timeout(80)
     ck("Ph. the board is up and the tube filter is not",
@@ -5208,6 +5219,23 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(40)
     drawn = pg.evaluate("__synth.patch().draw")
     ck("Ad. a drag on the spectrum raises that partial", drawn[1] > 0.7 and max(drawn[8:]) < 0.2, [round(v, 3) for v in drawn])
+    # Review 22 Oct (R1022-2): the perc knob did nothing while the chips sat on "perc off".
+    pg.evaluate("""() => __synth.setPatch({ device: 'additron', shape: 'stops', perc: 0, percHarm: 'off' })""")
+    pg.wait_for_timeout(80)
+    perc_knob = pg.locator("#mAdStage .knob[aria-label='perc'], .knob[aria-label='perc']").first
+    perc_knob.focus()
+    pg.keyboard.press("End")
+    pg.wait_for_timeout(60)
+    pk = pg.evaluate("""() => ({ p: __synth.patch().perc, h: __synth.patch().percHarm,
+      chip: (document.getElementById('adPerc3') || {}).getAttribute ? document.getElementById('adPerc3').getAttribute('aria-pressed') : null })""")
+    p_on = pg.evaluate("__synth.patch()")
+    p_off = dict(p_on, percHarm="off")
+    pq_on = ad_render(p_on, [{"t": "on", "n": 60, "v": 0.9, "at": 0}], 0.4)
+    pq_off = ad_render(p_off, [{"t": "on", "n": 60, "v": 0.9, "at": 0}], 0.4)
+    m = min(len(pq_on[0]), len(pq_off[0]))
+    pdiff = float(np.sqrt(np.mean(np.square(pq_on[0][:m] - pq_off[0][:m]))))
+    ck("Ad. turning the perc knob up from perc off turns the percussion on and it sounds",
+       pk["p"] == 1 and pk["h"] == "3" and pk["chip"] == "true" and pdiff > 1e-3, (pk, round(pdiff, 5)))
     pg.evaluate("""() => __synth.setPatch({ device: 'additron', shape: 'hand', morph: 0, rotor: false, click: 0, perc: 0, vib: 0, tilt: 0,
       attack: 0.005, decay: 0.2, sustain: 1, release: 0.04, level: 0.8,
       draw: [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0], drawB: [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0] })""")
