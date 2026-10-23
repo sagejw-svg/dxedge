@@ -1469,6 +1469,7 @@ function setMasterVol(v, persist) {
   return v;
 }
 const queue = [];
+let booted = false;           // every hosted device attached (E exists a little before that)
 function initAudioSession() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
 function ensureEngine() {
   if (enginePromise) return enginePromise;
@@ -1486,7 +1487,10 @@ function ensureEngine() {
     // Dekatron joins the mixer and the master clock as soon as the engine exists.
     // Asleep until the rail selects it, so it adds nothing to the other devices.
     const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => adHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rhumHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
-      const sleep = () => { drumHost.setActive(false); latticeHost.setActive(false); thyHost.setActive(false); gleamHost.setActive(false); moteHost.setActive(false); heptodeHost.setActive(false); geisslerHost.setActive(false); pentaHost.setActive(false); orthiconHost.setActive(false); trHost.setActive(false); gyHost.setActive(false); klHost.setActive(false); phHost.setActive(false); adHost.setActive(false); rhumHost.setActive(false); rnHost.setActive(false); };
+      // Every hosted device starts asleep, except the one the rail already shows: the chain of
+      // attaches can finish after the page is playable, and an 'active: false' there would cut a
+      // note the player is already holding on it (it panics the device).
+      const sleep = () => { HOSTED.forEach(id => { if (id !== dev) hostOf(id).setActive(false); }); };
       if (dev === 'dekatron') {
         releaseRailVoice();
         sleep(); drumHost.setActive(true); drumHost.setPatch(cur);
@@ -1537,7 +1541,7 @@ function ensureEngine() {
         sleep(); rnHost.setActive(true); rnHost.setPatch(cur);
       } else { sleep(); }
     });
-    return ready.then(() => { queue.splice(0).forEach(fn => fn()); updateAudioLamp(); restoreMixRouting(); syncHostUI(); return E; });
+    return ready.then(() => { queue.splice(0).forEach(fn => fn()); booted = true; updateAudioLamp(); restoreMixRouting(); syncHostUI(); return E; });
   }).catch(err => { console.error(err); toast('Audio engine failed to load: ' + err.message, 6000); throw err; });
   ctx.onstatechange = updateAudioLamp;
   return enginePromise;
@@ -1608,6 +1612,18 @@ function releaseRailVoice() {
   if (node) node.port.postMessage({ t: 'active', on: false });
 }
 function patchFor(id) { return id === dev ? cur : (DS[id] && DS[id].cur); }
+const HOSTED = ['dekatron', 'lattice', 'thyratron', 'gleam', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron', 'additron', 'rhumbatron', 'resnatron'];
+// What a generator (Geissler, Gyrotron) calls to wake a device it plays and to let it sleep when
+// its notes end. It never sleeps the device on the rail or one armed in the mixer: that would
+// panic it and cut what the player is holding there.
+function routeWaker(id) {
+  return on => {
+    const h = hostOf(id);
+    if (!h) return;
+    if (on) h.setActive(true);
+    else if (id !== dev && !mixArmed.includes(id)) h.setActive(false);
+  };
+}
 function hostOf(id) {
   return {
     dekatron: drumHost, lattice: latticeHost, thyratron: thyHost, gleam: gleamHost,
@@ -3659,18 +3675,18 @@ const heptodeHooks = {
 };
 heptodePanel = mountHeptodePanel($('heptodeRoot'), heptodeHooks);
 geisslerHost.setDrums(drumHost);
-geisslerHost.setWaker('dekatron', on => drumHost.setActive(on));
-geisslerHost.setWaker('lattice', on => latticeHost.setActive(on));
-geisslerHost.setWaker('thyratron', on => thyHost.setActive(on));
-geisslerHost.setWaker('gleam', on => gleamHost.setActive(on));
-geisslerHost.setWaker('mote', on => moteHost.setActive(on));
-geisslerHost.setWaker('heptode', on => heptodeHost.setActive(on));
-geisslerHost.setWaker('pentagrid', on => pentaHost.setActive(on));
-geisslerHost.setWaker('orthicon', on => orthiconHost.setActive(on));
-geisslerHost.setWaker('trochotron', on => trHost.setActive(on));
-geisslerHost.setWaker('gyrotron', on => gyHost.setActive(on));
-geisslerHost.setWaker('phantastron', on => phHost.setActive(on));
-geisslerHost.setWaker('rhumbatron', on => rhumHost.setActive(on));
+geisslerHost.setWaker('dekatron', routeWaker('dekatron'));
+geisslerHost.setWaker('lattice', routeWaker('lattice'));
+geisslerHost.setWaker('thyratron', routeWaker('thyratron'));
+geisslerHost.setWaker('gleam', routeWaker('gleam'));
+geisslerHost.setWaker('mote', routeWaker('mote'));
+geisslerHost.setWaker('heptode', routeWaker('heptode'));
+geisslerHost.setWaker('pentagrid', routeWaker('pentagrid'));
+geisslerHost.setWaker('orthicon', routeWaker('orthicon'));
+geisslerHost.setWaker('trochotron', routeWaker('trochotron'));
+geisslerHost.setWaker('gyrotron', routeWaker('gyrotron'));
+geisslerHost.setWaker('phantastron', routeWaker('phantastron'));
+geisslerHost.setWaker('rhumbatron', routeWaker('rhumbatron'));
 const geisslerHooks = {
   patch: geisslerPatch,
   host: geisslerHost,
@@ -3767,20 +3783,7 @@ const trHooks = {
 trPanel = mountTrochotronPanel($('trRoot'), trHooks);
 gyHost.setDrums(drumHost);
 ['dekatron', 'lattice', 'thyratron', 'gleam', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'rhumbatron'].forEach(id => {
-  const wakeOf = {
-    dekatron: on => drumHost.setActive(on),
-    lattice: on => latticeHost.setActive(on),
-    thyratron: on => thyHost.setActive(on),
-    gleam: on => gleamHost.setActive(on),
-    mote: on => moteHost.setActive(on),
-    heptode: on => heptodeHost.setActive(on),
-    geissler: on => geisslerHost.setActive(on),
-    pentagrid: on => pentaHost.setActive(on),
-    orthicon: on => orthiconHost.setActive(on),
-    trochotron: on => trHost.setActive(on),
-    rhumbatron: on => rhumHost.setActive(on),
-  };
-  gyHost.setWaker(id, wakeOf[id]);
+  gyHost.setWaker(id, routeWaker(id));
 });
 const gyHooks = {
   patch: gyrotronPatch,
@@ -3893,6 +3896,8 @@ function b64(f32) { const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.by
 window.__synth = {
   version: '0.19-resnatron',
   ready: () => !!E,
+  booted: () => booted,          // every hosted device attached and the boot queue drained
+  routeWaker: (id, on) => routeWaker(id)(on),   // what Geissler and Gyrotron call (tests)
   tubeShow: () => showState(SHOW),
   setTubeShow: mode => setShow(mode),
   device: () => dev,

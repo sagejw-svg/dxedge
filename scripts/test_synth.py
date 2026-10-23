@@ -1934,6 +1934,44 @@ with sync_playwright() as pw:
            info_g["rate"] == live_sr and freq_ok and level_ok and both,
            (info_g["rate"], round(wf, 2), round(lf, 2), round(wr, 4), round(lr, 4), round(ratio, 3)))
 
+    # A held note on the rail's device must survive the rest of the rack attaching, and a generator
+    # (Geissler, Gyrotron) ending its notes on that device must not put it to sleep. Both used to
+    # send it 'active: false', which panics it: the cause of "M. pentagrid" failing now and then.
+    PG_TONE = dict(device="pentagrid", tune=8500, bfo=700, bandwidth=400, air=0, noise=0, crackle=0, fade=0, agc=0, blanker=0, text="", play=True, mode="cw", level=0.9, cond=1)
+    OUT_RMS = """() => { const E = __synth.engine(); if (!window.__outAn) { const a = E.ctx.createAnalyser(); a.fftSize = 4096; E.C.out.connect(a); window.__outAn = { a, b: new Float32Array(4096) }; }
+      const x = window.__outAn; x.a.getFloatTimeDomainData(x.b); let q = 0; for (const v of x.b) q += v * v; return Math.sqrt(q / x.b.length); }"""
+    bctx = b.new_context(viewport={"width": 1366, "height": 1000}, service_workers="block")
+    # Hold back the last device's worklet (Resnatron's addModule waits for __releaseBoot), so the
+    # chain of attaches is still running when the note goes down.
+    bctx.add_init_script("""(() => { const am = AudioWorklet.prototype.addModule; let rel; const hold = new Promise(r => { rel = r; });
+      window.__releaseBoot = () => rel();
+      AudioWorklet.prototype.addModule = function (url, o) { return String(url).includes('resnatron.worklet') ? hold.then(() => am.call(this, url, o)) : am.call(this, url, o); }; })()""")
+    bp = bctx.new_page(); berr = []
+    bp.on("pageerror", lambda e: berr.append(str(e)))
+    bp.goto(BASE); bp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    early = bp.evaluate("__synth.booted()")
+    bp.evaluate(OUT_RMS)    # the analyser needs a moment of audio before it reads anything
+    bp.evaluate("(p) => __synth.setPatch(p)", PG_TONE); bp.wait_for_timeout(300)
+    bp.evaluate("async () => { const c = __synth.engine().ctx; if (c.state !== 'running') await c.resume(); }")
+    bp.evaluate("(n) => __synth.noteOn(n, 0.9)", 69); bp.wait_for_timeout(300)
+    before = bp.evaluate(OUT_RMS)
+    bp.evaluate("window.__releaseBoot()")
+    bp.wait_for_function("__synth.booted()", timeout=30000); bp.wait_for_timeout(350)
+    after = bp.evaluate(OUT_RMS)
+    bp.evaluate("(n) => __synth.noteOff(n)", 69)
+    ck(f"M. a note held on Pentagrid while the rack is still attaching keeps sounding when it finishes (booted at note-on: {early}; output {before:.3f} -> {after:.3f}, want 0.02 or more after)",
+       early is False and before > 0.02 and after > 0.02 and not berr, (early, before, after, berr))
+    bctx.close()
+    pg.evaluate("__synth.panic()"); pg.evaluate(OUT_RMS)
+    pg.evaluate("(p) => __synth.setPatch(p)", PG_TONE); pg.wait_for_timeout(300)
+    pg.evaluate("(n) => __synth.noteOn(n, 0.9)", 69); pg.wait_for_timeout(250)
+    before = pg.evaluate(OUT_RMS)
+    pg.evaluate("() => { __synth.routeWaker('pentagrid', true); __synth.routeWaker('pentagrid', false); }"); pg.wait_for_timeout(300)
+    after = pg.evaluate(OUT_RMS)
+    pg.evaluate("(n) => __synth.noteOff(n)", 69)
+    ck(f"M. a generator's notes ending on Pentagrid do not put it to sleep while it is on the rail (output {before:.3f} -> {after:.3f}, want 0.02 or more after)",
+       before > 0.02 and after > 0.02, (before, after))
+
     # Mote freeze: stop spawning grains and the delay/reverb tail must still be in the file.
     pg.evaluate("__synth.panic()")
     pg.evaluate("(d) => __synth.setDevice('mote')", "mote")
