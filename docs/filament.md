@@ -806,6 +806,22 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 23 Oct (test health, forced: main hung on it): the Gleam HRTF render deadlock. The suite on
+  origin/main `b93422e` stalled for more than 5 minutes in "G. HRTF keeps a left-hand finger on the
+  left" (the 18 Oct hang again). Measured cause, outside the suite, a fresh page each run in Chromium
+  153: an HRTF offline render started straight after the page's first HRTF panner hangs about one run
+  in five (Gleam's render 3 of 15; a bare oscillator and panner on the rack page 11 of 80; a bare
+  worklet and 8 panners on an empty page 1 of 15). In gdb the HRTF loader thread waits on a mutex
+  owned by the offline render thread, which waits on a condition for the loader: a deadlock inside
+  the browser, so the promise never settles. Starting the render 100 ms after a panner has begun the
+  load finished 30 of 30; after 1.5 s, 25 of 25. `renderGleamBuffer` now makes one HRTF panner per
+  sample rate per page (kept, so the loaded data stays shared) and waits 1 s from then before an HRTF
+  render: the same Gleam repro 40 of 40, first HRTF render 1.13 to 1.39 s (before: 0.65 to 0.96 s
+  when it did not hang), later ones unchanged. Output unchanged: a cold render and a warmed one
+  differ by at most 3e-8, the same as two warmed renders. `g_render` in the suite now gives up after
+  60 s with a failing check and NaN output instead of stalling. Not changed (inferred, same cause):
+  Sculpt's `renderSculpt` (`synth/hand-sculpt/audio.js`) renders HRTF panners offline straight
+  after making them, so it can hang the same way; it would need the same wait.
 - Done 21 Oct: Cathode's per-sample filter and pitch maths. Profiled Plate Screamer in Node: `exp2`
   was 19.6% of the worklet's self time and the two `Math.tan` sat inside `render` (41%), each run at
   the 2x rate for both filters and both VCOs even when their inputs sat still. `render` now keeps the
@@ -845,11 +861,6 @@ and proven by measurement), test suite health, load time and memory, code health
   from 20% (in the suite) to 30-44% (a separate bench under load) for the same tree tonight, measured.
   They are INFO lines and cannot fail the suite, but they cannot show a 10% change either. Use the Node
   bench (CPU time, seeded) for A/B work. Suite wall time on main tonight: 8 min 11 s.
-- Test health: on 18 Oct one suite run hung for more than 6 minutes inside "G. HRTF keeps a left-hand
-  finger on the left" (the offline render with the HRTF panner; the renderer sat at 90% CPU, no output).
-  The rerun of the same tree passed it in seconds, and so did main earlier the same night (measured).
-  Not caused by tonight's change (Gleam does not use the Filament worklet). If it recurs, give that
-  render a timeout so a hang fails one check instead of stalling the suite.
 - Load time: `synth/index.html` is one 316 KB file (measured). Worth checking which device panels could
   load on first use instead of at first paint.
 - Robustness: R1017-9 (no output protection with the compressor off) changes the sound, so it is a call
@@ -969,6 +980,7 @@ visuals alone while the Tube show item in 0.3 is open. Measured means a script r
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-23 (improvement, scheduled task, about 5:26 to 6:45 AM PT): test health, forced: main hung. The suite on origin/main `b93422e` stalled more than 5 minutes in "G. HRTF keeps a left-hand finger on the left" (the 18 Oct hang again) and was stopped. Cause, measured: in Chromium 153 an HRTF offline render started straight after the page's first HRTF panner deadlocks about one run in five (gdb: the HRTF loader thread waits on a mutex the offline render thread owns, and that thread waits for the loader). `renderGleamBuffer` now makes one HRTF panner per sample rate per page and waits 1 s before an HRTF render; the suite's Gleam renders now fail one check after 60 s instead of stalling. Before and after on the same fresh-page repro: 3 of 15 renders hung, then 40 of 40 finished; the first HRTF render of a page takes 1.13 to 1.39 s (was 0.65 to 0.96 s when it did not hang), later ones unchanged. Sound unchanged (a warmed render matches a cold one within 3e-8, the jitter between two warmed renders); no patch changes. Sculpt's offline HRTF render can hang the same way (inferred, not changed; see the Improvement backlog). Cache `dxedge-v127`. Suite: ALL PASS (1149 checks, 536 s). `scripts/test_synth_imported.py`: ALL PASS (29). CPU (test 9, headless): Cathode 20.8%; Filament 8 voices Ladder 24 25.4%, Valve 12 21.6%, Diode 18 28.6%, Sallen-Key 12 27.0%; stereo offset 25.7%; 16 voices 34.6%; EQ 31 bands 30.5%. Chassis draw 5.68 ms a frame. Commit: this one.
 - 2026-10-23 (review, scheduled task, about 4:25 to 5:15 AM PT): areas c (keyboard, computer keys, pedal, wheels and MIDI on all 18 devices), d (the new Mix desk: arms, session save, load and upload) and e (MIDI deck takes with armed strips, Render WAV), live `0.19-resnatron`, origin/main `4b87649`. Findings: 2 broken (both fixed), 2 confusing, 1 missing; R1017-3 and R1017-8 still open. Fixes: the pedal-up now reaches every device the pedal went down on, so arming a strip while holding no longer leaves a note ringing until Panic; upload mix refuses a file that is not `kind: dxmix` instead of resetting every strip and overwriting the saved mix. Each with a check that fails on the live code. Cache `dxedge-v126`. Suite: ALL PASS (1150 checks). Commit: the review commit of 23 Oct.
 - 2026-10-23 (graphics, scheduled task, about 3:15 to 4:15 AM PT): main first: suite on origin/main `72b3780` ALL PASS (1141 checks). Screenshots at 1366x1000 and 375x667, every rail device and every phone tab; no page errors, no horizontal scroll. Started the Graphics backlog (8 items, ranked). Built the top one, the Mix desk strips: fixed the `keys` class collision that stretched the keyed strip (desktop gap, phone overlap), a faceplate and lamp per strip, names on one line, an LED ladder meter at the canvas's real size, amber bus sliders. CSS and the meter painter only; no audio change. 5 new checks (3 Mx., 2 phone). Cache `dxedge-v125`. Suite: ALL PASS (1146 checks). Commit: the graphics commit of 23 Oct.
 - 2026-10-23 (check and debug, scheduled task, about 2:10 to 2:55 AM PT): reviewed 2 commits since 22 Oct 6 PM PT on origin/main `9a411cf`, both by Claude (the 12:28 AM nightly): the boot and router sleep fix `811b4c4` and Sallen-Key 12 `9a411cf`; also the health bot's state commit `720041a`. No edit under `/otr`, no test removed or loosened (the one changed check, the phone Filter tab, now also requires the Sallen-Key 12 chip), no trademark name, no new third-party code. Read the diffs: `routeWaker` and the boot `sleep` both skip the rail's device as intended; the new filter's coefficient memo is keyed on model and patch epoch, and Valve 12 rewrites the slots it shares with Sallen-Key 12, so switching models does not leak state (by reading the code). Suite: ALL PASS (1141 checks), including `M. pentagrid: recorded matches live`. `scripts/test_synth_imported.py`: ALL PASS (29). Live `/synth/`, `/synth/fm/`, `/synth/acid/` at 1366 and 375 px: no page or console errors, `__synth.ready()` and `booted()` true, the only failed request the `/api/stat` beacon aborted on close; no horizontal scroll at 375 px except Hexode (1154 px, open since 15 Oct). A live note on each of the 18 rack devices moved its own strip meter (measured, 0.014 Phantastron to 0.92 Geissler peak); an offline Filament render peaked at 0.35. Live `sw.js` `dxedge-v124` and the live `index.html`, `voice.worklet.js` and `patches.js` match the repo byte for byte. Defects found: none. Note for the task prompt: the Chromium path it names (`chromium-1194`) no longer exists; the suite falls back to `/opt/pw-browsers/chromium`. CPU (test 9, headless): Cathode 22.7%; Filament 8 voices Ladder 24 37.5%, Valve 12 29.1%, Diode 18 30.3%, Sallen-Key 12 31.9%; stereo offset 32.8%; 16 voices 42.6%. Chassis draw 4.75 ms a frame. Docs only, no cache bump. Commit: this one.

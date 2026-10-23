@@ -144,9 +144,32 @@ export async function createGleamNode(ctx, { patch, events, active, destination 
   return graph;
 }
 
+// The first HRTF panner a page makes at a sample rate starts a thread that loads the head
+// responses, and every context at that rate shares the result. In Chromium 153 an offline render
+// started within a moment of that start can deadlock: the render thread takes a lock, then waits
+// for the load, and the load thread is still waiting for the same lock (seen in gdb; the render
+// never returns and its promise never settles). Measured on the rack page, a fresh page each run:
+// an HRTF render started at once (this one, or a bare panner) hung in 14 of 70 runs; one started
+// 100 ms after a panner had begun the load finished in 30 of 30, and after 1.5 s in 25 of 25, by
+// then in 3 to 56 ms because the load was done. So an HRTF render first makes a panner at its rate (once per page, kept so
+// the loaded data stays shared) and waits HRTF_SETTLE_MS from then. The output does not change.
+const HRTF_SETTLE_MS = 1000;
+const hrtfLoads = new Map();          // sample rate -> { panner, settled }
+function hrtfSettled(sampleRate) {
+  let h = hrtfLoads.get(sampleRate);
+  if (!h) {
+    const panner = new OfflineAudioContext(1, 128, sampleRate).createPanner();
+    panner.panningModel = 'HRTF';
+    h = { panner, settled: new Promise(res => setTimeout(res, HRTF_SETTLE_MS)) };
+    hrtfLoads.set(sampleRate, h);
+  }
+  return h.settled;
+}
+
 export async function renderGleamBuffer({ patch, events = [], seconds = 1, sampleRate = 48000 } = {}) {
-  const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const p = normalizeGleam(patch);
+  if (p.hrtf) await hrtfSettled(sampleRate);
+  const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   // Events go in the processor options. A message posted after the node exists
   // can miss an offline render that finishes before the port delivers it.
   const queued = [];

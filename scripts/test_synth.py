@@ -3200,10 +3200,18 @@ with sync_playwright() as pw:
     sctx.close()
     # ---------------------------------------------------------------- G. Gleam, the touch field
     def g_render(patch, events, seconds=0.8):
+        # A render that never settles (the HRTF load deadlock, see hrtfSettled in gleam-ui.js)
+        # fails here after 60 s instead of stalling the suite. NaN output fails every check on it.
         raw = pg.evaluate(
-            """async ({patch, events, seconds}) => __synth.gleamRender({patch, events, seconds, sampleRate: 48000})""",
+            """async ({patch, events, seconds}) => Promise.race([
+                 __synth.gleamRender({patch, events, seconds, sampleRate: 48000}),
+                 new Promise(res => setTimeout(() => res(null), 60000))])""",
             {"patch": patch, "events": events, "seconds": seconds},
         )
+        if raw is None:
+            ck(f"G. an offline render finishes inside 60 s (hrtf {bool(patch.get('hrtf'))}, {seconds} s)", False, "timed out")
+            nan = np.full(int(seconds * 48000), np.nan)
+            return nan, nan.copy()
         return dec(raw)
     def g_fx(**kw):
         raw = pg.evaluate("""async (o) => __synth.gleamFxRender(o)""", kw)
