@@ -2661,6 +2661,37 @@ with sync_playwright() as pw:
         pg.click("#mixDown")
     mxfile = json.loads(open(mxdl.value.path(), encoding="utf-8").read())
     ck("Mx. download is a dxmix session", mxfile.get("kind") == "dxmix" and mxfile.get("v") == 1 and "filament" in mxfile.get("channels", {}) and mxfile.get("armed") == ["filament", "cathode"], mxfile.get("kind"))
+    # Review 23 Oct (R1023-2): upload mix takes only a dxmix file. A project (or any JSON) used to reset
+    # every strip to its defaults, overwrite the saved mix, and say "Loaded mix".
+    pg.evaluate("__synth.setMixer('filament', { level: 0.4 })")
+    mx_before = pg.evaluate("() => localStorage.getItem('dxmix_session')")
+    for wrong_name, wrong in (("project.json", pg.evaluate("() => __synth.project()")), ("other.json", {"hello": 1})):
+        pg.set_input_files("#mixFile", files=[{"name": wrong_name, "mimeType": "application/json", "buffer": json.dumps(wrong).encode()}])
+        pg.wait_for_timeout(250)
+        mx_after = pg.evaluate("() => ({ lvl: __synth.mixer().filament.level, saved: localStorage.getItem('dxmix_session'), toast: document.getElementById('toast').textContent, armed: __synth.mixTargets() })")
+        ck(f"Mx. upload mix refuses a file that is not a mix ({wrong_name}) and leaves the desk and the saved mix alone",
+           abs(mx_after["lvl"] - 0.4) < 1e-6 and mx_after["saved"] == mx_before and "not a mix" in mx_after["toast"] and mx_after["armed"] == ["filament", "cathode"],
+           {k: (v if k != "saved" else v == mx_before) for k, v in mx_after.items()})
+    pg.evaluate("__synth.setMixer('filament', { level: 1 })")
+    # Review 23 Oct (R1023-1): the pedal goes down on the lit device, a strip is armed, the pedal comes up.
+    # The pedal-up has to reach the device that got the pedal-down, or its note rings until Panic.
+    sus_dev = pg.evaluate("""() => { __synth.panic(); __synth.mixArm([]); return __synth.device(); }""")
+    sus_other = "cathode" if sus_dev == "filament" else "filament"
+    pg.wait_for_timeout(300)
+    pg.evaluate("() => { __synth.midi([0xB0, 64, 127]); __synth.noteOn(60, 0.8); }")
+    pg.wait_for_timeout(250)
+    pg.evaluate("() => __synth.noteOff(60)")
+    pg.wait_for_timeout(150)
+    sus_mid = pg.evaluate("() => __synth.voiceMeters()")
+    pg.evaluate(f"() => __synth.mixArm(['{sus_other}'])")
+    pg.evaluate("() => __synth.midi([0xB0, 64, 0])")
+    try:
+        pg.wait_for_function(f"() => !__synth.voiceMeters()['{sus_dev}']", timeout=6000); sus_left = 0
+    except Exception:
+        sus_left = pg.evaluate(f"() => __synth.voiceMeters()['{sus_dev}']")
+    ck(f"Mx. pedal down on {sus_dev}, arm {sus_other}, pedal up: the sustained note on {sus_dev} lets go",
+       sus_mid.get(sus_dev, 0) >= 1 and sus_left == 0, {"held": sus_mid, "left after 6 s": sus_left})
+    pg.evaluate("() => { __synth.panic(); __synth.mixArm(['filament', 'cathode']); }")
     pg.evaluate("""() => {
       __synth.mixArm([]);
       __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 });

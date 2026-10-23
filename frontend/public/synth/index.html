@@ -1852,7 +1852,12 @@ $('mixFile').addEventListener('change', () => {
   const f = $('mixFile').files && $('mixFile').files[0]; if (!f) return;
   const reader = new FileReader();
   reader.onload = () => {
-    try { const s = applySession(JSON.parse(String(reader.result))); toast('Loaded mix "' + s.name + '".'); }
+    try {
+      // Only a mix file. A project or any other JSON would reset every strip and overwrite the saved mix.
+      const raw = JSON.parse(String(reader.result));
+      if (!raw || raw.kind !== 'dxmix') throw new Error('not a mix');
+      const s = applySession(raw); toast('Loaded mix "' + s.name + '".');
+    }
     catch (e) { toast('That file is not a mix.'); }
     $('mixFile').value = '';
   };
@@ -2215,8 +2220,19 @@ function perf(kind, v) {
     else E.aftertouch(v);
   });
 }
+// Every device the pedal went down on. Arming or disarming a strip while the pedal is down
+// changes where the keys go, so the pedal-up goes to the devices that got the pedal-down too,
+// or a sustained note on the old target rings until Panic.
+const susSent = new Set();
 function setSustain(on) {
   sustainOn = !!on; $('holdBtn').setAttribute('aria-pressed', String(sustainOn));
+  const susNow = mixArmed.length ? mixArmed.slice() : [dev];
+  if (sustainOn) susNow.forEach(id => susSent.add(id));
+  else {
+    const stale = [...susSent].filter(id => !susNow.includes(id));
+    susSent.clear();
+    if (stale.length) withEngine(() => stale.forEach(id => voiceSustain(id, false)));
+  }
   if (mixArmed.length) {
     const targets = mixArmed.slice();
     withEngine(() => targets.forEach(id => voiceSustain(id, sustainOn)));

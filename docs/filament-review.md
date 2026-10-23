@@ -17,8 +17,11 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note" | measured |
+| R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
+| R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
 | R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus | measured (Gleam inferred) |
-| R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends) | measured |
+| R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 23 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03 | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
 | R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound | measured |
@@ -33,12 +36,12 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200% | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
-| R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level | measured |
+| R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 23 Oct | measured |
 | R1017-9 | confusing | d | No output protection with the compressor off: delay plus reverb can hard-clip at 0 dBFS | measured |
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px) | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4 | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -320,3 +323,78 @@ says "Saved" with no mention that one was replaced. Factory names are refused, s
 Areas c to h. Area a covered Thyratron, Additron, Rhumbatron and Phantastron; the other 14 devices'
 controls are still to do. Chips and switches were not swept. Suggested next: c (keyboard and MIDI on the
 newer devices), e (the deck), and a on Lattice, Mote and Klystron.
+
+## 2026-10-23 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `4b87649` (the new
+Mix desk strips had landed about 40 minutes earlier), sw.js `dxedge-v125`. Chromium headless at
+1366 x 900 and 375 x 812 (touch, 2x). No page errors or console errors in any run. Focus tonight:
+the keyboard and MIDI on all 18 devices, and the arm buttons on the new Mix desk, which change where
+the keys, wheels and pedal go.
+
+### What worked (measured)
+
+- MIDI note on and off, pitch bend, CC64 and computer key A on all 18 devices from the rail: every
+  device sounds; every one that plays held notes releases (strip meter 0 within 4 s, Lattice's Glass
+  Pad within about 11 s, which is its 1.5 s release curve). `__synth.state()` shows nothing held after.
+  The generative devices (Mote, Geissler, Pentagrid, Orthicon, Gyrotron) keep playing on their own, as
+  designed.
+- Arming: Filament and Cathode armed play the note on both; a held note on the rail device released
+  after Cathode is armed lets go; arming Cathode, pedal down, then disarming lets go (the strip sleeps).
+  Panic with three devices armed clears every voice.
+- MIDI deck with Filament and Cathode armed: three notes record on both devices (12 events, "6 notes"),
+  play back, and Stop leaves nothing sounding. Render WAV of that take: RIFF, 48 kHz 16-bit stereo,
+  peak 0.91, no NaN, no clipped samples.
+- Project upload refuses a mix file ("That file is not a project.").
+- Phone 375, Mix tab: no sideways scroll (scrollWidth 375), all 18 strips inside the width, no control
+  under 44 px.
+
+### Findings
+
+**R1023-1. Pedal down, arm a strip, pedal up: the note rings until Panic.** Area c, d. Broken.
+Measured. Fixed tonight.
+- Steps: nothing armed, Filament on the rail. Press hold (or send CC64 127), play C4, let go of the key.
+  On the Mix tab arm Cathode. Release hold (CC64 0).
+- Expected: the C4 on Filament lets go.
+- Actual: it rang for the full 12 s watched (strip meter 0.10 to 0.16, one voice) while the hold button
+  read off. Disarming Cathode did not stop it either; only Panic did.
+- Cause: `setSustain` sends the pedal to whatever the keys play now, so the pedal-up went to Cathode only.
+- Fix: the page remembers every device the pedal went down on and sends the pedal-up to those as well.
+  Check: "Mx. pedal down on filament, arm cathode, pedal up: the sustained note on filament lets go".
+
+**R1023-2. Upload mix takes any JSON and wipes the desk.** Area d. Broken. Measured. Fixed tonight.
+- Steps: set Filament's level to 0.4 and mute Cathode. Press "upload mix" and pick a project file
+  (the "download" button two rows up makes one) or any other JSON.
+- Expected: "That file is not a mix", nothing changes (project upload already does this the other way).
+- Actual: every strip went back to full level, centre, unmuted, no sends; the saved mix in this browser
+  was overwritten; the toast said `Loaded mix "Untitled"` (or `"Mix"`).
+- Fix: upload mix refuses anything that is not `kind: dxmix`. Check: "Mx. upload mix refuses a file
+  that is not a mix (project.json / other.json) and leaves the desk and the saved mix alone".
+
+**R1023-3. The recorder drops armed devices without a word.** Area c, e. Confusing. Measured.
+- Arm Filament, Cathode and Thyratron, arm the deck, play three notes: the take holds Filament and
+  Cathode only. With only Thyratron armed the deck stays on "armed: play a note" with nothing recorded.
+  The "the recorder takes Filament and Cathode only" message added on 17 Oct (R1017-1) only shows for
+  the rail device, not for armed strips, because the page passes armed notes to the recorder only for
+  Filament and Cathode.
+
+**R1023-4. Wheels moved before arming stay on the old device.** Area c. Confusing. Inferred from
+`perf()` in `index.html`: bend and mod go to the current targets only, the same shape as R1023-1. Bend
+up on Filament, arm Cathode, let the strip spring back: Filament likely keeps the bend until its next
+bend message or Panic. Not measured (no pitch readout on the live meter); lower impact than a stuck note.
+
+**R1023-5. Gleam has no pedal.** Area c. Missing. Measured for CC64: with CC64 down, a released note
+on Gleam was silent 1.5 s later while every other held-note device kept it. Inferred for the keyboard's
+hold button: `setSustain` has no Gleam branch. Gleam has its own hold (it latches fingers and MIDI
+notes), so mapping CC64 and the hold button to it is a design call.
+
+### Still open from earlier runs (re-checked tonight)
+
+- R1017-3: deck Render WAV still leaves out the mixer (`deck.js` `renderArgs` passes the master bus but
+  no `mixer`). Inferred from the code tonight; measured on 17 Oct.
+- R1017-8: strip meters are still pre-fader: muted Filament read 0.187 during a note.
+
+### Not covered tonight
+Areas a, b, f, g, h. Tempo (R1017-5), the keyboard position (R1017-7) and the phone strips (R1017-10,
+R1017-11) were not re-measured. Suggested next: a on Lattice, Mote and Klystron; f (does a project
+restore the arms?); h on the new Mix desk (the mute and solo chips are named only "mute" and "solo").
