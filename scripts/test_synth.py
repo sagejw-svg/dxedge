@@ -153,7 +153,7 @@ with sync_playwright() as pw:
         return e
 
     # ---------------------------------------------------------------- 1. self oscillation tracks pitch
-    cases = [("ladder24", "12AT7"), ("diode18", "12AT7"), ("valve12", "12AX7"), ("valve12", "300B"), ("valve12", "EL34"), ("valve12", "KT88")]
+    cases = [("ladder24", "12AT7"), ("diode18", "12AT7"), ("sk12", "12AT7"), ("valve12", "12AX7"), ("valve12", "300B"), ("valve12", "EL34"), ("valve12", "KT88")]
     for model, tube in cases:
         devs = []
         for n in (48, 60, 72, 84, 96):
@@ -177,7 +177,7 @@ with sync_playwright() as pw:
             gd = math.tan(math.pi * min(fc * 2.94, SR * 0.45) / fs) / 2.0615528128088303
             return abs(diode_h(1j * math.tan(math.pi * f / fs) / gd))
         return abs(1 / (1 - W * W + 2j * 0.70710678 * W))
-    for model in ("valve12", "ladder24", "diode18"):
+    for model in ("valve12", "ladder24", "diode18", "sk12"):   # sk12 at zero resonance is the same 2-pole Butterworth as valve12
         for fc in (100, 440, 1000, 4000):
             pt = lambda cut: patch(osc1={"wave": "sine", "level": 0.05, "fixed": fc}, filt={"model": model, "cutoff": cut})
             a = tone_amp(render(pt(fc), note(60), 1.0, rack=False)[0][SR // 2:], fc)
@@ -235,6 +235,61 @@ with sync_playwright() as pw:
                sq: __synth.factoryPatch('Diode Squelch').filt.model }; }""")
     ck(f"Df. a patch with filt.model diode18 keeps it; an unknown model loads as Valve 12; Diode Squelch is on Diode 18 ({nz})",
        nz == {"d": "diode18", "x": "valve12", "sq": "diode18"}, nz)
+
+    # ---------------------------------------------------------------- Sk. Sallen-Key 12 (2-pole, clipping gain stage, high-pass partner)
+    L, _ = render(patch(osc1={"level": 0}, filt={"model": "sk12", "cutoff": 262, "res": 0.85, "keytrack": 1}), note(60), 1.5, rack=False)
+    q = float(np.sqrt(np.mean(L[SR // 2:] ** 2)))
+    ck(f"Sk. Sallen-Key 12 at resonance 0.85 stays quiet with no input ({db(q):.1f} dBFS, want below -80)", db(q) < -80, db(q))
+    L, _ = render(patch(osc1={"level": 0}, filt={"model": "sk12", "cutoff": 262, "res": 1, "keytrack": 1}), note(60), 1.5, rack=False)
+    xs = L[SR // 2:]; q = float(np.sqrt(np.mean(xs ** 2)))
+    ck(f"Sk. Sallen-Key 12 at full resonance sings on its own ({db(q):.1f} dBFS, want -30 to -3)", -30 < db(q) < -3, db(q))
+    f0 = peak_freq(xs); hs = harmonics_db(xs, f0)
+    ck(f"Sk. its full-resonance scream is squared off: H3 {hs[1]:.1f} dB and H2 {hs[0]:.1f} dB below the fundamental (want H3 above -25, H2 above -35: the clip is uneven)",
+       hs[1] > -25 and hs[0] > -35, hs)
+    def sk_tone(f, cut, lvl=0.05, res=0, hp=20, model="sk12"):
+        L, _ = render(patch(osc1={"wave": "sine", "level": lvl, "fixed": f}, filt={"model": model, "cutoff": cut, "res": res, "hp": hp}), note(60), 1.0, rack=False)
+        return tone_amp(L[SR // 2:], f)
+    slope = db(sk_tone(6000, 100) / sk_tone(3000, 100)) - db(sk_tone(6000, 20000) / sk_tone(3000, 20000))
+    want = db(H("sk12", 6000, 100) / H("sk12", 3000, 100)) - db(H("sk12", 6000, 20000) / H("sk12", 3000, 20000))
+    ck(f"Sk. Sallen-Key 12 rolls off like two poles: 3 to 6 kHz with the knob at 100 Hz measures {slope:.1f} dB against the model's {want:.1f} (within 0.5)",
+       abs(slope - want) <= 0.5 and -12.5 <= want <= -11.5, (slope, want))
+    pk_q = sk_tone(500, 500, 0.01, 0.85) / 0.01; pk_l = sk_tone(500, 500, 0.6, 0.85) / 0.6; pk_o = sk_tone(500, 20000, 0.01) / 0.01
+    ck(f"Sk. resonance 0.85 makes a peak at the cutoff ({db(pk_q) - db(pk_o):.1f} dB above the open filter, want 15 or more)", db(pk_q) - db(pk_o) >= 15, (db(pk_q), db(pk_o)))
+    ck(f"Sk. a loud input clips the peak down (peak gain {db(pk_q):.1f} dB quiet, {db(pk_l):.1f} dB loud, want 10 dB or more apart)", db(pk_q) - db(pk_l) >= 10, (db(pk_q), db(pk_l)))
+    lv = {}
+    for rv in (0, 0.5, 0.85):
+        L, _ = render(patch(filt={"model": "sk12", "cutoff": 800, "res": rv}), note(36), 1.0, rack=False)
+        lv[rv] = db(float(np.sqrt(np.mean(L[SR // 2:] ** 2))))
+    ck(f"Sk. Sallen-Key 12 keeps its level as resonance rises (0.5: {lv[0.5] - lv[0]:+.1f} dB, 0.85: {lv[0.85] - lv[0]:+.1f} dB; within 3)",
+       abs(lv[0.5] - lv[0]) <= 3 and abs(lv[0.85] - lv[0]) <= 3, lv)
+    # The high-pass partner: a 2-pole high-pass (K s^2 / (s^2 + (3 - K) s + 1), Butterworth at zero resonance) in front
+    def H_hp(f, fc):
+        fs = 2 * SR; W = math.tan(math.pi * f / fs) / math.tan(math.pi * fc / fs); s_ = 1j * W
+        return abs(s_ * s_ / (s_ * s_ + math.sqrt(2) * s_ + 1))
+    hd = [(f, db(sk_tone(f, 20000, hp=1000) / sk_tone(f, 20000)), db(H_hp(f, 1000))) for f in (250, 500, 1000, 4000)]
+    ck(f"Sk. the high-pass at 1 kHz follows the 2-pole model within 0.5 dB at 250 Hz to 4 kHz ({[(f, round(m, 2), round(w, 2)) for f, m, w in hd]})",
+       all(abs(m - w) <= 0.5 for _, m, w in hd), hd)
+    a_lo = sk_tone(250, 20000, res=0.95, hp=1000); a_pk = sk_tone(1000, 20000, res=0.95, hp=1000)
+    ck(f"Sk. the high-pass takes half the resonance: at 0.95 it peaks at its cutoff ({db(a_pk / sk_tone(1000, 20000, res=0.95)):+.1f} dB) and still cuts 250 Hz ({db(a_lo / sk_tone(250, 20000, res=0.95)):.1f} dB)",
+       1 <= db(a_pk / sk_tone(1000, 20000, res=0.95)) <= 9 and db(a_lo / sk_tone(250, 20000, res=0.95)) < -15)
+    # (each render starts its oscillators at a random phase, so the two are compared by level, not sample for sample)
+    d_hp = db(sk_tone(300, 2000, res=0.3, hp=1000, model="ladder24") / sk_tone(300, 2000, res=0.3, hp=20, model="ladder24"))
+    ck(f"Sk. the high-pass knob does nothing on the other models (Ladder 24 at 300 Hz with it at 1 kHz and off: {d_hp:+.3f} dB, want within 0.05; it would cut about 19 dB)", abs(d_hp) <= 0.05, d_hp)
+    worst, bad = 0.0, 0
+    for cut in (16, 262, 20000):
+        for hpv in (20, 4000):
+            L, R = render(patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, v1={"drive": 10},
+                                filt={"model": "sk12", "cutoff": cut, "res": 1, "drive": 10, "env": 1, "hp": hpv}), [e for k in (24, 48, 72, 96) for e in note(k, 0.0)], 1.0, rack=False)
+            bad += int(np.sum(~np.isfinite(L)) + np.sum(~np.isfinite(R))); worst = max(worst, float(np.max(np.abs(L))))
+    ck(f"Sk. Sallen-Key 12 at full resonance and drive, cutoff 16 Hz to 20 kHz, high-pass off and at 4 kHz: finite and bounded (peak {worst:.2f}, want under 8)", bad == 0 and worst < 8, (bad, worst))
+    L, R = render(patch(filt={"model": "sk12", "cutoff": 600, "offset": 1}, stereo={"pan": "center", "spread": 0}), note(45), 1.5, rack=False)
+    cl, cr = _cen(L[SR // 2:]), _cen(R[SR // 2:])
+    ck(f"Sk. sk12 stereo offset +1 oct: the right side is brighter (centroid {cl:.0f} -> {cr:.0f} Hz)", cr > cl * 1.25, (cl, cr))
+    nz = pg.evaluate("""() => { const N = __synth.eq.normalize;
+      return { m: N({ filt: { model: 'sk12' } }).filt.model, hp0: N({}).filt.hp, lo: N({ filt: { hp: 3 } }).filt.hp, hi: N({ filt: { hp: 99999 } }).filt.hp,
+               sn: __synth.factoryPatch('Snarl Lead').filt.model }; }""")
+    ck(f"Sk. a patch with filt.model sk12 keeps it; filt.hp defaults to 20 (off) and clamps to 20..4000; Snarl Lead is on Sallen-Key 12 ({nz})",
+       nz == {"m": "sk12", "hp0": 20, "lo": 20, "hi": 4000, "sn": "sk12"}, nz)
 
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
@@ -1405,7 +1460,7 @@ with sync_playwright() as pw:
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
-    for model in ("ladder24", "valve12", "diode18"):
+    for model in ("ladder24", "valve12", "diode18", "sk12"):
         big["filt"]["model"] = model
         r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
         info(f"9. CPU {model}, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time in headless Chrome (offline render, rack included)")
@@ -1603,7 +1658,13 @@ with sync_playwright() as pw:
     ck("the filter note names Diode 18", "Diode 18" in pg.inner_text("#filtNote"), pg.inner_text("#filtNote"))
     bb = pg.query_selector('#mFilt .chip[data-v="diode18"]').bounding_box()
     ck(f"the Diode 18 chip is on screen and sits on one row with the others ({bb['height']:.0f} px tall)", bb["width"] > 0 and abs(bb["y"] - pg.query_selector('#mFilt .chip[data-v="valve12"]').bounding_box()["y"]) < 2, bb)
+    ck("Diode 18 hides the Sallen-Key high-pass knob", pg.query_selector('#kFilt [data-path="filt.hp"]') is not None and not pg.is_visible('#kFilt [data-path="filt.hp"]'))
+    pg.click('.chip[data-v="sk12"]')
+    ck("model chip switches to Sallen-Key 12, shows its high-pass knob and hides the loop tube row",
+       pg.evaluate("__synth.patch().filt.model") == "sk12" and pg.is_visible('#kFilt [data-path="filt.hp"]') and not pg.is_visible("#loopChips"))
+    ck("the filter note names Sallen-Key 12", "Sallen-Key 12" in pg.inner_text("#filtNote"), pg.inner_text("#filtNote"))
     pg.click('.chip[data-v="valve12"]')
+    ck("Valve 12 hides the high-pass knob again", not pg.is_visible('#kFilt [data-path="filt.hp"]'))
     pg.click('#mFilt .chip[data-v="EL34"]'); ck("loop tube chip sets V2 and the chassis label", pg.evaluate("__synth.patch().filt.tube") == "EL34" and pg.inner_text("#nameV2") == "EL34")
     # save a user patch, reload, still there
     pg.click("#saveP"); pg.fill("#saveName", "Test Bass"); pg.click("#saveOk"); pg.wait_for_timeout(100)
@@ -2084,8 +2145,8 @@ with sync_playwright() as pw:
         ck(f"10. {w}px: the Filter tab shows the filter", ph.is_visible("#mFilt") and not ph.is_visible("#mOsc1"))
         small = ph.evaluate("""() => [...document.querySelectorAll('.tabs button, .key.w, .btn, .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: touch targets are 44 px or more", not small, small)
-        ck(f"10. {w}px: the Filter tab shows the Diode 18 chip with no horizontal scroll",
-           ph.is_visible('#mFilt .chip[data-v="diode18"]') and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+        ck(f"10. {w}px: the Filter tab shows the Diode 18 and Sallen-Key 12 chips with no horizontal scroll",
+           ph.is_visible('#mFilt .chip[data-v="diode18"]') and ph.is_visible('#mFilt .chip[data-v="sk12"]') and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
         kk = ph.query_selector('.key.w'); bb = kk.bounding_box()
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")

@@ -2279,7 +2279,7 @@ const WAVE_L = { saw: 'saw', pulse: 'pulse', tri: 'tri', sine: 'sine' };
 document.querySelectorAll('[data-chips]').forEach(el => {
   const p = el.dataset.chips;
   const labels = {
-    'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18' },
+    'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12' },
     'lfo1.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' },
     'lfo1.mode': { global: 'global', voice: 'per voice' }, 'lfo2.mode': { global: 'global', voice: 'per voice' },
     'lfo2.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' }, 'stereo.pan': { center: 'centre', alt: 'alternate', key: 'keyboard', random: 'random' },
@@ -2318,6 +2318,7 @@ K('kFilt', 'filt.env', 'env', { min: -1, max: 1, step: 0.01, fmt: v => (v > 0 ? 
 K('kFilt', 'filt.vel', 'velocity', { min: 0, max: 1, step: 0.01, fmt: pct });
 K('kFilt', 'filt.sag', 'sag', { min: 0, max: 10, step: 0.1, title: 'Supply sag in the Valve loop: a loud resonance blooms, then settles' });
 K('kFilt', 'filt.offset', 'stereo off', { min: -1, max: 1, step: 0.01, fmt: v => v === 0 ? '0' : (v > 0 ? '+' : '') + v.toFixed(2) + 'oct', title: 'Stereo offset: left and right cutoffs move apart by up to an octave each way' });
+K('kFilt', 'filt.hp', 'high-pass', { map: LOG(20, 4000), fmt: v => v <= 20.5 ? 'off' : fmtHz(v), title: 'Sallen-Key 12 only: a 2-pole high-pass in front of the low-pass, with half its resonance. All the way down is off.' });
 K('kFilt', 'filt.bias', 'loop bias', { min: -5, max: 5, step: 0.1, fmt: v => v < 0 ? 'cold ' + (-v).toFixed(1) : v > 0 ? 'hot ' + v.toFixed(1) : '0', title: 'V2 bias: hot adds even harmonics to the resonance' });
 const T = LOG(0.001, 10), TR = LOG(0.003, 12);
 K('kEnvA', 'envA.a', 'attack', { map: T, fmt: fmtS }); K('kEnvA', 'envA.d', 'decay', { map: T, fmt: fmtS });
@@ -2461,10 +2462,13 @@ function afterF() {
   $('roleV2').textContent = 'V2 loop';
   $('loopChips').style.display = valve ? '' : 'none';
   ['filt.sag', 'filt.bias'].forEach(p => { kn(p).k.el.style.display = valve ? '' : 'none'; });
+  kn('filt.hp').k.el.style.display = cur.filt.model === 'sk12' ? '' : 'none';
   $('filtNote').textContent = valve
     ? 'Valve 12: 2-pole lowpass with V2 in its resonance loop. Triodes sing, power tubes scream.'
     : cur.filt.model === 'diode18'
     ? 'Diode 18: three coupled poles through diode pairs. Rubbery and squelchy; it sings from about 9 on resonance. Loud input fights the peak.'
+    : cur.filt.model === 'sk12'
+    ? 'Sallen-Key 12: 2-pole low-pass with a clipping gain stage, and a high-pass in front of it. It screams from about 9 on resonance and squares off past it; drive and loud notes clip it hard.'
     : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
   const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
   $('lfo2Pilot').classList.toggle('off', !l2on);

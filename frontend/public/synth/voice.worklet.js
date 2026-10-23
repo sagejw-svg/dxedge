@@ -7,7 +7,7 @@
 // the only decimators are the two on the sum.
 //
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
-//   -> filter (Valve 12, Ladder 24 or Diode 18) -> VCA -> pan -> L/R (2x) -> half-band -> out
+//   -> filter (Valve 12, Ladder 24, Diode 18 or Sallen-Key 12) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
@@ -28,6 +28,13 @@
 //              (a tanh of the voltage across it) that also loads the stage before it by half
 //              (DIO_B), with negative feedback from the last pole. Our own formulation: the
 //              coupled nodal equations, trapezoidal, solved as one 3x3 tridiagonal system.
+//   Sallen-Key 12: a 2-pole lowpass of two RC sections whose gain amplifier (K) feeds back
+//              through the first capacitor; it rings as K nears 3 and oscillates past it. The
+//              amplifier clips hard and unevenly (a sharp knee, lower on the negative side), so
+//              the resonance squares off and snarls. An optional 2-pole high-pass of the same
+//              build sits in front (filt.hp), its peak at half the low-pass's. Our own state
+//              equations for the two capacitor voltages, trapezoidal, the clip linearised at
+//              the last sample (one Newton step), each section solved as a 2x2 system.
 //
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
 //   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}, {t:'release'}. Any of them may carry
@@ -204,10 +211,14 @@ const F_S1 = 0, F_S2 = 1, F_S3 = 2, F_S4 = 3, F_ZI = 4, F_BP = 5, F_SH = 6, F_SA
   // fcoef() inputs that produced the coefficients now in F_G..F_AH (cutoff Hz, resonance, and
   // the model with the patch epoch). They live in the same array so frs.set(fl) copies them with
   // the coefficients they describe.
-  F_MFC = 18, F_MRES = 19, F_MKEY = 20, F_N = 21;
+  F_MFC = 18, F_MRES = 19, F_MKEY = 20,
+  // Sallen-Key 12: the clipped amplifier's last output and slope for the low-pass (F_Y0, F_Y1,
+  // with the node voltage in F_BP) and for the high-pass (F_HY0, F_HY1, node in F_SH), and the
+  // high-pass's 1/K make-up (F_HIK; its g and K sit in F_GH and F_AH).
+  F_Y0 = 21, F_Y1 = 22, F_HY0 = 23, F_HY1 = 24, F_HIK = 25, F_N = 26;
 class Filt {
   constructor() { this.s = new Float64Array(F_N); this.s[F_COMP] = 1; this.s[F_AH] = 1; this.s[F_LG] = 1.3; this.s[F_G] = 0.1; this.s[F_MKEY] = -1; }
-  reset() { const s = this.s; s[F_S1] = s[F_S2] = s[F_S3] = s[F_S4] = s[F_ZI] = s[F_BP] = s[F_SH] = s[F_SAG] = 0; }
+  reset() { const s = this.s; s[F_S1] = s[F_S2] = s[F_S3] = s[F_S4] = s[F_ZI] = s[F_BP] = s[F_SH] = s[F_SAG] = 0; s[F_Y0] = s[F_Y1] = s[F_HY0] = s[F_HY1] = 0; }
   bad() { const s = this.s; return !(Math.abs(s[F_S1]) < 1e6 && Math.abs(s[F_S2]) < 1e6 && Math.abs(s[F_S3]) < 1e6 && Math.abs(s[F_S4]) < 1e6 && Math.abs(s[F_BP]) < 1e6); }
   flush() { const s = this.s; for (let i = 0; i < 4; i++) if (Math.abs(s[i]) < 1e-20) s[i] = 0; }
   // Ladder 24: the transistor ladder after Teemu Voipio's cheap non-linear ZDF method.
@@ -248,6 +259,37 @@ class Filt {
     const v1 = (r1 + B * b * v2 - a * k * v3) * d1;
     s[F_S1] = 2 * v1 - s1; s[F_S2] = 2 * v2 - s2; s[F_S3] = 2 * v3 - s3;
     s[F_OUT] = v3 * s[F_COMP];
+  }
+  // Sallen-Key 12. Low-pass, normalised to w0 = 1: u is the voltage across the feedback capacitor,
+  // w the node into the amplifier, y = clip(K w) its output. du/dt = x - 2(u + y) + w and
+  // dw/dt = u + y - w, which is K / (s^2 + (3 - K) s + 1) when nothing clips. With
+  // y = A + Y1 w (the clip's value and slope at the last sample) one trapezoidal step is a
+  // linear 2x2 system; the output is then the exact clip of the new w, which is also the next
+  // sample's linearisation point. The high-pass (when F_GH > 0) swaps the R and C roles: p and q
+  // across its two capacitors, vb = x - p - q into its amplifier, K s^2 / (s^2 + (3 - K) s + 1).
+  sk() {
+    const s = this.s, g = s[F_G], K = s[F_K];
+    let x = s[F_IN];
+    const gh = s[F_GH];
+    if (gh > 0) {
+      const Kh = s[F_AH], Y1 = s[F_HY1], A = s[F_HY0] - Y1 * s[F_SH], s3 = s[F_S3], s4 = s[F_S4];
+      const b11 = 1 + gh * (2 - Y1), b12 = gh * (1 - Y1), t1 = s3 + gh * ((2 - Y1) * x - A), t2 = s4 + gh * x;
+      const id = 1 / (1 + gh * (3 - Y1) + gh * gh);
+      const p = ((1 + gh) * t1 - b12 * t2) * id, q = (b11 * t2 - gh * t1) * id;
+      s[F_S3] = 2 * p - s3; s[F_S4] = 2 * q - s4;
+      const vb = x - p - q; s[F_SH] = vb;
+      let uu = Kh * vb; const r = uu * (uu >= 0 ? SK_IP : SK_IN), r2 = r * r, qq = 1 / Math.sqrt(Math.sqrt(1 + r2 * r2));
+      uu *= qq; s[F_HY0] = uu; s[F_HY1] = Kh * qq * qq * qq * qq * qq;
+      x = uu * s[F_HIK];
+    }
+    const Y1 = s[F_Y1], A = s[F_Y0] - Y1 * s[F_BP], s1 = s[F_S1], s2 = s[F_S2];
+    const r1 = s1 + g * (x - 2 * A), r2 = s2 + g * A, a1 = 1 + 2 * g;
+    const w = (a1 * r2 + g * r1) / (1 + g * (3 - Y1) + g * g);
+    const u = (r1 + g * (1 - 2 * Y1) * w) / a1;
+    s[F_S1] = 2 * u - s1; s[F_S2] = 2 * w - s2; s[F_BP] = w;
+    let y = K * w; const rr = y * (y >= 0 ? SK_IP : SK_IN), rq = rr * rr, qk = 1 / Math.sqrt(Math.sqrt(1 + rq * rq));
+    y *= qk; s[F_Y0] = y; s[F_Y1] = K * qk * qk * qk * qk * qk;
+    s[F_OUT] = y * s[F_COMP];
   }
   // Valve 12: a 2-pole SVF lowpass whose resonance is positive feedback of the band-pass through
   // the loop tube's curve, a coupling-cap high-pass and a supply-sag follower, linearised at the
@@ -386,6 +428,8 @@ class Filament extends AudioWorkletProcessor {
     this.v1Tab = this.table(v1.tube || '12AX7', +v1.bias || 0);
     this.lTube = this.tubes[f.tube] || this.tubes['12AT7'] || { gain: 0.701, hp: 25 };
     this.lTab = this.table(f.tube || '12AT7', +f.bias || 0);
+    // Sallen-Key 12's high-pass partner: off at the bottom of its knob (20 Hz)
+    { const hp = num(f.hp, 20); this.skGh = hp > 20.5 ? Math.tan(Math.PI * Math.min(hp, this.sr * 0.2) / this.fs) : 0; }
     {   // oscillation where the coupling-cap lead atan(rho/w) equals the band-pass lag past 90 degrees
       const rho = (this.lTube.hp || 25) / 400, R = 0.70710678;
       let w = 1;
@@ -647,11 +691,17 @@ class Filament extends AudioWorkletProcessor {
   // Skipped when the inputs match the last call for this filter, which is every tick of a held
   // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
   fcoef(F, model) {
-    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 3 + model;
+    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 4 + model;
     if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
     s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
     let fc = clamp(this.cc[0], 16, sr * 0.45);
-    if (model === 2) {
+    if (model === 3) {
+      // Sallen-Key: K runs from the flat (Butterworth) point at zero resonance to 3, where it
+      // oscillates, at SK_RT, then on to SK_KMAX. Past the threshold the clip holds the loop at
+      // 3 on average and the waveform squares; SK_CAL raises the cutoff by the cents the clipped
+      // loop runs flat ((a + b e + c e^2) e, e running 0..1 from the threshold to full resonance).
+      if (res > SK_RT) { const e = (res - SK_RT) / (1 - SK_RT); fc *= Math.pow(2, (SK_CAL[0] + (SK_CAL[1] + SK_CAL[2] * e) * e) * e / 1200); }
+    } else if (model === 2) {
       // Diode: below the oscillation point the node frequency is lifted (DIO_LIFT at zero
       // resonance, easing out by the threshold) so the passband sits near Ladder 24's for the same
       // knob; at and past it the loop oscillates at the knob. Past it the diodes pull the pitch
@@ -679,7 +729,12 @@ class Filament extends AudioWorkletProcessor {
     }
     fc = clamp(fc, 16, sr * 0.45);
     s[F_G] = Math.tan(Math.PI * fc / fs);
-    if (model === 2) { s[F_G] /= DIO_W0; s[F_K] = res * DIO_KMAX; s[F_COMP] = 1 + s[F_K] * DIO_COMP; }
+    if (model === 3) {
+      const K = res <= SK_RT ? SK_K0 + (3 - SK_K0) * res / SK_RT : 3 + (SK_KMAX - 3) * (res - SK_RT) / (1 - SK_RT);
+      s[F_K] = K; s[F_COMP] = 1 / K;
+      const Kh = SK_K0 + (K - SK_K0) * SK_HPK;
+      s[F_GH] = this.skGh; s[F_AH] = Kh; s[F_HIK] = 1 / Kh;
+    } else if (model === 2) { s[F_G] /= DIO_W0; s[F_K] = res * DIO_KMAX; s[F_COMP] = 1 + s[F_K] * DIO_COMP; }
     else if (model === 1) { s[F_K] = res * 4.45; s[F_COMP] = 1 + s[F_K] * 0.45; }
     else {
       // The coupling cap in the Valve loop sits a fixed ratio below the cutoff (each tube's hp/400),
@@ -735,7 +790,7 @@ class Filament extends AudioWorkletProcessor {
     const off2 = num(o2.oct, 0) * 12 + num(o2.semi, 0) + num(o2.fine, 0) / 100;
     const fix1 = num(o1.fixed, 0), fix2 = num(o2.fixed, 0);
     const sync = !!o2.sync, pink = nz.color === 'pink';
-    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : 0;
+    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : 0;
     const ea = P.envA || {}, ef = P.envF || {};
     const aA = coef(Math.max(0.001, num(ea.a, 0.005)) / 1.466, sr), aD = coef(Math.max(0.001, num(ea.d, 0.3)) / 4.6, sr), aS = clamp(num(ea.s, 0.8), 0, 1), aR = coef(Math.max(0.003, num(ea.r, 0.3)) / 4.6, sr);
     const fA = coef(Math.max(0.001, num(ef.a, 0.005)) / 1.466, sr), fD = coef(Math.max(0.001, num(ef.d, 0.3)) / 4.6, sr), fS = clamp(num(ef.s, 0.5), 0, 1), fR = coef(Math.max(0.003, num(ef.r, 0.3)) / 4.6, sr);
@@ -753,7 +808,7 @@ class Filament extends AudioWorkletProcessor {
     // Two filters per voice only when something makes left and right differ.
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
-    const cc = this.cc, isLadder = model === 1, isDiode = model === 2;
+    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3;
 
     // smoothed parameters at each control tick, shared by every voice
     const CT = this.CT, nt = Math.ceil(frames / CTRL);
@@ -911,10 +966,10 @@ class Filament extends AudioWorkletProcessor {
           dcy = y - dcx + dcA * dcy; dcx = y; y = dcy * fdG;
           // filter(s)
           fl[F_IN] = y;
-          if (isLadder) FL.ladder(); else if (isDiode) FL.diode(); else FL.valve(lTab);
+          if (isLadder) FL.ladder(); else if (isDiode) FL.diode(); else if (isSk) FL.sk(); else FL.valve(lTab);
           const yl = fl[F_OUT];
           let yr = yl;
-          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isDiode) FR.diode(); else FR.valve(lTab); yr = frs[F_OUT]; }
+          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else FR.valve(lTab); yr = frs[F_OUT]; }
           const idx = i * OS + s;
           L2[idx] += yl * aLg; R2[idx] += yr * aRg;
         }
@@ -963,6 +1018,15 @@ const LGX = 0.3;   // how much of each tube's own gain reaches the Valve loop (0
 // 0..1 from the threshold to full (measured in Node renders of the voice, 36 to 108, cutoff 262 Hz).
 const DIO_B = 0.5, DIO_W0 = 2.0615528128088303, DIO_K0 = 16, DIO_KMAX = 16 / 0.9, DIO_LIFT = 2.94, DIO_COMP = 0.62;
 const DIO_CAL = [209, -1209, 2775];
+// Sallen-Key 12. SK_K0 = 3 - sqrt(2): equal parts and that gain give a flat (Butterworth)
+// response, so the knob is the -3 dB point at zero resonance. K reaches 3 (oscillation) at SK_RT
+// and SK_KMAX at full resonance, 20% past, which squares the wave off. The clip: u / (1 + (u/L)^4)^(1/4)
+// (slope exactly 1 near zero, then a sharp knee), with L = 1.5 on the positive side and 1.2 on
+// the negative (SK_IP, SK_IN are 1/L), so a hard-driven peak carries even harmonics too. SK_HPK:
+// the high-pass's share of the resonance. SK_CAL: cents, see fcoef (measured in Node renders of the
+// voice, notes 48 to 96 with the knob at 262 Hz and key tracking 1).
+const SK_K0 = 3 - Math.SQRT2, SK_RT = 0.9, SK_KMAX = 3.6, SK_IP = 1 / 1.5, SK_IN = 1 / 1.2, SK_HPK = 0.5;
+const SK_CAL = [6.67, 92.36, -34.23];   // measured flat: 1.3, 6.9, 22.4, 42.3, 64.9 cents at e = 0.1, 0.25, 0.5, 0.75, 1
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };
 // tanh(x)/x, Pade approximant (exact enough for |x| < 3, still monotone and bounded beyond)
