@@ -470,12 +470,24 @@
   .hostbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 8px; }
   .hostbar input[type="number"], .hostbar input[type="text"] { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 6.2em; font-size: 12px; }
   .hostbar .pos { color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 8em; }
-  .mixrow { display: grid; grid-template-columns: 88px minmax(80px, 1fr) minmax(80px, 1fr) auto auto; gap: 6px 8px; align-items: center; margin: 3px 0; min-width: 0; }
-  .mixrow .who { letter-spacing: 1px; color: var(--muted); font-size: 11px; min-width: 0; }
+  /* mix desk: each device is a channel strip with its own faceplate, lamp and LED ladder.
+     The row the keys play is .keyed (not .keys: that class is the keyboard, 150 px tall). */
+  .mixrow { display: grid; grid-template-columns: 118px minmax(80px, 1fr) minmax(80px, 1fr) auto auto; gap: 6px 8px; align-items: center; margin: 0 0 6px; min-width: 0;
+    padding: 6px 9px 7px; border: 1px solid #262626; border-radius: 7px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.014) 0 1px, transparent 1px 3px), linear-gradient(180deg, #191919, #101010 58%, #0b0b0b);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 1px 0 rgba(0,0,0,0.7); }
+  .mixrow .who { letter-spacing: 1px; color: var(--muted); font-size: 11px; min-width: 0; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mixrow .who::before { content: ''; flex: 0 0 auto; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #2a2a2a; box-shadow: inset 0 0 2px #000; }
   .mixrow .letter { color: var(--amber); font-weight: 700; margin-right: 6px; }
-  .mixrow.keys .letter { color: var(--green); }
-  .mixrow.armed { background: rgba(255, 179, 71, 0.05); border-radius: 6px; }
-  .mixmeter { grid-column: 1 / -1; width: 100%; max-width: 100%; height: 8px; display: block; background: #111; border-radius: 2px; }
+  .mixrow.keyed { border-color: rgba(0, 255, 157, 0.26); }
+  .mixrow.keyed .letter { color: var(--green); }
+  .mixrow.keyed .who { color: var(--text); }
+  .mixrow.keyed .who::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .mixrow.armed { border-color: rgba(255, 179, 71, 0.45); box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), inset 0 0 22px rgba(255, 179, 71, 0.07), 0 1px 0 rgba(0,0,0,0.7); }
+  .mixrow.armed .who::before { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  .mixmeter { grid-column: 1 / -1; width: 100%; max-width: 100%; height: 10px; display: block; background: #060606; border: 1px solid #1d1d1d; border-radius: 3px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.9); }
+  #mixBus label { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; min-width: 0; }
+  #mixBus input[type="range"] { accent-color: var(--amber); min-width: 0; }
   .mixrow label { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; min-width: 0; }
   .mixrow input[type="range"] { flex: 1; min-width: 0; accent-color: var(--amber); }
   #mixName { width: 10em; max-width: 100%; }
@@ -754,6 +766,7 @@
     .deck { padding: 6px; } .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
     #libPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
+    #mixBus label { flex: 1 1 100%; } #mixBus input[type="range"] { flex: 1 1 auto; width: auto; }
     .volab { flex: 1 1 160px; min-width: 0; max-width: 100%; }
     .volab input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; height: 44px; }
     #mHost input[type="range"], #hostTempo, #projName, #mixName { min-height: 44px; height: 44px; }
@@ -1720,7 +1733,7 @@ function syncHostUI() {
     $('mix' + s + 'Mute').setAttribute('aria-pressed', String(!!c.mute));
     $('mix' + s + 'Solo').setAttribute('aria-pressed', String(!!c.solo));
     $('mix' + s + 'Arm').setAttribute('aria-pressed', String(mixArmed.includes(id)));
-    if (row) { row.classList.toggle('armed', mixArmed.includes(id)); row.classList.toggle('keys', keys.includes(id)); }
+    if (row) { row.classList.toggle('armed', mixArmed.includes(id)); row.classList.toggle('keyed', keys.includes(id)); }
   });
 }
 function pushStrip(id, s) {
@@ -3876,6 +3889,38 @@ function applyOrthiconShare() {
 }
 applyOrthiconShare();
 
+// A strip meter is a ladder of LED segments: amber, then pale amber, red from 92%. Unlit
+// segments stay faintly visible so a silent strip still reads as a meter. The canvas backing
+// follows its CSS size (crisp on any width) and repaints only when the level moves a step.
+function paintLedLadder(c, g, v) {
+  const cw = c.clientWidth, ch = c.clientHeight;
+  if (!cw || !ch) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = Math.round(cw * dpr), H = Math.round(ch * dpr);
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; c._lv = -1; }
+  const q = Math.round(v * 240) / 240;
+  if (q === c._lv) return;
+  c._lv = q;
+  const n = Math.max(12, Math.min(48, Math.round(cw / 9)));
+  const pitch = W / n, gap = Math.max(1, Math.round(2 * dpr)), lit = q * n;
+  g.clearRect(0, 0, W, H);
+  for (let i = 0; i < n; i++) {
+    const x0 = Math.round(i * pitch), x1 = Math.round((i + 1) * pitch) - gap, f = i / n;
+    const hot = f >= 0.92, warm = f >= 0.72;
+    const on = Math.max(0, Math.min(1, lit - i));
+    g.globalAlpha = 1;
+    g.fillStyle = hot ? '#2c1313' : '#23190e';
+    g.fillRect(x0, 0, x1 - x0, H);
+    if (on > 0) {
+      g.globalAlpha = 0.35 + 0.65 * on;
+      g.fillStyle = hot ? '#ff5c5c' : warm ? '#ffd08a' : '#ffb347';
+      g.fillRect(x0, 0, x1 - x0, H);
+      g.fillStyle = 'rgba(255,255,255,0.28)';
+      g.fillRect(x0, 0, x1 - x0, Math.max(1, Math.round(H * 0.3)));
+    }
+  }
+  g.globalAlpha = 1;
+}
 function paintMixMeters() {
   if (E && document.visibilityState !== 'hidden') {
     const lv = E.mix.meters();
@@ -3884,11 +3929,7 @@ function paintMixMeters() {
       if (!c) return;
       const g = c.getContext('2d');
       if (!g) return;
-      const w = c.width, h = c.height, v = Math.max(0, Math.min(1, lv[id] || 0));
-      g.fillStyle = '#141414';
-      g.fillRect(0, 0, w, h);
-      g.fillStyle = v > 0.92 ? '#ff6b6b' : '#ffb347';
-      g.fillRect(0, 0, w * v, h);
+      paintLedLadder(c, g, Math.max(0, Math.min(1, lv[id] || 0)));
     });
   }
   requestAnimationFrame(paintMixMeters);

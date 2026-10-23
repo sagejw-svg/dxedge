@@ -2215,6 +2215,12 @@ with sync_playwright() as pw:
            ph.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
         small = ph.evaluate("""() => [...document.querySelectorAll('#mHost .btn, #mHost .chip, #mHost input')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.getAttribute('aria-label') || e.textContent)""")
         ck(f"10. {w}px: the mix desk controls are 44 px or more", not small, small)
+        lay = ph.evaluate("""() => { const rows = [...document.querySelectorAll('#mHost .mixrow')].filter(r => r.offsetParent);
+          const over = []; rows.forEach((r, i) => { const b = r.getBoundingClientRect();
+            if ([...r.children].some(c => { const q = c.getBoundingClientRect(); return q.bottom > b.bottom + 1 || q.right > b.right + 1; })) over.push(r.dataset.mix + ' spills');
+            if (i && b.top < rows[i - 1].getBoundingClientRect().bottom - 1) over.push(r.dataset.mix + ' overlaps'); });
+          return { n: rows.length, over }; }""")
+        ck(f"10. {w}px: the mix strips stack without overlap and keep their controls inside ({lay['n']} strips)", lay["n"] >= 18 and not lay["over"], lay)
         ph.locator("#mixFArm").scroll_into_view_if_needed(); ph.locator("#mixFArm").tap()
         ph.locator("#mixCArm").scroll_into_view_if_needed(); ph.locator("#mixCArm").tap(); ph.wait_for_timeout(80)
         armed = ph.evaluate("__synth.mixTargets()")
@@ -2607,6 +2613,34 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.noteOn(60, 0.85)")
     pg.wait_for_timeout(280)
     both = pg.evaluate("() => ({ t: __synth.mixTargets(), v: __synth.voiceMeters(), m: __synth.stripMeters() })")
+    # The desk's look: every strip a faceplate of the same height, names on one line, an LED ladder that
+    # is lit while the note sounds and faintly visible where it is not, amber bus sliders.
+    desk = pg.evaluate("""() => {
+      const rows = [...document.querySelectorAll('#mHost .mixrow')];
+      const hs = rows.map(r => Math.round(r.getBoundingClientRect().height));
+      const spill = rows.filter(r => { const b = r.getBoundingClientRect(); return [...r.children].some(c => { const q = c.getBoundingClientRect(); return q.bottom > b.bottom + 1 || q.top < b.top - 1; }); }).map(r => r.dataset.mix);
+      const cut = rows.map(r => r.querySelector('.who')).filter(w => w.scrollWidth > w.clientWidth + 1 || w.getBoundingClientRect().height > 22).map(w => w.textContent.trim());
+      const c = document.getElementById('mixFMeter'), g = c.getContext('2d');
+      const d = g.getImageData(0, 0, c.width, c.height).data, mid = Math.floor(c.height / 2) * c.width * 4;
+      const px = x => { const i = mid + x * 4; return [d[i], d[i + 1], d[i + 2], d[i + 3]]; };
+      let lit = 0, dim = 0, gap = 0;
+      for (let x = 0; x < c.width; x++) { const [r, gg, b, a] = px(x); if (a > 200 && r > 120 && gg > 70) lit++; else if (a > 200 && r > 25 && r < 60) dim++; else if (a < 10) gap++; }
+      const who = getComputedStyle(rows[2].querySelector('.who')).color, face = getComputedStyle(rows[2]).backgroundImage;
+      return { hs, spill, cut, lit, dim, gap, cw: c.width, css: c.clientWidth, keyed: rows.filter(r => r.classList.contains('keyed')).map(r => r.dataset.mix),
+        accent: getComputedStyle(document.getElementById('mixRoom')).accentColor, who, face: face.indexOf('gradient') >= 0,
+        anim: rows.filter(r => { const s = getComputedStyle(r); return s.animationName !== 'none' || parseFloat(s.transitionDuration) > 0; }).length };
+    }""")
+    ck(f"Mx. every strip is a faceplate of one height, nothing spills out, names on one line ({min(desk['hs'])} to {max(desk['hs'])} px)",
+       desk["face"] and max(desk["hs"]) - min(desk["hs"]) <= 1 and not desk["spill"] and not desk["cut"] and desk["keyed"] == ["filament", "cathode"], desk)
+    ck(f"Mx. the strip meter is a crisp LED ladder, lit while the note sounds ({desk['lit']} lit, {desk['dim']} dim, {desk['gap']} gap px)",
+       desk["cw"] >= desk["css"] > 100 and desk["lit"] > 4 and desk["dim"] > 20 and desk["gap"] > 8, desk)
+    _rgb = [int(v) for v in desk["who"][desk["who"].index("(") + 1:desk["who"].index(")")].split(",")[:3]]
+    def _lum(c):
+        c = [v / 255 for v in c]; c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    _con = (_lum(_rgb) + 0.05) / (_lum([25, 25, 25]) + 0.05)
+    ck(f"Mx. strip names read on the faceplate (contrast {_con:.1f}:1) and the bus sliders are amber, with no animation on the strips",
+       _con >= 4.5 and desk["accent"] in ("rgb(255, 179, 71)",) and desk["anim"] == 0, (desk["who"], desk["accent"], desk["anim"]))
     pg.evaluate("__synth.noteOff(60)")
     pg.wait_for_timeout(80)
     ck("Mx. arming Filament and Cathode plays the note on both",
