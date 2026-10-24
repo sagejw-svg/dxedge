@@ -5,6 +5,7 @@ import {
   questLog, questMarkers, advanceTalk, HUB_GATE,
   saveAuto, loadAuto, saveSlot, loadSlot, listSaves,
   moveItem, dropItem, activateItem, useItem, weaponAtk, armorDef, handoffItem, SAVE_KEY,
+  buyFromStall, swapRank,
 } from '../public/delve/engine.js';
 
 const memory = () => {
@@ -529,6 +530,90 @@ const feet = createGame(5, 'normal');
 assert.equal(activateItem(feet, { champ: 0, where: 'equip', slot: 'feet' }).ok, true);
 assert.equal(feet.party[0].equip.feet, null);
 assert.ok(feet.party[0].pack.some(it => it && it.name === 'road boots'));
+
+const ranks = createGame(4, 'normal');
+assert.equal(ranks.party[0].row, 'front');
+assert.equal(swapRank(ranks, 0).row, 'back');
+assert.equal(ranks.party[0].row, 'back');
+assert.equal(swapRank(ranks, 0).row, 'front');
+assert.equal(swapRank(ranks, 2).ok, true);
+assert.equal(ranks.party[2].row, 'front');
+
+const buyer = createGame(4, 'normal');
+buyer.gold = 30;
+assert.equal(buyFromStall(buyer, 'vial').reason, 'where');
+let buyerDown = null;
+for (let y = 0; y < MAP && !buyerDown; y++) {
+  for (let x = 0; x < MAP; x++) if (buyer.floors[0].tiles[y][x] === TILE.STAIRS_DOWN) buyerDown = { x, y };
+}
+debug.setPos(buyer, buyerDown.x, buyerDown.y, 0, 0);
+interact(buyer);
+assert.equal(buyer.inHub, true);
+assert.equal(buyFromStall(buyer, 'vial').ok, true);
+assert.equal(buyer.gold, 22);
+assert.ok(buyer.party[0].pack.some(it => it && it.name === 'red vial'), 'the stall sells a vial');
+assert.equal(buyFromStall(buyer, 'torch').ok, true);
+assert.equal(buyer.torch, true);
+assert.equal(buyFromStall(buyer, 'torch').reason, 'have');
+buyer.gold = 0;
+assert.equal(buyFromStall(buyer, 'biscuit').reason, 'gold');
+
+const raised = createGame(4, 'normal');
+let raisedDown = null;
+for (let y = 0; y < MAP && !raisedDown; y++) {
+  for (let x = 0; x < MAP; x++) if (raised.floors[0].tiles[y][x] === TILE.STAIRS_DOWN) raisedDown = { x, y };
+}
+debug.setPos(raised, raisedDown.x, raisedDown.y, 0, 0);
+interact(raised);
+const pyre = raised.hub.entities.find(e => e.sub === 'fire');
+raised.party[1].hp = 0;
+raised.gold = 12;
+debug.setPos(raised, pyre.x - 1, pyre.y, 0, 1);
+interact(raised);
+assert.ok(raised.party[1].hp > 0, 'the campfire lifts a fallen champion');
+assert.equal(raised.gold, 0);
+raised.restMs = 0;
+raised.party[2].hp = 0;
+raised.gold = 0;
+interact(raised);
+assert.equal(raised.party[2].hp, 0, 'a raise without coins leaves them down');
+assert.ok(raised.log.some(l => l.text.indexOf('12 coins') >= 0), 'the fire names the price');
+
+const plated = createGame(1, 'normal');
+let plate = null;
+let plateFloor = 0;
+for (let i = 0; i < plated.floors.length && !plate; i++) {
+  plate = plated.floors[i].entities.find(e => e.kind === 'plate');
+  plateFloor = i;
+}
+assert.ok(plate, 'a gate has a floor plate');
+const plateTiles = plated.floors[plateFloor].tiles;
+assert.equal(plateTiles[plate.gy][plate.gx], TILE.GATE);
+const approach = [
+  { x: plate.x, y: plate.y + 1, face: 0 },
+  { x: plate.x - 1, y: plate.y, face: 1 },
+  { x: plate.x, y: plate.y - 1, face: 2 },
+  { x: plate.x + 1, y: plate.y, face: 3 },
+].find(o => o.x > 0 && o.y > 0 && o.x < MAP - 1 && o.y < MAP - 1 && plateTiles[o.y][o.x] === TILE.FLOOR);
+assert.ok(approach, 'the plate can be stepped on');
+plated.floors[plateFloor].entities = plated.floors[plateFloor].entities.filter(e => !(e.kind === 'monster' && e.x === plate.x && e.y === plate.y));
+debug.setPos(plated, approach.x, approach.y, plateFloor, approach.face);
+assert.equal(move(plated, 'forward').ok, true);
+assert.equal(plate.sunk, true, 'stepping on the plate sinks it');
+assert.equal(plateTiles[plate.gy][plate.gx], TILE.GATE_OPEN, 'the plate lifts the gate');
+
+const bonesGame = createGame(1, 'normal');
+const bone = bonesGame.floors[0].entities.find(e => e.kind === 'prop' && e.sub === 'bones');
+assert.ok(bone, 'floor one has scattered bones');
+for (let i = 0; i <= 4; i++) if (bone.y + i < MAP) bonesGame.floors[0].tiles[bone.y + i][bone.x] = TILE.FLOOR;
+bonesGame.floors[0].entities = bonesGame.floors[0].entities.filter(e => e === bone || e.y < bone.y || e.y > bone.y + 4 || e.x !== bone.x);
+debug.setPos(bonesGame, bone.x, bone.y + 3, 0, 0);
+bonesGame.log.length = 0;
+interact(bonesGame);
+interact(bonesGame);
+const boneLine = bonesGame.log.find(l => l.text === 'Scattered bones, 3 steps ahead.');
+assert.ok(boneLine, 'the log names bones that are three steps ahead');
+assert.equal(boneLine.n, 1, 'that line is not repeated');
 
 const seen = floodReachable(g.floors[0].tiles, g.x, g.y);
 assert.ok(seen.size > 20);

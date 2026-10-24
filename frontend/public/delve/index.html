@@ -273,8 +273,8 @@
     padding: 24px;
     z-index: 5;
   }
-  #overlay[hidden], #help[hidden], #quests[hidden], #talk[hidden], #sheet[hidden] { display: none; }
-  #help, #quests, #sheet {
+  #overlay[hidden], #help[hidden], #quests[hidden], #talk[hidden], #sheet[hidden], #stall[hidden] { display: none; }
+  #help, #quests, #sheet, #stall {
     position: fixed; inset: 0;
     background: rgba(10, 8, 7, 0.82);
     display: grid; place-items: center;
@@ -293,7 +293,10 @@
   #talk .who { color: var(--ember); font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.82rem; }
   #talk p { margin: 6px 0; line-height: 1.35; }
   #talk small { color: var(--dim); }
-  #quests h3 { margin: 14px 0 6px; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ember); }
+  #quests h3, #stall h2 { margin: 14px 0 6px; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ember); }
+  #stall-body { width: min(640px, 100%); max-height: min(88vh, 760px); overflow: auto; background: var(--bg1); border: 1px solid #6a5038; border-radius: 16px; padding: 22px 22px 16px; }
+  #stall .qlog button { margin-top: 8px; }
+  #talk-stall, #sheet-rank { margin-top: 8px; }
   .qlog { list-style: none; display: grid; gap: 8px; }
   .qlog li { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
   .qlog li.done { opacity: 0.62; }
@@ -522,6 +525,7 @@
     <div class="tools">
       <button type="button" id="help-btn">Help (H)</button>
       <button type="button" id="quest-btn">Quests (J)</button>
+      <button type="button" id="stall-btn">Stall (B)</button>
       <select id="gfx" aria-label="Graphics quality">
         <option value="low">Low</option>
         <option value="medium">Med</option>
@@ -585,11 +589,11 @@
       <li><b>Q</b> strafe left. <b>E</b> strafe right. The pad under the view does the same by mouse or touch.</li>
       <li><b>Space</b> swings every living champion in the front rank, and also the selected champion if they stand in the back.</li>
       <li><b>Z</b> Bryn, <b>X</b> Cara, <b>C</b> Ivo, <b>V</b> Senn. Each attacks alone. Shift+1 through Shift+4 do the same.</li>
-      <li><b>F</b> or Enter uses a door, a chest, a lever, or the stairs in the next tile, and talks to someone standing there. If it is further down the hall, the log says how many steps. Click a champion's portrait to open their character sheet. Click a vial to drink it.</li>
+      <li><b>F</b> or Enter uses a door, a chest, a lever, or the stairs in the next tile, and talks to someone standing there. If it is further down the hall, the log names it once. Click a champion's portrait to open their character sheet. Click a vial to drink it.</li>
       <li><b>J</b> opens the quest log. The story runs down the seven floors. Side work is marked on the map: a lost adventurer, a shard to bring back, a monster nest, and a cracked niche.</li>
-      <li>The stair down stops at the waystation, a safe camp between floors. The campfire, Sable, and Nell are ahead of the near stair. Talk with F, rest at the campfire, then take the far stair to go deeper. The near stair returns you to the floor you left. The map zooms to the camp.</li>
-      <li>What you face is named in the log. Stairs are a dark well with gold steps. A chest, a lever, a locked door, an iron gate, a key, a vial, a wall torch, a tattered banner, bones, a cobweb, a stone figure, the campfire, a cracked niche, and a person each say what they are. Press F to use the one in front of you. A wall torch can be carried. The campfire lets the party rest. The same line stacks, as in <b>x4</b>, instead of filling the log.</li>
-      <li><b>1</b> <b>2</b> <b>3</b> <b>4</b> open Bryn, Cara, Ivo, and Senn. <b>I</b> opens the selected champion. The character sheet shows stats, skills, a paperdoll, and a backpack. Slots are head, body, legs, feet, hands, neck, weapon, and offhand. Drag gear between those slots, the backpack, and the other champions. Drop it on the floor. Double-click to equip, eat, or drink. The delve pauses while the sheet is open. <b>Esc</b> closes it.</li>
+      <li>The stair down stops at the waystation, a safe camp between floors. The campfire, Sable, and Nell are ahead of the near stair. Talk with F, rest at the campfire, then take the far stair to go deeper. The near stair returns you to the floor you left. The map zooms to the camp. <b>B</b> opens Nell's stall. Coins buy a hard biscuit, a waterskin, a red vial, or a carried torch.</li>
+      <li>What you face is named in the log. Stairs are a dark well with gold steps. A chest, a lever, a locked door, an iron gate, a key, a vial, a wall torch, a tattered banner, scattered bones, a cobweb, a stone figure, the campfire, a floor plate, a cracked niche, and a person each say what they are, and each one is drawn in the hall. Press F to use the one in front of you. A wall torch can be carried. Step on a floor plate to lift its gate. The campfire lets the party rest, and for 12 coins it lifts a champion who has fallen. The same line stacks, as in <b>x4</b>, instead of filling the log. A step count is said once until you move.</li>
+      <li><b>1</b> <b>2</b> <b>3</b> <b>4</b> open Bryn, Cara, Ivo, and Senn. <b>I</b> opens the selected champion. The character sheet shows stats, skills, a paperdoll, and a backpack. Slots are head, body, legs, feet, hands, neck, weapon, and offhand. Drag gear between those slots, the backpack, and the other champions. Drop it on the floor. Double-click to equip, eat, or drink. <b>G</b> swaps the front rank and the back. The front rank takes the melee. The back rank reaches farther. The delve pauses while the sheet is open. <b>Esc</b> closes it.</li>
       <li>Click a rune, or hold <b>Alt</b> and press <b>1</b> through <b>9</b>. <b>1</b> <b>2</b> <b>3</b> are Spark, Brand, Crown. <b>4</b> <b>5</b> <b>6</b> are Ash, Vita, Glim. <b>7</b> <b>8</b> <b>9</b> are Bolt, Mend, Shell. <b>R</b> casts the three. Spark + Glim + Bolt is light. Brand + Ash + Bolt is a fireball. Spark + Vita + Mend heals. Spark + Glim + Shell is a shield. Mana is on the rune. Casting skill rises as you use it. <b>Tab</b> cycles the selected champion.</li>
       <li>Three save slots live in this browser. Reaching the waystation writes an autosave. Load any of them from the title.</li>
       <li>A crypt ghost ignores steel. Magic hurts it, and a closed door stops it. Other creatures hear you, chase, flee when hurt, and strike harder in a pack. Some will force a door.</li>
@@ -601,6 +605,7 @@
 </div>
 <div id="quests" hidden><div id="quest-body"></div></div>
 <div id="sheet" hidden><div id="sheet-body"></div></div>
+<div id="stall" hidden><div id="stall-body"></div></div>
 <div id="toast" hidden></div>
 <script src="/lib/stat.js"></script>
 <script type="module" src="./main.js"></script>

@@ -68,6 +68,7 @@ def main():
     ok('waystation' in page_html, 'help mentions the waystation')
     ok('campfire' in page_html and 'tattered banner' in page_html and 'Spark' in page_html, 'help names the camp and the runes')
     ok('character sheet' in page_html and 'backpack' in page_html, 'help names the character sheet')
+    ok("Nell's stall" in page_html and 'floor plate' in page_html, 'help names the stall and the plate')
     ok('## Delve' in notices and 'original code' in notices, 'third-party notice covers Delve')
     ok('cdn.' not in page_html and 'googletag' not in page_html and 'analytics' not in page_html, 'no third-party tags in the page')
 
@@ -127,9 +128,78 @@ def main():
         ok('Cara' in pg.inner_text('#sheet'), '2 opens Cara')
         pg.keyboard.press('Escape')
         ok(pg.evaluate('() => document.getElementById("sheet").hidden === true && __delve.state().paused === false'), 'Esc closes the sheet and resumes')
+        pg.keyboard.press('1')
+        ok(pg.evaluate('() => document.getElementById("sheet").hidden === false'), '1 opens Bryn')
+        pg.keyboard.press('g')
+        ok(pg.evaluate('__delve.party()[0].row') == 'back', 'G steps the open champion back')
+        ok('Step to the front' in pg.inner_text('#sheet'), 'the sheet offers the other rank')
+        pg.keyboard.press('Escape')
+        ok(pg.evaluate('__delve.party()[0].row') == 'back', 'rank stays after the sheet closes')
+        pg.keyboard.press('g')
+        ok(pg.evaluate('__delve.party()[0].row') == 'front', 'G steps Bryn forward again')
         pg.keyboard.press('i')
         ok(pg.evaluate('() => document.getElementById("sheet").hidden === false'), 'I opens the selected sheet')
         pg.keyboard.press('Escape')
+
+        pg.evaluate('''() => new Promise(resolve => {
+          __delve.newGame(1, "normal");
+          __delve.setQuality("high");
+          const g = __delve.game;
+          const b = g.floors[0].entities.find(e => e.kind === "prop" && e.sub === "bones");
+          for (let i = 0; i <= 4; i++) if (b.y + i < 33) g.floors[0].tiles[b.y + i][b.x] = 1;
+          g.floors[0].entities = g.floors[0].entities.filter(e => e === b || e.x !== b.x || e.y < b.y || e.y > b.y + 4);
+          __delve.setPos(b.x, b.y + 3, 0, 0);
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        })''')
+        pg.screenshot(path='/tmp/delve-bones.png', full_page=False)
+        bones = pg.evaluate('''() => new Promise(resolve => {
+          const g = __delve.game;
+          const b = g.floors[0].entities.find(e => e.kind === "prop" && e.sub === "bones" && !e.taken);
+          const c = document.getElementById("view");
+          const ctx = c.getContext("2d");
+          const withBones = ctx.getImageData(0, 0, c.width, c.height).data;
+          b.taken = true;
+          requestAnimationFrame(() => {
+            const bare = ctx.getImageData(0, 0, c.width, c.height).data;
+            let n = 0, bright = 0;
+            for (let i = 0; i < withBones.length; i += 4) {
+              const dr = Math.abs(withBones[i] - bare[i]) + Math.abs(withBones[i + 1] - bare[i + 1]) + Math.abs(withBones[i + 2] - bare[i + 2]);
+              if (dr > 30) {
+                n++;
+                if (withBones[i] > 150 && withBones[i + 1] > 130) bright++;
+              }
+            }
+            b.taken = false;
+            resolve({n: n, bright: bright});
+          });
+        })''')
+        ok(bones['n'] > 800 and bones['bright'] > 200, 'bones are visible three steps ahead: ' + str(bones))
+        pg.evaluate('''() => {
+          const g = __delve.game;
+          g.log.length = 0;
+          __delve.interact();
+          __delve.interact();
+          const line = g.log.find(l => l.text.indexOf("Scattered bones") >= 0);
+          window.__boneLine = line ? line.n : 0;
+        }''')
+        ok(pg.evaluate('window.__boneLine') == 1, 'Use does not stack the bones line')
+
+        pg.evaluate('''() => {
+          const g = __delve.game;
+          g.inHub = true;
+          g.gold = 20;
+          g.paused = false;
+        }''')
+        pg.keyboard.press('b')
+        stall_text = pg.inner_text('#stall')
+        ok('hard biscuit' in stall_text and 'waterskin' in stall_text, stall_text[:240])
+        ok(pg.evaluate('() => __delve.state().paused === true'), 'the stall pauses the delve')
+        pg.click('[data-buy="biscuit"]')
+        ok(pg.evaluate('__delve.state().gold') == 16, 'a biscuit costs 4 coins')
+        pg.screenshot(path='/tmp/delve-stall.png', full_page=False)
+        pg.keyboard.press('Escape')
+        ok(pg.evaluate('() => document.getElementById("stall").hidden === true && __delve.state().paused === false'), 'Esc closes the stall')
+        pg.evaluate('__delve.newGame(1, "normal")')
 
         names = pg.inner_text('#party')
         ok('Bryn' in names and 'Senn' in names, 'party panel is on the page')

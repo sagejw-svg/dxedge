@@ -7,6 +7,7 @@ import {
   EQUIP_SLOTS, moveItem, dropItem, handoffItem, activateItem, itemBlurb, weaponAtk, armorDef, xpNeed, ensureGear,
   saveGame, loadGame, hasSave, clearSave, summarize, tileAt, debug,
   questLog, advanceTalk, listSaves, loadContinue, loadSlot, loadAuto, saveSlot, saveAuto,
+  STALL, buyFromStall, swapRank,
 } from './engine.js';
 
 const GFX_KEY = 'dxedge_delve_quality';
@@ -33,6 +34,7 @@ const volInput = document.getElementById('vol');
 const helpEl = document.getElementById('help');
 const questEl = document.getElementById('quests');
 const sheetEl = document.getElementById('sheet');
+const stallEl = document.getElementById('stall');
 const talkEl = document.getElementById('talk');
 const viewWrap = document.getElementById('view-wrap');
 const floatersEl = document.getElementById('floaters');
@@ -241,7 +243,7 @@ function showTitle() {
     '<ul class="help">' +
       '<li><b>W</b> forward, <b>S</b> back, <b>A</b> and <b>D</b> turn. Arrow keys do the same.</li>' +
       '<li><b>Q</b> and <b>E</b> strafe. The buttons under the view do all of this by mouse or touch.</li>' +
-      '<li><b>Space</b> swings the front rank. <b>Z X C V</b> send Bryn, Cara, Ivo, and Senn alone. <b>F</b> uses and talks. <b>J</b> opens the quest log. <b>1</b>–<b>4</b> or <b>I</b> opens a character sheet. <b>R</b> casts a rune.</li>' +
+      '<li><b>Space</b> swings the front rank. <b>Z X C V</b> send Bryn, Cara, Ivo, and Senn alone. <b>G</b> swaps that champion front or back. <b>F</b> uses and talks. <b>J</b> opens the quest log. <b>B</b> is Nell\'s stall. <b>1</b>–<b>4</b> or <b>I</b> opens a character sheet. <b>R</b> casts a rune.</li>' +
     '</ul>' +
     '<p class="lead" id="title-credits">Original code. Pictures and the ember favicon are drawn in the page. Sound is synthesized here. Nothing is loaded from another site, and nothing here is taken from another dungeon game.</p>'
   );
@@ -260,7 +262,7 @@ function showPause() {
     '</div>' +
     '<div class="saves"><p class="kicker">three slots, plus the waystation autosave</p>' + saveRows(true) + '</div>' +
     '<ul class="help">' +
-      '<li>W S move, A D turn, Q E strafe. Space swings the front rank. Z X C V attack one champion. F uses. 1–4 or I opens a character sheet. R casts a rune. H lists every key.</li>' +
+      '<li>W S move, A D turn, Q E strafe. Space swings the front rank. Z X C V attack one champion. G swaps rank. F uses. B is the stall. 1–4 or I opens a character sheet. R casts a rune. H lists every key.</li>' +
       '<li>Saves stay in this browser. Reaching the waystation writes the autosave.</li>' +
     '</ul>'
   );
@@ -383,7 +385,7 @@ function gearSig() {
       return it ? it.name + ':' + it.atk + ':' + it.def : '-';
     }).join(',');
     const pk = c.pack.map(it => it ? it.name + ':' + (it.amount || 0) : '-').join(',');
-    return [c.hp, c.sta, c.mana, c.level, c.xp, c.rune || 0, eq, pk].join(':');
+    return [c.hp, c.sta, c.mana, c.level, c.xp, c.row, c.rune || 0, eq, pk].join(':');
   }).join('/');
 }
 
@@ -477,7 +479,8 @@ function paintSheet(force) {
   }).join('');
   body.innerHTML =
     '<div class="sheet-top"><div><p class="kicker">character sheet</p><h2>' + escapeHtml(c.name) + '</h2>' +
-    '<p>' + escapeHtml(c.role) + ' · ' + escapeHtml(c.row) + ' rank · level ' + c.level + '</p></div>' +
+    '<p>' + escapeHtml(c.role) + ' · ' + escapeHtml(c.row) + ' rank · level ' + c.level + '</p>' +
+    '<button type="button" id="sheet-rank">' + (c.row === 'front' ? 'Step back' : 'Step to the front') + '</button></div>' +
     '<button type="button" id="sheet-close">Close</button></div>' +
     '<div class="sheet-grid">' +
       '<ul class="stats">' + lines.map(row => '<li>' + row[0] + ' <b>' + escapeHtml(String(row[1])) + '</b></li>').join('') + '</ul>' +
@@ -507,6 +510,14 @@ function applyDrop(from, to) {
 function bindSheet(root) {
   const close = root.querySelector('#sheet-close');
   if (close) close.addEventListener('click', () => closeSheet());
+  const rank = root.querySelector('#sheet-rank');
+  if (rank) rank.addEventListener('click', () => {
+    swapRank(game, game.selected);
+    sheetSig = '';
+    paintParty();
+    paintSheet(true);
+    paintLog();
+  });
   let pointerFrom = '';
   let pointerMoved = false;
   let pointerX = 0;
@@ -644,6 +655,10 @@ function openSheet(index) {
     questEl.hidden = true;
     if (!helpWasPaused) game.paused = false;
   }
+  if (stallOpen()) {
+    stallEl.hidden = true;
+    if (!helpWasPaused) game.paused = false;
+  }
   if (!sheetOpen()) sheetWasPaused = !!game.paused;
   game.selected = index;
   game.paused = true;
@@ -660,7 +675,7 @@ function closeSheet() {
   sheetEl.hidden = true;
   sheetDrag = false;
   sheetPick = '';
-  if (game && game.phase === 'play' && !sheetWasPaused && !helpOpen() && !questOpen()) game.paused = false;
+  if (game && game.phase === 'play' && !sheetWasPaused && !helpOpen() && !questOpen() && !stallOpen()) game.paused = false;
 }
 
 function toggleSheet(index) {
@@ -700,7 +715,7 @@ function paintParty() {
     el.classList.toggle('sel', i === game.selected);
     el.classList.toggle('down', c.hp <= 0);
     el.querySelector('.name').textContent = c.name;
-    el.querySelector('.role').textContent = c.role + ' · ' + ['Z', 'X', 'C', 'V'][i] + ' · lv ' + c.level;
+    el.querySelector('.role').textContent = c.role + ' · ' + c.row + ' · ' + ['Z', 'X', 'C', 'V'][i] + ' · lv ' + c.level;
     const bars = [['.hp', c.hp, c.maxHp], ['.sta', c.sta, c.maxSta], ['.mana', c.mana, c.maxMana]];
     for (const [sel, v, max] of bars) {
       const bar = el.querySelector(sel);
@@ -833,6 +848,7 @@ function paintAll() {
   paintSpells();
   paintFx();
   paintTalk();
+  if (stallOpen()) paintStall();
   if (sheetOpen()) paintSheet(false);
 }
 
@@ -900,7 +916,7 @@ function toggleQuest() {
   if (!questEl) return;
   if (!questEl.hidden) {
     questEl.hidden = true;
-    if (game && game.phase === 'play' && !helpWasPaused && !sheetOpen()) game.paused = false;
+    if (game && game.phase === 'play' && !helpWasPaused && !sheetOpen() && !stallOpen()) game.paused = false;
     return;
   }
   if (helpOpen()) toggleHelp();
@@ -911,19 +927,84 @@ function toggleQuest() {
   questEl.hidden = false;
 }
 
+function stallOpen() {
+  return !!(stallEl && !stallEl.hidden);
+}
+
+function paintStall() {
+  if (!stallEl) return;
+  const body = stallEl.querySelector('#stall-body');
+  if (!body) return;
+  const gold = game ? game.gold | 0 : 0;
+  const where = game && game.inHub ? 'hub' : 'away';
+  const sig = where + '|' + gold + '|' + (game && game.torch ? 1 : 0);
+  if (body.getAttribute('data-sig') === sig && body.querySelector('h2')) return;
+  body.setAttribute('data-sig', sig);
+  const rows = STALL.map(row => {
+    const have = row.id === 'torch' && game && game.torch;
+    const afford = game && game.inHub && gold >= row.cost && !have;
+    return '<li><b>' + escapeHtml(row.name) + '</b> <span>' + row.cost + ' coins</span><p>' + escapeHtml(row.detail) + '</p>' +
+      '<button type="button" data-buy="' + row.id + '"' + (afford ? '' : ' disabled') + '>' + (have ? 'Carried' : 'Buy') + '</button></li>';
+  }).join('');
+  const lead = game && game.inHub
+    ? 'You have ' + gold + ' coins. B or Esc closes the stall. The delve stays paused.'
+    : 'Nell keeps the stall at the waystation, between floors. B or Esc closes this.';
+  body.innerHTML = '<p class="kicker">waystation</p><h2>Nell\'s stall</h2><ul class="qlog">' + rows + '</ul><p class="lead">' + lead + '</p>';
+  body.querySelectorAll('[data-buy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!game) return;
+      buyFromStall(game, btn.getAttribute('data-buy'));
+      body.removeAttribute('data-sig');
+      paintStall();
+      paintParty();
+      paintHud();
+      paintLog();
+    });
+  });
+}
+
+function toggleStall() {
+  if (!stallEl) return;
+  if (!stallEl.hidden) {
+    stallEl.hidden = true;
+    if (game && game.phase === 'play' && !helpWasPaused && !sheetOpen() && !questOpen()) game.paused = false;
+    return;
+  }
+  if (helpOpen()) { helpEl.hidden = true; }
+  if (questOpen()) { questEl.hidden = true; }
+  if (sheetOpen()) closeSheet();
+  helpWasPaused = !!(game && game.paused);
+  if (game && game.phase === 'play') game.paused = true;
+  held.clear();
+  const body = stallEl.querySelector('#stall-body');
+  if (body) body.removeAttribute('data-sig');
+  paintStall();
+  stallEl.hidden = false;
+}
+
 function paintTalk() {
   if (!talkEl) return;
-  if (!game || !game.talk) { talkEl.hidden = true; return; }
+  if (!game || !game.talk) {
+    talkEl.hidden = true;
+    talkEl.removeAttribute('data-sig');
+    return;
+  }
   const t = game.talk;
+  const sig = t.id + ':' + t.i;
+  if (talkEl.getAttribute('data-sig') === sig && !talkEl.hidden) return;
+  talkEl.setAttribute('data-sig', sig);
   talkEl.hidden = false;
-  talkEl.innerHTML = '<div class="who">' + escapeHtml(t.name || 'Someone') + '</div><p>' + escapeHtml(t.lines[t.i] || '') + '</p><small>F or Space continues</small>';
+  const stallBtn = t.id === 'nell' ? '<button type="button" id="talk-stall">Stall</button>' : '';
+  talkEl.innerHTML = '<div class="who">' + escapeHtml(t.name || 'Someone') + '</div><p>' + escapeHtml(t.lines[t.i] || '') + '</p><small>F or Space continues</small> ' + stallBtn;
+  const stall = talkEl.querySelector('#talk-stall');
+  if (stall) stall.addEventListener('click', () => { audio.start(); toggleStall(); });
 }
 
 function toggleHelp() {
   if (!helpEl) return;
   if (!helpEl.hidden) {
     helpEl.hidden = true;
-    if (game && game.phase === 'play' && !helpWasPaused && !sheetOpen() && !questOpen()) game.paused = false;
+    if (game && game.phase === 'play' && !helpWasPaused && !sheetOpen() && !questOpen() && !stallOpen()) game.paused = false;
     return;
   }
   helpWasPaused = !!(game && game.paused);
@@ -957,6 +1038,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     audio.start();
     if (sheetOpen()) closeSheet();
+    if (stallOpen()) toggleStall();
     toggleQuest();
     return;
   }
@@ -968,13 +1050,33 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' || e.code === 'KeyJ') { e.preventDefault(); toggleQuest(); }
     return;
   }
+  if (stallOpen()) {
+    if (e.code === 'Escape' || e.code === 'KeyB') { e.preventDefault(); toggleStall(); }
+    return;
+  }
   if (sheetOpen()) {
     if (e.code === 'Escape' || e.code === 'KeyI') { e.preventDefault(); closeSheet(); return; }
+    if (e.code === 'KeyG') {
+      e.preventDefault();
+      swapRank(game, game.selected);
+      sheetSig = '';
+      paintParty();
+      paintSheet(true);
+      paintLog();
+      return;
+    }
     if (!e.altKey && !e.shiftKey && /^Digit[1-4]$/.test(e.code)) {
       e.preventDefault();
       openSheet(Number(e.code.slice(5)) - 1);
       return;
     }
+    return;
+  }
+  if (e.code === 'KeyB') {
+    if (typingTarget(e)) return;
+    e.preventDefault();
+    audio.start();
+    toggleStall();
     return;
   }
   if (game && game.talk && (e.code === 'Space' || e.code === 'KeyF' || e.code === 'Enter')) {
@@ -1032,6 +1134,14 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     audio.start();
     toggleSheet();
+  } else if (e.code === 'KeyG') {
+    e.preventDefault();
+    audio.start();
+    if (game) {
+      swapRank(game, game.selected);
+      paintParty();
+      paintLog();
+    }
   } else if (e.altKey && /^Digit[1-9]$/.test(e.code)) {
     if (!game || game.phase !== 'play') return;
     e.preventDefault();
@@ -1107,6 +1217,8 @@ const helpBtn = document.getElementById('help-btn');
 if (helpBtn) helpBtn.addEventListener('click', () => { audio.start(); toggleHelp(); });
 const questBtn = document.getElementById('quest-btn');
 if (questBtn) questBtn.addEventListener('click', () => { audio.start(); toggleQuest(); });
+const stallBtn = document.getElementById('stall-btn');
+if (stallBtn) stallBtn.addEventListener('click', () => { audio.start(); toggleStall(); });
 
 mapCanvas.width = 220;
 mapCanvas.height = 220;
@@ -1152,11 +1264,22 @@ window.__delve = {
   killAll() { if (game) { debug.killAll(game); if (game.phase !== 'play') showEnd(); } },
   press(code) {
     if (code === 'KeyH' || code === 'Slash') { if (sheetOpen()) closeSheet(); toggleHelp(); return; }
-    if (code === 'KeyJ') { if (sheetOpen()) closeSheet(); toggleQuest(); return; }
+    if (code === 'KeyJ') { if (sheetOpen()) closeSheet(); if (stallOpen()) toggleStall(); toggleQuest(); return; }
+    if (code === 'KeyB') { if (sheetOpen()) closeSheet(); toggleStall(); return; }
+    if (code === 'KeyG') {
+      if (!game) return;
+      swapRank(game, game.selected);
+      sheetSig = '';
+      paintParty();
+      if (sheetOpen()) paintSheet(true);
+      paintLog();
+      return;
+    }
     if (code === 'KeyI') { toggleSheet(); return; }
     if (code === 'Escape') {
       if (helpOpen()) toggleHelp();
       else if (questOpen()) toggleQuest();
+      else if (stallOpen()) toggleStall();
       else if (sheetOpen()) closeSheet();
       return;
     }
