@@ -10,7 +10,7 @@
 // What it measures: the Filament worklet alone (no rack, no browser), 6 s at 48 kHz in 128-frame
 // blocks, process CPU time (user + system) per render, best of the rounds. Each render runs in a
 // fresh child process so one version's JIT state never helps the other. The cases are test 9's
-// four (8 voices, Ladder 24 and Valve 12, stereo offset, 16 voices), Diode 18 and Sallen-Key 12 (with and without its high-pass) at 8 voices, plus wider coverage for the
+// four (8 voices, Ladder 24 and Valve 12, stereo offset, 16 voices), Diode 18, Sallen-Key 12 (with and without its high-pass) and Poly 24 (and Poly 24 screaming and driven) at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, and patch changes mid-note (stereo offset on, loop tube, model, drive).
 // The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
@@ -39,6 +39,8 @@ const CASES = {
   diode18: big('diode18'),
   sk12: big('sk12'),
   sk12hp: big('sk12', p => { p.filt.hp = 300; p.filt.res = 0.95; }),
+  poly24: big('poly24'),
+  poly24hot: big('poly24', p => { p.filt.res = 1; p.filt.drive = 9; p.v1.drive = 6; }),
   offset: big('valve12', p => { p.filt.offset = 0.5; }),
   uni16: big('valve12', p => { p.voice = { unison: 2, count: 8 }; }),
   lfo: big('valve12', p => { p.lfo1 = { rate: 4, pitch: 20, cutoff: 1, pw: 0.3, amp: 0.4, wave: 'tri' }; p.lfo2 = { rate: 0.7, cutoff: 0.5, pan: 0.5, phase: 90, wave: 'sh' }; p.noise = { level: 0.2, color: 'pink' }; }),

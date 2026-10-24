@@ -7,7 +7,7 @@
 // the only decimators are the two on the sum.
 //
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
-//   -> filter (Valve 12, Ladder 24, Diode 18 or Sallen-Key 12) -> VCA -> pan -> L/R (2x) -> half-band -> out
+//   -> filter (Valve 12, Ladder 24, Diode 18, Sallen-Key 12 or Poly 24) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
@@ -35,6 +35,13 @@
 //              build sits in front (filt.hp), its peak at half the low-pass's. Our own state
 //              equations for the two capacitor voltages, trapezoidal, the clip linearised at
 //              the last sample (one Newton step), each section solved as a 2x2 system.
+//   Poly 24:   four transconductance (OTA) stages in a cascade, each a capacitor charged by a
+//              current that saturates on the difference between its input and its own output
+//              (a tanh of the voltage across the stage), with the resonance fed back from the last
+//              stage through a soft-clipping amplifier. Linearly the same four poles as Ladder 24;
+//              the stages bend on loud, fast input (they slew) rather than on their own level, and
+//              more of the bass is made up as resonance rises. Our own formulation: each stage's
+//              tanh(d)/d taken at the last sample, the loop then solved exactly.
 //
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
 //   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}, {t:'release'}. Any of them may carry
@@ -290,6 +297,31 @@ class Filt {
     let y = K * w; const rr = y * (y >= 0 ? SK_IP : SK_IN), rq = rr * rr, qk = 1 / Math.sqrt(Math.sqrt(1 + rq * rq));
     y *= qk; s[F_Y0] = y; s[F_Y1] = K * qk * qk * qk * qk * qk;
     s[F_OUT] = y * s[F_COMP];
+  }
+  // Poly 24: stage i charges at g * tanh(d_i) with d_i = (its input - its output), the input of
+  // stage 1 is x - k * clip(y4) and clip(z) = L tanh(z / L). With t_i = tanh(d_i)/d_i and the
+  // clip's tanh(z/L)/(z/L) taken from the state (the last sample's estimate), each stage is a
+  // trapezoidal one-pole of gain g t_i, so y4 is linear in the input: y4 = A u + B, solved with
+  // the feedback in closed form, then the stages forward. No iteration, no allocation.
+  ota() {
+    const s = this.s, y = s[F_IN], g = s[F_G], k = s[F_K];
+    const s1 = s[F_S1], s2 = s[F_S2], s3 = s[F_S3], s4 = s[F_S4];
+    const ih = 0.5 * (y + s[F_ZI]); s[F_ZI] = y;
+    // tanh(x)/x as the same Pade approximant as tdx(), written out (as in ladder()) so the five
+    // calls cost no function lookups
+    let qa = s4 * P24_IL; qa *= qa;
+    const kf = k * ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945), SS = P24_SS;
+    qa = (ih - kf * s4 - s1) * SS; qa *= qa; const g1 = g * ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = (s1 - s2) * SS; qa *= qa; const g2 = g * ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = (s2 - s3) * SS; qa *= qa; const g3 = g * ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    qa = (s3 - s4) * SS; qa *= qa; const g4 = g * ((qa + 105) * qa + 945) / ((15 * qa + 420) * qa + 945);
+    const i1 = 1 / (1 + g1), i2 = 1 / (1 + g2), i3 = 1 / (1 + g3), i4 = 1 / (1 + g4);
+    const a1 = g1 * i1, a2 = g2 * i2, a3 = g3 * i3, a4 = g4 * i4;
+    const A = a1 * a2 * a3 * a4, B = a4 * (a3 * (a2 * s1 * i1 + s2 * i2) + s3 * i3) + s4 * i4;
+    const y4 = (A * ih + B) / (1 + A * kf);
+    const y1 = a1 * (ih - kf * y4) + s1 * i1, y2 = a2 * y1 + s2 * i2, y3 = a3 * y2 + s3 * i3;
+    s[F_S1] = 2 * y1 - s1; s[F_S2] = 2 * y2 - s2; s[F_S3] = 2 * y3 - s3; s[F_S4] = 2 * y4 - s4;
+    s[F_OUT] = y4 * s[F_COMP];
   }
   // Valve 12: a 2-pole SVF lowpass whose resonance is positive feedback of the band-pass through
   // the loop tube's curve, a coupling-cap high-pass and a supply-sag follower, linearised at the
@@ -691,11 +723,16 @@ class Filament extends AudioWorkletProcessor {
   // Skipped when the inputs match the last call for this filter, which is every tick of a held
   // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
   fcoef(F, model) {
-    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 4 + model;
+    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 5 + model;
     if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
     s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
     let fc = clamp(this.cc[0], 16, sr * 0.45);
-    if (model === 3) {
+    if (model === 4) {
+      // Poly 24: like the ladder, the saturating stages pull a self-oscillating filter flat by an
+      // amount set by how far the loop gain is past 4 (P24_CAL, cents per unit over, measured).
+      const over = res * P24_KMAX - 4;
+      if (over > 0) { const g0 = Math.PI * fc / fs; fc *= Math.pow(2, over * (P24_CAL[0] + P24_CAL[1] * g0) / 1200); }
+    } else if (model === 3) {
       // Sallen-Key: K runs from the flat (Butterworth) point at zero resonance to 3, where it
       // oscillates, at SK_RT, then on to SK_KMAX. Past the threshold the clip holds the loop at
       // 3 on average and the waveform squares; SK_CAL raises the cutoff by the cents the clipped
@@ -729,7 +766,8 @@ class Filament extends AudioWorkletProcessor {
     }
     fc = clamp(fc, 16, sr * 0.45);
     s[F_G] = Math.tan(Math.PI * fc / fs);
-    if (model === 3) {
+    if (model === 4) { s[F_K] = res * P24_KMAX; s[F_COMP] = 1 + s[F_K] * P24_COMP; }
+    else if (model === 3) {
       const K = res <= SK_RT ? SK_K0 + (3 - SK_K0) * res / SK_RT : 3 + (SK_KMAX - 3) * (res - SK_RT) / (1 - SK_RT);
       s[F_K] = K; s[F_COMP] = 1 / K;
       const Kh = SK_K0 + (K - SK_K0) * SK_HPK;
@@ -790,7 +828,7 @@ class Filament extends AudioWorkletProcessor {
     const off2 = num(o2.oct, 0) * 12 + num(o2.semi, 0) + num(o2.fine, 0) / 100;
     const fix1 = num(o1.fixed, 0), fix2 = num(o2.fixed, 0);
     const sync = !!o2.sync, pink = nz.color === 'pink';
-    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : 0;
+    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : 0;
     const ea = P.envA || {}, ef = P.envF || {};
     const aA = coef(Math.max(0.001, num(ea.a, 0.005)) / 1.466, sr), aD = coef(Math.max(0.001, num(ea.d, 0.3)) / 4.6, sr), aS = clamp(num(ea.s, 0.8), 0, 1), aR = coef(Math.max(0.003, num(ea.r, 0.3)) / 4.6, sr);
     const fA = coef(Math.max(0.001, num(ef.a, 0.005)) / 1.466, sr), fD = coef(Math.max(0.001, num(ef.d, 0.3)) / 4.6, sr), fS = clamp(num(ef.s, 0.5), 0, 1), fR = coef(Math.max(0.003, num(ef.r, 0.3)) / 4.6, sr);
@@ -808,7 +846,7 @@ class Filament extends AudioWorkletProcessor {
     // Two filters per voice only when something makes left and right differ.
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
-    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3;
+    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3, isOta = model === 4;
 
     // smoothed parameters at each control tick, shared by every voice
     const CT = this.CT, nt = Math.ceil(frames / CTRL);
@@ -966,10 +1004,10 @@ class Filament extends AudioWorkletProcessor {
           dcy = y - dcx + dcA * dcy; dcx = y; y = dcy * fdG;
           // filter(s)
           fl[F_IN] = y;
-          if (isLadder) FL.ladder(); else if (isDiode) FL.diode(); else if (isSk) FL.sk(); else FL.valve(lTab);
+          if (isLadder) FL.ladder(); else if (isOta) FL.ota(); else if (isDiode) FL.diode(); else if (isSk) FL.sk(); else FL.valve(lTab);
           const yl = fl[F_OUT];
           let yr = yl;
-          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else FR.valve(lTab); yr = frs[F_OUT]; }
+          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isOta) FR.ota(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else FR.valve(lTab); yr = frs[F_OUT]; }
           const idx = i * OS + s;
           L2[idx] += yl * aLg; R2[idx] += yr * aRg;
         }
@@ -1027,6 +1065,15 @@ const DIO_CAL = [209, -1209, 2775];
 // voice, notes 48 to 96 with the knob at 262 Hz and key tracking 1).
 const SK_K0 = 3 - Math.SQRT2, SK_RT = 0.9, SK_KMAX = 3.6, SK_IP = 1 / 1.5, SK_IN = 1 / 1.2, SK_HPK = 0.5;
 const SK_CAL = [6.67, 92.36, -34.23];   // measured flat: 1.3, 6.9, 22.4, 42.3, 64.9 cents at e = 0.1, 0.25, 0.5, 0.75, 1
+// Poly 24. The loop oscillates once k passes 4 (four equal one-poles, each 45 degrees and 1/sqrt 2
+// at the cutoff), at 0.9 on the knob; full resonance takes k 11% past it, like Ladder 24.
+// P24_IL = 1/L, the feedback amplifier's clip level; P24_SS scales the voltage across each stage
+// before its tanh (lower is cleaner: 0.5 keeps a normal note nearly linear, so drive is what
+// makes the stages slew), and the two together set the scream at about -12 dBFS. P24_COMP: the share of the passband the
+// feedback takes away that is made up (Ladder 24 makes up 0.45). P24_CAL: cents per unit of loop
+// gain over 4, a + b g0 with g0 = pi fc / fs (measured in Node renders of the voice).
+const P24_KMAX = 4 / 0.9, P24_IL = 1 / 0.5, P24_SS = 0.5, P24_COMP = 0.6;
+const P24_CAL = [105, -300];   // measured flat: 18, 28, 37, 47 cents at over 0.18, 0.27, 0.36, 0.44 (C3); 84 cents a unit at C7
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };
 // tanh(x)/x, Pade approximant (exact enough for |x| < 3, still monotone and bounded beyond)
