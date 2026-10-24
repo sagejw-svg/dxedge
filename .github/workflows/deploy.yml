@@ -267,7 +267,7 @@ jobs:
           # GET, not HEAD: these paths proxy to the backend, which answers 405
           # to HEAD, and a 405 carries no cache-control at all - the check would
           # pass by finding nothing.
-          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/ https://dxedge.net/eob/; do
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/ https://dxedge.net/eob/ https://dxedge.net/eob2/; do
             CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
             if [ -z "$CC" ]; then
               echo "ERROR: $U returned no cache-control header at all."
@@ -326,6 +326,20 @@ jobs:
           echo "$html" | grep -q 'noindex' || { echo "ERROR: /eob/ is missing noindex"; exit 1; }
           echo "$html" | grep -q 'Drop the EYE folder here' || { echo "ERROR: /eob/ has no folder picker"; exit 1; }
           echo "$html" | grep -q 'webkitdirectory' || { echo "ERROR: /eob/ picker is not a folder picker"; exit 1; }
+
+      - name: Verify the EOB2 engine is live
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/eob2/)
+          echo "/eob2/ $code"
+          if [ "$code" != "200" ]; then
+            echo "ERROR: /eob2/ is not 200"
+            exit 1
+          fi
+          html=$(curl -sf https://dxedge.net/eob2/)
+          echo "$html" | grep -q 'noindex' || { echo "ERROR: /eob2/ is missing noindex"; exit 1; }
+          echo "$html" | grep -q '/eob2/assets/index-DXq18miT.js' || { echo "ERROR: /eob2/ is not the published engine"; exit 1; }
+          js=$(curl -sf https://dxedge.net/eob2/assets/index-DXq18miT.js)
+          echo "$js" | grep -q 'Drop the DARKMOON folder here' || { echo "ERROR: /eob2/ bundle has no folder picker"; exit 1; }
 
       - name: Verify feed proxy is live
         run: |
