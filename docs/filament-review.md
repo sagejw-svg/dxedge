@@ -17,10 +17,11 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note" | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
-| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus | measured (Gleam inferred) |
+| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 24 Oct | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 23 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03 | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
@@ -28,9 +29,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
-| R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳" | measured |
-| R1020-8 | confusing | h | Desktop rack: 408 tab stops and no skip link; the library is stop 392, Panic 399 | measured |
+| R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 24 Oct | inferred (code, 24 Oct) |
+| R1020-8 | confusing | h | Desktop rack: 409 tab stops (24 Oct) and no skip link; the library is near the end | measured |
 | R1020-9 | confusing | h | 23 control names repeat across sections ("level" x4, "cutoff" x3, "oct" x2) with no section in the name | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200% | measured |
@@ -41,7 +42,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px) | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4 | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -398,3 +399,74 @@ notes), so mapping CC64 and the hold button to it is a design call.
 Areas a, b, f, g, h. Tempo (R1017-5), the keyboard position (R1017-7) and the phone strips (R1017-10,
 R1017-11) were not re-measured. Suggested next: a on Lattice, Mote and Klystron; f (does a project
 restore the arms?); h on the new Mix desk (the mute and solo chips are named only "mute" and "solo").
+
+## 2026-10-24 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `75d8a45` (the slider
+fader finish had landed about 1.5 hours earlier), sw.js `dxedge-v133`. Chromium headless at 1366 x 900
+and 375 x 812 (touch, 2x), and a reduced-motion context. No page errors or console errors on the rack
+or Anode in any run; Hexode logs only the old ScriptProcessorNode and WebGL ReadPixels warnings. The
+Chromium path in the task prompt (`chromium-1194`) is gone; the scripts used the default install.
+
+### What worked (measured)
+
+- Project with arms (the 23 Oct suggestion): arm Filament and Thyratron, tempo 97, Lattice level 0.4,
+  name "rv night", save project, clear all of it, load saved: both arms (and their chips), tempo, level
+  and name come back. A page reload boots the same.
+- An older project file (v1, only Filament and a mixer, device Lattice) applies its device, tempo 88
+  and Filament level 0.5, and leaves Mote's patch alone.
+- Song library: 21 songs in 8 kinds; every song loads and routes channel 10 to Dekatron where it has one.
+  Playing Beethoven, a project load mid-song keeps it playing; Stop leaves 0 voices and nothing held.
+  Loading another song while one plays stops the first, with 0 voices left 3.5 s later.
+- Hexode and Anode at both sizes: no failed requests, both link back to `/synth/` and to each other.
+  Anode and the Gleam full-screen page have no sideways scroll at 375 px.
+- Rack accessibility: 409 tab stops at 1366 px, every one with a visible focus outline (the only stop
+  without one is the document itself); 0 unnamed buttons, inputs, selects or sliders at either size.
+  Reduced motion: the tube show reports its reduced set and the only running animation is the
+  correlation mark's CSS transition.
+
+### Findings
+
+**R1024-1. Load saved puts the rail device back on an old patch.** Area f. Broken. Measured. Fixed tonight.
+- Steps: put Thyratron on the rail (Walnut Bass). Pick Arc Sweep from the patch list. Press save project,
+  then load saved.
+- Expected: Thyratron stays on Arc Sweep.
+- Actual: Thyratron goes back to Walnut Bass, shown as "* Walnut Bass (edited)", and stays there after
+  switching away and back. Same on Dekatron (Late Shift back to Relay), Lattice (Root Bass back to Glass
+  Pad) and Gleam (Self Orbit back to Amber Field). Cathode kept its pick. A project upload goes
+  through the same function (inferred from the code).
+- Cause: the page keeps a copy of each device's patch that it writes only when the rail changes device.
+  `applyProject` read that copy for the rail device, so for the four devices a project does not carry it
+  restored the patch from the moment the device was put on the rail.
+- Fix: `applyProject` takes the live patch first, and leaves a rail device the project does not carry
+  as it is (name and edited mark too). Check: "R. load saved keeps the patch picked on thyratron (and
+  lattice) on the rail".
+
+**R1024-2. The 36 mute and solo chips are all named "mute" and "solo".** Area h. Confusing. Measured.
+Fixed tonight.
+- Steps: with a screen reader, tab along the Mix desk.
+- Actual: each strip reads "mute, toggle button" and "solo, toggle button" with no device, while the
+  sliders beside them say "Filament level" and the arm chip "Arm Filament". 18 of each on both layouts.
+- Fix: each chip carries `aria-label` "Mute Filament", "Solo Filament" and so on. Check: "Mx. every mute
+  and solo chip names its device".
+
+**R1024-3. Hexode's operator toggles have no name.** Area g, h. Confusing. Measured.
+- The 13 `dx7-toggle` buttons (each operator's On/Off and Fixed, plus one more) are empty buttons with
+  no `aria-label` and no `aria-pressed`; the label sits in a neighbouring div. A screen reader says
+  "button". This is vendored Angular code under `/synth/fm/`, so it is left for James (Open items).
+
+### Still open from earlier runs (re-checked tonight)
+
+- R1020-3: a project still carries 14 devices; Thyratron, Dekatron, Lattice and Gleam patches and the
+  master bus are not in it (measured from `__synth.project()`).
+- R1020-6: Hexode's Hold, Voice, Viz, Demo 1, Demo 2, Save, Reset, Panic and MIDI input show no focus
+  ring (9 of the first 40 tab stops, measured).
+- R1020-7: Anode's regenerate buttons are still named "⟳" (`acid/js/ui.js`, inferred from the code).
+- R1020-8: 409 tab stops at 1366 px, still no skip link.
+- Hexode still scrolls sideways at 375 px (1154 px wide).
+
+### Not covered tonight
+Areas a, b, c, d, e. Suggested next: a on Lattice, Mote and Klystron (still not done); b (every factory
+patch on every device, now that Poly 24 and Velvet Brass are in); a check that the R1024-1 fix holds
+for the Halloween presets path (`applyPresets` writes the same stored copies).
+

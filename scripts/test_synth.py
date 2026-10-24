@@ -2613,6 +2613,26 @@ with sync_playwright() as pw:
         kept = pg.evaluate("""() => ({ toast: document.getElementById('toast').textContent, tempo: __synth.transport().state().tempo, name: document.getElementById('projName').value,
           saved: JSON.parse(localStorage.getItem('dxrack_project') || '{}').name, dev: __synth.device() })""")
         ck(f"R. upload refuses {wrong_name} and keeps the project", "not a project" in kept["toast"] and kept["tempo"] == 88 and kept["name"] == "Uploaded" and kept["saved"] == "Uploaded" and kept["dev"] == "cathode", kept)
+    # Review 24 Oct (R1024-1): with Thyratron, Dekatron, Lattice or Gleam on the rail, load saved put the rail
+    # device back on the patch it had when it was put on the rail (the page's stored copy was stale), marked edited.
+    for rail in ("thyratron", "lattice"):
+        rl = pg.evaluate("""async (rail) => {
+          const w = ms => new Promise(r => setTimeout(r, ms));
+          __synth.setDevice(rail); await w(150);
+          const sel = document.getElementById('patchSel');
+          const opts = [...sel.options].filter(o => o.value.startsWith('f:'));
+          const pick = opts.find(o => o.value !== sel.value && o !== opts[0]) || opts[1];
+          sel.value = pick.value; sel.dispatchEvent(new Event('change')); await w(150);
+          const picked = __synth.patch().name;
+          document.getElementById('projSave').click(); await w(60);
+          document.getElementById('projLoad').click(); await w(250);
+          const out = { picked, after: __synth.patch().name, label: sel.options[sel.selectedIndex].textContent };
+          __synth.setDevice('filament'); await w(100); __synth.setDevice(rail); await w(100);
+          out.back = __synth.patch().name;
+          __synth.setDevice('cathode'); await w(100);
+          return out;
+        }""", rail)
+        ck(f"R. load saved keeps the patch picked on {rail} on the rail", rl["after"] == rl["picked"] and rl["back"] == rl["picked"] and "(edited)" not in rl["label"], rl)
     ck("R. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Mx. the mix desk: arms, sends, one session
@@ -2723,6 +2743,15 @@ with sync_playwright() as pw:
         ck(f"Mx. upload mix refuses a file that is not a mix ({wrong_name}) and leaves the desk and the saved mix alone",
            abs(mx_after["lvl"] - 0.4) < 1e-6 and mx_after["saved"] == mx_before and "not a mix" in mx_after["toast"] and mx_after["armed"] == ["filament", "cathode"],
            {k: (v if k != "saved" else v == mx_before) for k, v in mx_after.items()})
+    # Review 24 Oct (R1024-2): the 18 mute and 18 solo chips were all named just "mute" and "solo".
+    chip_names = pg.evaluate("""() => [...document.querySelectorAll('.mixrow[data-mix]')].map(r => {
+      const lvl = r.querySelector('input[id$=Lvl]'); const who = (lvl.getAttribute('aria-label') || '').replace(/ level$/, '');
+      const m = r.querySelector('button[id$=Mute]'), so = r.querySelector('button[id$=Solo]');
+      return { who, mute: m && m.getAttribute('aria-label'), solo: so && so.getAttribute('aria-label') };
+    })""")
+    ck("Mx. every mute and solo chip names its device (Mute Filament, Solo Filament)",
+       len(chip_names) >= 18 and all(c["who"] and c["mute"] == "Mute " + c["who"] and c["solo"] == "Solo " + c["who"] for c in chip_names),
+       [c for c in chip_names if not (c["mute"] == "Mute " + c["who"] and c["solo"] == "Solo " + c["who"])][:4])
     pg.evaluate("__synth.setMixer('filament', { level: 1 })")
     # Review 23 Oct (R1023-1): the pedal goes down on the lit device, a strip is armed, the pedal comes up.
     # The pedal-up has to reach the device that got the pedal-down, or its note rings until Panic.
