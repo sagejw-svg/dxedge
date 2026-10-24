@@ -2751,6 +2751,82 @@ with sync_playwright() as pw:
     }""")
     ck("Mx. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Gx. faders: one slider finish across the rack
+    # Graphics 24 Oct. Every slider was the browser's own (a bright track and a blue or flat amber thumb), and on a
+    # 1366 px desktop Trochotron, Phantastron, Rhumbatron and Heptode squeezed theirs into two columns of a narrow card
+    # (6 to 88 px wide). Now each is a recessed slot with a bakelite cap and a lit index line, slider grids take only
+    # the columns that fit, and Resnatron's selects are dark. The input boxes are unchanged, so touch targets are too.
+    GX_DEVS = ["filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid",
+               "orthicon", "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron"]
+    GX_MEAS = """() => [...document.querySelectorAll('input[type=range]')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })
+      .map(e => { const s = getComputedStyle(e), r = e.getBoundingClientRect();
+        return { id: e.id || e.getAttribute('aria-label') || '?', app: s.appearance, acc: s.getPropertyValue('--fader-accent').trim(), w: Math.round(r.width), h: Math.round(r.height),
+          strip: !!e.closest('#mHost'), lat: !!e.closest('.lat'), anim: s.animationName !== 'none' || parseFloat(s.transitionDuration) > 0,
+          x: r.left, y: r.top, top: r.top + scrollY }; })"""
+    GX_PIX = """async ({ b64, lat }) => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data;
+      let lit = 0, blue = 0, pale = 0;
+      for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2];
+        if (lat ? (b > 200 && r > 90 && r < 160) : (r > 200 && gg > 130 && b < 120)) lit++;
+        if (!lat && b > 180 && r < 90) blue++;
+        if (r > 200 && gg > 200 && b > 200) pale++; }
+      return { lit, blue, pale };
+    }"""
+    gctx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); gp = gctx.new_page(); gerr = []
+    gp.on("pageerror", lambda e: gerr.append(str(e)))
+    gp.goto(BASE); gp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    gx_bad, gx_narrow, gx_pix, gx_anim, gx_n = [], [], [], [], 0
+    for d in GX_DEVS:
+        gp.evaluate(f"document.querySelector('.devbtn[data-d={d}]').click()"); gp.wait_for_timeout(300)
+        rows = gp.evaluate(GX_MEAS); gx_n += len(rows)
+        gx_bad += [f"{d}:{r['id']}:{r['app']}:{r['acc']}" for r in rows if r["app"] != "none" or r["acc"].lower() != ("#7aa2ff" if r["lat"] else "#ffb347")]
+        gx_narrow += [f"{d}:{r['id']}:{r['w']}" for r in rows if not r["strip"] and r["w"] < 80]
+        gx_anim += [f"{d}:{r['id']}" for r in rows if r["anim"]]
+        # the first slider of the device's own panel (not the header volume or the mix desk), painted
+        own = [r for r in rows if not r["strip"] and r["id"] not in ("mastVol", "mixRoom", "mixDelay", "mixFb")]
+        if own:
+            r0 = own[0]
+            gp.evaluate(f"window.scrollTo(0, {max(0, r0['top'] - 300)})"); gp.wait_for_timeout(60)
+            box = gp.evaluate(f"(() => {{ const e = [...document.querySelectorAll('input[type=range]')].filter(x => (x.id || x.getAttribute('aria-label')) === {json.dumps(r0['id'])} && x.getBoundingClientRect().width > 0)[0]; const r = e.getBoundingClientRect(); return {{ x: r.left, y: r.top, w: r.width, h: r.height }}; }})()")
+            shot = gp.screenshot(clip={"x": box["x"], "y": box["y"], "width": max(box["w"], 1), "height": max(box["h"], 1)})
+            px = gp.evaluate(GX_PIX, {"b64": base64.b64encode(shot).decode(), "lat": d == "lattice"})
+            if px["lit"] < 6 or px["blue"] > 0 or px["pale"] > 4: gx_pix.append((d, r0["id"], px))
+    ck(f"Gx. every slider on all 18 devices has the rack fader finish ({gx_n} sliders; Lattice keeps its blue index)", gx_n > 300 and not gx_bad, gx_bad[:12])
+    ck("Gx. each device's first slider is painted: a lit index line, no browser-blue thumb, no pale track", not gx_pix, gx_pix)
+    ck("Gx. no device slider on a 1366 px desktop is narrower than 80 px (Trochotron, Phantastron, Rhumbatron were 6 to 56)", not gx_narrow, gx_narrow[:12])
+    ck("Gx. sliders carry no animation or transition (reduced motion and otherwise)", not gx_anim, gx_anim[:12])
+    gp.evaluate("document.querySelector('.devbtn[data-d=resnatron]').click()"); gp.wait_for_timeout(300)
+    sel = gp.evaluate("""() => [...document.querySelectorAll('.rn-field select')].filter(s => s.offsetParent).map(s => { const c = getComputedStyle(s); return [c.backgroundColor, c.color]; })""")
+    def _gx_rgb(s): return [int(float(v)) for v in s[s.index("(") + 1:s.index(")")].split(",")[:3]]
+    def _gx_lum(c):
+        c = [v / 255 for v in c]; c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    sel_con = [(max(_gx_lum(_gx_rgb(f)), _gx_lum(_gx_rgb(bk))) + 0.05) / (min(_gx_lum(_gx_rgb(f)), _gx_lum(_gx_rgb(bk))) + 0.05) for bk, f in sel]
+    ck(f"Gx. Resnatron's selects are dark with readable text ({len(sel)} selects, contrast {min(sel_con or [0]):.1f}:1 or more)",
+       len(sel) >= 5 and all(_gx_lum(_gx_rgb(bk)) < 0.05 for bk, _ in sel) and min(sel_con) >= 4.5, sel)
+    ck("Gx. no page errors (desktop)", not gerr, gerr)
+    gctx.close()
+    pctx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True, device_scale_factor=2); pp = pctx.new_page(); perr_g = []
+    pp.on("pageerror", lambda e: perr_g.append(str(e)))
+    pp.goto(BASE); pp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    gx_short, gx_wide, gx_pn = [], [], 0
+    for d in ("heptode", "lattice", "trochotron", "phantastron", "rhumbatron", "resnatron"):
+        pp.evaluate(f"document.querySelector('.devbtn[data-d={d}]').click()"); pp.wait_for_timeout(300)
+        for t in pp.evaluate("[...document.querySelectorAll('[role=tab][data-go]')].filter(t => t.offsetParent).map(t => t.dataset.go)"):
+            pp.evaluate(f"document.querySelector('[role=tab][data-go={t}]').click()"); pp.wait_for_timeout(150)
+            rows = pp.evaluate(GX_MEAS); gx_pn += len(rows)
+            gx_short += [f"{d}:{t}:{r['id']}:{r['h']}" for r in rows if r["h"] < 44]
+            gx_wide += [f"{d}:{t}:{r['id']}:{r['w']}" for r in rows if not r["strip"] and r["w"] < 120]
+            sw = pp.evaluate("document.documentElement.scrollWidth")
+            if sw > 375: gx_wide.append(f"{d}:{t}: page scrolls sideways ({sw} px)")
+        pp.evaluate("document.querySelector('[role=tab][data-go=play]').click()")
+    ck(f"Gx. on a 375 px phone every slider stays a 44 px target ({gx_pn} sliders across six devices' tabs)", gx_pn > 100 and not gx_short, gx_short[:12])
+    ck("Gx. on a phone the device sliders are at least 120 px long and nothing scrolls sideways", not gx_wide, gx_wide[:12])
+    ck("Gx. no page errors (phone)", not perr_g, perr_g)
+    pctx.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

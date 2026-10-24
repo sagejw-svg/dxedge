@@ -42,6 +42,45 @@
   .wrap { max-width: 1880px; margin: 0 auto; }
   .label { font-size: 10px; color: #b5b5b5; letter-spacing: 3px; text-transform: uppercase; }
 
+  /* Faders. Every slider in the rack is a recessed slot with a bakelite cap and a lit index line,
+     the same finish as the pitch and mod strips. The cap is the readout, as on a hardware fader, so
+     there is no fill to keep in step when a patch sets a value. A device can set --fader-accent.
+     Only the look changes: the input keeps its own box, so sizes and touch targets stay as they were. */
+  input[type="range"] { --fader-accent: var(--amber); -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px; background: linear-gradient(180deg, #030303, #121212 60%, #1d1a17);
+    box-shadow: inset 0 0 0 1px #000, inset 0 1px 2px rgba(0,0,0,0.9), 0 1px 0 rgba(255,236,210,0.11);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 12px; height: 20px; margin-top: -7px; border-radius: 3px;
+    border: 1px solid #6a5238;
+    background: linear-gradient(90deg, transparent 0 4px, var(--fader-accent) 4px 6px, transparent 6px),
+      linear-gradient(180deg, #5a4733 0%, #3a2b1d 48%, #1e140c 52%, #2c2016 100%);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.75), 0 0 6px rgba(255,179,71,0.25);
+  }
+  input[type="range"]::-moz-range-track {
+    height: 6px; border-radius: 3px; background: linear-gradient(180deg, #030303, #121212 60%, #1d1a17);
+    box-shadow: inset 0 0 0 1px #000, inset 0 1px 2px rgba(0,0,0,0.9), 0 1px 0 rgba(255,236,210,0.11);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 10px; height: 18px; border-radius: 3px; border: 1px solid #6a5238;
+    background: linear-gradient(90deg, transparent 0 4px, var(--fader-accent) 4px 6px, transparent 6px),
+      linear-gradient(180deg, #5a4733 0%, #3a2b1d 48%, #1e140c 52%, #2c2016 100%);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.75), 0 0 6px rgba(255,179,71,0.25);
+  }
+  input[type="range"]:hover::-webkit-slider-thumb, input[type="range"]:focus-visible::-webkit-slider-thumb, input[type="range"]:active::-webkit-slider-thumb {
+    border-color: var(--fader-accent); box-shadow: 0 2px 3px rgba(0,0,0,0.75), 0 0 9px rgba(255,179,71,0.5);
+  }
+  input[type="range"]:hover::-moz-range-thumb, input[type="range"]:focus-visible::-moz-range-thumb, input[type="range"]:active::-moz-range-thumb {
+    border-color: var(--fader-accent); box-shadow: 0 2px 3px rgba(0,0,0,0.75), 0 0 9px rgba(255,179,71,0.5);
+  }
+  input[type="range"]:disabled { cursor: default; opacity: 0.45; }
+  @media (pointer: coarse) {
+    input[type="range"]::-webkit-slider-thumb { width: 16px; height: 26px; margin-top: -10px;
+      background: linear-gradient(90deg, transparent 0 6px, var(--fader-accent) 6px 8px, transparent 8px),
+        linear-gradient(180deg, #5a4733 0%, #3a2b1d 48%, #1e140c 52%, #2c2016 100%); }
+  }
+
   /* header */
   .top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
   .brand { flex: 1 1 300px; min-width: 0; }
@@ -324,6 +363,8 @@
   .rn-field { display: flex; align-items: center; gap: 8px; margin: 4px 0; min-width: 0; color: var(--dim); font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; }
   .rn-field span { flex: 0 0 3.2em; }
   .rn-field input, .rn-field select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+  .rn-field select { background: #1a1210; color: #f2d3a2; border: 1px solid #5a4030; border-radius: 6px; padding: 2px 6px; font-size: 12px; }
+  .rn-field select:hover { border-color: #e0a36a; }
   .rn-val { flex: 0 0 3.2em; color: #f0c09a; font-weight: 500; text-align: right; }
   .rn-jacks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .rn-jack { min-width: 44px; min-height: 44px; border-radius: 22px; border: 1px solid #5a4030; background: #2a1c16; color: #f2d3a2; font-size: 10px; padding: 4px 8px; }
@@ -348,6 +389,10 @@
   .hep-sliders { display: grid; grid-template-columns: 1fr; gap: 2px; max-width: 100%; }
   .hep-sliders label, .hep-tempo { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); max-width: 100%; }
   .hep-sliders input, .hep-tempo input { flex: 1 1 auto; min-width: 0; width: 100%; }
+  /* Slider rows line up: the name in a fixed column, the fader, then the readout. */
+  .tr-slide, .ph-slide, .rhum-slide { display: grid; grid-template-columns: 5.2em minmax(0, 1fr) 3.2em; }
+  .tr-slide > :last-child, .ph-slide > :last-child, .rhum-slide > :last-child { text-align: right; min-width: 0; }
+  .hep-sliders label { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); }
   body[data-dev="heptode"] #heptodeRoot .mod { background: #161310; border-color: #3a2a22; }
   body[data-dev="heptode"] #heptodeRoot h3 { color: #f3e6d8; letter-spacing: 1.6px; }
   body[data-dev="heptode"] #heptodeRoot .chip[aria-pressed="true"] { background: #e7c4a8; border-color: #e7c4a8; color: #2a140c; }
@@ -587,11 +632,13 @@
     #mHost, #mMaster { grid-column: 1 / -1; }
     #mHost { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; align-items: start; }
     #mHost > h3, #mHost > .hostbar, #mHost > .note { grid-column: 1 / -1; }
-    .tr-grid, .ph-grid, .rhum-grid, .rn-grid, .hep-sliders { grid-template-columns: 1fr 1fr; }
+    /* Slider grids take as many columns as fit at a usable width: a narrow card gets one column,
+       so a fader never shrinks to a stub between its label and its value. */
+    .rn-grid { grid-template-columns: 1fr 1fr; }
+    .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
   }
   @media (min-width: 1680px) {
     #mHost { grid-template-columns: 1fr 1fr 1fr; }
-    .tr-grid, .ph-grid, .rhum-grid { grid-template-columns: 1fr 1fr 1fr; }
     .panel { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   }
   /* phone: one section at a time, keyboard pinned */

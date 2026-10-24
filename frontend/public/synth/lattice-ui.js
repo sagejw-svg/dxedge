@@ -157,7 +157,7 @@ const STYLE = `
 .lat-file { position: relative; display: inline-flex; align-items: center; }
 .lat-sliders { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px 12px; }
 .lat-sl { display: flex; flex-direction: column; gap: 4px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #8b93a7; min-width: 0; }
-.lat input[type="range"] { width: 100%; min-height: 44px; height: 44px; accent-color: #7aa2ff; }
+.lat input[type="range"] { width: 100%; min-height: 44px; height: 44px; accent-color: #7aa2ff; --fader-accent: #7aa2ff; }
 .lat-val { color: #e8eefc; font-size: 13px; letter-spacing: 0; text-transform: none; }
 .lat-pos { font-variant-numeric: tabular-nums; color: #e8eefc; font-size: 13px; min-height: 44px; display: inline-flex; align-items: center; }
 .lat-meter { flex: 1 1 80px; height: 8px; background: #1a1e2a; border: 1px solid #2c3344; min-width: 80px; }
