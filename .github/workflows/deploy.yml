@@ -267,7 +267,7 @@ jobs:
           # GET, not HEAD: these paths proxy to the backend, which answers 405
           # to HEAD, and a 405 carries no cache-control at all - the check would
           # pass by finding nothing.
-          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js; do
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/; do
             CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
             if [ -z "$CC" ]; then
               echo "ERROR: $U returned no cache-control header at all."
@@ -299,6 +299,20 @@ jobs:
           fi
           eng=$(curl -sf https://dxedge.net/delve/engine.js)
           echo "$eng" | grep -q 'function aheadLine' || { echo "ERROR: /delve/engine.js is not the chest-distance build"; exit 1; }
+
+      - name: Verify the DM engine is live
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/dm/)
+          echo "/dm/ $code"
+          if [ "$code" != "200" ]; then
+            echo "ERROR: /dm/ is not 200"
+            exit 1
+          fi
+          html=$(curl -sf https://dxedge.net/dm/)
+          echo "$html" | grep -q 'noindex' || { echo "ERROR: /dm/ is missing noindex"; exit 1; }
+          echo "$html" | grep -q '/dm/assets/index-DTUDExGf.js' || { echo "ERROR: /dm/ is not the published engine"; exit 1; }
+          js=$(curl -sf https://dxedge.net/dm/assets/index-DTUDExGf.js)
+          echo "$js" | grep -q 'Drop DUNGEON.DAT and GRAPHICS.DAT here' || { echo "ERROR: /dm/ bundle has no file picker"; exit 1; }
 
       - name: Verify feed proxy is live
         run: |
