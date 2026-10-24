@@ -445,14 +445,38 @@ function buildSprites() {
     g.stroke();
   });
   sprites.bones = sheet(96, 128, (g) => {
-    g.strokeStyle = '#e4d2b8';
-    g.lineWidth = 5;
+    g.fillStyle = '#f4efe4';
+    g.beginPath(); g.ellipse(48, 70, 16, 18, 0, 0, 7); g.fill();
+    g.fillStyle = '#2a211c';
+    g.beginPath(); g.ellipse(42, 68, 3, 4, 0, 0, 7); g.ellipse(54, 68, 3, 4, 0, 0, 7); g.fill();
+    g.strokeStyle = '#f7f1e4';
+    g.lineWidth = 7;
+    g.lineCap = 'round';
     g.beginPath();
-    g.moveTo(24, 96); g.lineTo(48, 78); g.lineTo(74, 100);
-    g.moveTo(30, 108); g.lineTo(60, 90);
+    g.moveTo(18, 108); g.lineTo(78, 86);
+    g.moveTo(22, 86); g.lineTo(80, 112);
+    g.moveTo(30, 78); g.quadraticCurveTo(48, 96, 66, 78);
     g.stroke();
-    g.fillStyle = '#f3eadc';
-    g.beginPath(); g.arc(24, 96, 6, 0, 7); g.arc(74, 100, 6, 0, 7); g.fill();
+    g.fillStyle = '#fffaf0';
+    g.beginPath();
+    g.arc(18, 108, 7, 0, 7); g.arc(78, 86, 7, 0, 7);
+    g.arc(22, 86, 6, 0, 7); g.arc(80, 112, 6, 0, 7);
+    g.fill();
+  });
+  sprites.plate = sheet(96, 128, (g) => {
+    g.fillStyle = '#6a5a48';
+    g.fillRect(16, 78, 64, 36);
+    g.fillStyle = '#c4a06a';
+    g.fillRect(24, 86, 48, 20);
+    g.strokeStyle = '#f0d7a4';
+    g.lineWidth = 3;
+    g.strokeRect(30, 90, 36, 12);
+  });
+  sprites.plateSunk = sheet(96, 128, (g) => {
+    g.fillStyle = '#3a322c';
+    g.fillRect(18, 92, 60, 18);
+    g.fillStyle = '#5a4c3c';
+    g.fillRect(26, 96, 44, 8);
   });
   sprites.torch = sheet(96, 128, (g) => {
     g.fillStyle = '#4a3424';
@@ -463,8 +487,8 @@ function buildSprites() {
     g.beginPath(); g.ellipse(48, 56, 6, 10, 0, 0, 7); g.fill();
   });
   sprites.web = sheet(96, 128, (g) => {
-    g.strokeStyle = 'rgba(230, 224, 210, 0.75)';
-    g.lineWidth = 1.5;
+    g.strokeStyle = 'rgba(244, 240, 228, 0.95)';
+    g.lineWidth = 3;
     g.beginPath();
     g.moveTo(48, 6); g.lineTo(18, 70); g.lineTo(78, 64); g.closePath();
     g.moveTo(48, 6); g.lineTo(48, 78);
@@ -564,6 +588,61 @@ function clampByte(v) {
   return v < 0 ? 0 : v > 255 ? 255 : v;
 }
 
+function floorMark(kind, fx, fy) {
+  const cx = fx - 0.5;
+  const cy = fy - 0.5;
+  if (kind === 'bones') {
+    const skull = Math.hypot(cx, cy + 0.08) < 0.16;
+    const rib = Math.abs(cy - cx * 0.35) < 0.07 && Math.abs(cx) < 0.34;
+    const longA = Math.abs(cy - cx * 0.85) < 0.055 && Math.abs(cx) < 0.38;
+    const longB = Math.abs(cy + cx * 0.7 + 0.05) < 0.05 && Math.abs(cx) < 0.38;
+    const knob = Math.hypot(cx + 0.32, cy - 0.22) < 0.07 || Math.hypot(cx - 0.32, cy + 0.18) < 0.07;
+    if (skull || rib || longA || longB || knob) return [246, 236, 214];
+    return null;
+  }
+  if (kind === 'web') {
+    const edge = Math.abs(cx) > 0.42 || Math.abs(cy) > 0.42;
+    const ring = Math.abs(Math.hypot(cx, cy) - 0.22) < 0.035;
+    const spoke = Math.abs(cx) < 0.025 || Math.abs(cy) < 0.025 || Math.abs(Math.abs(cx) - Math.abs(cy)) < 0.03;
+    if (!edge && (ring || spoke) && Math.hypot(cx, cy) < 0.44) return [236, 230, 214];
+    return null;
+  }
+  if (kind === 'banner') {
+    if (Math.abs(cx + 0.28) < 0.05 && Math.abs(cy) < 0.32) return [92, 48, 36];
+    if (cx > -0.22 && cx < 0.16 && cy > -0.22 && cy < 0.08) return [168, 48, 42];
+    return null;
+  }
+  if (kind === 'statue') {
+    if (Math.hypot(cx, cy + 0.06) < 0.1) return [168, 160, 148];
+    if (Math.abs(cx) < 0.16 && cy > 0.02 && cy < 0.28) return [120, 114, 104];
+    return null;
+  }
+  if (kind === 'plate') {
+    const rim = Math.abs(cx) < 0.28 && Math.abs(cy) < 0.28 && (Math.abs(cx) > 0.2 || Math.abs(cy) > 0.2);
+    const core = Math.abs(cx) < 0.12 && Math.abs(cy) < 0.12;
+    if (rim) return [232, 176, 92];
+    if (core) return [246, 214, 150];
+    return null;
+  }
+  if (kind === 'sunk') {
+    if (Math.abs(cx) < 0.26 && Math.abs(cy) < 0.16) return [48, 40, 34];
+    return null;
+  }
+  if (kind === 'key') {
+    if (Math.hypot(cx + 0.08, cy) < 0.08 || (Math.abs(cy) < 0.035 && cx > -0.02 && cx < 0.22)) return [232, 196, 96];
+    return null;
+  }
+  if (kind === 'vial') {
+    if (Math.hypot(cx, cy) < 0.1) return [196, 64, 58];
+    return null;
+  }
+  if (kind === 'gear') {
+    if (Math.abs(cx) < 0.14 && Math.abs(cy) < 0.1) return [196, 164, 96];
+    return null;
+  }
+  return null;
+}
+
 function shade(r, g, b, dist, lr, lg, lb, side, above, gleam) {
   const amb = above ? look.amb + 0.08 : look.amb;
   let rr = r * (amb + lr) + lr * 26;
@@ -656,7 +735,8 @@ const SCALE = {
   moth: 0.78, hound: 1, chanter: 1.12, knight: 1.28, ghost: 1.05, seal: 1.7,
   chest: 0.84, chestOpen: 0.78, key: 0.42, potion: 0.38, lever: 0.72,
   stairsDown: 0.58, stairsUp: 0.58,
-  banner: 1.15, bones: 0.55, torch: 0.95, web: 0.9, statue: 1.05, fire: 1.05, gear: 0.5,
+  banner: 1.15, bones: 1.05, torch: 0.95, web: 1.05, statue: 1.05, fire: 1.05, gear: 0.5,
+  plate: 0.85, plateSunk: 0.7,
   npc: 1.05, sable: 1.08, nell: 1.08, pell: 1.05, relic: 0.5, crack: 0.55,
 };
 
@@ -776,9 +856,18 @@ export function createView() {
     const planeY = -Math.cos(ang + Math.PI / 2) * planeScale;
     const gleam = game.gleamMs > 0;
     const fireCells = new Set();
+    const decal = new Map();
     const hereEnts = (currentFloor(game) && currentFloor(game).entities) || [];
     for (const e of hereEnts) {
-      if (e.kind === 'prop' && e.sub === 'fire' && !e.taken) fireCells.add(e.x + ',' + e.y);
+      if (e.taken) continue;
+      if (e.kind === 'prop' && e.sub === 'fire') fireCells.add(e.x + ',' + e.y);
+      let mark = null;
+      if (e.kind === 'prop' && (e.sub === 'bones' || e.sub === 'web' || e.sub === 'banner' || e.sub === 'statue')) mark = e.sub;
+      else if (e.kind === 'plate') mark = e.sunk ? 'sunk' : 'plate';
+      else if (e.kind === 'key') mark = 'key';
+      else if (e.kind === 'potion') mark = 'vial';
+      else if (e.kind === 'item') mark = (e.item && (e.item.type === 'potion' || e.item.type === 'food' || e.item.type === 'drink')) ? 'vial' : 'gear';
+      if (mark) decal.set(e.x + ',' + e.y, mark);
     }
     const t = game.time || 0;
     let flick = 1 + Math.sin(t / 1600) * 0.012 + Math.sin(t / 2400) * 0.008;
@@ -861,6 +950,13 @@ export function createView() {
                 bb = hot ? 60 : 18;
               }
             }
+            const mark = decal.get(cellX + ',' + cellY);
+            if (mark) {
+              const fx = floorX - cellX;
+              const fy = floorY - cellY;
+              const ink = floorMark(mark, fx, fy);
+              if (ink) { rr = ink[0]; gg = ink[1]; bb = ink[2]; }
+            }
             if (glowTile && cellX === aheadX && cellY === aheadY) {
               rr = Math.min(255, rr + 34);
               gg = Math.min(255, gg + 16);
@@ -941,12 +1037,13 @@ export function createView() {
     const floor = currentFloor(game);
     const usable = {
       chest: 1, lever: 1, key: 1, potion: 1, gear: 1, npc: 1, sable: 1, nell: 1, pell: 1,
-      relic: 1, crack: 1, torch: 1, fire: 1,
+      relic: 1, crack: 1, torch: 1, fire: 1, plate: 1, plateSunk: 1, bones: 1, web: 1,
     };
     const onGround = {
       chest: 1, chestOpen: 1, key: 1, potion: 1, gear: 1, lever: 1,
       banner: 1, bones: 1, torch: 1, web: 1, statue: 1, fire: 1,
       npc: 1, sable: 1, nell: 1, pell: 1, relic: 1, crack: 1,
+      plate: 1, plateSunk: 1,
     };
     const labels = [];
     for (const e of floor.entities) {
@@ -966,6 +1063,7 @@ export function createView() {
         : e.kind === 'npc' ? (e.id || 'npc')
         : e.kind === 'relic' ? 'relic'
         : e.kind === 'mark' ? 'crack'
+        : e.kind === 'plate' ? (e.sunk ? 'plateSunk' : 'plate')
         : e.kind;
       if (e.kind === 'npc' && !sprites[sub]) sub = 'npc';
       let wx = e.x + 0.5;
@@ -1242,6 +1340,12 @@ export function createView() {
         ctx.beginPath();
         ctx.arc(mxOf(e.x) + cell / 2, myOf(e.y) + cell / 2, Math.max(2, cell * 0.35), 0, 7);
         ctx.fill();
+      } else if (e.kind === 'prop' && e.sub === 'bones') {
+        ctx.fillStyle = '#f3eadc';
+        ctx.fillRect(mxOf(e.x) + 2, myOf(e.y) + 2, Math.max(2, cell - 4), Math.max(2, cell - 4));
+      } else if (e.kind === 'plate') {
+        ctx.fillStyle = e.sunk ? '#5a4c3c' : '#e7a15a';
+        ctx.fillRect(mxOf(e.x) + 2, myOf(e.y) + 2, Math.max(2, cell - 4), Math.max(2, cell - 4));
       }
     }
     ctx.fillStyle = '#e7a15a';
@@ -1286,9 +1390,9 @@ function tileUsable(game, tiles, x, y) {
   if (!ents) return false;
   return ents.some(e => e.x === x && e.y === y && !e.taken && (
     (e.kind === 'chest' && !e.opened) || e.kind === 'lever' || e.kind === 'key' || e.kind === 'potion'
-    || e.kind === 'item'
+    || e.kind === 'item' || e.kind === 'plate'
     || e.kind === 'npc' || e.kind === 'relic' || e.kind === 'mark'
-    || (e.kind === 'prop' && (e.sub === 'torch' || e.sub === 'fire'))
+    || (e.kind === 'prop' && (e.sub === 'torch' || e.sub === 'fire' || e.sub === 'bones' || e.sub === 'web' || e.sub === 'banner' || e.sub === 'statue'))
   ));
 }
 

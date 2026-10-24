@@ -464,6 +464,7 @@ function generateFloor(floorIndex, diff, rng) {
 
   placeQuests(floorIndex, tiles, entities, rooms, diff, rng);
   placeProps(floorIndex, tiles, entities, rooms, rng);
+  placePlates(tiles, entities);
   return { tiles, entities, theme: FLOOR_THEMES[floorIndex] };
 }
 
@@ -545,6 +546,29 @@ function placeProps(floorIndex, tiles, entities, rooms, rng) {
     if (!spot) continue;
     entities.push({ kind: 'prop', sub: kinds[n % kinds.length], x: spot.x, y: spot.y });
     n += 1;
+  }
+}
+
+/** A plate beside each gate. No extra random draws, so the floors stay put. */
+function placePlates(tiles, entities) {
+  const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  for (const lever of entities) {
+    if (lever.kind !== 'lever') continue;
+    if (tiles[lever.gy][lever.gx] !== TILE.GATE) continue;
+    let spot = null;
+    for (let dist = 1; dist <= 3 && !spot; dist++) {
+      for (const [dx, dy] of dirs) {
+        const x = lever.gx + dx * dist;
+        const y = lever.gy + dy * dist;
+        if (x < 1 || y < 1 || x >= MAP - 1 || y >= MAP - 1) continue;
+        if (tiles[y][x] !== TILE.FLOOR) continue;
+        if (entities.some(e => e.x === x && e.y === y && !e.taken)) continue;
+        spot = { x, y };
+        break;
+      }
+    }
+    if (!spot) continue;
+    entities.push({ kind: 'plate', x: spot.x, y: spot.y, gx: lever.gx, gy: lever.gy, sunk: false });
   }
 }
 
@@ -1186,6 +1210,15 @@ function featureAt(game, x, y) {
     const line = 'A lever. Press F to throw it.';
     return feat('lever', 'lever', line, line);
   }
+  const plate = ents.find(e => e.kind === 'plate');
+  if (plate) {
+    if (plate.sunk) {
+      const line = 'A sunk plate. The stone has already dropped.';
+      return feat('plate-sunk', 'plate', line, line);
+    }
+    const line = 'A floor plate. Step on it.';
+    return feat('plate', 'plate', line, line, (d) => 'A floor plate is ' + stepWord(d) + ' ahead. Step on it.');
+  }
   const key = ents.find(e => e.kind === 'key');
   if (key) {
     const line = 'An iron key. Step onto it, or press F, to take it.';
@@ -1210,11 +1243,14 @@ function featureAt(game, x, y) {
     return feat('torch', 'torch', line, line, (d) => 'A wall torch is ' + stepWord(d) + ' ahead. Press F when you stand next to it.');
   }
   if (prop && prop.sub === 'fire') {
-    const line = 'The campfire. Press F to rest and close a few wounds.';
+    const line = 'The campfire. Press F to rest. Twelve coins lifts someone who has fallen.';
     return feat('fire', 'campfire', line, line, (d) => 'The campfire is ' + stepWord(d) + ' ahead. Press F to rest.');
   }
   if (prop && prop.sub === 'banner') return feat('banner', 'banner', 'A tattered banner.', 'A tattered banner.');
-  if (prop && prop.sub === 'bones') return feat('bones', 'bones', 'Scattered bones.', 'Scattered bones.');
+  if (prop && prop.sub === 'bones') {
+    const line = 'Scattered bones.';
+    return feat('bones', 'bones', line, line, (d) => 'Scattered bones, ' + stepWord(d) + ' ahead.');
+  }
   if (prop && prop.sub === 'web') return feat('web', 'cobweb', 'A cobweb.', 'A cobweb.');
   if (prop && prop.sub === 'statue') return feat('statue', 'statue', 'A stone figure.', 'A stone figure.');
   if (tile === TILE.LOCKED) {
@@ -1223,7 +1259,7 @@ function featureAt(game, x, y) {
   }
   if (tile === TILE.DOOR_OPEN) return feat('door-open', 'door', 'An open door.', 'An open door.');
   if (tile === TILE.GATE) {
-    const line = 'An iron gate. A lever nearby lifts it.';
+    const line = 'An iron gate. A lever or a floor plate lifts it.';
     return feat('gate', 'gate', line, line);
   }
   if (tile === TILE.GATE_OPEN) return feat('gate-open', 'gate', 'The gate is raised.', 'The gate is raised.');
@@ -1302,23 +1338,28 @@ function announceLook(game) {
   const here = featureAt(game, game.x, game.y);
   const hit = seenAhead(game, 6);
   const ahead = hit && hit.feature;
-  const key = (here ? here.id : '') + '>' + (ahead ? ahead.id : '');
-  if (key === game.lookKey) return;
-  if (!here && !ahead) {
-    game.lookKey = key;
-    return;
-  }
-  game.lookKey = key;
-  if (here) log(game, here.stand, 'info');
+  const hereLine = here ? here.stand : '';
+  let aheadLineText = '';
   if (ahead && (!here || ahead.id !== here.id)) {
-    log(game, hit.dist <= 1 ? ahead.near : ahead.far(hit.dist), 'info');
+    aheadLineText = hit.dist <= 1 ? ahead.near : ahead.far(hit.dist);
   }
+  const key = hereLine + '\n' + aheadLineText;
+  if (key === game.lookKey) return;
+  const prev = game.lookKey || '\n';
+  const split = prev.indexOf('\n');
+  const prevHere = split < 0 ? '' : prev.slice(0, split);
+  const prevAhead = split < 0 ? '' : prev.slice(split + 1);
+  game.lookKey = key;
+  if (hereLine && hereLine !== prevHere) log(game, hereLine, 'info');
+  if (aheadLineText && aheadLineText !== prevAhead) log(game, aheadLineText, 'info');
 }
 
 function noteAhead(game) {
   const hit = seenAhead(game, 6);
   if (!hit) return false;
-  log(game, aheadLine(hit), 'info');
+  const line = aheadLine(hit);
+  const last = game.log[game.log.length - 1];
+  if (!last || last.text !== line) log(game, line, 'info');
   floater(game, hit.dist === 1 ? '1 step' : hit.dist + ' steps', 'miss');
   return true;
 }
@@ -1627,7 +1668,7 @@ export function move(game, cmd) {
     const t = ny >= 0 && nx >= 0 && ny < MAP && nx < MAP ? floor.tiles[ny][nx] : TILE.WALL;
     if (m) log(game, m.name + ' is in the way.', 'info');
     else if (t === TILE.LOCKED) log(game, game.keys ? 'A locked door. Use it with a key.' : 'A locked door. It wants a key.', 'info');
-    else if (t === TILE.GATE) log(game, 'An iron gate. A lever nearby may lift it.', 'info');
+    else if (t === TILE.GATE) log(game, 'An iron gate. A lever or a floor plate may lift it.', 'info');
     else log(game, 'Stone.', 'info');
     return { ok: false, reason: 'blocked' };
   }
@@ -1637,6 +1678,8 @@ export function move(game, cmd) {
   pickupAt(game, nx, ny);
   const stepped = currentFloor(game).entities.find(e => e.kind === 'mark' && e.x === nx && e.y === ny);
   if (stepped) finishQuest(game, stepped.q || 'hidden');
+  const plate = currentFloor(game).entities.find(e => e.kind === 'plate' && e.x === nx && e.y === ny);
+  if (plate) pressPlate(game, plate);
   reveal(game);
   announceLook(game);
   return { ok: true, moved: true };
@@ -2052,6 +2095,69 @@ function applyTalk(game, id) {
   }
 }
 
+export const STALL = [
+  { id: 'biscuit', name: 'hard biscuit', cost: 4, detail: 'Eat it to close a small wound.' },
+  { id: 'skin', name: 'waterskin', cost: 4, detail: 'A drink. It brings stamina back.' },
+  { id: 'vial', name: 'red vial', cost: 8, detail: 'A stronger draught of health.' },
+  { id: 'torch', name: 'carried torch', cost: 6, detail: 'One torch, for the dark floors.' },
+];
+
+const STALL_ITEM = {
+  biscuit: { type: 'food', name: 'hard biscuit', amount: 6 },
+  skin: { type: 'drink', name: 'waterskin', amount: 8 },
+  vial: { type: 'potion', potion: 'hp', amount: 14, name: 'red vial' },
+};
+
+export function buyFromStall(game, id) {
+  if (!game || game.phase !== 'play') return { ok: false, reason: 'busy' };
+  const row = STALL.find(s => s.id === id);
+  if (!row) return { ok: false, reason: 'bad' };
+  if (!game.inHub) {
+    log(game, 'Nell keeps the stall at the waystation.', 'info');
+    return { ok: false, reason: 'where' };
+  }
+  if ((game.gold | 0) < row.cost) {
+    log(game, 'Not enough coin. ' + row.name + ' is ' + row.cost + '.', 'info');
+    return { ok: false, reason: 'gold' };
+  }
+  if (row.id === 'torch') {
+    if (game.torch) {
+      log(game, 'You already carry a torch.', 'info');
+      return { ok: false, reason: 'have' };
+    }
+    game.gold -= row.cost;
+    game.torch = true;
+    log(game, 'Nell hands you a torch. ' + row.cost + ' coins.', 'good');
+    return { ok: true };
+  }
+  const order = [];
+  const sel = game.party[game.selected];
+  if (sel && sel.hp > 0) order.push(sel);
+  for (const c of game.party) if (c.hp > 0 && order.indexOf(c) < 0) order.push(c);
+  const who = order.find(c => packRoom(c));
+  if (!who) {
+    log(game, 'The packs are full.', 'info');
+    return { ok: false, reason: 'full' };
+  }
+  game.gold -= row.cost;
+  putPack(who, STALL_ITEM[row.id]);
+  log(game, who.name + ' buys ' + row.name + '. ' + row.cost + ' coins.', 'good');
+  return { ok: true };
+}
+
+export function swapRank(game, index) {
+  if (!game || game.phase !== 'play') return { ok: false, reason: 'busy' };
+  const i = index == null ? game.selected : index | 0;
+  const c = game.party[i];
+  if (!c || c.hp <= 0) {
+    log(game, (c ? c.name : 'They') + ' cannot change rank.', 'info');
+    return { ok: false, reason: 'down' };
+  }
+  c.row = c.row === 'front' ? 'back' : 'front';
+  log(game, c.name + (c.row === 'front' ? ' steps to the front.' : ' steps back.'), 'info');
+  return { ok: true, row: c.row };
+}
+
 export function advanceTalk(game) {
   if (!game || !game.talk) return { ok: false };
   const talk = game.talk;
@@ -2133,12 +2239,43 @@ function takeTorch(game, prop) {
   return 'chest';
 }
 
+function pressPlate(game, plate) {
+  if (!plate || plate.sunk) {
+    if (plate) log(game, 'The plate has already sunk.', 'info');
+    return 'info';
+  }
+  plate.sunk = true;
+  const floor = currentFloor(game);
+  const t = floor.tiles[plate.gy] && floor.tiles[plate.gy][plate.gx];
+  if (t === TILE.GATE) {
+    floor.tiles[plate.gy][plate.gx] = TILE.GATE_OPEN;
+    log(game, 'The plate sinks. A gate lifts.', 'good');
+  } else {
+    log(game, 'The plate sinks. The gate is already raised.', 'info');
+  }
+  game.lookKey = '';
+  reveal(game);
+  return 'lever';
+}
+
+const RAISE_COST = 12;
+
 function restAtFire(game) {
   if ((game.restMs || 0) > 0) {
     log(game, 'The fire is warm. Rest again in a moment.', 'info');
     return 'info';
   }
   game.restMs = 14000;
+  const raised = [];
+  const waiting = [];
+  for (const c of game.party) {
+    if (c.hp > 0) continue;
+    if (game.gold < RAISE_COST) { waiting.push(c.name); continue; }
+    game.gold -= RAISE_COST;
+    c.hp = Math.max(1, Math.ceil(c.maxHp / 3));
+    c.sta = Math.min(c.maxSta, Math.max(c.sta, Math.ceil(c.maxSta / 4)));
+    raised.push(c.name);
+  }
   let any = false;
   for (const c of game.party) {
     if (c.hp <= 0) continue;
@@ -2148,7 +2285,12 @@ function restAtFire(game) {
     c.mana = Math.min(c.maxMana, c.mana + 4);
     if (c.hp > before || c.sta < c.maxSta) any = true;
   }
-  log(game, any ? 'The party rests at the campfire. A few wounds close.' : 'The party rests at the campfire.', 'good');
+  const bits = [];
+  if (raised.length) bits.push('The fire lifts ' + raised.join(' and ') + '. ' + (raised.length * RAISE_COST) + ' coins.');
+  if (waiting.length) bits.push(waiting.join(' and ') + ' stays down. The bowl wants ' + RAISE_COST + ' coins.');
+  if (any) bits.push('The party rests at the campfire. A few wounds close.');
+  else if (!raised.length) bits.push('The party rests at the campfire.');
+  log(game, bits.join(' '), 'good');
   return 'chest';
 }
 
@@ -2218,6 +2360,11 @@ function useCell(game, x, y) {
   const prop = floor.entities.find(e => e.kind === 'prop' && !e.taken && e.x === x && e.y === y);
   if (prop && prop.sub === 'torch') return takeTorch(game, prop);
   if (prop && prop.sub === 'fire') return restAtFire(game);
+  const plate = floor.entities.find(e => e.kind === 'plate' && e.x === x && e.y === y);
+  if (plate) {
+    if (x !== game.x || y !== game.y) return false;
+    return pressPlate(game, plate);
+  }
   if (prop) {
     const found = featureAt(game, x, y);
     if (found) log(game, found.near, 'info');

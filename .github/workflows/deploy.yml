@@ -288,6 +288,8 @@ jobs:
           echo "$html" | grep -q 'Quests (J)' || { echo "ERROR: /delve/ is missing the quest log"; exit 1; }
           echo "$html" | grep -q 'campfire' || { echo "ERROR: /delve/ is missing the waystation notes"; exit 1; }
           echo "$html" | grep -q 'character sheet' || { echo "ERROR: /delve/ is missing the character sheet"; exit 1; }
+          echo "$html" | grep -q 'floor plate' || { echo "ERROR: /delve/ is missing the floor plate"; exit 1; }
+          echo "$html" | grep -q "Nell's stall" || { echo "ERROR: /delve/ is missing the stall"; exit 1; }
           echo "$html" | grep -q 'Delve' || { echo "ERROR: /delve/ missing the title"; exit 1; }
           code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/delve/engine.js)
           echo "/delve/engine.js $code"
