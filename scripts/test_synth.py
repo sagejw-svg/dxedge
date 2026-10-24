@@ -5767,6 +5767,8 @@ with sync_playwright() as pw:
     fill = key_fill(wide)
     ck("Desk. 1920 keys fill the bar and the bottom labels stay on screen",
        fill["fill"] and fill["gap"] <= 2 and fill["whites"] >= 29 and not fill["overlap"] and fill["labelsIn"] and fill["linesIn"], fill)
+    # One extra rack page at a time: with four open beside pg, a 2-core box timed out loading the last (24 Oct)
+    wide.close()
     huge = b.new_page(viewport={"width": 2048, "height": 1080})
     huge.add_init_script("try { localStorage.setItem('dxedge_ui_size', 'l'); } catch (e) {}")
     huge.goto(BASE)
@@ -5776,11 +5778,13 @@ with sync_playwright() as pw:
     ck("Desk. 2048 keys fill the bar and the bottom labels stay on screen",
        fill2["fill"] and fill2["gap"] <= 2 and fill2["whites"] >= 36 and fill2["keyW"] >= 28
        and not fill2["overlap"] and fill2["labelsIn"] and fill2["linesIn"], fill2)
+    huge.close()
     mid = b.new_page(viewport={"width": 1280, "height": 800})
     mid.add_init_script("try { localStorage.removeItem('dxedge_ui_size'); } catch (e) {}")
     mid.goto(BASE)
     mid.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
     ck("Desk. 1280 stays medium", mid.evaluate("document.documentElement.getAttribute('data-ui')") == "m")
+    mid.close()
     ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     ph.add_init_script("try { localStorage.setItem('dxedge_ui_size', 'xl'); } catch (e) {}")
     ph.goto(BASE)
@@ -5800,7 +5804,7 @@ with sync_playwright() as pw:
       return { w: r.width, h: r.height, n: document.querySelectorAll('.key.w').length };
     }""")
     ck("Desk. a phone keeps 44px keys", phone_keys["w"] >= 44 and phone_keys["h"] >= 44 and phone_keys["n"] <= 20, phone_keys)
-    wide.close(); mid.close(); ph.close(); huge.close()
+    ph.close()
 
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(80)
