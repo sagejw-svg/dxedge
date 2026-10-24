@@ -36,7 +36,7 @@ def serve():
 
 def main():
     page_html = open(os.path.join(PUBLIC, 'dm', 'index.html'), encoding='utf-8').read()
-    bundle = open(os.path.join(PUBLIC, 'dm', 'assets', 'index-lcuHWnZP.js'), encoding='utf-8').read()
+    bundle = open(os.path.join(PUBLIC, 'dm', 'assets', 'index-CvLHDx8C.js'), encoding='utf-8').read()
     app = open(os.path.join(ROOT, 'frontend', 'src', 'App.jsx'), encoding='utf-8').read()
     sw = open(os.path.join(PUBLIC, 'sw.js'), encoding='utf-8').read()
     nginx = open(os.path.join(ROOT, 'nginx', 'nginx.conf'), encoding='utf-8').read()
@@ -50,13 +50,13 @@ def main():
             raise AssertionError(msg)
 
     ok('noindex, nofollow' in page_html, 'the page asks crawlers to skip it')
-    ok('/dm/assets/index-lcuHWnZP.js' in page_html, 'the bundle is served from /dm/')
-    ok('/dm/assets/index-DOoxH7BZ.css' in page_html, 'the stylesheet is served from /dm/')
+    ok('/dm/assets/index-CvLHDx8C.js' in page_html, 'the bundle is served from /dm/')
+    ok('/dm/assets/index-Ds76-2F7.css' in page_html, 'the stylesheet is served from /dm/')
     ok('Drop DUNGEON.DAT and GRAPHICS.DAT here' in bundle, 'the bundle contains the file picker')
-    ok('index-DTUDExGf.js' not in page_html and 'index-C-h2dl1g.css' not in page_html, 'the previous build is gone')
+    ok('index-lcuHWnZP.js' not in page_html and 'index-DOoxH7BZ.css' not in page_html, 'the previous build is gone')
     ok('href="/dm/"' not in app and "id: 'dm'" not in app, 'the engine is not in the site nav')
     cache = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
-    ok(cache is not None and int(cache.group(1)) >= 135, 'service worker cache bumped')
+    ok(cache is not None and int(cache.group(1)) >= 136, 'service worker cache bumped')
     ok("url.pathname.startsWith('/dm/')" in sw, 'service worker treats /dm/ as mutable')
     ok('location ^~ /dm/' in nginx, 'nginx does not pin /dm/ for a year')
 
