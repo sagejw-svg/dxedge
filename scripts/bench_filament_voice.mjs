@@ -6,11 +6,14 @@
 //   node scripts/bench_filament_voice.mjs --ref origin/main [--rounds 4] [--cases cathode|filament|c_plate,...]
 //                                                         A/B against a git ref: CPU change per case,
 //                                                         and whether the output is bit-identical
+//   node scripts/bench_filament_voice.mjs --profile sk12 [--top 12]
+//                                                         self time per function for one case, this tree
 //
 // What it measures: the Filament worklet alone (no rack, no browser), 6 s at 48 kHz in 128-frame
 // blocks, process CPU time (user + system) per render, best of the rounds. Each render runs in a
 // fresh child process so one version's JIT state never helps the other. The cases are test 9's
-// four (8 voices, Ladder 24 and Valve 12, stereo offset, 16 voices), Diode 18, Sallen-Key 12 (with and without its high-pass) and Poly 24 (and Poly 24 screaming and driven) at 8 voices, plus wider coverage for the
+// (8 voices on each filter model, stereo offset, 16 voices), Sallen-Key 12 with its high-pass and
+// Poly 24 screaming and driven at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, and patch changes mid-note (stereo offset on, loop tube, model, drive).
 // The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
@@ -71,9 +74,23 @@ async function one(dir, name) {
     AudioWorkletProcessor: class { constructor() { this.port = { postMessage() {}, onmessage: null }; } },
     registerProcessor: (n, c) => { procs[n] = c; } };
   vm.createContext(ctx);
-  vm.runInContext(`Math.random = (a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; })(12345)`, ctx);
-  vm.runInContext(fs.readFileSync(path.join(dir, 'voice.worklet.js'), 'utf8'), ctx, { filename: 'voice.worklet.js' });
+  // seeded (mulberry32); imul comes in as a parameter for the same reason as the wrapper below
+  vm.runInContext(`Math.random = ((a, imul) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = imul(a ^ a >>> 15, 1 | a);
+    t = t + imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; })(12345, Math.imul)`, ctx);
+  // The worklet runs inside a function here, not as a top-level script. A vm context's global object
+  // is contextified (an interceptor sits in front of it), so as a top-level script every read of a
+  // top-level function, class or const (tdx, DIO_B, SK_IP) and of a builtin (Math) is a slow lookup
+  // that V8 cannot inline, on every call. Chrome's AudioWorkletGlobalScope has no interceptor, so the
+  // bench used to blame any per-sample path that called one: measured 24 Oct, Diode 18's filter call
+  // took 7x and Sallen-Key 12's 10x the time of Ladder 24's (which reads no globals), and about the
+  // same as it once wrapped, which is what test 9 shows in headless Chrome. The builtins come in as
+  // parameters; the per-block globals (sampleRate, currentFrame, registerProcessor) stay global.
+  // lineOffset keeps profile line numbers on the file's own lines. The arithmetic is unchanged: every
+  // case hashes the same either way.
+  const G = ['Math', 'isFinite', 'NaN', 'Array', 'Object', 'JSON', 'Date', 'Set', 'Float32Array', 'Float64Array', 'Int32Array'];
+  const src = fs.readFileSync(path.join(dir, 'voice.worklet.js'), 'utf8');
+  vm.runInContext(`(function (${G.join(', ')}) {\n${src}\n})(${G.map(g => 'globalThis.' + g).join(', ')});`, ctx,
+    { filename: 'voice.worklet.js', lineOffset: -1 });
   const events = EV.map(e => Object.assign({}, e));
   if (name === 'lfo' || name === 'fm') events.push({ at: 48000 * 3, t: 'off', n: 60 }, { at: 48000 * 3.5, t: 'on', n: 62, v: 0.6 });
   if (name === 'change') {
@@ -109,6 +126,21 @@ async function one(dir, name) {
 
 if (process.argv[2] === '--one') {
   console.log(JSON.stringify(await one(process.argv[3], process.argv[4])));
+} else if (arg('--profile', null)) {
+  // self time per function (name:line), from V8's sampling profiler, for one case on this tree
+  const name = arg('--profile', null), tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'filament-prof-'));
+  const p = spawnSync(process.execPath, ['--cpu-prof', '--cpu-prof-dir', tmp, ME, '--one', path.join(REPO, 'frontend/public/synth'), name], { encoding: 'utf8' });
+  if (p.status !== 0) { console.error(p.stderr); process.exit(1); }
+  const prof = JSON.parse(fs.readFileSync(path.join(tmp, fs.readdirSync(tmp)[0]), 'utf8'));
+  const byId = new Map(prof.nodes.map(n => [n.id, n])), self = new Map();
+  for (const id of prof.samples) {
+    const cf = byId.get(id).callFrame, k = `${cf.functionName || '(anonymous)'}:${cf.lineNumber + 1} ${path.basename(cf.url)}`;
+    self.set(k, (self.get(k) || 0) + 1);
+  }
+  const total = prof.samples.length;
+  console.log(`${name}: ${JSON.parse(p.stdout).cpu.toFixed(1)}% of real time, ${total} samples`);
+  for (const [k, c] of [...self].sort((x, y) => y[1] - x[1]).slice(0, +arg('--top', 12))) console.log(`  ${(100 * c / total).toFixed(1).padStart(5)}%  ${k}`);
+  fs.rmSync(tmp, { recursive: true, force: true });
 } else {
   const ref = arg('--ref', null), rounds = +arg('--rounds', ref ? 4 : 2);
   const trees = [{ label: 'this tree', dir: path.join(REPO, 'frontend/public/synth') }];

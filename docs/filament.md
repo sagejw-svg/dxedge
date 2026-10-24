@@ -142,7 +142,7 @@ task can read it).
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx`. Links Hexode and Anode |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
 | `scripts/test_synth_imported.py` | Smoke test for Hexode and Anode: they load, stay quiet, and make a sound |
-| `scripts/bench_filament_voice.mjs` | Filament voice worklet in Node with a seeded random: CPU per case, and with `--ref <git ref>` an A/B that says whether the output is bit-identical. For CPU work; not part of the suite |
+| `scripts/bench_filament_voice.mjs` | Filament voice worklet in Node with a seeded random: CPU per case, with `--ref <git ref>` an A/B that says whether the output is bit-identical, and with `--profile <case>` self time per function. For CPU work; not part of the suite |
 | `docs/filament-licensing.md` | Licensing rules, the register of approved and reference-only resources, notes on our own rights |
 
 ## Roadmap
@@ -818,6 +818,40 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 24 Oct (test health, forced: main failed it): two wall-clock checks. The suite on origin/main
+  `a257110` failed 2 checks on both runs tonight, once beside a Node bench and once with nothing else
+  running (this box ran slow: test 9's Ladder 24 at 48% against 25 to 37% on most nights).
+  "Tv. the four tubes with the show draw in under 12 ms a frame" read 15.8 and 12.2 ms. Cause, measured
+  in a separate script: the figure is a smoothed wall-clock time and was read straight after two other
+  pages loaded the rack and rendered on the same 2 cores; read there it gave 5.9 to 11.1 ms on a page
+  that draws a held five-note chord in 5.2 ms, stable, once they close. The check now reads it at the
+  end of a 1.5 s chord its own page plays (flares, heat and lamps running) with the other contexts
+  closed: 2.79 ms in the suite. Same 12 ms limit; the show is busier while measured than before (it
+  was read idle). "G. hold, the generator and a finger combine" read 0 voices and no generator. Cause,
+  measured: the rack hands a patch to Gleam on the next animation frame and the generator takes its
+  first point a frame later, 43 to 137 ms and 66 to 398 ms after `setPatch` (5 runs), and the check
+  waited a fixed 100 ms. It now waits for the patch and the generator point (5 s cap), then asserts the
+  same things. No product code changed.
+- Done 24 Oct (CPU tooling): `scripts/bench_filament_voice.mjs` blamed the wrong code. It ran the
+  worklet as a top-level script in a Node vm context, whose global object sits behind an interceptor,
+  so every read of a top-level function or const (`tdx`, `DIO_B`, `exp2`) and of `Math` was a slow
+  lookup V8 could not inline. Chrome's worklet scope has no interceptor. Measured, filter call alone:
+  Diode 18 650 to 900 ns and Sallen-Key 12 880 to 970 ns against Ladder 24's 80 to 130 ns (Ladder
+  reads no globals); about 80 to 135 ns for all four once wrapped. The bench now runs the worklet
+  inside a function with the builtins passed in, and the seeded random takes `imul` the same way.
+  Output hash identical on all 22 cases. Bench CPU on a quiet box, old to new: Ladder 24 40.5 to 24.5%,
+  Valve 12 61.4 to 23.4%, Diode 18 72.9 to 24.7%, Sallen-Key 12 80.7 to 24.1%, Poly 24 43.9 to 33.8%,
+  LFO case 169 to 34%, Plate Screamer 41.3 to 14.6%. Test 9 in Chrome on the same box: 49.8, 44.4,
+  42.1, 39.0, 47.3%, so the models now rank about as Chrome ranks them (old bench: Diode and Sallen-Key
+  at 1.8x and 2x Ladder; Chrome 0.85x and 0.78x). New `--profile <case>` prints self time per function.
+  Rechecked with the fixed bench: the 21 Oct Cathode memo is -13% on Plate Screamer and within noise
+  on Init and Night Wind (it was reported as -13% to -31%).
+- CPU, after the bench fix (measured 24 Oct, `--profile`): Valve 12 is `render`'s own body 44%,
+  `valve()` 16%, `process` 13%, the oscillator `step` 11%, GC 4%. The LFO case is `render` 37%,
+  `valve()` 21%, `fcoef` 4%. Plate Screamer (Cathode) is `process` 33%, `render` 30% and GC 12%:
+  something in Cathode allocates per block, worth finding first (garbage on the audio thread costs in
+  Chrome too, inferred). The items below that quote profile shares were measured with the old bench:
+  their shares for anything that calls a top-level function or `Math` are overstated.
 - Done 23 Oct (test health, forced: main hung on it): the Gleam HRTF render deadlock. The suite on
   origin/main `b93422e` stalled for more than 5 minutes in "G. HRTF keeps a left-hand finger on the
   left" (the 18 Oct hang again). Measured cause, outside the suite, a fresh page each run in Chromium
@@ -856,7 +890,7 @@ and proven by measurement), test suite health, load time and memory, code health
   filter-drive `pow`s are memoized the same way; the NaN scrub on the 2x sum uses two compares instead
   of `Math.abs`. Output bit-identical on 9 cases (measured, `scripts/bench_filament_voice.mjs --ref`).
 - CPU, Filament: the Valve 12 per-sample solve is now the largest single cost (about 36% of the
-  worklet's self time in the Node profile, measured). Anything there changes the output in the last
+  worklet's self time in the Node profile, measured with the old bench; 16% with the fixed one). Anything there changes the output in the last
   bits, so it needs a tolerance check (for example null depth against the old render) instead of a hash.
 - CPU, Filament: LFO-heavy patches gained nothing tonight (every input moves every tick, measured
   -0.4% to -5%). A table `exp2` like Cathode's would help them but changes low bits: same tolerance
@@ -1013,6 +1047,7 @@ visuals alone while the Tube show item in 0.3 is open. Measured means a script r
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-24 (improvement, scheduled task, about 5:25 to 6:45 AM PT): test health, forced, plus CPU tooling. Main first: the suite on origin/main `a257110` failed 2 checks on both runs (once beside a Node bench, once quiet): the tube show draw time (15.8, 12.2 ms against 12) and "G. hold, the generator and a finger combine" (0 voices). Both were wall-clock races, measured: the draw time was read straight after two other pages loaded and rendered on the same cores (5.9 to 11.1 ms there against 5.2 ms stable on a quiet page), and the Gleam check waited 100 ms for a patch that lands on the next frame and a generator point a frame after (43 to 137 ms and 66 to 398 ms). The draw time is now read at the end of a chord its own page plays with the other contexts closed (2.79 ms in the suite); the Gleam check waits for the patch and the point. Then the Node bench: it ran the worklet as a top-level script in a vm context, where every global read is a slow uninlined lookup, so it overstated any path that calls a top-level function or `Math` (Diode 18 and Sallen-Key 12 filter calls 7x to 10x Ladder 24's; equal once wrapped). It now runs the worklet in a function with the builtins passed in; output hashes identical on all 22 cases; bench CPU old to new on a quiet box: Valve 12 61.4 to 23.4%, Diode 18 72.9 to 24.7%, Sallen-Key 12 80.7 to 24.1%, Plate Screamer 41.3 to 14.6%; new `--profile`. No product code and no sound changed. Cache unchanged (no served file changed). Suite: ALL PASS (1181 checks); `scripts/test_synth_imported.py` ALL PASS (29). CPU (test 9, headless, slow box): Cathode 34.4%; Filament 8 voices Ladder 24 49.8%, Valve 12 44.4%, Diode 18 42.1%, Sallen-Key 12 39.0%, Poly 24 47.3%; stereo offset 58.7%; 16 voices with ensemble 72.8%; EQ at 31 bands 69.5%. Commit: the improvement commit of 24 Oct.
 - 2026-10-24 (review, scheduled task, about 4:20 to 5:30 AM PT): areas f (song library, project save and load), g (Hexode, Anode, Gleam full screen) and h (accessibility) on the live site at origin/main `75d8a45`, sw.js `dxedge-v133`. Findings: 1 broken, 2 confusing (details in `docs/filament-review.md`, 24 Oct). Fixed: R1024-1, load saved put Thyratron, Dekatron, Lattice or Gleam on the rail back on the patch it had when it was put there (measured on all four); R1024-2, the 36 mute and solo chips now name their device. Three new checks, all three failing on the unfixed tree (measured). Still open and re-measured: R1020-3, R1020-6, R1020-8, Hexode 1154 px at 375. Cache `dxedge-v134`. Suite: ALL PASS (1181 checks). Commit: this one.
 - 2026-10-24 (graphics, scheduled task, about 3:15 to 4:40 AM PT): main first: suite on origin/main `9f43e94` ALL PASS (1169 checks; the run
   started on a clean tree, but the CSS edits below landed in the working tree while it ran, so its later sections saw them). Screenshots at

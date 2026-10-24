@@ -1496,7 +1496,14 @@ with sync_playwright() as pw:
        rf["end"]["heat"]["v1"] > 0.4 and rf["end"]["blue"]["v3"] > 0.3 and rr["res"] > 0.8 and not rr["shimmer"], (rf, rr))
     ck("Tv. reduced motion: no page errors", not rerr, rerr)
     rctx.close()
-    dm = pg.evaluate("__synth.tubeShow().drawMs")
+    # The draw time is a smoothed wall-clock figure (about 10 frames). Read straight after the two pages
+    # above, it timed their load and renders on the same cores as much as the chassis: measured 24 Oct,
+    # 5.9 to 11.1 ms on a page that draws a held five-note chord in 5.2 ms (stable) once the others close,
+    # and 12.2 ms in the suite on a slow box. So it is read here at the end of a chord this page plays on
+    # its own (flares, heat and lamps running), with the other contexts closed.
+    dm = pg.evaluate("""async () => { await __synth.engine().ctx.resume(); const ns = [36, 48, 55, 60, 64];
+      ns.forEach(n => __synth.noteOn(n, 1)); await new Promise(r => setTimeout(r, 1500));
+      const d = __synth.tubeShow().drawMs; ns.forEach(n => __synth.noteOff(n)); await new Promise(r => setTimeout(r, 250)); return d; }""")
     info("Tv. chassis draw time (four tubes with the show, smoothed, desktop)", f"{dm:.2f} ms per frame (the loop runs at 30 fps, 33 ms)")
     ck(f"Tv. the four tubes with the show draw in under 12 ms a frame ({dm:.2f} ms)", 0 < dm < 12, dm)
     ck("Tv. no page errors", not errs, errs)
@@ -3748,7 +3755,13 @@ with sync_playwright() as pw:
        midi_hold["latched"]["voices"] == 1 and midi_hold["latched"]["n"] == 1 and "m64" in midi_hold["latched"]["ids"]
        and midi_hold["after"]["voices"] == 0 and midi_hold["after"]["hold"] is False and midi_hold["after"]["n"] == 0, midi_hold)
     pg.evaluate("""() => __synth.setPatch({ device: 'gleam', mode: 'field', hold: true, generator: 'drift', rate: 0.5, depth: 0.8, seed: 5, level: 0.85, reverb: 0, glide: 0 })""")
-    pg.wait_for_timeout(100)
+    # The rack hands a patch to Gleam on the next animation frame and the generator takes its first
+    # point on the frame after: measured 24 Oct, 43 to 137 ms and 66 to 398 ms after setPatch. A fixed
+    # 100 ms wait lost that race on a slow box (both suite runs that night), so wait for both instead.
+    try:
+        pg.wait_for_function("""() => { const h = __synth.gleam(), p = h.patch(); return p.hold && p.generator === 'drift' && !!h.generator(); }""", timeout=5000)
+    except Exception:
+        pass   # the check below fails with what the page shows
     live_mix = pg.evaluate("""() => {
       const h = __synth.gleam();
       h.pointer('down', { id: 4, x: 0.15, y: 0.55, z: 0.9 });
