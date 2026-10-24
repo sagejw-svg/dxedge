@@ -310,8 +310,8 @@ jobs:
           fi
           html=$(curl -sf https://dxedge.net/dm/)
           echo "$html" | grep -q 'noindex' || { echo "ERROR: /dm/ is missing noindex"; exit 1; }
-          echo "$html" | grep -q '/dm/assets/index-DTUDExGf.js' || { echo "ERROR: /dm/ is not the published engine"; exit 1; }
-          js=$(curl -sf https://dxedge.net/dm/assets/index-DTUDExGf.js)
+          echo "$html" | grep -q '/dm/assets/index-lcuHWnZP.js' || { echo "ERROR: /dm/ is not the published engine"; exit 1; }
+          js=$(curl -sf https://dxedge.net/dm/assets/index-lcuHWnZP.js)
           echo "$js" | grep -q 'Drop DUNGEON.DAT and GRAPHICS.DAT here' || { echo "ERROR: /dm/ bundle has no file picker"; exit 1; }
 
       - name: Verify the EOB engine is live
