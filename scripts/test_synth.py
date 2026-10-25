@@ -2953,6 +2953,82 @@ with sync_playwright() as pw:
     ck("Gx. no page errors (phone)", not perr_g, perr_g)
     pctx.close()
 
+    # ---------------------------------------------------------------- Dk. the MIDI deck and song library strips (graphics, 25 Oct)
+    # Each strip is a brushed faceplate with two screws, an engraved name and recessed readout windows. The lamp in
+    # the first window reads the buttons' own state: dark, amber when there is something to play, red while armed
+    # (pulsing once the take runs, steady with reduced motion), green while playing.
+    DK_MEAS = """() => {
+      const strip = id => { const e = document.getElementById(id), c = getComputedStyle(e), a = getComputedStyle(e, '::before'), z = getComputedStyle(e, '::after');
+        return { face: c.backgroundImage.indexOf('gradient') >= 0, rad: parseFloat(c.borderTopLeftRadius), screws: [a.content, a.width, a.display, z.content, z.width, z.display] }; };
+      const win = id => { const e = document.getElementById(id), c = getComputedStyle(e);
+        return { color: c.color, bg: c.backgroundImage, h: e.getBoundingClientRect().height, shown: !!e.offsetParent }; };
+      return { deck: strip('deck'), lib: strip('library'), take: win('takeStat'), stat: win('libStat'), pos: win('libPos'),
+        sw: document.documentElement.scrollWidth, iw: innerWidth };
+    }"""
+    DK_LAMP = "id => { const s = getComputedStyle(document.getElementById(id), '::before'); return { bg: s.backgroundColor, anim: s.animationName, w: s.width }; }"
+    def _dk_rgbs(s): return [[int(float(v)) for v in m.split(",")[:3]] for m in __import__("re").findall(r"rgba?\(([^)]*)\)", s)]
+    def _dk_lum(c):
+        c = [v / 255 for v in c]; c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    def _dk_con(fg, bgimg):
+        # the lightest stop of the window's gradient is the worst case for the amber text
+        f = _dk_lum(_dk_rgbs(fg)[0]); bk = max(_dk_lum(c) for c in (_dk_rgbs(bgimg) or [[255, 255, 255]]))
+        return (max(f, bk) + 0.05) / (min(f, bk) + 0.05)
+    dctx = b.new_context(viewport={"width": 1366, "height": 1000}); dp = dctx.new_page(); derr = []
+    dp.on("pageerror", lambda e: derr.append(str(e)))
+    dp.goto(BASE); dp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    dk = dp.evaluate(DK_MEAS)
+    ck("Dk. the MIDI deck and song library are faceplates with two screws each (desktop)",
+       all(s["face"] and s["rad"] >= 5 and s["screws"][1] == "9px" and s["screws"][4] == "9px" and s["screws"][2] != "none" and s["screws"][5] != "none"
+           for s in (dk["deck"], dk["lib"])), (dk["deck"], dk["lib"]))
+    dk_con = [_dk_con(dk[k]["color"], dk[k]["bg"]) for k in ("take", "stat")]
+    ck(f"Dk. the take and song readouts are recessed windows with readable amber text (contrast {min(dk_con):.1f}:1 or more)",
+       all(dk[k]["shown"] and dk[k]["h"] >= 24 and "gradient" in dk[k]["bg"] for k in ("take", "stat")) and min(dk_con) >= 4.5, (dk["take"], dk["stat"], dk_con))
+    ck("Dk. an empty readout (no song position yet) is hidden, not an empty window", not dk["pos"]["shown"], dk["pos"])
+    lamp0 = dp.evaluate(f"({DK_LAMP})('takeStat')"); llamp0 = dp.evaluate(f"({DK_LAMP})('libStat')")
+    dp.click("#recBtn"); dp.wait_for_timeout(120); armed = dp.evaluate(f"({DK_LAMP})('takeStat')")
+    dp.evaluate("__synth.noteOn(60, 0.8)"); dp.wait_for_timeout(400); dp.evaluate("__synth.noteOff(60)"); dp.wait_for_timeout(250)
+    live = dp.evaluate(f"({DK_LAMP})('takeStat')"); was_live = dp.evaluate("document.getElementById('recBtn').classList.contains('live')")
+    dp.click("#stopBtn"); dp.wait_for_timeout(250); ready = dp.evaluate(f"({DK_LAMP})('takeStat')")
+    dp.click("#playTake"); dp.wait_for_timeout(150); playing = dp.evaluate(f"({DK_LAMP})('takeStat')")
+    dp.click("#stopBtn"); dp.wait_for_timeout(150)
+    ck("Dk. the deck lamp: dark with no take, dim red armed, pulsing red recording, amber with a take, green playing",
+       lamp0["w"] == "7px" and _dk_lum(_dk_rgbs(lamp0["bg"])[0]) < 0.05 and armed["bg"] == "rgb(168, 60, 60)" and armed["anim"] == "none"
+       and was_live and live["bg"] == "rgb(255, 92, 92)" and live["anim"] == "deckRec" and ready["bg"] == "rgb(255, 179, 71)" and playing["bg"] == "rgb(0, 255, 157)",
+       (lamp0, armed, was_live, live, ready, playing))
+    dp.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
+    dp.click("#libBtn")
+    dp.wait_for_function("() => [...document.querySelectorAll('#libPick option')].some(o => o.value === 'beethoven-sym5-i')")
+    dp.select_option("#libPick", "beethoven-sym5-i")
+    dp.wait_for_function("() => { const s = __synth.player().song(); return !!(s && s.name.indexOf('Symphony') >= 0); }", timeout=5000)
+    lready = dp.evaluate(f"({DK_LAMP})('libStat')")
+    dp.click("#libPlay"); dp.wait_for_timeout(300); lplay = dp.evaluate(f"({DK_LAMP})('libStat')"); pos_on = dp.evaluate(DK_MEAS)["pos"]
+    dp.click("#libStop"); dp.wait_for_timeout(200)
+    ck("Dk. the library lamp: dark with no song, amber with a song loaded, green while it plays; the position window appears",
+       _dk_lum(_dk_rgbs(llamp0["bg"])[0]) < 0.05 and lready["bg"] == "rgb(255, 179, 71)" and lplay["bg"] == "rgb(0, 255, 157)" and pos_on["shown"],
+       (llamp0, lready, lplay, pos_on))
+    dp.locator("#library").screenshot(path=os.path.join(SHOTS, "synth_library_strip.png"))
+    ck("Dk. no page errors (desktop strips)", not derr, derr)
+    dctx.close()
+    rmctx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); rmp = rmctx.new_page()
+    rmp.goto(BASE); rmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rmp.click("#recBtn"); rmp.evaluate("__synth.noteOn(60, 0.8)"); rmp.wait_for_timeout(400); rmp.evaluate("__synth.noteOff(60)"); rmp.wait_for_timeout(200)
+    rml = rmp.evaluate(f"({DK_LAMP})('takeStat')"); rm_live = rmp.evaluate("document.getElementById('recBtn').classList.contains('live')")
+    rmp.click("#stopBtn")
+    ck("Dk. reduced motion: the recording lamp is red and steady, no pulse", rm_live and rml["bg"] == "rgb(255, 92, 92)" and rml["anim"] == "none", (rm_live, rml))
+    rmctx.close()
+    dpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); dpp = dpx.new_page(); dperr = []
+    dpp.on("pageerror", lambda e: dperr.append(str(e)))
+    dpp.goto(BASE); dpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    dpp.evaluate("document.getElementById('deckBtn').click(); document.getElementById('libBtn').click()"); dpp.wait_for_timeout(300)
+    pk = dpp.evaluate(DK_MEAS)
+    pk_con = [_dk_con(pk[k]["color"], pk[k]["bg"]) for k in ("take", "stat")]
+    ck(f"Dk. on a 375 px phone the strips keep the faceplate and readouts, drop the screws, and nothing scrolls sideways (contrast {min(pk_con):.1f}:1)",
+       pk["deck"]["face"] and pk["lib"]["face"] and pk["deck"]["screws"][2] == "none" and pk["lib"]["screws"][5] == "none"
+       and pk["take"]["shown"] and pk["stat"]["shown"] and min(pk_con) >= 4.5 and pk["sw"] <= pk["iw"] == 375, pk)
+    ck("Dk. no page errors (phone strips)", not dperr, dperr)
+    dpx.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

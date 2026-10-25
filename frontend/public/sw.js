@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v139'
+const CACHE_NAME = 'dxedge-v140'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
