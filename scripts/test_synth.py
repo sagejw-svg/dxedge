@@ -1184,11 +1184,15 @@ with sync_playwright() as pw:
 
     # the recorder, driven through __synth: notes, velocities and the device each went to
     pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("__synth.deck().arm()")
+    # Each call is bracketed: [before, after]. The recorder stamps the call somewhere inside that
+    # window, so a slow call (a GC pause or a busy core) widens the window instead of counting as
+    # recorder error (25 Oct: one run read 10.4 ms when only the first call was slow).
     tt = pg.evaluate("""async () => { const t = [], w = ms => new Promise(r => setTimeout(r, ms)), now = () => performance.now() / 1000;
+      const c = f => { const b = now(); f(); t.push([b, now()]); };
       await w(120);
-      __synth.noteOn(60, 0.8); t.push(now()); await w(200); __synth.noteOn(64, 0.5); t.push(now()); await w(200);
-      __synth.noteOff(60); t.push(now()); __synth.noteOff(64); t.push(now()); await w(80);
-      __synth.setDevice('cathode'); await w(60); __synth.noteOn(36, 1.0); t.push(now()); await w(150); __synth.noteOff(36); t.push(now());
+      c(() => __synth.noteOn(60, 0.8)); await w(200); c(() => __synth.noteOn(64, 0.5)); await w(200);
+      c(() => __synth.noteOff(60)); c(() => __synth.noteOff(64)); await w(80);
+      __synth.setDevice('cathode'); await w(60); c(() => __synth.noteOn(36, 1.0)); await w(150); c(() => __synth.noteOff(36));
       await w(50); __synth.deck().stopRec(); __synth.setDevice('filament'); return t; }""")
     tk = pg.evaluate("__synth.deck().take()")
     ne = [e for e in tk["events"] if e["t"] in ("on", "off")]
@@ -1196,8 +1200,10 @@ with sync_playwright() as pw:
     ck("M. recorder: the first note starts the take; notes, offs and devices captured in order",
        sig == [("on", 60, "filament"), ("on", 64, "filament"), ("off", 60, "filament"), ("off", 64, "filament"), ("on", 36, "cathode"), ("off", 36, "cathode")]
        and ne[0]["time"] == 0 and not tk["rec"] and not tk["armed"], sig)
-    dt = max(abs((e["time"]) - (t - tt[0])) for e, t in zip(ne, tt))
-    ck(f"M. recorder timing matches the calls within 5 ms (worst {1000 * dt:.2f} ms), velocities kept", dt <= 0.005 and [round(e["v"], 2) for e in ne if e["t"] == "on"] == [0.8, 0.5, 1.0], (dt,))
+    # event i must land in [b_i - a_0, a_i - b_0]: dt is how far outside that window it falls
+    dt = max(max(0.0, (t[0] - tt[0][1]) - e["time"], e["time"] - (t[1] - tt[0][0])) for e, t in zip(ne, tt))
+    info("M. recorder: the slowest bracketed call took", f"{1000 * max(t[1] - t[0] for t in tt):.2f} ms")
+    ck(f"M. recorder timing matches the calls within 5 ms (worst {1000 * dt:.2f} ms outside the call windows), velocities kept", dt <= 0.005 and [round(e["v"], 2) for e in ne if e["t"] == "on"] == [0.8, 0.5, 1.0], (dt,))
     xb = pg.evaluate("__synth.deck().exportBytes()"); r = pg.evaluate("a => __synth.smf.read(a)", xb)
     pp = r["song"]["parts"]
     ex = [(round(e["time"], 4), e["data"][:2]) for p in pp for e in p["events"] if (e["data"][0] & 0xE0) == 0x80]
