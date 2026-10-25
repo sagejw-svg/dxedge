@@ -454,6 +454,7 @@ export function mountLatticePanel(container, hooks) {
       rowEl.className = 'lat-slot';
       const who = document.createElement('div');
       who.className = 'who';
+      const route = (SRC_LABELS[slot.src] || slot.src) + ' to ' + (DEST_LABELS[slot.dest] || slot.dest);
       who.textContent = (SRC_LABELS[slot.src] || slot.src) + ' → ' + (DEST_LABELS[slot.dest] || slot.dest);
       const bar = document.createElement('div');
       bar.className = 'lat-livebar';
@@ -464,13 +465,15 @@ export function mountLatticePanel(container, hooks) {
       who.appendChild(bar);
       const amt = document.createElement('input');
       amt.type = 'range'; amt.min = '-1'; amt.max = '1'; amt.step = '0.01'; amt.value = String(slot.amt);
-      amt.setAttribute('aria-label', 'Amount for ' + slot.src + ' to ' + slot.dest);
+      // Named the way the row reads (review 25 Oct, R1025-2): not the internal ids such as osc1.pos.
+      amt.setAttribute('aria-label', 'Amount, ' + route);
       amt.addEventListener('input', () => {
         patch().matrix[i].amt = +amt.value;
         edited();
       });
       const rm = document.createElement('button');
       rm.type = 'button'; rm.className = 'lat-btn'; rm.textContent = 'Remove';
+      rm.setAttribute('aria-label', 'Remove ' + route);
       rm.addEventListener('click', () => { patch().matrix.splice(i, 1); edited(); sync(); });
       rowEl.appendChild(who); rowEl.appendChild(amt); rowEl.appendChild(rm);
       slotsEl.appendChild(rowEl);

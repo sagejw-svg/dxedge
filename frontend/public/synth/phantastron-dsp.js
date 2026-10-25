@@ -279,6 +279,11 @@ export function postPhantastron(eng, msg) {
   if (msg.t === 'patch') {
     eng.patch = normalizePhantastron(msg.p);
     eng.phrase = phraseOf(eng.patch);
+    // A sounding voice keeps its place in the old phrase. When the new phrase is shorter, that
+    // index points past its end, the frame lookup reads undefined and process() throws, which
+    // kills the worklet until the page reloads (review 25 Oct, R1025-1). Wrap it into range.
+    const len = Math.max(1, eng.phrase.length);
+    for (let i = 0; i < eng.voices.length; i++) eng.voices[i].idx %= len;
     if (!eng.patch.run) eng.killed = false;
     return;
   }

@@ -17,15 +17,18 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation and no undo | measured |
+| R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
+| R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note" | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
 | R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 24 Oct | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 23 Oct | measured |
-| R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03 | measured |
+| R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
-| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound | measured |
+| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 25 Oct | measured |
 | R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
@@ -42,7 +45,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px) | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4 | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -469,4 +472,83 @@ Fixed tonight.
 Areas a, b, c, d, e. Suggested next: a on Lattice, Mote and Klystron (still not done); b (every factory
 patch on every device, now that Poly 24 and Velvet Brass are in); a check that the R1024-1 fix holds
 for the Halloween presets path (`applyPresets` writes the same stored copies).
+
+## 2026-10-25 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `4fe33df` (the deck and
+library faceplate had just landed), sw.js `dxedge-v140`. Chromium headless at 1366 x 900 and 375 x 812
+(touch, 2x). No page or console errors in any run. Area a covered the devices the 22 Oct review did not:
+Filament (with SVF 12, new yesterday), Cathode, Dekatron and Lattice. Area b covered every factory patch
+on all 18 devices and user save, reload and delete on five.
+
+### What worked (measured)
+
+- Every patch-bound control on the four devices moves its own field and only that one when focused and
+  stepped with the arrow keys: Filament 76, Cathode 51, Dekatron 11 (the kick page), Lattice 47. Labels
+  match the field (for example "stereo off" moves `filt.offset`, "B: EG 2" moves `lpf.b`).
+- SVF 12 morph on white noise at 1 kHz, resonance 0 (level relative to the loudest band, 125 Hz to 8 kHz):
+  morph 0 is a low-pass (-4.1 dB at 1 kHz, -36.5 at 8 kHz); 1 a band-pass centred on 1 kHz (-14.9 and
+  -14.3 dB at 125 Hz and 8 kHz); 2 a high-pass (-35.3 dB at 125 Hz); 3 a notch (-17.7 dB at 1 kHz, within
+  3.6 dB elsewhere). The morph knob is hidden on the other five models. At full resonance low-pass,
+  band-pass and high-pass self-oscillate (RMS 0.59 to 0.64, peak at most 0.93); the notch does not (0.03),
+  as a notch would not.
+- An offline sweep of every Filament range and menu value (about 120 renders) found no NaN and no peak
+  above 0.95. The sweep could not tell small changes from render-to-render variance (oscillators start at
+  a random phase by design), so it is not evidence that every knob is audible; the keyboard check above is.
+- All 127 factory patches on the 18 devices load from the patch menu and play C4 plus G4 with a non-zero
+  strip meter (0.013 Phantastron to 0.99 Cathode), none above 1.0, except Phantastron, below.
+- Save (default name "<patch> 2"), page reload and delete of a user patch on Filament, Cathode, Dekatron,
+  Lattice and Phantastron: the patch is listed under Yours, is current after the reload, and is gone after
+  delete with a toast.
+- Phone 375 px, every tab of Filament, Cathode, Dekatron, Lattice and Phantastron: page width 375, no
+  sideways scroll. The rail and the Dekatron step row scroll inside their own strips.
+
+### Findings
+
+**R1025-1. Phantastron dies when a patch is picked while a voice still sounds.** Area b. Broken. Measured.
+Fixed tonight.
+- Steps: put Phantastron on the rail. Play a key on Nursery Clock and let go. Within about half a second
+  pick Market Bits (or hold the key and pick Slow Drag).
+- Expected: the new patch plays.
+- Actual: Phantastron is silent from then on, on every patch and after Panic, until the page is
+  reloaded. Live, picking Market Bits 0.4 s after the key-up broke it in 5 of 23 runs (strip meter 0, the
+  device's own meter frozen). Offline (Node, the same engine): 13 of 120 patch pairs broke with the
+  switch 0.4 s after the key-up, and 18 of 20 switch times broke going from Nursery Clock to Slow Drag
+  with the key held. No page or console error is shown: the error is inside the audio worklet.
+- Cause: a voice keeps its index into the old cart's phrase. When the new phrase is shorter (Nursery
+  Clock 8 frames, Market Bits 6, Slow Drag 1), the index points past the end, the frame lookup returns
+  undefined, and `process()` throws a TypeError, which stops the worklet for good.
+- Fix: `phantastron-dsp.js` wraps every voice's index into the new phrase when a patch arrives. Check:
+  "Ph. switching to a shorter phrase under a held key keeps the toy speaking" (RMS 0.0 at all three
+  switch times on the unfixed code, 0.15 fixed).
+
+**R1025-2. Lattice matrix controls are named by internal ids.** Area a, h. Confusing. Measured. Fixed tonight.
+- Steps: Lattice, Mod tab, the matrix rows. Read the controls with a screen reader.
+- Expected: the names the row shows ("LFO 1 → Osc A position").
+- Actual: the amount slider was "Amount for lfo1 to osc1.pos" and "Amount for lfo2 to cutA", and every
+  row's button was just "Remove", so a screen reader could not tell rows apart.
+- Fix: "Amount, LFO 1 to Osc A position" and "Remove LFO 1 to Osc A position". Check: "W. matrix amount
+  and remove controls name their route in words".
+
+**R1025-3. Delete has no confirmation and no undo.** Area b. Confusing. Measured.
+- Steps: pick a patch under Yours, press delete.
+- Expected (inferred): a question, or an undo in the toast, since the patch exists only in this browser.
+- Actual: one press removes it from storage, shows "Deleted "<name>"." and loads the first factory patch
+  (R1022-5). No dialog was raised on any of five devices. Undo restores sounds, not the user list (by
+  reading the code). A design call, so left for James.
+
+**R1025-4. Cathode pitch mod A and B barely move from the keyboard.** Area a, h. Confusing. Measured.
+- Steps: Cathode, Osc tab, focus "A: MG" (pitch mod depth, plus or minus 24 semitones on a squared
+  curve), press the up arrow.
+- Actual: each press moves 0.1% of travel. After 1, 10, 20, 50 and 100 presses the readout is +0c, +0c,
+  +1c, +6c and +24c. Page Up and End work (End is +24 st). Other knobs step about 1% a press. Likely a
+  deliberate fine step near zero; for a keyboard user it reads as a dead knob.
+
+**R1025-5. Phone footer links are 13 px tall.** Area h. Confusing. Measured.
+- At 375 px, "Tip the developer" (113 x 13), "Hand Orchestra" (93 x 13), "Hexode" (40 x 13) and "Anode"
+  (33 x 13) are text links far under the 44 px target the rest of the phone layout keeps.
+
+Still open, re-measured: R1022-3 (Phantastron strip peaks 0.013 to 0.094 against 0.2 to 0.99 on most
+devices), R1022-5 (deleting a Filament user patch lands on Plate Bass, a Cathode one on Grid Bias Bass,
+while the devices open on Wide Novachord Strings and Plate Screamer).
 

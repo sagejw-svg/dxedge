@@ -3409,6 +3409,15 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(40)
     routed = pg.evaluate("__synth.patch().matrix.some(s => s.src === 'lfo1' && s.dest === 'osc1.pos')")
     ck("W. dragging a source onto a destination adds a route", routed)
+    # Review 25 Oct (R1025-2): the amount slider read "Amount for lfo1 to osc1.pos" and every
+    # remove button read "Remove". Both name the route the way the row shows it.
+    lat_names = pg.evaluate("""() => [...document.querySelectorAll('.lat-slot')].map(r => [
+      r.querySelector('input[type=range]').getAttribute('aria-label'),
+      r.querySelector('button').getAttribute('aria-label')])""")
+    ck("W. matrix amount and remove controls name their route in words",
+       ["Amount, LFO 1 to Osc A position", "Remove LFO 1 to Osc A position"] in lat_names
+       and all(a and b and "." not in a and "." not in b for a, b in lat_names)
+       and len(set(b for _a, b in lat_names)) == len(lat_names), lat_names)
     pg.evaluate("document.getElementById('latLfo0').scrollIntoView()"); pg.wait_for_timeout(40)
     shape0 = pg.evaluate("__synth.patch().shapes[0].slice()")
     box = pg.locator("#latLfo0").bounding_box()
@@ -5356,6 +5365,19 @@ with sync_playwright() as pw:
         fL, _fR = ph_render(pg.evaluate("__synth.patch()"), 1.2, [{"t": "on", "n": 60, "v": 0.9, "at": 0.02}, {"t": "off", "n": 60, "at": 1.0}])
         ph_fac[nm] = round(ph_rms(fL), 5)
     ck("Ph. every factory patch speaks when a key is held", len(ph_fac) >= 6 and min(ph_fac.values()) > 1e-3, ph_fac)
+    # Review 25 Oct (R1025-1): a patch with a shorter phrase picked while a voice still sounds
+    # left that voice's frame index past the end, process() threw, and the toy stayed silent
+    # until a reload. Hold a key on Nursery Clock, switch to Slow Drag, and keep listening.
+    pg.evaluate("__synth.load('Nursery Clock')")
+    ph_nc = pg.evaluate("__synth.patch()")
+    pg.evaluate("__synth.load('Slow Drag')")
+    ph_sd = pg.evaluate("__synth.patch()")
+    ph_sw = {}
+    for at in (0.3, 0.5, 0.9):
+        sL, _sR = ph_render(ph_nc, at + 0.7, [{"t": "on", "n": 60, "v": 0.9, "at": 0.02}, {"t": "patch", "p": ph_sd, "at": at}])
+        ph_sw[at] = round(ph_rms(sL[int((at + 0.2) * SR):int((at + 0.6) * SR)]), 5)
+    ck("Ph. switching to a shorter phrase under a held key keeps the toy speaking",
+       min(ph_sw.values()) > 1e-3, ph_sw)
     wired_bits = pg.evaluate("""() => [5, 2].map(b => __synth.phantastronBend({ bits: b, wires: [['vcc', 'bits']] }).bits)""")
     ck("Ph. a wire into BITS stops at three bits and never adds any", wired_bits == [3, 2], wired_bits)
     pg.evaluate("""() => __synth.setPatch({ device: 'phantastron', cart: 'lull', wires: [], run: false })""")
