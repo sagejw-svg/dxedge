@@ -2678,6 +2678,53 @@ with sync_playwright() as pw:
     ck("R. stop holds the beat and a second stop returns to the start", (not live["heldPlaying"]) and live["heldBeat"] > 0.1 and live["home"] == 0, live)
     ck("R. a parameter id round-trips, and a new device can register", live["cut"] == 1234 and live["read"] == 1234 and "sequencer" in live["ids"], live)
 
+    # Idle rack stages: the ensemble's wet side (off, or mix 0) and the single-ended B side are
+    # unplugged so the browser stops running them. A fixed signal through the rack must come out
+    # sample for sample the same with them unplugged and plugged back in by hand.
+    idle = pg.evaluate("""async () => {
+      const eng = await import('/synth/engine.js'); const PM = await import('/synth/patches.js');
+      let a = 1; const rnd = () => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; };
+      const src = new Float32Array(24000);
+      for (let i = 0; i < src.length; i++) src[i] = 0.3 * Math.sin(i * 0.0571) + 0.2 * Math.sin(i * 0.0857) + 0.1 * (rnd() * 2 - 1);
+      const pat = (ens, topology) => { const p = PM.normalize({}); p.ens = ens; p.out.topology = topology; return p; };
+      const run = async (P, replug) => {
+        const ctx = new OfflineAudioContext(2, 48000, 48000);
+        const E = await eng.createEngine(ctx, { patch: P, events: [] });
+        const st = { fed: E.ens.fed, bFed: E.C.bFed() };
+        if (replug) { if (!E.ens.fed) E.ens.mid.connect(E.ens.pre); if (!E.C.bFed()) E.C.tIn.connect(E.C.ppInv); }
+        const buf = ctx.createBuffer(2, src.length, 48000); buf.copyToChannel(src, 0); buf.copyToChannel(src.slice().reverse(), 1);
+        const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(E.ens.input); s.start(0);
+        E.node.disconnect();
+        const out = await ctx.startRendering();
+        return { st, L: out.getChannelData(0), R: out.getChannelData(1) };
+      };
+      const cmp = (x, y) => { let d = 0, pk = 0; for (let i = 0; i < x.L.length; i++) {
+        d = Math.max(d, Math.abs(x.L[i] - y.L[i]), Math.abs(x.R[i] - y.R[i])); pk = Math.max(pk, Math.abs(x.L[i])); } return { d, pk }; };
+      const offSe = pat({ on: false, mode: 'I', mix: 50 }, 'se'), mix0 = pat({ on: true, mode: 'II', mix: 0 }, 'pp');
+      const u1 = await run(offSe, false), p1 = await run(offSe, true), u2 = await run(mix0, false), p2 = await run(mix0, true);
+      const on = await run(pat({ on: true, mode: 'I', mix: 50 }, 'pp'), false);
+      // offline, a patch change replugs and unplugs at once
+      const ctx = new OfflineAudioContext(2, 4800, 48000), E = await eng.createEngine(ctx, { patch: offSe, events: [] });
+      E.setPatch(pat({ on: true, mode: 'I', mix: 50 }, 'pp'), true); const swOn = { fed: E.ens.fed, bFed: E.C.bFed() };
+      E.setPatch(offSe, true); const swOff = { fed: E.ens.fed, bFed: E.C.bFed() };
+      // live: off waits for the fade before it unplugs; on replugs at once
+      const L = __synth.engine(); await L.ctx.resume();
+      L.ens.set({ on: true, mode: 'I', mix: 50 }); const lOn = L.ens.fed;
+      L.ens.set({ on: false, mode: 'I', mix: 50 }); const lSoon = L.ens.fed;
+      await new Promise(r => setTimeout(r, 600)); const lLater = L.ens.fed;
+      L.ens.set({ on: true, mode: 'I', mix: 50 }); const lBack = L.ens.fed;
+      L.ens.set(L.patch().ens);
+      return { offSe: cmp(u1, p1), mix0: cmp(u2, p2), stOff: u1.st, stMix0: u2.st, stOn: on.st, swOn, swOff, lOn, lSoon, lLater, lBack };
+    }""")
+    ck("R. idle rack stages: ensemble off and single-ended unplug the wet side and the B side; ensemble on and push-pull keep them",
+       idle["stOff"] == {"fed": False, "bFed": False} and idle["stMix0"] == {"fed": False, "bFed": True} and idle["stOn"] == {"fed": True, "bFed": True}, idle)
+    ck(f"R. idle rack stages: unplugged is sample for sample the same as plugged (ensemble off, single-ended: max diff {idle['offSe']['d']}; mix 0: {idle['mix0']['d']})",
+       idle["offSe"]["d"] == 0 and idle["mix0"]["d"] == 0 and idle["offSe"]["pk"] > 0.05 and idle["mix0"]["pk"] > 0.05, idle)
+    ck("R. idle rack stages: a patch change replugs and unplugs them (offline, at once)",
+       idle["swOn"] == {"fed": True, "bFed": True} and idle["swOff"] == {"fed": False, "bFed": False}, idle)
+    ck("R. idle rack stages: live, switching the ensemble off unplugs only after the fade, and on replugs at once",
+       idle["lOn"] and idle["lSoon"] and not idle["lLater"] and idle["lBack"], idle)
+
     pg.locator("#mHost").scroll_into_view_if_needed()
     pg.fill("#hostTempo", "100"); pg.locator("#hostTempo").press("Tab"); pg.wait_for_timeout(40)
     ck("R. the tempo field sets the clock", pg.evaluate("__synth.transport().state().tempo") == 100, pg.evaluate("__synth.transport().state().tempo"))

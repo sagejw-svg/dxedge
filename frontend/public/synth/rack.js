@@ -338,9 +338,21 @@ function makeSynthChain(ctx){
   C.tIn.connect(C.ppInv); C.ppInv.connect(C.shaperB); C.shaperB.connect(C.ppB); C.ppB.connect(C.ppSum);
   C.ppSum.connect(C.tMake);
   var setTube0 = C.setTube;
+  // Single-ended, the B side's gain is exactly 0, yet its 4x oversampled shaper still ran. Its feed is
+  // unplugged then, the same way and for the same reason as the ensemble's wet side (see makeEnsemble):
+  // at once offline, live once ppB has faded (time constant 15 ms, 0.2 s is 13 of them).
+  var bFed = true, bT = null;
+  function feedB(want){
+    if(want){ if(bT){ clearTimeout(bT); bT=null; } if(!bFed){ C.tIn.connect(C.ppInv); bFed=true; } return; }
+    if(!bFed || bT) return;
+    var cut=function(){ bT=null; if(bFed){ try{ C.tIn.disconnect(C.ppInv); }catch(e){} bFed=false; } };
+    if(C.live) bT=setTimeout(cut, 200); else cut();
+  }
+  C.bFed = function(){ return bFed; };
   C.setTube = function(S){
     var tc = setTube0(S), pp = S.topology==='pp';
     C.shaperB.curve = tc.curve;
+    feedB(pp);
     C.setP(C.ppA.gain, pp ? 0.5 : 1); C.setP(C.ppB.gain, pp ? -0.5 : 0);
     if(pp){ tc.makeup = ppMakeup(tc.curve); C.setP(C.tMake.gain, tc.makeup); }
     return tc;
@@ -416,8 +428,24 @@ function makeEnsemble(ctx){
     if(k===0){ d.connect(E.sL); } else if(k===2){ d.connect(E.sR); } else { var h=G(0.5); d.connect(h); h.connect(E.sL); h.connect(E.sR); }
     return d; });
   E.oscs.forEach(function(o){ o.start(0); });
+  // Idle wet side. With the ensemble off (or its mix at 0) the wet gains sit at exactly 0, but the
+  // seven LFOs, five swept delay lines and three lowpasses still ran on every render quantum.
+  // So the mid feed is unplugged while the wet is not wanted: the lines drain to silence, the
+  // browser stops processing them once their tails pass (it skips a node whose inputs are silent,
+  // and with it the oscillators that only drive its delay time), and the output is the dry path
+  // alone, which is what it already was. Offline the graph is fixed before the render, so it
+  // unplugs at once; live it waits until the wet gains have faded (time constant 30 ms, 0.3 s is
+  // 10 of them), so switching the ensemble off never cuts a tail. On is replugged before the fade-in.
+  E.fed=true; var unplugT=null;
+  function feed(want){
+    if(want){ if(unplugT){ clearTimeout(unplugT); unplugT=null; } if(!E.fed){ E.mid.connect(E.pre); E.fed=true; } return; }
+    if(!E.fed || unplugT) return;
+    var cut=function(){ unplugT=null; if(E.fed){ try{ E.mid.disconnect(E.pre); }catch(e){} E.fed=false; } };
+    if(live) unplugT=setTimeout(cut, 300); else cut();
+  }
   E.set=function(ens){
     ens=ens||{}; var on=!!ens.on, m=ENS_MODES[ens.mode]||ENS_MODES['I'], mix=Math.max(0, Math.min(1, (+ens.mix||0)/100));
+    feed(on && mix > 0);
     if(m.juno){ setP(E.lfo.frequency, m.rate); setP(E.depA.gain, m.depth); setP(E.depB.gain, -m.depth); setP(E.dA.delayTime, m.center); setP(E.dB.delayTime, m.center); }
     setP(E.jL.gain, m.juno); setP(E.jR.gain, m.juno); setP(E.sL.gain, m.str*0.8); setP(E.sR.gain, m.str*0.8);
     // equal-loudness blend: the wet adds energy, so the dry comes down a little as the mix rises
