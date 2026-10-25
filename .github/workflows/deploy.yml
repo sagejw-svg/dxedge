@@ -267,7 +267,7 @@ jobs:
           # GET, not HEAD: these paths proxy to the backend, which answers 405
           # to HEAD, and a 405 carries no cache-control at all - the check would
           # pass by finding nothing.
-          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/ https://dxedge.net/eob/ https://dxedge.net/eob2/ https://dxedge.net/crawl/; do
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/ https://dxedge.net/eob/ https://dxedge.net/eob2/ https://dxedge.net/crawl/ https://dxedge.net/salvage/; do
             CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
             if [ -z "$CC" ]; then
               echo "ERROR: $U returned no cache-control header at all."
@@ -330,6 +330,25 @@ jobs:
           echo "/crawl/ js $js css $css"
           if [ "$js" != "200" ] || [ "$css" != "200" ]; then
             echo "ERROR: /crawl/ assets are not 200"
+            exit 1
+          fi
+
+      - name: Verify Deadweight is live
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/salvage/)
+          echo "/salvage/ $code"
+          if [ "$code" != "200" ]; then
+            echo "ERROR: /salvage/ is not 200"
+            exit 1
+          fi
+          html=$(curl -sf https://dxedge.net/salvage/)
+          echo "$html" | grep -q 'noindex' || { echo "ERROR: /salvage/ is missing noindex"; exit 1; }
+          echo "$html" | grep -q '/salvage/assets/index-DIhgpuB3.js' || { echo "ERROR: /salvage/ is not the published game"; exit 1; }
+          js=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/salvage/assets/index-DIhgpuB3.js)
+          css=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/salvage/assets/index-BboOXzUt.css)
+          echo "/salvage/ js $js css $css"
+          if [ "$js" != "200" ] || [ "$css" != "200" ]; then
+            echo "ERROR: /salvage/ assets are not 200"
             exit 1
           fi
 
