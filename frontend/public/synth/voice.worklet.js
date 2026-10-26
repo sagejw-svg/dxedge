@@ -7,7 +7,7 @@
 // the only decimators are the two on the sum.
 //
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
-//   -> filter (Valve 12, Ladder 24, Diode 18, Sallen-Key 12, Poly 24 or SVF 12) -> VCA -> pan -> L/R (2x) -> half-band -> out
+//   -> filter (Valve 12, Ladder 24, Diode 18, Sallen-Key 12, Poly 24, SVF 12 or Low pass gate) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
@@ -50,6 +50,13 @@
 //              at the edge, so it sings. Our own formulation of the trapezoidal two-integrator loop, each
 //              tanh(x)/x taken at the last sample and the loop then solved exactly. The low-pass passes
 //              DC at unity at any resonance, so no make-up is needed.
+//   Low pass gate: a vactrol-style gate. A light-dependent resistor (the vactrol) follows the amp
+//              envelope: it brightens in a few milliseconds and lets go slowly, more slowly the darker
+//              it gets. Its conductance sets both the low-pass cutoff (proportional to it, as an RC's
+//              is) and the voice level, so the filter and the volume fall together (filt.gate picks
+//              both, the filter only, or the VCA only; filt.lag sets how slowly it lets go). The filter
+//              is the SVF 12 loop at low-pass with its resonance held well short of oscillation
+//              (damping no lower than LPG_KMIN), so it never sings. Our own model.
 //
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
 //   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}, {t:'release'}. Any of them may carry
@@ -458,7 +465,7 @@ class Filament extends AudioWorkletProcessor {
     return {
       i, on: false, note: 60, vel: 0.8, gate: false, sust: false, pb: false, age: 0, pan: 0, gl: 0.7071, gr: 0.7071,
       pitch: 60, pitchT: 60, o1: new Osc(), o2: new Osc(), sub: new Osc(),
-      ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, pending: null, fade: 1, killing: false,
+      ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, vg: 0, pending: null, fade: 1, killing: false,
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
       dcx: 0, dcy: 0,
       nb0: 0, nb1: 0, nb2: 0,
@@ -625,7 +632,7 @@ class Filament extends AudioWorkletProcessor {
     if ((P.lfo1 || {}).mode === 'voice') v.lp[0] = 0;
     if ((P.lfo2 || {}).mode === 'voice') v.lp[1] = 0;
     v.lfoAge = 0;
-    v.ae = 0; v.fe = 0;
+    v.ae = 0; v.fe = 0; v.vg = 0;
     // a whisper of thermal noise in the filters, so a self-oscillating filter starts on its own
     for (const F of [v.fL, v.fR]) if (F.s[F_S1] === 0 && F.s[F_S2] === 0) { F.s[F_S1] = (Math.random() - 0.5) * 1e-3; F.s[F_BP] = F.s[F_S1]; }
     this.trigger(v, vel);
@@ -753,11 +760,14 @@ class Filament extends AudioWorkletProcessor {
   // Skipped when the inputs match the last call for this filter, which is every tick of a held
   // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
   fcoef(F, model) {
-    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 6 + model;
+    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 7 + model;
     if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
     s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
     let fc = clamp(this.cc[0], 16, sr * 0.45);
-    if (model === 5) {
+    if (model === 6) {
+      // Low pass gate: no calibration (it never self-oscillates, and the knob is the -3 dB point at
+      // zero resonance with the vactrol fully lit)
+    } else if (model === 5) {
       // SVF 12: past the threshold the clip holds the loop at the edge and the slewing integrators
       // pull it flat, by a measured amount (SVF_CAL, cents at full resonance, shaped by e).
       if (res > SVF_RT) { const g0 = Math.PI * fc / fs, e = (res - SVF_RT) / (1 - SVF_RT); fc *= Math.pow(2, (SVF_CAL[0] + SVF_CAL[1] * g0) * e / 1200); }
@@ -800,7 +810,8 @@ class Filament extends AudioWorkletProcessor {
     }
     fc = clamp(fc, 16, sr * 0.45);
     s[F_G] = Math.tan(Math.PI * fc / fs);
-    if (model === 5) { s[F_K] = res * SVF_KMAX; s[F_COMP] = 1; }
+    if (model === 6) { s[F_K] = res * LPG_KMAX; s[F_COMP] = 1; }
+    else if (model === 5) { s[F_K] = res * SVF_KMAX; s[F_COMP] = 1; }
     else if (model === 4) { s[F_K] = res * P24_KMAX; s[F_COMP] = 1 + s[F_K] * P24_COMP; }
     else if (model === 3) {
       const K = res <= SK_RT ? SK_K0 + (3 - SK_K0) * res / SK_RT : 3 + (SK_KMAX - 3) * (res - SK_RT) / (1 - SK_RT);
@@ -863,7 +874,12 @@ class Filament extends AudioWorkletProcessor {
     const off2 = num(o2.oct, 0) * 12 + num(o2.semi, 0) + num(o2.fine, 0) / 100;
     const fix1 = num(o1.fixed, 0), fix2 = num(o2.fixed, 0);
     const sync = !!o2.sync, pink = nz.color === 'pink';
-    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : 0;
+    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : 0;
+    // Low pass gate: what the vactrol drives (0 both, 1 the filter only, 2 the VCA only) and how
+    // slowly it lets go. Per-sample rates: 1 / (tau * sr + 1), close to 1 - exp(-1 / (tau * sr)).
+    const isLpg = model === 6, lpgMode = f.gate === 'lp' ? 1 : f.gate === 'vca' ? 2 : 0;
+    const lpgCut = isLpg && lpgMode !== 2, lpgAmp = isLpg && lpgMode !== 1;
+    const lpgKa = 1 / (LPG_TA * sr + 1), lpgLag = clamp(num(f.lag, 0.3), 0.02, 3) * sr;
     const ea = P.envA || {}, ef = P.envF || {};
     const aA = coef(Math.max(0.001, num(ea.a, 0.005)) / 1.466, sr), aD = coef(Math.max(0.001, num(ea.d, 0.3)) / 4.6, sr), aS = clamp(num(ea.s, 0.8), 0, 1), aR = coef(Math.max(0.003, num(ea.r, 0.3)) / 4.6, sr);
     const fA = coef(Math.max(0.001, num(ef.a, 0.005)) / 1.466, sr), fD = coef(Math.max(0.001, num(ef.d, 0.3)) / 4.6, sr), fS = clamp(num(ef.s, 0.5), 0, 1), fR = coef(Math.max(0.003, num(ef.r, 0.3)) / 4.6, sr);
@@ -881,7 +897,7 @@ class Filament extends AudioWorkletProcessor {
     // Two filters per voice only when something makes left and right differ.
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
-    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3, isOta = model === 4, isSvf = model === 5;
+    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3, isOta = model === 4, isSvf = model === 5 || model === 6;
 
     // smoothed parameters at each control tick, shared by every voice
     const CT = this.CT, nt = Math.ceil(frames / CTRL);
@@ -898,7 +914,7 @@ class Filament extends AudioWorkletProcessor {
       v.st2 = st2;
       FL.s[F_LG] = lG; FR.s[F_LG] = lG;
       let dcx = v.dcx, dcy = v.dcy, nb0 = v.nb0, nb1 = v.nb1, nb2 = v.nb2;
-      let ae = v.ae, fe = v.fe, as = v.as, fst = v.fs;
+      let ae = v.ae, fe = v.fe, as = v.as, fst = v.fs, vg = v.vg;
       let dt1 = v.dt1, dt2 = v.dt2, dts = v.dts, pw1 = v.pw1, pw2 = v.pw2, ampL = 1, ampR = 1, gl = 0.7071, gr = 0.7071;
       let fdG = 1, fdC = 1;
       let fade = v.fade;
@@ -973,14 +989,17 @@ class Filament extends AudioWorkletProcessor {
           // cm[0..3]: the last cutoff exponent and its power of two for each side: a still cutoff costs no pow
           const eL = oct + CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L - (st2 ? half : 0);
           if (eL !== cm[0]) { cm[0] = eL; cm[1] = Math.pow(2, eL); }
-          cc[0] = CT[cb + K_CUT] * cm[1];
+          // the low pass gate's cutoff follows the vactrol's conductance
+          const gc = lpgCut ? vg : 1;
+          cc[0] = CT[cb + K_CUT] * cm[1] * gc;
           this.fcoef(FL, model);
           if (st2) {
             const eR = oct + CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R + half;
             if (eR !== cm[2]) { cm[2] = eR; cm[3] = Math.pow(2, eR); }
-            cc[0] = CT[cb + K_CUT] * cm[3]; this.fcoef(FR, model);
+            cc[0] = CT[cb + K_CUT] * cm[3] * gc; this.fcoef(FR, model);
           }
-          if (isSvf) {
+          if (isLpg) { fl[F_WL] = 1; fl[F_WB] = 0; fl[F_WH] = 0; frs[F_WL] = 1; frs[F_WB] = 0; frs[F_WH] = 0; }
+          else if (isSvf) {
             // morph: 0..1 low to band, 1..2 band to high, 2..3 high plus low (the notch)
             const m = clamp(CT[cb + K_MOR], 0, 3);
             const wl = m < 1 ? 1 - m : m < 2 ? 0 : m - 2, wb = (m < 1 ? m : m < 2 ? 2 - m : 0) * SVF_K0, wh = m < 1 ? 0 : m < 2 ? m - 1 : 1;
@@ -1012,7 +1031,15 @@ class Filament extends AudioWorkletProcessor {
         else if (fst === E_REL) { fe += (0 - fe) * fR; }
         if (v.killing) { fade -= 1 / (0.002 * sr); if (fade <= 0) { fade = 0; } }
         const duck = duck0 + (this.duck - duck0) * (fr / frames);
-        const amp = ae * (1 - velA * (1 - v.vel)) * fade * duck * vol * 0.5 * uniG * fdC;
+        let lev = ae * (1 - velA * (1 - v.vel));
+        if (isLpg) {
+          // the vactrol: lit by the envelope (with velocity), fast on, slow off, slower as it darkens
+          const lt = lev > 1 ? 1 : lev;
+          if (lt > vg) vg += (lt - vg) * lpgKa;
+          else vg += (lt - vg) / (lpgLag * (LPG_D0 + (1 - LPG_D0) * (1 - vg)) + 1);
+          if (lpgAmp) lev = vg;
+        }
+        const amp = lev * fade * duck * vol * 0.5 * uniG * fdC;
         const aLg = amp * ampL * gl, aRg = amp * ampR * gr;
         // ---- 2x inner loop ----
         for (let s = 0; s < OS; s++) {
@@ -1055,13 +1082,14 @@ class Filament extends AudioWorkletProcessor {
       }
       // write back
       v.dcx = dcx; v.dcy = dcy; v.nb0 = nb0; v.nb1 = nb1; v.nb2 = nb2;
-      v.ae = ae; v.fe = fe; v.as = as; v.fs = fst; v.dt1 = dt1; v.dt2 = dt2; v.dts = dts; v.pw1 = pw1; v.pw2 = pw2;
+      v.ae = ae; v.fe = fe; v.as = as; v.fs = fst; v.vg = vg; v.dt1 = dt1; v.dt2 = dt2; v.dts = dts; v.pw1 = pw1; v.pw2 = pw2;
       v.fade = fade;
       v2Acc += fl[F_V2] + (st2 ? frs[F_V2] : 0); fl[F_V2] = 0; frs[F_V2] = 0;
       // flush denormals / blow-ups
       if (FL.bad() || FR.bad()) { FL.reset(); FR.reset(); } else { FL.flush(); FR.flush(); }
-      if (as === E_IDLE || (v.killing && fade <= 0)) {
-        v.on = false; v.as = E_IDLE; v.ae = 0; v.killing = false; v.fade = 1; v.st2 = false;
+      // a lit vactrol keeps the voice sounding after the envelope ends (when it drives the VCA)
+      if ((as === E_IDLE && !(lpgAmp && vg > LPG_END)) || (v.killing && fade <= 0)) {
+        v.on = false; v.as = E_IDLE; v.ae = 0; v.vg = 0; v.killing = false; v.fade = 1; v.st2 = false;
         FL.reset(); FR.reset();
         if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U, pnd.pb); }
       }
@@ -1123,6 +1151,12 @@ const P24_CAL = [105, -300];   // measured flat: 18, 28, 37, 47 cents at over 0.
 // g0 = pi fc / fs (measured in Node renders of the voice).
 const SVF_K0 = Math.SQRT2, SVF_RT = 0.9, SVF_KMAX = Math.SQRT2 / 0.9, SVF_IL = 1 / 1.8, SVF_SS = 0.35;
 const SVF_CAL = [77.8, -230];
+// Low pass gate. LPG_KMAX: full resonance takes the SVF damping from sqrt 2 down to LPG_KMIN = 0.5
+// (a peak of about +6 dB, Q 2), well short of oscillation. LPG_TA: the vactrol's turn-on time
+// constant (s). Turn-off: filt.lag x (LPG_D0 + (1 - LPG_D0)(1 - c)) for conductance c, so it falls
+// quickly from fully lit and the dark tail lingers for the whole lag. LPG_END: the conductance at
+// which a released voice is let go (-80 dB).
+const LPG_KMIN = 0.5, LPG_KMAX = Math.SQRT2 - LPG_KMIN, LPG_TA = 0.0025, LPG_D0 = 0.25, LPG_END = 1e-4;
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };
 // tanh(x)/x, Pade approximant (exact enough for |x| < 3, still monotone and bounded beyond)
@@ -1133,7 +1167,7 @@ function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function mwvAny(P, self) { return (self.mw > 0 && num((P.mw || {}).vib, 30) > 0) || (self.at > 0 && num((P.at || {}).vib, 0) > 0); }
 function isStruct(a, b) {
   if (!a) return true;
-  return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube',
+  return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube', 'filt.gate',
     'v1.tube', 'voice.mode'].some(k => get(a, k) !== get(b, k));
 }
 function get(o, path) { const ks = path.split('.'); let x = o; for (const k of ks) { if (x == null) return undefined; x = x[k]; } return x; }

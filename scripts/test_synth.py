@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -177,7 +177,7 @@ with sync_playwright() as pw:
             gd = math.tan(math.pi * min(fc * 2.94, SR * 0.45) / fs) / 2.0615528128088303
             return abs(diode_h(1j * math.tan(math.pi * f / fs) / gd))
         return abs(1 / (1 - W * W + 2j * 0.70710678 * W))
-    for model in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12"):   # sk12 and svf12 (low-pass) at zero resonance are the same 2-pole Butterworth as valve12
+    for model in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12", "lpg"):   # sk12, svf12 (low-pass) and lpg (vactrol fully lit at sustain 1) at zero resonance are the same 2-pole Butterworth as valve12
         for fc in (100, 440, 1000, 4000):
             pt = lambda cut: patch(osc1={"wave": "sine", "level": 0.05, "fixed": fc}, filt={"model": model, "cutoff": cut})
             a = tone_amp(render(pt(fc), note(60), 1.0, rack=False)[0][SR // 2:], fc)
@@ -406,6 +406,114 @@ with sync_playwright() as pw:
                nd: nd.filt.model + ':' + nd.filt.morph }; }""")
     ck(f"Sv. a patch with filt.model svf12 keeps it; filt.morph defaults to 0 (low-pass) and clamps to 0..3; Notch Drift is on SVF 12 at notch ({nz})",
        nz == {"m": "svf12", "m0": 0, "lo": 0, "hi": 3, "nd": "svf12:3"}, nz)
+
+    # ---------------------------------------------------------------- Lg. Low pass gate (the vactrol)
+    # The vactrol follows the amp envelope: it lights in a few ms and lets go slowly, and its conductance
+    # sets both the cutoff and the level. Envelopes here are read off a 2 kHz sine (an analytic-signal
+    # magnitude, smoothed over 2 ms), so the cycle does not get in the way.
+    def lg_env(x, w=96):
+        n_ = len(x); X = np.fft.fft(x); h = np.zeros(n_); h[0] = 1; h[1:(n_ + 1) // 2] = 2
+        if n_ % 2 == 0: h[n_ // 2] = 1
+        return np.convolve(np.abs(np.fft.ifft(X * h)), np.ones(w) / w, mode="same")
+    def lg_times(e, levels):
+        ip = int(np.argmax(e)); d_ = 20 * np.log10(np.maximum(e, 1e-12) / e[ip]); out = []
+        for lv_ in levels:
+            w_ = np.where(d_[ip:] < lv_)[0]; out.append((w_[0] + ip) / SR if len(w_) else None)
+        return out
+    L, _ = render(patch(osc1={"level": 0}, filt={"model": "lpg", "cutoff": 262, "res": 1, "keytrack": 1}), note(60), 1.5, rack=False)
+    q = float(np.sqrt(np.mean(L[SR // 2:] ** 2)))
+    ck(f"Lg. the low pass gate never sings: full resonance with no input stays quiet ({db(q):.1f} dBFS, want below -80)", db(q) < -80, db(q))
+    def lg_tone(f, cut, lvl=0.05, res=0, drive=3, **fx):
+        L, _ = render(patch(osc1={"wave": "sine", "level": lvl, "fixed": f}, filt=dict(model="lpg", cutoff=cut, res=res, drive=drive, **fx)), note(60), 1.0, rack=False)
+        return tone_amp(L[SR // 2:], f)
+    lo_ = lg_tone(500, 20000); pk1, pk5 = db(lg_tone(500, 500, res=1) / lo_), db(lg_tone(500, 500, res=0.5) / lo_)
+    ck(f"Lg. resonance stays gentle: the peak at the cutoff is {pk1:+.1f} dB at full resonance (want +4 to +8; Q 2 is +6.0) and {pk5:+.1f} dB at 0.5 (Butterworth is -3.0 at zero)", 4 <= pk1 <= 8 and -1.5 <= pk5 <= 2, (pk1, pk5))
+    lgP = lambda model, **f: patch(osc1={"wave": "sine", "level": 0.3, "fixed": 2000}, filt=dict(model=model, cutoff=20000, **f))
+    L, _ = render(lgP("lpg", gate="vca"), note(60), 0.5, rack=False); e_ = lg_env(L); st_ = float(np.median(e_[int(0.2 * SR):int(0.4 * SR)]))
+    att = [db(e_[int(ms * SR / 1000)]) - db(st_) for ms in (2, 10)]
+    ck(f"Lg. the vactrol lights in a few ms: {att[0]:+.1f} dB at 2 ms (want below -3: it rounds the front off), {att[1]:+.2f} dB at 10 ms (want within 0.5 of steady)", att[0] < -3 and abs(att[1]) <= 0.5, att)
+    pl = lambda **f: patch(osc1={"wave": "sine", "level": 0.3, "fixed": 2000}, filt=dict(model="lpg", cutoff=20000, gate="vca", **f), envA={"a": 0.001, "d": 0.03, "s": 0, "r": 0.03})
+    tl = {}
+    for lag in (0.1, 0.3):
+        L, _ = render(pl(lag=lag), note(60), 2.5, rack=False); tl[lag] = lg_times(lg_env(L), (-6, -20, -40))
+    r6, r40 = tl[0.3][0] / 6, (tl[0.3][2] - tl[0.3][1]) / 20
+    ck(f"Lg. it lets go slowly, and more slowly as it darkens: at lag 0.3 s the first 6 dB take {1000 * r6:.0f} ms a dB and -20 to -40 dB {1000 * r40:.0f} ms a dB (want 1.15x or more)", r40 >= 1.15 * r6 and tl[0.3][2] > 0.8, tl)
+    ck(f"Lg. the lag knob sets the release: -40 dB at {tl[0.1][2]:.2f} s with lag 0.1 and {tl[0.3][2]:.2f} s with lag 0.3 (want 2.4x to 3.3x)", 2.4 <= tl[0.3][2] / tl[0.1][2] <= 3.3, tl)
+    def lg_cen(x):
+        X = np.abs(np.fft.rfft(x * np.hanning(len(x)))); f_ = np.fft.rfftfreq(len(x), 1 / SR); return float(np.sum(X * f_) / max(np.sum(X), 1e-12))
+    lgQ = lambda g, **e: patch(filt=dict(model="lpg", cutoff=3000, gate=g, lag=0.3), envA=dict({"a": 0.001, "d": 0.05, "s": 0, "r": 0.05, "vel": 0.6}, **e))
+    gc_ = {}
+    for g in ("both", "vca", "lp"):
+        L, _ = render(lgQ(g), note(48), 2.0, rack=False); e_ = lg_env(L, 480); ip = int(np.argmax(e_)); t20 = lg_times(e_, (-20,))[0]; i20 = int(t20 * SR)
+        gc_[g] = (lg_cen(L[max(0, ip - 1200):ip + 1200]), lg_cen(L[i20 - 1200:i20 + 1200]), t20)
+    ck(f"Lg. filter + VCA: the note darkens as it fades (centroid {gc_['both'][0]:.0f} Hz at the peak, {gc_['both'][1]:.0f} at -20 dB, want under half); VCA only keeps its colour ({gc_['vca'][0]:.0f} -> {gc_['vca'][1]:.0f}, within 10%)",
+       gc_["both"][1] < 0.5 * gc_["both"][0] and abs(gc_["vca"][1] / gc_["vca"][0] - 1) <= 0.1, gc_)
+    L, _ = render(patch(filt={"model": "svf12", "cutoff": 3000}, envA={"a": 0.001, "d": 0.05, "s": 0, "r": 0.05, "vel": 0.6}), note(48), 2.0, rack=False)
+    t20s = lg_times(lg_env(L, 480), (-20,))[0]
+    hs = {}
+    for g in ("lp", "vca"):
+        L, _ = render(lgQ(g, s=0.25, d=0.02), note(48), 1.0, rack=False); hs[g] = lg_cen(L[SR // 2:])
+    ck(f"Lg. filter only: the level follows the envelope (-20 dB at {1000 * gc_['lp'][2]:.1f} ms, SVF 12 with the same envelope {1000 * t20s:.1f} ms, within 5) and a held note at sustain 0.25 is darker than VCA only (centroid {hs['lp']:.0f} against {hs['vca']:.0f} Hz, want 30% lower)",
+       abs(gc_["lp"][2] - t20s) <= 0.005 and hs["lp"] < 0.7 * hs["vca"], (gc_["lp"], t20s, hs))
+    vv = {}
+    for v_ in (0.3, 1.0):
+        L, _ = render(lgQ("both"), note(48, v=v_), 1.0, rack=False); vv[v_] = (db(float(np.sqrt(np.mean(L[:4800] ** 2)))), lg_cen(L[:4800]))
+    ck(f"Lg. a softer note lights the vactrol less, so it is quieter and darker (velocity 0.3: {vv[0.3][0] - vv[1.0][0]:+.1f} dB, centroid {vv[0.3][1]:.0f} against {vv[1.0][1]:.0f} Hz)",
+       vv[0.3][0] - vv[1.0][0] <= -3 and vv[0.3][1] < 0.8 * vv[1.0][1], vv)
+    L, _ = render(pl(lag=1.0), note(60, 0.0, 0.05), 1.0, rack=False); e_ = lg_env(L)
+    tail = db(float(np.max(e_[int(0.35 * SR):int(0.45 * SR)]))) - db(float(np.max(e_)))
+    L, _ = render(pl(lag=0.2), note(60, 0.0, 0.05), 3.0, rack=False); end_ = float(np.max(np.abs(L[-2400:])))
+    ck(f"Lg. a released note keeps sounding while the vactrol is lit: 0.3 s after the envelope has gone it is {tail:.1f} dB under its peak (lag 1 s, want above -40); with lag 0.2 s it has ended by 3 s ({db(end_):.0f} dBFS in the last 50 ms, want below -90)",
+       tail > -40 and db(end_) < -90, (tail, end_))
+    worst, bad = 0.0, 0
+    for cut in (16, 262, 20000):
+        for g in ("both", "lp", "vca"):
+            L, R = render(patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, v1={"drive": 10},
+                                filt={"model": "lpg", "cutoff": cut, "res": 1, "drive": 10, "env": 1, "gate": g, "lag": 3}), [e for k in (24, 48, 72, 96) for e in note(k, 0.0)], 1.0, rack=False)
+            bad += int(np.sum(~np.isfinite(L)) + np.sum(~np.isfinite(R))); worst = max(worst, float(np.max(np.abs(L))))
+    ck(f"Lg. full resonance and drive, cutoff 16 Hz to 20 kHz, each gate mode: finite and bounded (peak {worst:.2f}, want under 8)", bad == 0 and worst < 8, (bad, worst))
+    lrnd = random.Random(23)
+    sev, t = note(48, 0.0) + note(60, 0.0), 0.0
+    while t < 9.5:
+        t += 0.05
+        if lrnd.random() < 0.1: sev += note(lrnd.choice((36, 55, 67, 79)), t, t + lrnd.uniform(0.02, 0.4), lrnd.uniform(0.1, 1))
+        sev.append({"at": t, "t": "patch", "load": False, "p": patch(filt={"model": "lpg", "cutoff": math.exp(lrnd.uniform(math.log(20), math.log(20000))), "res": lrnd.random(),
+                    "drive": lrnd.uniform(0, 10), "lag": lrnd.uniform(0.02, 3), "gate": lrnd.choice(("both", "lp", "vca")), "offset": lrnd.uniform(-1, 1), "env": lrnd.uniform(-1, 1)},
+                    envA={"a": 0.001, "d": lrnd.uniform(0.01, 1), "s": lrnd.random(), "r": 0.1}, lfo1={"cutoff": lrnd.uniform(0, 4), "rate": lrnd.uniform(0.1, 30)})})
+    L, R = render(patch(filt={"model": "lpg"}), sev, 10.0, rack=False)
+    bad = int(np.sum(~np.isfinite(L)) + np.sum(~np.isfinite(R))); pk = float(max(np.max(np.abs(L)), np.max(np.abs(R))))
+    ck(f"Lg. 10 s of random cutoff, resonance, drive, lag, gate mode and envelope changes with notes coming and going: finite, bounded and sounding (peak {pk:.2f})", bad == 0 and pk < 8 and float(np.sqrt(np.mean(L ** 2))) > 1e-3, (bad, pk))
+    sine_g = lambda g: patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.005, "s": 0.6, "r": 0.005}, filt={"model": "lpg", "cutoff": 2500, "res": 0.3, "gate": g})
+    L, _ = render(sine_g("both"), note(45, 0.05) + [{"at": 0.4, "t": "patch", "load": False, "p": sine_g("vca")}], 1.2, rack=False)
+    s_ = np.abs(np.diff(L)); steady, worstst = float(np.max(s_[int(1.0 * SR):])), float(np.max(s_))
+    ck(f"Lg. no click when the gate mode changes under a held note (worst step {worstst:.5f}, steady {steady:.5f})", worstst <= 2.0 * steady + 1e-4, (worstst, steady))
+    # The coefficient memo is keyed on the model and the patch epoch: a change from the gate to Valve 12
+    # must not reuse the gate's coefficients (with the key at epoch x 6 + model they collided here: measured
+    # 1.03 dB off in Node). VCA only, so the gate's cutoff is exactly the knob and the memo inputs match.
+    vp = patch(osc1={"wave": "sine", "level": 0.05, "fixed": 1000}, filt={"model": "valve12", "cutoff": 1000, "res": 0.5})
+    gp = patch(osc1={"wave": "sine", "level": 0.05, "fixed": 1000}, filt={"model": "lpg", "cutoff": 1000, "res": 0.5, "gate": "vca"})
+    a0 = tone_amp(render(vp, note(60), 1.0, rack=False)[0][int(0.6 * SR):], 1000)
+    a1 = tone_amp(render(gp, note(60) + [{"at": 0.3, "t": "patch", "load": False, "p": vp}], 1.0, rack=False)[0][int(0.6 * SR):], 1000)
+    ck(f"Lg. a change from the gate to Valve 12 mid-note takes Valve 12's coefficients ({db(a1) - db(a0):+.2f} dB against Valve 12 from the start, want within 0.2)", abs(db(a1) - db(a0)) <= 0.2, (db(a0), db(a1)))
+    L, R = render(patch(filt={"model": "lpg", "cutoff": 600, "offset": 1}, stereo={"pan": "center", "spread": 0}), note(45), 1.5, rack=False)
+    cl, cr = _cen(L[SR // 2:]), _cen(R[SR // 2:])
+    ck(f"Lg. lpg stereo offset +1 oct: the right side is brighter (centroid {cl:.0f} -> {cr:.0f} Hz)", cr > cl * 1.25, (cl, cr))
+    nz = pg.evaluate("""() => { const N = __synth.eq.normalize, hp = __synth.factoryPatch('Hollow Pluck');
+      return { m: N({ filt: { model: 'lpg' } }).filt.model, l0: N({}).filt.lag, g0: N({}).filt.gate, lo: N({ filt: { lag: 0 } }).filt.lag, hi: N({ filt: { lag: 9 } }).filt.lag,
+               bad: N({ filt: { gate: 'loud' } }).filt.gate, vca: N({ filt: { gate: 'vca' } }).filt.gate, hp: hp.filt.model + ':' + hp.filt.gate }; }""")
+    ck(f"Lg. a patch with filt.model lpg keeps it; filt.lag defaults to 0.3 s and clamps to 0.02..3; filt.gate defaults to both and keeps only both, lp or vca; Hollow Pluck is on the gate ({nz})",
+       nz == {"m": "lpg", "l0": 0.3, "g0": "both", "lo": 0.02, "hi": 3, "bad": "both", "vca": "vca", "hp": "lpg:both"}, nz)
+    # Hollow Pluck moved onto the gate: it should keep the level and the length it had on Valve 12.
+    hpn = pg.evaluate("__synth.factoryPatch('Hollow Pluck')")
+    hpo = json.loads(json.dumps(hpn)); hpo["filt"].update({"model": "valve12", "cutoff": 320, "res": 0.62, "env": 0.7}); hpo["envA"]["d"] = 0.9
+    hpm = {}
+    for k_, p_ in (("valve12", hpo), ("lpg", hpn)):
+        L, _ = render(p_, note(60, 0.0, 0.5), 3.0, rack=False)
+        w_ = 480; fr_ = L[:len(L) // w_ * w_].reshape(-1, w_); r_ = np.sqrt(np.mean(fr_ ** 2, axis=1)); ip = int(np.argmax(r_))
+        d_ = 20 * np.log10(np.maximum(r_, 1e-12) / r_[ip]); t20_ = (np.where(d_[ip:] < -20)[0][0] + ip) * 0.01
+        hpm[k_] = (db(float(np.sqrt(np.mean(L[:int(0.3 * SR)] ** 2)))), t20_)
+    ck(f"Lg. Hollow Pluck on the gate keeps its level and length: first 300 ms {hpm['lpg'][0] - hpm['valve12'][0]:+.1f} dB against its Valve 12 version (within 1.5), -20 dB at {hpm['lpg'][1]:.2f} s against {hpm['valve12'][1]:.2f} s (within 0.08)",
+       abs(hpm["lpg"][0] - hpm["valve12"][0]) <= 1.5 and abs(hpm["lpg"][1] - hpm["valve12"][1]) <= 0.08, hpm)
 
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
@@ -1589,7 +1697,7 @@ with sync_playwright() as pw:
     # ---------------------------------------------------------------- 9. CPU (logged)
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
-    for model in ("ladder24", "valve12", "diode18", "sk12", "poly24", "svf12"):
+    for model in ("ladder24", "valve12", "diode18", "sk12", "poly24", "svf12", "lpg"):
         big["filt"]["model"] = model
         r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
         info(f"9. CPU {model}, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time in headless Chrome (offline render, rack included)")
@@ -1810,6 +1918,24 @@ with sync_playwright() as pw:
     ck("Home takes morph back to low-pass", pg.evaluate("__synth.patch().filt.morph") == 0 and "LP" in mk.inner_text(), mk.inner_text())
     bb = pg.query_selector('#mFilt .chip[data-v="svf12"]').bounding_box()
     ck(f"the SVF 12 chip is on screen ({bb['width']:.0f} x {bb['height']:.0f} px)", bb["width"] > 0 and bb["height"] > 0, bb)
+    ck("SVF 12 hides the gate row and the lag knob", not pg.is_visible("#gateChips") and not pg.is_visible('#kFilt [data-path="filt.lag"]'))
+    pg.click('#mFilt .chip[data-v="lpg"]')
+    ck("model chip switches to the low pass gate, which shows its gate row and lag knob and hides the morph knob, the loop tube row and the high-pass knob",
+       pg.evaluate("__synth.patch().filt.model") == "lpg" and pg.is_visible("#gateChips") and pg.is_visible('#kFilt [data-path="filt.lag"]')
+       and not pg.is_visible('#kFilt [data-path="filt.morph"]') and not pg.is_visible("#loopChips") and not pg.is_visible('#kFilt [data-path="filt.hp"]'))
+    ck("the filter note names the low pass gate, the vactrol and lag", all(w in pg.inner_text("#filtNote") for w in ("Low pass gate", "vactrol", "Lag")), pg.inner_text("#filtNote"))
+    gch = pg.evaluate("""() => [...document.querySelectorAll('#gateChips .chip')].map(b => b.dataset.v + ':' + b.textContent + ':' + b.getAttribute('aria-pressed'))""")
+    ck(f"the gate row offers filter + VCA (lit), filter only and VCA only ({gch})", gch == ["both:filter + VCA:true", "lp:filter only:false", "vca:VCA only:false"], gch)
+    pg.click('#gateChips .chip[data-v="vca"]'); pg.wait_for_timeout(60)
+    ck("a gate chip sets filt.gate", pg.evaluate("__synth.patch().filt.gate") == "vca" and pg.get_attribute('#gateChips .chip[data-v="vca"]', "aria-pressed") == "true")
+    pg.click('#gateChips .chip[data-v="both"]')
+    lk = pg.query_selector('#kFilt [data-path="filt.lag"]'); lk.focus(); pg.keyboard.press("End"); pg.wait_for_timeout(80)
+    lv_, lt_ = pg.evaluate("__synth.patch().filt.lag"), lk.inner_text()
+    ck(f"the lag knob goes to 3 s from the keyboard and says so ({lv_}, '{lt_.strip()}')", abs(lv_ - 3) < 1e-6 and "3.00s" in lt_, (lv_, lt_))
+    pg.keyboard.press("Home"); pg.wait_for_timeout(80)
+    ck("Home takes lag to 20 ms", abs(pg.evaluate("__synth.patch().filt.lag") - 0.02) < 1e-6 and "20ms" in lk.inner_text(), lk.inner_text())
+    bb = pg.query_selector('#mFilt .chip[data-v="lpg"]').bounding_box()
+    ck(f"the LP gate chip is on screen ({bb['width']:.0f} x {bb['height']:.0f} px)", bb["width"] > 0 and bb["height"] > 0, bb)
     bb = pg.query_selector('#mFilt .chip[data-v="poly24"]').bounding_box()
     ck(f"the Poly 24 chip is on screen ({bb['width']:.0f} x {bb['height']:.0f} px)", bb["width"] > 0 and bb["height"] > 0, bb)
     pg.click('.chip[data-v="valve12"]')
@@ -2293,8 +2419,13 @@ with sync_playwright() as pw:
         ck(f"10. {w}px: the Filter tab shows the filter", ph.is_visible("#mFilt") and not ph.is_visible("#mOsc1"))
         small = ph.evaluate("""() => [...document.querySelectorAll('.tabs button, .key.w, .btn, .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: touch targets are 44 px or more", not small, small)
-        ck(f"10. {w}px: the Filter tab shows the Diode 18, Sallen-Key 12, Poly 24 and SVF 12 chips with no horizontal scroll",
-           ph.is_visible('#mFilt .chip[data-v="diode18"]') and ph.is_visible('#mFilt .chip[data-v="sk12"]') and ph.is_visible('#mFilt .chip[data-v="poly24"]') and ph.is_visible('#mFilt .chip[data-v="svf12"]') and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+        ck(f"10. {w}px: the Filter tab shows the Diode 18, Sallen-Key 12, Poly 24, SVF 12 and LP gate chips with no horizontal scroll",
+           ph.is_visible('#mFilt .chip[data-v="diode18"]') and ph.is_visible('#mFilt .chip[data-v="sk12"]') and ph.is_visible('#mFilt .chip[data-v="poly24"]') and ph.is_visible('#mFilt .chip[data-v="svf12"]') and ph.is_visible('#mFilt .chip[data-v="lpg"]') and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+        m0_ = ph.evaluate("__synth.patch().filt.model"); ph.click('#mFilt .chip[data-v="lpg"]'); ph.wait_for_timeout(60)
+        gs_ = ph.evaluate("""() => [...document.querySelectorAll('#gateChips .chip, #kFilt [data-path="filt.lag"]')].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })""")
+        ck(f"10. {w}px: on the LP gate the gate chips and the lag knob show at 44 px or more, with no horizontal scroll ({gs_})",
+           len(gs_) == 4 and all(a_ >= 44 and b_ >= 44 for a_, b_ in gs_) and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"), gs_)
+        ph.click(f'#mFilt .chip[data-v="{m0_}"]'); ph.wait_for_timeout(60)
         kk = ph.query_selector('.key.w'); bb = kk.bounding_box()
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")
@@ -3246,8 +3377,13 @@ with sync_playwright() as pw:
       __synth.transport().setTempo(120);
       await __synth.engine().ctx.resume();
     }""")
-    pg.evaluate("__synth.player().play()"); pg.wait_for_timeout(350)
-    ck("library playback is holding its note", pg.evaluate("__synth.player().playing()") and 60 in (pg.evaluate("__synth.engine().meters.filament.notes") or []))
+    # Wait for the note rather than a fixed 350 ms: on a quiet page it shows in the meter 20 to 80 ms
+    # after play (measured 26 Oct), but on this busy page a fixed wait read it before it landed once.
+    hold_ms = pg.evaluate("""() => new Promise(res => { const t0 = performance.now(); __synth.player().play();
+      const tick = () => { const m = __synth.engine().meters.filament; if (__synth.player().playing() && (m.notes || []).indexOf(60) >= 0) return res(performance.now() - t0);
+        if (performance.now() - t0 > 3000) return res(-1); setTimeout(tick, 10); }; tick(); })""")
+    hst = pg.evaluate("() => ({ playing: __synth.player().playing(), notes: __synth.engine().meters.filament.notes, state: __synth.engine().ctx.state })")
+    ck(f"library playback is holding its note (in the meter {hold_ms:.0f} ms after play, want within 3 s)", hold_ms >= 0 and hst["playing"] and 60 in (hst["notes"] or []), hst)
     pg.evaluate("__synth.transport().setTempo(90)"); pg.wait_for_timeout(200)
     pg.evaluate("__synth.player().stop()"); pg.wait_for_timeout(200)
     ck("library stop after a tempo change leaves no note",
