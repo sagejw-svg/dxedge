@@ -115,6 +115,12 @@ export function createDeck(api) {
     T.rec = false; T.length = now() - T.t0;
     Object.keys(T.held).forEach(d => T.held[d].forEach(n => T.events.push({ time: T.length, dev: d, m: { t: 'off', n } })));
     T.held = {};
+    // A pedal still down at Stop goes up at the end of the take, so an exported file does not leave
+    // CC 64 held for whatever follows it in another program.
+    DEVS.forEach(d => {
+      const s = T.events.filter(e => e.dev === d && e.m.t === 'sus');
+      if (s.length && s[s.length - 1].m.on) T.events.push({ time: T.length, dev: d, m: { t: 'sus', on: false } });
+    });
     showTake();
   }
   const takeNotes = () => T.events.filter(e => e.m.t === 'on').length;

@@ -97,7 +97,7 @@ class FilamentMaster extends AudioWorkletProcessor {
     this.aL = lengths(ALLP, 0).map(n => new Allpass(n));
     this.aR = lengths(ALLP, SPREAD).map(n => new Allpass(n));
     this.env = 0;
-    this.lim = 1;
+    this.lim = 1; this.limEnv = 0;
     this.dcLx = 0; this.dcLy = 0; this.dcRx = 0; this.dcRy = 0;
     this.yL = 0; this.yR = 0;
     this.rec = false; this.recStop = false;
@@ -115,7 +115,6 @@ class FilamentMaster extends AudioWorkletProcessor {
     const c = (this.s && this.s.comp) || {};
     this.att = coef((isFinite(+c.attack) ? +c.attack : 10) / 1000);
     this.rel = coef((isFinite(+c.release) ? +c.release : 120) / 1000);
-    this.limAtt = coef(0.002);
     this.limRel = coef(0.08);
     const ceilDb = (c.ceiling == null || !isFinite(+c.ceiling)) ? -1 : +c.ceiling;
     this.ceil = Math.pow(10, ceilDb / 20);
@@ -179,9 +178,13 @@ class FilamentMaster extends AudioWorkletProcessor {
       ol = l * g; orr = r * g;
     }
     if ((c.on && c.limit) || safety) {
-      const pk = Math.max(Math.abs(ol), Math.abs(orr), 1e-12);
-      const want = pk > this.ceil ? this.ceil / pk : 1;
-      this.lim += (want - this.lim) * (want < this.lim ? this.limAtt : this.limRel);
+      // Peak limiter. The envelope jumps to a new peak at once and falls back over about 80 ms, and
+      // the gain is the ceiling over that envelope, so no sample leaves above the ceiling. (Until
+      // 26 Oct the gain itself was smoothed with a 2 ms attack and no hold: every waveform peak
+      // rode over the ceiling, by as much as 7 dB.)
+      const pk = Math.max(Math.abs(ol), Math.abs(orr));
+      this.limEnv = pk > this.limEnv ? pk : this.limEnv + (pk - this.limEnv) * this.limRel;
+      this.lim = this.limEnv > this.ceil ? this.ceil / this.limEnv : 1;
       ol *= this.lim; orr *= this.lim;
     }
     this.yL = ol; this.yR = orr;

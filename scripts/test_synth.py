@@ -1440,6 +1440,20 @@ with sync_playwright() as pw:
     ck("M. recorder on a device it cannot record (Thyratron): wheels, pedal and an armed note throw nothing, the key lights, nothing is recorded and the deck says why",
        not thrown and len(errs) == n_err and lit62 and tk_["armed"] and not tk_["rec"] and not any(e["dev"] == "thyratron" for e in tk_["events"])
        and "Filament and Cathode" in stat_, (thrown, errs[n_err:], lit62, tk_, stat_))
+    # Review 26 Oct: Stop with the pedal still down wrote the pedal-down into the take and no pedal-up,
+    # so an exported .mid left CC 64 held for whatever followed it in another program.
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100); pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.midi([0xB0, 64, 127]); await w(30); __synth.noteOn(60, 0.8); await w(150); __synth.noteOff(60); await w(80);
+      __synth.deck().stopRec(); __synth.midi([0xB0, 64, 0]); }""")
+    tks = pg.evaluate("__synth.deck().take()")
+    sus_ = [(e["time"], e["on"]) for e in tks["events"] if e["t"] == "sus"]
+    xs = pg.evaluate("a => __synth.smf.read(a)", pg.evaluate("__synth.deck().exportBytes()"))
+    cc64 = [e["data"][2] for p_ in xs["song"]["parts"] for e in p_["events"] if (e["data"][0] & 0xF0) == 0xB0 and e["data"][1] == 64]
+    ck("M. Stop with the pedal down ends the take with a pedal-up, and the exported .mid lets go of CC 64",
+       len(sus_) == 2 and sus_[0][1] is True and sus_[-1][1] is False and abs(sus_[-1][0] - tks["length"]) < 1e-6
+       and cc64 and cc64[0] >= 64 and cc64[-1] < 64, (sus_, tks["length"], cc64))
+    pg.evaluate("__synth.panic()")
     ck("M. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Q. the graphic EQ (rack-wide)
@@ -3273,9 +3287,15 @@ with sync_playwright() as pw:
     ck("Ob. at 1366 px the six outboard links sit on one row", len({l["top"] for l in L}) == 1, [l["top"] for l in L])
     ob_con = [_ob_con(l["color"], l["bg"]) for l in L] + [_ob_con(l["smColor"], l["bg"]) for l in L]
     ck(f"Ob. outboard names and descriptions are readable on their plates (contrast {min(ob_con):.1f}:1 or more)", min(ob_con) >= 4.5, ob_con)
-    op.hover(".racklinks .devlink >> nth=1"); op.wait_for_timeout(250)
+    op.hover(".racklinks .devlink >> nth=1")
+    # Wait for the hover to land and its 120 ms transition to finish rather than a fixed 250 ms: on a
+    # busy machine the hover style arrived late or mid-transition (26 Oct: rgb(252, 177, 71) at 250 ms).
+    try: op.wait_for_function("() => { const a = document.querySelectorAll('.racklinks .devlink')[1]; return getComputedStyle(a).borderTopColor === 'rgb(255, 179, 71)' && getComputedStyle(a, '::before').boxShadow.indexOf('255, 179, 71, 0.7)') >= 0; }", timeout=3000)
+    except Exception: pass
     hov = op.evaluate("() => { const a = document.querySelectorAll('.racklinks .devlink')[1]; return [getComputedStyle(a, '::before').boxShadow, getComputedStyle(a).borderTopColor, getComputedStyle(a, '::after').transform]; }")
-    op.mouse.move(5, 995); op.evaluate("document.querySelectorAll('.racklinks .devlink')[2].focus()"); op.keyboard.press("Tab"); op.wait_for_timeout(250)
+    op.mouse.move(5, 995); op.evaluate("document.querySelectorAll('.racklinks .devlink')[2].focus()"); op.keyboard.press("Tab")
+    try: op.wait_for_function("() => getComputedStyle(document.activeElement, '::before').boxShadow.indexOf('255, 179, 71, 0.7)') >= 0", timeout=3000)
+    except Exception: pass
     foc = op.evaluate("() => { const a = document.activeElement; return [a.getAttribute('href'), a.matches(':focus-visible'), getComputedStyle(a, '::before').boxShadow]; }")
     ck("Ob. hover and keyboard focus light the socket's ring amber and nudge the arrow",
        "255, 179, 71" in hov[0] and hov[1] == "rgb(255, 179, 71)" and hov[2] != "none" and foc[0] == "/synth/hand-orchestra/" and foc[1] and "255, 179, 71" in foc[2], (hov, foc))
@@ -6366,6 +6386,18 @@ with sync_playwright() as pw:
     spk, bpk = float(np.max(np.abs(safeL[int(0.2 * SR):]))), float(np.max(np.abs(bareL[int(0.2 * SR):])))
     ck("Desk. the safety limiter holds a loud note near a low ceiling",
        bpk > 0.2 and spk < bpk * 0.85 and spk < 0.2, (spk, bpk))
+    # Review 26 Oct: the limiter smoothed its gain per sample (2 ms attack, no hold), so every waveform
+    # peak rode over the ceiling: the safety limit let a delay and a chord out at +1.4 dBFS, and the
+    # compressor's limit (ceiling -1 dB, makeup 12 dB) at +1.8 dBFS. A ceiling is a ceiling.
+    c18 = 10 ** (-18 / 20)
+    spk_all = float(max(np.max(np.abs(safeL)), 0))
+    chord = [e for n_ in (48, 55, 60, 64, 67, 72) for e in note(n_, 0.05, 1.0, v=1)]
+    dlyL, dlyR = render(patch(), chord, 2.5, rack=False, master={"delay": {"on": True, "feedback": 0.95, "mix": 1}, "comp": {"on": False, "safety": True}})
+    mkL, mkR = render(patch(), chord, 2.0, rack=False, master={"comp": {"on": True, "makeup": 12, "limit": True, "ceiling": -1}})
+    c1 = 10 ** (-1 / 20)
+    dpk = float(max(np.max(np.abs(dlyL)), np.max(np.abs(dlyR)))); mpk = float(max(np.max(np.abs(mkL)), np.max(np.abs(mkR))))
+    ck(f"Desk. no sample passes the limiter's ceiling (safety at -18 dB: {db(spk_all):.2f} dBFS; safety at -1 dB, delay feedback 95%: {db(dpk):.2f}; limit at -1 dB, makeup 12 dB: {db(mpk):.2f})",
+       spk_all <= c18 * 1.0001 and 0.5 < dpk <= c1 * 1.0001 and 0.5 < mpk <= c1 * 1.0001, (spk_all, dpk, mpk))
     pg.evaluate("__synth.setMaster({comp:{safety:false, on:false}})")
     wide = b.new_page(viewport={"width": 1920, "height": 1080})
     wide.add_init_script("try { localStorage.removeItem('dxedge_ui_size'); localStorage.removeItem('dxedge_master_vol'); } catch (e) {}")

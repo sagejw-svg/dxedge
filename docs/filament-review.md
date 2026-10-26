@@ -17,6 +17,11 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1026-3 | confusing | d | Two reverbs and two delays: the strip sends feed the Mix desk's own room and an unsynced delay, not the master bus effects | measured |
+| R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
+| R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does) | measured |
+| R1026-6 | confusing | d | Clearing the tempo box and pressing Enter sets 40 BPM instead of keeping the tempo | measured |
+| R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
 | R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation and no undo | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
@@ -25,7 +30,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
 | R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 24 Oct | measured (Gleam inferred) |
-| R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 23 Oct | measured |
+| R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 26 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
 | R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 25 Oct | measured |
@@ -37,15 +42,15 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-8 | confusing | h | Desktop rack: 409 tab stops (24 Oct) and no skip link; the library is near the end | measured |
 | R1020-9 | confusing | h | 23 control names repeat across sections ("level" x4, "cutoff" x3, "oct" x2) with no section in the name | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
-| R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200% | measured |
+| R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200%; still open 26 Oct | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 23 Oct | measured |
-| R1017-9 | confusing | d | No output protection with the compressor off: delay plus reverb can hard-clip at 0 dBFS | measured |
-| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px) | measured |
-| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4 | measured, impact inferred |
+| R1017-9 | confusing | d | No output protection unless limit is switched on: delay plus reverb can hard-clip at 0 dBFS; still open 26 Oct | measured |
+| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 26 Oct | measured |
+| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 26 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -552,3 +557,110 @@ Still open, re-measured: R1022-3 (Phantastron strip peaks 0.013 to 0.094 against
 devices), R1022-5 (deleting a Filament user patch lands on Plate Bass, a Cathode one on Grid Bias Bass,
 while the devices open on Wide Novachord Strings and Plate Screamer).
 
+
+## 2026-10-26 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `0612588` (the outboard
+links finish and the low pass gate had landed overnight), sw.js `dxedge-v145`. Chromium headless at
+1366 x 900 and 375 x 812 (touch, 2x). No page or console errors on the live site in any run. The
+Chromium path in the task prompt (`chromium-1194`) is still gone; the scripts used `/opt/google/chrome`.
+Focus tonight: the master bus at its extremes (offline renders of a six-note chord at velocity 1),
+the Mix desk sends, and the deck with a pedal held and a rail switch mid-song.
+
+### What worked (measured)
+
+- MIDI: a note on at velocity 0 is a note off; notes on channel 4 play and release; CC 123 clears a
+  three-note chord (0 voices, nothing held); a note retriggered under the pedal holds once and lets go
+  when the pedal goes up.
+- Computer keys: X twelve times stops at C7 (A plays 96, the quote key 113); Z twelve times stops at
+  octave 0 (A plays 12); C and V stop at velocity 13 and 127; a key held through an octave change lets go.
+  Typing A in a number box plays nothing.
+- Deck: a three-track .mid built in the test (Melody ch 1, Bass ch 2, Drums ch 10) imports with
+  Filament, Cathode, off; plays and loops; switching the rail to Thyratron and then Cathode mid-song
+  keeps both parts sounding (strip meters 0.07 to 0.42 throughout); Stop leaves 0 voices and no lit
+  keys. Render WAV: RIFF, 48 kHz 16-bit stereo, 5.94 s (3.94 s plus the tail), peak 0.78, no NaN, no
+  clipped samples.
+- Mixer, offline: pan, level (0.5 measured -5.5 dB; renders vary by a few tenths), mute, level 0, another strip soloed, and
+  solo plus mute on one strip all behave; level 0, mute and solo-elsewhere are exact silence.
+- Master bus, offline: ping-pong with offset, delay at 40 BPM 1/1, and the compressor at attack 0 and
+  release 0 give no NaN. Tempo box: 1e3 and 999999 clamp to 240, -5 to 40.
+- Phone 375: deck open with a file listed, page width 375, no deck control under 44 px.
+- Note for test writers: Filament's "alt" voice pan starts every offline render on the left, so a
+  single note on a stereo patch reads 5 to 12 dB left-heavy; live it alternates per note. Not a defect.
+
+### Findings
+
+**R1026-1. The limiter lets peaks over its ceiling.** Area d. Broken. Measured. Fixed tonight.
+- Steps: master strip, switch limit on (the safety limiter, ceiling -1 dB). Delay on, feedback 95%,
+  mix 100%. Play a six-note chord hard. Or: compressor on with limit on, makeup 12 dB.
+- Expected: nothing above the ceiling (0.89, -1 dBFS).
+- Actual (offline, live engine): safety limit with the delay peaked 1.18 to 1.41 (+1.4 to +3 dBFS);
+  safety limit with reverb at mix 1 peaked 1.71; compressor limit with makeup 12 dB peaked 1.23 to 2.0;
+  makeup 24 dB, 2.45. The existing check passed because it only asked for "near" the ceiling.
+- Cause: `master.worklet.js` smoothed the limiter's gain per sample with a 2 ms attack and no hold, so
+  the gain rose again between waveform peaks and each peak rode over.
+- Fix: a peak envelope that jumps to a new peak at once and falls back over about 80 ms; the gain is
+  the ceiling over the envelope. Check: "Desk. no sample passes the limiter's ceiling" (before: 0.258
+  at a -18 dB ceiling of 0.126, 1.38 and 2.02 at -1 dB; after: exactly the ceiling in all three).
+
+**R1026-2. Stop with the pedal down leaves the pedal down in the take.** Area e. Broken. Measured.
+Fixed tonight.
+- Steps: arm the deck, press the pedal (CC 64 or space), play and release a note, press Stop with
+  the pedal still down, export.
+- Expected: the take ends with the pedal up, as it ends with every held note up.
+- Actual: the take held `sus on` at 0 and no `sus off`; the exported .mid has CC 64 = 127 and no 0,
+  so in another program the pedal stays down for whatever follows. (The deck's own player sends a
+  pedal-up at the end, so it was not heard here.)
+- Fix: `stopRec()` adds a pedal-up at the end for each device whose last pedal event is down. Check:
+  "M. Stop with the pedal down ends the take with a pedal-up, and the exported .mid lets go of CC 64".
+
+**R1026-3. Two reverbs and two delays.** Area d. Confusing. Measured.
+- The Mix desk strips have "reverb" and "delay" sends. They feed the desk's own shared room and a
+  feedback delay set in seconds (0.05 to 1.5 s, not tempo synced), not the master strip's reverb and
+  synced delay. With the master delay off, a strip's delay send at 1 still echoes (tail RMS 0.10
+  against 0.03 dry). A user who turns the master delay on and raises a send gets the other delay.
+- Options for James: route the sends into the master effects, or rename the desk returns ("desk room",
+  "desk echo") so the two are told apart.
+
+**R1026-4. Master reverb at full mix is much louder than dry.** Area d. Confusing. Measured.
+- Six-note chord: dry peak 0.57; reverb on at the default size, mix 1: 1.77 (+9.8 dB); size 1, damp 0,
+  mix 1: 3.13 in the first second, decaying (not unstable). At the default mix 0.28: 0.72. With limit
+  off this hard-clips at the output (R1017-9). The wet gain is not matched to the dry.
+
+**R1026-5. Space is always the pedal, even on a focused button.** Area c, h. Confusing. Measured.
+- Tab to hold, the deck's MIDI button or any chip and press Space: nothing happens (the pedal goes
+  down and up). Enter works. Space is the standard key for a button, so a keyboard user will try it
+  first. Keeping Space as the pedal after a mouse click on a button is also why it is intercepted,
+  so this is a design call (for example: Space presses a focused button only after Tab navigation).
+
+**R1026-6. An empty tempo box means 40 BPM.** Area d. Confusing. Measured.
+- Select the tempo, delete it, press Enter (or click away): the rack goes to 40 BPM. Keeping the old
+  tempo would be safer. Also, 120.7 shows as 121 while the clock runs at 120.7.
+
+**R1026-7. A first device switch can block the page as long as the deck's lookahead.** Area e.
+Confusing. Block measured, impact inferred.
+- `setDevice` took 151 ms the first time on Trochotron and 125 ms on Lattice (others 0 to 86 ms). The
+  deck schedules 150 ms ahead, so a first switch to those during playback could make notes late. Not
+  heard or measured as late notes tonight; a switch to Thyratron and Cathode mid-song played cleanly.
+
+### Still open from earlier runs (re-checked tonight)
+
+- R1017-3: `deck.renderArgs()` still has no `mixer` key (patches, device, master, events, seconds,
+  capped, sampleRate).
+- R1017-5: setting the rack tempo to 90 leaves the master at 120 BPM and its 1/8 delay at 0.25 s.
+- R1017-9: limit is still off by default; R1026-4 shows how far over 0 dBFS the bus can go without it.
+- R1017-10 and R1017-11: phone strips 22 x 117 px; readout C3 with the first visible key B3 (59).
+
+### Suite note
+
+A baseline run of the suite on origin/main, started while the review's own browser probes were
+running, failed six timing checks and then stopped on a click timeout. Two quiet runs of tonight's tree
+then failed "Ob. hover and keyboard focus light the socket's ring amber" (new 26 Oct) both times, and
+one also failed the Tv. Cathode flare timing check. The Ob. failure reproduced on its own (3 of 3) and
+is the check, not the page: it read the style a fixed 250 ms after the hover, and got the link
+mid-transition (rgb(252, 177, 71)) or before the hover style landed. The check now waits up to 3 s
+for the hover and focus styles, then asserts exactly what it did before (4 of 4 on its own).
+
+### Not covered tonight
+Areas a, b, f, g, h. Suggested next: a on the low pass gate and Hollow Pluck (new 26 Oct); f with the
+new limiter (does a project carry `comp.safety`?); h on the outboard tray (new 26 Oct).
