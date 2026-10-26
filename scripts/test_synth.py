@@ -129,6 +129,30 @@ def _register_check():
     ck("licensing: every CDN package a /synth page loads is in the register with its version and folder", not miss_c, miss_c)
 _register_check()
 
+# Licensing rule 6: no other company's product names or trademarks in the UI. Scan every quoted
+# string on a non-comment line of the /synth rack's own files (vendored pages excluded) for a list
+# of names. "Vactrol" (a registered trademark for a lamp and photoresistor in one package) reached
+# the LP gate's help text on 26 Oct. 'Wide Novachord Strings' is a factory patch James has not
+# ruled on yet (Open items, 15 Oct), so it is allowed here until he does.
+def _trademark_check():
+    import re as _re
+    names = r"vactrol|moog|minimoog|korg|ms-20|roland|tb-303|tr-808|tr-909|juno-\d+|jupiter-8|oberheim|prophet-5|buchla|mutable instruments|plaits|reason studios|propellerhead|rack extension|combinator"
+    allow = {"Wide Novachord Strings"}
+    pat = _re.compile(r"(['\"`])((?:(?!\1).)*?\b(?:" + names + r")\b(?:(?!\1).)*?)\1", _re.I)
+    hits = []
+    d = os.path.join(ROOT, "synth")
+    for f in sorted(os.listdir(d)):
+        if not f.endswith((".js", ".html")): continue
+        with open(os.path.join(d, f), encoding="utf-8", errors="ignore") as fh:
+            for i, line in enumerate(fh, 1):
+                t = line.strip()
+                if t.startswith(("//", "*", "/*", "<!--")): continue
+                code = _re.sub(r"\s//\s.*$", "", line)
+                for m in pat.finditer(code):
+                    if m.group(2) not in allow: hits.append(f"{f}:{i}: {m.group(2)[:80]}")
+    ck("licensing: no other company's product names or trademarks in a /synth UI string", not hits, hits[:10])
+_trademark_check()
+
 from playwright.sync_api import sync_playwright
 _CANDIDATES = [
     os.environ.get("SYNTH_CHROMIUM", ""),
@@ -1923,7 +1947,7 @@ with sync_playwright() as pw:
     ck("model chip switches to the low pass gate, which shows its gate row and lag knob and hides the morph knob, the loop tube row and the high-pass knob",
        pg.evaluate("__synth.patch().filt.model") == "lpg" and pg.is_visible("#gateChips") and pg.is_visible('#kFilt [data-path="filt.lag"]')
        and not pg.is_visible('#kFilt [data-path="filt.morph"]') and not pg.is_visible("#loopChips") and not pg.is_visible('#kFilt [data-path="filt.hp"]'))
-    ck("the filter note names the low pass gate, the vactrol and lag", all(w in pg.inner_text("#filtNote") for w in ("Low pass gate", "vactrol", "Lag")), pg.inner_text("#filtNote"))
+    ck("the filter note names the low pass gate, the light cell and lag, and no trademark", all(w in pg.inner_text("#filtNote") for w in ("Low pass gate", "light cell", "Lag")) and "vactrol" not in pg.inner_text("#filtNote").lower(), pg.inner_text("#filtNote"))
     gch = pg.evaluate("""() => [...document.querySelectorAll('#gateChips .chip')].map(b => b.dataset.v + ':' + b.textContent + ':' + b.getAttribute('aria-pressed'))""")
     ck(f"the gate row offers filter + VCA (lit), filter only and VCA only ({gch})", gch == ["both:filter + VCA:true", "lp:filter only:false", "vca:VCA only:false"], gch)
     pg.click('#gateChips .chip[data-v="vca"]'); pg.wait_for_timeout(60)

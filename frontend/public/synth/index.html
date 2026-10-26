@@ -2428,7 +2428,7 @@ K('kFilt', 'filt.sag', 'sag', { min: 0, max: 10, step: 0.1, title: 'Supply sag i
 K('kFilt', 'filt.offset', 'stereo off', { min: -1, max: 1, step: 0.01, fmt: v => v === 0 ? '0' : (v > 0 ? '+' : '') + v.toFixed(2) + 'oct', title: 'Stereo offset: left and right cutoffs move apart by up to an octave each way' });
 K('kFilt', 'filt.hp', 'high-pass', { map: LOG(20, 4000), fmt: v => v <= 20.5 ? 'off' : fmtHz(v), title: 'Sallen-Key 12 only: a 2-pole high-pass in front of the low-pass, with half its resonance. All the way down is off.' });
 K('kFilt', 'filt.morph', 'morph', { min: 0, max: 3, step: 0.01, fmt: fmtMorph, title: 'SVF 12 only: the output morphs from low-pass (0) through band-pass (1) and high-pass (2) to notch (3)' });
-K('kFilt', 'filt.lag', 'lag', { map: LOG(0.02, 3), fmt: fmtS, title: 'Low pass gate only: how slowly the vactrol lets go. It lights in a few milliseconds and fades more slowly the darker it gets.' });
+K('kFilt', 'filt.lag', 'lag', { map: LOG(0.02, 3), fmt: fmtS, title: 'Low pass gate only: how slowly the light cell lets go. It lights in a few milliseconds and fades more slowly the darker it gets.' });
 K('kFilt', 'filt.bias', 'loop bias', { min: -5, max: 5, step: 0.1, fmt: v => v < 0 ? 'cold ' + (-v).toFixed(1) : v > 0 ? 'hot ' + v.toFixed(1) : '0', title: 'V2 bias: hot adds even harmonics to the resonance' });
 const T = LOG(0.001, 10), TR = LOG(0.003, 12);
 K('kEnvA', 'envA.a', 'attack', { map: T, fmt: fmtS }); K('kEnvA', 'envA.d', 'decay', { map: T, fmt: fmtS });
@@ -2586,7 +2586,7 @@ function afterF() {
     : cur.filt.model === 'svf12'
     ? 'SVF 12: a 2-pole state variable filter. Morph sweeps its output from low-pass through band-pass and high-pass to notch. It sings from about 9 on resonance (except at notch, which cancels the peak); drive makes it slew.'
     : lpg
-    ? 'Low pass gate: a vactrol follows the amp envelope, lighting in a few milliseconds and letting go slowly, and its light sets the cutoff and the level together, so notes darken as they fade. Lag sets how slowly it lets go; gate picks what it drives. Resonance stays gentle: it never sings.'
+    ? 'Low pass gate: a light cell (a lamp and a photoresistor) follows the amp envelope, lighting in a few milliseconds and letting go slowly, and its light sets the cutoff and the level together, so notes darken as they fade. Lag sets how slowly it lets go; gate picks what it drives. Resonance stays gentle: it never sings.'
     : cur.filt.model === 'poly24'
     ? 'Poly 24: four OTA stages in a cascade. Smooth and round; it keeps more of its bass than Ladder 24 as resonance rises and sings from about 9 on resonance; drive makes the stages slew. A wide stereo offset can thin out in mono: hold mono check.'
     : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
