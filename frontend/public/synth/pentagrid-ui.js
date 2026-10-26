@@ -54,8 +54,14 @@ export function createPentagridHost() {
   const meter = { voices: 0, notes: [], cpu: 0, level: 0, playing: false, tune: PENTA_DEFAULT.tune };
   let onMeter = null;
   let patch = normalizePentagrid(PENTA_DEFAULT);
-  function send(m) { if (node) node.port.postMessage(m); else pending.push(m); }
+  // the last 32 messages sent (time, type, on, queued before the node existed), for the tests
+  const sent = [];
+  function send(m) {
+    sent.push([Math.round(performance.now()), m.t, m.on, !node]); if (sent.length > 32) sent.shift();
+    if (node) node.port.postMessage(m); else pending.push(m);
+  }
   return {
+    sent: () => sent.slice(),
     meter: () => meter,
     setMeterListener(fn) { onMeter = fn; },
     node: () => node,

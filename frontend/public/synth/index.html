@@ -4050,6 +4050,7 @@ window.__synth = {
   ready: () => !!E,
   booted: () => booted,          // every hosted device attached and the boot queue drained
   routeWaker: (id, on) => routeWaker(id)(on),   // what Geissler and Gyrotron call (tests)
+  pentaSent: () => ({ sent: pentaHost.sent(), meter: Object.assign({}, pentaHost.meter()), node: !!pentaHost.node(), dev, now: Math.round(performance.now()) }),   // tests
   tubeShow: () => showState(SHOW),
   setTubeShow: mode => setShow(mode),
   device: () => dev,

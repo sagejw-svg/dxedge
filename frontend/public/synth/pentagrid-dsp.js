@@ -445,6 +445,10 @@ export function renderRadio(eng, outL, outR, start) {
     }
 
     if (eng.blank > 0) { L = 0; R = 0; }
+    // The blanker's window counts down inside the band noise above. With the air off (air 0) that
+    // code is skipped, so a window that was open when the air went off never closed and the
+    // receiver stayed silent until reload (notes too). Run it down here instead.
+    if (air <= 0.0001 && eng.blank > 0) eng.blank--;
     const fc = Math.max(1800, Math.min(7000, P.bandwidth * 1.6));
     const gl = 1 - Math.exp(-2 * Math.PI * fc / sr);
     const gh = 1 - Math.exp(-2 * Math.PI * 55 / sr);

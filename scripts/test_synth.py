@@ -2267,7 +2267,7 @@ with sync_playwright() as pw:
         both = rms(gR[a0:a0 + len(seg)]) > 1e-4 if dev != "dekatron" else True
         ck(f"M. {dev}: recorded {wf:.1f} Hz matches live {lf:.1f} Hz (expect {expect}, level x{ratio:.2f})",
            info_g["rate"] == live_sr and freq_ok and level_ok and both,
-           (info_g["rate"], round(wf, 2), round(lf, 2), round(wr, 4), round(lr, 4), round(ratio, 3)))
+           (info_g["rate"], round(wf, 2), round(lf, 2), round(wr, 4), round(lr, 4), round(ratio, 3), pg.evaluate("__synth.pentaSent()") if dev == "pentagrid" else ""))
 
     # A held note on the rail's device must survive the rest of the rack attaching, and a generator
     # (Geissler, Gyrotron) ending its notes on that device must not put it to sleep. Both used to
@@ -2305,7 +2305,7 @@ with sync_playwright() as pw:
     after = pg.evaluate(OUT_RMS)
     pg.evaluate("(n) => __synth.noteOff(n)", 69)
     ck(f"M. a generator's notes ending on Pentagrid do not put it to sleep while it is on the rail (output {before:.3f} -> {after:.3f}, want 0.02 or more after)",
-       before > 0.02 and after > 0.02, (before, after))
+       before > 0.02 and after > 0.02, (before, after, pg.evaluate("__synth.pentaSent()")))
 
     # Mote freeze: stop spawning grains and the delay/reverb tail must still be in the file.
     pg.evaluate("__synth.panic()")
@@ -4552,6 +4552,21 @@ with sync_playwright() as pw:
        and plan[1]["el"] == "-" and abs(plan[1]["t0"] - 0.12) < 1e-9 and abs(plan[1]["t1"] - 0.30) < 1e-9, plan)
     ck("Pg. E is one dit and T is one dah",
        len(eplan) == 1 and abs(eplan[0]["t1"] - 0.06) < 1e-9 and len(tplan) == 1 and abs(tplan[0]["t1"] - 0.18) < 1e-9, (eplan, tplan))
+    # The noise blanker's window used to count down only inside the band-noise code, which air 0 skips:
+    # a window open when the air went off stayed open, and the receiver was silent until reload, notes
+    # too ("M. pentagrid" failing now and then, 26 Oct). Catch a window open, turn the air off, play.
+    bl = pg.evaluate("""async () => { const m = await import('/synth/pentagrid-dsp.js');
+      const eng = m.createRadioEngine(48000, { tune: 8500, air: 1, noise: 0.6, crackle: 1, blanker: 1, play: true, level: 0.9 });
+      const L = new Float32Array(128), R = new Float32Array(128); let f = 0, n = 0;
+      while (!(eng.blank > 0) && n < 48000 * 20 / 128) { m.renderRadio(eng, L, R, f); f += 128; n++; }
+      const caught = eng.blank;
+      m.postRadio(eng, { t: 'patch', p: { tune: 8500, bfo: 700, bandwidth: 400, air: 0, noise: 0, crackle: 0, fade: 0, agc: 0, blanker: 0, text: '', play: true, mode: 'cw', level: 0.9, cond: 1 } });
+      m.postRadio(eng, { t: 'on', n: 69, v: 0.9 });
+      let s = 0, c = 0;
+      for (let k = 0; k < 120; k++) { m.renderRadio(eng, L, R, f); f += 128; if (k > 60) for (const x of L) { s += x * x; c++; } }
+      return { caught, rms: Math.sqrt(s / c), left: eng.blank }; }""")
+    ck(f"Pg. a blanker window open when the air goes off closes, and a note then sounds (window {bl['caught']:.0f} samples, note {bl['rms']:.3f} RMS, want 0.05 or more)",
+       bl["caught"] > 0 and bl["rms"] >= 0.05 and bl["left"] <= 0, bl)
     side = {"device": "pentagrid", "tune": 8500, "air": 0, "noise": 0, "crackle": 0, "fade": 0, "agc": 0, "blanker": 0,
             "text": "A", "wpm": 20, "bfo": 700, "mode": "cw", "play": False, "level": 0.9, "bandwidth": 400, "cond": 1}
     mL, mR = prender(side, [], 0.8)
