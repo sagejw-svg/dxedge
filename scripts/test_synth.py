@@ -3231,6 +3231,73 @@ with sync_playwright() as pw:
     ck("Dk. no page errors (phone strips)", not dperr, dperr)
     dpx.close()
 
+    # ---------------------------------------------------------------- Ob. the outboard links (graphics, 26 Oct)
+    # The devices on their own pages sit in a recessed tray under the rail, each on a warm brushed plate with a cable
+    # socket (never a lamp: the keys do not play them) and an arrow that says the link opens a page.
+    OB_MEAS = """() => {
+      const t = document.querySelector('.racklinks'), tc = getComputedStyle(t), lab = t.querySelector('.label');
+      const links = [...t.querySelectorAll('.devlink')].map(a => { const c = getComputedStyle(a), s = getComputedStyle(a, '::before'), z = getComputedStyle(a, '::after'),
+          sm = a.querySelector('small'), r = a.getBoundingClientRect();
+        return { href: a.getAttribute('href'), title: a.title, top: Math.round(r.top), w: r.width, h: r.height, color: c.color, bg: c.backgroundImage, dur: c.transitionDuration,
+          smColor: sm ? getComputedStyle(sm).color : '', smShown: !!(sm && sm.offsetParent), sock: [s.content, s.width, s.height, s.backgroundImage, s.display, s.boxShadow],
+          mark: [z.content, z.display, z.transform, z.transitionDuration], radius: parseFloat(c.borderTopLeftRadius) }; });
+      const rb = document.querySelector('.rail').getBoundingClientRect(), tb = t.getBoundingClientRect(), cb = document.getElementById('chassis').getBoundingClientRect();
+      return { tray: { bg: tc.backgroundImage, shadow: tc.boxShadow, role: t.getAttribute('role'), label: lab ? lab.textContent : '', labelShown: !!(lab && lab.offsetParent) },
+        links, railBottom: rb.bottom, trayTop: tb.top, trayBottom: tb.bottom, chassisTop: cb.top, sw: document.documentElement.scrollWidth, iw: innerWidth,
+        railLamp: getComputedStyle(document.querySelector('.devbtn i')).width };
+    }"""
+    def _ob_stops(s):
+        # solid colour stops only; the faint brushed stripes (alpha under 0.5) are not the background the text sits on
+        out = []
+        for m in __import__("re").findall(r"rgba?\(([^)]*)\)", s):
+            v = [float(x) for x in m.split(",")]
+            if len(v) < 4 or v[3] >= 0.5: out.append([int(x) for x in v[:3]])
+        return out
+    def _ob_con(fg, bgimg):
+        f = _dk_lum(_dk_rgbs(fg)[0]); bk = max(_dk_lum(c) for c in (_ob_stops(bgimg) or [[255, 255, 255]]))
+        return (max(f, bk) + 0.05) / (min(f, bk) + 0.05)
+    OB_HREFS = ["/synth/fm/", "/synth/acid/", "/synth/hand-sculpt/", "/synth/hand-orchestra/", "/synth/hand-aether/", "/synth/iris/"]
+    octx = b.new_context(viewport={"width": 1366, "height": 1000}); op = octx.new_page(); oerr = []
+    op.on("pageerror", lambda e: oerr.append(str(e)))
+    op.goto(BASE); op.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    ob = op.evaluate(OB_MEAS); L = ob["links"]
+    ck("Ob. six outboard links, same pages as before, each titled as opening its own page",
+       [l["href"] for l in L] == OB_HREFS and all("own page" in l["title"] for l in L), [(l["href"], l["title"]) for l in L])
+    ck("Ob. the outboard tray is recessed and labelled (desktop)",
+       "gradient" in ob["tray"]["bg"] and "inset" in ob["tray"]["shadow"] and ob["tray"]["role"] == "group"
+       and ob["tray"]["label"].strip().lower() == "outboard" and ob["tray"]["labelShown"] and ob["trayTop"] >= ob["railBottom"] and ob["trayBottom"] <= ob["chassisTop"], ob["tray"])
+    ck("Ob. each outboard link has a cable socket and an opens-a-page arrow, and no lamp; rail buttons keep theirs",
+       all(l["sock"][1] == "10px" and l["sock"][2] == "10px" and "radial-gradient" in l["sock"][3] and l["sock"][4] != "none"
+           and "↗" in l["mark"][0] and l["mark"][1] != "none" and "gradient" in l["bg"] for l in L) and ob["railLamp"] == "7px",
+       [(l["sock"], l["mark"]) for l in L][:2])
+    ck("Ob. at 1366 px the six outboard links sit on one row", len({l["top"] for l in L}) == 1, [l["top"] for l in L])
+    ob_con = [_ob_con(l["color"], l["bg"]) for l in L] + [_ob_con(l["smColor"], l["bg"]) for l in L]
+    ck(f"Ob. outboard names and descriptions are readable on their plates (contrast {min(ob_con):.1f}:1 or more)", min(ob_con) >= 4.5, ob_con)
+    op.hover(".racklinks .devlink >> nth=1"); op.wait_for_timeout(250)
+    hov = op.evaluate("() => { const a = document.querySelectorAll('.racklinks .devlink')[1]; return [getComputedStyle(a, '::before').boxShadow, getComputedStyle(a).borderTopColor, getComputedStyle(a, '::after').transform]; }")
+    op.mouse.move(5, 995); op.evaluate("document.querySelectorAll('.racklinks .devlink')[2].focus()"); op.keyboard.press("Tab"); op.wait_for_timeout(250)
+    foc = op.evaluate("() => { const a = document.activeElement; return [a.getAttribute('href'), a.matches(':focus-visible'), getComputedStyle(a, '::before').boxShadow]; }")
+    ck("Ob. hover and keyboard focus light the socket's ring amber and nudge the arrow",
+       "255, 179, 71" in hov[0] and hov[1] == "rgb(255, 179, 71)" and hov[2] != "none" and foc[0] == "/synth/hand-orchestra/" and foc[1] and "255, 179, 71" in foc[2], (hov, foc))
+    op.locator(".racklinks").screenshot(path=os.path.join(SHOTS, "synth_outboard.png"))
+    ck("Ob. no page errors (desktop outboard)", not oerr, oerr)
+    octx.close()
+    orm = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); orp = orm.new_page()
+    orp.goto(BASE); orp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    orp.hover(".racklinks .devlink >> nth=0"); orp.wait_for_timeout(150); obr = orp.evaluate(OB_MEAS)["links"][0]
+    ck("Ob. reduced motion: no transitions on the outboard plates and the arrow stays put on hover",
+       all(float(d.rstrip("s")) == 0 for d in obr["dur"].split(",")) and float(obr["mark"][3].split(",")[0].rstrip("s")) == 0 and obr["mark"][2] == "none", obr)
+    orm.close()
+    opx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); opp = opx.new_page(); operr = []
+    opp.on("pageerror", lambda e: operr.append(str(e)))
+    opp.goto(BASE); opp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    obp = opp.evaluate(OB_MEAS); LP = obp["links"]
+    ck("Ob. on a 375 px phone the outboard links are 44 px targets with socket and arrow, the label and descriptions drop, nothing scrolls sideways",
+       all(l["h"] >= 44 and l["w"] >= 44 and l["sock"][4] != "none" and "↗" in l["mark"][0] and not l["smShown"] for l in LP)
+       and not obp["tray"]["labelShown"] and obp["sw"] <= obp["iw"] == 375 and obp["trayBottom"] <= obp["chassisTop"], obp)
+    ck("Ob. no page errors (phone outboard)", not operr, operr)
+    opx.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

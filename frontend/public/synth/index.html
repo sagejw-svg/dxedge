@@ -144,12 +144,27 @@
   .devbtn i { width: 7px; height: 7px; border-radius: 50%; background: #333; align-self: center; }
   .devbtn[aria-pressed="true"] { color: var(--amber2); border-color: var(--amber); background: rgba(255,179,71,0.07); }
   .devbtn[aria-pressed="true"] i { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
-  .racklinks { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 8px; align-items: center; }
-  .racklinks .devlink { display: inline-flex; align-items: baseline; gap: 6px; color: var(--muted); text-decoration: none;
-    border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; min-height: 36px; font-size: 12px; letter-spacing: 2px; font-weight: 600;
-    background: linear-gradient(180deg, #1a1a1a, #101010); }
-  .racklinks .devlink small { font-size: 9.5px; letter-spacing: 1px; font-weight: 400; color: var(--dim); text-transform: uppercase; }
-  .racklinks .devlink:hover { border-color: var(--amber); color: var(--amber2); text-decoration: none; }
+  /* outboard: the devices that live on their own pages. They sit in a recessed tray under the rail, each on a
+     warm brushed plate with a cable socket where a rail button has its lamp (they never light: the keys do not
+     play them) and an arrow that says the link opens a page. Hover and focus light the socket's ring. */
+  .racklinks { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 10px 8px; padding: 5px 8px; align-items: center; border: 1px solid #050505; border-radius: 6px;
+    background: linear-gradient(180deg, #060606, #0d0c0a); box-shadow: inset 0 2px 5px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.05); }
+  .racklinks .label { margin-right: 2px; padding: 3px 4px 3px 8px; border: 1px solid #2c2c2c; border-radius: 3px; color: #cfcfcf;
+    background: linear-gradient(180deg, #0c0c0c, #151515); text-shadow: 0 -1px 0 #000; box-shadow: inset 0 1px 2px rgba(0,0,0,0.85), 0 1px 0 rgba(255,255,255,0.05); }
+  .racklinks .devlink { display: inline-flex; align-items: baseline; gap: 6px; color: #d9cdb8; text-decoration: none;
+    border: 1px solid #3d3529; border-radius: 3px; padding: 5px 9px 5px 8px; min-height: 36px; font-size: 12px; letter-spacing: 1.5px; font-weight: 600;
+    background: repeating-linear-gradient(90deg, rgba(255,240,215,0.025) 0 1px, transparent 1px 3px), linear-gradient(180deg, #2a251e, #1b1814 60%, #141210);
+    box-shadow: inset 0 1px 0 rgba(255,236,210,0.08), 0 1px 2px rgba(0,0,0,0.8); text-shadow: 0 -1px 0 #000;
+    transition: border-color 120ms, color 120ms, box-shadow 120ms; }
+  .racklinks .devlink::before { content: ''; flex: 0 0 auto; align-self: center; width: 10px; height: 10px; border-radius: 50%;
+    background: radial-gradient(circle, #000 0 30%, #77706a 36%, #3a3632 62%, #1c1a18 100%); box-shadow: inset 0 0 1px #000, 0 1px 0 rgba(255,236,210,0.08);
+    transition: box-shadow 120ms; }
+  .racklinks .devlink::after { content: '\2197' / ''; align-self: center; font-size: 11px; line-height: 1; letter-spacing: 0; color: var(--amber); opacity: 0.8; transition: transform 120ms, opacity 120ms; }
+  .racklinks .devlink small { font-size: 9.5px; letter-spacing: 0.6px; font-weight: 400; color: #ab9f8b; text-transform: uppercase; }
+  .racklinks .devlink:hover, .racklinks .devlink:focus-visible { border-color: var(--amber); color: var(--amber2); text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255,236,210,0.1), 0 0 8px rgba(255,179,71,0.22); }
+  .racklinks .devlink:hover::before, .racklinks .devlink:focus-visible::before { box-shadow: inset 0 0 1px #000, 0 0 0 1px rgba(255,179,71,0.7), 0 0 7px rgba(255,179,71,0.55); }
+  .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { opacity: 1; transform: translate(1px, -1px); }
   body[data-dev="cathode"] [data-dev="filament"], body[data-dev="filament"] [data-dev="cathode"] { display: none !important; }
   body[data-dev="dekatron"] [data-dev="filament"], body[data-dev="dekatron"] [data-dev="cathode"],
   body[data-dev="filament"] [data-dev="dekatron"], body[data-dev="cathode"] [data-dev="dekatron"] { display: none !important; }
@@ -819,7 +834,7 @@
     .dnum { flex-basis: 44px; width: 44px; }
     .dpad { min-height: 44px; min-width: 44px; }
     .rail { padding: 4px 4px 0; gap: 4px; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; min-width: 0; } .rail .label { display: none; } .devbtn small { display: none; } .devbtn { flex: 0 0 auto; justify-content: center; min-width: 44px; min-height: 44px; }
-    .racklinks { padding: 6px 6px 0; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; min-width: 0; } .racklinks .devlink { flex: 0 0 auto; justify-content: center; min-width: 44px; min-height: 44px; letter-spacing: 0.4px; font-size: 10px; padding: 6px 8px; white-space: nowrap; } .racklinks .devlink small { display: none; }
+    .racklinks { margin: 5px 4px 0; padding: 3px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; min-width: 0; } .racklinks .label { display: none; } .racklinks .devlink { flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; letter-spacing: 0.4px; font-size: 10px; padding: 6px 8px; white-space: nowrap; } .racklinks .devlink small { display: none; }
     .jackfield { gap: 8px; } .jgroup { flex: 1 1 100%; }
     .jack { width: calc((100% - 16px) / 5); min-width: 52px; min-height: 66px; font-size: 8px; }
     body[data-tab="stereo"] #mStereo { order: -2; } body[data-tab="stereo"] #mEns { order: -1; }
@@ -846,7 +861,8 @@
     #wavSecs { min-height: 44px; min-width: 44px; }
     #mMaster select.btn { min-width: 44px; max-width: 100%; }
   }
-  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before { animation: none !important; }
+    .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>
 </head>
 <body data-tab="play" data-dev="filament">
@@ -924,13 +940,14 @@
       <button class="devbtn" id="devR" data-d="rhumbatron" aria-pressed="false"><i></i>RHUMBATRON<small>physical model</small></button>
       <button class="devbtn" id="devS" data-d="resnatron" aria-pressed="false"><i></i>RESNATRON<small>patch bay</small></button>
     </div>
-    <div class="racklinks" aria-label="More devices, each on its own page">
-      <a class="devlink" href="/synth/fm/">HEXODE<small>six-operator FM</small></a>
-      <a class="devlink" href="/synth/acid/">ANODE<small>acid bass</small></a>
-      <a class="devlink" href="/synth/hand-sculpt/">SCULPT<small>hand orbs</small></a>
-      <a class="devlink" href="/synth/hand-orchestra/">HAND ORCHESTRA<small>air keyboard</small></a>
-      <a class="devlink" href="/synth/hand-aether/">AETHER<small>hand theremin</small></a>
-      <a class="devlink" href="/synth/iris/">IRIS<small>camera score</small></a>
+    <div class="racklinks" role="group" aria-label="More devices, each on its own page">
+      <span class="label" aria-hidden="true">outboard</span>
+      <a class="devlink" href="/synth/fm/" title="Hexode opens on its own page">HEXODE<small>six-operator FM</small></a>
+      <a class="devlink" href="/synth/acid/" title="Anode opens on its own page">ANODE<small>acid bass</small></a>
+      <a class="devlink" href="/synth/hand-sculpt/" title="Sculpt opens on its own page">SCULPT<small>hand orbs</small></a>
+      <a class="devlink" href="/synth/hand-orchestra/" title="Hand Orchestra opens on its own page">HAND ORCHESTRA<small>air keyboard</small></a>
+      <a class="devlink" href="/synth/hand-aether/" title="Aether opens on its own page">AETHER<small>hand theremin</small></a>
+      <a class="devlink" href="/synth/iris/" title="Iris opens on its own page">IRIS<small>camera score</small></a>
     </div>
     <div class="chassis" id="chassis" aria-label="Tube chassis">
       <div class="tgroup">
