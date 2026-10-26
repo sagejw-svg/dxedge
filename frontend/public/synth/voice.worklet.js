@@ -427,6 +427,14 @@ const NP = 33;
 // ---------- envelopes ----------
 const E_IDLE = 0, E_ATT = 1, E_DEC = 2, E_SUS = 3, E_REL = 4;
 function coef(sec, sr) { return 1 - Math.exp(-1 / Math.max(1, sec * sr)); }
+// An envelope heading for 0 (a sustain of 0, or the filter envelope's release, which has no end
+// of its own) shrinks by a fixed ratio every sample and, after a second or two, sinks below the
+// smallest normal double (2.2e-308). From there every operation on it, and on the voice's output
+// times it, runs on subnormals, which neither V8 nor Chrome's audio thread flushes to zero:
+// measured 26 Oct, 19x slower per operation in a headless Chrome AudioWorklet. So below
+// ENV_FLOOR it is set to exactly 0. 1e-150 sits far below anything audible and below float32's
+// smallest value (1.4e-45), so nothing a voice adds at that level reaches the output buffer.
+const ENV_FLOOR = 1e-150;
 
 // ---------- the processor ----------
 class Filament extends AudioWorkletProcessor {
@@ -733,6 +741,9 @@ class Filament extends AudioWorkletProcessor {
       yl = l - xl + a * yl; xl = l; yr = r - xr + a * yr; xr = r;
       L[i] = yl; if (R !== L) R[i] = yr;
     }
+    // held voices that make no sound (a sustain of 0) leave the blocker decaying toward 0 for good
+    if (yl < ENV_FLOOR && yl > -ENV_FLOOR) yl = 0;
+    if (yr < ENV_FLOOR && yr > -ENV_FLOOR) yr = 0;
     this.dcxL = xl; this.dcL = yl; this.dcxR = xr; this.dcR = yr;
     let any = false; for (let i = 0; i < NV; i++) if (this.voices[i].on) { any = true; break; }
     this.idleN = any ? 0 : this.idleN + n;
@@ -1023,12 +1034,12 @@ class Filament extends AudioWorkletProcessor {
         // ---- envelopes (output rate) ----
         if (as === E_ATT) { ae += (1.3 - ae) * aA; if (ae >= 1) { ae = 1; as = E_DEC; } }
         else if (as === E_DEC) { ae += (aS - ae) * aD; if (Math.abs(ae - aS) < 1e-4) as = E_SUS; }
-        else if (as === E_SUS) { ae += (aS - ae) * 0.01; }
+        else if (as === E_SUS) { ae += (aS - ae) * 0.01; if (ae < ENV_FLOOR) ae = 0; }
         else if (as === E_REL) { ae += (0 - ae) * aR; if (ae < 1e-5) { ae = 0; as = E_IDLE; } }
         if (fst === E_ATT) { fe += (1.3 - fe) * fA; if (fe >= 1) { fe = 1; fst = E_DEC; } }
         else if (fst === E_DEC) { fe += (fS - fe) * fD; if (Math.abs(fe - fS) < 1e-4) fst = E_SUS; }
-        else if (fst === E_SUS) { fe += (fS - fe) * 0.01; }
-        else if (fst === E_REL) { fe += (0 - fe) * fR; }
+        else if (fst === E_SUS) { fe += (fS - fe) * 0.01; if (fe < ENV_FLOOR) fe = 0; }
+        else if (fst === E_REL) { fe += (0 - fe) * fR; if (fe < ENV_FLOOR) fe = 0; }
         if (v.killing) { fade -= 1 / (0.002 * sr); if (fade <= 0) { fade = 0; } }
         const duck = duck0 + (this.duck - duck0) * (fr / frames);
         let lev = ae * (1 - velA * (1 - v.vel));

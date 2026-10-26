@@ -8,9 +8,13 @@
 //                                                         and whether the output is bit-identical
 //   node scripts/bench_filament_voice.mjs --profile sk12 [--top 12]
 //                                                         self time per function for one case, this tree
+//   node scripts/bench_filament_voice.mjs --subnormals [--cases ...]
+//                                                         every case on this tree: which state fields hold a
+//                                                         subnormal at the end of a block (exit 3 if any)
+//   --seconds N on any of these renders N seconds instead of 6 (20 or more for steady-state A/B work)
 //
 // What it measures: the Filament worklet alone (no rack, no browser), 6 s at 48 kHz in 128-frame
-// blocks, process CPU time (user + system) per render, best of the rounds. Each render runs in a
+// blocks (--seconds to change it), process CPU time (user + system) per render, best of the rounds. Each render runs in a
 // fresh child process so one version's JIT state never helps the other. The cases are test 9's
 // (8 voices on each filter model, stereo offset, 16 voices), Sallen-Key 12 with its high-pass,
 // Poly 24 screaming and driven, SVF 12 morphed, screaming and swept, and the low pass gate in two of its modes at 8 voices, plus wider coverage for the
@@ -54,6 +58,10 @@ const CASES = {
   sync: big('ladder24', p => { p.osc2.sync = true; p.osc2.semi = 7; p.filt.res = 0.95; p.osc1.wave = 'tri'; }),
   fm: big('valve12', p => { p.osc2 = { wave: 'sine', level: 0.5, fm: 0.5, ring: 0.3 }; p.filt.res = 0.97; p.voice.glide = 0.1; }),
   still: big('valve12', p => { p.drift = 0; p.filt.res = 0.8; }),
+  // both envelopes at sustain 0 on 4 voices: notes released, struck again and stolen after the
+  // envelopes have run down toward 0 (the ENV_FLOOR path; see voice.worklet.js)
+  pluck: big('sk12', p => { p.envA = { a: 0.001, d: 0.3, s: 0, r: 0.5, vel: 0.5 }; p.envF = { a: 0.001, d: 0.2, s: 0, r: 0.3 };
+    p.filt.env = 0.6; p.voice.count = 4; }),
   change: big('valve12', p => { p.drift = 0; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
@@ -96,6 +104,8 @@ async function one(dir, name) {
   vm.runInContext(`(function (${G.join(', ')}) {\n${src}\n})(${G.map(g => 'globalThis.' + g).join(', ')});`, ctx,
     { filename: 'voice.worklet.js', lineOffset: -1 });
   const events = EV.map(e => Object.assign({}, e));
+  if (name === 'pluck') events.push({ at: 48000 * 2.5, t: 'off', n: 52 }, { at: 48000 * 2.5, t: 'off', n: 59 },
+    { at: 48000 * 4, t: 'on', n: 62, v: 0.9 }, { at: 48000 * 4.5, t: 'on', n: 74, v: 0.5 }, { at: 48000 * 5, t: 'on', n: 76, v: 0.7 });
   if (name === 'lfo' || name === 'fm') events.push({ at: 48000 * 3, t: 'off', n: 60 }, { at: 48000 * 3.5, t: 'on', n: 62, v: 0.6 });
   if (name === 'change') {
     const c = o => JSON.parse(JSON.stringify(o));
@@ -119,21 +129,56 @@ async function one(dir, name) {
     }
     pr = new procs.cathode({ processorOptions: { tubes: tubeData(), patch: cp(C_CASES[name]), events: cev, active: true } });
   } else pr = new procs.filament({ processorOptions: { tubes: tubeData(), patch: normalize(CASES[name]), events, active: true } });
-  const secs = 6, N = secs * 48000, B = 128, CF = vm.runInContext('Float32Array', ctx);
+  const secs = +(arg('--seconds', 6)), N = secs * 48000, B = 128, CF = vm.runInContext('Float32Array', ctx);
   const outL = new Float32Array(N), outR = new Float32Array(N), L = new CF(B), R = new CF(B);
   const c0 = process.cpuUsage();
-  for (let f = 0; f < N; f += B) { ctx.currentFrame = f; pr.process([], [[L, R]]); outL.set(L, f); outR.set(R, f); }
+  if (scanSub) {
+    for (let f = 0; f < N; f += B) { ctx.currentFrame = f; pr.process([], [[L, R]]); outL.set(L, f); outR.set(R, f); subScan(pr, 'proc', new Set()); }
+  } else for (let f = 0; f < N; f += B) { ctx.currentFrame = f; pr.process([], [[L, R]]); outL.set(L, f); outR.set(R, f); }
   const cu = process.cpuUsage(c0);
+  // -0 and +0 are the same sample: count them as one, so a state stopped at 0 (where it used to sink
+  // through the subnormals as a tiny negative number and come out as -0) is not "output differs"
+  for (let i = 0; i < N; i++) { if (outL[i] === 0) outL[i] = 0; if (outR[i] === 0) outR[i] = 0; }
   const hash = crypto.createHash('sha256').update(Buffer.from(outL.buffer)).update(Buffer.from(outR.buffer)).digest('hex').slice(0, 16);
-  return { cpu: (cu.user + cu.system) / 1e4 / secs, hash };
+  return { cpu: (cu.user + cu.system) / 1e4 / secs, hash, sub: scanSub ? Object.fromEntries(SUB) : undefined };
+}
+// --subnormals: after every block, walk the processor's state (voices, filters, oscillators,
+// decimators) and count, per field, the blocks that end with a value between 0 and the smallest
+// normal double. Arithmetic on subnormals is about 19x slower in Chrome's audio thread (measured
+// 26 Oct), and nothing there flushes them, so a state that decays toward 0 should stop at 0.
+const scanSub = process.argv.includes('--scan'), SUB = new Map(), MINN = 2.2250738585072014e-308;
+const isSub = x => typeof x === 'number' && x !== 0 && x < MINN && x > -MINN;
+const bump = k => SUB.set(k, (SUB.get(k) || 0) + 1);
+function subScan(o, pre, seen) {
+  if (!o || typeof o !== 'object' || seen.has(o)) return; seen.add(o);
+  if (ArrayBuffer.isView(o)) { for (let i = 0; i < o.length; i++) if (isSub(o[i])) { bump(pre + '[]'); break; } return; }
+  // the per-block mix buffers are rewritten each block; the patch and event queue are inputs
+  for (const k of Object.keys(o)) {
+    if (k === 'P' || k === 'port' || k === 'events' || k === 'pendingPatch' || k === 'L2' || k === 'R2') continue;
+    const x = o[k], q = Array.isArray(o) ? pre + '[]' : pre + '.' + k;
+    if (isSub(x)) bump(q); else if (x && typeof x === 'object') subScan(x, q, seen);
+  }
 }
 
+const SEC = arg('--seconds', null) ? ['--seconds', arg('--seconds', null)] : [];
 if (process.argv[2] === '--one') {
   console.log(JSON.stringify(await one(process.argv[3], process.argv[4])));
+} else if (process.argv.includes('--subnormals')) {
+  const want = arg('--cases', null), NAMES = Object.keys(CASES).concat(Object.keys(C_CASES))
+    .filter(n => !want || want.split(',').some(w => n === w || (w === 'cathode' && C_CASES[n]) || (w === 'filament' && CASES[n])));
+  let bad = 0;
+  for (const name of NAMES) {
+    const p = spawnSync(process.execPath, [ME, '--one', path.join(REPO, 'frontend/public/synth'), name, '--scan', ...SEC], { encoding: 'utf8' });
+    if (p.status !== 0) { console.error(p.stderr); process.exit(1); }
+    const sub = JSON.parse(p.stdout).sub, ks = Object.keys(sub).sort((a, b) => sub[b] - sub[a]);
+    if (ks.length) bad++;
+    console.log(name.padEnd(10) + (ks.length ? ks.map(k => `${k} (${sub[k]} blocks)`).join(', ') : 'no subnormals'));
+  }
+  process.exit(bad ? 3 : 0);
 } else if (arg('--profile', null)) {
   // self time per function (name:line), from V8's sampling profiler, for one case on this tree
   const name = arg('--profile', null), tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'filament-prof-'));
-  const p = spawnSync(process.execPath, ['--cpu-prof', '--cpu-prof-dir', tmp, ME, '--one', path.join(REPO, 'frontend/public/synth'), name], { encoding: 'utf8' });
+  const p = spawnSync(process.execPath, ['--cpu-prof', '--cpu-prof-dir', tmp, ME, '--one', path.join(REPO, 'frontend/public/synth'), name, ...SEC], { encoding: 'utf8' });
   if (p.status !== 0) { console.error(p.stderr); process.exit(1); }
   const prof = JSON.parse(fs.readFileSync(path.join(tmp, fs.readdirSync(tmp)[0]), 'utf8'));
   const byId = new Map(prof.nodes.map(n => [n.id, n])), self = new Map();
@@ -158,7 +203,7 @@ if (process.argv[2] === '--one') {
   const want = arg('--cases', null), NAMES = Object.keys(CASES).concat(Object.keys(C_CASES))
     .filter(n => !want || want.split(',').some(w => n === w || (w === 'cathode' && C_CASES[n]) || (w === 'filament' && CASES[n])));
   for (let r = 0; r < rounds; r++) for (const name of NAMES) for (const t of trees) {
-    const p = spawnSync(process.execPath, [ME, '--one', t.dir, name], { encoding: 'utf8' });
+    const p = spawnSync(process.execPath, [ME, '--one', t.dir, name, ...SEC], { encoding: 'utf8' });
     if (p.status !== 0) { console.error(p.stderr); process.exit(1); }
     const x = JSON.parse(p.stdout), k = t.label + '|' + name;
     if (!best[k] || x.cpu < best[k].cpu) best[k] = { cpu: x.cpu, hash: x.hash };

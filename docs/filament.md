@@ -142,7 +142,7 @@ task can read it).
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx`. Links Hexode and Anode |
 | `scripts/test_synth.py` | The suite. Must print ALL PASS before any push |
 | `scripts/test_synth_imported.py` | Smoke test for Hexode and Anode: they load, stay quiet, and make a sound |
-| `scripts/bench_filament_voice.mjs` | Filament voice worklet in Node with a seeded random: CPU per case, with `--ref <git ref>` an A/B that says whether the output is bit-identical, and with `--profile <case>` self time per function. For CPU work; not part of the suite |
+| `scripts/bench_filament_voice.mjs` | Filament voice worklet in Node with a seeded random: CPU per case, with `--ref <git ref>` an A/B that says whether the output is bit-identical, with `--profile <case>` self time per function, and with `--subnormals` the state fields that end a block holding a subnormal number (exit 3 if any). `--seconds N` sets the render length (default 6). For CPU work; not part of the suite |
 | `docs/filament-licensing.md` | Licensing rules, the register of approved and reference-only resources, notes on our own rights |
 
 ## Roadmap
@@ -843,6 +843,40 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 26 Oct (improvement, CPU, Filament voice): envelopes and the output DC blocker no longer sink into subnormal
+  numbers. Found with a line profile of test 9's Valve 12 case in the Node bench: the filter envelope's sustain line
+  alone was 7% of the worklet's samples. Test 9's patch has a filter sustain of 0, so once the decay hands over
+  (at 1e-4) the sustain stage shrinks `fe` by 0.99 a sample, and after about 1.5 s it is below the smallest normal
+  double (2.2e-308) and stays there, stuck at a few times 5e-324. Arithmetic on subnormals is slow, and measured
+  tonight in a headless Chrome AudioWorklet (offline and live) nothing flushes them: a loop on 1e-310 ran 19x slower
+  than the same loop on 1e-200. A new bench mode lists every state field that ends a block subnormal: on origin/main
+  every 8-voice case has `fe` there for 73% of a 6 s render; an amp sustain of 0 (Hollow Pluck, Glass Music Box,
+  Eerie Bells) adds `ae`, the cutoff memo, both decimators and, after about 14 s, the output DC blocker.
+  `voice.worklet.js` now sets the two envelopes to exactly 0 below `ENV_FLOOR` (1e-150) in sustain and the filter
+  envelope's release, and the output DC blocker at the end of a block. 1e-150 is below float32's smallest value, so
+  nothing at that level could reach the output. Output (measured, Node bench, seeded, all 27 cases at 6 s and at
+  40 s): equal sample for sample against origin/main. At 40 s two cases (lpgmodes, pluck) had samples that were -0
+  before and +0 now, the same value; the bench hash now counts -0 and +0 as one. CPU, Node bench, 40 s steady
+  state, one round, old to new: Ladder 24 13.3 to 9.9%, Valve 12 13.3 to 9.7%, SVF 12 11.7 to 9.2%, low pass gate
+  13.1 to 9.0%, 16 voices 24.1 to 18.1%, LFOs 17.9 to 16.3%, low pass gate held at sustain 0 44.5 to 10.1%, plucks
+  at sustain 0 with steals 32.9 to 6.9%; the unchanged Cathode cases moved -15 to +8% (that is the noise). Headless
+  Chrome, rack included, marginal cost (12 s render minus 2 s), median of 4, old to new: Valve 12 26.4 to 18.6%,
+  Ladder 24 26.6 to 18.5%, low pass gate 23.5 to 15.0%, a held 8-note pluck at sustain 0 97.7 to 23.3% (on this
+  2-core box the old code could not keep up with a held chord on those patches). Not changed (inferred): voice
+  stealing picks the quietest voice by `ae`; two held voices both below 1e-150 now compare equal (first slot wins)
+  where before the smaller subnormal won. Both are silent, so which one is cut is inaudible.
+- Test health (measured 26 Oct, not fixed): "Tv. Cathode: a note flares its tubes" failed 1 of 3 full runs tonight
+  (sampled V1 peak 0.296 against 0.3, first frame 90 ms after the note, while `fired.v1` recorded 0.9; the other two
+  runs 0.46 and a pass). It is the wall-clock sampling the 21 Oct fix removed from the Filament flare checks. The same
+  fix fits (assert on `fired` and `firedLag`), but `fired` is shared with the Filament notes played just before, so
+  TV_PEAK should record it at the start and require it to change.
+- Robustness, Cathode (measured 26 Oct, not fixed): with a still input (Filter Kick after it decays) Cathode's first
+  DC blocker `dcy1` sinks into subnormals and the high-pass filter reads it every sample (`hpS`, `dcy1` subnormal
+  in 30% of a 40 s render). Setting it to 0 the same way is not output neutral: the "whisper of noise" seed fires
+  when `hpS[D_S1]` is exactly 0 at the end of a block, and a subnormal input keeps it from ever being 0, so the
+  seed never fires there today; at 0 it fires and the output changes (Filter Kick at 6 s, measured). Whether the
+  seed should fire there is a sound question, so it waits. Other devices' worklets were not scanned
+  (`--subnormals` covers Filament and Cathode only); most snap their envelopes at a threshold already (read).
 - Done 26 Oct (nightly, a broken finding): Pentagrid could go silent until reload. "M. pentagrid: recorded ... matches
   live" and the next Pentagrid check both read silence (output 0.000) in 2 of 5 full suite runs that night, one of them
   on a clean origin/main `37175c4`. A log of what the page sent Pentagrid (new test hook `__synth.pentaSent()`) showed
@@ -1148,6 +1182,7 @@ visuals alone while the Tube show item in 0.3 is open. Measured means a script r
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-26 (improvement, scheduled task, about 5:28 to 6:40 AM PT): CPU, the Filament voice. Main first: suite on origin/main `0612588` ALL PASS (1265 checks), `scripts/test_synth_imported.py` ALL PASS. No review finding marked broken is open, so CPU. A line profile of test 9's Valve 12 case showed the filter envelope's sustain line at 7% of the worklet's samples: at a sustain of 0 the envelope sinks below the smallest normal double after about 1.5 s and stays there, and subnormal arithmetic runs 19x slower in a headless Chrome AudioWorklet (measured; nothing flushes it). Both envelopes and the output DC blocker now stop at exactly 0 below `ENV_FLOOR` (1e-150). Sound unchanged: output equal sample for sample on all 27 bench cases at 6 s and 40 s (two 40 s cases wrote -0 where they now write +0). Chrome, rack included, marginal cost, median of 4: Valve 12 26.4 to 18.6%, Ladder 24 26.6 to 18.5%, low pass gate 23.5 to 15.0%, a held pluck chord at sustain 0 97.7 to 23.3%. Bench: `--subnormals`, `--seconds`, a `pluck` case. Found, not changed: the same in Cathode's first DC blocker, where a fix changes when the noise seed fires (backlog). Rebased onto the 26 Oct review `1881d30`; cache `dxedge-v147`. Suite: ALL PASS (1267 checks; one earlier run on the pre-rebase tree failed only the Tv. Cathode flare check, a wall-clock flake, backlog). `scripts/test_synth_imported.py`: ALL PASS. CPU (test 9, headless; main earlier tonight in brackets): Cathode 18.1% (16.7); Filament 8 voices Ladder 24 27.3% (26.0), Valve 12 22.7% (23.2), Diode 18 22.5% (28.6), Sallen-Key 12 23.4% (25.9), Poly 24 23.1% (32.1), SVF 12 20.4% (24.6), low pass gate 19.8% (24.2); stereo offset 20.7% (28.6); 16 voices with ensemble 33.3% (40.5); EQ 31 bands 30.0% (36.2). Test 9 still times whole 6 s renders, so its fixed setup blurs these; the marginal figures above are the measurement. This line was added after that suite run (docs only; the suite does not read this file). Commit: this one.
 - 2026-10-26 (review, scheduled task, about 4:25 to 6:00 AM PT): areas c (keys, computer keys, pedal, octave, strips, MIDI), d (mixer, master clock, master bus) and e (MIDI deck), live at 1366 and 375 px against origin/main `0612588`. Findings: 2 broken (both fixed), 0 missing, 5 confusing; 5 earlier findings re-measured and still open; details in `docs/filament-review.md`. Fixes: the master limiter (the safety limit and the compressor's limit) is now a true peak limiter, where it used to let waveform peaks out up to 7 dB over its ceiling (R1026-1); Stop with the pedal down now ends the take with a pedal-up, so an exported .mid does not leave CC 64 held (R1026-2). Two new checks. The new Ob. hover check read a CSS transition at a fixed 250 ms and failed on every quiet run here; it now waits for the style and asserts the same thing. Cache `dxedge-v146`. Suite: ALL PASS (1267 checks). Commit: this one.
 - 2026-10-26 (graphics, scheduled task, about 3:15 to 3:45 AM PT): main first: suite on origin/main `8966bfd` ALL PASS (1255 checks). Screenshots at 1366x1000 (every rail device) and 375x667 (every device's phone tabs, 85 shots); no page errors, no horizontal scroll. Built the top Graphics backlog item, the outboard links: a recessed tray under the rail with an engraved OUTBOARD plate, each link a warm brushed plate with a cable socket instead of a lamp and an amber opens-a-page arrow; hover and keyboard focus light the socket ring; reduced motion drops the transitions and the arrow nudge; titles on each link and the tray is a named group. Measured: text contrast 5.8:1 or more (the old descriptions were 4.2:1), one row at 1366 px, 44 px targets and no sideways scroll at 375 px; the chassis moves down 17 px on a desktop and 7 px on a phone. CSS and markup only, no script or audio change. Added one backlog item (phone tray scroll cue). 10 new Ob. checks (6 fail on the old tree, measured). Cache `dxedge-v145`. Suite: ALL PASS (1265 checks). Commit: the graphics commit of 26 Oct.
 - 2026-10-26 (check and debug, scheduled task, about 2:10 to 3:00 AM PT): reviewed 3 commits since 25 Oct 6 PM PT on origin/main `38a1521`: the health bot's state commit `37175c4` (scripts/health only); by Claude (the 12:28 AM nightly) the low pass gate and Hollow Pluck `6d18dae` and the Pentagrid blanker fix `38a1521`. No edit under `/otr`, no test removed, no factory patch removed or renamed (Hollow Pluck retuned, logged for James), no new third-party code. The one loosened check (library playback waits up to 3 s for its note instead of a fixed 350 ms) is sound. `38a1521` did not bump the cache; the worker fetches with `cache: 'reload'` and the live files matched main, so no harm. Suite on origin/main ALL PASS (1254 checks), `scripts/test_synth_imported.py` ALL PASS (29). Live: /synth/ ready at 1366 and 375 px with no page or console errors and no horizontal scroll (only the `/api/stat` beacon aborts, as before), all 18 rail devices sound on a held note, /synth/fm/ and /synth/acid/ no errors, Hexode still scrolls sideways at 375 px (known, vendored), sw.js `dxedge-v143` matched. Defect: the LP gate's lag knob title and filter note named the vactrol, a registered trademark (licensing rule 6), and one check required the word. Fixed: both strings now say light cell; that check now wants "light cell" and no trademark; new licensing check scans every quoted string in the rack's own /synth files for a list of product names (fails on the old index.html; Wide Novachord Strings allowed until James rules). Internal names (`juno` keys in `rack.js`, comments, test names) left alone. Cache `dxedge-v144`. Suite: ALL PASS (1255 checks), imported ALL PASS (29). Commit: the check-and-debug commit of 26 Oct.
