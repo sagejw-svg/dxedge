@@ -21,8 +21,8 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 PUBLIC = os.path.join(ROOT, 'frontend', 'public')
 CRAWL = os.path.join(PUBLIC, 'crawl')
 PORT = 8785
-BUNDLE = 'main-UWuSTqQ6.js'
-SKYBOX = 'skybox-D9FOk2IG.js'
+BUNDLE = 'main-BCD1ap5Y.js'
+SKYBOX = 'skybox-wdbuDcCz.js'
 BANNED_EXT = ('.dat', '.cps', '.vcn', '.vmp', '.maz', '.exe', '.pak', '.wad')
 BANNED_NAMES = {'dungeon.dat', 'graphics.dat', 'item.dat', 'itemtype.dat'}
 
@@ -74,7 +74,7 @@ def main():
     ok('fork of DelveWard' in notice and 'EUPL-1.2' in notice, 'NOTICE records the fork')
     ok('href="/crawl/"' not in app and "id: 'crawl'" not in app, 'the game is not in the site nav')
     cache = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
-    ok(cache is not None and int(cache.group(1)) >= 152, 'service worker cache bumped')
+    ok(cache is not None and int(cache.group(1)) >= 153, 'service worker cache bumped')
     ok("url.pathname.startsWith('/crawl/')" in sw, 'service worker treats /crawl/ as mutable')
     ok('location ^~ /crawl/' in nginx, 'nginx does not pin /crawl/ for a year')
 

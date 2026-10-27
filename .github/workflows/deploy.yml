@@ -324,9 +324,9 @@ jobs:
           fi
           html=$(curl -sf https://dxedge.net/crawl/)
           echo "$html" | grep -q 'noindex' || { echo "ERROR: /crawl/ is missing noindex"; exit 1; }
-          echo "$html" | grep -q '/crawl/assets/main-UWuSTqQ6.js' || { echo "ERROR: /crawl/ is not the published game"; exit 1; }
-          js=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/main-UWuSTqQ6.js)
-          sky=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/skybox-D9FOk2IG.js)
+          echo "$html" | grep -q '/crawl/assets/main-BCD1ap5Y.js' || { echo "ERROR: /crawl/ is not the published game"; exit 1; }
+          js=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/main-BCD1ap5Y.js)
+          sky=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/skybox-wdbuDcCz.js)
           lic=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/LICENSE)
           notice=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/NOTICE)
           echo "/crawl/ js $js skybox $sky license $lic notice $notice"
