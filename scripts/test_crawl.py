@@ -98,9 +98,12 @@ def main():
                 return
             failed.append(f'{r.status} {r.url}')
         pg.on('response', note)
-        pg.goto(f'http://127.0.0.1:{PORT}/crawl/index.html', wait_until='networkidle')
+        pg.goto(f'http://127.0.0.1:{PORT}/crawl/index.html', wait_until='domcontentloaded')
         pg.wait_for_selector('text=Enable sound')
-        pg.wait_for_selector('text=Loading', timeout=30000)
+        # The loading line flips to "Loaded" once the level is up, and it stays
+        # until the player leaves the attribute screen. "Loading" itself is gone
+        # by the time the sprites finish.
+        pg.wait_for_selector('text=Loaded', timeout=30000)
         ok(pg.title() == 'Hearthvault', 'title')
         ok(pg.query_selector('canvas') is not None, 'the game canvas is on the page')
         body = pg.inner_text('body')
