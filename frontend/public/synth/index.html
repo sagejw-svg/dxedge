@@ -1011,6 +1011,9 @@
         <div class="chips" id="loopChips"><span class="cl">V2 loop</span><span data-chips="filt.tube" class="chips" style="margin:0"></span></div>
         <div class="chips" id="gateChips"><span class="cl">gate</span><span data-chips="filt.gate" class="chips" style="margin:0"></span></div>
         <div class="knobs" id="kFilt"></div><div class="note" id="filtNote"></div></section>
+      <section class="mod" data-dev="filament" data-tab="filter" id="mFiltB" data-wide><h3><span class="pilot" id="filtBPilot"></span>Filter B</h3><div class="chips" id="routeChips" data-chips="filtB.route"></div>
+        <div class="chips" id="filtBModel" data-chips="filtB.model"></div>
+        <div class="knobs" id="kFiltB"></div><div class="note" id="filtBNote"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mEnvA"><h3><span class="pilot"></span>Amp envelope</h3><div class="knobs" id="kEnvA"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mEnvF"><h3><span class="pilot"></span>Filter envelope</h3><div class="knobs" id="kEnvF"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mLfo"><h3><span class="pilot"></span>LFO 1</h3><div class="chips" data-chips="lfo1.wave"></div><div class="chips" data-chips="lfo1.mode"></div><div class="knobs" id="kLfo"></div></section>
@@ -2405,6 +2408,8 @@ document.querySelectorAll('[data-chips]').forEach(el => {
   const labels = {
     'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12', poly24: 'Poly 24', svf12: 'SVF 12', lpg: 'LP gate' },
     'filt.gate': { both: 'filter + VCA', lp: 'filter only', vca: 'VCA only' },
+    'filtB.route': { off: 'A only', serial: 'serial A > B', parallel: 'parallel', split: 'split L/R' },
+    'filtB.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12', poly24: 'Poly 24', svf12: 'SVF 12' },
     'lfo1.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' },
     'lfo1.mode': { global: 'global', voice: 'per voice' }, 'lfo2.mode': { global: 'global', voice: 'per voice' },
     'lfo2.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' }, 'stereo.pan': { center: 'centre', alt: 'alternate', key: 'keyboard', random: 'random' },
@@ -2446,6 +2451,12 @@ K('kFilt', 'filt.offset', 'stereo off', { min: -1, max: 1, step: 0.01, fmt: v =>
 K('kFilt', 'filt.hp', 'high-pass', { map: LOG(20, 4000), fmt: v => v <= 20.5 ? 'off' : fmtHz(v), title: 'Sallen-Key 12 only: a 2-pole high-pass in front of the low-pass, with half its resonance. All the way down is off.' });
 K('kFilt', 'filt.morph', 'morph', { min: 0, max: 3, step: 0.01, fmt: fmtMorph, title: 'SVF 12 only: the output morphs from low-pass (0) through band-pass (1) and high-pass (2) to notch (3)' });
 K('kFilt', 'filt.lag', 'lag', { map: LOG(0.02, 3), fmt: fmtS, title: 'Low pass gate only: how slowly the light cell lets go. It lights in a few milliseconds and fades more slowly the darker it gets.' });
+K('kFiltB', 'filtB.cutoff', 'cutoff', { map: LOG(20, 20000), fmt: fmtHz, title: 'Filter B cutoff' });
+K('kFiltB', 'filtB.res', 'res', { min: 0, max: 1, step: 0.005, fmt: v => (v * 10).toFixed(1), title: 'Filter B resonance. Every model but the low pass gate sings near the top.' });
+K('kFiltB', 'filtB.keytrack', 'key trk', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Filter B key tracking: 100% follows the keyboard exactly' });
+K('kFiltB', 'filtB.env', 'env', { min: -1, max: 1, step: 0.01, fmt: v => (v > 0 ? '+' : '') + Math.round(v * 100), title: 'Filter B envelope amount (the filter envelope, shared with A)' });
+K('kFiltB', 'filtB.morph', 'morph', { min: 0, max: 3, step: 0.01, fmt: fmtMorph, title: 'SVF 12 only: the output morphs from low-pass (0) through band-pass (1) and high-pass (2) to notch (3)' });
+K('kFiltB', 'filtB.bal', 'A / B', { min: -1, max: 1, step: 0.01, fmt: v => Math.abs(v) < 0.005 ? 'even' : (v < 0 ? 'A ' : 'B ') + Math.round(Math.abs(v) * 100), title: 'Parallel only: the balance between A and B (equal power; the middle is both at -3 dB)' });
 K('kFilt', 'filt.bias', 'loop bias', { min: -5, max: 5, step: 0.1, fmt: v => v < 0 ? 'cold ' + (-v).toFixed(1) : v > 0 ? 'hot ' + v.toFixed(1) : '0', title: 'V2 bias: hot adds even harmonics to the resonance' });
 const T = LOG(0.001, 10), TR = LOG(0.003, 12);
 K('kEnvA', 'envA.a', 'attack', { map: T, fmt: fmtS }); K('kEnvA', 'envA.d', 'decay', { map: T, fmt: fmtS });
@@ -2586,8 +2597,18 @@ function afterC(path) {
 }
 function afterF() {
   const valve = cur.filt.model === 'valve12';
+  const fb = cur.filtB || {}, route = fb.route || 'off', bOn = route !== 'off';
   $('roleV2').textContent = 'V2 loop';
-  $('loopChips').style.display = valve ? '' : 'none';
+  $('loopChips').style.display = valve || (bOn && fb.model === 'valve12') ? '' : 'none';
+  $('filtBPilot').classList.toggle('off', !bOn);
+  $('filtBModel').style.opacity = bOn ? '' : '0.45';
+  ['filtB.cutoff', 'filtB.res', 'filtB.keytrack', 'filtB.env', 'filtB.morph', 'filtB.bal'].forEach(p => { kn(p).k.el.style.opacity = bOn ? '' : '0.45'; });
+  kn('filtB.morph').k.el.style.display = fb.model === 'svf12' ? '' : 'none';
+  kn('filtB.bal').k.el.style.display = route === 'parallel' ? '' : 'none';
+  $('filtBNote').textContent = route === 'serial' ? 'Serial: A feeds B. Two low-passes stack into a steeper slope; a low-pass into a high-pass makes a band.'
+    : route === 'parallel' ? 'Parallel: V1 feeds both, and the two are summed at equal power. A / B leans toward one. Different models or cutoffs give two peaks.'
+    : route === 'split' ? 'Split: A plays the left side and B the right, a stereo filter you can play. Stereo offset moves A down and B up. Two very different filters can thin out in mono: hold mono check.'
+    : 'Off: only filter A plays. Pick a route to bring in filter B. B shares A\'s drive, velocity amount, loop tube, and the LFO and wheel moves on cutoff; it has its own key tracking and envelope amount.';
   ['filt.sag', 'filt.bias'].forEach(p => { kn(p).k.el.style.display = valve ? '' : 'none'; });
   kn('filt.hp').k.el.style.display = cur.filt.model === 'sk12' ? '' : 'none';
   kn('filt.morph').k.el.style.display = cur.filt.model === 'svf12' ? '' : 'none';

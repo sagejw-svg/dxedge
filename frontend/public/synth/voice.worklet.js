@@ -9,6 +9,13 @@
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
 //   -> filter (Valve 12, Ladder 24, Diode 18, Sallen-Key 12, Poly 24, SVF 12 or Low pass gate) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
+// Filter slots A and B. The filter above is slot A. Slot B (patch.filtB) is off by default; when on
+// it runs any model but the low pass gate, with its own cutoff, resonance, key tracking, envelope
+// amount and morph, and shares A's drive, velocity amount, loop tube, LFO and wheel cutoff moves and
+// stereo offset. filtB.route picks how they connect: serial (A into B), parallel (both fed by V1,
+// summed at equal power, filtB.bal leaning toward one), or split (A plays the left side, B the right;
+// the stereo offset then moves A down and B up).
+//
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
 // oscillators and V1. Otherwise one filter feeds both sides. Unison stacks 1-8 voices on a
@@ -358,6 +365,8 @@ class Filt {
     s[F_S1] = 2 * bp - s1; s[F_S2] = 2 * lp - s2; s[F_BP] = bp; s[F_HL] = hp;
     s[F_OUT] = s[F_WL] * lp + s[F_WB] * bp + s[F_WH] * hp;
   }
+  // Slot B's dispatch (slot A's is written out in render()); m as in render(): 0 Valve 12 .. 5 SVF 12
+  run(m, lTab) { if (m === 1) this.ladder(); else if (m === 4) this.ota(); else if (m === 5) this.svf(); else if (m === 2) this.diode(); else if (m === 3) this.sk(); else this.valve(lTab); }
   // Valve 12: a 2-pole SVF lowpass whose resonance is positive feedback of the band-pass through
   // the loop tube's curve, a coupling-cap high-pass and a supply-sag follower, linearised at the
   // previous band-pass value and solved exactly (one Newton step).
@@ -422,7 +431,13 @@ const K_L2A = 29;
 const K_L2PAN = 30;
 const K_L2PH = 31;    // LFO 2 stereo phase, degrees
 const K_MOR = 32;     // SVF 12 morph, 0 (low-pass) .. 3 (notch)
-const NP = 33;
+const K_BCUT = 33;    // filter slot B: cutoff (Hz), resonance, key tracking, envelope amount, morph,
+const K_BRES = 34;    // and the parallel balance (-1 all A .. 1 all B)
+const K_BKT = 35;
+const K_BENV = 36;
+const K_BMOR = 37;
+const K_BBAL = 38;
+const NP = 39;
 
 // ---------- envelopes ----------
 const E_IDLE = 0, E_ATT = 1, E_DEC = 2, E_SUS = 3, E_REL = 4;
@@ -475,11 +490,12 @@ class Filament extends AudioWorkletProcessor {
       pitch: 60, pitchT: 60, o1: new Osc(), o2: new Osc(), sub: new Osc(),
       ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, vg: 0, pending: null, fade: 1, killing: false,
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
+      fBL: new Filt(), fBR: new Filt(), stB: false,  // filter slot B (left or both, right)
       dcx: 0, dcy: 0,
       nb0: 0, nb1: 0, nb2: 0,
       drift: 0, driftT: 0, driftN: 0, drift2: 0, drift2T: 0,
       lp: Float64Array.from([Math.random(), Math.random()]), lsh: new Float64Array(10), lfoAge: 0,
-      cm: Float64Array.of(NaN, 1, NaN, 1, NaN, 1, NaN, 1),   // exponent memos for the control tick
+      cm: Float64Array.of(NaN, 1, NaN, 1, NaN, 1, NaN, 1, NaN, 1, NaN, 1),   // exponent memos for the control tick
       // control-rate values
       dt1: 0, dt2: 0, dts: 0, fg: 0, kres: 0, lvl: 0, lvlT: 0, pw1: 0.5, pw2: 0.5,
     };
@@ -537,6 +553,9 @@ class Filament extends AudioWorkletProcessor {
     T[K_L2P] = num(l2.pitch, 0); T[K_L2C] = num(l2.cutoff, 0); T[K_L2PW] = num(l2.pw, 0); T[K_L2A] = num(l2.amp, 0);
     T[K_L2PAN] = clamp(num(l2.pan, 0), 0, 1); T[K_L2PH] = clamp(num(l2.phase, 0), 0, 180);
     T[K_MOR] = clamp(num(f.morph, 0), 0, 3);
+    const fb = P.filtB || {};
+    T[K_BCUT] = num(fb.cutoff, 2000); T[K_BRES] = num(fb.res, 0); T[K_BKT] = num(fb.keytrack, 0.5); T[K_BENV] = num(fb.env, 0);
+    T[K_BMOR] = clamp(num(fb.morph, 0), 0, 3); T[K_BBAL] = clamp(num(fb.bal, 0), -1, 1);
     return T;
   }
 
@@ -643,6 +662,8 @@ class Filament extends AudioWorkletProcessor {
     v.ae = 0; v.fe = 0; v.vg = 0;
     // a whisper of thermal noise in the filters, so a self-oscillating filter starts on its own
     for (const F of [v.fL, v.fR]) if (F.s[F_S1] === 0 && F.s[F_S2] === 0) { F.s[F_S1] = (Math.random() - 0.5) * 1e-3; F.s[F_BP] = F.s[F_S1]; }
+    // (slot B only when it is on, so a patch with B off draws the same random numbers as before)
+    if (routeOf(P) !== 0) for (const F of [v.fBL, v.fBR]) if (F.s[F_S1] === 0 && F.s[F_S2] === 0) { F.s[F_S1] = (Math.random() - 0.5) * 1e-3; F.s[F_BP] = F.s[F_S1]; }
     this.trigger(v, vel);
   }
   trigger(v, vel) { v.as = E_ATT; v.fs = E_ATT; v.vel = vel; v.lfoAge = 0; }
@@ -712,9 +733,10 @@ class Filament extends AudioWorkletProcessor {
       let any = false; for (let i = 0; i < NV; i++) if (this.voices[i].on) { any = true; break; }
       if (!any) {
         if (this.pendingPatch) {
-          const oldModel = (this.P.filt || {}).model;
+          const oldModel = (this.P.filt || {}).model, oldB = slotBKey(this.P);
           this.setPatch(this.pendingPatch); this.pendingPatch = null; this.duck = 1; this.duckDir = 0;
           if ((this.P.filt || {}).model !== oldModel) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
+          if (slotBKey(this.P) !== oldB) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
         }
         this.target(this.S); this.Sp.set(this.S);
         for (let q = 0; q < 2; q++) this.lfoG[q] = (this.lfoG[q] + clamp(num(((q ? this.P.lfo2 : this.P.lfo1) || {}).rate, q ? 0.2 : 5), 0.01, 40) * n / this.sr) % 1;
@@ -770,7 +792,7 @@ class Filament extends AudioWorkletProcessor {
   // through this.cc so nothing is boxed: cc[0] = fc (Hz), cc[1] = resonance 0..1.
   // Skipped when the inputs match the last call for this filter, which is every tick of a held
   // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
-  fcoef(F, model) {
+  fcoef(F, model, skh) {
     const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 7 + model;
     if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
     s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
@@ -828,7 +850,7 @@ class Filament extends AudioWorkletProcessor {
       const K = res <= SK_RT ? SK_K0 + (3 - SK_K0) * res / SK_RT : 3 + (SK_KMAX - 3) * (res - SK_RT) / (1 - SK_RT);
       s[F_K] = K; s[F_COMP] = 1 / K;
       const Kh = SK_K0 + (K - SK_K0) * SK_HPK;
-      s[F_GH] = this.skGh; s[F_AH] = Kh; s[F_HIK] = 1 / Kh;
+      s[F_GH] = skh; s[F_AH] = Kh; s[F_HIK] = 1 / Kh;
     } else if (model === 2) { s[F_G] /= DIO_W0; s[F_K] = res * DIO_KMAX; s[F_COMP] = 1 + s[F_K] * DIO_COMP; }
     else if (model === 1) { s[F_K] = res * 4.45; s[F_COMP] = 1 + s[F_K] * 0.45; }
     else {
@@ -847,10 +869,11 @@ class Filament extends AudioWorkletProcessor {
     // ever overlap at a non-zero gain; amp ramps from duck0 to this.duck across each block.
     const duck0 = this.duck;
     if (this.duckDir === -1 && duck0 <= 0) {
-      const oldModel = (this.P.filt || {}).model;
+      const oldModel = (this.P.filt || {}).model, oldB = slotBKey(this.P);
       if (this.pendingPatch) { this.setPatch(this.pendingPatch); this.pendingPatch = null; }
       this.target(this.S); this.Sp.set(this.S);
       if ((this.P.filt || {}).model !== oldModel) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
+      if (slotBKey(this.P) !== oldB) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
       this.duckDir = 1;
     }
     if (this.duckDir !== 0) {
@@ -909,6 +932,12 @@ class Filament extends AudioWorkletProcessor {
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
     const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3, isOta = model === 4, isSvf = model === 5 || model === 6;
+    const skGh = this.skGh;
+    // Filter slot B: route 0 off, 1 serial, 2 parallel, 3 split. A runs a right-hand filter when the
+    // sides differ, except in split (A is the left side only); B runs one in serial and parallel.
+    const fbp = P.filtB || {}, route = routeOf(P), modelB = route ? modelBOf(fbp.model) : 5;
+    const stA = st2 && route !== 3, stB = st2 && (route === 1 || route === 2);
+    let gA = 1, gB = 0;
 
     // smoothed parameters at each control tick, shared by every voice
     const CT = this.CT, nt = Math.ceil(frames / CTRL);
@@ -921,9 +950,15 @@ class Filament extends AudioWorkletProcessor {
       if (!v.on) continue;
       if (vi >= N && this.mode() === 'poly' && v.as !== E_REL && !v.killing) { v.as = E_REL; v.fs = E_REL; v.gate = false; }
       const o1o = v.o1, o2o = v.o2, so = v.sub, FL = v.fL, FR = v.fR, fl = FL.s, frs = FR.s;
-      if (st2 && !v.st2) frs.set(fl);               // the right filter starts where the left one is
-      v.st2 = st2;
+      if (stA && !v.st2) frs.set(fl);               // the right filter starts where the left one is
+      v.st2 = stA;
       FL.s[F_LG] = lG; FR.s[F_LG] = lG;
+      const FBL = v.fBL, FBR = v.fBR, fbl = FBL.s, fbr = FBR.s;
+      if (route) {
+        if (stB && !v.stB) fbr.set(fbl);
+        fbl[F_LG] = lG; fbr[F_LG] = lG;
+      }
+      v.stB = stB;
       let dcx = v.dcx, dcy = v.dcy, nb0 = v.nb0, nb1 = v.nb1, nb2 = v.nb2;
       let ae = v.ae, fe = v.fe, as = v.as, fst = v.fs, vg = v.vg;
       let dt1 = v.dt1, dt2 = v.dt2, dts = v.dts, pw1 = v.pw1, pw2 = v.pw2, ampL = 1, ampR = 1, gl = 0.7071, gr = 0.7071;
@@ -998,16 +1033,43 @@ class Filament extends AudioWorkletProcessor {
           const res = clamp(CT[cb + K_RES], 0, 1), half = CT[cb + K_OFF] * 0.5;
           cc[1] = res;
           // cm[0..3]: the last cutoff exponent and its power of two for each side: a still cutoff costs no pow
-          const eL = oct + CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L - (st2 ? half : 0);
+          const lcL = CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L;
+          const eL = oct + lcL - (st2 ? half : 0);
           if (eL !== cm[0]) { cm[0] = eL; cm[1] = Math.pow(2, eL); }
           // the low pass gate's cutoff follows the vactrol's conductance
           const gc = lpgCut ? vg : 1;
           cc[0] = CT[cb + K_CUT] * cm[1] * gc;
-          this.fcoef(FL, model);
-          if (st2) {
+          this.fcoef(FL, model, skGh);
+          if (route) {
+            // slot B: its own key tracking and envelope amount; velocity, wheel, pressure and the
+            // LFOs move it as they move A. In split it is the right side, so it takes the right LFO
+            // values and the upper half of the stereo offset.
+            const octB = CT[cb + K_BKT] * (v.pitch - 60) / 12 + CT[cb + K_BENV] * 7 * fe + CT[cb + K_VELF] * (v.vel - 0.79) * 3
+              + this.mw * mwc + this.at * atc;
+            const lcR = CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R;
+            cc[1] = clamp(CT[cb + K_BRES], 0, 1);
+            const eB = route === 3 ? octB + lcR + (st2 ? half : 0) : octB + lcL - (st2 ? half : 0);
+            if (eB !== cm[8]) { cm[8] = eB; cm[9] = Math.pow(2, eB); }
+            cc[0] = CT[cb + K_BCUT] * cm[9]; this.fcoef(FBL, modelB, 0);
+            if (stB) {
+              const eBR = octB + lcR + half;
+              if (eBR !== cm[10]) { cm[10] = eBR; cm[11] = Math.pow(2, eBR); }
+              cc[0] = CT[cb + K_BCUT] * cm[11]; this.fcoef(FBR, modelB, 0);
+            }
+            if (modelB === 5) {
+              const m = clamp(CT[cb + K_BMOR], 0, 3);
+              const wl = m < 1 ? 1 - m : m < 2 ? 0 : m - 2, wb = (m < 1 ? m : m < 2 ? 2 - m : 0) * SVF_K0, wh = m < 1 ? 0 : m < 2 ? m - 1 : 1;
+              fbl[F_WL] = wl; fbl[F_WB] = wb; fbl[F_WH] = wh; fbr[F_WL] = wl; fbr[F_WB] = wb; fbr[F_WH] = wh;
+            }
+            // parallel: equal power, the balance leaning toward A (-1) or B (+1)
+            const bal = CT[cb + K_BBAL];
+            gA = Math.sqrt(0.5 * (1 - bal)); gB = Math.sqrt(0.5 * (1 + bal));
+            cc[1] = res;
+          }
+          if (stA) {
             const eR = oct + CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R + half;
             if (eR !== cm[2]) { cm[2] = eR; cm[3] = Math.pow(2, eR); }
-            cc[0] = CT[cb + K_CUT] * cm[3] * gc; this.fcoef(FR, model);
+            cc[0] = CT[cb + K_CUT] * cm[3] * gc; this.fcoef(FR, model, skGh);
           }
           if (isLpg) { fl[F_WL] = 1; fl[F_WB] = 0; fl[F_WH] = 0; frs[F_WL] = 1; frs[F_WB] = 0; frs[F_WH] = 0; }
           else if (isSvf) {
@@ -1017,6 +1079,7 @@ class Filament extends AudioWorkletProcessor {
             fl[F_WL] = wl; fl[F_WB] = wb; fl[F_WH] = wh; frs[F_WL] = wl; frs[F_WB] = wb; frs[F_WH] = wh;
           }
           const sagA = clamp(CT[cb + K_SAG], 0, 10) / 10; fl[F_SAGA] = sagA; frs[F_SAGA] = sagA;
+          if (route) { fbl[F_SAGA] = sagA; fbr[F_SAGA] = sagA; }
           const fd = clamp(CT[cb + K_FDRV], 0, 10);
           if (fd !== fdK) { fdK = fd; fdGk = Math.pow(2, (fd - 3) / 3); fdCk = 1 / Math.sqrt(fdGk); }
           fdG = fdGk; fdC = fdCk;
@@ -1084,9 +1147,22 @@ class Filament extends AudioWorkletProcessor {
           // filter(s)
           fl[F_IN] = y;
           if (isLadder) FL.ladder(); else if (isOta) FL.ota(); else if (isSvf) FL.svf(); else if (isDiode) FL.diode(); else if (isSk) FL.sk(); else FL.valve(lTab);
-          const yl = fl[F_OUT];
-          let yr = yl;
-          if (st2) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isOta) FR.ota(); else if (isSvf) FR.svf(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else FR.valve(lTab); yr = frs[F_OUT]; }
+          let yl = fl[F_OUT], yr = yl;
+          if (stA) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isOta) FR.ota(); else if (isSvf) FR.svf(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else FR.valve(lTab); yr = frs[F_OUT]; }
+          if (route) {
+            if (route === 1) {              // serial: A into B
+              fbl[F_IN] = yl; FBL.run(modelB, lTab); const bl = fbl[F_OUT];
+              if (stB) { fbr[F_IN] = yr; FBR.run(modelB, lTab); yr = fbr[F_OUT]; } else yr = bl;
+              yl = bl;
+            } else if (route === 2) {       // parallel: both from V1, summed
+              fbl[F_IN] = y; FBL.run(modelB, lTab); const bl = fbl[F_OUT];
+              let br = bl;
+              if (stB) { fbr[F_IN] = y; FBR.run(modelB, lTab); br = fbr[F_OUT]; }
+              yl = yl * gA + bl * gB; yr = yr * gA + br * gB;
+            } else {                        // split: A left, B right
+              fbl[F_IN] = y; FBL.run(modelB, lTab); yr = fbl[F_OUT];
+            }
+          }
           const idx = i * OS + s;
           L2[idx] += yl * aLg; R2[idx] += yr * aRg;
         }
@@ -1095,13 +1171,17 @@ class Filament extends AudioWorkletProcessor {
       v.dcx = dcx; v.dcy = dcy; v.nb0 = nb0; v.nb1 = nb1; v.nb2 = nb2;
       v.ae = ae; v.fe = fe; v.as = as; v.fs = fst; v.vg = vg; v.dt1 = dt1; v.dt2 = dt2; v.dts = dts; v.pw1 = pw1; v.pw2 = pw2;
       v.fade = fade;
-      v2Acc += fl[F_V2] + (st2 ? frs[F_V2] : 0); fl[F_V2] = 0; frs[F_V2] = 0;
+      v2Acc += fl[F_V2] + (stA ? frs[F_V2] : 0); fl[F_V2] = 0; frs[F_V2] = 0;
       // flush denormals / blow-ups
       if (FL.bad() || FR.bad()) { FL.reset(); FR.reset(); } else { FL.flush(); FR.flush(); }
+      if (route) {
+        v2Acc += fbl[F_V2] + (stB ? fbr[F_V2] : 0); fbl[F_V2] = 0; fbr[F_V2] = 0;
+        if (FBL.bad() || FBR.bad()) { FBL.reset(); FBR.reset(); } else { FBL.flush(); FBR.flush(); }
+      }
       // a lit vactrol keeps the voice sounding after the envelope ends (when it drives the VCA)
       if ((as === E_IDLE && !(lpgAmp && vg > LPG_END)) || (v.killing && fade <= 0)) {
-        v.on = false; v.as = E_IDLE; v.ae = 0; v.vg = 0; v.killing = false; v.fade = 1; v.st2 = false;
-        FL.reset(); FR.reset();
+        v.on = false; v.as = E_IDLE; v.ae = 0; v.vg = 0; v.killing = false; v.fade = 1; v.st2 = false; v.stB = false;
+        FL.reset(); FR.reset(); FBL.reset(); FBR.reset();
         if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U, pnd.pb); }
       }
     }
@@ -1179,8 +1259,14 @@ function mwvAny(P, self) { return (self.mw > 0 && num((P.mw || {}).vib, 30) > 0)
 function isStruct(a, b) {
   if (!a) return true;
   return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube', 'filt.gate',
-    'v1.tube', 'voice.mode'].some(k => get(a, k) !== get(b, k));
+    'v1.tube', 'voice.mode'].some(k => get(a, k) !== get(b, k)) || slotBKey(a) !== slotBKey(b);
 }
+// Filter slot B: the route (0 off, 1 serial, 2 parallel, 3 split) and the model (render()'s numbers;
+// the low pass gate is slot A only, so anything else reads as SVF 12). slotBKey changes when a swap
+// should duck and start B's filters from rest.
+function routeOf(P) { const r = (P && P.filtB || {}).route; return r === 'serial' ? 1 : r === 'parallel' ? 2 : r === 'split' ? 3 : 0; }
+function modelBOf(m) { return m === 'valve12' ? 0 : m === 'ladder24' ? 1 : m === 'diode18' ? 2 : m === 'sk12' ? 3 : m === 'poly24' ? 4 : 5; }
+function slotBKey(P) { const r = routeOf(P); return r ? r * 8 + modelBOf((P.filtB || {}).model) : 0; }
 function get(o, path) { const ks = path.split('.'); let x = o; for (const k of ks) { if (x == null) return undefined; x = x[k]; } return x; }
 
 registerProcessor('filament', Filament);

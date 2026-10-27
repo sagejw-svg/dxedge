@@ -18,6 +18,9 @@ export const DEFAULT = {
   noise: { color: 'white', level: 0 },
   v1: { tube: '12AX7', drive: 3, bias: 0 },
   filt: { model: 'valve12', cutoff: 1800, res: 0.3, drive: 3, keytrack: 0.5, env: 0.3, vel: 0.3, tube: '12AT7', bias: 0, sag: 3, offset: 0, hp: 20, morph: 0, lag: 0.3, gate: 'both' },
+  // filter slot B: off by default. route serial (A into B), parallel (summed; bal leans toward A or B)
+  // or split (A left, B right). Any model but the low pass gate. Shares A's drive, velocity, loop tube.
+  filtB: { route: 'off', model: 'svf12', cutoff: 2000, res: 0, keytrack: 0.5, env: 0, morph: 0, bal: 0 },
   envA: { a: 0.005, d: 0.4, s: 0.8, r: 0.4, vel: 0.5 },
   envF: { a: 0.005, d: 0.5, s: 0.3, r: 0.4 },
   lfo1: { wave: 'sine', rate: 5, delay: 0, mode: 'global', phase: 0, pitch: 0, cutoff: 0, pw: 0, amp: 0 },
@@ -45,6 +48,7 @@ export const RANGE = {
   'sub.oct': [1, 2], 'sub.level': [0, 1], 'noise.level': [0, 1],
   'v1.drive': [0, 10], 'v1.bias': [-5, 5],
   'filt.cutoff': [20, 20000], 'filt.res': [0, 1], 'filt.drive': [0, 10], 'filt.keytrack': [0, 1], 'filt.env': [-1, 1], 'filt.vel': [0, 1], 'filt.bias': [-5, 5], 'filt.sag': [0, 10], 'filt.offset': [-1, 1], 'filt.hp': [20, 4000], 'filt.morph': [0, 3], 'filt.lag': [0.02, 3],
+  'filtB.cutoff': [20, 20000], 'filtB.res': [0, 1], 'filtB.keytrack': [0, 1], 'filtB.env': [-1, 1], 'filtB.morph': [0, 3], 'filtB.bal': [-1, 1],
   'envA.a': [0.001, 10], 'envA.d': [0.001, 10], 'envA.s': [0, 1], 'envA.r': [0.003, 12], 'envA.vel': [0, 1],
   'envF.a': [0.001, 10], 'envF.d': [0.001, 10], 'envF.s': [0, 1], 'envF.r': [0.003, 12],
   'lfo1.rate': [0.02, 30], 'lfo1.delay': [0, 5], 'lfo1.phase': [0, 180], 'lfo1.pitch': [0, 100], 'lfo1.cutoff': [0, 4], 'lfo1.pw': [0, 0.9], 'lfo1.amp': [0, 1],
@@ -79,6 +83,8 @@ export const ENUMS = {
   'v1.tube': ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'],
   'filt.model': ['valve12', 'ladder24', 'diode18', 'sk12', 'poly24', 'svf12', 'lpg'],
   'filt.gate': ['both', 'lp', 'vca'],
+  'filtB.route': ['off', 'serial', 'parallel', 'split'],
+  'filtB.model': ['valve12', 'ladder24', 'diode18', 'sk12', 'poly24', 'svf12'],
   'filt.tube': ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'],
   'lfo1.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo1.mode': ['global', 'voice'],
   'lfo2.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo2.mode': ['global', 'voice'],

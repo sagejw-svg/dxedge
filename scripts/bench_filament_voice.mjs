@@ -19,7 +19,8 @@
 // (8 voices on each filter model, stereo offset, 16 voices), Sallen-Key 12 with its high-pass,
 // Poly 24 screaming and driven, SVF 12 morphed, screaming and swept, and the low pass gate in two of its modes at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
-// note with no drift, and patch changes mid-note (stereo offset on, loop tube, model, drive).
+// note with no drift, patch changes mid-note (stereo offset on, loop tube, model, drive), and filter
+// slot B in each of its routes (serial, parallel, split).
 // The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
 // Numbers are relative: headless Chrome in test 9 is the figure the log quotes.
 import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto'; import path from 'path';
@@ -63,6 +64,10 @@ const CASES = {
   pluck: big('sk12', p => { p.envA = { a: 0.001, d: 0.3, s: 0, r: 0.5, vel: 0.5 }; p.envF = { a: 0.001, d: 0.2, s: 0, r: 0.3 };
     p.filt.env = 0.6; p.voice.count = 4; }),
   change: big('valve12', p => { p.drift = 0; }),
+  // filter slot B (27 Oct): each route, B on another model, with the stereo offset where B runs two filters
+  serial: big('ladder24', p => { p.filtB = { route: 'serial', model: 'svf12', morph: 2, cutoff: 300, res: 0.4 }; }),
+  parallel: big('valve12', p => { p.filtB = { route: 'parallel', model: 'poly24', cutoff: 3000, res: 0.6, bal: 0.2 }; p.filt.offset = 0.3; }),
+  split: big('sk12', p => { p.filtB = { route: 'split', model: 'diode18', cutoff: 900, res: 0.7, env: 0.3 }; p.filt.offset = 0.4; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
 // Cathode (the mono device in the same worklet file): factory patches by name, a held line with glide,

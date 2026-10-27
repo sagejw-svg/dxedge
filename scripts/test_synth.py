@@ -539,6 +539,129 @@ with sync_playwright() as pw:
     ck(f"Lg. Hollow Pluck on the gate keeps its level and length: first 300 ms {hpm['lpg'][0] - hpm['valve12'][0]:+.1f} dB against its Valve 12 version (within 1.5), -20 dB at {hpm['lpg'][1]:.2f} s against {hpm['valve12'][1]:.2f} s (within 0.08)",
        abs(hpm["lpg"][0] - hpm["valve12"][0]) <= 1.5 and abs(hpm["lpg"][1] - hpm["valve12"][1]) <= 0.08, hpm)
 
+    # ---------------------------------------------------------------- Fb. filter slots A and B (serial, parallel, split)
+    # Slot B (patch.filtB) is off by default. These measure each route against the 2-pole model, B on every
+    # model against the same model in slot A, that B off changes nothing, and the extremes.
+    # B off: the same as no filtB at all, whatever B's other fields say. The oscillators start at a random
+    # phase, so this compares the first twelve harmonics of one note (the seeded Node bench,
+    # scripts/bench_filament_voice.mjs --ref, is the sample-for-sample check against the tree before B).
+    base_ = patch(osc1={"wave": "saw", "level": 0.8}, filt={"model": "ladder24", "cutoff": 900, "res": 0.6, "offset": 0.3})
+    off_ = json.loads(json.dumps(base_)); off_["filtB"] = {"route": "off", "model": "diode18", "cutoff": 80, "res": 1, "env": 1, "bal": 1}
+    f0_ = 440 * 2 ** ((45 - 69) / 12)
+    hh = lambda p_: [db(tone_amp(ch[SR // 2:], f0_ * k)) for ch in render(p_, note(45), 1.0, rack=False) for k in range(1, 13)]
+    ha, hb = hh(base_), hh(off_)
+    dfo = max(abs(x - y) for x, y in zip(ha, hb))
+    ck(f"Fb. with slot B off the voice is unchanged, whatever B's other fields say (first 12 harmonics on both sides: worst {dfo:.4f} dB apart, want within 0.02)", dfo <= 0.02, (ha, hb))
+    # B on each model, serial behind an open A, matches that model in slot A at the same cutoff
+    FQB = (250, 1000, 4000)
+    wb = {}
+    for m_ in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12"):
+        a_ = [tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": m_, "cutoff": 1000, "res": 0.3}), note(60), 1.0, rack=False)[0][SR // 2:], f) for f in FQB]
+        b_ = [tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "svf12", "cutoff": 20000},
+                                    filtB={"route": "serial", "model": m_, "cutoff": 1000, "res": 0.3, "keytrack": 0}), note(60), 1.0, rack=False)[0][SR // 2:], f) for f in FQB]
+        wb[m_] = round(max(abs(db(b_[i] / a_[i])) for i in range(len(FQB))), 3)
+    ck(f"Fb. slot B on each model (serial, behind an open A) matches the same model in slot A at 250 Hz, 1 kHz and 4 kHz within 0.3 dB ({wb})", max(wb.values()) <= 0.3, wb)
+    # serial: a 1 kHz low-pass (A, SVF 12) into a 1 kHz high-pass (B, SVF 12 at morph 2) is the product: a band
+    def h2(mo, f, fc):
+        fs = 2 * SR; W = math.tan(math.pi * f / fs) / math.tan(math.pi * fc / fs); d = 1 - W * W + 2j * 0.70710678 * W
+        return [1, 1j * 1.41421356 * W, -W * W, 1 - W * W][mo] / d
+    FQS = (100, 300, 1000, 2000, 4000)
+    ref_ = {f: tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "svf12", "cutoff": 20000}), note(60), 1.0, rack=False)[0][SR // 2:], f) for f in FQS}
+    sr_ = {f: db(tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "svf12", "cutoff": 1000},
+                                       filtB={"route": "serial", "model": "svf12", "morph": 2, "cutoff": 1000, "keytrack": 0}), note(60), 1.0, rack=False)[0][SR // 2:], f) / ref_[f]) for f in FQS}
+    se_ = {f: round(sr_[f] - db(abs(h2(0, f, 1000) * h2(2, f, 1000))), 2) for f in FQS}
+    ck(f"Fb. serial: a 1 kHz low-pass into a 1 kHz high-pass is the product of the two, within 0.5 dB from 100 Hz to 4 kHz (error {se_}; measured {[round(sr_[f], 1) for f in FQS]} dB)",
+       max(abs(x) for x in se_.values()) <= 0.5, (se_, sr_))
+    # parallel: a 300 Hz low-pass (A) beside a 3 kHz high-pass (B), equal power: the complex sum at 0.707 each
+    pr_ = {f: db(tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "svf12", "cutoff": 300},
+                                       filtB={"route": "parallel", "model": "svf12", "morph": 2, "cutoff": 3000, "keytrack": 0}), note(60), 1.0, rack=False)[0][SR // 2:], f) / ref_[f]) for f in FQS}
+    pe_ = {f: round(pr_[f] - db(abs(0.70710678 * h2(0, f, 300) + 0.70710678 * h2(2, f, 3000))), 2) for f in FQS}
+    ck(f"Fb. parallel: a 300 Hz low-pass beside a 3 kHz high-pass sums at equal power (-3 dB each), within 0.5 dB of the model from 100 Hz to 4 kHz (error {pe_}; measured {[round(pr_[f], 1) for f in FQS]} dB)",
+       max(abs(x) for x in pe_.values()) <= 0.5, (pe_, pr_))
+    bl_ = {}
+    for bal in (-1, 1):
+        bl_[bal] = [db(tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "svf12", "cutoff": 300},
+                                            filtB={"route": "parallel", "model": "svf12", "morph": 2, "cutoff": 3000, "keytrack": 0, "bal": bal}), note(60), 1.0, rack=False)[0][SR // 2:], f) / ref_[f]) for f in (100, 4000)]
+    want_ = {-1: [db(abs(h2(0, f, 300))) for f in (100, 4000)], 1: [db(abs(h2(2, f, 3000))) for f in (100, 4000)]}
+    be_ = max(abs(bl_[k][i] - want_[k][i]) for k in (-1, 1) for i in (0, 1) if want_[k][i] > -40)
+    ck(f"Fb. parallel balance: all the way to A is A alone and all the way to B is B alone (at 100 Hz and 4 kHz: A {[round(x, 1) for x in bl_[-1]]}, B {[round(x, 1) for x in bl_[1]]} dB; worst {be_:.2f} dB off the model where above -40)",
+       be_ <= 0.5 and bl_[-1][1] < -25 and bl_[1][0] < -25, (bl_, want_))
+    # split: A plays the left side, B the right
+    spl = lambda f: patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "ladder24", "cutoff": 500}, filtB={"route": "split", "model": "svf12", "cutoff": 4000, "keytrack": 0})
+    sl_ = {f: render(spl(f), note(60), 1.0, rack=False) for f in (250, 2000)}
+    al_ = {f: tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "ladder24", "cutoff": 500}), note(60), 1.0, rack=False)[0][SR // 2:], f) for f in (250, 2000)}
+    bR_ = {f: tone_amp(render(patch(osc1={"wave": "sine", "level": 0.05, "fixed": f}, filt={"model": "svf12", "cutoff": 4000}), note(60), 1.0, rack=False)[1][SR // 2:], f) for f in (250, 2000)}
+    sd_ = [round(db(tone_amp(sl_[f][0][SR // 2:], f) / al_[f]), 2) for f in (250, 2000)] + [round(db(tone_amp(sl_[f][1][SR // 2:], f) / bR_[f]), 2) for f in (250, 2000)]
+    ck(f"Fb. split: the left side is A alone (Ladder 24 at 500 Hz) and the right side is B alone (SVF 12 at 4 kHz), within 0.2 dB at 250 Hz and 2 kHz ({sd_})", max(abs(x) for x in sd_) <= 0.2, sd_)
+    L, R = render(patch(filt={"model": "svf12", "cutoff": 400}, filtB={"route": "split", "model": "svf12", "cutoff": 400, "keytrack": 0}), note(45), 1.5, rack=False)
+    c0 = (_cen(L[SR // 2:]), _cen(R[SR // 2:]))
+    L, R = render(patch(filt={"model": "svf12", "cutoff": 400, "offset": 1}, filtB={"route": "split", "model": "svf12", "cutoff": 400, "keytrack": 0}), note(45), 1.5, rack=False)
+    c1 = (_cen(L[SR // 2:]), _cen(R[SR // 2:]))
+    ck(f"Fb. split with A and B the same is centred (centroids {c0[0]:.0f} / {c0[1]:.0f} Hz, within 1%); a stereo offset of +1 moves A down and B up (left {c1[0]:.0f} Hz, right {c1[1]:.0f} Hz)",
+       abs(c0[0] / c0[1] - 1) < 0.01 and c1[0] < c0[0] * 0.9 and c1[1] > c0[1] * 1.1, (c0, c1))
+    # mono fold: split with two different low-passes, and parallel with a stereo offset, stay mono-safe
+    mfs = {}
+    for k_, p_ in (("split Ladder 24 / Diode 18", patch(osc2={"wave": "pulse", "level": 0.5, "fine": 7}, filt={"model": "ladder24", "cutoff": 700, "res": 0.5}, filtB={"route": "split", "model": "diode18", "cutoff": 1400, "res": 0.5})),
+                   ("parallel Valve 12 / Poly 24 with offset 0.5", patch(osc2={"wave": "pulse", "level": 0.5, "fine": 7}, filt={"model": "valve12", "cutoff": 700, "res": 0.5, "offset": 0.5}, filtB={"route": "parallel", "model": "poly24", "cutoff": 2500, "res": 0.5})),
+                   ("serial Sallen-Key 12 into Ladder 24 with offset 0.5", patch(osc2={"wave": "pulse", "level": 0.5, "fine": 7}, filt={"model": "sk12", "cutoff": 1500, "res": 0.5, "offset": 0.5}, filtB={"route": "serial", "model": "ladder24", "cutoff": 900, "res": 0.4}))):
+        L, R = render(p_, [e for k in (48, 55, 60, 64) for e in note(k, 0.05, 1.8)], 2.4)
+        seg = slice(int(0.3 * SR), int(1.7 * SR))
+        st = math.sqrt((np.mean(L[seg] ** 2) + np.mean(R[seg] ** 2)) / 2); mo = math.sqrt(np.mean(((L[seg] + R[seg]) / 2) ** 2))
+        mfs[k_] = round(db(st) - db(mo), 2)
+    ck(f"Fb. mono fold with slot B on, through the rack: every route loses 3 dB or less folded to mono ({mfs})", max(mfs.values()) <= 3, mfs)
+    # B self-oscillates where its model does, and follows the keys with its own key tracking
+    so_ = []
+    for n in (48, 72):
+        L, _ = render(patch(osc1={"level": 0}, filt={"model": "svf12", "cutoff": 20000}, filtB={"route": "serial", "model": "ladder24", "cutoff": 262, "res": 1, "keytrack": 1}), note(n), 1.5, rack=False)
+        so_.append(round(1200 * math.log2(peak_freq(L[SR // 2:]) / (262 * 2 ** ((n - 60) / 12))), 2))
+    ck(f"Fb. slot B on Ladder 24 at full resonance sings on its own and tracks the keys within 5 cents ({so_} cents at C3 and C5)", max(abs(x) for x in so_) <= 5, so_)
+    # B's own envelope amount and key tracking move B, not A
+    def bcen(**fb):
+        L, _ = render(patch(filt={"model": "svf12", "cutoff": 20000}, filtB=dict({"route": "serial", "model": "svf12", "cutoff": 300, "keytrack": 0}, **fb), envF={"a": 0.001, "d": 2, "s": 1}), note(45), 1.0, rack=False)
+        return _cen(L[SR // 2:])
+    ce0, ce1, ck1 = bcen(), bcen(env=0.5), bcen(keytrack=1)
+    ck(f"Fb. B's own envelope amount and key tracking open B (centroid {ce0:.0f} Hz; env +50: {ce1:.0f}; key tracking 100% on A2: {ck1:.0f}, which sits below the knob's C4 so it closes)",
+       ce1 > ce0 * 1.3 and ck1 < ce0 * 0.9, (ce0, ce1, ck1))
+    # extremes: every route on every B model, full resonance and drive, both ends of the cutoff: finite and bounded
+    worst, bad = 0.0, 0
+    for rt in ("serial", "parallel", "split"):
+        for m_ in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12"):
+            for cut in (16, 20000):
+                L, R = render(patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, v1={"drive": 10},
+                                    filt={"model": "sk12" if m_ == "valve12" else "valve12", "cutoff": 262, "res": 1, "drive": 10, "env": 1, "offset": 0.5},
+                                    filtB={"route": rt, "model": m_, "cutoff": cut, "res": 1, "env": 1, "morph": 1.5}), [e for k in (24, 60, 96) for e in note(k, 0.0)], 0.6, rack=False)
+                bad += int(np.sum(~np.isfinite(L)) + np.sum(~np.isfinite(R))); worst = max(worst, float(np.max(np.abs(L))), float(np.max(np.abs(R))))
+    ck(f"Fb. every route on every B model at full resonance, drive and envelope, B's cutoff at 16 Hz and 20 kHz: finite and bounded (peak {worst:.2f}, want under 8)", bad == 0 and worst < 8, (bad, worst))
+    brnd = random.Random(31)
+    sev, t = note(48, 0.0) + note(60, 0.0), 0.0
+    MB = ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12")
+    while t < 9.5:
+        t += 0.05
+        if brnd.random() < 0.1: sev += note(brnd.choice((36, 55, 67, 79)), t, t + brnd.uniform(0.02, 0.4), brnd.uniform(0.1, 1))
+        sev.append({"at": t, "t": "patch", "load": False, "p": patch(
+            filt={"model": brnd.choice(MB + ("lpg",)), "cutoff": math.exp(brnd.uniform(math.log(20), math.log(20000))), "res": brnd.random(), "drive": brnd.uniform(0, 10), "offset": brnd.uniform(-1, 1)},
+            filtB={"route": brnd.choice(("off", "serial", "parallel", "split")), "model": brnd.choice(MB), "cutoff": math.exp(brnd.uniform(math.log(20), math.log(20000))), "res": brnd.random(),
+                   "env": brnd.uniform(-1, 1), "keytrack": brnd.random(), "morph": brnd.uniform(0, 3), "bal": brnd.uniform(-1, 1)},
+            lfo1={"cutoff": brnd.uniform(0, 4), "rate": brnd.uniform(0.1, 30), "phase": brnd.choice((0, 90))})})
+    L, R = render(patch(filtB={"route": "serial"}), sev, 10.0, rack=False)
+    bad = int(np.sum(~np.isfinite(L)) + np.sum(~np.isfinite(R))); pk = float(max(np.max(np.abs(L)), np.max(np.abs(R))))
+    ck(f"Fb. 10 s of random routes, models, cutoffs, resonance, offsets and notes coming and going: finite, bounded and sounding (peak {pk:.2f})", bad == 0 and pk < 8 and float(np.sqrt(np.mean(L ** 2))) > 1e-3, (bad, pk))
+    # a route change under a held note rides the duck: no click
+    sine_b = lambda rt: patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.005, "s": 1, "r": 0.005}, filt={"model": "svf12", "cutoff": 2500, "res": 0.3}, filtB={"route": rt, "model": "ladder24", "cutoff": 6000})
+    for rt in ("serial", "split"):
+        L, R = render(sine_b("off"), note(45, 0.05) + [{"at": 0.4, "t": "patch", "load": False, "p": sine_b(rt)}], 1.2, rack=False)
+        s_ = np.abs(np.diff(L)) + np.abs(np.diff(R)); steady, worstst = float(np.max(s_[int(1.0 * SR):])), float(np.max(s_))
+        ck(f"Fb. no click when the route goes from off to {rt} under a held note (worst step {worstst:.5f}, steady {steady:.5f})", worstst <= 2.0 * steady + 1e-4, (worstst, steady))
+    # the schema: defaults, ranges, enums; old patches load with B off; no factory patch uses B yet
+    nz = pg.evaluate("""() => { const N = __synth.eq.normalize, d = N({}).filtB;
+      return { d: [d.route, d.model, d.cutoff, d.res, d.keytrack, d.env, d.morph, d.bal].join(','),
+               lpg: N({ filtB: { model: 'lpg' } }).filtB.model, bad: N({ filtB: { route: 'sideways' } }).filtB.route, sp: N({ filtB: { route: 'split' } }).filtB.route,
+               lo: [N({ filtB: { cutoff: 1, res: -1, bal: -5, morph: -1 } }).filtB].map(b => [b.cutoff, b.res, b.bal, b.morph].join(','))[0],
+               hi: [N({ filtB: { cutoff: 1e6, res: 5, bal: 5, morph: 9 } }).filtB].map(b => [b.cutoff, b.res, b.bal, b.morph].join(','))[0],
+               fac: __synth.factory().map(f => __synth.factoryPatch(f.name)).filter(p => p.filtB.route !== 'off').map(p => p.name) }; }""")
+    ck(f"Fb. filtB defaults to off (SVF 12, 2 kHz, flat, key tracking 50%); only the four routes and the six models other than the low pass gate load; ranges clamp; no factory patch turns it on ({nz})",
+       nz == {"d": "off,svf12,2000,0,0.5,0,0,0", "lpg": "svf12", "bad": "off", "sp": "split", "lo": "20,0,-1,0", "hi": "20000,1,1,3", "fac": []}, nz)
+
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
         p = patch(osc1={"level": 0}, filt={"model": "valve12", "cutoff": 262, "res": 1, "keytrack": 1, "tube": tube})
@@ -1742,6 +1865,12 @@ with sync_playwright() as pw:
     big["filt"]["model"] = "valve12"; big["filt"]["offset"] = 0.5
     r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
     info("9. CPU valve12 with stereo offset (two filters per voice), 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+    big["filt"]["offset"] = 0
+    for rt in ("serial", "parallel", "split"):
+        big["filtB"] = {"route": rt, "model": "ladder24", "cutoff": 900, "res": 0.5}
+        r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
+        info(f"9. CPU valve12 with filter B {rt} on Ladder 24, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+    big.pop("filtB")
     big["filt"]["offset"] = 0; big["voice"] = {"unison": 2, "count": 8}; big["ens"] = {"on": True, "mode": "strings", "mix": 50}
     r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
     info("9. CPU valve12, 8 notes x unison 2 = 16 voices, ensemble on", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
@@ -1978,6 +2107,34 @@ with sync_playwright() as pw:
     ck(f"the Poly 24 chip is on screen ({bb['width']:.0f} x {bb['height']:.0f} px)", bb["width"] > 0 and bb["height"] > 0, bb)
     pg.click('.chip[data-v="valve12"]')
     pg.click('#mFilt .chip[data-v="EL34"]'); ck("loop tube chip sets V2 and the chassis label", pg.evaluate("__synth.patch().filt.tube") == "EL34" and pg.inner_text("#nameV2") == "EL34")
+    # filter slot B (27 Oct): the Filter B section on the Filter tab
+    rch = pg.evaluate("""() => [...document.querySelectorAll('#routeChips .chip')].map(b => b.dataset.v + ':' + b.textContent + ':' + b.getAttribute('aria-pressed'))""")
+    bmc = pg.evaluate("""() => [...document.querySelectorAll('#filtBModel .chip')].map(b => b.dataset.v)""")
+    ck(f"Fb. the Filter B section offers A only (lit), serial, parallel and split, and B's six models without the low pass gate; its pilot is dark ({rch}; {bmc})",
+       rch == ["off:A only:true", "serial:serial A > B:false", "parallel:parallel:false", "split:split L/R:false"] and bmc == ["valve12", "ladder24", "diode18", "sk12", "poly24", "svf12"]
+       and pg.evaluate("document.getElementById('filtBPilot').classList.contains('off')") and pg.is_visible("#mFiltB"), (rch, bmc))
+    pg.click('#routeChips .chip[data-v="serial"]'); pg.wait_for_timeout(60)
+    ck("Fb. the serial chip sets filtB.route, lights the pilot and says what serial does",
+       pg.evaluate("__synth.patch().filtB.route") == "serial" and not pg.evaluate("document.getElementById('filtBPilot').classList.contains('off')") and "Serial" in pg.inner_text("#filtBNote"), pg.inner_text("#filtBNote"))
+    ck("Fb. B on SVF 12 shows its morph knob; the balance knob shows only in parallel",
+       pg.is_visible('#kFiltB [data-path="filtB.morph"]') and not pg.is_visible('#kFiltB [data-path="filtB.bal"]'))
+    pg.click('#filtBModel .chip[data-v="ladder24"]'); pg.click('#routeChips .chip[data-v="parallel"]'); pg.wait_for_timeout(60)
+    ck("Fb. B on Ladder 24 hides the morph knob; parallel shows the balance knob and its note",
+       pg.evaluate("__synth.patch().filtB.model") == "ladder24" and not pg.is_visible('#kFiltB [data-path="filtB.morph"]') and pg.is_visible('#kFiltB [data-path="filtB.bal"]') and "Parallel" in pg.inner_text("#filtBNote"))
+    pg.click('#mFilt .chip[data-v="ladder24"]'); pg.click('#filtBModel .chip[data-v="valve12"]'); pg.wait_for_timeout(60)
+    ck("Fb. the loop tube row shows when B is on Valve 12 even with A on Ladder 24", pg.is_visible("#loopChips"))
+    pg.click('#filtBModel .chip[data-v="svf12"]'); pg.wait_for_timeout(60)
+    ck("Fb. and hides again when neither slot is on Valve 12", not pg.is_visible("#loopChips"))
+    pg.click('#routeChips .chip[data-v="split"]'); pg.wait_for_timeout(60)
+    bk = pg.query_selector('#kFiltB [data-path="filtB.cutoff"]'); bk.focus(); pg.keyboard.press("Home"); pg.wait_for_timeout(80)
+    ck(f"Fb. B's cutoff knob goes to 20 Hz from the keyboard ({pg.evaluate('__synth.patch().filtB.cutoff')})", abs(pg.evaluate("__synth.patch().filtB.cutoff") - 20) < 1e-6)
+    sp_ = dec(pg.evaluate("a => __synth.render(a)", {"events": note(57, 0.0, 0.8), "seconds": 1.0, "rack": False}))
+    sl_l, sl_r = float(np.sqrt(np.mean(sp_[0][SR // 4:] ** 2))), float(np.sqrt(np.mean(sp_[1][SR // 4:] ** 2)))
+    ck(f"Fb. the panel's split reaches the engine: with B's cutoff at 20 Hz the right side is far quieter than the left ({db(sl_l):.1f} / {db(sl_r):.1f} dBFS, want 20 dB apart)", db(sl_l) - db(sl_r) >= 20, (db(sl_l), db(sl_r)))
+    pg.keyboard.press("End"); pg.wait_for_timeout(60)
+    pg.click('#routeChips .chip[data-v="off"]'); pg.click('#mFilt .chip[data-v="valve12"]'); pg.wait_for_timeout(60)
+    ck("Fb. A only turns slot B off again and dims its controls", pg.evaluate("__synth.patch().filtB.route") == "off" and pg.evaluate("document.getElementById('filtBPilot').classList.contains('off')")
+       and pg.evaluate("""getComputedStyle(document.querySelector('#kFiltB [data-path="filtB.cutoff"]')).opacity""") == "0.45")
     # save a user patch, reload, still there
     pg.click("#saveP"); pg.fill("#saveName", "Test Bass"); pg.click("#saveOk"); pg.wait_for_timeout(100)
     pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
@@ -2455,6 +2612,7 @@ with sync_playwright() as pw:
         ck(f"10. {w}px: one section group at a time", ph.evaluate("[...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length") <= 4)
         ph.click(".tabs [data-go=filter]"); ph.wait_for_timeout(100)
         ck(f"10. {w}px: the Filter tab shows the filter", ph.is_visible("#mFilt") and not ph.is_visible("#mOsc1"))
+        ck(f"10. {w}px: the Filter tab shows Filter B with its route chips", ph.is_visible("#mFiltB") and ph.is_visible('#routeChips .chip[data-v="split"]'))
         small = ph.evaluate("""() => [...document.querySelectorAll('.tabs button, .key.w, .btn, .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: touch targets are 44 px or more", not small, small)
         ck(f"10. {w}px: the Filter tab shows the Diode 18, Sallen-Key 12, Poly 24, SVF 12 and LP gate chips with no horizontal scroll",
