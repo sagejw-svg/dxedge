@@ -1724,6 +1724,10 @@ function pushPatch(load) {
 }
 
 // ---------------------------------------------------------------- transport, mixer, project
+// Until the boot finishes, restoreMixRouting has not yet put the saved arms and desk bus back, so the
+// live ones are empty and default. A save in that window keeps what the saved project has (review R1027-1).
+function liveArmed() { return booted || !bootProj ? mixArmed.slice() : normalizeArmed(bootProj.armed); }
+function liveBus() { return E && (booted || !bootProj) ? E.mix.bus() : (bootProj ? bootProj.bus : null); }
 function collectProject() {
   const st = E ? E.transport.state() : null;
   return normalizeProject({
@@ -1732,8 +1736,8 @@ function collectProject() {
     timeSig: st ? st.timeSig : (bootProj ? bootProj.timeSig : [4, 4]),
     device: dev,
     mixer: E ? E.mix.all() : (bootProj ? bootProj.mixer : null),
-    armed: mixArmed.slice(),
-    bus: E ? E.mix.bus() : (bootProj ? bootProj.bus : null),
+    armed: liveArmed(),
+    bus: liveBus(),
     devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') }, geissler: { patch: patchOf('geissler') }, pentagrid: { patch: patchOf('pentagrid') }, orthicon: { patch: patchOf('orthicon') }, trochotron: { patch: patchOf('trochotron') }, gyrotron: { patch: patchOf('gyrotron') }, klystron: { patch: patchOf('klystron') }, phantastron: { patch: patchOf('phantastron') }, additron: { patch: patchOf('additron') }, rhumbatron: { patch: patchOf('rhumbatron') }, resnatron: { patch: patchOf('resnatron') } },
   });
 }
@@ -1809,8 +1813,8 @@ function restoreMixRouting() {
 function collectSession() {
   return normalizeSession({
     name: $('mixName').value,
-    armed: mixArmed,
-    bus: E ? E.mix.bus() : null,
+    armed: liveArmed(),
+    bus: liveBus(),
     channels: E ? E.mix.all() : null,
   });
 }

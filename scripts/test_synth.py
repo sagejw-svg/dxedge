@@ -3104,6 +3104,22 @@ with sync_playwright() as pw:
           return out;
         }""", rail)
         ck(f"R. load saved keeps the patch picked on {rail} on the rail", rl["after"] == rl["picked"] and rl["back"] == rl["picked"] and "(edited)" not in rl["label"], rl)
+    # Review 27 Oct (R1027-1): the saved arms and desk bus come back only when the boot finishes (several
+    # seconds on a phone or a slow link). Save project or save mix in that window wrote no arms and the
+    # default bus over the saved ones. Holding one device's worklet back keeps the page in that window.
+    bctx = b.new_context(viewport={"width": 1366, "height": 900}, service_workers="block"); bpg = bctx.new_page()
+    bpg.goto(BASE); bpg.wait_for_function("window.__synth && __synth.booted()", timeout=30000)
+    bpg.evaluate("""() => { const p = __synth.project(); p.name = 'Early'; p.armed = ['cathode', 'thyratron'];
+      p.bus = { reverbSeconds: 2.2, delayTime: 0.5, delayFeedback: 0.6 }; localStorage.setItem('dxrack_project', JSON.stringify(p)); }""")
+    bctx.route("**/resnatron.worklet.js", lambda r: r.abort())
+    bpg.reload(); bpg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); bpg.wait_for_timeout(400)
+    early = bpg.evaluate("""() => { const booted = __synth.booted(); document.getElementById('projSave').click();
+      const p = JSON.parse(localStorage.getItem('dxrack_project')); const m = __synth.mixSession();
+      return { booted, armed: p.armed, bus: p.bus, name: p.name, mixArmed: m.armed, mixBus: m.bus }; }""")
+    ck("R. save project before the boot finishes keeps the saved arms and desk bus (and the mix session sees them)",
+       early["booted"] is False and early["name"] == "Early" and early["armed"] == ["cathode", "thyratron"] and early["mixArmed"] == ["cathode", "thyratron"]
+       and abs(early["bus"]["reverbSeconds"] - 2.2) < 1e-9 and abs(early["bus"]["delayFeedback"] - 0.6) < 1e-9 and abs(early["mixBus"]["reverbSeconds"] - 2.2) < 1e-9, early)
+    bctx.close()
     ck("R. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Mx. the mix desk: arms, sends, one session
