@@ -1,0 +1,28 @@
+Hearthvault
+Copyright (c) 2026 James Wilson
+
+Hearthvault is a fork of DelveWard, modified in 2026.
+DelveWard — Copyright (c) 2025 Jakub Lehotsky
+Upstream: https://github.com/l3hox/DelveWard
+
+Both the original work and this fork are licensed under the
+European Union Public Licence v. 1.2 (EUPL-1.2).
+The licence text is in the file LICENSE. A copy is also available at
+https://eupl.eu/1.2/en/
+
+This notice is the prominent modification notice required by EUPL-1.2
+Articles 5 and 6. The source of this derivative work is distributed
+under EUPL-1.2. No trademark right in the name DelveWard is claimed
+or granted.
+
+Modifications in this fork include:
+- the visible name Hearthvault
+- a shared cell query for walls, holes, and open floors
+- an entity-type registry used by save/load and the editor
+- a generated WebAudio soundtrack (footsteps, mechanisms, ambient beds)
+- a static build served from the /crawl/ subpath
+
+DelveWard's sprites, levels, and code are part of the upstream work
+and remain under EUPL-1.2. Hearthvault adds no assets from Dungeon
+Master, Eye of the Beholder, Might and Magic, or any other commercial
+game. Sounds in this fork are synthesized in the browser.

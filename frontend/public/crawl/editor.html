@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="googlebot" content="noindex, nofollow" />
+    <title>Hearthvault — Dungeon Editor</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: #0d0d0d;
+        color: #ccc;
+        font-family: monospace;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #toolbar {
+        background: #1a1a1a;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 12px;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+      }
+
+      #btn-open {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      #btn-open:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+
+      #level-name {
+        color: #aaa;
+        font-size: 13px;
+      }
+
+      #coord-display {
+        margin-left: auto;
+        color: #888;
+        font-size: 13px;
+      }
+
+      #canvas-container {
+        background: #111;
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #editor-canvas {
+        image-rendering: pixelated;
+      }
+
+      .tool-group {
+        display: flex;
+        gap: 4px;
+      }
+
+      .tool-btn {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .tool-btn:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+
+      .tool-btn.active {
+        background: #3a3a3a;
+        border-color: #fff;
+        color: #fff;
+      }
+
+      .tool-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      #char-palette {
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+        overflow-x: auto;
+      }
+
+      #char-palette.dimmed {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .palette-label {
+        color: #666;
+        font-size: 11px;
+        user-select: none;
+      }
+
+      .palette-group {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .palette-sep {
+        width: 1px;
+        height: 40px;
+        background: #444;
+      }
+
+      .palette-sep-sm {
+        width: 1px;
+        height: 20px;
+        background: #444;
+      }
+
+      .char-swatch-btn {
+        background: #1a1a1a;
+        border: 2px solid #444;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+
+      .char-swatch-btn canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+
+      .char-swatch-btn:hover {
+        border-color: #888;
+      }
+
+      .char-swatch-btn.selected {
+        border-color: #4488ff;
+      }
+
+      .char-swatch-btn.void {
+        width: 28px;
+        height: 28px;
+        color: #888;
+        font-family: monospace;
+        font-size: 13px;
+      }
+
+      #entity-palette {
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+        overflow-x: auto;
+      }
+
+      #entity-palette.dimmed {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .entity-swatch-btn {
+        width: 28px;
+        height: 28px;
+        background: #222;
+        border: 2px solid #444;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .entity-swatch-btn canvas {
+        display: block;
+      }
+
+      .entity-swatch-btn:hover {
+        border-color: #888;
+      }
+
+      .entity-swatch-btn.selected {
+        border-color: #44ff44;
+      }
+
+      .view-toggle {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #888;
+        font-size: 11px;
+        cursor: pointer;
+        user-select: none;
+        margin-left: 4px;
+      }
+
+      .view-toggle input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+        cursor: pointer;
+      }
+
+      .view-toggle:hover {
+        color: #ccc;
+      }
+
+      .item-context-menu {
+        position: fixed;
+        background: #222;
+        border: 1px solid #555;
+        z-index: 200;
+        max-height: 300px;
+        overflow-y: auto;
+        min-width: 150px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .item-ctx-header {
+        color: #888;
+        font-size: 10px;
+        padding: 4px 8px 2px;
+        text-transform: uppercase;
+        border-top: 1px solid #333;
+      }
+
+      .item-ctx-header:first-child {
+        border-top: none;
+      }
+
+      .item-ctx-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 8px;
+        color: #ccc;
+        cursor: pointer;
+      }
+
+      .item-ctx-row:hover {
+        background: #333;
+      }
+
+      .item-ctx-row canvas {
+        width: 20px;
+        height: 20px;
+        image-rendering: pixelated;
+        flex-shrink: 0;
+      }
+
+      .item-details {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #333;
+      }
+
+      .readonly-field {
+        margin-bottom: 4px;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .readonly-field label {
+        display: inline;
+        margin-bottom: 0;
+        white-space: nowrap;
+        color: #999;
+        font-size: 11px;
+      }
+
+      .readonly-field label::after {
+        content: ':';
+      }
+
+      .readonly-value {
+        color: #ccc;
+        font-size: 11px;
+        word-wrap: break-word;
+      }
+
+      .sprite-preview {
+        display: block;
+        image-rendering: pixelated;
+        margin-bottom: 8px;
+        max-width: 100%;
+        height: auto;
+      }
+
+      .coord-pair-row {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+
+      .coord-pair-row input {
+        width: 50px;
+        flex: 1;
+      }
+
+      .coord-sep {
+        color: #666;
+        font-size: 12px;
+      }
+
+      .coord-pair-row .btn-pick {
+        flex-shrink: 0;
+      }
+
+      #btn-export {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      #btn-export:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+
+      #btn-export:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      #btn-save, #btn-save-as, #btn-open-server {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      #btn-save:hover, #btn-save-as:hover, #btn-open-server:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+
+      #btn-save:disabled, #btn-save-as:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .toolbar-sep {
+        width: 1px;
+        height: 20px;
+        background: #444;
+        margin: 0 4px;
+      }
+
+      #main-area {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      #inspector {
+        width: 260px;
+        min-width: 260px;
+        background: #1a1a1a;
+        border-left: 1px solid #333;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      #dialog-canvas {
+        image-rendering: pixelated;
+      }
+
+      #dialog-inspector {
+        width: 260px;
+        min-width: 260px;
+        background: #1a1a1a;
+        border-left: 1px solid #333;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .inspector-placeholder {
+        color: #666;
+        font-size: 12px;
+        text-align: center;
+        margin-top: 40px;
+      }
+
+      .inspector-header {
+        color: #fff;
+        font-size: 14px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+      }
+
+      .inspector-field {
+        margin-bottom: 10px;
+      }
+
+      .inspector-field label {
+        display: block;
+        color: #888;
+        font-size: 11px;
+        margin-bottom: 3px;
+      }
+
+      .inspector-field input,
+      .inspector-field select {
+        width: 100%;
+        background: #222;
+        color: #ccc;
+        border: 1px solid #444;
+        padding: 4px 6px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .inspector-field input:focus,
+      .inspector-field select:focus {
+        outline: none;
+        border-color: #4488ff;
+      }
+
+      .btn-delete {
+        width: 100%;
+        margin-top: 16px;
+        padding: 6px 0;
+        background: #442222;
+        color: #ff6666;
+        border: 1px solid #663333;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .btn-delete:hover {
+        background: #553333;
+        border-color: #884444;
+      }
+
+      .entity-type-select {
+        display: none;
+      }
+
+      #level-properties {
+        width: 260px;
+        min-width: 260px;
+        background: #1a1a1a;
+        border-right: 1px solid #333;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .props-section-header {
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 6px 0;
+        user-select: none;
+      }
+
+      .props-section-header:hover {
+        color: #4488ff;
+      }
+
+      .props-section-body {
+        padding: 0 0 8px 8px;
+      }
+
+      .props-item-header {
+        color: #999;
+        font-size: 12px;
+        cursor: pointer;
+        padding: 4px 0;
+        user-select: none;
+      }
+
+      .props-item-header:hover {
+        color: #ccc;
+      }
+
+      .props-item-body {
+        padding: 0 0 8px 12px;
+        border-left: 1px solid #333;
+        margin-left: 4px;
+      }
+
+      .btn-add {
+        width: 100%;
+        margin-top: 4px;
+        padding: 4px 0;
+        background: #1a2a1a;
+        color: #66cc66;
+        border: 1px solid #336633;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .btn-add:hover {
+        background: #223322;
+        border-color: #448844;
+      }
+
+      .btn-remove {
+        width: 100%;
+        margin-top: 4px;
+        padding: 4px 0;
+        background: #2a1a1a;
+        color: #cc6666;
+        border: 1px solid #663333;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .btn-remove:hover {
+        background: #332222;
+        border-color: #884444;
+      }
+
+      .inspector-field input[type="checkbox"] {
+        width: auto;
+      }
+
+      .inspector-field.checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .inspector-field.checkbox-field label {
+        display: inline;
+        margin-bottom: 0;
+      }
+
+      #btn-new {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      #btn-new:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+
+      .props-array-entry {
+        margin-bottom: 2px;
+      }
+
+      .props-array-summary {
+        color: #999;
+        font-size: 12px;
+        cursor: pointer;
+        padding: 4px 0;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .props-array-summary:hover {
+        color: #ccc;
+      }
+
+      .props-array-summary span {
+        flex: 1;
+      }
+
+      .props-array-summary .btn-remove {
+        width: auto;
+        padding: 2px 8px;
+        margin-top: 0;
+        font-size: 11px;
+      }
+
+      .props-array-detail {
+        padding: 4px 0 8px 12px;
+        border-left: 1px solid #333;
+        margin-left: 4px;
+      }
+
+      .btn-pick { background:#2a2a3a; color:#88aaff; border:1px solid #4466aa;
+        padding:4px 8px; font-family:monospace; font-size:11px; cursor:pointer; white-space:nowrap; }
+      .btn-pick:hover { background:#3a3a4a; border-color:#6688cc; }
+      .btn-pick.active { background:#3a4a3a; color:#88ff88; border-color:#44aa44; }
+
+      .inspector-ref-header { color:#888; font-size:11px; margin-top:12px; margin-bottom:4px;
+        padding-top:8px; border-top:1px solid #333; }
+      .inspector-ref-item { color:#88aaff; font-size:12px; padding:3px 0; cursor:pointer; }
+      .inspector-ref-item:hover { color:#aaccff; text-decoration:underline; }
+
+      .tex-dropdown { position:relative; }
+      .tex-dropdown-trigger {
+        display:flex; align-items:center; gap:6px;
+        background:#222; border:1px solid #444; padding:4px 6px;
+        font-family:monospace; font-size:12px; color:#ccc; cursor:pointer;
+      }
+      .tex-dropdown-trigger:hover { border-color:#888; }
+      .tex-dropdown-panel {
+        display:none; position:absolute; top:100%; left:0; right:0;
+        background:#222; border:1px solid #555; z-index:100;
+        max-height:200px; overflow-y:auto;
+      }
+      .tex-dropdown-panel.open { display:block; }
+      .tex-dropdown-option {
+        display:flex; align-items:center; gap:6px;
+        padding:4px 6px; cursor:pointer; font-size:12px; color:#ccc;
+      }
+      .tex-dropdown-option:hover { background:#333; }
+      .tex-dropdown-option.selected { background:#2a3a2a; color:#88ff88; }
+      .tex-swatch {
+        width:20px; height:20px; border:1px solid #555;
+        image-rendering:pixelated; flex-shrink:0;
+      }
+      #error-banner {
+        display: none;
+        background: #2a1515;
+        border-top: 1px solid #663333;
+        color: #ff8888;
+        font-size: 12px;
+        padding: 4px 12px;
+        flex-shrink: 0;
+      }
+      #error-banner.visible {
+        display: block;
+      }
+      .error-goto {
+        color: #88aaff;
+        cursor: pointer;
+        margin-left: 4px;
+        text-decoration: none;
+        font-size: 11px;
+      }
+      .error-goto:hover {
+        color: #aaccff;
+        text-decoration: underline;
+      }
+
+      #char-palette::-webkit-scrollbar,
+      #entity-palette::-webkit-scrollbar {
+        height: 4px;
+      }
+
+      #char-palette::-webkit-scrollbar-thumb,
+      #entity-palette::-webkit-scrollbar-thumb {
+        background: #444;
+        border-radius: 2px;
+      }
+
+      #char-palette::-webkit-scrollbar-track,
+      #entity-palette::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #level-list {
+        display: none;
+      }
+
+      #level-list.visible {
+        display: block;
+        border-bottom: 1px solid #333;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+      }
+
+      #layer-list {
+        display: none;
+      }
+      #layer-list.visible {
+        display: block;
+        border-bottom: 1px solid #333;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+      }
+
+      .level-list-header {
+        color: #fff;
+        font-size: 13px;
+        padding: 6px 0;
+        user-select: none;
+      }
+
+      .level-list-name-field {
+        margin-bottom: 8px;
+      }
+
+      .level-list-name-field label {
+        display: block;
+        color: #888;
+        font-size: 11px;
+        margin-bottom: 3px;
+      }
+
+      .level-list-name-field input {
+        width: 100%;
+        background: #222;
+        color: #ccc;
+        border: 1px solid #444;
+        padding: 4px 6px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .level-list-name-field input:focus {
+        outline: none;
+        border-color: #4488ff;
+      }
+
+      .level-list-scroll {
+        max-height: 210px;
+        overflow-y: auto;
+      }
+
+      .level-list-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .level-list-scroll::-webkit-scrollbar-thumb {
+        background: #444;
+        border-radius: 2px;
+      }
+
+      .level-list-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .level-entry {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 6px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        font-size: 12px;
+      }
+
+      .level-entry:hover {
+        background: #222;
+      }
+
+      .level-entry.active {
+        border-left-color: #44cc44;
+        color: #44cc44;
+      }
+
+      .level-entry.highlight {
+        border-left-color: #ffaa00;
+        color: #ffaa00;
+      }
+
+      .level-entry.hover-highlight {
+        border-left-color: #5090ff;
+        color: #5090ff;
+      }
+
+      .level-entry-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .level-entry-id {
+        color: #666;
+        font-size: 11px;
+        flex-shrink: 0;
+      }
+
+      .level-entry-actions {
+        display: flex;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+
+      .level-entry-actions button {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 0 3px;
+        font-family: monospace;
+      }
+
+      .level-entry-actions button:hover {
+        color: #ccc;
+      }
+
+      #btn-new-dungeon {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 10px;
+        font-family: monospace;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      #btn-new-dungeon:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+
+      #status-hint {
+        display: none;
+        background: #152030;
+        border-top: 1px solid #334466;
+        color: #88bbff;
+        font-size: 12px;
+        padding: 4px 12px;
+        flex-shrink: 0;
+      }
+      #status-hint.visible {
+        display: block;
+      }
+
+      .file-picker-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 300;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .file-picker {
+        background: #1a1a1a;
+        border: 1px solid #555;
+        min-width: 280px;
+        max-width: 400px;
+        max-height: 400px;
+        display: flex;
+        flex-direction: column;
+      }
+      .file-picker-title {
+        color: #fff;
+        font-size: 13px;
+        padding: 10px 14px 8px;
+        border-bottom: 1px solid #333;
+      }
+      .file-picker-list {
+        overflow-y: auto;
+        padding: 4px 0;
+      }
+      .file-picker-item {
+        padding: 7px 14px;
+        color: #ccc;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .file-picker-item:hover {
+        background: #2a3a4a;
+        color: #fff;
+      }
+      .file-picker-cancel {
+        padding: 8px 14px;
+        border-top: 1px solid #333;
+        text-align: right;
+      }
+      .file-picker-cancel button {
+        background: #2a2a2a;
+        color: #ccc;
+        border: 1px solid #555;
+        padding: 4px 14px;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .file-picker-cancel button:hover {
+        background: #3a3a3a;
+        border-color: #888;
+      }
+      /* Preview canvas renders offscreen — drawn onto the 2D grid canvas as a floating window.
+         Must stay in DOM and focusable for keyboard input and pointer lock. */
+      #preview-canvas {
+        position: fixed;
+        left: -9999px;
+        top: 0;
+        width: 1px;
+        height: 1px;
+      }
+      /* Preview canvas focus indicators removed — preview is now an in-canvas window */
+    </style>
+    <script type="module" crossorigin src="/crawl/assets/editor-yDVEffx3.js"></script>
+    <link rel="modulepreload" crossorigin href="/crawl/assets/skybox-D9FOk2IG.js">
+  </head>
+  <body>
+    <div id="toolbar">
+      <button id="btn-open">Open File</button>
+      <span id="level-name">Level: (none)</span>
+      <span id="coord-display">Pos: —</span>
+      <!-- 3D preview toggle moved to entity palette view toggles -->
+    </div>
+    <div id="char-palette" class="dimmed"></div>
+    <div id="entity-palette" class="dimmed"></div>
+    <div id="main-area">
+      <div id="level-properties">
+        <div id="level-list"></div>
+        <div id="layer-list"></div>
+        <div id="level-props-content"></div>
+      </div>
+      <div id="canvas-container">
+        <canvas id="editor-canvas"></canvas>
+        <canvas id="dialog-canvas" style="display:none"></canvas>
+        <canvas id="preview-canvas"></canvas>
+      </div>
+      <div id="inspector"></div>
+      <div id="dialog-inspector" style="display:none"></div>
+    </div>
+    <div id="error-banner"></div>
+    <div id="status-hint"></div>
+  </body>
+</html>

@@ -324,14 +324,18 @@ jobs:
           fi
           html=$(curl -sf https://dxedge.net/crawl/)
           echo "$html" | grep -q 'noindex' || { echo "ERROR: /crawl/ is missing noindex"; exit 1; }
-          echo "$html" | grep -q '/crawl/assets/index-D7zYPsqB.js' || { echo "ERROR: /crawl/ is not the published game"; exit 1; }
-          js=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/index-D7zYPsqB.js)
-          css=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/index-DDj2uQ5E.css)
-          echo "/crawl/ js $js css $css"
-          if [ "$js" != "200" ] || [ "$css" != "200" ]; then
+          echo "$html" | grep -q '/crawl/assets/main-UWuSTqQ6.js' || { echo "ERROR: /crawl/ is not the published game"; exit 1; }
+          js=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/main-UWuSTqQ6.js)
+          sky=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/assets/skybox-D9FOk2IG.js)
+          lic=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/LICENSE)
+          notice=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/crawl/NOTICE)
+          echo "/crawl/ js $js skybox $sky license $lic notice $notice"
+          if [ "$js" != "200" ] || [ "$sky" != "200" ] || [ "$lic" != "200" ] || [ "$notice" != "200" ]; then
             echo "ERROR: /crawl/ assets are not 200"
             exit 1
           fi
+          curl -sf https://dxedge.net/crawl/LICENSE | grep -q 'EUPL' || { echo "ERROR: /crawl/LICENSE is not the EUPL"; exit 1; }
+          curl -sf https://dxedge.net/crawl/NOTICE | grep -q 'fork of DelveWard' || { echo "ERROR: /crawl/NOTICE is missing the fork notice"; exit 1; }
 
       - name: Verify Deadweight is live
         run: |

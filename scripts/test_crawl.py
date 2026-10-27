@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Headless check of the unlisted Hearthvault game at /crawl/.
 
-The page is a prebuilt static bundle. It must stay out of the site nav,
-keep its noindex tag, and show the title screen. The service worker and
-nginx treat the directory as mutable, the same way /dm/ is served.
+The page is a prebuilt static bundle, an EUPL-1.2 fork of DelveWard. It must
+stay out of the site nav, keep its noindex tag, serve LICENSE and NOTICE, and
+show the boot screen. The service worker and nginx treat the directory as
+mutable, the same way /dm/ is served. Commercial game data files are not
+part of this tree.
 
 Run from the repo root:  python3 scripts/test_crawl.py
 """
@@ -17,7 +19,12 @@ from playwright.sync_api import sync_playwright
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 PUBLIC = os.path.join(ROOT, 'frontend', 'public')
+CRAWL = os.path.join(PUBLIC, 'crawl')
 PORT = 8785
+BUNDLE = 'main-UWuSTqQ6.js'
+SKYBOX = 'skybox-D9FOk2IG.js'
+BANNED_EXT = ('.dat', '.cps', '.vcn', '.vmp', '.maz', '.exe', '.pak', '.wad')
+BANNED_NAMES = {'dungeon.dat', 'graphics.dat', 'item.dat', 'itemtype.dat'}
 
 
 class Quiet(SimpleHTTPRequestHandler):
@@ -35,8 +42,10 @@ def serve():
 
 
 def main():
-    page_html = open(os.path.join(PUBLIC, 'crawl', 'index.html'), encoding='utf-8').read()
-    bundle = open(os.path.join(PUBLIC, 'crawl', 'assets', 'index-D7zYPsqB.js'), encoding='utf-8').read()
+    page_html = open(os.path.join(CRAWL, 'index.html'), encoding='utf-8').read()
+    bundle = open(os.path.join(CRAWL, 'assets', BUNDLE), encoding='utf-8').read()
+    license_txt = open(os.path.join(CRAWL, 'LICENSE'), encoding='utf-8').read()
+    notice = open(os.path.join(CRAWL, 'NOTICE'), encoding='utf-8').read()
     app = open(os.path.join(ROOT, 'frontend', 'src', 'App.jsx'), encoding='utf-8').read()
     sw = open(os.path.join(PUBLIC, 'sw.js'), encoding='utf-8').read()
     nginx = open(os.path.join(ROOT, 'nginx', 'nginx.conf'), encoding='utf-8').read()
@@ -49,13 +58,23 @@ def main():
         if not cond:
             raise AssertionError(msg)
 
+    banned = []
+    for dirpath, _, files in os.walk(CRAWL):
+        for name in files:
+            low = name.lower()
+            if low in BANNED_NAMES or low.endswith(BANNED_EXT):
+                banned.append(os.path.join(dirpath, name))
+    ok(not banned, 'commercial game files: ' + ', '.join(banned))
     ok('noindex, nofollow' in page_html, 'the page asks crawlers to skip it')
-    ok('/crawl/assets/index-D7zYPsqB.js' in page_html, 'the bundle is served from /crawl/')
-    ok('/crawl/assets/index-DDj2uQ5E.css' in page_html, 'the stylesheet is served from /crawl/')
-    ok('data-testid="title"' in bundle and '>Hearthvault<' in bundle, 'the bundle contains the title screen')
+    ok(f'/crawl/assets/{BUNDLE}' in page_html, 'the bundle is served from /crawl/')
+    ok(f'/crawl/assets/{SKYBOX}' in page_html, 'the skybox chunk is served from /crawl/')
+    ok('HEARTHVAULT' in bundle and 'A fork of DelveWard' in bundle and 'EUPL-1.2' in bundle,
+       'the bundle contains the Hearthvault boot screen')
+    ok('EUROPEAN UNION PUBLIC LICENCE v. 1.2' in license_txt, 'LICENSE is EUPL-1.2')
+    ok('fork of DelveWard' in notice and 'EUPL-1.2' in notice, 'NOTICE records the fork')
     ok('href="/crawl/"' not in app and "id: 'crawl'" not in app, 'the game is not in the site nav')
     cache = re.search(r"CACHE_NAME = 'dxedge-v(\d+)'", sw)
-    ok(cache is not None and int(cache.group(1)) >= 137, 'service worker cache bumped')
+    ok(cache is not None and int(cache.group(1)) >= 152, 'service worker cache bumped')
     ok("url.pathname.startsWith('/crawl/')" in sw, 'service worker treats /crawl/ as mutable')
     ok('location ^~ /crawl/' in nginx, 'nginx does not pin /crawl/ for a year')
 
@@ -69,13 +88,23 @@ def main():
             browser = p.chromium.launch()
         pg = browser.new_page(viewport={'width': 1280, 'height': 800})
         pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e)))
-        pg.on('response', lambda r: failed.append(f'{r.status} {r.url}') if r.status >= 400 else None)
+        def note(r):
+            if r.status < 400:
+                return
+            # /api/levels/latest is optional. This host has no editor API, and
+            # the game falls back to /crawl/levels/ruins.json. A missing
+            # favicon is the browser, not the bundle.
+            if '/api/' in r.url or r.url.endswith('/favicon.ico'):
+                return
+            failed.append(f'{r.status} {r.url}')
+        pg.on('response', note)
         pg.goto(f'http://127.0.0.1:{PORT}/crawl/index.html', wait_until='networkidle')
-        pg.wait_for_selector('[data-testid="title"]')
+        pg.wait_for_selector('text=Enable sound')
+        pg.wait_for_selector('text=Loading', timeout=30000)
         ok(pg.title() == 'Hearthvault', 'title')
+        ok(pg.query_selector('canvas') is not None, 'the game canvas is on the page')
         body = pg.inner_text('body')
-        ok('Hearthvault' in body and 'New course' in body, body[:400])
-        ok(pg.query_selector('[data-testid="new-game"]') is not None, 'the new-course button is on the title screen')
+        ok(not body.startswith('Error:'), body[:400])
         ok(not failed, failed)
         pg.screenshot(path='/tmp/crawl-title.png', full_page=False)
         ok(not errors, errors)
