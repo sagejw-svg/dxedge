@@ -3476,6 +3476,75 @@ with sync_playwright() as pw:
     ck("Ob. no page errors (phone outboard)", not operr, operr)
     opx.close()
 
+    # ---------------------------------------------------------------- Rl. the desktop rail (graphics, 27 Oct)
+    # The rail is a recessed bay with an engraved RACK plate and even module plates: nine across from 1340 px (two rows
+    # of nine), six across below (three rows), the role dropped under 960 px. The phone keeps its one-row scrolling strip.
+    RL_MEAS = """() => {
+      const rail = document.querySelector('.rail'), bay = rail.querySelector('.rail-bay'), lab = rail.querySelector('.label');
+      const bs = [...rail.querySelectorAll('.devbtn')].map(b => { const r = b.getBoundingClientRect(), c = getComputedStyle(b), sm = b.querySelector('small');
+        return { d: b.dataset.d, left: Math.round(r.left), top: Math.round(r.top), w: r.width, h: r.height, clip: b.scrollWidth > b.clientWidth + 1,
+          smClip: !!(sm && sm.offsetParent && sm.scrollWidth > sm.clientWidth + 1), smShown: !!(sm && sm.offsetParent), color: c.color, bg: c.backgroundImage,
+          smColor: sm ? getComputedStyle(sm).color : '', pressed: b.getAttribute('aria-pressed'), border: c.borderTopColor, shadow: c.boxShadow,
+          lamp: getComputedStyle(b.querySelector('i')).boxShadow, dur: c.transitionDuration }; });
+      const rr = rail.getBoundingClientRect(), lr = lab.getBoundingClientRect(), br = bay.getBoundingClientRect(), rc = getComputedStyle(rail);
+      return { bs, rail: { h: rr.height, bg: rc.backgroundImage, shadow: rc.boxShadow }, label: { shown: !!lab.offsetParent, h: lr.height, wm: getComputedStyle(lab).writingMode, text: lab.textContent },
+        bayH: br.height, bayDisplay: getComputedStyle(bay).display, sw: document.documentElement.scrollWidth, iw: innerWidth,
+        chassisTop: document.getElementById('chassis').getBoundingClientRect().top };
+    }"""
+    def _rl_grid(m):
+        bs = m["bs"]; tops = sorted({x["top"] for x in bs}); lefts = sorted({x["left"] for x in bs})
+        per_row = [sum(1 for x in bs if x["top"] == t) for t in tops]
+        return tops, lefts, per_row, max(x["w"] for x in bs) - min(x["w"] for x in bs)
+    rctx = b.new_context(viewport={"width": 1366, "height": 1000}); rp = rctx.new_page(); rerr = []
+    rp.on("pageerror", lambda e: rerr.append(str(e)))
+    rp.goto(BASE); rp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rl = rp.evaluate(RL_MEAS); tops, lefts, per_row, wspread = _rl_grid(rl)
+    info("Rl. 1366 px rail", f"{len(rl['bs'])} plates, rows {per_row}, plate {rl['bs'][0]['w']:.0f}x{rl['bs'][0]['h']:.0f}, rail {rl['rail']['h']:.0f} px tall, chassis top {rl['chassisTop']:.0f}")
+    ck("Rl. at 1366 px the rail is two even rows of nine plates, one width, columns in line",
+       len(rl["bs"]) == 18 and per_row == [9, 9] and len(lefts) == 9 and wspread <= 1, (per_row, lefts, wspread))
+    ck("Rl. every rail plate is a 44 px target and no name or role is clipped (1366 px)",
+       all(x["h"] >= 44 and x["w"] >= 44 and not x["clip"] and not x["smClip"] and x["smShown"] for x in rl["bs"]), [(x["d"], x["w"], x["h"], x["clip"], x["smClip"]) for x in rl["bs"] if x["clip"] or x["smClip"] or x["h"] < 44])
+    ck("Rl. the rail is a recessed bay with an engraved RACK plate standing the full height of the plates",
+       "gradient" in rl["rail"]["bg"] and "inset" in rl["rail"]["shadow"] and rl["label"]["shown"] and rl["label"]["text"].strip().lower() == "rack"
+       and rl["label"]["wm"].startswith("vertical") and rl["label"]["h"] >= rl["bayH"] - 1 and rl["rail"]["h"] <= 120, (rl["rail"], rl["label"], rl["bayH"]))
+    unlit = [x for x in rl["bs"] if x["pressed"] != "true"]; lit = [x for x in rl["bs"] if x["pressed"] == "true"]
+    rl_con = [_ob_con(x["color"], x["bg"]) for x in unlit] + [_ob_con(x["smColor"], x["bg"]) for x in unlit]
+    info("Rl. contrast names, roles", [round(min(rl_con[:len(unlit)]),1), round(min(rl_con[len(unlit):]),1)]); ck(f"Rl. unlit plates are brushed faces and their names and roles read on them (contrast {min(rl_con):.1f}:1 or more)",
+       all("gradient" in x["bg"] for x in unlit) and min(rl_con) >= 4.5, rl_con)
+    ck("Rl. the lit plate keeps its amber border and glowing lamp, with a soft halo", len(lit) == 1 and lit[0]["d"] == "filament"
+       and lit[0]["border"] == "rgb(255, 179, 71)" and "255, 179, 71" in lit[0]["lamp"] and lit[0]["shadow"] != "none", lit)
+    rp.hover(".rail .devbtn[data-d=klystron]")
+    try: rp.wait_for_function("() => getComputedStyle(document.querySelector('.devbtn[data-d=klystron]')).borderTopColor === 'rgb(87, 80, 74)'", timeout=3000)
+    except Exception: pass
+    hv = rp.evaluate("() => { const b = document.querySelector('.devbtn[data-d=klystron]'); return [getComputedStyle(b).borderTopColor, getComputedStyle(b).color, getComputedStyle(b.querySelector('i')).boxShadow]; }")
+    ck("Rl. hover warms an unlit plate's edge, brightens its name and rings its lamp", hv[0] == "rgb(87, 80, 74)" and hv[1] == "rgb(226, 226, 226)" and "255, 179, 71" in hv[2], hv)
+    rp.click(".rail .devbtn[data-d=geissler]"); rp.wait_for_timeout(300)
+    rg = rp.evaluate(RL_MEAS)
+    ck("Rl. picking a device lights its plate and leaves the grid as it was",
+       [x["d"] for x in rg["bs"] if x["pressed"] == "true"] == ["geissler"] and _rl_grid(rg)[2] == [9, 9] and rg["bs"][0]["left"] == rl["bs"][0]["left"], [x["d"] for x in rg["bs"] if x["pressed"] == "true"])
+    rp.locator(".rail").screenshot(path=os.path.join(SHOTS, "synth_rail.png"))
+    for w, want, role in [(1024, [6, 6, 6], True), (800, [6, 6, 6], False), (1920, [9, 9], True)]:
+        rp.set_viewport_size({"width": w, "height": 900}); rp.wait_for_timeout(250)
+        rw = rp.evaluate(RL_MEAS); g = _rl_grid(rw)
+        ck(f"Rl. at {w} px the rail is even rows {want}, no plate clipped, {'roles shown' if role else 'names only'}, no sideways scroll",
+           g[2] == want and g[3] <= 1 and all(not x["clip"] and not x["smClip"] and x["smShown"] == role and x["h"] >= 44 for x in rw["bs"]) and rw["sw"] <= rw["iw"],
+           (g[2], g[3], [(x["d"], x["w"]) for x in rw["bs"] if x["clip"] or x["smClip"]], rw["sw"]))
+    ck("Rl. no page errors (desktop rail)", not rerr, rerr)
+    rctx.close()
+    rrm = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); rrp = rrm.new_page()
+    rrp.goto(BASE); rrp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    ck("Rl. reduced motion: no transitions on the rail plates", all(float(d.rstrip("s")) == 0 for x in rrp.evaluate(RL_MEAS)["bs"] for d in x["dur"].split(",")))
+    rrm.close()
+    rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
+    rpp.on("pageerror", lambda e: rperr.append(str(e)))
+    rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rm_ = rpp.evaluate(RL_MEAS)
+    ck("Rl. on a 375 px phone the rail stays one scrolling row of 44 px targets, the bay wrapper adds no box, nothing scrolls sideways",
+       len({x["top"] for x in rm_["bs"]}) == 1 and all(x["h"] >= 44 and x["w"] >= 44 for x in rm_["bs"]) and rm_["bayDisplay"] == "contents"
+       and not rm_["label"]["shown"] and rm_["sw"] <= rm_["iw"] == 375, (rm_["bayDisplay"], rm_["sw"], [(x["d"], x["w"], x["h"]) for x in rm_["bs"]][:4]))
+    ck("Rl. no page errors (phone rail)", not rperr, rperr)
+    rpx.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

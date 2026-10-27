@@ -144,6 +144,35 @@
   .devbtn i { width: 7px; height: 7px; border-radius: 50%; background: #333; align-self: center; }
   .devbtn[aria-pressed="true"] { color: var(--amber2); border-color: var(--amber); background: rgba(255,179,71,0.07); }
   .devbtn[aria-pressed="true"] i { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  /* desktop rail (graphics, 27 Oct): a recessed bay like the outboard tray, an engraved RACK plate standing at its left,
+     and the devices on even module plates: nine across at 1340 px and up (two rows of nine), six across below
+     (three rows; under 960 px the plates drop the role and keep the name). Each plate stacks the name over its role beside the lamp. A new device just starts the next row.
+     The phone keeps its one-row scrolling strip: the bay wrapper is display: contents there. */
+  .rail-bay { display: contents; }
+  @media (min-width: 761px) {
+    .rail { --rail-cols: 6; display: flex; flex-wrap: nowrap; align-items: stretch; gap: 6px; margin: 8px 10px 0; padding: 5px 6px 5px 5px;
+      border: 1px solid #050505; border-radius: 6px; background: linear-gradient(180deg, #060606, #0d0c0a);
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.05); }
+    .rail .label { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; margin: 0; padding: 6px 3px; min-width: 18px;
+      writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 1px; line-height: 1; border: 1px solid #2c2c2c; border-radius: 3px; color: #cfcfcf;
+      background: linear-gradient(90deg, #0c0c0c, #151515); text-shadow: 0 -1px 0 #000; box-shadow: inset 0 1px 2px rgba(0,0,0,0.85), 0 1px 0 rgba(255,255,255,0.05); }
+    .rail-bay { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(var(--rail-cols), minmax(0, 1fr)); gap: 5px; }
+    .rail .devbtn { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 7px; row-gap: 2px; align-items: center; align-content: center;
+      min-width: 0; min-height: 44px; padding: 5px 7px 5px 9px; border-radius: 4px; text-align: left; letter-spacing: 2px; line-height: 1.15;
+      white-space: nowrap; overflow: hidden; text-shadow: 0 -1px 0 #000; transition: border-color 120ms, color 120ms, box-shadow 120ms; }
+    .rail .devbtn:not([aria-pressed="true"]) { border-color: #2e2c29;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px), linear-gradient(180deg, #1d1d1d, #141414 60%, #0f0f0f);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.8); }
+    .rail .devbtn[aria-pressed="true"] { box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 14px rgba(0,0,0,0.45), 0 0 10px -3px currentColor; }
+    .rail .devbtn i { grid-row: 1 / span 2; }
+    .rail .devbtn small { grid-column: 2; overflow: hidden; text-overflow: ellipsis; font-size: 9px; letter-spacing: 0.4px; line-height: 1.2; color: #969696; }
+    .rail .devbtn:not([aria-pressed="true"]):hover, .rail .devbtn:not([aria-pressed="true"]):focus-visible { color: var(--text); border-color: #57504a; }
+    .rail .devbtn:not([aria-pressed="true"]):hover i, .rail .devbtn:not([aria-pressed="true"]):focus-visible i { box-shadow: 0 0 0 1px rgba(255,179,71,0.45); }
+  }
+  @media (min-width: 761px) and (max-width: 959px) {
+    .rail .devbtn { column-gap: 5px; padding: 5px 5px 5px 7px; font-size: 10.5px; letter-spacing: 0.5px; } .rail .devbtn small { display: none; }
+  }
+  @media (min-width: 1340px) { .rail { --rail-cols: 9; } }
   /* outboard: the devices that live on their own pages. They sit in a recessed tray under the rail, each on a
      warm brushed plate with a cable socket where a rail button has its lamp (they never light: the keys do not
      play them) and an arrow that says the link opens a page. Hover and focus light the socket's ring. */
@@ -862,7 +891,7 @@
     #mMaster select.btn { min-width: 44px; max-width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before { animation: none !important; }
-    .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
+    .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>
 </head>
 <body data-tab="play" data-dev="filament">
@@ -920,7 +949,8 @@
 
   <div class="inst"><div class="inst-in">
     <div class="rail" role="group" aria-label="Rack devices: the keyboard plays the lit one">
-      <span class="label">rack</span>
+      <span class="label" aria-hidden="true">rack</span>
+      <div class="rail-bay">
       <button class="devbtn" id="devF" data-d="filament" aria-pressed="true"><i></i>FILAMENT<small>poly tube synth</small></button>
       <button class="devbtn" id="devC" data-d="cathode" aria-pressed="false"><i></i>CATHODE<small>mono semi-modular</small></button>
       <button class="devbtn" id="devT" data-d="thyratron" aria-pressed="false"><i></i>THYRATRON<small>ladder mono</small></button>
@@ -939,6 +969,7 @@
       <button class="devbtn" id="devN" data-d="additron" aria-pressed="false"><i></i>ADDITRON<small>additive organ</small></button>
       <button class="devbtn" id="devR" data-d="rhumbatron" aria-pressed="false"><i></i>RHUMBATRON<small>physical model</small></button>
       <button class="devbtn" id="devS" data-d="resnatron" aria-pressed="false"><i></i>RESNATRON<small>patch bay</small></button>
+      </div>
     </div>
     <div class="racklinks" role="group" aria-label="More devices, each on its own page">
       <span class="label" aria-hidden="true">outboard</span>
