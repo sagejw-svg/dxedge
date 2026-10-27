@@ -861,6 +861,42 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 27 Oct (improvement, test health): the tube show checks that still read a wall-clock sample. "Tv. Cathode: a
+  note flares its tubes" (failed 1 of 3 full runs on 26 Oct and once in the 26 Oct review) and "Tv. subtle" asserted on
+  V1's flare as sampled from outside every 8 ms, so a frame loop that runs late shows the flare already decayed. Measured
+  tonight in a standalone page with the suite's own TV_PEAK, Plate Screamer, one note at velocity 0.9: with no throttle
+  the sampled peak is 0.64 to 0.72 (the flare is 0.9) and the first sample above 0.05 lands 25 to 47 ms after the note;
+  with the CPU throttled 8x the sampled peak was 0.24 to 0.52 and the old condition (above 0.3) failed 1 of 10 runs,
+  while the show's own record said V1 took 0.9 every time (0.8 once, a second flare from the meter). The show now also
+  counts the flares each tube has taken (`fires` in `__synth.tubeShow()`, test hook only, nothing drawn changes), and
+  TV_PEAK returns the state at its start, so a check can tell a flare from this note from one an earlier note left at
+  the same velocity (the Cathode note is 0.9, the same as the last Filament note before it). The Cathode and subtle
+  checks now assert that V1 fired during the call and took more than 0.5, with the sampled peak still in the name and
+  required above 0; the first two Filament flare checks also require that a flare fired during their call. Same
+  conditions on what the show did; the 8x run above fails the new conditions 0 of 10. The flare decay check still
+  compares against the sampled peak (not seen failing, left alone).
+- CPU, Cathode (measured 27 Oct, tried and not shipped): the Node bench's heap sampler shows Cathode allocating 3 to 6
+  MB/s in steady state on every c_ case, all of it boxed doubles at the four `exp2()` calls (argument and return, the
+  call not inlined into `render`). Passing x and 2^x through a Float64Array cut that to 0.14 MB/s with the output
+  identical, but Node CPU did not move (within noise on all 8 cases at 20 s) and Chrome does not have the problem: the
+  same processor run on a Chrome 153 page's main thread allocates 19 KB/s at `exp2` (inlined there) and 1.2 MB/s at
+  `Math.random` (the noise source, every 2x sample), and Chrome timing old against new was within noise. Reverted. The
+  Node bench overstates call overhead in large functions; read its allocation figures with that in mind.
+- Test health, test 9 (measured 27 Oct, not fixed): inside the suite, test 9's later lines can read up to twice what
+  the same patches cost in a fresh page, and how much varies run to run. Suite on origin/main `a53fa42` tonight:
+  Valve 12 19.9%, filter B serial 42.3%, parallel 44.7%, split 57.9%, 16 voices with ensemble 63.5%, EQ 31 bands 50.8%;
+  the build run an hour later (no voice code changed) read 22.5, 34.9, 31.2, 29.0, 34.6 and 32.3%. The same patches in a fresh page,
+  same browser, two rounds, 6 s render: Valve 12 18.8 to 25.4%, serial 25.9 to 26.4%, split 25.7 to 28.0%, 16 voices
+  26.8 to 31.6%, EQ 31.8 to 36.0%; marginal cost (12 s minus 2 s) 14.2 to 14.5%, 17.7 to 19.9%, 16.4 to 19.4%, 26.5 to
+  29.0%, 23.6 to 24.3%. In the first run the gap grew through the case order. Cause not found (candidates: worklet scopes or offline
+  contexts the suite page has not released, the 18 devices' live nodes); running test 9 in its own page and logging
+  the marginal cost would make the lines comparable night to night.
+- CPU, Filament (measured 27 Oct, line profile in the Node bench, Valve 12 at 20 s): no single bit-exact hot spot left.
+  The two oscillator pitch `Math.pow` calls per control tick are 6 to 8% of the worklet on every model (drift moves the
+  exponent every tick, so the memo never hits); the V1 tube table read 6%, its `y / G1 * mk1` 3%; the output decimator
+  5%. A cheaper pitch power changes low bits, the same tolerance question as the items below.
+- Tooling note (27 Oct): `/opt/pw-browsers/chromium-1194` is not on the build box any more; the suite falls back to
+  `/opt/google/chrome/chrome` (Chrome for Testing 153.0.8010.12), which is what tonight's numbers come from.
 - Done 26 Oct (improvement, CPU, Filament voice): envelopes and the output DC blocker no longer sink into subnormal
   numbers. Found with a line profile of test 9's Valve 12 case in the Node bench: the filter envelope's sustain line
   alone was 7% of the worklet's samples. Test 9's patch has a filter sustain of 0, so once the decay hands over
@@ -883,7 +919,7 @@ and proven by measurement), test suite health, load time and memory, code health
   2-core box the old code could not keep up with a held chord on those patches). Not changed (inferred): voice
   stealing picks the quietest voice by `ae`; two held voices both below 1e-150 now compare equal (first slot wins)
   where before the smaller subnormal won. Both are silent, so which one is cut is inaudible.
-- Test health (measured 26 Oct, not fixed): "Tv. Cathode: a note flares its tubes" failed 1 of 3 full runs tonight
+- Test health (measured 26 Oct; done 27 Oct, see above): "Tv. Cathode: a note flares its tubes" failed 1 of 3 full runs
   (sampled V1 peak 0.296 against 0.3, first frame 90 ms after the note, while `fired.v1` recorded 0.9; the other two
   runs 0.46 and a pass). It is the wall-clock sampling the 21 Oct fix removed from the Filament flare checks. The same
   fix fits (assert on `fired` and `firedLag`), but `fired` is shared with the Filament notes played just before, so
@@ -1218,6 +1254,7 @@ visuals alone while the Tube show item in 0.3 is open. Measured means a script r
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-10-27 (improvement, scheduled task, about 5:25 to 6:15 AM PT): test health. Main first: suite on origin/main `a53fa42` ALL PASS (1308 checks), `scripts/test_synth_imported.py` ALL PASS (29). No review finding marked broken is open. CPU looked at first and nothing shipped: a line profile shows no single bit-exact hot spot left in the Filament voice, and a Cathode allocation fix (boxed doubles at `exp2`, 6.3 to 0.14 MB/s in Node, output identical) did not change CPU in Node or Chrome and Chrome inlines that call anyway, so it was reverted (both in the Improvement backlog). Shipped: the tube show checks that still read a flare sampled from outside every 8 ms ("Tv. Cathode: a note flares its tubes", which failed twice on 26 Oct, and "Tv. subtle") now assert on the show's own record, with a new per-tube flare count (`fires` in `__synth.tubeShow()`, test hook only) so a check knows the flare came from its own note. Measured with the CPU throttled 8x: old condition failed 1 of 10 runs (sampled peak 0.24 against 0.3, the show recorded 0.9), new condition 0 of 10. No audio or visual change. Also logged: test 9 inside the suite read up to 2x a fresh page tonight (split B 57.9% against 26 to 28%). Cache `dxedge-v151`. Suite: ALL PASS (1308 checks, the same count: no check added or removed, five tightened). CPU (test 9, the build run): Cathode 21.0%; Filament 8 voices Ladder 24 30.6%, Valve 12 22.5%, Diode 18 23.8%, Sallen-Key 12 27.6%, Poly 24 24.9%, SVF 12 25.2%, low pass gate 24.9%; stereo offset 35.0%; filter B serial 34.9%, parallel 31.2%, split 29.0%; 16 voices with ensemble 34.6%; EQ 31 bands 32.3%. Commit: this one.
 - 2026-10-27 (review, scheduled task, about 4:25 to 5:30 AM PT): areas f (project and mix save and load, song library), g (Hexode, Anode) and h (accessibility, with the new desktop rail and outboard tray), live at 1366 and 375 px against origin/main `cb10caa`. Findings: 1 broken (fixed), 0 missing, 1 confusing; 5 earlier findings re-measured and still open; details in `docs/filament-review.md`. Fix: save project and save mix in the seconds before the boot finishes now keep the saved arms and desk bus instead of writing none and the default (R1027-1). One new check. Cache `dxedge-v150`. Suite: ALL PASS on the pushed tree (count in the commit message).
 - 2026-10-27 (graphics, scheduled task, about 3:15 to 4:30 AM PT): the desktop rail. On origin/main `841a6ec` the suite was ALL PASS (1293). The 18 device buttons now sit on even brushed module plates in a recessed bay with an upright engraved RACK plate: two rows of nine from 1340 px, three rows of six below, names only under 960 px; the phone strip is unchanged. Measured at 1366 px: rows 5, 6, 5, 2 before, 9 and 9 after; rail 170 to 105 px tall; plates 134x44; chassis 409 to 352 px. New Rl. section (14 checks: grid at 800, 1024, 1366 and 1920 px, no clipped text, contrast 6.9:1 names and 5.7:1 roles, hover, lit plate, reduced motion, phone strip, no page errors). Cache `dxedge-v149`. Suite: ALL PASS (1307). No audio or DSP change.
 - 2026-10-27 (check and debug, scheduled task, about 2:10 to 2:30 AM PT): reviewed 2 commits since 26 Oct 6 PM PT on origin/main `48d46c6`: the health bot's state commit `63ebb64` (scripts/health only) and, by Claude (the 12:28 AM nightly), filter slot B `48d46c6`. No edit under `/otr`, no test removed or loosened (the diff only adds checks), no factory patch removed or renamed, no new third-party code or product names; patches without `filtB` normalize to B off. Suite on origin/main: ALL PASS (1293 checks, 24 in the new Fb. section); `scripts/test_synth_imported.py` ALL PASS (29). Live: /synth/ ready at 1366 and 375 px with no page or console errors (only the known `api/stat` beacon abort), no sideways scroll at 375 px; Filament, Cathode and Dekatron sound in an offline render (RMS 0.072, 0.143, 0.080); /synth/fm/ and /synth/acid/ no errors, Hexode still scrolls sideways at 375 px (known, vendored); sw.js `dxedge-v148` live and on main. No defects, no fixes. One doc nit, not changed: the Filter B notes say the tube show follows A only, but the V2 meter also adds B's loop when B is Valve 12.

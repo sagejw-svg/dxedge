@@ -1728,14 +1728,16 @@ with sync_playwright() as pw:
     # Visual state from __synth.tubeShow(), read in the page while the chassis frame loop runs. Peaks are
     # sampled inside the page every 8 ms, so the round trips of evaluate() do not hide a 150 ms flare.
     TV_PEAK = """async (a) => { const S = () => __synth.tubeShow(); await __synth.engine().ctx.resume();
-      const o0 = S().onsets; let pk = { v1: 0, v3: 0 }, t1 = -1, t3 = -1; const t0 = performance.now();
+      const s0 = S(), o0 = s0.onsets; let pk = { v1: 0, v3: 0 }, t1 = -1, t3 = -1; const t0 = performance.now();
       a.notes.forEach(n => __synth.noteOn(n, a.v));
       while (performance.now() - t0 < a.ms) { const s = S();
         if (s.flare.v1 > pk.v1) pk.v1 = s.flare.v1; if (s.flare.v3 > pk.v3) pk.v3 = s.flare.v3;
         if (t1 < 0 && s.flare.v1 > 0.05) t1 = performance.now() - t0; if (t3 < 0 && s.flare.v3 > 0.05) t3 = performance.now() - t0;
         await new Promise(r => setTimeout(r, 8)); }
       const s = S(); a.notes.forEach(n => __synth.noteOff(n));
-      return { pk, t1, t3, onsets: s.onsets - o0, end: s }; }"""
+      return { pk, t1, t3, onsets: s.onsets - o0, start: s0, end: s }; }"""
+    # fires.v1 went up: V1 flared during this call (fired.v1 alone may still hold an earlier note's flare)
+    def tv_fired(r, k="v1"): return r["end"]["fires"][k] > r["start"]["fires"][k]
     pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("__synth.setTubeShow('full')"); pg.wait_for_timeout(100)
     clean = patch(osc1={"wave": "saw", "level": 0.6}, v1={"tube": "12AX7", "drive": 2, "bias": 0}, envA={"a": 0.001, "d": 0.1, "s": 1, "r": 0.05, "vel": 0})
     pg.evaluate("(p) => __synth.setPatch(p)", clean); pg.wait_for_timeout(200)
@@ -1748,9 +1750,9 @@ with sync_playwright() as pw:
     # 21 Oct with the box loaded (first sample at 74 and 145 ms); the sampled peaks stay in the names.
     hf, hl = hi["end"]["fired"], hi["end"]["firedLag"]
     ck(f"Tv. a note-on flares V1 ({hf['v1']:.2f}) and then the output pair ({hf['v3']:.2f}), V1 first (lag {hl['v1']:.0f} ms, {hl['v3']:.0f} ms on the show clock; sampled peaks {hi['pk']['v1']:.2f}, {hi['pk']['v3']:.2f})",
-       hf["v1"] > 0.5 and hf["v3"] > 0.3 and 0 <= hl["v1"] <= hl["v3"] and hl["v3"] >= 45 and hi["pk"]["v1"] > 0, hi)
+       tv_fired(hi) and tv_fired(hi, "v3") and hf["v1"] > 0.5 and hf["v3"] > 0.3 and 0 <= hl["v1"] <= hl["v3"] and hl["v3"] >= 45 and hi["pk"]["v1"] > 0, hi)
     lf = lo["end"]["fired"]
-    ck(f"Tv. the flare scales with velocity ({lf['v1']:.2f} at 0.3 against {hf['v1']:.2f} at 1.0; sampled peaks {lo['pk']['v1']:.2f}, {hi['pk']['v1']:.2f})", lf["v1"] < 0.5 * hf["v1"] and lf["v1"] > 0.05 and lo["pk"]["v1"] > 0, (lo, hi))
+    ck(f"Tv. the flare scales with velocity ({lf['v1']:.2f} at 0.3 against {hf['v1']:.2f} at 1.0; sampled peaks {lo['pk']['v1']:.2f}, {hi['pk']['v1']:.2f})", tv_fired(lo) and lf["v1"] < 0.5 * hf["v1"] and lf["v1"] > 0.05 and lo["pk"]["v1"] > 0, (lo, hi))
     ck(f"Tv. the flare decays (V1 {lo['end']['flare']['v1']:.3f} about 120 ms after a quiet note's peak; {hi['end']['flare']['v1']:.3f} after a loud one)", hi["end"]["flare"]["v1"] < 0.5 * hi["pk"]["v1"], hi)
     ck(f"Tv. one key is one flare (onsets {hi['onsets']}), not one from the key and another from the meter", hi["onsets"] == 1, hi)
     ch = pg.evaluate(TV_PEAK, {"notes": [48, 55, 60, 64], "v": 0.9, "ms": 400})
@@ -1807,7 +1809,10 @@ with sync_playwright() as pw:
        ho["s"]["arcs"] == a0 and ho["s"]["flare"]["v1"] == 0 and ho["s"]["heat"]["v1"] < 0.02 and ho["s"]["blue"]["v3"] < 0.02 and st_off["lamps"] == 0
        and not pg.is_visible("#vLamps") and pg.get_attribute('#showChips .chip[data-v="off"]', "aria-pressed") == "true", (ho, st_off))
     pg.evaluate("__synth.setTubeShow('subtle')"); hs = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 200}); pg.wait_for_timeout(300)
-    ck(f"Tv. subtle: the same flare state, drawn at a lower scale (peak {hs['pk']['v1']:.2f})", hs["pk"]["v1"] > 0.5 and hs["end"]["mode"] == "subtle", hs)
+    # As in the Filament checks above: the flare V1 took, from the show's own record, not a peak sampled
+    # every 8 ms from outside (a starved frame loop shows it already decayed; see the Improvement backlog, 27 Oct)
+    ck(f"Tv. subtle: the same flare state, drawn at a lower scale (V1 took {hs['end']['fired']['v1']:.2f}; sampled peak {hs['pk']['v1']:.2f})",
+       tv_fired(hs) and hs["end"]["fired"]["v1"] > 0.5 and hs["pk"]["v1"] > 0 and hs["end"]["mode"] == "subtle", hs)
     pg.evaluate("__synth.setTubeShow('full')")
     # resonance on V2: Valve 12 brightens with resonance and shimmers when it self-oscillates
     res = []
@@ -1820,8 +1825,8 @@ with sync_playwright() as pw:
     # Cathode: V2, the follower, shows the low-pass peak
     pg.evaluate("__synth.setDevice('cathode')"); pg.evaluate("__synth.load('Plate Screamer')"); pg.wait_for_timeout(200)
     pk_c = pg.evaluate("__synth.patch().lpf.peak"); cs = pg.evaluate(TV_PEAK, {"notes": [48], "v": 0.9, "ms": 700})
-    ck(f"Tv. Cathode: a note flares its tubes ({cs['pk']['v1']:.2f}) and V2 follows the low-pass peak (peak {pk_c}, shown {cs['end']['res']:.2f})",
-       cs["pk"]["v1"] > 0.3 and abs(cs["end"]["res"] - pk_c) < 0.1 and cs["end"]["shimmer"] == (pk_c >= 0.88), cs)
+    ck(f"Tv. Cathode: a note flares its tubes (V1 took {cs['end']['fired']['v1']:.2f}; sampled peak {cs['pk']['v1']:.2f}) and V2 follows the low-pass peak (peak {pk_c}, shown {cs['end']['res']:.2f})",
+       tv_fired(cs) and cs["end"]["fired"]["v1"] > 0.5 and cs["pk"]["v1"] > 0 and abs(cs["end"]["res"] - pk_c) < 0.1 and cs["end"]["shimmer"] == (pk_c >= 0.88), cs)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(300)
     # the chip, remembered per browser; reduced motion keeps only the steady glow
     tctx = b.new_context(viewport={"width": 1366, "height": 900}); tp = tctx.new_page(); terr = []; tp.on("pageerror", lambda e: terr.append(str(e)))

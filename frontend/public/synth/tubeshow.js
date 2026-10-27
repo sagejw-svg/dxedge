@@ -31,8 +31,9 @@ export function makeShow(mode, reduced) {
     pend: [], arcs: 0, lastArc: -1e9, lamps: 0, notes: new Set(), t: 0, drawMs: 0, onsets: 0,
     // the last flare each tube took (its level before any decay) and how long after its note-on, on the
     // show's own clock. For the test hook: unlike the decayed flare, these do not depend on when a
-    // starved frame loop happens to run.
-    fired: z(), firedLag: { v1: -1, v2: -1, v3: -1, v4: -1 },
+    // starved frame loop happens to run. fires counts them per tube, so a check can tell a flare that
+    // fired just now from the one left by an earlier note at the same velocity.
+    fired: z(), firedLag: { v1: -1, v2: -1, v3: -1, v4: -1 }, fires: z(),
   };
 }
 export const showScale = S => SCALE[S.mode] || 0;
@@ -71,7 +72,7 @@ export function stepShow(S, dt, inp) {
   for (let i = S.pend.length - 1; i >= 0; i--) {
     const p = S.pend[i];
     if (p.at <= S.t) {
-      if (inp.on[p.k]) { S.flare[p.k] = Math.max(S.flare[p.k], p.v); S.fired[p.k] = p.v; S.firedLag[p.k] = S.t - p.t0; }
+      if (inp.on[p.k]) { S.flare[p.k] = Math.max(S.flare[p.k], p.v); S.fired[p.k] = p.v; S.firedLag[p.k] = S.t - p.t0; S.fires[p.k]++; }
       S.pend.splice(i, 1);
     }
   }
@@ -120,6 +121,6 @@ export function showState(S) {
   const r = o => Object.fromEntries(Object.entries(o).map(([a, b]) => [a, Math.round(b * 1000) / 1000]));
   return { mode: S.mode, reduced: S.reduced, flare: r(S.flare), heat: r(S.heat), arc: r(S.arc), blue: r(S.blue),
     res: Math.round(S.res * 1000) / 1000, shimmer: S.shimmer, arcs: S.arcs, lamps: S.lamps, onsets: S.onsets,
-    fired: r(S.fired), firedLag: Object.fromEntries(TUBES.map(k => [k, S.firedLag[k] < 0 ? -1 : Math.round(S.firedLag[k] * 1e4) / 10])),
+    fired: r(S.fired), firedLag: Object.fromEntries(TUBES.map(k => [k, S.firedLag[k] < 0 ? -1 : Math.round(S.firedLag[k] * 1e4) / 10])), fires: Object.assign({}, S.fires),
     drawMs: Math.round(S.drawMs * 1000) / 1000 };
 }
