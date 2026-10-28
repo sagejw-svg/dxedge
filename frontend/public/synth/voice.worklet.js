@@ -491,6 +491,7 @@ class Filament extends AudioWorkletProcessor {
       ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, vg: 0, pending: null, fade: 1, killing: false,
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
       fBL: new Filt(), fBR: new Filt(), stB: false,  // filter slot B (left or both, right)
+      fcA: 0, fcB: 0,                                // the last control tick's cutoffs (Hz) for A and B, left side (the response plot reads them)
       dcx: 0, dcy: 0,
       nb0: 0, nb1: 0, nb2: 0,
       drift: 0, driftT: 0, driftN: 0, drift2: 0, drift2T: 0,
@@ -778,10 +779,13 @@ class Filament extends AudioWorkletProcessor {
     this.meterN += n;
     if (this.meterN >= this.sr / 30) {
       const act = this.voices.filter(v => v.on);
+      // the newest sounding voice's cutoffs, for the response plot (0 when nothing sounds)
+      let nv = null; for (let i = 0; i < NV; i++) { const w = this.voices[i]; if (w.on && !w.killing && (!nv || w.age > nv.age)) nv = w; }
       this.port.postMessage({
         t: 'meter', dev: 'filament', v1: Math.sqrt(this.v1Acc / Math.max(1, this.accN)), v2: Math.sqrt(this.v2Acc / Math.max(1, this.accN)),
         voices: act.length, notes: act.filter(v => v.gate || v.sust).map(v => v.note),
         cpu: this.cpuMs / (this.cpuFrames / this.sr * 1000),
+        fcA: nv ? nv.fcA : 0, fcB: nv && routeOf(this.P) ? nv.fcB : 0,
       });
       this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0;
       if (this.cpuFrames > this.sr) { this.cpuMs *= 0.5; this.cpuFrames *= 0.5; }
@@ -859,6 +863,55 @@ class Filament extends AudioWorkletProcessor {
       s[F_K] = KMAX * Math.pow(res, KEXP);
       s[F_GH] = Math.tan(Math.PI * Math.min(fc * (this.lTube.hp || 25) / 400, sr * 0.2) / fs); s[F_AH] = 1 / (1 + s[F_GH]);
     }
+  }
+
+  // ----- the response plot -----
+  // The filters' small-signal impulse responses, for the plot on the page. filtplot.js runs a silent
+  // copy of this processor on the page and calls this; the audio thread never does. Slot A at cutoff
+  // cutA (Hz, as render() hands fcoef() before its calibrations) into hA and, when slot B is on, slot B
+  // at cutB into hB, n samples each at the 2x rate, from an impulse of FR_AMP into fresh filters: what a
+  // quiet note hears, with no drive, no stereo offset and the vactrol fully lit. Returns the route (0 off,
+  // 1 serial, 2 parallel, 3 split) and leaves the parallel gains in this.frG and the lengths run in this.frL.
+  fresp(hA, hB, n, cutA, cutB) {
+    const P = this.P, f = P.filt || {}, fb = P.filtB || {}, route = routeOf(P);
+    const m = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : 0;
+    const lG = 1.3 * Math.pow((this.lTube.gain || 0.774) / 0.774, LGX), sagA = clamp(num(f.sag, 3), 0, 10) / 10;
+    if (!this.frF) { this.frF = new Filt(); this.frG = new Float64Array(2); this.frL = new Int32Array(2); }
+    this.frL[0] = this.frun(this.frF, m, cutA, num(f.res, 0), this.skGh, num(f.morph, 0), hA, n, lG, sagA);
+    this.frL[1] = route ? this.frun(this.frF, modelBOf(fb.model), cutB, num(fb.res, 0), 0, num(fb.morph, 0), hB, n, lG, sagA) : 0;
+    const bal = clamp(num(fb.bal, 0), -1, 1);
+    this.frG[0] = Math.sqrt(0.5 * (1 - bal)); this.frG[1] = Math.sqrt(0.5 * (1 + bal));
+    return route;
+  }
+  frun(F, m, cut, res, skh, mor, h, n, lG, sagA) {
+    const s = F.s, cc = this.cc, c0 = cc[0], c1 = cc[1];
+    F.reset(); s[F_MKEY] = -1; s[F_LG] = lG; s[F_SAGA] = sagA; s[F_V2] = 0;
+    cc[0] = cut; cc[1] = clamp(res, 0, 1); this.fcoef(F, m, skh); cc[0] = c0; cc[1] = c1;
+    if (m === 6) { s[F_WL] = 1; s[F_WB] = 0; s[F_WH] = 0; }
+    else if (m === 5) { const q = clamp(mor, 0, 3);
+      s[F_WL] = q < 1 ? 1 - q : q < 2 ? 0 : q - 2; s[F_WB] = (q < 1 ? q : q < 2 ? 2 - q : 0) * SVF_K0; s[F_WH] = q < 1 ? 0 : q < 2 ? q - 1 : 1; }
+    // Valve 12's loop tube has an offset at rest, so its filter moves on its own from a reset state: that
+    // run, with no input, comes off first (what is left is the response to the impulse alone). The
+    // other models sit still at rest. Stops early once a whole block of 256 stays under 1e-7 of the peak
+    // so far (the rest is zeros).
+    const rm = m === 6 ? 5 : m, lTab = this.lTab, ia = 1 / FR_AMP;
+    const z = rm === 0 ? (this.frZ && this.frZ.length >= n ? this.frZ : (this.frZ = new Float64Array(n))) : null;
+    if (z) {
+      const keep = s.slice(); s[F_IN] = 0;
+      for (let i = 0; i < n; i++) { F.run(0, lTab); z[i] = s[F_OUT]; s[F_IN] = 0; }
+      s.set(keep);
+    }
+    let pk = 0, bk = 0, i = 0;
+    for (; i < n; i++) {
+      s[F_IN] = i === 0 ? FR_AMP : 0; F.run(rm, lTab);
+      let y = (z ? s[F_OUT] - z[i] : s[F_OUT]) * ia; if (!(y < 1e9 && y > -1e9)) y = 0; h[i] = y;
+      const a = y < 0 ? -y : y; if (a > pk) pk = a; if (a > bk) bk = a;
+      if ((i & 255) === 255) { if (i > 1024 && bk < pk * 1e-7) { i++; break; } bk = 0; }
+    }
+    const used = i;
+    for (; i < n; i++) h[i] = 0;
+    s[F_V2] = 0;
+    return used;
   }
 
   render(a, b) {
@@ -1038,7 +1091,7 @@ class Filament extends AudioWorkletProcessor {
           if (eL !== cm[0]) { cm[0] = eL; cm[1] = Math.pow(2, eL); }
           // the low pass gate's cutoff follows the vactrol's conductance
           const gc = lpgCut ? vg : 1;
-          cc[0] = CT[cb + K_CUT] * cm[1] * gc;
+          cc[0] = CT[cb + K_CUT] * cm[1] * gc; v.fcA = cc[0];
           this.fcoef(FL, model, skGh);
           if (route) {
             // slot B: its own key tracking and envelope amount; velocity, wheel, pressure and the
@@ -1050,7 +1103,7 @@ class Filament extends AudioWorkletProcessor {
             cc[1] = clamp(CT[cb + K_BRES], 0, 1);
             const eB = route === 3 ? octB + lcR + (st2 ? half : 0) : octB + lcL - (st2 ? half : 0);
             if (eB !== cm[8]) { cm[8] = eB; cm[9] = Math.pow(2, eB); }
-            cc[0] = CT[cb + K_BCUT] * cm[9]; this.fcoef(FBL, modelB, 0);
+            cc[0] = CT[cb + K_BCUT] * cm[9]; v.fcB = cc[0]; this.fcoef(FBL, modelB, 0);
             if (stB) {
               const eBR = octB + lcR + half;
               if (eBR !== cm[10]) { cm[10] = eBR; cm[11] = Math.pow(2, eBR); }
@@ -1247,6 +1300,8 @@ const SVF_CAL = [77.8, -230];
 // constant (s). Turn-off: filt.lag x (LPG_D0 + (1 - LPG_D0)(1 - c)) for conductance c, so it falls
 // quickly from fully lit and the dark tail lingers for the whole lag. LPG_END: the conductance at
 // which a released voice is let go (-80 dB).
+// The response plot's impulse: small enough that every model stays in its linear range.
+const FR_AMP = 1e-4;
 const LPG_KMIN = 0.5, LPG_KMAX = Math.SQRT2 - LPG_KMIN, LPG_TA = 0.0025, LPG_D0 = 0.25, LPG_END = 1e-4;
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };

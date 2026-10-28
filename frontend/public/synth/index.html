@@ -596,6 +596,7 @@
   .eq-read .dim { color: var(--dim); }
   canvas#eqCv { width: 100%; height: 190px; display: block; touch-action: none; cursor: crosshair; border-radius: 6px; outline: none; border: 1px solid var(--border); background: #070707; }
   canvas#eqCv:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
+  canvas#fpCv { width: 100%; height: 150px; display: block; border-radius: 6px; border: 1px solid var(--border); background: #070707; margin-bottom: 4px; }
   #mEq.off canvas#eqCv { opacity: 0.75; }
 
   /* keybed */
@@ -885,6 +886,7 @@
     #mHost input[type="range"], #hostTempo, #projName, #mixName { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
     canvas#eqCv { height: 170px; }
+    canvas#fpCv { height: 128px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
     #wavSecs { min-height: 44px; min-width: 44px; }
@@ -1041,6 +1043,8 @@
       <section class="mod" data-dev="filament" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
         <div class="chips" id="loopChips"><span class="cl">V2 loop</span><span data-chips="filt.tube" class="chips" style="margin:0"></span></div>
         <div class="chips" id="gateChips"><span class="cl">gate</span><span data-chips="filt.gate" class="chips" style="margin:0"></span></div>
+        <div class="eq-read" id="fpRead" aria-live="off"><span class="dim">response</span></div>
+        <canvas id="fpCv" role="img" aria-label="Filter response"></canvas>
         <div class="knobs" id="kFilt"></div><div class="note" id="filtNote"></div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mFiltB" data-wide><h3><span class="pilot" id="filtBPilot"></span>Filter B</h3><div class="chips" id="routeChips" data-chips="filtB.route"></div>
         <div class="chips" id="filtBModel" data-chips="filtB.model"></div>
@@ -1438,7 +1442,7 @@
 <script type="module">
 import { makeKnob } from './knob.js';
 import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
-import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample } from './rack.js';
+import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData } from './rack.js';
 import { paintTubeState, paintTubeShow, fitCanvas } from './tubepaint.js';
 import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
@@ -1447,6 +1451,7 @@ import { createPlayer } from './player.js';
 import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
+import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
 import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
@@ -2611,7 +2616,7 @@ function afterChange(path) {
   $('mSpk').classList.toggle('off', !cur.out.spkOn); $('mRoom').classList.toggle('off', !cur.out.roomOn);
   $('ensPilot').classList.toggle('off', !cur.ens.on); $('mEns').classList.toggle('off', !cur.ens.on);
   $('eqPilot').classList.toggle('off', !cur.out.eqOn); $('mEq').classList.toggle('off', !cur.out.eqOn);
-  refreshEqChips(); EQV.dirty = true;
+  refreshEqChips(); EQV.dirty = true; FP.dirty = true;
   $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;
   $('topoV4').textContent = cur.out.topology === 'pp' ? 'PP' : 'SE';
   if (path && !String(path).startsWith('__')) markEdited();
@@ -2689,6 +2694,74 @@ function refreshAll() {
   if (dev === 'additron' && adPanel) adPanel.sync();
   if (dev === 'rhumbatron' && rhumPanel) rhumPanel.sync();
   if (dev === 'resnatron' && rnPanel) rnPanel.sync();
+}
+
+// ---------------------------------------------------------------- filter response plot (Filament)
+// The response of the lit patch's filters, from the worklet's own filter code (filtplot.js runs a
+// silent copy of the processor in a worker, filtplot.worker.js). The knobs at middle C are computed
+// whenever they change; while a note plays, the newest voice's cutoffs (key tracking, envelope,
+// velocity, LFOs, wheel, pressure, the vactrol) come in with the meter and a live curve rides over the
+// knob curve. One request is in flight at a time; live curves at most 15 a second, only when a cutoff
+// moved by more than 1/48 octave, spaced so the worker spends at most about a fifth of a core on them.
+const FP = { wk: null, busy: false, seq: 0, cbs: new Map(), dirty: true, knob: null, live: null, liveMix: 0, lastT: 0, gap: 66, ms: 0, drawMs: 0, n: 0, err: '', stale: false };
+const FP_WORKLET = new URL('./voice.worklet.js', import.meta.url).href;
+const fpSr = () => (ctx ? ctx.sampleRate : 48000);
+function fpWorker() {
+  if (!FP.wk) {
+    FP.wk = new Worker(new URL('./filtplot.worker.js', import.meta.url), { type: 'module' });
+    FP.wk.onmessage = e => { const cb = FP.cbs.get(e.data.id); FP.cbs.delete(e.data.id); if (cb) cb(e.data); };
+    FP.wk.onerror = e => { FP.err = String((e && e.message) || 'worker error'); FP.cbs.forEach(cb => cb({ err: FP.err })); FP.cbs.clear(); FP.busy = false; };
+  }
+  return FP.wk;
+}
+// p: a normalized Filament patch; resolves to { r } or { err }
+function fpAsk(p, cutA, cutB, sr) {
+  return new Promise(res => { const id = ++FP.seq; FP.cbs.set(id, res);
+    try { fpWorker().postMessage({ id, sr: sr || fpSr(), tubes: tubeData(), url: FP_WORKLET, patch: p, cutA, cutB }); }
+    catch (e) { FP.cbs.delete(id); FP.err = String((e && e.message) || e); res({ err: FP.err }); } });
+}
+function fpGot(d) { if (d.err) { FP.err = d.err; return null; } const r = d.r; FP.ms = FP.n ? FP.ms + (r.ms - FP.ms) * 0.3 : r.ms; FP.n++; return r; }
+function fpRead() {
+  const el = $('fpRead'), r = FP.liveMix > 0.5 && FP.live ? FP.live : FP.knob; if (!r) return;
+  const B = r.route ? ' &middot; B ' + fmtF(Math.round(r.cutB)) + 'Hz' : '';
+  const pk = peakOf(r, r.route === 3 ? 'a' : 'sum'), sings = r.ringA || (r.route && r.ringB);
+  const tail = sings ? ' &middot; <b>sings</b> near ' + fmtF(Math.round(pk.f)) + 'Hz'
+    : pk.db > 1 ? ' &middot; peak ' + sgnDb(pk.db) + ' at ' + fmtF(Math.round(pk.f)) + 'Hz' : '';
+  const t = (r === FP.live ? 'playing' : 'knobs at middle C') + ': A ' + fmtF(Math.round(r.cutA)) + 'Hz' + B + tail;
+  if (el.dataset.t === t) return;
+  el.dataset.t = t; el.innerHTML = '<span class="dim">' + t.replace(/^([^:]+):/, '$1:</span>');
+  $('fpCv').setAttribute('aria-label', 'Filter response, ' + t.replace(/&middot;/g, ',').replace(/<[^>]+>/g, ''));
+}
+function drawFp(now, m) {
+  const fb = cur.filtB || {}, cutA = cur.filt.cutoff, cutB = fb.cutoff || 2000;
+  const playing = !!(m && m.dev === 'filament' && m.voices > 0 && m.fcA > 0);
+  if (FP.knob && FP.knob.sr !== fpSr()) FP.dirty = true;
+  // a knob or patch change first, then the live curve
+  if (!FP.busy && !FP.err) {
+    if (FP.dirty || !FP.knob) {
+      FP.busy = true; FP.dirty = false;
+      fpAsk(cur, cutA, cutB).then(d => { FP.busy = false; const r = fpGot(d); if (r) { FP.knob = r; FP.stale = true; } });
+    } else if (playing && now - FP.lastT >= FP.gap) {
+      const L = FP.live, mv = !L || FP.stale || Math.abs(Math.log2(m.fcA / L.cutA)) > 1 / 48 || (L.route && Math.abs(Math.log2((m.fcB || cutB) / L.cutB)) > 1 / 48);
+      if (mv) {
+        FP.busy = true; FP.stale = false; FP.lastT = now;
+        fpAsk(cur, m.fcA, m.fcB || cutB).then(d => { FP.busy = false; const r = fpGot(d); if (r) { FP.live = r; FP.gap = Math.max(66, Math.min(400, FP.ms * 5)); } });
+      }
+    }
+  }
+  const dt = Math.min(0.1, (now - (FP.drawT || now)) / 1000); FP.drawT = now;
+  FP.liveMix += ((playing && FP.live ? 1 : 0) - FP.liveMix) * (1 - Math.exp(-dt / (playing ? 0.05 : 0.25)));
+  if (!playing && FP.liveMix < 0.01) { FP.liveMix = 0; FP.live = null; }
+  const f = fitCanvas($('fpCv')); if (!f) return;
+  const t0 = performance.now();
+  drawFilterPlot(f, { knob: FP.knob, live: FP.live, liveMix: FP.liveMix, font: FP.font || (FP.font = getComputedStyle(document.body).fontFamily) });
+  FP.drawMs += (performance.now() - t0 - FP.drawMs) * 0.2;
+  fpRead();
+}
+// tests: the plotted curve (the knobs, or the live one), read at frequencies
+function fpSummary(r) {
+  if (!r) return null; const pk = peakOf(r, r.route === 3 ? 'a' : 'sum');
+  return { route: r.route, cutA: r.cutA, cutB: r.cutB, ringA: r.ringA, ringB: r.ringB, peakDb: pk.db, peakHz: pk.f, ms: r.ms };
 }
 
 // ---------------------------------------------------------------- graphic EQ (rack-wide)
@@ -3750,6 +3823,7 @@ function frame(now) {
   const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
   paintHost();
   if ($('mEq').offsetParent) drawEq(now);
+  if (dev === 'filament' && $('fpCv').offsetParent) drawFp(now, E && E.meters ? E.meters.filament : null);
   const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
@@ -4125,6 +4199,16 @@ window.__synth = {
   routeWaker: (id, on) => routeWaker(id)(on),   // what Geissler and Gyrotron call (tests)
   pentaSent: () => ({ sent: pentaHost.sent(), meter: Object.assign({}, pentaHost.meter()), node: !!pentaHost.node(), dev, now: Math.round(performance.now()) }),   // tests
   tubeShow: () => showState(SHOW),
+  // the filter response plot: what it shows, and its curves read at frequencies (dB)
+  filterPlot: () => ({ ready: !!FP.knob, err: FP.err, live: !!(FP.live && FP.liveMix > 0.5), liveMix: FP.liveMix, knob: fpSummary(FP.knob), playing: fpSummary(FP.live),
+    ms: FP.ms, drawMs: FP.drawMs, n: FP.n, read: $('fpRead').textContent, label: $('fpCv').getAttribute('aria-label'),
+    painted: (() => { const c = $('fpCv'); if (!c.width) return 0; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 4) s += x[i] + x[i + 1]; return s / (x.length / 4); })() }),
+  filterPlotAt: (freqs, which, key) => { const r = which === 'live' ? FP.live : FP.knob; return r ? freqs.map(hz => dbAt(r, key || 'sum', hz)) : null; },
+  // the same lab on any Filament patch, without touching the page's curves (sr: a lab at that rate,
+  // for comparing with offline renders; the page's follows the live context)
+  filterRespOf: async (p, cutA, cutB, freqs, sr) => {
+    const d = await fpAsk(normalize(p), cutA, cutB == null ? 2000 : cutB, sr); if (d.err) return { err: d.err }; const r = d.r;
+    return { sr: r.sr, route: r.route, ringA: r.ringA, ringB: r.ringB, ms: r.ms, peak: peakOf(r, r.route === 3 ? 'a' : 'sum'), sum: freqs.map(hz => dbAt(r, 'sum', hz)), a: freqs.map(hz => dbAt(r, 'a', hz)), b: r.b ? freqs.map(hz => dbAt(r, 'b', hz)) : null }; },
   setTubeShow: mode => setShow(mode),
   device: () => dev,
   setDevice: d => setDevice(d),

@@ -662,6 +662,89 @@ with sync_playwright() as pw:
     ck(f"Fb. filtB defaults to off (SVF 12, 2 kHz, flat, key tracking 50%); only the four routes and the six models other than the low pass gate load; ranges clamp; no factory patch turns it on ({nz})",
        nz == {"d": "off,svf12,2000,0,0.5,0,0,0", "lpg": "svf12", "bad": "off", "sp": "split", "lo": "20,0,-1,0", "hi": "20000,1,1,3", "fac": []}, nz)
 
+    # ---------------------------------------------------------------- Fp. the filter response plot (28 Oct)
+    # The plot comes from the worklet's own filter code run in a worker (filtplot.js), so these check it
+    # against the voice as the engine plays it: quiet sine tones through each model, measured against the
+    # same filter wide open, and the plot's curve read the same way. Then the routes, a singing filter,
+    # the live curve under a note, the throttle, and the canvas.
+    pg.evaluate("document.getElementById('mFilt').scrollIntoView()")
+    try: pg.wait_for_function("__synth.filterPlot().ready && __synth.filterPlot().knob", timeout=15000); fp_ok = True
+    except Exception as e_: fp_ok = False
+    ck("Fp. the response plot's lab loads (the worklet's filter code, in a worker) and draws a first curve", fp_ok, pg.evaluate("__synth.filterPlot()"))
+    def fp_of(p_, cutA, cutB=None, fq=(250, 1000, 4000), sr=SR):
+        # at the renders' rate (48 kHz) unless asked; the page's own plot follows the live context's rate
+        return pg.evaluate("a => __synth.filterRespOf(a.p, a.a, a.b, a.f, a.sr)", {"p": p_, "a": cutA, "b": cutB, "f": list(fq), "sr": sr})
+    def two_tone(m_, cut, res, extra=None):
+        # 250 Hz and 4 kHz in one render (osc 1 and osc 2), 1 kHz in another; quiet (0.02), so every model stays
+        # linear and one tone barely moves the other (at 0.05 the 250 Hz tone took 0.4 dB off 4 kHz in Diode 18)
+        fl = dict({"model": m_, "cutoff": cut, "res": res}, **(extra or {}))
+        L1, _ = render(patch(osc1={"wave": "sine", "level": 0.02, "fixed": 250}, osc2={"wave": "sine", "level": 0.02, "fixed": 4000}, filt=fl), note(60, v=0.79), 1.0, rack=False)
+        L2, _ = render(patch(osc1={"wave": "sine", "level": 0.02, "fixed": 1000}, filt=fl), note(60, v=0.79), 1.0, rack=False)
+        return {250: tone_amp(L1[SR // 2:], 250), 1000: tone_amp(L2[SR // 2:], 1000), 4000: tone_amp(L1[SR // 2:], 4000)}
+    fp_err = {}
+    for m_ in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12", "lpg"):
+        op_ = two_tone(m_, 20000, 0); po_ = fp_of(patch(filt={"model": m_, "cutoff": 20000, "res": 0}), 20000)["a"]
+        for res in (0, 0.6):
+            ms_ = two_tone(m_, 1000, res); pp_ = fp_of(patch(filt={"model": m_, "cutoff": 1000, "res": res}), 1000)["a"]
+            e_ = []
+            for i, f in enumerate((250, 1000, 4000)):
+                meas = db(ms_[f] / op_[f]); plot = pp_[i] - po_[i]
+                if meas > -40: e_.append(round(plot - meas, 2))
+            fp_err[f"{m_}/{res}"] = e_
+    worst = max(abs(x) for v in fp_err.values() for x in v)
+    ck(f"Fp. the plot matches the voice on every model at resonance 0 and 0.6, 1 kHz cutoff, at 250 Hz, 1 kHz and 4 kHz within 0.2 dB where above -40 (worst {worst:.2f} dB)", worst <= 0.2, fp_err)
+    info("Fp. plot minus measured, dB, at 250 / 1k / 4k", fp_err)
+    # the routes, against the Fb. renders above (serial and parallel, relative to SVF 12 wide open)
+    po_ = fp_of(patch(filt={"model": "svf12", "cutoff": 20000}), 20000, fq=FQS)["a"]
+    ps_ = fp_of(patch(filt={"model": "svf12", "cutoff": 1000}, filtB={"route": "serial", "model": "svf12", "morph": 2, "cutoff": 1000, "keytrack": 0}), 1000, 1000, fq=FQS)
+    pq_ = fp_of(patch(filt={"model": "svf12", "cutoff": 300}, filtB={"route": "parallel", "model": "svf12", "morph": 2, "cutoff": 3000, "keytrack": 0}), 300, 3000, fq=FQS)
+    re_ = {"serial": [round(ps_["sum"][i] - po_[i] - sr_[f], 2) for i, f in enumerate(FQS) if sr_[f] > -40],
+           "parallel": [round(pq_["sum"][i] - po_[i] - pr_[f], 2) for i, f in enumerate(FQS) if pr_[f] > -40]}
+    ck(f"Fp. serial and parallel curves match the voice from 100 Hz to 4 kHz within 0.2 dB ({re_})", ps_["route"] == 1 and pq_["route"] == 2 and max(abs(x) for v in re_.values() for x in v) <= 0.2, (re_, ps_, pq_))
+    pa_ = fp_of(patch(filt={"model": "ladder24", "cutoff": 500}), 500, fq=(250, 2000))
+    pb_ = fp_of(patch(filt={"model": "svf12", "cutoff": 4000}), 4000, fq=(250, 2000))
+    pt_ = fp_of(patch(filt={"model": "ladder24", "cutoff": 500}, filtB={"route": "split", "model": "svf12", "cutoff": 4000, "keytrack": 0}), 500, 4000, fq=(250, 2000))
+    ck("Fp. split draws A (left) and B (right) apart: each is the same filter alone, within 0.01 dB",
+       pt_["route"] == 3 and max(abs(x - y) for x, y in zip(pt_["a"] + pt_["b"], pa_["a"] + pb_["a"])) <= 0.01, (pt_, pa_, pb_))
+    # singing: past the threshold the response does not decay, and its peak sits on the knob
+    sg_ = fp_of(patch(filt={"model": "ladder24", "cutoff": 262, "res": 1}), 262, fq=(262,))
+    nr_ = fp_of(patch(filt={"model": "ladder24", "cutoff": 262, "res": 0.85}), 262, fq=(262,))
+    ck(f"Fp. Ladder 24 at full resonance sings on the plot (peak at {sg_['peak']['f']:.0f} Hz, within 4% of 262, off the top); at 0.85 it rings down (peak {nr_['peak']['db']:+.1f} dB)",
+       sg_["ringA"] and abs(sg_["peak"]["f"] / 262 - 1) <= 0.04 and sg_["peak"]["db"] > 24 and not nr_["ringA"] and 6 < nr_["peak"]["db"] < 40, (sg_, nr_))
+    # the page: the knob curve follows a patch change, then a note draws the live curve at its own cutoff
+    pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 300, "res": 0.3, "keytrack": 1, "env": 0, "vel": 0}))
+    try: pg.wait_for_function("(() => { const k = __synth.filterPlot().knob; return k && k.cutA === 300; })()", timeout=3000); k_ok = True
+    except Exception as e_: k_ok = False
+    fpk = pg.evaluate("__synth.filterPlot()")
+    ck("Fp. a patch change redraws the knob curve (Ladder 24 at 300 Hz) and the readout says so", k_ok and "300Hz" in fpk["read"] and fpk["read"].startswith("knobs at middle C"), fpk)
+    pg.evaluate("__synth.noteOn(72, 0.8)")
+    try: pg.wait_for_function("(() => { const f = __synth.filterPlot(); return f.live && f.playing && Math.abs(f.playing.cutA / 600 - 1) < 0.01; })()", timeout=3000); l_ok = True
+    except Exception as e_: l_ok = False
+    fpl = pg.evaluate("__synth.filterPlot()")
+    lv_ = pg.evaluate("__synth.filterPlotAt([150, 600, 2400], 'live')"); lc_ = (fpl["playing"] or {}).get("cutA", 0)
+    ref_l = fp_of(pg.evaluate("__synth.patch()"), lc_ or 600, fq=(150, 600, 2400), sr=None)["a"]
+    ck(f"Fp. a note an octave up (key tracking 1) draws the live curve at 600 Hz within 1% ({lc_:.1f}), the lab's curve at that cutoff, and the readout says playing",
+       l_ok and lv_ is not None and max(abs(x - y) for x, y in zip(lv_, ref_l)) <= 0.05 and fpl["read"].startswith("playing"), (fpl, lv_, ref_l))
+    pg.evaluate("__synth.noteOff(72)")
+    try: pg.wait_for_function("!__synth.filterPlot().live && __synth.filterPlot().read.startsWith('knobs')", timeout=3000); r_ok = True
+    except Exception as e_: r_ok = False
+    ck("Fp. after the note ends the plot goes back to the knob curve", r_ok, pg.evaluate("__synth.filterPlot()"))
+    # the envelope sweeps the live cutoff; the plot recomputes at most 15 times a second while it does
+    pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "svf12", "cutoff": 200, "res": 0.5, "keytrack": 0, "env": 0.8, "vel": 0}, envF={"a": 0.4, "d": 1.5, "s": 0, "r": 0.3}, envA={"a": 0.001, "d": 0.1, "s": 1, "r": 0.2, "vel": 0}))
+    pg.wait_for_timeout(200)
+    # (the highest live cutoff seen while the note is held: at 1 s the envelope is already back near 400 Hz)
+    n0 = pg.evaluate("__synth.filterPlot().n")
+    hi_ = pg.evaluate("""async () => { __synth.noteOn(60, 0.8); let hi = 0; const t0 = performance.now();
+      while (performance.now() - t0 < 1000) { const p = __synth.filterPlot().playing; if (p && p.cutA > hi) hi = p.cutA; await new Promise(r => setTimeout(r, 40)); } return hi; }""")
+    fpe = pg.evaluate("__synth.filterPlot()"); n1 = fpe["n"]; pg.evaluate("__synth.noteOff(60)")
+    ck(f"Fp. the filter envelope moves the live curve (up to {hi_:.0f} Hz against the knob's 200) with at most 16 recomputes in a second ({n1 - n0})",
+       fpe["live"] and hi_ > 1000 and 1 <= n1 - n0 <= 16, (fpe, hi_, n1 - n0))
+    ck(f"Fp. the canvas is painted (mean {fpe['painted']:.1f}) and labelled", fpe["painted"] > 5 and fpe["label"].startswith("Filter response"), fpe)
+    info("Fp. cost", f"compute {fpe['ms']:.2f} ms a curve (running mean), draw {fpe['drawMs']:.2f} ms a frame")
+    wc_ = [fp_of(patch(filt={"model": m_, "cutoff": 60, "res": 0.85}), 60, fq=(60,))["ms"] for m_ in ("valve12", "ladder24", "poly24")]
+    info("Fp. cost, a slow case (60 Hz at resonance 0.85: Valve 12, Ladder 24, Poly 24)", [round(x, 1) for x in wc_])
+    pg.evaluate("p => __synth.setPatch(p)", patch())
+
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
         p = patch(osc1={"level": 0}, filt={"model": "valve12", "cutoff": 262, "res": 1, "keytrack": 1, "tube": tube})
@@ -1820,8 +1903,14 @@ with sync_playwright() as pw:
         pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "valve12", "cutoff": 800, "res": rv, "keytrack": 0, "env": 0, "vel": 0, "drive": 3, "sag": 3}))
         pg.wait_for_timeout(150); res.append(pg.evaluate(HOLD, {"notes": [57], "ms": 600})["s"])
     ck(f"Tv. V2 shows the resonance ({res[0]['res']:.2f} at 0.2, {res[1]['res']:.2f} at 0.97) and shimmers only when it self-oscillates", res[1]["res"] > 0.85 and res[0]["res"] < 0.3 and res[1]["shimmer"] and not res[0]["shimmer"], res)
-    pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 800, "res": 0.97})); pg.wait_for_timeout(500)
-    ck("Tv. on Ladder 24, V2 is out of the path and shows nothing", pg.evaluate("__synth.tubeShow().res") < 0.05 and not pg.evaluate("__synth.tubeShow().shimmer"))
+    # V2's glow eases off with a 0.12 s time constant on the show's clock, which only moves when the frame loop
+    # runs. A fixed 500 ms wait measured 340 to 400 ms needed on origin/main and 425 to 567 ms once one more
+    # line of text sat in the Filter section (28 Oct, headless, 6 tries each): a wall-clock race, so wait for
+    # it, up to 2 s. A V2 that kept glowing on Ladder 24 still fails.
+    pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 800, "res": 0.97}))
+    try: pg.wait_for_function("__synth.tubeShow().res < 0.05 && !__synth.tubeShow().shimmer", timeout=2000); v2_off = True
+    except Exception as e_: v2_off = False
+    ck("Tv. on Ladder 24, V2 is out of the path and shows nothing", v2_off, pg.evaluate("__synth.tubeShow()"))
     # Cathode: V2, the follower, shows the low-pass peak
     pg.evaluate("__synth.setDevice('cathode')"); pg.evaluate("__synth.load('Plate Screamer')"); pg.wait_for_timeout(200)
     pk_c = pg.evaluate("__synth.patch().lpf.peak"); cs = pg.evaluate(TV_PEAK, {"notes": [48], "v": 0.9, "ms": 700})
@@ -1953,9 +2042,16 @@ with sync_playwright() as pw:
           ['filament', 'cathode'].forEach(k => { notes[k] = (meters[k] && meters[k].notes) || []; });
           return { down: __synth.state().down.slice(), keys: document.querySelectorAll('.key.down').length, notes, sustain: __synth.state().sustain, dev: __synth.device() };
         }""")
+    # The worklet meters come back about 30 times a second, and in headless Chrome the round trip from a
+    # note off to a meter without the note measured 28 to 235 ms on origin/main (28 Oct; 12 keyups each,
+    # page idle): a fixed 90 ms wait read a released note as still held ("releasing the key after Ctrl
+    # lets go" failed once that way). So quiet() waits up to 1.5 s for the released state; a note that is
+    # really stuck never clears, so it still fails.
+    def is_quiet(g): return g["down"] == [] and g["keys"] == 0 and g["notes"]["filament"] == [] and g["notes"]["cathode"] == [] and not g["sustain"]
     def quiet(label):
-        g = gates()
-        ck(label, g["down"] == [] and g["keys"] == 0 and g["notes"]["filament"] == [] and g["notes"]["cathode"] == [] and not g["sustain"], g)
+        g = gates(); t_ = 0
+        while not is_quiet(g) and t_ < 1500: g = gates(); t_ += 90
+        ck(label, is_quiet(g), g)
     pg.keyboard.down("d")
     pg.evaluate("""() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', repeat: true, bubbles: true, cancelable: true }))""")
     ck("key repeat does not stack a second hold", pg.evaluate("__synth.state().down").count(pg.evaluate("12 * (__synth.state().oct + 1) + 4")) == 1)
@@ -2618,6 +2714,11 @@ with sync_playwright() as pw:
         ph.click(".tabs [data-go=filter]"); ph.wait_for_timeout(100)
         ck(f"10. {w}px: the Filter tab shows the filter", ph.is_visible("#mFilt") and not ph.is_visible("#mOsc1"))
         ck(f"10. {w}px: the Filter tab shows Filter B with its route chips", ph.is_visible("#mFiltB") and ph.is_visible('#routeChips .chip[data-v="split"]'))
+        try: ph.wait_for_function("__synth.filterPlot().ready && __synth.filterPlot().painted > 5", timeout=8000); fpv = True
+        except Exception as e_: fpv = False
+        fpb = ph.query_selector("#fpCv").bounding_box()
+        ck(f"10. {w}px: the Filter tab draws the response plot inside the screen, no horizontal scroll", fpv and fpb["x"] >= 0 and fpb["x"] + fpb["width"] <= w and fpb["height"] >= 100
+           and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"), (fpb, ph.evaluate("__synth.filterPlot()")))
         small = ph.evaluate("""() => [...document.querySelectorAll('.tabs button, .key.w, .btn, .chip')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent)""")
         ck(f"10. {w}px: touch targets are 44 px or more", not small, small)
         ck(f"10. {w}px: the Filter tab shows the Diode 18, Sallen-Key 12, Poly 24, SVF 12 and LP gate chips with no horizontal scroll",
