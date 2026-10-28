@@ -1064,9 +1064,7 @@ with sync_playwright() as pw:
         pkf = max(np.max(np.abs(L)), np.max(np.abs(R)))
         ck(f"C. {f_['name']}: loudness {loud:.1f} dB (want -18 to -11), mono fold {db(st) - db(mo):.1f} dB, peak {db(pkf):.1f} dBFS",
            -18 <= loud <= -11 and db(mo) >= db(st) - 3.0 and pkf <= 1.0, (loud, db(st) - db(mo), pkf))
-    # CPU, logged
-    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": pg.evaluate("__synth.cathodePatch('Plate Screamer')"), "events": note(60, 0.0), "seconds": 6.0})
-    info("9. CPU Cathode (Plate Screamer, one voice, both filters screaming)", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time, rack included")
+    # Cathode's CPU line is logged with the rest of test 9, in its own page (see 9. below)
     # the rack rail, live
     pg.evaluate("__synth.setDevice('cathode')"); pg.wait_for_timeout(200)
     ck("C. rail: Cathode lit, its panel shown, Filament's hidden", pg.evaluate("__synth.device()") == "cathode" and pg.is_visible("#mCLpf") and not pg.is_visible("#mFilt")
@@ -1963,27 +1961,48 @@ with sync_playwright() as pw:
     ck("Tv. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- 9. CPU (logged)
+    # Each line is a case's steady cost: the wall time of a CPU_L s offline render minus a CPU_S s one (each the
+    # faster of two), over the seconds between, so the fixed cost of every render (a fresh worklet scope, the worklet's JIT warm-up,
+    # measured 25 Oct at 0.25 to 0.45 s) drops out. It runs in a page of its own with both pages' live audio
+    # suspended: read on the main page after the 1000 checks above, the same patches cost up to twice what
+    # they cost in a fresh page, and by an amount that changed run to run (measured 27 and 28 Oct). The whole
+    # CPU_L s render is logged beside it. These are INFO lines; nothing here can fail the suite.
+    CPU_S, CPU_L = 2.0, 12.0
+    cpx = b.new_context(viewport={"width": 1366, "height": 1000}); cp = cpx.new_page(); cperr = []
+    cp.on("pageerror", lambda e: cperr.append(str(e)))
+    cp.goto(BASE); cp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    HUSH = "async () => { const c = __synth.engine().ctx, s = c.state; if (s === 'running') await c.suspend(); return s; }"
+    pg_was = pg.evaluate(HUSH); cp.evaluate(HUSH)
+    def cpu9(name, P, ev):
+        a = {"patch": P, "events": ev}
+        ms = lambda sec: min(cp.evaluate("a => __synth.timeRender(a)", dict(a, seconds=sec))["ms"] for _ in range(2))
+        ts, tl = ms(CPU_S), ms(CPU_L)
+        info(f"9. CPU {name}", f"{100 * (tl - ts) / ((CPU_L - CPU_S) * 1000):.1f}% of real time steady in headless Chrome "
+             f"(offline, rack included; {CPU_L:g} s render minus {CPU_S:g} s, best of 2 each, own page); whole {CPU_L:g} s render {100 * tl / (CPU_L * 1000):.1f}%")
+    # a throwaway render first: the page's first offline render runs 0.5 s slower than the rest (measured)
+    cp.evaluate("a => __synth.timeRender(a)", {"patch": patch(), "events": note(60, 0.0), "seconds": 1.0})
+    cpu9("Cathode (Plate Screamer, one voice, both filters screaming)", cp.evaluate("__synth.cathodePatch('Plate Screamer')"), note(60, 0.0))
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
     for model in ("ladder24", "valve12", "diode18", "sk12", "poly24", "svf12", "lpg"):
         big["filt"]["model"] = model
-        r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
-        info(f"9. CPU {model}, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time in headless Chrome (offline render, rack included)")
+        cpu9(f"{model}, 8 voices", big, ev8)
     big["filt"]["model"] = "valve12"; big["filt"]["offset"] = 0.5
-    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
-    info("9. CPU valve12 with stereo offset (two filters per voice), 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+    cpu9("valve12 with stereo offset (two filters per voice), 8 voices", big, ev8)
     big["filt"]["offset"] = 0
     for rt in ("serial", "parallel", "split"):
         big["filtB"] = {"route": rt, "model": "ladder24", "cutoff": 900, "res": 0.5}
-        r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
-        info(f"9. CPU valve12 with filter B {rt} on Ladder 24, 8 voices", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+        cpu9(f"valve12 with filter B {rt} on Ladder 24, 8 voices", big, ev8)
     big.pop("filtB")
-    big["filt"]["offset"] = 0; big["voice"] = {"unison": 2, "count": 8}; big["ens"] = {"on": True, "mode": "strings", "mix": 50}
-    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
-    info("9. CPU valve12, 8 notes x unison 2 = 16 voices, ensemble on", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
-    big["voice"] = {"unison": 1, "count": 8}; big["ens"] = {"on": False}; big["out"] = {"eqOn": True, "eqBands": 31, "eqGains": [3, -3] * 15 + [3]}
-    r = pg.evaluate("a => __synth.timeRender(a)", {"patch": big, "events": ev8, "seconds": 6.0})
-    info("9. CPU valve12, 8 voices, graphic EQ on at 31 bands", f"{100 * r['ms'] / 1000 / r['seconds']:.1f}% of real time")
+    big["voice"] = {"unison": 2, "count": 8}; big["ens"] = {"on": True, "mode": "strings", "mix": 50}
+    cpu9("valve12, 8 notes x unison 2 = 16 voices, ensemble on", big, ev8)
+    # the EQ case adds the EQ to the same output stage (until 28 Oct it replaced `out`, so the room and the
+    # default output tube came back on and the line timed them as well as the EQ)
+    big["voice"] = {"unison": 1, "count": 8}; big["ens"] = {"on": False}; big["out"] = dict(big["out"], eqOn=True, eqBands=31, eqGains=[3, -3] * 15 + [3])
+    cpu9("valve12, 8 voices, graphic EQ on at 31 bands", big, ev8)
+    ck("9. the CPU page: no page errors", not cperr, cperr)
+    cpx.close()
+    if pg_was == "running": pg.evaluate("() => __synth.engine().ctx.resume()")
 
     # ---------------------------------------------------------------- 12. MIDI
     def rmidi(p, midi, seconds):
