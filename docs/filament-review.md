@@ -17,11 +17,13 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1028-2 | confusing | a | Klystron gate and focus: most of their travel is silence (gate at 25% silences 4 of 5 factory patches; focus at its top costs 25 to 38 dB even with the gate at 0) | measured |
+| R1028-3 | confusing | a | Resnatron has two level controls that do the same thing (Level and the Out module's level multiply) | measured |
+| R1028-4 | confusing | a | LP gate in A with B on split or parallel: B's side follows the light cell's level but not its darkening, so the sides decay apart; the panel does not say so | measured |
 | R1027-2 | confusing | f | For several seconds after opening (about 8 s on the live site, headless) the Mix desk shows no arms and the default desk bus; the saved ones appear when the boot finishes | measured |
 | R1026-3 | confusing | d | Two reverbs and two delays: the strip sends feed the Mix desk's own room and an unsynced delay, not the master bus effects | measured |
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does) | measured |
-| R1026-6 | confusing | d | Clearing the tempo box and pressing Enter sets 40 BPM instead of keeping the tempo | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
 | R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation and no undo | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
@@ -51,7 +53,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 26 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 26 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -738,3 +740,111 @@ Measured.
 Areas a, b, c, d, e. Suggested next: a and b on Filter B (each route, the A / B knob, old patches with
 no `filtB`); a on the low pass gate and Hollow Pluck (still not done); c with the new rail on a phone.
 
+
+## 2026-10-28 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `30005a4` (the filter
+response plot and Filter B had landed in the last two nights), sw.js `dxedge-v154`. Chromium headless
+(Playwright's own build; the `chromium-1194` path in the task prompt is gone) at 1366 x 900 and
+375 x 812 (touch, 2x). No page or console errors in any run but one (below). Focus tonight, from the
+27 Oct suggestion: Filter B (every route, the A / B knob, B models, patches carrying it), the low pass
+gate and Hollow Pluck, and area a on four devices no review had covered (Klystron, Resnatron,
+Gyrotron, Pentagrid).
+
+### What worked (measured)
+
+- Filter B panel at both sizes: the four route chips set `filtB.route` and only the pressed one reads
+  `aria-pressed="true"`; A / B shows only on parallel, morph only on SVF 12; the note under the chips
+  changes with the route; the readout adds "B 2kHz" when B is on; the six B model chips set
+  `filtB.model`. Page width 375 at 375 px on every route.
+- Routes, offline (saw C3, A an open SVF 12, B an SVF 12 low-pass at 500 Hz; harmonic 16 relative to
+  full scale): off -45.4 dB; serial -70.4 dB; split left -45.4 (A alone, the same as off) and right
+  -70.4 (B alone); parallel at A / B -1 equals off and at +1 equals serial, and the fundamental is
+  2.8 dB up at the middle. Two identical 500 Hz low-passes in parallel come out 3.1 dB over one, as
+  documented.
+- B off is a straight wire: B set to Ladder 24, 100 Hz, resonance 1 with the route on "A only" leaves
+  the high band within 0.3 dB of B's defaults.
+- No clicks on route changes: a sine C3 through A and a Ladder 24 B (600 Hz, resonance 0.5), with the
+  route changed mid-note six ways and the B model changed once. The largest sample step near the change
+  was 0.0028 against 0.0027 in steady playing.
+- Sweep, 114 renders: A on Valve 12, LP gate and Ladder 24, each route, each B model, B resonance 0 and
+  1, a four-note chord on Wide Novachord Strings. No NaN and every one sounds. With the output stage
+  bypassed the voice bus peaks up to 1.66 at B resonance 1, but A alone at resonance 1 already does the
+  same (1.86 on SVF 12), and through the rack the worst case (A and B both singing in serial) peaks 0.983.
+- Low pass gate, C4 held 0.5 s at full sustain: "filter + VCA" with lag 0.05, 0.3 and 2 s is at -134,
+  -39 and -26 dB 300 ms after the key-up and darkens as it fades (harmonic 8 over the fundamental goes
+  from -23.7 dB held to -48.7, -31.7 and -25.3 just after release); "VCA only" fades the same way but
+  keeps its brightness (-23.7); "filter only" ends with the amp envelope. Hollow Pluck, a seven-note run:
+  no NaN, peak 0.65 through the rack.
+- Patches with Filter B: a user patch on split with B on Ladder 24 saves, is still selected and still on
+  split after a reload, and the project JSON carries `filtB`. Undo steps back the B model, then the
+  route. Picking Hollow Pluck afterwards puts B back to off.
+- Area a, four devices, Init or first patch: every visible panel slider, stepped to its end from the
+  keyboard, moves its own patch field and renders with no NaN: Klystron 16, Resnatron 28, Gyrotron 15,
+  Pentagrid 12. Every Gyrotron and Pentagrid control changes the sound. On Resnatron's Cavity Saw, 13
+  controls change nothing because their modules are not cabled (VCO 2, LFO, S&H, mixer, delay, and
+  VCO 1 pulse width and FM), which is right for a patch bay.
+
+### Findings
+
+**R1028-1. The filter plot calls a parallel sum a "peak at 20Hz".** Area a. Confusing. Measured. Fixed tonight.
+- Steps: Filament, Filter tab, Filter B on "parallel" with the factory defaults (A low-pass 2.3 kHz,
+  B low-pass 2 kHz).
+- Expected: the readout names a peak only where the curve rises to one.
+- Actual: "knobs at middle C: A 2.3kHz · B 2kHz · peak +3.0 dB at 20Hz". The two low-passes sum to a
+  flat +3 dB passband, so the highest point is the left edge of the plot, which the readout reported as
+  a peak.
+- Fix: a peak must stand more than 1 dB above both ends of the plot; otherwise a gain above 1 dB is read
+  as "passband +3.0 dB". Resonant peaks read as before ("peak +17.6 dB at 956Hz" on Ladder 24 at 1 kHz,
+  resonance 0.8). Check: "Fp. the readout names a flat parallel sum as passband gain, not a peak at
+  20 Hz" (failed on the unfixed page: "peak +3.0 dB at 20Hz").
+
+**R1026-6 (from 26 Oct). An emptied tempo box set 40 BPM.** Area d. Fixed tonight.
+- Clearing the rack tempo box and pressing Enter (or leaving it) now keeps the tempo and shows it again.
+  Check: "R. an emptied tempo box keeps the tempo and shows it again" (before: clock 40, box "40").
+
+**R1028-2. Most of Klystron's gate and focus travel is silence.** Area a. Confusing. Measured.
+- Steps: Klystron, any factory patch, hold C4, turn gate (0 to 0.4) or focus (0.6 to 8) up.
+- Expected: a usable range across the knob.
+- Actual (offline, RMS of a 1 s note): gate at 0.05 (12% of travel) silences Buncher Ah, the first patch;
+  gate at 0.1 (25%) silences Buncher Ah, Close Front, Held Frost and Keyed Sine; only Back Cloud lasts
+  (-24 dB). Focus at 8 with the gate at 0 costs 25 to 38 dB against each patch's own focus, and with the
+  patch's own gate it silences Buncher Ah and Keyed Sine. Bank env a at its top (0.2 s) silences Buncher Ah.
+- Inferred cause (code): the gate is an absolute threshold on each band's envelope, and on the pad
+  vowels those envelopes run far under 0.1; the band-pass gain also drops as the Q rises. Rescaling the
+  gate, or setting it relative to the loudest band, would change how existing patches sound: a call for
+  James. Related: R1022-3 (Buncher Ah is quiet to begin with).
+
+**R1028-3. Resnatron has two level controls that do the same thing.** Area a. Confusing. Measured.
+- The panel's "Level" slider (patch `level`) and the Out module's "Out level" (`out.level`) are
+  multiplied together (`0.45 × out.level × level` in `resnatron-dsp.js`). Each at its end gives the same
+  render (difference RMS 0.0107 from the patch, both peaks 0.262). A player turning one up may find the
+  other was the one holding it down. One of them could go, or the panel one could be labelled as the
+  device trim.
+
+**R1028-4. LP gate in A with B on split or parallel: the sides decay apart.** Area a. Confusing. Measured.
+- Steps: Filter A on LP gate (filter + VCA, lag 0.3 s), Filter B on split, hold a note and let go.
+- Actual: 1.2 s after the key-up the left side (A, the gate's filter) is at -114.6 dB and the right
+  (B) at -64.2 dB; on parallel the sum is at -67.3 dB against -114.6 with B off or serial. B takes the
+  light cell's level but not its darkening, so the tail swings right and stays bright. This matches the
+  27 Oct note that the gate stays in slot A, but neither note on the panel says so.
+
+- Test timing: the first suite run tonight failed "Fp. a patch change redraws the knob curve (Ladder 24 at
+  300 Hz) and the readout says so" once. The readout is written by the 30 fps frame loop, 10 to 70 ms after
+  the knob curve lands (measured locally), and the check read it the moment the curve landed. It now waits
+  for the readout as well; what it asserts is unchanged.
+
+### Still open, re-measured tonight
+- R1025-3: delete removes a user patch with no dialog.
+- R1022-5: deleting a Filament user patch lands on Plate Bass, not Wide Novachord Strings.
+
+### Notes
+- One offline Klystron render failed once with "AbortError: Failed to load worklet module script:
+  https://dxedge.net/synth/klystron.worklet.js", after about 60 renders in one page. The same script run
+  again did not see it. Likely a network blip (inferred); worth watching if it comes back.
+- An old user patch without `filtB` was not re-tested live tonight (the injection used the wrong storage
+  shape); the suite's normalize checks cover it, and the 22 Oct review covered stubs.
+
+### Not covered tonight
+Areas c, d, e, f, g, h. Suggested next: c and e (the deck with the new rail on a phone; R1023-3 and
+R1023-4), and d with the tempo fix live.

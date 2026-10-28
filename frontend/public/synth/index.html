@@ -1946,7 +1946,10 @@ if (bootProj) $('projName').value = bootProj.name;
 $('trPlay').addEventListener('click', () => { wake(); withEngine(() => { E.transport.play(); paintHost(); }); });
 $('trStop').addEventListener('click', () => withEngine(() => { E.transport.stop(); paintHost(); }));
 function commitTempo() {
-  withEngine(() => { const t = E.transport.setTempo($('hostTempo').value); $('hostTempo').value = String(Math.round(t)); paintHost(); });
+  // an emptied (or unreadable) box keeps the tempo instead of falling to the 40 BPM floor (review R1026-6)
+  withEngine(() => { const raw = String($('hostTempo').value).trim();
+    const t = raw === '' || !isFinite(+raw) ? E.transport.state().tempo : E.transport.setTempo(raw);
+    $('hostTempo').value = String(Math.round(t)); paintHost(); });
 }
 $('hostTempo').addEventListener('change', commitTempo);
 MIX_ROWS.forEach(([id, s]) => {
@@ -2724,9 +2727,13 @@ function fpGot(d) { if (d.err) { FP.err = d.err; return null; } const r = d.r; F
 function fpRead() {
   const el = $('fpRead'), r = FP.liveMix > 0.5 && FP.live ? FP.live : FP.knob; if (!r) return;
   const B = r.route ? ' &middot; B ' + fmtF(Math.round(r.cutB)) + 'Hz' : '';
-  const pk = peakOf(r, r.route === 3 ? 'a' : 'sum'), sings = r.ringA || (r.route && r.ringB);
+  const key = r.route === 3 ? 'a' : 'sum', pk = peakOf(r, key), sings = r.ringA || (r.route && r.ringB);
+  // a peak stands above both ends of the plot; a level that is highest at an end (two low-passes in
+  // parallel sum to +3 dB) is passband gain, not a peak at 20 Hz (review R1028-1)
+  const d = r[key], pass = d && d.length ? Math.max(d[0], d[d.length - 1]) : -Infinity;
   const tail = sings ? ' &middot; <b>sings</b> near ' + fmtF(Math.round(pk.f)) + 'Hz'
-    : pk.db > 1 ? ' &middot; peak ' + sgnDb(pk.db) + ' at ' + fmtF(Math.round(pk.f)) + 'Hz' : '';
+    : pk.db > 1 && pk.db > pass + 1 ? ' &middot; peak ' + sgnDb(pk.db) + ' at ' + fmtF(Math.round(pk.f)) + 'Hz'
+    : pass > 1 ? ' &middot; passband ' + sgnDb(pass) : '';
   const t = (r === FP.live ? 'playing' : 'knobs at middle C') + ': A ' + fmtF(Math.round(r.cutA)) + 'Hz' + B + tail;
   if (el.dataset.t === t) return;
   el.dataset.t = t; el.innerHTML = '<span class="dim">' + t.replace(/^([^:]+):/, '$1:</span>');

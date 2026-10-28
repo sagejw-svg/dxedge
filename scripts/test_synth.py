@@ -713,7 +713,8 @@ with sync_playwright() as pw:
        sg_["ringA"] and abs(sg_["peak"]["f"] / 262 - 1) <= 0.04 and sg_["peak"]["db"] > 24 and not nr_["ringA"] and 6 < nr_["peak"]["db"] < 40, (sg_, nr_))
     # the page: the knob curve follows a patch change, then a note draws the live curve at its own cutoff
     pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 300, "res": 0.3, "keytrack": 1, "env": 0, "vel": 0}))
-    try: pg.wait_for_function("(() => { const k = __synth.filterPlot().knob; return k && k.cutA === 300; })()", timeout=3000); k_ok = True
+    # (the readout is written by the 30 fps frame loop, a frame or two after the knob curve lands: wait for both)
+    try: pg.wait_for_function("(() => { const f = __synth.filterPlot(), k = f.knob; return k && k.cutA === 300 && f.read.includes('300Hz'); })()", timeout=3000); k_ok = True
     except Exception as e_: k_ok = False
     fpk = pg.evaluate("__synth.filterPlot()")
     ck("Fp. a patch change redraws the knob curve (Ladder 24 at 300 Hz) and the readout says so", k_ok and "300Hz" in fpk["read"] and fpk["read"].startswith("knobs at middle C"), fpk)
@@ -729,6 +730,18 @@ with sync_playwright() as pw:
     try: pg.wait_for_function("!__synth.filterPlot().live && __synth.filterPlot().read.startsWith('knobs')", timeout=3000); r_ok = True
     except Exception as e_: r_ok = False
     ck("Fp. after the note ends the plot goes back to the knob curve", r_ok, pg.evaluate("__synth.filterPlot()"))
+    # review R1028-1: two low-passes in parallel sum to a flat +3 dB passband, and the readout called
+    # that a "peak at 20Hz". A peak has to stand above the ends of the plot; the passband gain is named as such.
+    pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "svf12", "cutoff": 2300, "res": 0, "keytrack": 0}, filtB={"route": "parallel", "model": "svf12", "cutoff": 2000, "res": 0, "keytrack": 0}))
+    try: pg.wait_for_function("(() => { const k = __synth.filterPlot().knob; return k && k.cutA === 2300 && k.route === 2 && __synth.filterPlot().read.includes('B 2kHz'); })()", timeout=3000); pp_ok = True
+    except Exception as e_: pp_ok = False
+    rp_ = pg.evaluate("__synth.filterPlot().read")
+    pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 1000, "res": 0.8, "keytrack": 0}))
+    try: pg.wait_for_function("(() => { const k = __synth.filterPlot().knob; return k && k.cutA === 1000 && !k.route && __synth.filterPlot().read.includes('A 1kHz'); })()", timeout=3000); pr_ok = True
+    except Exception as e_: pr_ok = False
+    rr_ = pg.evaluate("__synth.filterPlot().read")
+    ck(f"Fp. the readout names a flat parallel sum as passband gain, not a peak at 20 Hz ('{rp_}'), and still names a resonant peak ('{rr_}')",
+       pp_ok and pr_ok and "peak" not in rp_ and "passband +3" in rp_ and "peak +" in rr_ and "at 20Hz" not in rr_, (rp_, rr_))
     # the envelope sweeps the live cutoff; the plot recomputes at most 15 times a second while it does
     pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "svf12", "cutoff": 200, "res": 0.5, "keytrack": 0, "env": 0.8, "vel": 0}, envF={"a": 0.4, "d": 1.5, "s": 0, "r": 0.3}, envA={"a": 0.001, "d": 0.1, "s": 1, "r": 0.2, "vel": 0}))
     pg.wait_for_timeout(200)
@@ -3161,6 +3174,10 @@ with sync_playwright() as pw:
     pg.locator("#mHost").scroll_into_view_if_needed()
     pg.fill("#hostTempo", "100"); pg.locator("#hostTempo").press("Tab"); pg.wait_for_timeout(40)
     ck("R. the tempo field sets the clock", pg.evaluate("__synth.transport().state().tempo") == 100, pg.evaluate("__synth.transport().state().tempo"))
+    # review R1026-6: an emptied tempo box committed with Enter set 40 BPM (the clamp's floor)
+    pg.fill("#hostTempo", ""); pg.locator("#hostTempo").press("Enter"); pg.locator("#hostTempo").press("Tab"); pg.wait_for_timeout(40)
+    et_ = (pg.evaluate("__synth.transport().state().tempo"), pg.evaluate("document.getElementById('hostTempo').value"))
+    ck(f"R. an emptied tempo box keeps the tempo and shows it again (clock {et_[0]}, box '{et_[1]}', want 100)", et_[0] == 100 and et_[1] == "100", et_)
     pg.click("#mixFMute")
     ck("R. the mute button mutes Filament", pg.evaluate("__synth.mixer().filament.mute") is True)
     pg.click("#projSave"); pg.wait_for_timeout(40)
