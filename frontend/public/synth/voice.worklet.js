@@ -16,6 +16,11 @@
 // summed at equal power, filtB.bal leaning toward one), or split (A plays the left side, B the right;
 // the stereo offset then moves A down and B up).
 //
+// Mod matrix (patch.mod, eight slots): each slot sends a per-voice source (an envelope, an LFO, velocity,
+// key, the wheel, aftertouch, or a random number per note) to a destination (pitch, pulse width, FM, ring,
+// the mixer levels, V1 drive, both filters' cutoff and resonance, morph, level, pan) at the control rate.
+// The amounts are smoothed like the knobs; a routing change rides the duck. No slot on: nothing changes.
+//
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
 // oscillators and V1. Otherwise one filter feeds both sides. Unison stacks 1-8 voices on a
@@ -437,7 +442,9 @@ const K_BKT = 35;
 const K_BENV = 36;
 const K_BMOR = 37;
 const K_BBAL = 38;
-const NP = 39;
+const K_MA = 39;      // mod matrix amounts, one per slot (-1..1)
+const MSLOTS = 8;
+const NP = K_MA + MSLOTS;
 
 // ---------- envelopes ----------
 const E_IDLE = 0, E_ATT = 1, E_DEC = 2, E_SUS = 3, E_REL = 4;
@@ -476,6 +483,10 @@ class Filament extends AudioWorkletProcessor {
     this.active = o.active !== false; this.playing = !!o.playing; this.idleN = 0;
     this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0; this.cpuMs = 0; this.cpuFrames = 0;
     this.coefEpoch = 0;
+    // mod matrix: per slot the source and destination numbers (0 = slot off), how many are on, which
+    // destinations are in use (a bit each), and a scratch row of destination sums for one voice's tick
+    this.mS = new Int32Array(MSLOTS); this.mD = new Int32Array(MSLOTS); this.mN = 0; this.mDm = 0; this.mL = 0; this.mRand = false;
+    this.MD = new Float64Array(M_DST.length); this.mkT = new Float64Array(MK_N); this.v1Gain = 0.774; this.v1D = 3;
     this.P = null; this.S = new Float64Array(NP); this.Sp = new Float64Array(NP); this.T = new Float64Array(NP); this.CT = new Float64Array(NP * (128 / CTRL + 1));
     this.setPatch(o.patch || {}, true);
     this.target(this.S); this.Sp.set(this.S);
@@ -492,6 +503,7 @@ class Filament extends AudioWorkletProcessor {
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
       fBL: new Filt(), fBR: new Filt(), stB: false,  // filter slot B (left or both, right)
       fcA: 0, fcB: 0,                                // the last control tick's cutoffs (Hz) for A and B, left side (the response plot reads them)
+      rnd: 0,                                        // the mod matrix's random source, drawn at each trigger (only when a slot uses it)
       dcx: 0, dcy: 0,
       nb0: 0, nb1: 0, nb2: 0,
       drift: 0, driftT: 0, driftN: 0, drift2: 0, drift2T: 0,
@@ -536,6 +548,18 @@ class Filament extends AudioWorkletProcessor {
     // makeup for the drive tube at the patch's drive (re-done when drive moves)
     this.v1G = (this.v1Tube.gain || 0.774) * Math.pow(2, ((+v1.drive || 0) - 3) * 0.5);
     this.v1Mk = tubeMakeup(this.v1Tab, this.v1G, 0.5);
+    // the mod matrix's routing
+    const mo = P.mod || {};
+    let mN = 0, dm = 0, ml = 0, rnd = false;
+    for (let i = 0; i < MSLOTS; i++) {
+      const s = mo[M_KEYS[i]] || {}, si = M_SRC.indexOf(s.src), di = M_DST.indexOf(s.dst), on = si > 0 && di > 0;
+      this.mS[i] = on ? si : 0; this.mD[i] = on ? di : 0;
+      if (on) { mN++; dm |= 1 << di; if (si === MS_LFO1) ml |= 1; if (si === MS_LFO2) ml |= 2; if (si === MS_RAND) rnd = true; }
+    }
+    this.mN = mN; this.mDm = dm; this.mL = ml; this.mRand = rnd;
+    this.MD.fill(0);                      // a slot turned off leaves nothing behind
+    this.v1Gain = this.v1Tube.gain || 0.774; this.v1D = clamp(num(v1.drive, 0), 0, 10);
+    if (dm & (1 << MD_DRIVE)) for (let j = 0; j < MK_N; j++) this.mkT[j] = tubeMakeup(this.v1Tab, this.v1Gain * Math.pow(2, (j * 0.25 - 3) * 0.5), 0.5);
   }
   // Continuous parameters, flattened, so they can be smoothed.
   target(T) {
@@ -557,6 +581,8 @@ class Filament extends AudioWorkletProcessor {
     const fb = P.filtB || {};
     T[K_BCUT] = num(fb.cutoff, 2000); T[K_BRES] = num(fb.res, 0); T[K_BKT] = num(fb.keytrack, 0.5); T[K_BENV] = num(fb.env, 0);
     T[K_BMOR] = clamp(num(fb.morph, 0), 0, 3); T[K_BBAL] = clamp(num(fb.bal, 0), -1, 1);
+    const mo = P.mod;
+    for (let i = 0; i < MSLOTS; i++) { const s = mo ? mo[M_KEYS[i]] : null; T[K_MA + i] = s ? clamp(num(s.amt, 0), -1, 1) : 0; }
     return T;
   }
 
@@ -667,7 +693,7 @@ class Filament extends AudioWorkletProcessor {
     if (routeOf(P) !== 0) for (const F of [v.fBL, v.fBR]) if (F.s[F_S1] === 0 && F.s[F_S2] === 0) { F.s[F_S1] = (Math.random() - 0.5) * 1e-3; F.s[F_BP] = F.s[F_S1]; }
     this.trigger(v, vel);
   }
-  trigger(v, vel) { v.as = E_ATT; v.fs = E_ATT; v.vel = vel; v.lfoAge = 0; }
+  trigger(v, vel) { v.as = E_ATT; v.fs = E_ATT; v.vel = vel; v.lfoAge = 0; if (this.mRand) v.rnd = Math.random() * 2 - 1; }
   noteOff(n) {
     this.kbdHeld.delete(n);
     this.held = this.held.filter(h => h !== n);
@@ -949,8 +975,8 @@ class Filament extends AudioWorkletProcessor {
     }
     const LV = this.LV, gsh = this.gsh;
     // An LFO nobody listens to costs nothing: skip it (its phase still runs).
-    const lUse0 = S[K_LP] > 0 || this.T[K_LP] > 0 || S[K_LC] > 0 || this.T[K_LC] > 0 || S[K_LPW] > 0 || this.T[K_LPW] > 0 || S[K_LA] > 0 || this.T[K_LA] > 0 || mwvAny(P, this);
-    const lUse1 = S[K_L2P] > 0 || this.T[K_L2P] > 0 || S[K_L2C] > 0 || this.T[K_L2C] > 0 || S[K_L2PW] > 0 || this.T[K_L2PW] > 0 || S[K_L2A] > 0 || this.T[K_L2A] > 0 || S[K_L2PAN] > 0 || this.T[K_L2PAN] > 0;
+    const lUse0 = S[K_LP] > 0 || this.T[K_LP] > 0 || S[K_LC] > 0 || this.T[K_LC] > 0 || S[K_LPW] > 0 || this.T[K_LPW] > 0 || S[K_LA] > 0 || this.T[K_LA] > 0 || mwvAny(P, this) || (this.mL & 1) !== 0;
+    const lUse1 = S[K_L2P] > 0 || this.T[K_L2P] > 0 || S[K_L2C] > 0 || this.T[K_L2C] > 0 || S[K_L2PW] > 0 || this.T[K_L2PW] > 0 || S[K_L2A] > 0 || this.T[K_L2A] > 0 || S[K_L2PAN] > 0 || this.T[K_L2PAN] > 0 || (this.mL & 2) !== 0;
     const sx = num(P.tune, 0) / 100;
 
     // patch values read once
@@ -979,8 +1005,10 @@ class Filament extends AudioWorkletProcessor {
     const dcA = 1 - TWO_PI * 15 / fs;
     const L2 = this.L2, R2 = this.R2;
     const N = this.pool(), U = this.uni(), uniG = 1 / Math.sqrt(U);
-    const l2Any = S[K_L2] > 1e-4 || this.T[K_L2] > 0 || Sp[K_L2] > 1e-4;
-    const lsAny = S[K_LS] > 1e-4 || this.T[K_LS] > 0 || Sp[K_LS] > 1e-4;
+    // the mod matrix (mN slots on; MD holds one voice's destination sums at each tick, all 0 when no slot is on)
+    const mN = this.mN, mS = this.mS, mD = this.mD, MD = this.MD, mDm = this.mDm, mDrv = (mDm & (1 << MD_DRIVE)) !== 0;
+    const l2Any = S[K_L2] > 1e-4 || this.T[K_L2] > 0 || Sp[K_L2] > 1e-4 || (mDm & (1 << MD_LVL2)) !== 0;
+    const lsAny = S[K_LS] > 1e-4 || this.T[K_LS] > 0 || Sp[K_LS] > 1e-4 || (mDm & (1 << MD_LVLS)) !== 0;
     // Two filters per voice only when something makes left and right differ.
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
@@ -1062,6 +1090,17 @@ class Filament extends AudioWorkletProcessor {
             LV[q * 2] = vL * fadeQ; LV[q * 2 + 1] = vR * fadeQ;
           }
           const l1L = LV[0], l1R = LV[1], l2L = LV[2], l2R = LV[3];
+          // mod matrix: this voice's sources into the destination sums
+          if (mN) {
+            MD.fill(0);
+            for (let m = 0; m < MSLOTS; m++) {
+              const d = mD[m]; if (d === 0) continue;
+              const si = mS[m];
+              const sv = si === 1 ? (ae > 1 ? 1 : ae) : si === 2 ? (fe > 1 ? 1 : fe) : si === 3 ? l1L : si === 4 ? l2L : si === 5 ? v.vel
+                : si === 6 ? (v.pitch - 60) / 60 : si === 7 ? this.mw : si === 8 ? this.at : v.rnd;
+              MD[d] += sv * CT[cb + K_MA + m];
+            }
+          }
           // drift: smooth random walk per voice
           if (--v.driftN <= 0) { v.driftT = Math.random() * 2 - 1; v.drift2T = Math.random() * 2 - 1; v.driftN = (0.3 + Math.random() * 0.6) * sr / CTRL; }
           v.drift += (v.driftT - v.drift) * 0.0003; v.drift2 += (v.drift2T - v.drift2) * 0.0003;
@@ -1069,21 +1108,21 @@ class Filament extends AudioWorkletProcessor {
           v.pitch += (v.pitchT - v.pitch) * gk;
           const vib = ((CT[cb + K_LP] + this.mw * mwv + this.at * atv) * l1L + CT[cb + K_L2P] * l2L) / 100;
           const det = v.uPos * CT[cb + K_DET] / 100;
-          const pn = v.pitch + this.bend * bendR + sx + vib + det + driftC * v.drift / 100;
+          const pn = v.pitch + this.bend * bendR + sx + vib + det + driftC * v.drift / 100 + MD[MD_PITCH] * 12;
           // cm[4..7]: the same memo for the two oscillator pitches (they move every tick under drift)
           const cm = v.cm;
           let f1, f2;
-          if (fix1 > 0) f1 = fix1 * Math.pow(2, (vib + det + driftC * v.drift / 100) / 12);
+          if (fix1 > 0) f1 = fix1 * Math.pow(2, (vib + det + driftC * v.drift / 100 + MD[MD_PITCH] * 12) / 12);
           else { const e1 = (pn + off1 - 69) / 12; if (e1 !== cm[4]) { cm[4] = e1; cm[5] = Math.pow(2, e1); } f1 = 440 * cm[5]; }
-          if (fix2 > 0) f2 = fix2;
-          else { const e2 = (pn + off2 + driftC * 0.5 * v.drift2 / 100 - 69) / 12; if (e2 !== cm[6]) { cm[6] = e2; cm[7] = Math.pow(2, e2); } f2 = 440 * cm[7]; }
+          if (fix2 > 0) f2 = mN ? fix2 * Math.pow(2, MD[MD_PITCH] + MD[MD_PITCH2]) : fix2;
+          else { const e2 = (pn + off2 + driftC * 0.5 * v.drift2 / 100 + MD[MD_PITCH2] * 12 - 69) / 12; if (e2 !== cm[6]) { cm[6] = e2; cm[7] = Math.pow(2, e2); } f2 = 440 * cm[7]; }
           dt1 = Math.min(f1 / fs, 0.45); dt2 = Math.min(f2 / fs, 0.45); dts = dt1 / subDiv;
-          const pwm = (CT[cb + K_LPW] * l1L + CT[cb + K_L2PW] * l2L) * 0.5;
+          const pwm = (CT[cb + K_LPW] * l1L + CT[cb + K_L2PW] * l2L) * 0.5 + MD[MD_PW] * 0.45;
           pw1 = clamp(CT[cb + K_PW1] + pwm, 0.03, 0.97); pw2 = clamp(CT[cb + K_PW2] + pwm, 0.03, 0.97);
           // filter cutoffs, left and right
           const oct = CT[cb + K_KT] * (v.pitch - 60) / 12 + CT[cb + K_ENV] * 7 * fe + CT[cb + K_VELF] * (v.vel - 0.79) * 3
-            + this.mw * mwc + this.at * atc;
-          const res = clamp(CT[cb + K_RES], 0, 1), half = CT[cb + K_OFF] * 0.5;
+            + this.mw * mwc + this.at * atc + MD[MD_CUT] * 5;
+          const res = clamp(CT[cb + K_RES] + MD[MD_RES], 0, 1), half = CT[cb + K_OFF] * 0.5;
           cc[1] = res;
           // cm[0..3]: the last cutoff exponent and its power of two for each side: a still cutoff costs no pow
           const lcL = CT[cb + K_LC] * l1L + CT[cb + K_L2C] * l2L;
@@ -1098,9 +1137,9 @@ class Filament extends AudioWorkletProcessor {
             // LFOs move it as they move A. In split it is the right side, so it takes the right LFO
             // values and the upper half of the stereo offset.
             const octB = CT[cb + K_BKT] * (v.pitch - 60) / 12 + CT[cb + K_BENV] * 7 * fe + CT[cb + K_VELF] * (v.vel - 0.79) * 3
-              + this.mw * mwc + this.at * atc;
+              + this.mw * mwc + this.at * atc + MD[MD_CUTB] * 5;
             const lcR = CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R;
-            cc[1] = clamp(CT[cb + K_BRES], 0, 1);
+            cc[1] = clamp(CT[cb + K_BRES] + MD[MD_RESB], 0, 1);
             const eB = route === 3 ? octB + lcR + (st2 ? half : 0) : octB + lcL - (st2 ? half : 0);
             if (eB !== cm[8]) { cm[8] = eB; cm[9] = Math.pow(2, eB); }
             cc[0] = CT[cb + K_BCUT] * cm[9]; v.fcB = cc[0]; this.fcoef(FBL, modelB, 0);
@@ -1127,7 +1166,7 @@ class Filament extends AudioWorkletProcessor {
           if (isLpg) { fl[F_WL] = 1; fl[F_WB] = 0; fl[F_WH] = 0; frs[F_WL] = 1; frs[F_WB] = 0; frs[F_WH] = 0; }
           else if (isSvf) {
             // morph: 0..1 low to band, 1..2 band to high, 2..3 high plus low (the notch)
-            const m = clamp(CT[cb + K_MOR], 0, 3);
+            const m = clamp(CT[cb + K_MOR] + MD[MD_MORPH] * 3, 0, 3);
             const wl = m < 1 ? 1 - m : m < 2 ? 0 : m - 2, wb = (m < 1 ? m : m < 2 ? 2 - m : 0) * SVF_K0, wh = m < 1 ? 0 : m < 2 ? m - 1 : 1;
             fl[F_WL] = wl; fl[F_WB] = wb; fl[F_WH] = wh; frs[F_WL] = wl; frs[F_WB] = wb; frs[F_WH] = wh;
           }
@@ -1140,12 +1179,21 @@ class Filament extends AudioWorkletProcessor {
           const la1 = clamp(CT[cb + K_LA], 0, 1), la2 = clamp(CT[cb + K_L2A], 0, 1);
           ampL = (1 - la1 * (0.5 - 0.5 * l1L)) * (1 - la2 * (0.5 - 0.5 * l2L));
           ampR = (1 - la1 * (0.5 - 0.5 * l1R)) * (1 - la2 * (0.5 - 0.5 * l2R));
+          if (mN) { const ma = 1 + MD[MD_AMP], g = ma < 0 ? 0 : ma > 2 ? 2 : ma; ampL *= g; ampR *= g; }
           // pan: the note's pan, its unison place, and LFO 2's auto-pan
-          const pan = clamp(v.pan + v.uPos * CT[cb + K_USP] + CT[cb + K_L2PAN] * l2L, -1, 1);
+          const pan = clamp(v.pan + v.uPos * CT[cb + K_USP] + CT[cb + K_L2PAN] * l2L + MD[MD_PAN], -1, 1);
           if (pan !== v.lastPan) { v.lastPan = pan; v.gl = Math.cos((pan + 1) * Math.PI / 4); v.gr = Math.sin((pan + 1) * Math.PI / 4); }
           gl = v.gl; gr = v.gr;
           l1 = CT[cb + K_L1]; l2 = CT[cb + K_L2]; ls = CT[cb + K_LS]; ln = CT[cb + K_LN];
           fm = CT[cb + K_FM] * 0.25; ring = CT[cb + K_RING]; G1 = CT[cb + K_V1G]; mk1 = CT[cb + K_V1MK]; vol = CT[cb + K_VOL];
+          if (mN) {
+            l1 = clamp(l1 + MD[MD_LVL1], 0, 1); l2 = clamp(l2 + MD[MD_LVL2], 0, 1); ls = clamp(ls + MD[MD_LVLS], 0, 1); ln = clamp(ln + MD[MD_LVLN], 0, 1);
+            fm = clamp(CT[cb + K_FM] + MD[MD_FM], 0, 1) * 0.25; ring = clamp(ring + MD[MD_RING], 0, 1);
+            if (mDrv) {   // V1 drive: the gain and its make-up at the modulated drive (the make-up from a table built with the patch)
+              const dE = clamp(this.v1D + MD[MD_DRIVE] * 10, 0, 10), jp = dE * 4, j0 = jp < MK_N - 1 ? jp | 0 : MK_N - 2, jf = jp - j0;
+              G1 = this.v1Gain * Math.pow(2, (dE - 3) * 0.5); mk1 = this.mkT[j0] + (this.mkT[j0 + 1] - this.mkT[j0]) * jf;
+            }
+          }
         }
         // ---- envelopes (output rate) ----
         if (as === E_ATT) { ae += (1.3 - ae) * aA; if (ae >= 1) { ae = 1; as = E_DEC; } }
@@ -1304,6 +1352,22 @@ const SVF_CAL = [77.8, -230];
 const FR_AMP = 1e-4;
 const LPG_KMIN = 0.5, LPG_KMAX = Math.SQRT2 - LPG_KMIN, LPG_TA = 0.0025, LPG_D0 = 0.25, LPG_END = 1e-4;
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
+// Mod matrix (patch.mod, slots s1..s8): each slot is a source, a destination and an amount (-1..1).
+// patches.js carries the same two lists (MOD_SRC, MOD_DST); the suite checks they match. Sources,
+// read per voice at the control tick: the amp and filter envelopes (0..1), LFO 1 and LFO 2 (-1..1, the
+// left side, after their delay), velocity (0..1), key ((pitch - 60) / 60, so middle C is 0 and five
+// octaves up is 1), the mod wheel and aftertouch (0..1), and a random number per note (-1..1, drawn at
+// each trigger, only when a slot uses it). Each destination adds amount x source x its scale: pitch and
+// pitch2 12 semitones (pitch moves both oscillators, pitch2 osc 2 only), pw 0.45, fm and ring 1, the four
+// mixer levels 1, drive 10 (V1 drive units), cut and cutB 5 octaves (so key at amount 1 is full key
+// tracking), res and resB 1, morph 3, pan 1, and amp a gain of 1 + that (0..2).
+const M_SRC = ['off', 'envA', 'envF', 'lfo1', 'lfo2', 'vel', 'key', 'wheel', 'at', 'rand'];
+const M_DST = ['off', 'pitch', 'pitch2', 'pw', 'fm', 'ring', 'lvl1', 'lvl2', 'lvlS', 'lvlN', 'drive', 'cut', 'res', 'morph', 'cutB', 'resB', 'amp', 'pan'];
+const MS_LFO1 = 3, MS_LFO2 = 4, MS_RAND = 9;
+const MD_PITCH = 1, MD_PITCH2 = 2, MD_PW = 3, MD_FM = 4, MD_RING = 5, MD_LVL1 = 6, MD_LVL2 = 7, MD_LVLS = 8, MD_LVLN = 9,
+  MD_DRIVE = 10, MD_CUT = 11, MD_RES = 12, MD_MORPH = 13, MD_CUTB = 14, MD_RESB = 15, MD_AMP = 16, MD_PAN = 17;
+const M_KEYS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
+const MK_N = 41;      // V1 make-up table for a modulated drive: 0..10 in steps of 0.25
 const WAVES = { saw: W_SAW, pulse: W_PULSE, square: W_PULSE, tri: W_TRI, triangle: W_TRI, sine: W_SINE };
 // tanh(x)/x, Pade approximant (exact enough for |x| < 3, still monotone and bounded beyond)
 function tdx(x) { const a = x * x; return ((a + 105) * a + 945) / ((15 * a + 420) * a + 945); }
@@ -1311,8 +1375,12 @@ function num(v, d) { v = +v; return isFinite(v) ? v : d; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 // the mod wheel and aftertouch can add vibrato through LFO 1 even when its own depth is 0
 function mwvAny(P, self) { return (self.mw > 0 && num((P.mw || {}).vib, 30) > 0) || (self.at > 0 && num((P.at || {}).vib, 0) > 0); }
+// the matrix's routing (sources and destinations, not amounts): a change rides the duck, so a slot
+// switched onto a busy destination does not step
+function modKey(P) { const m = (P && P.mod) || {}; let k = ''; for (let i = 0; i < MSLOTS; i++) { const s = m[M_KEYS[i]] || {}; k += (s.src || 'off') + '>' + (s.dst || 'off') + ';'; } return k; }
 function isStruct(a, b) {
   if (!a) return true;
+  if (modKey(a) !== modKey(b)) return true;
   return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube', 'filt.gate',
     'v1.tube', 'voice.mode'].some(k => get(a, k) !== get(b, k)) || slotBKey(a) !== slotBKey(b);
 }

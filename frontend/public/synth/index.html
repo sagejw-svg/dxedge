@@ -556,6 +556,17 @@
   .corr .cv.warn { color: var(--amber); }
   .corr .scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); }
   .note { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
+  /* mod matrix: eight rows of source, destination and amount (as many columns as fit at 420 px, two on a laptop; the full row on a wide screen) */
+  .mmx { display: grid; grid-template-columns: 1fr; gap: 4px 16px; margin-top: 4px; }
+  .mmrow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .mmrow .mmn { flex: 0 0 auto; width: 14px; color: var(--dim); font-size: 11px; text-align: right; }
+  .mmrow .mmto { flex: 0 0 auto; color: var(--dim); font-size: 11px; }
+  .mmrow select.btn { flex: 1 1 0; width: 0; min-width: 0; max-width: none; }
+  .mmrow .knobs { flex: 0 0 auto; margin-top: 0; }
+  .mmrow.off .mmd, .mmrow.off .knob { opacity: 0.45; }
+  .mmcount { margin-left: auto; color: var(--dim); font-size: 10.5px; font-weight: normal; letter-spacing: 0; }
+  @media (min-width: 761px) { .mmx { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); } }
+  @media (min-width: 1100px) { #mMatrix { grid-column: 1 / -1; } }
   .hostbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 8px; }
   .hostbar input[type="number"], .hostbar input[type="text"] { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 6.2em; font-size: 12px; }
   .hostbar .pos { color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 8em; }
@@ -1057,6 +1068,9 @@
       <section class="mod" data-dev="filament" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
         <div class="note">Mod wheel and aftertouch come from a MIDI keyboard, or the MOD strip by the keys.</div></section>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mMatrix" data-wide><h3><span class="pilot off" id="matrixPilot"></span>Mod matrix<span class="mmcount" id="mmCount"></span></h3>
+        <div class="mmx" id="mmx"></div>
+        <div class="note">Eight slots, each a source to a destination. The amount reads in the destination's units: pitch in semitones, cutoff in octaves (Key at +5.0 oct is full key tracking), V1 drive in drive units, the rest in percent. Envelopes, LFOs, key and random work per voice; random is new on every note.</div></section>
       <section class="mod" data-dev="cathode" data-tab="osc" id="mCV1"><h3><span class="pilot"></span>VCO 1</h3><div class="chips" data-chips="vco1.wave"></div><div class="chips" data-chips="vco1.scale"></div><div class="knobs" id="kCV1"></div></section>
       <section class="mod" data-dev="cathode" data-tab="osc" id="mCV2"><h3><span class="pilot" id="cv2Pilot"></span>VCO 2</h3><div class="chips" data-chips="vco2.wave"></div><div class="chips" data-chips="vco2.scale"></div>
         <div class="chips"><button class="chip" id="cSyncBtn" aria-pressed="false" title="Hard sync VCO 2 to VCO 1">sync</button></div><div class="knobs" id="kCV2"></div></section>
@@ -1452,7 +1466,7 @@ import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
 import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
-import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath } from './patches.js';
+import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
 import { MIX_CHANNELS, routeTargets, normalizeArmed, normalizeSession, saveSession, loadSession, sessionFileName } from './mixsession.js';
@@ -2524,6 +2538,52 @@ K('kVoice', 'voice.level', 'volume', { min: 0, max: 1, step: 0.01, fmt: pct });
 K('kCtl', 'mw.vib', 'whl vib', { title: 'Mod wheel to vibrato depth', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c' });
 K('kCtl', 'mw.cut', 'whl cut', { title: 'Mod wheel to filter cutoff', min: -4, max: 4, step: 0.05, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'oct' });
 K('kCtl', 'at.cut', 'AT cut', { title: 'Aftertouch (key pressure) to filter cutoff', min: -4, max: 4, step: 0.05, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + 'oct' });
+// ---------------------------------------------------------------- mod matrix (Filament)
+// Eight rows: a source, a destination and an amount knob (bound to mod.s1..s8). The worklet reads the
+// same lists (M_SRC, M_DST) and scales each destination: the knob shows the amount in those units.
+const MOD_SRC_L = { off: 'off', envA: 'Amp env', envF: 'Filter env', lfo1: 'LFO 1', lfo2: 'LFO 2', vel: 'Velocity', key: 'Key', wheel: 'Mod wheel', at: 'Pressure', rand: 'Random' };
+const MOD_DST_L = { off: 'off', pitch: 'Pitch', pitch2: 'Osc 2 pitch', pw: 'Pulse width', fm: 'FM', ring: 'Ring', lvl1: 'Osc 1 level', lvl2: 'Osc 2 level', lvlS: 'Sub level', lvlN: 'Noise level', drive: 'V1 drive', cut: 'Cutoff', res: 'Resonance', morph: 'Morph', cutB: 'B cutoff', resB: 'B resonance', amp: 'Level', pan: 'Pan' };
+function fmtModAmt(slot, a) {
+  const p = patchOf('filament'), d = (((p && p.mod) || {})[slot] || {}).dst, sg = a > 0 ? '+' : a < 0 ? '-' : '', m = Math.abs(a);
+  if (d === 'pitch' || d === 'pitch2') return sg + (m * 12).toFixed(1) + 'st';
+  if (d === 'cut' || d === 'cutB') return sg + (m * 5).toFixed(1) + 'oct';
+  if (d === 'drive') return sg + (m * 10).toFixed(1);
+  return sg + Math.round(m * 100) + '%';
+}
+const MM = {};
+MOD_SLOTS.forEach((k, i) => {
+  const row = document.createElement('div'); row.className = 'mmrow off'; row.dataset.slot = k;
+  const sel = (field, list, lab, name) => {
+    const el = document.createElement('select'); el.className = 'btn mm' + field[0]; el.setAttribute('aria-label', 'Mod slot ' + (i + 1) + ' ' + name);
+    list.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = lab[v] || v; el.appendChild(o); });
+    el.addEventListener('change', () => {
+      if (dev !== 'filament') return;
+      if (!undoArmed) rememberUndo();
+      const path = 'mod.' + k + '.' + field; setPath(cur, path, el.value); afterChange(path); pushPatch(false);
+    });
+    return el;
+  };
+  const n = document.createElement('span'); n.className = 'mmn'; n.textContent = String(i + 1);
+  const to = document.createElement('span'); to.className = 'mmto'; to.textContent = 'to';
+  const kh = document.createElement('div'); kh.className = 'knobs'; kh.id = 'kMod' + (i + 1);
+  const src = sel('src', MOD_SRC, MOD_SRC_L, 'source'), dst = sel('dst', MOD_DST, MOD_DST_L, 'destination');
+  row.append(n, src, to, dst, kh); $('mmx').appendChild(row);
+  K('kMod' + (i + 1), 'mod.' + k + '.amt', 'amount', { min: -1, max: 1, step: 0.01, fmt: v => fmtModAmt(k, v), title: 'Mod slot ' + (i + 1) + ' amount: how far the source moves the destination (minus turns it over)' });
+  MM[k] = { row, src, dst };
+});
+function refreshMod() {
+  if (dev !== 'filament') return;
+  let on = 0;
+  MOD_SLOTS.forEach(k => {
+    const s = (cur.mod || {})[k] || {}, m = MM[k], live = s.src !== 'off' && s.dst !== 'off';
+    if (m.src.value !== s.src) m.src.value = s.src || 'off';
+    if (m.dst.value !== s.dst) m.dst.value = s.dst || 'off';
+    m.row.classList.toggle('off', !live); if (live) on++;
+    const kk = kn('mod.' + k + '.amt'); if (kk) kk.k.set(kk.k.get());   // the units follow the destination
+  });
+  $('matrixPilot').classList.toggle('off', !on);
+  $('mmCount').textContent = on ? on + ' of 8 on' : 'all off';
+}
 K('kCtl', 'at.vib', 'AT vib', { title: 'Aftertouch (key pressure) to vibrato depth', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + 'c' });
 K('kStereo', 'stereo.spread', 'spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'How far voices spread across the field', dev: 'filament' });
 K('kStereo', 'stereo.uspread', 'uni spread', { min: 0, max: 1, step: 0.01, fmt: pct, title: 'Unison spread: how far unison copies fan out across the field', dev: 'filament' });
@@ -2676,6 +2736,7 @@ function afterF() {
   kn('voice.detune').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
   $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube;
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
+  refreshMod();
 }
 function refreshAll() {
   Object.keys(KN).forEach(key => { const e = KN[key]; if (e.dev && e.dev !== dev) return; if (!e.dev && (dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' || dev === 'additron' || dev === 'rhumbatron' || dev === 'resnatron')) return; e.k.set(e.map.from(getPath(cur, e.path))); });

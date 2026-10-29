@@ -20,7 +20,7 @@
 // Poly 24 screaming and driven, SVF 12 morphed, screaming and swept, and the low pass gate in two of its modes at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, patch changes mid-note (stereo offset on, loop tube, model, drive), and filter
-// slot B in each of its routes (serial, parallel, split).
+// slot B in each of its routes (serial, parallel, split), and the mod matrix with every slot on.
 // The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
 // Numbers are relative: headless Chrome in test 9 is the figure the log quotes.
 import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto'; import path from 'path';
@@ -68,6 +68,10 @@ const CASES = {
   serial: big('ladder24', p => { p.filtB = { route: 'serial', model: 'svf12', morph: 2, cutoff: 300, res: 0.4 }; }),
   parallel: big('valve12', p => { p.filtB = { route: 'parallel', model: 'poly24', cutoff: 3000, res: 0.6, bal: 0.2 }; p.filt.offset = 0.3; }),
   split: big('sk12', p => { p.filtB = { route: 'split', model: 'diode18', cutoff: 900, res: 0.7, env: 0.3 }; p.filt.offset = 0.4; }),
+  // the mod matrix with all eight slots on (V1 drive's make-up table included); a ref without the matrix ignores p.mod
+  matrix: big('valve12', p => { p.mod = { s1: { src: 'lfo1', dst: 'cut', amt: 0.2 }, s2: { src: 'envF', dst: 'cut', amt: 0.4 }, s3: { src: 'vel', dst: 'res', amt: 0.3 },
+    s4: { src: 'lfo2', dst: 'pan', amt: 0.5 }, s5: { src: 'envA', dst: 'drive', amt: 0.3 }, s6: { src: 'key', dst: 'pw', amt: 0.5 }, s7: { src: 'rand', dst: 'pitch2', amt: 0.02 },
+    s8: { src: 'wheel', dst: 'amp', amt: -0.5 } }; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
 // Cathode (the mono device in the same worklet file): factory patches by name, a held line with glide,

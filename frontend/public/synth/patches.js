@@ -8,6 +8,13 @@ import { EQ_N, EQ_PRESETS, eqFit } from './rack.js';
 
 export const SCHEMA = 1;
 
+// The mod matrix: eight slots, each a source, a destination and an amount (-1..1). voice.worklet.js
+// carries the same lists (M_SRC, M_DST) and the scale of each destination; the suite checks they match.
+export const MOD_SRC = ['off', 'envA', 'envF', 'lfo1', 'lfo2', 'vel', 'key', 'wheel', 'at', 'rand'];
+export const MOD_DST = ['off', 'pitch', 'pitch2', 'pw', 'fm', 'ring', 'lvl1', 'lvl2', 'lvlS', 'lvlN', 'drive', 'cut', 'res', 'morph', 'cutB', 'resB', 'amp', 'pan'];
+export const MOD_SLOTS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
+const modSlots = () => Object.fromEntries(MOD_SLOTS.map(k => [k, { src: 'off', dst: 'off', amt: 0 }]));
+
 export const DEFAULT = {
   v: SCHEMA, name: 'Init', cat: 'Keys',
   tune: 0,                   // cents, whole instrument
@@ -30,6 +37,7 @@ export const DEFAULT = {
   at: { vib: 0, cut: 1 },    // aftertouch: vibrato depth (cents), cutoff (octaves)
   stereo: { pan: 'alt', spread: 0.5, uspread: 0.5 },
   ens: { on: false, mode: 'I', mix: 50 },  // the ensemble chorus, before the output tubes
+  mod: modSlots(),           // the mod matrix: all eight slots off by default
   out: {
     tube: 'EL34', topology: 'pp', drive: 3, bias: 0, sag: 2, tone: 0, level: 0,
     spkOn: false, cab: 'monitor', spkInt: 6,
@@ -60,6 +68,7 @@ export const RANGE = {
   'out.spkInt': [0, 10], 'out.rmMix': [0, 100], 'out.rmDecay': [0.2, 6], 'out.rmTone': [0, 10], 'out.width': [0, 200], 'out.wChar': [3, 20],
   'out.eqBands': [10, 31], 'out.eqPre': [-12, 12],
 };
+MOD_SLOTS.forEach(k => { RANGE['mod.' + k + '.amt'] = [-1, 1]; });
 // The graphic EQ's fields, shared with Cathode (the rack is the same for both devices).
 export const EQ_RANGE = { 'out.eqBands': [10, 31], 'out.eqPre': [-12, 12] };
 export const EQ_PRESET_IDS = EQ_PRESETS.map(p => p.id).concat(['custom']);
@@ -97,6 +106,7 @@ export const ENUMS = {
   'out.room': ['living', 'studio', 'theater', 'hall'],
   'out.eqPreset': EQ_PRESET_IDS,
 };
+MOD_SLOTS.forEach(k => { ENUMS['mod.' + k + '.src'] = MOD_SRC; ENUMS['mod.' + k + '.dst'] = MOD_DST; });
 export const CATS = ['Bass', 'Lead', 'Pad', 'Keys', 'Pluck', 'FX', 'Halloween'];
 
 export function clone(o) { return JSON.parse(JSON.stringify(o)); }

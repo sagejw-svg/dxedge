@@ -763,6 +763,123 @@ with sync_playwright() as pw:
     info("Fp. cost, a slow case (60 Hz at resonance 0.85: Valve 12, Ladder 24, Poly 24)", [round(x, 1) for x in wc_])
     pg.evaluate("p => __synth.setPatch(p)", patch())
 
+    # ---------------------------------------------------------------- Mm. the mod matrix (29 Oct)
+    # Eight slots of source, destination and amount, per voice at the control rate. Each measured check
+    # sets a slot up so it must equal something the voice already does, or a known pitch, level or pan.
+    import re as _rem
+    _wk = open(os.path.join(ROOT, "synth", "voice.worklet.js")).read(); _pj = open(os.path.join(ROOT, "synth", "patches.js")).read()
+    def _jl(src, name):
+        m_ = _rem.search(r"const " + name + r" = \[([^\]]*)\]", src); return _rem.findall(r"'([^']*)'", m_.group(1)) if m_ else None
+    _ws, _wd = _jl(_wk, "M_SRC"), _jl(_wk, "M_DST")
+    _mdc = {k.lower(): int(v) for k, v in _rem.findall(r"MD_([A-Z0-9]+) = (\d+)", _wk)}
+    ck(f"Mm. the worklet and patches.js carry the same {len(_ws or [])} sources and {len(_wd or [])} destinations, and every destination number names its own entry",
+       bool(_ws) and _ws == _jl(_pj, "MOD_SRC") and _wd == _jl(_pj, "MOD_DST") and len(_mdc) == len(_wd) - 1 and all(_wd[i].lower() == k for k, i in _mdc.items()), (_ws, _wd, _mdc))
+    nm_ = pg.evaluate("""async () => { const m = await import('./patches.js'); const d = m.normalize({});
+      const j = m.normalize({ mod: { s1: { src: 'lfo1', dst: 'cut', amt: 5 }, s2: { src: 'bogus', dst: 'pitch', amt: -0.5 }, s9: { src: 'vel', dst: 'res', amt: 1 } } });
+      return { d: d.mod, j: j.mod, v: j.v, fac: m.FACTORY.every(p => Object.values(m.normalize(p).mod).every(s => s.src === 'off' && s.dst === 'off' && s.amt === 0)) }; }""")
+    off8 = all(nm_["d"].get(f"s{i}") == {"src": "off", "dst": "off", "amt": 0} for i in range(1, 9)) and len(nm_["d"]) == 8
+    ck("Mm. the schema: a patch with no matrix loads with all eight slots off, every factory patch has them off (no patch sounds different), and a bad slot is clamped or dropped (schema stays v:1)",
+       off8 and nm_["fac"] and nm_["v"] == 1 and nm_["j"]["s1"] == {"src": "lfo1", "dst": "cut", "amt": 1} and nm_["j"]["s2"] == {"src": "off", "dst": "pitch", "amt": -0.5} and "s9" not in nm_["j"], nm_)
+    def mm(**slots): return {k: dict({"src": "off", "dst": "off", "amt": 0}, **v) for k, v in slots.items()}
+    def cents(f, ref): return 1200 * math.log2(f / ref)
+    sine = lambda **o: dict({"wave": "sine", "level": 0.5}, **o)
+    # key -> pitch: (note - 60) / 60 x 12 semitones a unit; middle C does not move
+    L, _ = render(patch(osc1=sine(), mod=mm(s1={"src": "key", "dst": "pitch", "amt": 1})), note(72), 1.0, rack=False); kp72 = cents(peak_freq(L[SR // 2:]), 523.2511 * 2 ** (2.4 / 12))
+    L, _ = render(patch(osc1=sine(), mod=mm(s1={"src": "key", "dst": "pitch", "amt": 1})), note(60), 1.0, rack=False); kp60 = cents(peak_freq(L[SR // 2:]), 261.6256)
+    ck(f"Mm. key to pitch at +12.0st: C5 plays 2.4 semitones up ({kp72:+.2f} cents off) and middle C stays put ({kp60:+.2f}), want within 3", abs(kp72) <= 3 and abs(kp60) <= 3, (kp72, kp60))
+    # LFO 1 (square, 1 Hz, its own pitch depth 0) -> pitch at 1/12: a semitone up for half a second, then down
+    L, _ = render(patch(osc1=sine(), lfo1={"wave": "square", "rate": 1, "pitch": 0}, mod=mm(s3={"src": "lfo1", "dst": "pitch", "amt": 1 / 12})), note(60), 1.0, rack=False)
+    lu, ld = cents(peak_freq(L[int(0.1 * SR):int(0.4 * SR)]), 261.6256), cents(peak_freq(L[int(0.6 * SR):int(0.9 * SR)]), 261.6256)
+    ck(f"Mm. LFO 1 to pitch with LFO 1's own depth at 0: a square at 1 Hz moves middle C up {lu:+.1f} and down {ld:+.1f} cents (want +100 and -100, within 3)", abs(lu - 100) <= 3 and abs(ld + 100) <= 3, (lu, ld))
+    # filter envelope -> cutoff at 0.7 (3.5 octaves) is the filter envelope amount at 0.5 (also 3.5 octaves)
+    def env_track(env=0, **kw):
+        L, _ = render(patch(osc1=sine(fixed=2000, level=0.3), filt={"model": "ladder24", "cutoff": 250, "env": env}, envF={"a": 0.001, "d": 0.4, "s": 0, "r": 0.1}, **kw), note(60), 0.7, rack=False)
+        return [db(tone_amp(L[int(t * SR):int(t * SR) + 960], 2000)) for t in (0.03, 0.1, 0.2, 0.35, 0.5)]
+    e_k, e_m = env_track(0.5), env_track(mod=mm(s2={"src": "envF", "dst": "cut", "amt": 0.7}))
+    ck(f"Mm. filter envelope to cutoff at +3.5oct follows the same sweep as the filter envelope knob at +50 (2 kHz through Ladder 24 at 250 Hz, dB at 30 ms to 0.5 s: {[round(x, 1) for x in e_m]} against {[round(x, 1) for x in e_k]}, want within 0.3)",
+       max(abs(a_ - b_) for a_, b_ in zip(e_m, e_k)) <= 0.3 and e_k[0] - e_k[-1] > 20, (e_m, e_k))
+    # key -> cutoff at 1 is key tracking at 100%, on slot A and on slot B
+    def kt_amp(**kw):
+        L, _ = render(patch(osc1=sine(fixed=1000, level=0.3), **kw), note(84), 0.8, rack=False); return db(tone_amp(L[SR // 3:], 1000))
+    a_k, a_m = kt_amp(filt={"model": "ladder24", "cutoff": 300, "keytrack": 1}), kt_amp(filt={"model": "ladder24", "cutoff": 300, "keytrack": 0}, mod=mm(s1={"src": "key", "dst": "cut", "amt": 1}))
+    b_k = kt_amp(filtB={"route": "serial", "model": "ladder24", "cutoff": 300, "keytrack": 1})
+    b_m = kt_amp(filtB={"route": "serial", "model": "ladder24", "cutoff": 300, "keytrack": 0}, mod=mm(s8={"src": "key", "dst": "cutB", "amt": 1}))
+    a_0 = kt_amp(filt={"model": "ladder24", "cutoff": 300, "keytrack": 0})
+    ck(f"Mm. key to cutoff at +5.0oct is key tracking at 100%: a 1 kHz tone at C7 through Ladder 24 at 300 Hz, slot A {a_m:.2f} against {a_k:.2f} dB, slot B {b_m:.2f} against {b_k:.2f} (want within 0.1; with no tracking {a_0:.1f})",
+       abs(a_m - a_k) <= 0.1 and abs(b_m - b_k) <= 0.1 and a_k - a_0 > 20, (a_m, a_k, b_m, b_k, a_0))
+    # velocity -> resonance: a hard note takes Ladder 24 to full resonance and it sings with no input; a soft one does not
+    vr = {}
+    for v_ in (1.0, 0.3):
+        L, _ = render(patch(osc1={"level": 0}, filt={"model": "ladder24", "cutoff": 500, "res": 0}, mod=mm(s1={"src": "vel", "dst": "res", "amt": 1})), note(60, v=v_), 1.0, rack=False)
+        vr[v_] = db(float(np.sqrt(np.mean(L[SR // 2:] ** 2))))
+    ck(f"Mm. velocity to resonance: velocity 1.0 makes Ladder 24 sing with no input ({vr[1.0]:.1f} dBFS, want above -30), velocity 0.3 leaves it quiet ({vr[0.3]:.1f}, want below -80)", vr[1.0] > -30 and vr[0.3] < -80, vr)
+    # the mod wheel -> level at -100%: the wheel at half is -6 dB, all the way up is silent
+    ev_ = [{"at": 0.0, "t": "mw", "v": 0}] + note(60) + [{"at": 0.5, "t": "mw", "v": 0.5}, {"at": 1.0, "t": "mw", "v": 1}]
+    L, _ = render(patch(osc1=sine(), mw={"vib": 0, "cut": 0}, mod=mm(s4={"src": "wheel", "dst": "amp", "amt": -1})), ev_, 1.5, rack=False)
+    rms_ = lambda x: float(np.sqrt(np.mean(x ** 2)))
+    w1, w2, w3 = (rms_(L[int(a_ * SR):int(b_ * SR)]) for a_, b_ in ((0.25, 0.45), (0.7, 0.95), (1.2, 1.45)))
+    ck(f"Mm. mod wheel to level at -100%: the wheel at half takes {db(w2 / w1):+.2f} dB (want -6.02, within 0.3), all the way up {db(w3 / w1):+.1f} dB (want below -60)", abs(db(w2 / w1) + 6.02) <= 0.3 and db(w3 / w1) < -60, (w1, w2, w3))
+    # pressure -> pan at +100%: centred with no pressure, all the way right with full pressure
+    ev_ = [{"at": 0.0, "t": "at", "v": 0}] + note(60) + [{"at": 0.5, "t": "at", "v": 1}]
+    L, R = render(patch(osc1=sine(), at={"cut": 0, "vib": 0}, mod=mm(s5={"src": "at", "dst": "pan", "amt": 1})), ev_, 1.0, rack=False)
+    c_ = db(rms_(L[int(0.2 * SR):int(0.45 * SR)]) / rms_(R[int(0.2 * SR):int(0.45 * SR)])); r_ = db(rms_(L[int(0.7 * SR):int(0.95 * SR)]) / rms_(R[int(0.7 * SR):int(0.95 * SR)]))
+    ck(f"Mm. pressure to pan: no pressure leaves the note centred (left minus right {c_:+.2f} dB, want within 0.2), full pressure puts it hard right ({r_:+.1f} dB, want below -60)", abs(c_) <= 0.2 and r_ < -60, (c_, r_))
+    # amp envelope -> V1 drive at +10: a held note at sustain 0.5 drives V1 like the drive knob at 5 (the make-up included)
+    def drv(d0, **kw):
+        L, _ = render(patch(osc1=sine(fixed=200, level=0.9), v1={"tube": "12AX7", "drive": d0, "bias": 0}, envA={"a": 0.001, "d": 0.05, "s": 0.5, "r": 0.05, "vel": 0}, **kw), note(60), 1.0, rack=False)
+        x_ = L[SR // 2:]; return db(tone_amp(x_, 200)), harmonics_db(x_, 200, 4)
+    dk, dm_ = drv(5), drv(0, mod=mm(s6={"src": "envA", "dst": "drive", "amt": 1}))
+    d0_ = drv(0)
+    ck(f"Mm. amp envelope to V1 drive at +10.0: at sustain 0.5 the fundamental is {dm_[0]:.2f} dB against {dk[0]:.2f} with the drive knob at 5 (want within 0.3), H2..H4 {[round(x, 1) for x in dm_[1]]} against {[round(x, 1) for x in dk[1]]} (within 1 dB; no drive gives H3 {d0_[1][1]:.1f})",
+       abs(dm_[0] - dk[0]) <= 0.3 and max(abs(a_ - b_) for a_, b_ in zip(dm_[1], dk[1])) <= 1 and dk[1][1] - d0_[1][1] > 6, (dm_, dk, d0_))
+    # amp envelope -> osc 2 level with osc 2's knob at 0: osc 2 wakes up (it is skipped while nothing listens)
+    def o2(**kw):
+        L, _ = render(patch(osc1=sine(fixed=500, level=0.5), osc2={"wave": "sine", "level": 0, "fixed": 3000}, **kw), note(60), 0.8, rack=False)
+        x_ = L[SR // 3:]; return db(tone_amp(x_, 3000) / tone_amp(x_, 500))
+    o2m, o2n = o2(mod=mm(s2={"src": "envA", "dst": "lvl2", "amt": 1})), o2()
+    ck(f"Mm. amp envelope to osc 2 level at +100% with the osc 2 knob at 0: osc 2 plays at full level ({o2m:+.1f} dB against osc 1 at half, want +6.0 within 0.5); without the slot it is silent ({o2n:.0f} dB)", abs(o2m - 6.02) <= 0.5 and o2n < -90, (o2m, o2n))
+    # random -> pitch at 0.5 (+/-6 semitones): a new value on every note, steady through the note
+    evr = [e for i in range(8) for e in note(60, i * 0.3, i * 0.3 + 0.25)]
+    def rnd_notes(**kw):
+        L, _ = render(patch(osc1=sine(), envA={"a": 0.001, "d": 0.1, "s": 1, "r": 0.02, "vel": 0}, **kw), evr, 2.5, rack=False); out = []
+        for i in range(8):
+            a_ = int((i * 0.3 + 0.04) * SR); m_ = int((i * 0.3 + 0.14) * SR); z_ = int((i * 0.3 + 0.24) * SR)
+            out.append((cents(peak_freq(L[a_:m_]), 261.6256), cents(peak_freq(L[m_:z_]), 261.6256)))
+        return out
+    rn_, r0_ = rnd_notes(mod=mm(s7={"src": "rand", "dst": "pitch", "amt": 0.5})), rnd_notes()
+    sp_ = max(a_ for a_, _ in rn_) - min(a_ for a_, _ in rn_)
+    ck(f"Mm. random to pitch at +6.0st: eight notes of middle C land on eight pitches (spread {sp_:.0f} cents, want 200 or more, each within 600: {[round(a_) for a_, _ in rn_]}), each steady through its note (halves within 3 cents), and without the slot all sit on C (within 3)",
+       sp_ >= 200 and all(abs(a_) <= 603 and abs(a_ - b_) <= 3 for a_, b_ in rn_) and all(abs(a_) <= 3 for a_, _ in r0_), (rn_, r0_))
+    # the section on the page
+    pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(200)
+    ui0 = pg.evaluate("""() => ({ rows: document.querySelectorAll('#mmx .mmrow').length, sel: document.querySelectorAll('#mmx select').length, kn: document.querySelectorAll('#mmx .knob').length,
+      off: document.querySelectorAll('#mmx .mmrow.off').length, pilot: document.getElementById('matrixPilot').classList.contains('off'), count: document.getElementById('mmCount').textContent,
+      vis: !!document.getElementById('mMatrix').offsetParent })""")
+    ck(f"Mm. the Mod matrix section shows eight slots, each a source menu, a destination menu and an amount knob, all off with the pilot dark ({ui0})",
+       ui0 == {"rows": 8, "sel": 16, "kn": 8, "off": 8, "pilot": True, "count": "all off", "vis": True}, ui0)
+    pg.select_option('#mmx .mmrow[data-slot="s1"] .mms', "lfo1"); pg.select_option('#mmx .mmrow[data-slot="s1"] .mmd', "pitch")
+    kk_ = pg.locator("#kMod1 .knob"); kk_.focus()
+    for _ in range(10): kk_.press("ArrowUp")
+    pg.wait_for_timeout(150)
+    ui1 = pg.evaluate("""() => ({ s1: __synth.patch().mod.s1, kv: document.querySelector('#kMod1 .kv').textContent, pilot: document.getElementById('matrixPilot').classList.contains('off'),
+      count: document.getElementById('mmCount').textContent, off: document.querySelector('#mmx .mmrow[data-slot="s1"]').classList.contains('off') })""")
+    ck(f"Mm. picking LFO 1 to Pitch and turning the amount up ten steps writes the slot, the knob reads semitones and the pilot lights ({ui1})",
+       ui1["s1"] == {"src": "lfo1", "dst": "pitch", "amt": 0.1} and ui1["kv"] == "+1.2st" and not ui1["pilot"] and ui1["count"] == "1 of 8 on" and not ui1["off"], ui1)
+    L = dec(pg.evaluate("__synth.render({ events: [{ at: 0, t: 'on', n: 60, v: 0.8 }], seconds: 1.0, rack: false })"))[0]
+    fr_ = [cents(peak_freq(L[int(t * SR):int(t * SR) + 1200]), 261.6256) for t in np.arange(0.1, 0.9, 0.02)]
+    ck(f"Mm. the page's slot reaches the sound: LFO 1 (sine, 5 Hz) at +1.2st swings middle C over {max(fr_) - min(fr_):.0f} cents in 25 ms windows (want 190 to 250; the full swing is 240)", 190 <= max(fr_) - min(fr_) <= 250, [round(x) for x in fr_])
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(250)
+    ui2 = pg.evaluate("""() => ({ s1: __synth.patch().mod.s1, src: document.querySelector('#mmx .mmrow[data-slot="s1"] .mms').value, dst: document.querySelector('#mmx .mmrow[data-slot="s1"] .mmd').value,
+      kv: document.querySelector('#kMod1 .kv').textContent })""")
+    ck(f"Mm. a reload keeps the slot and the panel shows it ({ui2})", ui2 == {"s1": {"src": "lfo1", "dst": "pitch", "amt": 0.1}, "src": "lfo1", "dst": "pitch", "kv": "+1.2st"}, ui2)
+    pg.select_option('#mmx .mmrow[data-slot="s1"] .mmd', "cut"); pg.wait_for_timeout(100)
+    kvc = pg.evaluate("document.querySelector('#kMod1 .kv').textContent")
+    pg.select_option('#mmx .mmrow[data-slot="s1"] .mmd', "off"); pg.wait_for_timeout(100)
+    ui3 = pg.evaluate("""() => ({ off: document.querySelector('#mmx .mmrow[data-slot="s1"]').classList.contains('off'), pilot: document.getElementById('matrixPilot').classList.contains('off') })""")
+    ck(f"Mm. the amount's units follow the destination ('{kvc}' on cutoff) and a destination of off darkens the slot and the pilot", kvc == "+0.5oct" and ui3 == {"off": True, "pilot": True}, (kvc, ui3))
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Mm. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
         p = patch(osc1={"level": 0}, filt={"model": "valve12", "cutoff": 262, "res": 1, "keytrack": 1, "tube": tube})
@@ -2001,6 +2118,11 @@ with sync_playwright() as pw:
     big.pop("filtB")
     big["voice"] = {"unison": 2, "count": 8}; big["ens"] = {"on": True, "mode": "strings", "mix": 50}
     cpu9("valve12, 8 notes x unison 2 = 16 voices, ensemble on", big, ev8)
+    big["voice"] = {"unison": 1, "count": 8}; big["ens"] = {"on": False}
+    big["mod"] = {"s1": {"src": "lfo1", "dst": "cut", "amt": 0.2}, "s2": {"src": "envF", "dst": "cut", "amt": 0.4}, "s3": {"src": "vel", "dst": "res", "amt": 0.3}, "s4": {"src": "lfo2", "dst": "pan", "amt": 0.5},
+                  "s5": {"src": "envA", "dst": "drive", "amt": 0.3}, "s6": {"src": "key", "dst": "pw", "amt": 0.5}, "s7": {"src": "rand", "dst": "pitch2", "amt": 0.02}, "s8": {"src": "wheel", "dst": "amp", "amt": -0.5}}
+    cpu9("valve12, 8 voices, mod matrix with all 8 slots on", big, ev8)
+    big.pop("mod")
     # the EQ case adds the EQ to the same output stage (until 28 Oct it replaced `out`, so the room and the
     # default output tube came back on and the line timed them as well as the EQ)
     big["voice"] = {"unison": 1, "count": 8}; big["ens"] = {"on": False}; big["out"] = dict(big["out"], eqOn=True, eqBands=31, eqGains=[3, -3] * 15 + [3])
@@ -2765,6 +2887,12 @@ with sync_playwright() as pw:
         ck(f"10. {w}px: on the LP gate the gate chips and the lag knob show at 44 px or more, with no horizontal scroll ({gs_})",
            len(gs_) == 4 and all(a_ >= 44 and b_ >= 44 for a_, b_ in gs_) and ph.evaluate("document.documentElement.scrollWidth <= innerWidth"), gs_)
         ph.click(f'#mFilt .chip[data-v="{m0_}"]'); ph.wait_for_timeout(60)
+        ph.click(".tabs [data-go=mod]"); ph.wait_for_timeout(150)
+        mmv = ph.evaluate("""() => { const s = document.getElementById('mMatrix'), el = [...s.querySelectorAll('select, .knob')];
+          return { vis: !!s.offsetParent, rows: s.querySelectorAll('.mmrow').length, n: el.length, small: el.filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).length,
+            out: el.filter(e => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth; }).length, sw: document.documentElement.scrollWidth <= innerWidth }; }""")
+        ck(f"10. {w}px: the Mod tab shows the mod matrix, eight rows of menus and knobs at 44 px or more inside the screen, with no horizontal scroll ({mmv})",
+           mmv == {"vis": True, "rows": 8, "n": 24, "small": 0, "out": 0, "sw": True}, mmv)
         kk = ph.query_selector('.key.w'); bb = kk.bounding_box()
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")
