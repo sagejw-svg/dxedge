@@ -1793,6 +1793,28 @@ with sync_playwright() as pw:
        len(sus_) == 2 and sus_[0][1] is True and sus_[-1][1] is False and abs(sus_[-1][0] - tks["length"]) < 1e-6
        and cc64 and cc64[0] >= 64 and cc64[-1] < 64, (sus_, tks["length"], cc64))
     pg.evaluate("__synth.panic()")
+    # Review 29 Oct: the exported .mid ended at its last event, not where Stop was pressed, so the
+    # silence after the last note was lost and the file looped short of the take (measured on the
+    # live site: a 1.37 s take exported as 0.62 s).
+    pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.noteOn(60, 0.8); await w(150); __synth.noteOff(60); await w(600); __synth.deck().stopRec(); }""")
+    tkl = pg.evaluate("__synth.deck().take()")
+    xl = pg.evaluate("a => __synth.smf.read(a)", pg.evaluate("__synth.deck().exportBytes()"))
+    ck(f"M. the exported .mid keeps the take's length, silence after the last note included ({xl['song']['length']:.3f} s against the take's {tkl['length']:.3f} s, want within 5 ms)",
+       tkl["length"] > 0.6 and abs(xl["song"]["length"] - tkl["length"]) < 0.005, (xl["song"]["length"], tkl["length"]))
+    # Review 29 Oct: pressure held when the take starts was left out (the pedal, bend and wheel were
+    # written at 0), so the take played back without it.
+    pg.evaluate("__synth.midi([0xD0, 100])"); pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.noteOn(62, 0.8); await w(120); __synth.noteOff(62); await w(50); __synth.deck().stopRec(); __synth.midi([0xD0, 0]); }""")
+    ta = pg.evaluate("__synth.deck().take()")
+    at0 = [round(e["v"], 3) for e in ta["events"] if e["t"] == "at" and e["time"] == 0]
+    xa = pg.evaluate("a => __synth.smf.read(a)", pg.evaluate("__synth.deck().exportBytes()"))
+    da = [e["data"][1] for p_ in xa["song"]["parts"] for e in p_["events"] if (e["data"][0] & 0xF0) == 0xD0]
+    ck(f"M. pressure held when a take starts is written at its start, and the .mid carries it (take {at0}, file {da})",
+       at0 == [round(100 / 127, 3)] and da[:1] == [100], (at0, da, ta["events"][:4]))
+    pg.evaluate("__synth.panic()")
     ck("M. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Q. the graphic EQ (rack-wide)

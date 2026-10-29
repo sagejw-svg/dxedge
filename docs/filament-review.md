@@ -17,23 +17,25 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
+| R1029-4 | confusing | d | Mixer pan is a balance control: hard left keeps the left side at the centre level and drops the right, so a mono voice panned hard sounds about 3 dB quieter | measured |
 | R1028-2 | confusing | a | Klystron gate and focus: most of their travel is silence (gate at 25% silences 4 of 5 factory patches; focus at its top costs 25 to 38 dB even with the gate at 0) | measured |
 | R1028-3 | confusing | a | Resnatron has two level controls that do the same thing (Level and the Out module's level multiply) | measured |
 | R1028-4 | confusing | a | LP gate in A with B on split or parallel: B's side follows the light cell's level but not its darkening, so the sides decay apart; the panel does not say so | measured |
 | R1027-2 | confusing | f | For several seconds after opening (about 8 s on the live site, headless) the Mix desk shows no arms and the default desk bus; the saved ones appear when the boot finishes | measured |
 | R1026-3 | confusing | d | Two reverbs and two delays: the strip sends feed the Mix desk's own room and an unsynced delay, not the master bus effects | measured |
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
-| R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does) | measured |
+| R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
 | R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation and no undo | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
-| R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note" | measured |
+| R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note"; still open 29 Oct | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
 | R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 24 Oct | measured (Gleam inferred) |
-| R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 26 Oct | measured |
+| R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
 | R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 25 Oct | measured |
@@ -45,15 +47,15 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-8 | confusing | h | Desktop rack: 426 tab stops (27 Oct; 409 on 24 Oct) and no skip link; the library is near the end | measured |
 | R1020-9 | confusing | h | 56 control names repeat across sections (27 Oct: "off" x6, "cutoff" x4, "level" x4, the six filter model chips x2 since Filter B) with no section in the name | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
-| R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200%; still open 26 Oct | measured |
+| R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200%; still open 29 Oct | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
-| R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 23 Oct | measured |
+| R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
 | R1017-9 | confusing | d | No output protection unless limit is switched on: delay plus reverb can hard-clip at 0 dBFS; still open 26 Oct | measured |
-| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 26 Oct | measured |
-| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 26 Oct | measured, impact inferred |
+| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
+| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -848,3 +850,79 @@ Gyrotron, Pentagrid).
 ### Not covered tonight
 Areas c, d, e, f, g, h. Suggested next: c and e (the deck with the new rail on a phone; R1023-3 and
 R1023-4), and d with the tempo fix live.
+
+## 2026-10-29 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `c319d6d`, sw.js
+`dxedge-v157` (live matched the repo). Chromium headless (Playwright's own build; the
+`chromium-1194` path in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No
+page or console errors on the live site in any run. Focus tonight: the new mod matrix driven from the
+wheel, pressure and bend over MIDI, the master bus knobs measured against their labels, and the deck's
+take, export, import and loop round trip.
+
+### What worked (measured)
+
+- Mod matrix from MIDI, live (master recorder): a sine patch with slot 1 wheel to level at -100%
+  plays at -16 dB with CC 1 at 0 and -101.5 dB with CC 1 at 127.
+- Wheel and bend across a device switch: wheel up on Filament, switch to Cathode, wheel to 0, back to
+  Filament: the strip reads 0 and Filament plays at full level. Bend up (493.9 Hz for A4), switch to
+  Cathode, bend centred there, back to Filament: 440.0 Hz. Panic leaves the note normal.
+- A take with the wheel moving mid-note: live -20.6 / -26.7 / -57.8 dB (wheel 0, half, full); deck
+  Render WAV -20.9 / -27.1 / -50.9; the exported .mid carries CC 1 (64, 127, 0) at the right times, and
+  the re-imported file renders the same (-20.9 / -27.1 / -50.8). Render: RIFF 48 kHz 16-bit, peak 0.198,
+  no NaN.
+- Master compressor static curve (A5 sine at -17.3 dBFS peak, knee 0): threshold -24 ratio 8 gives
+  -23.0 (peak-detect model -23.2); threshold -30 ratio 2 gives -23.5 (model -23.7).
+- Master delay unsynced at 375 ms, feedback 0.35: echoes at 0.375 s spacing, each 9.1 dB down (the
+  feedback says 9.1). Reverb width 0 gives identical L and R (-176 dB difference). Reverb or delay
+  switched on at mix 0 leaves the level unchanged (0.00 dB).
+- Deck stop after a looping take: no voices and a zero strip meter 3 s later. Eight-note chord at
+  velocity 1 on Velvet Brass with default master settings peaked 0.705 live.
+
+### Findings
+
+**R1029-1. An exported take loses the silence after its last note, so it loops short.** Area e.
+Broken. Measured (lengths and loop positions). Fixed tonight.
+- Steps: arm the deck, play a note, wait a second, press stop. Export .mid, import the file, turn loop on
+  and play it.
+- Expected: the file is as long as the take and loops at the same point.
+- Actual: a 1.37 s take exported as a 0.62 s file. Looping, the take wrapped every 1.37 s and the
+  re-imported file every 0.62 s. In another program the clip is also short.
+- Cause: `writeSMF` put each track's end at its last event; the reader honours the end-of-track time,
+  so the file had nothing to say where Stop was pressed.
+- Fix: `writeSMF` takes a `length` in seconds and ends every track there (0, the default, keeps the old
+  behaviour for Gyrotron and Trochotron); the deck passes the take's length. Check: "M. the exported .mid
+  keeps the take's length" (before: 0.196 s against 0.812 s; after: 0.777 against 0.777).
+
+**R1029-2. Pressure held when a take starts is left out of the take.** Area c, e. Broken. Measured.
+Fixed tonight.
+- Steps: hold channel pressure (or send D0 100), arm the deck, play a note, stop.
+- Expected: the take starts with the pressure, as it already does for the pedal, bend and wheel.
+- Actual: the take began with the pedal and the note only; no pressure event, so a patch with pressure
+  on cutoff or (now) any mod matrix slot plays the take back differently from what was played.
+- Fix: `rec()` writes the held pressure at time 0 with the others. Check: "M. pressure held when a take
+  starts is written at its start, and the .mid carries it" (before: none; after: 0.787 and D0 100).
+
+**R1029-3. Record captures after the master volume.** Area d. Confusing. Measured; impact inferred.
+- Steps: set the master volume to 25%, record a chord with the header's record.
+- Actual: the WAV is 11.5 dB quieter than the same chord at 100% (RMS -28.6 against -17.1 dB). A user
+  who turns the monitor level down to play quietly gets a quiet file. A design call: record before the
+  volume, or say on the control that it is part of the recording.
+
+**R1029-4. Mixer pan is a balance control.** Area d. Confusing. Measured.
+- Offline, one sine voice: centre L and R -20.32 dB; pan -1 L -20.32, R silent; pan -0.5 L -20.32,
+  R -23.33. A mono voice panned hard sounds about 3 dB quieter than centred (equal-power panning would
+  hold it level). Common on stereo sources, so a design call; worth one line in the mixer's help.
+
+### Still open from earlier runs (re-checked tonight)
+
+- R1017-3: `deck.renderArgs()` still has no `mixer` key.
+- R1017-5: rack tempo set to 90 in the tempo box leaves the master at 120 BPM and its 1/8 delay at 0.25 s.
+- R1017-8: a muted Filament strip still meters 0.12 with a note held.
+- R1017-10 and R1017-11: phone strips 22 x 117 px; readout C3, first visible key 60.
+- R1023-3: with Filament and Thyratron armed, the take holds Filament only and the deck says nothing.
+- R1026-5: Space on the focused rec button does not arm it; Enter does.
+
+### Not covered tonight
+Areas a, b, f, g, h. Suggested next: f, g, h (does a project carry the mod matrix and filter B;
+the mod matrix panel with a keyboard only).

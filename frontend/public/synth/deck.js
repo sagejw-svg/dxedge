@@ -102,6 +102,7 @@ export function createDeck(api) {
       if (c.sus) T.events.push({ time: 0, dev, m: { t: 'sus', on: true } });
       if (c.bend) T.events.push({ time: 0, dev, m: { t: 'bend', v: c.bend } });
       if (c.mw) T.events.push({ time: 0, dev, m: { t: 'mw', v: c.mw } });
+      if (c.at) T.events.push({ time: 0, dev, m: { t: 'at', v: c.at } });
     }
     if (!T.names[dev]) T.names[dev] = api.patchName(dev);
     const h = T.held[dev] || (T.held[dev] = new Set());
@@ -139,7 +140,7 @@ export function createDeck(api) {
       events: T.events.filter(e => e.dev === d).map(e => ({ time: e.time, data: bytesOf(e.m, d === 'cathode' ? 1 : 0) })).filter(e => e.data),
     }));
   }
-  const exportBytes = () => writeSMF({ bpm: 120, parts: takeParts() });
+  const exportBytes = () => writeSMF({ bpm: 120, parts: takeParts(), length: T.length });
 
   // ---------------------------------------------------------------- import
   const Fi = { name: '', song: null, assign: [] };

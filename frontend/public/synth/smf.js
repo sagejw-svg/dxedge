@@ -14,7 +14,7 @@
 // songOf(smf) -> { parts: [{ name, chans, notes, lo, hi, mean, events: [{ time, data }] }], length, bpm }
 //   Times in seconds through the tempo map. A track that holds notes on several channels is
 //   split into one part per channel (format 0 files carry a whole band in one track).
-// writeSMF({ bpm, parts: [{ name, ch, events: [{ time, data }] }] }) -> Uint8Array
+// writeSMF({ bpm, parts: [{ name, ch, events: [{ time, data }] }], length }) -> Uint8Array (length in seconds: where every track ends; 0 = at its last event)
 //   Format 1 at 480 ticks per quarter: a tempo track (tempo, 4/4) and one track per part.
 
 export const PPQ_OUT = 480;
@@ -147,14 +147,17 @@ function metaText(body, type, s) {
   body.push(0, 0xFF, type); pushVlq(body, bytes.length); bytes.forEach(x => body.push(x));
 }
 
-export function writeSMF({ bpm = 120, parts = [] }) {
+export function writeSMF({ bpm = 120, parts = [], length = 0 }) {
   const out = [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, 0, 0, PPQ_OUT >> 8, PPQ_OUT & 255];
   const uspq = Math.round(60e6 / bpm), tps = PPQ_OUT * bpm / 60;
+  // length (seconds): every track ends there, not at its last event, so silence after the last
+  // note survives the round trip and the file loops at the same point as what was recorded
+  const endTick = Math.max(0, Math.round((+length || 0) * tps));
   const t0 = [];
   metaText(t0, 0x03, 'Tempo');
   t0.push(0, 0xFF, 0x51, 3, (uspq >> 16) & 255, (uspq >> 8) & 255, uspq & 255);
   t0.push(0, 0xFF, 0x58, 4, 4, 2, 24, 8);
-  t0.push(0, 0xFF, 0x2F, 0);
+  pushVlq(t0, endTick); t0.push(0xFF, 0x2F, 0);
   chunk(out, t0);
   let n = 1;
   for (const pt of parts) {
@@ -169,7 +172,7 @@ export function writeSMF({ bpm = 120, parts = [] }) {
       const hi = e.d[0] & 0xF0;
       body.push(hi | ch, e.d[1] & 0x7f); if (DATA_LEN[hi] === 2) body.push((e.d[2] || 0) & 0x7f);
     }
-    body.push(0, 0xFF, 0x2F, 0);
+    pushVlq(body, Math.max(0, endTick - last)); body.push(0xFF, 0x2F, 0);
     chunk(out, body); n++;
   }
   out[10] = n >> 8; out[11] = n & 255;
