@@ -466,14 +466,19 @@ with sync_playwright() as pw:
     def lg_cen(x):
         X = np.abs(np.fft.rfft(x * np.hanning(len(x)))); f_ = np.fft.rfftfreq(len(x), 1 / SR); return float(np.sum(X * f_) / max(np.sum(X), 1e-12))
     lgQ = lambda g, **e: patch(filt=dict(model="lpg", cutoff=3000, gate=g, lag=0.3), envA=dict({"a": 0.001, "d": 0.05, "s": 0, "r": 0.05, "vel": 0.6}, **e))
+    # The -20 dB times for the comparison below are read through a window of exactly two periods of the note
+    # (C3): a 10 ms window leaves the saw's ripple in, and where its peak falls moved the time by up to +/-3 ms
+    # with the oscillator's random start phase (measured 29 Oct: lp minus SVF 12 ran -4.1 to +5.5 ms over 11
+    # renders, and 5.5 failed the 5 ms bound on main; through the two-period window -0.5 to +3.0 over 10).
+    W48 = round(2 * SR / 130.8128)
     gc_ = {}
     for g in ("both", "vca", "lp"):
         L, _ = render(lgQ(g), note(48), 2.0, rack=False); e_ = lg_env(L, 480); ip = int(np.argmax(e_)); t20 = lg_times(e_, (-20,))[0]; i20 = int(t20 * SR)
-        gc_[g] = (lg_cen(L[max(0, ip - 1200):ip + 1200]), lg_cen(L[i20 - 1200:i20 + 1200]), t20)
+        gc_[g] = (lg_cen(L[max(0, ip - 1200):ip + 1200]), lg_cen(L[i20 - 1200:i20 + 1200]), lg_times(lg_env(L, W48), (-20,))[0])
     ck(f"Lg. filter + VCA: the note darkens as it fades (centroid {gc_['both'][0]:.0f} Hz at the peak, {gc_['both'][1]:.0f} at -20 dB, want under half); VCA only keeps its colour ({gc_['vca'][0]:.0f} -> {gc_['vca'][1]:.0f}, within 10%)",
        gc_["both"][1] < 0.5 * gc_["both"][0] and abs(gc_["vca"][1] / gc_["vca"][0] - 1) <= 0.1, gc_)
     L, _ = render(patch(filt={"model": "svf12", "cutoff": 3000}, envA={"a": 0.001, "d": 0.05, "s": 0, "r": 0.05, "vel": 0.6}), note(48), 2.0, rack=False)
-    t20s = lg_times(lg_env(L, 480), (-20,))[0]
+    t20s = lg_times(lg_env(L, W48), (-20,))[0]
     hs = {}
     for g in ("lp", "vca"):
         L, _ = render(lgQ(g, s=0.25, d=0.02), note(48), 1.0, rack=False); hs[g] = lg_cen(L[SR // 2:])
