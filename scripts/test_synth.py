@@ -4717,6 +4717,66 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(250)
     ck("G. the rail shows the pad and hides Filament's filter",
        pg.evaluate("__synth.device()") == "gleam" and pg.is_visible("#gleamPad") and not pg.is_visible("#mFilt"))
+    # Empty state (graphics, 29 Oct): an untouched field shows a hint (axis names, a pilot ring and an instruction line).
+    # pad.dataset.hint is its opacity: 1 after 1.2 s of quiet, 0 while anything sounds.
+    GLEAM_PIX = """(box) => { const c = document.querySelector('#gleamPad canvas'), x = c.getContext('2d');
+      const s = c.width / c.clientWidth, r = c.getBoundingClientRect();
+      const [bx, by, bw, bh] = box.map(v => Math.round(v * s));
+      const d = x.getImageData(bx, by, bw, bh).data; let max = 0, sum = 0, best = [0, 0, 0];
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      for (let i = 0; i < d.length; i += 4) { const L = 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]); sum += d[i] + d[i + 1] + d[i + 2]; if (L > max) { max = L; best = [d[i], d[i + 1], d[i + 2]]; } }
+      return { max, sum, best, w: c.clientWidth, h: c.clientHeight }; }"""
+    pg.evaluate("() => { const h = __synth.gleam(); h.setPatch(Object.assign({}, h.patch(), { mode: 'field', hold: false, generator: 'off' })); __synth.panic(); }")
+    try: pg.wait_for_function("() => +document.getElementById('gleamPad').dataset.hint >= 0.95", timeout=6000)
+    except Exception: pass
+    hint0 = pg.evaluate("document.getElementById('gleamPad').dataset.hint")
+    gdim = pg.evaluate("() => { const c = document.querySelector('#gleamPad canvas'); return [c.clientWidth, c.clientHeight]; }")
+    gcx, gcy = gdim[0] / 2, gdim[1] / 2
+    title_px = pg.evaluate(GLEAM_PIX, [gcx - 90, gcy + 2, 180, 20])
+    bgL = 0.2126 * (7 / 255 / 12.92) + 0.7152 * (8 / 255 / 12.92) + 0.0722 * (12 / 255 / 12.92)
+    title_cr = (title_px["max"] + 0.05) / (bgL + 0.05)
+    ck("G. an untouched field shows its hint, and the TOUCH TO PLAY line is readable (contrast 4.5:1 or more on the field)",
+       hint0 is not None and float(hint0) >= 0.95 and title_cr >= 4.5 and title_px["best"][0] > title_px["best"][2] + 60,
+       (hint0, round(title_cr, 1), title_px["best"]))
+    ring_a = pg.evaluate(GLEAM_PIX, [gcx - 40, gcy - 74, 80, 80])["sum"]
+    pg.wait_for_timeout(1500)
+    ring_b = pg.evaluate(GLEAM_PIX, [gcx - 40, gcy - 74, 80, 80])["sum"]
+    ck("G. the hint's pilot ring breathes (full motion)", ring_a != ring_b, (ring_a, ring_b))
+    pg.evaluate("() => __synth.gleam().pointer('down', { id: 71, x: 0.4, y: 0.5, z: 0.8 })")
+    try: pg.wait_for_function("() => +document.getElementById('gleamPad').dataset.hint === 0", timeout=3000)
+    except Exception: pass
+    hint_busy = pg.evaluate("document.getElementById('gleamPad').dataset.hint")
+    pg.evaluate("() => { __synth.gleam().pointer('up', { id: 71, x: 0.4, y: 0.5, z: 0.8 }); __synth.panic(); }")
+    try: pg.wait_for_function("() => +document.getElementById('gleamPad').dataset.hint >= 0.95", timeout=8000)
+    except Exception: pass
+    hint_back = pg.evaluate("document.getElementById('gleamPad').dataset.hint")
+    ck("G. the hint goes while a voice sounds and comes back after the quiet", hint_busy == "0.00" and float(hint_back or 0) >= 0.95, (hint_busy, hint_back))
+    for gmode, gword in (("room", "room"), ("effect", "effect")):
+        pg.evaluate(f"() => {{ const h = __synth.gleam(); h.setPatch(Object.assign({{}}, h.patch(), {{ mode: '{gmode}', generator: 'off', hold: false }})); }}")
+        pg.wait_for_timeout(250)
+        gm = pg.evaluate("() => [document.getElementById('gleamPad').dataset.hint, __synth.gleam().patch().mode, __synth.gleam().voices() + (__synth.gleam().orbs ? __synth.gleam().orbs().length : 0)]")
+        mid = pg.evaluate(GLEAM_PIX, [gcx - 110, gcy - 20, 220, 18])
+        ck(f"G. {gword} mode: the untouched pad keeps a readable hint line", gm[1] == gmode and (gm[2] > 0 or float(gm[0] or 0) >= 0.95 and (mid["max"] + 0.05) / (bgL + 0.05) >= 4.5),
+           (gm, round((mid["max"] + 0.05) / (bgL + 0.05), 1)))
+    pg.evaluate("() => { const h = __synth.gleam(); h.setPatch(Object.assign({}, h.patch(), { mode: 'field' })); }")
+    grm = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); grp = grm.new_page(); grerr = []
+    grp.on("pageerror", lambda e: grerr.append(str(e)))
+    grp.goto(BASE); grp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    grp.evaluate("__synth.setDevice('gleam')")
+    try: grp.wait_for_function("() => document.getElementById('gleamPad').dataset.hint === '1.00'", timeout=6000)
+    except Exception: pass
+    grp.wait_for_timeout(2500)   # the field fades its trails 28% a frame; give it time to settle on a still picture
+    rdim = grp.evaluate("() => { const c = document.querySelector('#gleamPad canvas'); return [c.clientWidth, c.clientHeight]; }")
+    rr_a = grp.evaluate(GLEAM_PIX, [rdim[0] / 2 - 40, rdim[1] / 2 - 74, 80, 80])["sum"]
+    grp.wait_for_timeout(1500)
+    rr_b = grp.evaluate(GLEAM_PIX, [rdim[0] / 2 - 40, rdim[1] / 2 - 74, 80, 80])["sum"]
+    rvals = grp.evaluate("""() => new Promise(res => { const pad = document.getElementById('gleamPad'), seen = new Set();
+      __synth.gleam().pointer('down', { id: 72, x: 0.4, y: 0.5, z: 0.8 });
+      setTimeout(() => { __synth.gleam().pointer('up', { id: 72, x: 0.4, y: 0.5, z: 0.8 }); __synth.panic(); }, 400);
+      const t0 = performance.now(); (function tick() { seen.add(pad.dataset.hint); if (performance.now() - t0 < 3500) requestAnimationFrame(tick); else res([...seen]); })(); })""")
+    ck("G. reduced motion: the hint's ring holds still and the hint switches without a fade",
+       rr_a == rr_b and set(rvals) <= {"0.00", "1.00"} and "0.00" in rvals and not grerr, (rr_a, rr_b, rvals, grerr))
+    grm.close()
     fx = pg.evaluate("""() => {
       const h = __synth.gleam();
       const before = h.fxProbe();
@@ -4879,6 +4939,27 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(300)
     ck("H. the player is on screen and Filament's filter is not",
        pg.evaluate("__synth.device()") == "heptode" and pg.is_visible("#hepRoll") and pg.is_visible("#heptodePlace") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
+    # Empty state and roll size (graphics, 29 Oct). The roll canvas had no CSS height, so it took the canvas's 2:1
+    # ratio (592 px tall at 1366) inside its 150 px window and a loaded song's notes sat out of sight.
+    ROLL = """() => { const c = document.getElementById('hepRoll'), d = document.getElementById('hepDrop'), x = c.getContext('2d');
+      const s = c.width / c.clientWidth, cw = c.clientWidth, ch = c.clientHeight;
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const box = x.getImageData(Math.round((cw / 2 - 80) * s), Math.round((ch / 2 - 18) * s), Math.round(160 * s), Math.round(36 * s)).data;
+      let max = 0, best = [0, 0, 0]; for (let i = 0; i < box.length; i += 4) { const L = 0.2126 * lin(box[i]) + 0.7152 * lin(box[i + 1]) + 0.0722 * lin(box[i + 2]); if (L > max) { max = L; best = [box[i], box[i + 1], box[i + 2]]; } }
+      const all = x.getImageData(0, 0, c.width, c.height).data; let sum = 0, colour = 0;
+      for (let i = 0; i < all.length; i += 4) { sum += all[i] + all[i + 1] + all[i + 2]; if (Math.max(all[i], all[i + 1], all[i + 2]) - Math.min(all[i], all[i + 1], all[i + 2]) > 40) colour++; }
+      return { empty: c.dataset.empty, ch, dh: d.clientHeight, max, best, mean: sum / (all.length / 4), colour }; }"""
+    hep_empty = pg.evaluate(ROLL)
+    win_bg = 0.2126 * (11 / 255 / 12.92) + 0.7152 * (9 / 255 / 12.92) + 0.0722 * (7 / 255 / 12.92)
+    hep_cr = (hep_empty["max"] + 0.05) / (win_bg + 0.05)
+    ck("H. with no song the roll shows its empty state, readable (contrast 4.5:1 or more in the readout window)",
+       hep_empty["empty"] == "1" and hep_cr >= 4.5 and hep_empty["best"][0] > hep_empty["best"][2] + 60, (hep_empty, round(hep_cr, 1)))
+    ck("H. the roll canvas fills its window instead of overflowing it", abs(hep_empty["ch"] - hep_empty["dh"]) <= 2, (hep_empty["ch"], hep_empty["dh"]))
+    pg.evaluate("() => document.getElementById('hepDrop').dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }))")
+    pg.wait_for_timeout(150)
+    hep_over = pg.evaluate(ROLL)
+    pg.evaluate("() => document.getElementById('hepDrop').dispatchEvent(new DragEvent('dragleave', { bubbles: true }))")
+    ck("H. a file dragged over the empty roll lights its lanes", hep_over["mean"] > hep_empty["mean"] * 1.3, (round(hep_empty["mean"], 1), round(hep_over["mean"], 1)))
     pg.evaluate("""() => {
       const bytes = new Uint8Array(__synth.heptodeFixture());
       const file = new File([bytes], 'phrase.mid', { type: 'audio/midi' });
@@ -4888,6 +4969,10 @@ with sync_playwright() as pw:
     }""")
     pg.wait_for_function("() => __synth.heptodeState().notes >= 3", timeout=5000)
     ck("H. dropping a .mid file loads its notes", pg.evaluate("__synth.heptodeState().notes") >= 3 and "phrase" in pg.evaluate("__synth.heptodeState().name").lower(), pg.evaluate("__synth.heptodeState()"))
+    pg.wait_for_timeout(150)
+    hep_full = pg.evaluate(ROLL)
+    ck("H. with a song loaded the roll leaves its empty state and its notes are painted in the window",
+       hep_full["empty"] == "0" and hep_full["colour"] > 0 and abs(hep_full["ch"] - hep_full["dh"]) <= 2, hep_full)
     pg.click("#hepPlay")
     pg.wait_for_timeout(200)
     ck("H. play starts the file", pg.evaluate("__synth.heptodeState().playing") is True)

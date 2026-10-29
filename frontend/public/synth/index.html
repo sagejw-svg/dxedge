@@ -427,6 +427,9 @@
   .hep-roll { position: relative; height: 150px; max-width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid #3a2a22; background: #14110e; }
   .hep-roll.over { outline: 2px dashed #e7c4a8; outline-offset: -3px; }
   #hepRoll, #heptodePlace { width: 100%; max-width: 100%; display: block; }
+  /* graphics 29 Oct: the roll fills its 150 px window. With no height it took the canvas's 2:1 ratio (592 px tall at
+     1366, clipped to the top 148), so a loaded song's notes sat below the window and the roll looked empty on a desktop. */
+  #hepRoll { height: 100%; }
   #heptodePlace { height: 220px; touch-action: none; border-radius: 8px; border: 1px solid #3a2a22; background: #14110e; }
   .hep-bar { flex-wrap: wrap; max-width: 100%; }
   .hep-channels { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }

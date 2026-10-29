@@ -386,7 +386,11 @@ export function mountHeptodePanel(container, hooks) {
     ctx.fillStyle = '#14110e';
     ctx.fillRect(0, 0, w, h);
     const score = hooks.host.score();
-    if (score && score.t && score.t.length && bake.width) {
+    const empty = !(score && score.t && score.t.length);
+    const emptyFlag = empty ? '1' : '0';
+    if (canvas.dataset.empty !== emptyFlag) canvas.dataset.empty = emptyFlag;
+    if (empty) { drawEmptyRoll(ctx, w, h, drop.classList.contains('over')); return; }
+    if (bake.width) {
       ctx.drawImage(bake, 0, 0, w, h);
     }
     const st = hooks.host.meter();
@@ -397,6 +401,57 @@ export function mountHeptodePanel(container, hooks) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, h);
     ctx.stroke();
+  }
+
+  // Empty state (graphics, 29 Oct): with no song the roll shows its own lanes, an octave band per C on the same
+  // pitch scale the notes will use (MIDI 0 at the bottom, 127 at the top; MIDI 60 is C4 like the keyboard), and an
+  // engraved readout window in the middle that says what to do. A file dragged over it lights the lanes.
+  let rollFont = '';
+  function drawEmptyRoll(ctx, w, h, over) {
+    if (!rollFont) rollFont = (getComputedStyle(document.body).getPropertyValue('--font-mono') || '').trim() || 'monospace';
+    const y = n => (127 - n) / 128 * h;
+    for (let oct = 0; oct < 11; oct++) {
+      const top = y(Math.min(127, oct * 12 + 11) + 1);
+      const bot = y(oct * 12);
+      ctx.fillStyle = oct % 2 ? (over ? 'rgba(255,179,71,0.10)' : 'rgba(231,196,168,0.035)') : (over ? 'rgba(255,179,71,0.05)' : 'rgba(0,0,0,0.18)');
+      ctx.fillRect(0, top, w, bot - top);
+      ctx.fillStyle = over ? 'rgba(255,179,71,0.45)' : 'rgba(231,196,168,0.14)';
+      ctx.fillRect(0, Math.round(bot) - 1, w, 1);
+    }
+    ctx.font = '9px ' + rollFont;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = over ? 'rgba(255,200,120,0.85)' : 'rgba(231,196,168,0.55)';
+    for (let oct = 2; oct <= 8; oct += 2) {
+      const n = (oct + 1) * 12;
+      ctx.fillText('C' + oct, 4, Math.round(y(n)) - 2);
+    }
+    const title = over ? 'RELEASE TO LOAD' : 'NO SONG LOADED';
+    const sub = over ? 'the file plays on Heptode' : (w < 420 ? 'drop a .mid, or choose a song' : 'drop a .mid file here, or choose a song above');
+    ctx.font = 'bold 12px ' + rollFont;
+    const tw = ctx.measureText(title).width + 3 * title.length;
+    ctx.font = '11px ' + rollFont;
+    const sw = ctx.measureText(sub).width;
+    const bw = Math.min(w - 16, Math.max(tw, sw) + 36);
+    const bh = 50;
+    const bx = Math.round((w - bw) / 2);
+    const by = Math.round((h - bh) / 2);
+    ctx.fillStyle = '#0b0907';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    ctx.strokeStyle = over ? 'rgba(255,179,71,0.75)' : 'rgba(231,196,168,0.22)';
+    ctx.strokeRect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffc46e';
+    ctx.font = 'bold 12px ' + rollFont;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillText(title, w / 2, by + 18);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.fillStyle = '#c9b8a6';
+    ctx.font = '11px ' + rollFont;
+    ctx.fillText(sub, w / 2, by + 35);
   }
 
   function bakeRoll(score) {

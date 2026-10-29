@@ -1094,7 +1094,80 @@ export function mountGleamPad(container, host, opts) {
       ctx2.font = (12 * (window.devicePixelRatio || 1)) + 'px sans-serif';
       ctx2.fillText('filter', 12, h - 16);
       ctx2.fillText('feedback', 12, 22);
+    }    drawHint(now, p, w, h);
+  }
+  // Empty state (graphics, 29 Oct): an untouched field says what it is. Field mode names the two axes along the edges
+  // and puts a pilot ring and a line of instructions in the middle; room and effect modes get their own line. The hint
+  // fades out as soon as anything plays (a finger, a key or MIDI note, hold, the generator, orbs) and back in after 1.2 s of quiet. With
+  // reduced motion the ring does not breathe and the hint switches instead of fading. pad.dataset.hint carries its
+  // opacity for the suite.
+  let hintA = 1;
+  let quietSince = 0;
+  let hintFont = '';
+  function drawHint(now, p, w, h) {
+    let busy = pointers.size > 0 || trails.size > 0 || !!host.generator() || (host.voices ? host.voices() > 0 : false);
+    if (!busy) host.latched().forEach(() => { busy = true; });
+    if (!busy && p.mode === 'room' && host.orbs().length) busy = true;
+    const t = Number.isFinite(now) ? now : performance.now();
+    if (busy) quietSince = t;
+    const want = !busy && t - quietSince > 1200 ? 1 : 0;
+    if (reduce) hintA = want;
+    else hintA += (want - hintA) * (want ? 0.06 : 0.35);
+    if (hintA < 0.01) hintA = 0;
+    const tag = hintA.toFixed(2);
+    if (pad.dataset.hint !== tag) pad.dataset.hint = tag;
+    if (!hintA) return;
+    if (!hintFont) hintFont = (getComputedStyle(document.body).getPropertyValue('--font-mono') || '').trim() || 'monospace';
+    const s = w / Math.max(1, pad.clientWidth || w);
+    const a = hintA;
+    const cx = w / 2;
+    const cy = h / 2;
+    ctx2.save();
+    ctx2.textAlign = 'center';
+    ctx2.textBaseline = 'middle';
+    if (p.mode === 'field') {
+      const breathe = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(t / 900);
+      const r = (22 + breathe * 6) * s;
+      const g = ctx2.createRadialGradient(cx, cy - 34 * s, 1, cx, cy - 34 * s, r * 2.2);
+      g.addColorStop(0, 'rgba(255, 196, 110,' + (0.30 * a) + ')');
+      g.addColorStop(1, 'rgba(255, 140, 40, 0)');
+      ctx2.fillStyle = g;
+      ctx2.beginPath(); ctx2.arc(cx, cy - 34 * s, r * 2.2, 0, Math.PI * 2); ctx2.fill();
+      ctx2.strokeStyle = 'rgba(255, 179, 71,' + (0.75 * a) + ')';
+      ctx2.lineWidth = 1.5 * s;
+      ctx2.beginPath(); ctx2.arc(cx, cy - 34 * s, r, 0, Math.PI * 2); ctx2.stroke();
+      ctx2.beginPath(); ctx2.arc(cx, cy - 34 * s, 4 * s, 0, Math.PI * 2);
+      ctx2.fillStyle = 'rgba(255, 214, 150,' + a + ')'; ctx2.fill();
+      // axis legends on the edges: X is pitch, Y is timbre
+      ctx2.font = (10 * s) + 'px ' + hintFont;
+      ctx2.fillStyle = 'rgba(214, 190, 160,' + (0.9 * a) + ')';
+      ctx2.textAlign = 'left';
+      ctx2.fillText('low', 12 * s, h - 14 * s);
+      ctx2.textAlign = 'right';
+      ctx2.fillText('high', w - 12 * s, h - 14 * s);
+      ctx2.textAlign = 'center';
+      ctx2.fillText('pitch  \u2192', cx, h - 14 * s);
+      ctx2.save();
+      ctx2.translate(14 * s, cy);
+      ctx2.rotate(-Math.PI / 2);
+      ctx2.fillText('soft  \u2192  bright', 0, 0);
+      ctx2.restore();
     }
+    const title = p.mode === 'room' ? 'TOUCH TO PLACE A VOICE' : p.mode === 'effect' ? 'HOLD TO SWEEP THE MASTER' : 'TOUCH TO PLAY';
+    const sub = p.mode === 'room' ? 'near the centre is dry, far is roomy'
+      : p.mode === 'effect' ? 'left and right sweep the filter, up is feedback'
+      : 'each finger is a voice; slide to bend';
+    ctx2.font = 'bold ' + (13 * s) + 'px ' + hintFont;
+    if ('letterSpacing' in ctx2) ctx2.letterSpacing = (3 * s) + 'px';
+    ctx2.fillStyle = 'rgba(255, 196, 110,' + a + ')';
+    ctx2.fillText(title, cx, p.mode === 'field' ? cy + 12 * s : cy - 10 * s);
+    if ('letterSpacing' in ctx2) ctx2.letterSpacing = '0px';
+    let fs = 11;
+    ctx2.font = (fs * s) + 'px ' + hintFont;
+    while (fs > 8 && ctx2.measureText(sub).width > w - 40 * s) { fs -= 0.5; ctx2.font = (fs * s) + 'px ' + hintFont; }
+    ctx2.fillStyle = 'rgba(214, 196, 176,' + a + ')';
+    ctx2.fillText(sub, cx, p.mode === 'field' ? cy + 32 * s : cy + 10 * s);
+    ctx2.restore();
   }
   requestAnimationFrame(draw);
   if (window.ResizeObserver) new ResizeObserver(fit).observe(pad);
