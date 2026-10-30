@@ -17,6 +17,10 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part | measured |
+| R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail | measured |
+| R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
+| R1030-6 | confusing | h | The eight mod matrix amount knobs are all named "amount" for a screen reader; the slot is only in the tooltip | measured |
 | R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
 | R1029-4 | confusing | d | Mixer pan is a balance control: hard left keeps the left side at the centre level and drops the right, so a mono voice panned hard sounds about 3 dB quieter | measured |
 | R1028-2 | confusing | a | Klystron gate and focus: most of their travel is silence (gate at 25% silences 4 of 5 factory patches; focus at its top costs 25 to 38 dB even with the gate at 0) | measured |
@@ -44,8 +48,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
 | R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 24 Oct | inferred (code, 24 Oct) |
-| R1020-8 | confusing | h | Desktop rack: 426 tab stops (27 Oct; 409 on 24 Oct) and no skip link; the library is near the end | measured |
-| R1020-9 | confusing | h | 56 control names repeat across sections (27 Oct: "off" x6, "cutoff" x4, "level" x4, the six filter model chips x2 since Filter B) with no section in the name | measured |
+| R1020-8 | confusing | h | Desktop rack: 452 tab stops (30 Oct; 426 on 27 Oct) and no skip link; the library is near the end | measured |
+| R1020-9 | confusing | h | 58 control names repeat across sections (30 Oct, 56 on 27 Oct: "off" x6, "cutoff" x4, "level" x4, the six filter model chips x2 since Filter B) with no section in the name | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200%; still open 29 Oct | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
@@ -55,7 +59,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -926,3 +930,111 @@ Fixed tonight.
 ### Not covered tonight
 Areas a, b, f, g, h. Suggested next: f, g, h (does a project carry the mod matrix and filter B;
 the mod matrix panel with a keyboard only).
+
+## 2026-10-30 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `07c6a4e` (tempo-synced
+LFOs and the three-row phone header had landed overnight). Chromium 1243 headless (the `chromium-1194`
+path in the task prompt is gone) at 1366 x 900 and 375 x 812 (touch, 2x), and a reduced-motion
+context. No page errors on the rack, Hexode or Anode. Hexode logs the browser's ScriptProcessorNode
+deprecation warning (vendored code). Focus tonight: projects carrying the new patch fields, the song
+library routed to every device, and keyboard and screen reader use of the new Mod tab and header.
+Audio was measured on the live output with the master recorder (`E.fx.recordStart` and `recordStop`)
+and the strip meters; levels are peak and RMS of the left channel over 2 to 2.5 s.
+
+### What worked (measured)
+
+- Project with the new fields: LFO 1 sync 1/8, LFO 2 sync 1/4d, mod slot 1 lfo1, slot 2 to pitch at
+  -0.3, Filter B serial at 900 Hz. Save project, load Hollow Pluck, load project: all of it comes back,
+  and the sync menus and slot menus on the panel show it. Download is `filament-rv-1030.json` and
+  carries the same fields; uploading it in a fresh browser applies them and the project name.
+- An old project with no `mod`, no `filtB` and no LFO `sync` loads with no error and gets the defaults
+  (sync off, slots off, Filter B off).
+- Library: switching songs while one plays stops the first (0 voices at once and 2 s later); a key held
+  through a library play and stop is still held; a tempo change from 150 to 60 mid-song keeps playing
+  and the time readout follows (0:12.1 long becomes 0:30.2); loop at 240 BPM wraps at 0:08.0 twice in
+  16 s; loading a project while a song plays keeps it playing; every stop leaves 0 voices.
+- Hexode at both sizes: a held A sounds (peak 0.26) and lets go (0), links back to `/synth/` and to
+  Anode, no failed requests. Anode at both sizes: start plays (peak 0.55 at 1366, 0.40 at 375), links
+  back to `/synth/` and to Hexode, no sideways scroll at 375 px.
+- Rack, both sizes: 0 unnamed controls (457 at 1366, 95 at 375); a Tab walk of every stop (452 at
+  1366, 91 at 375) shows an outline or ring on each one, the Mod tab's selects and knobs included. The
+  new size switch is a named group ("Control size") of four buttons with `aria-pressed` and titles.
+  Reduced motion: the tube show reports its reduced set (no flare, no arcs) with a note held; the only
+  running animation is the correlation marker's `left` transition.
+
+### Findings
+
+**R1030-1. A library channel routed to most hosted devices plays nothing.** Area f. Broken. Measured.
+Fixed tonight.
+- Steps: open songs, pick Dock Lamp, set each channel to Lattice (or Mote, Klystron, Rhumbatron,
+  Gyrotron, Orthicon, Pentagrid, Geissler, Resnatron) while Filament is on the rail. Press play.
+- Expected: the song on that device, as it does on Filament, Cathode, Thyratron, Gleam or Additron.
+- Actual (Dekatron muted, so only the routed device is heard): Lattice RMS 0.0002, Mote 0.0002,
+  Gyrotron 0.0001, Rhumbatron 0.0012, Klystron, Orthicon, Pentagrid, Geissler and Resnatron 0, against
+  Filament 0.14, Cathode 0.17, Thyratron 0.14, Additron 0.23. The strip meters read 0. Visiting the
+  device on the rail first, then going back, made Lattice play; Resnatron also needed its patch sent.
+- Cause: the player's `arm()` woke Filament and Cathode only. The other hosted devices sleep while off
+  the rail and drop or never voice the notes.
+- Fix: `arm()` calls the page's `wakeDevice` (the same call the Mix desk's arm uses: active, plus the
+  device's current patch) for each hosted device a song routes to, and stop puts them back to sleep
+  with `sleepDevice`, which never sleeps the rail device or an armed strip. Check: "P. a channel
+  routed to Lattice or Resnatron off the rail sounds (review R1030-1)" (a fresh page; before: strip
+  peak 0 and 0; after, local: 0.40 and 0.18).
+
+**R1030-2. After a song with drum hits, Dekatron's pattern no longer plays.** Area f. Broken. Measured.
+Fixed tonight.
+- Steps: in a fresh page, press Play on the Rack tab: Dekatron's pattern plays (strip peak 0.58). Load
+  The Entertainer (channel 10 on Dekatron), play a second, stop. Press Play on the Rack tab, or play
+  any song, or press play on Dekatron's own panel.
+- Expected: the pattern follows the transport as before.
+- Actual: no pattern (strip peak 0.009 on the Rack tab's play; Greensleeves afterwards 0;
+  `drumMeter().playing` false) for the rest of the session while a song is loaded.
+- Cause: every transport play also runs the player's `startFrom`, whose `silence()` posted a Dekatron
+  `panic` for any device it had ever touched. The panic lands after the transport message that armed
+  the pattern and disarms it.
+- Fix: the panic goes to Dekatron only when this run sent it hits. Check: "P. Dekatron's pattern still
+  follows the transport after a song with drum hits (review R1030-2)" (before: false on the second
+  play; after: true).
+
+**R1030-3. Dekatron's pattern plays under every library song.** Area f. Confusing. Measured.
+- Dock Lamp, Greensleeves and Symphony No. 5 have no channel 10, yet Dekatron's own step pattern runs
+  with the transport: Dekatron strip peak 0.51 to 0.57, Dock Lamp RMS 0.256 with it against 0.167 with
+  Dekatron muted. A song that does route channel 10 to Dekatron gets the pattern and its own hits at
+  once. The build notes list it as a known limit ("Playing a song also starts the rack clock"); the
+  page does not say so. Inferred: a first-time user hears a drum loop that is not in the song. Before
+  tonight's R1030-2 fix it went away after the first drum song, so it was also inconsistent. Design
+  call: hold the pattern while a song plays, or say it on the library strip.
+
+**R1030-4. Heptode is a channel target that plays nothing.** Area f. Confusing. Measured.
+- Dock Lamp with every channel on Heptode: RMS 0 off the rail, woken, and with Heptode on the rail.
+  Heptode plays its own MIDI file; it is still listed among the channel chips, so the chip silences the
+  channel with no word. Either drop it from the chips or have it voice incoming notes.
+
+**R1030-5. Changing a channel's device mid-song stops Dekatron's pattern.** Area f. Confusing.
+Inferred (code).
+- `setRoute` while playing calls `silence()`, which still panics Dekatron when the run has sent it hits,
+  so the pattern disarms until the next play. Same cause as R1030-2; left alone because the panic there
+  is also what clears hits already queued for the old route.
+
+**R1030-6. The mod matrix amount knobs share one name.** Area h. Confusing. Measured.
+- The eight knobs on the Mod tab have `aria-label="amount"`; the slot number is only in the tooltip
+  ("Mod slot 1 amount: ..."). The slot menus next to them are named "Mod slot 1 source" and so on. A
+  screen reader hears "amount" eight times. Naming them "Mod slot N amount" would match the menus.
+
+### Still open from earlier runs (re-checked tonight)
+
+- R1020-3: a project still carries 14 devices (no Thyratron, Dekatron, Lattice, Gleam) and no master
+  bus (`__synth.project()` keys).
+- R1020-7: Anode's regenerate buttons are still the glyph "⟳" (`acid/js/ui.js`).
+- R1020-8: 452 tab stops at 1366 px (26 more than 27 Oct, mostly the Mod tab), still no skip link.
+- R1020-9: 58 names repeat at 1366 px ("amount" x8 is new; "off" x6, "cutoff" x4, "level" x4).
+- R1024-3: Hexode's 13 operator toggles still have no name (both sizes).
+- R1025-5: phone footer links still 13 px tall (Tip the developer, Hand Orchestra, Hexode, Anode,
+  DXEdge, Old Time Radio).
+- R1017-10: phone pitch and mod strips still 22 x 117 px.
+- Hexode still scrolls sideways at 375 px (1154 px wide).
+
+### Not covered tonight
+Areas a, b, c, d, e. Suggested next: a and b on the tempo-synced LFOs (each note value against the
+rack tempo, old patches with no `sync`), and a on the mod matrix destinations.
