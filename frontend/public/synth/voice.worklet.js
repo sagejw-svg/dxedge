@@ -477,6 +477,9 @@ class Filament extends AudioWorkletProcessor {
     this.gsh = new Float64Array(10);        // global LFO random state, 5 per LFO: curL, prevL, curR, prevR, lastPhase
     this.lfoRate = new Float64Array(2); this.lfoDelay = new Float64Array(2); this.lfoWave = new Int32Array(2); this.lfoGlob = new Int32Array(2);
     this.lfoG0 = new Float64Array(2); this.LV = new Float64Array(4);   // per tick: LFO1 L, LFO1 R, LFO2 L, LFO2 R
+    // the rack's master clock as the engine last posted it: tempo, playing, and the beat at a frame
+    this.ckTempo = 120; this.ckPlay = false; this.ckBeat = 0; this.ckFrame = 0;
+    this.setClock(o.clock || {}, 0);
     this.cc = new Float64Array(4);
     this.duck = 1; this.duckDir = 0; this.pendingPatch = null;
     this.events = [];
@@ -513,6 +516,20 @@ class Filament extends AudioWorkletProcessor {
       dt1: 0, dt2: 0, dts: 0, fg: 0, kres: 0, lvl: 0, lvlT: 0, pw1: 0.5, pw2: 0.5,
     };
   }
+
+  // ----- master clock -----
+  // {t:'clock', tempo, playing, beat, frame}: the transport was at `beat` at absolute frame `frame`.
+  // A message with no frame (or a scheduled one) counts from the frame it is applied at.
+  setClock(m, at) {
+    const t = +m.tempo;
+    this.ckTempo = isFinite(t) && t > 0 ? clamp(t, 40, 240) : this.ckTempo;
+    this.ckPlay = !!m.playing;
+    const b = +m.beat; this.ckBeat = isFinite(b) ? Math.max(0, b) : 0;
+    const f = +m.frame; this.ckFrame = m.frame != null && isFinite(f) ? f : at;
+  }
+  beatAt(frame) { return this.ckPlay ? this.ckBeat + (frame - this.ckFrame) * this.ckTempo / (60 * this.sr) : this.ckBeat; }
+  // an LFO's rate in Hz: its own knob, or the tempo when it is synced
+  lfoHz(l, q) { const sb = syncBeats(l); return sb ? this.ckTempo / (60 * sb) : clamp(num(l.rate, q ? 0.2 : 5), 0.01, 40); }
 
   // ----- patch handling -----
   setPatch(p) { this.P = p; this.buildTables(); }
@@ -613,6 +630,7 @@ class Filament extends AudioWorkletProcessor {
         break;
       case 'release': this.releaseInput(); break;
       case 'play': this.playing = !!m.on; break;
+      case 'clock': this.setClock(m, m.at != null ? m.at : currentFrame); break;
       case 'flush': this.events = this.events.filter(e => !e.pb); break;
       case 'active':      // the rack moved the keyboard to another device: let go of every key, let the tails ring
         this.active = !!m.on;
@@ -766,7 +784,11 @@ class Filament extends AudioWorkletProcessor {
           if (slotBKey(this.P) !== oldB) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
         }
         this.target(this.S); this.Sp.set(this.S);
-        for (let q = 0; q < 2; q++) this.lfoG[q] = (this.lfoG[q] + clamp(num(((q ? this.P.lfo2 : this.P.lfo1) || {}).rate, q ? 0.2 : 5), 0.01, 40) * n / this.sr) % 1;
+        for (let q = 0; q < 2; q++) {
+          const l = (q ? this.P.lfo2 : this.P.lfo1) || {}, sb = this.ckPlay && l.mode !== 'voice' ? syncBeats(l) : 0;
+          if (sb) { const c = this.beatAt(base + n) / sb; this.lfoG[q] = c - Math.floor(c); }
+          else this.lfoG[q] = (this.lfoG[q] + this.lfoHz(l, q) * n / this.sr) % 1;
+        }
         L.fill(0); if (R !== L) R.fill(0);
         this.meterOut(n, t0);
         return true;
@@ -812,6 +834,9 @@ class Filament extends AudioWorkletProcessor {
         voices: act.length, notes: act.filter(v => v.gate || v.sust).map(v => v.note),
         cpu: this.cpuMs / (this.cpuFrames / this.sr * 1000),
         fcA: nv ? nv.fcA : 0, fcB: nv && routeOf(this.P) ? nv.fcB : 0,
+        // the clock as this worklet sees it at the end of the block, and the two global LFO phases there
+        clk: { tempo: this.ckTempo, playing: this.ckPlay, beat: this.beatAt(currentFrame + n), frame: currentFrame + n },
+        lfo: [this.lfoG[0], this.lfoG[1]],
       });
       this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0;
       if (this.cpuFrames > this.sr) { this.cpuMs *= 0.5; this.cpuFrames *= 0.5; }
@@ -969,9 +994,13 @@ class Filament extends AudioWorkletProcessor {
     const LP = [P.lfo1 || {}, P.lfo2 || {}];
     const lRate = this.lfoRate, lDelay = this.lfoDelay, lWave = this.lfoWave, lGlob = this.lfoGlob, lG0 = this.lfoG0;
     for (let q = 0; q < 2; q++) {
-      lRate[q] = clamp(num(LP[q].rate, q ? 0.2 : 5), 0.01, 40); lDelay[q] = Math.max(0, num(LP[q].delay, 0));
+      lRate[q] = this.lfoHz(LP[q], q); lDelay[q] = Math.max(0, num(LP[q].delay, 0));
       lWave[q] = LWAVES[LP[q].wave] ?? 0; lGlob[q] = LP[q].mode === 'voice' ? 0 : 1;
-      lG0[q] = this.lfoG[q]; this.lfoG[q] = (this.lfoG[q] + lRate[q] * frames / sr) % 1;
+      // synced and global while the transport plays: the phase is the transport position in cycles
+      const sb = lGlob[q] && this.ckPlay ? syncBeats(LP[q]) : 0;
+      if (sb) { const c = this.beatAt(currentFrame + a) / sb; lG0[q] = c - Math.floor(c); }
+      else lG0[q] = this.lfoG[q];
+      this.lfoG[q] = (lG0[q] + lRate[q] * frames / sr) % 1;
     }
     const LV = this.LV, gsh = this.gsh;
     // An LFO nobody listens to costs nothing: skip it (its phase still runs).
@@ -1352,6 +1381,13 @@ const SVF_CAL = [77.8, -230];
 const FR_AMP = 1e-4;
 const LPG_KMIN = 0.5, LPG_KMAX = Math.SQRT2 - LPG_KMIN, LPG_TA = 0.0025, LPG_D0 = 0.25, LPG_END = 1e-4;
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
+// LFO tempo sync (lfo1.sync, lfo2.sync): 'off', or a note value whose length is one LFO cycle, in
+// quarter-note beats ('d' dotted, 'tr' triplet). patches.js carries the same table (LFO_SYNC_BEATS); the
+// suite checks they match. A synced LFO runs at tempo / 60 / beats Hz. A global one, while the rack's
+// transport plays, takes its phase from the transport position (beat / beats), so it lands on the bar.
+const SYNC_BEATS = { '4/1': 16, '2/1': 8, '1/1': 4, '1/2d': 3, '1/2': 2, '1/2tr': 4 / 3, '1/4d': 1.5, '1/4': 1, '1/4tr': 2 / 3,
+  '1/8d': 0.75, '1/8': 0.5, '1/8tr': 1 / 3, '1/16d': 0.375, '1/16': 0.25, '1/16tr': 1 / 6, '1/32': 0.125 };
+function syncBeats(l) { const b = l && l.sync !== 'off' ? SYNC_BEATS[l.sync] : 0; return b > 0 ? b : 0; }
 // Mod matrix (patch.mod, slots s1..s8): each slot is a source, a destination and an amount (-1..1).
 // patches.js carries the same two lists (MOD_SRC, MOD_DST); the suite checks they match. Sources,
 // read per voice at the control tick: the amp and filter envelopes (0..1), LFO 1 and LFO 2 (-1..1, the

@@ -880,6 +880,75 @@ with sync_playwright() as pw:
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Mm. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Ls. LFO tempo sync (30 Oct)
+    # lfo1.sync / lfo2.sync: off, or the note value one cycle lasts at the rack tempo. A square LFO on full
+    # tremolo gates a 1 kHz sine, so each half cycle is an on or off stretch whose edges can be timed.
+    _sb_w = dict(_rem.findall(r"'([0-9/a-z]+)': ([0-9./ ]+?)(?=\s*,|\s*$)", _rem.search(r"const SYNC_BEATS = \{([^}]*)\}", _wk).group(1)))
+    _sb_p = dict(_rem.findall(r"'([0-9/a-z]+)': ([0-9./ ]+?)(?=\s*,|\s*$)", _rem.search(r"const LFO_SYNC_BEATS = \{([^}]*)\}", _pj).group(1)))
+    _sb_v = {k: eval(v) for k, v in _sb_w.items()}
+    ck(f"Ls. the worklet and patches.js carry the same {len(_sb_w)} sync note values with the same lengths in beats (4/1 is 16 beats, 1/4 is 1, 1/8tr is 1/3)",
+       len(_sb_w) == 16 and _sb_w == _sb_p and _sb_v["4/1"] == 16 and _sb_v["1/4"] == 1 and abs(_sb_v["1/8tr"] - 1 / 3) < 1e-12 and _sb_v["1/4d"] == 1.5, (_sb_w, _sb_p))
+    ns_ = pg.evaluate("""async () => { const m = await import('./patches.js'); const d = m.normalize({}), j = m.normalize({ lfo1: { sync: '1/8d' }, lfo2: { sync: '3/7' } });
+      return { d: [d.lfo1.sync, d.lfo2.sync], j: [j.lfo1.sync, j.lfo2.sync], v: j.v, list: m.LFO_SYNC, fac: m.FACTORY.every(p => { const q = m.normalize(p); return q.lfo1.sync === 'off' && q.lfo2.sync === 'off'; }) }; }""")
+    ck("Ls. the schema: a patch with no sync loads with both LFOs off (free), every factory patch is free (no patch sounds different), an unknown value falls back to off (schema stays v:1)",
+       ns_["d"] == ["off", "off"] and ns_["j"] == ["1/8d", "off"] and ns_["v"] == 1 and ns_["fac"] and ns_["list"][0] == "off" and len(ns_["list"]) == 17, ns_)
+    def lfo_edges(lfo1=None, lfo2=None, events=None, seconds=2.0, tempo=120, n=69):
+        p_ = patch(osc1={"wave": "sine", "level": 0.5, "fixed": 1000}, lfo1=lfo1 or {"amp": 0}, lfo2=lfo2 or {"amp": 0})
+        ev_ = events if events is not None else note(n)
+        L_, _ = dec(pg.evaluate("a => __synth.render(a)", {"patch": p_, "events": ev_, "seconds": seconds, "rack": False, "tempo": tempo, "masterFx": False}))
+        w_ = int(SR * 0.0005); env_ = np.abs(L_[:len(L_) // w_ * w_]).reshape(-1, w_).max(axis=1)
+        hi_ = env_ > env_.max() * 0.5
+        return [round((i + 1) * 0.0005, 4) for i in np.where(np.diff(hi_.astype(int)) != 0)[0]]
+    def spacing(e_): return float(np.mean(np.diff(e_))) if len(e_) > 2 else 0.0
+    sq_ = lambda **o: dict({"wave": "square", "rate": 5, "amp": 1}, **o)
+    e120, e90 = lfo_edges(sq_(sync="1/4")), lfo_edges(sq_(sync="1/4"), tempo=90)
+    e2_ = lfo_edges(lfo2=sq_(sync="1/8d"), tempo=100)
+    ck(f"Ls. synced, the rate knob (5 Hz) is ignored and a cycle is the note value at the rack tempo: 1/4 at 120 BPM flips every {spacing(e120) * 1000:.1f} ms (want 250), at 90 BPM {spacing(e90) * 1000:.1f} ms (want 333.3); LFO 2 at a dotted 1/8 at 100 BPM {spacing(e2_) * 1000:.1f} ms (want 225); each within 1 ms",
+       abs(spacing(e120) - 0.25) < 0.001 and abs(spacing(e90) - 0.25 * 4 / 3) < 0.001 and abs(spacing(e2_) - 0.225) < 0.001 and len(e120) >= 6, (e120, e90, e2_))
+    ef_ = lfo_edges(sq_(rate=2))
+    ck(f"Ls. sync off still runs at the rate knob: 2 Hz flips every {spacing(ef_) * 1000:.1f} ms (want 250, within 1)", abs(spacing(ef_) - 0.25) < 0.001, ef_)
+    # the transport starts at 0.37 s: a global synced LFO jumps to the transport's phase there
+    eL0 = lfo_edges(sq_(sync="1/4"), events=note(69) + [{"at": 0.37, "t": "clock", "playing": True, "beat": 0, "tempo": 120}])
+    eL5 = lfo_edges(sq_(sync="1/4"), events=note(69) + [{"at": 0.37, "t": "clock", "playing": True, "beat": 2.5, "tempo": 120}])
+    aft0, aft5 = [round(x - 0.37, 4) for x in eL0 if x > 0.36][:3], [round(x - 0.37, 4) for x in eL5 if x > 0.36][:3]
+    ck(f"Ls. a global synced LFO locks to the transport: started at beat 0 at 0.37 s it turns on there and flips {aft0} s later (want 0, 0.25, 0.5); started at beat 2.5 (half a cycle in) it stays off and flips at {aft5} (want 0.25, 0.5, 0.75); within 2 ms",
+       len(aft0) == 3 and len(aft5) == 3 and all(abs(a_ - b_) < 0.002 for a_, b_ in zip(aft0, (0, 0.25, 0.5))) and all(abs(a_ - b_) < 0.002 for a_, b_ in zip(aft5, (0.25, 0.5, 0.75))), (eL0, eL5))
+    # a tempo change while playing (120 to 60 BPM at beat 2): the phase carries on, the half cycle doubles
+    eT_ = lfo_edges(sq_(sync="1/4"), seconds=2.6, events=note(69) + [{"at": 0, "t": "clock", "playing": True, "beat": 0, "tempo": 120}, {"at": 1.0, "t": "clock", "playing": True, "beat": 2, "tempo": 60}])
+    pre_, post_ = [x for x in eT_ if x < 0.99], [x for x in eT_ if x > 0.99]
+    ck(f"Ls. a tempo change while playing keeps the phase: 120 BPM flips every {spacing(pre_) * 1000:.0f} ms, then from beat 2 at 1.0 s at 60 BPM at {[round(x, 3) for x in post_]} (want 1.0, 1.5, 2.0, 2.5, within 2 ms)",
+       abs(spacing(pre_) - 0.25) < 0.001 and len(post_) == 4 and all(abs(a_ - b_) < 0.002 for a_, b_ in zip(post_, (1.0, 1.5, 2.0, 2.5))), eT_)
+    # per voice: restarts at the note, even while the transport plays
+    eV_ = lfo_edges(sq_(sync="1/4", mode="voice"), events=[{"at": 0, "t": "clock", "playing": True, "beat": 0.3, "tempo": 120}, {"at": 0.13, "t": "on", "n": 69, "v": 0.8}])
+    ck(f"Ls. a per-voice synced LFO restarts at its note (0.13 s), not at the bar: edges at {[round(x, 3) for x in eV_[:3]]} (want 0.13, 0.38, 0.63, within 2 ms)",
+       len(eV_) >= 3 and all(abs(a_ - b_) < 0.002 for a_, b_ in zip(eV_[:3], (0.13, 0.38, 0.63))), eV_)
+    # the page: the menu writes the patch, the readout follows the rack tempo, the transport reaches the worklet
+    ui_ = pg.evaluate("""() => { const s = document.getElementById('lfo1Sync'); return { n: s.options.length, v: s.value, hz: document.getElementById('lfo1Hz').textContent,
+      vis: !!s.offsetParent, lab: s.getAttribute('aria-label') }; }""")
+    ck(f"Ls. each LFO section has a sync menu (17 choices, off first) reading free ({ui_})", ui_ == {"n": 17, "v": "off", "hz": "free", "vis": True, "lab": "LFO 1 tempo sync"}, ui_)
+    pg.select_option("#lfo1Sync", "1/8"); pg.evaluate("__synth.transport().setTempo(90)"); pg.wait_for_timeout(150)
+    ui1_ = pg.evaluate("""() => ({ sync: __synth.patch().lfo1.sync, hz: document.getElementById('lfo1Hz').textContent, dim: document.querySelector('#kLfo [data-path="lfo1.rate"]').style.opacity,
+      on: document.getElementById('lfo1Sync').parentNode.classList.contains('on') })""")
+    ck(f"Ls. picking 1/8 writes the patch, dims the rate knob and reads 3.00 Hz at 90 BPM ({ui1_})", ui1_ == {"sync": "1/8", "hz": "3.00 Hz at 90 BPM", "dim": "0.45", "on": True}, ui1_)
+    clk_ = pg.evaluate("""async () => { const T = __synth.transport(), E = __synth.engine(); T.locate(0); T.play();
+      await new Promise(r => setTimeout(r, 700)); const m = E.meters.filament, s = T.state();
+      const out = { tempo: m.clk.tempo, playing: m.clk.playing, beat: m.clk.beat, lfo: m.lfo[0], tb: s.beat, frame: m.clk.frame, now: Math.round(E.ctx.currentTime * E.ctx.sampleRate), sr: E.ctx.sampleRate };
+      T.stop(); await new Promise(r => setTimeout(r, 150)); out.stopped = E.meters.filament.clk.playing;
+      T.locate(3); await new Promise(r => setTimeout(r, 150)); out.located = E.meters.filament.clk.beat; T.stop(); T.setTempo(120); return out; }""")
+    # the transport's beat at the worklet's meter frame, from the main thread's clock
+    tb_at = clk_["tb"] - (clk_["now"] - clk_["frame"]) / clk_["sr"] * 90 / 60
+    ck(f"Ls. the rack transport reaches the worklet: playing at 90 BPM, its beat {clk_['beat']:.4f} matches the transport's {tb_at:.4f} at that frame (within 0.01), LFO 1's phase {clk_['lfo']:.5f} is the beat in eighths ({(clk_['beat'] / 0.5) % 1:.5f}, within 1e-6); stop and locate reach it too",
+       clk_["tempo"] == 90 and clk_["playing"] and clk_["beat"] > 0.2 and abs(clk_["beat"] - tb_at) < 0.01 and min(abs(clk_["lfo"] - (clk_["beat"] / 0.5) % 1), 1 - abs(clk_["lfo"] - (clk_["beat"] / 0.5) % 1)) < 1e-6
+       and clk_["stopped"] is False and abs(clk_["located"] - 3) < 1e-9, clk_)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(250)
+    ui2_ = pg.evaluate("() => ({ sync: __synth.patch().lfo1.sync, v: document.getElementById('lfo1Sync').value, hz: document.getElementById('lfo1Hz').textContent })")
+    ck(f"Ls. a reload keeps the sync and the menu shows it ({ui2_})", ui2_["sync"] == "1/8" and ui2_["v"] == "1/8" and ui2_["hz"].endswith("BPM"), ui2_)
+    pg.select_option("#lfo1Sync", "off"); pg.wait_for_timeout(100)
+    ui3_ = pg.evaluate("() => ({ sync: __synth.patch().lfo1.sync, hz: document.getElementById('lfo1Hz').textContent, dim: document.querySelector('#kLfo [data-path=\"lfo1.rate\"]').style.opacity })")
+    ck(f"Ls. back to off: free, and the rate knob is lit again ({ui3_})", ui3_ == {"sync": "off", "hz": "free", "dim": ""}, ui3_)
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Ls. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
         p = patch(osc1={"level": 0}, filt={"model": "valve12", "cutoff": 262, "res": 1, "keytrack": 1, "tube": tube})
@@ -2915,6 +2984,10 @@ with sync_playwright() as pw:
             out: el.filter(e => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth; }).length, sw: document.documentElement.scrollWidth <= innerWidth }; }""")
         ck(f"10. {w}px: the Mod tab shows the mod matrix, eight rows of menus and knobs at 44 px or more inside the screen, with no horizontal scroll ({mmv})",
            mmv == {"vis": True, "rows": 8, "n": 24, "small": 0, "out": 0, "sw": True}, mmv)
+        lsv = ph.evaluate("""() => ['lfo1Sync', 'lfo2Sync'].map(id => { const e = document.getElementById(id); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect();
+          return { vis: !!e.offsetParent, w: Math.round(r.width), h: Math.round(r.height), inside: r.left >= 0 && r.right <= innerWidth }; }).concat([document.documentElement.scrollWidth <= innerWidth])""")
+        ck(f"10. {w}px: the LFO sync menus are 44 px targets inside the screen, with no horizontal scroll ({lsv})",
+           all(x["vis"] and x["w"] >= 44 and x["h"] >= 44 and x["inside"] for x in lsv[:2]) and lsv[2] is True, lsv)
         kk = ph.query_selector('.key.w'); bb = kk.bounding_box()
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")

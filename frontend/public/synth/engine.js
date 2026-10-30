@@ -54,6 +54,12 @@ export async function createEngine(ctx, opts = {}) {
   E.mix.set('cathode', {});
   if (opts.mixer) E.mix.load(opts.mixer);
   E.transport = createTransport(ctx, { tempo: opts.tempo, timeSig: opts.timeSig });
+  // Filament and Cathode read the master clock (tempo, playing, the beat at a frame) for tempo-synced
+  // LFOs. The worklet extrapolates the beat from the frame, so only play, stop, tempo and locate are sent.
+  const clockMsg = () => { const s = E.transport.state(); return { t: 'clock', tempo: s.tempo, playing: s.playing, beat: s.beat, frame: s.frame }; };
+  const postClock = () => { const m = clockMsg(); ['filament', 'cathode'].forEach(d => { if (E.nodes[d]) E.nodes[d].port.postMessage(m); }); };
+  E.transport.subscribe(ev => { if (ev && (ev.type === 'play' || ev.type === 'stop' || ev.type === 'tempo')) postClock(); });
+  { const locate = E.transport.locate; E.transport.locate = b => { const r = locate(b); postClock(); return r; }; }
   E.api = RACK_API;
   // Master bus after the mixer and the output chain:
   // devices → mixer → ensemble/chain → master gain → FX → destination.
@@ -73,7 +79,7 @@ export async function createEngine(ctx, opts = {}) {
     if (E.nodes[dev]) return E.nodes[dev];
     const n = new AudioWorkletNode(ctx, dev, {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device, playing: !!playing },
+      processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device, playing: !!playing, clock: clockMsg() },
     });
     E.mix.attach(dev, n);
     n.port.onmessage = e => {
@@ -166,8 +172,8 @@ export async function createEngine(ctx, opts = {}) {
   E.panic = () => Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' }));
   E.mono = on => { if (E.C) E.C.setMono(!!on); };
 
-  // A device the page and other devices talk to. Subscribing does not change
-  // the voice: Filament and Cathode ignore the clock until something reads it.
+  // A device the page and other devices talk to. Subscribing does not change the voice;
+  // Filament's tempo-synced LFOs get the clock from the engine's clock message, not from here.
   function facade(id) {
     const desc = getDevice(id);
     return {

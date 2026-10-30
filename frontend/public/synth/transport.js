@@ -4,8 +4,9 @@
 // time it falls on so a sequencer can schedule a worklet message at that frame.
 //
 // The musical maths (ticks, bars, seconds) is pure and does not touch the
-// audio graph. Filament and Cathode do not read the clock yet, so their sound
-// does not move when it plays.
+// audio graph. Filament's LFOs follow it when their sync is set to a note value
+// (the engine posts play, stop, tempo and locate to the worklet); with sync off
+// nothing moves when it plays.
 
 export const PPQ = 24;
 export const TEMPO_MIN = 40;

@@ -561,6 +561,10 @@
   .note { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
   /* mod matrix: eight rows of source, destination and amount (as many columns as fit at 420 px, two on a laptop; the full row on a wide screen) */
   .mmx { display: grid; grid-template-columns: 1fr; gap: 4px 16px; margin-top: 4px; }
+  .lsync { align-items: center; flex-wrap: nowrap; min-width: 0; }
+  .lsync select.btn { flex: 0 1 auto; min-width: 0; max-width: 150px; }
+  .lsync .lshz { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .lsync.on .lshz { color: var(--amber); }
   .mmrow { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .mmrow .mmn { flex: 0 0 auto; width: 14px; color: var(--dim); font-size: 11px; text-align: right; }
   .mmrow .mmto { flex: 0 0 auto; color: var(--dim); font-size: 11px; }
@@ -1065,9 +1069,11 @@
         <div class="knobs" id="kFiltB"></div><div class="note" id="filtBNote"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mEnvA"><h3><span class="pilot"></span>Amp envelope</h3><div class="knobs" id="kEnvA"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mEnvF"><h3><span class="pilot"></span>Filter envelope</h3><div class="knobs" id="kEnvF"></div></section>
-      <section class="mod" data-dev="filament" data-tab="mod" id="mLfo"><h3><span class="pilot"></span>LFO 1</h3><div class="chips" data-chips="lfo1.wave"></div><div class="chips" data-chips="lfo1.mode"></div><div class="knobs" id="kLfo"></div></section>
-      <section class="mod" data-dev="filament" data-tab="mod" id="mLfo2"><h3><span class="pilot" id="lfo2Pilot"></span>LFO 2</h3><div class="chips" data-chips="lfo2.wave"></div><div class="chips" data-chips="lfo2.mode"></div><div class="knobs" id="kLfo2"></div>
-        <div class="note">Stereo phase offsets the right side: on tremolo it auto-pans, on cutoff the sweep moves between the speakers.</div></section>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mLfo"><h3><span class="pilot"></span>LFO 1</h3><div class="chips" data-chips="lfo1.wave"></div><div class="chips" data-chips="lfo1.mode"></div>
+        <div class="chips lsync"><span class="cl">sync</span><select class="btn" id="lfo1Sync" aria-label="LFO 1 tempo sync" title="Tempo sync: one LFO cycle lasts this note value at the rack tempo (Rack tab). Off runs at the rate knob."></select><span class="lshz" id="lfo1Hz"></span></div><div class="knobs" id="kLfo"></div></section>
+      <section class="mod" data-dev="filament" data-tab="mod" id="mLfo2"><h3><span class="pilot" id="lfo2Pilot"></span>LFO 2</h3><div class="chips" data-chips="lfo2.wave"></div><div class="chips" data-chips="lfo2.mode"></div>
+        <div class="chips lsync"><span class="cl">sync</span><select class="btn" id="lfo2Sync" aria-label="LFO 2 tempo sync" title="Tempo sync: one LFO cycle lasts this note value at the rack tempo (Rack tab). Off runs at the rate knob."></select><span class="lshz" id="lfo2Hz"></span></div><div class="knobs" id="kLfo2"></div>
+        <div class="note">Stereo phase offsets the right side: on tremolo it auto-pans, on cutoff the sweep moves between the speakers. Sync ties either LFO to the rack tempo; a global synced LFO lines up with the bar while the rack plays.</div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
         <div class="note">Mod wheel and aftertouch come from a MIDI keyboard, or the MOD strip by the keys.</div></section>
@@ -1469,7 +1475,7 @@ import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
 import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
-import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS } from './patches.js';
+import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS, LFO_SYNC, LFO_SYNC_BEATS } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
 import { MIX_CHANNELS, routeTargets, normalizeArmed, normalizeSession, saveSession, loadSession, sessionFileName } from './mixsession.js';
@@ -1640,6 +1646,7 @@ function ensureEngine() {
     mixer: bootProj && bootProj.mixer,
   }).then(e => {
     E = e; E.master.gain.value = masterVol;
+    E.transport.subscribe(lfoSyncClock);          // the LFO sync readouts follow the rack tempo
     // Dekatron joins the mixer and the master clock as soon as the engine exists.
     // Asleep until the rail selects it, so it adds nothing to the other devices.
     const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gleamHost.attach(ctx, null, E)).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => adHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rhumHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E)).then(() => {
@@ -2605,6 +2612,34 @@ K('kLfo2', 'lfo2.pitch', 'vibrato', { min: 0, max: 100, step: 1, fmt: v => Math.
 K('kLfo2', 'lfo2.cutoff', 'cutoff', { min: 0, max: 4, step: 0.01, fmt: v => v.toFixed(2) + 'oct' });
 K('kLfo2', 'lfo2.pw', 'pwm', { min: 0, max: 0.9, step: 0.01, fmt: pct });
 K('kLfo2', 'lfo2.amp', 'tremolo', { min: 0, max: 1, step: 0.01, fmt: pct });
+// LFO tempo sync: a menu per LFO (lfo1.sync, lfo2.sync). Synced, the rate knob dims and the readout
+// gives the rate the rack tempo makes; the worklet takes the tempo from the engine's clock message.
+// (function declarations: afterF() may run before this point in the boot)
+function SYNC_L(v) { return v === 'off' ? 'off' : v.replace(/d$/, ' dotted').replace(/tr$/, ' triplet'); }
+function syncHz(v, bpm) { const b = LFO_SYNC_BEATS[v]; return b ? bpm / 60 / b : 0; }
+function rackTempo() { return E ? E.transport.state().tempo : (bootProj && bootProj.tempo) || 120; }
+['lfo1', 'lfo2'].forEach((l, i) => {
+  const el = $(l + 'Sync');
+  LFO_SYNC.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = SYNC_L(v); el.appendChild(o); });
+  el.addEventListener('change', () => {
+    if (dev !== 'filament') return;
+    if (!undoArmed) rememberUndo();
+    setPath(cur, l + '.sync', el.value); afterChange(l + '.sync'); pushPatch(false);
+  });
+});
+function refreshLfoSync() {
+  if (dev !== 'filament') return;
+  const bpm = rackTempo();
+  ['lfo1', 'lfo2'].forEach(l => {
+    const v = (cur[l] || {}).sync || 'off', el = $(l + 'Sync'), on = v !== 'off', hz = syncHz(v, bpm);
+    if (el.value !== v) el.value = v;
+    el.parentNode.classList.toggle('on', on);
+    $(l + 'Hz').textContent = on ? (hz < 1 ? hz.toFixed(3) : hz.toFixed(2)) + ' Hz at ' + Math.round(bpm) + ' BPM' : 'free';
+    const k = kn(l + '.rate'); if (k) k.k.el.style.opacity = on ? '0.45' : '';
+  });
+}
+// the readout follows the rack tempo (subscribed as soon as the engine exists; see ensureEngine)
+function lfoSyncClock(ev) { if (ev && ev.type === 'tempo') refreshLfoSync(); }
 K('kEns', 'ens.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 K('kSpk', 'out.spkInt', 'intensity', { min: 0, max: 10, step: 0.1 });
 K('kRoom', 'out.rmMix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
@@ -2736,6 +2771,7 @@ function afterF() {
     : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
   const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
   $('lfo2Pilot').classList.toggle('off', !l2on);
+  refreshLfoSync();
   kn('voice.detune').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
   $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube;
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);

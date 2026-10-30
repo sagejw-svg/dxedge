@@ -135,7 +135,7 @@ task can read it).
 | `frontend/public/synth/resnatron-ui.js` | The bay, drag cables, and `createResnatronHost`. `attach` calls `addDevice` |
 | `frontend/public/synth/iris/` | Iris, a camera instrument on its own page. `iris.js` is the patch and the pixel measurements, `iris-dsp.js` the voice, `iris.worklet.js` the processor, `iris-ui.js` the panel |
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
-| `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure |
+| `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure. `engine.js` posts its state (`{t:'clock'}`) to the Filament and Cathode worklets on play, stop, tempo and locate, for tempo-synced LFOs |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, and the graphic EQ's presets, fitting, resampling and live spectrum tap) |
 | `frontend/public/synth/fm/` | Hexode, a vendored six-operator FM page (MIT, Matt Montag). The name on the page is Hexode. See `CHANGES.md` and `THIRD_PARTY_NOTICES.md` |
@@ -297,7 +297,29 @@ task can read it).
       rates and depths, envelope times, glide, detune, filter drive, B balance and the stereo offset as destinations; the right
       side of an LFO for stereo moves (the matrix uses the left side on both); the drawer over the panel the design doc
       describes (tonight it is a section on the Mod tab, like the other modules); and lamps that show each slot moving.
-- [ ] Host clock and transport (one shared tempo the arp and LFO sync read). The clock itself landed with the rack framework on 14 Oct (tempo, play/stop, subscriptions). What remains here is the arp and the LFO sync reading it. Neither reads it yet, so no patch sounds different.
+- [x] Host clock and transport (one shared tempo the arp and LFO sync read) - 30 Oct 2026 (nightly). The clock itself landed with the
+      rack framework on 14 Oct (tempo, play/stop, subscriptions); tonight Filament's two LFOs read it, and the arpeggiator (the next
+      item) will read the same clock message when it is built. New patch fields `lfo1.sync` and `lfo2.sync`: `off` (default, the rate
+      knob as before) or a note value one LFO cycle lasts: 4/1, 2/1, 1/1, 1/2d, 1/2, 1/2tr, 1/4d, 1/4, 1/4tr, 1/8d, 1/8, 1/8tr, 1/16d,
+      1/16, 1/16tr, 1/32 (d dotted, tr triplet; lengths in quarter-note beats in `LFO_SYNC_BEATS`, the worklet's `SYNC_BEATS` matches).
+      Synced, the rate is tempo / 60 / beats (1/4 at 120 BPM is 2 Hz) and the rate knob is ignored and dimmed. A global synced LFO,
+      while the rack transport plays, takes its phase from the transport position (beat / beats), so its cycle starts on the bar;
+      stopped, it runs on at the synced rate from where it was. A per-voice synced LFO restarts at each note, as before, at the synced
+      rate. How it gets there: the engine posts `{t:'clock', tempo, playing, beat, frame}` to the Filament and Cathode nodes on play,
+      stop, tempo and locate (and in `processorOptions` when a node is built); the worklet extrapolates the beat from the frame, so
+      there is one message per change, not per pulse, and no drift (both count the same sample clock). An offline render takes the
+      `tempo` it is given, and a scheduled `clock` event (`at`) can start the transport inside a render (the tests do). The deck's
+      Render WAV now passes the rack tempo. UI: a sync menu in each LFO section (Mod tab) with a readout ("3.00 Hz at 90 BPM", or
+      "free"). The meter message now carries the worklet's clock and both global LFO phases (`clk`, `lfo`), which the tests read.
+      Schema stays v:1; no factory patch uses sync, so nothing sounds different: the seeded Node bench says all 31 earlier cases are
+      bit-identical to origin/main (new case `lfosync`). Measured (test section Ls.): a square tremolo flips every 250.0 ms at 1/4 and
+      120 BPM, 333.3 ms at 90 BPM, 225.0 ms for LFO 2 at a dotted 1/8 and 100 BPM (each within 1 ms; the rate knob sat at 5 Hz);
+      started at beat 0 at 0.37 s the LFO turns on there and flips 0.25 and 0.5 s later, started half a cycle in it flips 0.25 s later;
+      a change from 120 to 60 BPM at beat 2 keeps the phase; a per-voice LFO starts at its note, not the bar; live, the worklet's beat
+      matches the transport's within 0.01 beat and LFO 1's phase is the beat in eighths within 1e-6.
+      Still open from this item (follow-ups): Cathode's MG sync (Cathode gets the clock message but does not read it yet); the song
+      library and file render follow the rack tempo (the deck's file render does not yet scale the tempo by its 50-200% rate); a
+      "retrigger on play" choice for per-voice LFOs; a phase knob so a global synced LFO can start its cycle off the bar.
 - [ ] Arpeggiator: up, down, up-down, random, as played; 1-4 oct; 40-240 BPM; gate, swing, latch
 - [x] Ensemble: BBD chorus I, II, I+II, and a three-phase string ensemble - 13 Oct, stereo round
 - [ ] Tape echo: mono, ping pong, offset; wow and flutter; tube record amp
@@ -1245,6 +1267,7 @@ the rest as listed. The Lattice and Mote palette item waits on James.
   title on each plate (the role) would keep it reachable by hover there.
 
 ## Open items for James
+- Nightly 30 Oct: tempo-synced LFOs (Mod tab, a sync menu in each LFO section; nothing sounds different until you pick a note value). Calls made, any of which can change: (1) the menu runs 4/1 down to 1/32 with dotted and triplet values from 1/2 to 1/16 (16 values); (2) a global synced LFO jumps to the bar's phase when the rack transport starts, so a slow sweep can step at Play (a per-voice one restarts at each note instead); (3) stopped, a synced LFO keeps running at the synced rate rather than freezing; (4) Cathode's MG does not sync yet. Try LFO 1 at 1/8 on tremolo or cutoff with the song library playing.
 - Graphics 29 Oct: Heptode's piano roll and Gleam's touch field look different when idle. Before: Heptode's roll was a blank dark box with no song, and on a desktop it stayed blank even with a song playing (the canvas was four times taller than its window, so the notes were out of sight; phones were fine). Gleam's field was a bare grid. After: the roll shows its notes on a desktop; with no song it shows faint octave lanes and a small dark window reading NO SONG LOADED, drop a .mid file here, or choose a song above, and dragging a file over it lights the lanes amber (RELEASE TO LOAD). Gleam's untouched field shows a slowly breathing amber ring with TOUCH TO PLAY and "each finger is a voice; slide to bend", and names its axes on the edges (low, pitch, high; soft to bright); it fades the moment anything sounds and returns after 1.2 s of quiet (room and effect modes say what they do instead). Say if the Gleam hint should be smaller, shorter, or only shown once per visit. No audio change.
 - Nightly 29 Oct: the mod matrix is on the Mod tab (8 slots, all off; nothing sounds different). Two calls: (1) the design doc puts it in a drawer that opens over the panel; tonight it is a section like the others (the full row on a wide screen). Say if you want the drawer. (2) The design doc lists a third, free envelope as a source; the matrix has the amp and filter envelopes only for now. Say if you want the free envelope next, ahead of the host clock item.
 - Nightly 28 Oct: the live filter response plot is in the Filter section (Filter tab). Nothing sounds different. Two calls: (1) the curve is the small-signal response (what a quiet note hears); drive and loud notes bend the real filter, and the plot does not show that yet. Say if you want a drive-aware curve, at the cost of more CPU per redraw. (2) With a stereo offset the plot draws the centre, not the two sides; say if you want the left and right curves drawn faintly. Also open as a follow-up: dragging on the plot to set cutoff and resonance.

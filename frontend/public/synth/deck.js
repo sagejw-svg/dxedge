@@ -291,6 +291,7 @@ export function createDeck(api) {
       master: api.master ? api.master() : null,      // the master bus you hear (delay, reverb, comp)
       events: ev.map(e => Object.assign({ at: e.time / rate, dev: e.dev }, e.m)).filter(e => e.at < MAX_S),
       seconds: Math.min(MAX_S, len + 2), capped: len + 2 > MAX_S, sampleRate: 48000,
+      tempo: api.engine() ? api.engine().transport.state().tempo : undefined,   // tempo-synced LFOs
     };
   }
   async function renderWav() {

@@ -13,6 +13,12 @@ export const SCHEMA = 1;
 export const MOD_SRC = ['off', 'envA', 'envF', 'lfo1', 'lfo2', 'vel', 'key', 'wheel', 'at', 'rand'];
 export const MOD_DST = ['off', 'pitch', 'pitch2', 'pw', 'fm', 'ring', 'lvl1', 'lvl2', 'lvlS', 'lvlN', 'drive', 'cut', 'res', 'morph', 'cutB', 'resB', 'amp', 'pan'];
 export const MOD_SLOTS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
+// LFO tempo sync: 'off', or the note value one LFO cycle lasts, slowest first ('d' dotted, 'tr' triplet).
+// LFO_SYNC_BEATS is that length in quarter-note beats; voice.worklet.js carries the same table (SYNC_BEATS)
+// and the suite checks they match. A synced LFO runs at tempo / 60 / beats Hz from the rack's master clock.
+export const LFO_SYNC_BEATS = { '4/1': 16, '2/1': 8, '1/1': 4, '1/2d': 3, '1/2': 2, '1/2tr': 4 / 3, '1/4d': 1.5, '1/4': 1, '1/4tr': 2 / 3,
+  '1/8d': 0.75, '1/8': 0.5, '1/8tr': 1 / 3, '1/16d': 0.375, '1/16': 0.25, '1/16tr': 1 / 6, '1/32': 0.125 };
+export const LFO_SYNC = ['off'].concat(Object.keys(LFO_SYNC_BEATS));
 const modSlots = () => Object.fromEntries(MOD_SLOTS.map(k => [k, { src: 'off', dst: 'off', amt: 0 }]));
 
 export const DEFAULT = {
@@ -30,8 +36,9 @@ export const DEFAULT = {
   filtB: { route: 'off', model: 'svf12', cutoff: 2000, res: 0, keytrack: 0.5, env: 0, morph: 0, bal: 0 },
   envA: { a: 0.005, d: 0.4, s: 0.8, r: 0.4, vel: 0.5 },
   envF: { a: 0.005, d: 0.5, s: 0.3, r: 0.4 },
-  lfo1: { wave: 'sine', rate: 5, delay: 0, mode: 'global', phase: 0, pitch: 0, cutoff: 0, pw: 0, amp: 0 },
-  lfo2: { wave: 'tri', rate: 0.2, delay: 0, mode: 'global', phase: 0, pitch: 0, cutoff: 0, pw: 0, amp: 0, pan: 0 },
+  // sync 'off' runs at rate (Hz); a note value (LFO_SYNC) runs from the rack tempo instead and ignores rate
+  lfo1: { wave: 'sine', rate: 5, delay: 0, mode: 'global', phase: 0, pitch: 0, cutoff: 0, pw: 0, amp: 0, sync: 'off' },
+  lfo2: { wave: 'tri', rate: 0.2, delay: 0, mode: 'global', phase: 0, pitch: 0, cutoff: 0, pw: 0, amp: 0, pan: 0, sync: 'off' },
   voice: { mode: 'poly', count: 8, glide: 0, bend: 2, level: 0.8, unison: 1, detune: 12 },
   mw: { vib: 30, cut: 0 },   // mod wheel: vibrato depth (cents), cutoff (octaves)
   at: { vib: 0, cut: 1 },    // aftertouch: vibrato depth (cents), cutoff (octaves)
@@ -97,6 +104,7 @@ export const ENUMS = {
   'filt.tube': ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'],
   'lfo1.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo1.mode': ['global', 'voice'],
   'lfo2.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo2.mode': ['global', 'voice'],
+  'lfo1.sync': LFO_SYNC, 'lfo2.sync': LFO_SYNC,
   'ens.mode': ['I', 'II', 'I+II', 'strings'],
   'voice.mode': ['poly', 'mono', 'legato'],
   'stereo.pan': ['center', 'alt', 'key', 'random'],
