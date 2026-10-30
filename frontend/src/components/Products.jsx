@@ -384,7 +384,7 @@ const PRODUCTS = [
     tagline: 'The definitive amateur radio reference',
     description: 'The ARRL Handbook has been the bible of amateur radio since 1926. Covers everything from basic electronics theory to advanced antenna design, digital modes, and station building. No ham shack bookshelf is complete without it.',
     price: '$50',
-    link: 'https://www.arrl.org/arrl-handbook-for-radio-communications',
+    link: 'https://handbook.arrl.org/',
     badge: 'Essential Reference',
     badgeColor: '#00ff9d',
     specs: ['1400+ pages', 'Annual edition', 'Circuit diagrams', 'Digital download available'],
