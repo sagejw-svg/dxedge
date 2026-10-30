@@ -3333,6 +3333,37 @@ with sync_playwright() as pw:
     ck("R. tempo clamps to 40..240", pure["tempo"] == 40, pure["tempo"])
     ck("R. centre pan is unity and a hard right pan drops the left", abs(pure["balL"] - 1) < 1e-12 and abs(pure["balR"] - 1) < 1e-12 and abs(pure["hard"]) < 1e-12 and abs(pure["half"] - 0.7071067811865476) < 1e-9, pure)
     ck("R. Filament and Cathode publish the device contract", pure["api"] == "dxrack/1" and pure["outs"] == 1 and pure["midi"] and pure["cut"] == 1800 and pure["nParam"] > 40 and pure["catWave"] == "choice" and "saw" in pure["catChoices"] and {"filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote"} <= set(pure["both"]), pure)
+    # Parameter types (30 Oct): the int list is explicit per device. Until then parameterTable guessed
+    # from the numbers, so a -1..1 amount at 0 read as int and Pentagrid's 5..40 wpm as float.
+    ptypes = pg.evaluate("""async () => {
+      const d = await import('/synth/device.js');
+      const out = {}, bad = [];
+      for (const x of d.listDevices()) {
+        const P = x.parameters || {};
+        out[x.id] = {};
+        for (const k of Object.keys(P)) {
+          const i = P[k];
+          if (i.type === 'int' || i.type === 'float') out[x.id][k] = i.type;
+          if (i.type === 'int' && ![i.default, i.min, i.max].every(Number.isInteger)) bad.push(x.id + ':' + k);
+        }
+      }
+      return { out, bad };
+    }""")
+    PT_WANT = {
+      "filament": {"osc1.semi": "int", "osc2.oct": "int", "voice.count": "int", "voice.bend": "int", "out.eqBands": "int",
+                   "mod.s1.amt": "float", "filtB.bal": "float", "mw.cut": "float", "osc2.fm": "float", "v1.drive": "float"},
+      "cathode": {"vco2.semi": "int", "ctl.bend": "int", "hpf.a": "float", "drift": "float"},
+      "thyratron": {"tune": "int", "bend": "int", "osc1.tune": "float", "mod.pitch": "float"},
+      "pentagrid": {"wpm": "int", "seed": "int", "air": "float"},
+      "resnatron": {"vco1.oct": "int", "vco1.fine": "float", "vca.level": "float"},
+      "trochotron": {"depth": "int", "seed": "int", "cy": "float"},
+      "geissler": {"capReed": "int", "seed": "int", "birth": "float"},
+      "additron": {"morph": "float"},
+    }
+    pt_miss = [f"{dv}:{k}={ptypes['out'].get(dv, {}).get(k)}" for dv, kv in PT_WANT.items() for k, t in kv.items()
+               if ptypes["out"].get(dv, {}).get(k) != t]
+    ck("R. parameter tables: whole-number knobs are int, amounts and levels are float, every int is whole at both ends",
+       not pt_miss and not ptypes["bad"], {"wrong": pt_miss, "notWhole": ptypes["bad"]})
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
@@ -5825,7 +5856,7 @@ with sync_playwright() as pw:
     ck("Fr. Trochotron publishes a stereo MIDI dxrack/1 device",
        devf["id"] == "trochotron" and devf["api"] == "dxrack/1" and devf["inst"] and devf["outs"] == 1 and devf["midi"]
        and devf["proc"] == "trochotron" and devf["worklet"] == "trochotron.worklet.js" and devf["ch"] == 2
-       and devf["name"] == "Trochotron" and devf["seed"] == "float"
+       and devf["name"] == "Trochotron" and devf["seed"] == "int"
        and all(g in (devf["gen"] or []) for g in ("lsystem", "mandelbrot", "julia", "logistic", "lorenz", "thue")), devf)
     seed = {"device": "trochotron", "seed": 42, "generator": "mandelbrot", "depth": 3, "scale": "dorian", "key": 2, "tempo": 108, "density": 0.4, "chaos": 0.35, "voices": 3, "zoom": 1, "cx": -0.6, "cy": 0}
     one = tr_notes(seed)
@@ -5965,7 +5996,7 @@ with sync_playwright() as pw:
        devy["id"] == "gyrotron" and devy["name"] == "Gyrotron" and devy["api"] == "dxrack/1" and devy["inst"]
        and devy["outs"] == 1 and devy["midiIn"] and devy["midiOut"] and devy["proc"] == "gyrotron"
        and devy["worklet"] == "gyrotron.worklet.js" and devy["ch"] == 2 and devy["over"] == 1
-       and devy["seed"] == 1701 and devy["seedType"] == "float" and devy["bodies"] == "int" and devy["gravity"] == "float"
+       and devy["seed"] == 1701 and devy["seedType"] == "int" and devy["bodies"] == "int" and devy["gravity"] == "float"
        and "penta" in (devy["scale"] or []) and "free" in (devy["scale"] or []),
        devy)
     sky = {"device": "gyrotron", "seed": 1701, "running": True}

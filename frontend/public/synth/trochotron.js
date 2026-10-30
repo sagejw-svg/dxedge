@@ -96,7 +96,8 @@ const RANGE = {
   ji: [-2, 2],
 };
 
-export const TROCHO_PARAMETERS = parameterTable(TROCHO_DEFAULT, RANGE, ENUMS);
+// whole numbers: the ones normalizeTrochotron floors or truncates
+export const TROCHO_PARAMETERS = parameterTable(TROCHO_DEFAULT, RANGE, ENUMS, ['seed', 'depth', 'key', 'voices']);
 
 export const trochotronDevice = {
   id: TROCHO_ID,

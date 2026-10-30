@@ -276,7 +276,8 @@ const RANGE = {
   pitch: [-24, 24],
 };
 
-export const PHANTA_PARAMETERS = parameterTable(PHANTA_DEFAULT, RANGE, ENUMS);
+// whole numbers: the seed and the bit depth (the normalizer floors and rounds them); loop is 0..1
+export const PHANTA_PARAMETERS = parameterTable(PHANTA_DEFAULT, RANGE, ENUMS, ['seed', 'bits']);
 
 export const phantastronDevice = {
   id: PHANTA_ID,

@@ -85,9 +85,10 @@ const ENUMS = {
   route: ROUTES.slice(),
 };
 
+// whole numbers: the ones normalizeCore rounds (gyrotron-world.js)
 export const GYRO_PARAMETERS = parameterTable(Object.assign({
   v: GYRO_SCHEMA, device: GYRO_ID, name: 'Copper Orbit', cat: 'Orbit',
-}, GYRO_CORE), CORE_RANGE, ENUMS);
+}, GYRO_CORE), CORE_RANGE, ENUMS, ['seed', 'bodyCount', 'wellCount', 'root', 'key', 'voices']);
 
 export function midiOf(patch, seconds) {
   const run = runWorld(patch || {}, seconds || 4);

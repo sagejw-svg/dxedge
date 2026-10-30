@@ -157,7 +157,8 @@ const RANGE = {
   'grain.spread': GRAIN_RANGE.spread,
 };
 
-export const KLY_PARAMETERS = parameterTable(KLY_DEFAULT, RANGE, ENUMS);
+// no whole-number parameters
+export const KLY_PARAMETERS = parameterTable(KLY_DEFAULT, RANGE, ENUMS, []);
 
 export const klystronDevice = {
   id: KLY_ID,

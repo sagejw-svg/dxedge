@@ -25,9 +25,14 @@ const registry = new Map();
 
 const SKIP = { v: 1, name: 1, cat: 1, device: 1, cables: 1 };
 
-// Build the parameter table from a patch's defaults, ranges and enums.
-export function parameterTable(defaults, range, enums) {
-  const info = {};
+// Build the parameter table from a patch's defaults, ranges and enums. `ints` lists the paths whose
+// value is always a whole number (the device's normalizer rounds it, or its control steps in whole
+// units and rounds); every other number is a float. Until 30 Oct 2026 the type was guessed from the
+// numbers (whole default and ends, span 32 or less), which called a -1..1 amount at 0 an int and a
+// 5..40 wpm a float. A device whose patch carries the shared output stage (`out`) lists
+// 'out.eqBands' (10 or 31 bands).
+export function parameterTable(defaults, range, enums, ints) {
+  const info = {}, whole = new Set(ints || []);
   (function walk(obj, prefix) {
     Object.keys(obj).forEach(k => {
       if (!prefix && SKIP[k]) return;
@@ -50,8 +55,7 @@ export function parameterTable(defaults, range, enums) {
       }
       if (typeof v === 'number') {
         const min = span ? span[0] : v, max = span ? span[1] : v;
-        const int = !!(span && Number.isInteger(min) && Number.isInteger(max) && Number.isInteger(v) && max - min >= 1 && max - min <= 32);
-        info[path] = { id: path, label: path, type: int ? 'int' : 'float', default: v, min, max };
+        info[path] = { id: path, label: path, type: whole.has(path) ? 'int' : 'float', default: v, min, max };
       }
     });
   })(defaults, '');
@@ -79,7 +83,9 @@ registerDevice({
   description: 'Polyphonic tube synthesizer',
   instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true, midiOutput: false,
   processor: 'filament',
-  parameters: parameterTable(DEFAULT, RANGE, ENUMS),
+  // whole numbers: the knobs that round (index.html, `round: true`), the sub's octave chips, the EQ's bands
+  parameters: parameterTable(DEFAULT, RANGE, ENUMS, ['osc1.oct', 'osc1.semi', 'osc2.oct', 'osc2.semi', 'sub.oct',
+    'voice.count', 'voice.unison', 'voice.bend', 'out.eqBands']),
 });
 
 registerDevice({
@@ -87,7 +93,7 @@ registerDevice({
   description: 'Mono semi-modular synthesizer',
   instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true, midiOutput: false,
   processor: 'cathode',
-  parameters: parameterTable(C_DEFAULT, C_RANGE, C_ENUMS),
+  parameters: parameterTable(C_DEFAULT, C_RANGE, C_ENUMS, ['vco2.semi', 'ctl.bend', 'out.eqBands']),
 });
 
 registerDevice({
@@ -96,7 +102,8 @@ registerDevice({
   instrument: true, audioInputs: 0, audioOutputs: 1, midiInput: true, midiOutput: false,
   processor: 'thyratron', worklet: 'thyratron.worklet.js', channels: 2, oversample: 2,
   messages: ['patch', 'on', 'off', 'bend', 'mw', 'sus', 'panic', 'active'],
-  parameters: parameterTable(THY_DEFAULT, THY_RANGE, THY_ENUMS),
+  // tune and bend: the panel rounds knobs that step by 1 (thyratron-ui.js); the normalizer rounds bend too
+  parameters: parameterTable(THY_DEFAULT, THY_RANGE, THY_ENUMS, ['tune', 'bend']),
   normalize: normalizeThy,
 });
 

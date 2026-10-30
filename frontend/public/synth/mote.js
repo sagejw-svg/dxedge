@@ -152,7 +152,8 @@ const RANGE = {
   'tail.mix': TAIL_RANGE.mix,
 };
 
-export const MOTE_PARAMETERS = parameterTable(MOTE_DEFAULT, RANGE, ENUMS);
+// whole numbers: only the shared output stage's EQ bands
+export const MOTE_PARAMETERS = parameterTable(MOTE_DEFAULT, RANGE, ENUMS, ['out.eqBands']);
 
 // Shipped sources. Generated for this project and dedicated CC0. See sources/README.md.
 export const MOTE_FILES = [

@@ -244,7 +244,7 @@ export const DRUM_FACTORY = [
 
 // dxrack/1 parameter info. Same ids as DRUM_PARAMETERS. A choice or boolean would
 // carry min/max as an index; every Dekatron knob is a number. Length is an int
-// (the span is small and whole); the rest are floats, matching parameterTable.
+// (whole steps); the rest are floats. Like parameterTable, the int list is explicit.
 const INT_PARAM = { 'seq.length': 1 };
 export const DRUM_PARAMETER_INFO = {};
 DRUM_PARAMETERS.forEach(p => {

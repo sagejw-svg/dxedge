@@ -91,7 +91,8 @@ const ENUMS = {
   exciter: EXCITERS.slice(),
 };
 
-export const RHUM_PARAMETERS = parameterTable(RHUM_DEFAULT, RANGE, ENUMS);
+// no whole-number parameters
+export const RHUM_PARAMETERS = parameterTable(RHUM_DEFAULT, RANGE, ENUMS, []);
 
 export const rhumbatronDevice = {
   id: RHUM_ID,

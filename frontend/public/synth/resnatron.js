@@ -282,16 +282,18 @@ export function parseShare(text) {
 
 const ENUMS = {};
 const RANGE = { level: [0, 1] };
+const INTS = [];     // the spec's own 'int' params (the octaves): the panel and the normalizer round them
 RN_ORDER.forEach(id => {
   Object.keys(RN_SPEC[id].params).forEach(k => {
     const meta = RN_SPEC[id].params[k];
     const path = id + '.' + k;
     if (meta.type === 'choice') ENUMS[path] = meta.choices.slice();
     else if (meta.type !== 'bool') RANGE[path] = [meta.min, meta.max];
+    if (meta.type === 'int') INTS.push(path);
   });
 });
 
-export const RN_PARAMETERS = parameterTable(RN_DEFAULT, RANGE, ENUMS);
+export const RN_PARAMETERS = parameterTable(RN_DEFAULT, RANGE, ENUMS, INTS);
 
 export const resnatronDevice = {
   id: RN_ID,

@@ -280,7 +280,8 @@ const RANGE = {
   'fx.chorus': [0, 1],
 };
 
-export const HEPTODE_PARAMETERS = parameterTable(HEPTODE_DEFAULT, RANGE, ENUMS);
+// whole numbers: the voice count and the live channel (normalizeHeptode truncates both), the EQ's bands
+export const HEPTODE_PARAMETERS = parameterTable(HEPTODE_DEFAULT, RANGE, ENUMS, ['poly', 'live', 'out.eqBands']);
 
 export const heptodeDevice = {
   id: HEPTODE_ID,

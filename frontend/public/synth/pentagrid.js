@@ -274,7 +274,8 @@ export function stationNear(khz) {
   return best && dist < 40 ? best : null;
 }
 
-const PENTA_PARAMETERS = parameterTable(PENTA_DEFAULT, PENTA_RANGE, PENTA_ENUMS);
+// whole numbers: Morse speed and the seed (normalizePentagrid rounds both); air is a 0..1 level
+const PENTA_PARAMETERS = parameterTable(PENTA_DEFAULT, PENTA_RANGE, PENTA_ENUMS, ['wpm', 'seed']);
 
 export const pentagridDevice = {
   id: PENTA_ID,

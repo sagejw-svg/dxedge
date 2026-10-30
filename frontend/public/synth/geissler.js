@@ -104,9 +104,10 @@ const ENUMS = {
   routeFlicker: ROUTES.slice(),
 };
 
+// whole numbers: the ones normalizeCore rounds (geissler-world.js)
 export const GEISSLER_PARAMETERS = parameterTable(Object.assign({
   v: GEISSLER_SCHEMA, device: GEISSLER_ID, name: 'Glass Meadow', cat: 'Field',
-}, GEISSLER_CORE), CORE_RANGE, ENUMS);
+}, GEISSLER_CORE), CORE_RANGE, ENUMS, ['seed', 'cap', 'capReed', 'capGraze', 'capStalk', 'capFlicker', 'root', 'tempo', 'voices', 'season']);
 
 export const geisslerDevice = {
   id: GEISSLER_ID,

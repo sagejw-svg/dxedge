@@ -149,7 +149,8 @@ const ENUMS = {
   brush: BRUSHES.slice(),
 };
 
-export const ORTH_PARAMETERS = parameterTable(ORTH_DEFAULT, RANGE, ENUMS);
+// whole numbers: the root note (normalizeOrthicon rounds it), the EQ's bands
+export const ORTH_PARAMETERS = parameterTable(ORTH_DEFAULT, RANGE, ENUMS, ['root', 'out.eqBands']);
 
 export const orthiconDevice = {
   id: ORTH_ID,

@@ -230,7 +230,8 @@ const ENUMS = {
   percHarm: PERC.slice(),
 };
 
-export const AD_PARAMETERS = parameterTable(AD_DEFAULT, RANGE, ENUMS);
+// no whole-number parameters
+export const AD_PARAMETERS = parameterTable(AD_DEFAULT, RANGE, ENUMS, []);
 
 export const additronDevice = {
   id: AD_ID,
