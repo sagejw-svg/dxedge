@@ -3728,6 +3728,7 @@ player = createPlayer({
   patchOf: d => (d === dev ? cur : DS[d].cur),
   devices: () => listDevices(),
   lit: n => paintKey(n, false),
+  wakeDevice: id => wakeDevice(id), sleepDevice: id => sleepDevice(id),
   // A library song can name a factory preset per device. An unknown name is skipped.
   // Dekatron's pattern is its own patch, so it goes to the drum host rather than
   // the synth setPatch (that would treat the pattern as a Filament patch).

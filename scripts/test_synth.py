@@ -4136,6 +4136,38 @@ with sync_playwright() as pw:
     hp.evaluate("window.__release()"); hp.wait_for_timeout(300)
     ck("P. no page errors with a late device", not herr, herr)
     hctx.close()
+    # Review R1030-1 and R1030-2, in a fresh page so no device has been on the rail yet.
+    # R1030-1: a channel routed to a hosted device off the rail (Lattice, Resnatron) played
+    # nothing, because the player woke only Filament and Cathode (strip peak 0 before the fix).
+    # R1030-2: after a song with hits on Dekatron, the stop's panic stayed queued for the next
+    # play and disarmed the step pattern the same transport event had just armed.
+    wctx = b.new_context(viewport={"width": 1366, "height": 900})
+    wp = wctx.new_page(); werr = []; wp.on("pageerror", lambda e: werr.append(str(e)))
+    wp.goto(BASE); wp.wait_for_function("window.__synth && __synth.ready() && __synth.player().ready()", timeout=20000)
+    wp.mouse.click(5, 5)
+    wp.wait_for_function("__synth.booted()", timeout=40000)
+    wp.evaluate("""async () => { await __synth.player().loadId('dx-dock-lamp'); await __synth.engine().ctx.resume(); }""")
+    woke = {}
+    for d in ("lattice", "resnatron"):
+        wp.evaluate("d => { [1, 2, 3].forEach(c => __synth.player().route(c, d)); __synth.player().play(); }", d)
+        woke[d] = wp.evaluate("""async d => { let mx = 0; for (let i = 0; i < 40; i++) { await new Promise(r => setTimeout(r, 50));
+          mx = Math.max(mx, __synth.stripMeters()[d] || 0); } return mx; }""", d)
+        wp.evaluate("__synth.player().stop()"); wp.wait_for_timeout(400)
+    woke["rail"] = wp.evaluate("__synth.device()")
+    ck("P. a channel routed to Lattice or Resnatron off the rail sounds (review R1030-1)",
+       woke["rail"] == "filament" and woke["lattice"] > 0.02 and woke["resnatron"] > 0.02, woke)
+    wp.evaluate("""async () => { await __synth.player().loadId('joplin-the-entertainer'); }""")
+    drum = {"ch10": wp.evaluate("__synth.player().routing()['10']")}
+    wp.evaluate("__synth.player().play()"); wp.wait_for_timeout(1000)
+    drum["first"] = wp.evaluate("__synth.drumMeter().playing")
+    wp.evaluate("__synth.player().stop()"); wp.wait_for_timeout(300)
+    wp.evaluate("__synth.player().play()"); wp.wait_for_timeout(700)
+    drum["again"] = wp.evaluate("__synth.drumMeter().playing")
+    wp.evaluate("__synth.player().stop()"); wp.wait_for_timeout(200)
+    ck("P. Dekatron's pattern still follows the transport after a song with drum hits (review R1030-2)",
+       drum["ch10"] == "dekatron" and drum["first"] and drum["again"], drum)
+    ck("P. no page errors waking hosted devices from the library", not werr, werr)
+    wctx.close()
 
     pg.evaluate("""async () => { await __synth.player().loadId('chopin-funeral-march'); }""")
     pg.wait_for_timeout(40)

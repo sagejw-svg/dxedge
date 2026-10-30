@@ -22,7 +22,7 @@ export function createPlayer(api) {
   let loadToken = 0;
   let playing = false, timer = 0, idx = 0, anchor = null, pendingTempo = null, schedBeat = 0;
   let unsub = null;
-  const sounding = {}, touched = {};
+  const sounding = {}, touched = {}, woken = new Set();
   const lit = new Map(), timeouts = new Set();
 
   function targets() {
@@ -102,8 +102,10 @@ export function createPlayer(api) {
         E.sendTo(d, { t: 'at', v: 0 });
         E.playing(d, false);
       } else if (d === 'dekatron') {
+        // Only after this player sent it hits. A panic also disarms the step pattern, and at a
+        // play the pattern has just been armed by the same transport event (review R1030-2).
         const node = E.nodes.dekatron;
-        if (node && node.port) node.port.postMessage({ t: 'panic' });
+        if (touched[d].size && node && node.port) node.port.postMessage({ t: 'panic' });
       } else if (E.devices[d]) {
         touched[d].forEach(n => E.devices[d].midi({ t: 'off', n }));
         E.devices[d].midi({ t: 'sus', on: false });
@@ -121,8 +123,15 @@ export function createPlayer(api) {
       if (d === 'filament' || d === 'cathode') {
         if (d !== api.dev()) { const p = api.patchOf(d); if (p) E.setPatch(p, true); }
         E.playing(d, true);
+      } else if (d !== 'dekatron' && api.wakeDevice) {
+        // A hosted device off the rail sleeps and drops notes (review R1030-1).
+        api.wakeDevice(d); woken.add(d);
       }
     });
+  }
+  function sleepWoken() {
+    if (api.sleepDevice) woken.forEach(d => api.sleepDevice(d));
+    woken.clear();
   }
   function show() {
     const on = !!(song && playing);
@@ -189,7 +198,7 @@ export function createPlayer(api) {
     if (playing) {
       const E = api.engine();
       if (E && E.transport.state().playing) E.transport.stop();
-      else { playing = false; clearInterval(timer); timer = 0; silence(); }
+      else { playing = false; clearInterval(timer); timer = 0; silence(); sleepWoken(); }
     }
     song = next;
     meta = item || { title: fileName || next.name, composer: '' };
@@ -314,7 +323,7 @@ export function createPlayer(api) {
     if (!song) { show(); return; }
     if (ev.type === 'play') startFrom(ev);
     else if (ev.type === 'stop') {
-      playing = false; clearInterval(timer); timer = 0; anchor = null; silence(); show();
+      playing = false; clearInterval(timer); timer = 0; anchor = null; silence(); sleepWoken(); show();
     } else if (ev.type === 'tempo') {
       if (playing) pendingTempo = ev.tempo;
       show();
