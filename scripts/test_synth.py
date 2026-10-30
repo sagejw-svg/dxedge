@@ -7182,6 +7182,58 @@ with sync_playwright() as pw:
     ck("Desk. a phone keeps 44px keys", phone_keys["w"] >= 44 and phone_keys["h"] >= 44 and phone_keys["n"] <= 20, phone_keys)
     ph.close()
 
+    # Hd. the phone header (graphics, 30 Oct): three rows, not four, so the lit panel shows above the keybed on a
+    # 375x667 first screen; the size switch is one slot of four joined keys; a running take's time sits over the
+    # rec key instead of pushing the row down.
+    def _hd_lum(c):
+        c = [v / 255 for v in c]; c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    def _hd_rgb(s):
+        return [float(v) for v in s[s.index("(") + 1:s.index(")")].split(",")[:3]]
+    HD_JS = """() => {
+      const R = s => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) return null; const r = e.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; };
+      const bar = ['#prevP','#patchSel','#nextP','#saveP','#undoBtn','#initBtn','#safeLim','#mastRec','#mastJump','#midiBtn','.top > .sup', ...[...document.querySelectorAll('#uiSize button')].map((_, i) => '#uiSize button:nth-child(' + (i + 1) + ')')];
+      const small = bar.map(s => [s, R(s)]).filter(([s, r]) => r && (r.w < 44 || r.h < 44)).map(([s, r]) => s + ' ' + Math.round(r.w) + 'x' + Math.round(r.h));
+      const keys = [...document.querySelectorAll('#uiSize button')].map(e => e.getBoundingClientRect());
+      const joined = keys.every((k, i) => i === 0 || Math.abs(k.left - keys[i - 1].right) < 0.5);
+      const lit = document.querySelector('#uiSize button[aria-pressed="true"]');
+      return { rec: R('#mastRec'), midi: R('#midiBtn'), size: R('#uiSize'), vol: R('.volab'), top: R('.top'), panel: R('.panel'), keybed: R('.keybed'), chassis: R('#chassis'),
+        small, joined, litBg: lit ? getComputedStyle(lit).backgroundImage : '', sw: document.documentElement.scrollWidth, iw: innerWidth };
+    }"""
+    for hw in (375, 360):
+        hctx = b.new_context(viewport={"width": hw, "height": 667}, is_mobile=True, has_touch=True, device_scale_factor=2)
+        hp = hctx.new_page(); herr = []; hp.on("pageerror", lambda e: herr.append(str(e)))
+        hp.goto(BASE); hp.wait_for_function("window.__synth && __synth.ready()", timeout=20000); hp.wait_for_timeout(300)
+        hd = hp.evaluate(HD_JS)
+        one_row = abs(hd["rec"]["y"] - hd["midi"]["y"]) < 1 and abs(hd["rec"]["y"] - hd["size"]["y"]) < 1 and hd["rec"]["y"] > hd["vol"]["y"] + 20
+        ck(f"Hd. {hw}px: rec, master, MIDI and the size switch share the third header row (header {hd['top']['h']:.0f} px tall)",
+           one_row and hd["top"]["h"] <= 210, hd)
+        ck(f"Hd. {hw}px: the lit panel shows above the keybed on the first screen ({hd['keybed']['y'] - hd['panel']['y']:.0f} px)",
+           hd["keybed"]["y"] - hd["panel"]["y"] >= 40, (hd["panel"], hd["keybed"]))
+        ck(f"Hd. {hw}px: header targets are 44 px, the four size keys are joined, the lit key is amber, no sideways scroll",
+           not hd["small"] and hd["joined"] and "255, 197, 108" in hd["litBg"] and hd["sw"] <= hd["iw"], hd)
+        if hw == 375:
+            hp.evaluate("() => { document.getElementById('mastRec').setAttribute('aria-pressed', 'true'); document.querySelectorAll('[data-rec-time]').forEach(e => { e.textContent = '12:34'; }); }")
+            hp.wait_for_timeout(60)
+            rt = hp.evaluate("""() => { const t = document.getElementById('mastTime'), k = document.getElementById('mastRec');
+              const a = t.getBoundingClientRect(), r = k.getBoundingClientRect(), cs = getComputedStyle(t);
+              return { inside: a.left >= r.left - 0.5 && a.right <= r.right + 0.5 && a.top >= r.top - 0.5 && a.bottom <= r.bottom + 0.5,
+                fits: t.scrollWidth <= t.clientWidth + 1, color: cs.color, bg: cs.backgroundColor, pe: cs.pointerEvents,
+                hit: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === k,
+                midiY: document.getElementById('midiBtn').getBoundingClientRect().top, recY: r.top, chassis: document.getElementById('chassis').getBoundingClientRect().top }; }""")
+            rcon = (_hd_lum(_hd_rgb(rt["color"])) + 0.05) / (_hd_lum(_hd_rgb(rt["bg"])) + 0.05)
+            ck(f"Hd. 375px: a running take's time sits over the rec key, a tap still reaches the key, nothing moves (contrast {rcon:.1f}:1)",
+               rt["inside"] and rt["fits"] and rt["hit"] and rt["pe"] == "none" and abs(rt["midiY"] - rt["recY"]) < 1
+               and abs(rt["chassis"] - hd["chassis"]["y"]) < 1 and rcon >= 4.5, rt)
+            hp.evaluate("() => { document.getElementById('mastRec').setAttribute('aria-pressed', 'false'); document.querySelectorAll('[data-rec-time]').forEach(e => { e.textContent = ''; }); }")
+            hp.screenshot(path=os.path.join(SHOTS, "synth_header_phone.png"))
+        ck(f"Hd. {hw}px: no page errors", not herr, herr)
+        hctx.close()
+    dsk = pg.evaluate(HD_JS)
+    ck("Hd. 1366px: the size switch is one slot of joined keys on the patch row",
+       dsk["joined"] and abs(dsk["size"]["y"] - dsk["midi"]["y"]) < 4 and dsk["size"]["w"] < 200, dsk["size"])
+
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(80)
     ck("Rn. no page errors", not errs, errs)

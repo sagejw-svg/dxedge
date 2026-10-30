@@ -1176,9 +1176,9 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (29 Oct): 1. phone first screen; 2. phone rail and outboard tray scroll cues (one finish, one
-fade); 3. desktop panel blanks and Pentagrid's dial; 4. fader readouts; 5. wide cards for the three slider devices; then
-the rest as listed. The Lattice and Mote palette item waits on James.
+Rank of the open items (30 Oct): 1. phone rail and outboard tray scroll cues (one fade for both); 2. desktop panel blanks
+and Pentagrid's dial; 3. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes); 4. fader
+readouts; 5. wide cards for the three slider devices; then the rest as listed. The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1241,6 +1241,16 @@ the rest as listed. The Lattice and Mote palette item waits on James.
   modes get their own line. The hint fades out as soon as any voice sounds and back after 1.2 s of quiet; with reduced
   motion the ring holds still and the hint switches without a fade. Also on the standalone /synth/gleam/ page. Text
   contrast checked by the suite at 4.5:1 or more (amber title on the readout window and on the field).
+- [x] 30 Oct: phone header, first slice of the phone first screen item. Measured before at 375x667: the header was four
+  rows (patches; volume and limit; rec and master alone on a row, forced by `flex: 1 1 100%`; MIDI and the size keys), 250 px
+  tall, so the lit panel started at 523 px and the keybed at 524 px: 1 px of panel on the first screen. The tip link was
+  34 px tall. Seen: S, M, L and XL were four loose buttons. Now: three rows (patches; volume and limit; rec, master, MIDI and
+  the size switch), 200 px tall; the panel starts at 473 px, so 51 px of it (the first section's name and the top of its
+  controls) shows above the keybed at 375 and 360 px. The size switch is one recessed slot of four joined keys, the lit key
+  amber with a soft glow, on desktop too (148 px wide at 1366, was 188). A running take's time sits over the rec key on a phone
+  (a red lamp and the time, contrast 16.3:1, taps pass through to the key), so starting a take no longer pushes the rack down;
+  the desktop keeps the time beside the key. The tip link is 44 px tall on a phone. Below 354 px the size switch wraps to a
+  fourth row as before. All targets 44 px, no sideways scroll (measured at 320, 360, 375 and 390 px). No audio change.
 - [ ] Desktop panel rows leave blanks (seen 29 Oct at 1366 px): Pentagrid's Dial and Receiver fill the left 60% and the
   right is empty; Heptode's Tracks and Place cards sit at the left of a mostly empty row; Filament's Osc tab leaves the
   last column empty. Pentagrid's dial arc also runs off the top of its window (the 14 mark is cut by the edge).
@@ -1255,9 +1265,11 @@ the rest as listed. The Lattice and Mote palette item waits on James.
   since patches set values without input events) would help (seen).
 - [ ] Rhumbatron, Trochotron and Phantastron slider cards are 228 px wide at 1366 px, so their faders are 81 to 100 px.
   A wide card (`data-wide`) for those sections would double them (measured).
-- [ ] Phone first screen (25 Oct, seen at 375x667 on every device): the header, size chips, rail, outboard links and
-  chassis fill about the top 490 px, and the fixed keybed the bottom 150, so the lit device's own panel shows only a
-  sliver until you scroll. A slimmer phone chassis or a collapsible header would give the panel room.
+- [ ] Phone first screen (25 Oct, seen at 375x667 on every device; partly done 30 Oct): after the header slice the panel
+  shows 51 px above the keybed. The rest of the first screen is the rail (48 px), the outboard tray (52 px), the chassis
+  (99 px) and the tabs (52 px). A slimmer phone chassis (tubes and VU at about 80% height) would give the panel another
+  20 to 30 px; it touches the tube canvases, so it waits for the Tube show item. Also seen: the patch menu is 100 px wide
+  on a 375 px phone ("Wide Nov"), cramped beside six keys.
 - [ ] MIDI deck tempo readout ("100%") is still bare text beside the slider, not in a window like the other readouts (seen).
 - [ ] Phone outboard tray (26 Oct, seen): the only cue that it scrolls is the clipped fourth plate. A soft fade at
   its right edge would say "more this way" without taking height.
