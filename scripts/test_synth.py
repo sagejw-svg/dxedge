@@ -966,10 +966,12 @@ with sync_playwright() as pw:
     def arp_run(arp, events, seconds=1.2, tempo=120, cands=None, extra=None):
         p_ = patch(osc1={"wave": "sine", "level": 0.5}, arp=dict({"on": True}, **arp), **(extra or {}))
         L_, _ = dec(pg.evaluate("a => __synth.render(a)", {"patch": p_, "events": events, "seconds": seconds, "rack": False, "tempo": tempo, "masterFx": False}))
-        # the level as the magnitude of the analytic signal (a sine's is flat, whatever its phase), in 0.5 ms bins
-        X_ = np.fft.fft(L_); h_ = np.zeros(len(L_)); h_[0] = 1; h_[1:(len(L_) + 1) // 2] = 2
-        if len(L_) % 2 == 0: h_[len(L_) // 2] = 1
-        a_env = np.abs(np.fft.ifft(X_ * h_)); w_ = int(SR * 0.0005)
+        # the level as the magnitude of the analytic signal (a sine's is flat, whatever its phase), in 0.5 ms bins.
+        # Zero-padded to twice the length (31 Oct): unpadded, the FFT wraps a note still sounding at the end onto time 0,
+        # and with the oscillator's random start phase the first bin read 0.12 to 0.52 of full level across renders of the
+        # same input, so an edge at 0 came and went (the 1/16 triplet tempo check failed about 1 run in 6). Padded: under 0.16.
+        N_ = 2 * len(L_); X_ = np.fft.fft(L_, N_); h_ = np.zeros(N_); h_[0] = 1; h_[1:N_ // 2] = 2; h_[N_ // 2] = 1
+        a_env = np.abs(np.fft.ifft(X_ * h_))[:len(L_)]; w_ = int(SR * 0.0005)
         env_ = a_env[:len(a_env) // w_ * w_].reshape(-1, w_).mean(axis=1)
         hi_ = env_ > env_.max() * 0.5; d_ = np.diff(hi_.astype(int))
         ups = [round(float(i + 1) * 0.0005, 4) for i in np.where(d_ > 0)[0]]; downs = [round(float(i + 1) * 0.0005, 4) for i in np.where(d_ < 0)[0]]
@@ -4102,6 +4104,74 @@ with sync_playwright() as pw:
        and not rm_["label"]["shown"] and rm_["sw"] <= rm_["iw"] == 375, (rm_["bayDisplay"], rm_["sw"], [(x["d"], x["w"], x["h"]) for x in rm_["bs"]][:4]))
     ck("Rl. no page errors (phone rail)", not rperr, rperr)
     rpx.close()
+
+    # ---------------------------------------------------------------- Sc. phone rail bay and scroll cues (graphics, 31 Oct)
+    # On a phone the rail sits in the outboard tray's recessed bay on brushed plates, and both strips show a fade and a
+    # chevron at the edge that has more to scroll (data-more), gone at the end. The fades take no room and catch no taps.
+    # The rail keeps its lit plate in view, so a device far down the rail shows its lamp.
+    SC_MEAS = """() => {
+      const one = sel => { const el = document.querySelector(sel), r = el.getBoundingClientRect(), c = getComputedStyle(el),
+          a = getComputedStyle(el, '::after'), z = getComputedStyle(el, '::before');
+        const items = [...el.querySelectorAll(sel === '.rail' ? '.devbtn' : '.devlink')];
+        const last = items[items.length - 1].getBoundingClientRect(), first = items[0].getBoundingClientRect();
+        const midY = r.top + r.height / 2, hitR = document.elementFromPoint(r.right - 12, midY), hitL = document.elementFromPoint(r.left + 12, midY);
+        return { more: el.dataset.more || '', x: el.scrollLeft, max: el.scrollWidth - el.clientWidth, bg: c.backgroundImage, shadow: c.boxShadow,
+          after: [a.content, a.opacity, a.pointerEvents, a.position, a.transitionDuration], before: [z.content, z.opacity, z.pointerEvents, z.position],
+          hitR: !!(hitR && hitR.closest(sel === '.rail' ? '.devbtn' : '.devlink')), hitL: !!(hitL && hitL.closest(sel === '.rail' ? '.devbtn' : '.devlink')),
+          lastGap: r.right - parseFloat(c.borderRightWidth) - parseFloat(c.paddingRight) - last.right,
+          firstGap: first.left - (r.left + parseFloat(c.borderLeftWidth) + parseFloat(c.paddingLeft)), h: r.height }; };
+      const rail = document.querySelector('.rail'), lit = rail.querySelector('.devbtn[aria-pressed="true"]'), rr = rail.getBoundingClientRect(), lr = lit.getBoundingClientRect();
+      const unlit = [...rail.querySelectorAll('.devbtn:not([aria-pressed="true"])')].map(b => { const c = getComputedStyle(b); return { color: c.color, bg: c.backgroundImage }; });
+      return { rail: one('.rail'), tray: one('.racklinks'), lit: { d: lit.dataset.d, inView: lr.left >= rr.left - 0.5 && lr.right <= rr.right + 0.5 }, unlit,
+        sw: document.documentElement.scrollWidth, iw: innerWidth };
+    }"""
+    scx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); scp = scx.new_page(); scerr = []
+    scp.on("pageerror", lambda e: scerr.append(str(e)))
+    scp.goto(BASE); scp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); scp.wait_for_timeout(300)
+    s0 = scp.evaluate(SC_MEAS)
+    sc_con = [_ob_con(x["color"], x["bg"]) for x in s0["unlit"]]
+    info("Sc. phone strips", f"rail {s0['rail']['h']:.0f} px tall, scroll {s0['rail']['max']} px; tray scroll {s0['tray']['max']} px")
+    ck(f"Sc. on a 375 px phone the rail is a recessed bay like the outboard tray, unlit plates brushed, names readable (contrast {min(sc_con):.1f}:1 or more)",
+       "gradient" in s0["rail"]["bg"] and "inset" in s0["rail"]["shadow"] and all("gradient" in x["bg"] for x in s0["unlit"]) and min(sc_con) >= 4.5
+       and s0["rail"]["h"] <= 56, (s0["rail"]["bg"][:60], s0["rail"]["shadow"][:60], s0["rail"]["h"], sc_con))
+    ck("Sc. at the start both strips show the right-edge cue only, with a chevron, and the cue catches no taps",
+       all(s0[k]["more"] == "r" and s0[k]["after"][1] == "1" and s0[k]["before"][1] == "0" and "›" in s0[k]["after"][0]
+           and s0[k]["after"][2] == "none" and s0[k]["after"][3] == "sticky" and s0[k]["hitR"] for k in ("rail", "tray"))
+       and abs(s0["rail"]["firstGap"]) <= 1 and abs(s0["tray"]["firstGap"]) <= 1, {k: (s0[k]["more"], s0[k]["after"], s0[k]["hitR"], s0[k]["firstGap"]) for k in ("rail", "tray")})
+    scp.evaluate("document.querySelector('.rail').scrollLeft = 200; document.querySelector('.racklinks').scrollLeft = 100"); scp.wait_for_timeout(250)
+    s1 = scp.evaluate(SC_MEAS)
+    ck("Sc. scrolled part way, both edges show a cue (left chevron too) and taps under either fade reach the plate",
+       all(s1[k]["more"] == "l r" and s1[k]["after"][1] == "1" and s1[k]["before"][1] == "1" and "‹" in s1[k]["before"][0] and s1[k]["hitL"] and s1[k]["hitR"]
+           for k in ("rail", "tray")), {k: (s1[k]["more"], s1[k]["before"], s1[k]["hitL"]) for k in ("rail", "tray")})
+    scp.evaluate("document.querySelector('.rail').scrollLeft = 99999; document.querySelector('.racklinks').scrollLeft = 99999"); scp.wait_for_timeout(250)
+    s2 = scp.evaluate(SC_MEAS)
+    ck("Sc. at the end the right cue goes, and the fades take no room (the last plate ends at the bay's inner edge)",
+       all(s2[k]["more"] == "l" and s2[k]["after"][1] == "0" and abs(s2[k]["lastGap"]) <= 1 for k in ("rail", "tray")),
+       {k: (s2[k]["more"], s2[k]["after"][1], s2[k]["lastGap"]) for k in ("rail", "tray")})
+    scp.evaluate("document.querySelector('.rail').scrollLeft = 0"); scp.wait_for_timeout(150)
+    scp.evaluate("document.getElementById('devS').click()"); scp.wait_for_timeout(400)
+    s3 = scp.evaluate(SC_MEAS)
+    ck("Sc. picking the last device on the rail brings its lit plate into view, and nothing scrolls sideways",
+       s3["lit"]["d"] == "resnatron" and s3["lit"]["inView"] and s3["rail"]["x"] > 0 and s3["sw"] <= s3["iw"] == 375, (s3["lit"], s3["rail"]["x"], s3["sw"]))
+    scp.evaluate("document.getElementById('devF').click()"); scp.wait_for_timeout(400)
+    s4 = scp.evaluate(SC_MEAS)
+    ck("Sc. picking the first device again scrolls back to it and the cues follow", s4["lit"]["d"] == "filament" and s4["lit"]["inView"] and s4["rail"]["more"] == "r",
+       (s4["lit"], s4["rail"]["more"], s4["rail"]["x"]))
+    scp.screenshot(path=os.path.join(SHOTS, "synth_phone_strips.png"))
+    ck("Sc. no page errors (phone strips)", not scerr, scerr)
+    scx.close()
+    scr = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True, reduced_motion="reduce"); scrp = scr.new_page()
+    scrp.goto(BASE); scrp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sr = scrp.evaluate(SC_MEAS)
+    ck("Sc. reduced motion: the cues switch without a fade", all(float(sr[k]["after"][4].split(",")[0].rstrip("s")) == 0 for k in ("rail", "tray")) and sr["rail"]["more"] == "r",
+       {k: sr[k]["after"] for k in ("rail", "tray")})
+    scr.close()
+    scd = b.new_context(viewport={"width": 1366, "height": 1000}); scdp = scd.new_page()
+    scdp.goto(BASE); scdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sd = scdp.evaluate(SC_MEAS)
+    ck("Sc. on a desktop neither strip scrolls, so neither shows a cue", all(sd[k]["more"] == "" and sd[k]["max"] <= 1 and sd[k]["after"][0] == "none" for k in ("rail", "tray")),
+       {k: (sd[k]["more"], sd[k]["max"], sd[k]["after"][0]) for k in ("rail", "tray")})
+    scd.close()
 
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)

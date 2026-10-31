@@ -1224,9 +1224,9 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (30 Oct): 1. phone rail and outboard tray scroll cues (one fade for both); 2. desktop panel blanks
-and Pentagrid's dial; 3. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes); 4. fader
-readouts; 5. wide cards for the three slider devices; then the rest as listed. The Lattice and Mote palette item waits on James.
+Rank of the open items (31 Oct): 1. desktop panel blanks and Pentagrid's dial; 2. phone first screen, the rest (a slimmer phone
+chassis, once the Tube show item closes; the patch menu); 3. fader readouts; 4. wide cards for the three slider devices; 5. the MIDI deck
+tempo readout window; then the rest as listed. The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1299,6 +1299,19 @@ readouts; 5. wide cards for the three slider devices; then the rest as listed. T
   (a red lamp and the time, contrast 16.3:1, taps pass through to the key), so starting a take no longer pushes the rack down;
   the desktop keeps the time beside the key. The tip link is 44 px tall on a phone. Below 354 px the size switch wraps to a
   fourth row as before. All targets 44 px, no sideways scroll (measured at 320, 360, 375 and 390 px). No audio change.
+- [x] 31 Oct: phone rail and outboard tray scroll cues, with the phone rail in a bay (the 26 and 27 Oct phone items). Seen before
+  at 375x667: the rail was loose buttons straight on the panel (lamp low at the left, name pushed right) under the desktop's
+  recessed bays, and the only sign either strip scrolled was a plate clipped at the right edge. Seen and measured before: a
+  device picked from the far end (Resnatron, from a song or a saved project) left the rail at the start, so its lit plate was
+  off screen and nothing on the first screen showed which device the keys played except the title. Now: on a phone the rail
+  sits in the outboard tray's recessed bay, its unlit buttons on the desktop's brushed module plates with the lamp centred
+  (names 6.9:1 measured); both strips draw a fade with a small amber chevron at whichever edge has more (`data-more`, set from
+  the scroll position by a passive scroll listener and a ResizeObserver), and the cue goes at that end. The fades are sticky
+  flex items with negative margins: they take no room (the last plate ends at the bay's inner edge, measured) and catch no
+  taps (`pointer-events: none`; a tap under a fade reaches the plate, measured). Picking a device scrolls the rail just enough
+  to show its lit plate (an instant scroll, no animation). Reduced motion: the cue switches without its 160 ms fade. Desktop
+  unchanged (the rail and tray regions are pixel-identical on all 18 devices, compared). Cost: the chassis and panel sit 4 px
+  lower at 375 px (the lit panel shows 47 px above the keybed, was 51). New checks: Sc. (9).
 - [ ] Desktop panel rows leave blanks (seen 29 Oct at 1366 px): Pentagrid's Dial and Receiver fill the left 60% and the
   right is empty; Heptode's Tracks and Place cards sit at the left of a mostly empty row; Filament's Osc tab leaves the
   last column empty. Pentagrid's dial arc also runs off the top of its window (the 14 mark is cut by the edge).
@@ -1319,14 +1332,11 @@ readouts; 5. wide cards for the three slider devices; then the rest as listed. T
   20 to 30 px; it touches the tube canvases, so it waits for the Tube show item. Also seen: the patch menu is 100 px wide
   on a 375 px phone ("Wide Nov"), cramped beside six keys.
 - [ ] MIDI deck tempo readout ("100%") is still bare text beside the slider, not in a window like the other readouts (seen).
-- [ ] Phone outboard tray (26 Oct, seen): the only cue that it scrolls is the clipped fourth plate. A soft fade at
-  its right edge would say "more this way" without taking height.
-- [ ] Phone rail (27 Oct, seen): still loose buttons on the panel, while the desktop rail and the outboard tray are
-  recessed bays; the same tray finish and a right-edge fade (it scrolls too) would match them. Costs a few px of height.
 - [ ] Rail plates on a 761 to 959 px window (27 Oct, measured): the role drops because the plates are 103 to 136 px; a
   title on each plate (the role) would keep it reachable by hover there.
 
 ## Open items for James
+- Graphics 31 Oct: the device strips on a phone look different. Before: the rail was a row of loose dark buttons on the panel, and neither it nor the outboard row under it showed that it scrolls, except a button cut off at the right edge; a device picked from the far end (Resnatron, say) stayed off screen. After: the rail sits in the same sunken tray as the outboard row, on the brushed plates the desktop uses, and both rows show a dark fade with a small amber chevron at the edge that has more (left, right or both), gone at the end; picking a device slides the rail to show its lit plate. The panel sits 4 px lower on a phone. Desktop unchanged. If the chevrons read as buttons to you, they can go and leave only the fade.
 - Nightly 31 Oct: the arpeggiator (Play tab, Arpeggiator section; off until you switch it on, so nothing sounds different). Calls made, any of which can change: (1) it follows the rack tempo, with no BPM knob of its own; (2) the step menu runs 1/2 to 1/32 with dotted and triplet values (11); (3) with the rack playing, a key waits for the next step on the grid, and stopped, the first note plays with the key; (4) Play does not restart the pattern, it carries on from the note it was on; (5) latch replaces the chord when you press a key with none down; (6) the sustain pedal holds keys you let go; (7) it is Filament only tonight (Cathode is a follow-up). Try a three-note chord at 1/16, up-down over 2 octaves, gate 30%, swing 60%, with the song library playing.
 - Nightly 31 Oct, please listen: Horror Pad and Ghost Choir are slightly narrower. Their mono fold sat at the edge of the 3 dB limit and moved with each render's random phases (measured on main: Horror Pad 2.5 to 2.9 dB over 16 renders, and 3.1 dB in tonight's suite, which failed it; Ghost Choir 2.3 to 3.0 over 10). Stereo width 130 to 115 (Horror Pad) and 140 to 120 (Ghost Choir) brings them to 1.9 to 2.4 and 1.8 to 2.3 dB. Nothing else in either patch changed. Say if you would rather keep the width and trim the ensemble or unison spread instead.
 - Graphics 30 Oct: the header on a phone looks different. Before: four rows of buttons (patches; volume; rec and master alone on a row; MIDI and four loose S, M, L, XL buttons), so at 375x667 the device's own panel did not show at all above the keyboard. After: three rows, with rec, master, MIDI and the size keys on one row, and 51 px of the panel (its first section's name) showing above the keyboard. S, M, L and XL are one dark switch of four joined keys with the lit one amber (desktop too). While recording on a phone, the rec key shows a red lamp and the elapsed time instead of the word rec. Say if you would rather keep the time beside the key, or want the next step (a slimmer phone chassis) after the Tube show closes.
