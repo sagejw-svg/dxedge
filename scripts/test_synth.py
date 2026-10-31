@@ -2186,16 +2186,26 @@ with sync_playwright() as pw:
 
     # ---------------------------------------------------------------- Tv. the tube show (James, 13 Oct)
     # Visual state from __synth.tubeShow(), read in the page while the chassis frame loop runs. Peaks are
-    # sampled inside the page every 8 ms, so the round trips of evaluate() do not hide a 150 ms flare.
+    # sampled inside the page every 8 ms (pk, t1, t3: logged in the check names only). What the checks
+    # assert on comes from the show itself: fires, fired and firedLag, and drawn (the highest flare the
+    # frame loop handed the painter since the tube last fired). The call holds the notes for a.ms and then,
+    # if the frame loop has not caught up, until every tube in a.need has fired and been drawn and the
+    # show clock has run a.after seconds past V1's flare (cap a.cap ms). On a quiet box that is inside
+    # a.ms, so nothing waits longer. Before 31 Oct the call stopped at a.ms whatever the frame loop had
+    # done, and "the flare scales with velocity" failed once late in a suite run: sampled peak 0.00
+    # while the show had recorded the flare. a.wait false (reduced motion, where nothing fires) never waits.
     TV_PEAK = """async (a) => { const S = () => __synth.tubeShow(); await __synth.engine().ctx.resume();
-      const s0 = S(), o0 = s0.onsets; let pk = { v1: 0, v3: 0 }, t1 = -1, t3 = -1; const t0 = performance.now();
+      const need = a.need || ['v1'], after = a.after == null ? 0.12 : a.after, cap = a.cap || 4000;
+      const s0 = S(), o0 = s0.onsets; let pk = { v1: 0, v3: 0 }, t1 = -1, t3 = -1, s = s0; const t0 = performance.now();
+      const done = s => need.every(k => s.fires[k] > s0.fires[k] && s.drawn[k] > 0) && s.fires.v1 > s0.fires.v1 && s.t - s.firedAt.v1 >= after;
       a.notes.forEach(n => __synth.noteOn(n, a.v));
-      while (performance.now() - t0 < a.ms) { const s = S();
+      for (;;) { const el = performance.now() - t0; s = S();
         if (s.flare.v1 > pk.v1) pk.v1 = s.flare.v1; if (s.flare.v3 > pk.v3) pk.v3 = s.flare.v3;
-        if (t1 < 0 && s.flare.v1 > 0.05) t1 = performance.now() - t0; if (t3 < 0 && s.flare.v3 > 0.05) t3 = performance.now() - t0;
+        if (t1 < 0 && s.flare.v1 > 0.05) t1 = el; if (t3 < 0 && s.flare.v3 > 0.05) t3 = el;
+        if ((el >= a.ms && (a.wait === false || done(s))) || el >= cap) break;
         await new Promise(r => setTimeout(r, 8)); }
-      const s = S(); a.notes.forEach(n => __synth.noteOff(n));
-      return { pk, t1, t3, onsets: s.onsets - o0, start: s0, end: s }; }"""
+      a.notes.forEach(n => __synth.noteOff(n));
+      return { pk, t1, t3, onsets: s.onsets - o0, start: s0, end: s, ms: Math.round(performance.now() - t0), done: done(s) }; }"""
     # fires.v1 went up: V1 flared during this call (fired.v1 alone may still hold an earlier note's flare)
     def tv_fired(r, k="v1"): return r["end"]["fires"][k] > r["start"]["fires"][k]
     pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("__synth.setTubeShow('full')"); pg.wait_for_timeout(100)
@@ -2203,17 +2213,21 @@ with sync_playwright() as pw:
     pg.evaluate("(p) => __synth.setPatch(p)", clean); pg.wait_for_timeout(200)
     st = pg.evaluate("__synth.tubeShow()")
     ck("Tv. the tube show defaults to full, its chip lit", st["mode"] == "full" and not st["reduced"] and pg.get_attribute('#showChips .chip[data-v="full"]', "aria-pressed") == "true", st)
-    hi = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 260}); pg.wait_for_timeout(700)
+    hi = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 260, "need": ["v1", "v3"]}); pg.wait_for_timeout(700)
     lo = pg.evaluate(TV_PEAK, {"notes": [62], "v": 0.3, "ms": 260}); pg.wait_for_timeout(200)
     # The flare each tube took and its lag after the note-on come from the show itself (its own clock),
     # so a starved page cannot hide them. Sampling from outside every 8 ms missed the 150 ms peak twice on
     # 21 Oct with the box loaded (first sample at 74 and 145 ms); the sampled peaks stay in the names.
     hf, hl = hi["end"]["fired"], hi["end"]["firedLag"]
-    ck(f"Tv. a note-on flares V1 ({hf['v1']:.2f}) and then the output pair ({hf['v3']:.2f}), V1 first (lag {hl['v1']:.0f} ms, {hl['v3']:.0f} ms on the show clock; sampled peaks {hi['pk']['v1']:.2f}, {hi['pk']['v3']:.2f})",
-       tv_fired(hi) and tv_fired(hi, "v3") and hf["v1"] > 0.5 and hf["v3"] > 0.3 and 0 <= hl["v1"] <= hl["v3"] and hl["v3"] >= 45 and hi["pk"]["v1"] > 0, hi)
+    ck(f"Tv. a note-on flares V1 ({hf['v1']:.2f}) and then the output pair ({hf['v3']:.2f}), V1 first (lag {hl['v1']:.0f} ms, {hl['v3']:.0f} ms on the show clock; drawn {hi['end']['drawn']['v1']:.2f}, {hi['end']['drawn']['v3']:.2f}; sampled peaks {hi['pk']['v1']:.2f}, {hi['pk']['v3']:.2f})",
+       tv_fired(hi) and tv_fired(hi, "v3") and hf["v1"] > 0.5 and hf["v3"] > 0.3 and 0 <= hl["v1"] <= hl["v3"] and hl["v3"] >= 45 and hi["end"]["drawn"]["v1"] > 0 and hi["end"]["drawn"]["v3"] > 0, hi)
     lf = lo["end"]["fired"]
-    ck(f"Tv. the flare scales with velocity ({lf['v1']:.2f} at 0.3 against {hf['v1']:.2f} at 1.0; sampled peaks {lo['pk']['v1']:.2f}, {hi['pk']['v1']:.2f})", tv_fired(lo) and lf["v1"] < 0.5 * hf["v1"] and lf["v1"] > 0.05 and lo["pk"]["v1"] > 0, (lo, hi))
-    ck(f"Tv. the flare decays (V1 {lo['end']['flare']['v1']:.3f} about 120 ms after a quiet note's peak; {hi['end']['flare']['v1']:.3f} after a loud one)", hi["end"]["flare"]["v1"] < 0.5 * hi["pk"]["v1"], hi)
+    ck(f"Tv. the flare scales with velocity ({lf['v1']:.2f} at 0.3 against {hf['v1']:.2f} at 1.0; drawn {lo['end']['drawn']['v1']:.2f}; sampled peaks {lo['pk']['v1']:.2f}, {hi['pk']['v1']:.2f})", tv_fired(lo) and lf["v1"] < 0.5 * hf["v1"] and lf["v1"] > 0.05 and lo["end"]["drawn"]["v1"] > 0, (lo, hi))
+    # the decay, on the show clock: at least 0.12 s after V1's flare (TV_PEAK waits for that), against the
+    # highest flare drawn since (a sampled peak is read from outside and can miss it)
+    hd = hi["end"]["t"] - hi["end"]["firedAt"]["v1"]
+    ck(f"Tv. the flare decays (V1 {hi['end']['flare']['v1']:.3f} {hd * 1000:.0f} ms after a loud note's flare, drawn at {hi['end']['drawn']['v1']:.3f}; quiet note {lo['end']['flare']['v1']:.3f})",
+       hd >= 0.12 and hi["end"]["drawn"]["v1"] > 0 and hi["end"]["flare"]["v1"] < 0.5 * hi["end"]["drawn"]["v1"], hi)
     ck(f"Tv. one key is one flare (onsets {hi['onsets']}), not one from the key and another from the meter", hi["onsets"] == 1, hi)
     ch = pg.evaluate(TV_PEAK, {"notes": [48, 55, 60, 64], "v": 0.9, "ms": 400})
     ck(f"Tv. a chord flares once per note ({ch['onsets']}) and lights one voice lamp per voice ({ch['end']['lamps']} lamps)",
@@ -2271,8 +2285,8 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setTubeShow('subtle')"); hs = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 200}); pg.wait_for_timeout(300)
     # As in the Filament checks above: the flare V1 took, from the show's own record, not a peak sampled
     # every 8 ms from outside (a starved frame loop shows it already decayed; see the Improvement backlog, 27 Oct)
-    ck(f"Tv. subtle: the same flare state, drawn at a lower scale (V1 took {hs['end']['fired']['v1']:.2f}; sampled peak {hs['pk']['v1']:.2f})",
-       tv_fired(hs) and hs["end"]["fired"]["v1"] > 0.5 and hs["pk"]["v1"] > 0 and hs["end"]["mode"] == "subtle", hs)
+    ck(f"Tv. subtle: the same flare state, drawn at a lower scale (V1 took {hs['end']['fired']['v1']:.2f}, drawn {hs['end']['drawn']['v1']:.2f}; sampled peak {hs['pk']['v1']:.2f})",
+       tv_fired(hs) and hs["end"]["fired"]["v1"] > 0.5 and hs["end"]["drawn"]["v1"] > 0 and hs["end"]["mode"] == "subtle", hs)
     pg.evaluate("__synth.setTubeShow('full')")
     # resonance on V2: Valve 12 brightens with resonance and shimmers when it self-oscillates
     res = []
@@ -2291,8 +2305,8 @@ with sync_playwright() as pw:
     # Cathode: V2, the follower, shows the low-pass peak
     pg.evaluate("__synth.setDevice('cathode')"); pg.evaluate("__synth.load('Plate Screamer')"); pg.wait_for_timeout(200)
     pk_c = pg.evaluate("__synth.patch().lpf.peak"); cs = pg.evaluate(TV_PEAK, {"notes": [48], "v": 0.9, "ms": 700})
-    ck(f"Tv. Cathode: a note flares its tubes (V1 took {cs['end']['fired']['v1']:.2f}; sampled peak {cs['pk']['v1']:.2f}) and V2 follows the low-pass peak (peak {pk_c}, shown {cs['end']['res']:.2f})",
-       tv_fired(cs) and cs["end"]["fired"]["v1"] > 0.5 and cs["pk"]["v1"] > 0 and abs(cs["end"]["res"] - pk_c) < 0.1 and cs["end"]["shimmer"] == (pk_c >= 0.88), cs)
+    ck(f"Tv. Cathode: a note flares its tubes (V1 took {cs['end']['fired']['v1']:.2f}, drawn {cs['end']['drawn']['v1']:.2f}; sampled peak {cs['pk']['v1']:.2f}) and V2 follows the low-pass peak (peak {pk_c}, shown {cs['end']['res']:.2f})",
+       tv_fired(cs) and cs["end"]["fired"]["v1"] > 0.5 and cs["end"]["drawn"]["v1"] > 0 and abs(cs["end"]["res"] - pk_c) < 0.1 and cs["end"]["shimmer"] == (pk_c >= 0.88), cs)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(300)
     # the chip, remembered per browser; reduced motion keeps only the steady glow
     tctx = b.new_context(viewport={"width": 1366, "height": 900}); tp = tctx.new_page(); terr = []; tp.on("pageerror", lambda e: terr.append(str(e)))
@@ -2306,10 +2320,10 @@ with sync_playwright() as pw:
     rctx = b.new_context(viewport={"width": 1366, "height": 900}, reduced_motion="reduce"); rp = rctx.new_page(); rerr = []; rp.on("pageerror", lambda e: rerr.append(str(e)))
     rp.goto(BASE); rp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
     rp.evaluate("(p) => __synth.setPatch(p)", hot); rp.wait_for_timeout(150)
-    rf = rp.evaluate(TV_PEAK, {"notes": [36, 48, 55, 60, 64], "v": 1.0, "ms": 1800})
+    rf = rp.evaluate(TV_PEAK, {"notes": [36, 48, 55, 60, 64], "v": 1.0, "ms": 1800, "wait": False})
     rp.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "valve12", "cutoff": 800, "res": 0.97}))
     rr = rp.evaluate(HOLD, {"notes": [57], "ms": 600})["s"]
-    ck(f"Tv. reduced motion: no flares and no arcs on a clipping chord (arcs {rf['end']['arcs']}, flare {rf['pk']['v1']})", rf["end"]["reduced"] and rf["end"]["arcs"] == 0 and rf["pk"]["v1"] == 0, rf)
+    ck(f"Tv. reduced motion: no flares and no arcs on a clipping chord (arcs {rf['end']['arcs']}, flare {rf['pk']['v1']})", rf["end"]["reduced"] and rf["end"]["arcs"] == 0 and rf["pk"]["v1"] == 0 and rf["end"]["fires"]["v1"] == rf["start"]["fires"]["v1"] and rf["end"]["drawn"]["v1"] == 0, rf)
     ck(f"Tv. reduced motion keeps the steady glow (heat {rf['end']['heat']['v1']:.2f}, blue {rf['end']['blue']['v3']:.2f}) and no shimmer (resonance {rr['res']:.2f})",
        rf["end"]["heat"]["v1"] > 0.4 and rf["end"]["blue"]["v3"] > 0.3 and rr["res"] > 0.8 and not rr["shimmer"], (rf, rr))
     ck("Tv. reduced motion: no page errors", not rerr, rerr)
@@ -4159,9 +4173,23 @@ with sync_playwright() as pw:
       return { rail: one('.rail'), tray: one('.racklinks'), lit: { d: lit.dataset.d, inView: lr.left >= rr.left - 0.5 && lr.right <= rr.right + 0.5 }, unlit,
         sw: document.documentElement.scrollWidth, iw: innerWidth };
     }"""
+    # Each measurement waits for the strips to settle first: data-more at the value the step expects (it follows a
+    # scroll event, which a busy page delivers late) and then every CSS transition on the strips finished (the cues fade
+    # over 160 ms). Before 31 Oct each step waited a fixed 250 ms, and on a loaded box the left cue read opacity 0.95.
+    SC_SETTLE = """async (want) => {
+      const els = { rail: document.querySelector('.rail'), tray: document.querySelector('.racklinks') }, t0 = performance.now();
+      const frame = () => new Promise(r => requestAnimationFrame(() => r()));
+      const lag = () => Object.entries(want || {}).some(([k, v]) => (els[k].dataset.more || '') !== v);
+      while (lag() && performance.now() - t0 < 3000) await frame();
+      await frame(); await frame();
+      const tr = document.getAnimations().filter(a => a instanceof CSSTransition && a.effect && Object.values(els).some(e => e.contains(a.effect.target)));
+      await Promise.race([Promise.all(tr.map(a => a.finished.catch(() => null))), new Promise(r => setTimeout(r, 2000))]);
+      return { ms: Math.round(performance.now() - t0), transitions: tr.length, lag: lag() };
+    }"""
     scx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); scp = scx.new_page(); scerr = []
     scp.on("pageerror", lambda e: scerr.append(str(e)))
-    scp.goto(BASE); scp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); scp.wait_for_timeout(300)
+    scp.goto(BASE); scp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sc_st = [scp.evaluate(SC_SETTLE, {"rail": "r", "tray": "r"})]
     s0 = scp.evaluate(SC_MEAS)
     sc_con = [_ob_con(x["color"], x["bg"]) for x in s0["unlit"]]
     info("Sc. phone strips", f"rail {s0['rail']['h']:.0f} px tall, scroll {s0['rail']['max']} px; tray scroll {s0['tray']['max']} px")
@@ -4172,23 +4200,28 @@ with sync_playwright() as pw:
        all(s0[k]["more"] == "r" and s0[k]["after"][1] == "1" and s0[k]["before"][1] == "0" and "›" in s0[k]["after"][0]
            and s0[k]["after"][2] == "none" and s0[k]["after"][3] == "sticky" and s0[k]["hitR"] for k in ("rail", "tray"))
        and abs(s0["rail"]["firstGap"]) <= 1 and abs(s0["tray"]["firstGap"]) <= 1, {k: (s0[k]["more"], s0[k]["after"], s0[k]["hitR"], s0[k]["firstGap"]) for k in ("rail", "tray")})
-    scp.evaluate("document.querySelector('.rail').scrollLeft = 200; document.querySelector('.racklinks').scrollLeft = 100"); scp.wait_for_timeout(250)
+    scp.evaluate("document.querySelector('.rail').scrollLeft = 200; document.querySelector('.racklinks').scrollLeft = 100")
+    sc_st.append(scp.evaluate(SC_SETTLE, {"rail": "l r", "tray": "l r"}))
     s1 = scp.evaluate(SC_MEAS)
     ck("Sc. scrolled part way, both edges show a cue (left chevron too) and taps under either fade reach the plate",
        all(s1[k]["more"] == "l r" and s1[k]["after"][1] == "1" and s1[k]["before"][1] == "1" and "‹" in s1[k]["before"][0] and s1[k]["hitL"] and s1[k]["hitR"]
            for k in ("rail", "tray")), {k: (s1[k]["more"], s1[k]["before"], s1[k]["hitL"]) for k in ("rail", "tray")})
-    scp.evaluate("document.querySelector('.rail').scrollLeft = 99999; document.querySelector('.racklinks').scrollLeft = 99999"); scp.wait_for_timeout(250)
+    scp.evaluate("document.querySelector('.rail').scrollLeft = 99999; document.querySelector('.racklinks').scrollLeft = 99999")
+    sc_st.append(scp.evaluate(SC_SETTLE, {"rail": "l", "tray": "l"}))
     s2 = scp.evaluate(SC_MEAS)
     ck("Sc. at the end the right cue goes, and the fades take no room (the last plate ends at the bay's inner edge)",
        all(s2[k]["more"] == "l" and s2[k]["after"][1] == "0" and abs(s2[k]["lastGap"]) <= 1 for k in ("rail", "tray")),
        {k: (s2[k]["more"], s2[k]["after"][1], s2[k]["lastGap"]) for k in ("rail", "tray")})
     scp.evaluate("document.querySelector('.rail').scrollLeft = 0"); scp.wait_for_timeout(150)
     scp.evaluate("document.getElementById('devS').click()"); scp.wait_for_timeout(400)
+    sc_st.append(scp.evaluate(SC_SETTLE, None))
     s3 = scp.evaluate(SC_MEAS)
     ck("Sc. picking the last device on the rail brings its lit plate into view, and nothing scrolls sideways",
        s3["lit"]["d"] == "resnatron" and s3["lit"]["inView"] and s3["rail"]["x"] > 0 and s3["sw"] <= s3["iw"] == 375, (s3["lit"], s3["rail"]["x"], s3["sw"]))
     scp.evaluate("document.getElementById('devF').click()"); scp.wait_for_timeout(400)
+    sc_st.append(scp.evaluate(SC_SETTLE, {"rail": "r"}))
     s4 = scp.evaluate(SC_MEAS)
+    info("Sc. settle", f"waits {[x['ms'] for x in sc_st]} ms, transitions {[x['transitions'] for x in sc_st]}, still lagging {[x['lag'] for x in sc_st]}")
     ck("Sc. picking the first device again scrolls back to it and the cues follow", s4["lit"]["d"] == "filament" and s4["lit"]["inView"] and s4["rail"]["more"] == "r",
        (s4["lit"], s4["rail"]["more"], s4["rail"]["x"]))
     scp.screenshot(path=os.path.join(SHOTS, "synth_phone_strips.png"))

@@ -34,6 +34,10 @@ export function makeShow(mode, reduced) {
     // starved frame loop happens to run. fires counts them per tube, so a check can tell a flare that
     // fired just now from the one left by an earlier note at the same velocity.
     fired: z(), firedLag: { v1: -1, v2: -1, v3: -1, v4: -1 }, fires: z(),
+    // also for the test hook: firedAt is the show clock at each tube's last flare, and drawn the highest
+    // flare showFor() handed the painter since then. A check reads what was drawn from these instead of
+    // sampling the flare from outside, which a starved frame loop can slip past.
+    firedAt: z(), drawn: z(),
   };
 }
 export const showScale = S => SCALE[S.mode] || 0;
@@ -72,7 +76,7 @@ export function stepShow(S, dt, inp) {
   for (let i = S.pend.length - 1; i >= 0; i--) {
     const p = S.pend[i];
     if (p.at <= S.t) {
-      if (inp.on[p.k]) { S.flare[p.k] = Math.max(S.flare[p.k], p.v); S.fired[p.k] = p.v; S.firedLag[p.k] = S.t - p.t0; S.fires[p.k]++; }
+      if (inp.on[p.k]) { S.flare[p.k] = Math.max(S.flare[p.k], p.v); S.fired[p.k] = p.v; S.firedLag[p.k] = S.t - p.t0; S.fires[p.k]++; S.firedAt[p.k] = S.t; S.drawn[p.k] = 0; }
       S.pend.splice(i, 1);
     }
   }
@@ -109,9 +113,11 @@ export function stepShow(S, dt, inp) {
   return S;
 }
 
-// What one tube's overlay needs, scaled by the mode.
+// What one tube's overlay needs, scaled by the mode. The frame loop calls this once per tube per frame,
+// right before painting, so it also keeps the test hook's drawn peak (nothing it returns changes).
 export function showFor(S, t) {
   const k = showScale(S);
+  if (S.flare[t] > S.drawn[t]) S.drawn[t] = S.flare[t];
   return { k, flare: S.flare[t], heat: S.heat[t], arc: S.arc[t], seed: S.seed[t], blue: S.blue[t] || 0,
     res: t === 'v2' ? S.res : 0, shimmer: t === 'v2' && S.shimmer, reduced: S.reduced };
 }
@@ -122,5 +128,6 @@ export function showState(S) {
   return { mode: S.mode, reduced: S.reduced, flare: r(S.flare), heat: r(S.heat), arc: r(S.arc), blue: r(S.blue),
     res: Math.round(S.res * 1000) / 1000, shimmer: S.shimmer, arcs: S.arcs, lamps: S.lamps, onsets: S.onsets,
     fired: r(S.fired), firedLag: Object.fromEntries(TUBES.map(k => [k, S.firedLag[k] < 0 ? -1 : Math.round(S.firedLag[k] * 1e4) / 10])), fires: Object.assign({}, S.fires),
+    t: Math.round(S.t * 1e4) / 1e4, firedAt: Object.fromEntries(TUBES.map(k => [k, Math.round(S.firedAt[k] * 1e4) / 1e4])), drawn: r(S.drawn),
     drawMs: Math.round(S.drawMs * 1000) / 1000 };
 }
