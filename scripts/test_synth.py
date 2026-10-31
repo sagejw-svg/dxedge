@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -949,6 +949,134 @@ with sync_playwright() as pw:
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Ls. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Ar. the arpeggiator (31 Oct)
+    # patch.arp: held keys play one note a step on the rack tempo's grid. A sine through an open filter with a
+    # quick envelope, so each note is an edge in the level and one clear pitch.
+    _am_w, _am_p = _jl(_wk, "ARP_MODES"), _jl(_pj, "ARP_MODES")
+    _ad_p = _jl(_pj, "ARP_DIVS")
+    ck(f"Ar. the worklet and patches.js carry the same five modes, and every step value ({len(_ad_p or [])}) has a length in the shared sync table",
+       _am_w == _am_p == ["up", "down", "updown", "random", "played"] and _ad_p and len(_ad_p) == 11 and all(d in _sb_w for d in _ad_p), (_am_w, _am_p, _ad_p))
+    an_ = pg.evaluate("""async () => { const m = await import('./patches.js'), d = m.normalize({}).arp, j = m.normalize({ arp: { on: 1, mode: 'zigzag', div: '1/5', oct: 2.6, gate: 0, swing: 2, latch: 1 } });
+      const h = m.normalize({ arp: { oct: 9, gate: 3, swing: -1 } }).arp;
+      return { d, j: j.arp, v: j.v, h: [h.oct, h.gate, h.swing], fac: m.FACTORY.every(p => !m.normalize(p).arp.on) }; }""")
+    ck(f"Ar. the schema: a patch with no arp loads with it off (up, 1/16, 1 octave, gate 50%, straight, no latch); every factory patch has it off; unknown values fall back, ranges clamp, octaves round (schema stays v:1) ({an_})",
+       an_["d"] == {"on": False, "mode": "up", "div": "1/16", "oct": 1, "gate": 0.5, "swing": 0, "latch": False} and an_["fac"] and an_["v"] == 1
+       and an_["j"] == {"on": True, "mode": "up", "div": "1/16", "oct": 3, "gate": 0.05, "swing": 0.5, "latch": True} and an_["h"] == [4, 1, 0], an_)
+    _cands = list(range(36, 97))
+    def arp_run(arp, events, seconds=1.2, tempo=120, cands=None, extra=None):
+        p_ = patch(osc1={"wave": "sine", "level": 0.5}, arp=dict({"on": True}, **arp), **(extra or {}))
+        L_, _ = dec(pg.evaluate("a => __synth.render(a)", {"patch": p_, "events": events, "seconds": seconds, "rack": False, "tempo": tempo, "masterFx": False}))
+        # the level as the magnitude of the analytic signal (a sine's is flat, whatever its phase), in 0.5 ms bins
+        X_ = np.fft.fft(L_); h_ = np.zeros(len(L_)); h_[0] = 1; h_[1:(len(L_) + 1) // 2] = 2
+        if len(L_) % 2 == 0: h_[len(L_) // 2] = 1
+        a_env = np.abs(np.fft.ifft(X_ * h_)); w_ = int(SR * 0.0005)
+        env_ = a_env[:len(a_env) // w_ * w_].reshape(-1, w_).mean(axis=1)
+        hi_ = env_ > env_.max() * 0.5; d_ = np.diff(hi_.astype(int))
+        ups = [round(float(i + 1) * 0.0005, 4) for i in np.where(d_ > 0)[0]]; downs = [round(float(i + 1) * 0.0005, 4) for i in np.where(d_ < 0)[0]]
+        if hi_[0]: ups = [0.0] + ups
+        notes = []
+        for t_ in ups:
+            a_ = int((t_ + 0.004) * SR); seg = L_[a_:a_ + int(0.016 * SR)]
+            if len(seg) < 200: continue
+            notes.append(max(cands or _cands, key=lambda n_: tone_amp(seg, 440 * 2 ** ((n_ - 69) / 12))))
+        return ups, downs, notes, L_
+    def held(ns, at=0.0, off=None, v=0.8): return [e for n_ in ns for e in note(n_, at, off, v)]
+    def _arms(x): return float(np.sqrt(np.mean(np.square(x)))) if len(x) else 0.0
+    CEG = held([60, 64, 67], 0.0, 1.0)
+    u_, d_, n_, _ = arp_run({}, CEG)
+    # an edge reads a fixed time after its note starts (half way up a 1 ms attack, in 0.5 ms bins): the first note
+    # starts with the keys at 0, so its edge is that delay, and every later time is read less it
+    LAT = u_[0] if u_ else 0.0
+    def near(xs, want, tol=0.001): return len(xs) >= len(want) and all(abs(a_ - LAT - b_) <= tol for a_, b_ in zip(xs, want))
+    ck(f"Ar. up at 1/16 and 120 BPM: the first note with the keys ({LAT * 1000:.1f} ms to half level), then one every 125 ms ({[round(x - LAT, 4) for x in u_[:8]]}), C E G C E G C E ({n_[:8]}), within 1 ms",
+       LAT <= 0.002 and near(u_, [i * 0.125 for i in range(8)]) and n_[:8] == [60, 64, 67, 60, 64, 67, 60, 64], (u_, n_))
+    modes_ = {}
+    for nm_, a_, ev_, want_ in [("down", {"mode": "down"}, CEG, [67, 64, 60, 67, 64, 60]), ("up-down", {"mode": "updown"}, CEG, [60, 64, 67, 64, 60, 64, 67, 64]),
+                                ("as played (G, C, E)", {"mode": "played"}, held([67], 0.0, 1.0) + held([60], 0.001, 1.0) + held([64], 0.002, 1.0), [67, 60, 64, 67, 60, 64]),
+                                ("up over 2 octaves", {"oct": 2}, CEG, [60, 64, 67, 72, 76, 79, 60, 64]), ("down over 3 octaves", {"mode": "down", "oct": 3}, held([60, 67], 0.0, 1.0), [91, 84, 79, 72, 67, 60, 91])]:
+        _, _, got_, _ = arp_run(a_, ev_)
+        modes_[nm_] = got_[:len(want_)]
+        ck(f"Ar. {nm_}: {got_[:len(want_)]} (want {want_})", got_[:len(want_)] == want_, got_)
+    # random: 96 steps of a 1/32 at 120 BPM, each read at its place on the grid (a repeated note makes no edge)
+    _, _, _, Lr_ = arp_run({"mode": "random", "div": "1/32"}, held([60, 64, 67], 0.0, 6.1), seconds=6.1)
+    n_ = [max((60, 64, 67), key=lambda k: tone_amp(Lr_[int((i * 0.0625 + 0.004) * SR):int((i * 0.0625 + 0.028) * SR)], 440 * 2 ** ((k - 69) / 12))) for i in range(96)]
+    ck(f"Ar. random: 96 steps, each key played ({ {k: n_.count(k) for k in (60, 64, 67)} }, want each 15 or more), not the up pattern",
+       min(n_.count(k) for k in (60, 64, 67)) >= 15 and n_[:9] != [60, 64, 67] * 3, n_)
+    # gate: the note's length is its share of the step (the release adds the same to both, so compare two gates)
+    def on_len(arp):
+        u_, d_, _, _ = arp_run(arp, CEG, seconds=0.6)
+        return [round(b_ - a_, 4) for a_, b_ in zip(u_, d_)][:3], u_, d_
+    g25, u25, d25 = on_len({"gate": 0.25}); g75, _, _ = on_len({"gate": 0.75})
+    ck(f"Ar. gate: 25% holds each note {g25} s and 75% holds it {g75} s, half a step (62.5 ms) longer, within 1.5 ms",
+       len(g25) == 3 and len(g75) == 3 and all(abs((b_ - a_) - 0.0625) <= 0.0015 for a_, b_ in zip(g25, g75)), (g25, g75))
+    # gate 100%: the note is still at full level just before the next step (at 50% it has gone)
+    _, _, _, L1 = arp_run({"gate": 1}, CEG, seconds=1.0); _, _, _, L5 = arp_run({"gate": 0.5}, CEG, seconds=1.0)
+    def tail_db(L__, k): return db(_arms(L__[int((k * 0.125 - 0.006) * SR):int((k * 0.125 - 0.001) * SR)]) / _arms(L__[int((k * 0.125 - 0.06) * SR):int((k * 0.125 - 0.04) * SR)]))
+    t1_, t5_ = [round(tail_db(L1, k), 1) for k in (1, 2, 3)], [round(tail_db(L5, k), 1) for k in (1, 2, 3)]
+    n1 = [max((60, 64, 67), key=lambda k: tone_amp(L1[int((i * 0.125 + 0.01) * SR):int((i * 0.125 + 0.1) * SR)], 440 * 2 ** ((k - 69) / 12))) for i in range(3)]
+    ck(f"Ar. gate 100% runs each note into the next: the last 5 ms before each step sit {t1_} dB from the note's level (want within 1); at 50% {t5_} dB (want under -40); the pitches still step ({n1[:3]})",
+       all(abs(x) <= 1 for x in t1_) and all(x < -40 for x in t5_) and n1[:3] == [60, 64, 67], (t1_, t5_, n1))
+    u_, _, _, _ = arp_run({"swing": 0.5}, CEG, seconds=0.6)
+    u3, _, _, _ = arp_run({"swing": 1 / 3}, CEG, seconds=0.6)
+    ck(f"Ar. swing: 75% puts every second step at {[round(x - LAT, 4) for x in u_[1:4:2]]} (want 0.1875, 0.4375), 67% at {[round(x - LAT, 4) for x in u3[1:2]]} (want 0.1667); the others stay on the grid {[round(x - LAT, 4) for x in u_[0:4:2]]}; within 1 ms",
+       near(u_, [0, 0.1875, 0.25, 0.4375]) and abs(u3[1] - LAT - 0.25 * 2 / 3) <= 0.001, (u_, u3))
+    u90, _, _, _ = arp_run({"div": "1/8"}, CEG, seconds=1.3, tempo=90)
+    ut, _, _, _ = arp_run({"div": "1/16tr"}, CEG, seconds=0.6)
+    ck(f"Ar. the step follows the rack tempo and the note value: 1/8 at 90 BPM every {np.mean(np.diff(u90)) * 1000:.1f} ms (want 333.3), a 1/16 triplet at 120 every {np.mean(np.diff(ut[:6])) * 1000:.1f} ms (want 83.3), within 1 ms",
+       len(u90) >= 3 and abs(np.mean(np.diff(u90)) - 1 / 3) < 0.001 and abs(np.mean(np.diff(ut[:6])) - 1 / 12) < 0.001, (u90, ut))
+    # the transport: playing, a key between steps waits for the next one; stopped, the first note is the key
+    uw, _, _, _ = arp_run({"div": "1/8"}, [{"at": 0, "t": "clock", "playing": True, "beat": 0, "tempo": 120}] + held([60, 64, 67], 0.2, 1.2), seconds=1.0)
+    up_, _, _, _ = arp_run({"div": "1/8"}, held([60, 64, 67], 0.1, 1.2) + [{"at": 0.37, "t": "clock", "playing": True, "beat": 0, "tempo": 120}], seconds=1.3)
+    ck(f"Ar. on the transport: keys at 0.2 s with the rack playing from 0 wait for the next eighth ({[round(x - LAT, 4) for x in uw[:3]]}, want 0.25, 0.5, 0.75); keys at 0.1 s while stopped start at once and move onto the bar when Play lands at 0.37 s, without a flam ({[round(x - LAT, 4) for x in up_[:4]]}, want 0.1, 0.35, 0.62, 0.87); within 1 ms",
+       near(uw, [0.25, 0.5, 0.75]) and near(up_, [0.1, 0.35, 0.62, 0.87]), (uw, up_))
+    # latch and the pedal
+    un, _, _, _ = arp_run({}, held([60, 64, 67], 0.0, 0.3), seconds=1.0)
+    ul, _, nl, _ = arp_run({"latch": True}, held([60, 64, 67], 0.0, 0.3) + held([72], 0.6, 0.7), seconds=1.0)
+    ck(f"Ar. latch: let go at 0.3 s, it stops after its last step unlatched ({[round(x - LAT, 4) for x in un]}) and plays on latched ({len(ul)} notes to 1 s); a key pressed with none down starts a new chord ({nl[5:]} after 0.6 s, want all 72)",
+       near(un, [0, 0.125, 0.25]) and len(un) == 3 and len(ul) == 9 and nl[5:] == [72] * 4, (un, ul, nl))
+    us, ds, _, _ = arp_run({}, [{"at": 0, "t": "sus", "on": True}] + held([60, 64, 67], 0.0, 0.2) + [{"at": 0.5, "t": "sus", "on": False}], seconds=1.0)
+    ck(f"Ar. sustain pedal: keys let go at 0.2 s keep playing until the pedal rises at 0.5 s ({[round(x - LAT, 4) for x in us]}), and its own notes still stop at the gate under the pedal ({len([x for x in ds if x < 0.5])} falls before 0.5 s)",
+       near(us, [0, 0.125, 0.25, 0.375]) and len(us) == 4 and len([x for x in ds if x < 0.5]) >= 3, (us, ds))
+    # switched on over a held chord it takes the keys; switched off it gives them back as a chord
+    sp_ = patch(osc1={"wave": "sine", "level": 0.5})
+    on_ = dict(sp_, arp={"on": True})
+    L_, _ = dec(pg.evaluate("a => __synth.render(a)", {"patch": sp_, "events": held([60, 64, 67], 0.0, 1.2) + [{"at": 0.3, "t": "patch", "p": on_}, {"at": 0.8, "t": "patch", "p": sp_}], "seconds": 1.1, "rack": False, "masterFx": False}))
+    def amps(a_, b_): seg = L_[int(a_ * SR):int(b_ * SR)]; return [round(db(tone_amp(seg, 440 * 2 ** ((k - 69) / 12))), 1) for k in (60, 64, 67)]
+    pre_, mid_, post_ = amps(0.1, 0.25), amps(0.552, 0.607), amps(0.9, 1.05)
+    ck(f"Ar. switched on over a held chord it takes the keys (at 0.56 s only G sounds: {mid_} dB for C, E, G) and switched off it gives them back as a chord (after 0.8 s: {post_}, before: {pre_})",
+       all(x > -40 for x in pre_) and mid_[2] > -40 and mid_[0] < mid_[2] - 20 and mid_[1] < mid_[2] - 20 and all(abs(a_ - b_) < 1.5 for a_, b_ in zip(pre_, post_)), (pre_, mid_, post_))
+    # velocity: each step plays at its key's velocity
+    _, _, _, Lv_ = arp_run({"mode": "played"}, held([60], 0.0, 1.0, v=1.0) + held([64], 0.001, 1.0, v=0.25), seconds=0.6, extra={"envA": {"a": 0.001, "d": 0.1, "s": 1, "r": 0.01, "vel": 1}})
+    sv_ = [Lv_[int((i * 0.125 + 0.01) * SR):int((i * 0.125 + 0.05) * SR)] for i in range(2)]
+    lv_ = [db(_arms(x)) for x in sv_]; nv_ = [max((60, 64), key=lambda k: tone_amp(x, 440 * 2 ** ((k - 69) / 12))) for x in sv_]
+    ck(f"Ar. each step plays at its key's velocity: C at 1.0 then E at 0.25 is {lv_[0] - lv_[1]:.1f} dB apart (want 6 or more)", nv_[:2] == [60, 64] and lv_[0] - lv_[1] >= 6, (nv_, lv_))
+    # the page: the section, its switches, the step menu and readout, the knobs, the worklet stepping live
+    aui_ = pg.evaluate("""() => { const s = document.getElementById('mArp'), d = document.getElementById('arpDiv');
+      return { vis: !!s.offsetParent, chips: [...s.querySelectorAll('[data-chips="arp.mode"] .chip')].map(b => b.textContent), n: d.options.length, v: d.value, hz: document.getElementById('arpHz').textContent,
+        on: document.getElementById('arpOnBtn').textContent, off: s.classList.contains('off'), knobs: [...s.querySelectorAll('#kArp [data-path]')].map(k => k.dataset.path) }; }""")
+    ck(f"Ar. the Arpeggiator section: off, five mode chips, an 11-step menu at 1/16 reading 8.00 steps/s at 120 BPM, octave, gate and swing knobs ({aui_})",
+       aui_ == {"vis": True, "chips": ["up", "down", "up-down", "random", "as played"], "n": 11, "v": "1/16", "hz": "8.00 steps/s at 120 BPM", "on": "off", "off": True, "knobs": ["arp.oct", "arp.gate", "arp.swing"]}, aui_)
+    pg.click("#arpOnBtn"); pg.click('#mArp .chip[data-v="updown"]'); pg.select_option("#arpDiv", "1/8"); pg.click("#arpLatchBtn"); pg.wait_for_timeout(100)
+    aui1_ = pg.evaluate("""() => ({ arp: __synth.patch().arp, hz: document.getElementById('arpHz').textContent, on: document.getElementById('arpOnBtn').textContent,
+      latch: document.getElementById('arpLatchBtn').getAttribute('aria-pressed') })""")
+    ck(f"Ar. the switches, chips and menu write the patch: on, up-down, 1/8 (4.00 steps/s at 120 BPM), latched ({aui1_})",
+       aui1_["arp"]["on"] is True and aui1_["arp"]["mode"] == "updown" and aui1_["arp"]["div"] == "1/8" and aui1_["arp"]["latch"] is True and aui1_["hz"] == "4.00 steps/s at 120 BPM"
+       and aui1_["on"] == "on" and aui1_["latch"] == "true", aui1_)
+    live_ = pg.evaluate("""async () => { __synth.noteOn(60, 0.8); __synth.noteOn(67, 0.8); await new Promise(r => setTimeout(r, 120)); __synth.noteOff(60); __synth.noteOff(67);
+      const seen = new Set(); let a = null;
+      for (let i = 0; i < 16; i++) { await new Promise(r => setTimeout(r, 70)); a = __synth.engine().meters.filament.arp; (__synth.engine().meters.filament.notes || []).forEach(n => seen.add(n)); }
+      return { a, seen: [...seen].sort((x, y) => x - y) }; }""")
+    ck(f"Ar. live, latched: two keys tapped and let go keep the worklet stepping (meter {live_['a']}), and both pitches sound in turn ({live_['seen']})",
+       live_["a"] and live_["a"]["keys"] == 2 and live_["a"]["run"] and live_["a"]["step"] >= 4 and {60, 67} <= set(live_["seen"]), live_)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(250)
+    aui2_ = pg.evaluate("() => ({ arp: __synth.patch().arp, v: document.getElementById('arpDiv').value, on: document.getElementById('arpOnBtn').getAttribute('aria-pressed') })")
+    ck(f"Ar. a reload keeps the arpeggiator's settings and the panel shows them ({aui2_})", aui2_["arp"]["on"] is True and aui2_["arp"]["mode"] == "updown" and aui2_["v"] == "1/8" and aui2_["on"] == "true", aui2_)
+    pg.click("#arpOnBtn"); pg.wait_for_timeout(100)
+    ck("Ar. switched off from the panel", pg.evaluate("__synth.patch().arp.on") is False and pg.evaluate("document.getElementById('mArp').classList.contains('off')"))
+    pg.evaluate("__synth.panic && __synth.panic()")
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Ar. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
         p = patch(osc1={"level": 0}, filt={"model": "valve12", "cutoff": 262, "res": 1, "keytrack": 1, "tube": tube})
@@ -1031,11 +1159,17 @@ with sync_playwright() as pw:
         P = pg.evaluate("n => __synth.factoryPatch(n)", n)
         chord = [36] if P["cat"] == "Bass" else ([60] if P["voice"]["mode"] != "poly" else [48, 55, 60, 64])
         ev = [e for k in chord for e in note(k, 0.05, 1.8)]
-        L, R = render(P, ev, 2.4)
-        seg = slice(int(0.3 * SR), int(1.7 * SR))
-        st = math.sqrt((np.mean(L[seg] ** 2) + np.mean(R[seg] ** 2)) / 2); mo = math.sqrt(np.mean(((L[seg] + R[seg]) / 2) ** 2))
-        ck(f"7. mono fold: {n} loses {db(st) - db(mo):.1f} dB folded to mono (limit 3)", db(mo) >= db(st) - 3.0, (db(st), db(mo)))
-        ck(f"7. {n} sounds, and stays under 0 dBFS", 1e-3 < st and max(np.max(np.abs(L)), np.max(np.abs(R))) <= 1.0, (db(st),))
+        # two renders, the worse one counts: each starts its oscillators, drift and pan at random, and a wide
+        # patch's fold moves by a few tenths of a dB from render to render (31 Oct: Horror Pad read 2.5 to 3.1 dB)
+        folds_ = []
+        for _r in range(2):
+            L, R = render(P, ev, 2.4)
+            seg = slice(int(0.3 * SR), int(1.7 * SR))
+            st = math.sqrt((np.mean(L[seg] ** 2) + np.mean(R[seg] ** 2)) / 2); mo = math.sqrt(np.mean(((L[seg] + R[seg]) / 2) ** 2))
+            folds_.append((db(st) - db(mo), st, max(np.max(np.abs(L)), np.max(np.abs(R)))))
+        wf_ = max(folds_)
+        ck(f"7. mono fold: {n} loses {wf_[0]:.1f} dB folded to mono, the worse of two renders ({folds_[0][0]:.2f}, {folds_[1][0]:.2f}; limit 3)", wf_[0] <= 3.0, folds_)
+        ck(f"7. {n} sounds, and stays under 0 dBFS", all(1e-3 < f_[1] and f_[2] <= 1.0 for f_ in folds_), [(db(f_[1]), f_[2]) for f_ in folds_])
 
     # ---------------------------------------------------------------- 8. aliasing baseline
     for wave in ("saw", "pulse"):
@@ -2988,6 +3122,13 @@ with sync_playwright() as pw:
           return { vis: !!e.offsetParent, w: Math.round(r.width), h: Math.round(r.height), inside: r.left >= 0 && r.right <= innerWidth }; }).concat([document.documentElement.scrollWidth <= innerWidth])""")
         ck(f"10. {w}px: the LFO sync menus are 44 px targets inside the screen, with no horizontal scroll ({lsv})",
            all(x["vis"] and x["w"] >= 44 and x["h"] >= 44 and x["inside"] for x in lsv[:2]) and lsv[2] is True, lsv)
+        ph.click(".tabs [data-go=play]"); ph.wait_for_timeout(150)
+        arv = ph.evaluate("""() => { const s = document.getElementById('mArp'); s.scrollIntoView({ block: 'start' });
+          const el = [...s.querySelectorAll('#arpOnBtn, .chip, select, [data-path]')].filter(e => e.offsetParent);
+          return { vis: !!s.offsetParent, n: el.length, small: el.filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => e.id || e.textContent || e.dataset.path),
+            out: el.filter(e => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth; }).map(e => e.id || e.textContent || e.dataset.path), sw: document.documentElement.scrollWidth <= innerWidth }; }""")
+        ck(f"10. {w}px: the Play tab shows the Arpeggiator: its switch, five mode chips, step menu, latch and three knobs at 44 px or more inside the screen, with no horizontal scroll ({arv})",
+           arv == {"vis": True, "n": 11, "small": [], "out": [], "sw": True}, arv)
         kk = ph.query_selector('.key.w'); bb = kk.bounding_box()
         ph.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] - 10); ph.wait_for_timeout(200)
         ck(f"10. {w}px: tapping a key starts the audio", ph.evaluate("__synth.state().ctx") == "running")

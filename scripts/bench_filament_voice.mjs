@@ -20,7 +20,7 @@
 // Poly 24 screaming and driven, SVF 12 morphed, screaming and swept, and the low pass gate in two of its modes at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, patch changes mid-note (stereo offset on, loop tube, model, drive), and filter
-// slot B in each of its routes (serial, parallel, split), the mod matrix with every slot on, and tempo-synced LFOs.
+// slot B in each of its routes (serial, parallel, split), the mod matrix with every slot on, tempo-synced LFOs, and the arpeggiator.
 // The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
 // Numbers are relative: headless Chrome in test 9 is the figure the log quotes.
 import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto'; import path from 'path';
@@ -75,6 +75,8 @@ const CASES = {
   // tempo-synced LFOs (30 Oct): LFO 1 global at 1/8 locks to the transport, which starts at 0.5 s at 132 BPM;
   // LFO 2 per voice at a dotted 1/4. A ref without sync ignores the fields and the clock message.
   lfosync: big('valve12', p => { p.lfo1 = { rate: 4, cutoff: 1, amp: 0.3, wave: 'tri', sync: '1/8' }; p.lfo2 = { rate: 0.7, pitch: 15, pan: 0.4, mode: 'voice', wave: 'smooth', sync: '1/4d' }; }),
+  // the arpeggiator (31 Oct): up-down over 2 octaves with swing, the transport starting under it, keys let go, the pedal
+  arp: big('valve12', p => { p.arp = { on: true, mode: 'updown', oct: 2, gate: 0.7, swing: 0.2, div: '1/16' }; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
 // Cathode (the mono device in the same worklet file): factory patches by name, a held line with glide,
@@ -119,6 +121,8 @@ async function one(dir, name) {
   if (name === 'pluck') events.push({ at: 48000 * 2.5, t: 'off', n: 52 }, { at: 48000 * 2.5, t: 'off', n: 59 },
     { at: 48000 * 4, t: 'on', n: 62, v: 0.9 }, { at: 48000 * 4.5, t: 'on', n: 74, v: 0.5 }, { at: 48000 * 5, t: 'on', n: 76, v: 0.7 });
   if (name === 'lfosync') { events.push({ at: 24000, t: 'clock', tempo: 132, playing: true, beat: 0 }, { at: 48000 * 3, t: 'off', n: 60 }, { at: 48000 * 3.5, t: 'on', n: 62, v: 0.6 }); events.sort((a, b) => a.at - b.at); }
+  if (name === 'arp') { events.push({ at: 96000, t: 'clock', tempo: 132, playing: true, beat: 0 }, { at: 48000 * 3.2, t: 'off', n: 60 }, { at: 48000 * 3.2, t: 'off', n: 64 },
+    { at: 48000 * 4, t: 'sus', on: true }, { at: 48000 * 4.1, t: 'off', n: 48 }, { at: 48000 * 4.6, t: 'sus', on: false }); events.sort((a, b) => a.at - b.at); }
   if (name === 'lfo' || name === 'fm') events.push({ at: 48000 * 3, t: 'off', n: 60 }, { at: 48000 * 3.5, t: 'on', n: 62, v: 0.6 });
   if (name === 'change') {
     const c = o => JSON.parse(JSON.stringify(o));

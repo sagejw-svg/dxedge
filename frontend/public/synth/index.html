@@ -577,6 +577,8 @@
   .lsync select.btn { flex: 0 1 auto; min-width: 0; max-width: 150px; }
   .lsync .lshz { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .lsync.on .lshz { color: var(--amber); }
+  #arpRate { flex-wrap: wrap; row-gap: 4px; }
+  #arpRate #arpLatchBtn { margin-left: auto; }
   .mmrow { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .mmrow .mmn { flex: 0 0 auto; width: 14px; color: var(--dim); font-size: 11px; text-align: right; }
   .mmrow .mmto { flex: 0 0 auto; color: var(--dim); font-size: 11px; }
@@ -1098,6 +1100,11 @@
         <div class="chips lsync"><span class="cl">sync</span><select class="btn" id="lfo2Sync" aria-label="LFO 2 tempo sync" title="Tempo sync: one LFO cycle lasts this note value at the rack tempo (Rack tab). Off runs at the rate knob."></select><span class="lshz" id="lfo2Hz"></span></div><div class="knobs" id="kLfo2"></div>
         <div class="note">Stereo phase offsets the right side: on tremolo it auto-pans, on cutoff the sweep moves between the speakers. Sync ties either LFO to the rack tempo; a global synced LFO lines up with the bar while the rack plays.</div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
+      <section class="mod" data-dev="filament" data-tab="play mod" id="mArp"><h3><span class="pilot" id="arpPilot"></span>Arpeggiator<button class="chip sw" id="arpOnBtn" aria-pressed="false" title="Arpeggiator on or off: while it is on, held keys play one note a step">off</button></h3>
+        <div class="chips" data-chips="arp.mode"></div>
+        <div class="chips lsync" id="arpRate"><span class="cl">step</span><select class="btn" id="arpDiv" aria-label="Arpeggiator step length" title="One step lasts this note value at the rack tempo (Rack tab, 40 to 240 BPM)"></select><span class="lshz" id="arpHz"></span><button class="chip" id="arpLatchBtn" type="button" aria-pressed="false" title="Latch: the arpeggio keeps playing after you let go; the next chord replaces it">latch</button></div>
+        <div class="knobs" id="kArp"></div>
+        <div class="note">Hold keys and it plays them one a step at the rack tempo. While the rack plays, steps land on its beat. The sustain pedal holds keys you let go.</div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
         <div class="note">Mod wheel and aftertouch come from a MIDI keyboard, or the MOD strip by the keys.</div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mMatrix" data-wide><h3><span class="pilot off" id="matrixPilot"></span>Mod matrix<span class="mmcount" id="mmCount"></span></h3>
@@ -1498,7 +1505,7 @@ import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
 import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
-import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS, LFO_SYNC, LFO_SYNC_BEATS } from './patches.js';
+import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS, LFO_SYNC, LFO_SYNC_BEATS, ARP_DIVS } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
 import { MIX_CHANNELS, routeTargets, normalizeArmed, normalizeSession, saveSession, loadSession, sessionFileName } from './mixsession.js';
@@ -2509,6 +2516,7 @@ document.querySelectorAll('[data-chips]').forEach(el => {
     'vco1.scale': { 32: "32'", 16: "16'", 8: "8'", 4: "4'" }, 'vco2.scale': { 32: "32'", 16: "16'", 8: "8'", 4: "4'" },
     'vco1.wave': { tri: 'tri', saw: 'saw', pulse: 'pulse', noise: 'noise' }, 'vco2.wave': { saw: 'saw', square: 'square', narrow: 'narrow', ring: 'ring' },
     'pm.dest': { both: 'both VCOs', vco2: 'VCO 2 only' },
+    'arp.mode': { up: 'up', down: 'down', updown: 'up-down', random: 'random', played: 'as played' },
   }[p];
   chips(el, p, p === 'sub.oct' ? [1, 2] : null, labels || (p.endsWith('wave') ? WAVE_L : null));
 });
@@ -2662,7 +2670,26 @@ function refreshLfoSync() {
   });
 }
 // the readout follows the rack tempo (subscribed as soon as the engine exists; see ensureEngine)
-function lfoSyncClock(ev) { if (ev && ev.type === 'tempo') refreshLfoSync(); }
+function lfoSyncClock(ev) { if (ev && ev.type === 'tempo') { refreshLfoSync(); refreshArp(); } }
+// Arpeggiator (patch.arp): on/off and latch switches, the mode chips (built with the other chips), the
+// step menu and its readout at the rack tempo, and three knobs. The worklet does the stepping.
+K('kArp', 'arp.oct', 'octaves', { min: 1, max: 4, step: 1, round: true, fmt: v => v + ' oct', title: 'Octaves: the pattern climbs this many octaves before it starts again' });
+K('kArp', 'arp.gate', 'gate', { min: 0.05, max: 1, step: 0.01, fmt: pct, title: 'Gate: how much of its step each note holds (100% runs into the next)' });
+K('kArp', 'arp.swing', 'swing', { min: 0, max: 0.5, step: 0.01, fmt: v => Math.round(50 + v * 50) + '%', title: 'Swing: 50% is straight; 67% a triplet shuffle; 75% puts every second step three quarters of the way through its pair' });
+ARP_DIVS.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = SYNC_L(v); $('arpDiv').appendChild(o); });
+$('arpDiv').addEventListener('change', () => {
+  if (dev !== 'filament') return;
+  if (!undoArmed) rememberUndo();
+  setPath(cur, 'arp.div', $('arpDiv').value); afterChange('arp.div'); pushPatch(false);
+});
+function refreshArp() {
+  if (dev !== 'filament' || !cur.arp) return;
+  const a = cur.arp, bpm = rackTempo(), b = LFO_SYNC_BEATS[a.div] || 0.25, sps = bpm / 60 / b;
+  if ($('arpDiv').value !== a.div) $('arpDiv').value = a.div;
+  $('arpRate').classList.toggle('on', !!a.on);
+  $('arpHz').textContent = sps.toFixed(sps < 10 ? 2 : 1) + ' steps/s at ' + Math.round(bpm) + ' BPM';
+  $('arpPilot').classList.toggle('off', !a.on); $('mArp').classList.toggle('off', !a.on);
+}
 K('kEns', 'ens.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 K('kSpk', 'out.spkInt', 'intensity', { min: 0, max: 10, step: 0.1 });
 K('kRoom', 'out.rmMix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
@@ -2717,7 +2744,8 @@ function toggle(id, path, label) {
 }
 const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), toggle('wOnBtn', 'out.wOn', on => on ? 'width on' : 'width off'),
             toggle('spkOnBtn', 'out.spkOn', on => on ? 'on' : 'off'), toggle('roomOnBtn', 'out.roomOn', on => on ? 'on' : 'off'),
-            toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off'), toggle('eqOnBtn', 'out.eqOn', on => on ? 'on' : 'off')];
+            toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off'), toggle('eqOnBtn', 'out.eqOn', on => on ? 'on' : 'off'),
+            toggle('arpOnBtn', 'arp.on', on => on ? 'on' : 'off'), toggle('arpLatchBtn', 'arp.latch')];
 // touching a bypassed module's control switches it on (the /otr rack rule)
 [['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on'], ['mEq', 'out.eqOn']].forEach(([id, path]) => {
   $(id).addEventListener('pointerdown', e => { if (e.target.closest('.sw')) return; if (!getPath(cur, path)) { setPath(cur, path, true); afterChange(path); pushPatch(false); } });
@@ -2794,7 +2822,7 @@ function afterF() {
     : 'Ladder 24: 4-pole transistor ladder. Fat; the bass thins as resonance rises. Its steep phase means a wide stereo offset can thin out in mono: hold mono check.';
   const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
   $('lfo2Pilot').classList.toggle('off', !l2on);
-  refreshLfoSync();
+  refreshLfoSync(); refreshArp();
   kn('voice.detune').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
   $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube;
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);

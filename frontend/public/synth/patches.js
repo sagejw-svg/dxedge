@@ -19,6 +19,10 @@ export const MOD_SLOTS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
 export const LFO_SYNC_BEATS = { '4/1': 16, '2/1': 8, '1/1': 4, '1/2d': 3, '1/2': 2, '1/2tr': 4 / 3, '1/4d': 1.5, '1/4': 1, '1/4tr': 2 / 3,
   '1/8d': 0.75, '1/8': 0.5, '1/8tr': 1 / 3, '1/16d': 0.375, '1/16': 0.25, '1/16tr': 1 / 6, '1/32': 0.125 };
 export const LFO_SYNC = ['off'].concat(Object.keys(LFO_SYNC_BEATS));
+// Arpeggiator (patch.arp): the modes, and the note values one step can last (lengths from LFO_SYNC_BEATS;
+// voice.worklet.js reads the same table). Steps follow the rack tempo (40 to 240 BPM).
+export const ARP_MODES = ['up', 'down', 'updown', 'random', 'played'];
+export const ARP_DIVS = ['1/2', '1/4d', '1/4', '1/4tr', '1/8d', '1/8', '1/8tr', '1/16d', '1/16', '1/16tr', '1/32'];
 const modSlots = () => Object.fromEntries(MOD_SLOTS.map(k => [k, { src: 'off', dst: 'off', amt: 0 }]));
 
 export const DEFAULT = {
@@ -45,6 +49,9 @@ export const DEFAULT = {
   stereo: { pan: 'alt', spread: 0.5, uspread: 0.5 },
   ens: { on: false, mode: 'I', mix: 50 },  // the ensemble chorus, before the output tubes
   mod: modSlots(),           // the mod matrix: all eight slots off by default
+  // the arpeggiator: off by default. div is a step's note value at the rack tempo, oct 1 to 4 octaves,
+  // gate the share of a step a note holds, swing how late every second step lands (0.5 = 3:1), latch keeps let-go keys
+  arp: { on: false, mode: 'up', div: '1/16', oct: 1, gate: 0.5, swing: 0, latch: false },
   out: {
     tube: 'EL34', topology: 'pp', drive: 3, bias: 0, sag: 2, tone: 0, level: 0,
     spkOn: false, cab: 'monitor', spkInt: 6,
@@ -76,6 +83,7 @@ export const RANGE = {
   'out.eqBands': [10, 31], 'out.eqPre': [-12, 12],
 };
 MOD_SLOTS.forEach(k => { RANGE['mod.' + k + '.amt'] = [-1, 1]; });
+RANGE['arp.oct'] = [1, 4]; RANGE['arp.gate'] = [0.05, 1]; RANGE['arp.swing'] = [0, 0.5];
 // The graphic EQ's fields, shared with Cathode (the rack is the same for both devices).
 export const EQ_RANGE = { 'out.eqBands': [10, 31], 'out.eqPre': [-12, 12] };
 export const EQ_PRESET_IDS = EQ_PRESETS.map(p => p.id).concat(['custom']);
@@ -105,6 +113,7 @@ export const ENUMS = {
   'lfo1.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo1.mode': ['global', 'voice'],
   'lfo2.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo2.mode': ['global', 'voice'],
   'lfo1.sync': LFO_SYNC, 'lfo2.sync': LFO_SYNC,
+  'arp.mode': ARP_MODES, 'arp.div': ARP_DIVS,
   'ens.mode': ['I', 'II', 'I+II', 'strings'],
   'voice.mode': ['poly', 'mono', 'legato'],
   'stereo.pan': ['center', 'alt', 'key', 'random'],
@@ -138,6 +147,7 @@ export function normalize(p) {
   normEq(out.out, p.out);
   if (!CATS.includes(out.cat)) out.cat = 'Keys';
   out.voice.count = Math.round(out.voice.count); out.voice.unison = Math.round(out.voice.unison);
+  out.arp.oct = Math.round(out.arp.oct);
   out.v = SCHEMA;
   return out;
 }
@@ -308,7 +318,7 @@ const F = [
     envA: { a: 0.85, d: 1.4, s: 0.88, r: 2.4, vel: 0.25 }, envF: { a: 1.1, d: 1.8, s: 0.55, r: 2 },
     lfo1: { wave: 'tri', rate: 0.18, pitch: 8, cutoff: 0.35 }, drift: 3.5,
     voice: { mode: 'poly', unison: 4, detune: 20 }, stereo: { pan: 'alt', spread: 0.45, uspread: 0.8 },
-    out: { level: -2, tube: 'KT88', topology: 'pp', drive: 3, roomOn: true, room: 'hall', rmMix: 24, rmDecay: 3.6, wOn: true, width: 130 } },
+    out: { level: -2, tube: 'KT88', topology: 'pp', drive: 3, roomOn: true, room: 'hall', rmMix: 24, rmDecay: 3.6, wOn: true, width: 115 } },
   { name: 'Creaky Drone', cat: 'Halloween',
     osc1: { wave: 'pulse', pw: 0.18, level: 0.7 }, osc2: { wave: 'saw', oct: -1, fine: 4, level: 0.28 }, noise: { color: 'pink', level: 0.16 },
     v1: { tube: 'EL34', drive: 5 },
@@ -325,7 +335,7 @@ const F = [
     envA: { a: 0.7, d: 1.3, s: 0.9, r: 2.2, vel: 0.2 }, envF: { a: 0.9, d: 1.5, s: 0.65, r: 1.8 },
     lfo1: { wave: 'sine', rate: 0.22, pitch: 6 }, lfo2: { wave: 'sine', rate: 0.11, pan: 0.45 }, drift: 2.2,
     stereo: { pan: 'alt', spread: 0.55 },
-    out: { level: -1.5, tube: '300B', topology: 'se', drive: 2, roomOn: true, room: 'hall', rmMix: 32, rmDecay: 4.2, wOn: true, width: 140 } },
+    out: { level: -1.5, tube: '300B', topology: 'se', drive: 2, roomOn: true, room: 'hall', rmMix: 32, rmDecay: 4.2, wOn: true, width: 120 } },
   { name: 'Sub Heartbeat', cat: 'Halloween',
     osc1: { wave: 'sine', oct: -1, level: 0.9 }, osc2: { level: 0 }, sub: { wave: 'sine', oct: 1, level: 0.55 },
     v1: { tube: '12AU7', drive: 2 },

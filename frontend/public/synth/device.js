@@ -85,7 +85,7 @@ registerDevice({
   processor: 'filament',
   // whole numbers: the knobs that round (index.html, `round: true`), the sub's octave chips, the EQ's bands
   parameters: parameterTable(DEFAULT, RANGE, ENUMS, ['osc1.oct', 'osc1.semi', 'osc2.oct', 'osc2.semi', 'sub.oct',
-    'voice.count', 'voice.unison', 'voice.bend', 'out.eqBands']),
+    'voice.count', 'voice.unison', 'voice.bend', 'out.eqBands', 'arp.oct']),
 });
 
 registerDevice({

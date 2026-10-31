@@ -21,6 +21,10 @@
 // the mixer levels, V1 drive, both filters' cutoff and resonance, morph, level, pan) at the control rate.
 // The amounts are smoothed like the knobs; a routing change rides the duck. No slot on: nothing changes.
 //
+// Arpeggiator (patch.arp, off by default): while it is on, note on and off messages go to it instead of
+// the voices, and it plays one note a step on the rack tempo's grid (see class Arp). Its notes reach the
+// voices as ordinary note ons and offs, so everything below treats them like keys. Off: nothing changes.
+//
 // Stereo inside the voice: when the filter has a stereo offset, or an LFO with stereo phase
 // moves the cutoff, each voice runs two filters (left and right cutoffs) after the shared
 // oscillators and V1. Otherwise one filter feeds both sides. Unison stacks 1-8 voices on a
@@ -491,6 +495,7 @@ class Filament extends AudioWorkletProcessor {
     this.mS = new Int32Array(MSLOTS); this.mD = new Int32Array(MSLOTS); this.mN = 0; this.mDm = 0; this.mL = 0; this.mRand = false;
     this.MD = new Float64Array(M_DST.length); this.mkT = new Float64Array(MK_N); this.v1Gain = 0.774; this.v1D = 3;
     this.P = null; this.S = new Float64Array(NP); this.Sp = new Float64Array(NP); this.T = new Float64Array(NP); this.CT = new Float64Array(NP * (128 / CTRL + 1));
+    this.arp = new Arp(this); this.nowF = 0;     // the arpeggiator (off unless the patch turns it on); the frame a message lands on
     this.setPatch(o.patch || {}, true);
     this.target(this.S); this.Sp.set(this.S);
     (o.events || []).forEach(e => this.events.push(e));
@@ -532,7 +537,29 @@ class Filament extends AudioWorkletProcessor {
   lfoHz(l, q) { const sb = syncBeats(l); return sb ? this.ckTempo / (60 * sb) : clamp(num(l.rate, q ? 0.2 : 5), 0.01, 40); }
 
   // ----- patch handling -----
-  setPatch(p) { this.P = p; this.buildTables(); }
+  setPatch(p) { this.P = p; this.buildTables(); this.arpPatch(); }
+  // ----- arpeggiator -----
+  // Switched on, the notes the keys are holding move into it (they stop, and it starts stepping through
+  // them); switched off, its note lets go and the keys still down (or on the pedal) play as a chord again.
+  arpPatch() {
+    const A = this.arp, a = this.P.arp || {}, on = !!a.on, f = this.nowF;
+    A.set(a);
+    if (on === A.on) return;
+    if (on) {
+      A.on = true;
+      for (let i = 0; i < NV; i++) {
+        const v = this.voices[i];
+        if (v.on && v.gate && !v.killing && A.find(v.note) < 0) { const n = v.note, vel = v.vel, pb = v.pb; this.noteOff(n, true); A.keyOn(n, vel, pb, f); }
+      }
+    } else {
+      A.on = false;
+      if (A.note >= 0) { this.noteOff(A.note, true); A.note = -1; }
+      for (let i = 0; i < A.nk; i++) if (A.kf[i] & 5) { this.noteOn(A.kn[i], A.kv[i], (A.kf[i] & 2) !== 0); if (!(A.kf[i] & 1)) this.noteOff(A.kn[i]); }
+      A.nk = 0; A.run = false;
+    }
+  }
+  arpOn(n, v, pb) { this.noteOn(n, v, pb); }
+  arpOff(n) { this.noteOff(n, true); }
   table(id, bias) {
     const key = id + ':' + bias.toFixed(3);
     let t = this.tabCache[key];
@@ -606,6 +633,7 @@ class Filament extends AudioWorkletProcessor {
   onMsg(m) {
     if (!m) return;
     if (m.at != null) { this.events.push(m); this.events.sort((a, b) => a.at - b.at); return; }
+    this.nowF = currentFrame;
     this.apply(m);
   }
   apply(m) {
@@ -618,23 +646,25 @@ class Filament extends AudioWorkletProcessor {
         else this.setPatch(m.p);
         break;
       }
-      case 'on': this.noteOn(m.n | 0, num(m.v, 0.8), !!m.pb); break;
-      case 'off': this.noteOff(m.n | 0); break;
+      case 'on': if (this.arp.on) this.arp.keyOn(m.n & 127, num(m.v, 0.8), !!m.pb, this.nowF); else this.noteOn(m.n | 0, num(m.v, 0.8), !!m.pb); break;
+      case 'off': if (this.arp.on) this.arp.keyOff(m.n & 127, this.sus); else this.noteOff(m.n | 0); break;
       case 'bend': this.bend = clamp(num(m.v, 0), -1, 1); break;
       case 'mw': this.mw = clamp(num(m.v, 0), 0, 1); break;
       case 'at': this.at = clamp(num(m.v, 0), 0, 1); break;
-      case 'sus': this.sus = !!m.on; if (!this.sus) this.releaseSustained(); break;
+      case 'sus': this.sus = !!m.on; if (!this.sus) { this.releaseSustained(); if (this.arp.on) this.arp.susOff(); } break;
       case 'panic':
+        this.arp.panic();
         this.held = []; this.kbdHeld.clear(); this.sus = false;
         this.voices.forEach(v => { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.sust = false; v.pb = false; v.pending = null; });
         break;
       case 'release': this.releaseInput(); break;
       case 'play': this.playing = !!m.on; break;
-      case 'clock': this.setClock(m, m.at != null ? m.at : currentFrame); break;
+      case 'clock': { const f = m.at != null ? m.at : currentFrame, b = this.arp.beatAt(f); this.setClock(m, f); this.arp.clock(f, b); break; }
       case 'flush': this.events = this.events.filter(e => !e.pb); break;
       case 'active':      // the rack moved the keyboard to another device: let go of every key, let the tails ring
         this.active = !!m.on;
         if (!this.active && !this.playing) {
+          this.arp.release();
           this.held = []; this.kbdHeld.clear(); this.sus = false;
           this.voices.forEach(v => { v.sust = false; v.pb = false; v.pending = null; if (v.on && v.as !== E_IDLE) { v.gate = false; v.as = E_REL; v.fs = E_REL; } });
         } else if (!this.active && this.playing) this.releaseInput();
@@ -712,7 +742,8 @@ class Filament extends AudioWorkletProcessor {
     this.trigger(v, vel);
   }
   trigger(v, vel) { v.as = E_ATT; v.fs = E_ATT; v.vel = vel; v.lfoAge = 0; if (this.mRand) v.rnd = Math.random() * 2 - 1; }
-  noteOff(n) {
+  // hard: the arpeggiator's own note offs, which the sustain pedal does not hold
+  noteOff(n, hard) {
     this.kbdHeld.delete(n);
     this.held = this.held.filter(h => h !== n);
     const mode = this.mode();
@@ -728,7 +759,7 @@ class Filament extends AudioWorkletProcessor {
           if (mode === 'mono') this.trigger(v, v.vel);
           continue;
         }
-        if (this.sus) { v.sust = true; v.gate = false; continue; }
+        if (this.sus && !hard) { v.sust = true; v.gate = false; continue; }
         v.gate = false; if (v.as !== E_IDLE) { v.as = E_REL; v.fs = E_REL; }
       }
       return;
@@ -737,7 +768,7 @@ class Filament extends AudioWorkletProcessor {
       const v = this.voices[i];
       if (v.on && v.note === n && v.gate) {
         v.gate = false;
-        if (this.sus) v.sust = true; else { v.as = E_REL; v.fs = E_REL; }
+        if (this.sus && !hard) v.sust = true; else { v.as = E_REL; v.fs = E_REL; }
       }
       if (v.pending && v.pending.n === n) v.pending = null;
     }
@@ -748,6 +779,7 @@ class Filament extends AudioWorkletProcessor {
   // Let go of keys the page is holding. Notes a MIDI file already started (pb) keep sounding,
   // including ones the sustain pedal is holding for the player.
   releaseInput() {
+    this.arp.release();
     this.kbdHeld.clear();
     const pbNotes = new Set();
     let pbSus = false;
@@ -774,7 +806,7 @@ class Filament extends AudioWorkletProcessor {
     const base = currentFrame;
     // Asleep: no voice has sounded for 100 ms (the decimators and DC blockers have run down) and
     // no note is due in this block. A second device in the rack costs nothing while it waits.
-    if (this.idleN >= C_IDLE_FR && !(this.events.length && (this.events[0].at || 0) < base + n)) {
+    if (this.idleN >= C_IDLE_FR && !this.arp.busy() && !(this.events.length && (this.events[0].at || 0) < base + n)) {
       let any = false; for (let i = 0; i < NV; i++) if (this.voices[i].on) { any = true; break; }
       if (!any) {
         if (this.pendingPatch) {
@@ -796,10 +828,14 @@ class Filament extends AudioWorkletProcessor {
     }
     L2.fill(0, 0, n * OS); R2.fill(0, 0, n * OS);
     let pos = 0;
+    const A = this.arp;
     while (pos < n) {
+      this.nowF = base + pos;
       while (this.events.length && (this.events[0].at || 0) <= base + pos) this.apply(this.events.shift());
+      if (A.busy()) A.fire(base + pos);
       let end = n;
       if (this.events.length) { const at = this.events[0].at - base; if (at > pos && at < n) end = at; }
+      if (A.busy()) { const at = A.next() - base; if (at > pos && at < end) end = at; }
       this.render(pos, end);
       pos = end;
     }
@@ -837,6 +873,8 @@ class Filament extends AudioWorkletProcessor {
         // the clock as this worklet sees it at the end of the block, and the two global LFO phases there
         clk: { tempo: this.ckTempo, playing: this.ckPlay, beat: this.beatAt(currentFrame + n), frame: currentFrame + n },
         lfo: [this.lfoG[0], this.lfoG[1]],
+        // the arpeggiator: keys it holds, whether it is stepping, steps played since it started, its sounding note
+        arp: this.arp.on ? { keys: this.arp.nk, run: this.arp.run, step: this.arp.idx, note: this.arp.note } : null,
       });
       this.meterN = 0; this.v1Acc = 0; this.v2Acc = 0; this.accN = 0;
       if (this.cpuFrames > this.sr) { this.cpuMs *= 0.5; this.cpuFrames *= 0.5; }
@@ -1388,6 +1426,123 @@ const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
 const SYNC_BEATS = { '4/1': 16, '2/1': 8, '1/1': 4, '1/2d': 3, '1/2': 2, '1/2tr': 4 / 3, '1/4d': 1.5, '1/4': 1, '1/4tr': 2 / 3,
   '1/8d': 0.75, '1/8': 0.5, '1/8tr': 1 / 3, '1/16d': 0.375, '1/16': 0.25, '1/16tr': 1 / 6, '1/32': 0.125 };
 function syncBeats(l) { const b = l && l.sync !== 'off' ? SYNC_BEATS[l.sync] : 0; return b > 0 ? b : 0; }
+
+// ---------- arpeggiator (patch.arp) ----------
+// Keys go to the arpeggiator instead of the voices while it is on, and it plays one note a step from
+// the keys it holds. Our own design. Steps sit on a grid of note values (arp.div, a length in beats from
+// SYNC_BEATS) at the rack tempo. While the rack transport plays, the grid is the transport's beat, so a
+// step lands on the bar and a key pressed between steps waits for the next one; stopped, the grid starts
+// at the first key and runs on its own beat count at the same tempo. Swing (0..0.5) delays every second
+// step by that fraction of a step (0.5 is the 3:1 "75%" shuffle). Gate (0.05..1) is how much of its step
+// a note holds; at 1 it lets go on the next step's frame. Latch keeps the keys after they are let go, and
+// the next key pressed with none down starts a new chord. The sustain pedal holds let-go keys until it
+// rises. Modes: up, down, up-down (the ends once each), random, and as played (the order keys went down),
+// over 1 to 4 octaves. Every buffer is made here; nothing is allocated while it plays.
+const ARP_MODES = ['up', 'down', 'updown', 'random', 'played'];
+const ARP_MAXK = 128;
+class Arp {
+  constructor(host) {
+    this.h = host;
+    this.on = false; this.mode = 0; this.oct = 1; this.sb = 0.25; this.gate = 0.5; this.swing = 0; this.latch = false;
+    this.kn = new Int32Array(ARP_MAXK); this.kv = new Float64Array(ARP_MAXK); this.kf = new Uint8Array(ARP_MAXK); this.nk = 0;
+    this.ord = new Int32Array(ARP_MAXK);
+    this.run = false; this.k = 0; this.idx = 0;     // stepping; the next step on the grid; the position in the pattern
+    this.aB = 0; this.aF = 0;                       // stopped: the arp's own beat aB at frame aF
+    this.note = -1; this.offF = 0; this.lastF = -1; // the sounding note and the frame it lets go
+  }
+  // settings from the patch (the on/off switch is the host's: it moves held notes across)
+  set(a) {
+    a = a || {};
+    const m = ARP_MODES.indexOf(a.mode); this.mode = m < 0 ? 0 : m;
+    this.oct = clamp(Math.round(num(a.oct, 1)), 1, 4);
+    const b = SYNC_BEATS[a.div]; this.sb = b > 0 ? b : 0.25;
+    this.gate = clamp(num(a.gate, 0.5), 0.05, 1); this.swing = clamp(num(a.swing, 0), 0, 0.5);
+    const latch = !!a.latch;
+    if (this.latch && !latch) this.drop(1 | 4);     // latch off: let go of keys nobody holds
+    this.latch = latch;
+  }
+  busy() { return this.run || this.note >= 0; }
+  // the grid: the arp's beat at a frame, a beat's frame, a step's start beat (odd steps swing late)
+  beatAt(f) { const h = this.h; return h.ckPlay ? h.beatAt(f) : this.aB + (f - this.aF) * h.ckTempo / (60 * h.sr); }
+  frameOf(b) { const h = this.h, fpb = 60 * h.sr / h.ckTempo; return h.ckPlay ? h.ckFrame + (b - h.ckBeat) * fpb : this.aF + (b - this.aB) * fpb; }
+  stepAt(k) { return (k + (k & 1 ? this.swing : 0)) * this.sb; }
+  nextK(b) { let k = Math.max(0, Math.floor(b / this.sb) - 1); while (this.stepAt(k) < b - 1e-9) k++; return k; }
+  find(n) { for (let i = 0; i < this.nk; i++) if (this.kn[i] === n) return i; return -1; }
+  remove(i) {
+    for (let j = i + 1; j < this.nk; j++) { this.kn[j - 1] = this.kn[j]; this.kv[j - 1] = this.kv[j]; this.kf[j - 1] = this.kf[j]; }
+    this.nk--;
+  }
+  // drop every key with none of the flags in keep (1 down, 2 from the file player, 4 held by the pedal)
+  drop(keep) {
+    for (let i = this.nk - 1; i >= 0; i--) if (!(this.kf[i] & keep)) this.remove(i);
+    if (!this.nk) this.run = false;
+  }
+  keyOn(n, v, pb, f) {
+    if (this.latch && this.nk) { let down = false; for (let i = 0; i < this.nk; i++) if (this.kf[i] & 1) { down = true; break; } if (!down) { this.nk = 0; this.run = false; } }
+    let i = this.find(n);
+    if (i < 0) { if (this.nk >= ARP_MAXK) return; i = this.nk++; this.kn[i] = n; }
+    this.kv[i] = v; this.kf[i] = 1 | (pb ? 2 : 0);
+    if (!this.run) this.start(f);
+  }
+  keyOff(n, sus) {
+    const i = this.find(n); if (i < 0) return;
+    if (this.latch) { this.kf[i] &= ~1; return; }
+    if (sus) { this.kf[i] = (this.kf[i] & ~1) | 4; return; }
+    this.remove(i); if (!this.nk) this.run = false;
+  }
+  susOff() { if (this.latch) { for (let i = 0; i < this.nk; i++) this.kf[i] &= ~4; return; } this.drop(1); }
+  release() { this.drop(2); }                        // the page let go of its keys: the file player's stay
+  panic() { this.nk = 0; this.run = false; this.note = -1; }
+  start(f) {
+    this.run = true; this.idx = 0;
+    if (this.h.ckPlay) this.k = this.nextK(this.beatAt(f));
+    else { this.aB = 0; this.aF = f; this.k = 0; }
+  }
+  // the rack clock changed at frame f; b was the arp's beat there just before. The next step is the next
+  // one on the (new) grid, unless that lands within 0.4 of a step of the last one played: then the one
+  // after, so pressing Play does not flam.
+  clock(f, b) {
+    if (!this.h.ckPlay) { this.aB = b; this.aF = f; }
+    if (this.run) {
+      this.k = this.nextK(this.beatAt(f));
+      if (this.lastF >= 0 && this.dueK() - this.lastF < 0.4 * this.sb * 60 * this.h.sr / this.h.ckTempo) this.k++;
+    }
+  }
+  dueK() { return Math.ceil(this.frameOf(this.stepAt(this.k)) - 1e-6); }
+  // the next frame anything happens (Infinity when idle)
+  next() {
+    let f = Infinity;
+    if (this.note >= 0) f = this.offF;
+    if (this.run) { const s = this.dueK(); if (s < f) f = s; }
+    return f;
+  }
+  // let go and play whatever is due at frame f: the note off first, so a gate of 1 retriggers cleanly
+  fire(f) {
+    if (this.note >= 0 && this.offF <= f) { this.h.arpOff(this.note); this.note = -1; }
+    if (!this.run || this.dueK() > f) return;
+    const N = this.nk, M = N * this.oct;
+    if (!N) { this.run = false; return; }
+    // the order: by pitch (insertion sort of key indexes), or as played
+    const ord = this.ord;
+    for (let i = 0; i < N; i++) {
+      let j = i;
+      if (this.mode !== 4) while (j > 0 && this.kn[ord[j - 1]] > this.kn[i]) { ord[j] = ord[j - 1]; j--; }
+      ord[j] = i;
+    }
+    let pos;
+    if (this.mode === 1) pos = M - 1 - this.idx % M;
+    else if (this.mode === 2) { const C = M > 1 ? 2 * M - 2 : 1, i = this.idx % C; pos = i < M ? i : C - i; }
+    else if (this.mode === 3) pos = Math.min(M - 1, Math.floor(Math.random() * M));
+    else pos = this.idx % M;
+    const key = ord[pos % N];
+    let n = this.kn[key] + 12 * Math.floor(pos / N); while (n > 127) n -= 12;
+    if (this.note >= 0) { this.h.arpOff(this.note); this.note = -1; }
+    this.h.arpOn(n, this.kv[key], (this.kf[key] & 2) !== 0);
+    const s0 = this.stepAt(this.k), s1 = this.stepAt(this.k + 1);
+    this.note = n; this.offF = Math.max(f + 1, Math.ceil(this.frameOf(s0 + this.gate * (s1 - s0)) - 1e-6));
+    this.k++; this.idx++; this.lastF = f;
+  }
+}
 // Mod matrix (patch.mod, slots s1..s8): each slot is a source, a destination and an amount (-1..1).
 // patches.js carries the same two lists (MOD_SRC, MOD_DST); the suite checks they match. Sources,
 // read per voice at the control tick: the amp and filter envelopes (0..1), LFO 1 and LFO 2 (-1..1, the
