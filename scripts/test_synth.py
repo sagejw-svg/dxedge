@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -1078,6 +1078,23 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.panic && __synth.panic()")
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Ar. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Pn. the patch arrows (review 31 Oct, R1031-2)
+    # The menu groups factory patches by category; the arrows used to walk the factory list's own order, so on
+    # Filament the step after Snarl Lead was Wide Novachord Strings, not Seven Filaments, the next one shown.
+    pn_ = pg.evaluate("""async () => {
+      const sel = document.getElementById('patchSel'), opts = [...sel.options].map(o => o.value).filter(v => v !== '__edit');
+      const go = async (id, n) => { const w = []; for (let i = 0; i < n; i++) { document.getElementById(id).click(); await new Promise(r => setTimeout(r, 30)); w.push(sel.value); } return w; };
+      sel.value = opts[0]; sel.dispatchEvent(new Event('change')); await new Promise(r => setTimeout(r, 30));
+      const fwd = await go('nextP', opts.length), back = await go('prevP', opts.length);
+      return { opts, fwd, back }; }""")
+    _want_ = pn_["opts"][1:] + pn_["opts"][:1]
+    ck(f"Pn. the next arrow walks the patch menu in the order it shows and wraps to the top ({len(pn_['opts'])} patches; first steps {pn_['fwd'][:8]})",
+       len(pn_["opts"]) >= 20 and pn_["fwd"] == _want_, (pn_["opts"], pn_["fwd"]))
+    ck(f"Pn. the previous arrow walks back the same way, past the top to the bottom ({pn_['back'][:4]})",
+       pn_["back"] == pn_["opts"][::-1], (pn_["opts"][::-1], pn_["back"]))
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Pn. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
     for tube, lead in (("12AX7", 2), ("12AT7", 2), ("12AU7", 2), ("300B", 2), ("EL34", 3), ("6L6", 3), ("KT88", 3)):
@@ -2767,6 +2784,23 @@ with sync_playwright() as pw:
         ck(f"M. exported WAV is not silent (RMS {db(rms(wL)):.1f} dB, tail {db(tail):.1f} dB)", rms(wL) > 1e-3 and rms(wR) > 1e-3 and tail > 1e-4, (rms(wL), tail))
     else:
         ck("M. exported WAV is not silent", False, "no header")
+    # The master strip's render follows the rack tempo (review 31 Oct, R1031-1): it rendered at the engine's default
+    # 120 BPM whatever the rack was set to, so an arpeggio or a synced LFO came out at the wrong speed.
+    _t0_ = pg.evaluate("__synth.transport().state().tempo")
+    pg.evaluate("__synth.transport().setTempo(80)")
+    _ap_ = patch(osc1={"wave": "sine", "level": 0.5}, arp={"on": True, "mode": "up", "div": "1/8", "oct": 1, "gate": 0.5, "swing": 0, "latch": False})
+    _w8_ = pg.evaluate("""async a => __synth.renderWav(a)""", {"seconds": 2.2, "rack": False, "patch": _ap_, "events": note(60, 0.0, 2.1) + note(67, 0.0, 2.1)})
+    pg.evaluate(f"__synth.transport().setTempo({_t0_})")
+    _i8_ = parse_wav(base64.b64decode(_w8_["b64"]))
+    _ups_ = []
+    if _i8_:
+        _x_, _ = pcm24(_i8_["data"]); _x_ = np.asarray(_x_, dtype=float)
+        _N_ = 2 * len(_x_); _X_ = np.fft.fft(_x_, _N_); _h_ = np.zeros(_N_); _h_[0] = 1; _h_[1:_N_ // 2] = 2; _h_[_N_ // 2] = 1
+        _e_ = np.abs(np.fft.ifft(_X_ * _h_))[:len(_x_)]; _bw_ = int(44100 * 0.0005); _e_ = _e_[:len(_e_) // _bw_ * _bw_].reshape(-1, _bw_).mean(axis=1)
+        _hi_ = (_e_ > _e_.max() * 0.5).astype(int); _ups_ = [(i + 1) * 0.0005 for i in np.where(np.diff(_hi_) > 0)[0]]
+    _gaps_ = [round(float(b_ - a_), 4) for a_, b_ in zip(_ups_[:5], _ups_[1:6])]
+    ck(f"M. the master Render WAV steps the arpeggiator at the rack tempo: 1/8 at 80 BPM every {_gaps_} s (want 0.375, within 2 ms; 0.25 is the engine's default 120)",
+       len(_gaps_) >= 4 and all(abs(g_ - 0.375) <= 0.002 for g_ in _gaps_[1:]), (_ups_[:8], _gaps_))
     pg.fill("#wavSecs", "1")
     with pg.expect_download(timeout=60000) as di:
         pg.click("#wavGo")

@@ -17,6 +17,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
+| R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
 | R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part | measured |
 | R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail | measured |
 | R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
@@ -59,7 +61,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1038,3 +1040,84 @@ Inferred (code).
 ### Not covered tonight
 Areas a, b, c, d, e. Suggested next: a and b on the tempo-synced LFOs (each note value against the
 rack tempo, old patches with no `sync`), and a on the mod matrix destinations.
+
+## 2026-10-31 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `dae7ccf`, sw.js
+`dxedge-v164` (live and main agree). Chromium headless (Playwright's chromium-1243; the `chromium-1194`
+path in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console
+errors in any run. Focus tonight: the arpeggiator (new on 31 Oct) as a player would use it, the
+tempo-synced LFOs against the rack tempo (the 30 Oct suggestion), and area b on every device's patch
+menu, the arrows, save, reload and delete.
+
+### What worked (measured)
+
+- Arpeggiator panel at 1366 and 375: the on switch, five mode chips (one pressed), the 11-step menu,
+  latch, and the octave, gate and swing knobs all write `patch.arp`; the readout follows the rack
+  tempo ("8.00 steps/s at 120 BPM", then "6.00 steps/s at 90 BPM" after a tempo change). Phone: every
+  control is 44 px tall, page width 375.
+- Live, computer keys (A, D, G held 1.2 s at 90 BPM, 1/16): the meter's step count climbed 2 to 9;
+  let go, the arp stopped (keys 0, not running). Latched: two tapped keys kept stepping; switching the
+  rail to Cathode and back dropped them (keys 0, voices 0); rack Play and Stop kept a latched arp
+  stepping; panic cleared it.
+- The song library with the arp on (Greensleeves, all three channels on Filament): the arp took the
+  song's notes (1 to 4 keys, step count 1 to 23 over 3 s); Stop left 0 voices and 0 keys, latched or not.
+- Offline renders with the arp on: mono, legato with glide, unison 8, 4 octaves from notes 110 and 118
+  (wrapped below 128), gate 100% with swing 75% at 1/32, random over 3 octaves. No NaN, peaks 0.29 to
+  0.47, no sample step over 0.29 (the high notes; 0.06 to 0.13 elsewhere).
+- Tempo-synced LFO 1 on the amp, every note value from 1/1 to 1/32 at 80 and 150 BPM: the measured rate
+  is within 0.1% to 2.6% of tempo / 60 / beats; the larger errors are the slow values, where a 2 s render
+  holds only two or three cycles (measurement resolution, not the LFO).
+- Area b: every factory patch on 17 devices selected from the menu with no error and the menu showing
+  it (Filament 25, Cathode 19, Thyratron 6, Gleam 7, Mote 3, Heptode 1, Geissler 3, Pentagrid 6,
+  Orthicon 5, Trochotron 6, Gyrotron 3, Klystron 5, Phantastron 6, Additron 5, Rhumbatron 7,
+  Resnatron 4, Dekatron 8; Lattice's 8 checked separately). A Filament user patch saved with the arp on
+  up-down came back selected and on after a reload; an old user patch with no `arp`, `filtB` or `mod`
+  loaded with the arp off and the panel saying so; undo after switching the arp on switched it off.
+
+### Findings
+
+**R1031-1. The master strip's Render WAV ignores the rack tempo.** Area a, d. Broken. Measured. Fixed tonight.
+- Steps: set the rack tempo to 80, switch the arp on at 1/8, hold a chord, press the master strip's
+  render wav.
+- Expected: steps every 0.375 s, as you hear it.
+- Actual: steps every 0.2505 s at rack tempos 80, 120 and 160 alike: the render ran at the engine's
+  default 120 BPM. The same holds for tempo-synced LFOs (inferred: they read the same clock). The deck's
+  Render WAV already passed the tempo; `renderToWav` in `wav.js` did not.
+- Fix: `renderToWav` takes `tempo`, and both master render paths pass the rack tempo. After: 0.3755 to
+  0.376 s. Check: "M. the master Render WAV steps the arpeggiator at the rack tempo" (before: 0.2505).
+
+**R1031-2. The patch arrows skip around the menu.** Area b. Confusing. Measured. Fixed tonight.
+- Steps: Filament, pick Snarl Lead, press the next arrow.
+- Expected: Seven Filaments, the next patch shown in the menu.
+- Actual: Wide Novachord Strings. The menu groups patches by category, but the arrows walked the
+  factory list's own order, so a patch filed out of order in that list (Seven Filaments, Lattice's
+  Choir Wash and Drift Cloth, Gleam's Self Orbit, Klystron's Keyed Sine, two of Orthicon's and
+  Resnatron's) came up out of turn, and the next arrow from the last patch did not always land on the
+  first one shown (Gleam: Master Sweep to Self Orbit).
+- Fix: the arrows walk the menu's own options, factory groups then yours. Checks: "Pn. the next arrow
+  walks the patch menu in the order it shows" and "Pn. the previous arrow walks back the same way" (both
+  failed on the unfixed page).
+
+**R1031-3. Picking a patch switches the arpeggiator off.** Area a, b. Confusing. Measured.
+- Steps: switch the arp on and latch a chord, then pick any factory patch (or press an arrow).
+- Actual: the arp stops and its settings go back to the defaults, because they live in the patch and
+  every factory patch has it off. Auditioning sounds under a running arpeggio is a common way to browse
+  patches. Whether the arp should be a patch setting or a device setting (or a "keep arp" switch) is a
+  design call for James.
+
+**R1031-4. A MIDI take records the keys, not the arpeggio.** Area a, e. Missing. Measured (take), inferred (impact).
+- Steps: arp on, arm the deck, hold C3 and G3 for a second, stop.
+- Actual: the take holds two notes (on at 0 and 0.03 s, off at 1.09 and 1.13 s). Playback on the rack
+  arpeggiates them again, so it sounds right here, but the exported .mid is a held chord in any other
+  program, and the arp restarts free-running on playback rather than on the bar it was played on. A
+  choice for James: record keys (as now), record the arp's notes, or offer both.
+
+### Still open, re-measured tonight
+- R1022-5: deleting a Filament user patch still lands on Plate Bass, not Wide Novachord Strings.
+- R1025-3: delete still removes a user patch at once with no question.
+
+### Not covered tonight
+Areas c, d (beyond the render tempo), e, f, g, h. Suggested next: c, d and e: the arp with a MIDI
+keyboard over `__synth.midi` (CC64, bend while stepping), the deck playing back an arp take with the
+rack running, and the master render of a synced LFO patch now that it carries the tempo.

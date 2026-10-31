@@ -67,6 +67,7 @@ export function downloadWav(bytes, name) {
 
 // Offline render of the current patch (and the master bus) to a 24-bit WAV.
 // Capped at 10 minutes. `master` is a master-bus state; omitted means the defaults (everything bypassed).
+// `tempo` is the rack tempo the arpeggiator and tempo-synced LFOs follow; omitted means the engine's default.
 export async function renderToWav(opts) {
   const seconds = Math.max(0.05, Math.min(600, +opts.seconds || 1));
   const buf = await renderOffline({
@@ -78,6 +79,7 @@ export async function renderToWav(opts) {
     mono: !!opts.mono,
     master: opts.master || null,
     masterFx: opts.masterFx !== false,
+    tempo: opts.tempo,
   });
   const bytes = encodeWav24(buf.getChannelData(0), buf.getChannelData(1), buf.sampleRate || SR);
   return { bytes, frames: buf.length, sampleRate: SR, bits: 24, channels: 2, seconds };

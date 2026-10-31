@@ -3159,7 +3159,12 @@ function loadKey(key) {
   refreshAll(); fillSelect(); pushPatch(true);
 }
 $('patchSel').addEventListener('change', e => { if (e.target.value !== '__edit') loadKey(e.target.value); });
-function step(d) { const list = allPatches(); let i = list.findIndex(x => x.key === curKey); i = (i + d + list.length) % list.length; loadKey(list[i].key); }
+// the arrows walk the menu in the order it shows (factory patches grouped by category, then yours)
+function step(d) {
+  const list = [...$('patchSel').options].map(o => o.value).filter(v => v !== '__edit');
+  if (!list.length) return;
+  let i = list.indexOf(curKey); i = i < 0 ? (d > 0 ? 0 : list.length - 1) : (i + d + list.length) % list.length; loadKey(list[i]);
+}
 $('prevP').addEventListener('click', () => step(-1)); $('nextP').addEventListener('click', () => step(1));
 $('saveP').addEventListener('click', () => { $('saveForm').classList.add('open'); $('saveName').value = curKey.startsWith('u:') ? cur.name : cur.name + ' 2'; $('saveName').focus(); $('saveName').select(); });
 $('saveNo').addEventListener('click', () => $('saveForm').classList.remove('open'));

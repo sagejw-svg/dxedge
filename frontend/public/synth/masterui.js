@@ -154,6 +154,8 @@ export function mountMaster(api) {
   let recTimer = 0;
   function stat(t) { $('fxStat').textContent = t; }
   function engine() { return api.getEngine(); }
+  // the rack tempo, so a render steps the arpeggiator and the synced LFOs at the tempo you hear
+  function rackTempo() { const E = engine(); return E && E.transport ? E.transport.state().tempo : undefined; }
   function prefix(duringTake) {
     const name = api.wavPrefix ? api.wavPrefix(!!duringTake) : '';
     return name || 'filament';
@@ -227,7 +229,7 @@ export function mountMaster(api) {
     try {
       const notes = api.getNotes();
       const events = (notes.length ? notes : [60]).map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
-      const w = await renderToWav({ patch: api.getPatch(), events, seconds, rack: true, master: state });
+      const w = await renderToWav({ patch: api.getPatch(), events, seconds, rack: true, master: state, tempo: rackTempo() });
       const name = downloadWav(w.bytes, wavName(prefix(false)));
       stat('saved ' + name + ' · ' + w.frames + ' frames');
     } catch (e) {
@@ -252,7 +254,7 @@ export function mountMaster(api) {
       return { b64: bytesToB64(w.bytes), bytes: w.bytes.length, frames: w.frames, sr: w.sampleRate, bits: 24, channels: 2, name: w.name };
     },
     async renderWav(opts) {
-      const w = await renderToWav(Object.assign({ patch: api.getPatch(), master: state, rack: true }, opts));
+      const w = await renderToWav(Object.assign({ patch: api.getPatch(), master: state, rack: true, tempo: rackTempo() }, opts));
       return {
         b64: bytesToB64(w.bytes), bytes: w.bytes.length, frames: w.frames,
         sr: w.sampleRate, bits: w.bits, channels: w.channels, seconds: w.seconds,
