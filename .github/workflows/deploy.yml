@@ -267,7 +267,7 @@ jobs:
           # GET, not HEAD: these paths proxy to the backend, which answers 405
           # to HEAD, and a 405 carries no cache-control at all - the check would
           # pass by finding nothing.
-          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/ https://dxedge.net/eob/ https://dxedge.net/eob2/ https://dxedge.net/crawl/ https://dxedge.net/salvage/; do
+          for U in https://dxedge.net/sw.js https://dxedge.net/crane-cab/js/main.js https://dxedge.net/news/ https://dxedge.net/delve/ https://dxedge.net/delve/engine.js https://dxedge.net/dm/ https://dxedge.net/eob/ https://dxedge.net/eob2/ https://dxedge.net/crawl/ https://dxedge.net/salvage/ https://dxedge.net/forever-zoom/ https://dxedge.net/forever-zoom/app.js https://dxedge.net/forever-zoom/style.css; do
             CC=$(curl -s -D- -o /dev/null "$U" | tr -d '\r' | grep -i '^cache-control:' | tr '\n' ' ')
             if [ -z "$CC" ]; then
               echo "ERROR: $U returned no cache-control header at all."
@@ -355,6 +355,49 @@ jobs:
             echo "ERROR: /salvage/ assets are not 200"
             exit 1
           fi
+
+      - name: Verify Forever Zoom is live
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/forever-zoom/)
+          echo "/forever-zoom/ $code"
+          if [ "$code" != "200" ]; then
+            echo "ERROR: /forever-zoom/ is not 200"
+            exit 1
+          fi
+          html=$(curl -sf https://dxedge.net/forever-zoom/)
+          echo "$html" | grep -q 'Forever Zoom' || { echo "ERROR: /forever-zoom/ is missing the title"; exit 1; }
+          echo "$html" | grep -q 'noindex' || { echo "ERROR: /forever-zoom/ is missing noindex"; exit 1; }
+          echo "$html" | grep -q '/forever-zoom/app.js' || { echo "ERROR: /forever-zoom/ is not the published page"; exit 1; }
+          echo "$html" | grep -q '/forever-zoom/procedural.js' || { echo "ERROR: /forever-zoom/ is missing the procedural engine"; exit 1; }
+          js=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/forever-zoom/procedural.js)
+          css=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/forever-zoom/style.css)
+          echo "/forever-zoom/ procedural $js css $css"
+          if [ "$js" != "200" ] || [ "$css" != "200" ]; then
+            echo "ERROR: /forever-zoom/ assets are not 200"
+            exit 1
+          fi
+          curl -sf https://dxedge.net/forever-zoom/app.js | grep -q '/api/forever-zoom' || { echo "ERROR: app.js is not pointed at the proxy"; exit 1; }
+          curl -sf https://dxedge.net/forever-zoom/procedural.js | grep -q 'ProceduralZoom' || { echo "ERROR: procedural engine is missing"; exit 1; }
+          # A stale backend has no route, so the SPA catch-all answers with
+          # index.html and a 200. Status alone cannot tell them apart.
+          # fal may be false (no key, or credits exhausted). The page still
+          # draws. Do not require fal to be true.
+          curl -sf https://dxedge.net/api/forever-zoom/health | python3 -c "
+          import sys, json
+          raw = sys.stdin.read()
+          if raw.lstrip().lower().startswith('<!doctype'):
+              raise SystemExit('ERROR: /api/forever-zoom/health fell through to the SPA')
+          d = json.loads(raw)
+          print('forever-zoom health', d.get('status'), 'fal', d.get('fal'))
+          assert d.get('status') == 'ok'
+          assert isinstance(d.get('fal'), bool)
+          assert 'desk' in d.get('themes', [])
+          "
+          curl -sf https://dxedge.net/api/health | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert d.get('forever_zoom') is True, 'backend is missing Forever Zoom'
+          "
 
       - name: Verify the EOB engine is live
         run: |

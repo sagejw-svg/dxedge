@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Forever Zoom</title>
+  <link rel="stylesheet" href="/forever-zoom/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Forever <span>Zoom</span></h1>
+      <span id="statusBadge" class="badge">checking…</span>
+      <span id="themeBadge" class="badge">Desk</span>
+      <div class="grow"></div>
+      <div class="controls">
+        <label title="Generation mode">
+          <select id="modeSelect">
+            <option value="auto">Auto (AI → procedural)</option>
+            <option value="ai">AI only (fal)</option>
+            <option value="procedural">Procedural only</option>
+          </select>
+        </label>
+        <button id="btnStart" class="primary">New journey</button>
+        <button id="btnZoom" disabled>Zoom in</button>
+        <button id="btnPng" disabled>Save PNG</button>
+        <button id="btnVideo" disabled>Record WebM</button>
+        <button id="btnJson" disabled>Save journey JSON</button>
+        <label class="file" title="Replay a saved journey">
+          Load JSON
+          <input id="loadJson" type="file" accept="application/json,.json" hidden />
+        </label>
+      </div>
+    </header>
+
+    <div id="stage-wrap">
+      <div id="stage" title="Click to aim, scroll or press Zoom in">
+        <canvas id="view" width="1024" height="1024"></canvas>
+        <canvas id="fx" width="1024" height="1024"></canvas>
+        <div id="crosshair"></div>
+        <div id="hud">
+          <div class="pill" id="hudDepth">Depth 0</div>
+          <div class="pill" id="hudCost">$0.00 spent</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>Click to aim · scroll / Zoom in to descend · scenes morph forever</div>
+      <div id="log"></div>
+    </footer>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script src="/forever-zoom/procedural.js"></script>
+  <script src="/forever-zoom/app.js"></script>
+</body>
+</html>
