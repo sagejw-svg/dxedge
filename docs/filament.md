@@ -137,7 +137,7 @@ task can read it).
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure. `engine.js` posts its state (`{t:'clock'}`) to the Filament and Cathode worklets on play, stop, tempo and locate, for tempo-synced LFOs |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
-| `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, and the graphic EQ's presets, fitting, resampling and live spectrum tap) |
+| `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, the tape echo, and the graphic EQ's presets, fitting, resampling and live spectrum tap) |
 | `frontend/public/synth/fm/` | Hexode, a vendored six-operator FM page (MIT, Matt Montag). The name on the page is Hexode. See `CHANGES.md` and `THIRD_PARTY_NOTICES.md` |
 | `frontend/public/synth/acid/` | Anode, a vendored acid bass groovebox (CC BY 4.0, David Whiting / Vitling). The page credits the author. Drums in this copy are synthesized. See `CHANGES.md` |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx`. Links Hexode and Anode |
@@ -350,7 +350,26 @@ task can read it).
       arp settings and tempo are unchanged); the tube show flares on key presses, not on each arp step; a chord mode (all keys
       every step) and a pattern restart on Play.
 - [x] Ensemble: BBD chorus I, II, I+II, and a three-phase string ensemble - 13 Oct, stereo round
-- [ ] Tape echo: mono, ping pong, offset; wow and flutter; tube record amp
+- [x] Tape echo: mono, ping pong, offset; wow and flutter; tube record amp - 1 Nov 2026 (nightly).
+      Rack-wide, after the ensemble (ensemble > tape echo > EQ > output tubes), `makeTapeEcho` in rack.js below the additions
+      line, plain Web Audio nodes like the ensemble. Patch fields `echo.on`, `mode` (mono, pingpong, offset), `time` (40 to
+      1500 ms), `sync` (off or a note value from 1/2 to 1/16 at the rack tempo), `fb`, `mix`, `wow`, `flutter` (0 to 100%),
+      `drive` (0 to 10), `tone` (0 to 10, a 1.8 to 9 kHz low-pass); Filament, Cathode and Dekatron carry the same fields.
+      Off by default and no factory patch switches it on, so nothing sounds different. The record path: the mid plus the
+      feedback through the record amp (an asymmetric tanh, 2x oversampled, slope 1 at rest; drive pushes up to 26 dB into
+      it, so it saturates with H2 above H3 and keeps a runaway loop bounded), then a 100 Hz high-pass and the tone low-pass,
+      both inside the loop, so each pass is darker. Two heads read the tape: mono plays head A on both sides; ping-pong
+      plays head A on the right and head B at 2x on the left with feedback from B (R, L, R, L); offset plays head A left
+      (feedback) and head B at 1.5x right. Wow (0.53 and 0.87 Hz, about 0.8% peak at 100%) and flutter (6.7 and 11.1 Hz,
+      about 0.3%) move both heads. Mix keeps the dry at full level to 50% and brings the wet to full at 50%. A synced echo
+      follows a tempo change (the tape glides to the new time). Timing: Chromium delays a 2x WaveShaper by 128 frames and
+      closes a feedback loop one render quantum late; both are measured once per sample rate (`probeEchoLatency`) and
+      taken off the heads, the input enters brk late, and the wiring is rebuilt per mode so the feedback head is the only
+      delay line in the loop and the first input the merger pulls (a loop entered at a tap off the filter put the other
+      head 128 frames late). Measured (section Te.): head times and every pass round the loop within 1 ms of the knob,
+      sync and ping-pong and offset; 50% feedback steps -5.9 dB a repeat, 85% -1.3 dB; wow 100% 1.20% peak, flutter
+      0.40%; off and mix 0 are sample for sample the stage taken out of the graph. Still open: a tape hiss or age control,
+      a spring reverb after it (the next item), and factory patches that use it (a call for James).
 - [ ] Spring reverb: two tube-driven springs of different lengths, drip
 Done when: every model self-oscillates where it should; mono fold passes for all patches.
 
@@ -1357,6 +1376,7 @@ tempo readout window; then the rest as listed. The Lattice and Mote palette item
   title on each plate (the role) would keep it reachable by hover there.
 
 ## Open items for James
+- Tape echo, 1 Nov (nightly): new section on the Rack tab, off in every patch, so nothing you know sounds different. Worth a listen: drive 7 to 10 with feedback 80 to 100% (the record amp holds the runaway), wow and flutter at 50%+, and sync on with the tempo changed while it repeats (the tape glides). Two calls: (1) should a few factory patches use it (a dub bass, a slapback lead, a ping-pong pluck), and which? I left every patch alone. (2) Ping-pong starts on the right, not the left: the browser only times the loop exactly when the feedback head feeds the left side (details in the roadmap line). If you would rather hear it start on the left, I can swap the sides by building the loop differently; say so. Note the master bus still has its own clean delay; the tape echo is per patch and sits before the EQ and output tubes.
 - Review 31 Oct, two arpeggiator calls (details in `docs/filament-review.md`): (1) R1031-3, the arp lives in the patch, so picking any factory patch, or pressing an arrow, switches a running arpeggio off and resets its settings; keep it per patch, make it a device setting, or add a "keep arp" switch? (2) R1031-4, the deck records the keys you hold, not the arp's notes, so an exported .mid is a held chord in a DAW; record keys (now), the arp's notes, or offer both? Also fixed tonight, no sound change to any patch: the master strip's render wav now follows the rack tempo (it rendered the arp and synced LFOs at 120 BPM), and the patch arrows walk the menu in the order it shows.
 - Graphics 31 Oct: the device strips on a phone look different. Before: the rail was a row of loose dark buttons on the panel, and neither it nor the outboard row under it showed that it scrolls, except a button cut off at the right edge; a device picked from the far end (Resnatron, say) stayed off screen. After: the rail sits in the same sunken tray as the outboard row, on the brushed plates the desktop uses, and both rows show a dark fade with a small amber chevron at the edge that has more (left, right or both), gone at the end; picking a device slides the rail to show its lit plate. The panel sits 4 px lower on a phone. Desktop unchanged. If the chevrons read as buttons to you, they can go and leave only the fade.
 - Nightly 31 Oct: the arpeggiator (Play tab, Arpeggiator section; off until you switch it on, so nothing sounds different). Calls made, any of which can change: (1) it follows the rack tempo, with no BPM knob of its own; (2) the step menu runs 1/2 to 1/32 with dotted and triplet values (11); (3) with the rack playing, a key waits for the next step on the grid, and stopped, the first note plays with the key; (4) Play does not restart the pattern, it carries on from the note it was on; (5) latch replaces the chord when you press a key with none down; (6) the sustain pedal holds keys you let go; (7) it is Filament only tonight (Cathode is a follow-up). Try a three-note chord at 1/16, up-down over 2 octaves, gate 30%, swing 60%, with the song library playing.

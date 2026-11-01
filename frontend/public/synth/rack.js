@@ -457,6 +457,149 @@ function makeEnsemble(ctx){
 }
 
 // ======================================================================
+// Tape echo, rack-wide (brief: ENSEMBLE > TAPE ECHO > SPRING > EQ > V3/V4). Our own design, built
+// from plain Web Audio nodes like the ensemble, so it runs the same live and offline.
+//   The record path: the mid (L+R)/2 plus the feedback goes through the record amp (a gain, an
+//   asymmetric tanh curve with slope 1 at rest, and the inverse gain, so a quiet echo is clean and
+//   unity, and pushing drive saturates it, with even harmonics from the asymmetry), then a 100 Hz
+//   high-pass and the tone low-pass. Both sit inside the loop, so each pass round it is darker and a
+//   little thinner than the last, and the curve keeps a runaway loop bounded.
+//   Two playback heads read that tape: head A at the time, head B further along.
+//          mono      head A on both sides; feedback from head A.
+//          pingpong  head A on the right, head B at twice the spacing on the left, feedback from
+//                    head B, so the repeats alternate R (t), L (2t), R (3t), L (4t)...
+//          offset    head A on the left (feedback from it), head B at 1.5x the spacing on the
+//                    right, so the right repeats fall between the left's.
+//   The wiring is rebuilt per mode so the feedback head is the only delay line in the loop and the
+//   left wet's only source. The browser pulls the merger's left input first, so it enters the loop
+//   at that delay line, which is where a loop may close. Entered anywhere else (a tap off the tone
+//   filter, say), Chromium closes it there and the other head plays a render quantum late
+//   (measured: 128 frames).
+//   Wow (two slow sines, 0.53 and 0.87 Hz) and flutter (6.7 and 11.1 Hz) move both heads' delay
+//   times together, as one tape would. At 100% wow peaks near 0.8% pitch, flutter near 0.3%.
+// Left and right wet are never inverted, so folding to mono only adds the two (mono-safe).
+// ======================================================================
+var ECHO_MODES = ['mono', 'pingpong', 'offset'];
+var ECHO_HEAD_B = { mono: 1, pingpong: 2, offset: 1.5 };  // head B's spacing against head A
+var ECHO_OFFSET = 1.5;
+var ECHO_MAX = 4.4;                                      // seconds of tape per head
+var ECHO_TMAX = 2.15;                                    // head A's longest time (head B at 2x still fits)
+var ECHO_WOW = [[0.53, 0.008], [0.87, 0.004]];           // [Hz, peak pitch deviation at 100%]
+var ECHO_FLUTTER = [[6.7, 0.003], [11.1, 0.001]];
+var ECHO_R = 6;                                          // the record amp curve spans +/-6 at the shaper's input
+var ECHO_B = 0.15;                                       // its asymmetry (the operating point)
+function echoSat(u){ var t=Math.tanh(ECHO_B); return (Math.tanh(u+ECHO_B)-t)/(1-t*t); }
+function echoDriveGain(drive){ return 0.25*Math.pow(10, clampN(+drive||0,0,10)*2.6/20); } // 0 -> 0.25, 10 -> 5 (26 dB of push)
+function echoToneHz(tone){ return 1800*Math.pow(5, clampN(+tone||0,0,10)/10); }        // 0 -> 1.8 kHz, 10 -> 9 kHz
+// The time of head A in seconds: free milliseconds, or a note value (beats) at the rack tempo.
+function echoSeconds(e, tempo, beatsOf){
+  e=e||{}; var b = e.sync && e.sync!=='off' && beatsOf ? beatsOf[e.sync] : 0;
+  var s = b ? b*60/clampN(+tempo||120,40,240) : clampN(+e.time||375,40,1500)/1000;
+  return clampN(s, 0.04, ECHO_TMAX);
+}
+// The dry and wet gains for a mix of 0..100: the dry holds full level to 50%, the wet reaches full at 50%.
+function echoMix(mix){ var m=clampN(+mix||0,0,100)/100; return { dry: Math.min(1, 2*(1-m)), wet: Math.min(1, 2*m) }; }
+// Two delays the times must allow for, both measured once per sample rate on a tiny offline graph
+// shaped like the echo's loop (an impulse, the record amp's 2x shaper with a straight curve, a delay
+// line, half fed back): lat, the shaper's oversampling latency (Chromium: 128 frames), and brk, what
+// closing a loop costs on top of its delay line (Chromium: one render quantum, 128 frames). Head
+// times come down by lat + brk, and the input reaches the record amp brk late, so the first repeat
+// and every pass round the loop both land on the time.
+var ECHO_LAT = {};
+function probeEchoLatency(sr){
+  if(ECHO_LAT[sr]) return Promise.resolve(ECHO_LAT[sr]);
+  var none={ lat:0, brk:0 };
+  try{
+    var N=4096, D=1000, c=new OfflineAudioContext(1,N,sr), b=c.createBuffer(1,N,sr); b.getChannelData(0)[100]=1;
+    var s=c.createBufferSource(); s.buffer=b; var sum=c.createGain(), w=c.createWaveShaper(), d=c.createDelay(1), f=c.createGain();
+    w.curve=new Float32Array([-1,0,1]); w.oversample='2x'; d.delayTime.value=D/sr; f.gain.value=0.5;
+    s.connect(sum); sum.connect(w); w.connect(d); d.connect(f); f.connect(sum); d.connect(c.destination); s.start(0);
+    return c.startRendering().then(function(o){
+      var x=o.getChannelData(0), pk=function(a,z){ var m=a; for(var i=a;i<z;i++) if(Math.abs(x[i])>Math.abs(x[m])) m=i; return m; };
+      var p1=pk(0,N), p2=pk(p1+64,N), lat=p1-100-D, brk=p2-p1-D-lat;
+      ECHO_LAT[sr]=(lat>=0 && lat<=512 && brk>=0 && brk<=512) ? { lat:lat, brk:brk } : none; return ECHO_LAT[sr]; })
+      .catch(function(){ ECHO_LAT[sr]=none; return none; });
+  }catch(e){ ECHO_LAT[sr]=none; return Promise.resolve(none); }
+}
+// lt: { lat, brk } in frames (probeEchoLatency); zeros if unknown
+function makeTapeEcho(ctx, lt){
+  var live = !(window.OfflineAudioContext && ctx instanceof OfflineAudioContext);
+  function G(v){ var g=ctx.createGain(); g.gain.value=v; return g; }
+  function ST(n){ n.channelCount=2; n.channelCountMode='explicit'; n.channelInterpretation='speakers'; return n; }
+  function MO(n){ n.channelCount=1; n.channelCountMode='explicit'; n.channelInterpretation='speakers'; return n; }
+  function BQ(type,f){ var b=ctx.createBiquadFilter(); b.type=type; b.frequency.value=f; b.Q.value=0.5; return b; }
+  function setP(p,v,tc){ if(live){ try{ p.setTargetAtTime(v, ctx.currentTime, tc||0.03); return; }catch(e){} } p.value=v; }
+  var T = { oscs: [], fed: true, state: null, lt: lt||{ lat:0, brk:0 }, wired: null };
+  T.late=(T.lt.lat+T.lt.brk)/ctx.sampleRate;                 // what comes off every head's time
+  T.input=ST(G(1)); T.output=ST(G(1)); T.dry=ST(G(1)); T.input.connect(T.dry); T.dry.connect(T.output);
+  T.mid=MO(G(1)); T.input.connect(T.mid);
+  T.rec=MO(G(1)); T.pre=ctx.createDelay(0.05); T.pre.delayTime.value=T.lt.brk/ctx.sampleRate;
+  T.mid.connect(T.pre); T.pre.connect(T.rec);              // the record sum: the mid (brk late) plus the feedback
+  T.recIn=MO(G(1/ECHO_R)); T.amp=ctx.createWaveShaper(); T.amp.oversample='2x'; T.recOut=MO(G(ECHO_R));
+  T.amp.curve=(function(){ var n=4097, c=new Float32Array(n); for(var i=0;i<n;i++) c[i]=echoSat((i/(n-1)*2-1)*ECHO_R)/ECHO_R; return c; })();
+  T.hp=BQ('highpass',100); T.lp=BQ('lowpass',echoToneHz(5));
+  T.rec.connect(T.recIn); T.recIn.connect(T.amp); T.amp.connect(T.recOut); T.recOut.connect(T.hp); T.hp.connect(T.lp);
+  T.dA=ctx.createDelay(ECHO_MAX); T.dB=ctx.createDelay(ECHO_MAX); T.dA.delayTime.value=0.375; T.dB.delayTime.value=0.375;
+  T.lp.connect(T.dA); T.lp.connect(T.dB);
+  T.fb=G(0); T.wetL=G(0); T.wetR=G(0); T.merge=ctx.createChannelMerger(2);
+  T.wetL.connect(T.merge,0,0); T.wetR.connect(T.merge,0,1); T.merge.connect(T.output); T.fb.connect(T.rec);
+  // wow and flutter: four sines, each scaled to seconds of delay so its peak pitch deviation is as listed
+  T.wowG=[]; T.flutG=[];
+  function wobble(list, into){ list.forEach(function(w){ var o=ctx.createOscillator(); o.type='sine'; o.frequency.value=w[0];
+    var g=G(0); o.connect(g); g.connect(T.dA.delayTime); g.connect(T.dB.delayTime); T.oscs.push(o); into.push({ g:g, hz:w[0], dev:w[1] }); }); }
+  wobble(ECHO_WOW, T.wowG); wobble(ECHO_FLUTTER, T.flutG);
+  T.oscs.forEach(function(o){ o.start(0); });
+  // the heads' wiring for a mode: [left and feedback, right]. Mono leaves head B unconnected, so it never runs.
+  var WIRES = { mono: ['dA', 'dA'], pingpong: ['dB', 'dA'], offset: ['dA', 'dB'] };
+  function wire(mode){
+    if(T.wired===mode) return; var w=WIRES[mode];
+    try{ T.dA.disconnect(); }catch(e){} try{ T.dB.disconnect(); }catch(e){}
+    T[w[0]].connect(T.wetL); T[w[0]].connect(T.fb); T[w[1]].connect(T.wetR); T.wired=mode;
+  }
+  wire('mono');
+  var rewireT=null;
+  // Idle: with the echo off (or its mix at 0) the wet gains and the feedback sit at 0 and the mid feed
+  // is unplugged, so the loop drains and the browser stops processing it once the tape is silent (as
+  // the ensemble's wet side does). Live it waits for the wet fade (0.3 s); offline it unplugs at once.
+  var unplugT=null;
+  function feed(want){
+    if(want){ if(unplugT){ clearTimeout(unplugT); unplugT=null; } if(!T.fed){ T.mid.connect(T.pre); T.fed=true; } return; }
+    if(!T.fed || unplugT) return;
+    var cut=function(){ unplugT=null; if(T.fed){ try{ T.mid.disconnect(T.pre); }catch(e){} T.fed=false; } };
+    if(live) unplugT=setTimeout(cut, 300); else cut();
+  }
+  // e: the patch's echo fields; sec: head A's time in seconds (echoSeconds)
+  T.set=function(e, sec){
+    e=e||{}; var on=!!e.on, mx=echoMix(e.mix), mode=ECHO_MODES.indexOf(e.mode)<0 ? 'mono' : e.mode;
+    var want = on && mx.wet > 0, fb = want ? clampN(+e.fb||0,0,100)/100 : 0, g=echoDriveGain(e.drive);
+    var kB = ECHO_HEAD_B[mode];
+    sec = clampN(+sec||0.375, 0.04, ECHO_TMAX);
+    feed(want);
+    // a new mode rewires the heads: offline at once; live under a 30 ms dip of the wet and the feedback
+    if(T.wired!==mode){
+      if(!live) wire(mode);
+      else { if(rewireT) clearTimeout(rewireT); [T.wetL.gain, T.wetR.gain, T.fb.gain].forEach(function(p){ p.cancelScheduledValues(ctx.currentTime); p.setTargetAtTime(0, ctx.currentTime, 0.005); });
+        rewireT=setTimeout(function(){ rewireT=null; wire(mode); T.set(e, sec); }, 30);
+        T.state={ on:on, mode:mode, sec:sec, secB:sec*kB, fb:fb, drive:g, wet: want ? mx.wet : 0, dry: on ? mx.dry : 1, wiring:true }; return; }
+    }
+    setP(T.fb.gain, fb);
+    // both heads come early by the record amp's latency and the loop's cost (see probeEchoLatency). A new
+    // time glides (0.1 s time constant): the repeats bend in pitch, as a real tape's do when its speed changes
+    setP(T.dA.delayTime, sec - T.late, 0.1); setP(T.dB.delayTime, sec*kB - T.late, 0.1);
+    setP(T.recIn.gain, g/ECHO_R); setP(T.recOut.gain, ECHO_R/g);
+    setP(T.lp.frequency, Math.min(echoToneHz(e.tone), ctx.sampleRate*0.45));
+    var wow=clampN(+e.wow||0,0,100)/100, fl=clampN(+e.flutter||0,0,100)/100;
+    T.wowG.forEach(function(w){ setP(w.g.gain, want ? wow*w.dev/(2*Math.PI*w.hz) : 0); });
+    T.flutG.forEach(function(w){ setP(w.g.gain, want ? fl*w.dev/(2*Math.PI*w.hz) : 0); });
+    setP(T.wetL.gain, want ? mx.wet : 0); setP(T.wetR.gain, want ? mx.wet : 0);
+    setP(T.dry.gain, on ? mx.dry : 1);
+    T.state={ on:on, mode:mode, sec:sec, secB:sec*kB, fb:fb, wired:T.wired, drive:g, wet: want ? mx.wet : 0, dry: on ? mx.dry : 1 };
+  };
+  T.stop=function(){ T.oscs.forEach(function(o){ try{ o.stop(); }catch(e){} }); };
+  return T;
+}
+
+// ======================================================================
 // Graphic EQ, rack-wide (the first stage of makeChain: ensemble > EQ > output tubes).
 // The chain's EQ (ISO band centres, 1/1, 2/3 and 1/3 octave peaking filters, the top band a
 // shelf) and its response maths are in the copied block above. Here: the band counts a patch may
@@ -522,4 +665,5 @@ function tubeData(){ return TUBES.map(function(t){ return { id:t.id, gain:t.gain
 
 export { TUBES, TUBE_BY, CABS, CAB_BY, ROOMS, ROOM_BY, tubeCurve, curveAt, harmonics, makeChain, makeSynthChain,
          compMakeupDb, dB2lin, clampN, hashStr, mulberry32, ppMakeup, tubeData, makeEnsemble, ENS_MODES,
+         makeTapeEcho, probeEchoLatency, ECHO_MODES, ECHO_HEAD_B, ECHO_OFFSET, ECHO_WOW, ECHO_FLUTTER, echoSat, echoDriveGain, echoToneHz, echoSeconds, echoMix,
          ISO, EQ_N, EQ_PRESETS, EQ_PRESET_BY, eqCentres, eqResponse, eqFit, eqTarget, eqResample, addEqTap };

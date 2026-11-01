@@ -266,6 +266,7 @@
   body:not([data-dev="gleam"]) #gleamRoot { display: none !important; }
   /* the graphic EQ is a Filament and Cathode patch field; the tube show needs the chassis */
   body:not([data-dev="filament"]):not([data-dev="cathode"]) #mEq { display: none !important; }
+  body:not([data-dev="filament"]):not([data-dev="cathode"]) #mEcho { display: none !important; }
   body:not([data-dev="filament"]):not([data-dev="cathode"]):not([data-dev="thyratron"]):not([data-dev="dekatron"]):not([data-dev="gleam"]) #mShow { display: none !important; }
   body[data-dev="dekatron"] #mStereo, body[data-dev="dekatron"] #mEns, body[data-dev="dekatron"] #mOut,
   body[data-dev="dekatron"] #mSpk, body[data-dev="dekatron"] #mRoom { display: none !important; }
@@ -1169,6 +1170,11 @@
         <div class="knobs" id="kStereo"></div></section>
       <section class="mod" data-tab="stereo rack" id="mEns"><h3><span class="pilot" id="ensPilot"></span>Ensemble<button class="chip sw" id="ensOnBtn" aria-pressed="false">off</button></h3><div class="chips" data-chips="ens.mode"></div><div class="knobs" id="kEns"></div>
         <div class="note">Bucket brigade chorus before the output tubes. I and II sweep slow, I+II shimmers, strings is the three-phase ensemble of the string machines.</div></section>
+      <section class="mod" data-tab="rack" id="mEcho"><h3><span class="pilot" id="echoPilot"></span>Tape echo<button class="chip sw" id="echoOnBtn" aria-pressed="false" title="Tape echo on or off">off</button></h3>
+        <div class="chips" data-chips="echo.mode" role="group" aria-label="Echo heads"></div>
+        <div class="chips lsync" id="echoRate"><span class="cl">sync</span><select class="btn" id="echoSync" aria-label="Tape echo tempo sync" title="Tempo sync: the echo lands this note value later at the rack tempo. Off uses the time knob."></select><span class="lshz" id="echoMs"></span></div>
+        <div class="knobs" id="kEcho"></div>
+        <div class="note">A tape loop after the ensemble. The record amp saturates when you push drive, and every repeat goes back through it and the tone filter, so each one is darker than the last. Ping-pong alternates the sides; offset adds a second head on the right at one and a half times the spacing. Wow and flutter wobble the tape.</div></section>
       <section class="mod" data-tab="rack" id="mEq" data-wide><h3><span class="pilot" id="eqPilot"></span>Graphic EQ<button class="chip sw" id="eqOnBtn" aria-pressed="false">off</button></h3>
         <div class="chips" id="eqBandChips" role="group" aria-label="Number of bands"><span class="cl">bands</span></div>
         <div class="chips" id="eqPresetChips" role="group" aria-label="EQ preset"></div>
@@ -1515,7 +1521,7 @@
 <script type="module">
 import { makeKnob } from './knob.js';
 import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
-import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData } from './rack.js';
+import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz } from './rack.js';
 import { paintTubeState, paintTubeShow, fitCanvas } from './tubepaint.js';
 import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
@@ -1525,7 +1531,7 @@ import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
 import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
-import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS, LFO_SYNC, LFO_SYNC_BEATS, ARP_DIVS } from './patches.js';
+import { DEFAULT, FACTORY, CATS, ENUMS, normalize, clone, getPath, setPath, MOD_SRC, MOD_DST, MOD_SLOTS, LFO_SYNC, LFO_SYNC_BEATS, ARP_DIVS, ECHO_SYNC } from './patches.js';
 import { C_DEFAULT, C_FACTORY, C_CATS, C_ENUMS, C_SRC, C_IN, C_NORM, JACK_GROUPS, JACK_LABEL, SRC_SHORT, inLabel, normalizeC, normCables } from './cathode.js';
 import { normalizeProject, loadLocal, saveLocal, projectFileName } from './project.js';
 import { MIX_CHANNELS, routeTargets, normalizeArmed, normalizeSession, saveSession, loadSession, sessionFileName } from './mixsession.js';
@@ -2537,6 +2543,7 @@ document.querySelectorAll('[data-chips]').forEach(el => {
     'vco1.wave': { tri: 'tri', saw: 'saw', pulse: 'pulse', noise: 'noise' }, 'vco2.wave': { saw: 'saw', square: 'square', narrow: 'narrow', ring: 'ring' },
     'pm.dest': { both: 'both VCOs', vco2: 'VCO 2 only' },
     'arp.mode': { up: 'up', down: 'down', updown: 'up-down', random: 'random', played: 'as played' },
+    'echo.mode': { mono: 'mono', pingpong: 'ping-pong', offset: 'offset' },
   }[p];
   chips(el, p, p === 'sub.oct' ? [1, 2] : null, labels || (p.endsWith('wave') ? WAVE_L : null));
 });
@@ -2690,7 +2697,7 @@ function refreshLfoSync() {
   });
 }
 // the readout follows the rack tempo (subscribed as soon as the engine exists; see ensureEngine)
-function lfoSyncClock(ev) { if (ev && ev.type === 'tempo') { refreshLfoSync(); refreshArp(); } }
+function lfoSyncClock(ev) { if (ev && ev.type === 'tempo') { refreshLfoSync(); refreshArp(); refreshEcho(); } }
 // Arpeggiator (patch.arp): on/off and latch switches, the mode chips (built with the other chips), the
 // step menu and its readout at the rack tempo, and three knobs. The worklet does the stepping.
 K('kArp', 'arp.oct', 'octaves', { min: 1, max: 4, step: 1, round: true, fmt: v => v + ' oct', title: 'Octaves: the pattern climbs this many octaves before it starts again' });
@@ -2711,6 +2718,31 @@ function refreshArp() {
   $('arpPilot').classList.toggle('off', !a.on); $('mArp').classList.toggle('off', !a.on);
 }
 K('kEns', 'ens.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
+// Tape echo (patch.echo, shared rack): the head chips (built with the other chips), the sync menu with its
+// readout at the rack tempo, and seven knobs. rack.js makeTapeEcho does the sound; the engine sets its time.
+K('kEcho', 'echo.time', 'time', { map: LOG(40, 1500), fmt: v => Math.round(v) + 'ms', title: 'Echo time (head A) when sync is off' });
+K('kEcho', 'echo.fb', 'feedback', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Feedback: how much of each repeat goes back onto the tape. Near 100% it keeps going, held in check by the record amp' });
+K('kEcho', 'echo.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Mix: the dry stays at full level up to 50%; the echo reaches full level at 50%' });
+K('kEcho', 'echo.drive', 'drive', { min: 0, max: 10, step: 0.1, title: 'Record amp drive: pushes the tube record amp into saturation' });
+K('kEcho', 'echo.tone', 'tone', { min: 0, max: 10, step: 0.1, fmt: v => (echoToneHz(v) / 1000).toFixed(1) + 'kHz', title: 'Tone: the low-pass in the loop; every repeat passes it again' });
+K('kEcho', 'echo.wow', 'wow', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Wow: slow pitch drift of the tape' });
+K('kEcho', 'echo.flutter', 'flutter', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Flutter: fast pitch wobble of the tape' });
+ECHO_SYNC.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = SYNC_L(v); $('echoSync').appendChild(o); });
+$('echoSync').addEventListener('change', () => {
+  if (!cur.echo) return;
+  if (!undoArmed) rememberUndo();
+  setPath(cur, 'echo.sync', $('echoSync').value); if (!cur.echo.on) setPath(cur, 'echo.on', true);
+  afterChange('echo.sync'); pushPatch(false);
+});
+function refreshEcho() {
+  const src = cur && cur.echo ? cur : DS.filament.cur, e = src && src.echo; if (!e) return;
+  const sec = echoSeconds(e, rackTempo(), LFO_SYNC_BEATS), synced = e.sync !== 'off';
+  if ($('echoSync').value !== e.sync) $('echoSync').value = e.sync;
+  $('echoRate').classList.toggle('on', synced);
+  $('echoMs').textContent = synced ? Math.round(sec * 1000) + ' ms at ' + Math.round(rackTempo()) + ' BPM' : 'free';
+  const k = kn('echo.time'); if (k) k.k.el.style.opacity = synced ? '0.45' : '';
+  $('echoPilot').classList.toggle('off', !e.on); $('mEcho').classList.toggle('off', !e.on);
+}
 K('kSpk', 'out.spkInt', 'intensity', { min: 0, max: 10, step: 0.1 });
 K('kRoom', 'out.rmMix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 K('kRoom', 'out.rmDecay', 'decay', { min: 0.2, max: 6, step: 0.05, fmt: v => v.toFixed(2) + 's' });
@@ -2765,9 +2797,10 @@ function toggle(id, path, label) {
 const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), toggle('wOnBtn', 'out.wOn', on => on ? 'width on' : 'width off'),
             toggle('spkOnBtn', 'out.spkOn', on => on ? 'on' : 'off'), toggle('roomOnBtn', 'out.roomOn', on => on ? 'on' : 'off'),
             toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off'), toggle('eqOnBtn', 'out.eqOn', on => on ? 'on' : 'off'),
+            toggle('echoOnBtn', 'echo.on', on => on ? 'on' : 'off'),
             toggle('arpOnBtn', 'arp.on', on => on ? 'on' : 'off'), toggle('arpLatchBtn', 'arp.latch')];
 // touching a bypassed module's control switches it on (the /otr rack rule)
-[['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on'], ['mEq', 'out.eqOn']].forEach(([id, path]) => {
+[['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on'], ['mEq', 'out.eqOn'], ['mEcho', 'echo.on']].forEach(([id, path]) => {
   $(id).addEventListener('pointerdown', e => { if (e.target.closest('.sw')) return; if (!getPath(cur, path)) { setPath(cur, path, true); afterChange(path); pushPatch(false); } });
 });
 
@@ -2787,6 +2820,7 @@ function afterChange(path) {
   $('spkPilot').classList.toggle('off', !cur.out.spkOn); $('roomPilot').classList.toggle('off', !cur.out.roomOn);
   $('mSpk').classList.toggle('off', !cur.out.spkOn); $('mRoom').classList.toggle('off', !cur.out.roomOn);
   $('ensPilot').classList.toggle('off', !cur.ens.on); $('mEns').classList.toggle('off', !cur.ens.on);
+  refreshEcho();
   $('eqPilot').classList.toggle('off', !cur.out.eqOn); $('mEq').classList.toggle('off', !cur.out.eqOn);
   refreshEqChips(); EQV.dirty = true; FP.dirty = true;
   $('nameV3').textContent = cur.out.tube; $('nameV4').textContent = cur.out.tube;

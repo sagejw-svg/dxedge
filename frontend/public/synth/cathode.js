@@ -2,9 +2,9 @@
 //
 // Cathode is the second device in the Filament rack: one voice, semi-modular. A patch is plain
 // JSON like Filament's, with device: 'cathode' and a list of cables, each [source, input].
-// The rack fields (ens, out, the graphic EQ included) are the same as Filament's and take its defaults.
+// The rack fields (ens, echo, out, the graphic EQ included) are the same as Filament's and take its defaults.
 
-import { DEFAULT as F_DEFAULT, clone, EQ_RANGE, EQ_PRESET_IDS, normEq } from './patches.js';
+import { DEFAULT as F_DEFAULT, clone, EQ_RANGE, EQ_PRESET_IDS, normEq, ECHO_RANGE, ECHO_ENUMS } from './patches.js';
 
 export const C_SCHEMA = 1;
 
@@ -50,6 +50,7 @@ export const C_DEFAULT = {
   vca: { level: 0.8, vel: 0.3, bias: 0 },
   cables: [],
   ens: clone(F_DEFAULT.ens),
+  echo: clone(F_DEFAULT.echo),
   out: clone(F_DEFAULT.out),
 };
 
@@ -70,6 +71,7 @@ export const RANGE = {
   'out.drive': [0, 10], 'out.bias': [-5, 5], 'out.sag': [0, 10], 'out.tone': [-5, 5], 'out.level': [-24, 12],
   'out.spkInt': [0, 10], 'out.rmMix': [0, 100], 'out.rmDecay': [0.2, 6], 'out.rmTone': [0, 10], 'out.width': [0, 200], 'out.wChar': [3, 20],
   ...EQ_RANGE,
+  ...ECHO_RANGE,
 };
 const TUBES = ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'];
 export const C_ENUMS = {
@@ -78,6 +80,7 @@ export const C_ENUMS = {
   'pm.dest': ['both', 'vco2'], 'ctl.trig': ['multi', 'single'],
   'drive.tube': TUBES, 'follow.tube': TUBES,
   'ens.mode': ['I', 'II', 'I+II', 'strings'],
+  ...ECHO_ENUMS,
   'out.tube': TUBES, 'out.topology': ['se', 'pp'],
   'out.cab': ['console', 'bakelite', 'horn', 'monitor'], 'out.room': ['living', 'studio', 'theater', 'hall'],
   'out.eqPreset': EQ_PRESET_IDS,

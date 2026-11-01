@@ -23,6 +23,13 @@ export const LFO_SYNC = ['off'].concat(Object.keys(LFO_SYNC_BEATS));
 // voice.worklet.js reads the same table). Steps follow the rack tempo (40 to 240 BPM).
 export const ARP_MODES = ['up', 'down', 'updown', 'random', 'played'];
 export const ARP_DIVS = ['1/2', '1/4d', '1/4', '1/4tr', '1/8d', '1/8', '1/8tr', '1/16d', '1/16', '1/16tr', '1/32'];
+// Tape echo (patch.echo): the head modes, and 'off' (free time in ms) or the note value head A sits at
+// (lengths from LFO_SYNC_BEATS) at the rack tempo. The rack (rack.js makeTapeEcho) does the sound.
+export const ECHO_MODES = ['mono', 'pingpong', 'offset'];
+export const ECHO_SYNC = ['off', '1/2', '1/4d', '1/4', '1/4tr', '1/8d', '1/8', '1/8tr', '1/16d', '1/16'];
+// The rack fields every device that feeds the shared rack carries (Cathode and Dekatron copy them).
+export const ECHO_RANGE = { 'echo.time': [40, 1500], 'echo.fb': [0, 100], 'echo.mix': [0, 100], 'echo.wow': [0, 100], 'echo.flutter': [0, 100], 'echo.drive': [0, 10], 'echo.tone': [0, 10] };
+export const ECHO_ENUMS = { 'echo.mode': ECHO_MODES, 'echo.sync': ECHO_SYNC };
 const modSlots = () => Object.fromEntries(MOD_SLOTS.map(k => [k, { src: 'off', dst: 'off', amt: 0 }]));
 
 export const DEFAULT = {
@@ -48,6 +55,9 @@ export const DEFAULT = {
   at: { vib: 0, cut: 1 },    // aftertouch: vibrato depth (cents), cutoff (octaves)
   stereo: { pan: 'alt', spread: 0.5, uspread: 0.5 },
   ens: { on: false, mode: 'I', mix: 50 },  // the ensemble chorus, before the output tubes
+  // the tape echo, after the ensemble: off by default. time is head A in ms (sync 'off') or a note value at the
+  // rack tempo; fb and mix in %; wow and flutter in % of their full depth; drive pushes the record amp; tone darkens the repeats
+  echo: { on: false, mode: 'mono', time: 375, sync: 'off', fb: 35, mix: 30, wow: 20, flutter: 20, drive: 3, tone: 5 },
   mod: modSlots(),           // the mod matrix: all eight slots off by default
   // the arpeggiator: off by default. div is a step's note value at the rack tempo, oct 1 to 4 octaves,
   // gate the share of a step a note holds, swing how late every second step lands (0.5 = 3:1), latch keeps let-go keys
@@ -83,6 +93,7 @@ export const RANGE = {
   'out.eqBands': [10, 31], 'out.eqPre': [-12, 12],
 };
 MOD_SLOTS.forEach(k => { RANGE['mod.' + k + '.amt'] = [-1, 1]; });
+Object.assign(RANGE, ECHO_RANGE);
 RANGE['arp.oct'] = [1, 4]; RANGE['arp.gate'] = [0.05, 1]; RANGE['arp.swing'] = [0, 0.5];
 // The graphic EQ's fields, shared with Cathode (the rack is the same for both devices).
 export const EQ_RANGE = { 'out.eqBands': [10, 31], 'out.eqPre': [-12, 12] };
@@ -115,6 +126,7 @@ export const ENUMS = {
   'lfo1.sync': LFO_SYNC, 'lfo2.sync': LFO_SYNC,
   'arp.mode': ARP_MODES, 'arp.div': ARP_DIVS,
   'ens.mode': ['I', 'II', 'I+II', 'strings'],
+  ...ECHO_ENUMS,
   'voice.mode': ['poly', 'mono', 'legato'],
   'stereo.pan': ['center', 'alt', 'key', 'random'],
   'out.tube': ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'],

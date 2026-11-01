@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -2184,6 +2184,197 @@ with sync_playwright() as pw:
     ck(f"Q. UI: the LED ladders read the live spectrum (loudest band {max(lv) if lv else -999:.0f} dBFS)", bool(lv) and max(lv) > -70, lv)
     ck("Q. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Te. the tape echo (rack-wide, 1 Nov)
+    # (in a function, so its helper names stay local and never shadow the suite's: tempo(), onset(), held...)
+    def _tape_echo():
+        # A 15 ms saw burst through the rack. At mix 100 the dry is gone, so what comes out is the repeats
+        # alone; head times are onsets measured against the same burst with the echo off (the limiter's
+        # look-ahead delays both the same). Output stage clean, room and width off.
+        def tep(**echo):
+            e = {"on": True, "mode": "mono", "time": 250, "sync": "off", "fb": 0, "mix": 100, "wow": 0, "flutter": 0, "drive": 0, "tone": 10}
+            e.update(echo)
+            return patch(envA={"a": 0.001, "d": 0.012, "s": 0, "r": 0.004, "vel": 0}, osc1={"wave": "saw", "level": 0.5}, echo=e)
+        def onset(x, thr):
+            i = np.flatnonzero(np.abs(x) > thr); return int(i[0]) if len(i) else -1
+        burst = note(60, 0.05, 0.08)
+        D0, _ = render(tep(on=False), burst, 0.6)
+        t_dry = onset(D0, 0.1 * float(np.max(np.abs(D0))))
+        ref_pk = float(np.max(np.abs(D0)))
+        def heads(L, times, w=0.03):
+            return [float(np.max(np.abs(L[max(0, t_dry + int((t - w) * SR)):t_dry + int((t + w) * SR)]))) for t in times]
+        # mono: one head, both sides the same, at the knob's time
+        L, R = render(tep(time=250), burst, 0.8)
+        t1 = (onset(L, 0.1 * ref_pk) - t_dry) / SR * 1000
+        ck(f"Te. mono: the first repeat lands at the time knob (250 ms knob, measured {t1:.2f} ms; want within 1 ms)", abs(t1 - 250) <= 1, t1)
+        ck(f"Te. mono: the repeat is the same on both sides (max L-R {float(np.max(np.abs(L - R))):.2e})", float(np.max(np.abs(L - R))) < 1e-6, float(np.max(np.abs(L - R))))
+        L, _ = render(tep(time=90), burst, 0.5)
+        t1 = (onset(L, 0.1 * ref_pk) - t_dry) / SR * 1000
+        ck(f"Te. mono: a short time is as exact (90 ms knob, measured {t1:.2f} ms)", abs(t1 - 90) <= 1, t1)
+        # every pass round the loop lands on the time too: repeats 2 to 4 at 2t, 3t, 4t
+        L, _ = render(tep(time=200, fb=70), burst, 1.1)
+        pk = [t_dry + int((0.2 * k - 0.01) * SR) + onset(L[t_dry + int((0.2 * k - 0.01) * SR):], 0.05 * ref_pk) for k in (1, 2, 3, 4)]
+        gaps = [(pk[i + 1] - pk[i]) / SR * 1000 for i in range(3)]
+        ck(f"Te. feedback: each pass round the loop takes the time ({[round(g, 2) for g in gaps]} ms between repeats; want 200 within 1)", all(abs(g - 200) <= 1 for g in gaps), gaps)
+        # feedback: no second repeat at 0; at 50% and 85% each repeat a steady step down (a 1 kHz sine burst, RMS per repeat)
+        sb = lambda fb: patch(osc1={"wave": "sine", "level": 0.5, "fixed": 1000}, envA={"a": 0.002, "d": 0.012, "s": 0, "r": 0.004, "vel": 0},
+                              echo={"on": True, "mode": "mono", "time": 200, "fb": fb, "mix": 100, "wow": 0, "flutter": 0, "drive": 0, "tone": 10})
+        fbr = {}
+        for fb in (0, 50, 85):
+            L, _ = render(sb(fb), burst, 1.2)
+            h = [float(np.sqrt(np.mean(L[t_dry + int((0.2 * k - 0.03) * SR):t_dry + int((0.2 * k + 0.05) * SR)] ** 2))) for k in (1, 2, 3, 4)]
+            fbr[fb] = [db(h[i + 1] / max(h[i], 1e-12)) for i in range(3)]
+        ck(f"Te. feedback 0: one repeat only (second {fbr[0][0]:.0f} dB under the first, want 60 or more)", fbr[0][0] <= -60, fbr[0])
+        ck(f"Te. feedback 50%: each repeat about 6 dB under the last ({[round(x, 2) for x in fbr[50]]}; want -7 to -5.5)", all(-7 <= x <= -5.5 for x in fbr[50]), fbr[50])
+        ck(f"Te. feedback 85%: each repeat about 1.4 dB under the last ({[round(x, 2) for x in fbr[85]]}; want -2.5 to -1)", all(-2.5 <= x <= -1 for x in fbr[85]), fbr[85])
+        # ping-pong: right at t, left at 2t, right at 3t, left at 4t; the other side silent each time
+        L, R = render(tep(mode="pingpong", time=200, fb=70), burst, 1.2)
+        hl, hr = heads(L, [0.2, 0.4, 0.6, 0.8]), heads(R, [0.2, 0.4, 0.6, 0.8])
+        pp = [db(hr[0] / max(hl[0], 1e-9)), db(hl[1] / max(hr[1], 1e-9)), db(hr[2] / max(hl[2], 1e-9)), db(hl[3] / max(hr[3], 1e-9))]
+        ck(f"Te. ping-pong: repeats alternate right, left, right, left (each 40 dB or more over the other side: {[round(x) for x in pp]})", all(x >= 40 for x in pp), (hl, hr))
+        tr, tl = (onset(R, 0.1 * ref_pk) - t_dry) / SR * 1000, (onset(L, 0.1 * ref_pk) - t_dry) / SR * 1000
+        t3 = (int(0.5 * SR) + onset(R[int(0.5 * SR):], 0.05 * ref_pk) - t_dry) / SR * 1000
+        ck(f"Te. ping-pong: right at the time, left at twice it, right again at three times ({tr:.2f}, {tl:.2f}, {t3:.2f} ms; want 200, 400, 600 within 1)",
+           abs(tr - 200) <= 1 and abs(tl - 400) <= 1 and abs(t3 - 600) <= 1.5, (tr, tl, t3))
+        # offset: left head at t, right head at 1.5 t
+        L, R = render(tep(mode="offset", time=200, fb=0), burst, 0.8)
+        tl, tr = (onset(L, 0.1 * ref_pk) - t_dry) / SR * 1000, (onset(R, 0.1 * ref_pk) - t_dry) / SR * 1000
+        ck(f"Te. offset: left head at the time, right head at 1.5x ({tl:.2f} and {tr:.2f} ms; want 200 and 300 within 1)", abs(tl - 200) <= 1 and abs(tr - 300) <= 1, (tl, tr))
+        # mono-safe: a centred patch with ping-pong and offset folds to mono with no cancellation
+        for mode in ("pingpong", "offset"):
+            sp = patch(osc1={"wave": "saw", "level": 0.5}, echo={"on": True, "mode": mode, "time": 180, "fb": 60, "mix": 50, "wow": 30, "flutter": 30})
+            evs = [e for k, n in enumerate((48, 55, 60, 64)) for e in note(n, 0.1 + 0.3 * k, 0.3 + 0.3 * k)]
+            L, R = render(sp, evs, 2.4); Lm, _ = render(sp, evs, 2.4, mono=True)
+            st, mo = float(np.sqrt(np.mean((L ** 2 + R ** 2) / 2))), float(np.sqrt(np.mean(Lm ** 2)))
+            ck(f"Te. {mode} folds to mono without cancelling (loses {db(st) - db(mo):.1f} dB, want 3 or less)", db(st) - db(mo) <= 3.0, (db(st), db(mo)))
+        # sync: a note value at the rack tempo
+        sy = {}
+        for div, bpm in (("1/8", 100), ("1/8", 150), ("1/4d", 120)):
+            L = dec(pg.evaluate("a => __synth.render(a)", {"patch": tep(sync=div, time=40), "events": burst, "seconds": 1.2, "rack": True, "tempo": bpm}))[0]
+            sy[(div, bpm)] = (onset(L, 0.1 * ref_pk) - t_dry) / SR * 1000
+        ck(f"Te. sync: 1/8 at 100 and 150 BPM, 1/4 dotted at 120 ({[round(v, 2) for v in sy.values()]} ms; want 300, 200, 750 within 1)",
+           abs(sy[("1/8", 100)] - 300) <= 1 and abs(sy[("1/8", 150)] - 200) <= 1 and abs(sy[("1/4d", 120)] - 750) <= 1, sy)
+        # tone: the loop low-pass darkens every repeat (spectral centroid of repeats 1 and 3), and the knob sets how much
+        def centroid(x):
+            X = np.abs(np.fft.rfft(x * np.hanning(len(x)))); f = np.fft.rfftfreq(len(x), 1 / SR); return float(np.sum(X * f) / np.sum(X))
+        cen = {}
+        for tone in (0, 10):
+            L, _ = render(tep(time=200, fb=80, tone=tone), burst, 1.0)
+            seg = lambda k: L[t_dry + int((0.2 * k - 0.01) * SR):t_dry + int((0.2 * k + 0.03) * SR)]
+            cen[tone] = (centroid(seg(1)), centroid(seg(3)))
+        ck(f"Te. tone: each repeat is darker than the last (centroid {cen[10][0]:.0f} Hz on repeat 1, {cen[10][1]:.0f} on repeat 3 at tone 10; {cen[0][0]:.0f} and {cen[0][1]:.0f} at tone 0)",
+           cen[10][1] < cen[10][0] * 0.95 and cen[0][1] < cen[0][0] * 0.9, cen)
+        ck(f"Te. tone: the knob down is darker ({cen[0][0]:.0f} against {cen[10][0]:.0f} Hz on repeat 1)", cen[0][0] < cen[10][0] * 0.8, cen)
+        # the record amp: a sine's echo is clean at drive 0 and saturates, with an even harmonic, at drive 10
+        sine = lambda drive: patch(osc1={"wave": "sine", "level": 0.6, "fixed": 220}, envA={"a": 0.003, "d": 0.1, "s": 1, "r": 0.01, "vel": 0},
+                                   echo={"on": True, "mode": "mono", "time": 300, "fb": 0, "mix": 100, "wow": 0, "flutter": 0, "drive": drive, "tone": 10})
+        # the output stage after the echo adds a little H2 of its own, so the dry tone (echo off) is the reference,
+        # read over the same stretch of the note the echo plays back 300 ms later (0.15 to 0.55 s; the key lets go at 0.6)
+        hd = {}
+        for drv in ("dry", 0, 10):
+            P = sine(0 if drv == "dry" else drv)
+            if drv == "dry": P["echo"]["on"] = False
+            L, _ = render(P, note(60, 0.0, 0.6), 1.0)
+            a = 0.15 if drv == "dry" else 0.45
+            hd[drv] = harmonics_db(L[int(a * SR):int((a + 0.4) * SR)], 220, 4)
+        ck(f"Te. record amp: clean at drive 0 (H2 {hd[0][0]:.1f}, H3 {hd[0][1]:.0f} dB against the dry tone's {hd['dry'][0]:.1f} and {hd['dry'][1]:.0f}), saturated with an even harmonic at drive 10 (H2 {hd[10][0]:.0f}, H3 {hd[10][1]:.0f} dB)",
+           hd[0][0] < hd["dry"][0] + 2 and hd[0][1] < -60 and hd[10][0] > hd["dry"][0] + 10 and hd[10][1] > -40, hd)
+        # runaway: full feedback, full drive, a loud chord: the loop stays bounded, finite, under 0 dBFS
+        L, R = render(patch(osc1={"wave": "saw", "level": 0.9}, echo={"on": True, "mode": "pingpong", "time": 120, "fb": 100, "drive": 10, "mix": 60}),
+                      [e for n in (48, 52, 55, 60) for e in note(n, 0.0, 0.4)], 4.0)
+        late = float(np.sqrt(np.mean(np.concatenate([L[3 * SR:], R[3 * SR:]]) ** 2)))
+        ck(f"Te. full feedback and drive stays bounded (peak {float(np.max(np.abs(np.concatenate([L, R])))):.3f}, last second {db(late):.1f} dBFS, all finite)",
+           bool(np.all(np.isfinite(L)) and np.all(np.isfinite(R))) and float(np.max(np.abs(np.concatenate([L, R])))) <= 1.0 and db(late) > -40, db(late))
+        # wow and flutter: the pitch of a held sine's echo, from the analytic signal's phase (smoothed over 20 ms)
+        def inst_dev(x, f0):
+            n = len(x); X = np.fft.fft(x); hh = np.zeros(n); hh[0] = 1; hh[1:(n + 1) // 2] = 2
+            if n % 2 == 0: hh[n // 2] = 1
+            ph = np.unwrap(np.angle(np.fft.ifft(X * hh))); fr = np.diff(ph) * SR / (2 * np.pi)
+            k = int(0.02 * SR); fr = np.convolve(fr, np.ones(k) / k, mode="valid")[k:-k]
+            return float(np.max(np.abs(fr / f0 - 1)))
+        held = lambda wow, fl: patch(osc1={"wave": "sine", "level": 0.4, "fixed": 440}, envA={"a": 0.003, "d": 0.1, "s": 1, "r": 0.01, "vel": 0},
+                                     echo={"on": True, "mode": "mono", "time": 200, "fb": 0, "mix": 100, "wow": wow, "flutter": fl, "drive": 0, "tone": 10})
+        wf = {}
+        for k_, (w_, f_) in {"none": (0, 0), "wow": (100, 0), "flutter": (0, 100)}.items():
+            L, _ = render(held(w_, f_), note(69, 0.0, 4.5), 4.6)
+            wf[k_] = 100 * inst_dev(L[int(0.4 * SR):int(4.4 * SR)], 440)
+        ck(f"Te. wow and flutter: none holds the pitch ({wf['none']:.3f}% peak), wow 100% swings it {wf['wow']:.2f}% (want 0.5 to 1.3), flutter 100% {wf['flutter']:.2f}% (want 0.15 to 0.45)",
+           wf["none"] < 0.03 and 0.5 <= wf["wow"] <= 1.3 and 0.15 <= wf["flutter"] <= 0.45, wf)
+        # off is a straight wire: a fixed signal into the rack comes out sample for sample the same with the echo off,
+        # with it on at mix 0, and with the stage taken out of the graph by hand (ensemble output straight to the chain)
+        sw = pg.evaluate("""async () => {
+          const eng = await import('/synth/engine.js'); const PM = await import('/synth/patches.js');
+          let a = 7; const rnd = () => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; };
+          const src = new Float32Array(24000);
+          for (let i = 0; i < src.length; i++) src[i] = 0.3 * Math.sin(i * 0.0571) + 0.2 * Math.sin(i * 0.0857) + 0.1 * (rnd() * 2 - 1);
+          const run = async (echo, bypass) => {
+            const ctx = new OfflineAudioContext(2, 48000, 48000), P = PM.normalize({}); if (echo) P.echo = echo;
+            const E = await eng.createEngine(ctx, { patch: P, events: [] });
+            if (bypass) { E.ens.output.disconnect(E.echo.input); E.ens.output.connect(E.C.input); }
+            const buf = ctx.createBuffer(2, src.length, 48000); buf.copyToChannel(src, 0); buf.copyToChannel(src.slice().reverse(), 1);
+            const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(E.ens.input); s.start(0);
+            E.node.disconnect();
+            const out = await ctx.startRendering(); return [out.getChannelData(0), out.getChannelData(1)];
+          };
+          const cmp = (x, y) => { let d = 0, pk = 0; for (let i = 0; i < x[0].length; i++) { d = Math.max(d, Math.abs(x[0][i] - y[0][i]), Math.abs(x[1][i] - y[1][i])); pk = Math.max(pk, Math.abs(x[0][i])); } return [d, pk]; };
+          const ref = await run(null, true);
+          return { off: cmp(ref, await run({ on: false, fb: 90, mix: 80, wow: 100 }, false)), mix0: cmp(ref, await run({ on: true, mix: 0, fb: 90 }, false)),
+                   on: cmp(ref, await run({ on: true, mix: 30, fb: 50 }, false)) }; }""")
+        ck(f"Te. off is a straight wire: echo off and mix 0 match the stage taken out by hand, sample for sample (max diff {sw['off'][0]}, {sw['mix0'][0]}; on at 30% differs by {sw['on'][0]:.2f})",
+           sw["off"][0] == 0 and sw["mix0"][0] == 0 and sw["off"][1] > 0.05 and sw["on"][0] > 0.01, sw)
+        # the schema: defaults, clamps, enums, Cathode and Dekatron carry it, no factory patch has it on
+        nz = pg.evaluate("""async () => { const PM = await import('/synth/patches.js'), CM = await import('/synth/cathode.js'), DM = await import('/synth/drums.js');
+          const old = PM.normalize({ name: 'x', out: { level: 2 } }).echo;
+          const bad = PM.normalize({ echo: { on: 1, mode: 'tape', sync: '3/7', time: 9, fb: 500, mix: -4, wow: 'x', flutter: 101, drive: 11, tone: -1 } }).echo;
+          const c = CM.normalizeC({ device: 'cathode', echo: { on: true, mode: 'offset', sync: '1/4', fb: 40 } }).echo;
+          const d = DM.normalizeDrum({ echo: { on: true, mode: 'pingpong' } }).echo;
+          const onF = PM.FACTORY.filter(p => p.echo && p.echo.on).map(p => p.name), onC = CM.C_FACTORY.filter(p => p.echo && p.echo.on).map(p => p.name);
+          return { old, bad, c: [c.on, c.mode, c.sync, c.fb, c.time], d: [d.on, d.mode, d.mix], onF, onC, nF: PM.FACTORY.length, allF: PM.FACTORY.every(p => p.echo && p.echo.mode === 'mono') }; }""")
+        ck("Te. schema: a patch from before the echo loads with it off at the defaults",
+           nz["old"] == {"on": False, "mode": "mono", "time": 375, "sync": "off", "fb": 35, "mix": 30, "wow": 20, "flutter": 20, "drive": 3, "tone": 5}, nz["old"])
+        ck("Te. schema: junk clamps (time 40, feedback 100, mix 0, flutter 100, drive 10, tone 0) and unknown names fall back (mono, sync off)",
+           nz["bad"] == {"on": True, "mode": "mono", "time": 40, "sync": "off", "fb": 100, "mix": 0, "wow": 20, "flutter": 100, "drive": 10, "tone": 0}, nz["bad"])
+        ck("Te. schema: Cathode and Dekatron patches carry the same echo fields", nz["c"] == [True, "offset", "1/4", 40, 375] and nz["d"] == [True, "pingpong", 30], nz)
+        ck(f"Te. schema: no factory patch switches the echo on, so none sounds different ({nz['nF']} Filament patches)", nz["onF"] == [] and nz["onC"] == [] and nz["allF"], nz)
+        # idle: off unplugs the feed (offline at once); live, off waits for the fade and on replugs at once
+        idl = pg.evaluate("""async () => { const eng = await import('/synth/engine.js'), PM = await import('/synth/patches.js');
+          const ctx = new OfflineAudioContext(2, 4800, 48000), E = await eng.createEngine(ctx, { patch: PM.normalize({}), events: [] });
+          const off0 = E.echo.fed; E.setPatch(PM.normalize({ echo: { on: true } }), true); const on1 = E.echo.fed;
+          E.setPatch(PM.normalize({ echo: { on: true, mix: 0 } }), true); const mix0 = E.echo.fed;
+          const L = __synth.engine(); await L.ctx.resume(); const keep = L.patch().echo;
+          L.echo.set({ on: true, mix: 30 }, 0.3); const lOn = L.echo.fed; L.echo.set({ on: false, mix: 30 }, 0.3); const lSoon = L.echo.fed;
+          await new Promise(r => setTimeout(r, 600)); const lLater = L.echo.fed; L.echo.set({ on: true, mix: 30 }, 0.3); const lBack = L.echo.fed;
+          L.setPatch(L.patch(), false); L.echo.set(keep, 0.375);
+          return { off0, on1, mix0, lOn, lSoon, lLater, lBack }; }""")
+        ck("Te. idle: off and mix 0 unplug the tape (offline at once), on plugs it in; live, off waits for the fade and on replugs at once",
+           idl == {"off0": False, "on1": True, "mix0": False, "lOn": True, "lSoon": True, "lLater": False, "lBack": True}, idl)
+        # the section, in the page
+        pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
+        pg.locator("#mEcho").scroll_into_view_if_needed()
+        ck("Te. UI: the Tape echo section is in the rack, off for a factory patch", pg.is_visible("#mEcho") and pg.get_attribute("#echoOnBtn", "aria-pressed") == "false"
+           and pg.evaluate("__synth.engine().echo.state.on") is False, pg.evaluate("__synth.engine().echo.state"))
+        pg.click('#mEcho .chip[data-v="pingpong"]'); pg.wait_for_timeout(200)
+        st = pg.evaluate("[__synth.patch().echo, __synth.engine().echo.state]")
+        ck("Te. UI: touching a head chip switches the echo on in ping-pong and the rack follows", st[0]["on"] and st[0]["mode"] == "pingpong" and st[1]["on"] and st[1]["mode"] == "pingpong"
+           and pg.get_attribute("#echoOnBtn", "aria-pressed") == "true", st)
+        pg.select_option("#echoSync", "1/4"); pg.wait_for_timeout(200)
+        tempo = pg.evaluate("__synth.transport().state().tempo")
+        st = pg.evaluate("[__synth.patch().echo.sync, __synth.engine().echo.state.sec, document.getElementById('echoMs').textContent]")
+        ck(f"Te. UI: sync 1/4 sets the tape to a beat at the rack tempo ({st[1] * 1000:.1f} ms at {tempo} BPM, readout '{st[2]}')",
+           st[0] == "1/4" and abs(st[1] - 60 / tempo) < 1e-6 and st[2].startswith(str(round(60000 / tempo))), st)
+        pg.evaluate("__synth.transport().setTempo(150)"); pg.wait_for_timeout(150)
+        st = pg.evaluate("[__synth.engine().echo.state.sec, document.getElementById('echoMs').textContent]")
+        ck(f"Te. UI: a new rack tempo moves a synced echo ({st[0] * 1000:.1f} ms at 150 BPM, readout '{st[1]}')", abs(st[0] - 0.4) < 1e-6 and st[1].startswith("400 ms"), st)
+        pg.evaluate(f"__synth.transport().setTempo({tempo})"); pg.wait_for_timeout(50)
+        pg.click("#echoOnBtn"); pg.wait_for_timeout(100)
+        ck("Te. UI: the switch turns it off again", pg.evaluate("__synth.patch().echo.on") is False and pg.evaluate("__synth.engine().echo.state.on") is False)
+        vis = {}
+        for d_ in ("cathode", "lattice", "pentagrid", "dekatron", "filament"):
+            pg.evaluate(f"__synth.setDevice('{d_}')"); pg.wait_for_timeout(250); vis[d_] = pg.is_visible("#mEcho")
+        ck("Te. UI: the section shows for Filament and Cathode only, like the graphic EQ", vis == {"cathode": True, "lattice": False, "pentagrid": False, "dekatron": False, "filament": True}, vis)
+        pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(100)
+        ck("Te. no page errors", not errs, errs)
+    _tape_echo()
+
     # ---------------------------------------------------------------- Tv. the tube show (James, 13 Oct)
     # Visual state from __synth.tubeShow(), read in the page while the chassis frame loop runs. Peaks are
     # sampled inside the page every 8 ms (pk, t1, t3: logged in the check names only). What the checks
@@ -2385,6 +2576,9 @@ with sync_playwright() as pw:
     # default output tube came back on and the line timed them as well as the EQ)
     big["voice"] = {"unison": 1, "count": 8}; big["ens"] = {"on": False}; big["out"] = dict(big["out"], eqOn=True, eqBands=31, eqGains=[3, -3] * 15 + [3])
     cpu9("valve12, 8 voices, graphic EQ on at 31 bands", big, ev8)
+    big["out"] = dict(big["out"], eqOn=False); big["echo"] = {"on": True, "mode": "pingpong", "time": 300, "fb": 60, "mix": 40, "wow": 50, "flutter": 50, "drive": 5}
+    cpu9("valve12, 8 voices, tape echo on (ping-pong, wow and flutter)", big, ev8)
+    big.pop("echo")
     ck("9. the CPU page: no page errors", not cperr, cperr)
     cpx.close()
     if pg_was == "running": pg.evaluate("() => __synth.engine().ctx.resume()")

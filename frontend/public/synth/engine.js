@@ -6,8 +6,8 @@
 // rack takes its settings (ens, out) from the active device's patch. A device that is not
 // active lets go of its keys, finishes its tails and sleeps; Cathode's node is only built the
 // first time it is chosen.
-import { makeSynthChain, makeEnsemble, tubeData, dB2lin } from './rack.js';
-import { normalize, clone, getPath, setPath } from './patches.js';
+import { makeSynthChain, makeEnsemble, makeTapeEcho, probeEchoLatency, echoSeconds, tubeData, dB2lin } from './rack.js';
+import { normalize, clone, getPath, setPath, LFO_SYNC_BEATS } from './patches.js';
 import { normalizeC } from './cathode.js';
 import { makeMasterFx } from './masterfx.js';
 import { createMixer } from './mixer.js';
@@ -42,7 +42,9 @@ export async function createEngine(ctx, opts = {}) {
   if (opts.rack !== false) {
     E.C = makeSynthChain(ctx);
     E.ens = makeEnsemble(ctx);
-    E.ens.output.connect(E.C.input);
+    E.echo = makeTapeEcho(ctx, await probeEchoLatency(ctx.sampleRate));                 // ensemble > tape echo > the chain (EQ, output tubes, ...)
+    E.ens.output.connect(E.echo.input);
+    E.echo.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
   // Mixer in front of the shared ensemble (or the master, when the rack is off).
@@ -59,6 +61,10 @@ export async function createEngine(ctx, opts = {}) {
   const clockMsg = () => { const s = E.transport.state(); return { t: 'clock', tempo: s.tempo, playing: s.playing, beat: s.beat, frame: s.frame }; };
   const postClock = () => { const m = clockMsg(); ['filament', 'cathode'].forEach(d => { if (E.nodes[d]) E.nodes[d].port.postMessage(m); }); };
   E.transport.subscribe(ev => { if (ev && (ev.type === 'play' || ev.type === 'stop' || ev.type === 'tempo')) postClock(); });
+  // The tape echo's time follows the rack tempo when it is synced to a note value.
+  const echoSec = p => echoSeconds(p && p.echo, E.transport.state().tempo, LFO_SYNC_BEATS);
+  const setEcho = () => { if (E.echo) E.echo.set(patch.echo, echoSec(patch)); };
+  E.transport.subscribe(ev => { if (ev && ev.type === 'tempo' && patch.echo && patch.echo.sync !== 'off') setEcho(); });
   { const locate = E.transport.locate; E.transport.locate = b => { const r = locate(b); postClock(); return r; }; }
   E.api = RACK_API;
   // Master bus after the mixer and the output chain:
@@ -102,8 +108,8 @@ export async function createEngine(ctx, opts = {}) {
   Object.defineProperty(E, 'node', { get: () => E.nodes[E.device] });
 
   let S = E.C ? rackState(patch) : null;
-  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); if (E.C.setEqTap) E.C.setEqTap(S.eqOn); }
-  let ensJ = JSON.stringify(patch.ens);
+  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); setEcho(); if (E.C.setEqTap) E.C.setEqTap(S.eqOn); }
+  let ensJ = JSON.stringify(patch.ens), echoJ = JSON.stringify(patch.echo);
 
   E.patch = () => patch;
   E.patchOf = dev => E.patches[dev] || null;
@@ -135,6 +141,7 @@ export async function createEngine(ctx, opts = {}) {
   function applyRack() {
     if (!E.C) return;
     const ej = JSON.stringify(patch.ens); if (ej !== ensJ) { E.ens.set(patch.ens); ensJ = ej; }
+    const tj = JSON.stringify(patch.echo); if (tj !== echoJ) { setEcho(); echoJ = tj; }
     const N = rackState(patch), C = E.C;
     const tubeKeys = ['tube', 'drive', 'bias', 'sag', 'tone', 'out', 'topology'];
     const roomRegen = N.room !== S.room || N.rmDecay !== S.rmDecay || N.rmTone !== S.rmTone;
