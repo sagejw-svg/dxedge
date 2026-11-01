@@ -736,6 +736,8 @@
        so a fader never shrinks to a stub between its label and its value. */
     .rn-grid { grid-template-columns: 1fr 1fr; }
     .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+    /* a filled card can hold several slider columns: a wider gutter keeps one column's readout off the next one's name */
+    .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { column-gap: 26px; }
   }
   @media (min-width: 1680px) {
     #mHost { grid-template-columns: 1fr 1fr 1fr; }
@@ -3424,6 +3426,62 @@ new MutationObserver(() => { railShowLit(); document.querySelectorAll('.rail, .r
   .observe(document.querySelector('.rail'), { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
 railShowLit();
 
+// Panel rows fill the width (graphics, 1 Nov). The panel is an auto-fill grid, so a row whose next card does not fit
+// ended in an empty well (Pentagrid's Dial and Receiver used 3 of 5 columns at 1366 px; 15 of 18 devices had one).
+// After the grid places the cards, the empty columns at the end of each row go to that row's cards, the last card
+// first, one column each in turn. Rows never change, only widths, so nothing moves to another row. Desktop only:
+// a phone shows one column. Runs when the device, tab, mix view, the cards or the panel width change.
+const panelEl = $('panel');
+const fillMq = matchMedia('(min-width: 761px)');
+const panelItems = root => {
+  const out = [];
+  for (const el of root.children) {
+    const s = getComputedStyle(el);
+    if (s.display === 'none' || s.position === 'absolute' || s.position === 'fixed') continue;
+    if (s.display === 'contents') out.push(...panelItems(el)); else out.push(el);
+  }
+  return out;
+};
+let panelFillRuns = 0;
+function panelFill() {
+  panelFillRuns++;
+  panelEl.querySelectorAll('[data-fill]').forEach(el => { el.style.gridColumn = ''; delete el.dataset.fill; });
+  if (!fillMq.matches) return;
+  const cs = getComputedStyle(panelEl);
+  const tracks = cs.gridTemplateColumns.split(' ').map(parseFloat).filter(n => n > 0);
+  const cols = tracks.length, cw = tracks[0], gap = parseFloat(cs.columnGap) || 0;
+  if (cols < 2) return;
+  const rows = [];
+  for (const el of panelItems(panelEl)) {
+    const r = el.getBoundingClientRect();
+    if (!r.width) continue;
+    let row = rows.find(x => Math.abs(x.top - r.top) <= 2);
+    if (!row) rows.push(row = { top: r.top, items: [] });
+    row.items.push({ el, left: r.left, span: Math.max(1, Math.round((r.width + gap) / (cw + gap))) });
+  }
+  for (const row of rows) {
+    let hole = cols - row.items.reduce((s, x) => s + x.span, 0);
+    const mods = row.items.filter(x => x.el.classList.contains('mod')).sort((a, b) => b.left - a.left);
+    if (hole <= 0 || !mods.length) continue;
+    for (let i = 0; hole > 0; i = (i + 1) % mods.length, hole--) mods[i].add = (mods[i].add || 0) + 1;
+    for (const m of mods) if (m.add) { m.el.dataset.fill = String(m.span + m.add); m.el.style.gridColumn = 'span ' + (m.span + m.add); }
+  }
+}
+{
+  let fillW = 0, fillRaf = 0;
+  const isItem = n => n && n.parentElement && (n.parentElement === panelEl || n.parentElement.parentElement === panelEl);
+  new MutationObserver(panelFill).observe(document.body, { attributes: true, attributeFilter: ['data-dev', 'data-tab', 'data-mixdesk'] });
+  new MutationObserver(recs => { if (recs.some(r => r.target === panelEl || r.target.parentElement === panelEl || (r.type === 'attributes' && isItem(r.target)))) panelFill(); })
+    .observe(panelEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'data-wide'] });
+  if (window.ResizeObserver) new ResizeObserver(es => {
+    const w = Math.round(es[0].contentRect.width);
+    if (w === fillW) return;
+    fillW = w; cancelAnimationFrame(fillRaf); fillRaf = requestAnimationFrame(panelFill);
+  }).observe(panelEl);
+  fillMq.addEventListener('change', panelFill);
+  panelFill();
+}
+
 // ---------------------------------------------------------------- Cathode patch panel
 // Click (or tap, or Enter) an output and then an input, or the other way round; or drag between
 // them. A click on a patched input pulls its cable; dragging a patched input's plug moves it, or
@@ -4440,6 +4498,7 @@ window.__synth = {
   booted: () => booted,          // every hosted device attached and the boot queue drained
   routeWaker: (id, on) => routeWaker(id)(on),   // what Geissler and Gyrotron call (tests)
   pentaSent: () => ({ sent: pentaHost.sent(), meter: Object.assign({}, pentaHost.meter()), node: !!pentaHost.node(), dev, now: Math.round(performance.now()) }),   // tests
+  panelFills: () => panelFillRuns,   // tests: how often the row fill has run (graphics, 1 Nov)
   tubeShow: () => showState(SHOW),
   // the filter response plot: what it shows, and its curves read at frequencies (dB)
   filterPlot: () => ({ ready: !!FP.knob, err: FP.err, live: !!(FP.live && FP.liveMix > 0.5), liveMix: FP.liveMix, knob: fpSummary(FP.knob), playing: fpSummary(FP.live),

@@ -4434,6 +4434,72 @@ with sync_playwright() as pw:
        {k: (sd[k]["more"], sd[k]["max"], sd[k]["after"][0]) for k in ("rail", "tray")})
     scd.close()
 
+    # ---------------------------------------------------------------- Pf. panel rows fill the width (graphics, 1 Nov)
+    # The panel is an auto-fill grid; a row whose next card did not fit ended in an empty well (15 of 18 devices at
+    # 1366 px). The empty columns now go to that row's cards. Measured per device: no row ends short of the panel's
+    # right edge, cards keep their order, no canvas is stretched (bitmap ratio = box ratio), and Pentagrid's dial bezel
+    # stays inside its window. A phone keeps one column and no fills.
+    PF_MEAS = """() => {
+      const p = document.getElementById('panel'), cs = getComputedStyle(p);
+      const tracks = cs.gridTemplateColumns.split(' ').map(parseFloat).filter(n => n > 0), gap = parseFloat(cs.columnGap) || 0;
+      const inner = p.getBoundingClientRect().right - parseFloat(cs.paddingRight);
+      const items = root => { const o = []; for (const el of root.children) { const s = getComputedStyle(el);
+        if (s.display === 'none' || s.position === 'absolute' || s.position === 'fixed') continue;
+        if (s.display === 'contents') o.push(...items(el)); else o.push(el); } return o; };
+      const rows = [];
+      for (const el of items(p)) { const r = el.getBoundingClientRect(); if (!r.width) continue;
+        let row = rows.find(x => Math.abs(x.top - r.top) <= 2); if (!row) rows.push(row = { top: r.top, els: [] });
+        row.els.push({ id: el.id || el.className, l: r.left, r: r.right }); }
+      const short = rows.map(x => ({ ids: x.els.map(e => e.id), gap: inner - Math.max(...x.els.map(e => e.r)) })).filter(x => x.gap > tracks[0] / 2);
+      const order = rows.every(x => x.els.every((e, i) => !i || e.l > x.els[i - 1].l));
+      const cvs = [...p.querySelectorAll('canvas')].filter(c => c.offsetParent && c.clientWidth > 20 && c.clientHeight > 20 && c.width > 2)
+        .map(c => ({ id: c.id || (c.closest('.mod') || {}).id, err: Math.abs((c.width / c.height) / (c.clientWidth / c.clientHeight) - 1) })).filter(x => x.err > 0.03);
+      return { cols: tracks.length, short, order, cvs, fills: p.querySelectorAll('[data-fill]').length,
+        sw: document.documentElement.scrollWidth, iw: innerWidth };
+    }"""
+    PF_DIAL = """() => { const c = document.getElementById('pentagridDial'), g = c.getContext('2d'), w = c.width, h = c.height;
+      const band = g.getImageData(0, 0, w, Math.max(2, Math.round(h * 0.012))).data; let top = 0; for (let i = 3; i < band.length; i += 4) top = Math.max(top, band[i]);
+      const all = g.getImageData(0, 0, w, h).data; let lit = 0; for (let i = 3; i < all.length; i += 16) if (all[i] > 0) lit++;
+      return { top, lit, w, h }; }"""
+    pfx = b.new_context(viewport={"width": 1366, "height": 1000}); pfp = pfx.new_page(); pferr = []
+    pfp.on("pageerror", lambda e: pferr.append(str(e)))
+    pfp.goto(BASE); pfp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    pf_devs = pfp.eval_on_selector_all(".rail .devbtn", "els => els.map(e => e.dataset.d)")
+    pf_res = {}
+    for d in pf_devs:
+        pfp.click(f'.devbtn[data-d="{d}"]'); pfp.wait_for_timeout(450)
+        pf_res[d] = pfp.evaluate(PF_MEAS)
+    pf_short = {d: r["short"] for d, r in pf_res.items() if r["short"]}
+    info("Pf. filled cards per device at 1366 px", {d: r["fills"] for d, r in pf_res.items()})
+    ck(f"Pf. at 1366 px no panel row on any of the {len(pf_devs)} devices ends in an empty well", not pf_short and len(pf_devs) >= 18, pf_short)
+    ck("Pf. cards keep their order along each row", all(r["order"] for r in pf_res.values()), [d for d, r in pf_res.items() if not r["order"]])
+    pf_cv = {d: r["cvs"] for d, r in pf_res.items() if r["cvs"]}
+    ck("Pf. no panel canvas is stretched: every bitmap has its box's shape within 3% (Heptode's Place field redraws when its card widens)", not pf_cv, pf_cv)
+    pfp.click('.devbtn[data-d="pentagrid"]'); pfp.wait_for_timeout(500)
+    pdl = pfp.evaluate(PF_DIAL)
+    ck("Pf. Pentagrid's dial is painted and its bezel stays inside the window (nothing drawn in its top rows)", pdl["top"] == 0 and pdl["lit"] > 1000, pdl)
+    n0 = pfp.evaluate("__synth.panelFills()"); pfp.wait_for_timeout(1500); n1 = pfp.evaluate("__synth.panelFills()")
+    ck("Pf. the row fill sits still while nothing changes (no runs in 1.5 s)", n1 == n0, (n0, n1))
+    for W in (1024, 1920, 800):
+        pfp.set_viewport_size({"width": W, "height": 1000}); pfp.wait_for_timeout(250)
+        bad = {}
+        for d in ("filament", "heptode", "pentagrid", "additron", "gleam"):
+            pfp.click(f'.devbtn[data-d="{d}"]'); pfp.wait_for_timeout(300)
+            r = pfp.evaluate(PF_MEAS)
+            if r["short"] or r["cvs"] or r["sw"] > r["iw"]: bad[d] = r
+        ck(f"Pf. at {W} px the rows fill too, nothing stretched, no sideways scroll", not bad, bad)
+    ck("Pf. no page errors (row fill)", not pferr, pferr)
+    pfx.close()
+    pfm = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); pfmp = pfm.new_page()
+    pfmp.goto(BASE); pfmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    pm = {}
+    for d in ("pentagrid", "heptode"):
+        pfmp.evaluate(f"document.querySelector('.devbtn[data-d=\"{d}\"]').click()"); pfmp.wait_for_timeout(350)
+        pm[d] = pfmp.evaluate(PF_MEAS)
+    ck("Pf. on a 375 px phone the panel keeps one column and no fills, with no sideways scroll",
+       all(r["cols"] == 1 and r["fills"] == 0 and r["sw"] <= r["iw"] for r in pm.values()), {d: (r["cols"], r["fills"], r["sw"]) for d, r in pm.items()})
+    pfm.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",
@@ -6005,9 +6071,9 @@ with sync_playwright() as pw:
        pg.evaluate("__synth.device()") == "pentagrid" and pg.is_visible("#pentagridDial") and pg.is_visible("#pentagridText")
        and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
     box = pg.locator("#pentagridDial").bounding_box()
-    pg.mouse.click(box["x"] + 12, box["y"] + box["height"] * 0.62)
+    pg.mouse.click(box["x"] + 12, box["y"] + box["height"] * 0.8)
     left_tune = pg.evaluate("__synth.patch().tune")
-    pg.mouse.click(box["x"] + box["width"] - 12, box["y"] + box["height"] * 0.62)
+    pg.mouse.click(box["x"] + box["width"] - 12, box["y"] + box["height"] * 0.8)
     right_tune = pg.evaluate("__synth.patch().tune")
     ck("Pg. dragging the dial retunes from the low end to the high end", left_tune < 5000 and right_tune > 25000, (left_tune, right_tune))
     before = pg.evaluate("__synth.patch().text")

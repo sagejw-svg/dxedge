@@ -116,6 +116,8 @@ function fmtKhz(khz) {
   return whole + ' ' + String(rest).padStart(3, '0');
 }
 
+const DIAL_CY = 0.8;   // the hub's height in the dial window, shared by the drawing and the pointer
+
 function drawDial(cv, tune, level) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = cv.clientWidth || 320;
@@ -127,12 +129,21 @@ function drawDial(cv, tune, level) {
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.clearRect(0, 0, w, h);
+  // The hub sits low and the radius leaves room for the bezel (R + 19 px with its stroke), so the whole arc and
+  // the top marks stay inside the window (graphics, 1 Nov: at 240 px the old R + 14 ran 52 px off the top).
   const cx = w / 2;
-  const cy = h * 0.62;
-  const R = Math.min(w * 0.46, h * 0.78);
+  const cy = h * DIAL_CY;
+  const R = Math.max(40, Math.min(w * 0.46, cy - 24));
   c.beginPath();
   c.arc(cx, cy, R + 14, Math.PI, 0);
   c.fillStyle = '#1a120c';
+  c.fill();
+  // a lamp behind the scale: a warm pool under the glass, brightest near the hub
+  const lamp = c.createRadialGradient(cx, cy, R * 0.1, cx, cy, R + 8);
+  lamp.addColorStop(0, 'rgba(255, 170, 80, 0.20)');
+  lamp.addColorStop(0.65, 'rgba(255, 150, 60, 0.09)');
+  lamp.addColorStop(1, 'rgba(255, 140, 50, 0)');
+  c.fillStyle = lamp;
   c.fill();
   c.lineWidth = 10;
   c.strokeStyle = '#3a2618';
@@ -197,7 +208,7 @@ function dialAngle(khz) {
 function tuneFromPointer(cv, clientX, clientY) {
   const r = cv.getBoundingClientRect();
   const cx = r.left + r.width / 2;
-  const cy = r.top + r.height * 0.62;
+  const cy = r.top + r.height * DIAL_CY;
   let a = Math.atan2(clientY - cy, clientX - cx);
   if (a > Math.PI / 2) a = -Math.PI;
   else if (a > 0) a = 0;

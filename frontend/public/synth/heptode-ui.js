@@ -657,6 +657,16 @@ export function mountHeptodePanel(container, hooks) {
     hooks.edited();
     drawField();
   }
+  // Redraw at the field's new size when its card widens or the window changes (graphics, 1 Nov: the panel's row
+  // fill can triple the card's width, and the old bitmap was stretched, tokens drawn as flat ovals).
+  if (window.ResizeObserver) {
+    let fw = 0, fraf = 0;
+    new ResizeObserver(es => {
+      const w = Math.round(es[0].contentRect.width);
+      if (!w || w === fw) return;
+      fw = w; cancelAnimationFrame(fraf); fraf = requestAnimationFrame(drawField);
+    }).observe(field);
+  }
   field.addEventListener('pointerdown', ev => {
     const i = hit(ev);
     if (i < 0) return;

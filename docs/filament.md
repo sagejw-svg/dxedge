@@ -1264,9 +1264,9 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (31 Oct): 1. desktop panel blanks and Pentagrid's dial; 2. phone first screen, the rest (a slimmer phone
-chassis, once the Tube show item closes; the patch menu); 3. fader readouts; 4. wide cards for the three slider devices; 5. the MIDI deck
-tempo readout window; then the rest as listed. The Lattice and Mote palette item waits on James.
+Rank of the open items (1 Nov): 1. the MIDI deck tempo readout window; 2. fader readouts; 3. the Mix tab on a phone (compact strips);
+4. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes; the patch menu); 5. rail plate titles at 761 to
+959 px; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1352,9 +1352,20 @@ tempo readout window; then the rest as listed. The Lattice and Mote palette item
   to show its lit plate (an instant scroll, no animation). Reduced motion: the cue switches without its 160 ms fade. Desktop
   unchanged (the rail and tray regions are pixel-identical on all 18 devices, compared). Cost: the chassis and panel sit 4 px
   lower at 375 px (the lit panel shows 47 px above the keybed, was 51). New checks: Sc. (9).
-- [ ] Desktop panel rows leave blanks (seen 29 Oct at 1366 px): Pentagrid's Dial and Receiver fill the left 60% and the
-  right is empty; Heptode's Tracks and Place cards sit at the left of a mostly empty row; Filament's Osc tab leaves the
-  last column empty. Pentagrid's dial arc also runs off the top of its window (the 14 mark is cut by the edge).
+- [x] 1 Nov: desktop panel rows fill the width, and Pentagrid's dial fits its window. Measured before: the panel is an auto-fill
+  grid (5 columns at 1366 px), and a row whose next card did not fit ended in an empty well. 15 of 18 devices had one at 1366 px
+  (all but Lattice, Dekatron and Resnatron: Filament, Cathode, Gleam, Orthicon, Trochotron, Additron and Rhumbatron each left
+  a last card alone with 4 empty columns; Pentagrid's Dial and Receiver used 3 of 5; Heptode, Mote, Geissler, Gyrotron and
+  Phantastron used 2 of 5), every device had at least one at 1024 px (3 columns; the Mix and Master cards spanned 2 of 3) and
+  17 of 18 at 1920 px. Pentagrid's dial bezel ran 52 px off the top of its 240 px window (seen: the 14 mark cut). Now: after the
+  grid places the cards, each row's empty columns go to that row's cards, the last card first, one column each in turn (a
+  script in index.html, `panelFill`; it runs when the device, tab, mix view, the cards or the panel width change, never on a
+  timer, and a phone keeps one column). Rows never change, only widths, so no card moves. The panels got shorter: at 1366 px
+  Additron 2,659 to 2,219 px, Orthicon 2,711 to 2,393, Heptode 2,443 to 2,187, Filament 4,307 to 4,201. Heptode's Place
+  field now redraws when its card widens (its bitmap was stretched 3x, the track tokens drawn as flat ovals; caught by the new
+  canvas shape check). Slider grids get a 26 px gutter on desktop so one column's readout does not run into the next one's name
+  in a widened card (seen on Phantastron's Bends: "0.90 BITS"). The dial's hub sits at 80% of the window and the radius leaves
+  the bezel inside it, with a warm lamp glow behind the scale (no motion, so nothing to reduce). New checks: Pf. (10).
 - [ ] Lattice and Mote use their own chip palettes (blue and cyan) beside the amber elsewhere (seen). A call
   for James whether that is per-device character or drift.
 - [ ] Mix tab on a phone: "tempo" is lower case beside the upper-case bus labels, and each strip is about
@@ -1365,7 +1376,8 @@ tempo readout window; then the rest as listed. The Lattice and Mote palette item
   sends, Heptode tempo and morph) show their value only by position. A small readout or a lit fill (needs a value hook,
   since patches set values without input events) would help (seen).
 - [ ] Rhumbatron, Trochotron and Phantastron slider cards are 228 px wide at 1366 px, so their faders are 81 to 100 px.
-  A wide card (`data-wide`) for those sections would double them (measured).
+  A wide card (`data-wide`) for those sections would double them (measured). 1 Nov: the row fill now widens the card that ends
+  each of those devices' rows (Rhumbatron's Body, Trochotron's Shape, Phantastron's Bends); the cards mid-row are unchanged.
 - [ ] Phone first screen (25 Oct, seen at 375x667 on every device; partly done 30 Oct): after the header slice the panel
   shows 51 px above the keybed. The rest of the first screen is the rail (48 px), the outboard tray (52 px), the chassis
   (99 px) and the tabs (52 px). A slimmer phone chassis (tubes and VU at about 80% height) would give the panel another
