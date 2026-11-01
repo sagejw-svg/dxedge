@@ -2372,6 +2372,26 @@ with sync_playwright() as pw:
             pg.evaluate(f"__synth.setDevice('{d_}')"); pg.wait_for_timeout(250); vis[d_] = pg.is_visible("#mEcho")
         ck("Te. UI: the section shows for Filament and Cathode only, like the graphic EQ", vis == {"cathode": True, "lattice": False, "pentagrid": False, "dekatron": False, "filament": True}, vis)
         pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(100)
+        # Review 1 Nov: Panic ("Silence every note") left the tape running, so near full feedback the
+        # repeats of a note went on after the panic for as long as the echo stayed on.
+        pnc = pg.evaluate("""async () => { const E = __synth.engine(); await E.ctx.resume(); const fx = E.fx, keep = __synth.patch();
+          const p = __synth.patch(); p.echo = { on: true, mode: 'mono', time: 200, sync: 'off', fb: 100, mix: 50, drive: 2, tone: 10, wow: 0, flutter: 0 };
+          p.envA = { a: 0.001, d: 0.05, s: 0, r: 0.02 }; p.arp = Object.assign({}, p.arp, { on: false });
+          p.out = Object.assign({}, p.out, { roomOn: false }); p.ens = Object.assign({}, p.ens, { on: false });
+          const m0 = JSON.parse(JSON.stringify(__synth.master())); __synth.setMaster({ delay: { on: false }, reverb: { on: false } });
+          __synth.setPatch(p); await new Promise(r => setTimeout(r, 300));
+          const rms = s => { let a = 0; for (let i = 0; i < s.L.length; i++) a += s.L[i] * s.L[i]; return 20 * Math.log10(Math.sqrt(a / Math.max(1, s.L.length)) + 1e-12); };
+          const grab = async ms => { fx.recordStart(); await new Promise(r => setTimeout(r, ms)); return rms(await fx.recordStop()); };
+          __synth.noteOn(69, 0.9); await new Promise(r => setTimeout(r, 60)); __synth.noteOff(69);
+          await new Promise(r => setTimeout(r, 900)); const tail = await grab(500);
+          __synth.panic(); await new Promise(r => setTimeout(r, 120)); const after = await grab(250);
+          await new Promise(r => setTimeout(r, 400));
+          __synth.noteOn(69, 0.9); await new Promise(r => setTimeout(r, 60)); __synth.noteOff(69);
+          await new Promise(r => setTimeout(r, 450)); const back = await grab(500);
+          __synth.panic(); __synth.setPatch(keep); __synth.setMaster(m0); await new Promise(r => setTimeout(r, 400));
+          return { tail, after, back }; }""")
+        ck(f"Te. Panic empties the tape: a repeat at full feedback stops ({pnc['tail']:.1f} dBFS before, {pnc['after']:.1f} after; want 40 dB or more down and under -70), and a new note echoes again ({pnc['back']:.1f} dBFS)",
+           pnc["tail"] > -50 and pnc["after"] < -70 and pnc["tail"] - pnc["after"] >= 40 and pnc["back"] > -50, pnc)
         ck("Te. no page errors", not errs, errs)
     _tape_echo()
 

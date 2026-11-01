@@ -569,7 +569,20 @@ function makeTapeEcho(ctx, lt){
     if(live) unplugT=setTimeout(cut, 300); else cut();
   }
   // e: the patch's echo fields; sec: head A's time in seconds (echoSeconds)
+  // Panic empties the tape: the feedback and the wet sides go to 0 until the tape has run past both
+  // heads, then the patch's echo comes back. Without it a repeat near full feedback outlives every
+  // note the panic stopped (review 1 Nov). The dry path is untouched, so new notes still play.
+  var flushT=null;
+  T.flush=function(){
+    if(!T.state || !T.state.wet) return;
+    [T.wetL.gain, T.wetR.gain, T.fb.gain].forEach(function(p){ p.cancelScheduledValues(ctx.currentTime); p.setTargetAtTime(0, ctx.currentTime, 0.005); });
+    if(flushT) clearTimeout(flushT);
+    var hold=Math.max(T.state.sec, T.state.secB)+0.1;
+    flushT=setTimeout(function(){ flushT=null; if(T.last) T.set(T.last.e, T.last.sec); }, hold*1000);
+  };
+  T.flushing=function(){ return !!flushT; };
   T.set=function(e, sec){
+    T.last={ e:e, sec:sec };
     e=e||{}; var on=!!e.on, mx=echoMix(e.mix), mode=ECHO_MODES.indexOf(e.mode)<0 ? 'mono' : e.mode;
     var want = on && mx.wet > 0, fb = want ? clampN(+e.fb||0,0,100)/100 : 0, g=echoDriveGain(e.drive);
     var kB = ECHO_HEAD_B[mode];
@@ -582,7 +595,7 @@ function makeTapeEcho(ctx, lt){
         rewireT=setTimeout(function(){ rewireT=null; wire(mode); T.set(e, sec); }, 30);
         T.state={ on:on, mode:mode, sec:sec, secB:sec*kB, fb:fb, drive:g, wet: want ? mx.wet : 0, dry: on ? mx.dry : 1, wiring:true }; return; }
     }
-    setP(T.fb.gain, fb);
+    setP(T.fb.gain, flushT ? 0 : fb);
     // both heads come early by the record amp's latency and the loop's cost (see probeEchoLatency). A new
     // time glides (0.1 s time constant): the repeats bend in pitch, as a real tape's do when its speed changes
     setP(T.dA.delayTime, sec - T.late, 0.1); setP(T.dB.delayTime, sec*kB - T.late, 0.1);
@@ -591,7 +604,7 @@ function makeTapeEcho(ctx, lt){
     var wow=clampN(+e.wow||0,0,100)/100, fl=clampN(+e.flutter||0,0,100)/100;
     T.wowG.forEach(function(w){ setP(w.g.gain, want ? wow*w.dev/(2*Math.PI*w.hz) : 0); });
     T.flutG.forEach(function(w){ setP(w.g.gain, want ? fl*w.dev/(2*Math.PI*w.hz) : 0); });
-    setP(T.wetL.gain, want ? mx.wet : 0); setP(T.wetR.gain, want ? mx.wet : 0);
+    var wl = want && !flushT ? mx.wet : 0; setP(T.wetL.gain, wl); setP(T.wetR.gain, wl);
     setP(T.dry.gain, on ? mx.dry : 1);
     T.state={ on:on, mode:mode, sec:sec, secB:sec*kB, fb:fb, wired:T.wired, drive:g, wet: want ? mx.wet : 0, dry: on ? mx.dry : 1 };
   };

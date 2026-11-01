@@ -17,6 +17,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
+| R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch | measured (cut), inferred (impact) |
+| R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
 | R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
 | R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part | measured |
@@ -53,7 +56,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-8 | confusing | h | Desktop rack: 452 tab stops (30 Oct; 426 on 27 Oct) and no skip link; the library is near the end | measured |
 | R1020-9 | confusing | h | 58 control names repeat across sections (30 Oct, 56 on 27 Oct: "off" x6, "cutoff" x4, "level" x4, the six filter model chips x2 since Filter B) with no section in the name | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
-| R1017-5 | confusing | d | Three separate tempos: rack transport, master delay tempo knob, deck 50-200%; still open 29 Oct | measured |
+| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 1 Nov | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
@@ -61,7 +64,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1121,3 +1124,87 @@ menu, the arrows, save, reload and delete.
 Areas c, d (beyond the render tempo), e, f, g, h. Suggested next: c, d and e: the arp with a MIDI
 keyboard over `__synth.midi` (CC64, bend while stepping), the deck playing back an arp take with the
 rack running, and the master render of a synced LFO patch now that it carries the tempo.
+
+## 2026-11-01 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `e9e9244`, sw.js
+`dxedge-v168` (live and main agree). Chromium headless (Playwright's chromium-1243; the
+`chromium-1194` path in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page
+or console errors on the live site in any run. Focus tonight: the tape echo (new on 1 Nov) the way a
+player meets it (Panic, patch changes, the rail, the renders, the deck's tempo), the arpeggiator over
+MIDI with the pedal and bend (the 31 Oct suggestion), and the deck's import, play, stop and Render WAV.
+
+### What worked (measured)
+
+- Tape echo in both renders: the master strip's render wav and the deck's Render WAV of the same note
+  both carry the repeats (the gap 0.6 to 1.0 s after the note reads -37.4 dBFS in each; -240 with the
+  echo off). The deck's render args carry the Filament patch's echo fields.
+- A factory patch picked while a sine echo tail rings: no click (largest sample step 0.0049 against the
+  sine's own 0.0051, three tries at different points in the tail).
+- Hot echo, offline: a six-note chord at velocity 1 into ping-pong, feedback 100%, mix 100%, drive 10,
+  master effects off: peak 0.475, no NaN, nothing above 1.
+- Arpeggiator: latched, then Panic: silent, and the next key plays only itself. Computer keys held
+  with an octave shift mid-hold leave nothing sounding. Over MIDI: CC64 down keeps it stepping after
+  the keys are let go, a full bend while it steps leaves it stepping, CC64 up stops it. A take of an
+  arp chord plays back with the transport running and leaves nothing sounding at its end.
+- MIDI deck: a .mid with a tempo change (120 to 60 BPM after two beats) reads its notes at 0, 0.5, 1.0
+  and 2.0 s and a length of 2.5 s. A format 0 file with channels 1, 2 and 10 splits into three parts
+  (Filament, Cathode, off). Moving the rail to Thyratron mid-file keeps Filament's notes sounding, and
+  Stop then clears them and the keys. Panic stops playback and resets the play button. Render WAV by
+  the button: `filament-tempo-<stamp>.wav`, 48 kHz 16-bit stereo, 4.5 s (2.5 s plus the 2 s tail), peak
+  0.34, no clipped samples.
+- Phone 375: no sideways scroll on any of the seven tabs; the Tape echo section sits on the Rack tab
+  with 44 px chips and 52 x 69 px knobs.
+
+### Findings
+
+**R1101-1. Panic does not stop the tape echo.** Area c, d. Broken. Measured. Fixed tonight.
+- Steps: switch the tape echo on with feedback near 100% (95 is enough), play a note, let go, press
+  Panic (its tooltip: "Silence every note").
+- Expected: silence, as for every voice.
+- Actual: the repeats went on at the same level through the whole 3 s recording after the panic (-29
+  to -27 dB a repeat, every 250 ms); at 100% they go on until the echo is switched off.
+- Fix: the engine's panic empties the tape: the feedback and the wet sides drop to 0 until the tape
+  has run past both heads, then the patch's echo comes back. The dry path is untouched, so a note
+  played straight after still sounds. Check: "Te. Panic empties the tape" (unfixed: -38 dB before the
+  panic and -39 after; fixed: -30 before, -150 or below after, and a new note echoes at -36).
+
+**R1101-2. Tape echo feedback runs hotter than its knob.** Area d. Confusing. Measured.
+- Offline, a sine blip, mono, 200 ms, tone 10, drive 0, the level of repeat 30 against repeat 1:
+  feedback 90% -13.0 dB (a loop gain of 0.90 would lose 27 dB), 95% 0.0 dB (never decays), 100%
+  +12.1 dB (grows until the record amp holds it). Drive 5: -17.2, -0.3, +9.9 dB. The suite's 85% check
+  (-1 to -2.5 dB a repeat) passes. Inference: the record amp's small-signal gain is a little above 1,
+  so the last 10% of the knob is already runaway. Whether that is the intended feel ("near 100% it keeps
+  going") or the knob should be rescaled is a sound call for James.
+
+**R1101-3. The tape echo's tail is cut when the rail moves.** Area d. Confusing. Measured (cut),
+inferred (impact).
+- Steps: Filament with the echo on (feedback 95%), play a note, let go, pick Cathode on the rail.
+- Actual: the repeats fall from -28 dB to silence within 0.1 s, because the one echo follows the lit
+  device's patch (Cathode's has it off). Picking a factory patch on Filament does the same. The same
+  rule means a Filament part played by the deck while the rail is on Cathode goes through Cathode's
+  echo settings. It matches how the EQ and output tubes already work, so it is a design question: let a
+  tail ring out across a rail or patch change, or say on the section that the echo belongs to the lit
+  device.
+
+**R1101-4. Log knobs show their quantized position, not the patch value.** Area d, h. Confusing.
+Measured.
+- The tape echo's time is 375 ms in the patch and the engine, but the knob and its aria-valuetext read
+  "376ms". Arrow up then down from 1000 ms lands on 999.5 ms. `knob.js` rounds the 0 to 1 position to
+  its step and shows the mapped value of that position; every LOG-mapped knob does this (cutoff, lag,
+  the echo time). Cosmetic, but it reads as a wrong default.
+
+### Still open, re-measured tonight
+- R1017-3: `deck.renderArgs()` still has no `mixer` key.
+- R1017-5: now four tempos in play: the tape echo's sync follows the rack tempo, the master delay its
+  own knob (120 after the rack moved), and the deck's rate at 50% moves neither (rack 120, master 120),
+  so a synced echo runs at double speed against a file played at half rate.
+- R1017-9 and R1026-4: the hot echo chord above with the master reverb at mix 1 and limit off peaks
+  2.57 with 11,523 samples above 1.0 (offline).
+- R1017-10 and R1017-11: phone pitch and mod strips 22 x 117 px; octave readout C3.
+- R1026-5: Space on the focused hold button does not press it; Enter does.
+- R1031-4: an arp take of a three-note chord held 1 s holds three note-ons.
+
+### Not covered tonight
+Areas a, b, f, g, h. Suggested next: f, g, h (does a project carry the tape echo and the arp; the echo
+and arp panels with a keyboard only and a screen reader's names).

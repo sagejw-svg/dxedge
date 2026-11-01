@@ -176,7 +176,7 @@ export async function createEngine(ctx, opts = {}) {
   // is built if needed), and hold a device awake while playback runs.
   E.sendTo = (dev, m) => nodeFor(dev === 'cathode' ? 'cathode' : 'filament').port.postMessage(m);
   E.playing = (dev, on) => E.sendTo(dev, { t: 'play', on: !!on });
-  E.panic = () => Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' }));
+  E.panic = () => { Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' })); if (E.echo && E.echo.flush) E.echo.flush(); };
   E.mono = on => { if (E.C) E.C.setMono(!!on); };
 
   // A device the page and other devices talk to. Subscribing does not change the voice;
