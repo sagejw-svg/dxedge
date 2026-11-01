@@ -27,6 +27,7 @@ from database import save_subscription, delete_subscription
 from usage import (init_usage_db, record as usage_record, summary as usage_summary,
                    prune_and_rollup as usage_prune)
 import news as newsdesk
+import forever_zoom
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -522,6 +523,9 @@ async def health():
         # the feed proxy, rather than inferring it from a 200 that the SPA
         # catch-all would also return.
         "feed_proxy":   True,
+        # Same idea as feed_proxy: a stale container has no Forever Zoom
+        # router, and the SPA catch-all would still answer 200 for the page.
+        "forever_zoom": True,
         "version":      "2.0",
     }
 
@@ -995,6 +999,9 @@ async def news_forget(request: Request):
         return _news_out(newsdesk.forget_reader(body))
     except Exception as e:
         _news_fail(e)
+
+
+app.include_router(forever_zoom.router)
 
 
 # Serve React frontend - try real file first, fall back to index.html for SPA routing

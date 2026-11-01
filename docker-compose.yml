@@ -27,6 +27,10 @@ services:
       - NEWS_OWNER_SEED=${NEWS_OWNER_SEED:-}
       - NEWS_OWNER_READER=${NEWS_OWNER_READER:-}
       - NEWS_PASSWORD=${NEWS_PASSWORD:-}
+      # Forever Zoom. Read from this directory's .env on the droplet.
+      # Never commit the value. Empty leaves the page on its procedural
+      # fallback; fal answering 402 does the same. The value is not logged.
+      - FAL_KEY=${FAL_KEY:-}
     expose:
       - "8000"
     volumes:
