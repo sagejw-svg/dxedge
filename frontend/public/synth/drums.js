@@ -76,6 +76,7 @@ export const DRUM_DEFAULT = {
   stereo: clone(F_DEFAULT.stereo),
   ens: clone(F_DEFAULT.ens),
   echo: clone(F_DEFAULT.echo),
+  spring: clone(F_DEFAULT.spring),
   out: clone(F_DEFAULT.out),
 };
 
@@ -111,7 +112,7 @@ export function normalizeDrum(p) {
     out.steps[id] = Array.from({ length: 16 }, (_, i) => (+rowIn[i] > 0 ? 1 : 0));
   });
   if (Array.isArray(p.accent)) out.accent = Array.from({ length: 16 }, (_, i) => (+p.accent[i] > 0 ? 1 : 0));
-  ['stereo', 'ens', 'echo', 'out'].forEach(k => {
+  ['stereo', 'ens', 'echo', 'spring', 'out'].forEach(k => {
     if (!p[k] || typeof p[k] !== 'object') return;
     Object.keys(out[k]).forEach(f => {
       if (p[k][f] == null) return;
@@ -156,7 +157,7 @@ function pat(partial) {
     voices: partial.voices,
     steps: partial.steps ? stepsFrom(partial.steps) : undefined,
     accent: partial.accent ? row(partial.accent) : undefined,
-    ens: partial.ens, echo: partial.echo, out: partial.out,
+    ens: partial.ens, echo: partial.echo, spring: partial.spring, out: partial.out,
   });
   // stepsFrom already returns 0/1 arrays; normalizeDrum accepts those.
   return p;

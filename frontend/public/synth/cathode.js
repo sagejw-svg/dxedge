@@ -4,7 +4,7 @@
 // JSON like Filament's, with device: 'cathode' and a list of cables, each [source, input].
 // The rack fields (ens, echo, out, the graphic EQ included) are the same as Filament's and take its defaults.
 
-import { DEFAULT as F_DEFAULT, clone, EQ_RANGE, EQ_PRESET_IDS, normEq, ECHO_RANGE, ECHO_ENUMS } from './patches.js';
+import { DEFAULT as F_DEFAULT, clone, EQ_RANGE, EQ_PRESET_IDS, normEq, ECHO_RANGE, ECHO_ENUMS, SPRING_RANGE } from './patches.js';
 
 export const C_SCHEMA = 1;
 
@@ -51,6 +51,7 @@ export const C_DEFAULT = {
   cables: [],
   ens: clone(F_DEFAULT.ens),
   echo: clone(F_DEFAULT.echo),
+  spring: clone(F_DEFAULT.spring),
   out: clone(F_DEFAULT.out),
 };
 
@@ -72,6 +73,7 @@ export const RANGE = {
   'out.spkInt': [0, 10], 'out.rmMix': [0, 100], 'out.rmDecay': [0.2, 6], 'out.rmTone': [0, 10], 'out.width': [0, 200], 'out.wChar': [3, 20],
   ...EQ_RANGE,
   ...ECHO_RANGE,
+  ...SPRING_RANGE,
 };
 const TUBES = ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'];
 export const C_ENUMS = {

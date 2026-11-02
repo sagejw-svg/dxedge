@@ -613,6 +613,64 @@ function makeTapeEcho(ctx, lt){
 }
 
 // ======================================================================
+// Spring reverb, rack-wide, after the tape echo (brief: ENSEMBLE > TAPE ECHO > SPRING > EQ > V3/V4).
+// The tank is a worklet (spring.worklet.js: a tube driver, then two springs of different lengths, each a
+// dispersive allpass chain in a loop, spring A on the left, spring B on the right). Here: the mix around
+// it in plain Web Audio nodes. The tank hears the mid (L+R)/2; the dry keeps its own stereo.
+//   mix     the same law as the tape echo: the dry holds full level to 50%, the wet reaches full at 50%
+//   decay   seconds to fall 60 dB (0.5 to 6)
+//   tone    the low-pass on every reflection, 1.5 to 4.5 kHz (lower is darker; each echo passes it again)
+//   drip    how much the springs disperse: 0 is a faint chirp, 100 the long falling "drip" of a surf tank
+//   drive   pushes the tube driver in front of the tank into saturation
+// Off (or mix 0) is a straight wire: the wet gain sits at 0 and the tank's feed is unplugged; offline at
+// once, live once the wet has faded (0.3 s). The tank then clears and sleeps until it hears a sound again.
+// ======================================================================
+var SPRING_T = [0.0331, 0.0413];                       // one-way transit of spring A (left) and B (right), s
+function springToneHz(tone){ return 1500*Math.pow(3, clampN(+tone||0,0,10)/10); }   // 0 -> 1.5 kHz, 10 -> 4.5 kHz
+// (the URL is made here, not at the top: rack.js is also imported inside worklet scopes, which have no URL)
+function loadSpring(ctx){
+  if(!ctx.__filamentSpring) ctx.__filamentSpring = ctx.audioWorklet.addModule(new URL('./spring.worklet.js', import.meta.url).href);
+  return ctx.__filamentSpring;
+}
+// call after loadSpring(ctx) has resolved
+function makeSpring(ctx){
+  var live = !(window.OfflineAudioContext && ctx instanceof OfflineAudioContext);
+  function G(v){ var g=ctx.createGain(); g.gain.value=v; return g; }
+  function ST(n){ n.channelCount=2; n.channelCountMode='explicit'; n.channelInterpretation='speakers'; return n; }
+  function setP(p,v,tc){ if(live){ try{ p.setTargetAtTime(v, ctx.currentTime, tc||0.03); return; }catch(e){} } p.value=v; }
+  var S = { fed: true, state: null };
+  S.input=ST(G(1)); S.output=ST(G(1)); S.dry=ST(G(1)); S.input.connect(S.dry); S.dry.connect(S.output);
+  S.mid=G(1); S.mid.channelCount=1; S.mid.channelCountMode='explicit'; S.mid.channelInterpretation='speakers';
+  S.node=new AudioWorkletNode(ctx, 'filament-spring', { numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[2],
+    channelCount:1, channelCountMode:'explicit', channelInterpretation:'speakers' });
+  S.wet=ST(G(0));
+  S.input.connect(S.mid); S.mid.connect(S.node); S.node.connect(S.wet); S.wet.connect(S.output);
+  var P = function(n){ return S.node.parameters.get(n); };
+  var unplugT=null;
+  function feed(want){
+    if(want){ if(unplugT){ clearTimeout(unplugT); unplugT=null; } if(!S.fed){ S.mid.connect(S.node); S.fed=true; } return; }
+    if(!S.fed || unplugT) return;
+    var cut=function(){ unplugT=null; if(S.fed){ try{ S.mid.disconnect(S.node); }catch(e){} S.fed=false; S.node.port.postMessage({ t:'clear' }); } };
+    if(live) unplugT=setTimeout(cut, 300); else cut();
+  }
+  // Panic: the tank fades out over 256 samples and clears; the dry path is untouched.
+  S.flush=function(){ S.node.port.postMessage({ t:'clear' }); };
+  // The worklet's own state, for the tests: { sleep, blocks, K, band, a, dly, g }.
+  var statN=0;
+  S.stat=function(){ var id=++statN; return new Promise(function(res){ var h=function(e){ if(e.data && e.data.t==='stat' && e.data.id===id){ S.node.port.removeEventListener('message', h); res(e.data); } };
+    S.node.port.addEventListener('message', h); S.node.port.start(); S.node.port.postMessage({ t:'stat', id:id }); }); };
+  S.set=function(sp){
+    sp=sp||{}; var on=!!sp.on, mx=echoMix(sp.mix), want = on && mx.wet > 0;
+    feed(want);
+    setP(P('drive'), clampN(+sp.drive||0,0,10)); setP(P('decay'), clampN(+sp.decay||2.5,0.5,6)); setP(P('tone'), clampN(+sp.tone||0,0,10));
+    setP(P('drip'), clampN(+sp.drip||0,0,100));
+    setP(S.wet.gain, want ? mx.wet : 0); setP(S.dry.gain, on ? mx.dry : 1);
+    S.state={ on:on, wet: want ? mx.wet : 0, dry: on ? mx.dry : 1, decay: clampN(+sp.decay||2.5,0.5,6), drip: clampN(+sp.drip||0,0,100) };
+  };
+  return S;
+}
+
+// ======================================================================
 // Graphic EQ, rack-wide (the first stage of makeChain: ensemble > EQ > output tubes).
 // The chain's EQ (ISO band centres, 1/1, 2/3 and 1/3 octave peaking filters, the top band a
 // shelf) and its response maths are in the copied block above. Here: the band counts a patch may
@@ -679,4 +737,5 @@ function tubeData(){ return TUBES.map(function(t){ return { id:t.id, gain:t.gain
 export { TUBES, TUBE_BY, CABS, CAB_BY, ROOMS, ROOM_BY, tubeCurve, curveAt, harmonics, makeChain, makeSynthChain,
          compMakeupDb, dB2lin, clampN, hashStr, mulberry32, ppMakeup, tubeData, makeEnsemble, ENS_MODES,
          makeTapeEcho, probeEchoLatency, ECHO_MODES, ECHO_HEAD_B, ECHO_OFFSET, ECHO_WOW, ECHO_FLUTTER, echoSat, echoDriveGain, echoToneHz, echoSeconds, echoMix,
+         makeSpring, loadSpring, springToneHz, SPRING_T,
          ISO, EQ_N, EQ_PRESETS, EQ_PRESET_BY, eqCentres, eqResponse, eqFit, eqTarget, eqResample, addEqTap };

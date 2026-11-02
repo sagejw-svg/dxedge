@@ -6,7 +6,7 @@
 // rack takes its settings (ens, out) from the active device's patch. A device that is not
 // active lets go of its keys, finishes its tails and sleeps; Cathode's node is only built the
 // first time it is chosen.
-import { makeSynthChain, makeEnsemble, makeTapeEcho, probeEchoLatency, echoSeconds, tubeData, dB2lin } from './rack.js';
+import { makeSynthChain, makeEnsemble, makeTapeEcho, probeEchoLatency, echoSeconds, makeSpring, loadSpring, tubeData, dB2lin } from './rack.js';
 import { normalize, clone, getPath, setPath, LFO_SYNC_BEATS } from './patches.js';
 import { normalizeC } from './cathode.js';
 import { makeMasterFx } from './masterfx.js';
@@ -43,8 +43,11 @@ export async function createEngine(ctx, opts = {}) {
     E.C = makeSynthChain(ctx);
     E.ens = makeEnsemble(ctx);
     E.echo = makeTapeEcho(ctx, await probeEchoLatency(ctx.sampleRate));                 // ensemble > tape echo > the chain (EQ, output tubes, ...)
+    await loadSpring(ctx);
+    E.spring = makeSpring(ctx);                                                          // tape echo > spring reverb > the chain
     E.ens.output.connect(E.echo.input);
-    E.echo.output.connect(E.C.input);
+    E.echo.output.connect(E.spring.input);
+    E.spring.output.connect(E.C.input);
     E.C.out.connect(E.master);
   }
   // Mixer in front of the shared ensemble (or the master, when the rack is off).
@@ -108,8 +111,8 @@ export async function createEngine(ctx, opts = {}) {
   Object.defineProperty(E, 'node', { get: () => E.nodes[E.device] });
 
   let S = E.C ? rackState(patch) : null;
-  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); setEcho(); if (E.C.setEqTap) E.C.setEqTap(S.eqOn); }
-  let ensJ = JSON.stringify(patch.ens), echoJ = JSON.stringify(patch.echo);
+  if (E.C) { E.C.apply(S); E.ens.set(patch.ens); setEcho(); E.spring.set(patch.spring); if (E.C.setEqTap) E.C.setEqTap(S.eqOn); }
+  let ensJ = JSON.stringify(patch.ens), echoJ = JSON.stringify(patch.echo), springJ = JSON.stringify(patch.spring);
 
   E.patch = () => patch;
   E.patchOf = dev => E.patches[dev] || null;
@@ -142,6 +145,7 @@ export async function createEngine(ctx, opts = {}) {
     if (!E.C) return;
     const ej = JSON.stringify(patch.ens); if (ej !== ensJ) { E.ens.set(patch.ens); ensJ = ej; }
     const tj = JSON.stringify(patch.echo); if (tj !== echoJ) { setEcho(); echoJ = tj; }
+    const sj = JSON.stringify(patch.spring); if (sj !== springJ) { E.spring.set(patch.spring); springJ = sj; }
     const N = rackState(patch), C = E.C;
     const tubeKeys = ['tube', 'drive', 'bias', 'sag', 'tone', 'out', 'topology'];
     const roomRegen = N.room !== S.room || N.rmDecay !== S.rmDecay || N.rmTone !== S.rmTone;
@@ -176,7 +180,7 @@ export async function createEngine(ctx, opts = {}) {
   // is built if needed), and hold a device awake while playback runs.
   E.sendTo = (dev, m) => nodeFor(dev === 'cathode' ? 'cathode' : 'filament').port.postMessage(m);
   E.playing = (dev, on) => E.sendTo(dev, { t: 'play', on: !!on });
-  E.panic = () => { Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' })); if (E.echo && E.echo.flush) E.echo.flush(); };
+  E.panic = () => { Object.keys(E.nodes).forEach(k => E.nodes[k].port.postMessage({ t: 'panic' })); if (E.echo && E.echo.flush) E.echo.flush(); if (E.spring) E.spring.flush(); };
   E.mono = on => { if (E.C) E.C.setMono(!!on); };
 
   // A device the page and other devices talk to. Subscribing does not change the voice;

@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -2395,6 +2395,175 @@ with sync_playwright() as pw:
         ck("Te. no page errors", not errs, errs)
     _tape_echo()
 
+    # ---------------------------------------------------------------- Sp. the spring reverb (rack-wide, 2 Nov)
+    def _spring():
+        def sp(**s):
+            d = {"on": True, "mix": 100, "decay": 2.5, "tone": 10, "drip": 40, "drive": 0}; d.update(s); return d
+        def sine_burst(f, **s):
+            return patch(osc1={"wave": "sine", "level": 0.5, "fixed": f}, envA={"a": 0.001, "d": 0.006, "s": 0, "r": 0.003, "vel": 0}, spring=sp(**s))
+        burst = note(60, 0.05, 0.06)
+        def env(x):
+            k = int(0.002 * SR); return np.convolve(np.abs(x), np.ones(k) / k, mode="same")
+        D0, _ = render(dict(sine_burst(1000), spring={"on": False}), burst, 0.3)
+        p0 = int(np.argmax(env(D0)))                       # the dry burst's envelope peak; arrivals are timed from it
+        def arrival(e, a, z):
+            i0 = p0 + int(a * SR); return (i0 + int(np.argmax(e[i0:p0 + int(z * SR)])) - p0) / SR * 1000
+        # transit times: 1 kHz arrives one transit late (A 33.1 ms left, B 41.3 ms right), then once per round trip.
+        # At drip 0: with more drip the burst's own spread of frequencies (about 1 kHz +/- 170 Hz) moves its envelope peak
+        # later than 1 kHz's group delay (measured: +0.3 ms at drip 40, +1 ms at 100 on the second arrival)
+        L, R = render(sine_burst(1000, drip=0), burst, 0.4)
+        eL, eR = env(L), env(R)
+        tt = [arrival(eL, 0.015, 0.06), arrival(eL, 0.08, 0.13), arrival(eR, 0.02, 0.07), arrival(eR, 0.1, 0.16)]
+        ck(f"Sp. transit (drip 0): 1 kHz reaches the left pickup at {tt[0]:.2f} ms and again at {tt[1]:.2f} (spring A: want 33.1 and 99.3 within 0.5), the right at {tt[2]:.2f} and {tt[3]:.2f} (spring B: 41.3 and 123.9)",
+           abs(tt[0] - 33.1) <= 0.5 and abs(tt[1] - 99.3) <= 0.5 and abs(tt[2] - 41.3) <= 0.5 and abs(tt[3] - 123.9) <= 0.5, tt)
+        # the drip: lows arrive later than highs (a falling chirp), more so with drip up, and every pass adds to it
+        spread = {}
+        for drip in (0, 100):
+            a = {}
+            for f in (300, 3000):
+                L, _ = render(sine_burst(f, drip=drip), burst, 0.4); e = env(L)
+                a[f] = (arrival(e, 0.015, 0.06), arrival(e, 0.08, 0.14))
+            spread[drip] = (a[300][0] - a[3000][0], a[300][1] - a[3000][1])
+        ck(f"Sp. drip: 300 Hz arrives after 3 kHz, {spread[0][0]:.1f} ms at drip 0 and {spread[100][0]:.1f} ms at drip 100 (want 0.5 to 4, and 8 or more)",
+           0.5 <= spread[0][0] <= 4 and spread[100][0] >= 8, spread)
+        ck(f"Sp. drip: each pass smears the chirp further ({spread[100][0]:.1f} ms on the first arrival, {spread[100][1]:.1f} on the next; want 2.5x or more)",
+           spread[100][1] >= 2.5 * spread[100][0], spread)
+        # decay: the time to -60 dB at 500 Hz to 1 kHz (short-time spectra of a noise burst, both sides), against the knob
+        nb = lambda **s: patch(osc1={"level": 0}, noise={"level": 0.6, "color": "white"}, envA={"a": 0.001, "d": 0.03, "s": 0, "r": 0.005, "vel": 0}, spring=sp(**s))
+        def rt60(L, R, lo, hi):
+            n, hop = 4096, 1200; w = np.hanning(n); f = np.fft.rfftfreq(n, 1 / SR); m = (f >= lo) & (f <= hi)
+            e = np.array([np.sum(np.abs(np.fft.rfft(L[i:i + n] * w))[m] ** 2 + np.abs(np.fft.rfft(R[i:i + n] * w))[m] ** 2) for i in range(0, len(L) - n, hop)])
+            edb = 10 * np.log10(e + 1e-30); pk = int(np.argmax(edb)); top = edb[pk]
+            idx = [i for i in range(pk, len(edb)) if top - 45 <= edb[i] <= top - 5]
+            return -60 / np.polyfit(np.array(idx) * hop / SR, edb[idx], 1)[0]
+        rt = {}
+        for d_ in (0.6, 2.5, 6.0):
+            L, R = render(nb(decay=d_, tone=5), note(60, 0.05, 0.08), d_ * 1.4 + 0.6, masterFx=False)
+            rt[d_] = rt60(L, R, 500, 1000)
+        ck(f"Sp. decay: the knob is the time to -60 dB at 500 Hz to 1 kHz ({', '.join(f'{k:g} s: {v:.2f}' for k, v in rt.items())}; want within 15%)",
+           all(abs(v / k - 1) <= 0.15 for k, v in rt.items()), rt)
+        # tone: the reflections' low-pass makes the top fade sooner when it is down
+        tn = {}
+        for t_ in (0, 10):
+            L, R = render(nb(decay=2.5, tone=t_), note(60, 0.05, 0.08), 4.0, masterFx=False)
+            tn[t_] = rt60(L, R, 2000, 3000)
+        ck(f"Sp. tone: 2 to 3 kHz rings {tn[0]:.2f} s at tone 0 and {tn[10]:.2f} s at tone 10 (want under half)", tn[0] < 0.5 * tn[10], tn)
+        # the tube driver: a held 220 Hz sine through the tank is clean at drive 0 and saturated at drive 10
+        hd = {}
+        for drv in (0, 10):
+            P = patch(osc1={"wave": "sine", "level": 0.6, "fixed": 220}, spring=sp(drive=drv, decay=0.5, drip=0))
+            L, _ = render(P, note(60, 0.0, 1.5), 1.5)
+            hd[drv] = harmonics_db(L[int(0.6 * SR):int(1.4 * SR)], 220, 4)
+        ck(f"Sp. driver: clean at drive 0 (H2 {hd[0][0]:.0f}, H3 {hd[0][1]:.0f} dB), saturated at drive 10 (H2 {hd[10][0]:.0f}, H3 {hd[10][1]:.0f} dB)",
+           hd[0][1] < -60 and hd[10][1] > -45 and hd[10][0] > hd[0][0] + 6, hd)
+        # two springs: the sides differ (low correlation), and the mono fold does not cancel
+        ch = [e for k, n in enumerate((48, 55, 60, 64)) for e in note(n, 0.1 + 0.3 * k, 0.3 + 0.3 * k)]
+        L, R = render(patch(osc1={"wave": "saw", "level": 0.5}, spring=sp(mix=100, drip=80, tone=5)), ch, 2.4)
+        corr = float(np.corrcoef(L, R)[0, 1])
+        P = patch(osc1={"wave": "saw", "level": 0.5}, spring=sp(mix=50, drip=80, tone=5))
+        L, R = render(P, ch, 2.4); Lm, _ = render(P, ch, 2.4, mono=True)
+        st, mo = float(np.sqrt(np.mean((L ** 2 + R ** 2) / 2))), float(np.sqrt(np.mean(Lm ** 2)))
+        ck(f"Sp. two springs: the wet sides are different tanks (correlation {corr:+.2f}, want under 0.5) and fold to mono without cancelling (loses {db(st) - db(mo):.1f} dB, want 3 or less)",
+           corr < 0.5 and db(st) - db(mo) <= 3.0, (corr, db(st), db(mo)))
+        # runaway: the longest decay, full drive, a loud chord: bounded and finite
+        L, R = render(patch(osc1={"wave": "saw", "level": 0.9}, spring=sp(mix=100, decay=6, drive=10, drip=100)), [e for n in (36, 48, 52, 55) for e in note(n, 0.0, 1.0)], 4.0)
+        both = np.concatenate([L, R])
+        ck(f"Sp. longest decay and full drive stays bounded (peak {float(np.max(np.abs(both))):.3f}, all finite)", bool(np.all(np.isfinite(both))) and float(np.max(np.abs(both))) <= 1.0, float(np.max(np.abs(both))))
+        # off is a straight wire: off and mix 0 match the stage taken out by hand (tape echo output straight to the chain)
+        sw = pg.evaluate("""async () => {
+          const eng = await import('/synth/engine.js'); const PM = await import('/synth/patches.js');
+          let a = 11; const rnd = () => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; };
+          const src = new Float32Array(24000);
+          for (let i = 0; i < src.length; i++) src[i] = 0.3 * Math.sin(i * 0.0571) + 0.2 * Math.sin(i * 0.0857) + 0.1 * (rnd() * 2 - 1);
+          const run = async (spring, bypass) => {
+            const ctx = new OfflineAudioContext(2, 48000, 48000), P = PM.normalize({}); if (spring) P.spring = spring;
+            const E = await eng.createEngine(ctx, { patch: P, events: [] });
+            if (bypass) { E.echo.output.disconnect(E.spring.input); E.echo.output.connect(E.C.input); }
+            const buf = ctx.createBuffer(2, src.length, 48000); buf.copyToChannel(src, 0); buf.copyToChannel(src.slice().reverse(), 1);
+            const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(E.ens.input); s.start(0);
+            E.node.disconnect();
+            const out = await ctx.startRendering(); return [out.getChannelData(0), out.getChannelData(1)];
+          };
+          const cmp = (x, y) => { let d = 0, pk = 0; for (let i = 0; i < x[0].length; i++) { d = Math.max(d, Math.abs(x[0][i] - y[0][i]), Math.abs(x[1][i] - y[1][i])); pk = Math.max(pk, Math.abs(x[0][i])); } return [d, pk]; };
+          const ref = await run(null, true);
+          return { off: cmp(ref, await run({ on: false, mix: 80, decay: 6, drip: 100 }, false)), mix0: cmp(ref, await run({ on: true, mix: 0, decay: 6 }, false)),
+                   on: cmp(ref, await run({ on: true, mix: 30 }, false)) }; }""")
+        ck(f"Sp. off is a straight wire: spring off and mix 0 match the stage taken out by hand, sample for sample (max diff {sw['off'][0]}, {sw['mix0'][0]}; on at 30% differs by {sw['on'][0]:.2f})",
+           sw["off"][0] == 0 and sw["mix0"][0] == 0 and sw["off"][1] > 0.05 and sw["on"][0] > 0.01, sw)
+        # the schema: defaults, clamps, Cathode and Dekatron carry it, no factory patch has it on
+        nz = pg.evaluate("""async () => { const PM = await import('/synth/patches.js'), CM = await import('/synth/cathode.js'), DM = await import('/synth/drums.js');
+          const old = PM.normalize({ name: 'x', out: { level: 2 } }).spring;
+          const bad = PM.normalize({ spring: { on: 1, mix: 400, decay: 0.01, tone: 'x', drip: -5, drive: 99 } }).spring;
+          const c = CM.normalizeC({ device: 'cathode', spring: { on: true, decay: 4 } }).spring;
+          const d = DM.normalizeDrum({ spring: { on: true, mix: 60 } }).spring;
+          const onF = PM.FACTORY.filter(p => p.spring && p.spring.on).map(p => p.name), onC = CM.C_FACTORY.filter(p => p.spring && p.spring.on).map(p => p.name);
+          return { old, bad, c: [c.on, c.decay, c.mix], d: [d.on, d.mix, d.decay], onF, onC, nF: PM.FACTORY.length }; }""")
+        ck("Sp. schema: a patch from before the spring loads with it off at the defaults",
+           nz["old"] == {"on": False, "mix": 25, "decay": 2.5, "tone": 5, "drip": 40, "drive": 3}, nz["old"])
+        ck("Sp. schema: junk clamps (mix 100, decay 0.5, drip 0, drive 10) and a non-number keeps the default (tone 5)",
+           nz["bad"] == {"on": True, "mix": 100, "decay": 0.5, "tone": 5, "drip": 0, "drive": 10}, nz["bad"])
+        ck("Sp. schema: Cathode and Dekatron patches carry the same spring fields", nz["c"] == [True, 4, 25] and nz["d"] == [True, 60, 2.5], nz)
+        ck(f"Sp. schema: no factory patch switches the spring on, so none sounds different ({nz['nF']} Filament patches)", nz["onF"] == [] and nz["onC"] == [], nz)
+        # rack.js is imported inside worklet scopes (heptode-dsp.js reaches it through patches.js), which have no URL or window:
+        # a module that imports patches.js must still register its processor (a first build made the spring's URL at the top
+        # of rack.js, and Heptode's worklet stopped loading, and with it every device hosted after it)
+        wk = pg.evaluate("""async () => { const c = new OfflineAudioContext(1, 128, 48000);
+          const src = "import * as P from '" + location.origin + "/synth/patches.js'; registerProcessor('rk-probe', class extends AudioWorkletProcessor { process() { return false; } });";
+          const u = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+          try { await c.audioWorklet.addModule(u); new AudioWorkletNode(c, 'rk-probe'); return 'ok'; } catch (e) { return String(e).slice(0, 160); } }""")
+        ck("Sp. rack.js and patches.js load inside a worklet scope", wk == "ok", wk)
+        # idle: off and mix 0 unplug the tank (offline at once) and it sleeps; on plugs it in; live, off waits for the fade
+        idl = pg.evaluate("""async () => { const eng = await import('/synth/engine.js'), PM = await import('/synth/patches.js');
+          const ctx = new OfflineAudioContext(2, 4800, 48000), E = await eng.createEngine(ctx, { patch: PM.normalize({}), events: [] });
+          const off0 = E.spring.fed; E.setPatch(PM.normalize({ spring: { on: true } }), true); const on1 = E.spring.fed;
+          E.setPatch(PM.normalize({ spring: { on: true, mix: 0 } }), true); const mix0 = E.spring.fed;
+          const L = __synth.engine(); await L.ctx.resume(); const keep = L.patch().spring;
+          L.spring.set({ on: true, mix: 30 }); const lOn = L.spring.fed; L.spring.set({ on: false, mix: 30 }); const lSoon = L.spring.fed;
+          await new Promise(r => setTimeout(r, 600)); const lLater = L.spring.fed; const st = await L.spring.stat();
+          L.spring.set({ on: true, mix: 30 }); const lBack = L.spring.fed;
+          L.spring.set(keep);
+          return { off0, on1, mix0, lOn, lSoon, lLater, lBack, sleep: st.sleep }; }""")
+        ck("Sp. idle: off and mix 0 unplug the tank (offline at once), on plugs it in; live, off waits for the fade, then the tank sleeps",
+           idl == {"off0": False, "on1": True, "mix0": False, "lOn": True, "lSoon": True, "lLater": False, "lBack": True, "sleep": True}, idl)
+        # the section, in the page
+        pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
+        pg.locator("#mSpring").scroll_into_view_if_needed()
+        ck("Sp. UI: the Spring reverb section is in the rack, off for a factory patch", pg.is_visible("#mSpring") and pg.get_attribute("#springOnBtn", "aria-pressed") == "false"
+           and pg.evaluate("__synth.engine().spring.state.on") is False, pg.evaluate("__synth.engine().spring.state"))
+        box = pg.locator("#kSpring .knob").nth(1).bounding_box()
+        pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2); pg.mouse.down(); pg.mouse.move(box["x"] + box["width"] / 2, box["y"] - 40, steps=5); pg.mouse.up()
+        pg.wait_for_timeout(200)
+        st = pg.evaluate("[__synth.patch().spring, __synth.engine().spring.state]")
+        ck(f"Sp. UI: dragging the decay knob switches the spring on and the rack follows (decay {st[0]['decay']:.2f} s, tank {st[1]['decay']:.2f} s)",
+           st[0]["on"] and st[1]["on"] and st[0]["decay"] > 2.5 and abs(st[0]["decay"] - st[1]["decay"]) < 1e-9 and pg.get_attribute("#springOnBtn", "aria-pressed") == "true", st)
+        pg.click("#springOnBtn"); pg.wait_for_timeout(100)
+        ck("Sp. UI: the switch turns it off again", pg.evaluate("__synth.patch().spring.on") is False and pg.evaluate("__synth.engine().spring.state.on") is False)
+        vis = {}
+        for d_ in ("cathode", "lattice", "dekatron", "filament"):
+            pg.evaluate(f"__synth.setDevice('{d_}')"); pg.wait_for_timeout(250); vis[d_] = pg.is_visible("#mSpring")
+        ck("Sp. UI: the section shows for Filament and Cathode only, like the tape echo", vis == {"cathode": True, "lattice": False, "dekatron": False, "filament": True}, vis)
+        pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(100)
+        # Panic empties the tank: a long ringing tail stops, and a new note rings again
+        pnc = pg.evaluate("""async () => { const E = __synth.engine(); await E.ctx.resume(); const fx = E.fx, keep = __synth.patch();
+          const p = __synth.patch(); p.spring = { on: true, mix: 50, decay: 6, tone: 5, drip: 60, drive: 3 };
+          p.envA = { a: 0.001, d: 0.05, s: 0, r: 0.02 }; p.arp = Object.assign({}, p.arp, { on: false }); p.echo = Object.assign({}, p.echo, { on: false });
+          p.out = Object.assign({}, p.out, { roomOn: false }); p.ens = Object.assign({}, p.ens, { on: false });
+          const m0 = JSON.parse(JSON.stringify(__synth.master())); __synth.setMaster({ delay: { on: false }, reverb: { on: false } });
+          __synth.setPatch(p); await new Promise(r => setTimeout(r, 300));
+          const rms = s => { let a = 0; for (let i = 0; i < s.L.length; i++) a += s.L[i] * s.L[i]; return 20 * Math.log10(Math.sqrt(a / Math.max(1, s.L.length)) + 1e-12); };
+          const grab = async ms => { fx.recordStart(); await new Promise(r => setTimeout(r, ms)); return rms(await fx.recordStop()); };
+          __synth.noteOn(57, 0.9); await new Promise(r => setTimeout(r, 80)); __synth.noteOff(57);
+          await new Promise(r => setTimeout(r, 500)); const tail = await grab(400);
+          __synth.panic(); await new Promise(r => setTimeout(r, 120)); const after = await grab(300);
+          __synth.noteOn(57, 0.9); await new Promise(r => setTimeout(r, 80)); __synth.noteOff(57);
+          await new Promise(r => setTimeout(r, 300)); const back = await grab(400);
+          __synth.panic(); __synth.setPatch(keep); __synth.setMaster(m0); await new Promise(r => setTimeout(r, 400));
+          return { tail, after, back }; }""")
+        ck(f"Sp. Panic empties the tank: a 6 s tail stops ({pnc['tail']:.1f} dBFS before, {pnc['after']:.1f} after; want 40 dB or more down and under -70), and a new note rings again ({pnc['back']:.1f} dBFS)",
+           pnc["tail"] > -55 and pnc["after"] < -70 and pnc["tail"] - pnc["after"] >= 40 and pnc["back"] > -55, pnc)
+        ck("Sp. no page errors", not errs, errs)
+    _spring()
+
     # ---------------------------------------------------------------- Tv. the tube show (James, 13 Oct)
     # Visual state from __synth.tubeShow(), read in the page while the chassis frame loop runs. Peaks are
     # sampled inside the page every 8 ms (pk, t1, t3: logged in the check names only). What the checks
@@ -2598,7 +2767,9 @@ with sync_playwright() as pw:
     cpu9("valve12, 8 voices, graphic EQ on at 31 bands", big, ev8)
     big["out"] = dict(big["out"], eqOn=False); big["echo"] = {"on": True, "mode": "pingpong", "time": 300, "fb": 60, "mix": 40, "wow": 50, "flutter": 50, "drive": 5}
     cpu9("valve12, 8 voices, tape echo on (ping-pong, wow and flutter)", big, ev8)
-    big.pop("echo")
+    big.pop("echo"); big["spring"] = {"on": True, "mix": 40, "decay": 6, "tone": 10, "drip": 100, "drive": 5}
+    cpu9("valve12, 8 voices, spring reverb on (decay 6 s, drip 100%)", big, ev8)
+    big.pop("spring")
     ck("9. the CPU page: no page errors", not cperr, cperr)
     cpx.close()
     if pg_was == "running": pg.evaluate("() => __synth.engine().ctx.resume()")

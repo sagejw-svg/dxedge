@@ -137,7 +137,8 @@ task can read it).
 | `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure. `engine.js` posts its state (`{t:'clock'}`) to the Filament and Cathode worklets on play, stop, tempo and locate, for tempo-synced LFOs |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
-| `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, the tape echo, and the graphic EQ's presets, fitting, resampling and live spectrum tap) |
+| `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, the tape echo, the spring reverb's mix around its worklet, and the graphic EQ's presets, fitting, resampling and live spectrum tap) |
+| `frontend/public/synth/spring.worklet.js` | AudioWorklet processor `filament-spring`: the spring reverb tank (a tube driver, two dispersive allpass loops, one per side). Our own model; `makeSpring` in rack.js wraps it |
 | `frontend/public/synth/fm/` | Hexode, a vendored six-operator FM page (MIT, Matt Montag). The name on the page is Hexode. See `CHANGES.md` and `THIRD_PARTY_NOTICES.md` |
 | `frontend/public/synth/acid/` | Anode, a vendored acid bass groovebox (CC BY 4.0, David Whiting / Vitling). The page credits the author. Drums in this copy are synthesized. See `CHANGES.md` |
 | `frontend/src/components/Synth.jsx` | Thin iframe shell; tab group "Synth" in `App.jsx`. Links Hexode and Anode |
@@ -370,7 +371,29 @@ task can read it).
       sync and ping-pong and offset; 50% feedback steps -5.9 dB a repeat, 85% -1.3 dB; wow 100% 1.20% peak, flutter
       0.40%; off and mix 0 are sample for sample the stage taken out of the graph. Still open: a tape hiss or age control,
       a spring reverb after it (the next item), and factory patches that use it (a call for James).
-- [ ] Spring reverb: two tube-driven springs of different lengths, drip
+- [x] Spring reverb: two tube-driven springs of different lengths, drip - 2 Nov 2026 (nightly).
+      Rack-wide, after the tape echo (ensemble > tape echo > spring > EQ > output tubes). The tank is a worklet of its own,
+      `spring.worklet.js` (processor `filament-spring`); `makeSpring` in rack.js below the additions line puts the mix around it in
+      plain Web Audio nodes, like the echo. Patch fields `spring.on`, `mix` (0 to 100%, the echo's law: dry full to 50%, wet full
+      at 50%), `decay` (0.5 to 6 s to -60 dB), `tone` (0 to 10, the reflections' low-pass, 1.5 to 4.5 kHz), `drip` (0 to 100%) and
+      `drive` (0 to 10); Filament, Cathode and Dekatron carry the same fields. Off by default and no factory patch switches it on,
+      so nothing sounds different. The tank hears the mid. A tube driver (the echo's record amp curve: slope 1 at rest, drive
+      pushes up to 26 dB into it) and a 4-pole band-limit at 5 kHz feed two springs: A, 33.1 ms one way, on the left; B, 41.3 ms,
+      on the right. Each spring is a loop: down the spring through a dispersion chain (24 stretched first-order allpasses, z^-1
+      stretched to z^-K with K = sample rate / 12 kHz rounded, coefficient -0.3 to -0.75 from the drip knob) and a delay line to
+      the pickup, back through a 100 Hz high-pass, the tone low-pass, the decay gain and a second chain. So the first arrival is
+      one transit late, each echo after it one round trip later, lows arrive after highs (a falling chirp), and each pass smears
+      it further. The delay lines are shortened by the chains' group delay at 1 kHz, so 1 kHz keeps the transit time at any drip;
+      the decay gain makes up what the loop filters take at 700 Hz, so the knob is the decay there. Idle: off or mix 0 unplugs the
+      feed (offline at once, live after the 0.3 s fade), the tank clears and sleeps until it hears a sound. Panic fades the tank
+      out over 256 samples and clears it. Mono-safe: the sides are two different tanks, never inverted.
+      Measured (section Sp.): 1 kHz arrives at 33.1 and 41.3 ms and again one round trip later within 0.5 ms; 300 Hz after 3 kHz
+      by 2.5 ms at drip 0 and 10.4 ms at drip 100, and 31 ms on the next pass; decay at 500 Hz to 1 kHz 0.63, 2.68 and 6.22 s for
+      the knob at 0.6, 2.5 and 6; 2 to 3 kHz rings 0.53 s at tone 0 against 2.15 s at tone 10; the driver's H3 -74 dB at drive 0,
+      -35 dB at drive 10; wet sides correlate at -0.01 and the mono fold loses 1.1 dB; off and mix 0 are sample for sample the
+      stage taken out of the graph.
+      Still open: a spring "crash" when the tank is knocked (a transient control or a button), a second, denser chirp band above
+      the dispersive one (real tanks have one), and factory patches that use it (a call for James).
 Done when: every model self-oscillates where it should; mono fold passes for all patches.
 
 ### Cathode (second device) - first version done 13 Oct 2026
