@@ -1288,9 +1288,9 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (1 Nov): 1. the MIDI deck tempo readout window; 2. fader readouts; 3. the Mix tab on a phone (compact strips);
-4. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes; the patch menu); 5. rail plate titles at 761 to
-959 px; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (2 Nov): 1. the Mix tab on a phone (compact strips); 2. readouts for the faders still without one (Heptode's
+track, tempo and morph sliders; the header VOL readout is bare text); 3. phone first screen, the rest (a slimmer phone chassis, once the
+Tube show item closes; the patch menu); 4. rail plate titles at 761 to 959 px; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1390,15 +1390,28 @@ Rank of the open items (1 Nov): 1. the MIDI deck tempo readout window; 2. fader 
   canvas shape check). Slider grids get a 26 px gutter on desktop so one column's readout does not run into the next one's name
   in a widened card (seen on Phantastron's Bends: "0.90 BITS"). The dial's hub sits at 80% of the window and the radius leaves
   the bezel inside it, with a warm lamp glow behind the scale (no motion, so nothing to reduce). New checks: Pf. (10).
+- [x] 2 Nov: fader readouts on the mix desk and the MIDI deck's tempo (the top two items of 1 Nov). Seen before: the 75 mix
+  faders (18 strips of level, pan, reverb and delay sends, and the bus room, delay and feedback) showed their value only by the
+  cap's position, and the deck's "100%" was bare text beside its fader. Measured before at 1366 px: each strip's reverb send sat
+  in the 118 px name column, so that fader was about 60 px while delay's was 130. Now: every one of those faders reads its value in
+  a small recessed amber window (the deck's readout finish): level in dB (off at zero), pan as C, L40 or R50, sends and feedback
+  in percent, room in seconds, delay in ms. A hook on each input's own value setter repaints the window on every write (a drag,
+  a project, a song, the engine's sync), so no caller changes and patches need no event; the same text goes to aria-valuetext
+  and the window is aria-hidden. In a strip the window sits under the fader's name, so the fader keeps most of its length; on
+  desktop the sends now line up under level and pan and arm spans mute and solo. The deck tempo window matches the position
+  readout beside it. Measured after: text 13.8:1 on the window; level faders 139 to 124 px at 1366, 176 to 161 at 800, 97 to 82
+  on a 375 px phone; reverb sends about 60 to 124 px at 1366; desktop strips 89 to 97 px tall (Mix card 1,162 to 1,234 px at
+  1366); phone strips unchanged at 256 px; 44 px targets and no sideways scroll unchanged. Display only, no audio change.
+  New checks: Fd. (9).
 - [ ] Lattice and Mote use their own chip palettes (blue and cyan) beside the amber elsewhere (seen). A call
   for James whether that is per-device character or drift.
 - [ ] Mix tab on a phone: "tempo" is lower case beside the upper-case bus labels, and each strip is about
   256 px tall, so the Mix section is about 5,460 px long (measured after tonight's change). A compact phone strip (level and pan on one row,
   sends behind a toggle) would halve it.
 
-- [ ] Faders have no fill: the cap is the readout. Sliders without a number beside them (Heptode's track sliders, the mix
-  sends, Heptode tempo and morph) show their value only by position. A small readout or a lit fill (needs a value hook,
-  since patches set values without input events) would help (seen).
+- [ ] Faders have no fill: the cap is the readout. Sliders without a number beside them (Heptode's track sliders, Heptode
+  tempo and morph) show their value only by position (seen). 2 Nov: the mix desk and the deck tempo have windows now
+  (`hookFader` in index.html); the same hook and `.fread` window fit Heptode's. The header VOL "100%" is still bare text.
 - [ ] Rhumbatron, Trochotron and Phantastron slider cards are 228 px wide at 1366 px, so their faders are 81 to 100 px.
   A wide card (`data-wide`) for those sections would double them (measured). 1 Nov: the row fill now widens the card that ends
   each of those devices' rows (Rhumbatron's Body, Trochotron's Shape, Phantastron's Bends); the cards mid-row are unchanged.
@@ -1407,11 +1420,11 @@ Rank of the open items (1 Nov): 1. the MIDI deck tempo readout window; 2. fader 
   (99 px) and the tabs (52 px). A slimmer phone chassis (tubes and VU at about 80% height) would give the panel another
   20 to 30 px; it touches the tube canvases, so it waits for the Tube show item. Also seen: the patch menu is 100 px wide
   on a 375 px phone ("Wide Nov"), cramped beside six keys.
-- [ ] MIDI deck tempo readout ("100%") is still bare text beside the slider, not in a window like the other readouts (seen).
 - [ ] Rail plates on a 761 to 959 px window (27 Oct, measured): the role drops because the plates are 103 to 136 px; a
   title on each plate (the role) would keep it reachable by hover there.
 
 ## Open items for James
+- Graphics 2 Nov, fader readouts: before, the 75 mix faders showed their value only by where the cap sat, and the MIDI deck's tempo "100%" was loose text. Now each one reads its value in a small amber window like the deck's status windows (level in dB, pan as C, L40 or R50, sends in percent, room in seconds, delay in ms), and it follows patches, projects and songs as well as drags. On a desktop each strip is 8 px taller (the window sits under the fader's name) and its second row is rearranged: reverb under level, delay under pan, arm under mute and solo (before, the reverb fader was squeezed into the name column, about 60 px). Phone strips keep their height; the faders there are 15 px shorter. If you want level in percent instead of dB, say so.
 - Nightly 2 Nov, spring reverb (Rack tab, after the tape echo): it is in and off everywhere, so nothing sounds different. Please listen: turn it on over a pluck or a lead and try drip 0, 40 and 100. Two calls: (1) are the defaults (mix 25%, decay 2.5 s, tone 5, drip 40%, drive 3) a good first sound, and (2) do you want a few factory patches retuned to use it (the tape echo has the same question open)?
 - Review 1 Nov (`docs/filament-review.md`), three tape echo calls: (1) the feedback knob runs hot: at 95% the repeats never fade and at 100% they grow about 12 dB before the record amp holds them, so the top tenth of the knob is runaway (R1101-2, measured). Rescale it so 100% is the edge, or keep the feel? (2) The one echo follows the lit device's patch, so moving the rail to Cathode or picking a patch cuts a ringing tail within 0.1 s, and a deck part on Filament plays through Cathode's echo while Cathode is lit (R1101-3). Let tails ring across a change, or say so on the section? (3) Log knobs read their rounded position, so the default 375 ms shows as 376ms (R1101-4); show the patch value instead? Fixed tonight, no patch sounds different: Panic now empties the tape (R1101-1); before, repeats near full feedback went on after it.
 - Graphics 1 Nov, desktop panel rows: before, a panel row whose next card did not fit stopped short and left a dark empty well at the right (Pentagrid's Dial and Receiver used 60% of the width; Additron's Envelope card stood alone, one column wide and 1,000 px tall). Now the cards in that row widen to fill it, so most devices' last rows are wider and shorter (Additron's panel 2,659 to 2,219 px at 1366). Pentagrid's dial is a little smaller, fully inside its window, with a warm glow behind the scale. Phones are unchanged. If you prefer a card to keep its width, say which and it can opt out.

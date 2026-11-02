@@ -4691,6 +4691,83 @@ with sync_playwright() as pw:
        all(r["cols"] == 1 and r["fills"] == 0 and r["sw"] <= r["iw"] for r in pm.values()), {d: (r["cols"], r["fills"], r["sw"]) for d, r in pm.items()})
     pfm.close()
 
+    # ---------------------------------------------------------------- Fd. fader readouts (graphics, 2 Nov)
+    # Every mix fader (18 strips x level, pan, two sends, and the bus room, delay and feedback) and the deck's tempo
+    # fader reads its value in a recessed amber window. A hook on the input's value setter repaints it on every write,
+    # so a drag, a project or the engine's sync (setMixer -> syncHostUI) all show. The fader carries the same text as
+    # aria-valuetext; the window is aria-hidden. Desktop strips line up: the sends under level and pan, arm under mute
+    # and solo. On a phone the readout sits under the fader's name, so a strip keeps its height.
+    FR_MEAS = """() => {
+      const ins = [...document.querySelectorAll('#mHost input[type="range"]'), document.getElementById('tempoIn')];
+      return ins.map(i => { const found = document.getElementById(i.id === 'tempoIn' ? 'tempoV' : i.id + 'V'), o = found || document.createElement('output');
+        const c = getComputedStyle(o), r = o.getBoundingClientRect(), lab = i.closest('label'), lr = lab ? lab.getBoundingClientRect() : r;
+        const n = lab && lab.querySelector('.fname'), nr = n ? n.getBoundingClientRect() : null, ir = i.getBoundingClientRect();
+        return { id: i.id, missing: !found, v: +i.value, t: o.textContent, vt: i.getAttribute('aria-valuetext'), hidden: o.getAttribute('aria-hidden'), tag: o.tagName,
+          color: c.color, bg: c.backgroundImage, anim: c.animationName, tr: parseFloat(c.transitionDuration) || 0,
+          clip: o.scrollWidth > o.clientWidth + 1, inLab: r.left >= lr.left - 1 && r.right <= lr.right + 1 && r.bottom <= lr.bottom + 1,
+          w: r.width, h: r.height, x: r.left, y: r.top, below: nr ? r.top >= nr.bottom - 1 : null, iw: ir.width, ih: ir.height, ix: ir.left }; });
+    }"""
+    def fr_fmt(i, v):
+        if i == "tempoIn": return f"{round(v)}%"
+        if i.endswith("Lvl"):
+            if v <= 0.0005: return "off"
+            d = 20 * math.log10(v)
+            return ("0.0" if abs(d) < 0.05 else f"{d:.1f}" if d > -10 else str(round(d))) + " dB"
+        if i.endswith("Pan"): return "C" if abs(v) < 0.005 else ("L" if v < 0 else "R") + str(round(abs(v) * 100))
+        if i == "mixRoom": return f"{v:.2f} s"
+        if i == "mixDelay": return f"{round(v * 1000)} ms" if v < 0.9995 else f"{v:.2f} s"
+        return f"{round(v * 100)}%"
+    def fr_bad(rows): return [(r["id"], r["t"], r["vt"], fr_fmt(r["id"], r["v"])) for r in rows
+                              if r["missing"] or r["t"] != fr_fmt(r["id"], r["v"]) or r["vt"] != r["t"]]
+    frx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); frp = frx.new_page(); frerr = []
+    frp.on("pageerror", lambda e: frerr.append(str(e)))
+    frp.goto(BASE); frp.wait_for_function("window.__synth && __synth.booted()", timeout=30000)
+    frp.evaluate("document.querySelector('.tabs [data-go=\"mix\"]').click()"); frp.evaluate("document.getElementById('deckBtn').click()"); frp.wait_for_timeout(300)
+    fr0 = frp.evaluate(FR_MEAS)
+    fr_con = [_ob_con(r["color"], r["bg"]) for r in fr0 if not r["missing"]] or [0]
+    ck(f"Fd. all {len(fr0)} mix and deck tempo faders have a readout window (an aria-hidden <output>), and each reads its fader's value, also as aria-valuetext",
+       len(fr0) == 76 and all(not r["missing"] and r["tag"] == "OUTPUT" and r.get("hidden") == "true" for r in fr0) and not fr_bad(fr0), fr_bad(fr0)[:6])
+    ck(f"Fd. the windows are painted, nothing clipped or outside its label, text {min(fr_con):.1f}:1 or more on the window",
+       all("gradient" in r["bg"] and not r["clip"] and r["inLab"] and r["w"] >= 30 for r in fr0) and min(fr_con) >= 4.5,
+       [(r["id"], r["w"], r["clip"], r["inLab"]) for r in fr0 if not ("gradient" in r["bg"] and not r["clip"] and r["inLab"] and r["w"] >= 30)][:6])
+    frp.evaluate("""() => { const set = (id, v) => { const i = document.getElementById(id); i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); };
+      set('mixFLvl', 0.5); set('mixFPan', -0.4); set('mixFRev', 0.25); set('mixDelay', 1.2); set('mixFb', 0.6); set('tempoIn', 150); }""")
+    fr1 = {r["id"]: r["t"] for r in frp.evaluate(FR_MEAS)}
+    want1 = {"mixFLvl": "-6.0 dB", "mixFPan": "L40", "mixFRev": "25%", "mixDelay": "1.20 s", "mixFb": "60%", "tempoIn": "150%"}
+    ck("Fd. moving a fader updates its window (level -6.0 dB, pan L40, send 25%, delay 1.20 s, feedback 60%, tempo 150%)",
+       all(fr1[k] == v for k, v in want1.items()), {k: fr1[k] for k in want1})
+    frp.evaluate("__synth.setMixer('cathode', { level: 0.1, pan: 0.5, sendR: 0, sendD: 1, mute: false, solo: false })"); frp.wait_for_timeout(60)
+    fr2 = {r["id"]: r["t"] for r in frp.evaluate(FR_MEAS)}
+    frp.evaluate("""() => { __synth.setMixer('filament', { level: 1, pan: 0, sendR: 0, sendD: 0, mute: false, solo: false });
+      __synth.setMixer('cathode', { level: 0, pan: 0, sendR: 0, sendD: 0, mute: false, solo: false }); }"""); frp.wait_for_timeout(60)
+    fr3 = frp.evaluate(FR_MEAS); fr3m = {r["id"]: r["t"] for r in fr3}
+    ck("Fd. a value set by the engine with no input event shows too (setMixer: -20 dB, R50, 100%; then 0.0 dB, C, off)",
+       (fr2["mixCLvl"], fr2["mixCPan"], fr2["mixCDly"]) == ("-20 dB", "R50", "100%") and (fr3m["mixFLvl"], fr3m["mixFPan"], fr3m["mixCLvl"]) == ("0.0 dB", "C", "off") and not fr_bad(fr3),
+       (fr2["mixCLvl"], fr2["mixCPan"], fr2["mixCDly"], fr3m["mixFLvl"], fr3m["mixFPan"], fr3m["mixCLvl"], fr_bad(fr3)[:4]))
+    frp.evaluate("__synth.setMixer('cathode', { level: 1, pan: 0, sendR: 0, sendD: 0, mute: false, solo: false })")
+    frd = {r["id"]: r for r in frp.evaluate(FR_MEAS)}
+    fr_col = [(s, abs(frd["mix" + s + "Rev"]["ix"] - frd["mix" + s + "Lvl"]["ix"]), abs(frd["mix" + s + "Dly"]["ix"] - frd["mix" + s + "Pan"]["ix"])) for s in "FCDT"]
+    arm = frp.evaluate("""() => { const a = document.getElementById('mixFArm').getBoundingClientRect(), m = document.getElementById('mixFMute').getBoundingClientRect(),
+      s = document.getElementById('mixFSolo').getBoundingClientRect(); return { l: a.left - m.left, r: s.right - a.right }; }""")
+    ck(f"Fd. at 1366 px the sends line up under level and pan, arm spans mute and solo, faders {min(frd[k]['iw'] for k in frd if k.startswith('mixF')):.0f} px or more",
+       all(a < 1.5 and c < 1.5 for _, a, c in fr_col) and abs(arm["l"]) < 1.5 and abs(arm["r"]) < 1.5 and min(frd[k]["iw"] for k in frd if k.startswith("mix")) >= 100, (fr_col, arm))
+    ck("Fd. reduced motion: the windows neither animate nor fade", all(r["anim"] == "none" and r["tr"] == 0 for r in frd.values()))
+    ck("Fd. no page errors (fader readouts, desktop)", not frerr, frerr)
+    frx.close()
+    frm = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); frmp = frm.new_page(); frmerr = []
+    frmp.on("pageerror", lambda e: frmerr.append(str(e)))
+    frmp.goto(BASE); frmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    frmp.tap('.tabs [data-go="mix"]'); frmp.wait_for_timeout(300)
+    frm0 = [r for r in frmp.evaluate(FR_MEAS) if r["id"].startswith("mix")]
+    frs = frmp.evaluate("""() => ({ hs: [...document.querySelectorAll('#mHost .mixrow')].map(r => Math.round(r.getBoundingClientRect().height)),
+      sw: document.documentElement.scrollWidth, iw: innerWidth })""")
+    strip = [r for r in frm0 if r["id"] not in ("mixRoom", "mixDelay", "mixFb")]
+    ck(f"Fd. on a 375 px phone each strip readout sits under its name inside the 44 px fader row, faders {min(r['iw'] for r in strip):.0f} px or more, strips {max(frs['hs'])} px tall, no sideways scroll",
+       len(strip) == 72 and all(r["below"] and r["inLab"] and not r["clip"] and r["ih"] >= 44 and r["iw"] >= 70 for r in strip) and max(frs["hs"]) <= 260 and frs["sw"] <= frs["iw"],
+       ([(r["id"], r["below"], r["inLab"], r["clip"], r["ih"], r["iw"]) for r in strip if not (r["below"] and r["inLab"] and not r["clip"] and r["ih"] >= 44 and r["iw"] >= 70)][:5], frs))
+    ck("Fd. no page errors (fader readouts, phone)", not frmerr, frmerr)
+    frm.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

@@ -272,6 +272,7 @@ A strip of brushed metal chassis runs across the top of the instrument. It carri
 
 * **House style.** It matches DXEdge: the dark theme, the amber accent and the same fonts.
 * **Panel finish.** Walnut end cheeks, brushed aluminium, Bakelite knobs with amber pointer lines, and amber pilot lamps on each module's power switch.
+* **Readouts.** A value worth reading sits in a recessed amber window (black glass, amber text with a faint glow), the deck's status finish. Mix faders and the deck's tempo fader show theirs this way (2 Nov): level in dB, pan as C, L or R and a number, sends and feedback in percent, room in seconds, delay in ms. The window is aria-hidden; the fader carries the same text as aria-valuetext.
 * **Faces.** Skins, like the pop-out radio's faces:
 
   * Walnut (default)
