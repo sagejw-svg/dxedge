@@ -1535,7 +1535,7 @@
     <p><b style="color:var(--muted)">Playing it.</b> Click or touch the keys (lower on a key is louder). Computer keyboard: <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>T</kbd> <kbd>G</kbd> <kbd>Y</kbd> <kbd>H</kbd> <kbd>U</kbd> <kbd>J</kbd> <kbd>K</kbd> play an octave, <kbd>Z</kbd> <kbd>X</kbd> shift the octave, <kbd>C</kbd> <kbd>V</kbd> set velocity, <kbd>space</kbd> is the sustain pedal. Panic silences every note. Knobs: drag up or down (shift for fine), arrow keys, the mouse wheel while the knob is focused (shift for a single step), double click to reset. Undo (or Ctrl+Z) steps back on the lit device. Init loads that device's plain patch. S M L XL, remembered in this browser, sizes the controls. On a wide screen the keyboard stays along the bottom and the keys fill the bar.
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
-        <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to Filament, Cathode, Dekatron, or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
+        <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to any device on the rack (its row of chips lists them), or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
     <p><b style="color:var(--muted)">Sculpt.</b> A hand instrument on its own page: <a href="/synth/hand-sculpt/">pinch a glowing orb</a> and move it in the space in front of you. The camera picture stays in the browser.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
@@ -2560,6 +2560,8 @@ function K(hostId, path, label, o) {
   });
   k.el.dataset.path = path;
   if (o.dev) k.el.dataset.dev = o.dev;
+  // o.name: the screen reader name when the short panel label repeats elsewhere on the rack (review R1102-1)
+  if (o.name) k.el.setAttribute('aria-label', o.name);
   k.el.addEventListener('pointerdown', () => { if (learning) armLearn(key); });
   KN[key] = { k, map, path, dev: kd };
   return k;
@@ -2690,7 +2692,7 @@ MOD_SLOTS.forEach((k, i) => {
   const kh = document.createElement('div'); kh.className = 'knobs'; kh.id = 'kMod' + (i + 1);
   const src = sel('src', MOD_SRC, MOD_SRC_L, 'source'), dst = sel('dst', MOD_DST, MOD_DST_L, 'destination');
   row.append(n, src, to, dst, kh); $('mmx').appendChild(row);
-  K('kMod' + (i + 1), 'mod.' + k + '.amt', 'amount', { min: -1, max: 1, step: 0.01, fmt: v => fmtModAmt(k, v), title: 'Mod slot ' + (i + 1) + ' amount: how far the source moves the destination (minus turns it over)' });
+  K('kMod' + (i + 1), 'mod.' + k + '.amt', 'amount', { name: 'Mod slot ' + (i + 1) + ' amount', min: -1, max: 1, step: 0.01, fmt: v => fmtModAmt(k, v), title: 'Mod slot ' + (i + 1) + ' amount: how far the source moves the destination (minus turns it over)' });
   MM[k] = { row, src, dst };
 });
 function refreshMod() {
@@ -2774,19 +2776,19 @@ function refreshArp() {
 K('kEns', 'ens.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%' });
 // Tape echo (patch.echo, shared rack): the head chips (built with the other chips), the sync menu with its
 // readout at the rack tempo, and seven knobs. rack.js makeTapeEcho does the sound; the engine sets its time.
-K('kEcho', 'echo.time', 'time', { map: LOG(40, 1500), fmt: v => Math.round(v) + 'ms', title: 'Echo time (head A) when sync is off' });
-K('kEcho', 'echo.fb', 'feedback', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Feedback: how much of each repeat goes back onto the tape. Near 100% it keeps going, held in check by the record amp' });
-K('kEcho', 'echo.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Mix: the dry stays at full level up to 50%; the echo reaches full level at 50%' });
-K('kEcho', 'echo.drive', 'drive', { min: 0, max: 10, step: 0.1, title: 'Record amp drive: pushes the tube record amp into saturation' });
-K('kEcho', 'echo.tone', 'tone', { min: 0, max: 10, step: 0.1, fmt: v => (echoToneHz(v) / 1000).toFixed(1) + 'kHz', title: 'Tone: the low-pass in the loop; every repeat passes it again' });
-K('kEcho', 'echo.wow', 'wow', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Wow: slow pitch drift of the tape' });
-K('kEcho', 'echo.flutter', 'flutter', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Flutter: fast pitch wobble of the tape' });
+K('kEcho', 'echo.time', 'time', { name: 'Tape echo time', map: LOG(40, 1500), fmt: v => Math.round(v) + 'ms', title: 'Echo time (head A) when sync is off' });
+K('kEcho', 'echo.fb', 'feedback', { name: 'Tape echo feedback', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Feedback: how much of each repeat goes back onto the tape. Near 100% it keeps going, held in check by the record amp' });
+K('kEcho', 'echo.mix', 'mix', { name: 'Tape echo mix', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Mix: the dry stays at full level up to 50%; the echo reaches full level at 50%' });
+K('kEcho', 'echo.drive', 'drive', { name: 'Tape echo drive', min: 0, max: 10, step: 0.1, title: 'Record amp drive: pushes the tube record amp into saturation' });
+K('kEcho', 'echo.tone', 'tone', { name: 'Tape echo tone', min: 0, max: 10, step: 0.1, fmt: v => (echoToneHz(v) / 1000).toFixed(1) + 'kHz', title: 'Tone: the low-pass in the loop; every repeat passes it again' });
+K('kEcho', 'echo.wow', 'wow', { name: 'Tape echo wow', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Wow: slow pitch drift of the tape' });
+K('kEcho', 'echo.flutter', 'flutter', { name: 'Tape echo flutter', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Flutter: fast pitch wobble of the tape' });
 // Spring reverb (patch.spring, shared rack): five knobs. rack.js makeSpring and spring.worklet.js do the sound.
-K('kSpring', 'spring.mix', 'mix', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Mix: the dry stays at full level up to 50%; the springs reach full level at 50%' });
-K('kSpring', 'spring.decay', 'decay', { map: LOG(0.5, 6), fmt: v => v.toFixed(1) + 's', title: 'Decay: how long the springs ring, to 60 dB down' });
-K('kSpring', 'spring.tone', 'tone', { min: 0, max: 10, step: 0.1, fmt: v => (springToneHz(v) / 1000).toFixed(1) + 'kHz', title: 'Tone: the low-pass on every reflection; lower is darker' });
-K('kSpring', 'spring.drip', 'drip', { min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Drip: how far the springs smear each echo into a falling chirp' });
-K('kSpring', 'spring.drive', 'drive', { min: 0, max: 10, step: 0.1, title: 'Drive: pushes the tube that drives the springs into saturation' });
+K('kSpring', 'spring.mix', 'mix', { name: 'Spring reverb mix', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Mix: the dry stays at full level up to 50%; the springs reach full level at 50%' });
+K('kSpring', 'spring.decay', 'decay', { name: 'Spring reverb decay', map: LOG(0.5, 6), fmt: v => v.toFixed(1) + 's', title: 'Decay: how long the springs ring, to 60 dB down' });
+K('kSpring', 'spring.tone', 'tone', { name: 'Spring reverb tone', min: 0, max: 10, step: 0.1, fmt: v => (springToneHz(v) / 1000).toFixed(1) + 'kHz', title: 'Tone: the low-pass on every reflection; lower is darker' });
+K('kSpring', 'spring.drip', 'drip', { name: 'Spring reverb drip', min: 0, max: 100, step: 1, fmt: v => Math.round(v) + '%', title: 'Drip: how far the springs smear each echo into a falling chirp' });
+K('kSpring', 'spring.drive', 'drive', { name: 'Spring reverb drive', min: 0, max: 10, step: 0.1, title: 'Drive: pushes the tube that drives the springs into saturation' });
 ECHO_SYNC.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = SYNC_L(v); $('echoSync').appendChild(o); });
 $('echoSync').addEventListener('change', () => {
   if (!cur.echo) return;

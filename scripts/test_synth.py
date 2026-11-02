@@ -4753,6 +4753,21 @@ with sync_playwright() as pw:
        all(a < 1.5 and c < 1.5 for _, a, c in fr_col) and abs(arm["l"]) < 1.5 and abs(arm["r"]) < 1.5 and min(frd[k]["iw"] for k in frd if k.startswith("mix")) >= 100, (fr_col, arm))
     ck("Fd. reduced motion: the windows neither animate nor fade", all(r["anim"] == "none" and r["tr"] == 0 for r in frd.values()))
     ck("Fd. no page errors (fader readouts, desktop)", not frerr, frerr)
+    # review R1102-1: the effect and mod amount knobs repeat short labels (mix, tone, drive, decay, amount)
+    # found elsewhere on the rack; a screen reader name has to say which section the knob is in
+    rvk = frp.evaluate("""() => ({
+      echo: [...document.querySelectorAll('#kEcho .knob')].map(k => [k.getAttribute('aria-label'), k.querySelector('.kl').textContent]),
+      spring: [...document.querySelectorAll('#kSpring .knob')].map(k => [k.getAttribute('aria-label'), k.querySelector('.kl').textContent]),
+      mod: [...document.querySelectorAll('[id^="kMod"] .knob')].map(k => [k.closest('[id^="kMod"]').id, k.getAttribute('aria-label'), k.querySelector('.kl').textContent]) })""")
+    rv_bad = [r for r in rvk["echo"] if r[0] != "Tape echo " + r[1]] + [r for r in rvk["spring"] if r[0] != "Spring reverb " + r[1]] \
+        + [r for r in rvk["mod"] if r[1] != "Mod slot " + r[0][4:] + " amount" or r[2] != "amount"]
+    ck(f"Rv. the {len(rvk['echo'])} tape echo, {len(rvk['spring'])} spring reverb and {len(rvk['mod'])} mod amount knobs carry their section in the screen reader name, the panel label stays short (review R1102-1)",
+       len(rvk["echo"]) == 7 and len(rvk["spring"]) == 5 and len(rvk["mod"]) == 8 and not rv_bad, rv_bad or rvk)
+    # review R1102-2: the footer said a library channel can go to Filament, Cathode, Dekatron or off
+    rvf = frp.evaluate("""() => ({ foot: [...document.querySelectorAll('footer p')].map(p => p.textContent).find(t => t.includes('Song library')) || '',
+      n: __synth.player().choices().length })""")
+    ck(f"Rv. the footer's song library note does not limit a channel to Filament, Cathode and Dekatron ({rvf['n']} choices on a channel) (review R1102-2)",
+       rvf["n"] > 4 and "Filament, Cathode, Dekatron, or off" not in rvf["foot"] and "any device on the rack" in rvf["foot"], rvf["foot"][:200])
     frx.close()
     frm = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); frmp = frm.new_page(); frmerr = []
     frmp.on("pageerror", lambda e: frmerr.append(str(e)))

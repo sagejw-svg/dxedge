@@ -18,14 +18,13 @@ Newest severity first. IDs are `R<date>-<n>`.
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
 | R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
-| R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch | measured (cut), inferred (impact) |
+| R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch (2 Nov: the spring reverb is a patch field too, so it follows the same way) | measured (cut), inferred (impact, spring) |
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
 | R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
-| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part | measured |
-| R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail | measured |
+| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 2 Nov | measured |
+| R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail; still open 2 Nov | measured |
 | R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
-| R1030-6 | confusing | h | The eight mod matrix amount knobs are all named "amount" for a screen reader; the slot is only in the tooltip | measured |
 | R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
 | R1029-4 | confusing | d | Mixer pan is a balance control: hard left keeps the left side at the centre level and drops the right, so a mono voice panned hard sounds about 3 dB quieter | measured |
 | R1028-2 | confusing | a | Klystron gate and focus: most of their travel is silence (gate at 25% silences 4 of 5 factory patches; focus at its top costs 25 to 38 dB even with the gate at 0) | measured |
@@ -52,9 +51,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 24 Oct | inferred (code, 24 Oct) |
-| R1020-8 | confusing | h | Desktop rack: 452 tab stops (30 Oct; 426 on 27 Oct) and no skip link; the library is near the end | measured |
-| R1020-9 | confusing | h | 58 control names repeat across sections (30 Oct, 56 on 27 Oct: "off" x6, "cutoff" x4, "level" x4, the six filter model chips x2 since Filter B) with no section in the name | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 2 Nov (4 buttons, no name, both sizes) | measured (2 Nov) |
+| R1020-8 | confusing | h | Desktop rack: 481 tab stops (2 Nov; 452 on 30 Oct, 426 on 27 Oct) and no skip link; the library is stop 466 | measured |
+| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "off" x9 (the tape echo and spring reverb switches are new), the tube chips x3, "cutoff" x4, "level" x4 (2 Nov, after the R1102-1 fix) | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 1 Nov | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
@@ -64,7 +63,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1208,3 +1207,86 @@ Measured.
 ### Not covered tonight
 Areas a, b, f, g, h. Suggested next: f, g, h (does a project carry the tape echo and the arp; the echo
 and arp panels with a keyboard only and a screen reader's names).
+
+## 2026-11-02 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, origin/main `6035445`, sw.js `dxedge-v172` (the spring reverb and
+the fader readout windows had landed overnight). Chromium 1243 headless (the `chromium-1194` path in
+the task prompt is gone) at 1366 x 900 and 375 x 812 (touch, 2x), and a reduced-motion context. No
+page errors on the rack, Hexode, Anode, Iris or Gleam. Audio was read from the live output with the
+master recorder (`__synth.recordStart` and `recordStop`, a 24-bit WAV decoded in the script) and the
+strip meters; offline renders went through `__synth.render`. Focus tonight: every library song, a
+project carrying the new spring reverb and tape echo, the new fader readouts from the keyboard, and
+names and focus for the new sections.
+
+### What worked (measured)
+
+- Library: all 21 songs, played 3 s each on a fresh page at the defaults, sound (peak 0.56 to 0.97,
+  RMS 0.06 to 0.34), with no sample at full scale and no NaN. After each stop the output is under
+  0.003 peak within 2.5 s, with 0 held notes and 0 voices.
+- Project with the new fields: Filament with the spring reverb on (mix 40, decay 3.3, drip 70) and the
+  tape echo on. Save project, load another factory patch (spring off), load project: both come back,
+  and the spring switch reads "on" with `aria-pressed="true"`. Offline renders of one note through
+  that patch (dry, spring, echo, both, and spring at mix 100, decay 6, drip 100, drive 10): no NaN,
+  largest sample step 0.02 to 0.10, peak at or under 0.38.
+- Fader readouts (new): three Left arrows on Filament level, pan, the desk room and feedback move the
+  window and `aria-valuetext` together (-0.3 dB, L3, 1.07 s, 32%); `setMixer` with level 0.5 and pan
+  -0.4 shows -6.0 dB and L40. The deck tempo window reads 100%.
+- Hexode at both sizes: a held A sounds (peak 0.31 and 0.32) and lets go (0); links back to `/synth/`
+  and to Anode. Anode at both sizes: start plays (peak 0.18), links back to `/synth/` and Hexode, no
+  sideways scroll at 375 px. Iris and Gleam load at both sizes, link back, no sideways scroll.
+- Rack, both sizes: a Tab walk (481 stops at 1366, 102 at 375) finds 0 unnamed stops and an outline or
+  ring on every one, the spring reverb's switch and knobs included. Reduced motion: with a note held
+  the tube show reports its reduced set (no flare, no arcs); the only running animation is the
+  correlation marker's `left` transition.
+
+### Findings
+
+**R1102-1. The tape echo and spring reverb knobs are named "mix", "tone", "drive", "decay".** Area h.
+Confusing. Measured. Fixed tonight.
+- Steps: Tab through the Rack tab with a screen reader (or read `aria-label` on `#kEcho .knob` and
+  `#kSpring .knob`).
+- Expected: a name that says which section the knob is in, as the mixer faders do ("Filament level").
+- Actual: the two new effects added "mix" x2, "drive" x2, "tone" x2 and "decay" to names that already
+  repeat (desktop totals tonight: "mix" x6, "drive" x5, "tone" x4, "decay" x4), on top of the
+  eight mod matrix knobs all named "amount" (R1030-6).
+- Fix: `K()` takes a `name` option for the screen reader name; the panel label stays short. The
+  echo knobs are "Tape echo time" and so on, the spring knobs "Spring reverb mix" and so on, and the
+  mod knobs "Mod slot 1 amount" to "Mod slot 8 amount", matching the slot menus. Closes R1030-6.
+  Check: "Rv. the 7 tape echo, 5 spring reverb and 8 mod amount knobs carry their section in the
+  screen reader name" (fails on `6035445`: "time", "feedback", "mix").
+
+**R1102-2. The footer says a library channel can go to Filament, Cathode, Dekatron or off.** Area f.
+Confusing. Measured. Fixed tonight.
+- Steps: read "Song library." in the footer, then open songs and look at a channel's chips.
+- Expected: the note matches the chips.
+- Actual: each channel offers 19 choices (every device on the rack and off). The note predates the
+  routing to hosted devices (R1030-1).
+- Fix: "Each MIDI channel can go to any device on the rack (its row of chips lists them), or off."
+  Check: "Rv. the footer's song library note does not limit a channel to Filament, Cathode and
+  Dekatron" (fails on `6035445`).
+
+### Still open from earlier runs (re-checked tonight)
+
+- R1020-3: a project still carries 14 devices (no Thyratron, Dekatron, Lattice, Gleam). Its `bus` is
+  the Mix desk bus; the master bus is not in it.
+- R1030-3: Greensleeves (no channel 10) still runs Dekatron's pattern: Dekatron strip 0.33 at 2 s,
+  `drumMeter().playing` true.
+- R1030-4: Dock Lamp with every channel on Heptode and Dekatron muted: Heptode strip 0 over 1.2 s,
+  output peak 0. The chips read "Heptode".
+- R1020-7: Anode's four regenerate buttons still have no name but the glyph (both sizes).
+- R1024-3: Hexode's 13 operator toggles still have no name (both sizes).
+- Hexode still scrolls sideways at 375 px (1154 px wide).
+- R1025-5: phone footer links still 13 px tall (Tip the developer, Hand Orchestra, Hexode, Anode,
+  DXEdge, Old Time Radio); the Sculpt link and the full screen link are 32 px.
+- R1017-10: phone pitch and mod strips still 22 x 117 px.
+- R1020-8 and R1020-9: see the table (481 stops; names still repeat, "off" x9 now).
+
+### Not reported
+
+- Main-thread gaps of 200 to 2000 ms when a song starts were measured while the test suite ran on
+  the same machine. Not repeatable on a quiet machine tonight, so no finding.
+
+### Not covered tonight
+Areas a, b, c, d, e. Suggested next: a and b on the spring reverb (each knob against an offline
+render, factory patches with it on, old patches with no `spring`), and R1101-3 for the spring.
