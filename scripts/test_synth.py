@@ -2525,6 +2525,20 @@ with sync_playwright() as pw:
           return { off0, on1, mix0, lOn, lSoon, lLater, lBack, sleep: st.sleep }; }""")
         ck("Sp. idle: off and mix 0 unplug the tank (offline at once), on plugs it in; live, off waits for the fade, then the tank sleeps",
            idl == {"off0": False, "on1": True, "mix0": False, "lOn": True, "lSoon": True, "lLater": False, "lBack": True, "sleep": True}, idl)
+        # a note, then silence while the tank rings: the input high-pass state sinks toward zero, and below the smallest
+        # normal double every sample's arithmetic on it runs slow (measured 2 Nov: subnormal after about 1.9 s, stuck there).
+        # The tank stops it at exactly 0. Read 3.5 s in (a 6 s tank still ringing), offline, through the test hook `ih`.
+        sub = pg.evaluate("""async () => { const eng = await import('/synth/engine.js'), PM = await import('/synth/patches.js');
+          const sr = 48000, ctx = new OfflineAudioContext(2, sr * 4, sr);
+          const p = PM.normalize({ spring: { on: true, mix: 40, decay: 6, drive: 5 }, envA: { a: 0.001, d: 0.05, s: 1, r: 0.02 } });
+          const E = await eng.createEngine(ctx, { patch: p, events: [{ at: 0, t: 'on', n: 57, v: 0.9 }, { at: sr * 0.3, t: 'off', n: 57 }] });
+          E.master.connect(ctx.destination); let st = null;
+          ctx.suspend(3.5).then(async () => { st = await E.spring.stat(); ctx.resume(); });
+          await ctx.startRendering();
+          const ih = st ? st.ih : null;
+          return { got: !!st, sleep: st && st.sleep, ih, subnormal: ih !== null && ih !== 0 && Math.abs(ih) < 2.2250738585072014e-308 }; }""")
+        ck(f"Sp. silence after a note: the tank's input stage stops at 0 instead of sinking into subnormals while the tank still rings (state {sub.get('ih')!r} at 3.5 s)",
+           sub["got"] and sub["sleep"] is False and sub["ih"] is not None and not sub["subnormal"] and abs(sub["ih"]) < 1e-100, sub)
         # the section, in the page
         pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
         pg.locator("#mSpring").scroll_into_view_if_needed()

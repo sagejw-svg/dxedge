@@ -28,6 +28,7 @@ const SPR_T = [0.0331, 0.0413];      // one-way transit times, s (A left, B righ
 const SPR_M = 24;                    // allpass sections per chain
 const SPR_B = 0.15;                  // driver curve asymmetry
 const SPR_WET = 0.7;                 // wet output scale
+const SPR_FLOOR = 1e-150;            // the input high-pass state stops at 0 below this (no subnormals)
 const TB = Math.tanh(SPR_B), TB1 = 1 - TB * TB;
 
 // |H| at w (radians/sample) of a biquad c[0..4], and of the one-pole high-pass y = k (y1 + x - x1)
@@ -94,7 +95,7 @@ class FilamentSpring extends AudioWorkletProcessor {
       const m = e.data || {};
       if (m.t === 'clear') { if (!this.sleep) this.fade = 256; }
       else if (m.t === 'stat') this.port.postMessage({ t: 'stat', sleep: this.sleep, blocks: this.blocks, K: this.K, band: this.band,
-        a: this.sp[0].a, dly: this.sp.map(s => s.dly), dly2: this.sp.map(s => s.dly2), g: this.sp.map(s => s.g), id: m.id });
+        a: this.sp[0].a, dly: this.sp.map(s => s.dly), dly2: this.sp.map(s => s.dly2), g: this.sp.map(s => s.g), ih: this.ih, id: m.id });
     };
   }
   coeffs(drive, decay, tone, drip) {
@@ -130,46 +131,81 @@ class FilamentSpring extends AudioWorkletProcessor {
     }
     this.blocks++;
     this.coeffs(params.drive[0], params.decay[0], params.tone[0], params.drip[0]);
-    const gd = this.gd, ic = this.inC, iz = this.inZ, tc = this.tc, hpK = this.hpK, ihK = this.ihK, K = this.K;
+    const gd = this.gd, ic = this.inC, iz = this.inZ, tc = this.tc, hpK = this.hpK, ihK = this.ihK, K = this.K, oc = this.outC;
+    // The two springs run side by side in one pass. Each spring's four steps (D2 read, AP1, D1 read, AP2) only
+    // read delay-line slots written two or more samples ago, so its two allpass chains do not depend on each
+    // other within a sample, and the springs never do: the four chains run interleaved in one loop, so the CPU
+    // overlaps four serial chains of multiply-adds instead of waiting on one at a time. Every chain does the
+    // same arithmetic in the same order as before, and every Float32Array store still rounds where it did, so
+    // the output is the same sample for sample (measured 2 Nov, see the Improvement backlog in docs/filament.md).
+    const sA = this.sp[0], sB = this.sp[1], a = sA.a;          // a is set on both springs together
+    const A1a = sA.ap1, A2a = sA.ap2, A1b = sB.ap1, A2b = sB.ap2, lzA = sA.lp, lzB = sB.lp, ozA = sA.oz, ozB = sB.oz;
+    const mA = sA.mask, mB = sB.mask, gA = sA.g, gB = sB.g;
+    const dlyA = sA.dly, dly2A = sA.dly2, dlyB = sB.dly, dly2B = sB.dly2;
+    const tc0 = tc[0], tc1 = tc[1], tc2 = tc[2], tc3 = tc[3], tc4 = tc[4];
+    const oc0 = oc[0], oc1 = oc[1], oc2 = oc[2], oc3 = oc[3], oc4 = oc[4];
+    const ic0 = ic[0], ic1 = ic[1], ic2 = ic[2], ic3 = ic[3], ic4 = ic[4];
+    let wA = sA.w, pA = sA.p, wB = sB.w, pB = sB.p, hpA = sA.hp, hxA = sA.hx, hpB = sB.hp, hxB = sB.hx;
+    let ih = this.ih, ix = this.ix;
     let energy = 0;
     for (let i = 0; i < N; i++) {
       // the driver: input high-pass, the tube curve, then the 4-pole band-limit
       let x = inp ? inp[i] : 0;
-      const h = ihK * (this.ih + x - this.ix); this.ix = x; this.ih = h; x = h;
+      const h = ihK * (ih + x - ix); ix = x; ih = h; x = h;
       const u = x * gd; x = ((Math.tanh(u + SPR_B) - TB) / TB1) / gd;
-      let y1 = ic[0] * x + iz[0]; iz[0] = ic[1] * x - ic[3] * y1 + iz[1]; iz[1] = ic[2] * x - ic[4] * y1;
-      let y2 = ic[0] * y1 + iz[2]; iz[2] = ic[1] * y1 - ic[3] * y2 + iz[3]; iz[3] = ic[2] * y1 - ic[4] * y2;
+      let y1 = ic0 * x + iz[0]; iz[0] = ic1 * x - ic3 * y1 + iz[1]; iz[1] = ic2 * x - ic4 * y1;
+      let y2 = ic0 * y1 + iz[2]; iz[2] = ic1 * y1 - ic3 * y2 + iz[3]; iz[3] = ic2 * y1 - ic4 * y2;
       x = y2;
       let fadeG = 1;
-      if (this.fade > 0) { fadeG = this.fade / 256; this.fade--; if (this.fade === 0) { for (const s of this.sp) s.clear(); this.fade = -1; } }
-      for (let k = 0; k < 2; k++) {
-        const s = this.sp[k], a = s.a, mask = s.mask, w = s.w, p = s.p;
-        // the reflection arriving back at the driver end: D2 read at its delay (linear interpolation)
-        const r2 = w - s.dly2, r2i = Math.floor(r2), f2 = r2 - r2i;
-        const b = s.d2[r2i & mask] * (1 - f2) + s.d2[(r2i + 1) & mask] * f2;
-        const r = w - s.dly, ri = Math.floor(r), fr = r - ri;
-        // down the spring: AP1, then into D1
-        let v = x + b, j = p;
-        const A1 = s.ap1;
-        for (let m = 0; m < SPR_M; m++, j += K) { const vk = A1[j], q = v - a * vk; A1[j] = q; v = a * q + vk; }
-        s.d1[w & mask] = v;
-        // the pickup: D1 read at its delay
-        const y = s.d1[ri & mask] * (1 - fr) + s.d1[(ri + 1) & mask] * fr;
-        // the reflection: high-pass, the tone low-pass, the decay gain, AP2, into D2
-        const hy = hpK * (s.hp + y - s.hx); s.hx = y; s.hp = hy;
-        const lz = s.lp, ly = tc[0] * hy + lz[0]; lz[0] = tc[1] * hy - tc[3] * ly + lz[1]; lz[1] = tc[2] * hy - tc[4] * ly;
-        let z = ly * s.g * fadeG; j = p;
-        const A2 = s.ap2;
-        for (let m = 0; m < SPR_M; m++, j += K) { const vk = A2[j], q = z - a * vk; A2[j] = q; z = a * q + vk; }
-        s.d2[w & mask] = z;
-        s.w = (w + 1) & mask; s.p = p + 1 === K ? 0 : p + 1;
-        // the pickup's own band-limit, then out on this spring's side
-        const oz = s.oz, o1 = this.outC[0] * y + oz[0]; oz[0] = this.outC[1] * y - this.outC[3] * o1 + oz[1]; oz[1] = this.outC[2] * y - this.outC[4] * o1;
-        const o = o1 * SPR_WET * fadeG;
-        if (k === 0) oL[i] = o; else oR[i] = o;
-        energy += o < 0 ? -o : o;
+      if (this.fade > 0) {
+        fadeG = this.fade / 256; this.fade--;
+        if (this.fade === 0) { sA.clear(); sB.clear(); hpA = hxA = hpB = hxB = 0; this.fade = -1; }
       }
+      // spring A: the reflection arriving back at the driver end (D2 read at its delay, linear interpolation),
+      // and the pickup (D1 read at its delay)
+      const r2A = wA - dly2A, r2iA = Math.floor(r2A), f2A = r2A - r2iA;
+      const bA = sA.d2[r2iA & mA] * (1 - f2A) + sA.d2[(r2iA + 1) & mA] * f2A;
+      const rA = wA - dlyA, riA = Math.floor(rA), frA = rA - riA;
+      const yA = sA.d1[riA & mA] * (1 - frA) + sA.d1[(riA + 1) & mA] * frA;
+      // spring A's reflection: high-pass, the tone low-pass, the decay gain
+      const hyA = hpK * (hpA + yA - hxA); hxA = yA; hpA = hyA;
+      const lyA = tc0 * hyA + lzA[0]; lzA[0] = tc1 * hyA - tc3 * lyA + lzA[1]; lzA[1] = tc2 * hyA - tc4 * lyA;
+      // spring B, the same
+      const r2B = wB - dly2B, r2iB = Math.floor(r2B), f2B = r2B - r2iB;
+      const bB = sB.d2[r2iB & mB] * (1 - f2B) + sB.d2[(r2iB + 1) & mB] * f2B;
+      const rB = wB - dlyB, riB = Math.floor(rB), frB = rB - riB;
+      const yB = sB.d1[riB & mB] * (1 - frB) + sB.d1[(riB + 1) & mB] * frB;
+      const hyB = hpK * (hpB + yB - hxB); hxB = yB; hpB = hyB;
+      const lyB = tc0 * hyB + lzB[0]; lzB[0] = tc1 * hyB - tc3 * lyB + lzB[1]; lzB[1] = tc2 * hyB - tc4 * lyB;
+      // the four chains: AP1 down each spring (into D1), AP2 on each reflection (into D2)
+      let vA = x + bA, zA = lyA * gA * fadeG, vB = x + bB, zB = lyB * gB * fadeG, jA = pA, jB = pB;
+      for (let m = 0; m < SPR_M; m++, jA += K, jB += K) {
+        const k1 = A1a[jA], q1 = vA - a * k1; A1a[jA] = q1; vA = a * q1 + k1;
+        const k2 = A2a[jA], q2 = zA - a * k2; A2a[jA] = q2; zA = a * q2 + k2;
+        const k3 = A1b[jB], q3 = vB - a * k3; A1b[jB] = q3; vB = a * q3 + k3;
+        const k4 = A2b[jB], q4 = zB - a * k4; A2b[jB] = q4; zB = a * q4 + k4;
+      }
+      sA.d1[wA & mA] = vA; sA.d2[wA & mA] = zA; sB.d1[wB & mB] = vB; sB.d2[wB & mB] = zB;
+      wA = (wA + 1) & mA; pA = pA + 1 === K ? 0 : pA + 1;
+      wB = (wB + 1) & mB; pB = pB + 1 === K ? 0 : pB + 1;
+      // each pickup's own band-limit, then out on that spring's side (A left, B right)
+      const o1A = oc0 * yA + ozA[0]; ozA[0] = oc1 * yA - oc3 * o1A + ozA[1]; ozA[1] = oc2 * yA - oc4 * o1A;
+      const oA = o1A * SPR_WET * fadeG;
+      oL[i] = oA; energy += oA < 0 ? -oA : oA;
+      const o1B = oc0 * yB + ozB[0]; ozB[0] = oc1 * yB - oc3 * o1B + ozB[1]; ozB[1] = oc2 * yB - oc4 * o1B;
+      const oB = o1B * SPR_WET * fadeG;
+      oR[i] = oB; energy += oB < 0 ? -oB : oB;
     }
+    sA.w = wA; sA.p = pA; sB.w = wB; sB.p = pB; sA.hp = hpA; sA.hx = hxA; sB.hp = hpB; sB.hx = hxB;
+    // With the input silent the input high-pass state shrinks by ihK a sample and, about 1.9 s in, sinks below the
+    // smallest normal double and stays there (stuck near 5e-324), while the tank rings on for up to 14 s at decay 6.
+    // Subnormal arithmetic is slow and nothing in an AudioWorklet flushes it (measured 26 Oct for the voice), so it
+    // stops at exactly 0 below SPR_FLOOR. That changes no sample: while the input stays silent the driver adds SPR_B
+    // (0.15) to u = x gd (gd at most 5), and any |u| under about 1e-17 rounds back to exactly SPR_B, so its output was
+    // already exactly 0; and a state this small vanishes in rounding against any nonzero input step (a float32 sample
+    // is at least 1.4e-45).
+    if (ih < SPR_FLOOR && ih > -SPR_FLOOR) ih = 0;
+    this.ih = ih; this.ix = ix;
     // a silent input and a tank under -140 dB for a while: clear it and sleep until the next sound
     if (!live && energy < 1e-7 * N) { if (++this.quiet > 8) { for (const s of this.sp) s.clear(); this.iz_reset(); this.sleep = true; } }
     else this.quiet = 0;
