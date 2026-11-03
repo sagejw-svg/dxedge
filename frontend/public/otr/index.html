@@ -4151,60 +4151,91 @@
   // metal: a horizontal sweep for spun metal, from the finish's five tones
   function metalGrad(c, x0, x1, m){ var g=c.createLinearGradient(x0,0,x1,0); g.addColorStop(0,m[0]); g.addColorStop(0.18,m[1]); g.addColorStop(0.34,m[3]); g.addColorStop(0.46,m[2]); g.addColorStop(0.75,m[1]); g.addColorStop(1,m[0]); return g; }
 
-  // wax primitives: each parcel is an ellipse (flattened on the floor and under the cap, and a little
-  // across its motion, the way a drop pushing through a liquid flattens; a long tail is a neck, never
-  // speed), each neck a string of small discs as thick as the neck is
+  // wax primitives, as shapes with a distance: each parcel an ellipse (flattened on the floor and under
+  // the cap, and a little across its motion, the way a drop pushing through a liquid flattens; a long
+  // tail is a neck, never speed), each neck a rod as thick as the neck between the two parcels' centres.
+  // Parcels of one blob are melted together with a smooth minimum, so where they meet, and where a neck
+  // joins a blob, the surface rounds into a fillet instead of adding up into a bump; different blobs are
+  // only ever touching, never blended, so each keeps its own outline.
+  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.0, WAX_KN=1.4;   // blend widths: a parcel melts into its blob over about its own radius
   function waxPrims(sim){
-    var out=[], L=sim.L, i, K=2.1;
-    for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r/(1+0.8*ee), b=o.r*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
+    var out=[], L=sim.L, i;
+    for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*WAX_GROW/(1+0.8*ee), b=o.r*WAX_GROW*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
       var sx=1+0.32*o.rest+0.22*o.sq, sy=1-0.38*o.rest-0.28*o.sq;
-      // M = diag(sx,sy) R diag(a,b); store its inverse rows and the bounding extents
-      var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10;
-      out.push({ x:o.x, y:o.y, i00:m11/det/K, i01:-m01/det/K, i10:-m10/det/K, i11:m00/det/K, ex:K*Math.sqrt(m00*m00+m01*m01), ey:K*Math.sqrt(m10*m10+m11*m11), T:o.T, f:o.f });
+      // M = diag(sx,sy) R diag(a,b) maps the unit circle onto the parcel; keep its inverse and its extents
+      var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10, kk=WAX_KA+WAX_KB*o.r;
+      out.push({ n:0, b:o.blob, x:o.x, y:o.y, i00:m11/det, i01:-m01/det, i10:-m10/det, i11:m00/det, ex:Math.sqrt(m00*m00+m01*m01)+kk, ey:Math.sqrt(m10*m10+m11*m11)+kk, k:kk, T:o.T, f:o.f });
     }
     for(i=0;i<sim.LINKS.length;i++){ var l=sim.LINKS[i], A=l.a, Bq=l.b, dx=Bq.x-A.x, dy=Bq.y-A.y, d=Math.sqrt(dx*dx+dy*dy); if(d<(A.r+Bq.r)*0.55) continue;
-      var ux=dx/d, uy=dy/d, s0=A.r*0.55, s1=d-Bq.r*0.55, rn=Math.max(0.45,l.rn), n=Math.max(1,Math.ceil((s1-s0)/(rn*0.8)));
-      for(var k=0;k<=n;k++){ var t=s0+(s1-s0)*k/n, f=t/d, rr=rn*K;
-        out.push({ x:A.x+ux*t, y:A.y+uy*t, i00:1/rr, i01:0, i10:0, i11:1/rr, ex:rr, ey:rr, T:A.T+(Bq.T-A.T)*f, f:Math.min(A.f,Bq.f) }); } }
+      var rn=Math.max(0.45,l.rn), kn=WAX_KA+WAX_KN*rn, pad=rn+kn;
+      out.push({ n:1, b:A.blob, x:(A.x+Bq.x)/2, y:(A.y+Bq.y)/2, ax:A.x, ay:A.y, bx:dx, by:dy, bb:dx*dx+dy*dy, rn:rn, k:kn, ex:Math.abs(dx)/2+pad, ey:Math.abs(dy)/2+pad, T:(A.T+Bq.T)/2, T0:A.T, T1:Bq.T, f:Math.min(A.f,Bq.f) });
+    }
     return out;
   }
+  // signed distance (lamp units, negative inside) from a point to one primitive
+  function waxDist(p, x, y){
+    if(p.n){ var px=x-p.ax, py=y-p.ay, t=(px*p.bx+py*p.by)/p.bb; t=t<0?0:t>1?1:t; var qx=px-p.bx*t, qy=py-p.by*t; return Math.sqrt(qx*qx+qy*qy)-p.rn; }
+    var rx=x-p.x, ry=y-p.y, qx=p.i00*rx+p.i01*ry, qy=p.i10*rx+p.i11*ry, ql=Math.sqrt(qx*qx+qy*qy); if(ql<1e-4) ql=1e-4;
+    var gx=(p.i00*qx+p.i10*qy)/ql, gy=(p.i01*qx+p.i11*qy)/ql;                     // gradient of |q|: (|q|-1)/|grad| is the distance near the edge
+    return (ql-1)/Math.sqrt(gx*gx+gy*gy);
+  }
+  function smin(a, b, k){ var h=k-Math.abs(a-b); return h<=0 ? Math.min(a,b) : Math.min(a,b)-h*h*0.25/k; }
+  var WAX_FAR=50;
   function lampField(view, sim, vis, ppu, cover){
     // the window of the lamp to sample: wax (or the whole inside for Thermal) cut to what is on screen
-    var prims=waxPrims(sim), g=sim.geo, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, i, p;
+    var prims=waxPrims(sim), g=sim.geo, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, i, j, p;
     if(cover){ x0=LCX-23; x1=LCX+23; y0=g.Y0; y1=g.Y1+1; }
     for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
     x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
     if(x1<=x0 || y1<=y0) return null;
     var cs=Math.max(0.1, 2.0/ppu); if((x1-x0)*(y1-y0)/(cs*cs)>46000) cs=Math.sqrt((x1-x0)*(y1-y0)/46000);
     var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
-    if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); } else { st.F.fill(0,0,N); st.FT.fill(0,0,N); st.FF.fill(0,0,N); }
-    var F=st.F, FT=st.FT, FF=st.FF;
-    for(i=0;i<prims.length;i++){ p=prims[i];
-      var a0=Math.max(0,Math.floor((p.x-p.ex-x0)/cs)), a1=Math.min(W-1,Math.ceil((p.x+p.ex-x0)/cs)), b0=Math.max(0,Math.floor((p.y-p.ey-y0)/cs)), b1=Math.min(H-1,Math.ceil((p.y+p.ey-y0)/cs));
-      for(var b=b0;b<=b1;b++){ var ry=y0+b*cs-p.y, row=b*W;
-        for(var a=a0;a<=a1;a++){ var rx=x0+a*cs-p.x, qx=p.i00*rx+p.i01*ry, qy=p.i10*rx+p.i11*ry, d2=qx*qx+qy*qy; if(d2>=1) continue;
-          var w=1-d2; w=w*w*w; F[row+a]+=w; FT[row+a]+=w*p.T; FF[row+a]+=w*p.f; } } }
-    return { F:F, FT:FT, FF:FF, W:W, H:H, x0:x0, y0:y0, cs:cs, st:st };
+    if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FB=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FW=new Float32Array(N); }
+    var F=st.F, FB=st.FB, FT=st.FT, FF=st.FF, FW=st.FW; F.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FW.fill(0,0,N);
+    // one blob at a time: melt its parts together, then lay it over the others as a hard union
+    var groups={}, order=[];
+    for(i=0;i<prims.length;i++){ p=prims[i]; var key=p.b==null ? 'p'+i : p.b; if(!groups[key]){ groups[key]=[]; order.push(key); } groups[key].push(p); }
+    var m=2*cs;
+    for(j=0;j<order.length;j++){ var grp=groups[order[j]], ga0=W, ga1=-1, gb0=H, gb1=-1;
+      for(i=0;i<grp.length;i++){ p=grp[i];
+        p.a0=Math.max(0,Math.floor((p.x-p.ex-m-x0)/cs)); p.a1=Math.min(W-1,Math.ceil((p.x+p.ex+m-x0)/cs)); p.b0=Math.max(0,Math.floor((p.y-p.ey-m-y0)/cs)); p.b1=Math.min(H-1,Math.ceil((p.y+p.ey+m-y0)/cs));
+        if(p.a0<ga0) ga0=p.a0; if(p.a1>ga1) ga1=p.a1; if(p.b0<gb0) gb0=p.b0; if(p.b1>gb1) gb1=p.b1; }
+      if(ga1<ga0 || gb1<gb0) continue;
+      for(var b=gb0;b<=gb1;b++) FB.fill(WAX_FAR, b*W+ga0, b*W+ga1+1);
+      for(i=0;i<grp.length;i++){ p=grp[i];
+        for(b=p.b0;b<=p.b1;b++){ var y=y0+b*cs, row=b*W;
+          for(var a=p.a0;a<=p.a1;a++){ var x=x0+a*cs, d=waxDist(p,x,y), q=row+a;
+            FB[q]=smin(FB[q], d, p.k);
+            if(d<p.k){ var w=d<0 ? 1+Math.min(1.5,-d) : (1-d/p.k)*(1-d/p.k), T=p.T;
+              if(p.n){ var tt=((x-p.ax)*p.bx+(y-p.ay)*p.by)/p.bb; tt=tt<0?0:tt>1?1:tt; T=p.T0+(p.T1-p.T0)*tt; }
+              FW[q]+=w; FT[q]+=w*T; FF[q]+=w*p.f; } } } }
+      for(b=gb0;b<=gb1;b++){ for(var a2=ga0, q2=b*W+ga0; a2<=ga1; a2++, q2++) if(FB[q2]<F[q2]) F[q2]=FB[q2]; }
+    }
+    return { F:F, FT:FT, FF:FF, FW:FW, W:W, H:H, x0:x0, y0:y0, cs:cs, st:st };
   }
+  // a rounded profile across the wax for its shading: steep at the outline, flat once well inside
+  var WAX_RZ=4.2;
+  function waxZ(d){ if(d>=0) return 0; var t=-d; return t>=WAX_RZ ? WAX_RZ : Math.sqrt(t*(2*WAX_RZ-t)); }
   function lampPaintWax(c, view, sim, look, o, lit){
     var thermal=look==='thermal', fd=lampField(view, sim, o.vis, o.ppu, thermal); if(!fd) return;
-    var F=fd.F, FT=fd.FT, FF=fd.FF, W=fd.W, H=fd.H, cs=fd.cs, st=fd.st, TH0=0.46, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], g=sim.geo;
+    var F=fd.F, FT=fd.FT, FF=fd.FF, FW=fd.FW, W=fd.W, H=fd.H, cs=fd.cs, st=fd.st, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], g=sim.geo;
     if(!st.cv){ st.cv=document.createElement('canvas'); }
     if(st.cv.width!==W || st.cv.height!==H){ st.cv.width=W; st.cv.height=H; st.cx=st.cv.getContext('2d'); st.img=st.cx.createImageData(W,H); }
-    var D=st.img.data, wc=look==='blacklight' ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35);
+    var D=st.img.data, wc=look==='blacklight' ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35), lim=cs*(look==='neon'?2.5:1.5);
     var hx=-0.38, hy=-0.52, hz=0.76;                                   // the room light, up and to the left
     for(var b=0;b<H;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.3+0.7*Math.exp(-above/42))+0.1;
-      for(var a=0;a<W;a++){ var k=b*W+a, x=fd.x0+a*cs, f=F[k], pi=k*4, edge=(wIn-Math.abs(x-LCX))/cs+0.5;
+      for(var a=0;a<W;a++){ var k=b*W+a, x=fd.x0+a*cs, dd=F[k], pi=k*4, edge=(wIn-Math.abs(x-LCX))/cs+0.5;
         if(edge<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; }
         var A=0, R=0, G=0, Bc=0;
-        if(f>TH0*0.55){
-          var fl=a>0?F[k-1]:f, fr=a<W-1?F[k+1]:f, fu=b>0?F[k-W]:f, fdn=b<H-1?F[k+W]:f, gx=(fr-fl)/(2*cs), gy=(fdn-fu)/(2*cs), gm=Math.sqrt(gx*gx+gy*gy)+1e-6;
-          A=Math.max(0,Math.min(1,(f-TH0)/(gm*cs)+0.5));
-          if(A>0){ var T=FT[k]/f, mf=FF[k]/f, h=Math.min(1,(f-TH0)/0.9), nx=-gx*5, ny=-gy*5, nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
+        if(dd<lim){
+          A=Math.max(0,Math.min(1,0.5-dd/cs));
+          if(A>0 || look==='neon'){ var fw=FW[k]||1e-6, T=FT[k]/fw, mf=FF[k]/fw, h=Math.min(1,Math.max(0,-dd)/2.5);
+            var zl=waxZ(a>0?F[k-1]:dd), zr=waxZ(a<W-1?F[k+1]:dd), zu=waxZ(b>0?F[k-W]:dd), zd=waxZ(b<H-1?F[k+W]:dd);
+            var nx=-(zr-zl)/(2*cs), ny=-(zd-zu)/(2*cs), nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
             var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp; spec*=spec; spec*=spec; spec*=spec;   // ^16
             if(thermal){ var tc=thermRGB((T-22)/45), sh=0.7+0.3*dl; R=tc[0]*sh; G=tc[1]*sh; Bc=tc[2]*sh; }
             else if(look==='blacklight'){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
-            else if(look==='neon'){ var e2=Math.exp(-Math.pow((f-TH0)/(gm*cs*1.6+0.02),2)), nc=col.neon; R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
+            else if(look==='neon'){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
             else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
             else { var base = mf<0.6 ? solidC : wc, glow=mf<0.6 ? 0.4 : 1, li=Lb*(0.42+0.58*dl)*glow, rim=(1-h)*0.32*Lb*glow, hot=Math.max(0,T-50)*0.012*lit;
               R=base[0]*(0.16+0.95*li+rim)+255*hot*0.6+255*spec*0.4; G=base[1]*(0.16+0.95*li+rim)+150*hot*0.6+245*spec*0.4; Bc=base[2]*(0.16+0.95*li+rim)+60*hot*0.6+235*spec*0.4; } }
