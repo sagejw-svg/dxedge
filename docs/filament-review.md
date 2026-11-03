@@ -17,6 +17,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
+| R1103-3 | confusing | b, h | Phone: the save name field is 28 px tall (the rest of the patch bar is 44 px) | measured |
 | R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
 | R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch (2 Nov: the spring reverb is a patch field too, so it follows the same way) | measured (cut), inferred (impact, spring) |
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
@@ -35,7 +37,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
-| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation and no undo | measured |
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov) | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
@@ -46,7 +48,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
-| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 25 Oct | measured |
+| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 3 Nov | measured |
 | R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
@@ -63,7 +65,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1290,3 +1292,80 @@ Confusing. Measured. Fixed tonight.
 ### Not covered tonight
 Areas a, b, c, d, e. Suggested next: a and b on the spring reverb (each knob against an offline
 render, factory patches with it on, old patches with no `spring`), and R1101-3 for the spring.
+
+## 2026-11-03 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `7bce8ab`, sw.js
+`dxedge-v176` (live and main agree). Playwright's own Chromium headless (the `chromium-1194` path in
+the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in
+any run. Focus tonight: area a on six devices with their own panels (Thyratron, Additron, Rhumbatron,
+Mote, Orthicon, Gleam), area b on every factory patch on all 18 devices, the tape echo and spring
+reverb as patch fields (new since the last area b run), user save, reload, delete and undo on
+Filament and Lattice, and the patch bar on a phone.
+
+### What worked (measured)
+
+- Area b, all 127 factory patches on the 18 devices picked from the patch menu at 1366 px (Filament
+  25, Cathode 19, Thyratron 6, Gleam 7, Mote 3, Heptode 1, Geissler 3, Pentagrid 6, Orthicon 5,
+  Trochotron 6, Gyrotron 3, Klystron 5, Phantastron 6, Additron 5, Rhumbatron 7, Resnatron 4,
+  Dekatron 8, Lattice 8): each one becomes the current patch under its own name, no errors.
+- Tape echo and spring reverb in a user patch: Plate Bass with the echo on (sync 1/8) and the spring
+  on (drip raised to 50 from the keyboard) saved as "Review Echo Spring", selected after the save;
+  after a reload it is current, both sections read on, the fields match, and the rack's spring is on.
+- Delete, then undo: deleting that patch lands on Plate Bass (R1022-5, below), and undo brings the
+  deleted patch's sound back as "* Review Echo Spring (edited)", spring still on, so save puts it
+  back. The delete toast does not say this.
+- Area a, every visible panel control stepped from the keyboard (arrows, then Home and End) moves its
+  own patch field and only that one: Thyratron 26, Additron 14, Rhumbatron 6, Mote 15, Orthicon 7,
+  Gleam 4. The one control that moves two is Additron's perc, which also picks perc 3 from "perc off"
+  (the documented R1022-2 behaviour). A held C4 afterwards sounds on each device's strip.
+- Thyratron, offline (`thyRender`, C3 then G3, 1 s; two renders of the same patch are identical, so
+  any spectral difference is the control): each of the 26 controls at Home and at End, 52 renders, no
+  NaN, peaks up to 0.82 (silent only with the level at 0). All change the sound except four that should not on their own: bend range
+  (no bend sent), oscillator 3 rate (oscillator 3 is not the low oscillator in the default patch), and
+  the mod pitch and cutoff depths (they act at full mod wheel).
+- Phone 375 px: on all 18 devices the patch bar fits and the page is 375 wide. Arrows, save, undo,
+  init and delete are 44 px tall; ok and cancel in the save form are 44 px. Save, the arrows and
+  delete work by tap; next from the last user patch wraps to the first factory patch, as the menu
+  order says.
+
+### Findings
+
+**R1103-1. A Lattice patch made from an imported WAV loses the WAV on reload.** Area a, b. Broken. Measured (table, sound), inferred (which table plays, shared table).
+- Steps: Lattice, load a WAV into oscillator A (the toast says "Wavetable loaded into oscillator A."),
+  save the patch, reload the page.
+- Expected: the saved patch comes back with its wavetable.
+- Actual: the patch comes back current, still named, with `osc1.table` "user", but the imported table
+  is gone (`latticeTable()` null after the reload; a Float32Array of 28672 before). The same patch
+  rendered offline with the table and without it: RMS 0.113 and 0.078, a different sound. The DSP
+  falls back to a factory table when "user" has no data (`lattice-dsp.js` line 356, so Glass), with
+  no word on the panel. The table lives only in the page's memory: it is not in the patch, the user
+  list or the project (the project JSON was 15.8 KB with the table loaded). From the same code, the
+  rack holds one imported table at a time, so two user patches made from two WAVs would both play the
+  last one loaded (inferred, not run). A fix means storing the table (or its 16 source frames, 4096
+  samples) with the patch, which is a schema and storage call, so it is left for James.
+
+**R1103-2. Save took a factory patch's name in another case.** Area b. Confusing. Measured. Fixed tonight.
+- Steps: Filament, save, type "plate bass", ok.
+- Expected: refused, like "Plate Bass" ("That name belongs to a factory patch.").
+- Actual: saved; the menu then listed "Plate Bass" under Bass and "plate bass" under Yours, two
+  entries a reader takes for the same patch.
+- Fix: the factory name check ignores case. Check: "Pn. save refuses a factory name in any case"
+  (fails on `7bce8ab`: the menu listed both and the form closed).
+
+**R1103-3. Phone: the save name field is 28 px tall.** Area b, h. Confusing. Measured.
+- At 375 px the field sits in a 44 px row but the input itself is 170 x 28 px, under the 44 px target
+  the rest of the patch bar meets. Left for the graphics backlog: it is layout, not a defect in what
+  save does.
+
+### Still open, re-measured tonight
+- R1022-5: deleting a Filament user patch still lands on Plate Bass (on the desktop and on a phone).
+- R1025-3: delete still removes a user patch at once with no question; undo now gives its sound back
+  as an edited patch (above), which the toast does not say.
+- Known from the graphics backlog, seen again: the phone patch menu is 100 px wide and shows "Wide Nov".
+
+### Not covered tonight
+Areas c to h beyond the phone patch bar. Area a still to do on the newest devices' chips and switches
+(only sliders and knobs were swept tonight), and on Cathode's and Dekatron's echo and spring copies.
+Suggested next: c, d and e, including whether the tape echo and spring follow a deck take that plays
+two devices.

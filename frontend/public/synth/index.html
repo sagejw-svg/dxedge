@@ -3290,7 +3290,8 @@ $('saveP').addEventListener('click', () => { $('saveForm').classList.add('open')
 $('saveNo').addEventListener('click', () => $('saveForm').classList.remove('open'));
 function doSave() {
   const name = $('saveName').value.trim().slice(0, 40); if (!name) return;
-  if (D().factory.some(p => p.name === name)) { toast('That name belongs to a factory patch.'); return; }
+  // any case: "plate bass" beside Plate Bass read as the factory patch in the menu (review 3 Nov, R1103-2)
+  if (D().factory.some(p => p.name.toLowerCase() === name.toLowerCase())) { toast('That name belongs to a factory patch.'); return; }
   cur.name = name; const p = D().normalize(cur);
   user = user.filter(u => u.name !== name).concat([p]); store.set(D().kUser, user);
   curKey = 'u:' + name; edited = false; fillSelect(); $('saveForm').classList.remove('open');

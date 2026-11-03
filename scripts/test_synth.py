@@ -1094,6 +1094,18 @@ with sync_playwright() as pw:
     ck(f"Pn. the previous arrow walks back the same way, past the top to the bottom ({pn_['back'][:4]})",
        pn_["back"] == pn_["opts"][::-1], (pn_["opts"][::-1], pn_["back"]))
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    # review 3 Nov, R1103-2: save refused "Plate Bass" but took "plate bass", so the menu showed both
+    sv_ = pg.evaluate("""async () => {
+      const w = () => new Promise(r => setTimeout(r, 40)), sel = document.getElementById('patchSel');
+      const f = __synth.factory()[0].name, low = f.toLowerCase();
+      document.getElementById('saveP').click(); await w();
+      document.getElementById('saveName').value = low; document.getElementById('saveOk').click(); await w();
+      const names = [...sel.options].map(o => o.textContent).filter(t => t.toLowerCase() === low);
+      const open = document.getElementById('saveForm').classList.contains('open');
+      document.getElementById('saveNo').click(); return { f, names, open }; }""")
+    ck(f"Pn. save refuses a factory name in any case ('{sv_['f'].lower()}' beside '{sv_['f']}'): the menu lists it once and the form stays open ({sv_['names']})",
+       sv_["names"] == [sv_["f"]] and sv_["open"] is True, sv_)
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Pn. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- 3. Valve 12: the loop tube voices the resonance
