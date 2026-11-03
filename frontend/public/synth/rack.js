@@ -357,6 +357,32 @@ function makeSynthChain(ctx){
     if(pp){ tc.makeup = ppMakeup(tc.curve); C.setP(C.tMake.gain, tc.makeup); }
     return tc;
   };
+  // The room's impulse response is built only while the room is in the route. The copied setRoom
+  // builds a new IR and ConvolverNode on every apply, even with the room off: a seeded noise tail of
+  // up to 6.5 s a channel, then the convolver's own setup, all on the main thread, for a node nothing
+  // pulls (route() leaves rmOut unplugged). With the room off the wrapper sets only the pre-delay
+  // and the dry and wet gains, as setRoom does, and marks the IR due; the IR is built the moment the
+  // room goes in (setRoom with the room on, or route()). The IR is seeded by the room's id and shaped
+  // by its decay and tone only (see genIR), so one built later is sample for sample the one the
+  // copied code would have built.
+  var setRoom0 = C.setRoom, roomDue = false;
+  C.roomDue = function(){ return roomDue; };
+  C.setRoom = function(S, regen){
+    if(S.on && S.roomOn){
+      if(!roomDue) return setRoom0(S, regen);
+      // due: drop the old convolver first (the room is not in the route yet, so nothing hears it go),
+      // so setRoom builds the new one and plugs it straight in, as it does when it finds none,
+      // rather than fading it in 90 ms later
+      roomDue = false;
+      if(C.conv){ try{ C.conv.disconnect(); C.rmPre.disconnect(C.conv); }catch(e){} C.conv = null; }
+      return setRoom0(S, true);
+    }
+    if(regen || !C.conv) roomDue = true;
+    var R = ROOM_BY[S.room] || ROOMS[0], m = clampN(S.rmMix,0,100)/100;   // the levels part of setRoom, as is
+    C.setP(C.rmPre.delayTime, R.pre/1000); C.setP(C.rmDry.gain, Math.cos(m*Math.PI/2)); C.setP(C.rmWet.gain, Math.sin(m*Math.PI/2));
+  };
+  var routeR = C.route;
+  C.route = function(S){ if(S.on && S.roomOn && roomDue) C.setRoom(S, true); routeR(S); };
   // Mono check at the very end: (L+R)/2 on both channels, switched by two gains.
   C.monoIn=G(1); C.monoIn.channelCount=2; C.monoIn.channelCountMode='explicit'; C.monoIn.channelInterpretation='speakers';
   C.stG=G(1); C.moG=G(0); C.moSum=G(0.5); C.moSum.channelCount=1; C.moSum.channelCountMode='explicit'; C.moSum.channelInterpretation='speakers';

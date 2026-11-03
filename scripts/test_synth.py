@@ -4097,6 +4097,44 @@ with sync_playwright() as pw:
        idle["swOn"] == {"fed": True, "bFed": True} and idle["swOff"] == {"fed": False, "bFed": False}, idle)
     ck("R. idle rack stages: live, switching the ensemble off unplugs only after the fade, and on replugs at once",
        idle["lOn"] and idle["lSoon"] and not idle["lLater"] and idle["lBack"], idle)
+    # The room's impulse response is built only while the room is in the route (3 Nov improvement): an engine whose
+    # patch has the room off builds no IR or convolver (15 ms of main thread at the default studio fields, 78 ms at
+    # a 6 s hall, measured), and switching the room on later must give sample for sample what a room on from the
+    # start gives, including after the room, decay and tone changed while it was off.
+    rmd = pg.evaluate("""async () => {
+      const eng = await import('/synth/engine.js'); const PM = await import('/synth/patches.js');
+      let a = 7; const rnd = () => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; };
+      const src = new Float32Array(48000);
+      for (let i = 0; i < 24000; i++) src[i] = (0.3 * Math.sin(i * 0.0571) + 0.2 * (rnd() * 2 - 1)) * (1 - i / 24000);
+      const pat = o => { const p = PM.normalize({}); Object.assign(p.ens, { on: false }); Object.assign(p.out, o); return p; };
+      const st = E => ({ conv: !!E.C.conv, due: E.C.roomDue ? E.C.roomDue() : null });
+      const run = async (P, later) => {
+        const ctx = new OfflineAudioContext(2, 96000, 48000);
+        const E = await eng.createEngine(ctx, { patch: P, events: [] }); const s0 = st(E), mid = [];
+        (later || []).forEach(q => { E.setPatch(q, true); mid.push(st(E)); });
+        const buf = ctx.createBuffer(2, src.length, 48000); buf.copyToChannel(src, 0); buf.copyToChannel(src.slice().reverse(), 1);
+        const s = ctx.createBufferSource(); s.buffer = buf; s.connect(E.ens.input); s.start(0);
+        E.node.disconnect();
+        const out = await ctx.startRendering(), L = out.getChannelData(0), R = out.getChannelData(1);
+        let tail = 0; for (let i = 60000; i < 96000; i++) tail += L[i] * L[i];
+        return { s0, mid, L, R, tail: Math.sqrt(tail / 36000) };
+      };
+      const cmp = (x, y) => { let d = 0; for (let i = 0; i < x.L.length; i++) d = Math.max(d, Math.abs(x.L[i] - y.L[i]), Math.abs(x.R[i] - y.R[i])); return d; };
+      const th = { room: 'theater', rmDecay: 2.5, rmMix: 30, rmTone: 6 }, hl = { room: 'hall', rmDecay: 4, rmMix: 30, rmTone: 3 };
+      const off = await run(pat(Object.assign({ roomOn: false }, th)));
+      const onTh = await run(pat(Object.assign({ roomOn: true }, th)));
+      const offOn = await run(pat(Object.assign({ roomOn: false }, th)), [pat(Object.assign({ roomOn: true }, th))]);
+      const onHl = await run(pat(Object.assign({ roomOn: true }, hl)));
+      const offChOn = await run(pat(Object.assign({ roomOn: false }, th)), [pat(Object.assign({ roomOn: false }, hl)), pat(Object.assign({ roomOn: true }, hl))]);
+      return { off: off.s0, on: onTh.s0, offOn: offOn.mid, offChOn: offChOn.mid, d1: cmp(offOn, onTh), d2: cmp(offChOn, onHl),
+               tailOff: off.tail, tailOn: onTh.tail, tailHl: onHl.tail };
+    }""")
+    ck("R. room off: no impulse response is built until the room goes in; switched on, it is built at once",
+       rmd["off"] == {"conv": False, "due": True} and rmd["on"] == {"conv": True, "due": False}
+       and rmd["offOn"] == [{"conv": True, "due": False}] and rmd["offChOn"] == [{"conv": False, "due": True}, {"conv": True, "due": False}], rmd)
+    ck(f"R. room switched on after starting off is sample for sample a room on from the start (max diff {rmd['d1']}; changed while off then on: {rmd['d2']}; "
+       f"tail RMS off {rmd['tailOff']:.1e}, on {rmd['tailOn']:.1e}, hall {rmd['tailHl']:.1e})",
+       rmd["d1"] == 0 and rmd["d2"] == 0 and rmd["tailOn"] > 100 * max(rmd["tailOff"], 1e-9) and rmd["tailHl"] > 100 * max(rmd["tailOff"], 1e-9), rmd)
 
     pg.locator("#mHost").scroll_into_view_if_needed()
     pg.fill("#hostTempo", "100"); pg.locator("#hostTempo").press("Tab"); pg.wait_for_timeout(40)

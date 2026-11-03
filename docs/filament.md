@@ -1013,6 +1013,30 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 3 Nov (improvement, load time and memory, the room's impulse response): an engine whose patch has the room
+  off no longer builds the room. The copied `setRoom` (rack.js, /otr block) made a new IR and ConvolverNode on every
+  `apply`, room on or off: a seeded noise tail of up to 6.5 s a channel and the convolver's setup, on the main thread,
+  for a node `route()` leaves unplugged. `makeSynthChain` now wraps `setRoom` and `route` (additions, the copied block is
+  untouched): with the room off it sets only the pre-delay and the dry and wet gains and marks the IR due; the IR is
+  built when the room goes in. The IR is seeded by the room id and shaped by decay and tone only, so one built later is
+  the one the old code built. Measured, headless Chrome 153, `C.apply` alone on a fresh chain, median of 4 rounds of
+  25: room off at the default fields (studio, 0.9 s) 15.5 to 0.75 ms; off at a 3.4 s hall 54.4 to 0.70 ms; off at a
+  6 s hall 78.1 to 0.70 ms; room on, studio 15.4 to 16.2 ms and 6 s hall 80.8 to 77.8 ms (unchanged, noise). Who
+  pays it (inferred from the code): every offline render of a room-off patch (the suite's `patch()` and `cpatch()`,
+  test 9's cases, 3 Filament factory patches), the live engine on such a patch, and every room knob step taken while
+  the room is off (each one rebuilt the IR). A whole 0.25 s render showed no difference (room off, median of 15:
+  327 to 336 ms; this box moves 80 ms render to render), and test 9 subtracts fixed costs, so its lines cannot show
+  it. Memory (inferred, not measured): an off room no longer holds a stereo IR of up to 2.5 MB and the convolver's
+  own copy of it. Output (measured): a fixed signal through the chain, 6 cases (room on at 0.9 s and 6 s, off, off
+  then on, room, decay and tone changed while off then on, on then off with a new decay then on), hashes equal old
+  and new and repeatable. Two new checks (R. room off builds no IR until it goes in; switched on later is sample for
+  sample a room on from the start, also after changes made while off); the first fails on origin/main.
+  Why not a higher item: R1103-1 (broken, Lattice WAV tables lost on reload) needs a patch schema and storage call
+  and the review left it for James. CPU: test 9 is all Filament; the voice has no bit-exact hot spot left (27 Oct
+  profile), and the rack stages test 9 routes through (the 4x tube shaper, its filters, the sag and limiter
+  compressors, the clipper, the ceiling) all shape the sound; the one exact-zero branch left, the mono check's four
+  nodes at gain 0, looks too small to measure (inferred). Test health: the goniometer watch item has not failed again.
+  Still open: the 30 Oct parameter ranges item below.
 - Done 2 Nov (improvement, CPU, the spring reverb tank): the same arithmetic, scheduled better, and no subnormals. Test
   9's newest line, the spring (`b843849`, 2 Nov nightly), was the one unprofiled DSP in it: it read 1.8 to 4.5 points
   over Valve 12 alone in the 2 Nov nightly and check runs. Inside each sample the tank ran its four 24-section allpass chains
@@ -1209,7 +1233,8 @@ and proven by measurement), test suite health, load time and memory, code health
 - CPU, the rack (measured 25 Oct, as above): the room convolver is about 7 points of Plate Screamer's
   17.5% and is on in 41 of 44 factory patches. Any cheaper reverb changes the sound, so it is a call
   for James. Building it costs 30 to 75 ms of main thread per engine (the IR and the convolver's own
-  setup), which a live patch change with a new room also pays.
+  setup), which a live patch change with a new room also pays Since 3 Nov an engine with the room off does not
+  build it (see above); with the room on it still does.
 - Test health, test 9 (measured 25 Oct; done 28 Oct, see above): each offline render has a fixed cost of about 0.25 to 0.45 s
   in headless Chrome (a 0.25 s render takes 250 to 650 ms): a fresh worklet scope (addModule of an
   empty module alone takes 40 to 130 ms), the room's IR and convolver, and the worklet's JIT warm-up.
@@ -1591,6 +1616,7 @@ titles at 761 to 959 px; 4. Rhumbatron's cavity caption; then the rest as listed
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-11-03 (improvement, scheduled task, about 5:24 to 6:45 AM PT): load time and memory, the room's impulse response. Main first: the suite on origin/main `7bce8ab` ran 945 checks with 0 failures before this job's edit landed in the same working tree mid-run, so it was stopped there (the 3 AM graphics job had ALL PASS 1512 on that commit); the 4 AM review `f90f642` landed meanwhile and the tree was rebased onto it. No review finding marked broken that this job can fix: R1103-1 (Lattice WAV tables lost on reload) needs a schema and storage call and is left for James. Test 9 has no sound-identical hot spot left (see the backlog entry). Shipped: with the room off, the rack no longer builds the room's IR and convolver; it builds them when the room goes in. `C.apply` with the room off, headless Chrome, median of 100: 15.5 to 0.75 ms at the default fields, 78.1 to 0.70 ms at a 6 s hall; room on unchanged. Output unchanged: 6 fixed-signal cases hash equal old and new. No sound changed. Cache `dxedge-v178`. New checks: R. (2). Suite on the pushed tree: ALL PASS (1515 checks; one BrokenPipe traceback from the suite's own file server, not a check); `scripts/test_synth_imported.py` ALL PASS. CPU (test 9, this box, noisy): Cathode 25.3%; valve12 8 voices 29.2%; ladder24 36.0%; 16 voices with ensemble 43.9%; tape echo on 30.8%; spring on 32.1%. Commit: this one.
 - 2026-11-03 (review, scheduled task, about 4:05 to 5:30 AM PT): areas a (every panel slider and knob on Thyratron 26, Additron 14, Rhumbatron 6, Mote 15, Orthicon 7 and Gleam 4 moves its own field; Thyratron's 26 at both ends rendered offline, no NaN) and b (all 127 factory patches on 18 devices from the menu; tape echo and spring in a saved user patch across a reload; delete and undo; a Lattice WAV patch across a reload; the patch bar at 375 px on all 18 devices) on the live site at origin/main `7bce8ab`, sw.js `dxedge-v176`. Findings: 1 broken (R1103-1, Lattice imported WAV lost on reload, left for James), 2 confusing (R1103-2 fixed: save refuses a factory name in any case; R1103-3 left), 0 missing; re-measured and still open R1022-5, R1025-3. Cache `dxedge-v177`. Suite: ALL PASS (1513 checks, the new Pn. case included; it fails on `7bce8ab`). Commit: the one that carries this line.
 - 2026-11-03 (graphics, scheduled task, about 3:14 to 4:30 AM PT): main first: suite on origin/main `ef12996` ALL PASS (1504 checks). Screenshots at 1366x1000 (every rail device) and 375x667 (every phone tab, every device's first screen, the Mix tab top and middle); no page errors, no sideways scroll. The Tube show item is still open (the big tube view), so tube visuals were left alone. Built the top Graphics backlog item, the Mix tab on a phone: each strip is four rows instead of six (name with mute, solo and arm; level and pan; the LED ladder; the sends), nothing hidden, 256 to 181 px a strip at 375 px, the Mix section 5,458 to 4,117 px; under 360 px the name takes its own line (204 px at 320). The phone bus faders start on one line, and the tempo label matches the bus names (the only desktop change). CSS only, no script or audio change; tab order unchanged. Cache `dxedge-v176`. New checks: Ms. (8). Suite on the pushed tree: ALL PASS (1512 checks). Commit: this one. (Chromium 1194 is not on this box; the suite ran on /opt/google/chrome.)
 - 2026-11-03 (check and debug, scheduled task, about 2:00 to 2:40 AM PT): reviewed 1 commit since 2 Nov 6 PM PT on origin/main `1a65a41`, by Claude (the 12:28 AM nightly): the tube show's flares from the meters of Dekatron, Thyratron, Lattice and Gleam. No edit under `/otr`, no factory patch removed or renamed, no new vendored code or CDN package (no register row needed), no product names, no test removed or loosened (the only removed suite line is its docstring, rewritten to add the meter flares; 6 checks added). Read the four engines' `ons`/`onv` counters, the host meter copies (Dekatron, Lattice and Thyratron already copy the whole meter; Gleam's copies the two new fields), Thyratron's sleep meter, Gleam's slide test, the frame loop's resync on a device change or a count that goes back, and the held-key guard on Filament and Cathode: no defects found. Suite on origin/main: ALL PASS (1504 checks; one BrokenPipe traceback from the suite's own file server, a closed request, not a check); `scripts/test_synth_imported.py` ALL PASS. CPU (test 9) on this box: Cathode 16.2%, Valve 12 8 voices 19.0%, Ladder 24 19.9%. Live: /synth/ ready at 1366 and 375 px, no page or console errors, no failed requests, no sideways scroll; /synth/fm/ and /synth/acid/ no page or console errors (Hexode still scrolls 779 px sideways at 375, known since 15 Oct). Offline renders on the live page: Filament -20.3 dB, Cathode -16.7 dB, Dekatron kick -14.4 dB, Thyratron -17.1 dB, Lattice -17.3 dB RMS; a key on Dekatron gave exactly 1 meter flare live. Live sw.js `dxedge-v175` and the commit's served files matched main. (Chromium 1194 is not on this box; the suite ran on Playwright's Chromium 1243 via `SYNTH_CHROMIUM`.) No defects, no fix; this line only (docs, which the suite does not read).
