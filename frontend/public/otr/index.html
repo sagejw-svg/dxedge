@@ -3935,9 +3935,9 @@
     }
 
     // ---- wax ----
-    var CW=0.28, VMAX=60, RWALL=9, area=0, yy;
+    var CW=0.28, VMAX=90, RWALL=9, area=0, yy;
     for(yy=Y0; yy<Y1; yy+=0.5) area+=2*inner(yy)*0.5;
-    var WF=0.18, WAX=area*WF, L=[], LINKS=[], CONTACT={}, nextId=1;
+    var WF=0.27, WAX=area*WF, L=[], LINKS=[], CONTACT={}, nextId=1;
     var S={ t:0, power:1, on:true, music:0, seed:seed, lobes:L, links:LINKS };
     function lobe(x,y,v,e){ var o={ id:nextId++, x:x, y:y, vx:0, vy:0, v:v, r:Math.sqrt(v/Math.PI), e:e, T:0, f:0, rest:0, sq:0, el:0, ang:0, ex:1 }; phase(o); return o; }
     function phase(o){ var e=o.e; if(e<TM){ o.T=e; o.f=0; } else if(e<TM+LAT){ o.T=TM; o.f=(e-TM)/LAT; } else { o.T=e-LAT; o.f=1; } }
@@ -4079,7 +4079,7 @@
     // QB bulb into the liquid; LSIDE, LTOP losses to the room; KT neck force scale; BL the liquid's expansion
     // over the wax's; KC, DF, FE, FW the coil (contact, how much hotter than the liquid, share at its
     // edge, width); HX wax to liquid; TEN neck tension; KN, KF heat shared inside the pool, inside a moving blob
-    var QB=120, LSIDE=0.035, LTOP=0.12, KT=12, BL=0.35, KC=0.2, DF=16, FE=0.05, FW=7, HX=0.09, TEN=2.4, KN=0.03, KF=0.8;
+    var QB=120, LSIDE=0.035, LTOP=0.12, KT=12, BL=0.35, KC=0.26, DF=16, FE=0.05, FW=7, HX=0.09, TEN=2.4, KN=0.03, KF=0.8;
     function project(){
       var i, j, k, it, h=CS;
       for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]){ DV[k]=0; PR[k]=0; continue; }
@@ -4157,7 +4157,7 @@
   // Parcels of one blob are melted together with a smooth minimum, so where they meet, and where a neck
   // joins a blob, the surface rounds into a fillet instead of adding up into a bump; different blobs are
   // only ever touching, never blended, so each keeps its own outline.
-  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.0, WAX_KN=1.4;   // blend widths: a parcel melts into its blob over about its own radius
+  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.9, WAX_KN=2.2;   // blend widths: a parcel melts into its blob over about its own radius
   function waxPrims(sim){
     var out=[], L=sim.L, i;
     for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*WAX_GROW/(1+0.8*ee), b=o.r*WAX_GROW*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
@@ -4223,8 +4223,14 @@
     if(st.cv.width!==W || st.cv.height!==H){ st.cv.width=W; st.cv.height=H; st.cx=st.cv.getContext('2d'); st.img=st.cx.createImageData(W,H); }
     var D=st.img.data, wc=look==='blacklight' ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35), lim=cs*(look==='neon'?2.5:1.5);
     var hx=-0.38, hy=-0.52, hz=0.76;                                   // the room light, up and to the left
-    var wt=[Math.min(255,wc[0]*1.12+34), Math.min(255,wc[1]*1.18+30), Math.min(255,wc[2]*1.08+12)];   // light that has come through the wax
+    // Molten wax does not reflect much (it is barely denser optically than the liquid); it glows. It scatters
+    // the bulb's light, so the thicker it is the brighter (light centre, deeper edges), it is brightest near
+    // the bulb, where it goes nearly white, and it is lit by light that has come up through the coloured
+    // liquid, so it takes on the liquid's tint the higher it is (white wax in blue liquid glows pale blue).
+    var liqN=col.liq.map(function(v){ return v/255; }), tintK=col.clear ? 0.35 : 1, uvL=look==='blacklight';
     for(var b=0;b<H;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.45+0.55*Math.exp(-above/55))+0.1;
+      var Lw=lit*(0.62+0.38*Math.exp(-above/70))+0.08, tint=tintK*(0.3+0.45*(1-Math.exp(-above/45))), hotW=0.35+0.65*Math.exp(-above/38);
+      var wl=[wc[0]*(1-tint*(1-liqN[0])), wc[1]*(1-tint*(1-liqN[1])), wc[2]*(1-tint*(1-liqN[2]))];
       for(var a=0;a<W;a++){ var k=b*W+a, x=fd.x0+a*cs, dd=F[k], pi=k*4, edge=(wIn-Math.abs(x-LCX))/cs+0.5;
         if(edge<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; }
         var A=0, R=0, G=0, Bc=0;
@@ -4238,17 +4244,27 @@
             else if(look==='blacklight'){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
             else if(look==='neon'){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
             else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
-            else { var base = mf<0.6 ? solidC : wc, glow=mf<0.6 ? 0.4 : 1, li=Lb*(0.42+0.58*dl)*glow, rim=(1-h)*0.32*Lb*glow, hot=Math.max(0,T-50)*0.012*lit;
-              // molten wax is translucent: where it is thin (its edges, necks, small drops) the light from below comes through and it glows
-              var tr= mf<0.6 ? 0 : Lb*Math.pow(1-h,1.5)*0.5*(0.55+0.45*dl);
-              R=base[0]*(0.16+0.95*li+rim)+wt[0]*tr+255*hot*0.6+255*spec*0.4; G=base[1]*(0.16+0.95*li+rim)+wt[1]*tr+150*hot*0.6+245*spec*0.4; Bc=base[2]*(0.16+0.95*li+rim)+wt[2]*tr+60*hot*0.6+235*spec*0.4; } }
+            else if(mf<0.6){ var li=Lb*(0.42+0.58*dl)*0.4, rim=(1-h)*0.13*Lb;   // solid wax: dull and opaque
+              R=solidC[0]*(0.16+0.95*li+rim)+255*spec*0.25; G=solidC[1]*(0.16+0.95*li+rim)+245*spec*0.25; Bc=solidC[2]*(0.16+0.95*li+rim)+235*spec*0.25; }
+            else { var th=Math.sqrt(Math.min(1,Math.max(0,-dd)/7.5)), E=Lw*(0.22+0.78*th)*(0.8+0.2*dl), X=E*(3.2+2.2*hotW), hot=Math.max(0,T-50)*0.01*lit;
+              // exposed like the glow it is: bright colours run toward white near the bulb, deeper and more saturated up high
+              R=255*(1-Math.exp(-wl[0]/255*X))+255*hot*0.4+255*spec*0.05; G=255*(1-Math.exp(-wl[1]/255*X))+150*hot*0.4+245*spec*0.05; Bc=255*(1-Math.exp(-wl[2]/255*X))+60*hot*0.4+235*spec*0.05;
+              A*=0.7+0.3*Math.min(1,th*1.6); } }   // the thinnest edges let the liquid show through
         }
         if(thermal && A<1){ var tl=sim.sampleTL(x,y), lc=thermRGB((tl-22)/45); R=R*A+lc[0]*0.55*(1-A); G=G*A+lc[1]*0.55*(1-A); Bc=Bc*A+lc[2]*0.55*(1-A); A=1; }
         A*=Math.min(1,edge);
         D[pi]=R>255?255:R; D[pi+1]=G>255?255:G; D[pi+2]=Bc>255?255:Bc; D[pi+3]=A*255;
       } }
     st.cx.putImageData(st.img,0,0);
-    c.save(); c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs); c.restore();
+    c.save(); c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs);
+    // glowing wax blooms a little into the liquid around it, as it does to an eye or a camera
+    // (blurred at the wax image's own small size, then scaled up, so it costs little at any zoom)
+    if((look==='natural'||look==='night'||look==='vintage'||look==='blacklight') && lit>0.01 && st.cx && ('filter' in st.cx)){
+      if(!st.bcv){ st.bcv=document.createElement('canvas'); }
+      if(st.bcv.width!==W || st.bcv.height!==H){ st.bcv.width=W; st.bcv.height=H; st.bcx=st.bcv.getContext('2d'); }
+      st.bcx.clearRect(0,0,W,H); st.bcx.filter='blur('+(1.6/cs).toFixed(1)+'px)'; st.bcx.drawImage(st.cv,0,0); st.bcx.filter='none';
+      c.globalCompositeOperation='lighter'; c.globalAlpha=clampN(0.32*lit,0,0.45); c.drawImage(st.bcv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs); }
+    c.restore();
   }
 
   // a colour seen through more of itself, or by less light: each channel falls off faster the weaker it is
@@ -4282,7 +4298,7 @@
     // the liquid: the bulb's light carries most of the way up the bottle, and where it is weaker the colour
     // deepens (the liquid soaks up its weaker colours first, so yellow goes amber) instead of going grey
     if(!thermal){ var lg=c.createLinearGradient(0,Y0,0,Y1+1), k0=col.clear&&!uv&&!neon&&!xray ? 0.35 : 1;
-      [0,0.2,0.45,0.7,0.88,1].forEach(function(s){ var ii=clampN(0.06+lit*k0*(0.3+0.64*Math.exp(-(1-s)*93/55)),0,1); lg.addColorStop(s, rgba(lampDeep(liq, ii), 1)); });
+      [0,0.2,0.45,0.7,0.88,1].forEach(function(s){ var ii=clampN(0.08+lit*k0*(0.6+0.34*Math.exp(-(1-s)*93/50)),0,1); lg.addColorStop(s, rgba(lampDeep(liq, ii), 1)); });
       ins(); c.fillStyle=lg; c.fill();
       if(lit>0.01) add(function(){ var cg=c.createRadialGradient(0,0,0,0,0,1); cg.addColorStop(0,rgba(liq,clampN(0.5*lit*k0,0,0.8))); cg.addColorStop(0.45,rgba(liq,clampN(0.14*lit*k0,0,0.3))); cg.addColorStop(1,rgba(liq,0));
         ins(); c.translate(cx,Y1+6); c.scale(26,70); c.fillStyle=cg; c.fill(); });
