@@ -543,7 +543,7 @@
   @media (max-width: 760px){ .tv-panel { border-left: none; border-top: 1px solid var(--border2); overflow: visible; } }
   .tv-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .tv-top .label { color: var(--amber); } .tv-top .sp { flex: 1; }
   .tview[data-subj="lamp"] .tv-tube { display: none; } .tview:not([data-subj="lamp"]) .tv-lamp { display: none; }
-  .tv-seg button { padding: 5px 11px; font-size: 11.5px; }
+  .tv-seg button { padding: 5px 8px; font-size: 11.5px; white-space: nowrap; }
   #tvKnobs .knob { width: 66px; } #tvKnobs .knob .kl { letter-spacing: 0.5px; }
   .tv-sec { margin-top: 14px; } .tv-sec > .kl { font-size: 9.5px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
   .rack-row2 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; padding: 0 12px 12px; }
@@ -909,7 +909,7 @@
       <button id="tvFit" title="Fit (0)" style="font-size:11px">fit</button><button id="tvFull" title="Full screen" aria-label="Full screen">⛶</button></div>
   </div>
   <aside class="tv-panel">
-    <div class="tv-top"><div class="seg tv-seg" id="tvSubj" role="group" aria-label="What to look at"><button data-s="tube" aria-pressed="true">Tube</button><button data-s="lamp" aria-pressed="false">Lava lamp</button></div><span class="sp"></span><button class="rack-x" id="tvClose" aria-label="Close tube view" title="Close (Esc)">×</button></div>
+    <div class="tv-top"><div class="seg tv-seg" id="tvSubj" role="group" aria-label="What to look at"><button data-s="tube" aria-pressed="true">Tube</button><button data-s="lamp" aria-pressed="false">Lava lamp</button><button data-s="radio" aria-pressed="false" title="The lava lamp standing on a mini radio">Lava lamp + radio</button></div><span class="sp"></span><button class="rack-x" id="tvClose" aria-label="Close tube view" title="Close (Esc)">×</button></div>
     <div class="tv-sec"><div class="kl">filter</div><div class="chips2" id="tvLooks" role="group" aria-label="Filter"></div></div>
     <div class="tv-sec tv-tube"><div class="kl">glow</div><div class="knobs left" id="tvKnobs"></div></div>
     <div class="tv-sec tv-tube"><div class="kl">tube</div><div class="chips2" id="tvTubes" role="group" aria-label="Choose a tube"></div></div>
@@ -920,8 +920,7 @@
       <div class="knobs left" id="tvLampKnobs"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">wax / liquid</div><div class="chips2" id="tvLampCols" role="group" aria-label="Wax and liquid colours"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">base</div><div class="chips2" id="tvLampBases" role="group" aria-label="Base finish"></div></div>
-    <div class="tv-sec tv-lamp"><div class="kl">stand</div><div class="chips2"><button class="tchip" id="tvLampRadio" aria-pressed="false" title="Stand the lamp on a mini radio under 2 inches tall: a dial that shows and sets how far into the episode you are, previous, back 15 s, play or pause, forward 15 s, skip, a five band EQ, volume and the sleep timer. Its controls work here and on the black view.">📻 on a mini radio</button></div></div>
-    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. Click the lamp to see it on its own, everything else black; click again or press Esc to come back. Stand it on the mini radio and the radio's buttons, dial, EQ and knob work here and on black. None of this changes the sound.</div>
+    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. Click the lamp to see it on its own, everything else black; click again or press Esc to come back. Lava lamp + radio stands it on a mini radio whose dial, buttons, EQ and knob work here and on black. None of this changes the sound.</div>
     <div class="mod-note tv-tube">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
   </aside>
 </div>
@@ -3275,12 +3274,10 @@
   $('lampPower').onclick=function(){ setLampOn(!ADV.lampOn); }; $('tvLampPower').onclick=function(){ setLampOn(!ADV.lampOn); };
   $('tvLampMusic').onclick=function(){ ADV.lampMusic=!ADV.lampMusic; saveAdv(); syncLampUI(); if(ADV.lampMusic && !ADV.on) toast('Music heat follows the sound once it plays'); };
   $('tvLampCold').onclick=function(){ lampRestart(); toast('A new lamp, cold from the box'); };
-  $('tvLampRadio').onclick=function(){ ADV.lampRadio=!ADV.lampRadio; saveAdv(); syncLampUI(); TVZ.z=1; clampPan(); };
   function syncLampUI(){
     var c=LCOL_BY[ADV.lampCol]||LAMP_COLS[0];
     [$('lampPower'),$('tvLampPower')].forEach(function(b){ b.setAttribute('aria-pressed', ADV.lampOn?'true':'false'); b.lastChild.textContent=ADV.lampOn?'on':'off'; });
     $('tvLampMusic').setAttribute('aria-pressed', ADV.lampMusic?'true':'false');
-    $('tvLampRadio').setAttribute('aria-pressed', ADV.lampRadio?'true':'false');
     $('lampColSel').value=ADV.lampCol;
     document.querySelectorAll('#tvLampCols .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampCol?'true':'false'); });
     document.querySelectorAll('#tvLampBases .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampBase?'true':'false'); });
@@ -3290,7 +3287,8 @@
   function syncTubeView(){
     var t=TUBE_BY[ADV.tube], L=curLook(), lamp=TVZ.subj==='lamp';
     $('tview').setAttribute('data-subj', TVZ.subj); $('tview').setAttribute('aria-label', lamp?'Lava lamp view':'Tube view');
-    document.querySelectorAll('#tvSubj button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.s===TVZ.subj?'true':'false'); });
+    var key = TVZ.subj==='tube' ? 'tube' : ADV.lampRadio ? 'radio' : 'lamp';
+    document.querySelectorAll('#tvSubj button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.s===key?'true':'false'); });
     $('tvCv').setAttribute('aria-label', lamp?'The lava lamp, zoomed in':'The tube, zoomed in');
     $('tvName').textContent= lamp ? 'Lava lamp' : t.id; $('tvKind').textContent=t.kind; $('tvLookName').textContent=L.name+' filter';
     if(lamp) syncLampUI();
@@ -3412,7 +3410,11 @@
     $('tubeZoom').onclick=function(){ openTubeView('tube'); };
     $('lampCv').addEventListener('click', function(){ openLampSolo(); });
     $('lampZoom').onclick=function(){ openTubeView('lamp'); };
-    document.querySelectorAll('#tvSubj button').forEach(function(b){ b.onclick=function(){ if(TVZ.subj===b.dataset.s) return; TVZ.subj=b.dataset.s; TVZ.z=1; clampPan(); syncTubeView(); }; });
+    // Tube, Lava lamp, or Lava lamp + radio (the same lamp standing on the mini radio)
+    document.querySelectorAll('#tvSubj button').forEach(function(b){ b.onclick=function(){
+      var k=b.dataset.s, subj = k==='tube' ? 'tube' : 'lamp', radio = k==='radio';
+      if(subj==='lamp' && !!ADV.lampRadio!==radio){ ADV.lampRadio=radio; saveAdv(); } else if(TVZ.subj===subj) return;
+      TVZ.subj=subj; TVZ.z=1; clampPan(); syncTubeView(); }; });
     document.addEventListener('keydown', function(e){
       if(!tvIsOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
       var tag=document.activeElement && document.activeElement.tagName; if(tag==='INPUT'||tag==='SELECT') return;
@@ -4293,14 +4295,16 @@
   function renderLamp(cv, now, view, z, px, py, q){
     var f=fitCanvas(cv, q); if(!f) return null; lampTick(now);
     var c=f.c, r=f.r, L=curLook(), W=cv.width, H=cv.height;
-    var solo=view==='solo', SH=lampSceneH(), s=Math.min(f.w/TW, f.h/SH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=f.h/2-(SH/2+(py||0))*s;
+    // with the radio the big view keeps the strip under the zoom buttons clear, so they never sit on its controls
+    var solo=view==='solo', SH=lampSceneH(), hh=f.h-(view==='big' && radioOn() ? Math.min(56, f.h*0.11) : 0);
+    var s=Math.min(f.w/TW, hh/SH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=hh/2-(SH/2+(py||0))*s;
     if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
     c.setTransform(1,0,0,1,0,0);
     var bg = solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
     c.setTransform(r*s,0,0,r*s,r*tx,r*ty);
     paintLamp(c, now, { detail:r*s, view:view, ppu:r*s, vis:{ x0:-tx/s, y0:-ty/s, x1:(f.w-tx)/s, y1:(f.h-ty)/s } });
     c.setTransform(1,0,0,1,0,0); if(!solo) lookOverlay(c, W, H, L, now);
-    return { s:s, tx:tx, ty:ty, w:f.w, h:f.h };
+    return { s:s, tx:tx, ty:ty, w:f.w, h:hh };
   }
   function drawLamp(now){ renderLamp($('lampCv'), now, 'rack'); }
 
@@ -4312,10 +4316,12 @@
   // skip; a five band EQ whose sliders move the rack's EQ around their own frequencies, keeping whatever
   // shape it already has, with each band's live level lit in its slot; and the volume knob. Its controls
   // work in the big view and on black; in the rack it is only drawn.
-  var RAD={ x0:6, x1:114, yb:184.5, yf:196, h:22, drag:null, press:null, seek:null, last:0, lvl:[0,0,0,0,0] };
+  var RAD={ x0:6, x1:114, yb:184.5, yf:196, h:24, drag:null, press:null, seek:null, last:0, lvl:[0,0,0,0,0], name:'', nameT:0, shown:null };
   RAD.extra=RAD.yf+RAD.h+1-LFLOOR;
-  var RAD_EQ=[60,250,1000,4000,12000], RAD_EQX=[88,91,94,97,100], RAD_TY0=200, RAD_TY1=213, RAD_BY=206.5, RAD_VX=106.5, RAD_SLEEP=['off','15','30','60','end'];
-  var RAD_BTN=[ { id:'prev', x:49, r:3 }, { id:'back', x:56.5, r:3 }, { id:'play', x:65, r:4 }, { id:'fwd', x:73.5, r:3 }, { id:'next', x:81, r:3 } ];
+  var RAD_EQ=[60,250,1000,4000,12000], RAD_EQX=[88.5,91.3,94.1,96.9,99.7], RAD_TY0=200, RAD_TY1=215.4, RAD_BY=207.8, RAD_VX=106.6, RAD_SLEEP=['off','15','30','60','end'];
+  var RAD_BTN=[ { id:'prev', x:52, r:3 }, { id:'back', x:59.5, r:3 }, { id:'play', x:67.5, r:4 }, { id:'fwd', x:75.5, r:3 }, { id:'next', x:82.6, r:3 } ];
+  // the display: show and episode on top (scrolling when long), time below, the dial's scale under that
+  var RAD_D={ x0:11, x1:47, y0:199.4, y1:211.6, s0:12.5, s1:45.5 }, RAD_K=10;
   var RAD_DOM={ play:'playBtn', prev:'prevBtn', next:'skipBtn', back:'backBtn', fwd:'fwdBtn' };
   function radioOn(){ return !!ADV.lampRadio; }
   function lampSceneH(){ return TH+(radioOn()?RAD.extra:0); }
@@ -4334,18 +4340,18 @@
   function radSetVol(v){ var el=$('vol'); el.value=clampN(v,0,1); if(el.oninput) el.oninput.call(el); }
   function radSleepIdx(){ var i=RAD_SLEEP.indexOf($('sleepSel').value); return i<0?0:i; }
   function radSleepNext(){ var sel=$('sleepSel'); sel.value=RAD_SLEEP[(radSleepIdx()+1)%RAD_SLEEP.length]; if(sel.onchange) sel.onchange.call(sel); }
-  function radDialFrac(x){ return clampN((x-13.5)/27,0,1); }
-  function radCenter(id){ if(id==='dial') return { x:27, y:204 }; if(id==='sleep') return { x:15.5, y:212.2 }; if(id==='vol') return { x:RAD_VX, y:RAD_BY };
+  function radDialFrac(x){ return clampN((x-RAD_D.s0)/(RAD_D.s1-RAD_D.s0),0,1); }
+  function radCenter(id){ if(id==='dial') return { x:29, y:209.5 }; if(id==='sleep') return { x:14.2, y:214.6 }; if(id==='vol') return { x:RAD_VX, y:RAD_BY };
     if(/^eq/.test(id)){ var i=+id.slice(2); return { x:RAD_EQX[i], y:radGainY(radEqVal(i)) }; }
     for(var k=0;k<RAD_BTN.length;k++) if(RAD_BTN[k].id===id) return { x:RAD_BTN[k].x, y:RAD_BY }; return null; }
   // where a pointer is in lamp units, from the geometry the last render used
   function radPt(e, cv, g){ var r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left-g.tx)/g.s, y:(e.clientY-r.top-g.ty)/g.s }; }
   function radHit(p){
     if(!radioOn() || !p || p.y<RAD.yf || p.y>RAD.yf+RAD.h+1 || p.x<RAD.x0 || p.x>RAD.x1) return null;
-    if(p.x>=11 && p.x<=43) return p.y<=209.4 ? 'dial' : p.x<=31 ? 'sleep' : 'body';
+    if(p.x>=10.5 && p.x<=47.5){ if(p.y<=212.2) return p.y>=205 ? 'dial' : 'body'; return p.x<=29 ? 'sleep' : 'body'; }
     for(var i=0;i<RAD_BTN.length;i++){ var b=RAD_BTN[i], lo=i?(RAD_BTN[i-1].x+b.x)/2:b.x-4.2, hi=i<RAD_BTN.length-1?(b.x+RAD_BTN[i+1].x)/2:b.x+4.2; if(p.x>=lo && p.x<hi) return b.id; }
-    for(i=0;i<RAD_EQX.length;i++) if(Math.abs(p.x-RAD_EQX[i])<=1.5) return 'eq'+i;
-    if(p.x>=102.5) return 'vol';
+    for(i=0;i<RAD_EQX.length;i++) if(Math.abs(p.x-RAD_EQX[i])<=1.4) return 'eq'+i;
+    if(p.x>=102) return 'vol';
     return 'body';
   }
   function radDown(id, p){
@@ -4374,6 +4380,10 @@
     for(var i=0;i<5;i++){ var top=-140; for(var j=0;j<f.length;j++){ if(Math.abs(Math.log(f[j]/RAD_EQ[i])/Math.LN2)<=0.75 && EQV.lv[j]!=null) top=Math.max(top, EQV.lv[j]); }
       var t=(eqAn && !audio.paused) ? clampN((top-LED_MIN)/(LED_MAX-LED_MIN),0,1) : 0; RAD.lvl[i]+= (t-RAD.lvl[i])*(t>RAD.lvl[i]?0.6:0.15); }
   }
+  function radFont(size, w){ return (w||'')+' '+(size*RAD_K)+'px '+(FONT || (FONT=getComputedStyle(document.body).fontFamily)); }
+  function radTextW(c, str, size, w){ c.save(); c.setTransform(1,0,0,1,0,0); c.font=radFont(size,w); var m=c.measureText(str).width/RAD_K; c.restore(); return m; }
+  function radText(c, str, x, y, size, w, align){ c.save(); c.translate(x,y); c.scale(1/RAD_K,1/RAD_K); c.font=radFont(size,w); c.textAlign=align||'left'; c.textBaseline='alphabetic'; c.fillText(str,0,0); c.restore(); }
+  var RAD_STILL = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function radRR(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r); c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath(); }
   function radIcon(c, id, x, y, u, playing){
     c.beginPath();
@@ -4410,26 +4420,40 @@
     var fx0=x0+3, fx1=x1-3, fy0=yf+2, fy1=yB-2.4;
     radRR(c, fx0, fy0, fx1-fx0, fy1-fy0, 1.1); var pg=c.createLinearGradient(0,fy0,0,fy1); pg.addColorStop(0,'#1d1d20'); pg.addColorStop(1,'#0c0c0e'); c.fillStyle=pg; c.fill();
     c.strokeStyle='rgba(255,255,255,0.09)'; c.lineWidth=0.3; c.stroke();
-    // the dial: needle at how far into the episode you are
-    var dx0=12, dx1=42, dy0=200, dy1=208.6, dur=audio.duration, frac=RAD.seek!=null ? RAD.seek : (dur && isFinite(dur) ? clampN((audio.currentTime||0)/dur,0,1) : 0), on=playing||RAD.seek!=null;
-    radRR(c, dx0, dy0, dx1-dx0, dy1-dy0, 0.7); var dg=c.createLinearGradient(dx0,0,dx1,0), bl=on?1:0.55;
-    dg.addColorStop(0,rgba([58,30,6],1)); dg.addColorStop(0.5,rgba([Math.round(130*bl),Math.round(76*bl),Math.round(18*bl)],1)); dg.addColorStop(1,rgba([58,30,6],1)); c.fillStyle=dg; c.fill();
-    c.strokeStyle='rgba(0,0,0,0.7)'; c.lineWidth=0.35; c.stroke();
-    c.strokeStyle='rgba(25,12,0,0.75)'; c.lineWidth=0.2;
-    for(k=0;k<=20;k++){ var tx=13.5+k*27/20, tl=k%5===0?2.2:1.1; c.beginPath(); c.moveTo(tx,dy1-0.9); c.lineTo(tx,dy1-0.9-tl); c.stroke(); }
-    c.beginPath(); c.moveTo(13.5,dy0+2.2); c.lineTo(40.5,dy0+2.2); c.stroke();
-    var nx=13.5+frac*27; add(function(){ c.strokeStyle='rgba(255,90,40,0.35)'; c.lineWidth=1.1; c.beginPath(); c.moveTo(nx,dy0+0.9); c.lineTo(nx,dy1-0.9); c.stroke(); });
-    c.strokeStyle= dur ? '#ff5326' : 'rgba(255,83,38,0.45)'; c.lineWidth=0.42; c.beginPath(); c.moveTo(nx,dy0+0.9); c.lineTo(nx,dy1-0.9); c.stroke();
-    var gl=c.createLinearGradient(0,dy0,0,dy1); gl.addColorStop(0,'rgba(255,255,255,0.14)'); gl.addColorStop(0.45,'rgba(255,255,255,0.02)'); gl.addColorStop(1,'rgba(255,255,255,0)'); radRR(c, dx0+0.3, dy0+0.3, dx1-dx0-0.6, (dy1-dy0)*0.5, 0.5); c.fillStyle=gl; c.fill();
+    // the display: show and episode (scrolling when they do not fit), time, and the dial's scale whose
+    // needle is how far into the episode you are (tap or drag the lower part to move it)
+    var D=RAD_D, dur=audio.duration, has=dur && isFinite(dur), frac=RAD.seek!=null ? RAD.seek : (has ? clampN((audio.currentTime||0)/dur,0,1) : 0), on=playing||RAD.seek!=null, i, k;
+    radRR(c, D.x0, D.y0, D.x1-D.x0, D.y1-D.y0, 0.7); var dg=c.createLinearGradient(0,D.y0,0,D.y1); dg.addColorStop(0,'#160c04'); dg.addColorStop(1,'#0b0602'); c.fillStyle=dg; c.fill();
+    c.strokeStyle='rgba(0,0,0,0.75)'; c.lineWidth=0.35; c.stroke();
+    var show=($('npShow').textContent||'').trim(), ep=($('npEp').textContent||'').trim(), name= ep ? show+'  ·  '+ep : show;
+    if(name!==RAD.name){ RAD.name=name; RAD.nameT=now; }
+    var tShown = RAD.seek!=null && has ? fmt(RAD.seek*dur)+' / '+fmt(dur) : has ? fmt(audio.currentTime)+' / '+fmt(dur) : (audio.currentSrc && (audio.currentTime||0)>0) ? fmt(audio.currentTime) : '--:--';
+    RAD.shown={ name:name, time:tShown };
+    var tc=on ? [255,196,107] : [214,160,86], tx0=D.x0+1.2, avail=D.x1-D.x0-2.4, nsz=2.9, nw=radTextW(c, name, nsz, '600');
+    c.save(); c.beginPath(); c.rect(D.x0+0.5, D.y0+0.4, D.x1-D.x0-1, 5.4); c.clip();
+    c.shadowColor='rgba(255,160,60,0.55)'; c.shadowBlur=3; c.fillStyle=rgba(tc, on?1:0.85);
+    if(nw<=avail) radText(c, name, tx0, D.y0+4.4, nsz, '600');
+    else if(RAD_STILL && RAD_STILL.matches){ var cut=name; while(cut.length>1 && radTextW(c, cut+'…', nsz, '600')>avail) cut=cut.slice(0,-1); radText(c, cut+'…', tx0, D.y0+4.4, nsz, '600'); }
+    else { var gap=10, sp=5, hold=2.2, per=nw+gap, cyc=hold+per/sp, ph=((now-RAD.nameT)/1000)%cyc, off=ph<hold ? 0 : (ph-hold)*sp;
+      radText(c, name, tx0-off, D.y0+4.4, nsz, '600'); radText(c, name, tx0-off+per, D.y0+4.4, nsz, '600'); }
+    c.restore();
+    c.save(); c.shadowColor='rgba(255,160,60,0.45)'; c.shadowBlur=2; c.fillStyle=rgba(tc, 0.92); radText(c, tShown, tx0, D.y0+8.1, 2.6, '500'); c.restore();
+    // the scale and its needle
+    c.strokeStyle='rgba(255,180,90,0.35)'; c.lineWidth=0.18;
+    for(k=0;k<=22;k++){ var sx_=D.s0+k*(D.s1-D.s0)/22, tl=k%11===0?1.9:k%2===0?1.1:0.6; c.beginPath(); c.moveTo(sx_,D.y1-0.6); c.lineTo(sx_,D.y1-0.6-tl); c.stroke(); }
+    c.beginPath(); c.moveTo(D.s0,D.y1-0.6); c.lineTo(D.s1,D.y1-0.6); c.stroke();
+    var nx=D.s0+frac*(D.s1-D.s0); add(function(){ c.strokeStyle='rgba(255,90,40,0.4)'; c.lineWidth=1; c.beginPath(); c.moveTo(nx,D.y1-3.2); c.lineTo(nx,D.y1-0.4); c.stroke(); });
+    c.strokeStyle= has ? '#ff5326' : 'rgba(255,83,38,0.45)'; c.lineWidth=0.4; c.beginPath(); c.moveTo(nx,D.y1-3.2); c.lineTo(nx,D.y1-0.4); c.stroke();
+    var gl=c.createLinearGradient(0,D.y0,0,D.y1); gl.addColorStop(0,'rgba(255,255,255,0.08)'); gl.addColorStop(0.4,'rgba(255,255,255,0.015)'); gl.addColorStop(1,'rgba(255,255,255,0)'); radRR(c, D.x0+0.3, D.y0+0.3, D.x1-D.x0-0.6, (D.y1-D.y0)*0.45, 0.5); c.fillStyle=gl; c.fill();
     // sleep: a moon and its four lights (15, 30, 60 minutes, end of episode)
-    var si=radSleepIdx(), sx=15.5, sy=212.2, sOn=si>0, blink=sOn && SLEEP.until && (SLEEP.until-Date.now())<SLEEP_FADE*1000 && Math.floor(now/400)%2;
-    c.beginPath(); c.arc(sx,sy+(RAD.press==='sleep'?0.25:0),2.1,0,Math.PI*2); var sg=c.createRadialGradient(sx-0.8,sy-0.8,0.2,sx,sy,2.1); sg.addColorStop(0,'#46464a'); sg.addColorStop(1,'#141416'); c.fillStyle=sg; c.fill();
+    var si=radSleepIdx(), sx=14.2, sy=214.6, sOn=si>0, blink=sOn && SLEEP.until && (SLEEP.until-Date.now())<SLEEP_FADE*1000 && Math.floor(now/400)%2;
+    c.beginPath(); c.arc(sx,sy+(RAD.press==='sleep'?0.25:0),1.9,0,Math.PI*2); var sg=c.createRadialGradient(sx-0.7,sy-0.7,0.2,sx,sy,1.9); sg.addColorStop(0,'#46464a'); sg.addColorStop(1,'#141416'); c.fillStyle=sg; c.fill();
     c.strokeStyle='rgba(255,255,255,0.14)'; c.lineWidth=0.2; c.stroke();
-    c.fillStyle=rgba(amber, sOn?0.95:0.45); c.beginPath(); c.arc(sx,sy,1.05,0,Math.PI*2); c.fill(); c.fillStyle='#2a2a2e'; c.beginPath(); c.arc(sx+0.55,sy-0.4,0.9,0,Math.PI*2); c.fill();
-    for(k=1;k<=4;k++){ var lx=17.5+k*3, lon=si===k && !blink; c.beginPath(); c.arc(lx,sy,0.62,0,Math.PI*2); c.fillStyle= lon ? '#ffb347' : '#3a2a18'; c.fill();
-      if(lon) add(function(){ c.beginPath(); c.arc(lx,sy,1.5,0,Math.PI*2); c.fillStyle='rgba(255,170,60,0.25)'; c.fill(); }); }
+    c.fillStyle=rgba(amber, sOn?0.95:0.45); c.beginPath(); c.arc(sx,sy,0.95,0,Math.PI*2); c.fill(); c.fillStyle='#2a2a2e'; c.beginPath(); c.arc(sx+0.5,sy-0.36,0.82,0,Math.PI*2); c.fill();
+    for(k=1;k<=4;k++){ var lx=15.3+k*2.9, lon=si===k && !blink; c.beginPath(); c.arc(lx,sy,0.58,0,Math.PI*2); c.fillStyle= lon ? '#ffb347' : '#3a2a18'; c.fill();
+      if(lon) add(function(){ c.beginPath(); c.arc(lx,sy,1.4,0,Math.PI*2); c.fillStyle='rgba(255,170,60,0.25)'; c.fill(); }); }
     // a little grille
-    c.fillStyle='#050505'; for(k=0;k<4;k++){ radRR(c, 32.5, 210.6+k*1.05, 9.5, 0.5, 0.25); c.fill(); }
+    c.fillStyle='#050505'; for(k=0;k<3;k++){ radRR(c, 31, 213.4+k*1.05, 15.5, 0.5, 0.25); c.fill(); }
     // transport
     RAD_BTN.forEach(function(b){
       var el=$(RAD_DOM[b.id]), ok=!(el && el.disabled), pr=RAD.press===b.id, by=RAD_BY+(pr?0.3:0);
@@ -4839,7 +4863,7 @@
         bench: function(n, which){ var cv=$(which==='rack'?'lampCv':'tvCv'), t0=performance.now(); n=n||30;
           for(var i=0;i<n;i++){ renderLamp(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
         solo: function(v){ if(v===true) openLampSolo(); else if(v===false) closeLampSolo(); return soloIsOpen(); },
-        radio: function(){ return { on:radioOn(), eq:[0,1,2,3,4].map(radEqVal), lvl:RAD.lvl.slice(), vol:radVol(), sleep:$('sleepSel').value, sceneH:lampSceneH() }; },
+        radio: function(){ return { on:radioOn(), eq:[0,1,2,3,4].map(radEqVal), lvl:RAD.lvl.slice(), vol:radVol(), sleep:$('sleepSel').value, sceneH:lampSceneH(), shown:RAD.shown }; },
         radioAt: function(id, which){ var solo=which==='solo', cv=$(solo?'soloCv':'tvCv'), g=solo?SOLO.geom:tvGeom, p=radCenter(id); if(!g||!p) return null; var r=cv.getBoundingClientRect(); return { x:r.left+g.tx+p.x*g.s, y:r.top+g.ty+p.y*g.s, s:g.s }; },
         stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; }
       },

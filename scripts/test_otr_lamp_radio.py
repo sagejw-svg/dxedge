@@ -37,11 +37,19 @@ with sync_playwright() as p:
     LA("set({radio:false})"); LA("reset(4242)"); LA("advance(300)")
     h0 = LA("radio()")["sceneH"]
     pg.click("#lampZoom"); pg.wait_for_timeout(400)
-    ck("off by default, the chip is in the lamp's panel", pg.is_visible("#tvLampRadio") and pg.get_attribute("#tvLampRadio", "aria-pressed") == "false")
-    pg.click("#tvLampRadio"); pg.wait_for_timeout(400)
+    PR = "Array.from(document.querySelectorAll('#tvSubj button')).map(b => b.dataset.s + ':' + b.getAttribute('aria-pressed'))"
+    ck("off by default: the top reads Tube, Lava lamp, Lava lamp + radio, with Lava lamp chosen", pg.evaluate(PR) == ["tube:false", "lamp:true", "radio:false"] and pg.inner_text("#tvSubj").split() == ["Tube", "Lava", "lamp", "Lava", "lamp", "+", "radio"], (pg.evaluate(PR), pg.inner_text("#tvSubj")))
+    sb, cb = pg.locator("#tvSubj").bounding_box(), pg.locator("#tvClose").bounding_box()
+    ck("the three fit on one row beside the close button", sb["height"] < 40 and sb["x"] + sb["width"] <= cb["x"] + 1, (sb, cb))
+    pg.click("#tvSubj button[data-s='radio']"); pg.wait_for_timeout(400)
     r = LA("radio()")
-    ck("the chip stands the lamp on the radio", r["on"] and pg.get_attribute("#tvLampRadio", "aria-pressed") == "true" and r["sceneH"] > h0, (r, h0))
+    ck("Lava lamp + radio stands the lamp on the radio", r["on"] and pg.evaluate(PR) == ["tube:false", "lamp:false", "radio:true"] and r["sceneH"] > h0 and pg.evaluate("__otr.adv.tv.subject()") == "lamp", (r, h0))
+    ck("the display shows the words (nothing playing yet: the player's prompt)", r["shown"] and r["shown"]["name"] == pg.inner_text("#npShow").strip() and r["shown"]["time"] == "--:--", r["shown"])
     ck("the radio is under 2 inches at the lamp's scale (14.5 in lamp, 182 units)", (r["sceneH"] - h0 - 7) / (182 / 14.5) < 2.0, r["sceneH"] - h0)
+    pg.click("#tvSubj button[data-s='lamp']"); pg.wait_for_timeout(300)
+    ck("Lava lamp takes it off the radio again", not LA("radio()")["on"] and pg.evaluate(PR) == ["tube:false", "lamp:true", "radio:false"])
+    pg.click("#tvSubj button[data-s='tube']"); pg.wait_for_timeout(300); pg.click("#tvSubj button[data-s='radio']"); pg.wait_for_timeout(400)
+    ck("from the tube straight to the lamp on its radio", LA("radio()")["on"] and pg.evaluate("__otr.adv.tv.subject()") == "lamp")
     pg.locator("#tvStage").screenshot(path=f"{SP}/otr_lamp_radio_big.png")
 
     # big view: the radio's controls work, and do not pan, zoom or go black
@@ -80,7 +88,7 @@ with sync_playwright() as p:
 
     # single click on the radio's face is not the lamp: no black view
     d = at("dial"); s0 = pg.eval_on_selector("#sleepSel", "e => e.value")
-    pg.mouse.click(d["x"] + 10 * d["s"], d["y"] + 8 * d["s"]); pg.wait_for_timeout(600)   # the grille: no control there
+    pg.mouse.click(d["x"] + 9 * d["s"], d["y"] + 5 * d["s"]); pg.wait_for_timeout(600)   # the grille: no control there
     ck("a click on the radio's face (not a control) does nothing and does not go black", not LA("solo()") and pg.eval_on_selector("#sleepSel", "e => e.value") == s0)
 
     # the black view: the radio stays, its controls work, a click elsewhere still comes back
@@ -123,7 +131,9 @@ with sync_playwright() as p:
         pg.mouse.click(pl["x"], pl["y"]); pg.wait_for_timeout(1200)
         ck("and plays again", not pg.evaluate('document.getElementById("audio").paused'))
         dur = pg.evaluate('document.getElementById("audio").duration')
-        dl = at("dial"); pg.mouse.click(dl["x"] + 6.75 * dl["s"], dl["y"]); pg.wait_for_timeout(1200)
+        sh = LA("radio()")["shown"]
+        ck("playing, the display shows the show and episode and the time out of the total", sh["name"].startswith(pg.inner_text("#npShow").strip()) and "·" in sh["name"] and " / " in sh["time"], sh)
+        dl = at("dial"); pg.mouse.click(dl["x"] + 8.25 * dl["s"], dl["y"]); pg.wait_for_timeout(1200)   # 0.75 of the scale (12.5 to 45.5)
         ck("a tap on the dial seeks (three quarters of the way)", abs(pg.evaluate(T) / dur - 0.75) < 0.05, (pg.evaluate(T), dur))
         pg.wait_for_timeout(1500); lv = LA("radio()")["lvl"]
         ck("the EQ slots light with the music", max(lv) > 0.05, lv)
@@ -137,6 +147,20 @@ with sync_playwright() as p:
         ck("on black, play pauses and the view stays", pg.evaluate('document.getElementById("audio").paused') and LA("solo()"))
         pg.keyboard.press("Escape")
     ck("no page errors", not errs, errs[:3])
+
+    # phone: every control on the radio is reachable in the big view (not under the zoom buttons)
+    m = b.new_page(viewport={"width": 375, "height": 812}, is_mobile=True, has_touch=True); merrs = []
+    m.on("pageerror", lambda e: merrs.append(str(e)))
+    m.goto(BASE); m.wait_for_function("window.__otr && __otr.ready()", timeout=20000)
+    m.click("#advBtn"); m.wait_for_timeout(300); m.click("#lampZoom"); m.wait_for_timeout(300); m.click("#tvSubj button[data-s='radio']"); m.wait_for_timeout(500)
+    hidden = []
+    for cid in ["dial", "sleep", "prev", "back", "play", "fwd", "next", "eq0", "eq4", "vol"]:
+        q = m.evaluate(f"__otr.adv.lamp.radioAt('{cid}', 'big')")
+        if m.evaluate(f"(document.elementFromPoint({q['x']}, {q['y']}) || {{}}).id") != "tvCv": hidden.append(cid)
+    ck("375 px: no radio control sits under the zoom buttons", not hidden, hidden)
+    sw = m.evaluate("document.documentElement.scrollWidth")
+    ck("375 px: the top choice fits, no horizontal scroll", sw <= 375 and m.locator("#tvSubj").bounding_box()["height"] < 40, sw)
+    ck("no page errors (phone)", not merrs, merrs[:3])
     b.close()
 httpd.shutdown()
 print("FAILS", F)
