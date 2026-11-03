@@ -4844,6 +4844,68 @@ with sync_playwright() as pw:
     ck("Fd. no page errors (fader readouts, phone)", not frmerr, frmerr)
     frm.close()
 
+    # ---------------------------------------------------------------- Ms. phone mix strips (graphics, 3 Nov)
+    # Four rows a strip on a phone: name with mute, solo and arm; level and pan; the LED ladder; the two sends.
+    # Was six rows, 256 px a strip at 375 px. Nothing hidden, the DOM (tab) order unchanged, desktop untouched.
+    MS_MEAS = """() => { const rows = [...document.querySelectorAll('#mHost .mixrow')]; const mid = r => (r.top + r.bottom) / 2;
+      const out = rows.map(r => { const g = s => r.querySelector(s).getBoundingClientRect(), labs = [...r.querySelectorAll('label')].map(l => l.getBoundingClientRect());
+        const who = g('.who'), ch = [...r.querySelectorAll('.chip')].map(c => c.getBoundingClientRect()), m = g('.mixmeter'), b = r.getBoundingClientRect();
+        const ins = [...r.querySelectorAll('input[type="range"]')].map(i => i.getBoundingClientRect());
+        return { id: r.dataset.mix, h: b.height,
+          chipsOnName: ch.every(c => Math.abs(mid(c) - mid(who)) <= 2 || c.top >= who.bottom - 1),
+          chipRow: ch.every(c => Math.abs(c.top - ch[0].top) <= 1),
+          lvlPan: Math.abs(labs[0].top - labs[1].top) <= 1 && labs[1].left > labs[0].right - 1,
+          meter: m.top >= Math.max(labs[0].bottom, labs[1].bottom) - 1 && m.bottom <= Math.min(labs[2].top, labs[3].top) + 1 && m.width >= b.width - 20,
+          sends: Math.abs(labs[2].top - labs[3].top) <= 1 && labs[3].left > labs[2].right - 1,
+          small: [...ch, ...ins].filter(q => q.height < 44 || q.width < 44).length,
+          spill: [...r.querySelectorAll('*')].some(e => { const q = e.getBoundingClientRect(); return q.width && (q.left < b.left - 0.5 || q.right > b.right + 0.5 || q.bottom > b.bottom + 0.5); }),
+          cut: r.querySelector('.who').scrollWidth > r.querySelector('.who').clientWidth + 1,
+          minF: Math.min(...ins.map(q => q.width)),
+          order: [...r.querySelectorAll('input, button')].map(e => e.id.replace(/^mix[A-Z]/, '')).join(' '),
+          anim: getComputedStyle(r).animationName, tr: parseFloat(getComputedStyle(r).transitionDuration) || 0 }; });
+      const t = document.querySelector('#mHost .hostbar > label:has(#hostTempo)'), tc = getComputedStyle(t), bl = document.querySelector('#mixBus label'), bc = getComputedStyle(bl);
+      const starts = [...document.querySelectorAll('#mixBus input[type="range"]')].map(i => Math.round(i.getBoundingClientRect().left));
+      return { rows: out, mix: document.getElementById('mHost').getBoundingClientRect().height, sw: document.documentElement.scrollWidth, iw: innerWidth,
+        tempo: { tt: tc.textTransform, fs: tc.fontSize, color: tc.color, busTt: bc.textTransform, busFs: bc.fontSize, busColor: bc.color }, starts }; }"""
+    msc = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True, reduced_motion="reduce"); msp = msc.new_page(); mserr = []
+    msp.on("pageerror", lambda e: mserr.append(str(e)))
+    msp.goto(BASE); msp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    msp.tap('.tabs [data-go="mix"]'); msp.wait_for_timeout(300)
+    ms = msp.evaluate(MS_MEAS); R = ms["rows"]
+    # the tempo label's text against the panel behind it, read from the page's own pixels
+    msp.evaluate("document.getElementById('mHost').scrollIntoView()"); msp.wait_for_timeout(150)
+    _tb = msp.evaluate("(() => { const r = document.querySelector('#mHost .hostbar > label:has(#hostTempo)').firstChild; const g = document.createRange(); g.selectNodeContents(r); const q = g.getBoundingClientRect(); return [q.left, q.top, q.width, q.height]; })()")
+    _png = base64.b64encode(msp.screenshot(clip={"x": _tb[0] - 4, "y": _tb[1], "width": _tb[2] + 8, "height": _tb[3]})).decode()
+    _bg = msp.evaluate("""async b => { const im = await createImageBitmap(await (await fetch('data:image/png;base64,' + b)).blob()); const c = new OffscreenCanvas(im.width, im.height), g = c.getContext('2d');
+      g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, im.width, im.height).data, n = {}; let best = null;
+      for (let i = 0; i < d.length; i += 4) { const k = d[i] + ',' + d[i + 1] + ',' + d[i + 2]; n[k] = (n[k] || 0) + 1; if (!best || n[k] > n[best]) best = k; } return best.split(',').map(Number); }""", _png)
+    _fg = [int(v) for v in ms["tempo"]["color"][ms["tempo"]["color"].index("(") + 1:-1].split(",")[:3]]
+    ms_con = (max(_lum(_fg), _lum(_bg)) + 0.05) / (min(_lum(_fg), _lum(_bg)) + 0.05)
+    ms_bad = [r["id"] for r in R if not (r["chipsOnName"] and r["chipRow"] and r["lvlPan"] and r["meter"] and r["sends"])]
+    ck(f"Ms. 375 px: every strip is four rows: mute, solo and arm on the name row, level and pan side by side, the meter under them, the sends side by side ({len(R)} strips)",
+       len(R) == 18 and not ms_bad, ms_bad[:5] or R[:1])
+    ck(f"Ms. 375 px: strips {max(r['h'] for r in R):.0f} px tall (was 256), the Mix section {ms['mix']:.0f} px (was 5,458), no sideways scroll",
+       max(r["h"] for r in R) <= 190 and ms["mix"] <= 4400 and ms["sw"] <= ms["iw"], (sorted({round(r['h']) for r in R}), ms["mix"], ms["sw"]))
+    ck(f"Ms. 375 px: chips and faders 44 px or more, faders {min(r['minF'] for r in R):.0f} px or more, nothing spills out, no name cut",
+       all(r["small"] == 0 and not r["spill"] and not r["cut"] and r["minF"] >= 70 for r in R), [(r["id"], r["small"], r["spill"], r["cut"], r["minF"]) for r in R if r["small"] or r["spill"] or r["cut"] or r["minF"] < 70][:5])
+    ck("Ms. the tab order in each strip is unchanged: level, pan, mute, solo, reverb, delay, arm",
+       all(r["order"].split() == [k for k in ("Lvl", "Pan", "Mute", "Solo", "Rev", "Dly", "Arm")] for r in R), [(r["id"], r["order"]) for r in R][:3])
+    ck(f"Ms. the tempo label reads like the bus labels ({ms['tempo']['tt']}, {ms['tempo']['fs']}, contrast {ms_con:.1f}:1 on the panel), the three bus faders start on one line ({ms['starts']}), reduced motion: no animation on the strips",
+       ms_con >= 4.5 and ms["tempo"]["tt"] == ms["tempo"]["busTt"] == "uppercase" and ms["tempo"]["fs"] == ms["tempo"]["busFs"] and ms["tempo"]["color"] == ms["tempo"]["busColor"]
+       and len(ms["starts"]) == 3 and max(ms["starts"]) - min(ms["starts"]) <= 1 and all(r["anim"] == "none" and r["tr"] == 0 for r in R), (ms["tempo"], ms["starts"], _bg, ms_con))
+    ms_w = {}
+    for w_ in (320, 360, 760):
+        msp.set_viewport_size({"width": w_, "height": 667}); msp.wait_for_timeout(250)
+        m_ = msp.evaluate(MS_MEAS); ms_w[w_] = (max(r["h"] for r in m_["rows"]), m_["sw"] <= m_["iw"],
+            all(r["small"] == 0 and not r["spill"] and not r["cut"] and r["lvlPan"] and r["meter"] and r["sends"] and r["chipRow"] for r in m_["rows"]))
+    ck(f"Ms. 320, 360 and 760 px: strips stay whole with 44 px targets, no name cut, no sideways scroll (heights {[round(v[0]) for v in ms_w.values()]} px; under 360 the name takes its own line)",
+       all(v[1] and v[2] and v[0] <= 215 for v in ms_w.values()), ms_w)
+    msp.set_viewport_size({"width": 1366, "height": 1000}); msp.wait_for_timeout(250)
+    md = msp.evaluate("() => [...document.querySelectorAll('#mHost .mixrow')].map(r => [getComputedStyle(r).display, Math.round(r.getBoundingClientRect().height)])")
+    ck(f"Ms. at 1366 px the strips are still the desktop grid ({md[0][1]} px tall)", all(d == "grid" for d, _ in md) and max(h for _, h in md) <= 100, md[:3])
+    ck("Ms. no page errors (phone mix strips)", not mserr, mserr)
+    msc.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

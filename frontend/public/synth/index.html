@@ -980,6 +980,26 @@
     #wavSecs { min-height: 44px; min-width: 44px; }
     #mMaster select.btn { min-width: 44px; max-width: 100%; }
   }
+  /* the tempo box reads like the bus labels beside it (it was lower case, larger, brighter) */
+  #mHost .hostbar > label:has(#hostTempo) { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  /* phone mix strips (graphics, 3 Nov): four rows instead of six, nothing hidden. The name row carries
+     mute, solo and arm at the right; level and pan share a row, the LED ladder runs under them, and the
+     two sends share the last row. Flex order moves only the chips (the meter is aria-hidden); the tab
+     order stays level, pan, mute, solo, sends, arm. Desktop strips are untouched. */
+  @media (max-width: 760px) {
+    .mixrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 8px 7px; }
+    .mixrow .who { order: 0; flex: 1 1 calc(100% - 3 * 54px); }
+    .mixrow .chip { flex: 0 0 48px; min-width: 48px; padding: 4px 0; letter-spacing: 0; font-size: 11px; }
+    .mixrow .chip[id$="Mute"] { order: 1; } .mixrow .chip[id$="Solo"] { order: 2; } .mixrow .chip[id$="Arm"] { order: 3; }
+    .mixrow label { flex: 1 1 calc(50% - 3px); }
+    .mixrow label:nth-of-type(1) { order: 4; } .mixrow label:nth-of-type(2) { order: 5; }
+    .mixrow .mixmeter { order: 6; flex: 1 1 100%; }
+    .mixrow label:nth-of-type(3) { order: 7; } .mixrow label:nth-of-type(4) { order: 8; }
+    /* the shared bus faders start on one line whatever their name's length */
+    #mixBus label .fname { flex: 0 0 64px; }
+  }
+  /* under 360 px the name takes its own line so a long name is not cut; the chips share the next */
+  @media (max-width: 359px) { .mixrow .who { flex-basis: 100%; } .mixrow .chip { flex: 1 1 0; } }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before { animation: none !important; }
     .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .rail::before, .rail::after, .racklinks::before, .racklinks::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>

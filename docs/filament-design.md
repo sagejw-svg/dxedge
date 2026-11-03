@@ -267,6 +267,7 @@ A strip of brushed metal chassis runs across the top of the instrument. It carri
 * One section shown at a time, chosen from a segmented control: Play, Osc, Filter, Mod, Stereo, Rack.
 * A keyboard pinned to the bottom: one and a half octaves, scrollable, with octave buttons. Velocity comes from where you touch the key (lower is louder). Pitch and mod are vertical strips beside the keys.
 * Everything reachable with a thumb, with touch targets of 44 px or more.
+* Mix strips are compact (3 Nov): four rows a strip, the name with mute, solo and arm at its right, then level and pan, the LED ladder, and the two sends. Nothing is tucked away behind a toggle; under 360 px the name takes its own line.
 
 ### Look
 
