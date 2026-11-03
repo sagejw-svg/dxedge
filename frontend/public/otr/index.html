@@ -920,7 +920,8 @@
       <div class="knobs left" id="tvLampKnobs"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">wax / liquid</div><div class="chips2" id="tvLampCols" role="group" aria-label="Wax and liquid colours"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">base</div><div class="chips2" id="tvLampBases" role="group" aria-label="Base finish"></div></div>
-    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. Click the lamp to see it on its own, everything else black; click again or press Esc to come back. None of this changes the sound.</div>
+    <div class="tv-sec tv-lamp"><div class="kl">stand</div><div class="chips2"><button class="tchip" id="tvLampRadio" aria-pressed="false" title="Stand the lamp on a mini radio under 2 inches tall: a dial that shows and sets how far into the episode you are, previous, back 15 s, play or pause, forward 15 s, skip, a five band EQ, volume and the sleep timer. Its controls work here and on the black view.">📻 on a mini radio</button></div></div>
+    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. Click the lamp to see it on its own, everything else black; click again or press Esc to come back. Stand it on the mini radio and the radio's buttons, dial, EQ and knob work here and on black. None of this changes the sound.</div>
     <div class="mod-note tv-tube">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
   </aside>
 </div>
@@ -2781,7 +2782,7 @@
                   roomOn:false, room:'living', rmDecay:0.55, rmMix:20, rmTone:4,
                   wOn:false, width:100, wChar:9,
                   tvFilter:'natural', tvBright:100, tvResp:100, tvSpeed:50, tvFlicker:35,
-                  lampOn:true, lampCol:'classic', lampBase:'gold', lampW:25, lampMusic:false, lampBright:100, lampTime:1 };
+                  lampOn:true, lampCol:'classic', lampBase:'gold', lampW:25, lampMusic:false, lampBright:100, lampTime:1, lampRadio:false };
   var advFresh = load('otr_adv', null) === null;
   var ADV = (function(){
     var d=JSON.parse(JSON.stringify(ADV_DEF));
@@ -3274,10 +3275,12 @@
   $('lampPower').onclick=function(){ setLampOn(!ADV.lampOn); }; $('tvLampPower').onclick=function(){ setLampOn(!ADV.lampOn); };
   $('tvLampMusic').onclick=function(){ ADV.lampMusic=!ADV.lampMusic; saveAdv(); syncLampUI(); if(ADV.lampMusic && !ADV.on) toast('Music heat follows the sound once it plays'); };
   $('tvLampCold').onclick=function(){ lampRestart(); toast('A new lamp, cold from the box'); };
+  $('tvLampRadio').onclick=function(){ ADV.lampRadio=!ADV.lampRadio; saveAdv(); syncLampUI(); TVZ.z=1; clampPan(); };
   function syncLampUI(){
     var c=LCOL_BY[ADV.lampCol]||LAMP_COLS[0];
     [$('lampPower'),$('tvLampPower')].forEach(function(b){ b.setAttribute('aria-pressed', ADV.lampOn?'true':'false'); b.lastChild.textContent=ADV.lampOn?'on':'off'; });
     $('tvLampMusic').setAttribute('aria-pressed', ADV.lampMusic?'true':'false');
+    $('tvLampRadio').setAttribute('aria-pressed', ADV.lampRadio?'true':'false');
     $('lampColSel').value=ADV.lampCol;
     document.querySelectorAll('#tvLampCols .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampCol?'true':'false'); });
     document.querySelectorAll('#tvLampBases .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampBase?'true':'false'); });
@@ -3306,7 +3309,7 @@
   // Only the lamp on black, no text and no controls. Real full screen where the browser allows it
   // (iPhone does not, so there the black layer covers the page); the screen is kept awake; a click,
   // a tap or Esc brings back whatever was there before.
-  var SOLO={ raf:0, prev:null, lock:null, idle:0, fs:false };
+  var SOLO={ raf:0, prev:null, lock:null, idle:0, fs:false, geom:null, eat:false };
   function soloIsOpen(){ return !$('lampSolo').hidden; }
   function soloWake(){ try{ if(navigator.wakeLock && !SOLO.lock) navigator.wakeLock.request('screen').then(function(l){ if(!soloIsOpen()){ l.release().catch(function(){}); return; } SOLO.lock=l;
     l.addEventListener('release', function(){ if(SOLO.lock===l) SOLO.lock=null; }); }).catch(function(){}); }catch(e){} }
@@ -3316,7 +3319,7 @@
     SOLO.prev=document.activeElement; SOLO.fs=false; el.hidden=false; document.body.style.overflow='hidden';
     if(document.fullscreenEnabled && el.requestFullscreen && !document.fullscreenElement){ try{ el.requestFullscreen({ navigationUI:'hide' }).then(function(){ SOLO.fs=true; }).catch(function(){}); }catch(e){} }
     soloWake(); soloPoke(); try{ el.focus({ preventScroll:true }); }catch(e){}
-    var loop=function(now){ if(!soloIsOpen()){ SOLO.raf=0; return; } SOLO.raf=requestAnimationFrame(loop); try{ renderLamp($('soloCv'), now, 'solo'); }catch(e){ console.warn(e); } };
+    var loop=function(now){ if(!soloIsOpen()){ SOLO.raf=0; return; } SOLO.raf=requestAnimationFrame(loop); try{ SOLO.geom=renderLamp($('soloCv'), now, 'solo'); }catch(e){ console.warn(e); } };
     if(!SOLO.raf) SOLO.raf=requestAnimationFrame(loop);
   }
   function closeLampSolo(){
@@ -3326,8 +3329,14 @@
     SOLO.fs=false; if(SOLO.lock){ var l=SOLO.lock; SOLO.lock=null; l.release().catch(function(){}); }
     if(SOLO.prev && SOLO.prev.focus) try{ SOLO.prev.focus({ preventScroll:true }); }catch(e){}
   }
-  $('lampSolo').addEventListener('click', closeLampSolo);
-  $('lampSolo').addEventListener('pointermove', soloPoke);
+  // on black a click anywhere comes back, except on the mini radio, whose controls work here
+  $('lampSolo').addEventListener('pointerdown', function(e){ SOLO.eat=false; if(!SOLO.geom) return; var p=radPt(e,$('soloCv'),SOLO.geom), id=radHit(p); if(!id) return;
+    e.preventDefault(); SOLO.eat=true; try{ this.setPointerCapture(e.pointerId); }catch(_){ } radDown(id, p); });
+  $('lampSolo').addEventListener('pointermove', function(e){ soloPoke(); if(RAD.drag && SOLO.geom) radMove(radPt(e,$('soloCv'),SOLO.geom)); });
+  $('lampSolo').addEventListener('pointerup', function(e){ if(RAD.drag && SOLO.geom) radUp(radPt(e,$('soloCv'),SOLO.geom)); });
+  $('lampSolo').addEventListener('pointercancel', function(){ radUp(null, true); });
+  $('lampSolo').addEventListener('wheel', function(e){ if(!SOLO.geom || radHit(radPt(e,$('soloCv'),SOLO.geom))!=='vol') return; e.preventDefault(); radSetVol(radVol()-e.deltaY*0.0015); }, { passive:false });
+  $('lampSolo').addEventListener('click', function(){ if(SOLO.eat){ SOLO.eat=false; return; } closeLampSolo(); });
   // leaving full screen by the browser's own means (Esc, a gesture) leaves the black view too
   document.addEventListener('fullscreenchange', function(){ if(SOLO.fs && document.fullscreenElement!==$('lampSolo')){ SOLO.fs=false; closeLampSolo(); } });
   document.addEventListener('visibilitychange', function(){ if(soloIsOpen() && document.visibilityState==='visible') soloWake(); });
@@ -3361,14 +3370,20 @@
     nz=clampN(nz,1,8); var g=tvGeom;
     if(!g || mx==null){ TVZ.z=nz; clampPan(); return; }
     var lx=(mx-g.tx)/g.s, ly=(my-g.ty)/g.s, s1=g.s/TVZ.z*nz;
-    TVZ.x=(g.w/2-mx+lx*s1)/s1-TW/2; TVZ.y=(g.h/2-my+ly*s1)/s1-TH/2; TVZ.z=nz; clampPan();
+    TVZ.x=(g.w/2-mx+lx*s1)/s1-TW/2; TVZ.y=(g.h/2-my+ly*s1)/s1-(TVZ.subj==='lamp'?lampSceneH():TH)/2; TVZ.z=nz; clampPan();
   }
   function zoomStep(f){ var g=tvGeom; zoomAt(TVZ.z*f, g?g.w/2:null, g?g.h/2:null); }
   (function(){
     var cv=$('tvCv');
-    cv.addEventListener('pointerdown', function(e){ e.preventDefault(); cv.setPointerCapture(e.pointerId); tvPtr[e.pointerId]={ x:e.clientX, y:e.clientY };
+    cv.addEventListener('pointerdown', function(e){
+      var rp=(tvGeom && TVZ.subj==='lamp' && radioOn()) ? radPt(e,cv,tvGeom) : null, rid=radHit(rp);
+      if(rid){ e.preventDefault(); cv.setPointerCapture(e.pointerId); tvTap.ctl=true; tvTap.ctlT=performance.now(); clearTimeout(tvTap.t); radDown(rid, rp); return; }
+      tvTap.ctl=false;
+      e.preventDefault(); cv.setPointerCapture(e.pointerId); tvPtr[e.pointerId]={ x:e.clientX, y:e.clientY };
       if(Object.keys(tvPtr).length===1) tvTap={ x:e.clientX, y:e.clientY, moved:false, multi:false, t:tvTap.t }; else tvTap.multi=true; cv.classList.add('drag'); });
     cv.addEventListener('pointermove', function(e){
+      if(RAD.drag){ if(tvGeom) radMove(radPt(e,cv,tvGeom)); return; }
+      if(!Object.keys(tvPtr).length && tvGeom && TVZ.subj==='lamp'){ var hov=radHit(radPt(e,cv,tvGeom)); cv.style.cursor = hov && hov!=='body' ? 'pointer' : ''; }
       var p=tvPtr[e.pointerId]; if(!p) return; var ids=Object.keys(tvPtr);
       if(Math.abs(e.clientX-tvTap.x)+Math.abs(e.clientY-tvTap.y)>6) tvTap.moved=true;
       if(ids.length===1){ var s=tvGeom?tvGeom.s:1; TVZ.x-=(e.clientX-p.x)/s; TVZ.y-=(e.clientY-p.y)/s; clampPan(); }
@@ -3376,17 +3391,17 @@
         if(d0>0) zoomAt(TVZ.z*d1/d0, (e.clientX+other.x)/2-r.left, (e.clientY+other.y)/2-r.top); }
       p.x=e.clientX; p.y=e.clientY;
     });
-    function up(e){ delete tvPtr[e.pointerId]; if(!Object.keys(tvPtr).length) cv.classList.remove('drag'); }
+    function up(e){ if(RAD.drag){ radUp(tvGeom && e.type!=='pointercancel' ? radPt(e,cv,tvGeom) : null, e.type==='pointercancel'); } delete tvPtr[e.pointerId]; if(!Object.keys(tvPtr).length) cv.classList.remove('drag'); }
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    cv.addEventListener('wheel', function(e){ e.preventDefault(); var r=cv.getBoundingClientRect(); zoomAt(TVZ.z*Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, { passive:false });
+    cv.addEventListener('wheel', function(e){ e.preventDefault(); if(tvGeom && TVZ.subj==='lamp' && radHit(radPt(e,cv,tvGeom))==='vol'){ radSetVol(radVol()-e.deltaY*0.0015); return; } var r=cv.getBoundingClientRect(); zoomAt(TVZ.z*Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, { passive:false });
     // a single click on the lamp itself (not a drag, not half of a double click) shows it alone on black
     cv.addEventListener('click', function(e){
-      clearTimeout(tvTap.t); if(TVZ.subj!=='lamp' || tvTap.moved || tvTap.multi || e.detail>1 || !tvGeom) return;
+      clearTimeout(tvTap.t); if(tvTap.ctl || TVZ.subj!=='lamp' || tvTap.moved || tvTap.multi || e.detail>1 || !tvGeom) return;
       var r=cv.getBoundingClientRect(), lx=(e.clientX-r.left-tvGeom.tx)/tvGeom.s, ly=(e.clientY-r.top-tvGeom.ty)/tvGeom.s;
       if(Math.abs(lx-LCX)>36 || ly<6 || ly>197) return;
       tvTap.t=setTimeout(openLampSolo, 280);
     });
-    cv.addEventListener('dblclick', function(e){ clearTimeout(tvTap.t); var r=cv.getBoundingClientRect(); if(TVZ.z>1.05){ TVZ.z=1; clampPan(); } else zoomAt(3, e.clientX-r.left, e.clientY-r.top); });
+    cv.addEventListener('dblclick', function(e){ clearTimeout(tvTap.t); if(tvTap.ctl || performance.now()-(tvTap.ctlT||0)<700) return; var r=cv.getBoundingClientRect(); if(TVZ.z>1.05){ TVZ.z=1; clampPan(); } else zoomAt(3, e.clientX-r.left, e.clientY-r.top); });
     $('tvIn').onclick=function(){ zoomStep(1.4); }; $('tvOut').onclick=function(){ zoomStep(1/1.4); };
     $('tvFit').onclick=function(){ TVZ.z=1; clampPan(); };
     if(!document.fullscreenEnabled) $('tvFull').style.display='none';
@@ -4211,15 +4226,16 @@
     var Y0=g.Y0, Y1=g.Y1;
 
     // the room: the lamp lights the wall behind it and pools on the table (none of it on its own on black)
-    var room=o.view!=='solo';
+    var room=o.view!=='solo', radio=radioOn(), tableY=LFLOOR+(radio?RAD.extra:0);
     if(room && lit>0.01 && !thermal && !xray){ var br=110, bl=c.createRadialGradient(cx,92,4,cx,92,br); bl.addColorStop(0,rgba(glowC,clampN(0.2*lit,0,0.5))); bl.addColorStop(0.5,rgba(glowC,clampN(0.06*lit,0,0.2))); bl.addColorStop(1,rgba(glowC,0));
       c.fillStyle=bl; c.beginPath(); c.arc(cx,92,br,0,Math.PI*2); c.fill(); }
     if(room && P.synth){ c.save(); c.strokeStyle='rgba(255,40,200,0.22)'; c.lineWidth=0.5;
-      for(var gx=-6; gx<=6; gx++){ c.beginPath(); c.moveTo(cx+gx*6, LFLOOR); c.lineTo(cx+gx*40, LFLOOR+120); c.stroke(); } c.restore(); }
-    if(room){ var tg=c.createLinearGradient(0,LFLOOR,0,LFLOOR+30); tg.addColorStop(0,P.chassisCol[0]); tg.addColorStop(1,P.chassisCol[1]); c.fillStyle=tg; c.fillRect(-TW,LFLOOR,TW*3,TH);
-      c.fillStyle=P.chassisEdge; c.fillRect(-TW,LFLOOR,TW*3,0.6); }
-    if(room && lit>0.01) add(function(){ var pr=c.createRadialGradient(cx,LFLOOR+3,1,cx,LFLOOR+3,56); pr.addColorStop(0,rgba(glowC,clampN(0.3*lit,0,0.6))); pr.addColorStop(1,rgba(glowC,0));
-      c.save(); c.translate(cx,LFLOOR+3); c.scale(1,0.2); c.translate(-cx,-(LFLOOR+3)); c.fillStyle=pr; c.fillRect(cx-60,LFLOOR-60,120,120); c.restore(); });
+      for(var gx=-6; gx<=6; gx++){ c.beginPath(); c.moveTo(cx+gx*6, tableY); c.lineTo(cx+gx*40, tableY+120); c.stroke(); } c.restore(); }
+    if(room){ var tg=c.createLinearGradient(0,tableY,0,tableY+30); tg.addColorStop(0,P.chassisCol[0]); tg.addColorStop(1,P.chassisCol[1]); c.fillStyle=tg; c.fillRect(-TW,tableY,TW*3,TH);
+      c.fillStyle=P.chassisEdge; c.fillRect(-TW,tableY,TW*3,0.6); }
+    if(room && lit>0.01) add(function(){ var pr=c.createRadialGradient(cx,tableY+3,1,cx,tableY+3,56); pr.addColorStop(0,rgba(glowC,clampN((radio?0.18:0.3)*lit,0,0.6))); pr.addColorStop(1,rgba(glowC,0));
+      c.save(); c.translate(cx,tableY+3); c.scale(1,0.2); c.translate(-cx,-(tableY+3)); c.fillStyle=pr; c.fillRect(cx-60,tableY-60,120,120); c.restore(); });
+    if(radio) paintRadio(c, now, o, lit, glowC, add);
 
     // ---- the bottle: liquid, coil, wax, glass ----
     lampGlass(c, sim, 0, 26, 128); c.fillStyle= xray ? 'rgba(120,170,220,0.06)' : 'rgba(205,220,230,0.035)'; c.fill();
@@ -4272,12 +4288,12 @@
     c.beginPath(); c.ellipse(cx,LBASE,19.6,3.1,0,0,Math.PI); c.strokeStyle= lit>0.01 ? rgba(mix(glowC,[255,240,200],0.4),clampN(0.35+0.4*lit,0,1)) : 'rgba(255,255,255,0.18)'; c.lineWidth=0.8; c.stroke();
     if(lit>0.01) add(function(){ c.beginPath(); c.ellipse(cx,LBASE+0.4,19,2.7,0,0,Math.PI); c.strokeStyle=rgba(glowC,clampN(0.22*lit,0,0.5)); c.lineWidth=2.6; c.stroke(); });
     c.beginPath(); c.ellipse(cx,LFLOOR,33,4.8,0,0,Math.PI); c.strokeStyle='rgba(255,255,255,0.12)'; c.lineWidth=0.5; c.stroke();
-    if(o.view==='rack' && !on && LAMP.stat && LAMP.stat.melt<0.1){ c.fillStyle='#6a6a6a'; c.font='9px '+(FONT||getComputedStyle(document.body).fontFamily); c.textAlign='center'; c.fillText('OFF', cx, TH-3); c.textAlign='start'; }
+    if(o.view==='rack' && !on && LAMP.stat && LAMP.stat.melt<0.1){ c.fillStyle='#6a6a6a'; c.font='9px '+(FONT||getComputedStyle(document.body).fontFamily); c.textAlign='center'; c.fillText('OFF', cx, TH-3+(radio?RAD.extra:0)); c.textAlign='start'; }
   }
   function renderLamp(cv, now, view, z, px, py, q){
     var f=fitCanvas(cv, q); if(!f) return null; lampTick(now);
     var c=f.c, r=f.r, L=curLook(), W=cv.width, H=cv.height;
-    var solo=view==='solo', s=Math.min(f.w/TW, f.h/TH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=f.h/2-(TH/2+(py||0))*s;
+    var solo=view==='solo', SH=lampSceneH(), s=Math.min(f.w/TW, f.h/SH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=f.h/2-(SH/2+(py||0))*s;
     if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
     c.setTransform(1,0,0,1,0,0);
     var bg = solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
@@ -4287,6 +4303,161 @@
     return { s:s, tx:tx, ty:ty, w:f.w, h:f.h };
   }
   function drawLamp(now){ renderLamp($('lampCv'), now, 'rack'); }
+
+  // ---- the mini radio the lamp can stand on ----
+  // Under 2 inches tall at the lamp's scale (a 14.5 inch lamp, about 12.5 units to the inch): a walnut
+  // cabinet with a dark faceplate and no words on it. Left to right: the dial, whose needle is how far
+  // into the episode you are (tap or drag it to seek), with the sleep timer under it (the moon; its four
+  // lights are 15, 30, 60 minutes and end of episode); previous, back 15 s, play or pause, forward 15 s,
+  // skip; a five band EQ whose sliders move the rack's EQ around their own frequencies, keeping whatever
+  // shape it already has, with each band's live level lit in its slot; and the volume knob. Its controls
+  // work in the big view and on black; in the rack it is only drawn.
+  var RAD={ x0:6, x1:114, yb:184.5, yf:196, h:22, drag:null, press:null, seek:null, last:0, lvl:[0,0,0,0,0] };
+  RAD.extra=RAD.yf+RAD.h+1-LFLOOR;
+  var RAD_EQ=[60,250,1000,4000,12000], RAD_EQX=[88,91,94,97,100], RAD_TY0=200, RAD_TY1=213, RAD_BY=206.5, RAD_VX=106.5, RAD_SLEEP=['off','15','30','60','end'];
+  var RAD_BTN=[ { id:'prev', x:49, r:3 }, { id:'back', x:56.5, r:3 }, { id:'play', x:65, r:4 }, { id:'fwd', x:73.5, r:3 }, { id:'next', x:81, r:3 } ];
+  var RAD_DOM={ play:'playBtn', prev:'prevBtn', next:'skipBtn', back:'backBtn', fwd:'fwdBtn' };
+  function radioOn(){ return !!ADV.lampRadio; }
+  function lampSceneH(){ return TH+(radioOn()?RAD.extra:0); }
+  function radNearest(fc){ var f=ISO[ADV.bands], b=0, bd=1e9; for(var j=0;j<f.length;j++){ var d=Math.abs(Math.log(f[j]/fc)); if(d<bd){ bd=d; b=j; } } return b; }
+  function radEqVal(i){ return ADV.gains ? (ADV.gains[radNearest(RAD_EQ[i])]||0) : 0; }
+  function radYGain(y){ return clampN(12-(y-RAD_TY0)/(RAD_TY1-RAD_TY0)*24,-12,12); }
+  function radGainY(g){ return RAD_TY0+(12-g)/24*(RAD_TY1-RAD_TY0); }
+  // move the EQ around one slider's frequency by how far the slider moved, from where the drag began
+  function radEqSet(i, t){
+    var D=RAD.drag, f=ISO[ADV.bands], d=t-D.d0; if(!D.g0) return;
+    if(!ADV.eqOn) setModule('eqOn', true); else touchAdv();
+    for(var j=0;j<f.length;j++){ var o=Math.log(f[j]/RAD_EQ[i])/Math.LN2/1.1, w=Math.exp(-o*o*1.4); if(w<0.02) continue; setBandGain(j, D.g0[j]+d*w, true); }
+    EQV.dirty=true;
+  }
+  function radVol(){ var v=parseFloat($('vol').value); return isNaN(v)?0.9:v; }
+  function radSetVol(v){ var el=$('vol'); el.value=clampN(v,0,1); if(el.oninput) el.oninput.call(el); }
+  function radSleepIdx(){ var i=RAD_SLEEP.indexOf($('sleepSel').value); return i<0?0:i; }
+  function radSleepNext(){ var sel=$('sleepSel'); sel.value=RAD_SLEEP[(radSleepIdx()+1)%RAD_SLEEP.length]; if(sel.onchange) sel.onchange.call(sel); }
+  function radDialFrac(x){ return clampN((x-13.5)/27,0,1); }
+  function radCenter(id){ if(id==='dial') return { x:27, y:204 }; if(id==='sleep') return { x:15.5, y:212.2 }; if(id==='vol') return { x:RAD_VX, y:RAD_BY };
+    if(/^eq/.test(id)){ var i=+id.slice(2); return { x:RAD_EQX[i], y:radGainY(radEqVal(i)) }; }
+    for(var k=0;k<RAD_BTN.length;k++) if(RAD_BTN[k].id===id) return { x:RAD_BTN[k].x, y:RAD_BY }; return null; }
+  // where a pointer is in lamp units, from the geometry the last render used
+  function radPt(e, cv, g){ var r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left-g.tx)/g.s, y:(e.clientY-r.top-g.ty)/g.s }; }
+  function radHit(p){
+    if(!radioOn() || !p || p.y<RAD.yf || p.y>RAD.yf+RAD.h+1 || p.x<RAD.x0 || p.x>RAD.x1) return null;
+    if(p.x>=11 && p.x<=43) return p.y<=209.4 ? 'dial' : p.x<=31 ? 'sleep' : 'body';
+    for(var i=0;i<RAD_BTN.length;i++){ var b=RAD_BTN[i], lo=i?(RAD_BTN[i-1].x+b.x)/2:b.x-4.2, hi=i<RAD_BTN.length-1?(b.x+RAD_BTN[i+1].x)/2:b.x+4.2; if(p.x>=lo && p.x<hi) return b.id; }
+    for(i=0;i<RAD_EQX.length;i++) if(Math.abs(p.x-RAD_EQX[i])<=1.5) return 'eq'+i;
+    if(p.x>=102.5) return 'vol';
+    return 'body';
+  }
+  function radDown(id, p){
+    RAD.drag={ id:id, p0:p }; RAD.press=null;
+    if(id==='dial') RAD.seek=radDialFrac(p.x);
+    else if(/^eq/.test(id)){ var i=+id.slice(2); if(ADV.gains){ RAD.drag.g0=ADV.gains.slice(); RAD.drag.d0=radEqVal(i); radEqSet(i, radYGain(p.y)); } }
+    else if(id==='vol') RAD.drag.v0=radVol();
+    else if(id!=='body') RAD.press=id;
+  }
+  function radMove(p){ var D=RAD.drag; if(!D) return;
+    if(D.id==='dial') RAD.seek=radDialFrac(p.x);
+    else if(/^eq/.test(D.id)) radEqSet(+D.id.slice(2), radYGain(p.y));
+    else if(D.id==='vol') radSetVol(D.v0+(D.p0.y-p.y)/12+(p.x-D.p0.x)/24);
+    else if(D.id!=='body') RAD.press = radHit(p)===D.id ? D.id : null;
+  }
+  function radUp(p, cancel){ var D=RAD.drag; RAD.drag=null; if(!D){ RAD.press=null; return; }
+    if(D.id==='dial'){ var f=RAD.seek; RAD.seek=null; if(!cancel && f!=null && audio.duration) seekTo(f*audio.duration); }
+    else if(!cancel && RAD.press===D.id){ if(RAD_DOM[D.id]) $(RAD_DOM[D.id]).click(); else if(D.id==='sleep') radSleepNext(); }
+    RAD.press=null;
+  }
+  // live level in each of the five bands, from the rack EQ's analyser (dark when nothing is measured)
+  function radLevels(now, o){
+    var dt=Math.min(0.1,(now-(RAD.last||now))/1000); RAD.last=now;
+    if(o.view!=='rack') bandLevels(dt, now);
+    var f=ISO[ADV.bands];
+    for(var i=0;i<5;i++){ var top=-140; for(var j=0;j<f.length;j++){ if(Math.abs(Math.log(f[j]/RAD_EQ[i])/Math.LN2)<=0.75 && EQV.lv[j]!=null) top=Math.max(top, EQV.lv[j]); }
+      var t=(eqAn && !audio.paused) ? clampN((top-LED_MIN)/(LED_MAX-LED_MIN),0,1) : 0; RAD.lvl[i]+= (t-RAD.lvl[i])*(t>RAD.lvl[i]?0.6:0.15); }
+  }
+  function radRR(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r); c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath(); }
+  function radIcon(c, id, x, y, u, playing){
+    c.beginPath();
+    if(id==='play' && playing){ c.rect(x-u*0.85,y-u,u*0.6,u*2); c.rect(x+u*0.25,y-u,u*0.6,u*2); c.fill(); return; }
+    if(id==='play'){ c.moveTo(x-u*0.7,y-u*1.1); c.lineTo(x+u*1.15,y); c.lineTo(x-u*0.7,y+u*1.1); c.closePath(); c.fill(); return; }
+    if(id==='prev'||id==='next'){ var m=id==='prev'?1:-1; c.rect(x-m*u*1.05-u*0.18,y-u,u*0.36,u*2); c.moveTo(x+m*u*0.95,y-u); c.lineTo(x+m*u*0.95,y+u); c.lineTo(x-m*u*0.6,y); c.closePath(); c.fill(); return; }
+    var R=u*1.15, back=id==='back'; c.lineWidth=u*0.32; c.beginPath();
+    if(back) c.arc(x,y,R,-Math.PI/2+0.35,-Math.PI/2+5.0,false); else c.arc(x,y,R,-Math.PI/2-0.35,-Math.PI/2-5.0,true);
+    c.stroke(); c.beginPath(); var tx=back?x-u*0.55:x+u*0.55; c.moveTo(tx,y-R); c.lineTo(back?x+u*0.35:x-u*0.35,y-R-u*0.65); c.lineTo(back?x+u*0.35:x-u*0.35,y-R+u*0.65); c.closePath(); c.fill();
+    c.beginPath(); c.arc(x,y,u*0.22,0,Math.PI*2); c.fill();
+  }
+  function paintRadio(c, now, o, lit, glowC, add){
+    var x0=RAD.x0, x1=RAD.x1, yb=RAD.yb, yf=RAD.yf, yB=yf+RAD.h, cx=LCX, playing=!audio.paused, amber=[255,196,107], L=Math.min(1,lit);
+    radLevels(now, o);
+    c.save();
+    // feet and the cabinet's shadow on the table
+    c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(x0+2, yB, x1-x0-4, 1);
+    c.fillStyle='#0b0805'; c.fillRect(x0+6, yB-0.2, 10, 1.2); c.fillRect(x1-16, yB-0.2, 10, 1.2);
+    // walnut top, seen from a little above like the lamp's base, lit by the lamp
+    c.beginPath(); c.moveTo(x0+3.2,yb); c.lineTo(x1-3.2,yb); c.quadraticCurveTo(x1-0.4,yb+0.4,x1,yf); c.lineTo(x0,yf); c.quadraticCurveTo(x0+0.4,yb+0.4,x0+3.2,yb); c.closePath();
+    var tg=c.createLinearGradient(0,yb,0,yf); tg.addColorStop(0,'#1e1007'); tg.addColorStop(1,'#4e2c15'); c.fillStyle=tg; c.fill();
+    c.save(); c.clip(); c.strokeStyle='rgba(0,0,0,0.22)'; c.lineWidth=0.22;
+    for(var k=0;k<6;k++){ var gy=yb+1.2+k*1.85; c.beginPath(); c.moveTo(x0, gy); c.bezierCurveTo(cx-25,gy+0.7,cx+20,gy-0.7,x1,gy+0.25); c.stroke(); } c.restore();
+    c.beginPath(); c.ellipse(cx, LFLOOR+0.6, 35, 5.4, 0, 0, Math.PI*2); c.fillStyle='rgba(0,0,0,0.38)'; c.fill();
+    if(lit>0.01) add(function(){ var g=c.createRadialGradient(cx,LFLOOR,4,cx,LFLOOR,58); g.addColorStop(0,rgba(glowC,clampN(0.42*lit,0,0.7))); g.addColorStop(1,rgba(glowC,0));
+      c.save(); c.beginPath(); c.moveTo(x0+3.2,yb); c.lineTo(x1-3.2,yb); c.lineTo(x1,yf); c.lineTo(x0,yf); c.closePath(); c.clip(); c.translate(cx,LFLOOR); c.scale(1,0.22); c.translate(-cx,-LFLOOR);
+      c.fillStyle=g; c.fillRect(cx-60,LFLOOR-60,120,120); c.restore(); });
+    // walnut front frame, darker away from the light
+    radRR(c, x0, yf, x1-x0, RAD.h, 1.6);
+    var fg=c.createLinearGradient(x0,0,x1,0); fg.addColorStop(0,'#1a0d05'); fg.addColorStop(0.5,'#3d2210'); fg.addColorStop(1,'#1a0d05'); c.fillStyle=fg; c.fill();
+    c.fillStyle='rgba(0,0,0,'+(0.5*(1-L)).toFixed(3)+')'; c.fill();
+    c.fillStyle=rgba(mix([255,215,160],glowC,0.4), 0.12+0.2*L); c.fillRect(x0+0.6,yf,x1-x0-1.2,0.45);
+    // the faceplate
+    var fx0=x0+3, fx1=x1-3, fy0=yf+2, fy1=yB-2.4;
+    radRR(c, fx0, fy0, fx1-fx0, fy1-fy0, 1.1); var pg=c.createLinearGradient(0,fy0,0,fy1); pg.addColorStop(0,'#1d1d20'); pg.addColorStop(1,'#0c0c0e'); c.fillStyle=pg; c.fill();
+    c.strokeStyle='rgba(255,255,255,0.09)'; c.lineWidth=0.3; c.stroke();
+    // the dial: needle at how far into the episode you are
+    var dx0=12, dx1=42, dy0=200, dy1=208.6, dur=audio.duration, frac=RAD.seek!=null ? RAD.seek : (dur && isFinite(dur) ? clampN((audio.currentTime||0)/dur,0,1) : 0), on=playing||RAD.seek!=null;
+    radRR(c, dx0, dy0, dx1-dx0, dy1-dy0, 0.7); var dg=c.createLinearGradient(dx0,0,dx1,0), bl=on?1:0.55;
+    dg.addColorStop(0,rgba([58,30,6],1)); dg.addColorStop(0.5,rgba([Math.round(130*bl),Math.round(76*bl),Math.round(18*bl)],1)); dg.addColorStop(1,rgba([58,30,6],1)); c.fillStyle=dg; c.fill();
+    c.strokeStyle='rgba(0,0,0,0.7)'; c.lineWidth=0.35; c.stroke();
+    c.strokeStyle='rgba(25,12,0,0.75)'; c.lineWidth=0.2;
+    for(k=0;k<=20;k++){ var tx=13.5+k*27/20, tl=k%5===0?2.2:1.1; c.beginPath(); c.moveTo(tx,dy1-0.9); c.lineTo(tx,dy1-0.9-tl); c.stroke(); }
+    c.beginPath(); c.moveTo(13.5,dy0+2.2); c.lineTo(40.5,dy0+2.2); c.stroke();
+    var nx=13.5+frac*27; add(function(){ c.strokeStyle='rgba(255,90,40,0.35)'; c.lineWidth=1.1; c.beginPath(); c.moveTo(nx,dy0+0.9); c.lineTo(nx,dy1-0.9); c.stroke(); });
+    c.strokeStyle= dur ? '#ff5326' : 'rgba(255,83,38,0.45)'; c.lineWidth=0.42; c.beginPath(); c.moveTo(nx,dy0+0.9); c.lineTo(nx,dy1-0.9); c.stroke();
+    var gl=c.createLinearGradient(0,dy0,0,dy1); gl.addColorStop(0,'rgba(255,255,255,0.14)'); gl.addColorStop(0.45,'rgba(255,255,255,0.02)'); gl.addColorStop(1,'rgba(255,255,255,0)'); radRR(c, dx0+0.3, dy0+0.3, dx1-dx0-0.6, (dy1-dy0)*0.5, 0.5); c.fillStyle=gl; c.fill();
+    // sleep: a moon and its four lights (15, 30, 60 minutes, end of episode)
+    var si=radSleepIdx(), sx=15.5, sy=212.2, sOn=si>0, blink=sOn && SLEEP.until && (SLEEP.until-Date.now())<SLEEP_FADE*1000 && Math.floor(now/400)%2;
+    c.beginPath(); c.arc(sx,sy+(RAD.press==='sleep'?0.25:0),2.1,0,Math.PI*2); var sg=c.createRadialGradient(sx-0.8,sy-0.8,0.2,sx,sy,2.1); sg.addColorStop(0,'#46464a'); sg.addColorStop(1,'#141416'); c.fillStyle=sg; c.fill();
+    c.strokeStyle='rgba(255,255,255,0.14)'; c.lineWidth=0.2; c.stroke();
+    c.fillStyle=rgba(amber, sOn?0.95:0.45); c.beginPath(); c.arc(sx,sy,1.05,0,Math.PI*2); c.fill(); c.fillStyle='#2a2a2e'; c.beginPath(); c.arc(sx+0.55,sy-0.4,0.9,0,Math.PI*2); c.fill();
+    for(k=1;k<=4;k++){ var lx=17.5+k*3, lon=si===k && !blink; c.beginPath(); c.arc(lx,sy,0.62,0,Math.PI*2); c.fillStyle= lon ? '#ffb347' : '#3a2a18'; c.fill();
+      if(lon) add(function(){ c.beginPath(); c.arc(lx,sy,1.5,0,Math.PI*2); c.fillStyle='rgba(255,170,60,0.25)'; c.fill(); }); }
+    // a little grille
+    c.fillStyle='#050505'; for(k=0;k<4;k++){ radRR(c, 32.5, 210.6+k*1.05, 9.5, 0.5, 0.25); c.fill(); }
+    // transport
+    RAD_BTN.forEach(function(b){
+      var el=$(RAD_DOM[b.id]), ok=!(el && el.disabled), pr=RAD.press===b.id, by=RAD_BY+(pr?0.3:0);
+      c.beginPath(); c.arc(b.x,RAD_BY+0.35,b.r+0.45,0,Math.PI*2); c.fillStyle='rgba(0,0,0,0.65)'; c.fill();
+      c.beginPath(); c.arc(b.x,by,b.r,0,Math.PI*2); var bg=c.createRadialGradient(b.x-b.r*0.4,by-b.r*0.5,0.2,b.x,by,b.r); bg.addColorStop(0,pr?'#2c2c30':'#4c4c52'); bg.addColorStop(1,'#121214'); c.fillStyle=bg; c.fill();
+      c.strokeStyle='rgba(255,255,255,0.16)'; c.lineWidth=0.22; c.stroke();
+      if(b.id==='play' && playing) add(function(){ c.beginPath(); c.arc(b.x,by,b.r+0.6,0,Math.PI*2); c.strokeStyle='rgba(255,170,60,0.45)'; c.lineWidth=0.5; c.stroke(); });
+      c.fillStyle=rgba(amber, ok?0.92:0.32); c.strokeStyle=c.fillStyle; radIcon(c, b.id, b.x, by, b.r*0.42, playing);
+    });
+    // the five band EQ: a slot each, lit to the band's live level, and its slider
+    for(var i=0;i<5;i++){ var ex=RAD_EQX[i];
+      radRR(c, ex-0.5, RAD_TY0-0.4, 1, RAD_TY1-RAD_TY0+0.8, 0.45); c.fillStyle='#040404'; c.fill();
+      var segs=10, litN=Math.round(RAD.lvl[i]*segs);
+      for(k=0;k<segs;k++){ var syk=RAD_TY1-0.2-(k+1)*(RAD_TY1-RAD_TY0)/segs; c.fillStyle= k<litN ? (k>=8 ? '#ff5a2a' : k>=6 ? '#ffb347' : '#e8a040') : 'rgba(255,170,60,0.07)'; c.fillRect(ex-0.32, syk+0.15, 0.64, (RAD_TY1-RAD_TY0)/segs-0.3); }
+      c.fillStyle='rgba(255,255,255,0.16)'; c.fillRect(ex-1.4, (RAD_TY0+RAD_TY1)/2-0.08, 0.5, 0.16); c.fillRect(ex+0.9, (RAD_TY0+RAD_TY1)/2-0.08, 0.5, 0.16);
+      var cy=radGainY(radEqVal(i)), cg=c.createLinearGradient(0,cy-0.7,0,cy+0.7); cg.addColorStop(0,'#e4e4e8'); cg.addColorStop(1,'#6a6a70');
+      c.fillStyle='rgba(0,0,0,0.6)'; c.fillRect(ex-1.25, cy-0.55, 2.5, 1.4); c.fillStyle=cg; c.fillRect(ex-1.2, cy-0.7, 2.4, 1.4); c.fillStyle='#2a2a2e'; c.fillRect(ex-1.2, cy-0.06, 2.4, 0.14);
+    }
+    // volume: knob with its pointer, and a light arc for the level
+    var vv=radVol(), a0=Math.PI*0.75, a1=a0+Math.PI*1.5*vv, vr=3.3;
+    c.lineWidth=0.4; c.strokeStyle='rgba(255,170,60,0.12)'; c.beginPath(); c.arc(RAD_VX,RAD_BY,vr+0.9,a0,a0+Math.PI*1.5); c.stroke();
+    c.strokeStyle='rgba(255,180,80,0.85)'; c.beginPath(); c.arc(RAD_VX,RAD_BY,vr+0.9,a0,a1); c.stroke();
+    c.beginPath(); c.arc(RAD_VX,RAD_BY+0.35,vr+0.3,0,Math.PI*2); c.fillStyle='rgba(0,0,0,0.6)'; c.fill();
+    c.beginPath(); c.arc(RAD_VX,RAD_BY,vr,0,Math.PI*2); var kg=c.createRadialGradient(RAD_VX-1.2,RAD_BY-1.4,0.3,RAD_VX,RAD_BY,vr); kg.addColorStop(0,'#b8b8be'); kg.addColorStop(0.55,'#55555c'); kg.addColorStop(1,'#1c1c20'); c.fillStyle=kg; c.fill();
+    c.strokeStyle='rgba(0,0,0,0.35)'; c.lineWidth=0.18; for(k=0;k<18;k++){ var ka=k*Math.PI*2/18; c.beginPath(); c.moveTo(RAD_VX+Math.cos(ka)*(vr-0.6),RAD_BY+Math.sin(ka)*(vr-0.6)); c.lineTo(RAD_VX+Math.cos(ka)*vr,RAD_BY+Math.sin(ka)*vr); c.stroke(); }
+    c.strokeStyle='#ffc46b'; c.lineWidth=0.45; c.beginPath(); c.moveTo(RAD_VX+Math.cos(a1)*0.9,RAD_BY+Math.sin(a1)*0.9); c.lineTo(RAD_VX+Math.cos(a1)*(vr-0.7),RAD_BY+Math.sin(a1)*(vr-0.7)); c.stroke();
+    c.restore();
+  }
 
   // Graphic EQ: LED ladder per band (live spectrum, peak hold), fader caps, and the summed curve.
   var EQV = { sel:-1, hover:-1, lv:[], pk:[], pkT:[], drag:null, dirty:true, curve:null, last:0 };
@@ -4668,6 +4839,8 @@
         bench: function(n, which){ var cv=$(which==='rack'?'lampCv':'tvCv'), t0=performance.now(); n=n||30;
           for(var i=0;i<n;i++){ renderLamp(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
         solo: function(v){ if(v===true) openLampSolo(); else if(v===false) closeLampSolo(); return soloIsOpen(); },
+        radio: function(){ return { on:radioOn(), eq:[0,1,2,3,4].map(radEqVal), lvl:RAD.lvl.slice(), vol:radVol(), sleep:$('sleepSel').value, sceneH:lampSceneH() }; },
+        radioAt: function(id, which){ var solo=which==='solo', cv=$(solo?'soloCv':'tvCv'), g=solo?SOLO.geom:tvGeom, p=radCenter(id); if(!g||!p) return null; var r=cv.getBoundingClientRect(); return { x:r.left+g.tx+p.x*g.s, y:r.top+g.ty+p.y*g.s, s:g.s }; },
         stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; }
       },
       // Test-only: decode the start of a real recording (byte range) and report the energy in the
