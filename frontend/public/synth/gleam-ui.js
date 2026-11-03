@@ -277,6 +277,7 @@ export function createGleamHost() {
     send({
       t: 'voice', id, slot, on: true, trig: !!trig,
       hz: msg.hz, y: msg.y, level: msg.level, pan: msg.pan, gain: msg.gain, send: msg.send,
+      vel: clamp(ev.z == null ? 0.8 : +ev.z, 0, 1),   // the touch's pressure, for the tube show's flare
     });
     if (graph) graph.place(slot, msg.pan, msg.depth);
   }
@@ -621,6 +622,7 @@ export function createGleamHost() {
         meter.peak = m.peak || 0;
         meter.voices = m.voices || 0;
         meter.slots = m.slots || [];
+        if (m.ons != null) { meter.ons = m.ons; meter.onv = m.onv || 0; }
       };
       fx = createGleamFx(audioCtx);
       if (standalone) {

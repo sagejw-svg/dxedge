@@ -483,6 +483,7 @@ export function createLatticeEngine(sampleRate, patch) {
     decL: createDecimator(taps), decR: createDecimator(taps),
     dcLx: 0, dcL: 0, dcRx: 0, dcR: 0,
     meterN: 0, cpuMs: 0, cpuFrames: 0, peak: 0,
+    ons: 0, onv: 0,            // note-ons so far and the last one's velocity (the tube show's flares)
     vis: { pos1: 0.15, pos2: 0.4, lfo: [0, 0, 0, 0], env: [0, 0, 0], slots: [], voices: 0 },
     onMeter: null,
   };
@@ -512,6 +513,7 @@ function noteOn(eng, n, vel) {
   }
   slot.on = true; slot.held = true; slot.note = note;
   slot.vel = clamp(num(vel, 0.8), 0, 1);
+  eng.ons++; eng.onv = slot.vel;
   slot.age = ++eng.age;
   slot.envA.stage = 'a'; slot.envA.v = 0;
   slot.envF.stage = 'a'; slot.envF.v = 0;
@@ -907,7 +909,7 @@ export function renderBlock(eng, outL, outR, start) {
       voices: sounding, cpu: eng.cpuFrames ? eng.cpuMs / (eng.cpuFrames / sr * 1000) : 0,
       pos1: eng.vis.pos1, pos2: eng.vis.pos2,
       lfo: eng.vis.lfo.slice(), env: eng.vis.env.slice(), slots: eng.vis.slots.slice(),
-      peak: eng.peak,
+      peak: eng.peak, ons: eng.ons, onv: eng.onv,
     });
     eng.meterN = 0; eng.peak = 0;
     if (eng.cpuFrames > sr) { eng.cpuMs *= 0.5; eng.cpuFrames *= 0.5; }

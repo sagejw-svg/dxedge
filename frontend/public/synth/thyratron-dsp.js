@@ -195,6 +195,7 @@ function noteOn(eng, n, v) {
   const st = eng.stack;
   for (let i = st.length - 1; i >= 0; i--) if (st[i].n === n) st.splice(i, 1);
   st.push({ n, v: vel });
+  eng.ons++; eng.onv = vel;
   const fresh = eng.envA.stage === 'off' || eng.envA.v < 0.0008;
   eng.target = n;
   eng.vel = vel;
@@ -322,6 +323,7 @@ export function createThyEngine(sampleRate, patch) {
     cpuFrames: 0,
     acc: 0,
     accN: 0,
+    ons: 0, onv: 0,            // note-ons so far and the last one's velocity (the tube show's flares)
     onMeter: null,
   };
 }
@@ -341,7 +343,7 @@ export function renderThy(eng, outL, outR, start) {
   if (sleeping) {
     if (!eng.toldSleep && eng.onMeter) {
       eng.toldSleep = true;
-      eng.onMeter({ t: 'meter', dev: 'thyratron', voices: 0, notes: [], v1: 0, cpu: 0 });
+      eng.onMeter({ t: 'meter', dev: 'thyratron', voices: 0, notes: [], v1: 0, cpu: 0, ons: eng.ons, onv: eng.onv });
     }
     for (let i = 0; i < n; i++) { outL[i] = 0; if (outR !== outL) outR[i] = 0; }
     return;
@@ -422,6 +424,7 @@ export function renderThy(eng, outL, outR, start) {
       notes: eng.stack.map(s => s.n),
       v1: Math.sqrt(eng.acc / Math.max(1, eng.accN)),
       cpu: eng.cpuFrames ? eng.cpuMs / (eng.cpuFrames / sr * 1000) : 0,
+      ons: eng.ons, onv: eng.onv,
     });
     eng.meterN = 0; eng.acc = 0; eng.accN = 0;
     if (eng.cpuFrames > sr) { eng.cpuMs *= 0.5; eng.cpuFrames *= 0.5; }

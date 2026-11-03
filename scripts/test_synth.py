@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -2701,6 +2701,47 @@ with sync_playwright() as pw:
     pk_c = pg.evaluate("__synth.patch().lpf.peak"); cs = pg.evaluate(TV_PEAK, {"notes": [48], "v": 0.9, "ms": 700})
     ck(f"Tv. Cathode: a note flares its tubes (V1 took {cs['end']['fired']['v1']:.2f}, drawn {cs['end']['drawn']['v1']:.2f}; sampled peak {cs['pk']['v1']:.2f}) and V2 follows the low-pass peak (peak {pk_c}, shown {cs['end']['res']:.2f})",
        tv_fired(cs) and cs["end"]["fired"]["v1"] > 0.5 and cs["end"]["drawn"]["v1"] > 0 and abs(cs["end"]["res"] - pk_c) < 0.1 and cs["end"]["shimmer"] == (pk_c >= 0.88), cs)
+    # Dekatron, Thyratron, Lattice and Gleam flare from the note-on count on their own meter (3 Nov), so what
+    # reaches them past the page's keys flares too: a routed song note (the library's path, __synth.routeHit),
+    # Dekatron's own pattern, a Gleam finger. Before, only the page's keys and MIDI flared them. Each check waits
+    # on the show's own counters (fires, onsets, meterFlares) up to 3 s, then holds 300 ms so a second flare
+    # from the same note would be counted.
+    TV_ONS = """async (a) => { const S = () => __synth.tubeShow(); await __synth.engine().ctx.resume(); const s0 = S();
+      a.go(); const t0 = performance.now();
+      while (performance.now() - t0 < 3000) { const s = S(); if (s.fires.v1 >= s0.fires.v1 + a.want && s.onsets >= s0.onsets + a.want) break; await new Promise(r => setTimeout(r, 10)); }
+      await new Promise(r => setTimeout(r, 300)); const s = S(); if (a.stop) a.stop(); await new Promise(r => setTimeout(r, 150));
+      return { onsets: s.onsets - s0.onsets, fires: s.fires.v1 - s0.fires.v1, meter: s.meterFlares - s0.meterFlares, fired: s.fired.v1, dev: s.meterDev }; }"""
+    def tv_ons(go, stop=None, want=1):
+        return pg.evaluate("(a) => (" + TV_ONS + ")({ want: a.want, go: () => eval(a.go), stop: a.stop ? () => eval(a.stop) : null })", {"go": go, "stop": stop, "want": want})
+    pg.evaluate("__synth.setTubeShow('full')")
+    ons_k, ons_r = {}, {}
+    for d_id in ("thyratron", "lattice", "gleam", "dekatron"):
+        pg.evaluate(f"__synth.setDevice('{d_id}')"); pg.wait_for_timeout(400)
+        ons_k[d_id] = tv_ons("__synth.noteOn(36, 0.9)", "__synth.noteOff(36)")
+        ons_r[d_id] = tv_ons(f"__synth.routeHit('{d_id}', true, 38, 0.9)", f"__synth.routeHit('{d_id}', false, 38, 0)")
+    ck(f"Tv. Dekatron, Thyratron, Lattice, Gleam: a key is one flare, taken from the device's meter (onsets {[ons_k[k]['onsets'] for k in ons_k]}, from the meter {[ons_k[k]['meter'] for k in ons_k]})",
+       all(r["onsets"] == 1 and r["fires"] == 1 and r["meter"] == 1 for r in ons_k.values()), ons_k)
+    ck(f"Tv. a song note routed past the page's keys flares those four (onsets {[ons_r[k]['onsets'] for k in ons_r]}, V1 fired {[ons_r[k]['fires'] for k in ons_r]})",
+       all(r["onsets"] == 1 and r["fires"] == 1 and r["fired"] > 0.5 for r in ons_r.values()), ons_r)
+    pg.evaluate("__synth.setDevice('thyratron')"); pg.wait_for_timeout(300)
+    tq = tv_ons("__synth.routeHit('thyratron', true, 40, 0.3)", "__synth.routeHit('thyratron', false, 40, 0)")
+    tl = tv_ons("__synth.routeHit('thyratron', true, 41, 1.0)", "__synth.routeHit('thyratron', false, 41, 0)")
+    ck(f"Tv. a routed note's flare scales with its velocity (Thyratron V1 took {tq['fired']:.2f} at 0.3, {tl['fired']:.2f} at 1.0)",
+       tq["fires"] == 1 and tl["fires"] == 1 and 0.05 < tq["fired"] < 0.5 * tl["fired"], (tq, tl))
+    pg.evaluate("__synth.setDevice('gleam')"); pg.wait_for_timeout(300)
+    gf = tv_ons("""(() => { const g = __synth.gleam(); g.pointer('down', { id: 81, x: 0.3, y: 0.5, z: 0.8 });
+      [0.35, 0.4, 0.45, 0.5, 0.55].forEach((x, i) => setTimeout(() => g.pointer('move', { id: 81, x, y: 0.5, z: 0.8 }), 30 * (i + 1))); })()""",
+      "__synth.gleam().pointer('up', { id: 81, x: 0.55, y: 0.5, z: 0.8 })")
+    ck(f"Tv. Gleam: a finger that slides is one flare (onsets {gf['onsets']}, V1 fired {gf['fires']})", gf["onsets"] == 1 and gf["fires"] == 1, gf)
+    # Dekatron's own pattern on the rack's transport: one flare per hit, none once it stops
+    pg.evaluate("__synth.setDevice('dekatron')"); pg.wait_for_timeout(300)
+    dp = pg.evaluate("""async () => { await __synth.engine().ctx.resume(); const S = () => __synth.tubeShow(), M = () => __synth.drumMeter();
+      const s0 = S(), m0 = M(); __synth.transport().locate(0); __synth.transport().play(); await new Promise(r => setTimeout(r, 2000));
+      __synth.transport().stop(); await new Promise(r => setTimeout(r, 400)); const s1 = S(), m1 = M();
+      await new Promise(r => setTimeout(r, 800)); const s2 = S();
+      return { hits: (m1.ons || 0) - (m0.ons || 0), onsets: s1.onsets - s0.onsets, fires: s1.fires.v1 - s0.fires.v1, fires3: s1.fires.v3 - s0.fires.v3, after: s2.onsets - s1.onsets }; }""")
+    ck(f"Tv. Dekatron's own pattern flares the chassis, one flare per hit ({dp['onsets']} flares for {dp['hits']} hits in 2 s; V1 {dp['fires']}, V3 {dp['fires3']}), and nothing once it stops ({dp['after']})",
+       dp["hits"] >= 6 and dp["hits"] - 6 <= dp["onsets"] <= dp["hits"] and dp["fires"] == dp["onsets"] and dp["fires3"] == dp["onsets"] and dp["after"] == 0, dp)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(300)
     # the chip, remembered per browser; reduced motion keeps only the steady glow
     tctx = b.new_context(viewport={"width": 1366, "height": 900}); tp = tctx.new_page(); terr = []; tp.on("pageerror", lambda e: terr.append(str(e)))
@@ -2720,6 +2761,12 @@ with sync_playwright() as pw:
     ck(f"Tv. reduced motion: no flares and no arcs on a clipping chord (arcs {rf['end']['arcs']}, flare {rf['pk']['v1']})", rf["end"]["reduced"] and rf["end"]["arcs"] == 0 and rf["pk"]["v1"] == 0 and rf["end"]["fires"]["v1"] == rf["start"]["fires"]["v1"] and rf["end"]["drawn"]["v1"] == 0, rf)
     ck(f"Tv. reduced motion keeps the steady glow (heat {rf['end']['heat']['v1']:.2f}, blue {rf['end']['blue']['v3']:.2f}) and no shimmer (resonance {rr['res']:.2f})",
        rf["end"]["heat"]["v1"] > 0.4 and rf["end"]["blue"]["v3"] > 0.3 and rr["res"] > 0.8 and not rr["shimmer"], (rf, rr))
+    rp.evaluate("__synth.setDevice('dekatron')"); rp.wait_for_timeout(300)
+    rd = rp.evaluate("""async () => { await __synth.engine().ctx.resume(); const S = () => __synth.tubeShow(), M = () => __synth.drumMeter();
+      const s0 = S(), m0 = M(); __synth.transport().locate(0); __synth.transport().play(); await new Promise(r => setTimeout(r, 1500));
+      __synth.transport().stop(); await new Promise(r => setTimeout(r, 300)); const s1 = S(), m1 = M();
+      return { hits: (m1.ons || 0) - (m0.ons || 0), onsets: s1.onsets - s0.onsets, fires: s1.fires.v1 - s0.fires.v1, drawn: s1.drawn.v1 }; }""")
+    ck(f"Tv. reduced motion: Dekatron's pattern ({rd['hits']} hits) flares nothing", rd["hits"] >= 4 and rd["onsets"] == 0 and rd["fires"] == 0, rd)
     ck("Tv. reduced motion: no page errors", not rerr, rerr)
     rctx.close()
     # The draw time is a smoothed wall-clock figure (about 10 frames). Read straight after the two pages

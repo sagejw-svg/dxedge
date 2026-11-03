@@ -4,7 +4,9 @@
 // output analysers the page already reads, once per chassis frame, and tubepaint.js draws it.
 //
 //   flare   every note-on flares V1 at once, then V2, then the output pair, scaled by velocity,
-//           decaying with a 150 ms time constant
+//           decaying with a 150 ms time constant. Filament and Cathode flare from the page's keys and
+//           the note numbers on their meter; Dekatron, Thyratron, Lattice and Gleam from the note-on
+//           count on theirs, so their own patterns, fingers and routed songs flare too
 //   heat    drive and the actual signal level push the plates from grey through cherry red to orange
 //   arc     a hard clip in a tube stage or at the output ceiling fires a blue-white arc (rate limited)
 //   blue    blue fluorescence on the power tubes (V3, V4) that follows the output level
@@ -54,6 +56,16 @@ export function showNote(S, vel) {
   S.onsets++;
   TUBES.forEach(k => S.pend.push({ k, t0: S.t, at: S.t + FLARE_LAG[k], v: k === 'v1' ? v : v * 0.85 }));
   if (S.pend.length > 64) S.pend.splice(0, S.pend.length - 64);
+}
+// A device whose meter counts its own note-ons (Dekatron, Thyratron, Lattice, Gleam: their patterns,
+// fingers and the song library reach them without passing the page's keys). count is how many arrived
+// since the last frame, vel the last one's velocity. One flare each, at most MAX_ONSETS a frame, so a
+// burst after a hidden tab does not queue a wall of them.
+const MAX_ONSETS = 6;
+export function showOnsets(S, count, vel) {
+  const n = Math.min(MAX_ONSETS, Math.max(0, count | 0));
+  for (let i = 0; i < n; i++) showNote(S, vel > 0 ? Math.min(1, vel) : 0.8);
+  return n;
 }
 // Note numbers from a meter; anything new since the last one is a note-on (keys, MIDI, the deck).
 export function showNotes(S, notes, velOf, skip) {

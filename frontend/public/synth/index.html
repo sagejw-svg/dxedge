@@ -1550,7 +1550,7 @@ import { makeKnob } from './knob.js';
 import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
 import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz, springToneHz } from './rack.js';
 import { paintTubeState, paintTubeShow, fitCanvas } from './tubepaint.js';
-import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, stepShow, showFor, showState } from './tubeshow.js';
+import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, showOnsets, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
 import { createPlayer } from './player.js';
@@ -2229,7 +2229,9 @@ function noteOn(n, v, src) {
   if (!set) { set = new Set(); holds.set(n, set); }
   set.add(src);
   if (!fresh) return;
-  showKeyed.set(n, performance.now()); showNote(SHOW, v);
+  // Dekatron, Thyratron, Lattice and Gleam flare from the note-on count on their own meter (see frame()),
+  // which this note reaches too, so the key does not flare them a second time
+  showKeyed.set(n, performance.now()); if (!ONSET_METER.has(dev)) showNote(SHOW, v);
   if (mixArmed.length) {
     const targets = mixArmed.slice();
     noteRoutes.set(n, targets);
@@ -4020,6 +4022,8 @@ if (reduceMotion) Object.values(TUBE_ST).forEach(s => s.tvFlicker = 0);
 let showSaved = 'full'; try { showSaved = localStorage.getItem(SHOW_KEY) || 'full'; } catch (e) {}
 const SHOW = makeShow(showSaved, reduceMotion);
 const showKeyed = new Map();                 // note -> when the page sent it (so a meter does not flare it twice)
+const ONSET_METER = new Set(['dekatron', 'lattice', 'thyratron', 'gleam']);   // lit devices that flare from their meter's note-on count
+const showOns = { dev: null, n: 0, got: 0 };  // the lit device's note-on count at the last frame; got: flares taken from it (test hook)
 function refreshShowChips() { document.querySelectorAll('#showChips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === SHOW.mode))); $('chassis').dataset.show = SHOW.mode; }
 function setShow(mode) {
   if (!setShowMode(SHOW, mode)) return false;
@@ -4149,7 +4153,19 @@ function frame(now) {
   };
   // tube show inputs: the levels above, the drive knobs, hard clipping, V2's resonance, the voices
   const keysOn = cath || dev === 'filament';  // Filament or Cathode lit: the meter carries note numbers
-  if (keysOn) { const tnow = performance.now(); showNotes(SHOW, m.notes, null, n => tnow - (showKeyed.get(n) || -1e9) < 250); }
+  // A note the page's keys still hold, or sent in the last 250 ms, already flared at its key. The hold test
+  // keeps a starved frame loop (a first frame more than 250 ms after the key) from flaring it twice.
+  if (keysOn) { const tnow = performance.now(); showNotes(SHOW, m.notes, null, n => held(n) || tnow - (showKeyed.get(n) || -1e9) < 250); }
+  // Dekatron, Thyratron, Lattice and Gleam count their note-ons on the meter (keys, their own patterns and
+  // fingers, routed songs): each new one since the last frame is a flare. A device change or a count that
+  // went back (a rebuilt worklet) only resyncs. A meter that has not posted a count yet reads 0, so the first
+  // note after the page loads still flares.
+  const om_ = drumOn ? dm : latOn ? lm : thyOn ? tm : gleamOn ? gm : null;
+  if (om_) {
+    const c = +om_.ons || 0;
+    if (showOns.dev !== dev || c < showOns.n) { showOns.dev = dev; showOns.n = c; }
+    else if (c > showOns.n) { showOns.got += showOnsets(SHOW, c - showOns.n, +om_.onv || 0); showOns.n = c; }
+  } else showOns.dev = null;
   // V1's meter sums every voice's power. Per voice, factory patches average 0.19 to 0.46 RMS (Screaming
   // 12AX7 swings up to 0.62 with its sweep), and V1 at drive 10 on three full oscillators reads 0.80 to
   // 0.95, so above 0.7 per voice counts as hard clipping. The output ceiling is 0.99.
@@ -4561,7 +4577,8 @@ window.__synth = {
   routeWaker: (id, on) => routeWaker(id)(on),   // what Geissler and Gyrotron call (tests)
   pentaSent: () => ({ sent: pentaHost.sent(), meter: Object.assign({}, pentaHost.meter()), node: !!pentaHost.node(), dev, now: Math.round(performance.now()) }),   // tests
   panelFills: () => panelFillRuns,   // tests: how often the row fill has run (graphics, 1 Nov)
-  tubeShow: () => showState(SHOW),
+  tubeShow: () => Object.assign(showState(SHOW), { meterFlares: showOns.got, meterDev: showOns.dev }),
+  routeHit: (dest, on, n, v) => routeHit(dest, on, n, v),   // tests: the song library's path to a device, past the page's keys
   // the filter response plot: what it shows, and its curves read at frequencies (dB)
   filterPlot: () => ({ ready: !!FP.knob, err: FP.err, live: !!(FP.live && FP.liveMix > 0.5), liveMix: FP.liveMix, knob: fpSummary(FP.knob), playing: fpSummary(FP.live),
     ms: FP.ms, drawMs: FP.drawMs, n: FP.n, read: $('fpRead').textContent, label: $('fpCv').getAttribute('aria-label'),

@@ -223,12 +223,17 @@ export function createDrumEngine(sampleRate, patch) {
     lowAcc: 0,
     highAcc: 0,
     onMeter: null,
+    ons: 0, onv: 0,            // hits so far and the last one's velocity (the tube show's flares)
     dcL: 0, dcLx: 0, dcR: 0, dcRx: 0,
   };
   return eng;
 }
 
 function seqOf(eng) { return readSeq(eng.P); }
+
+// The meter carries a running count of hits (its own pattern's and the ones it is sent), so the page's
+// tube show can flare for hits that never pass through the page's keys.
+function countHit(eng, v) { eng.ons++; eng.onv = v; }
 
 function fireStep(eng, index) {
   const P = eng.P || {}, seq = seqOf(eng);
@@ -246,6 +251,7 @@ function fireStep(eng, index) {
     if ((+vp.level || 0) <= 0) return;
     if (HAT[id]) choke(eng.voices[HAT[id]]);
     trigger(id, eng.voices[id], vel);
+    countHit(eng, vel);
   });
   if (eng.onStep) eng.onStep(index, seq.length);
 }
@@ -257,7 +263,9 @@ function handle(eng, m, frame) {
     const id = m.voice;
     if (!eng.voices[id]) return;
     if (HAT[id]) choke(eng.voices[HAT[id]]);
-    trigger(id, eng.voices[id], m.v == null ? 0.9 : +m.v);
+    const v = m.v == null ? 0.9 : +m.v;
+    trigger(id, eng.voices[id], v);
+    countHit(eng, v);
     return;
   }
   if (m.t === 'transport') {
@@ -384,6 +392,7 @@ export function renderDrum(eng, outL, outR, start) {
       v1: Math.sqrt(eng.lowAcc / Math.max(1, eng.accN)),
       v2: Math.sqrt(eng.highAcc / Math.max(1, eng.accN)),
       cpu: eng.cpuFrames ? eng.cpuMs / (eng.cpuFrames / eng.sr * 1000) : 0,
+      ons: eng.ons, onv: eng.onv,
     });
     eng.meterN = 0; eng.lowAcc = 0; eng.highAcc = 0; eng.accN = 0;
     if (eng.cpuFrames > eng.sr) { eng.cpuMs *= 0.5; eng.cpuFrames *= 0.5; }

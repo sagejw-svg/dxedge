@@ -44,6 +44,7 @@ export function createGleamEngine(sampleRate, patch) {
     meterN: 0,
     peak: 0,
     seq: 0,
+    ons: 0, onv: 0,            // fingers and notes started so far and the last one's velocity (the tube show's flares)
     delayL: new Float32Array(Math.floor((sampleRate || 48000) * 0.19)),
     delayR: new Float32Array(Math.floor((sampleRate || 48000) * 0.23)),
     dIdxL: 0,
@@ -159,10 +160,12 @@ function handle(eng, m) {
   if (m.t === 'on' || (m.t === 'voice' && m.on)) {
     const id = m.id != null ? m.id : (m.n != null ? 'm' + m.n : null);
     if (id == null) return;
+    const known = eng.byId.has(id);
     const v = claim(eng, id, m.slot, m.slot != null);
     if (!v) return;
     const hz = Number.isFinite(+m.hz) ? +m.hz : (m.n != null ? midiHz(m.n) : v.hzT);
     const fresh = !(v.env > 0.002);
+    const wasOn = v.on;
     v.on = true;
     v.alive = true;
     v.born = ++eng.seq;
@@ -178,6 +181,8 @@ function handle(eng, m) {
     v.y = Math.max(0, Math.min(1, y));
     const level = Number.isFinite(+m.level) ? +m.level : (m.v != null ? +m.v : 0.75);
     v.levelT = Math.max(0, Math.min(1, level));
+    // a finger that slides keeps its voice on: only a new touch, a new note or a retrigger counts as an onset
+    if (!wasOn || !known || m.trig) { eng.ons++; eng.onv = Number.isFinite(+m.vel) ? Math.max(0, Math.min(1, +m.vel)) : v.levelT; }
     if (Number.isFinite(+m.pan)) v.pan = Math.max(-1, Math.min(1, +m.pan));
     if (Number.isFinite(+m.send)) v.send = Math.max(0, Math.min(1, +m.send));
     if (Number.isFinite(+m.gain)) v.dry = Math.max(0, Math.min(1.2, +m.gain));
@@ -302,6 +307,6 @@ export function renderGleam(eng, L, R, slots, start, wetL, wetR) {
       sounding++;
       info.push({ slot: s, id: v.id, env: v.env, pan: v.pan, y: v.y, on: v.on });
     }
-    if (eng.onMeter) eng.onMeter({ t: 'meter', peak: eng.peak, voices: sounding, slots: info });
+    if (eng.onMeter) eng.onMeter({ t: 'meter', peak: eng.peak, voices: sounding, slots: info, ons: eng.ons, onv: eng.onv });
   }
 }
