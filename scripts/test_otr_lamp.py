@@ -58,6 +58,24 @@ with sync_playwright() as p:
     blobs = LA("blobs()")
     ck("blobs are spread through the bottle, not stuck together", len({round(o["y"] / 20) for o in blobs}) >= 2, blobs)
 
+    # a real lamp keeps a pool on the coil and buds blobs of different sizes off it; all the wax
+    # aloft at once is what an overheated lamp does, not one at 25 W
+    LA("reset(4242)"); LA("advance(300)")
+    empty, share, sizes = 0, [], []
+    for i in range(120):
+        bl = pg.evaluate("(() => { __otr.adv.lamp.advance(1); return __otr.adv.lamp.blobs(); })()")
+        low = {o["b"] for o in bl if o["y"] + o["r"] > 122.5}
+        tot = sum(o["r"] ** 2 for o in bl); pool = sum(o["r"] ** 2 for o in bl if o["b"] in low)
+        if pool == 0: empty += 1
+        share.append(pool / tot)
+        vols = {}
+        for o in bl:
+            if o["b"] not in low: vols[o["b"]] = vols.get(o["b"], 0) + o["r"] ** 2
+        sizes += [v for v in vols.values() if v > 3]
+    ck("at 25 W a pool stays on the coil (rarely empty)", empty <= 24, empty)
+    ck("the pool holds a good share of the wax", sum(share) / len(share) > 0.2, round(sum(share) / len(share), 2))
+    ck("blobs in flight come in different sizes", len(sizes) > 20 and max(sizes) >= 2.5 * min(sizes), (len(sizes), round(min(sizes or [0]), 1), round(max(sizes or [0]), 1)))
+
     # ---- determinism and randomness ----
     run = lambda seed: pg.evaluate(f"(() => {{ const L=__otr.adv.lamp; L.reset({seed}); L.advance(150); return L.blobs(); }})()")   # one call: no frames in between
     A = run(77); A2 = run(77); Bb = run(78)
@@ -120,8 +138,37 @@ with sync_playwright() as p:
     pg.click("#tvSubj button[data-s='lamp']"); pg.wait_for_timeout(200)
     pg.locator("#tvStage").screenshot(path=f"{SP}/otr_lamp_view.png")
     pg.keyboard.press("Escape"); ck("Esc closes", not pg.evaluate("__otr.adv.tv.isOpen()"))
-    pg.click("#lampCv"); pg.wait_for_timeout(200)
-    ck("clicking the lamp in the rack opens it too", pg.evaluate("__otr.adv.tv.subject()") == "lamp" and pg.evaluate("__otr.adv.tv.isOpen()"))
+    # ---- the lamp alone, everything else black ----
+    SOLO_PX = """(() => { const cv=document.getElementById('soloCv'), c=cv.getContext('2d'), W=cv.width, H=cv.height;
+        const at=(x,y)=>Array.from(c.getImageData(Math.floor(x),Math.floor(y),1,1).data.slice(0,3));
+        const m=c.getImageData(Math.floor(W*0.45),Math.floor(H*0.3),Math.floor(W*0.1),Math.floor(H*0.3)).data; let s=0; for(let i=0;i<m.length;i+=4) s+=m[i]+m[i+1]+m[i+2];
+        return { edge:[at(2,2),at(W-3,2),at(2,H-3),at(W-3,H-3),at(W*0.1,H*0.5),at(W*0.9,H*0.5)], mid:s/(m.length/4)/3, cw:cv.clientWidth, ch:cv.clientHeight, vw:innerWidth, vh:innerHeight }; })()"""
+    pg.click("#lampCv"); pg.wait_for_timeout(500)
+    ck("clicking the lamp in the rack shows it alone on black", LA("solo()") and pg.is_visible("#lampSolo") and not pg.evaluate("__otr.adv.tv.isOpen()"))
+    ck("nothing but the lamp: no text, no controls", pg.inner_text("#lampSolo").strip() == "" and pg.eval_on_selector("#lampSolo", "e => e.querySelectorAll('button,input,select,a').length") == 0)
+    px = pg.evaluate(SOLO_PX)
+    ck("everything around the lamp is black", all(sum(c) == 0 for c in px["edge"]), px)
+    ck("the lamp is lit in the middle", px["mid"] > 20, px)
+    ck("it covers the whole window", px["cw"] == px["vw"] and px["ch"] == px["vh"], px)
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    ck("Esc brings the page back", not LA("solo()") and not pg.is_visible("#lampSolo"))
+    pg.click("#lampCv"); pg.wait_for_timeout(400); pg.mouse.click(30, 30); pg.wait_for_timeout(300)
+    ck("a click anywhere brings it back too", not LA("solo()"))
+    pg.click("#lampZoom"); pg.wait_for_timeout(400)
+    bx = pg.locator("#tvCv").bounding_box(); cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] * 0.45
+    pg.mouse.dblclick(cx, cy); pg.wait_for_timeout(600)
+    ck("in the big view a double click on the lamp still zooms, no black", pg.evaluate("__otr.adv.tv.state()")["z"] > 1.3 and not LA("solo()"))
+    pg.click("#tvFit"); pg.wait_for_timeout(200)
+    pg.mouse.move(cx, cy); pg.mouse.down(); pg.mouse.move(cx + 40, cy + 10, steps=4); pg.mouse.up(); pg.wait_for_timeout(500)
+    ck("a drag in the big view does not go black", not LA("solo()"))
+    pg.click("#tvFit"); pg.wait_for_timeout(200)
+    pg.mouse.click(bx["x"] + 12, bx["y"] + bx["height"] * 0.55); pg.wait_for_timeout(500)
+    ck("a click on the dark beside the lamp does nothing", not LA("solo()"))
+    pg.mouse.click(cx, cy); pg.wait_for_timeout(600)
+    ck("a single click on the lamp in the big view goes black", LA("solo()"))
+    pg.locator("#lampSolo").screenshot(path=f"{SP}/otr_lamp_solo.png")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    ck("Esc from there returns to the big view, still open", not LA("solo()") and pg.evaluate("__otr.adv.tv.isOpen()"))
     pg.keyboard.press("Escape")
     pg.select_option("#lampColSel", "purple")
     ck("module colour list sets the colours", pg.evaluate("__otr.adv.state().lampCol") == "purple")
@@ -144,6 +191,12 @@ with sync_playwright() as p:
     ck("375 px: lamp module fits, no horizontal scroll", sw <= 375 and m.is_visible("#lampCv"), sw)
     m.click("#lampZoom"); m.wait_for_timeout(300)
     ck("375 px: the lamp view opens and its controls are reachable", m.evaluate("__otr.adv.tv.subject()") == "lamp" and m.locator("#tvLampCols").count() == 1)
+    m.keyboard.press("Escape"); m.wait_for_timeout(200)
+    m.tap("#lampCv"); m.wait_for_timeout(500)
+    mp = m.evaluate(SOLO_PX)
+    ck("375 px: a tap on the lamp shows it alone on black, edge to edge", m.evaluate("__otr.adv.lamp.solo()") and all(sum(c) == 0 for c in mp["edge"]) and mp["mid"] > 20 and mp["cw"] == 375, mp)
+    m.tap("#lampSolo"); m.wait_for_timeout(300)
+    ck("375 px: a tap brings it back", not m.evaluate("__otr.adv.lamp.solo()"))
     ck("no page errors (phone)", not merrs, merrs[:3])
     b.close()
 httpd.shutdown()

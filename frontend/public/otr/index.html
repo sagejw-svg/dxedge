@@ -515,6 +515,11 @@
   /* ---- Tube view: the tube, big ---- */
   .tview { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.94); display: grid; grid-template-columns: minmax(0,1fr) 320px; }
   .tview[hidden] { display: none; }
+  /* the lamp alone: everything else black, no text, no controls */
+  .lamp-solo { position: fixed; inset: 0; z-index: 200; background: #000; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; outline: none; }
+  .lamp-solo[hidden] { display: none; }
+  .lamp-solo.idle { cursor: none; }
+  .lamp-solo canvas { display: block; width: 100%; height: 100%; }
   @media (max-width: 760px){ .tview { grid-template-columns: minmax(0,1fr); grid-template-rows: 60vh auto; overflow-y: auto; } }
   .tv-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
   canvas#tvCv { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
@@ -697,7 +702,7 @@
           <button class="pwr small" id="lampPower" aria-pressed="true" title="The lamp's switch"><span class="sw"></span>on</button></div>
         <div class="mod-b">
           <div class="lamp-stage">
-            <canvas id="lampCv" role="img" aria-label="Lava lamp. Click to open it big" title="Click to zoom in"></canvas>
+            <canvas id="lampCv" role="img" aria-label="Lava lamp. Click to see it on its own, everything else black" title="Click: the lamp alone on black (click again or Esc to come back)"></canvas>
             <div class="lamp-info">
               <div class="lamp-stat" id="lampStat" aria-live="polite">warming up</div>
               <select id="lampColSel" aria-label="Wax and liquid colours"></select>
@@ -915,10 +920,12 @@
       <div class="knobs left" id="tvLampKnobs"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">wax / liquid</div><div class="chips2" id="tvLampCols" role="group" aria-label="Wax and liquid colours"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">base</div><div class="chips2" id="tvLampBases" role="group" aria-label="Base finish"></div></div>
-    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. None of this changes the sound.</div>
+    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. Click the lamp to see it on its own, everything else black; click again or press Esc to come back. None of this changes the sound.</div>
     <div class="mod-note tv-tube">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
   </aside>
 </div>
+
+<div class="lamp-solo" id="lampSolo" hidden tabindex="-1" role="dialog" aria-modal="true" aria-label="The lava lamp on its own. Click, tap or press Escape to come back."><canvas id="soloCv" aria-hidden="true"></canvas></div>
 
 <div class="dock" id="dock" aria-label="Now playing">
   <div class="dock-bar"><i id="dockFill"></i></div>
@@ -3226,7 +3233,7 @@
   $('deListen').onclick=function(){ ADV.deListen=!ADV.deListen; if(ADV.deListen) touchMod('deOn'); if(PROC) PROC.setDe(ADV); syncAdvUI(); toast(ADV.deListen?'Listening to the S band only':'Listening to everything'); };
 
   // ---- Tube view: the tube full size, with zoom, pan, filters and glow controls ----
-  var TVZ={ z:1, x:0, y:0, subj:'tube' }, tvRAF=0, tvGeom=null, tvPrevFocus=null, tvPtr={};
+  var TVZ={ z:1, x:0, y:0, subj:'tube' }, tvRAF=0, tvGeom=null, tvPrevFocus=null, tvPtr={}, tvTap={ x:0, y:0, moved:false, multi:false, t:0 };
   var TV_KNOBS=[
     { key:'tvBright', label:'Brightness', min:0, max:200, step:1, def:100, title:'How bright the heater, plates and glow are',
       fmt:function(v){ return Math.round(v)+'%'; } },
@@ -3295,6 +3302,36 @@
     tvPrevFocus=document.activeElement; $('tview').hidden=false; document.body.style.overflow='hidden';
     syncTubeView(); startTV(); try{ $('tvClose').focus({preventScroll:true}); }catch(e){}
   }
+  // ---- the lamp alone: click the lamp and everything else goes black ----
+  // Only the lamp on black, no text and no controls. Real full screen where the browser allows it
+  // (iPhone does not, so there the black layer covers the page); the screen is kept awake; a click,
+  // a tap or Esc brings back whatever was there before.
+  var SOLO={ raf:0, prev:null, lock:null, idle:0, fs:false };
+  function soloIsOpen(){ return !$('lampSolo').hidden; }
+  function soloWake(){ try{ if(navigator.wakeLock && !SOLO.lock) navigator.wakeLock.request('screen').then(function(l){ if(!soloIsOpen()){ l.release().catch(function(){}); return; } SOLO.lock=l;
+    l.addEventListener('release', function(){ if(SOLO.lock===l) SOLO.lock=null; }); }).catch(function(){}); }catch(e){} }
+  function soloPoke(){ var el=$('lampSolo'); el.classList.remove('idle'); clearTimeout(SOLO.idle); SOLO.idle=setTimeout(function(){ el.classList.add('idle'); }, 1500); }
+  function openLampSolo(){
+    if(soloIsOpen()) return; var el=$('lampSolo');
+    SOLO.prev=document.activeElement; SOLO.fs=false; el.hidden=false; document.body.style.overflow='hidden';
+    if(document.fullscreenEnabled && el.requestFullscreen && !document.fullscreenElement){ try{ el.requestFullscreen({ navigationUI:'hide' }).then(function(){ SOLO.fs=true; }).catch(function(){}); }catch(e){} }
+    soloWake(); soloPoke(); try{ el.focus({ preventScroll:true }); }catch(e){}
+    var loop=function(now){ if(!soloIsOpen()){ SOLO.raf=0; return; } SOLO.raf=requestAnimationFrame(loop); try{ renderLamp($('soloCv'), now, 'solo'); }catch(e){ console.warn(e); } };
+    if(!SOLO.raf) SOLO.raf=requestAnimationFrame(loop);
+  }
+  function closeLampSolo(){
+    if(!soloIsOpen()) return; var el=$('lampSolo');
+    el.hidden=true; clearTimeout(SOLO.idle); if(!tvIsOpen()) document.body.style.overflow='';
+    if(document.fullscreenElement===el && document.exitFullscreen) document.exitFullscreen().catch(function(){});
+    SOLO.fs=false; if(SOLO.lock){ var l=SOLO.lock; SOLO.lock=null; l.release().catch(function(){}); }
+    if(SOLO.prev && SOLO.prev.focus) try{ SOLO.prev.focus({ preventScroll:true }); }catch(e){}
+  }
+  $('lampSolo').addEventListener('click', closeLampSolo);
+  $('lampSolo').addEventListener('pointermove', soloPoke);
+  // leaving full screen by the browser's own means (Esc, a gesture) leaves the black view too
+  document.addEventListener('fullscreenchange', function(){ if(SOLO.fs && document.fullscreenElement!==$('lampSolo')){ SOLO.fs=false; closeLampSolo(); } });
+  document.addEventListener('visibilitychange', function(){ if(soloIsOpen() && document.visibilityState==='visible') soloWake(); });
+  window.addEventListener('keydown', function(e){ if(soloIsOpen() && e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation(); closeLampSolo(); } }, true);
   function closeTubeView(){
     $('tview').hidden=true; document.body.style.overflow='';
     if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){});
@@ -3315,7 +3352,7 @@
     return Math.min(TVQ.q, qMax);
   }
   function startTV(){ if(tvRAF) return; TVQ.q=1; TVQ.ceil=1; TVQ.ema=16.7; TVQ.last=0; TVQ.t=0;
-    var loop=function(now){ if(!tvIsOpen()){ tvRAF=0; return; } tvRAF=requestAnimationFrame(loop);
+    var loop=function(now){ if(!tvIsOpen()){ tvRAF=0; return; } tvRAF=requestAnimationFrame(loop); if(soloIsOpen()) return;
       try{ var cv=$('tvCv'); tvGeom=(TVZ.subj==='lamp'?renderLamp:renderTube)(cv, now, 'big', TVZ.z, TVZ.x, TVZ.y, tvQuality(now, cv)); $('tvZl').textContent=Math.round(TVZ.z*100)+'%'; }catch(e){ console.warn(e); } };
     tvRAF=requestAnimationFrame(loop); }
   function clampPan(){ if(TVZ.z<=1.001){ TVZ.z=1; TVZ.x=0; TVZ.y=0; return; } TVZ.x=clampN(TVZ.x,-TW*0.55,TW*0.55); TVZ.y=clampN(TVZ.y,-TH*0.55,TH*0.55); }
@@ -3329,9 +3366,11 @@
   function zoomStep(f){ var g=tvGeom; zoomAt(TVZ.z*f, g?g.w/2:null, g?g.h/2:null); }
   (function(){
     var cv=$('tvCv');
-    cv.addEventListener('pointerdown', function(e){ e.preventDefault(); cv.setPointerCapture(e.pointerId); tvPtr[e.pointerId]={ x:e.clientX, y:e.clientY }; cv.classList.add('drag'); });
+    cv.addEventListener('pointerdown', function(e){ e.preventDefault(); cv.setPointerCapture(e.pointerId); tvPtr[e.pointerId]={ x:e.clientX, y:e.clientY };
+      if(Object.keys(tvPtr).length===1) tvTap={ x:e.clientX, y:e.clientY, moved:false, multi:false, t:tvTap.t }; else tvTap.multi=true; cv.classList.add('drag'); });
     cv.addEventListener('pointermove', function(e){
       var p=tvPtr[e.pointerId]; if(!p) return; var ids=Object.keys(tvPtr);
+      if(Math.abs(e.clientX-tvTap.x)+Math.abs(e.clientY-tvTap.y)>6) tvTap.moved=true;
       if(ids.length===1){ var s=tvGeom?tvGeom.s:1; TVZ.x-=(e.clientX-p.x)/s; TVZ.y-=(e.clientY-p.y)/s; clampPan(); }
       else if(ids.length===2){ var other=tvPtr[ids[0]===String(e.pointerId)?ids[1]:ids[0]], d0=Math.hypot(p.x-other.x,p.y-other.y), d1=Math.hypot(e.clientX-other.x,e.clientY-other.y), r=cv.getBoundingClientRect();
         if(d0>0) zoomAt(TVZ.z*d1/d0, (e.clientX+other.x)/2-r.left, (e.clientY+other.y)/2-r.top); }
@@ -3340,7 +3379,14 @@
     function up(e){ delete tvPtr[e.pointerId]; if(!Object.keys(tvPtr).length) cv.classList.remove('drag'); }
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('wheel', function(e){ e.preventDefault(); var r=cv.getBoundingClientRect(); zoomAt(TVZ.z*Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, { passive:false });
-    cv.addEventListener('dblclick', function(e){ var r=cv.getBoundingClientRect(); if(TVZ.z>1.05){ TVZ.z=1; clampPan(); } else zoomAt(3, e.clientX-r.left, e.clientY-r.top); });
+    // a single click on the lamp itself (not a drag, not half of a double click) shows it alone on black
+    cv.addEventListener('click', function(e){
+      clearTimeout(tvTap.t); if(TVZ.subj!=='lamp' || tvTap.moved || tvTap.multi || e.detail>1 || !tvGeom) return;
+      var r=cv.getBoundingClientRect(), lx=(e.clientX-r.left-tvGeom.tx)/tvGeom.s, ly=(e.clientY-r.top-tvGeom.ty)/tvGeom.s;
+      if(Math.abs(lx-LCX)>36 || ly<6 || ly>197) return;
+      tvTap.t=setTimeout(openLampSolo, 280);
+    });
+    cv.addEventListener('dblclick', function(e){ clearTimeout(tvTap.t); var r=cv.getBoundingClientRect(); if(TVZ.z>1.05){ TVZ.z=1; clampPan(); } else zoomAt(3, e.clientX-r.left, e.clientY-r.top); });
     $('tvIn').onclick=function(){ zoomStep(1.4); }; $('tvOut').onclick=function(){ zoomStep(1/1.4); };
     $('tvFit').onclick=function(){ TVZ.z=1; clampPan(); };
     if(!document.fullscreenEnabled) $('tvFull').style.display='none';
@@ -3349,7 +3395,7 @@
     $('tvLight').onclick=function(){ if(!ADV.on) setAdvPower(true); if(!ADV.tubeOn) setModule('tubeOn', true); syncTubeView(); };
     $('tubeCv').addEventListener('click', function(){ openTubeView('tube'); });
     $('tubeZoom').onclick=function(){ openTubeView('tube'); };
-    $('lampCv').addEventListener('click', function(){ openTubeView('lamp'); });
+    $('lampCv').addEventListener('click', function(){ openLampSolo(); });
     $('lampZoom').onclick=function(){ openTubeView('lamp'); };
     document.querySelectorAll('#tvSubj button').forEach(function(b){ b.onclick=function(){ if(TVZ.subj===b.dataset.s) return; TVZ.subj=b.dataset.s; TVZ.z=1; clampPan(); syncTubeView(); }; });
     document.addEventListener('keydown', function(e){
@@ -3813,11 +3859,19 @@
   // A slice through the lamp in the 120 x 200 logical space the tube uses (y grows down), in
   // seconds and degrees C. Nothing is scripted or looped; everything comes from these rules plus a
   // little noise, so no two evenings are the same.
-  //  Wax: parcels ("lobes") of molten paraffin, each with its own volume, heat and velocity. Paraffin
-  //   expands about three times more than the liquid when warmed, so a parcel rises when it is hotter
-  //   than the crossover temperature and sinks when it cools below it. It melts over a latent-heat
-  //   plateau; solid wax is heavy and stuck where it lies. Drag is Stokes-like, so big blobs move
-  //   faster than small ones, and heat leaves through the surface, so big blobs hold heat longer.
+  //  Wax: parcels of molten paraffin, each with its own volume, heat and velocity; a blob is every
+  //   parcel joined by necks, and a big blob is many parcels. Paraffin expands two to three times more
+  //   than the liquid when warmed, so wax rises when it is hotter than the crossover temperature and
+  //   sinks when it cools below it. It melts over a latent-heat plateau; solid wax is heavy and stuck
+  //   where it lies. Drag is Stokes-like and belongs to the whole blob, so big blobs move faster than
+  //   small ones (up to blobs nearly as wide as the bottle, which the walls hold back).
+  //  Heat: wax trades heat with the liquid only through surface the liquid can reach (wax pressed
+  //   against wax is not in contact), so big blobs and the pool hold their heat and small blobs cool
+  //   fast. A blob moving through the liquid is stirred inside, so its parcels share heat quickly; the
+  //   pool lying on the bottom is not, so it stays hottest over the coil and coolest at its edges.
+  //   The bulb warms the bottom of the glass and the liquid; the coil is a hot surface, hottest in the
+  //   middle, that passes heat to wax lying on it in proportion to the difference, so the pool warms
+  //   toward the coil's temperature rather than without limit. Glass and cap lose heat to the room.
   //  Necks: parcels of one blob are joined by threads of wax that pull them together (surface
   //   tension). A thread thins as it is stretched (its volume is conserved) and breaks once it is
   //   longer than its own circumference (Rayleigh-Plateau), sometimes leaving a satellite droplet.
@@ -3825,11 +3879,9 @@
   //   between them to drain grow a neck and become one blob; neighbours inside a blob fuse.
   //  Liquid: a coarse grid with its own temperature and incompressible flow (buoyancy, viscosity,
   //   pressure projection, advection), dragged by the wax and dragging it back.
-  //  Heat: the bulb warms the bottom of the glass and the coil under the wax; the glass and the cap
-  //   lose heat to the room; wax and liquid trade heat across every blob's surface.
-  // Warm-up, the first tower pushing up through the cake, blobs budding off the pool, merging,
-  // stalling under the cap when the lamp runs hot, and the wax setting again when it is switched off
-  // all follow from those rules.
+  // Warm-up, the first tower pushing up through the cake, a pool that stays on the coil and buds
+  // blobs of every size, merging, stalling under the cap when the lamp runs hot, and the wax setting
+  // again when it is switched off all follow from those rules.
   function makeLava(seed){
     var rnd=mulberry32((seed>>>0)||1);
     var CX=60, Y0=33.5, Y1=126.5, TROOM=22, TM=34, TX=48, LAT=10;
@@ -3866,19 +3918,22 @@
     }
 
     // ---- wax ----
-    var CW=0.28, VMAX=125, area=0, yy;
+    var CW=0.28, VMAX=60, RWALL=9, area=0, yy;
     for(yy=Y0; yy<Y1; yy+=0.5) area+=2*inner(yy)*0.5;
-    var WAX=area*0.14, L=[], LINKS=[], CONTACT={}, nextId=1;
+    var WF=0.18, WAX=area*WF, L=[], LINKS=[], CONTACT={}, nextId=1;
     var S={ t:0, power:1, on:true, music:0, seed:seed, lobes:L, links:LINKS };
-    function lobe(x,y,v,e){ var o={ id:nextId++, x:x, y:y, vx:0, vy:0, v:v, r:Math.sqrt(v/Math.PI), e:e, T:0, f:0, rest:0, sq:0, el:0, ang:0 }; phase(o); return o; }
+    function lobe(x,y,v,e){ var o={ id:nextId++, x:x, y:y, vx:0, vy:0, v:v, r:Math.sqrt(v/Math.PI), e:e, T:0, f:0, rest:0, sq:0, el:0, ang:0, ex:1 }; phase(o); return o; }
     function phase(o){ var e=o.e; if(e<TM){ o.T=e; o.f=0; } else if(e<TM+LAT){ o.T=TM; o.f=(e-TM)/LAT; } else { o.T=e-LAT; o.f=1; } }
     function link(a,b,rn,L0){ LINKS.push({ a:a, b:b, rn0:rn, L0:L0, rn:rn }); }
     function reset(){
       L.length=0; LINKS.length=0; CONTACT={};
-      // a cold cake of wax across the bottom, in parcels joined edge to edge
-      var n=Math.max(3,Math.round(WAX/(VMAX*0.55))), v=WAX/n, w=inner(Y1-3)-2, i;
-      for(i=0;i<n;i++){ var x=CX-w+(2*w)*(i+0.5)/n, o=lobe(x, 0, v, TROOM); o.y=floorY(x)-o.r*0.55; L.push(o); }
-      for(i=1;i<n;i++) link(L[i-1], L[i], Math.min(L[i].r,L[i-1].r)*0.9, Math.hypot(L[i].x-L[i-1].x, L[i].y-L[i-1].y));
+      // a cold cake of wax across the bottom: two courses of parcels, each joined to its neighbours
+      var n=Math.max(4,Math.round(WAX/(VMAX*0.55))), n1=Math.ceil(n/2), v=WAX/n, r0=Math.sqrt(v/Math.PI), w=inner(Y1-3)-2, lo=[], hi=[], i, x, o;
+      for(i=0;i<n1;i++){ x=CX-w+(2*w)*(i+0.5)/n1; o=lobe(x, 0, v, TROOM); o.y=floorY(x)-o.r*0.55; L.push(o); lo.push(o); }
+      for(i=0;i<n-n1;i++){ x=CX-(w-r0)+(2*(w-r0))*(i+0.5)/(n-n1); o=lobe(x, 0, v, TROOM); o.y=floorY(x)-o.r*0.55-r0*1.25; L.push(o); hi.push(o); }
+      var join=function(a,b){ link(a, b, Math.min(a.r,b.r)*0.9, Math.hypot(b.x-a.x, b.y-a.y)); };
+      for(i=1;i<lo.length;i++) join(lo[i-1], lo[i]); for(i=1;i<hi.length;i++) join(hi[i-1], hi[i]);
+      hi.forEach(function(u){ lo.slice().sort(function(p,q){ return Math.abs(p.x-u.x)-Math.abs(q.x-u.x); }).slice(0,2).forEach(function(d){ join(d,u); }); });
       for(k=0;k<GN;k++){ TL[k]=TROOM; U[k]=V[k]=0; PR[k]=0; }
       S.t=0;
     }
@@ -3890,15 +3945,20 @@
       for(i=0;i<L.length;i++) par[L[i].id]=L[i].id;
       for(i=0;i<LINKS.length;i++){ var a=f(LINKS[i].a.id), b=f(LINKS[i].b.id); if(a!==b) par[a]=b; }
       for(i=0;i<L.length;i++) L[i].blob=f(L[i].id); }
+    // the share of a's surface that b covers (wax pressed against wax trades no heat with the liquid)
+    function occl(ra, rb, d){ if(d>=ra+rb) return 0; if(d<=Math.abs(rb-ra)) return rb>ra ? 1 : 0; return Math.acos(Math.max(-1,Math.min(1,(d*d+ra*ra-rb*rb)/(2*d*ra))))/Math.PI; }
     function linked(a,b){ for(var i=0;i<LINKS.length;i++){ var l=LINKS[i]; if((l.a===a&&l.b===b)||(l.a===b&&l.b===a)) return l; } return null; }
     function step(){
       var dt=DT, P=S.on ? S.power*(1+0.6*S.music) : 0, n=L.length, i, a, b, o;
       blobsOf();
-      // forces from the liquid: buoyancy, drag (Stokes: 1/r per unit mass), a little thermal noise
-      for(i=0;i<n;i++){ o=L[i];
-        var tl=bil(TL,o.x,o.y), acc=1.0*((o.T-TX)-0.35*(tl-TX)) - (1-o.f)*8;
+      var BV={}, BF={}; for(i=0;i<n;i++){ o=L[i]; BV[o.blob]=(BV[o.blob]||0)+o.v; if(o.rest>0.5) BF[o.blob]=1; o.ex=1-0.3*o.rest; }
+      // forces from the liquid: buoyancy, drag (Stokes: 1/r per unit mass, r of the whole blob, held
+      // down for blobs nearly as wide as the bottle, which the walls slow), and a nudge now and then
+      // standing in for eddies smaller than the liquid grid can show
+      for(i=0;i<n;i++){ o=L[i]; var Rb=Math.min(RWALL, Math.sqrt(BV[o.blob]/Math.PI));
+        var tl=bil(TL,o.x,o.y), acc=1.0*((o.T-TX)-BL*(tl-TX)) - (1-o.f)*8;
         o.vy-=acc*dt;
-        var g=3.0/Math.max(1,o.r)*(0.6+0.4*o.f), ul=bil(U,o.x,o.y), vl=bil(V,o.x,o.y), fr=1-Math.exp(-g*dt), dvx=(ul-o.vx)*fr, dvy=(vl-o.vy)*fr;
+        var g=3.0/Math.max(1,Rb)*(0.6+0.4*o.f), ul=bil(U,o.x,o.y), vl=bil(V,o.x,o.y), fr=1-Math.exp(-g*dt), dvx=(ul-o.vx)*fr, dvy=(vl-o.vy)*fr;
         o.vx+=dvx; o.vy+=dvy; spread(FU,o.x,o.y,o.r,-dvx*o.v*0.12,1); spread(FV,o.x,o.y,o.r,-dvy*o.v*0.12,1);
         if(o.f>0.5){ o.vx+=(rnd()-0.5)*0.5*dt*60*0.05; o.vy+=(rnd()-0.5)*0.5*dt*60*0.05; }
       }
@@ -3910,16 +3970,16 @@
         if(!solid && (l.rn<0.5 || (gap>0 && gap>Math.PI*2*l.rn))){
           // the thread breaks; a thick one leaves a satellite droplet behind
           LINKS.splice(i,1);
-          if(l.rn>1.2 && gap>2 && rnd()<0.3){ var sv=Math.min(Math.PI*l.rn*l.rn*0.8, a.v*0.15, b.v*0.15); a.v-=sv/2; b.v-=sv/2; a.r=Math.sqrt(a.v/Math.PI); b.r=Math.sqrt(b.v/Math.PI);
+          if(l.rn>1.2 && gap>2 && rnd()<0.12){ var sv=Math.min(Math.PI*l.rn*l.rn*0.8, a.v*0.15, b.v*0.15); a.v-=sv/2; b.v-=sv/2; a.r=Math.sqrt(a.v/Math.PI); b.r=Math.sqrt(b.v/Math.PI);
             var s=lobe((a.x+b.x)/2,(a.y+b.y)/2,sv,(a.e+b.e)/2); s.vx=(a.vx+b.vx)/2; s.vy=(a.vy+b.vy)/2; L.push(s); }
           continue; }
         // tension ~ circumference of the neck; viscous damping along the neck
-        var ma=a.v, mb=b.v, ten=(solid?40:2.4)*l.rn*(gap>-a.r*0.3 ? 1 : 0.3), rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny, damp=(solid?1:0.25)*l.rn*rv;
+        var ma=a.v, mb=b.v, ten=(solid?40:TEN)*l.rn*(gap>-a.r*0.3 ? 1 : 0.3), rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny, damp=(solid?1:0.25)*l.rn*rv;
         var Fm=(ten+damp)*dt*KT; a.vx+=Fm*nx/ma; a.vy+=Fm*ny/ma; b.vx-=Fm*nx/mb; b.vy-=Fm*ny/mb;
         // a neck that is pressed together grows thicker (the blobs are flowing into one)
         if(d<l.L0){ l.L0=Math.max(d,(a.r+b.r)*0.5); l.rn0=Math.min(0.85*Math.min(a.r,b.r), l.rn0+0.6*dt); }
         // heat runs along the neck
-        var q=0.15*l.rn*(b.T-a.T)*dt; a.e+=q/(a.v*CW); b.e-=q/(b.v*CW);
+        var q=(BF[a.blob]?KN:KF)*l.rn*(b.T-a.T)*dt; a.e+=q/(a.v*CW); b.e-=q/(b.v*CW);
       }
       // contacts: push apart; parcels of different blobs pressed together long enough coalesce;
       // neighbours inside one blob fuse while the result is not too big
@@ -3929,12 +3989,13 @@
         var key=a.id<b.id ? a.id+':'+b.id : b.id+':'+a.id;
         if(dd>=touch){ if(CONTACT[key]) delete CONTACT[key]; continue; }
         var ux=ex/dd, uy=ey/dd, same=a.blob===b.blob, ov=(same?(a.r+b.r)*0.62:touch)-dd;
+        a.ex-=occl(a.r,b.r,dd); b.ex-=occl(b.r,a.r,dd);
         if(same && dd<(a.r+b.r)*0.66 && a.v+b.v<=VMAX && a.f>0.6 && b.f>0.6){ fuse(a,b); fused=true; break; }
         if(ov>0){ var push=(same?8:22)*ov*dt, wa=b.v/(a.v+b.v), wb=a.v/(a.v+b.v);
           a.vx-=push*ux*wa; a.vy-=push*uy*wa; b.vx+=push*ux*wb; b.vy+=push*uy*wb; }
-        if(!same && a.f>0.7 && b.f>0.7){ var tm=(a.T+b.T)/2, need=1.6*Math.exp(-(tm-50)/9)*(0.6+0.8*rnd());
+        if(!same && a.f>0.7 && b.f>0.7){ var tm=(a.T+b.T)/2, rr=a.r*b.r/(a.r+b.r), need=1.6*Math.exp(-(tm-50)/9)*(0.6+0.8*rnd())*Math.min(1,rr*rr/2.56);   // the film drains faster under a small drop
           CONTACT[key]=(CONTACT[key]||0)+dt*(0.5+ov); if(CONTACT[key]>need){ delete CONTACT[key]; link(a,b,0.35*Math.min(a.r,b.r),dd); } }
-        var q2=0.05*Math.min(a.r,b.r)*(b.T-a.T)*dt; a.e+=q2/(a.v*CW); b.e-=q2/(b.v*CW);
+        var q2=(same?(BF[a.blob]?KN:KF):0.05)*Math.min(a.r,b.r)*(b.T-a.T)*dt; a.e+=q2/(a.v*CW); b.e-=q2/(b.v*CW);
       } if(fused) break; }
       // move; keep inside the glass, above the dished floor, below the surface
       for(i=0;i<L.length;i++){ o=L[i];
@@ -3947,14 +4008,16 @@
         if(o.y-ry*1.0<Y0+0.3){ o.y=Y0+0.3+ry; if(o.vy<0) o.vy=0; o.vx*=0.99; }
         o.rest+=((onFloor?1:0)-o.rest)*(1-Math.exp(-dt*3));
         o.sq+=(((o.y-ry<Y0+0.6)?1:0)-o.sq)*(1-Math.exp(-dt*3));    // flattening under the cap
-        var sp=Math.sqrt(o.vx*o.vx+o.vy*o.vy); o.el+=(Math.min(0.45, sp*0.03*o.f)-o.el)*(1-Math.exp(-dt*2)); if(sp>0.3) o.ang=Math.atan2(o.vy,o.vx);
+        var sp=Math.sqrt(o.vx*o.vx+o.vy*o.vy); o.el+=(Math.min(0.2, sp*0.02*o.f)-o.el)*(1-Math.exp(-dt*2)); if(sp>0.3) o.ang=Math.atan2(o.vy,o.vx);
       }
       // heat: the coil under the wax, wax <-> liquid across each blob's surface
       for(i=0;i<L.length;i++){ o=L[i];
-        // the coil and the hot glass bottom: strongest in the middle, felt a little way up as well
+        // the coil and the hot glass bottom: hotter than the liquid above them, most in the middle over
+        // the bulb, and they pass heat to wax lying on them in proportion to the difference, so wax
+        // on the coil warms toward the coil's temperature rather than without limit
         var gapF=Math.max(0, floorY(o.x)-(o.y+o.r*(1-0.38*o.rest))), prox=Math.exp(-gapF/3);
-        if(prox>0.02){ var sh=0.12+Math.exp(-Math.pow((o.x-CX)/5,2)); o.e+=P*KC*sh*o.r*1.6*prox*dt/(o.v*CW); }
-        var tl2=avgIn(TL,o.x,o.y,o.r), Q=0.06*2*Math.PI*o.r*(tl2-o.T)*dt;
+        if(prox>0.02){ var tfl=bil(TL,o.x,Y1-CS)+P*DF*(FE+(1-FE)*Math.exp(-Math.pow((o.x-CX)/FW,2))); o.e+=KC*o.r*prox*(tfl-o.T)*dt/(o.v*CW); }
+        var tl2=avgIn(TL,o.x,o.y,o.r), Q=HX*2*Math.PI*o.r*Math.max(0.15,o.ex)*(tl2-o.T)*dt;
         o.e+=Q/(o.v*CW); spread(TL,o.x,o.y,o.r,-Q,CC); phase(o);
       }
       // parcels too big to stay round split in two along the way they are moving
@@ -3996,7 +4059,10 @@
       for(j=0;j<GY;j++){ for(i=0;i<GX/2;i++){ k=j*GX+i; if(!M[k]){ var kk=k; while(kk<j*GX+GX-1 && !M[kk]) kk++; TL[k]=TL[kk]; } }
         for(i=GX-1;i>=GX/2;i--){ k=j*GX+i; if(!M[k]){ var k2=k; while(k2>j*GX && !M[k2]) k2--; TL[k]=TL[k2]; } } }
     }
-    var QB=150, LSIDE=0.035, LTOP=0.12, KT=12, KC=5;
+    // QB bulb into the liquid; LSIDE, LTOP losses to the room; KT neck force scale; BL the liquid's expansion
+    // over the wax's; KC, DF, FE, FW the coil (contact, how much hotter than the liquid, share at its
+    // edge, width); HX wax to liquid; TEN neck tension; KN, KF heat shared inside the pool, inside a moving blob
+    var QB=120, LSIDE=0.035, LTOP=0.12, KT=12, BL=0.35, KC=0.2, DF=16, FE=0.05, FW=7, HX=0.09, TEN=2.4, KN=0.03, KF=0.8;
     function project(){
       var i, j, k, it, h=CS;
       for(j=0;j<GY;j++) for(i=0;i<GX;i++){ k=j*GX+i; if(!M[k]){ DV[k]=0; PR[k]=0; continue; }
@@ -4068,11 +4134,12 @@
   // metal: a horizontal sweep for spun metal, from the finish's five tones
   function metalGrad(c, x0, x1, m){ var g=c.createLinearGradient(x0,0,x1,0); g.addColorStop(0,m[0]); g.addColorStop(0.18,m[1]); g.addColorStop(0.34,m[3]); g.addColorStop(0.46,m[2]); g.addColorStop(0.75,m[1]); g.addColorStop(1,m[0]); return g; }
 
-  // wax primitives: each parcel is an ellipse (flattened on the floor and under the cap, drawn out
-  // along its motion), each neck a string of small discs as thick as the neck is
+  // wax primitives: each parcel is an ellipse (flattened on the floor and under the cap, and a little
+  // across its motion, the way a drop pushing through a liquid flattens; a long tail is a neck, never
+  // speed), each neck a string of small discs as thick as the neck is
   function waxPrims(sim){
     var out=[], L=sim.L, i, K=2.1;
-    for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*(1+ee), b=o.r/(1+0.8*ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
+    for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r/(1+0.8*ee), b=o.r*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
       var sx=1+0.32*o.rest+0.22*o.sq, sy=1-0.38*o.rest-0.28*o.sq;
       // M = diag(sx,sy) R diag(a,b); store its inverse rows and the bounding extents
       var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10;
@@ -4143,14 +4210,15 @@
     var mt= xray ? ['#0d1620','#1d3040','#6a8aa8','#a8c8e8','#2a4050'] : neon ? ['#0a0414','#14081e','#3a1050','#ff28c8','#1a0828'] : thermal ? ['#06041e','#120a40','#2a1a70','#3a2a90','#160c50'] : uv ? ['#120822','#2a1648','#5a3a90','#9a7ae0','#2a1848'] : fin;
     var Y0=g.Y0, Y1=g.Y1;
 
-    // the room: the lamp lights the wall behind it and pools on the table
-    if(lit>0.01 && !thermal && !xray){ var br=110, bl=c.createRadialGradient(cx,92,4,cx,92,br); bl.addColorStop(0,rgba(glowC,clampN(0.2*lit,0,0.5))); bl.addColorStop(0.5,rgba(glowC,clampN(0.06*lit,0,0.2))); bl.addColorStop(1,rgba(glowC,0));
+    // the room: the lamp lights the wall behind it and pools on the table (none of it on its own on black)
+    var room=o.view!=='solo';
+    if(room && lit>0.01 && !thermal && !xray){ var br=110, bl=c.createRadialGradient(cx,92,4,cx,92,br); bl.addColorStop(0,rgba(glowC,clampN(0.2*lit,0,0.5))); bl.addColorStop(0.5,rgba(glowC,clampN(0.06*lit,0,0.2))); bl.addColorStop(1,rgba(glowC,0));
       c.fillStyle=bl; c.beginPath(); c.arc(cx,92,br,0,Math.PI*2); c.fill(); }
-    if(P.synth){ c.save(); c.strokeStyle='rgba(255,40,200,0.22)'; c.lineWidth=0.5;
+    if(room && P.synth){ c.save(); c.strokeStyle='rgba(255,40,200,0.22)'; c.lineWidth=0.5;
       for(var gx=-6; gx<=6; gx++){ c.beginPath(); c.moveTo(cx+gx*6, LFLOOR); c.lineTo(cx+gx*40, LFLOOR+120); c.stroke(); } c.restore(); }
-    var tg=c.createLinearGradient(0,LFLOOR,0,LFLOOR+30); tg.addColorStop(0,P.chassisCol[0]); tg.addColorStop(1,P.chassisCol[1]); c.fillStyle=tg; c.fillRect(-TW,LFLOOR,TW*3,TH);
-    c.fillStyle=P.chassisEdge; c.fillRect(-TW,LFLOOR,TW*3,0.6);
-    if(lit>0.01) add(function(){ var pr=c.createRadialGradient(cx,LFLOOR+3,1,cx,LFLOOR+3,56); pr.addColorStop(0,rgba(glowC,clampN(0.3*lit,0,0.6))); pr.addColorStop(1,rgba(glowC,0));
+    if(room){ var tg=c.createLinearGradient(0,LFLOOR,0,LFLOOR+30); tg.addColorStop(0,P.chassisCol[0]); tg.addColorStop(1,P.chassisCol[1]); c.fillStyle=tg; c.fillRect(-TW,LFLOOR,TW*3,TH);
+      c.fillStyle=P.chassisEdge; c.fillRect(-TW,LFLOOR,TW*3,0.6); }
+    if(room && lit>0.01) add(function(){ var pr=c.createRadialGradient(cx,LFLOOR+3,1,cx,LFLOOR+3,56); pr.addColorStop(0,rgba(glowC,clampN(0.3*lit,0,0.6))); pr.addColorStop(1,rgba(glowC,0));
       c.save(); c.translate(cx,LFLOOR+3); c.scale(1,0.2); c.translate(-cx,-(LFLOOR+3)); c.fillStyle=pr; c.fillRect(cx-60,LFLOOR-60,120,120); c.restore(); });
 
     // ---- the bottle: liquid, coil, wax, glass ----
@@ -4209,13 +4277,13 @@
   function renderLamp(cv, now, view, z, px, py, q){
     var f=fitCanvas(cv, q); if(!f) return null; lampTick(now);
     var c=f.c, r=f.r, L=curLook(), W=cv.width, H=cv.height;
-    var s=Math.min(f.w/TW, f.h/TH)*(view==='big'?0.94:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=f.h/2-(TH/2+(py||0))*s;
+    var solo=view==='solo', s=Math.min(f.w/TW, f.h/TH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=f.h/2-(TH/2+(py||0))*s;
     if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
     c.setTransform(1,0,0,1,0,0);
-    var bg = L.p.bg || (view==='big' ? '#060504' : null); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
+    var bg = solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
     c.setTransform(r*s,0,0,r*s,r*tx,r*ty);
     paintLamp(c, now, { detail:r*s, view:view, ppu:r*s, vis:{ x0:-tx/s, y0:-ty/s, x1:(f.w-tx)/s, y1:(f.h-ty)/s } });
-    c.setTransform(1,0,0,1,0,0); lookOverlay(c, W, H, L, now);
+    c.setTransform(1,0,0,1,0,0); if(!solo) lookOverlay(c, W, H, L, now);
     return { s:s, tx:tx, ty:ty, w:f.w, h:f.h };
   }
   function drawLamp(now){ renderLamp($('lampCv'), now, 'rack'); }
@@ -4454,7 +4522,7 @@
   }
   var rackRAF=0;
   function startRack(){ if(rackRAF) return; var loop=function(now){ if(!ADV.open){ rackRAF=0; return; } rackRAF=requestAnimationFrame(loop);
-      try{ drawTube(now); drawLamp(now); if(!tvIsOpen()){ drawEq(now); drawMeter(now); drawSpk(now); drawGonio(now); drawDeGR(now); } }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }   // the Tube view covers the rack: only its little tube keeps up
+      if(soloIsOpen()) return; try{ drawTube(now); drawLamp(now); if(!tvIsOpen()){ drawEq(now); drawMeter(now); drawSpk(now); drawGonio(now); drawDeGR(now); } }catch(e){ console.warn(e); } }; rackRAF=requestAnimationFrame(loop); }   // the Tube view covers the rack: only its little tube keeps up
 
   // Offline measurement for tests: render through a fresh chain (stereo) and read it back.
   //   tones: [{f,a}] (default one sine at freq/amp), impulse: true for a single click at 50 ms,
@@ -4595,10 +4663,11 @@
         advance: function(sec){ lampSim(); LAMP.sim.S.on=!!ADV.lampOn; LAMP.sim.S.power=clampN(ADV.lampW,15,40)/25; lampAdvance(sec||1); syncLampStat(); return this.state(); },
         reset: function(seed){ lampRestart(seed); return this.state(); },
         set: function(o){ Object.keys(o||{}).forEach(function(k){ if(('lamp'+k.charAt(0).toUpperCase()+k.slice(1)) in ADV_DEF) ADV['lamp'+k.charAt(0).toUpperCase()+k.slice(1)]=o[k]; }); Object.keys(advKnobs).forEach(function(k){ if(/^lamp/.test(k)) advKnobs[k].set(ADV[k]); }); saveAdv(); syncLampUI(); return JSON.parse(JSON.stringify(ADV)); },
-        blobs: function(){ lampSim(); return LAMP.sim.L.map(function(o){ return { x:o.x, y:o.y, r:o.r, T:o.T, f:o.f }; }); },
+        blobs: function(){ lampSim(); LAMP.sim.stats(); return LAMP.sim.L.map(function(o){ return { x:o.x, y:o.y, r:o.r, T:o.T, f:o.f, b:o.blob }; }); },
         cols: function(){ return LAMP_COLS.map(function(x){ return x.id; }); },
         bench: function(n, which){ var cv=$(which==='rack'?'lampCv':'tvCv'), t0=performance.now(); n=n||30;
           for(var i=0;i<n;i++){ renderLamp(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
+        solo: function(v){ if(v===true) openLampSolo(); else if(v===false) closeLampSolo(); return soloIsOpen(); },
         stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; }
       },
       // Test-only: decode the start of a real recording (byte range) and report the energy in the
