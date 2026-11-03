@@ -4223,7 +4223,8 @@
     if(st.cv.width!==W || st.cv.height!==H){ st.cv.width=W; st.cv.height=H; st.cx=st.cv.getContext('2d'); st.img=st.cx.createImageData(W,H); }
     var D=st.img.data, wc=look==='blacklight' ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35), lim=cs*(look==='neon'?2.5:1.5);
     var hx=-0.38, hy=-0.52, hz=0.76;                                   // the room light, up and to the left
-    for(var b=0;b<H;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.3+0.7*Math.exp(-above/42))+0.1;
+    var wt=[Math.min(255,wc[0]*1.12+34), Math.min(255,wc[1]*1.18+30), Math.min(255,wc[2]*1.08+12)];   // light that has come through the wax
+    for(var b=0;b<H;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.45+0.55*Math.exp(-above/55))+0.1;
       for(var a=0;a<W;a++){ var k=b*W+a, x=fd.x0+a*cs, dd=F[k], pi=k*4, edge=(wIn-Math.abs(x-LCX))/cs+0.5;
         if(edge<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; }
         var A=0, R=0, G=0, Bc=0;
@@ -4238,7 +4239,9 @@
             else if(look==='neon'){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
             else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
             else { var base = mf<0.6 ? solidC : wc, glow=mf<0.6 ? 0.4 : 1, li=Lb*(0.42+0.58*dl)*glow, rim=(1-h)*0.32*Lb*glow, hot=Math.max(0,T-50)*0.012*lit;
-              R=base[0]*(0.16+0.95*li+rim)+255*hot*0.6+255*spec*0.4; G=base[1]*(0.16+0.95*li+rim)+150*hot*0.6+245*spec*0.4; Bc=base[2]*(0.16+0.95*li+rim)+60*hot*0.6+235*spec*0.4; } }
+              // molten wax is translucent: where it is thin (its edges, necks, small drops) the light from below comes through and it glows
+              var tr= mf<0.6 ? 0 : Lb*Math.pow(1-h,1.5)*0.5*(0.55+0.45*dl);
+              R=base[0]*(0.16+0.95*li+rim)+wt[0]*tr+255*hot*0.6+255*spec*0.4; G=base[1]*(0.16+0.95*li+rim)+wt[1]*tr+150*hot*0.6+245*spec*0.4; Bc=base[2]*(0.16+0.95*li+rim)+wt[2]*tr+60*hot*0.6+235*spec*0.4; } }
         }
         if(thermal && A<1){ var tl=sim.sampleTL(x,y), lc=thermRGB((tl-22)/45); R=R*A+lc[0]*0.55*(1-A); G=G*A+lc[1]*0.55*(1-A); Bc=Bc*A+lc[2]*0.55*(1-A); A=1; }
         A*=Math.min(1,edge);
@@ -4248,6 +4251,8 @@
     c.save(); c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs); c.restore();
   }
 
+  // a colour seen through more of itself, or by less light: each channel falls off faster the weaker it is
+  function lampDeep(c0, ii){ return c0.map(function(v){ var t=v/255; return Math.round(255*t*Math.pow(Math.max(0,ii), 1+1.1*(1-t))+3); }); }
   function paintLamp(c, now, o){
     var sim=lampSim(), g=sim.geo, L=curLook(), look=L.id, P=L.p, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], fin=(LBASE_BY[ADV.lampBase]||LAMP_BASES[0]).m, cx=LCX, d=o.detail||1;
     var B=clampN(ADV.lampBright,0,200)/100, on=!!ADV.lampOn, pw=on ? clampN(ADV.lampW,15,40)/25*(1+0.25*sim.S.music) : 0;
@@ -4274,8 +4279,10 @@
     lampGlass(c, sim, 0, 26, 128); c.fillStyle= xray ? 'rgba(120,170,220,0.06)' : 'rgba(205,220,230,0.035)'; c.fill();
     // the liquid, lit from the bulb underneath (Thermal draws the liquid's own temperature instead)
     var ins=function(){ c.beginPath(); var y; c.moveTo(cx-sim.inner(Y1),Y1); for(y=Y1-1.5;y>Y0;y-=1.5) c.lineTo(cx-sim.inner(y),y); c.lineTo(cx-sim.inner(Y0),Y0); c.lineTo(cx+sim.inner(Y0),Y0); for(y=Y0+1.5;y<Y1;y+=1.5) c.lineTo(cx+sim.inner(y),y); c.lineTo(cx+sim.inner(Y1),Y1); c.closePath(); };
-    if(!thermal){ var dk=[8,6,6], lg=c.createLinearGradient(0,Y0,0,Y1+1), k0=col.clear&&!uv&&!neon&&!xray ? 0.35 : 1;
-      [0,0.35,0.7,0.88,1].forEach(function(s){ var ii=clampN(0.07+lit*k0*(0.1+0.75*Math.exp(-(1-s)*93/36)),0,1); lg.addColorStop(s, rgba(mix(dk, liq, ii), 1)); });
+    // the liquid: the bulb's light carries most of the way up the bottle, and where it is weaker the colour
+    // deepens (the liquid soaks up its weaker colours first, so yellow goes amber) instead of going grey
+    if(!thermal){ var lg=c.createLinearGradient(0,Y0,0,Y1+1), k0=col.clear&&!uv&&!neon&&!xray ? 0.35 : 1;
+      [0,0.2,0.45,0.7,0.88,1].forEach(function(s){ var ii=clampN(0.06+lit*k0*(0.3+0.64*Math.exp(-(1-s)*93/55)),0,1); lg.addColorStop(s, rgba(lampDeep(liq, ii), 1)); });
       ins(); c.fillStyle=lg; c.fill();
       if(lit>0.01) add(function(){ var cg=c.createRadialGradient(0,0,0,0,0,1); cg.addColorStop(0,rgba(liq,clampN(0.5*lit*k0,0,0.8))); cg.addColorStop(0.45,rgba(liq,clampN(0.14*lit*k0,0,0.3))); cg.addColorStop(1,rgba(liq,0));
         ins(); c.translate(cx,Y1+6); c.scale(26,70); c.fillStyle=cg; c.fill(); });
