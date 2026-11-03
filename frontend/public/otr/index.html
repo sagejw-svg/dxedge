@@ -702,7 +702,7 @@
           <button class="pwr small" id="lampPower" aria-pressed="true" title="The lamp's switch"><span class="sw"></span>on</button></div>
         <div class="mod-b">
           <div class="lamp-stage">
-            <canvas id="lampCv" role="img" aria-label="Lava lamp. Click to see it on its own, everything else black" title="Click: the lamp alone on black (click again or Esc to come back)"></canvas>
+            <canvas id="lampCv" role="img" aria-label="Lava lamp. Click to open it big" title="Click to open it big"></canvas>
             <div class="lamp-info">
               <div class="lamp-stat" id="lampStat" aria-live="polite">warming up</div>
               <select id="lampColSel" aria-label="Wax and liquid colours"></select>
@@ -920,7 +920,7 @@
       <div class="knobs left" id="tvLampKnobs"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">wax / liquid</div><div class="chips2" id="tvLampCols" role="group" aria-label="Wax and liquid colours"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">base</div><div class="chips2" id="tvLampBases" role="group" aria-label="Base finish"></div></div>
-    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. Click the lamp to see it on its own, everything else black; click again or press Esc to come back. Lava lamp + radio stands it on a mini radio whose dial, buttons, EQ and knob work here and on black. None of this changes the sound.</div>
+    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. ⛶ (or a click on the lamp) shows it on its own, full screen with everything else black; click again or press Esc to come back. Lava lamp + radio stands it on a mini radio whose dial, buttons, EQ and knob work here and on black. None of this changes the sound.</div>
     <div class="mod-note tv-tube">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
   </aside>
 </div>
@@ -3288,6 +3288,9 @@
     var t=TUBE_BY[ADV.tube], L=curLook(), lamp=TVZ.subj==='lamp';
     $('tview').setAttribute('data-subj', TVZ.subj); $('tview').setAttribute('aria-label', lamp?'Lava lamp view':'Tube view');
     var key = TVZ.subj==='tube' ? 'tube' : ADV.lampRadio ? 'radio' : 'lamp';
+    $('tvFull').style.display = TVZ.subj==='lamp' || document.fullscreenEnabled ? '' : 'none';
+    $('tvFull').title = TVZ.subj==='lamp' ? 'Full screen: the lamp on its own (Esc to come back)' : 'Full screen';
+    $('tvFull').setAttribute('aria-label', $('tvFull').title);
     document.querySelectorAll('#tvSubj button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.s===key?'true':'false'); });
     $('tvCv').setAttribute('aria-label', lamp?'The lava lamp, zoomed in':'The tube, zoomed in');
     $('tvName').textContent= lamp ? 'Lava lamp' : t.id; $('tvKind').textContent=t.kind; $('tvLookName').textContent=L.name+' filter';
@@ -3317,7 +3320,8 @@
     SOLO.prev=document.activeElement; SOLO.fs=false; el.hidden=false; document.body.style.overflow='hidden';
     if(document.fullscreenEnabled && el.requestFullscreen && !document.fullscreenElement){ try{ el.requestFullscreen({ navigationUI:'hide' }).then(function(){ SOLO.fs=true; }).catch(function(){}); }catch(e){} }
     soloWake(); soloPoke(); try{ el.focus({ preventScroll:true }); }catch(e){}
-    var loop=function(now){ if(!soloIsOpen()){ SOLO.raf=0; return; } SOLO.raf=requestAnimationFrame(loop); try{ SOLO.geom=renderLamp($('soloCv'), now, 'solo'); }catch(e){ console.warn(e); } };
+    SOLOQ.q=1; SOLOQ.ceil=1; SOLOQ.ema=16.7; SOLOQ.last=0; SOLOQ.t=0; SOLOQ.lock=TVQ.lock;
+    var loop=function(now){ if(!soloIsOpen()){ SOLO.raf=0; return; } SOLO.raf=requestAnimationFrame(loop); try{ var cv=$('soloCv'); SOLO.geom=renderLamp(cv, now, 'solo', 1, 0, 0, frameQuality(SOLOQ, now, cv)); }catch(e){ console.warn(e); } };
     if(!SOLO.raf) SOLO.raf=requestAnimationFrame(loop);
   }
   function closeLampSolo(){
@@ -3347,17 +3351,19 @@
   // Adaptive resolution: when frames run long (a slow GPU, a very large window) the Tube view drops
   // its backing store in steps toward half resolution, and creeps back up when there is headroom,
   // never above a level that already proved too slow. The pixel budget caps 4K windows up front.
-  var TVQ={ q:1, ceil:1, lock:null, ema:16.7, last:0, t:0 };
-  function tvQuality(now, cv){
-    var dt=now-TVQ.last; TVQ.last=now; if(dt>0 && dt<250) TVQ.ema += (dt-TVQ.ema)*0.08;
+  var TVQ={ q:1, ceil:1, lock:null, ema:16.7, last:0, t:0 }, SOLOQ={ q:1, ceil:1, lock:null, ema:16.7, last:0, t:0 };
+  // canvas resolution that keeps the frame rate up: capped near 4 megapixels, eased down when frames run long
+  function frameQuality(Q, now, cv){
+    var dt=now-Q.last; Q.last=now; if(dt>0 && dt<250) Q.ema += (dt-Q.ema)*0.08;
     var dpr=window.devicePixelRatio||1, px=cv.clientWidth*cv.clientHeight*dpr*dpr, qMax=px>0 ? Math.min(1, Math.sqrt(4.2e6/px)) : 1;
-    if(TVQ.lock!=null) return TVQ.lock;
-    if(now-TVQ.t>800){
-      if(TVQ.ema>24 && TVQ.q>0.5){ TVQ.ceil=TVQ.q-0.05; TVQ.q=Math.max(0.5, TVQ.q-0.15); TVQ.t=now; TVQ.ema=17; }
-      else if(TVQ.ema<18.5 && TVQ.q+0.1<=Math.min(qMax,TVQ.ceil) && now-TVQ.t>3000){ TVQ.q+=0.1; TVQ.t=now; }
+    if(Q.lock!=null) return Q.lock;
+    if(now-Q.t>800){
+      if(Q.ema>24 && Q.q>0.5){ Q.ceil=Q.q-0.05; Q.q=Math.max(0.5, Q.q-0.15); Q.t=now; Q.ema=17; }
+      else if(Q.ema<18.5 && Q.q+0.1<=Math.min(qMax,Q.ceil) && now-Q.t>3000){ Q.q+=0.1; Q.t=now; }
     }
-    return Math.min(TVQ.q, qMax);
+    return Math.min(Q.q, qMax);
   }
+  function tvQuality(now, cv){ return frameQuality(TVQ, now, cv); }
   function startTV(){ if(tvRAF) return; TVQ.q=1; TVQ.ceil=1; TVQ.ema=16.7; TVQ.last=0; TVQ.t=0;
     var loop=function(now){ if(!tvIsOpen()){ tvRAF=0; return; } tvRAF=requestAnimationFrame(loop); if(soloIsOpen()) return;
       try{ var cv=$('tvCv'); tvGeom=(TVZ.subj==='lamp'?renderLamp:renderTube)(cv, now, 'big', TVZ.z, TVZ.x, TVZ.y, tvQuality(now, cv)); $('tvZl').textContent=Math.round(TVZ.z*100)+'%'; }catch(e){ console.warn(e); } };
@@ -3402,13 +3408,15 @@
     cv.addEventListener('dblclick', function(e){ clearTimeout(tvTap.t); if(tvTap.ctl || performance.now()-(tvTap.ctlT||0)<700) return; var r=cv.getBoundingClientRect(); if(TVZ.z>1.05){ TVZ.z=1; clampPan(); } else zoomAt(3, e.clientX-r.left, e.clientY-r.top); });
     $('tvIn').onclick=function(){ zoomStep(1.4); }; $('tvOut').onclick=function(){ zoomStep(1/1.4); };
     $('tvFit').onclick=function(){ TVZ.z=1; clampPan(); };
-    if(!document.fullscreenEnabled) $('tvFull').style.display='none';
-    $('tvFull').onclick=function(){ if(document.fullscreenElement) document.exitFullscreen(); else $('tview').requestFullscreen().catch(function(){}); };
+    // ⛶: for the lamp, the lamp on its own (everything else black, full screen where the browser allows it);
+    // for the tube, the whole view full screen
+    $('tvFull').onclick=function(){ if(TVZ.subj==='lamp'){ openLampSolo(); return; }
+      if(document.fullscreenElement) document.exitFullscreen(); else $('tview').requestFullscreen().catch(function(){}); };
     $('tvClose').onclick=closeTubeView;
     $('tvLight').onclick=function(){ if(!ADV.on) setAdvPower(true); if(!ADV.tubeOn) setModule('tubeOn', true); syncTubeView(); };
     $('tubeCv').addEventListener('click', function(){ openTubeView('tube'); });
     $('tubeZoom').onclick=function(){ openTubeView('tube'); };
-    $('lampCv').addEventListener('click', function(){ openLampSolo(); });
+    $('lampCv').addEventListener('click', function(){ openTubeView('lamp'); });
     $('lampZoom').onclick=function(){ openTubeView('lamp'); };
     // Tube, Lava lamp, or Lava lamp + radio (the same lamp standing on the mini radio)
     document.querySelectorAll('#tvSubj button').forEach(function(b){ b.onclick=function(){
@@ -3967,6 +3975,7 @@
     function linked(a,b){ for(var i=0;i<LINKS.length;i++){ var l=LINKS[i]; if((l.a===a&&l.b===b)||(l.a===b&&l.b===a)) return l; } return null; }
     function step(){
       var dt=DT, P=S.on ? S.power*(1+0.6*S.music) : 0, n=L.length, i, a, b, o;
+      for(i=0;i<n;i++){ L[i].px=L[i].x; L[i].py=L[i].y; }   // where it was a step ago, so drawing can go smoothly between steps
       blobsOf();
       var BV={}, BF={}; for(i=0;i<n;i++){ o=L[i]; BV[o.blob]=(BV[o.blob]||0)+o.v; if(o.rest>0.5) BF[o.blob]=1; o.ex=1-0.3*o.rest; }
       // forces from the liquid: buoyancy, drag (Stokes: 1/r per unit mass, r of the whole blob, held
@@ -4128,6 +4137,7 @@
     LAMP.music += (lv-LAMP.music)*(1-Math.exp(-dt/1.5)); sim.S.music = ADV.lampMusic ? clampN(LAMP.music*1.6,0,1) : 0;
     var spd = LAMP.warming && ADV.lampOn ? Math.max(3, ADV.lampTime) : ADV.lampTime;
     LAMP.acc += dt*spd; var n=0; while(LAMP.acc>=sim.DT && n<16){ sim.step(); LAMP.acc-=sim.DT; n++; } if(n>=16) LAMP.acc=0;
+    sim.alpha=clampN(LAMP.acc/sim.DT,0,1);   // how far between the last step and the next this frame falls
     if(now-LAMP.statT>500){ LAMP.statT=now; lampWatch(); syncLampStat(); }
   }
   function lampStatus(){
@@ -4157,18 +4167,19 @@
   // Parcels of one blob are melted together with a smooth minimum, so where they meet, and where a neck
   // joins a blob, the surface rounds into a fillet instead of adding up into a bump; different blobs are
   // only ever touching, never blended, so each keeps its own outline.
-  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.9, WAX_KN=2.2;   // blend widths: a parcel melts into its blob over about its own radius
+  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.9, WAX_KN=2.2, WAX_KMAX=6;   // blend widths: a parcel melts into its blob over about its own radius
   function waxPrims(sim){
-    var out=[], L=sim.L, i;
+    var out=[], L=sim.L, i, al=sim.alpha||0;
+    for(i=0;i<L.length;i++){ var o0=L[i]; o0.rx = o0.px!=null ? o0.px+(o0.x-o0.px)*al : o0.x; o0.ry = o0.py!=null ? o0.py+(o0.y-o0.py)*al : o0.y; }
     for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*WAX_GROW/(1+0.8*ee), b=o.r*WAX_GROW*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
       var sx=1+0.32*o.rest+0.22*o.sq, sy=1-0.38*o.rest-0.28*o.sq;
       // M = diag(sx,sy) R diag(a,b) maps the unit circle onto the parcel; keep its inverse and its extents
-      var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10, kk=WAX_KA+WAX_KB*o.r;
-      out.push({ n:0, b:o.blob, x:o.x, y:o.y, i00:m11/det, i01:-m01/det, i10:-m10/det, i11:m00/det, ex:Math.sqrt(m00*m00+m01*m01)+kk, ey:Math.sqrt(m10*m10+m11*m11)+kk, k:kk, T:o.T, f:o.f });
+      var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10, kk=Math.min(WAX_KMAX, WAX_KA+WAX_KB*o.r);
+      out.push({ n:0, b:o.blob, x:o.rx, y:o.ry, i00:m11/det, i01:-m01/det, i10:-m10/det, i11:m00/det, ex:Math.sqrt(m00*m00+m01*m01)+0.6*kk, ey:Math.sqrt(m10*m10+m11*m11)+0.6*kk, k:kk, T:o.T, f:o.f });
     }
-    for(i=0;i<sim.LINKS.length;i++){ var l=sim.LINKS[i], A=l.a, Bq=l.b, dx=Bq.x-A.x, dy=Bq.y-A.y, d=Math.sqrt(dx*dx+dy*dy); if(d<(A.r+Bq.r)*0.55) continue;
-      var rn=Math.max(0.45,l.rn), kn=WAX_KA+WAX_KN*rn, pad=rn+kn;
-      out.push({ n:1, b:A.blob, x:(A.x+Bq.x)/2, y:(A.y+Bq.y)/2, ax:A.x, ay:A.y, bx:dx, by:dy, bb:dx*dx+dy*dy, rn:rn, k:kn, ex:Math.abs(dx)/2+pad, ey:Math.abs(dy)/2+pad, T:(A.T+Bq.T)/2, T0:A.T, T1:Bq.T, f:Math.min(A.f,Bq.f) });
+    for(i=0;i<sim.LINKS.length;i++){ var l=sim.LINKS[i], A=l.a, Bq=l.b, dx=Bq.rx-A.rx, dy=Bq.ry-A.ry, d=Math.sqrt(dx*dx+dy*dy); if(d<(A.r+Bq.r)*0.55) continue;
+      var rn=Math.max(0.45,l.rn), kn=Math.min(WAX_KMAX, WAX_KA+WAX_KN*rn), pad=rn+0.6*kn;
+      out.push({ n:1, b:A.blob, x:(A.rx+Bq.rx)/2, y:(A.ry+Bq.ry)/2, ax:A.rx, ay:A.ry, bx:dx, by:dy, bb:dx*dx+dy*dy, rn:rn, k:kn, ex:Math.abs(dx)/2+pad, ey:Math.abs(dy)/2+pad, T:(A.T+Bq.T)/2, T0:A.T, T1:Bq.T, f:Math.min(A.f,Bq.f) });
     }
     return out;
   }
@@ -4188,7 +4199,7 @@
     for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
     x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
     if(x1<=x0 || y1<=y0) return null;
-    var cs=Math.max(0.1, 2.0/ppu); if((x1-x0)*(y1-y0)/(cs*cs)>46000) cs=Math.sqrt((x1-x0)*(y1-y0)/46000);
+    var cs=Math.max(0.1, 3.0/ppu); if((x1-x0)*(y1-y0)/(cs*cs)>16000) cs=Math.sqrt((x1-x0)*(y1-y0)/16000);
     var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
     if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FB=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FW=new Float32Array(N); }
     var F=st.F, FB=st.FB, FT=st.FT, FF=st.FF, FW=st.FW; F.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FW.fill(0,0,N);
@@ -4197,14 +4208,14 @@
     for(i=0;i<prims.length;i++){ p=prims[i]; var key=p.b==null ? 'p'+i : p.b; if(!groups[key]){ groups[key]=[]; order.push(key); } groups[key].push(p); }
     var m=2*cs;
     for(j=0;j<order.length;j++){ var grp=groups[order[j]], ga0=W, ga1=-1, gb0=H, gb1=-1;
-      for(i=0;i<grp.length;i++){ p=grp[i];
+      for(i=0;i<grp.length;i++){ p=grp[i]; if(!p.n){ var crr=Math.max(p.ex,p.ey)+m; p.cr=crr*crr; }
         p.a0=Math.max(0,Math.floor((p.x-p.ex-m-x0)/cs)); p.a1=Math.min(W-1,Math.ceil((p.x+p.ex+m-x0)/cs)); p.b0=Math.max(0,Math.floor((p.y-p.ey-m-y0)/cs)); p.b1=Math.min(H-1,Math.ceil((p.y+p.ey+m-y0)/cs));
         if(p.a0<ga0) ga0=p.a0; if(p.a1>ga1) ga1=p.a1; if(p.b0<gb0) gb0=p.b0; if(p.b1>gb1) gb1=p.b1; }
       if(ga1<ga0 || gb1<gb0) continue;
       for(var b=gb0;b<=gb1;b++) FB.fill(WAX_FAR, b*W+ga0, b*W+ga1+1);
       for(i=0;i<grp.length;i++){ p=grp[i];
         for(b=p.b0;b<=p.b1;b++){ var y=y0+b*cs, row=b*W;
-          for(var a=p.a0;a<=p.a1;a++){ var x=x0+a*cs, d=waxDist(p,x,y), q=row+a;
+          for(var a=p.a0;a<=p.a1;a++){ var x=x0+a*cs, q=row+a; if(!p.n){ var ux=x-p.x, uy=y-p.y; if(ux*ux+uy*uy>p.cr) continue; } var d=waxDist(p,x,y);
             FB[q]=smin(FB[q], d, p.k);
             if(d<p.k){ var w=d<0 ? 1+Math.min(1.5,-d) : (1-d/p.k)*(1-d/p.k), T=p.T;
               if(p.n){ var tt=((x-p.ax)*p.bx+(y-p.ay)*p.by)/p.bb; tt=tt<0?0:tt>1?1:tt; T=p.T0+(p.T1-p.T0)*tt; }
