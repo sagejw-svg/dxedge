@@ -38,7 +38,7 @@ import wave
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-from otr_live import normalize_spoken, pick_premade_voice  # noqa: E402
+from otr_live import SPOKEN_STATION, normalize_spoken, pick_premade_voice  # noqa: E402
 
 CATALOG = os.path.join(ROOT, "frontend", "public", "otr", "catalog.json")
 OUT = os.path.join(ROOT, "frontend", "public", "otr", "live", "pack")
@@ -54,35 +54,35 @@ JINGLE_MS = 15000
 
 JINGLE_PROMPT = (
     "A 15-second 1940s American radio station identification jingle for a station "
-    "called old time radio. Small live orchestra: warm trumpets, clarinet, and "
-    "a bright xylophone sting, then a short male close-harmony group singing the "
-    "words old time radio, resolving on a major chord. Mono, a little vinyl "
+    "called Old Time Radio on listen O T R dot com. Small live orchestra: warm trumpets, clarinet, and "
+    "a bright xylophone sting, then a short male close-harmony group singing "
+    "Old Time Radio on listen O T R dot com, resolving on a major chord. Mono, a little vinyl "
     "warmth, the sound of a 1947 network ID. No modern drums, no synthesizer, "
     "no electric guitar."
 )
 
 IDENTS = [
-    ("ident", "You're listening to old time radio."),
-    ("ident-stay", "This is old time radio. Stay with us."),
-    ("ident-live", "Old time radio. The live broadcast."),
+    ("ident", "You're listening to " + SPOKEN_STATION + "."),
+    ("ident-stay", "This is " + SPOKEN_STATION + ", where the golden age of radio never signs off."),
+    ("ident-live", SPOKEN_STATION + ". The live broadcast."),
 ]
 
 # Start second in the Eastern day -> the line that opens that block.
 DAYPARTS = [
-    (0, "It's the middle of the night on old time radio. Mysteries until dawn."),
-    (5 * 3600, "Good morning from old time radio. Comedy to start the day."),
-    (8 * 3600, "Daytime on old time radio. Stories through the morning."),
-    (12 * 3600, "High noon on old time radio. Westerns through the afternoon."),
-    (16 * 3600, "Late afternoon on old time radio. Crime is on the case."),
-    (19 * 3600, "Dinner time on old time radio. Comedy at the table."),
-    (20 * 3600, "It's eight o'clock. Tonight on old time radio, the mystery hour."),
-    (20 * 3600 + 1800, "Eight thirty. Time for comedy on old time radio."),
-    (21 * 3600, "Nine o'clock. A western, here on old time radio."),
-    (21 * 3600 + 1800, "Nine thirty. Crime drama on old time radio."),
-    (22 * 3600, "Ten o'clock. Turn the lights down. Horror, on old time radio."),
-    (22 * 3600 + 1800, "Ten thirty. Drama on old time radio."),
-    (23 * 3600, "Eleven o'clock. Adventure on old time radio."),
-    (23 * 3600 + 1800, "Eleven thirty. Stories of tomorrow, tonight, on old time radio."),
+    (0, "It's the middle of the night on " + SPOKEN_STATION + ". Mysteries until dawn."),
+    (5 * 3600, "Good morning from " + SPOKEN_STATION + ". Comedy to start the day."),
+    (8 * 3600, "Daytime on " + SPOKEN_STATION + ". Stories through the morning."),
+    (12 * 3600, "High noon on " + SPOKEN_STATION + ". Westerns through the afternoon."),
+    (16 * 3600, "Late afternoon on " + SPOKEN_STATION + ". Crime is on the case."),
+    (19 * 3600, "Dinner time on " + SPOKEN_STATION + ". Comedy at the table."),
+    (20 * 3600, "It's eight o'clock. Tonight on " + SPOKEN_STATION + ", the mystery hour."),
+    (20 * 3600 + 1800, "Eight thirty. Time for comedy on " + SPOKEN_STATION + "."),
+    (21 * 3600, "Nine o'clock. A western, here on " + SPOKEN_STATION + "."),
+    (21 * 3600 + 1800, "Nine thirty. Crime drama on " + SPOKEN_STATION + "."),
+    (22 * 3600, "Ten o'clock. Turn the lights down. Horror, on " + SPOKEN_STATION + "."),
+    (22 * 3600 + 1800, "Ten thirty. Drama on " + SPOKEN_STATION + "."),
+    (23 * 3600, "Eleven o'clock. Adventure on " + SPOKEN_STATION + "."),
+    (23 * 3600 + 1800, "Eleven thirty. Stories of tomorrow, tonight, on " + SPOKEN_STATION + "."),
 ]
 
 
@@ -97,7 +97,7 @@ def shows():
 
 
 def up_next_line(name):
-    return "Up next on old time radio, " + name + "."
+    return "Up next on " + SPOKEN_STATION + ", " + name + "."
 
 
 def plan():

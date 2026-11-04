@@ -133,7 +133,7 @@ def main():
 
         shows = [it for it in day if it["kind"] == "show"]
         breaks = [it for it in day if it["kind"] == "break"]
-        ck("a station break follows every show", len(breaks) >= len(shows) and all(it["line"] and "Listenotr Radio" in it["line"] for it in breaks), (len(shows), len(breaks)))
+        ck("a station break follows every show", len(breaks) >= len(shows) and all(it["line"] and "Old Time Radio on listen O T R dot com" in it["line"] for it in breaks), (len(shows), len(breaks)))
         mystery = next(it for it in day if it["kind"] == "show" and it["start"] == 20 * 3600)
         mystery_break = next(it for it in day if it["kind"] == "break" and it["start"] == mystery["start"] + mystery["dur"])
         ck("the break after the 8:00 mystery announces Jack Benny and plays that clip",
@@ -281,19 +281,27 @@ def main():
            not berrs and mounted["player"] and mounted["placeholder"] and mounted["ready"] == "ready" and mounted["sw"] <= 390,
            (berrs[:3], mounted))
         basic.click("#otrModeAdvanced")
-        basic.wait_for_function("() => OTRMode.current()==='advanced' && getComputedStyle(document.getElementById('otrAdvLive')).display !== 'none'", timeout=5000)
-        adv_box = basic.evaluate("""() => {
-          const b = document.getElementById('otrAdvLive').getBoundingClientRect();
-          const s = document.getElementById('otrModeSwitch').getBoundingClientRect();
-          return { b, s, sw: document.documentElement.scrollWidth, iw: innerWidth };
+        basic.wait_for_function("() => OTRMode.current()==='advanced' && document.querySelector('#networkChips .station[data-net=listenotr] .st-now') && document.querySelector('#networkChips .station[data-net=listenotr] .st-now').textContent.trim()", timeout=20000)
+        adv = basic.evaluate("""() => {
+          const cards = [...document.querySelectorAll('#networkChips .station')].map(e => e.dataset.net);
+          const card = document.querySelector('#networkChips .station[data-net=listenotr]');
+          return {
+            mode: OTRMode.current(),
+            button: !!document.getElementById('otrAdvLive'),
+            first: cards[0],
+            name: card.querySelector('.st-name').textContent,
+            now: card.querySelector('.st-now').textContent.trim(),
+            left: card.querySelector('.st-left .l').textContent,
+            next: card.querySelector('.st-next').textContent
+          };
         }""")
-        ck("Advanced Listen Live is a compact control in the mode switch",
-           adv_box["b"]["height"] >= 40 and adv_box["b"]["height"] <= 64 and adv_box["b"]["width"] < 160
-           and adv_box["b"]["right"] <= adv_box["s"]["right"] and adv_box["sw"] <= 390, adv_box)
-        basic.click("#otrAdvLive")
-        basic.wait_for_function("() => OTRMode.current()==='basic' && !__listenotr.paused()", timeout=5000)
-        ck("Listen Live on Advanced returns to Basic and joins the broadcast",
-           basic.evaluate("OTRMode.current()") == "basic" and basic.locator("#otr-live [data-otr-live-player]").count() == 1)
+        ck("Advanced has no Listen Live switch, and Listenotr Radio (Live) leads the station list",
+           adv["mode"] == "advanced" and not adv["button"] and adv["first"] == "listenotr"
+           and adv["name"].startswith("Listenotr Radio (Live)") and adv["now"] and adv["left"].endswith("left") and adv["next"].startswith("then"), adv)
+        basic.locator("#networkChips .station[data-net=listenotr]").click()
+        basic.wait_for_function("() => OTRMode.current()==='advanced' && !__listenotr.paused() && __otr.state.network==='listenotr'", timeout=5000)
+        ck("choosing Listenotr Radio (Live) plays the synced broadcast and stays on Advanced",
+           basic.evaluate("OTRMode.current()") == "advanced" and basic.evaluate("__otr.state.network") == "listenotr" and not basic.evaluate("__listenotr.paused()"))
         basic_ctx.close()
 
         phone, _, pctx = open_page(w=390, h=844)

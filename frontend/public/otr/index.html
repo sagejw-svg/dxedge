@@ -608,7 +608,6 @@
         <span class="sup-s">helps cover hosting and development</span></a>
     </div>
     <div class="otr-mode-switch" id="otrModeSwitch" role="group" aria-label="Basic or Advanced">
-      <button type="button" id="otrAdvLive">Listen Live</button>
       <button type="button" id="otrModeBasic" aria-pressed="true">Basic</button>
       <button type="button" id="otrModeAdvanced" aria-pressed="false">Advanced</button>
     </div>
@@ -1578,6 +1577,8 @@
 
   // Tune in: join the station's broadcast at the current clock position.
   function startChannel(ch){
+    stopListenotr();
+    if(state.network==='listenotr') state.network=null;
     if(!(chanShows[ch]||[]).length){ toast('No shows on that channel'); return; }
     if(onlyMode()){   // a shared clock can't skip episodes, so play an enhanced-only mix of the channel instead
       var shows=chanShows[ch];
@@ -1651,8 +1652,59 @@
     });
   }
   function netShowCount(N){ var seen={}; N.slots.forEach(function(s){ if(s.show && N.has(s.show)) seen[s.show]=1; }); Object.keys(N.pools).forEach(function(p){ N.pools[p].forEach(function(id){ seen[id]=1; }); }); return Object.keys(seen).length; }
+  // Listenotr Radio (Live) sits at the top of the same list as NBC, CBS, ABC and Mutual.
+  // It is not one of those grids: the clock is the Eastern broadcast, and the
+  // player in #otr-live does the seeking. The card is how Advanced tunes it in.
+  function stopListenotr(){ if(window.__listenotr && __listenotr.pause) __listenotr.pause(); }
+  function renderListenotrStation(){
+    var card=document.querySelector('#networkChips .station[data-net="listenotr"]');
+    if(!card || !window.__listenotr || !__listenotr.booted()) return;
+    var a=__listenotr.onAir(); if(!a) return;
+    var show = a.kind==='break' ? 'Station break' : (a.show || 'Listenotr Radio');
+    var title = a.kind==='break' ? (a.nextShow ? ('up next, '+a.nextShow) : 'Listenotr Radio') : niceTitle(a.title||'');
+    var html='<b>'+escapeHtml(show)+'</b>'+(title?'<span class="sep"> &middot; </span>'+escapeHtml(title):'');
+    var el=card.querySelector('.st-now'); if(el._h!==html){ el.innerHTML=html; el._h=html; }
+    card.querySelector('.st-bar i').style.width=(a.dur? (100*a.offset/a.dur).toFixed(1):'0')+'%';
+    card.querySelector('.st-left .l').textContent=fmt(Math.max(0, a.dur-a.offset))+' left';
+    var next = a.nextShow ? 'then <b>'+escapeHtml(a.nextShow)+'</b>' : '';
+    var nx=card.querySelector('.st-next'); if(nx._h!==next){ nx.innerHTML=next; nx._h=next; }
+    if(state.network==='listenotr'){
+      $('npShow').textContent = a.kind==='break' ? 'Listenotr Radio (Live)' : show;
+      $('npEp').textContent = a.kind==='break' ? (a.line||'Station break') : title;
+      $('npDate').textContent = a.kind==='break' ? '' : (a.date||'');
+      if($('upnext')) $('upnext').innerHTML = a.nextShow ? ('<b>up next</b> &nbsp;'+escapeHtml(a.nextShow)+(a.nextTitle?' - '+escapeHtml(niceTitle(a.nextTitle)):'') ) : '';
+      $('vizIdle').style.display='none';
+      $('playBtn').disabled=false;
+      setPlaying(!__listenotr.paused());
+      ['skipBtn','prevBtn','backBtn','fwdBtn'].forEach(function(id){ if($(id)) $(id).disabled=true; });
+      setStatus(__listenotr.paused() ? 'paused' : 'playing');
+    }
+  }
+  window.__otrPaintListenotr = renderListenotrStation;
+  function tuneListenotr(){
+    try{ audio.pause(); }catch(e){}
+    state.channel=null; state.stationShowIds=null; state.stationLabel='Listenotr Radio (Live)';
+    state.savedActive=-1; state.random=false; state.queue=[]; state.qi=-1;
+    state.network='listenotr'; state.live=true;
+    save('otr_last','net:listenotr');
+    if(window.__listenotr && __listenotr.play) __listenotr.play();
+    setPlayerMode('active');
+    markActiveChip();
+    renderListenotrStation();
+  }
+  function listenotrStationCard(){
+    var c=document.createElement('div'); c.className='station network'; c.dataset.net='listenotr';
+    c.title='Listenotr Radio, live. Everyone hears this same moment. No skipping.';
+    c.innerHTML='<div class="st-head"><span class="st-name">Listenotr Radio (Live)<span class="st-season">live</span></span>'+
+      '<span class="st-actions"><span class="st-count">on the clock</span></span></div>'+
+      '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"><span class="l"></span></div><div class="st-next"></div>';
+    c.onclick=function(){ tuneListenotr(); };
+    return c;
+  }
   function buildNetworkCards(){
     var row=$('networks'), el=$('networkChips'); el.innerHTML='';
+    el.appendChild(listenotrStationCard());
+    renderListenotrStation();
     NET_ORDER.forEach(function(id){
       var N=NETS[id], c=document.createElement('div'); c.className='station network'; c.dataset.net=id;
       c.title = N.grid.tagline || ('Tune in to '+N.name);
@@ -1731,6 +1783,7 @@
   function netQueue(N, t){ var a=N.onAir(t); if(!a) return null; return { a:a, items:[a.item].concat(N.upcoming(t, 6)).map(netItem) }; }
   // Tune in: join the network's chain at the current clock position.
   function startNetwork(id){
+    stopListenotr();
     var N=NETS[id]; if(!N) return;
     var q=netQueue(N, Date.now()/1000); if(!q){ toast('Nothing on the air right now'); return; }
     if(onlyMode()) toast('Station mode plays the full lineup; enhanced-only is ignored here');
@@ -1767,6 +1820,8 @@
     el.style.display='block';
   }
   function startStation(showIds, label){
+    stopListenotr();
+    if(state.network==='listenotr') state.network=null;
     var shows = showIds.map(function(id){ return byId[id]; }).filter(Boolean);
     if(!shows.length){ toast('No valid shows in that station'); return; }
     state.channel = null; state.stationShowIds = showIds.slice(); state.stationLabel = label||'Custom station';
@@ -1800,6 +1855,8 @@
     return order;
   }
   function startRandom(scope, label){
+    stopListenotr();
+    if(state.network==='listenotr') state.network=null;
     var ids = (scope && scope.length) ? scope.slice() : CAT.shows.filter(function(s){ return !s.adv; }).map(function(s){ return s.id; });
     if(!ids.length){ toast('Nothing to shuffle'); return; }
     state.channel=null; state.stationShowIds=ids; state.stationLabel=label||'Surprise me'; state.savedActive=-1;
@@ -1963,6 +2020,11 @@
 
   // ---- transport wiring ----
   $('playBtn').onclick = function(){
+    if(state.network==='listenotr' && window.__listenotr){
+      if(__listenotr.paused()) __listenotr.play(); else __listenotr.pause();
+      renderListenotrStation();
+      return;
+    }
     ensureAudioGraph();
     if(ac && ac.state==='suspended') ac.resume();
     state.awaitingGesture=false; clearBackoff();
@@ -1976,9 +2038,9 @@
     if(audio.paused){ audio.play().catch(function(){}); }
     else { audio.pause(); }
   };
-  $('skipBtn').onclick = function(){ if(state.queue.length){ state.errCount=0; next(false); } };
-  $('prevBtn').onclick = function(){ if(state.queue.length){ state.errCount=0; prev(); } };
-  $('vol').oninput = function(){ audio.volume = parseFloat(this.value); save('otr_vol', this.value); };
+  $('skipBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } if(state.queue.length){ state.errCount=0; next(false); } };
+  $('prevBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } if(state.queue.length){ state.errCount=0; prev(); } };
+  $('vol').oninput = function(){ audio.volume = parseFloat(this.value); if(window.__listenotr) __listenotr.volume(audio.volume); save('otr_vol', this.value); };
 
   // ---- seeking: 15 second back/forward, the bar, arrow keys and Prev's restart all come through here ----
   // Any seek on a live channel leaves the broadcast clock (status says time-shifted); tap the station to rejoin.
@@ -1989,8 +2051,8 @@
     audio.currentTime = Math.max(0, Math.min(d, sec));   // seeking to the end fires 'ended', which moves on
   }
   function seekBy(delta){ if(audio.duration) seekTo((audio.currentTime||0)+delta); }
-  $('backBtn').onclick = function(){ seekBy(-15); };
-  $('fwdBtn').onclick = function(){ seekBy(15); };
+  $('backBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } seekBy(-15); };
+  $('fwdBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } seekBy(15); };
 
   // ---- episode links: ?e=<episode key>&t=<seconds into the story> ----
   // t is on the catalog timeline, so it lands at the same point whichever copy the listener plays.
@@ -2104,7 +2166,7 @@
     try{ if(audio.buffered.length){ $('buf').style.width = d?(100*audio.buffered.end(audio.buffered.length-1)/d)+'%':'0%'; } }catch(e){}
   });
   function currentDur(){ var it=currentItem(); if(it){ var s=byId[it.showId]; if(s&&s.eps[it.epIndex]) return s.eps[it.epIndex][2]; } return 0; }
-  $('bar').onclick = function(ev){ var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) seekTo(p*d); };
+  $('bar').onclick = function(ev){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) seekTo(p*d); };
 
   function clearWatch(){ if(state.playWatch){ clearTimeout(state.playWatch); state.playWatch=null; } }
   function clearBackoff(){ if(state.backoffTimer){ clearTimeout(state.backoffTimer); state.backoffTimer=null; } }
@@ -2132,7 +2194,8 @@
     var d=$('dockPlay'); d.textContent = p ? '⏸' : '▶'; d.setAttribute('aria-label', p ? 'Pause' : 'Play');
   }
   function setStatus(kind){
-    var where = state.network && NETS[state.network] ? ' · '+NETS[state.network].name+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
+    var where = state.network==='listenotr' ? ' · Listenotr Radio (Live)'
+              : state.network && NETS[state.network] ? ' · '+NETS[state.network].name+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
               : (state.channel && !state.stationShowIds) ? ' · '+titleCase(state.channel)+(state.live?' live':(state.shifted?' (time-shifted)':' (skipped ahead)'))
               : (state.stationLabel ? ' · '+state.stationLabel : '');
     var ad = currentItem() && currentItem().isAd;
@@ -2514,6 +2577,8 @@
   function hl(text, terms){ var t=escapeHtml(text); terms.forEach(function(term){ if(term.length<2) return; var re=new RegExp('('+term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'); t=t.replace(re,'<mark>$1</mark>'); }); return t; }
 
   function playEpisode(showId, epIndex, startSec){
+    stopListenotr();
+    if(state.network==='listenotr') state.network=null;
     var show=byId[showId]; if(!show) return;
     // build a queue for this show, starting at the chosen episode, then the rest of the show shuffled
     var rest = show.eps.map(function(_,i){ return i; }).filter(function(i){ return i!==epIndex; });

@@ -6,7 +6,7 @@
     "voice_id": "pqHfZKP75CvOlQylNhV4",
     "category": "premade"
   },
-  "note": "Jingle, station IDs, the 15 flagship up-next lines, and the evening, late-night, and early-morning intros are ElevenLabs, stock voice Bill (premade pqHfZKP75CvOlQylNhV4). Up-next lines for the other series, and the daytime theme lines the pack does not include, are still espeak-ng en-us placeholders.",
+  "note": "Station IDs, the voice ID, and the evening, late-night, and early-morning intros say Old Time Radio on listen O T R dot com, in ElevenLabs stock voice Bill. Fifteen flagship up-next lines are also Bill. Other series and the remaining daytime lines are espeak placeholders using that same spoken station name.",
   "jingle": {
     "file": "jingle.mp3",
     "dur": 9.091,
@@ -14,70 +14,70 @@
   },
   "ident": {
     "file": "idents/station-id-1.mp3",
-    "dur": 5.799,
+    "dur": 7.523,
     "source": "elevenlabs"
   },
   "idents": [
     {
       "file": "idents/station-id-1.mp3",
-      "dur": 5.799,
+      "dur": 7.523,
       "source": "elevenlabs"
     },
     {
       "file": "idents/station-id-2.mp3",
-      "dur": 5.851,
+      "dur": 7.131,
       "source": "elevenlabs"
     },
     {
       "file": "idents/station-id-3.mp3",
-      "dur": 6.504,
+      "dur": 7.523,
       "source": "elevenlabs"
     },
     {
       "file": "idents/station-id-4.mp3",
-      "dur": 7.131,
+      "dur": 11.598,
       "source": "elevenlabs"
     }
   ],
   "upNext": {
     "mr-keen-tracer-of-lost-persons": {
       "file": "up-next/mr-keen-tracer-of-lost-persons.mp3",
-      "dur": 6.348,
+      "dur": 8.516,
       "source": "placeholder"
     },
     "quiet-please": {
       "file": "up-next/quiet-please.mp3",
-      "dur": 4.754,
+      "dur": 6.922,
       "source": "placeholder"
     },
     "dr-kildare": {
       "file": "up-next/dr-kildare.mp3",
-      "dur": 4.493,
+      "dur": 6.635,
       "source": "placeholder"
     },
     "classic-baseball": {
       "file": "up-next/classic-baseball.mp3",
-      "dur": 4.519,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "diary-of-fate": {
       "file": "up-next/diary-of-fate.mp3",
-      "dur": 4.31,
+      "dur": 6.478,
       "source": "placeholder"
     },
     "the-clock": {
       "file": "up-next/the-clock.mp3",
-      "dur": 3.866,
+      "dur": 6.034,
       "source": "placeholder"
     },
     "boston-blackie": {
       "file": "up-next/boston-blackie.mp3",
-      "dur": 4.362,
+      "dur": 6.531,
       "source": "placeholder"
     },
     "the-line-up": {
       "file": "up-next/the-line-up.mp3",
-      "dur": 3.971,
+      "dur": 6.139,
       "source": "placeholder"
     },
     "gunsmoke": {
@@ -92,37 +92,37 @@
     },
     "exploring-tomorrow": {
       "file": "up-next/exploring-tomorrow.mp3",
-      "dur": 4.545,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "whitehall-1212": {
       "file": "up-next/whitehall-1212.mp3",
-      "dur": 6.113,
+      "dur": 8.359,
       "source": "placeholder"
     },
     "red-ryder": {
       "file": "up-next/red-ryder.mp3",
-      "dur": 3.997,
+      "dur": 6.165,
       "source": "placeholder"
     },
     "the-life-of-riley": {
       "file": "up-next/the-life-of-riley.mp3",
-      "dur": 4.362,
+      "dur": 6.531,
       "source": "placeholder"
     },
     "dr-christian": {
       "file": "up-next/dr-christian.mp3",
-      "dur": 4.415,
+      "dur": 6.557,
       "source": "placeholder"
     },
     "hopalong-cassidy": {
       "file": "up-next/hopalong-cassidy.mp3",
-      "dur": 4.545,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "the-mysterious-traveler": {
       "file": "up-next/the-mysterious-traveler.mp3",
-      "dur": 4.78,
+      "dur": 6.922,
       "source": "placeholder"
     },
     "inner-sanctum-mysteries": {
@@ -132,57 +132,57 @@
     },
     "eddie-cantor": {
       "file": "up-next/eddie-cantor.mp3",
-      "dur": 4.101,
+      "dur": 6.296,
       "source": "placeholder"
     },
     "its-higgins-sir": {
       "file": "up-next/its-higgins-sir.mp3",
-      "dur": 4.859,
+      "dur": 7.027,
       "source": "placeholder"
     },
     "ozzie-harriet": {
       "file": "up-next/ozzie-harriet.mp3",
-      "dur": 4.467,
+      "dur": 6.635,
       "source": "placeholder"
     },
     "one-mans-family": {
       "file": "up-next/one-mans-family.mp3",
-      "dur": 4.519,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "the-milton-berle-show": {
       "file": "up-next/the-milton-berle-show.mp3",
-      "dur": 4.676,
+      "dur": 6.818,
       "source": "placeholder"
     },
     "ghost-corps": {
       "file": "up-next/ghost-corps.mp3",
-      "dur": 4.049,
+      "dur": 6.217,
       "source": "placeholder"
     },
     "the-phil-harris-alice-faye-show": {
       "file": "up-next/the-phil-harris-alice-faye-show.mp3",
-      "dur": 5.538,
+      "dur": 7.706,
       "source": "placeholder"
     },
     "black-flame-of-the-amazon": {
       "file": "up-next/black-flame-of-the-amazon.mp3",
-      "dur": 4.859,
+      "dur": 7.027,
       "source": "placeholder"
     },
     "mercury-theatre": {
       "file": "up-next/mercury-theatre.mp3",
-      "dur": 4.441,
+      "dur": 6.609,
       "source": "placeholder"
     },
     "the-red-skelton-show": {
       "file": "up-next/the-red-skelton-show.mp3",
-      "dur": 4.728,
+      "dur": 6.896,
       "source": "placeholder"
     },
     "the-damon-runyon-theatre": {
       "file": "up-next/the-damon-runyon-theatre.mp3",
-      "dur": 4.728,
+      "dur": 6.896,
       "source": "placeholder"
     },
     "dimension-x": {
@@ -192,72 +192,72 @@
     },
     "vic-and-sade": {
       "file": "up-next/vic-and-sade.mp3",
-      "dur": 4.258,
+      "dur": 6.426,
       "source": "placeholder"
     },
     "chandu-the-magician": {
       "file": "up-next/chandu-the-magician.mp3",
-      "dur": 4.545,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "this-is-your-fbi": {
       "file": "up-next/this-is-your-fbi.mp3",
-      "dur": 4.519,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "the-martin-and-lewis-show": {
       "file": "up-next/the-martin-and-lewis-show.mp3",
-      "dur": 5.172,
+      "dur": 7.34,
       "source": "placeholder"
     },
     "broadway-is-my-beat": {
       "file": "up-next/broadway-is-my-beat.mp3",
-      "dur": 4.415,
+      "dur": 6.583,
       "source": "placeholder"
     },
     "tarzan": {
       "file": "up-next/tarzan.mp3",
-      "dur": 3.84,
+      "dur": 6.008,
       "source": "placeholder"
     },
     "horizons-west": {
       "file": "up-next/horizons-west.mp3",
-      "dur": 4.415,
+      "dur": 6.583,
       "source": "placeholder"
     },
     "new-adventures-of-nero-wolfe": {
       "file": "up-next/new-adventures-of-nero-wolfe.mp3",
-      "dur": 5.172,
+      "dur": 7.34,
       "source": "placeholder"
     },
     "bold-venture": {
       "file": "up-next/bold-venture.mp3",
-      "dur": 4.284,
+      "dur": 6.452,
       "source": "placeholder"
     },
     "dark-fantasy": {
       "file": "up-next/dark-fantasy.mp3",
-      "dur": 4.336,
+      "dur": 6.478,
       "source": "placeholder"
     },
     "speed-gibson-of-the-international-secret-police": {
       "file": "up-next/speed-gibson-of-the-international-secret-police.mp3",
-      "dur": 6.374,
+      "dur": 8.594,
       "source": "placeholder"
     },
     "jeff-regan": {
       "file": "up-next/jeff-regan.mp3",
-      "dur": 4.127,
+      "dur": 6.269,
       "source": "placeholder"
     },
     "the-halls-of-ivy": {
       "file": "up-next/the-halls-of-ivy.mp3",
-      "dur": 4.571,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "on-stage": {
       "file": "up-next/on-stage.mp3",
-      "dur": 4.023,
+      "dur": 6.191,
       "source": "placeholder"
     },
     "burns-and-allen": {
@@ -267,57 +267,57 @@
     },
     "hall-of-fantasy": {
       "file": "up-next/hall-of-fantasy.mp3",
-      "dur": 4.545,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "night-beat": {
       "file": "up-next/night-beat.mp3",
-      "dur": 3.997,
+      "dur": 6.165,
       "source": "placeholder"
     },
     "academy-award": {
       "file": "up-next/academy-award.mp3",
-      "dur": 4.389,
+      "dur": 6.557,
       "source": "placeholder"
     },
     "let-george-do-it": {
       "file": "up-next/let-george-do-it.mp3",
-      "dur": 4.415,
+      "dur": 6.583,
       "source": "placeholder"
     },
     "mr-district-attorney": {
       "file": "up-next/mr-district-attorney.mp3",
-      "dur": 4.885,
+      "dur": 7.053,
       "source": "placeholder"
     },
     "pat-novak-for-hire": {
       "file": "up-next/pat-novak-for-hire.mp3",
-      "dur": 5.198,
+      "dur": 7.34,
       "source": "placeholder"
     },
     "dick-barton-special-agent": {
       "file": "up-next/dick-barton-special-agent.mp3",
-      "dur": 5.433,
+      "dur": 7.602,
       "source": "placeholder"
     },
     "molle-mystery-theatre": {
       "file": "up-next/molle-mystery-theatre.mp3",
-      "dur": 4.676,
+      "dur": 6.844,
       "source": "placeholder"
     },
     "planet-man": {
       "file": "up-next/planet-man.mp3",
-      "dur": 4.232,
+      "dur": 6.374,
       "source": "placeholder"
     },
     "philo-vance": {
       "file": "up-next/philo-vance.mp3",
-      "dur": 4.206,
+      "dur": 6.374,
       "source": "placeholder"
     },
     "mark-trail": {
       "file": "up-next/mark-trail.mp3",
-      "dur": 4.18,
+      "dur": 6.322,
       "source": "placeholder"
     },
     "x-minus-one": {
@@ -327,22 +327,22 @@
     },
     "fort-laramie": {
       "file": "up-next/fort-laramie.mp3",
-      "dur": 4.127,
+      "dur": 6.296,
       "source": "placeholder"
     },
     "screen-directors-playhouse": {
       "file": "up-next/screen-directors-playhouse.mp3",
-      "dur": 5.068,
+      "dur": 7.236,
       "source": "placeholder"
     },
     "radio-readers-digest": {
       "file": "up-next/radio-readers-digest.mp3",
-      "dur": 4.807,
+      "dur": 6.975,
       "source": "placeholder"
     },
     "screen-guild-theater": {
       "file": "up-next/screen-guild-theater.mp3",
-      "dur": 4.676,
+      "dur": 6.818,
       "source": "placeholder"
     },
     "the-shadow": {
@@ -352,117 +352,117 @@
     },
     "the-harold-peary-show": {
       "file": "up-next/the-harold-peary-show.mp3",
-      "dur": 4.702,
+      "dur": 6.844,
       "source": "placeholder"
     },
     "command-performance": {
       "file": "up-next/command-performance.mp3",
-      "dur": 4.571,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "michael-shayne": {
       "file": "up-next/michael-shayne.mp3",
-      "dur": 4.18,
+      "dur": 6.348,
       "source": "placeholder"
     },
     "buck-rogers": {
       "file": "up-next/buck-rogers.mp3",
-      "dur": 4.049,
+      "dur": 6.217,
       "source": "placeholder"
     },
     "the-great-gildersleeve": {
       "file": "up-next/the-great-gildersleeve.mp3",
-      "dur": 4.545,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "it-pays-to-be-ignorant": {
       "file": "up-next/it-pays-to-be-ignorant.mp3",
-      "dur": 4.728,
+      "dur": 6.896,
       "source": "placeholder"
     },
     "cbs-radio-mystery-theater-fantasy": {
       "file": "up-next/cbs-radio-mystery-theater-fantasy.mp3",
-      "dur": 6.348,
+      "dur": 8.49,
       "source": "placeholder"
     },
     "lum-and-abner": {
       "file": "up-next/lum-and-abner.mp3",
-      "dur": 4.232,
+      "dur": 6.4,
       "source": "placeholder"
     },
     "voyage-of-the-scarlet-queen": {
       "file": "up-next/voyage-of-the-scarlet-queen.mp3",
-      "dur": 5.146,
+      "dur": 7.314,
       "source": "placeholder"
     },
     "space-patrol": {
       "file": "up-next/space-patrol.mp3",
-      "dur": 4.362,
+      "dur": 6.504,
       "source": "placeholder"
     },
     "rocky-jordan": {
       "file": "up-next/rocky-jordan.mp3",
-      "dur": 4.206,
+      "dur": 6.374,
       "source": "placeholder"
     },
     "adventures-of-maisie": {
       "file": "up-next/adventures-of-maisie.mp3",
-      "dur": 4.571,
+      "dur": 6.74,
       "source": "placeholder"
     },
     "cbs-radio-mystery-theater": {
       "file": "up-next/cbs-radio-mystery-theater.mp3",
-      "dur": 5.433,
+      "dur": 7.602,
       "source": "placeholder"
     },
     "my-favorite-husband": {
       "file": "up-next/my-favorite-husband.mp3",
-      "dur": 4.702,
+      "dur": 6.87,
       "source": "placeholder"
     },
     "candy-matson": {
       "file": "up-next/candy-matson.mp3",
-      "dur": 4.415,
+      "dur": 6.583,
       "source": "placeholder"
     },
     "wild-bill-hickok": {
       "file": "up-next/wild-bill-hickok.mp3",
-      "dur": 4.624,
+      "dur": 6.792,
       "source": "placeholder"
     },
     "calling-all-cars": {
       "file": "up-next/calling-all-cars.mp3",
-      "dur": 4.598,
+      "dur": 6.766,
       "source": "placeholder"
     },
     "the-adventures-of-philip-marlowe": {
       "file": "up-next/the-adventures-of-philip-marlowe.mp3",
-      "dur": 5.277,
+      "dur": 7.445,
       "source": "placeholder"
     },
     "the-bing-crosby-show": {
       "file": "up-next/the-bing-crosby-show.mp3",
-      "dur": 4.78,
+      "dur": 6.949,
       "source": "placeholder"
     },
     "father-knows-best": {
       "file": "up-next/father-knows-best.mp3",
-      "dur": 4.598,
+      "dur": 6.766,
       "source": "placeholder"
     },
     "my-friend-irma": {
       "file": "up-next/my-friend-irma.mp3",
-      "dur": 4.206,
+      "dur": 6.374,
       "source": "placeholder"
     },
     "edgar-bergen-and-charlie-mccarthy": {
       "file": "up-next/edgar-bergen-and-charlie-mccarthy.mp3",
-      "dur": 5.695,
+      "dur": 7.863,
       "source": "placeholder"
     },
     "frontier-town": {
       "file": "up-next/frontier-town.mp3",
-      "dur": 4.284,
+      "dur": 6.452,
       "source": "placeholder"
     },
     "fibber-mcgee-and-molly": {
@@ -472,12 +472,12 @@
     },
     "john-steele-adventurer": {
       "file": "up-next/john-steele-adventurer.mp3",
-      "dur": 4.833,
+      "dur": 7.001,
       "source": "placeholder"
     },
     "eb-and-zeb": {
       "file": "up-next/eb-and-zeb.mp3",
-      "dur": 4.153,
+      "dur": 6.322,
       "source": "placeholder"
     },
     "the-new-adventures-of-sherlock-holmes": {
@@ -487,177 +487,177 @@
     },
     "bill-stern-sports-reel": {
       "file": "up-next/bill-stern-sports-reel.mp3",
-      "dur": 4.885,
+      "dur": 7.053,
       "source": "placeholder"
     },
     "mystery-house": {
       "file": "up-next/mystery-house.mp3",
-      "dur": 4.258,
+      "dur": 6.426,
       "source": "placeholder"
     },
     "luke-slaughter": {
       "file": "up-next/luke-slaughter.mp3",
-      "dur": 4.127,
+      "dur": 6.296,
       "source": "placeholder"
     },
     "the-falcon": {
       "file": "up-next/the-falcon.mp3",
-      "dur": 3.944,
+      "dur": 6.113,
       "source": "placeholder"
     },
     "ripleys-believe-it-or-not": {
       "file": "up-next/ripleys-believe-it-or-not.mp3",
-      "dur": 5.094,
+      "dur": 7.262,
       "source": "placeholder"
     },
     "2000-plus": {
       "file": "up-next/2000-plus.mp3",
-      "dur": 4.598,
+      "dur": 6.766,
       "source": "placeholder"
     },
     "counter-spy": {
       "file": "up-next/counter-spy.mp3",
-      "dur": 4.206,
+      "dur": 6.348,
       "source": "placeholder"
     },
     "ma-perkins": {
       "file": "up-next/ma-perkins.mp3",
-      "dur": 4.153,
+      "dur": 6.296,
       "source": "placeholder"
     },
     "you-bet-your-life": {
       "file": "up-next/you-bet-your-life.mp3",
-      "dur": 4.362,
+      "dur": 6.531,
       "source": "placeholder"
     },
     "the-spike-jones-show": {
       "file": "up-next/the-spike-jones-show.mp3",
-      "dur": 4.833,
+      "dur": 7.001,
       "source": "placeholder"
     },
     "the-adventures-of-frank-race": {
       "file": "up-next/the-adventures-of-frank-race.mp3",
-      "dur": 5.146,
+      "dur": 7.314,
       "source": "placeholder"
     },
     "the-goldbergs": {
       "file": "up-next/the-goldbergs.mp3",
-      "dur": 4.258,
+      "dur": 6.4,
       "source": "placeholder"
     },
     "the-blue-beetle": {
       "file": "up-next/the-blue-beetle.mp3",
-      "dur": 4.101,
+      "dur": 6.269,
       "source": "placeholder"
     },
     "escape": {
       "file": "up-next/escape.mp3",
-      "dur": 3.84,
+      "dur": 6.008,
       "source": "placeholder"
     },
     "have-gun-will-travel": {
       "file": "up-next/have-gun-will-travel.mp3",
-      "dur": 4.624,
+      "dur": 6.792,
       "source": "placeholder"
     },
     "the-big-show": {
       "file": "up-next/the-big-show.mp3",
-      "dur": 4.153,
+      "dur": 6.322,
       "source": "placeholder"
     },
     "nbc-university-theater": {
       "file": "up-next/nbc-university-theater.mp3",
-      "dur": 5.172,
+      "dur": 7.314,
       "source": "placeholder"
     },
     "nick-carter-master-detective": {
       "file": "up-next/nick-carter-master-detective.mp3",
-      "dur": 5.669,
+      "dur": 7.811,
       "source": "placeholder"
     },
     "the-haunting-hour": {
       "file": "up-next/the-haunting-hour.mp3",
-      "dur": 4.31,
+      "dur": 6.478,
       "source": "placeholder"
     },
     "the-witchs-tale": {
       "file": "up-next/the-witchs-tale.mp3",
-      "dur": 4.362,
+      "dur": 6.531,
       "source": "placeholder"
     },
     "the-bob-hope-show": {
       "file": "up-next/the-bob-hope-show.mp3",
-      "dur": 4.676,
+      "dur": 6.818,
       "source": "placeholder"
     },
     "21st-precinct": {
       "file": "up-next/21st-precinct.mp3",
-      "dur": 4.963,
+      "dur": 7.131,
       "source": "placeholder"
     },
     "the-scarlet-pimpernel": {
       "file": "up-next/the-scarlet-pimpernel.mp3",
-      "dur": 4.598,
+      "dur": 6.766,
       "source": "placeholder"
     },
     "frontier-gentleman": {
       "file": "up-next/frontier-gentleman.mp3",
-      "dur": 4.519,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "perry-mason": {
       "file": "up-next/perry-mason.mp3",
-      "dur": 4.127,
+      "dur": 6.296,
       "source": "placeholder"
     },
     "amos-and-andy": {
       "file": "up-next/amos-and-andy.mp3",
-      "dur": 4.389,
+      "dur": 6.557,
       "source": "placeholder"
     },
     "the-green-hornet": {
       "file": "up-next/the-green-hornet.mp3",
-      "dur": 4.336,
+      "dur": 6.478,
       "source": "placeholder"
     },
     "abbott-and-costello": {
       "file": "up-next/abbott-and-costello.mp3",
-      "dur": 4.545,
+      "dur": 6.713,
       "source": "placeholder"
     },
     "lights-out": {
       "file": "up-next/lights-out.mp3",
-      "dur": 4.023,
+      "dur": 6.191,
       "source": "placeholder"
     },
     "sam-spade": {
       "file": "up-next/sam-spade.mp3",
-      "dur": 4.075,
+      "dur": 6.243,
       "source": "placeholder"
     },
     "moon-over-africa": {
       "file": "up-next/moon-over-africa.mp3",
-      "dur": 4.415,
+      "dur": 6.557,
       "source": "placeholder"
     },
     "box-13": {
       "file": "up-next/box-13.mp3",
-      "dur": 4.206,
+      "dur": 6.374,
       "source": "placeholder"
     },
     "the-shadow-of-fu-manchu": {
       "file": "up-next/the-shadow-of-fu-manchu.mp3",
-      "dur": 4.807,
+      "dur": 6.975,
       "source": "placeholder"
     },
     "the-goon-show": {
       "file": "up-next/the-goon-show.mp3",
-      "dur": 4.153,
+      "dur": 6.322,
       "source": "placeholder"
     },
     "barrie-craig-confidential-investigator": {
       "file": "up-next/barrie-craig-confidential-investigator.mp3",
-      "dur": 6.374,
+      "dur": 8.516,
       "source": "placeholder"
     },
     "the-whistler": {
@@ -667,17 +667,17 @@
     },
     "the-mel-blanc-show": {
       "file": "up-next/the-mel-blanc-show.mp3",
-      "dur": 4.702,
+      "dur": 6.87,
       "source": "placeholder"
     },
     "tom-corbett-space-cadet": {
       "file": "up-next/tom-corbett-space-cadet.mp3",
-      "dur": 5.512,
+      "dur": 7.654,
       "source": "placeholder"
     },
     "the-black-museum": {
       "file": "up-next/the-black-museum.mp3",
-      "dur": 4.519,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "dragnet": {
@@ -687,12 +687,12 @@
     },
     "information-please": {
       "file": "up-next/information-please.mp3",
-      "dur": 4.963,
+      "dur": 7.131,
       "source": "placeholder"
     },
     "secrets-of-scotland-yard": {
       "file": "up-next/secrets-of-scotland-yard.mp3",
-      "dur": 5.198,
+      "dur": 7.367,
       "source": "placeholder"
     },
     "suspense": {
@@ -702,17 +702,17 @@
     },
     "the-hermits-cave": {
       "file": "up-next/the-hermits-cave.mp3",
-      "dur": 4.493,
+      "dur": 6.661,
       "source": "placeholder"
     },
     "the-six-shooter": {
       "file": "up-next/the-six-shooter.mp3",
-      "dur": 4.336,
+      "dur": 6.504,
       "source": "placeholder"
     },
     "our-miss-brooks": {
       "file": "up-next/our-miss-brooks.mp3",
-      "dur": 4.232,
+      "dur": 6.4,
       "source": "placeholder"
     },
     "yours-truly-johnny-dollar": {
@@ -722,67 +722,67 @@
     },
     "dangerous-assignment": {
       "file": "up-next/dangerous-assignment.mp3",
-      "dur": 4.571,
+      "dur": 6.74,
       "source": "placeholder"
     },
     "i-love-a-mystery": {
       "file": "up-next/i-love-a-mystery.mp3",
-      "dur": 4.389,
+      "dur": 6.531,
       "source": "placeholder"
     },
     "the-fred-allen-show": {
       "file": "up-next/the-fred-allen-show.mp3",
-      "dur": 4.598,
+      "dur": 6.766,
       "source": "placeholder"
     },
     "weird-circle": {
       "file": "up-next/weird-circle.mp3",
-      "dur": 4.153,
+      "dur": 6.322,
       "source": "placeholder"
     },
     "adventures-of-frank-merriwell": {
       "file": "up-next/adventures-of-frank-merriwell.mp3",
-      "dur": 5.198,
+      "dur": 7.367,
       "source": "placeholder"
     },
     "the-adventures-of-superman": {
       "file": "up-next/the-adventures-of-superman.mp3",
-      "dur": 4.989,
+      "dur": 7.131,
       "source": "placeholder"
     },
     "tales-of-the-texas-rangers": {
       "file": "up-next/tales-of-the-texas-rangers.mp3",
-      "dur": 5.172,
+      "dur": 7.34,
       "source": "placeholder"
     },
     "easy-aces": {
       "file": "up-next/easy-aces.mp3",
-      "dur": 4.023,
+      "dur": 6.191,
       "source": "placeholder"
     },
     "gang-busters": {
       "file": "up-next/gang-busters.mp3",
-      "dur": 4.18,
+      "dur": 6.348,
       "source": "placeholder"
     },
     "ranger-bill": {
       "file": "up-next/ranger-bill.mp3",
-      "dur": 4.153,
+      "dur": 6.322,
       "source": "placeholder"
     },
     "richard-diamond-private-detective": {
       "file": "up-next/richard-diamond-private-detective.mp3",
-      "dur": 6.034,
+      "dur": 8.202,
       "source": "placeholder"
     },
     "the-man-called-x": {
       "file": "up-next/the-man-called-x.mp3",
-      "dur": 4.101,
+      "dur": 6.269,
       "source": "placeholder"
     },
     "duffys-tavern": {
       "file": "up-next/duffys-tavern.mp3",
-      "dur": 4.284,
+      "dur": 6.452,
       "source": "placeholder"
     },
     "the-lone-ranger": {
@@ -792,42 +792,42 @@
     },
     "sf-68": {
       "file": "up-next/sf-68.mp3",
-      "dur": 4.545,
+      "dur": 6.687,
       "source": "placeholder"
     },
     "mr-moto": {
       "file": "up-next/mr-moto.mp3",
-      "dur": 4.18,
+      "dur": 6.348,
       "source": "placeholder"
     },
     "sealed-book": {
       "file": "up-next/sealed-book.mp3",
-      "dur": 3.997,
+      "dur": 6.165,
       "source": "placeholder"
     },
     "challenge-of-the-yukon": {
       "file": "up-next/challenge-of-the-yukon.mp3",
-      "dur": 4.467,
+      "dur": 6.635,
       "source": "placeholder"
     },
     "magic-island": {
       "file": "up-next/magic-island.mp3",
-      "dur": 4.206,
+      "dur": 6.348,
       "source": "placeholder"
     },
     "the-campbell-playhouse": {
       "file": "up-next/the-campbell-playhouse.mp3",
-      "dur": 4.598,
+      "dur": 6.766,
       "source": "placeholder"
     },
     "the-bickersons": {
       "file": "up-next/the-bickersons.mp3",
-      "dur": 4.232,
+      "dur": 6.374,
       "source": "placeholder"
     },
     "the-saint": {
       "file": "up-next/the-saint.mp3",
-      "dur": 3.892,
+      "dur": 6.034,
       "source": "placeholder"
     },
     "lux-radio-theatre": {
@@ -837,100 +837,100 @@
     },
     "the-aldrich-family": {
       "file": "up-next/the-aldrich-family.mp3",
-      "dur": 4.493,
+      "dur": 6.661,
       "source": "placeholder"
     },
     "flash-gordon": {
       "file": "up-next/flash-gordon.mp3",
-      "dur": 4.18,
+      "dur": 6.348,
       "source": "placeholder"
     },
     "the-lives-of-harry-lime": {
       "file": "up-next/the-lives-of-harry-lime.mp3",
-      "dur": 4.859,
+      "dur": 7.027,
       "source": "placeholder"
     },
     "first-nighter": {
       "file": "up-next/first-nighter.mp3",
-      "dur": 4.18,
+      "dur": 6.348,
       "source": "placeholder"
     }
   },
   "daypart": {
     "0": {
       "file": "daypart/0.mp3",
-      "dur": 5.616,
+      "dur": 9.038,
       "source": "elevenlabs"
     },
     "18000": {
       "file": "daypart/18000.mp3",
-      "dur": 6.165,
+      "dur": 9.639,
       "source": "elevenlabs"
     },
     "28800": {
       "file": "daypart/28800.mp3",
-      "dur": 4.676,
+      "dur": 6.818,
       "source": "placeholder"
     },
     "43200": {
       "file": "daypart/43200.mp3",
-      "dur": 5.198,
+      "dur": 7.34,
       "source": "placeholder"
     },
     "57600": {
       "file": "daypart/57600.mp3",
-      "dur": 5.042,
+      "dur": 7.184,
       "source": "placeholder"
     },
     "68400": {
       "file": "daypart/68400.mp3",
-      "dur": 9.979,
+      "dur": 11.651,
       "source": "elevenlabs"
     },
     "72000": {
       "file": "daypart/72000.mp3",
-      "dur": 9.979,
+      "dur": 11.651,
       "source": "elevenlabs"
     },
     "73800": {
       "file": "daypart/73800.mp3",
-      "dur": 4.754,
+      "dur": 6.896,
       "source": "placeholder"
     },
     "75600": {
       "file": "daypart/75600.mp3",
-      "dur": 5.016,
+      "dur": 7.158,
       "source": "placeholder"
     },
     "77400": {
       "file": "daypart/77400.mp3",
-      "dur": 4.493,
+      "dur": 6.635,
       "source": "placeholder"
     },
     "79200": {
       "file": "daypart/79200.mp3",
-      "dur": 6.4,
+      "dur": 8.542,
       "source": "placeholder"
     },
     "81000": {
       "file": "daypart/81000.mp3",
-      "dur": 3.918,
+      "dur": 6.087,
       "source": "placeholder"
     },
     "82800": {
       "file": "daypart/82800.mp3",
-      "dur": 4.441,
+      "dur": 6.609,
       "source": "placeholder"
     },
     "84600": {
       "file": "daypart/84600.mp3",
-      "dur": 6.191,
+      "dur": 8.333,
       "source": "placeholder"
     }
   },
   "jingleVoice": {
     "file": "jingle-voice-id.mp3",
-    "dur": 1.567,
+    "dur": 3.239,
     "source": "elevenlabs"
   }
 }

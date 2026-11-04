@@ -59,22 +59,32 @@ def pick_premade_voice(voices):
     raise RuntimeError("No premade ElevenLabs voice is available. Cloned and custom voices are not used.")
 
 
-# Spoken audio says "old time radio". The letters OTR, and the brand name
-# Listenotr, are never sent to a voice. "Listenotr Radio" becomes the phrase
-# once, so it does not come out as "old time radio radio".
+# How a voice names this station. "O T R" is the spelled-out site
+# (listen O T R dot com), not the abbreviation OTR.
+SPOKEN_STATION = "Old Time Radio on listen O T R dot com"
+_STATION_MARK = "\u0000"
 _LISTENO_RADIO = re.compile(r"\bListenotr\s+Radio\b", re.IGNORECASE)
 _LISTENO = re.compile(r"\bListenotr\b", re.IGNORECASE)
 _OTR_DOTS = re.compile(r"\bO\s*\.\s*T\s*\.\s*R\b\.?", re.IGNORECASE)
 _OTR_WORD = re.compile(r"\bOTR\b", re.IGNORECASE)
+_SHORT_STATION = re.compile(r"\bold time radio\b", re.IGNORECASE)
 
 
 def normalize_spoken(text):
-    """Text that is about to be spoken. Never leaves the abbreviation OTR in it."""
+    """Text about to be spoken. The station is SPOKEN_STATION.
+
+    A phrase that already uses that form is left as-is, so the spaced
+    letters in "listen O T R dot com" are not rewritten. Bare OTR, O.T.R.,
+    Listenotr, and the short "old time radio" become the full form.
+    """
     spoken = str(text or "")
-    spoken = _LISTENO_RADIO.sub("old time radio", spoken)
-    spoken = _LISTENO.sub("old time radio", spoken)
-    spoken = _OTR_DOTS.sub("old time radio", spoken)
-    spoken = _OTR_WORD.sub("old time radio", spoken)
+    spoken = re.sub(re.escape(SPOKEN_STATION), _STATION_MARK, spoken, flags=re.IGNORECASE)
+    spoken = _LISTENO_RADIO.sub(_STATION_MARK, spoken)
+    spoken = _LISTENO.sub(_STATION_MARK, spoken)
+    spoken = _OTR_DOTS.sub(_STATION_MARK, spoken)
+    spoken = _OTR_WORD.sub(_STATION_MARK, spoken)
+    spoken = _SHORT_STATION.sub(_STATION_MARK, spoken)
+    spoken = spoken.replace(_STATION_MARK, SPOKEN_STATION)
     spoken = re.sub(r"[ \t]{2,}", " ", spoken)
     return spoken.strip()
 
