@@ -4448,10 +4448,9 @@
   // ---- the lava lamp: state, clock, painter ----
   // Same 120 x 200 logical space as the tube. The lamp stands on the floor at y=190: a spun-metal
   // cone base (190..126) with the bulb inside, the glass bottle (128..26, its outline is the
-  // simulation's), and a cone cap (31..8). The wax is drawn as a smooth field over the simulated
-  // parcels and their necks, shaded per pixel: lit from the bulb underneath, a soft highlight from
-  // the room, glowing thin edges; the field is sampled at about two device pixels per cell over the
-  // part of the lamp that is on screen, so it stays sharp at any zoom for the same cost.
+  // simulation's), and a cone cap (31..8). The wax is a metaball field over the parcels and necks,
+  // shaded per pixel. The field is one device pixel per cell (the canvas itself is devicePixelRatio),
+  // with a steep threshold at the surface so the outline stays crisp instead of a scaled-up blur.
   var LCX=60, LFLOOR=190, LBASE=126;
   var LAMP={ sim:null, last:0, acc:0, warming:true, stat:null, statT:0, music:0, seed:0, F:{} };
   function lampSim(){ if(!LAMP.sim){ LAMP.seed=(Math.random()*4294967296)>>>0; LAMP.sim=makeLava(LAMP.seed); LAMP.warming=true; LAMP.stat=LAMP.sim.stats(); } return LAMP.sim; }
@@ -4530,7 +4529,10 @@
     for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
     x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
     if(x1<=x0 || y1<=y0) return null;
-    var cs=Math.max(0.1, 3.0/ppu); if((x1-x0)*(y1-y0)/(cs*cs)>16000) cs=Math.sqrt((x1-x0)*(y1-y0)/16000);
+    // One device pixel per cell. If the whole bottle would be more than the cell budget, coarsen,
+    // but never back to the old three-pixel cells.
+    var cs=Math.max(0.05, 1.0/ppu), area=(x1-x0)*(y1-y0), budget=48000;
+    if(area/(cs*cs)>budget) cs=Math.sqrt(area/budget);
     var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
     if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FB=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FW=new Float32Array(N); }
     var F=st.F, FB=st.FB, FT=st.FT, FF=st.FF, FW=st.FW; F.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FW.fill(0,0,N);
@@ -4553,6 +4555,7 @@
               FW[q]+=w; FT[q]+=w*T; FF[q]+=w*p.f; } } } }
       for(b=gb0;b<=gb1;b++){ for(var a2=ga0, q2=b*W+ga0; a2<=ga1; a2++, q2++) if(FB[q2]<F[q2]) F[q2]=FB[q2]; }
     }
+    st.pxPerCell = cs * ppu; st.cs = cs;
     return { F:F, FT:FT, FF:FF, FW:FW, W:W, H:H, x0:x0, y0:y0, cs:cs, st:st };
   }
   // a rounded profile across the wax for its shading: steep at the outline, flat once well inside
@@ -4577,7 +4580,7 @@
         if(edge<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; }
         var A=0, R=0, G=0, Bc=0;
         if(dd<lim){
-          A=Math.max(0,Math.min(1,0.5-dd/cs));
+          A=Math.max(0,Math.min(1,0.5-dd/(cs*0.55)));
           if(A>0 || look==='neon'){ var fw=FW[k]||1e-6, T=FT[k]/fw, mf=FF[k]/fw, h=Math.min(1,Math.max(0,-dd)/2.5);
             var zl=waxZ(a>0?F[k-1]:dd), zr=waxZ(a<W-1?F[k+1]:dd), zu=waxZ(b>0?F[k-W]:dd), zd=waxZ(b<H-1?F[k+W]:dd);
             var nx=-(zr-zl)/(2*cs), ny=-(zd-zu)/(2*cs), nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
@@ -4599,13 +4602,14 @@
       } }
     st.cx.putImageData(st.img,0,0);
     c.save(); c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs);
-    // glowing wax blooms a little into the liquid around it, as it does to an eye or a camera
-    // (blurred at the wax image's own small size, then scaled up, so it costs little at any zoom)
+    // A hair of glow, in source pixels. The old blur(1.6/cs) was several device pixels once the
+    // coarse field was scaled up, which is what made the wax look fuzzy.
+    st.bloomPx = 0.55;
     if((look==='natural'||look==='night'||look==='vintage'||look==='blacklight') && lit>0.01 && st.cx && ('filter' in st.cx)){
       if(!st.bcv){ st.bcv=document.createElement('canvas'); }
       if(st.bcv.width!==W || st.bcv.height!==H){ st.bcv.width=W; st.bcv.height=H; st.bcx=st.bcv.getContext('2d'); }
-      st.bcx.clearRect(0,0,W,H); st.bcx.filter='blur('+(1.6/cs).toFixed(1)+'px)'; st.bcx.drawImage(st.cv,0,0); st.bcx.filter='none';
-      c.globalCompositeOperation='lighter'; c.globalAlpha=clampN(0.32*lit,0,0.45); c.drawImage(st.bcv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs); }
+      st.bcx.clearRect(0,0,W,H); st.bcx.filter='blur('+st.bloomPx.toFixed(2)+'px)'; st.bcx.drawImage(st.cv,0,0); st.bcx.filter='none';
+      c.globalCompositeOperation='lighter'; c.globalAlpha=clampN(0.16*lit,0,0.22); c.drawImage(st.bcv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs); }
     c.restore();
   }
 
@@ -5301,7 +5305,9 @@
         radio: function(){ return { on:radioOn(), eq:[0,1,2,3,4].map(radEqVal), lvl:RAD.lvl.slice(), vol:radVol(), sleep:$('sleepSel').value, sceneH:lampSceneH(), shown:RAD.shown }; },
         tip: function(){ var el=$('radTip'); return { shown:!el.hidden, text:el.textContent, id:RTIP.id }; },
         radioAt: function(id, which){ var solo=which==='solo', cv=$(solo?'soloCv':'tvCv'), g=solo?SOLO.geom:tvGeom, p=radCenter(id); if(!g||!p) return null; var r=cv.getBoundingClientRect(); return { x:r.left+g.tx+p.x*g.s, y:r.top+g.ty+p.y*g.s, s:g.s }; },
-        stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; }
+        stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; },
+        crisp: function(){ var cv=$('lampCv'); drawLamp(performance.now()); var dpr=window.devicePixelRatio||1, st=LAMP.F.rack||{};
+          return { dpr:dpr, ratio: cv.clientWidth ? cv.width/cv.clientWidth : 0, pxPerCell: st.pxPerCell==null ? 99 : st.pxPerCell, bloom: st.bloomPx==null ? 99 : st.bloomPx, w:cv.width, cw:cv.clientWidth }; }
       },
       // Test-only: decode the start of a real recording (byte range) and report the energy in the
       // voice band (200 Hz-3 kHz) and the S band (above 5 kHz) after the chain.

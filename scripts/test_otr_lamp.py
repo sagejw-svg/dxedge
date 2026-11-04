@@ -185,7 +185,12 @@ with sync_playwright() as p:
     ck("lamp settings survive a reload", s["lampCol"] == "purple" and s["lampBase"] == "silver" and s["lampW"] == 31 and s["lampMusic"], s)
     cost = pg.evaluate("__otr.adv.lamp.stepCost(600)")
     ck("a physics step is cheap (under 1 ms headless)", cost < 1.0, cost)
-    pg.evaluate("__otr.adv.open(true)"); pg.wait_for_timeout(300); pg.locator("#lampMod").screenshot(path=f"{SP}/otr_lamp_module.png")
+    pg.evaluate("__otr.adv.open(true)"); pg.wait_for_timeout(300)
+    crisp = pg.evaluate("__otr.adv.lamp.crisp()")
+    ck("the lamp canvas is backed at device pixels", crisp["cw"] > 0 and crisp["ratio"] + 0.05 >= crisp["dpr"], crisp)
+    ck("wax is about one device pixel per cell, not a blurry upsample", 0.4 <= crisp["pxPerCell"] <= 1.35, crisp)
+    ck("the wax glow is a thin edge, not a heavy blur", crisp["bloom"] <= 0.8, crisp)
+    pg.locator("#lampMod").screenshot(path=f"{SP}/otr_lamp_module.png")
     ck("no page errors (desktop)", not errs, errs[:3])
 
     m = b.new_page(viewport={"width": 375, "height": 812}, is_mobile=True, has_touch=True); merrs = []
