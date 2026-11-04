@@ -605,6 +605,7 @@
   document.write('<link rel="stylesheet" href="' + base + 'basic.css?v=1">');
   document.write('<script src="' + base + 'mode.js?v=1"><\/script>');
   document.write('<script src="' + base + 'live/listenotr-radio.js?v=3"><\/script>');
+  document.write('<script src="' + base + 'live/scifi/scifi-live.js?v=1"><\/script>');
 })();
 </script>
 </head>
@@ -1596,7 +1597,7 @@
   // Tune in: join the station's broadcast at the current clock position.
   function startChannel(ch){
     stopListenotr();
-    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
+    if(state.network==='listenotr' || state.network==='scifi'){ state.network=null; syncLiveChrome(); }
     if(!(chanShows[ch]||[]).length){ toast('No shows on that channel'); return; }
     if(onlyMode()){   // a shared clock can't skip episodes, so play an enhanced-only mix of the channel instead
       var shows=chanShows[ch];
@@ -1675,7 +1676,7 @@
   // player in #otr-live does the seeking. The card is how Advanced tunes it in.
   function stopListenotr(){ if(window.__listenotr && __listenotr.pause) __listenotr.pause(); }
   function syncLiveChrome(){
-    var on = state.network==='listenotr';
+    var on = state.network==='listenotr' || state.network==='scifi';
     var was = document.body.classList.contains('otr-liveclock');
     document.body.classList.toggle('otr-liveclock', on);
     bindSessionTransport();
@@ -1774,7 +1775,7 @@
   var sessionMode = '';
   function bindSessionTransport(){
     if(!('mediaSession' in navigator)) return;
-    var mode = state.network==='listenotr' ? 'live' : 'library';
+    var mode = (state.network==='listenotr' || state.network==='scifi') ? 'live' : 'library';
     if(mode===sessionMode) return;
     sessionMode = mode;
     var ms = navigator.mediaSession;
@@ -1997,7 +1998,7 @@
   }
   function startStation(showIds, label){
     stopListenotr();
-    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
+    if(state.network==='listenotr' || state.network==='scifi'){ state.network=null; syncLiveChrome(); }
     var shows = showIds.map(function(id){ return byId[id]; }).filter(Boolean);
     if(!shows.length){ toast('No valid shows in that station'); return; }
     state.channel = null; state.stationShowIds = showIds.slice(); state.stationLabel = label||'Custom station';
@@ -2033,7 +2034,7 @@
   }
   function startRandom(scope, label){
     stopListenotr();
-    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
+    if(state.network==='listenotr' || state.network==='scifi'){ state.network=null; syncLiveChrome(); }
     var ids = (scope && scope.length) ? scope.slice() : CAT.shows.filter(function(s){ return !s.adv; }).map(function(s){ return s.id; });
     if(!ids.length){ toast('Nothing to shuffle'); return; }
     state.channel=null; state.stationShowIds=ids; state.stationLabel=label||'Surprise me'; state.savedActive=-1;
@@ -2398,6 +2399,7 @@
 
   function setPlaying(p){
     if(state.network==='listenotr'){ setLiveTransportLabel(); return; }
+    if(state.network==='scifi') return;
     $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play';
     var d=$('dockPlay'); d.textContent = p ? '⏸' : '▶'; d.setAttribute('aria-label', p ? 'Pause' : 'Play');
   }
@@ -2792,7 +2794,7 @@
 
   function playEpisode(showId, epIndex, startSec){
     stopListenotr();
-    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
+    if(state.network==='listenotr' || state.network==='scifi'){ state.network=null; syncLiveChrome(); }
     var show=byId[showId]; if(!show) return;
     // build a queue for this show, starting at the chosen episode, then the rest of the show shuffled
     var rest = show.eps.map(function(_,i){ return i; }).filter(function(i){ return i!==epIndex; });
@@ -5197,7 +5199,7 @@
     if(e.ctrlKey || e.metaKey || e.altKey) return;
     if(e.key==='/'){ e.preventDefault(); showTab('search', { focus:true, reveal:true }); return; }
     if(el && el.classList && (el.classList.contains('tab') || el.id==='dockTxt') && (e.key===' '||e.key==='Spacebar')) return;   // let the focused tab activate
-    if(state.network==='listenotr' && (e.key==='n'||e.key==='N'||e.key==='p'||e.key==='P'||e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); e.stopPropagation(); return; }
+    if((state.network==='listenotr' || state.network==='scifi') && (e.key==='n'||e.key==='N'||e.key==='p'||e.key==='P'||e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); e.stopPropagation(); return; }
     if(e.key===' '||e.key==='Spacebar'){ e.preventDefault(); $('playBtn').click(); }
     else if(e.key==='n'||e.key==='N'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; next(false); } }
     else if(e.key==='p'||e.key==='P'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; prev(); } }

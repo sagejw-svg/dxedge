@@ -1,0 +1,117 @@
+{
+  "station": "Sci-Fi (Live)",
+  "voice": "Bill (premade, pqHfZKP75CvOlQylNhV4)",
+  "music_prompt": "Short 9 second retro 1950s science fiction radio theme sting, eerie warbling theremin melody over soft vibraphone and strings, vintage AM radio sound, instrumental, mysterious resolving ending",
+  "files": [
+    {
+      "file": "scifi-jingle.mp3",
+      "type": "jingle",
+      "text": "[music: Short 9 second retro 1950s science fiction radio theme sting, eerie warbling theremin melody over soft vibraphone and strings, vintage AM radio sound, instrumental, mysterious resolving ending] then voice: Sci-Fi Live, Old Time Radio on listen O T R dot com.",
+      "series": null,
+      "parts": [
+        "scifi-jingle-music.mp3",
+        "scifi-jingle-voice-tag.mp3"
+      ],
+      "seconds": 15.7
+    },
+    {
+      "file": "scifi-jingle-music.mp3",
+      "type": "jingle_music",
+      "text": "Short 9 second retro 1950s science fiction radio theme sting, eerie warbling theremin melody over soft vibraphone and strings, vintage AM radio sound, instrumental, mysterious resolving ending",
+      "series": null,
+      "seconds": 10.057
+    },
+    {
+      "file": "scifi-jingle-voice-tag.mp3",
+      "type": "jingle_voice",
+      "text": "Sci-Fi Live, Old Time Radio on listen O T R dot com.",
+      "series": null,
+      "seconds": 5.329
+    },
+    {
+      "file": "scifi-station-id-1.mp3",
+      "type": "station_id",
+      "text": "You're tuned to Sci-Fi Live, tales of tomorrow, on Old Time Radio on listen O T R dot com.",
+      "series": null,
+      "seconds": 7.941
+    },
+    {
+      "file": "scifi-station-id-2.mp3",
+      "type": "station_id",
+      "text": "This is Sci-Fi Live. Rocket ships, strange worlds, and the stars beyond, on Old Time Radio on listen O T R dot com.",
+      "series": null,
+      "seconds": 10.58
+    },
+    {
+      "file": "scifi-station-id-3.mp3",
+      "type": "station_id",
+      "text": "Stay tuned to Sci-Fi Live on Old Time Radio on listen O T R dot com, where the future is always on the air.",
+      "series": null,
+      "seconds": 9.143
+    },
+    {
+      "file": "scifi-station-id-4.mp3",
+      "type": "station_id",
+      "text": "Sci-Fi Live. Classic science fiction, around the clock, on Old Time Radio on listen O T R dot com.",
+      "series": null,
+      "seconds": 8.359
+    },
+    {
+      "file": "scifi-up-next-1.mp3",
+      "type": "up_next",
+      "text": "Coming up next on Sci-Fi Live, another journey into the unknown.",
+      "series": null,
+      "seconds": 4.833
+    },
+    {
+      "file": "scifi-up-next-2.mp3",
+      "type": "up_next",
+      "text": "Stay with us. Coming up next, a new adventure from the far side of tomorrow.",
+      "series": null,
+      "seconds": 5.747
+    },
+    {
+      "file": "scifi-up-next-3.mp3",
+      "type": "up_next",
+      "text": "Coming up next, strange signals from deep space. Don't touch that dial.",
+      "series": null,
+      "seconds": 4.859
+    },
+    {
+      "file": "scifi-up-next-4.mp3",
+      "type": "up_next",
+      "text": "Next on Sci-Fi Live, the countdown begins for another tale of the future.",
+      "series": null,
+      "seconds": 5.277
+    },
+    {
+      "file": "scifi-up-next-5.mp3",
+      "type": "up_next",
+      "text": "Coming up next, worlds beyond imagining. Stay tuned.",
+      "series": null,
+      "seconds": 4.676
+    },
+    {
+      "file": "scifi-up-next-6.mp3",
+      "type": "up_next",
+      "text": "Fasten your seat belt. Coming up next on Sci-Fi Live, a trip to the stars.",
+      "series": null,
+      "seconds": 6.087
+    },
+    {
+      "file": "scifi-intro-evening.mp3",
+      "type": "time_intro",
+      "text": "Good evening, space travelers. Welcome to Sci-Fi Live on Old Time Radio on listen O T R dot com. Settle in, the countdown to tonight's adventures has begun.",
+      "series": null,
+      "seconds": 12.199
+    },
+    {
+      "file": "scifi-intro-late-night.mp3",
+      "type": "time_intro",
+      "text": "It's late, and the stars are out. This is Sci-Fi Live on Old Time Radio on listen O T R dot com. Get comfortable, close your eyes, and drift off to tales of tomorrow.",
+      "series": null,
+      "seconds": 14.472
+    }
+  ],
+  "gap_note": "Clips play only in the silence between episodes. seconds is the file length. The player never starts a clip that would run into the next episode."
+}
