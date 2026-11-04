@@ -101,17 +101,26 @@ class FilamentMaster extends AudioWorkletProcessor {
     this.dcLx = 0; this.dcLy = 0; this.dcRx = 0; this.dcRy = 0;
     this.yL = 0; this.yR = 0;
     this.rec = false; this.recStop = false;
+    this.fadeN = 0; this.fadeLen = 1; this.wg = 1;
     this.apply(opt.master || {});
     this.port.onmessage = e => {
       const m = e.data;
       if (!m) return;
       if (m.t === 'set') this.apply(m.master || {});
+      else if (m.t === 'flush') { this.fadeLen = Math.max(1, Math.round(0.01 * sampleRate)); this.fadeN = this.fadeLen; }
       else if (m.t === 'rec') { if (m.on) { this.rec = true; this.recStop = false; } else this.recStop = true; }
     };
   }
 
   apply(s) {
-    if (s && s.delay && s.reverb && s.comp) this.s = s;
+    // An effect switched back on starts empty. Its lines stop moving while it is off, so they still
+    // held the sound from when it went off, and that came back out on its own.
+    const was = this.s || {};
+    if (s && s.delay && s.reverb && s.comp) {
+      if (s.delay.on && !(was.delay && was.delay.on)) this.clearDelay();
+      if (s.reverb.on && !(was.reverb && was.reverb.on)) this.clearReverb();
+      this.s = s;
+    }
     const c = (this.s && this.s.comp) || {};
     this.att = coef((isFinite(+c.attack) ? +c.attack : 10) / 1000);
     this.rel = coef((isFinite(+c.release) ? +c.release : 120) / 1000);
@@ -123,6 +132,13 @@ class FilamentMaster extends AudioWorkletProcessor {
     const secR = isFinite(+d.secondsR) ? +d.secondsR : secL;
     this.dSampL = Math.max(1, secL * sampleRate);
     this.dSampR = Math.max(1, secR * sampleRate);
+  }
+
+  clearDelay() { this.dL.b.fill(0); this.dR.b.fill(0); this.fadeN = 0; }
+  clearReverb() {
+    this.cL.concat(this.cR).forEach(c => { c.b.fill(0); c.f = 0; });
+    this.aL.concat(this.aR).forEach(a => a.b.fill(0));
+    this.dcLx = this.dcLy = this.dcRx = this.dcRy = 0; this.fadeN = 0;
   }
 
   delay(l, r) {
@@ -141,6 +157,7 @@ class FilamentMaster extends AudioWorkletProcessor {
       this.dR.write(r + tapR * fb);
       wetL = tapL; wetR = tapR;
     }
+    wetL *= this.wg; wetR *= this.wg;
     const dry = 1 - mix;
     this.yL = l * dry + wetL * mix;
     this.yR = r * dry + wetR * mix;
@@ -159,7 +176,7 @@ class FilamentMaster extends AudioWorkletProcessor {
     const dr = sr - this.dcRx + 0.995 * this.dcRy;
     this.dcLx = sl; this.dcLy = dl; this.dcRx = sr; this.dcRy = dr;
     const mix = +rv.mix || 0, width = rv.width == null ? 1 : +rv.width;
-    const wet1 = mix * (width * 0.5 + 0.5), wet2 = mix * ((1 - width) * 0.5), dry = 1 - mix;
+    const wet1 = mix * (width * 0.5 + 0.5) * this.wg, wet2 = mix * ((1 - width) * 0.5) * this.wg, dry = 1 - mix;
     this.yL = l * dry + dl * wet1 + dr * wet2;
     this.yR = r * dry + dr * wet1 + dl * wet2;
   }
@@ -201,6 +218,12 @@ class FilamentMaster extends AudioWorkletProcessor {
     for (let i = 0; i < n; i++) {
       let l = inL ? inL[i] : 0, r = inR ? inR[i] : l;
       if (!bypass) {
+        // Panic: the delay and reverb returns fade out over 10 ms, then both are emptied. The dry
+        // signal is untouched, so a note played straight after still sounds.
+        if (this.fadeN > 0) {
+          this.wg = --this.fadeN / this.fadeLen;
+          if (this.fadeN === 0) { this.clearDelay(); this.clearReverb(); this.wg = 1; }
+        }
         this.delay(l, r); l = this.yL; r = this.yR;
         this.reverb(l, r); l = this.yL; r = this.yR;
         this.comp(l, r); l = this.yL; r = this.yR;

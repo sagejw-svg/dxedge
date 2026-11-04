@@ -2404,6 +2404,35 @@ with sync_playwright() as pw:
           return { tail, after, back }; }""")
         ck(f"Te. Panic empties the tape: a repeat at full feedback stops ({pnc['tail']:.1f} dBFS before, {pnc['after']:.1f} after; want 40 dB or more down and under -70), and a new note echoes again ({pnc['back']:.1f} dBFS)",
            pnc["tail"] > -50 and pnc["after"] < -70 and pnc["tail"] - pnc["after"] >= 40 and pnc["back"] > -50, pnc)
+        # Review 4 Nov: Panic left the master bus delay and reverb running (-31 dB 0.2 to 1 s after it at
+        # feedback 0.9), and an effect switched off kept its lines, so switching it back on played the old
+        # sound again with nothing held (delay -33 dB, reverb -23 dB, peak 0.39).
+        mfx = pg.evaluate("""async () => { const E = __synth.engine(); await E.ctx.resume(); const fx = E.fx, keep = __synth.patch();
+          const p = __synth.patch(); p.echo = Object.assign({}, p.echo, { on: false }); p.spring = Object.assign({}, p.spring, { on: false });
+          p.envA = { a: 0.001, d: 0.05, s: 0, r: 0.02 }; p.arp = Object.assign({}, p.arp, { on: false });
+          p.out = Object.assign({}, p.out, { roomOn: false }); p.ens = Object.assign({}, p.ens, { on: false });
+          const m0 = JSON.parse(JSON.stringify(__synth.master())); __synth.setPatch(p);
+          const zz = ms => new Promise(r => setTimeout(r, ms));
+          const rms = s => { let a = 0; for (let i = 0; i < s.L.length; i++) a += s.L[i] * s.L[i]; return 20 * Math.log10(Math.sqrt(a / Math.max(1, s.L.length)) + 1e-12); };
+          const grab = async ms => { fx.recordStart(); await zz(ms); return rms(await fx.recordStop()); };
+          const blip = async () => { __synth.noteOn(69, 0.9); await zz(60); __synth.noteOff(69); };
+          const D = { on: true, sync: false, time: 200, feedback: 0.9, mix: 0.5, ping: false }, V = { on: true, size: 1, damp: 0, mix: 0.5 };
+          const r = {};
+          __synth.setMaster({ delay: D, reverb: { on: false }, comp: { on: false } }); await zz(300);
+          await blip(); await zz(250); r.dTail = await grab(400); __synth.panic(); await zz(120); r.dAfter = await grab(300);
+          __synth.setMaster({ delay: { on: false }, reverb: V }); await zz(200);
+          await blip(); await zz(300); r.rTail = await grab(300); __synth.panic(); await zz(120); r.rAfter = await grab(300);
+          __synth.setMaster({ delay: D, reverb: { on: false } }); await zz(200); await blip(); await zz(500);
+          __synth.setMaster({ delay: { on: false } }); await zz(600); __synth.setMaster({ delay: D }); await zz(60); r.dBack = await grab(400);
+          __synth.setMaster({ delay: { on: false }, reverb: V }); await zz(200); await blip(); await zz(300);
+          __synth.setMaster({ reverb: { on: false } }); await zz(600); __synth.setMaster({ reverb: V }); await zz(60); r.rBack = await grab(400);
+          __synth.setMaster({ reverb: { on: false } }); await zz(100); __synth.setMaster({ reverb: V }); await zz(60); await blip(); await zz(100); r.rLive = await grab(300);
+          __synth.panic(); __synth.setPatch(keep); __synth.setMaster(m0); await zz(400);
+          return r; }""")
+        ck(f"M. master bus: Panic empties the master delay ({mfx['dTail']:.1f} dBFS before, {mfx['dAfter']:.1f} after) and reverb ({mfx['rTail']:.1f}, {mfx['rAfter']:.1f}); want 40 dB or more down and under -70",
+           mfx["dTail"] > -50 and mfx["rTail"] > -50 and mfx["dAfter"] < -70 and mfx["rAfter"] < -70 and mfx["dTail"] - mfx["dAfter"] >= 40 and mfx["rTail"] - mfx["rAfter"] >= 40, mfx)
+        ck(f"M. master bus: switched back on, the master delay ({mfx['dBack']:.1f} dBFS) and reverb ({mfx['rBack']:.1f}) start empty (want under -70), and a note played after that still rings ({mfx['rLive']:.1f}, want over -50)",
+           mfx["dBack"] < -70 and mfx["rBack"] < -70 and mfx["rLive"] > -50, mfx)
         ck("Te. no page errors", not errs, errs)
     _tape_echo()
 
@@ -3618,6 +3647,25 @@ with sync_playwright() as pw:
     ck(f"M. a note held on Pentagrid while the rack is still attaching keeps sounding when it finishes (booted at note-on: {early}; output {before:.3f} -> {after:.3f}, want 0.02 or more after)",
        early is False and before > 0.02 and after > 0.02 and not berr, (early, before, after, berr))
     bctx.close()
+    # Review 4 Nov: each hosted device was built awake and slept only once the whole chain had attached,
+    # so Mote, Geissler, Orthicon and Gyrotron played on their own for the rest of the chain (about 7 s
+    # on the live site; output peak 0.95) to anyone who clicked or pressed a key in that time.
+    nctx = b.new_context(viewport={"width": 1366, "height": 1000}, service_workers="block")
+    nctx.add_init_script("""(() => { const am = AudioWorklet.prototype.addModule; let rel; const hold = new Promise(r => { rel = r; });
+      window.__releaseBoot = () => rel();
+      AudioWorklet.prototype.addModule = function (url, o) { return String(url).includes('resnatron.worklet') ? hold.then(() => am.call(this, url, o)) : am.call(this, url, o); }; })()""")
+    npg = nctx.new_page(); nerr = []
+    npg.on("pageerror", lambda e: nerr.append(str(e)))
+    npg.goto(BASE); npg.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    npg.evaluate("async () => { const c = __synth.engine().ctx; if (c.state !== 'running') await c.resume(); }")
+    npg.wait_for_function("__synth.devices().some(d => d.id === 'rhumbatron')", timeout=30000); npg.wait_for_timeout(1500)
+    nm = npg.evaluate("""async () => { const top = {}; for (let i = 0; i < 12; i++) { const m = __synth.stripMeters() || {};
+      for (const k in m) top[k] = Math.max(top[k] || 0, m[k] || 0); await new Promise(r => setTimeout(r, 100)); } return { booted: __synth.booted(), top }; }""")
+    loud = {k: round(v, 3) for k, v in nm["top"].items() if v > 0.002}
+    npg.evaluate("window.__releaseBoot()"); npg.wait_for_function("__synth.booted()", timeout=30000)
+    ck(f"M. while the rack is still attaching, no device plays on its own (booted then: {nm['booted']}; strips above 0.002: {loud or 'none'})",
+       nm["booted"] is False and not loud and not nerr, (nm, nerr))
+    nctx.close()
     pg.evaluate("__synth.panic()"); pg.evaluate(OUT_RMS)
     pg.evaluate("(p) => __synth.setPatch(p)", PG_TONE); pg.wait_for_timeout(300)
     pg.evaluate("(n) => __synth.noteOn(n, 0.9)", 69); pg.wait_for_timeout(250)

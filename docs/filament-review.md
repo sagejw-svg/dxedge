@@ -18,6 +18,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
+| R1104-4 | confusing | c, d | Panic leaves the Mix desk delay and room returns and the patch's own output room ringing; the room's tail then refills the master reverb | measured |
 | R1103-3 | confusing | b, h | Phone: the save name field is 28 px tall (the rest of the patch bar is 44 px) | measured |
 | R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
 | R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch (2 Nov: the spring reverb is a patch field too, so it follows the same way) | measured (cut), inferred (impact, spring) |
@@ -65,7 +66,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1369,3 +1370,97 @@ Areas c to h beyond the phone patch bar. Area a still to do on the newest device
 (only sliders and knobs were swept tonight), and on Cathode's and Dekatron's echo and spring copies.
 Suggested next: c, d and e, including whether the tape echo and spring follow a deck take that plays
 two devices.
+
+## 2026-11-04 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `1556a62`, sw.js
+`dxedge-v180` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path
+in the task prompt is still gone) at 1366 x 900, and 375 x 812 (touch, 2x) for the boot check. No page
+or console errors on the live site in any run. Audio was read from the live output with the master
+recorder (`__synth.recordStart` and `recordStop`, the 24-bit WAV decoded in the script) and the strip
+meters; offline renders went through `__synth.render` with the deck's own `renderArgs`. Focus tonight:
+what Panic does and does not stop (the master bus, the Mix desk returns, the output room), effects
+switched off and on, the first seconds after the page loads, and a deck file that plays Filament and
+Cathode together with the tape echo on (the 3 Nov suggestion).
+
+### What worked (measured)
+
+- Computer keys: a held A with five auto-repeat keydowns makes one onset and one voice; Ctrl+D plays
+  nothing. The hold button, a key, then Panic: 2 voices to 0, hold back to unpressed, and the next key
+  releases normally (the Wide Novachord release runs about 3 s).
+- MIDI via `__synth.midi`: a take of note on and off, CC64 down and up, a bend, CC1 and a closing
+  bend records 11 events in order; CC123 leaves 0 voices. Export and import of that take gives one
+  part of 3 notes on channel 1, length 2.10 s.
+- MIDI deck, an imported two-track file built in the test (channel 1 for Filament with a note-off
+  sent as velocity 0 and a repeated, overlapping E4; channel 2 for Cathode): 3 and 1 notes, assigned
+  to Filament and Cathode, 2.25 s. Playback follows the score (`sounding` shows 64, then 48, then
+  nothing); at the end 0 voices. With loop on it wraps (1.06 s after 5.6 s), and Stop leaves nothing
+  sounding, 0 voices and no lit keys. Render WAV by the button: `filament-reimport-<stamp>.wav`,
+  48 kHz 16-bit stereo, 4.1 s, peak 0.45, no clipped samples, largest step 0.11.
+- Mixer: a mute or a solo is complete (the strip fades on a 20 ms time constant; measured silent
+  2 s later, -84 dB with only the floor), level 0 likewise.
+
+### Findings
+
+**R1104-1. A click in the first seconds after load plays four devices at once.** Area c, d. Broken.
+Measured. Fixed tonight.
+- Steps: open the page, click anywhere (or press a key) while the "audio" lamp is still settling.
+- Expected: silence until a note is played.
+- Actual: Mote, Geissler, Orthicon and Gyrotron play on their own until the rack finishes attaching:
+  about 7 s, measured on the live site with the default autoplay policy and one click 0.5 s after
+  the engine came up, at 1366 px and at 375 px (strip meters up to 0.68 for Geissler; output peak
+  0.95, RMS -13 dB). With autoplay allowed (a returning visitor in Chrome) it plays without a click.
+  The tail then rings through the output room for about 3 s more.
+- Cause (code): every hosted device is built awake, and the boot chain put them to sleep only at
+  its end.
+- Fix: each device goes to sleep as soon as it has attached, unless it is on the rail or armed.
+  Check: "M. while the rack is still attaching, no device plays on its own" (fails on the live code
+  with the last attach held back: Mote at 0.069).
+
+**R1104-2. Panic does not stop the master bus delay or reverb.** Area c, d. Broken. Measured. Fixed
+tonight.
+- Steps: master delay on (feedback 0.9, 250 ms, mix 0.5), play a note, let go, press Panic.
+- Expected: silence (Panic's tooltip is "Silence every note"; since 1 Nov it empties the tape echo).
+- Actual: the repeats went on: -31.5 dB 0.2 to 1.0 s after Panic, -36.5 dB 1.5 to 2.5 s after. The
+  master reverb at size 1, damp 0 kept ringing at -15 dB.
+- Fix: Panic fades the master delay and reverb returns over 10 ms and then empties both; the dry
+  path is untouched. Check: "M. master bus: Panic empties the master delay and reverb" (live code:
+  -36.1 dB before, -38.2 after; fixed: -240 after).
+
+**R1104-3. An effect switched back on plays what it held when it was switched off.** Area d.
+Confusing. Measured. Fixed tonight (same change as R1104-2).
+- Steps: master delay on, play a note, switch the delay off, wait 2 s, switch it on with nothing
+  playing. Same for the reverb.
+- Actual: the old repeats came back, -32.7 dB (delay) and -22.6 dB with a peak of 0.39 (reverb),
+  because the lines stop moving while the effect is off.
+- Fix: a delay or reverb switched on starts empty. Check: "M. master bus: switched back on, the master
+  delay and reverb start empty" (live code: -37.4 and -34.4 dB; fixed: -240).
+
+**R1104-4. Panic leaves the other tails ringing.** Area c, d. Confusing. Measured. Not fixed.
+- The Mix desk returns: a strip's delay send at 1 with the desk feedback at 0.85 (its top) read
+  -25.7 dB 0.3 to 1.3 s after Panic and -28.6 dB later; the room send -27.2 dB 0.2 to 0.7 s after.
+- The patch's own output room: on the default patch (Wide Novachord Strings, hall, decay 3) a note
+  then Panic still reads -40.5 dB 0.3 to 0.7 s after (Plate Bass, studio 0.9 s: -69 dB). With the
+  master reverb on, that room tail refills the reverb after its flush (-29 dB a second after Panic).
+- All of these decay on their own (the desk feedback stops at 0.85), unlike the tape echo and the
+  master delay. Whether Panic should cut every tail or only runaway ones is a call for James; a cut
+  needs a short dip on the desk returns and on the room's wet gain.
+
+### Still open, re-measured tonight
+
+- R1101-3, now with the deck: in the two-track file above with the tape echo on Filament only and
+  the rail on Filament, Cathode's part gets Filament's echo (live -20.9 dB 0.8 s after its note; the
+  Render WAV of the same file -18.9 dB). With the rail on Cathode the render drops it (-47.1 dB). The
+  live output and the render agree, so the WAV matches what was heard.
+
+### Not reported
+
+- `__synth.cathodePatch()` throws ("undefined" is not valid JSON) on a fresh page before Cathode has
+  been shown. It is a test hook, not something a player reaches.
+- The deck WAV's name stamp follows the browser's clock zone (UTC in this headless run).
+
+### Not covered tonight
+
+Areas a, b, f, g, h; the phone only for the boot check. Suggested next: f, g, h, including whether a
+project restores the master bus effects' on and off state cleanly now that switching on clears them.
+

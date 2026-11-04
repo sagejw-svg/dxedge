@@ -234,6 +234,8 @@ export async function makeMasterFx(ctx, initial) {
       return masterView(state);
     },
     recording: () => recording,
+    // Panic empties the delay and the reverb (a short fade, then silence).
+    flush() { if (node) node.port.postMessage({ t: 'flush' }); },
     recordedSeconds: () => (cap ? cap.seconds() : 0),
     recordStart() {
       // Same rate as the context. Resampling to 44.1 kHz is not what the
