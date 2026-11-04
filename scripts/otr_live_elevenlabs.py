@@ -38,7 +38,7 @@ import wave
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-from otr_live import pick_premade_voice  # noqa: E402
+from otr_live import normalize_spoken, pick_premade_voice  # noqa: E402
 
 CATALOG = os.path.join(ROOT, "frontend", "public", "otr", "catalog.json")
 OUT = os.path.join(ROOT, "frontend", "public", "otr", "live", "pack")
@@ -54,35 +54,35 @@ JINGLE_MS = 15000
 
 JINGLE_PROMPT = (
     "A 15-second 1940s American radio station identification jingle for a station "
-    "called Listenotr Radio. Small live orchestra: warm trumpets, clarinet, and "
+    "called old time radio. Small live orchestra: warm trumpets, clarinet, and "
     "a bright xylophone sting, then a short male close-harmony group singing the "
-    "words Listenotr Radio, resolving on a major chord. Mono, a little vinyl "
+    "words old time radio, resolving on a major chord. Mono, a little vinyl "
     "warmth, the sound of a 1947 network ID. No modern drums, no synthesizer, "
     "no electric guitar."
 )
 
 IDENTS = [
-    ("ident", "You're listening to Listenotr Radio."),
-    ("ident-stay", "This is Listenotr Radio. Stay with us."),
-    ("ident-live", "Listenotr Radio. The live broadcast."),
+    ("ident", "You're listening to old time radio."),
+    ("ident-stay", "This is old time radio. Stay with us."),
+    ("ident-live", "Old time radio. The live broadcast."),
 ]
 
 # Start second in the Eastern day -> the line that opens that block.
 DAYPARTS = [
-    (0, "It's the middle of the night on Listenotr Radio. Mysteries until dawn."),
-    (5 * 3600, "Good morning from Listenotr Radio. Comedy to start the day."),
-    (8 * 3600, "Daytime on Listenotr Radio. Stories through the morning."),
-    (12 * 3600, "High noon on Listenotr Radio. Westerns through the afternoon."),
-    (16 * 3600, "Late afternoon on Listenotr Radio. Crime is on the case."),
-    (19 * 3600, "Dinner time on Listenotr Radio. Comedy at the table."),
-    (20 * 3600, "It's eight o'clock. Tonight on Listenotr Radio, the mystery hour."),
-    (20 * 3600 + 1800, "Eight thirty. Time for comedy on Listenotr Radio."),
-    (21 * 3600, "Nine o'clock. A western, here on Listenotr Radio."),
-    (21 * 3600 + 1800, "Nine thirty. Crime drama on Listenotr Radio."),
-    (22 * 3600, "Ten o'clock. Turn the lights down. Horror, on Listenotr Radio."),
-    (22 * 3600 + 1800, "Ten thirty. Drama on Listenotr Radio."),
-    (23 * 3600, "Eleven o'clock. Adventure on Listenotr Radio."),
-    (23 * 3600 + 1800, "Eleven thirty. Stories of tomorrow, tonight, on Listenotr Radio."),
+    (0, "It's the middle of the night on old time radio. Mysteries until dawn."),
+    (5 * 3600, "Good morning from old time radio. Comedy to start the day."),
+    (8 * 3600, "Daytime on old time radio. Stories through the morning."),
+    (12 * 3600, "High noon on old time radio. Westerns through the afternoon."),
+    (16 * 3600, "Late afternoon on old time radio. Crime is on the case."),
+    (19 * 3600, "Dinner time on old time radio. Comedy at the table."),
+    (20 * 3600, "It's eight o'clock. Tonight on old time radio, the mystery hour."),
+    (20 * 3600 + 1800, "Eight thirty. Time for comedy on old time radio."),
+    (21 * 3600, "Nine o'clock. A western, here on old time radio."),
+    (21 * 3600 + 1800, "Nine thirty. Crime drama on old time radio."),
+    (22 * 3600, "Ten o'clock. Turn the lights down. Horror, on old time radio."),
+    (22 * 3600 + 1800, "Ten thirty. Drama on old time radio."),
+    (23 * 3600, "Eleven o'clock. Adventure on old time radio."),
+    (23 * 3600 + 1800, "Eleven thirty. Stories of tomorrow, tonight, on old time radio."),
 ]
 
 
@@ -97,7 +97,7 @@ def shows():
 
 
 def up_next_line(name):
-    return "Up next on Listenotr Radio, " + name + "."
+    return "Up next on old time radio, " + name + "."
 
 
 def plan():
@@ -172,9 +172,9 @@ def duration(path):
 
 
 def speak_espeak(text, dest):
-    # espeak's stock American voice. "Listenotr" is spelled out so the letters
-    # are intelligible. The produced pack says the brand as a word.
-    spoken = text.replace("Listenotr", "Listen O.T.R.")
+    # espeak-ng's stock American voice. The normalizer is what actually gets
+    # spoken, so a template can never come out as the letters OTR.
+    spoken = normalize_spoken(text)
     wav = dest + ".wav"
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     subprocess.check_call([
@@ -249,6 +249,35 @@ def write_manifest(rows, jingle_dur, placeholder, voice):
         handle.write("\n")
 
 
+def refresh_placeholders():
+    """Re-speak only the espeak stand-ins. The ElevenLabs recordings stay put."""
+    manifest_path = os.path.join(OUT, "manifest.json")
+    manifest = json.load(open(manifest_path))
+    names = {show["id"]: show["name"] for show in shows()}
+    daypart_text = {str(start): text for start, text in DAYPARTS}
+    done = 0
+    for show_id, entry in manifest.get("upNext", {}).items():
+        if entry.get("source") != "placeholder":
+            continue
+        text = normalize_spoken(up_next_line(names[show_id]))
+        entry["dur"] = speak_espeak(text, os.path.join(OUT, entry["file"]))
+        done += 1
+        if done % 25 == 0:
+            print("  refreshed", done)
+    for key, entry in manifest.get("daypart", {}).items():
+        if entry.get("source") != "placeholder":
+            continue
+        text = daypart_text.get(key)
+        if not text:
+            continue
+        entry["dur"] = speak_espeak(normalize_spoken(text), os.path.join(OUT, entry["file"]))
+        done += 1
+    with open(manifest_path, "w") as handle:
+        json.dump(manifest, handle, indent=2)
+        handle.write("\n")
+    print("refreshed", done, "placeholder clips")
+
+
 def write_placeholders():
     manifest_path = os.path.join(OUT, "manifest.json")
     if os.path.exists(manifest_path):
@@ -313,7 +342,7 @@ def generate(key):
             "https://api.elevenlabs.io/v1/text-to-speech/%s?output_format=mp3_44100_128" % voice_id,
             key,
             {
-                "text": row["text"],
+                "text": normalize_spoken(row["text"]),
                 "model_id": "eleven_multilingual_v2",
                 "voice_settings": {"stability": 0.42, "similarity_boost": 0.8},
             },
@@ -342,15 +371,19 @@ def main():
     parser = argparse.ArgumentParser(description="Build the Listenotr Radio asset pack.")
     parser.add_argument("--estimate", action="store_true")
     parser.add_argument("--placeholders", action="store_true")
+    parser.add_argument("--refresh-placeholders", action="store_true",
+                        help="re-speak espeak stand-ins only; leave ElevenLabs files alone")
     parser.add_argument("--generate", action="store_true")
     args = parser.parse_args()
-    if not (args.estimate or args.placeholders or args.generate):
+    if not (args.estimate or args.placeholders or args.refresh_placeholders or args.generate):
         parser.print_help()
         return 2
     key = api_key()
     est = estimate()
     if args.estimate or args.generate:
         print_estimate(est, bool(key))
+    if args.refresh_placeholders:
+        refresh_placeholders()
     if args.placeholders:
         write_placeholders()
     if args.generate:

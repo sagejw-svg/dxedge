@@ -59,12 +59,34 @@ def pick_premade_voice(voices):
     raise RuntimeError("No premade ElevenLabs voice is available. Cloned and custom voices are not used.")
 
 
+# Spoken audio says "old time radio". The letters OTR, and the brand name
+# Listenotr, are never sent to a voice. "Listenotr Radio" becomes the phrase
+# once, so it does not come out as "old time radio radio".
+_LISTENO_RADIO = re.compile(r"\bListenotr\s+Radio\b", re.IGNORECASE)
+_LISTENO = re.compile(r"\bListenotr\b", re.IGNORECASE)
+_OTR_DOTS = re.compile(r"\bO\s*\.\s*T\s*\.\s*R\b\.?", re.IGNORECASE)
+_OTR_WORD = re.compile(r"\bOTR\b", re.IGNORECASE)
+
+
+def normalize_spoken(text):
+    """Text that is about to be spoken. Never leaves the abbreviation OTR in it."""
+    spoken = str(text or "")
+    spoken = _LISTENO_RADIO.sub("old time radio", spoken)
+    spoken = _LISTENO.sub("old time radio", spoken)
+    spoken = _OTR_DOTS.sub("old time radio", spoken)
+    spoken = _OTR_WORD.sub("old time radio", spoken)
+    spoken = re.sub(r"[ \t]{2,}", " ", spoken)
+    return spoken.strip()
+
+
 def episode_intro_text(show, title):
     show = _clip(show, 80) or "the next show"
     title = _clip(title, 90)
     if title:
-        return "Tonight, on " + show + ". " + title + ". Tune in."
-    return "Tonight, on " + show + ". Tune in."
+        line = "Tonight, on " + show + ". " + title + ". Tune in."
+    else:
+        line = "Tonight, on " + show + ". Tune in."
+    return normalize_spoken(line)
 
 
 def _clip(value, limit):
@@ -172,7 +194,7 @@ def intro_for(body, now=None, generate=None):
         return {"play": "ident", "reason": "daily-cap"}
     if generate is None:
         generate = _generate_with_elevenlabs
-    text = episode_intro_text(body.get("show"), body.get("title"))
+    text = normalize_spoken(episode_intro_text(body.get("show"), body.get("title")))
     try:
         audio = generate(text, ep)
     except Exception as exc:
@@ -203,7 +225,7 @@ def _generate_with_elevenlabs(text, ep):
     import urllib.request
     voice = _premade_voice_id(key)
     payload = json.dumps({
-        "text": text,
+        "text": normalize_spoken(text),
         "model_id": "eleven_multilingual_v2",
         "voice_settings": {"stability": 0.45, "similarity_boost": 0.75},
     }).encode("utf-8")

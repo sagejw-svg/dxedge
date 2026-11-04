@@ -1,5 +1,6 @@
 """Listener-gated Listenotr episode intros. No network, no API key in the logs."""
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -137,6 +138,38 @@ def test_heartbeat_expires():
     assert otr_live.listener_count(now=100 + otr_live.LISTENER_WINDOW + 1) == 0
     otr_live.note_listener("nope", now=100)
     assert otr_live.listener_count(now=100) == 0
+
+
+def _says_otr(text):
+    if re.search(r"listenotr", text, re.IGNORECASE):
+        return True
+    if re.search(r"\bO\s*\.\s*T\s*\.\s*R\b", text, re.IGNORECASE):
+        return True
+    if re.search(r"\bOTR\b", text, re.IGNORECASE):
+        return True
+    return False
+
+
+def test_spoken_text_says_old_time_radio_never_otr():
+    samples = [
+        "You're listening to OTR.",
+        "This is O.T.R. tonight.",
+        "O. T. R. returns at eight.",
+        "otr on the hour",
+        "You're listening to Listenotr Radio.",
+        "Up next on Listenotr Radio, Suspense.",
+        "A Listenotr presentation.",
+    ]
+    for raw in samples:
+        spoken = otr_live.normalize_spoken(raw)
+        assert not _says_otr(spoken), spoken
+        assert "old time radio" in spoken.lower()
+    intro = otr_live.episode_intro_text("OTR Theatre", "The O.T.R. Hour")
+    assert intro == "Tonight, on old time radio Theatre. The old time radio Hour. Tune in."
+    assert not _says_otr(intro)
+    plain = otr_live.episode_intro_text("Suspense", "Sorry, Wrong Number")
+    assert plain == "Tonight, on Suspense. Sorry, Wrong Number. Tune in."
+    assert not _says_otr(plain)
 
 
 def test_intro_sentence():
