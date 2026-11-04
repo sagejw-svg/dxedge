@@ -293,7 +293,8 @@
       cue: cue,
       nextShow: next ? next.showName : null,
       nextTitle: next ? next.title : null,
-      nextShowId: next ? next.showId : null
+      nextShowId: next ? next.showId : null,
+      nextUrl: next ? next.url : null
     };
   }
   function overlaps(ms, seconds, kind) {
@@ -366,10 +367,21 @@
     booted = true;
   }).catch(function (e) { fail = e; throw e; });
 
+  var clipFails = 0, badClip = '', stallAt = 0;
   function targetFor(air) {
     if (!air) return { url: '', at: 0, token: 'none', loop: false };
     if (air.kind === 'show') return { url: air.url, at: air.offset, token: 'show', loop: false };
-    if (air.cue) return { url: air.cue.url, at: air.cue.at, token: air.cue.file + '@' + air.cue.at0, loop: false };
+    if (air.kind === 'break' && badClip && air.cues && air.cues.length) {
+      for (var i = 0; i < air.cues.length; i++) {
+        var c = air.cues[i];
+        if (badClip.indexOf(c.file) >= 0) continue;
+        if (air.offset < c.at0 + c.dur) {
+          return { url: c.url, at: Math.max(0, air.offset - c.at0), token: 'next@' + c.file, loop: false };
+        }
+      }
+      if (air.nextUrl) return { url: air.nextUrl, at: 0, token: 'episode-after-break', loop: false };
+    }
+    if (air.cue && !(badClip && badClip.indexOf(air.cue.file) >= 0)) return { url: air.cue.url, at: air.cue.at, token: air.cue.file + '@' + air.cue.at0, loop: false };
     return { url: SILENCE, at: 0, token: 'hold', loop: true };
   }
   function bumpSuppress() {
@@ -388,10 +400,22 @@
     var p = audioEl.play();
     if (p && p.catch) p.catch(function () {});
   }
+  var pauseAt = 0;
   function onPause() {
-    if (!armed || suppressPause > 0 || !audioEl || audioEl.ended) return;
-    want = false;
-    paintTransport();
+    if (!armed || !audioEl) return;
+    pauseAt = Date.now();
+    if (suppressPause > 0) return;
+    var el = audioEl;
+    // ended often fires pause first. Do not treat that as the listener
+    // stopping, or the episode after the announcer never starts.
+    setTimeout(function () {
+      if (!armed || audioEl !== el || suppressPause > 0) return;
+      if (el.ended) { onEnded(); return; }
+      if (el.paused) {
+        want = false;
+        paintTransport();
+      }
+    }, 40);
   }
   function onPlayEv() {
     if (!armed) return;
@@ -400,9 +424,18 @@
     forceRate();
     paintTransport();
   }
+  function onAudioError() {
+    if (!armed || !want || !audioEl) return;
+    clipFails++;
+    var failed = audioEl.currentSrc || audioEl.src || '';
+    if (clipFails >= 2 && failed.indexOf('/scifi/assets/') >= 0) badClip = failed;
+    loadedKey = '';
+    setTimeout(function () { if (armed && want) follow(); }, 250);
+  }
   function onEnded() {
     if (!armed || !want || !audioEl) return;
     if (audioEl.loop) return;
+    clipFails = 0;
     loadedKey = '';
     follow();
   }
@@ -424,17 +457,28 @@
     el.addEventListener('play', onPlayEv);
     el.addEventListener('playing', onPlayEv);
     el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onAudioError);
     el.addEventListener('ratechange', onRate);
     el.addEventListener('timeupdate', function () { if (armed) paintProgress(); });
   }
   function follow() {
     if (!armed || !want || !audioEl || !booted) return;
+    if (pauseAt && audioEl.paused && !audioEl.ended && Date.now() - pauseAt < 80) return;
     forceRate();
     var air = onAir();
     var t = targetFor(air);
     var key = (air ? air.key : '') + '|' + t.token;
     var d = audioEl.duration;
-    if (!t.loop && isFinite(d) && d > 0.2 && t.at >= d - 0.08) {
+    var srcNow = audioEl.currentSrc || audioEl.src || '';
+    var onThis = t.url && (srcNow.indexOf(t.url) >= 0 || (t.url.indexOf('http') !== 0 && srcNow.indexOf(t.url.split('/').pop()) >= 0));
+    var announcer = !!(t.url && t.url.indexOf('/scifi/assets/') >= 0);
+    var hearingClip = srcNow.indexOf('/scifi/assets/') >= 0 && !audioEl.ended && !audioEl.paused
+      && audioEl.currentTime > 0.2 && audioEl.currentTime + 0.25 < (isFinite(d) ? d : 1e9);
+    // Finish the announcer file even if the schedule has already reached the
+    // episode. Cutting it off is what left the station silent.
+    if (hearingClip && (!onThis || (announcer && audioEl.currentTime + 0.4 < t.at))) return;
+    var fileDone = isFinite(d) && d > 0.2 && (audioEl.ended || audioEl.currentTime >= d - 0.05);
+    if (!t.loop && fileDone && t.at >= d - 0.2) {
       t = { url: SILENCE, at: 0, token: 'hold', loop: true };
       key = (air ? air.key : '') + '|hold';
     }
@@ -964,6 +1008,14 @@
 
   function tick() {
     if (!booted) return;
+    if (armed && want && audioEl && audioEl.paused && suppressPause === 0 && !(pauseAt && Date.now() - pauseAt < 80)) {
+      if (!stallAt) stallAt = Date.now();
+      else if (Date.now() - stallAt > 1500) {
+        stallAt = Date.now();
+        loadedKey = '';
+        follow();
+      }
+    } else if (!audioEl || !audioEl.paused) stallAt = 0;
     if (mode === 'main' && armed) {
       var s = window.__otr && __otr.state;
       if (s && s.network && s.network !== 'scifi') { release(); }

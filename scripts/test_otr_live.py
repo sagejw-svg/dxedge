@@ -16,7 +16,7 @@ CHROME = os.environ.get("OTR_CHROMIUM", "/opt/google/chrome/chrome")
 BASE = f"http://127.0.0.1:{PORT}"
 
 HOST_TEST = b"""<!doctype html><html><head><title>host</title></head><body>
-<script src="/otr/live/listenotr-radio.js?v=3"></script>
+<script src="/otr/live/listenotr-radio.js?v=4"></script>
 <script>document.addEventListener('DOMContentLoaded', function(){
   var d = document.createElement('div'); d.id = 'otr-live'; document.body.appendChild(d);
 });</script></body></html>"""
@@ -143,7 +143,19 @@ def main():
         def break_urls(it):
             return " ".join((c.get("url") or "") for c in (it.get("cues") or []))
         ck("every break plays an up-next line or a station ID from the pack",
-           breaks and all(("up-next/" in break_urls(it) or "/idents/" in break_urls(it)) for it in breaks))
+           breaks and all(("up-next/" in break_urls(it) or "/idents/" in break_urls(it) or not it.get("cues")) for it in breaks))
+        fit = pg.evaluate("""() => {
+          const day = __listenotr.day('2026-11-04');
+          const bad = [];
+          day.forEach(function (it) {
+            if (it.kind !== 'break') return;
+            var s = 0;
+            (it.cues || []).forEach(function (c) { s += c.dur || 0; });
+            if (s > it.dur + 0.05) bad.push({ start: it.start, dur: it.dur, sum: s });
+          });
+          return { badN: bad.length, sample: bad.slice(0, 3) };
+        }""")
+        ck("no announcer clip is scheduled past the end of its break", fit["badN"] == 0, fit)
         into_mystery = next(it for it in day if it["kind"] == "break" and it.get("nextShowId") == "suspense" and it.get("nextStart") == 20 * 3600)
         cue_urls = [c["url"] for c in (into_mystery.get("cues") or [])]
         ck("the break into the 8 o'clock mystery opens with the jingle, then the voice ID",
@@ -281,6 +293,15 @@ def main():
         break_ui = pg.evaluate("() => ({ kicker: document.querySelector('#lrKicker').textContent, ep: document.querySelector('#lrEp').textContent, src: __listenotr.audio().src, time: __listenotr.audio().time })")
         ck("the station break plays the announcer clip from its own offset",
            break_ui["kicker"] == "Station break" and "Jack Benny" in break_ui["ep"] and "the-jack-benny-show.mp3" in break_ui["src"] and break_ui["time"] < 3, break_ui)
+        # The break is over on the clock while the announcer file is still playing.
+        # The clip must finish, then the episode has to start. Playback must not stay paused.
+        pg.evaluate("(sod) => __listenotr.setClock(__listenotr.unixFor('2026-11-04', sod))", mystery_break["start"] + mystery_break["dur"] + 1)
+        pg.wait_for_function("""() => {
+          const a = __listenotr.audio();
+          return !a.paused && !__listenotr.paused() && a.src.indexOf('archive.org') >= 0;
+        }""", timeout=12000)
+        ck("when the announcer clip ends, the episode starts and playback does not stop",
+           not pg.evaluate("__listenotr.audio().paused") and "archive.org" in pg.evaluate("__listenotr.audio().src"))
 
         pg.evaluate("""() => { try { Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }); } catch (e) {} }""")
         pg.click("#lrShare")

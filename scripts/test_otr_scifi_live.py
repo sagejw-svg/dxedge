@@ -58,7 +58,35 @@ def fulfill_mp3(route):
     route.fulfill(status=200, body=data, headers={**common, "Content-Length": str(len(data))})
 
 
+def integrated_lufs(path):
+    proc = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-nostats", "-i", path, "-af", "ebur128", "-f", "null", "-"],
+        capture_output=True, text=True,
+    )
+    val = None
+    for line in proc.stderr.splitlines():
+        parts = line.strip().split()
+        if parts and parts[0] == "I:" and len(parts) >= 2:
+            try:
+                val = float(parts[1])
+            except ValueError:
+                pass
+    return val
+
+
 def main():
+    speech = [
+        "frontend/public/otr/live/scifi/assets/scifi-intro-late-night.mp3",
+        "frontend/public/otr/live/scifi/assets/scifi-station-id-1.mp3",
+        "frontend/public/otr/live/pack/idents/station-id-1.mp3",
+        "frontend/public/otr/live/pack/up-next/suspense.mp3",
+        "frontend/public/otr/live/pack/jingle-voice-id.mp3",
+    ]
+    levels = {os.path.basename(p): integrated_lufs(p) for p in speech}
+    quiet = {k: v for k, v in levels.items() if v is None or v < -18.5 or v > -14.5}
+    print(("PASS" if not quiet else "FAIL"), "announcer speech is about -16 LUFS", levels if not quiet else quiet)
+    if quiet:
+        raise SystemExit(1)
     subprocess.check_call([
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
         "-f", "lavfi", "-i", "sine=frequency=440:duration=180",
@@ -122,11 +150,12 @@ def main():
         spot = pg.evaluate("""() => {
           let ms = __scifi.unixFor('2026-11-04', 12 * 3600);
           let show = null, brk = null;
-          for (let i = 0; i < 900 && (!show || !brk); i++) {
+          for (let i = 0; i < 80 && (!show || !brk); i++) {
             const a = __scifi.onAir(ms);
-            if (a.kind === 'show' && a.offset < 0.05 && a.dur > 90) show = ms + 20000;
-            if (a.kind === 'break' && a.offset < 0.05) brk = ms + 400;
-            ms += 5000;
+            const start = ms - a.offset * 1000;
+            if (!show && a.kind === 'show' && a.dur > 90) show = start + 20000;
+            if (!brk && a.kind === 'break' && a.cues && a.cues[0] && a.cues[0].file === 'scifi-jingle.mp3') brk = start + 400;
+            ms = start + a.dur * 1000 + 500;
           }
           const s = __scifi.onAir(show);
           const b = __scifi.onAir(brk);
@@ -197,6 +226,31 @@ def main():
         }""", timeout=8000)
         ck("the break plays an announcer clip and does not keep the episode",
            "scifi-jingle.mp3" in pg.evaluate("document.getElementById('sfAudio').currentSrc"))
+        tail = pg.evaluate("""(ms) => {
+          const a = __scifi.onAir(ms);
+          const cues = (a && a.cues) || [];
+          const last = cues[cues.length - 1];
+          if (!last) return { at: 0, after: 0 };
+          return { at: a.startMs + Math.round(last.at0 * 1000) + 200, after: a.startMs + Math.round(a.dur * 1000) + 400 };
+        }""", spot["brkMs"])
+        pg.evaluate("(ms) => __scifi.setClock(ms)", tail["at"])
+        pg.wait_for_timeout(600)
+        # The break is over on the clock while the clip is still speaking.
+        # Playback must finish the clip, then start the episode, and not go silent.
+        pg.evaluate("(ms) => __scifi.setClock(ms)", tail["after"])
+        pg.wait_for_function("""() => {
+          const a = document.getElementById('sfAudio');
+          const src = a.currentSrc || a.src || '';
+          return !a.paused && src.indexOf('archive.org') >= 0;
+        }""", timeout=15000)
+        ck("when the last announcer clip ends, the episode starts and playback stays up",
+           not pg.evaluate("document.getElementById('sfAudio').paused") and "archive.org" in pg.evaluate("document.getElementById('sfAudio').currentSrc"))
+        fit = pg.evaluate("""() => {
+          const rows = __scifi.breaksIn(__scifi.unixFor('2026-11-04', 0), 36 * 3600);
+          const bad = rows.filter(b => (b.cues || []).reduce((s, c) => s + c.dur, 0) > b.dur + 0.05);
+          return { n: rows.length, bad: bad.length };
+        }""")
+        ck("sci-fi cues fit inside the gap and are not scheduled into the episode", fit["n"] > 10 and fit["bad"] == 0, fit)
         pg.evaluate("(ms) => __scifi.setClock(ms)", spot["showMs"])
         pg.wait_for_function("""() => (document.getElementById('sfAudio').currentSrc || '').indexOf('archive.org') >= 0 && document.getElementById('sfAudio').currentTime > 12""", timeout=8000)
         before = pg.evaluate("() => ({ id: __scifi.onAir().showId, t: document.getElementById('sfAudio').currentTime })")
