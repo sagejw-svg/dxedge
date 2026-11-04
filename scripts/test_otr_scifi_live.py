@@ -251,6 +251,42 @@ def main():
           return { n: rows.length, bad: bad.length };
         }""")
         ck("sci-fi cues fit inside the gap and are not scheduled into the episode", fit["n"] > 10 and fit["bad"] == 0, fit)
+        morning = pg.evaluate("""() => {
+          const start = __scifi.unixFor('2026-11-04', 9 * 3600);
+          const end = start + 45 * 60 * 1000;
+          const rows = [];
+          let ms = start, prev = '', silence = 0, worst = 0, bad = [];
+          while (ms < end) {
+            const a = __scifi.onAir(ms);
+            const w = __scifi.wall(ms);
+            const ap = w.hour < 12 ? 'AM' : 'PM';
+            let hh = w.hour % 12; if (!hh) hh = 12;
+            const p2 = n => (n < 10 ? '0' : '') + n;
+            const clock = hh + ':' + p2(w.minute) + ':' + p2(Math.floor(w.second)) + ' ' + ap + ' ET';
+            let label;
+            if (a.kind === 'show') {
+              silence = 0;
+              label = 'SHOW ' + a.show + ' | ' + (a.title || '') + ' | ' + (a.date || '');
+            } else {
+              const cue = a.cue;
+              if (!cue) { silence += 1; if (silence > worst) worst = silence; }
+              else silence = 0;
+              if (cue && cue.type === 'up_next' && cue.showId && cue.showId !== a.nextShowId)
+                bad.push(cue.file + ' before ' + a.nextShowId);
+              if (cue && /scifi-up-next-/.test(cue.file || '')) bad.push('generic ' + cue.file);
+              const name = cue ? cue.file : 'SILENCE';
+              label = 'BREAK ' + a.dur.toFixed(0) + 's now=' + name + ' next=' + (a.nextShow || '');
+            }
+            if (label !== prev) { rows.push(clock + '  ' + label); prev = label; }
+            ms += 1000;
+          }
+          return { rows: rows, worst: worst, bad: bad };
+        }""")
+        print("   Sci-Fi 6:00-6:45 AM PT:")
+        for row in morning["rows"]:
+            print("   " + row)
+        ck("sci-fi morning gaps stay within a few seconds of silence", morning["worst"] <= 4, morning["worst"])
+        ck("sci-fi up-next names the series that plays next, not a generic line", not morning["bad"], morning["bad"])
         pg.evaluate("(ms) => __scifi.setClock(ms)", spot["showMs"])
         pg.wait_for_function("""() => (document.getElementById('sfAudio').currentSrc || '').indexOf('archive.org') >= 0 && document.getElementById('sfAudio').currentTime > 12""", timeout=8000)
         before = pg.evaluate("() => ({ id: __scifi.onAir().showId, t: document.getElementById('sfAudio').currentTime })")

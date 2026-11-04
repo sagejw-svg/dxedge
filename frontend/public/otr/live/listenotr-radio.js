@@ -313,7 +313,7 @@
       it.nextEp = following && following.epId || null;
       it.nextIsTomorrow = isTom;
       if (it.kind === 'break') {
-        var cues = cuesFor(it);
+        var cues = layoutBreak(it);
         it.cues = cues;
         var spoken = null;
         for (var c = cues.length - 1; c >= 0; c--) {
@@ -344,7 +344,7 @@
       line: it.line || null, nextShowId: it.nextShowId || null, nextShow: it.nextShow || null,
       nextTitle: it.nextTitle || null, nextStart: it.nextStart == null ? null : it.nextStart,
       nextEp: it.nextEp || null, epId: it.epId || null,
-      cues: it.cues ? it.cues.map(function (c) { return { url: c.url, dur: c.dur }; }) : null,
+      cues: it.cues ? it.cues.map(function (c) { return { url: c.url, dur: c.dur, at0: c.at0 || 0 }; }) : null,
       nextIsTomorrow: !!it.nextIsTomorrow
     };
     if (extra) for (var k in extra) o[k] = extra[k];
@@ -431,6 +431,50 @@
     }
     return seq;
   }
+  function fillerChoices() {
+    var list = [];
+    if (PACK && PACK.jingle) list.push(packClip(PACK.jingle));
+    if (PACK && PACK.jingleVoice) list.push(packClip(PACK.jingleVoice));
+    ((PACK && PACK.idents) || []).forEach(function (e) { var c = packClip(e); if (c) list.push(c); });
+    return list.filter(function (c) { return c && c.dur > 0.5; });
+  }
+  function pickFiller(salt, room) {
+    var list = fillerChoices().filter(function (c) { return c.dur <= room + 0.001; });
+    if (!list.length) return null;
+    var pick = list[hashStr(String(salt)) % list.length];
+    return { url: pick.url, dur: pick.dur, at0: 0 };
+  }
+  // Clips sit at the end of the break, right before the episode they name.
+  // Any time in front of them is filled with a station ID or the jingle, which
+  // do not name a series. Silence between pieces stays under a few seconds.
+  function layoutBreak(br) {
+    var tail = cuesFor(br);
+    var tailSum = 0;
+    tail.forEach(function (c) { tailSum += c.dur || 0; });
+    if (tailSum > br.dur) tailSum = br.dur;
+    var tailAt = Math.max(0, br.dur - tailSum);
+    var fillers = [], cursor = 0, guard = 0;
+    while (tailAt - cursor > 3.5 && guard++ < 80) {
+      var room = tailAt - cursor - 0.35;
+      if (room < 3.2) break;
+      var piece = pickFiller(String(br.start) + ':' + guard, room);
+      if (!piece) break;
+      piece.at0 = cursor;
+      fillers.push(piece);
+      cursor += piece.dur + 0.35;
+    }
+    var left = tailAt - cursor;
+    if (left > 3.5) {
+      var last = pickFiller(String(br.start) + ':tail', left - 0.2);
+      if (last) {
+        last.at0 = tailAt - last.dur - 0.2;
+        if (last.at0 >= cursor - 0.001) fillers.push(last);
+      }
+    }
+    var at = tailAt;
+    tail.forEach(function (c) { c.at0 = at; at += c.dur; });
+    return fillers.concat(tail);
+  }
   function init(catalog, schedule, pack){
     CAT = catalog;
     SCHED = schedule;
@@ -466,7 +510,7 @@
     try { if (Math.abs((audio.currentTime || 0) - t) > 0.25) audio.currentTime = t; } catch (e) {}
   }
   function cueList(a) {
-    var cues = (a.cues || []).map(function (c) { return { url: c.url, dur: c.dur || 6 }; });
+    var cues = (a.cues || []).map(function (c) { return { url: c.url, dur: c.dur || 6, at0: c.at0 || 0 }; });
     if (state.badUrl) cues = cues.filter(function (c) { return c.url !== state.badUrl; });
     if (a.nextEp && state.intros[a.nextEp]) {
       var introDur = state.introDur[a.nextEp] || 0;
@@ -475,9 +519,13 @@
       var room = (a.dur || 0) - ahead;
       // Unknown length, or longer than the gap: keep the clip that already fits.
       if (introDur > 0.2 && introDur <= room - 0.25) {
-        var intro = { url: state.intros[a.nextEp], dur: introDur };
-        if (cues.length) cues[cues.length - 1] = intro;
-        else cues = [intro];
+        var intro = { url: state.intros[a.nextEp], dur: introDur, at0: Math.max(0, (a.dur || 0) - introDur) };
+        var prevEnd = cues.length > 1 ? (cues[cues.length - 2].at0 || 0) + (cues[cues.length - 2].dur || 0) : 0;
+        if (intro.at0 < prevEnd) intro.at0 = prevEnd;
+        if (intro.at0 + introDur <= (a.dur || 0) + 0.05) {
+          if (cues.length) cues[cues.length - 1] = intro;
+          else cues = [intro];
+        }
       }
     }
     return cues;
@@ -486,10 +534,11 @@
   // and how far into that file. Past the last clip, the break is silence.
   function seekTarget(a) {
     if (!a || a.kind !== 'break') return { url: a && a.url || '', at: a ? a.offset : 0, token: 'show' };
-    var cues = cueList(a), t = 0;
+    var cues = cueList(a);
     for (var i = 0; i < cues.length; i++) {
-      if (a.offset < t + cues[i].dur) return { url: cues[i].url, at: Math.max(0, a.offset - t), token: cues[i].url };
-      t += cues[i].dur;
+      var at0 = cues[i].at0 || 0;
+      if (a.offset >= at0 && a.offset < at0 + cues[i].dur)
+        return { url: cues[i].url, at: Math.max(0, a.offset - at0), token: cues[i].url + '@' + at0 };
     }
     return { url: '', at: 0, token: 'hold' };
   }
@@ -854,9 +903,9 @@
     pulse();
     // If a clip ends or errors and nothing resumes, start the scheduled
     // episode instead of staying silent.
-    if (state.started && !state.userPaused && audio && audio.paused) {
+    if (state.started && !state.userPaused && audio && audio.paused && !state.hold) {
       if (!state.stallAt) state.stallAt = Date.now();
-      else if (Date.now() - state.stallAt > 1500) {
+      else if (Date.now() - state.stallAt > 4000) {
         state.stallAt = Date.now();
         state.hold = false;
         state.loadedKey = null;
