@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
-from ratelimit import lotw_limiter, api_limiter, compute_limiter, stat_limiter
+from ratelimit import lotw_limiter, api_limiter, compute_limiter, stat_limiter, live_limiter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
@@ -28,6 +28,7 @@ from usage import (init_usage_db, record as usage_record, summary as usage_summa
                    prune_and_rollup as usage_prune)
 import news as newsdesk
 import forever_zoom
+import otr_live
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -876,6 +877,57 @@ async def post_stat(request: Request):
     except Exception as e:
         logger.warning(f"usage record failed: {e}")
     return Response(status_code=204)
+
+
+@app.post("/api/otr/live/heartbeat")
+async def otr_live_heartbeat(request: Request):
+    """A tuned-in Listenotr set, pinged while it is playing. Same shape as
+    /api/stat: 204 either way, Do Not Track is a no-op, and nothing here is
+    required for the audio to play. The body is a session id only."""
+    if _opted_out(request):
+        return Response(status_code=204)
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    ok, _ = live_limiter.is_allowed(ip)
+    if not ok:
+        return Response(status_code=204)
+    try:
+        body = await request.json()
+    except Exception:
+        return Response(status_code=204)
+    if isinstance(body, dict):
+        otr_live.note_listener(body.get("s"))
+    return Response(status_code=204)
+
+
+@app.post("/api/otr/live/intro")
+async def otr_live_intro(request: Request):
+    """Ask whether the break before an episode has a produced intro.
+
+    Generation runs only inside the lead window, only with a listener on the
+    books, and only once per episode id. Otherwise the station ID plays.
+    """
+    if _opted_out(request):
+        return JSONResponse({"play": "ident", "reason": "opt-out"})
+    ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    ok, _ = live_limiter.is_allowed(ip)
+    if not ok:
+        return JSONResponse({"play": "ident", "reason": "rate"})
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"play": "ident", "reason": "bad-body"})
+    if not isinstance(body, dict):
+        return JSONResponse({"play": "ident", "reason": "bad-body"})
+    result = await asyncio.to_thread(otr_live.intro_for, body)
+    return JSONResponse(result)
+
+
+@app.get("/api/otr/live/intro/{ep_id}")
+async def otr_live_intro_file(ep_id: str):
+    path = otr_live.cached_file(ep_id)
+    if not path:
+        raise HTTPException(404, "No intro cached")
+    return FileResponse(path, media_type="audio/mpeg")
 
 
 @app.get("/api/stats/summary")

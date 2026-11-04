@@ -586,6 +586,7 @@
   window.__OTR_ASSET_BASE = base;
   document.write('<link rel="stylesheet" href="' + base + 'basic.css?v=1">');
   document.write('<script src="' + base + 'mode.js?v=1"><\/script>');
+  document.write('<script src="' + base + 'live/listenotr-radio.js?v=1"><\/script>');
 })();
 </script>
 </head>
@@ -607,6 +608,7 @@
         <span class="sup-s">helps cover hosting and development</span></a>
     </div>
     <div class="otr-mode-switch" id="otrModeSwitch" role="group" aria-label="Basic or Advanced">
+      <button type="button" id="otrAdvLive">Listen Live</button>
       <button type="button" id="otrModeBasic" aria-pressed="true">Basic</button>
       <button type="button" id="otrModeAdvanced" aria-pressed="false">Advanced</button>
     </div>

@@ -1,0 +1,43 @@
+{
+  "_readme": [
+    "Listenotr Radio, the virtual-live broadcast. A parallel of the old network clock: themed blocks at fixed Eastern times, the same blocks every day, a new episode each day.",
+    "The client (listenotr-radio.js) resolves episodes from /otr/catalog.json and seeks to the wall-clock offset, so every listener is on the same moment. Nothing here is a listener's local timezone.",
+    "from/to and at are America/New_York wall times. minutes is the block length. theme is a catalog channel. show, when set, pins that block to one series. night blocks are Tonight's lineup.",
+    "Station breaks sit between shows. upNext maps a catalog show id to a pre-generated clip (espeak-ng stock en-us voice, scripts/otr_live_announcer.sh). A break whose next show is missing from upNext plays ident.mp3 only.",
+    "The produced pack (jingle, station IDs, an up-next line for every series, time-of-night intros) lives in pack/manifest.json. Placeholders are espeak-ng's stock en-us voice. scripts/otr_live_elevenlabs.py --generate replaces them with one premade ElevenLabs voice and an ElevenLabs music jingle. It refuses cloned and custom voices. The key stays in ELEVENLABS_API_KEY and is never printed.",
+    "Per-episode lines (Tonight, on Suspense. The title. Tune in.) are not in the pack. The server makes one only when a listener is tuned in during the minute before that episode, and caches it by episode id.",
+    "Later, a real stream: point Liquidsoap at this file (same blocks, same episode pick, the pack's break clips), have it write one Icecast mount, and let the page play that mount instead of seeking archive.org. See the note at the top of listenotr-radio.js."
+  ],
+  "id": "listenotr",
+  "name": "Listenotr Radio",
+  "tz": "America/New_York",
+  "loop": "daily",
+  "breakMin": 18,
+  "ident": "/otr/live/pack/idents/ident.mp3",
+  "upNext": {
+    "suspense": "/otr/live/pack/up-next/suspense.mp3",
+    "the-jack-benny-show": "/otr/live/pack/up-next/the-jack-benny-show.mp3",
+    "the-lone-ranger": "/otr/live/pack/up-next/the-lone-ranger.mp3",
+    "sam-spade": "/otr/live/pack/up-next/sam-spade.mp3",
+    "inner-sanctum-mysteries": "/otr/live/pack/up-next/inner-sanctum-mysteries.mp3",
+    "radio-readers-digest": "/otr/live/pack/up-next/radio-readers-digest.mp3",
+    "the-falcon": "/otr/live/pack/up-next/the-falcon.mp3",
+    "dimension-x": "/otr/live/pack/up-next/dimension-x.mp3"
+  },
+  "spans": [
+    { "from": "00:00", "to": "05:00", "minutes": 30, "theme": "suspense", "label": "Overnight mystery" },
+    { "from": "05:00", "to": "08:00", "minutes": 30, "theme": "comedy", "label": "Morning comedy" },
+    { "from": "08:00", "to": "12:00", "minutes": 30, "theme": "drama", "label": "Daytime drama" },
+    { "from": "12:00", "to": "16:00", "minutes": 30, "theme": "western", "label": "Afternoon western" },
+    { "from": "16:00", "to": "19:00", "minutes": 30, "theme": "crime", "label": "Late afternoon crime" },
+    { "from": "19:00", "to": "20:00", "minutes": 30, "theme": "comedy", "label": "Dinner comedy" },
+    { "at": "20:00", "minutes": 30, "theme": "suspense", "label": "Mystery", "show": "suspense", "night": true },
+    { "at": "20:30", "minutes": 30, "theme": "comedy", "label": "Comedy", "show": "the-jack-benny-show", "night": true },
+    { "at": "21:00", "minutes": 30, "theme": "western", "label": "Western", "show": "the-lone-ranger", "night": true },
+    { "at": "21:30", "minutes": 30, "theme": "crime", "label": "Crime", "show": "sam-spade", "night": true },
+    { "at": "22:00", "minutes": 30, "theme": "horror", "label": "Horror", "show": "inner-sanctum-mysteries", "night": true },
+    { "at": "22:30", "minutes": 30, "theme": "drama", "label": "Drama", "show": "radio-readers-digest", "night": true },
+    { "at": "23:00", "minutes": 30, "theme": "action", "label": "Adventure", "show": "the-falcon", "night": true },
+    { "at": "23:30", "minutes": 30, "theme": "future", "label": "Tomorrow", "show": "dimension-x", "night": true }
+  ]
+}
