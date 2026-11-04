@@ -16,7 +16,7 @@ CHROME = os.environ.get("OTR_CHROMIUM", "/opt/google/chrome/chrome")
 BASE = f"http://127.0.0.1:{PORT}"
 
 HOST_TEST = b"""<!doctype html><html><head><title>host</title></head><body>
-<script src="/otr/live/listenotr-radio.js?v=1"></script>
+<script src="/otr/live/listenotr-radio.js?v=2"></script>
 <script>document.addEventListener('DOMContentLoaded', function(){
   var d = document.createElement('div'); d.id = 'otr-live'; document.body.appendChild(d);
 });</script></body></html>"""
