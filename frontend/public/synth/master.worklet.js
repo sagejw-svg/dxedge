@@ -134,11 +134,15 @@ class FilamentMaster extends AudioWorkletProcessor {
     this.dSampR = Math.max(1, secR * sampleRate);
   }
 
-  clearDelay() { this.dL.b.fill(0); this.dR.b.fill(0); this.fadeN = 0; }
+  // Neither clear touches a Panic fade in progress (fadeN, wg). Until 4 Nov both set fadeN to 0, so an
+  // effect switched on in the 10 ms of a fade stopped it part way and left wg there: the delay and reverb
+  // returns stayed that much quieter (down to silent) until the next Panic. The fade now runs to its end,
+  // which empties both lines and puts wg back to 1.
+  clearDelay() { this.dL.b.fill(0); this.dR.b.fill(0); }
   clearReverb() {
     this.cL.concat(this.cR).forEach(c => { c.b.fill(0); c.f = 0; });
     this.aL.concat(this.aR).forEach(a => a.b.fill(0));
-    this.dcLx = this.dcLy = this.dcRx = this.dcRy = 0; this.fadeN = 0;
+    this.dcLx = this.dcLy = this.dcRx = this.dcRy = 0;
   }
 
   delay(l, r) {
@@ -215,6 +219,9 @@ class FilamentMaster extends AudioWorkletProcessor {
     const s = this.s || {};
     const safety = !!(s.comp && s.comp.safety);
     const bypass = !(s.delay && s.delay.on) && !(s.reverb && s.reverb.on) && !(s.comp && s.comp.on) && !safety;
+    // A Panic fade that a full bypass cut short (every effect switched off within its 10 ms) ends here at
+    // once: nothing of the delay or reverb is heard while bypassed, so there is nothing left to fade.
+    if (bypass && this.fadeN > 0) { this.fadeN = 0; this.clearDelay(); this.clearReverb(); this.wg = 1; }
     for (let i = 0; i < n; i++) {
       let l = inL ? inL[i] : 0, r = inR ? inR[i] : l;
       if (!bypass) {

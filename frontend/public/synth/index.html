@@ -4283,6 +4283,17 @@ function drawGonio(running) {
   $('corrV').textContent = GON.corr > 0.985 ? 'mono' : (GON.corr >= 0 ? '+' : '') + GON.corr.toFixed(2) + (GON.corr < 0 ? ' (phasey)' : '');
   $('corrV').classList.toggle('warn', GON.corr < 0);
 }
+// Test hook for the goniometer (improvement, 4 Nov), outside the copied drawGonio above. On a frame that
+// draws a cloud, drawGonio moves GON.scale 8% of the way to its target (0.42 of the canvas over that
+// frame's peak), so a changed scale marks a drawn frame and the target is s0 + (scale - s0) / 0.08. `fit`
+// is the drawn scale over that target: 1 is a cloud sized as meant; far above 1 (a scale still coming
+// down after a quiet stretch, the usual case) draws it mostly off the canvas. Nothing drawn changes.
+const GON_T = { frames: 0, fit: 0 };
+function gonioWatch(s0) {
+  if (GON.scale === s0) return;
+  const target = s0 + (GON.scale - s0) / 0.08;
+  GON_T.frames++; GON_T.fit = target > 0 ? Math.min(GON.scale, 400) / target : 0;
+}
 function frame(now) {
   requestAnimationFrame(frame);
   if (document.hidden) return;
@@ -4392,7 +4403,7 @@ function frame(now) {
   if (!TVIEW.open) {                      // all of these are under the big tube view while it is open
     drawVU(vuL, vuR);
     drawEye(eyeLv);
-    const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
+    const sec = $('mStereo'); if (sec.offsetParent) { const s0 = GON.scale; drawGonio(running); gonioWatch(s0); }
     paintHost();
     if ($('mEq').offsetParent) drawEq(now);
     if (dev === 'filament' && $('fpCv').offsetParent) drawFp(now, E && E.meters ? E.meters.filament : null);
@@ -5337,6 +5348,7 @@ window.__synth = {
   noteOn: (n, v) => noteOn(n, v == null ? 0.8 : v), noteOff: n => noteOff(n),
   meter: () => E ? Object.assign({}, E.meter) : null,
   correlation: () => GON.corr, corrText: () => $('corrV').textContent,
+  gonio: () => ({ frames: GON_T.frames, fit: GON_T.fit, scale: GON.scale }),   // tests: drawn frames, and the cloud's size over its target on the last one
   state: () => ({ ctx: ctx ? ctx.state : 'none', down: heldNotes(), ptrs: [...ptrs.keys()], keys: [...keyDown.keys()], tab: document.body.dataset.tab, oct: baseOct, sustain: sustainOn }),
   panic: () => panic(),
   engine: () => E,

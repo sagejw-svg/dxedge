@@ -1426,6 +1426,10 @@ tonight.
 - Fix: Panic fades the master delay and reverb returns over 10 ms and then empties both; the dry
   path is untouched. Check: "M. master bus: Panic empties the master delay and reverb" (live code:
   -36.1 dB before, -38.2 after; fixed: -240 after).
+- Follow-up (improvement job, 4 Nov): the fix's `clearDelay` and `clearReverb` also set the fade
+  counter to 0, so an effect switched on within the 10 ms fade left the returns at a part-faded gain
+  until the next Panic (18 dB down in this check, 3 of 15 repeats on main). Fixed in `master.worklet.js`,
+  with two block-by-block checks; the live check now reads both channels. See the Improvement backlog.
 
 **R1104-3. An effect switched back on plays what it held when it was switched off.** Area d.
 Confusing. Measured. Fixed tonight (same change as R1104-2).

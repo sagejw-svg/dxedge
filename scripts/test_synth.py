@@ -1292,9 +1292,20 @@ with sync_playwright() as pw:
       const b = await ctx.startRendering(), d = b.getChannelData(0); let m = 0; for (let i = 480; i < d.length; i++) m = Math.max(m, Math.abs(d[i])); return m; }""")
     ck(f"S. the final ceiling is unity gain below its knee (0.5 in, {g:.4f} out)", abs(g - 0.5) < 0.002, g)
     # goniometer and correlation, live
+    # The goniometer's scale adapts 8% a drawn frame toward 0.42 of the canvas over the peak, and a quiet
+    # stretch (a release tail, these strings' slow attack) leaves it far above that, so after a fixed 1.2 s
+    # the cloud was often drawn about 6x too wide and mostly off the canvas (measured 4 Nov: 100 to 200 lit
+    # pixels against 600 to 800 once the scale has come in; 79 in that night's suite, 44 in a failed run on
+    # 30 Oct). So, after the same 1.2 s, wait until the last drawn frame's cloud is within 2x of its intended
+    # size (`fit`, 0.5 to 2) and at least 10 frames have been drawn since the notes went on (10 s cap).
     pg.evaluate("__synth.load('Wide Novachord Strings')"); pg.wait_for_timeout(150)
+    gf0 = pg.evaluate("__synth.gonio().frames")
     for n_ in (48, 55, 60, 64): pg.evaluate(f"__synth.noteOn({n_}, 0.8)")
     pg.wait_for_timeout(1200)
+    gw = pg.evaluate("""async f0 => { const t0 = performance.now(); let g = __synth.gonio();
+      while (performance.now() - t0 < 10000 && !(g.frames - f0 >= 10 && g.fit >= 0.5 && g.fit <= 2)) { await new Promise(r => setTimeout(r, 20)); g = __synth.gonio(); }
+      return { ms: Math.round(performance.now() - t0), frames: g.frames - f0, fit: Math.round(g.fit * 100) / 100 }; }""", gf0)
+    info("S. goniometer settle", f"{gw['ms']} ms past 1.2 s, {gw['frames']} drawn frames, fit {gw['fit']}")
     ct = pg.evaluate("__synth.corrText()"); cv = pg.evaluate("__synth.correlation()")
     painted = pg.evaluate("""() => { const c = document.getElementById('gonioCv'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 1; i < x.length; i += 4) s += x[i] > 150 ? 1 : 0; return s; }""")
     ck(f"S. goniometer draws the stereo image and the correlation meter reads it ({ct!r}, {cv:+.2f}, {painted} lit pixels)", painted > 50 and ct not in ("idle", "play to see") and -1 <= cv <= 1, (ct, cv, painted))
@@ -2407,13 +2418,19 @@ with sync_playwright() as pw:
         # Review 4 Nov: Panic left the master bus delay and reverb running (-31 dB 0.2 to 1 s after it at
         # feedback 0.9), and an effect switched off kept its lines, so switching it back on played the old
         # sound again with nothing held (delay -33 dB, reverb -23 dB, peak 0.39).
+        # Improvement 4 Nov: levels are both channels' mean power. This patch pans its voices alternately
+        # (stereo 'alt'), so the left channel alone read the same blip 6 to 9 dB apart from note to note.
+        # One oscillator, no drift: two detuned saws in a 60 ms blip add or cancel by their free-running
+        # phases, which moved the delay tail between -40 and -46 dB (both channels) against the -50 bound;
+        # with one it read -44.2 to -45.7 in 10 runs (measured 4 Nov).
         mfx = pg.evaluate("""async () => { const E = __synth.engine(); await E.ctx.resume(); const fx = E.fx, keep = __synth.patch();
           const p = __synth.patch(); p.echo = Object.assign({}, p.echo, { on: false }); p.spring = Object.assign({}, p.spring, { on: false });
           p.envA = { a: 0.001, d: 0.05, s: 0, r: 0.02 }; p.arp = Object.assign({}, p.arp, { on: false });
           p.out = Object.assign({}, p.out, { roomOn: false }); p.ens = Object.assign({}, p.ens, { on: false });
+          p.osc2 = Object.assign({}, p.osc2, { level: 0 }); p.drift = 0;
           const m0 = JSON.parse(JSON.stringify(__synth.master())); __synth.setPatch(p);
           const zz = ms => new Promise(r => setTimeout(r, ms));
-          const rms = s => { let a = 0; for (let i = 0; i < s.L.length; i++) a += s.L[i] * s.L[i]; return 20 * Math.log10(Math.sqrt(a / Math.max(1, s.L.length)) + 1e-12); };
+          const rms = s => { let a = 0; for (let i = 0; i < s.L.length; i++) a += s.L[i] * s.L[i] + s.R[i] * s.R[i]; return 20 * Math.log10(Math.sqrt(a / Math.max(1, 2 * s.L.length)) + 1e-12); };
           const grab = async ms => { fx.recordStart(); await zz(ms); return rms(await fx.recordStop()); };
           const blip = async () => { __synth.noteOn(69, 0.9); await zz(60); __synth.noteOff(69); };
           const D = { on: true, sync: false, time: 200, feedback: 0.9, mix: 0.5, ping: false }, V = { on: true, size: 1, damp: 0, mix: 0.5 };
@@ -2433,6 +2450,38 @@ with sync_playwright() as pw:
            mfx["dTail"] > -50 and mfx["rTail"] > -50 and mfx["dAfter"] < -70 and mfx["rAfter"] < -70 and mfx["dTail"] - mfx["dAfter"] >= 40 and mfx["rTail"] - mfx["rAfter"] >= 40, mfx)
         ck(f"M. master bus: switched back on, the master delay ({mfx['dBack']:.1f} dBFS) and reverb ({mfx['rBack']:.1f}) start empty (want under -70), and a note played after that still rings ({mfx['rLive']:.1f}, want over -50)",
            mfx["dBack"] < -70 and mfx["rBack"] < -70 and mfx["rLive"] > -50, mfx)
+        # Improvement 4 Nov: an effect switched on, or every effect switched off, inside Panic's 10 ms fade
+        # stopped the fade part way and left the returns' gain (wg) there until the next Panic. The live check
+        # above (each round ends in a Panic and a master reset) failed on main 4 Nov, and 3 of 15 times when
+        # repeated: the delay's repeats came back 18 dB down. Run block by block here (the worklet's class
+        # with a stand-in port, 44.1 kHz, 128 samples a block), so the timing is exact: after each sequence,
+        # an impulse must come out of the bus sample for sample as from a fresh bus in the same state.
+        mfade = pg.evaluate("""async () => {
+          const src = await (await fetch('/synth/master.worklet.js', { cache: 'no-store' })).text();
+          const { forWorklet, mergeMaster, MASTER_DEFAULT } = await import('./masterfx.js');
+          let Cls = null;
+          class AWP { constructor() { this.port = { postMessage() {}, onmessage: null }; } }
+          new Function('registerProcessor', 'sampleRate', 'AudioWorkletProcessor', src)((n, c) => { Cls = c; }, 44100, AWP);
+          const W = p => forWorklet(mergeMaster(MASTER_DEFAULT, p));
+          const dOn = { on: true, sync: false, time: 200, feedback: 0.9, mix: 0.5, ping: false }, rOn = { on: true, size: 0.5, damp: 0.3, mix: 0.4 };
+          const ST = { D: W({ delay: dOn, reverb: { on: false } }), R: W({ delay: { on: false }, reverb: rOn }), DR: W({ delay: dOn, reverb: rOn }), OFF: W({ delay: { on: false }, reverb: { on: false } }) };
+          const N = 128;
+          const block = (pr, imp) => { const L = new Float32Array(N), R = new Float32Array(N); if (imp) { L[0] = imp; R[0] = imp; }
+            const oL = new Float32Array(N), oR = new Float32Array(N); pr.process([[L, R]], [[oL, oR]]); return oL; };
+          const probe = pr => { const out = []; out.push(...block(pr, 1)); for (let k = 0; k < 90; k++) out.push(...block(pr, 0)); return out; };
+          const run = (st0, ops) => { const pr = new Cls({ processorOptions: { master: ST[st0] } });
+            for (const o of ops) { if (o === 'flush') pr.port.onmessage({ data: { t: 'flush' } }); else if (typeof o === 'number') for (let k = 0; k < o; k++) block(pr, 0);
+              else if (o === 'hit') block(pr, 0.8); else pr.port.onmessage({ data: { t: 'set', master: ST[o] } }); }
+            return { out: probe(pr), wg: pr.wg }; };
+          const cmp = (a, ref) => { let m = 0; for (let i = 0; i < ref.length; i++) m = Math.max(m, Math.abs(a[i] - ref[i])); return m; };
+          const at = (o, s) => { let m = 0; for (let i = Math.round(s * 44100) - 64; i < Math.round(s * 44100) + 64; i++) m = Math.max(m, Math.abs(o[i])); return m; };
+          const a = run('D', ['hit', 20, 'flush', 2, 'OFF', 2, 'D', 4]), aRef = run('D', []);
+          const b = run('R', ['hit', 20, 'flush', 1, 'DR', 8]), bRef = run('DR', []);
+          return { aDiff: cmp(a.out, aRef.out), aWg: a.wg, aRep: at(a.out, 0.2), aRefRep: at(aRef.out, 0.2), bDiff: cmp(b.out, bRef.out), bWg: b.wg }; }""")
+        ck(f"M. master bus: every effect off 2 blocks into a Panic fade, then the delay back on: the bus is as new (first repeat {mfade['aRep']:.3f}, fresh {mfade['aRefRep']:.3f}; max difference {mfade['aDiff']:.2g}; return gain {mfade['aWg']:.3f})",
+           mfade["aDiff"] <= 1e-9 and mfade["aWg"] == 1 and abs(mfade["aRefRep"] - 0.5) < 0.01, mfade)
+        ck(f"M. master bus: the delay switched on 1 block into a Panic fade with the reverb on: the fade still ends and the bus is as new (max difference {mfade['bDiff']:.2g}; return gain {mfade['bWg']:.3f})",
+           mfade["bDiff"] <= 1e-9 and mfade["bWg"] == 1, mfade)
         ck("Te. no page errors", not errs, errs)
     _tape_echo()
 
