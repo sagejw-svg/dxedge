@@ -152,6 +152,10 @@
   .console.idle .seek, .console.idle .transport, .console.idle .upnext, .console.idle #moreBtn, .console.idle .sleep-left,
   .console.idle .cue-resume { display: none !important; }
   .console.cued .seek, .console.cued #prevBtn, .console.cued #backBtn, .console.cued #fwdBtn, .console.cued #skipBtn, .console.cued .upnext { display: none !important; }
+  /* Listenotr Radio (Live) stays on the clock: no speed, skip, seek, or surprise. */
+  body.otr-liveclock .seek,
+  body.otr-liveclock #prevBtn, body.otr-liveclock #backBtn, body.otr-liveclock #fwdBtn, body.otr-liveclock #skipBtn,
+  body.otr-liveclock #dockSkip, body.otr-liveclock #rateRow, body.otr-liveclock #linkBtn, body.otr-liveclock #moreRandom { display: none !important; }
   .cue-resume { margin-top: 9px; }
   .cue-resume[hidden], .console:not(.cued) .cue-resume { display: none; }
 
@@ -699,7 +703,7 @@
         <!-- More: the occasional controls, out of the way until asked for -->
         <div class="morep" id="morePanel" hidden role="dialog" aria-label="More options">
           <div class="morep-h"><span class="label">more</span><button class="rack-x" id="moreClose" aria-label="Close more options">×</button></div>
-          <label class="mrow" title="Playback speed"><span>Speed</span>
+          <label class="mrow" id="rateRow" title="Playback speed"><span>Speed</span>
             <select id="rateSel"><option value="1">1x</option><option value="1.1">1.1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></label>
           <label class="mrow" title="Stop playing after a while, with a fade out"><span>Sleep timer</span>
             <select id="sleepSel"><option value="off">off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="end">end of episode</option></select></label>
@@ -1578,7 +1582,7 @@
   // Tune in: join the station's broadcast at the current clock position.
   function startChannel(ch){
     stopListenotr();
-    if(state.network==='listenotr') state.network=null;
+    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
     if(!(chanShows[ch]||[]).length){ toast('No shows on that channel'); return; }
     if(onlyMode()){   // a shared clock can't skip episodes, so play an enhanced-only mix of the channel instead
       var shows=chanShows[ch];
@@ -1656,7 +1660,25 @@
   // It is not one of those grids: the clock is the Eastern broadcast, and the
   // player in #otr-live does the seeking. The card is how Advanced tunes it in.
   function stopListenotr(){ if(window.__listenotr && __listenotr.pause) __listenotr.pause(); }
+  function syncLiveChrome(){
+    var on = state.network==='listenotr';
+    var was = document.body.classList.contains('otr-liveclock');
+    document.body.classList.toggle('otr-liveclock', on);
+    if(on) setLiveTransportLabel();
+    else if(was){ setPlaying(!(audio.paused || !state.queue.length)); applyRate(); }
+  }
+  function setLiveTransportLabel(){
+    if(state.network!=='listenotr' || !window.__listenotr) return;
+    var stopped=__listenotr.paused();
+    var muted=!stopped && __listenotr.muted && __listenotr.muted();
+    var label = stopped ? '▶ Listen' : (muted ? '🔊 Unmute' : '🔇 Mute');
+    $('playBtn').innerHTML = label;
+    var d=$('dockPlay');
+    d.textContent = stopped ? '▶' : (muted ? '🔊' : '🔇');
+    d.setAttribute('aria-label', stopped ? 'Listen live' : (muted ? 'Unmute' : 'Mute'));
+  }
   function renderListenotrStation(){
+    syncLiveChrome();
     var card=document.querySelector('#networkChips .station[data-net="listenotr"]');
     if(!card || !window.__listenotr || !__listenotr.booted()) return;
     var a=__listenotr.onAir(); if(!a) return;
@@ -1675,8 +1697,13 @@
       if($('upnext')) $('upnext').innerHTML = a.nextShow ? ('<b>up next</b> &nbsp;'+escapeHtml(a.nextShow)+(a.nextTitle?' - '+escapeHtml(niceTitle(a.nextTitle)):'') ) : '';
       $('vizIdle').style.display='none';
       $('playBtn').disabled=false;
-      setPlaying(!__listenotr.paused());
-      ['skipBtn','prevBtn','backBtn','fwdBtn'].forEach(function(id){ if($(id)) $(id).disabled=true; });
+      setLiveTransportLabel();
+      if(SLEEP.mode==='end' && SLEEP.liveKey && a.key && a.key!==SLEEP.liveKey){
+        __listenotr.mute(true);
+        clearSleep();
+        setLiveTransportLabel();
+        toast('Sleep timer: muted');
+      }
       setStatus(__listenotr.paused() ? 'paused' : 'playing');
     }
   }
@@ -1691,6 +1718,8 @@
     setPlayerMode('active');
     markActiveChip();
     renderListenotrStation();
+    syncLiveChrome();
+    try{ audio.playbackRate=1; audio.defaultPlaybackRate=1; }catch(e){}
   }
   function listenotrStationCard(){
     var c=document.createElement('div'); c.className='station network'; c.dataset.net='listenotr';
@@ -1790,6 +1819,7 @@
     state.channel=null; state.stationShowIds=null; state.stationLabel=N.name; state.savedActive=-1;
     save('otr_last','net:'+id);
     setQueue(q.items, true); state.network=id; state.live=true; state.schedAds=true; state.pausedAt=0;
+    syncLiveChrome();
     state.pendingSeek = q.a.offset>5 ? q.a.offset : 0;
     markActiveChip();
     playCurrent();
@@ -1821,7 +1851,7 @@
   }
   function startStation(showIds, label){
     stopListenotr();
-    if(state.network==='listenotr') state.network=null;
+    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
     var shows = showIds.map(function(id){ return byId[id]; }).filter(Boolean);
     if(!shows.length){ toast('No valid shows in that station'); return; }
     state.channel = null; state.stationShowIds = showIds.slice(); state.stationLabel = label||'Custom station';
@@ -1833,7 +1863,8 @@
   }
   // raw: keep the order exactly as given (a network station's chain cannot be filtered to enhanced-only copies)
   function setQueue(order, raw){ state.cueNext=false; state.queue = raw ? order.slice() : onlyFilter(order); state.qi = -1; state.history=[]; state.programsSinceAd=0;
-    state.live=false; state.shifted=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; state.network=null; }
+    state.live=false; state.shifted=false; state.schedAds=false; state.pendingSeek=0; state.pendingRatio=0; state.random=false; state.network=null;
+    syncLiveChrome(); }
 
   // Random ("surprise me"): pick episodes at random across a scope (all shows, or one
   // channel). A separate mode from the broadcast clock - it plays on demand and keeps
@@ -1856,7 +1887,7 @@
   }
   function startRandom(scope, label){
     stopListenotr();
-    if(state.network==='listenotr') state.network=null;
+    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
     var ids = (scope && scope.length) ? scope.slice() : CAT.shows.filter(function(s){ return !s.adv; }).map(function(s){ return s.id; });
     if(!ids.length){ toast('Nothing to shuffle'); return; }
     state.channel=null; state.stationShowIds=ids; state.stationLabel=label||'Surprise me'; state.savedActive=-1;
@@ -2021,7 +2052,8 @@
   // ---- transport wiring ----
   $('playBtn').onclick = function(){
     if(state.network==='listenotr' && window.__listenotr){
-      if(__listenotr.paused()) __listenotr.play(); else __listenotr.pause();
+      if(__listenotr.paused()) __listenotr.play();
+      else __listenotr.mute(!__listenotr.muted());
       renderListenotrStation();
       return;
     }
@@ -2080,24 +2112,40 @@
   $('rateSel').value = String(state.rate);
   function applyRate(){
     try{ audio.preservesPitch = true; audio.webkitPreservesPitch = true; }catch(e){}
+    if(state.network==='listenotr'){
+      audio.defaultPlaybackRate = 1; audio.playbackRate = 1;
+      return;
+    }
     audio.defaultPlaybackRate = state.rate; audio.playbackRate = state.rate;
     if(state.rate!==1) offClock();
   }
-  $('rateSel').onchange = function(){ state.rate = parseFloat(this.value)||1; save('otr_rate', String(state.rate)); applyRate(); };
+  $('rateSel').onchange = function(){
+    if(state.network==='listenotr'){ $('rateSel').value=String(state.rate); applyRate(); return; }
+    state.rate = parseFloat(this.value)||1; save('otr_rate', String(state.rate)); applyRate();
+  };
   audio.addEventListener('loadedmetadata', applyRate);
+  audio.addEventListener('play', function(){ if(state.network==='listenotr') applyRate(); });
+  audio.addEventListener('ratechange', function(){ if(state.network==='listenotr' && audio.playbackRate!==1) audio.playbackRate=1; });
 
   // ---- sleep timer: 15/30/60 minutes or end of episode, fading out before it stops ----
   // The fade lowers the element volume. iPhone Safari ignores scripted volume, so there it simply stops.
-  var SLEEP = { mode:'off', until:0, timer:null }, SLEEP_FADE = 30, END_FADE = 15;
+  var SLEEP = { mode:'off', until:0, timer:null, liveKey:'' }, SLEEP_FADE = 30, END_FADE = 15;
   function baseVol(){ var v=parseFloat($('vol').value); return isNaN(v)?0.9:v; }
   function fadeTo(frac){ try{ audio.volume = Math.max(0, Math.min(1, baseVol()*frac)); }catch(e){} }
   function clearSleep(restore){
     if(SLEEP.timer) clearInterval(SLEEP.timer);
-    SLEEP.mode='off'; SLEEP.until=0; SLEEP.timer=null;
+    SLEEP.mode='off'; SLEEP.until=0; SLEEP.timer=null; SLEEP.liveKey='';
     $('sleepSel').value='off'; $('sleepLeft').textContent='';
     if(restore!==false) fadeTo(1);
   }
   function sleepNow(){
+    if(state.network==='listenotr' && window.__listenotr && __listenotr.mute){
+      __listenotr.mute(true);
+      clearSleep();
+      setLiveTransportLabel();
+      toast('Sleep timer: muted');
+      return;
+    }
     audio.pause(); clearSleep(); toast('Sleep timer: stopped');
   }
   function sleepTick(){
@@ -2111,7 +2159,13 @@
     var v=this.value;
     if(v==='off'){ clearSleep(); return; }
     clearSleep(); this.value=v; SLEEP.mode=v;
-    if(v==='end'){ $('sleepLeft').textContent='stops after this episode'; return; }
+    if(v==='end'){
+      $('sleepLeft').textContent = state.network==='listenotr' ? 'mutes after this episode' : 'stops after this episode';
+      if(state.network==='listenotr' && window.__listenotr && __listenotr.onAir){
+        var liveNow=__listenotr.onAir(); SLEEP.liveKey = liveNow && liveNow.key || '';
+      }
+      return;
+    }
     SLEEP.until = Date.now()+parseInt(v,10)*60000;
     SLEEP.timer = setInterval(sleepTick, 1000); sleepTick();
   };
@@ -2190,6 +2244,7 @@
   }
 
   function setPlaying(p){
+    if(state.network==='listenotr'){ setLiveTransportLabel(); return; }
     $('playBtn').innerHTML = p ? '⏸ Pause' : '▶ Play';
     var d=$('dockPlay'); d.textContent = p ? '⏸' : '▶'; d.setAttribute('aria-label', p ? 'Pause' : 'Play');
   }
@@ -2229,10 +2284,16 @@
     if(!('mediaSession' in navigator)) return;
     var ms=navigator.mediaSession;
     try{
-      ms.setActionHandler('play', function(){ if(state.cueNext){ wakeFromSleep(); return; } audio.play().catch(function(){}); });
-      ms.setActionHandler('pause', function(){ audio.pause(); });
-      ms.setActionHandler('nexttrack', function(){ if(state.queue.length){ state.errCount=0; next(false); } });
-      ms.setActionHandler('previoustrack', function(){ if(state.queue.length){ state.errCount=0; prev(); } });
+      ms.setActionHandler('play', function(){
+        if(state.network==='listenotr'){ $('playBtn').click(); return; }
+        if(state.cueNext){ wakeFromSleep(); return; } audio.play().catch(function(){});
+      });
+      ms.setActionHandler('pause', function(){
+        if(state.network==='listenotr' && window.__listenotr && !__listenotr.paused()){ __listenotr.mute(true); setLiveTransportLabel(); return; }
+        audio.pause();
+      });
+      ms.setActionHandler('nexttrack', function(){ if(state.network==='listenotr') return; if(state.queue.length){ state.errCount=0; next(false); } });
+      ms.setActionHandler('previoustrack', function(){ if(state.network==='listenotr') return; if(state.queue.length){ state.errCount=0; prev(); } });
     }catch(e){}
   }
 
@@ -2578,7 +2639,7 @@
 
   function playEpisode(showId, epIndex, startSec){
     stopListenotr();
-    if(state.network==='listenotr') state.network=null;
+    if(state.network==='listenotr'){ state.network=null; syncLiveChrome(); }
     var show=byId[showId]; if(!show) return;
     // build a queue for this show, starting at the chosen episode, then the rest of the show shuffled
     var rest = show.eps.map(function(_,i){ return i; }).filter(function(i){ return i!==epIndex; });
@@ -4979,6 +5040,7 @@
     if(e.ctrlKey || e.metaKey || e.altKey) return;
     if(e.key==='/'){ e.preventDefault(); showTab('search', { focus:true, reveal:true }); return; }
     if(el && el.classList && (el.classList.contains('tab') || el.id==='dockTxt') && (e.key===' '||e.key==='Spacebar')) return;   // let the focused tab activate
+    if(state.network==='listenotr' && (e.key==='n'||e.key==='N'||e.key==='p'||e.key==='P'||e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); return; }
     if(e.key===' '||e.key==='Spacebar'){ e.preventDefault(); $('playBtn').click(); }
     else if(e.key==='n'||e.key==='N'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; next(false); } }
     else if(e.key==='p'||e.key==='P'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; prev(); } }
