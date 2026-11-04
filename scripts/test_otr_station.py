@@ -33,7 +33,7 @@ with sync_playwright() as p:
   ck('station.js loaded and the four networks registered in order', pg.evaluate('__otr.network.ids()')==['nbc','cbs','abc','mutual'])
   pg.wait_for_function("() => { const n=document.querySelector('#networkChips .station[data-net=listenotr] .st-now'); return n && n.textContent.trim(); }", timeout=15000)
   cards=pg.eval_on_selector_all('#networkChips .station','els=>els.map(e=>[e.dataset.net, e.querySelector(".st-now").textContent, e.querySelector(".st-left .l").textContent])')
-  nets=[c for c in cards if c[0]!='listenotr']
+  nets=[c for c in cards if c[0] not in ('listenotr', 'scifi')]
   ck('Listenotr Radio (Live) leads the station list and is on the air', cards and cards[0][0]=='listenotr' and cards[0][1].strip() and cards[0][2].endswith('left'), cards[:2])
   ck('every network card shows something on the air', len(nets)==4 and all(c[1] and c[2].endswith('left') for c in nets), nets)
   def at(dow,h,m): return pg.evaluate('([d,h,m])=>{ const x=new Date(); x.setDate(x.getDate()+((d-x.getDay()+7)%7)); x.setHours(h,m,0,0); return x.getTime()/1000; }',[dow,h,m])
