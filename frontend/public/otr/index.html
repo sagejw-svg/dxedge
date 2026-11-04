@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-otr-mode="basic">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -577,6 +577,17 @@
   .rack-h select { background: var(--bg1); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
     font-family: var(--font-mono); font-size: 11px; padding: 4px 6px; cursor: pointer; max-width: 210px; }
 </style>
+<script>
+/* Load Basic/Advanced files from whichever directory is serving this page
+   (/otr/index.html on the site, or /index.html when a test serves the otr folder). */
+(function () {
+  var path = location.pathname;
+  var base = /\/otr(\/|$)/.test(path) ? '/otr/' : path.replace(/[^/]*$/, '');
+  window.__OTR_ASSET_BASE = base;
+  document.write('<link rel="stylesheet" href="' + base + 'basic.css?v=1">');
+  document.write('<script src="' + base + 'mode.js?v=1"><\/script>');
+})();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -595,7 +606,40 @@
         <span class="sup-h">☕ Tip the developer</span>
         <span class="sup-s">helps cover hosting and development</span></a>
     </div>
+    <div class="otr-mode-switch" id="otrModeSwitch" role="group" aria-label="Basic or Advanced">
+      <button type="button" id="otrModeBasic" aria-pressed="true">Basic</button>
+      <button type="button" id="otrModeAdvanced" aria-pressed="false">Advanced</button>
+    </div>
   </header>
+
+  <!-- Basic mode. #otr-live is the mount for the live station player: put that
+       player inside this element (or set data-otr-live="ready"). The placeholder
+       stays until a player is actually there. Advanced is the rest of this page. -->
+  <div id="otr-basic">
+    <section id="otr-live" aria-label="Listen live">
+      <div id="otr-live-placeholder" class="otr-live-ph">
+        <div class="otr-kicker">live station</div>
+        <button type="button" class="otr-live-btn" id="otrLiveBtn">Listen Live</button>
+        <p class="otr-live-note" id="otrLiveNote">Tunes a classic network that is on the air right now.</p>
+      </div>
+    </section>
+    <section class="otr-now" id="otr-basic-now" aria-live="polite" aria-label="Now playing and up next">
+      <div class="otr-now-col">
+        <div class="otr-kicker">Now playing</div>
+        <div class="otr-now-show" id="otrNowShow">Nothing playing yet</div>
+        <div class="otr-now-ep" id="otrNowEp"></div>
+      </div>
+      <div class="otr-now-col">
+        <div class="otr-kicker">Up next</div>
+        <div class="otr-now-next" id="otrNowNext">Pick a show below, or listen live</div>
+      </div>
+      <button type="button" class="otr-mini" id="otrBasicPlay" hidden>Play</button>
+    </section>
+    <section id="otr-basic-shows" aria-label="Popular shows">
+      <div class="otr-kicker">Popular shows</div>
+      <div class="otr-pops" id="otrPopular"></div>
+    </section>
+  </div>
 
   <div class="console idle" id="console">
     <div class="stack">
@@ -5036,5 +5080,6 @@
 })();
 </script>
 <script src="/lib/stat.js"></script>
+<script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'basic.js?v=1"><\/script>');</script>
 </body>
 </html>
