@@ -51,7 +51,7 @@
   var BREAK_MIN = 18, IDENT = '', UPNEXT = {}, PACK = null;
   var booted = false, fail = null, clockMs = null, timer = null, obs = null;
   var state = {
-    started: false, userPaused: true, loadedKey: null, hold: false,
+    started: false, userPaused: true, muted: false, loadedKey: null, hold: false,
     err: false, want: 0, lineupKey: '', mediaKey: '',
     intros: {}, introDur: {}, asked: {}, hbAt: 0
   };
@@ -520,7 +520,9 @@
       return;
     }
     audio.src = url;
-    try { audio.load(); } catch (e) {}
+    try { audio.muted = !!state.muted; } catch (e) {}
+    try { audio.load(); } catch (e2) {}
+    try { audio.muted = !!state.muted; } catch (e3) {}
   }
   function follow(){
     if (!booted || !audio || !state.started || state.userPaused) return;
@@ -544,28 +546,51 @@
       var title = a.kind === 'break' ? 'Station break' : (niceTitle(a.title) || a.show || 'Listenotr Radio');
       var artist = a.kind === 'break' ? 'Listenotr Radio' : (a.show || 'Listenotr Radio');
       navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: artist, album: 'Listenotr Radio' });
-      navigator.mediaSession.setActionHandler('play', function(){ userPlay(); });
-      navigator.mediaSession.setActionHandler('pause', function(){ userPause(); });
+      navigator.mediaSession.setActionHandler('play', function(){
+        if (!state.started || state.userPaused) userPlay(); else setMuted(false);
+      });
+      navigator.mediaSession.setActionHandler('pause', function(){
+        if (state.started && !state.userPaused) setMuted(true);
+      });
       ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'].forEach(function(name){
         try { navigator.mediaSession.setActionHandler(name, null); } catch (e) {}
       });
+    } catch (e) {}
+  }
+  function lockRate(){
+    if (!audio) return;
+    try {
+      if (audio.defaultPlaybackRate !== 1) audio.defaultPlaybackRate = 1;
+      if (audio.playbackRate !== 1) audio.playbackRate = 1;
+      audio.muted = !!state.muted;
     } catch (e) {}
   }
   function userPlay(){
     if (!booted || !audio) return;
     state.started = true;
     state.userPaused = false;
+    state.muted = false;
+    try { audio.muted = false; } catch (e) {}
+    lockRate();
     state.loadedKey = null;
     state.hold = false;
     follow();
     render();
   }
+  // Leaving the station (another card, or a host that stops the player). Not a
+  // listener control: the button mutes, so the broadcast is never paused off the clock.
   function userPause(){
     state.userPaused = true;
     state.hold = false;
     try { if (audio) audio.pause(); } catch (e) {}
     render();
   }
+  function setMuted(on){
+    state.muted = !!on;
+    try { if (audio) audio.muted = state.muted; } catch (e) {}
+    render();
+  }
+  function toggleMute(){ setMuted(!state.muted); }
   function setVol(v){
     v = Math.max(0, Math.min(1, +v || 0));
     if (audio) audio.volume = v;
@@ -655,10 +680,10 @@
     var b = $('lrPlay');
     if (!b) return;
     var on = state.started && !state.userPaused;
-    var label = on ? 'Pause' : 'Listen';
+    var label = !on ? 'Listen' : (state.muted ? 'Unmute' : 'Mute');
     if (b.textContent !== label) b.textContent = label;
-    b.setAttribute('aria-label', on ? 'Pause' : 'Listen live');
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', !on ? 'Listen live' : (state.muted ? 'Unmute' : 'Mute'));
+    b.setAttribute('aria-pressed', state.muted ? 'true' : 'false');
     var air = $('lrAir');
     if (air) air.classList.toggle('live', on);
     var lamp = $('lrLamp');
@@ -686,7 +711,8 @@
     text('lrNext', a.nextShow ? (a.nextShow + ' · ' + when) : '—');
     text('lrNextEp', a.nextTitle ? niceTitle(a.nextTitle) : '');
     var st = '';
-    if (state.started && state.userPaused) st = 'Paused. Play rejoins the broadcast, live.';
+    if (state.started && state.userPaused) st = 'Stopped. Listen rejoins the broadcast, live.';
+    else if (state.started && state.muted) st = 'Muted. The broadcast stays on the clock.';
     else if (!state.started) st = 'Press Listen. You join whatever is on at this moment.';
     else if (state.err) st = 'This episode is slow to answer. The clock has not moved.';
     text('lrStatus', st);
@@ -853,15 +879,18 @@
     $('lrVol').value = String(saved);
     $('lrVol').addEventListener('input', function(){ setVol(+this.value); });
     $('lrPlay').addEventListener('click', function(){
-      if (state.started && !state.userPaused) userPause(); else userPlay();
+      if (!state.started || state.userPaused) userPlay(); else toggleMute();
     });
     $('lrShare').addEventListener('click', onShare);
     $('lrLink').value = shareUrl();
-    audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('loadedmetadata', function(){ lockRate(); onMeta(); });
+    audio.addEventListener('play', lockRate);
+    audio.addEventListener('playing', lockRate);
+    audio.addEventListener('ratechange', lockRate);
     audio.addEventListener('ended', function(){ if (!state.userPaused) hold(); });
     audio.addEventListener('error', onErr);
     var foot = $('lrFoot');
-    foot.appendChild(document.createTextNode('Play and volume only. The clock chooses the show, and there is no way to skip ahead. Everyone listening is on this same moment. '));
+    foot.appendChild(document.createTextNode('Listen and volume only. Mute keeps your place on the clock. There is no pause and no way to skip ahead. Everyone listening is on this same moment. '));
     var link = document.createElement('a');
     link.href = '/otr/';
     link.textContent = 'Full player';
@@ -932,12 +961,16 @@
     play: function(){ userPlay(); },
     pause: function(){ userPause(); },
     paused: function(){ return !state.started || state.userPaused; },
+    mute: function(on){ if (arguments.length) setMuted(!!on); else toggleMute(); return !!state.muted; },
+    muted: function(){ return !!state.muted; },
     volume: function(v){ if (arguments.length) setVol(v); return audio ? audio.volume : 0; },
     audio: function(){
       return {
         src: audio ? (audio.currentSrc || audio.src || '') : '',
         time: audio ? audio.currentTime : 0,
         paused: audio ? audio.paused : true,
+        muted: audio ? audio.muted : false,
+        rate: audio ? audio.playbackRate : 1,
         controls: audio ? audio.controls : false,
         duration: audio && isFinite(audio.duration) ? audio.duration : null
       };

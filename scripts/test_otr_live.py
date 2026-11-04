@@ -3,7 +3,7 @@
 
 The day's lineup is a pure function of the Eastern clock, so two listeners —
 in any time zone — hear the same episode at the same offset. The page offers
-play/pause and volume only. Station breaks sit between shows.
+Listen, mute, and volume only. Station breaks sit between shows.
 
 Run:  python3 scripts/test_otr_live.py
 """
@@ -216,6 +216,28 @@ def main():
         pg.wait_for_function("() => { const t = __listenotr.audio().time; return t > 34 && t < 48; }", timeout=4000)
         ck("a clock jump while listening seeks to the new shared offset", 34 < pg.evaluate("__listenotr.audio().time") < 48)
 
+        ck("once Listen has started, the button is Mute, not Pause",
+           pg.evaluate("document.querySelector('#lrPlay').textContent") == "Mute")
+        pg.evaluate("document.querySelector('#lrAudio').playbackRate = 1.5")
+        pg.wait_for_function("() => Math.abs(__listenotr.audio().rate - 1) < 0.001", timeout=2000)
+        ck("live audio stays at 1x even if the rate is changed", abs(pg.evaluate("__listenotr.audio().rate") - 1) < 0.001)
+
+        pg.click("#lrPlay")
+        pg.evaluate("__listenotr.setClock(__listenotr.unixFor('2026-11-04', 20*3600+70))")
+        pg.wait_for_function("() => { const t = __listenotr.audio().time; return t > 60 && t < 82; }", timeout=4000)
+        muted = pg.evaluate("""() => ({
+          label: document.querySelector('#lrPlay').textContent,
+          paused: __listenotr.paused(),
+          muted: __listenotr.muted(),
+          elMuted: document.querySelector('#lrAudio').muted,
+          elPaused: document.querySelector('#lrAudio').paused
+        })""")
+        ck("Mute keeps the stream playing on the clock",
+           muted["label"] == "Unmute" and muted["muted"] and muted["elMuted"] and not muted["paused"] and not muted["elPaused"], muted)
+        pg.click("#lrPlay")
+        ck("Unmute stays on that same live moment",
+           pg.evaluate("() => !__listenotr.muted() && !__listenotr.paused() && document.querySelector('#lrPlay').textContent === 'Mute' && __listenotr.audio().time > 60"))
+
         pg.evaluate("__listenotr.pause()")
         held = pg.evaluate("__listenotr.audio().time")
         pg.evaluate("__listenotr.setClock(__listenotr.unixFor('2026-11-04', 20*3600+100))")
@@ -302,6 +324,42 @@ def main():
         basic.wait_for_function("() => OTRMode.current()==='advanced' && !__listenotr.paused() && __otr.state.network==='listenotr'", timeout=5000)
         ck("choosing Listenotr Radio (Live) plays the synced broadcast and stays on Advanced",
            basic.evaluate("OTRMode.current()") == "advanced" and basic.evaluate("__otr.state.network") == "listenotr" and not basic.evaluate("__listenotr.paused()"))
+        def shown(page, ids):
+            return page.evaluate("""(ids) => {
+              const on = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return false;
+                return getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+              };
+              const out = {};
+              ids.forEach(id => { out[id] = on(id); });
+              return out;
+            }""", ids)
+        basic.evaluate("document.getElementById('moreBtn').click()")
+        live_ui = shown(basic, ["prevBtn", "backBtn", "fwdBtn", "skipBtn", "rateRow", "linkBtn", "moreRandom", "sleepSel", "popBtn2", "vol", "playBtn"])
+        live_ui["play"] = basic.evaluate("document.getElementById('playBtn').textContent")
+        live_ui["locked"] = basic.evaluate("document.body.classList.contains('otr-liveclock')")
+        ck("Advanced live hides speed, skip, seek, surprise and copy-moment, and the button is Mute",
+           live_ui["locked"] and "Mute" in live_ui["play"] and "Pause" not in live_ui["play"]
+           and not live_ui["prevBtn"] and not live_ui["backBtn"] and not live_ui["fwdBtn"] and not live_ui["skipBtn"]
+           and not live_ui["rateRow"] and not live_ui["linkBtn"] and not live_ui["moreRandom"]
+           and live_ui["sleepSel"] and live_ui["popBtn2"] and live_ui["vol"], live_ui)
+        basic.evaluate("document.getElementById('moreClose').click()")
+        basic.evaluate("__listenotr.setClock(__listenotr.unixFor('2026-11-04', 20*3600+10))")
+        basic.wait_for_function("() => { const a = __listenotr.audio(); return !__listenotr.paused() && !a.paused && a.time > 6 && a.time < 16; }", timeout=8000)
+        basic.evaluate("document.getElementById('playBtn').click()")
+        basic.evaluate("__listenotr.setClock(__listenotr.unixFor('2026-11-04', 20*3600+40))")
+        basic.wait_for_function("() => { const a = __listenotr.audio(); return __listenotr.muted() && !__listenotr.paused() && !a.paused && a.time > 34 && a.time < 48; }", timeout=4000)
+        ck("Advanced Mute keeps the stream playing on the clock",
+           basic.evaluate("() => __listenotr.muted() && !__listenotr.paused() && !document.querySelector('#lrAudio').paused && document.getElementById('playBtn').textContent.indexOf('Unmute') >= 0"))
+        basic.locator("#networkChips .station[data-net=nbc]").click()
+        basic.wait_for_function("() => __otr.state.network==='nbc' && !document.body.classList.contains('otr-liveclock')", timeout=8000)
+        basic.evaluate("if (document.getElementById('morePanel').hidden) document.getElementById('moreBtn').click()")
+        back = shown(basic, ["prevBtn", "skipBtn", "rateRow", "linkBtn", "moreRandom", "sleepSel", "popBtn2"])
+        back["play"] = basic.evaluate("document.getElementById('playBtn').textContent")
+        ck("a normal station restores speed, skip, surprise, copy-moment and play/pause",
+           back["prevBtn"] and back["skipBtn"] and back["rateRow"] and back["linkBtn"] and back["moreRandom"]
+           and back["sleepSel"] and back["popBtn2"] and "Mute" not in back["play"], back)
         basic_ctx.close()
 
         phone, _, pctx = open_page(w=390, h=844)
