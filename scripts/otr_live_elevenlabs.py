@@ -250,6 +250,15 @@ def write_manifest(rows, jingle_dur, placeholder, voice):
 
 
 def write_placeholders():
+    manifest_path = os.path.join(OUT, "manifest.json")
+    if os.path.exists(manifest_path):
+        current = json.load(open(manifest_path))
+        engine = (current.get("voice") or {}).get("engine")
+        if engine == "elevenlabs":
+            sys.exit(
+                "The pack on disk is the ElevenLabs recording (Bill). "
+                "Refusing to overwrite it with espeak placeholders."
+            )
     rows = plan()
     for index, row in enumerate(rows, 1):
         dest = os.path.join(OUT, row["file"])

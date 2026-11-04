@@ -29,7 +29,11 @@ GRACE_SECONDS = 15
 # client cannot walk the catalog and run up a bill.
 MAX_NEW_PER_DAY = 60
 
-PREFERRED_PREMADE = ("George", "Brian", "Daniel", "Clyde", "Bill", "Charlie", "Callum", "Chris")
+# Bill, the premade voice on the committed station pack. Episode intros use
+# this id so they match the jingle and the up-next lines. It is a stock
+# library voice, not a clone.
+STOCK_VOICE_ID = "pqHfZKP75CvOlQylNhV4"
+PREFERRED_PREMADE = ("Bill", "George", "Brian", "Daniel", "Clyde", "Charlie", "Callum", "Chris")
 
 _lock = threading.Lock()
 _listeners = {}  # session id -> last seen unix seconds
@@ -38,11 +42,15 @@ _new_today = {"day": "", "n": 0}
 
 def pick_premade_voice(voices):
     """Choose one stock ElevenLabs voice. Cloned, professional, and generated
-    voices are the caller's own and are never eligible."""
+    voices are the caller's own and are never eligible. Bill's premade id wins
+    when it is in the list, so a clone that happens to be named Bill does not."""
     premade = [v for v in (voices or []) if (v.get("category") or "") == "premade" and v.get("voice_id")]
+    for voice in premade:
+        if voice.get("voice_id") == STOCK_VOICE_ID:
+            return voice
     by_name = {}
-    for v in premade:
-        by_name.setdefault(v.get("name") or "", v)
+    for voice in premade:
+        by_name.setdefault(voice.get("name") or "", voice)
     for name in PREFERRED_PREMADE:
         if name in by_name:
             return by_name[name]
@@ -214,21 +222,8 @@ def _generate_with_elevenlabs(text, ep):
         return None
 
 
-_voice_memo = {"id": ""}
-
-
 def _premade_voice_id(key):
-    if _voice_memo["id"]:
-        return _voice_memo["id"]
-    import json
-    import urllib.request
-    req = urllib.request.Request(
-        "https://api.elevenlabs.io/v1/voices",
-        headers={"xi-api-key": key, "Accept": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-    voice = pick_premade_voice(data.get("voices") or [])
-    _voice_memo["id"] = voice["voice_id"]
-    logger.info("otr live intro voice: %s (premade)", voice.get("name") or "premade")
-    return _voice_memo["id"]
+    # The pack was recorded with Bill. Intros stay on that same premade id
+    # instead of asking the account which voice to use.
+    del key
+    return STOCK_VOICE_ID

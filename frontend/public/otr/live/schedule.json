@@ -3,8 +3,7 @@
     "Listenotr Radio, the virtual-live broadcast. A parallel of the old network clock: themed blocks at fixed Eastern times, the same blocks every day, a new episode each day.",
     "The client (listenotr-radio.js) resolves episodes from /otr/catalog.json and seeks to the wall-clock offset, so every listener is on the same moment. Nothing here is a listener's local timezone.",
     "from/to and at are America/New_York wall times. minutes is the block length. theme is a catalog channel. show, when set, pins that block to one series. night blocks are Tonight's lineup.",
-    "Station breaks sit between shows. upNext maps a catalog show id to a pre-generated clip (espeak-ng stock en-us voice, scripts/otr_live_announcer.sh). A break whose next show is missing from upNext plays ident.mp3 only.",
-    "The produced pack (jingle, station IDs, an up-next line for every series, time-of-night intros) lives in pack/manifest.json. Placeholders are espeak-ng's stock en-us voice. scripts/otr_live_elevenlabs.py --generate replaces them with one premade ElevenLabs voice and an ElevenLabs music jingle. It refuses cloned and custom voices. The key stays in ELEVENLABS_API_KEY and is never printed.",
+    "Station breaks use pack/manifest.json. ElevenLabs stock voice Bill covers the jingle, the station IDs, 15 flagship up-next lines, and the evening, late-night, and early-morning intros. Other series still use espeak-ng en-us placeholders. Per-episode intros use the same Bill voice id.",
     "Per-episode lines (Tonight, on Suspense. The title. Tune in.) are not in the pack. The server makes one only when a listener is tuned in during the minute before that episode, and caches it by episode id.",
     "Later, a real stream: point Liquidsoap at this file (same blocks, same episode pick, the pack's break clips), have it write one Icecast mount, and let the page play that mount instead of seeking archive.org. See the note at the top of listenotr-radio.js."
   ],

@@ -407,8 +407,9 @@
     var i = salt ? (hashStr(String(salt)) % list.length) : 0;
     return packClip(list[i]);
   }
-  // Jingle, then the time-of-night line, then "up next". Drop from the front
-  // if the break is too short to hold them; the up-next line always stays.
+  // Top of the hour: the big-band sting, then "Listenotr Radio!", then the
+  // time-of-night line, then "up next". Drop from the front if the break is
+  // too short to hold them; the up-next line always stays.
   function cuesFor(br) {
     var up = upNextClip(br.nextShowId) || identClip(br.start);
     if (!up) return [];
@@ -416,6 +417,7 @@
     if (PACK && PACK.daypart && !br.nextIsTomorrow && PACK.daypart[String(br.nextStart)])
       seq.unshift(packClip(PACK.daypart[String(br.nextStart)]));
     var onHour = br.nextIsTomorrow || (br.nextStart != null && br.nextStart % 3600 === 0);
+    if (onHour && PACK && PACK.jingleVoice) seq.unshift(packClip(PACK.jingleVoice));
     if (onHour && PACK && PACK.jingle) seq.unshift(packClip(PACK.jingle));
     function total(arr) { var s = 0; for (var i = 0; i < arr.length; i++) s += arr[i].dur || 0; return s; }
     while (seq.length > 1 && total(seq) > br.dur) seq.shift();
