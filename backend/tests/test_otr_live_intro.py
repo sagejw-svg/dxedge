@@ -30,6 +30,19 @@ def teardown_function(_):
 SECRET = "super-secret-test-key-do-not-print"
 
 
+def test_episode_intros_use_bills_stock_voice():
+    assert otr_live.STOCK_VOICE_ID == "pqHfZKP75CvOlQylNhV4"
+    assert otr_live._premade_voice_id("not-sent") == "pqHfZKP75CvOlQylNhV4"
+    voices = [
+        {"name": "Bill", "voice_id": "clone-bill", "category": "cloned"},
+        {"name": "George", "voice_id": "premade-george", "category": "premade"},
+        {"name": "Bill", "voice_id": "pqHfZKP75CvOlQylNhV4", "category": "premade"},
+    ]
+    chosen = otr_live.pick_premade_voice(voices)
+    assert chosen["voice_id"] == "pqHfZKP75CvOlQylNhV4"
+    assert chosen["category"] == "premade"
+
+
 def test_premade_voice_refuses_clones():
     voices = [
         {"name": "George", "voice_id": "clone-george", "category": "cloned"},

@@ -145,8 +145,10 @@ def main():
         ck("every break plays an up-next line or a station ID from the pack",
            breaks and all(("up-next/" in break_urls(it) or "/idents/" in break_urls(it)) for it in breaks))
         into_mystery = next(it for it in day if it["kind"] == "break" and it.get("nextShowId") == "suspense" and it.get("nextStart") == 20 * 3600)
-        ck("the break into the 8 o'clock mystery opens with the station jingle",
-           into_mystery["cues"] and "jingle.mp3" in into_mystery["cues"][0]["url"], into_mystery["cues"])
+        cue_urls = [c["url"] for c in (into_mystery.get("cues") or [])]
+        ck("the break into the 8 o'clock mystery opens with the jingle, then the voice ID",
+           len(cue_urls) >= 2 and cue_urls[0].endswith("jingle.mp3") and "jingle-voice-id.mp3" in cue_urls[1]
+           and any("up-next/suspense.mp3" in u for u in cue_urls), cue_urls)
 
         # Same instant, three zones. The lineup is Eastern, not the listener's zone.
         ms = pg.evaluate("__listenotr.unixFor('2026-11-04', 20*3600+400)")
