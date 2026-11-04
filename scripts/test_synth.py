@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -2792,6 +2792,139 @@ with sync_playwright() as pw:
     info("Tv. chassis draw time (four tubes with the show, smoothed, desktop)", f"{dm:.2f} ms per frame (the loop runs at 30 fps, 33 ms)")
     ck(f"Tv. the four tubes with the show draw in under 12 ms a frame ({dm:.2f} ms)", 0 < dm < 12, dm)
     ck("Tv. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Tb. the big tube view (4 Nov 2026)
+    # One chassis tube full size, with the tube show, a look, zoom and pan (the last open Tube show slice but the
+    # '73-style monosynth's tubes). State from __synth.tubeView.state(); pixels read off the canvases themselves.
+    TB_SUM = """(id) => { const cv = document.getElementById(id), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let lit = 0, sum = 0, h = 2166136261 >>> 0; for (let i = 0; i < d.length; i += 4) { const v = d[i] + d[i + 1] + d[i + 2]; sum += v; if (v > 90) lit++; if ((i & 1023) === 0) { h ^= v; h = Math.imul(h, 16777619) >>> 0; } }
+      return { lit: lit / (d.length / 4), mean: sum / (d.length / 4) / 3, hash: h }; }"""
+    # TB_DIFF: how far the canvas moved since the last call on it (mean and largest change per channel, 0..255)
+    TB_DIFF = """(id) => { const cv = document.getElementById(id), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, p = (window.__tbPrev || {})[id];
+      (window.__tbPrev = window.__tbPrev || {})[id] = d; if (!p || p.length !== d.length) return null;
+      let s = 0, mx = 0; for (let i = 0; i < d.length; i++) { if ((i & 3) === 3) continue; const v = Math.abs(d[i] - p[i]); s += v; if (v > mx) mx = v; }
+      return { mean: s / (d.length * 0.75), max: mx }; }"""
+    TB_FRAMES = "async (n) => { const f0 = __synth.tubeView.state().frames, t0 = performance.now(); while (__synth.tubeView.state().frames < f0 + n && performance.now() - t0 < 4000) await new Promise(r => setTimeout(r, 15)); return __synth.tubeView.state().frames - f0; }"
+    pg.evaluate("__synth.setDevice('filament')"); pg.evaluate("__synth.setTubeShow('full')")
+    pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "valve12", "cutoff": 900, "res": 0.4}, v1={"tube": "12AX7", "drive": 6, "bias": 0}))
+    pg.evaluate("window.scrollTo(0, 0)"); pg.wait_for_timeout(200)
+    tb0 = pg.evaluate("__synth.tubeView.state()")
+    pg.click("#tvChassisBtn"); tbf = pg.evaluate(TB_FRAMES, 4); tb1 = pg.evaluate("__synth.tubeView.state()")
+    tbpx = pg.evaluate(TB_SUM, "tvCv")
+    ck(f"Tb. the chassis button opens the tube view on V1, a modal dialog with focus on its close button ({tbf} frames drawn, canvas {tb1['w']}x{tb1['h']}, {tbpx['lit'] * 100:.1f}% of it lit)",
+       not tb0["open"] and tb1["open"] and not tb1["hidden"] and tb1["tube"] == "v1" and tbf >= 4 and tbpx["lit"] > 0.02 and not tb1["err"]
+       and pg.get_attribute("#tview", "role") == "dialog" and pg.get_attribute("#tview", "aria-modal") == "true"
+       and pg.evaluate("document.activeElement.id") == "tvClose" and pg.evaluate("document.body.classList.contains('tv-open')"), (tb0, tb1, tbpx))
+    ck(f"Tb. the view names the tube the chassis shows ({tb1['name']!r}, {tb1['title']!r})",
+       tb1["name"] == pg.text_content("#nameV1").strip() and tb1["title"] == "Tube view, V1 drive", tb1)
+    # the chassis rests under the view: a chassis tube's pixels hold still while a note plays (the flicker moves them when it paints)
+    pg.evaluate("__synth.engine().ctx.resume()"); pg.evaluate("__synth.noteOn(48, 0.9)"); pg.wait_for_timeout(150)
+    ch_a = pg.evaluate(TB_SUM, "tubeV1"); bg_a = pg.evaluate(TB_SUM, "tvCv"); pg.wait_for_timeout(350)
+    ch_b = pg.evaluate(TB_SUM, "tubeV1"); bg_b = pg.evaluate(TB_SUM, "tvCv")
+    pg.evaluate("__synth.noteOff(48)"); pg.wait_for_timeout(200)
+    ck(f"Tb. the chassis tubes rest while the view is open, and the big tube keeps moving (chassis hash {'same' if ch_a['hash'] == ch_b['hash'] else 'changed'}, view {'same' if bg_a['hash'] == bg_b['hash'] else 'changed'})",
+       ch_a["hash"] == ch_b["hash"] and bg_a["hash"] != bg_b["hash"], (ch_a, ch_b, bg_a, bg_b))
+    # the show runs at full size: a note flares V1 and the big view is what draws it (the chassis does not paint while open)
+    tbn = pg.evaluate(TV_PEAK, {"notes": [60], "v": 1.0, "ms": 300})
+    ck(f"Tb. a note flares the big tube (V1 took {tbn['end']['fired']['v1']:.2f}, drawn {tbn['end']['drawn']['v1']:.2f} by the view)",
+       tv_fired(tbn) and tbn["end"]["fired"]["v1"] > 0.5 and tbn["end"]["drawn"]["v1"] > 0, tbn)
+    pg.wait_for_timeout(300)
+    # zoom about the cursor: the tube point under the mouse stays under it; clamped to 1x to 8x
+    def tb_under(s, x, y):
+        sc = min(s["cssW"] / 120, s["cssH"] / 200) * 0.94 * s["z"]
+        return (60 + s["px"] + (x - s["cssW"] / 2) / sc, 100 + s["py"] + (y - s["cssH"] / 2) / sc)
+    box = pg.locator("#tvCv").bounding_box(); mx, my = box["width"] * 0.62, box["height"] * 0.35
+    s_a = pg.evaluate("__synth.tubeView.state()"); u_a = tb_under(s_a, mx, my)
+    pg.mouse.move(box["x"] + mx, box["y"] + my); pg.mouse.wheel(0, -300); pg.wait_for_timeout(150)
+    s_b = pg.evaluate("__synth.tubeView.state()"); u_b = tb_under(s_b, mx, my)
+    ck(f"Tb. the wheel zooms about the cursor ({s_a['z']}x to {s_b['z']}x; the tube point under it moved {math.dist(u_a, u_b):.2f} units)",
+       s_b["z"] > 1.5 and math.dist(u_a, u_b) < 0.5, (s_a, s_b, u_a, u_b))
+    pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2); pg.mouse.down(); pg.mouse.move(box["x"] + box["width"] / 2 - 60, box["y"] + box["height"] / 2 + 40, steps=4); pg.mouse.up()
+    s_c = pg.evaluate("__synth.tubeView.state()"); sc_b = min(s_b["cssW"] / 120, s_b["cssH"] / 200) * 0.94 * s_b["z"]
+    ck(f"Tb. a drag pans the tube with the pointer (pan {s_b['px']:.1f}, {s_b['py']:.1f} to {s_c['px']:.1f}, {s_c['py']:.1f}; want +{60 / sc_b:.1f}, -{40 / sc_b:.1f})",
+       abs((s_c["px"] - s_b["px"]) - 60 / sc_b) < 0.6 and abs((s_c["py"] - s_b["py"]) + 40 / sc_b) < 0.6, (s_b, s_c))
+    zc = pg.evaluate("[__synth.tubeView.zoom(50), __synth.tubeView.zoom(0.1), __synth.tubeView.state()]")
+    ck(f"Tb. zoom stops at 8x and at 1x, and back at 1x the tube is centred again ({zc[0]}, {zc[1]}, pan {zc[2]['px']}, {zc[2]['py']})",
+       zc[0] == 8 and zc[1] == 1 and zc[2]["px"] == 0 and zc[2]["py"] == 0, zc)
+    # the painter at 3x: the same tube fills more of the canvas
+    pz = pg.evaluate("""async () => { const m = await import('./tubepaint.js'); const cv = document.createElement('canvas');
+      cv.style.cssText = 'width:400px;height:400px;position:fixed;left:0;top:0;z-index:-1'; document.body.appendChild(cv);
+      const st = { shown: '12AX7', heat: 1, glow: 0.6, drive: 5, bias: 0, on: true, tubeOn: true, tvFilter: 'natural', tvBright: 100, tvFlicker: 0 };
+      const z = { k: 1, flare: 0, heat: 0, arc: 0, seed: 1, blue: 0, res: 0, shimmer: false };
+      const lit = (sh, zz) => { const o = m.paintTubeShow(cv, 1000, st, 'big', sh, zz, 0, 0, 1); const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+        let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) { const v = d[i] + d[i + 1] + d[i + 2]; s += v; if (v > 90) n++; } return { lit: n / (d.length / 4), mean: s / (d.length / 4) / 3, s: o.s }; };
+      const r = { z1: lit(null, 1), z3: lit(null, 3), f1: lit(Object.assign({}, z, { flare: 1 }), 1) }; cv.remove(); return r; }""")
+    ck(f"Tb. painter: at 3x the tube fills more of the canvas ({pz['z1']['lit'] * 100:.1f}% lit at 1x, {pz['z3']['lit'] * 100:.1f}% at 3x; scale {pz['z1']['s']:.2f} to {pz['z3']['s']:.2f}) and a flare brightens the big view ({pz['z1']['mean']:.1f} to {pz['f1']['mean']:.1f})",
+       pz["z3"]["lit"] > 1.5 * pz["z1"]["lit"] and abs(pz["z3"]["s"] / pz["z1"]["s"] - 3) < 0.01 and pz["f1"]["mean"] > pz["z1"]["mean"] + 1, pz)
+    # keys: 1 to 4 pick a tube, + zooms, 0 fits, and a playing key still plays
+    pg.focus("#tvFit"); pg.keyboard.press("3"); k3 = pg.evaluate("__synth.tubeView.state()")
+    pg.keyboard.press("Equal"); kz = pg.evaluate("__synth.tubeView.state()"); pg.keyboard.press("0"); k0 = pg.evaluate("__synth.tubeView.state()")
+    ck(f"Tb. keys: 3 shows V3 ({k3['name']!r}, {k3['title']!r}), + zooms ({kz['z']}x), 0 fits ({k0['z']}x)",
+       k3["tube"] == "v3" and k3["name"] == pg.text_content("#nameV3").strip() and k3["title"] == "Tube view, V3 out" and kz["z"] > 1.1 and k0["z"] == 1, (k3, kz, k0))
+    on0 = pg.evaluate("__synth.tubeShow().onsets"); pg.keyboard.down("KeyA"); pg.wait_for_timeout(250)
+    vk = pg.evaluate("__synth.engine().meter.voices || 0"); on1 = pg.evaluate("__synth.tubeShow().onsets"); pg.keyboard.up("KeyA"); pg.wait_for_timeout(200)
+    ck(f"Tb. the computer keyboard still plays with the view open ({vk} voice, {on1 - on0} flare)", vk >= 1 and on1 - on0 == 1, (vk, on0, on1))
+    pg.focus("#tvFlick"); pg.keyboard.press("Tab"); tab_wrap = pg.evaluate("document.activeElement.id")
+    ck(f"Tb. Tab stays inside the view (after the last control: {tab_wrap!r})", tab_wrap == "tvClose", tab_wrap)
+    # V2 out of the path says so
+    pg.evaluate("(p) => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 900, "res": 0.4})); pg.keyboard.press("2"); pg.evaluate(TB_FRAMES, 2)
+    k2 = pg.evaluate("__synth.tubeView.state()")
+    ck(f"Tb. V2 on Ladder 24 says it is out of the signal path ({k2['stat']!r})", k2["tube"] == "v2" and "out of the signal path" in k2["stat"], k2)
+    # looks: this picture only; remembered in this browser
+    pg.click('#tvLooks .chip[data-v="night"]'); pg.evaluate(TB_FRAMES, 2); ln = pg.evaluate("__synth.tubeView.state()")
+    ck(f"Tb. a look changes the big tube only (night vision: view filter {ln['filter'][:22]!r}..., chassis filter {pg.evaluate("document.getElementById('tubeV1').style.filter")!r})",
+       ln["look"] == "night" and "hue-rotate" in ln["filter"] and pg.evaluate("document.getElementById('tubeV1').style.filter") == ""
+       and pg.get_attribute('#tvLooks .chip[data-v="night"]', "aria-pressed") == "true", ln)
+    pg.click('#tvLooks .chip[data-v="neon"]'); pg.evaluate(TB_FRAMES, 2)
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(100); kc = pg.evaluate("__synth.tubeView.state()")
+    ck(f"Tb. Esc closes it and focus goes back to the chassis button ({pg.evaluate('document.activeElement.id')!r})",
+       not kc["open"] and kc["hidden"] and pg.evaluate("document.activeElement.id") == "tvChassisBtn" and not pg.evaluate("document.body.classList.contains('tv-open')"), kc)
+    pg.wait_for_timeout(200); ch_c = pg.evaluate(TB_SUM, "tubeV1"); pg.wait_for_timeout(300); dmc = pg.evaluate("__synth.tubeShow().drawMs")
+    ck(f"Tb. closed, the chassis paints again (V1 {ch_c['lit'] * 100:.1f}% lit, draw {dmc:.2f} ms)", ch_c["lit"] > 0.02 and dmc > 0, (ch_c, dmc))
+    pg.dblclick('.tube[data-t="v3"]'); pg.evaluate(TB_FRAMES, 3); kd = pg.evaluate("__synth.tubeView.state()")
+    ck(f"Tb. a double click on a chassis tube opens that tube (V3: {kd['tube']}, look kept: {kd['look']})", kd["open"] and kd["tube"] == "v3" and kd["look"] == "neon", kd)
+    # draw time, smoothed over about 10 frames, a held chord with the show on, at 1366 x 1000 (canvas about 1066 x 1000)
+    pg.evaluate("__synth.tubeView.look('natural'); __synth.tubeView.pick('v1')")
+    dmv = pg.evaluate("""async () => { const ns = [36, 48, 55, 60, 64]; ns.forEach(n => __synth.noteOn(n, 1)); await new Promise(r => setTimeout(r, 1500));
+      const s = __synth.tubeView.state(); ns.forEach(n => __synth.noteOff(n)); await new Promise(r => setTimeout(r, 250)); return s; }""")
+    info("Tb. big tube view draw time (one tube with the show, smoothed, desktop)", f"{dmv['drawMs']:.2f} ms per frame on a {dmv['w']}x{dmv['h']} canvas (quality {dmv['q']})")
+    ck(f"Tb. the big tube draws in under 12 ms a frame ({dmv['drawMs']:.2f} ms)", 0 < dmv["drawMs"] < 12, dmv)
+    SET_FLICK = "v => { const e = document.getElementById('tvFlick'); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); return __synth.tubeView.state().flicker; }"
+    fk = pg.evaluate(SET_FLICK, 100); pg.wait_for_timeout(3000); mds = []
+    for _ in range(4): pg.evaluate(TB_FRAMES, 1); pg.evaluate(TB_DIFF, "tvCv"); pg.evaluate(TB_FRAMES, 4); mds.append(pg.evaluate(TB_DIFF, "tvCv"))
+    pg.evaluate(SET_FLICK, 35); mb = max(mds, key=lambda d: d["max"])
+    ck(f"Tb. with the flicker up, the idle big tube does move (4 frames apart, the largest of 4 tries: {mb['mean']:.3f} on average, {mb['max']} at most; flicker {fk}%)", fk == 100 and mb["max"] >= 4, mds)
+    pg.click("#tvClose"); pg.wait_for_timeout(100)
+    ck("Tb. the close button closes it", not pg.evaluate("__synth.tubeView.state().open"), pg.evaluate("__synth.tubeView.state()"))
+    # remembered look, reduced motion holds the picture still, and the phone layout
+    xctx = b.new_context(viewport={"width": 1366, "height": 900}, reduced_motion="reduce"); xp = xctx.new_page(); xerr = []; xp.on("pageerror", lambda e: xerr.append(str(e)))
+    xp.goto(BASE); xp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    xp.evaluate("__synth.tubeView.look('blacklight')"); xp.reload(); xp.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    # Idle, so the steady glows (which follow the level, and may move in reduced motion) have settled: what is left to
+    # move is the flicker, the dust's twinkle, the X-ray band and the photo grain, and reduced motion holds them all.
+    # The same idle tube with the flicker on does move (checked on the main page, below).
+    xp.click("#tvChassisBtn"); xp.wait_for_timeout(3000); xp.evaluate(TB_FRAMES, 2)
+    xa = xp.evaluate(TB_SUM, "tvCv"); xp.evaluate(TB_DIFF, "tvCv"); xp.evaluate(TB_FRAMES, 6); xb = xp.evaluate(TB_DIFF, "tvCv"); xs = xp.evaluate("__synth.tubeView.state()")
+    xp.evaluate("__synth.tubeView.look('night')"); xp.evaluate(TB_FRAMES, 2); xp.evaluate(TB_DIFF, "tvCv"); xp.evaluate(TB_FRAMES, 6); xd = xp.evaluate(TB_DIFF, "tvCv")
+    ck(f"Tb. the look is remembered in this browser ({xs['look']} after a reload)", xs["look"] == "blacklight", xs)
+    ck(f"Tb. reduced motion: the big tube holds still (6 idle frames apart, black light moved {xb['mean']:.3f} on average, {xb['max']} at most; night vision's grain {xd['mean']:.3f}, {xd['max']}), flicker off",
+       xs["reduced"] and xb["mean"] < 0.01 and xb["max"] <= 2 and xd["mean"] < 0.01 and xd["max"] <= 2 and xa["lit"] > 0.02 and xp.is_disabled("#tvFlick") and xp.text_content("#tvFlickV") == "still", (xa, xb, xd, xs))
+    ck("Tb. reduced motion: no page errors", not xerr, xerr)
+    xctx.close()
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        qp = b.new_page(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); qerr = []; qp.on("pageerror", lambda e: qerr.append(str(e)))
+        qp.goto(BASE); qp.wait_for_function("window.__synth && __synth.ready()", timeout=20000); qp.wait_for_timeout(300)
+        bb = qp.locator("#tvChassisBtn").bounding_box()
+        qp.tap("#tvChassisBtn"); qp.evaluate(TB_FRAMES, 3); qs = qp.evaluate("__synth.tubeView.state()")
+        small = qp.evaluate("""() => [...document.querySelectorAll('#tview button, #tview input')].filter(e => e.offsetParent !== null)
+          .map(e => { const r = e.getBoundingClientRect(); return [e.id || e.dataset.v || e.textContent.trim(), Math.round(r.width), Math.round(r.height)]; }).filter(x => x[1] < 44 || x[2] < 44)""")
+        sw = qp.evaluate("[document.documentElement.scrollWidth, document.getElementById('tview').scrollWidth]")
+        ck(f"Tb. phone {pw_}x{ph_}: the chassis button ({bb['width']:.0f}x{bb['height']:.0f} px) opens the view, the tube fills the top ({qs['cssW']}x{qs['cssH']}), every control 44 px or more, no sideways scroll (page {sw[0]}, view {sw[1]})",
+           bb["width"] >= 44 and bb["height"] >= 44 and qs["open"] and qs["cssW"] == pw_ and qs["cssH"] >= 0.5 * ph_ and qs["frames"] >= 3 and not small and sw[0] <= pw_ and sw[1] <= pw_, (bb, qs, small, sw))
+        qp.tap("#tvClose"); qp.wait_for_timeout(100)
+        ck(f"Tb. phone {pw_}x{ph_}: the close button closes it, no page errors", not qp.evaluate("__synth.tubeView.state().open") and not qerr, qerr)
+        qp.close()
+    ck("Tb. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- 9. CPU (logged)
     # Each line is a case's steady cost: the wall time of a CPU_L s offline render minus a CPU_S s one (each the

@@ -136,6 +136,30 @@
   .vlamps i { width: 5px; height: 5px; border-radius: 50%; background: #241c14; box-shadow: inset 0 0 1px #000; }
   .vlamps i.on { background: #ffb347; box-shadow: 0 0 5px #ff9a2e, 0 0 9px rgba(255,140,40,0.55); }
   .chassis[data-show="off"] .vlamps { display: none; }
+  /* the big tube view (4 Nov 2026): one chassis tube full size, with the show, a look, zoom and pan */
+  .tvbtn { position: absolute; top: 3px; right: 4px; z-index: 2; min-width: 28px; min-height: 24px; padding: 0 6px; border-radius: 4px; border: 1px solid #2c2c2c;
+    background: rgba(12,12,12,0.72); color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer; }
+  .tvbtn:hover, .tvbtn:focus-visible { border-color: var(--amber); color: var(--amber2); }
+  body.tv-open { overflow: hidden; }
+  .tview { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,0.95); display: grid; grid-template-columns: minmax(0,1fr) 300px; }
+  .tview[hidden] { display: none; }
+  .tv-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  #tvCv { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  #tvCv.drag { cursor: grabbing; }
+  .tv-hud { position: absolute; left: 16px; top: 14px; pointer-events: none; text-shadow: 0 1px 6px #000; }
+  .tv-hud .n { font-size: 24px; font-weight: 600; color: #fff; letter-spacing: 1px; line-height: 1.1; }
+  .tv-hud .k { font-size: 10.5px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+  .tv-hud .k.warn { color: var(--amber2); }
+  .tv-x { position: absolute; right: 12px; top: 12px; min-width: 44px; min-height: 44px; font-size: 20px; line-height: 1; }
+  .tv-zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 5px; align-items: center; background: rgba(10,10,10,0.75);
+    border: 1px solid var(--border2); border-radius: 10px; padding: 5px; }
+  .tv-zoom .btn { min-width: 36px; }
+  .tv-zoom .zl { font-size: 11px; color: var(--amber2); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+  .tv-panel { min-width: 0; overflow-y: auto; padding: 16px 14px; border-left: 1px solid #222; background: #0b0a09; display: flex; flex-direction: column; gap: 10px; }
+  .tv-panel h3 { margin: 0; font-size: 12px; letter-spacing: 2px; color: var(--amber2); text-transform: uppercase; }
+  .tv-sl { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+  .tv-sl input { flex: 1 1 auto; min-width: 0; }
+  .tv-sl b { min-width: 42px; text-align: right; color: var(--amber2); font-weight: 600; }
   .eye { display: flex; flex-direction: column; align-items: center; }
   .eye canvas { width: 54px; height: 54px; display: block; }
   .vu canvas { width: 230px; height: 74px; display: block; }
@@ -797,6 +821,12 @@
     .eye { margin-left: auto; }
     .tube figcaption { font-size: 8px; letter-spacing: 0; }
     .tube figcaption .role { display: none; }
+    .tvbtn { top: 2px; right: 2px; min-width: 44px; min-height: 44px; font-size: 16px; }
+    .tview { grid-template-columns: minmax(0,1fr); grid-template-rows: 58vh auto; overflow-y: auto; }
+    .tv-panel { overflow: visible; border-left: 0; border-top: 1px solid #222; padding: 12px; }
+    .tv-zoom .btn { min-width: 44px; min-height: 44px; }
+    .tv-sl input { min-height: 44px; }
+    .tv-hud .n { font-size: 20px; }
     .eye canvas { width: 34px; height: 34px; }
     .eye .el { display: none; }
     .vu canvas { width: 112px; height: 42px; }
@@ -1103,6 +1133,7 @@
       <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="vlamps" id="vLamps" aria-hidden="true" title="Voice lamps: one per sounding voice"></div>
+      <button type="button" class="tvbtn" id="tvChassisBtn" aria-label="Tube view: one tube full size" title="Tube view (or double click a tube)">&#x2922;</button>
       <div class="lamps">
         <div class="lamp"><i id="lampAudio"></i><span id="audioState">audio off</span></div>
         <div class="lamp"><i id="lampCpu"></i>cpu <b id="cpuV">0%</b></div>
@@ -1232,6 +1263,7 @@
       <section class="mod" data-tab="rack" id="mShow"><h3><span class="pilot"></span>Tube show</h3>
         <div class="chips" id="showChips" role="group" aria-label="Tube show"><span class="cl">show</span></div>
         <div class="eq-read"><span class="dim">flares, red plating, arcs and blue glow on the chassis tubes; reduced motion keeps the steady glow only</span></div>
+        <div class="chips"><button type="button" class="btn small" id="tvOpenBtn" title="One tube full size (or double click a tube on the chassis)">tube view</button></div>
       </section>
       <section class="mod" data-tab="rack" id="mOut" data-wide><h3><span class="pilot"></span>Output tubes, V3 and V4</h3><div class="chips" data-chips="out.tube"></div><div class="chips" data-chips="out.topology"></div>
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
@@ -1564,12 +1596,28 @@
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tview" id="tview" hidden role="dialog" aria-modal="true" aria-labelledby="tvTitle">
+  <div class="tv-stage">
+    <canvas id="tvCv" role="img" aria-label="The tube, full size"></canvas>
+    <div class="tv-hud"><div class="n" id="tvName">12AX7</div><div class="k" id="tvTitle">Tube view, V1 drive</div><div class="k" id="tvLookName">Natural</div><div class="k" id="tvStat"></div></div>
+    <button type="button" class="btn tv-x" id="tvClose" aria-label="Close the tube view" title="Close (Esc)">&times;</button>
+    <div class="tv-zoom"><button type="button" class="btn" id="tvOut" aria-label="Zoom out" title="Zoom out (-)">&minus;</button><span class="zl" id="tvZl">100%</span><button type="button" class="btn" id="tvIn" aria-label="Zoom in" title="Zoom in (+)">+</button><button type="button" class="btn" id="tvFit" title="Fit (0)">fit</button></div>
+  </div>
+  <aside class="tv-panel">
+    <h3>Tube view</h3>
+    <div class="chips" id="tvTubes" role="group" aria-label="Which tube"><span class="cl">tube</span></div>
+    <div class="chips" id="tvLooks" role="group" aria-label="Look"><span class="cl">look</span></div>
+    <label class="tv-sl">brightness <input type="range" id="tvBright" min="40" max="200" step="5"><b id="tvBrightV">100%</b></label>
+    <label class="tv-sl">flicker <input type="range" id="tvFlick" min="0" max="100" step="5"><b id="tvFlickV">35%</b></label>
+    <div class="note">The tube show runs here at full size: flares, red plating, arcs, blue glow and resonance, at the show setting on the Rack tab. The keys and MIDI still play. Drag to look around, scroll or pinch to zoom (up to 8x), double click to jump in or back out. + and &minus; zoom, 0 fits, 1 to 4 pick a tube, arrows move, Esc closes. The look, brightness and flicker change only this picture, never the sound.</div>
+  </aside>
+</div>
 
 <script type="module">
 import { makeKnob } from './knob.js';
 import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
 import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz, springToneHz } from './rack.js';
-import { paintTubeState, paintTubeShow, fitCanvas } from './tubepaint.js';
+import { paintTubeState, paintTubeShow, fitCanvas, TUBE_LOOKS, LOOK_BY } from './tubepaint.js';
 import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, showOnsets, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
@@ -4060,6 +4108,140 @@ function paintVoiceLamps(n) {
   if (n === lampsShown) return; lampsShown = n;
   $('vLamps').querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', i < n));
 }
+// ---- the big tube view (4 Nov 2026): one chassis tube full size, with the tube show, a look, zoom and pan ----
+// Opened from the chassis button, the Tube show section, or a double click on a chassis tube. It draws in the
+// same 30 fps frame loop, from the same tube state and show state as the chassis, and the chassis tubes rest
+// while it is open (they are under it). Nothing here touches the audio path: the look, brightness and flicker
+// change this picture only. Reduced motion: no flicker, the picture holds still (a fixed clock and a fixed
+// grain for the photo looks), and the show already drops its flares, arcs and shimmer.
+const TV_KEYS = ['v1', 'v2', 'v3', 'v4'];
+const TV_ZMAX = 8, TV_W = 120, TV_H = 200;  // the painter's tube space, in its units
+const TV_MAX_PX = 2.4e6;                    // backing store cap (device pixels), so a big window stays inside the frame budget
+const TV_STILL = 3421;                      // ms: the clock reduced motion paints at (the X-ray band sits mid-tube)
+const TVS = Object.assign({ look: 'natural', bright: 100, flicker: 35 }, store.get('filament_tubeview', {}) || {});
+if (!LOOK_BY[TVS.look]) TVS.look = 'natural';
+TVS.bright = clampN(Number.isFinite(+TVS.bright) ? +TVS.bright : 100, 40, 200);
+TVS.flicker = clampN(Number.isFinite(+TVS.flicker) ? +TVS.flicker : 35, 0, 100);
+const TVIEW = { open: false, tube: 'v1', z: 1, px: 0, py: 0, frames: 0, drawMs: 0, q: 1, box: null, err: null, opener: null, st: {}, hud: '' };
+function tvSave() { store.set('filament_tubeview', { look: TVS.look, bright: TVS.bright, flicker: TVS.flicker }); }
+function tvClamp() {
+  TVIEW.z = clampN(TVIEW.z, 1, TV_ZMAX);
+  const f = 1 - 1 / TVIEW.z;
+  TVIEW.px = clampN(TVIEW.px, -TV_W / 2 * f, TV_W / 2 * f); TVIEW.py = clampN(TVIEW.py, -TV_H / 2 * f, TV_H / 2 * f);
+}
+// Zoom to z about a point on the canvas (CSS px from its top left; default its centre), so what is under it stays put.
+function tvZoom(z, x, y) {
+  const cv = $('tvCv'), w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) { TVIEW.z = z; tvClamp(); tvSync(); return TVIEW.z; }
+  const s0 = Math.min(w / TV_W, h / TV_H) * 0.94, s1 = s0 * TVIEW.z, z2 = clampN(z, 1, TV_ZMAX), s2 = s0 * z2;
+  const dx = (x == null ? w / 2 : x) - w / 2, dy = (y == null ? h / 2 : y) - h / 2;
+  TVIEW.px += dx * (1 / s1 - 1 / s2); TVIEW.py += dy * (1 / s1 - 1 / s2); TVIEW.z = z2;
+  tvClamp(); tvSync(); return TVIEW.z;
+}
+function tvPan(dx, dy) {          // CSS px on the canvas
+  const cv = $('tvCv'), s = Math.min(cv.clientWidth / TV_W, cv.clientHeight / TV_H) * 0.94 * TVIEW.z || 1;
+  TVIEW.px -= dx / s; TVIEW.py -= dy / s; tvClamp();
+}
+function tvPick(k) { if (!TV_KEYS.includes(k)) return false; TVIEW.tube = k; tvSync(); return true; }
+function tvLook(id) { if (!LOOK_BY[id]) return false; TVS.look = id; tvSave(); tvSync(); return true; }
+function tvSync() {
+  document.querySelectorAll('#tvTubes .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === TVIEW.tube)));
+  document.querySelectorAll('#tvLooks .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === TVS.look)));
+  $('tvBright').value = TVS.bright; $('tvBrightV').textContent = TVS.bright + '%';
+  $('tvFlick').value = TVS.flicker; $('tvFlickV').textContent = reduceMotion ? 'still' : TVS.flicker + '%';
+  $('tvFlick').disabled = reduceMotion;
+  $('tvZl').textContent = Math.round(TVIEW.z * 100) + '%';
+  $('tvLookName').textContent = LOOK_BY[TVS.look].name;
+  tvHud();
+}
+function tvHud() {
+  const k = TVIEW.tube, fig = document.querySelector('.tube[data-t="' + k + '"]');
+  const role = fig ? fig.querySelector('.role').textContent.trim() : k.toUpperCase(), name = $('name' + k.toUpperCase()).textContent.trim();
+  const off = !TUBE_ST[k].on, txt = name + '|' + role + '|' + off + '|' + TVS.look;
+  if (txt === TVIEW.hud) return; TVIEW.hud = txt;
+  $('tvName').textContent = name; $('tvTitle').textContent = 'Tube view, ' + role;
+  $('tvStat').textContent = off ? 'out of the signal path on this patch' : ''; $('tvStat').classList.toggle('warn', off);
+  $('tvCv').setAttribute('aria-label', 'The ' + name + ' (' + role + '), full size, ' + LOOK_BY[TVS.look].name.toLowerCase() + ' look');
+}
+function openTubeView(k, opener) {
+  if (TV_KEYS.includes(k)) TVIEW.tube = k;
+  if (!TVIEW.open) TVIEW.opener = opener || document.activeElement;
+  TVIEW.open = true; TVIEW.z = 1; TVIEW.px = 0; TVIEW.py = 0; TVIEW.hud = '';
+  $('tview').hidden = false; document.body.classList.add('tv-open');
+  tvSync(); try { $('tvClose').focus({ preventScroll: true }); } catch (e) {}
+  return true;
+}
+function closeTubeView() {
+  if (!TVIEW.open) return false;
+  TVIEW.open = false; $('tview').hidden = true; document.body.classList.remove('tv-open'); TVIEW.ptr.clear();
+  const o = TVIEW.opener; TVIEW.opener = null;
+  if (o && o.isConnected && o.focus) { try { o.focus({ preventScroll: true }); } catch (e) {} }
+  return true;
+}
+function paintTubeView(now) {
+  const cv = $('tvCv'), k = TVIEW.tube, o = TVIEW.st;
+  Object.assign(o, TUBE_ST[k]); o.tvFilter = TVS.look; o.tvBright = TVS.bright; o.tvFlicker = reduceMotion ? 0 : TVS.flicker;
+  const w = cv.clientWidth, h = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+  TVIEW.q = w && h ? Math.min(1, Math.sqrt(TV_MAX_PX / (w * h * dpr * dpr))) : 1;
+  const t0 = performance.now();
+  let r0 = null;
+  if (reduceMotion) { r0 = Math.random; let a = 0x2545F491; Math.random = () => { a = (Math.imul(a, 1664525) + 1013904223) >>> 0; return a / 4294967296; }; }
+  try { TVIEW.box = paintTubeShow(cv, reduceMotion ? TV_STILL : now, o, 'big', showFor(SHOW, k), TVIEW.z, TVIEW.px, TVIEW.py, TVIEW.q); }
+  catch (e) { TVIEW.err = String(e); }
+  finally { if (r0) Math.random = r0; }
+  TVIEW.drawMs += (performance.now() - t0 - TVIEW.drawMs) * 0.1; TVIEW.frames++;
+  tvHud();
+}
+TVIEW.ptr = new Map();
+{
+  TV_KEYS.forEach((k, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = k; b.textContent = k.toUpperCase();
+    b.title = 'Show ' + k.toUpperCase() + ' (' + (i + 1) + ')'; b.addEventListener('click', () => tvPick(k)); $('tvTubes').appendChild(b); });
+  TUBE_LOOKS.forEach(l => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = l.id; b.textContent = l.name.toLowerCase();
+    b.addEventListener('click', () => tvLook(l.id)); $('tvLooks').appendChild(b); });
+  $('tvBright').addEventListener('input', e => { TVS.bright = clampN(+e.target.value, 40, 200); tvSave(); tvSync(); });
+  $('tvFlick').addEventListener('input', e => { TVS.flicker = clampN(+e.target.value, 0, 100); tvSave(); tvSync(); });
+  $('tvClose').addEventListener('click', () => closeTubeView());
+  $('tvIn').addEventListener('click', () => tvZoom(TVIEW.z * 1.5));
+  $('tvOut').addEventListener('click', () => tvZoom(TVIEW.z / 1.5));
+  $('tvFit').addEventListener('click', () => { TVIEW.z = 1; TVIEW.px = TVIEW.py = 0; tvSync(); });
+  $('tvChassisBtn').addEventListener('click', e => { e.stopPropagation(); openTubeView(null, e.currentTarget); });
+  $('tvOpenBtn').addEventListener('click', e => openTubeView(null, e.currentTarget));
+  document.querySelectorAll('.tube[data-t]').forEach(f => f.addEventListener('dblclick', e => { e.preventDefault(); openTubeView(f.dataset.t, $('tvChassisBtn')); }));
+  const cv = $('tvCv'), at = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = at(e); tvZoom(TVIEW.z * Math.exp(-clampN(e.deltaY, -200, 200) * 0.0025), x, y); }, { passive: false });
+  cv.addEventListener('dblclick', e => { const [x, y] = at(e); tvZoom(TVIEW.z < 1.9 ? 3 : 1, x, y); });
+  let pinch = 0;
+  cv.addEventListener('pointerdown', e => { TVIEW.ptr.set(e.pointerId, at(e)); try { cv.setPointerCapture(e.pointerId); } catch (er) {} cv.classList.add('drag');
+    if (TVIEW.ptr.size === 2) { const [a, b] = [...TVIEW.ptr.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; } });
+  cv.addEventListener('pointermove', e => {
+    const p0 = TVIEW.ptr.get(e.pointerId); if (!p0) return; const p1 = at(e);
+    if (TVIEW.ptr.size === 1) { tvPan(p1[0] - p0[0], p1[1] - p0[1]); TVIEW.ptr.set(e.pointerId, p1); return; }
+    TVIEW.ptr.set(e.pointerId, p1); const [a, b] = [...TVIEW.ptr.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+    tvZoom(TVIEW.z * d / pinch, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); pinch = d;
+  });
+  const up = e => { TVIEW.ptr.delete(e.pointerId); if (!TVIEW.ptr.size) cv.classList.remove('drag'); };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => cv.addEventListener(ev, up));
+  // Keys the view keeps; everything else goes on to the page, so the computer keyboard still plays.
+  $('tview').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeTubeView(); return; }
+    if (e.key === 'Tab') {
+      const fs = [...$('tview').querySelectorAll('button, input')].filter(el => !el.disabled && el.offsetParent !== null);
+      if (!fs.length) return; const i = fs.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); fs[fs.length - 1].focus(); } else if (!e.shiftKey && i === fs.length - 1) { e.preventDefault(); fs[0].focus(); }
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const onRange = e.target && e.target.type === 'range';
+    let done = true;
+    if (e.code === 'Equal' || e.code === 'NumpadAdd') tvZoom(TVIEW.z * 1.25);
+    else if (e.code === 'Minus' || e.code === 'NumpadSubtract') tvZoom(TVIEW.z / 1.25);
+    else if (e.code === 'Digit0' || e.code === 'Numpad0') { TVIEW.z = 1; TVIEW.px = TVIEW.py = 0; tvSync(); }
+    else if (/^Digit[1-4]$/.test(e.code)) tvPick(TV_KEYS[+e.code.slice(5) - 1]);
+    else if (!onRange && e.key.startsWith('Arrow')) { const st = 24; tvPan(e.key === 'ArrowLeft' ? st : e.key === 'ArrowRight' ? -st : 0, e.key === 'ArrowUp' ? st : e.key === 'ArrowDown' ? -st : 0); }
+    else done = false;
+    if (done) { e.preventDefault(); e.stopPropagation(); }
+  });
+  tvSync();
+}
 let vuL = 0, vuR = 0, eyeLv = 0, anBuf = null, lastFrame = 0, lastNow = 0;
 function rms(an) { if (!anBuf || anBuf.length !== an.fftSize) anBuf = new Float32Array(an.fftSize); an.getFloatTimeDomainData(anBuf); let s = 0, p = 0; for (let i = 0; i < anBuf.length; i++) { const v = anBuf[i]; s += v * v; const a = Math.abs(v); if (a > p) p = a; } return [Math.sqrt(s / anBuf.length), p]; }
 function drawEye(lv) {
@@ -4208,21 +4390,24 @@ function frame(now) {
     s.heat += (ht - s.heat) * (1 - Math.exp(-dt / (ht > s.heat ? 0.6 : 0.25)));
     const gt = 0.3 + 0.7 * t.lv;
     s.glow += (gt - s.glow) * (1 - Math.exp(-dt / 0.08));
-    try { paintTubeShow($('tube' + k.toUpperCase()), now, s, 'rack', showFor(SHOW, k)); } catch (e) {}
+    if (!TVIEW.open) { try { paintTubeShow($('tube' + k.toUpperCase()), now, s, 'rack', showFor(SHOW, k)); } catch (e) {} }
   });
-  SHOW.drawMs += (performance.now() - td0 - SHOW.drawMs) * 0.1;
+  if (TVIEW.open) paintTubeView(now);     // the chassis rests under the big tube view
+  else SHOW.drawMs += (performance.now() - td0 - SHOW.drawMs) * 0.1;
   paintVoiceLamps(SHOW.lamps);
   // VU: 300 ms ballistics, 0 VU = -12 dBFS RMS (factory patches sit around -14)
   const vuOf = r => 20 * Math.log10(r + 1e-9) + 12;
   const kv = 1 - Math.exp(-dt / 0.3);
   vuL += (clampN(vuOf(oL), -22, 4) - vuL) * kv; vuR += (clampN(vuOf(oR), -22, 4) - vuR) * kv;
-  drawVU(vuL, vuR);
   eyeLv += (clampN(pk / 0.89, 0, 1) - eyeLv) * (1 - Math.exp(-dt / (pk / 0.89 > eyeLv ? 0.03 : 0.4)));
-  drawEye(eyeLv);
-  const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
-  paintHost();
-  if ($('mEq').offsetParent) drawEq(now);
-  if (dev === 'filament' && $('fpCv').offsetParent) drawFp(now, E && E.meters ? E.meters.filament : null);
+  if (!TVIEW.open) {                      // all of these are under the big tube view while it is open
+    drawVU(vuL, vuR);
+    drawEye(eyeLv);
+    const sec = $('mStereo'); if (sec.offsetParent) drawGonio(running);
+    paintHost();
+    if ($('mEq').offsetParent) drawEq(now);
+    if (dev === 'filament' && $('fpCv').offsetParent) drawFp(now, E && E.meters ? E.meters.filament : null);
+  }
   const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
   $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
   const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
@@ -4599,6 +4784,14 @@ window.__synth = {
   pentaSent: () => ({ sent: pentaHost.sent(), meter: Object.assign({}, pentaHost.meter()), node: !!pentaHost.node(), dev, now: Math.round(performance.now()) }),   // tests
   panelFills: () => panelFillRuns,   // tests: how often the row fill has run (graphics, 1 Nov)
   tubeShow: () => Object.assign(showState(SHOW), { meterFlares: showOns.got, meterDev: showOns.dev }),
+  // the big tube view (tests): open on a tube, close, zoom about a canvas point, pick a tube or a look, and its state
+  tubeView: {
+    open: k => openTubeView(k || null), close: () => closeTubeView(), zoom: (z, x, y) => tvZoom(z, x, y), pick: k => tvPick(k), look: id => tvLook(id),
+    state: () => { const cv = $('tvCv'); return { open: TVIEW.open, hidden: $('tview').hidden, tube: TVIEW.tube, look: TVS.look, bright: TVS.bright, flicker: TVS.flicker,
+      z: Math.round(TVIEW.z * 1000) / 1000, px: Math.round(TVIEW.px * 100) / 100, py: Math.round(TVIEW.py * 100) / 100, frames: TVIEW.frames,
+      drawMs: Math.round(TVIEW.drawMs * 1000) / 1000, q: Math.round(TVIEW.q * 1000) / 1000, err: TVIEW.err, w: cv.width, h: cv.height, cssW: cv.clientWidth, cssH: cv.clientHeight,
+      name: $('tvName').textContent, title: $('tvTitle').textContent, stat: $('tvStat').textContent, filter: cv.style.filter, reduced: reduceMotion, chassisDrawMs: Math.round(SHOW.drawMs * 1000) / 1000 }; },
+  },
   routeHit: (dest, on, n, v) => routeHit(dest, on, n, v),   // tests: the song library's path to a device, past the page's keys
   // the filter response plot: what it shows, and its curves read at frequencies (dB)
   filterPlot: () => ({ ready: !!FP.knob, err: FP.err, live: !!(FP.live && FP.liveMix > 0.5), liveMix: FP.liveMix, knob: fpSummary(FP.knob), playing: fpSummary(FP.live),

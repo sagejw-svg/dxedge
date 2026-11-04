@@ -398,15 +398,27 @@
 import { TUBES, TUBE_BY } from './rack.js';
 var ADV = null, TV = null;
 function tubeTick(){}                       // the synth advances heat and glow itself
-function paintTubeState(cv, now, st, view){ ADV = st; TV = st; return renderTube(cv, now, view||'rack'); }
+// z, px, py, q: zoom (1 fits), pan in tube units from the centre, and a backing-store quality (1 is the
+// device pixel ratio). The chassis passes none of them; the big tube view (4 Nov 2026) passes all four.
+function paintTubeState(cv, now, st, view, z, px, py, q){ ADV = st; TV = st; var o=renderTube(cv, now, view||'rack', z, px, py, q);
+  if(o && view==='big') bigChassis(cv, o, st); return o; }
+// The copied painter brushes the chassis 160 units wide, which the chassis canvases never see past. A big view
+// is wider than that, so the brushed band ended in two hard edges; carry the same grain out to both sides.
+// (Night vision and Vintage photo vignette the edges away, and their overlay is already on top, so not those.)
+function bigChassis(cv, o, st){
+  var L=LOOK_BY[st.tvFilter]||TUBE_LOOKS[0]; if(L.overlay) return;
+  var t=TUBE_BY[st.shown]||TUBES[0], g=GEO[t.shape], c=cv.getContext('2d'), r=cv.width/o.w, cx=TW/2, CH=g.chassis;
+  c.save(); c.setTransform(r*o.s,0,0,r*o.s,r*o.tx,r*o.ty); c.globalAlpha=0.07; c.fillStyle=grain(c,'brush',6,0.09);
+  c.fillRect(cx-80-TW*8, CH+0.6, TW*8, 40); c.fillRect(cx+80, CH+0.6, TW*8, 40); c.restore();
+}
 
 // ---- the tube show (James, 13 Oct 2026): an exaggerated overlay, drawn over a painted tube ----
 // sh comes from tubeshow.js showFor(): { k, flare, heat, arc, seed, blue, res, shimmer, reduced }, 0..1 each,
 // k the mode scale (subtle 0.45, full 1). Drawn in the same 120 x 200 tube space, added on top.
 var SHOW_GREY=[110,104,98], SHOW_CHERRY=[215,28,14], SHOW_ORANGE=[255,150,40], SHOW_FLARE=[255,226,170],
   SHOW_BLUE=[70,125,255], SHOW_ARC=[200,226,255], SHOW_RES=[255,196,110], SHOW_EDGE=TW/2-1;   // halos fade out inside the canvas
-function paintTubeShow(cv, now, st, view, sh){
-  var o=paintTubeState(cv, now, st, view); if(!o || !sh || !(sh.k>0)) return o;
+function paintTubeShow(cv, now, st, view, sh, z, px, py, q){
+  var o=paintTubeState(cv, now, st, view, z, px, py, q); if(!o || !sh || !(sh.k>0)) return o;
   var any=sh.flare>0.01||sh.heat>0.02||sh.arc>0.01||sh.blue>0.02||sh.res>0.02; if(!any) return o;
   var r=cv.width/o.w, s=o.s, c=cv.getContext('2d'), k=sh.k, cx=TW/2, tt=now/1000;
   var t=TUBE_BY[st.shown]||TUBES[0], g=GEO[t.shape], mid=(g.pTop+g.pBot)/2, plH=g.pBot-g.pTop, hw=profAt(g, mid)-1.4, pw=hw*0.62;
