@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Pileup: you are the DX station running a contest pileup. Several stations answer your CQ at once, each at its own pitch. Net the one you can hear, narrow the filter, copy the call, work it, and take the next one.">
+<link rel="icon" href="/favicon.ico?v=112" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=112">
+<link rel="icon" type="image/png" href="/favicon-32.png?v=112" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicon-16.png?v=112" sizes="16x16">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=112" sizes="180x180">
+<link rel="manifest" href="/manifest.json">
+<title>DX//EDGE &middot; PILEUP</title>
+<link rel="canonical" href="https://dxedge.net/pileup/">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080808; --bg1:#0e0e0e; --bg2:#141414; --border:#1e1e1e;
+    --text:#e0e0e0; --muted:#888; --dim:#444;
+    --green:#00ff9d; --teal:#7affb2; --yellow:#ffd600; --blue:#7a9fff; --red:#ff6b6b; --orange:#ff9a3c;
+    --mono:'SF Mono','Fira Code','Consolas',monospace;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);
+            overflow:hidden;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+  #wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        flex-direction:column;gap:6px;padding:4px}
+  #stage{position:relative;width:480px;height:430px;flex:none}
+  canvas{display:block;width:100%;height:100%;background:#000;touch-action:none;outline:none;
+         -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+  #ctl{width:480px;max-width:100%;flex:none;display:flex;flex-direction:column;gap:6px}
+  #ctl.hide{visibility:hidden}
+  .tune{display:flex;align-items:center;gap:8px}
+  .tune label{font-size:10px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;flex:none;width:44px}
+  .tune input[type=range]{flex:1;accent-color:var(--green);min-width:50px}
+  .tune .val{font-size:10px;color:var(--muted);flex:none;width:62px;text-align:right}
+  .step{font-family:var(--mono);font-size:15px;width:34px;height:32px;background:var(--bg1);color:var(--muted);
+        border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:0;flex:none;touch-action:manipulation}
+  .step:hover{border-color:var(--dim)}
+  .entry{display:flex;gap:6px}
+  input.call{flex:1;min-width:0;font-family:var(--mono);font-size:17px;letter-spacing:3px;text-transform:uppercase;
+             padding:9px 11px;background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px}
+  input.call:focus{outline:1px solid var(--green)}
+  .row{display:flex;gap:6px}
+  .btn{display:block;width:100%;padding:11px 12px;font-family:var(--mono);font-size:14px;letter-spacing:2px;
+       background:var(--bg1);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;
+       text-transform:uppercase;touch-action:manipulation}
+  .btn:hover{border-color:var(--dim)}
+  .btn.primary{background:rgba(0,255,157,.10);border-color:var(--green);color:var(--green)}
+  .btn.primary:hover{background:rgba(0,255,157,.18)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+  .entry .btn{width:auto;flex:0 0 92px;padding:9px 6px;font-size:12px}
+  .row .btn{font-size:11px;padding:9px 4px;letter-spacing:1px}
+
+  #ui{position:absolute;inset:0;overflow:auto;background:rgba(8,8,8,.90);display:none;-webkit-overflow-scrolling:touch}
+  #ui.show{display:block}
+  .panel{max-width:404px;margin:0 auto;padding:20px 18px 28px}
+  .view{display:none}.view.show{display:block}
+  h1{font-size:27px;letter-spacing:8px;font-weight:700;color:var(--green);text-align:center;line-height:1.1}
+  h2{font-size:18px;letter-spacing:4px;font-weight:700;color:var(--green);text-align:center;margin-bottom:10px}
+  .tag{color:var(--muted);font-size:12px;text-align:center;line-height:1.65;margin:12px 0}
+  .set{margin:14px 0}
+  .set>.lab{font-size:10px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-family:var(--mono);font-size:12px;padding:7px 11px;background:var(--bg1);color:var(--muted);
+        border:1px solid var(--border);border-radius:5px;cursor:pointer;touch-action:manipulation}
+  .chip[aria-pressed=true]{background:rgba(0,255,157,.12);border-color:var(--green);color:var(--green)}
+  .mini{font-size:11px;color:var(--dim);line-height:1.6;margin-top:6px}
+  .keys{font-size:11px;color:var(--dim);line-height:1.9;margin-top:14px}
+  .keys b{color:var(--muted);font-weight:400}
+  table.log{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+  table.log td{padding:3px 4px;border-bottom:1px solid var(--border);color:var(--muted)}
+  table.log td.c{color:var(--text)}
+  table.log td.r{text-align:right;color:var(--dim)}
+  .stats{display:flex;gap:10px;justify-content:center;margin:14px 0;flex-wrap:wrap}
+  .stat{text-align:center;min-width:72px}
+  .stat .n{font-size:22px;color:var(--green)}
+  .stat .l{font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase}
+  @media (max-width:520px){
+    #stage{width:100%;height:auto;aspect-ratio:480/430}
+    #ctl{width:100%}
+    .tune label{width:38px}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv" width="480" height="430" tabindex="0" aria-label="Pileup"></canvas>
+    <div id="ui">
+      <div class="panel">
+
+        <div class="view show" id="vTitle">
+          <h1>PILEUP</h1>
+          <p class="tag">
+            You are running the pileup. Call CQ and several stations answer at once,
+            each a little off your frequency. Net the one you can hear, narrow the filter,
+            copy the call and work it. Partial copy is allowed, and that is the real skill.
+          </p>
+          <div class="set">
+            <div class="lab">your call</div>
+            <input class="call" id="myCall" maxlength="12" placeholder="KK6ZZZ" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="set">
+            <div class="lab">pace</div>
+            <div class="chips" id="cPace"></div>
+            <div class="mini" id="paceNote"></div>
+          </div>
+          <div class="set">
+            <div class="lab">callers at once</div>
+            <div class="chips" id="cDense"></div>
+          </div>
+          <div class="set">
+            <div class="lab">run length</div>
+            <div class="chips" id="cMins"></div>
+          </div>
+          <div class="set">
+            <div class="lab">band</div>
+            <div class="chips" id="cBand"></div>
+          </div>
+          <div class="set">
+            <div class="lab">hints</div>
+            <div class="chips" id="cHint"></div>
+            <div class="mini" id="hintNote"></div>
+          </div>
+          <div class="tune"><label for="tone">tone</label>
+            <input type="range" id="tone" min="300" max="1000" step="10"><span class="val" id="toneV"></span></div>
+          <div class="tune"><label for="vol">vol</label>
+            <input type="range" id="vol" min="0" max="100" step="5"><span class="val" id="volV"></span></div>
+          <button class="btn primary" id="bStart" style="margin-top:14px">start run</button>
+          <button class="btn" id="bTest">test tone</button>
+          <div class="keys">
+            <b>&larr; &rarr;</b> tune, shift for coarse &middot; <b>[ ]</b> filter width<br>
+            <b>Enter</b> send CQ, or log the call you typed<br>
+            <b>R</b> ask again (AGN) &middot; <b>Esc</b> pause &middot; <b>M</b> mute<br>
+            Type a partial with <b>?</b> (such as 3KZ?) and only matching stations come back.
+          </div>
+        </div>
+
+        <div class="view" id="vPause">
+          <h2>PAUSED</h2>
+          <div class="tune"><label for="tone2">tone</label>
+            <input type="range" id="tone2" min="300" max="1000" step="10"><span class="val" id="toneV2"></span></div>
+          <div class="tune"><label for="vol2">vol</label>
+            <input type="range" id="vol2" min="0" max="100" step="5"><span class="val" id="volV2"></span></div>
+          <div class="set">
+            <div class="lab">hints</div>
+            <div class="chips" id="cHint2"></div>
+          </div>
+          <button class="btn primary" id="bResume" style="margin-top:14px">resume</button>
+          <button class="btn" id="bQuit">end run</button>
+        </div>
+
+        <div class="view" id="vOver">
+          <h2>RUN OVER</h2>
+          <div class="stats">
+            <div class="stat"><div class="n" id="oQ">0</div><div class="l">qsos</div></div>
+            <div class="stat"><div class="n" id="oRate">0</div><div class="l">per hour</div></div>
+            <div class="stat"><div class="n" id="oAcc">0%</div><div class="l">accuracy</div></div>
+            <div class="stat"><div class="n" id="oScore">0</div><div class="l">score</div></div>
+          </div>
+          <p class="tag" id="oNote"></p>
+          <table class="log" id="oLog"></table>
+          <button class="btn primary" id="bAgain" style="margin-top:14px">run again</button>
+          <button class="btn" id="bMenu">settings</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="ctl" class="hide">
+    <div class="tune">
+      <label for="dial">dial</label>
+      <button class="step" id="dnC" title="down 10 Hz">&laquo;</button>
+      <input type="range" id="dial" min="-1200" max="1200" step="2">
+      <button class="step" id="upC" title="up 10 Hz">&raquo;</button>
+      <span class="val" id="dialV"></span>
+    </div>
+    <div class="tune">
+      <label for="width">filter</label>
+      <input type="range" id="width" min="80" max="1400" step="20">
+      <span class="val" id="widthV"></span>
+    </div>
+    <div class="entry">
+      <input class="call" id="callIn" maxlength="12" placeholder="call" autocomplete="off"
+             autocapitalize="characters" spellcheck="false" inputmode="text">
+      <button class="btn primary" id="bLog">log</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="bCQ">cq</button>
+      <button class="btn" id="bAgn">agn</button>
+      <button class="btn" id="bNet">net</button>
+      <button class="btn" id="bPause">pause</button>
+    </div>
+  </div>
+</div>
+
+<script src="/lib/stat.js" defer></script>
+<script type="module">
+import { MORSE } from '/morse/core.js'
+import {
+  ENTITIES, EXTRA_ENTITIES, gridToLatLon, gcDist, declination, bestPath, locateCall,
+} from '/lib/propagation.js'
+
+/* ------------------------------------------------------------------ *
+ * Pileup - you are the DX station running a contest pileup.
+ *
+ * The thing this trains is not copying one callsign, it is pulling one
+ * callsign out of three that are on top of each other. So every caller
+ * gets its own oscillator at its own pitch, and the analyser is tapped
+ * ahead of the IF filter: the waterfall shows the whole pileup, the
+ * filter is only what you hear. Narrowing it is how you split them,
+ * exactly as on a real radio.
+ *
+ * There is one CW code table on the site (/morse/core.js) and one
+ * ionosphere (/lib/propagation.js). Both are imported, never rewritten.
+ * ------------------------------------------------------------------ */
+
+const W = 480, H = 430
+const HUD_H = 34
+const FALL_TOP = HUD_H + 10, FALL_H = 150          // panadapter
+const STATUS_Y = FALL_TOP + FALL_H + 18
+const EX_Y = STATUS_Y + 30
+const LOG_Y = EX_Y + 54
+const SPAN_HZ = 2600                                // panadapter spans 0..2600 Hz of the passband
+const DIAL_SPAN = 1200                              // the dial moves +/- 1.2 kHz
+const NET_HZ = 30                                   // how close is "netted" for a clean copy
+const KEY = { hi: 'dxPileup_hi', hiCall: 'dxPileup_hiCall', settings: 'dxPileup_settings' }
+const C = {
+  bg: '#000', bg1: '#0e0e0e', border: '#1e1e1e', text: '#e0e0e0', muted: '#888', dim: '#444',
+  green: '#00ff9d', teal: '#7affb2', yellow: '#ffd600', blue: '#7a9fff', red: '#ff6b6b', orange: '#ff9a3c',
+}
+const FONT = "'SF Mono','Fira Code','Consolas',monospace"
+const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const BAND_MHZ = { '80m': 3.55, '40m': 7.03, '20m': 14.04, '15m': 21.04, '10m': 28.04 }
+
+/* Pace sets caller speed and how long a window stays open. James found Morse
+ * Invaders v0.1 too fast, so relaxed is the default and it is genuinely slow. */
+const PACE = {
+  relaxed: { wpm: [13, 18], gap: [1500, 2600], cq: 20, label: 'relaxed' },
+  normal:  { wpm: [16, 24], gap: [1100, 2000], cq: 24, label: 'normal' },
+  brisk:   { wpm: [20, 30], gap: [800, 1500],  cq: 28, label: 'brisk' },
+}
+const DENSE = { auto: 0, 1: 1, 2: 2, 3: 3, 4: 4 }
+const HINTS = {
+  off:  'No help. The call is only ever in your ears.',
+  agn:  'After two AGNs, the station closest to your filter has its call shown on the panadapter.',
+  on:   'Every caller is labelled on the panadapter. Good for learning what a pileup looks like.',
+}
+
+/* --- small helpers ---------------------------------------------------- */
+function lsGet(k) { try { return localStorage.getItem(k) } catch { return null } }
+function lsSet(k, v) { try { localStorage.setItem(k, String(v)) } catch { /* private mode */ } }
+function loadJSON(k, fb) { try { const v = JSON.parse(lsGet(k)); return v && typeof v === 'object' ? v : fb } catch { return fb } }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+function int(v) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0 }
+function rnd(n) { return Math.floor(Math.random() * n) }
+function pick(a) { return a[rnd(a.length)] }
+function between(lo, hi) { return lo + Math.random() * (hi - lo) }
+function $(id) { return document.getElementById(id) }
+function utcHours() { const d = new Date(); return d.getUTCHours() + d.getUTCMinutes() / 60 }
+function mmss(ms) {
+  const s = Math.max(0, Math.round(ms / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+/* --- settings --------------------------------------------------------- */
+const params = new URLSearchParams(location.search)
+const DEF = {
+  call: '', grid: 'DM12', pace: 'relaxed', dense: 'auto', mins: 5, band: '20m',
+  hint: 'agn', toneHz: 570, volume: 45, width: 500, mute: false,
+}
+let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
+const pGrid = params.get('grid')
+if (pGrid && gridToLatLon(pGrid)) S.grid = pGrid.toUpperCase()
+if (!gridToLatLon(S.grid)) S.grid = DEF.grid
+const pCall = params.get('call')
+if (pCall) S.call = pCall.toUpperCase()
+S.toneHz = clamp(int(S.toneHz) || DEF.toneHz, 300, 1000)
+S.volume = clamp(int(S.volume), 0, 100)
+S.width = clamp(int(S.width) || DEF.width, 80, 1400)
+S.mins = [3, 5, 10, 20].includes(int(S.mins)) ? int(S.mins) : DEF.mins
+if (!PACE[S.pace]) S.pace = DEF.pace
+if (!(S.dense in DENSE)) S.dense = DEF.dense
+if (!BAND_MHZ[S.band]) S.band = DEF.band
+if (!HINTS[S.hint]) S.hint = DEF.hint
+function saveSettings() { lsSet(KEY.settings, JSON.stringify(S)) }
+function myCall() { return (S.call || 'KK6ZZZ').toUpperCase() }
+let hi = int(lsGet(KEY.hi))
+let hiCall = lsGet(KEY.hiCall) || ''
+
+/* --- who is in the pileup --------------------------------------------- *
+ * Callers are drawn from the DXCC prefix blocks in propagation.js, weighted
+ * by how loud that path actually is from your grid on this band at this UTC
+ * hour. So a 20 m run at local noon is full of the Americas and a 40 m run
+ * at local midnight fills up with Europe, without anything being scripted.
+ *
+ * The suffixes are random. These are prefix blocks, never real operators.
+ */
+const SUFFIX_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+function prefixPool() {
+  const seen = new Set()
+  const out = []
+  for (const e of [...ENTITIES, ...EXTRA_ENTITIES]) {
+    const px = e[0]
+    if (px.includes('/')) continue          // VP8/G and friends are not a call prefix
+    if (seen.has(px)) continue
+    seen.add(px)
+    out.push({ px, name: e[1], lat: e[2], lon: e[3], rarity: e[4] })
+  }
+  return out
+}
+
+function makeCall(px) {
+  const endsDigit = /\d$/.test(px)
+  const digit = endsDigit ? '' : String(rnd(10))
+  const n = px.length + (endsDigit ? 0 : 1) >= 4 ? 2 : (Math.random() < 0.72 ? 2 : 3)
+  let suf = ''
+  for (let i = 0; i < n; i++) suf += SUFFIX_LETTERS[rnd(26)]
+  return px + digit + suf
+}
+
+/* S units for a path, with one honest fudge: the hop model has nothing to say
+ * about a station a few hundred km away, which on a real band arrives by
+ * ground wave or a near-vertical bounce. Anything inside 600 km is simply
+ * called loud rather than pushed through a model that would report skip. */
+function pathS(qth, tgt, fMHz, utc, decl) {
+  const D = gcDist(qth, tgt)
+  if (D < 600) return { S: 6.5, D }
+  const r = bestPath({ f: fMHz, D, qth, tgt, utc, decl, sfi: 120, k: 2, flare: 0 })
+  return { S: r.verdict === 'worked' || r.verdict === 'weak' ? (r.S || 0) : 0, D }
+}
+
+function buildRoster() {
+  const qth = gridToLatLon(S.grid)
+  const fMHz = BAND_MHZ[S.band]
+  const utc = utcHours()
+  const decl = declination(new Date())
+  const out = []
+  for (const p of prefixPool()) {
+    const { S: s, D } = pathS(qth, { lat: p.lat, lon: p.lon }, fMHz, utc, decl)
+    if (s < 1.5) continue
+    out.push({ ...p, S: s, D, weight: Math.pow(s, 1.6) * (p.rarity === 0 ? 1 : p.rarity === 1 ? 0.45 : 0.18) })
+  }
+  return out
+}
+
+function drawFromRoster(roster) {
+  if (!roster.length) return null
+  let total = 0
+  for (const r of roster) total += r.weight
+  let t = Math.random() * total
+  for (const r of roster) { t -= r.weight; if (t <= 0) return r }
+  return roster[roster.length - 1]
+}
+
+/* --- audio ------------------------------------------------------------ *
+ * One context. A bus that every caller feeds, an analyser tapped ahead of
+ * the IF filter so the panadapter sees what the filter rejects, and a band
+ * noise loop under the whole thing. Your own sidetone bypasses the filter,
+ * because your keyer is not coming through your receiver.
+ */
+const A = {
+  ctx: null, master: null, bus: null, filter: null, analyser: null,
+  sigGain: null, noiseGain: null, noiseSrc: null, sideGain: null, bins: null, unsupported: false,
+}
+
+function resume() {
+  if (A.unsupported) return null
+  if (!A.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext
+    if (!AC) { A.unsupported = true; return null }
+    /* iOS puts plain Web Audio on the ringer channel, where the silent switch
+     * kills it; declaring a playback session moves it to the media channel. */
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback' } catch { /* older iOS */ }
+    A.ctx = new AC()
+    buildGraph()
+  }
+  if (A.ctx.state === 'suspended') A.ctx.resume()
+  return A.ctx
+}
+
+async function prime() {
+  const ctx = resume()
+  if (!ctx) return null
+  for (let i = 0; i < 3 && ctx.state !== 'running'; i++) {
+    try { await ctx.resume() } catch { /* retry */ }
+    if (ctx.state !== 'running') await new Promise(r => setTimeout(r, 60))
+  }
+  return ctx.state === 'running' ? ctx : null
+}
+
+function buildGraph() {
+  const ctx = A.ctx
+  A.master = ctx.createGain(); A.master.gain.value = S.mute ? 0 : S.volume / 100
+  A.analyser = ctx.createAnalyser(); A.analyser.fftSize = 4096; A.analyser.smoothingTimeConstant = 0.5
+  /* The default -100..-30 dB window puts the band noise halfway up the display
+   * and leaves no room for a signal. Widening the top end drops the floor to
+   * where a floor belongs and lets a loud caller actually tower over it. */
+  A.analyser.minDecibels = -88
+  A.analyser.maxDecibels = -12
+  A.bins = new Uint8Array(A.analyser.frequencyBinCount)
+  A.filter = ctx.createBiquadFilter(); A.filter.type = 'bandpass'
+  A.bus = ctx.createGain(); A.bus.gain.value = 1
+  A.sigGain = ctx.createGain(); A.sigGain.gain.value = 0.8
+  A.noiseGain = ctx.createGain(); A.noiseGain.gain.value = 0.07
+  A.sideGain = ctx.createGain(); A.sideGain.gain.value = 0.22
+  A.bus.connect(A.analyser)
+  A.bus.connect(A.filter); A.filter.connect(A.master); A.master.connect(ctx.destination)
+  A.sigGain.connect(A.bus); A.noiseGain.connect(A.bus)
+  A.sideGain.connect(A.master)              // your own keyer, not filtered
+  const n = ctx.sampleRate * 3
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate)
+  const d = buf.getChannelData(0)
+  let last = 0
+  for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; last = 0.75 * last + 0.25 * w; d[i] = last * 1.6 }
+  A.noiseSrc = ctx.createBufferSource(); A.noiseSrc.buffer = buf; A.noiseSrc.loop = true
+  A.noiseSrc.connect(A.noiseGain); A.noiseSrc.start()
+  applyFilter()
+}
+
+/* A bandpass at your sidetone pitch. Q is centre over bandwidth, so the width
+ * slider is in Hz the way a radio's filter is labelled, not in Q. */
+function applyFilter() {
+  if (!A.filter) return
+  A.filter.frequency.value = S.toneHz
+  A.filter.Q.value = clamp(S.toneHz / Math.max(40, S.width), 0.4, 14)
+}
+function applyVolume() { if (A.master) A.master.gain.value = S.mute ? 0 : S.volume / 100 }
+
+/* CW: one oscillator, keyed with a shaped envelope, at whatever audio pitch
+ * the dial puts this station on. Same primitive Spot Chaser uses, and it takes
+ * a destination so several of these can sound at once - which is the game. */
+function sendCW(text, audioHz, wpm, ctx = A.ctx, dest = A.sigGain, startAt = 0) {
+  const dit = 1.2 / wpm
+  const osc = ctx.createOscillator()
+  const g = ctx.createGain()
+  osc.frequency.value = Math.max(1, audioHz)
+  g.gain.value = 0
+  osc.connect(g); g.connect(dest)
+  let t = ctx.currentTime + 0.05 + startAt
+  const rise = 0.005
+  for (const ch of String(text).toUpperCase()) {
+    /* A character already leaves 3 units behind it (1 from the element loop
+     * plus 2 here), so a word space only owes the remaining 4. Adding a full
+     * 7 here is the classic way to end up sending everything 30% slow. */
+    if (ch === ' ') { t += dit * 4; continue }
+    const code = MORSE[ch]
+    if (!code) { t += dit * 3; continue }
+    for (const el of code) {
+      const len = (el === '-' ? 3 : 1) * dit
+      g.gain.setValueAtTime(0, t)
+      g.gain.linearRampToValueAtTime(1, t + rise)
+      g.gain.setValueAtTime(1, t + len - rise)
+      g.gain.linearRampToValueAtTime(0, t + len)
+      t += len + dit
+    }
+    t += dit * 2
+  }
+  osc.start(); osc.stop(t + 0.05)
+  const endsAt = t
+  return {
+    osc,
+    gain: g,
+    ms: (t - (ctx.currentTime + 0.05 + startAt)) * 1000,
+    stop() {
+      try {
+        g.gain.cancelScheduledValues(ctx.currentTime)
+        g.gain.setValueAtTime(0, ctx.currentTime)
+      } catch { /* context gone */ }
+      try { osc.stop() } catch { /* not started */ }
+      try { osc.disconnect(); g.disconnect() } catch { /* already gone */ }
+    },
+    get done() { return ctx.currentTime >= endsAt },
+  }
+}
+
+/* How long a string takes at a speed, without scheduling anything. */
+function cwMs(text, wpm) {
+  const dit = 1200 / wpm
+  let ms = 0
+  for (const ch of String(text).toUpperCase()) {
+    if (ch === ' ') { ms += dit * 4; continue }     // see sendCW: 3 units are already behind us
+    const code = MORSE[ch]
+    if (!code) { ms += dit * 3; continue }
+    for (const el of code) ms += (el === '-' ? 3 : 1) * dit + dit
+    ms += dit * 2
+  }
+  return ms
+}
+
+/* --- game ------------------------------------------------------------- */
+let G = null
+let dialHz = 0
+const live = []                 // transmissions currently scheduled, for a hard stop
+
+function stopAll() {
+  while (live.length) { const tx = live.pop(); try { tx.stop() } catch { /* gone */ } }
+}
+
+function audioHzFor(caller) {
+  /* The pitch you hear is the difference between where they are and where your
+   * dial is, offset by your sidetone. Netted means that difference is zero. */
+  return S.toneHz + (caller.off - dialHz)
+}
+
+/* A caller's loudness as heard: path strength, then how far off your filter it
+ * sits. The filter does the real rejection in the audio graph; this is only the
+ * gain the station is handed, so a weak DX station stays weak when netted. */
+function gainFor(caller) {
+  const s = clamp(caller.S / 9, 0.06, 1)
+  return 0.10 + 0.55 * s
+}
+
+function newCaller(roster, id) {
+  const r = drawFromRoster(roster)
+  if (!r) return null
+  const p = PACE[S.pace]
+  const call = makeCall(r.px)
+  return {
+    id,
+    call,
+    entity: r.name,
+    rarity: r.rarity,
+    S: r.S,
+    D: r.D,
+    off: Math.round(between(-620, 620)),           // where they are calling, Hz from your TX
+    wpm: Math.round(between(p.wpm[0], p.wpm[1])),
+    serial: 1 + rnd(380),
+    gain: null,
+    tx: null,
+    nextTx: 0,
+    sent: 0,
+    agnSeen: 0,
+    tag: false,                                    // hint label earned
+  }
+}
+
+function startRun() {
+  stopAll()
+  const roster = buildRoster()
+  G = {
+    phase: 'play',
+    paused: false,
+    t: 0,
+    endsAt: S.mins * 60000,
+    roster,
+    callers: [],
+    nextId: 1,
+    log: [],
+    qsos: 0,
+    score: 0,
+    attempts: 0,
+    busts: 0,
+    agns: 0,
+    status: 'press CQ, or Enter',
+    statusKind: 'idle',
+    mode: 'idle',                                  // idle | calling | pileup | working
+    working: null,
+    myTx: null,
+    cqCount: 0,
+    serial: 1,
+    flash: 0,
+  }
+  dialHz = 0
+  $('callIn').value = ''
+  $('ctl').classList.remove('hide')
+  $('ui').classList.remove('show')
+  syncUI()
+  if (!roster.length) {
+    G.status = 'nothing is open on ' + S.band + ' from ' + S.grid
+    G.statusKind = 'bad'
+  }
+}
+
+function endRun() {
+  if (!G) return
+  stopAll()
+  G.phase = 'over'
+  const mins = Math.max(1 / 60, G.t / 60000)
+  const rate = Math.round(G.qsos / (mins / 60))
+  const acc = G.attempts ? Math.round(100 * (G.attempts - G.busts) / G.attempts) : 0
+  G.result = { rate, acc }
+  if (G.score > hi) { hi = G.score; hiCall = myCall(); lsSet(KEY.hi, hi); lsSet(KEY.hiCall, hiCall) }
+  $('oQ').textContent = G.qsos
+  $('oRate').textContent = rate
+  $('oAcc').textContent = acc + '%'
+  $('oScore').textContent = G.score
+  $('oNote').textContent = G.qsos
+    ? `${G.qsos} in the log on ${S.band}, ${G.busts} busted call${G.busts === 1 ? '' : 's'}. Best here is ${hi}${hiCall ? ' by ' + hiCall : ''}.`
+    : `Nothing logged. Narrow the filter with ] and net one station at a time.`
+  const rows = G.log.slice(-12).reverse().map(e =>
+    `<tr><td class="c">${e.call}</td><td>${e.entity}</td><td class="r">${e.wpm} wpm</td></tr>`).join('')
+  $('oLog').innerHTML = rows || ''
+  showView('vOver')
+  $('ctl').classList.add('hide')
+}
+
+function sendMine(text, then) {
+  /* Your own transmission. Audible as a sidetone, and it blocks: you cannot
+   * hear the pileup while you are sending, which is why running a pileup is
+   * about short exchanges. */
+  const p = PACE[S.pace]
+  const ms = cwMs(text, p.cq)
+  G.myTx = { text, ms, left: ms, then: then || null }
+  const ctx = resume()
+  if (ctx && !S.mute) {
+    const tx = sendCW(text, S.toneHz, p.cq, ctx, A.sideGain)
+    live.push(tx)
+    G.myTx.tx = tx
+  }
+  G.mode = 'calling'
+  G.status = 'sending: ' + text
+  G.statusKind = 'tx'
+}
+
+function cq() {
+  if (!G || G.phase !== 'play' || G.myTx) return
+  G.cqCount++
+  sendMine(`CQ TEST ${myCall()}`, () => openPileup())
+}
+
+function wantedCallers() {
+  if (S.dense !== 'auto') return DENSE[S.dense]
+  const p = S.pace
+  return p === 'relaxed' ? 1 + rnd(2) : p === 'normal' ? 2 + rnd(2) : 3 + rnd(2)
+}
+
+function openPileup(filter) {
+  if (!G) return
+  /* Stations already in the pileup stay if they match the filter; new ones join
+   * only on a fresh CQ. A partial call is a request for a subset, which is the
+   * whole reason partials exist in a contest. */
+  if (filter) {
+    G.callers = G.callers.filter(c => matchesPartial(c.call, filter))
+    if (!G.callers.length) {
+      G.status = 'nobody comes back to ' + filter
+      G.statusKind = 'bad'
+      G.mode = 'idle'
+      return
+    }
+  } else {
+    const want = wantedCallers()
+    while (G.callers.length < want) {
+      const c = newCaller(G.roster, G.nextId++)
+      if (!c) break
+      /* Keep them apart enough that splitting them is possible, not hopeless. */
+      let tries = 0
+      while (tries++ < 20 && G.callers.some(o => Math.abs(o.off - c.off) < 90)) c.off = Math.round(between(-620, 620))
+      G.callers.push(c)
+    }
+  }
+  const p = PACE[S.pace]
+  G.callers.forEach((c, i) => {
+    stopCaller(c)                                 // nothing from the last round is still in the air
+    c.txEnds = 0
+    c.nextTx = G.t + i * between(60, 320)         // ragged, the way a real pileup starts
+    c.sent = 0
+    c.gapMs = between(p.gap[0], p.gap[1])
+  })
+  G.mode = 'pileup'
+  G.status = filter ? 'only ' + filter + ' answering' : 'copy one'
+  G.statusKind = 'rx'
+}
+
+function matchesPartial(call, frag) {
+  /* A contest partial is the letters you are sure of, so a station answers when
+   * its call contains that run of characters. "?" alone means everybody. */
+  const f = String(frag).toUpperCase().replace(/\?/g, '')
+  if (!f) return true
+  return call.includes(f)
+}
+
+function txFor(c) {
+  /* A caller sends its own call, twice when it thinks it is being covered. */
+  return c.sent === 0 || Math.random() < 0.35 ? c.call : c.call + ' ' + c.call
+}
+
+function startCallerTx(c) {
+  const ctx = resume()
+  c.sent++
+  const text = txFor(c)
+  c.ms = cwMs(text, c.wpm)
+  c.txEnds = G.t + c.ms
+  if (!ctx || S.mute) { c.tx = null; return }
+  if (!c.gain || c.gain.context !== ctx) {
+    c.gain = ctx.createGain()
+    c.gain.connect(A.sigGain)
+  }
+  c.gain.gain.value = gainFor(c)
+  const tx = sendCW(text, audioHzFor(c), c.wpm, ctx, c.gain)
+  live.push(tx)
+  c.tx = tx
+}
+
+/* Moving the dial has to move a transmission already in the air, or tuning
+ * would only work between characters. The oscillator frequency is live. */
+function retune() {
+  if (!G) return
+  for (const c of G.callers) {
+    if (c.tx && c.tx.osc) {
+      try { c.tx.osc.frequency.value = Math.max(1, audioHzFor(c)) } catch { /* gone */ }
+    }
+  }
+}
+
+function agn() {
+  if (!G || G.phase !== 'play' || G.myTx) return
+  G.agns++
+  for (const c of G.callers) c.agnSeen++
+  sendMine('AGN', () => openPileup())
+}
+
+/* Net: put the dial on whichever caller is nearest your filter already. A
+ * learner needs a way to discover what netted sounds like. */
+function net() {
+  if (!G || !G.callers.length) return
+  let best = null, bd = 1e9
+  for (const c of G.callers) {
+    const d = Math.abs(audioHzFor(c) - S.toneHz)
+    if (d < bd) { bd = d; best = c }
+  }
+  if (best) { setDial(best.off); G.status = 'netted'; G.statusKind = 'rx' }
+}
+
+function logIt() {
+  if (!G || G.phase !== 'play' || G.myTx) return
+  const raw = ($('callIn').value || '').toUpperCase().trim().replace(/[^A-Z0-9?/]/g, '')
+  if (!raw) return
+  if (raw.includes('?')) {
+    $('callIn').value = raw.replace(/\?/g, '')
+    sendMine(raw, () => openPileup(raw))
+    return
+  }
+  G.attempts++
+  const hit = G.callers.find(c => c.call === raw)
+  if (!hit) {
+    G.busts++
+    G.flash = 320
+    G.status = 'no such call here'
+    G.statusKind = 'bad'
+    sendMine('QRZ?', () => openPileup())
+    return
+  }
+  work(hit)
+}
+
+function work(c) {
+  stopCaller(c)
+  G.mode = 'working'
+  G.working = c
+  /* Contest shorthand, because the full thing is unplayable: 5NN is 599 with
+   * cut numbers, and a serial goes out without its leading zeros. Sending
+   * "DL3KZB 599 001" at 20 wpm takes twelve seconds; this takes five. */
+  const mine = `${c.call} 5NN ${G.serial}`
+  sendMine(mine, () => {
+    /* He comes back with his report, then he is in the log. */
+    const ctx = resume()
+    const reply = `R 5NN ${c.serial}`
+    const ms = cwMs(reply, c.wpm)
+    if (ctx && !S.mute) {
+      if (!c.gain || c.gain.context !== ctx) { c.gain = ctx.createGain(); c.gain.connect(A.sigGain) }
+      c.gain.gain.value = gainFor(c)
+      const tx = sendCW(reply, audioHzFor(c), c.wpm, ctx, c.gain)
+      live.push(tx)
+      c.tx = tx
+    }
+    G.replyLeft = ms
+    G.status = 'his report'
+    G.statusKind = 'rx'
+  })
+}
+
+function completeQso() {
+  const c = G.working
+  if (!c) return
+  G.qsos++
+  G.serial++
+  G.score += 1 + c.rarity                       // a rare entity is worth more, as a multiplier would be
+  G.log.push({ call: c.call, entity: c.entity, wpm: c.wpm, S: c.S })
+  G.callers = G.callers.filter(o => o.id !== c.id)
+  G.working = null
+  G.replyLeft = 0
+  $('callIn').value = ''
+  G.flash = -320                                 // positive flash
+  G.status = c.call + ' logged, ' + c.entity
+  G.statusKind = 'good'
+  /* Whoever is left keeps calling: you work a pileup down, you do not reset it. */
+  if (G.callers.length) openPileup()
+  else { G.mode = 'idle'; G.status = 'pileup worked out, call CQ' }
+}
+
+function stopCaller(c) {
+  if (c.tx) { try { c.tx.stop() } catch { /* gone */ } c.tx = null }
+}
+
+/* --- the loop --------------------------------------------------------- */
+function update(dt) {
+  if (!G || G.phase !== 'play' || G.paused) return
+  G.t += dt
+  if (G.flash > 0) G.flash = Math.max(0, G.flash - dt)
+  if (G.flash < 0) G.flash = Math.min(0, G.flash + dt)
+
+  if (G.t >= G.endsAt) { endRun(); return }
+
+  /* your own transmission blocks everything else */
+  if (G.myTx) {
+    G.myTx.left -= dt
+    if (G.myTx.left <= 0) {
+      const then = G.myTx.then
+      G.myTx = null
+      if (then) then()
+    }
+    return
+  }
+
+  /* his report after you sent the exchange */
+  if (G.working) {
+    G.replyLeft -= dt
+    if (G.replyLeft <= 0) completeQso()
+    return
+  }
+
+  if (G.mode !== 'pileup') return
+
+  /* Transmission timing is driven by txEnds, not by whether an audio node
+   * exists, so a muted or unprimed run keeps the same rhythm as a noisy one.
+   * gapMs is defaulted here because a caller can reach this loop without
+   * having been through openPileup, and NaN would silence it permanently. */
+  const pace = PACE[S.pace]
+  for (const c of G.callers) {
+    if (!c.gapMs) c.gapMs = between(pace.gap[0], pace.gap[1])
+    if (c.txEnds) {
+      if (G.t < c.txEnds) continue
+      if (c.tx) { c.tx = null }
+      c.txEnds = 0
+      c.nextTx = G.t + c.gapMs
+      continue
+    }
+    if (G.t >= c.nextTx) startCallerTx(c)
+  }
+  /* hints: after two AGNs the station nearest the filter earns a label */
+  if (S.hint === 'agn') {
+    for (const c of G.callers) if (c.agnSeen >= 2) {
+      const d = Math.abs(audioHzFor(c) - S.toneHz)
+      if (d < Math.max(120, S.width / 2)) c.tag = true
+    }
+  }
+}
+
+/* --- canvas ----------------------------------------------------------- */
+const cv = $('cv')
+const g2 = cv.getContext('2d')
+
+function text(str, x, y, size, color, align = 'left', weight = '') {
+  g2.font = `${weight} ${size}px ${FONT}`.trim()
+  g2.fillStyle = color
+  g2.textAlign = align
+  g2.textBaseline = 'alphabetic'
+  g2.fillText(str, x, y)
+}
+
+function hzToX(hz) { return clamp((hz / SPAN_HZ) * W, -40, W + 40) }
+
+function draw() {
+  g2.fillStyle = C.bg
+  g2.fillRect(0, 0, W, H)
+
+  /* HUD */
+  g2.fillStyle = C.bg1
+  g2.fillRect(0, 0, W, HUD_H)
+  g2.fillStyle = C.border
+  g2.fillRect(0, HUD_H - 1, W, 1)
+  if (G && G.phase === 'play') {
+    const left = G.endsAt - G.t
+    text(mmss(left), 10, 22, 15, left < 30000 ? C.red : C.green, 'left', '700')
+    text(`Q ${G.qsos}`, 92, 22, 13, C.text)
+    /* A rate computed over the first few seconds is a made-up number, so it
+     * stays blank until there is a minute of run behind it. */
+    const mins = G.t / 60000
+    text(mins >= 1 ? `${Math.round(G.qsos / (mins / 60))}/h` : '--/h', 156, 22, 12, C.muted)
+    text(`SCORE ${G.score}`, 214, 22, 12, C.teal)
+    text(`DE ${myCall()}`, W - 10, 22, 12, C.dim, 'right')
+  } else {
+    text('PILEUP', 10, 22, 15, C.green, 'left', '700')
+    text(`BEST ${hi}${hiCall ? ' ' + hiCall : ''}`, W - 10, 22, 12, C.dim, 'right')
+  }
+
+  /* panadapter */
+  g2.fillStyle = '#060606'
+  g2.fillRect(0, FALL_TOP, W, FALL_H)
+  g2.strokeStyle = C.border
+  g2.lineWidth = 1
+  g2.strokeRect(0.5, FALL_TOP + 0.5, W - 1, FALL_H - 1)
+
+  /* the filter passband, drawn where it actually is */
+  const fLo = hzToX(S.toneHz - S.width / 2), fHi = hzToX(S.toneHz + S.width / 2)
+  g2.fillStyle = 'rgba(0,255,157,0.07)'
+  g2.fillRect(fLo, FALL_TOP + 1, Math.max(2, fHi - fLo), FALL_H - 2)
+  g2.strokeStyle = 'rgba(0,255,157,0.35)'
+  g2.beginPath(); g2.moveTo(fLo, FALL_TOP); g2.lineTo(fLo, FALL_TOP + FALL_H)
+  g2.moveTo(fHi, FALL_TOP); g2.lineTo(fHi, FALL_TOP + FALL_H); g2.stroke()
+  /* your sidetone pitch, the thing you net onto */
+  const cx = hzToX(S.toneHz)
+  g2.strokeStyle = 'rgba(0,255,157,0.75)'
+  g2.setLineDash([3, 3])
+  g2.beginPath(); g2.moveTo(cx, FALL_TOP); g2.lineTo(cx, FALL_TOP + FALL_H); g2.stroke()
+  g2.setLineDash([])
+
+  /* live spectrum, tapped ahead of the filter: you see what you cannot hear */
+  if (A.analyser && A.bins) {
+    A.analyser.getByteFrequencyData(A.bins)
+    const sr = A.ctx.sampleRate
+    const binHz = sr / A.analyser.fftSize
+    const n = Math.min(A.bins.length, Math.floor(SPAN_HZ / binHz))
+    g2.beginPath()
+    g2.moveTo(0, FALL_TOP + FALL_H)
+    for (let i = 0; i < n; i++) {
+      const x = (i * binHz / SPAN_HZ) * W
+      const v = A.bins[i] / 255
+      g2.lineTo(x, FALL_TOP + FALL_H - v * (FALL_H - 10))
+    }
+    g2.lineTo(W, FALL_TOP + FALL_H)
+    g2.closePath()
+    g2.fillStyle = 'rgba(122,255,178,0.16)'
+    g2.fill()
+    g2.strokeStyle = 'rgba(122,255,178,0.55)'
+    g2.lineWidth = 1
+    g2.stroke()
+  }
+
+  /* scale, along the top so it never fights the trace or the signal bars */
+  for (let hz = 0; hz <= SPAN_HZ; hz += 500) {
+    const x = hzToX(hz)
+    g2.fillStyle = C.border
+    g2.fillRect(x, FALL_TOP + 1, 1, 4)
+    text(String(hz), x, FALL_TOP + 13, 8, C.dim, 'center')
+  }
+
+  /* Each caller as a bar standing on the floor at its pitch, tall in
+   * proportion to how loud the path is, so the pileup reads the way it would
+   * on a panadapter. The live trace shows the same thing while they are
+   * actually keying; the bars are what tells you who is still there. */
+  if (G && G.callers) {
+    const base = FALL_TOP + FALL_H - 1
+    const room = FALL_H - 34
+    for (const c of G.callers) {
+      const hz = audioHzFor(c)
+      if (hz < -50 || hz > SPAN_HZ + 50) continue
+      const x = hzToX(hz)
+      const sounding = !!c.tx
+      const h = 14 + (clamp(c.S, 0, 9) / 9) * room
+      g2.fillStyle = sounding ? C.yellow : 'rgba(255,214,0,0.22)'
+      g2.fillRect(x - 1.5, base - h, 3, h)
+      if (sounding) {
+        g2.fillStyle = 'rgba(255,214,0,0.14)'
+        g2.fillRect(x - 5, base - h, 10, h)
+      }
+      if (S.hint === 'on' || c.tag) {
+        text(c.call, x, base - h - 5, 9, sounding ? C.yellow : C.dim, 'center')
+      }
+    }
+  }
+
+  /* status */
+  if (G) {
+    const kind = G.statusKind
+    const col = kind === 'good' ? C.green : kind === 'bad' ? C.red : kind === 'tx' ? C.orange : kind === 'rx' ? C.teal : C.muted
+    if (G.flash) {
+      g2.fillStyle = G.flash > 0 ? `rgba(255,107,107,${0.16 * (G.flash / 320)})` : `rgba(0,255,157,${0.16 * (-G.flash / 320)})`
+      g2.fillRect(0, STATUS_Y - 18, W, 26)
+    }
+    text(G.status || '', W / 2, STATUS_Y, 13, col, 'center')
+    const mode = G.mode === 'pileup' ? `${G.callers.length} calling` : G.mode === 'calling' ? 'transmitting' : G.mode === 'working' ? 'exchange' : 'standing by'
+    text(mode, W / 2, STATUS_Y + 18, 10, C.dim, 'center')
+  }
+
+  /* what you are about to send */
+  if (G && G.phase === 'play') {
+    const typed = ($('callIn').value || '').toUpperCase()
+    text('COPY', 10, EX_Y + 4, 9, C.dim)
+    text(typed || '—', 10, EX_Y + 26, 19, typed ? C.text : C.dim, 'left', '700')
+    text(`${S.band}  ${S.grid}  ${PACE[S.pace].label}`, W - 10, EX_Y + 4, 9, C.dim, 'right')
+    text(`dial ${dialHz > 0 ? '+' : ''}${dialHz} Hz   filter ${S.width} Hz`, W - 10, EX_Y + 26, 11, C.muted, 'right')
+
+    /* the log, most recent first */
+    text('IN THE LOG', 10, LOG_Y, 9, C.dim)
+    const rows = G.log.slice(-8).reverse()
+    rows.forEach((e, i) => {
+      const y = LOG_Y + 18 + i * 15
+      text(e.call, 10, y, 12, C.text)
+      text(e.entity, 110, y, 11, C.muted)
+      text(`${e.wpm} wpm`, W - 10, y, 10, C.dim, 'right')
+    })
+    if (!rows.length) text('nothing yet', 10, LOG_Y + 18, 11, C.dim)
+  }
+}
+
+/* --- frame ------------------------------------------------------------ */
+let last = 0
+function frame(ts) {
+  const dt = last ? Math.min(50, ts - last) : 16
+  last = ts
+  update(dt)
+  draw()
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+
+/* --- UI --------------------------------------------------------------- */
+function showView(id) {
+  for (const v of document.querySelectorAll('.view')) v.classList.toggle('show', v.id === id)
+  $('ui').classList.add('show')
+}
+
+function chips(host, opts, get, set) {
+  const el = $(host)
+  if (!el) return
+  el.innerHTML = ''
+  for (const o of opts) {
+    const b = document.createElement('button')
+    b.className = 'chip'
+    b.type = 'button'
+    b.textContent = o.label
+    b.setAttribute('aria-pressed', String(get() === o.value))
+    b.addEventListener('click', () => { set(o.value); saveSettings(); syncUI() })
+    el.appendChild(b)
+  }
+}
+
+function syncUI() {
+  chips('cPace', Object.keys(PACE).map(k => ({ value: k, label: k })), () => S.pace, v => { S.pace = v })
+  chips('cDense', Object.keys(DENSE).map(k => ({ value: k, label: k })), () => S.dense, v => { S.dense = v })
+  chips('cMins', [3, 5, 10, 20].map(n => ({ value: n, label: n + ' min' })), () => S.mins, v => { S.mins = v })
+  chips('cBand', Object.keys(BAND_MHZ).map(b => ({ value: b, label: b })), () => S.band, v => { S.band = v })
+  chips('cHint', Object.keys(HINTS).map(k => ({ value: k, label: k })), () => S.hint, v => { S.hint = v })
+  chips('cHint2', Object.keys(HINTS).map(k => ({ value: k, label: k })), () => S.hint, v => { S.hint = v })
+  const p = PACE[S.pace]
+  $('paceNote').textContent = `callers at ${p.wpm[0]} to ${p.wpm[1]} wpm, you send at ${p.cq}`
+  $('hintNote').textContent = HINTS[S.hint]
+  $('myCall').value = S.call
+  for (const [r, v] of [['tone', 'toneV'], ['tone2', 'toneV2']]) {
+    if ($(r)) { $(r).value = S.toneHz; $(v).textContent = S.toneHz + ' Hz' }
+  }
+  for (const [r, v] of [['vol', 'volV'], ['vol2', 'volV2']]) {
+    if ($(r)) { $(r).value = S.volume; $(v).textContent = (S.mute ? 'muted' : S.volume + '%') }
+  }
+  $('dial').value = dialHz
+  $('dialV').textContent = `${dialHz > 0 ? '+' : ''}${dialHz} Hz`
+  $('width').value = S.width
+  $('widthV').textContent = S.width + ' Hz'
+}
+
+function setDial(hz) {
+  dialHz = clamp(Math.round(hz), -DIAL_SPAN, DIAL_SPAN)
+  retune()
+  $('dial').value = dialHz
+  $('dialV').textContent = `${dialHz > 0 ? '+' : ''}${dialHz} Hz`
+}
+function setWidth(hz) {
+  S.width = clamp(Math.round(hz), 80, 1400)
+  applyFilter()
+  saveSettings()
+  $('width').value = S.width
+  $('widthV').textContent = S.width + ' Hz'
+}
+
+function pauseGame() {
+  if (!G || G.phase !== 'play' || G.paused) return
+  G.paused = true
+  stopAll()
+  for (const c of G.callers) c.tx = null
+  if (G.myTx) G.myTx.tx = null
+  showView('vPause')
+}
+function resumeGame() {
+  if (!G || !G.paused) return
+  G.paused = false
+  $('ui').classList.remove('show')
+  /* anything that was sounding is gone; let the pileup pick back up */
+  if (G.mode === 'pileup') for (const c of G.callers) c.nextTx = G.t + between(100, 500)
+  if (G.myTx) { const then = G.myTx.then; G.myTx = null; if (then) then() }
+  if (G.working) { G.replyLeft = 0 }
+  cv.focus()
+}
+function quitGame() { if (G) endRun() }
+
+async function begin() {
+  const typed = ($('myCall').value || '').toUpperCase().trim().replace(/[^A-Z0-9/]/g, '')
+  if (typed) S.call = typed
+  saveSettings()
+  await prime()
+  applyFilter()
+  applyVolume()
+  startRun()
+  cv.focus()
+}
+
+/* --- wiring ----------------------------------------------------------- */
+$('bStart').addEventListener('click', begin)
+$('bAgain').addEventListener('click', () => { G = null; begin() })
+$('bMenu').addEventListener('click', () => { G = null; showView('vTitle'); $('ctl').classList.add('hide'); syncUI() })
+$('bTest').addEventListener('click', async () => {
+  const ctx = await prime()
+  if (!ctx) return
+  applyVolume()
+  const tx = sendCW('V', S.toneHz, 18, ctx, A.sigGain)
+  live.push(tx)
+})
+$('bResume').addEventListener('click', resumeGame)
+$('bQuit').addEventListener('click', quitGame)
+$('bCQ').addEventListener('click', cq)
+$('bAgn').addEventListener('click', agn)
+$('bNet').addEventListener('click', net)
+$('bLog').addEventListener('click', logIt)
+$('bPause').addEventListener('click', pauseGame)
+$('dial').addEventListener('input', e => setDial(int(e.target.value)))
+$('width').addEventListener('input', e => setWidth(int(e.target.value)))
+$('dnC').addEventListener('click', () => setDial(dialHz - 10))
+$('upC').addEventListener('click', () => setDial(dialHz + 10))
+for (const id of ['tone', 'tone2']) {
+  const el = $(id); if (!el) continue
+  el.addEventListener('input', e => { S.toneHz = clamp(int(e.target.value), 300, 1000); applyFilter(); retune(); saveSettings(); syncUI() })
+}
+for (const id of ['vol', 'vol2']) {
+  const el = $(id); if (!el) continue
+  el.addEventListener('input', e => { S.volume = clamp(int(e.target.value), 0, 100); S.mute = false; applyVolume(); saveSettings(); syncUI() })
+}
+$('callIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); logIt() }
+})
+
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const tag = (e.target && e.target.tagName) || ''
+  const typing = tag === 'INPUT'
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    if (G && G.phase === 'play') { G.paused ? resumeGame() : pauseGame() }
+    return
+  }
+  if (e.key === 'Enter' && !typing) {
+    e.preventDefault()
+    if (!G) begin()
+    else if (G.phase === 'over') { G = null; begin() }
+    else if (G.paused) resumeGame()
+    else if (G.mode === 'idle') cq()
+    else logIt()
+    return
+  }
+  if (!G || G.paused || G.phase !== 'play') return
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setDial(dialHz - (e.shiftKey ? 50 : 10)); return }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setDial(dialHz + (e.shiftKey ? 50 : 10)); return }
+  if (e.key === '[') { e.preventDefault(); setWidth(S.width - 60); return }
+  if (e.key === ']') { e.preventDefault(); setWidth(S.width + 60); return }
+  if (typing) return
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); agn(); return }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); net(); return }
+  if (e.key === 'c' || e.key === 'C') { e.preventDefault(); cq(); return }
+  if (e.key === 'm' || e.key === 'M') { e.preventDefault(); S.mute = !S.mute; applyVolume(); saveSettings(); syncUI() }
+})
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G && !G.paused && G.phase === 'play') pauseGame()
+})
+
+/* Dragging across the panadapter tunes, which is how a phone gets a dial. */
+let drag = null
+cv.addEventListener('pointerdown', e => {
+  if (!G || G.phase !== 'play' || G.paused) return
+  const r = cv.getBoundingClientRect()
+  const y = (e.clientY - r.top) * (H / r.height)
+  if (y < FALL_TOP || y > FALL_TOP + FALL_H) return
+  drag = { x: e.clientX, d0: dialHz, scale: (SPAN_HZ / r.width) }
+  cv.setPointerCapture(e.pointerId)
+})
+cv.addEventListener('pointermove', e => {
+  if (!drag) return
+  setDial(drag.d0 - (e.clientX - drag.x) * drag.scale)
+})
+cv.addEventListener('pointerup', () => { drag = null })
+cv.addEventListener('pointercancel', () => { drag = null })
+
+showView('vTitle')
+syncUI()
+
+/* --- test seam -------------------------------------------------------- */
+window.__pileup = {
+  get G() { return G }, get S() { return S }, get hi() { return hi },
+  get dialHz() { return dialHz },
+  audioHzFor, gainFor, cwMs, matchesPartial, makeCall, prefixPool, buildRoster, pathS,
+  begin, start: startRun, cq, agn, net, log: logIt, pause: pauseGame, resume: resumeGame, quit: quitGame,
+  setDial, setWidth,
+  setSetting: (k, v) => { S[k] = v; applyFilter(); applyVolume(); saveSettings(); syncUI() },
+  type: v => { $('callIn').value = v },
+  calls: () => (G ? G.callers.map(c => c.call) : []),
+  offsets: () => (G ? G.callers.map(c => c.off) : []),
+  pitches: () => (G ? G.callers.map(c => Math.round(audioHzFor(c))) : []),
+  /* Put the dial exactly on a caller, by index, so a test can assert netting. */
+  netTo: i => { if (G && G.callers[i]) setDial(G.callers[i].off) },
+  /* Seed a deterministic pileup instead of whatever the roster drew. */
+  seed: list => {
+    if (!G) return
+    G.callers = list.map((c, i) => ({
+      id: G.nextId++, call: c.call, entity: c.entity || 'Test', rarity: c.rarity || 0,
+      S: c.S == null ? 6 : c.S, D: c.D || 5000, off: c.off || 0, wpm: c.wpm || 18,
+      serial: c.serial || 42, gain: null, tx: null, nextTx: 0, txEnds: 0, sent: 0,
+      gapMs: c.gapMs || between(PACE[S.pace].gap[0], PACE[S.pace].gap[1]),
+      agnSeen: 0, tag: false,
+    }))
+    G.mode = 'pileup'
+  },
+  step: ms => { for (let d = ms; d > 0; d -= 16) update(Math.min(16, d)) },
+  /* Render through an offline context so a test measures real samples. The
+   * whole point of this game is several signals at once, so the render builds
+   * the same bus/filter chain and lets the caller choose the filter width. */
+  renderPileup: async (stations, seconds, widthHz, toneHz) => {
+    const ctx = A.ctx || resume()
+    const off = new OfflineAudioContext(1, Math.ceil(ctx.sampleRate * seconds), ctx.sampleRate)
+    const master = off.createGain(); master.gain.value = 1
+    const filt = off.createBiquadFilter()
+    filt.type = 'bandpass'
+    filt.frequency.value = toneHz == null ? S.toneHz : toneHz
+    filt.Q.value = clamp((toneHz == null ? S.toneHz : toneHz) / Math.max(40, widthHz || 100000), 0.4, 14)
+    const bus = off.createGain(); bus.gain.value = 1
+    if (widthHz) { bus.connect(filt); filt.connect(master) } else { bus.connect(master) }
+    master.connect(off.destination)
+    for (const st of stations) {
+      const g = off.createGain()
+      g.gain.value = st.gain == null ? 1 : st.gain
+      g.connect(bus)
+      sendCW(st.text, st.hz, st.wpm || 18, off, g, st.at || 0)
+    }
+    const buf = await off.startRendering()
+    return Array.from(buf.getChannelData(0))
+  },
+  sampleRate: () => (A.ctx || resume()).sampleRate,
+}
+</script>
+</body>
+</html>

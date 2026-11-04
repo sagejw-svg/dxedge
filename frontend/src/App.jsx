@@ -32,6 +32,7 @@ import Invaders from './components/Invaders'
 import MorseInvaders from './components/MorseInvaders'
 import Skip from './components/Skip'
 import SpotChaser from './components/SpotChaser'
+import Pileup from './components/Pileup'
 import CraneCab from './components/CraneCab'
 import Delve from './components/Delve'
 import Emulators from './components/Emulators'
@@ -67,6 +68,7 @@ const TABS = [
   { id: 'morseinv', label: 'Morse Invaders' },
   { id: 'skip', label: 'Skip' },
   { id: 'spotchase', label: 'Spot Chaser' },
+  { id: 'pileup', label: 'Pileup' },
   { id: 'delve', label: 'Delve' },
   // Emulators
   { id: 'emulators', label: 'Emulators' },
@@ -123,6 +125,7 @@ const TAB_GROUPS = [
       { id: 'morseinv', label: 'Morse Invaders', icon: '〰️' },
       { id: 'skip', label: 'Skip', icon: '🌅' },
       { id: 'spotchase', label: 'Spot Chaser', icon: '📡' },
+      { id: 'pileup', label: 'Pileup', icon: '🗣' },
       { id: 'delve', label: 'Delve', icon: '🕯' },
     ],
   },
@@ -443,6 +446,7 @@ export default function App() {
           {tab === 'morseinv' && <MorseInvaders />}
           {tab === 'skip' && <Skip />}
           {tab === 'spotchase' && <SpotChaser />}
+          {tab === 'pileup' && <Pileup callsign={callsign} />}
           {tab === 'delve' && <Delve />}
           {tab === 'cranecab' && <CraneCab />}
           {tab === 'emulators' && <Emulators />}
