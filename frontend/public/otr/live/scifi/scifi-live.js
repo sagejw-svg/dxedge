@@ -480,6 +480,7 @@
   var LOCKS = ['prevBtn', 'backBtn', 'fwdBtn', 'skipBtn', 'linkBtn', 'randomBtn', 'moreRandom', 'dockSkip'];
   function lock() {
     document.documentElement.setAttribute('data-scifi-live', '1');
+    if (document.body) document.body.classList.add('otr-liveclock');
     LOCKS.forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
@@ -512,6 +513,11 @@
   }
   function unlock() {
     document.documentElement.removeAttribute('data-scifi-live');
+    if (document.body) document.body.classList.remove('otr-liveclock');
+    document.querySelectorAll('.livetip.lock').forEach(function (n) {
+      n.classList.remove('lock', 'showtip');
+      n.removeAttribute('title');
+    });
     LOCKS.forEach(function (id) {
       var el = document.getElementById(id);
       if (!el || !el.__sfSaved) return;
@@ -719,6 +725,8 @@
     want = false;
     loadedKey = '';
     unlock();
+    var s = window.__otr && __otr.state;
+    if (s && s.network === 'scifi') s.network = null;
     if (audioEl) {
       audioEl.loop = false;
       bumpSuppress();

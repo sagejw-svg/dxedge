@@ -51,7 +51,7 @@
   var BREAK_MIN = 18, IDENT = '', UPNEXT = {}, PACK = null;
   var booted = false, fail = null, clockMs = null, timer = null, obs = null;
   var state = {
-    started: false, userPaused: true, loadedKey: null, hold: false,
+    started: false, userPaused: true, muted: false, loadedKey: null, hold: false,
     err: false, want: 0, lineupKey: '', mediaKey: '',
     intros: {}, introDur: {}, asked: {}, hbAt: 0
   };
@@ -520,7 +520,9 @@
       return;
     }
     audio.src = url;
-    try { audio.load(); } catch (e) {}
+    try { audio.muted = !!state.muted; } catch (e) {}
+    try { audio.load(); } catch (e2) {}
+    try { audio.muted = !!state.muted; } catch (e3) {}
   }
   function follow(){
     if (!booted || !audio || !state.started || state.userPaused) return;
@@ -544,28 +546,52 @@
       var title = a.kind === 'break' ? 'Station break' : (niceTitle(a.title) || a.show || 'Listenotr Radio');
       var artist = a.kind === 'break' ? 'Listenotr Radio' : (a.show || 'Listenotr Radio');
       navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: artist, album: 'Listenotr Radio' });
-      navigator.mediaSession.setActionHandler('play', function(){ userPlay(); });
-      navigator.mediaSession.setActionHandler('pause', function(){ userPause(); });
-      ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'].forEach(function(name){
-        try { navigator.mediaSession.setActionHandler(name, null); } catch (e) {}
+      navigator.mediaSession.setActionHandler('play', function(){
+        if (!state.started || state.userPaused) userPlay(); else setMuted(false);
       });
+      navigator.mediaSession.setActionHandler('pause', function(){
+        if (state.started && !state.userPaused) setMuted(true);
+      });
+      // Empty handlers, not null: null lets some browsers seek the element.
+      ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'].forEach(function(name){
+        try { navigator.mediaSession.setActionHandler(name, function(){}); } catch (e) {}
+      });
+    } catch (e) {}
+  }
+  function lockRate(){
+    if (!audio) return;
+    try {
+      if (audio.defaultPlaybackRate !== 1) audio.defaultPlaybackRate = 1;
+      if (audio.playbackRate !== 1) audio.playbackRate = 1;
+      audio.muted = !!state.muted;
     } catch (e) {}
   }
   function userPlay(){
     if (!booted || !audio) return;
     state.started = true;
     state.userPaused = false;
+    state.muted = false;
+    try { audio.muted = false; } catch (e) {}
+    lockRate();
     state.loadedKey = null;
     state.hold = false;
     follow();
     render();
   }
+  // Leaving the station (another card, or a host that stops the player). Not a
+  // listener control: the button mutes, so the broadcast is never paused off the clock.
   function userPause(){
     state.userPaused = true;
     state.hold = false;
     try { if (audio) audio.pause(); } catch (e) {}
     render();
   }
+  function setMuted(on){
+    state.muted = !!on;
+    try { if (audio) audio.muted = state.muted; } catch (e) {}
+    render();
+  }
+  function toggleMute(){ setMuted(!state.muted); }
   function setVol(v){
     v = Math.max(0, Math.min(1, +v || 0));
     if (audio) audio.volume = v;
@@ -655,10 +681,10 @@
     var b = $('lrPlay');
     if (!b) return;
     var on = state.started && !state.userPaused;
-    var label = on ? 'Pause' : 'Listen';
+    var label = !on ? 'Listen' : (state.muted ? 'Unmute' : 'Mute');
     if (b.textContent !== label) b.textContent = label;
-    b.setAttribute('aria-label', on ? 'Pause' : 'Listen live');
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', !on ? 'Listen live' : (state.muted ? 'Unmute' : 'Mute'));
+    b.setAttribute('aria-pressed', state.muted ? 'true' : 'false');
     var air = $('lrAir');
     if (air) air.classList.toggle('live', on);
     var lamp = $('lrLamp');
@@ -681,12 +707,18 @@
     var frac = a.dur > 0 ? Math.max(0, Math.min(1, a.offset / a.dur)) : 0;
     var fill = $('lrFill');
     if (fill) fill.style.width = (frac * 100).toFixed(1) + '%';
+    var bar = $('lrBar');
+    if (bar) {
+      bar.setAttribute('aria-valuemax', String(Math.round(a.dur || 0)));
+      bar.setAttribute('aria-valuenow', String(Math.round(a.offset || 0)));
+    }
     text('lrLeft', a.kind === 'break' ? (fmt(a.dur - a.offset) + ' until the next show') : (fmt(a.dur - a.offset) + ' left'));
     var when = a.nextShow ? (a.nextIsTomorrow ? '12:00 AM' : clock12((a.nextStart || 0) / 60)) : '';
     text('lrNext', a.nextShow ? (a.nextShow + ' · ' + when) : '—');
     text('lrNextEp', a.nextTitle ? niceTitle(a.nextTitle) : '');
     var st = '';
-    if (state.started && state.userPaused) st = 'Paused. Play rejoins the broadcast, live.';
+    if (state.started && state.userPaused) st = 'Stopped. Listen rejoins the broadcast, live.';
+    else if (state.started && state.muted) st = 'Muted. The broadcast stays on the clock.';
     else if (!state.started) st = 'Press Listen. You join whatever is on at this moment.';
     else if (state.err) st = 'This episode is slow to answer. The clock has not moved.';
     text('lrStatus', st);
@@ -781,7 +813,7 @@
     '#otr-live .lr-show{font-size:22px;color:#fff;font-weight:600;line-height:1.3;margin-top:4px;}',
     '#otr-live .lr-ep{color:#ffd08a;font-size:15px;line-height:1.4;margin-top:2px;}',
     '#otr-live .lr-meta{color:#7c7c7c;font-size:12px;margin-top:4px;}',
-    '#otr-live .lr-bar{height:6px;border-radius:3px;background:#1c1c1c;margin-top:12px;pointer-events:none;}',
+    '#otr-live .lr-bar{height:6px;border-radius:3px;background:#1c1c1c;margin-top:12px;pointer-events:none;cursor:default;touch-action:none;}',
     '#otr-live .lr-bar i{display:block;height:100%;width:0;background:#ffb347;border-radius:3px;}',
     '#otr-live .lr-left{color:#a6a6a6;font-size:12px;margin-top:4px;font-variant-numeric:tabular-nums;}',
     '#otr-live .lr-status{color:#ffd08a;font-size:12.5px;margin-top:8px;min-height:1.2em;}',
@@ -823,7 +855,7 @@
     '<div id="lrLive" aria-live="polite"><div class="lr-show" id="lrShow">Tuning the lineup…</div>',
     '<div class="lr-ep" id="lrEp"></div></div>',
     '<div class="lr-meta" id="lrMeta"></div>',
-    '<div class="lr-bar" id="lrBar" aria-hidden="true"><i id="lrFill"></i></div>',
+    '<div class="lr-bar" id="lrBar" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-label="Elapsed. The broadcast stays on the clock."><i id="lrFill"></i></div>',
     '<div class="lr-left" id="lrLeft"></div>',
     '<div class="lr-status" id="lrStatus"></div>',
     '<div class="lr-k">Up next</div><div class="lr-next" id="lrNext"></div><div class="lr-next-ep" id="lrNextEp"></div>',
@@ -853,15 +885,31 @@
     $('lrVol').value = String(saved);
     $('lrVol').addEventListener('input', function(){ setVol(+this.value); });
     $('lrPlay').addEventListener('click', function(){
-      if (state.started && !state.userPaused) userPause(); else userPlay();
+      if (!state.started || state.userPaused) userPlay(); else toggleMute();
     });
+    var elapsed = $('lrBar');
+    if (elapsed) {
+      ['click', 'pointerdown', 'mousedown', 'dragstart', 'touchstart'].forEach(function (evName) {
+        elapsed.addEventListener(evName, function (ev) { ev.preventDefault(); ev.stopPropagation(); });
+      });
+    }
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+      if (!state.started || state.userPaused) return;
+      if (window.__otr && window.__otr.state && window.__otr.state.network !== 'listenotr') return;
+      ev.preventDefault();
+      ev.stopPropagation();
+    }, true);
     $('lrShare').addEventListener('click', onShare);
     $('lrLink').value = shareUrl();
-    audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('loadedmetadata', function(){ lockRate(); onMeta(); });
+    audio.addEventListener('play', lockRate);
+    audio.addEventListener('playing', lockRate);
+    audio.addEventListener('ratechange', lockRate);
     audio.addEventListener('ended', function(){ if (!state.userPaused) hold(); });
     audio.addEventListener('error', onErr);
     var foot = $('lrFoot');
-    foot.appendChild(document.createTextNode('Play and volume only. The clock chooses the show, and there is no way to skip ahead. Everyone listening is on this same moment. '));
+    foot.appendChild(document.createTextNode('Listen and volume only. Mute keeps your place on the clock. There is no pause and no way to skip ahead. Everyone listening is on this same moment. '));
     var link = document.createElement('a');
     link.href = '/otr/';
     link.textContent = 'Full player';
@@ -932,12 +980,16 @@
     play: function(){ userPlay(); },
     pause: function(){ userPause(); },
     paused: function(){ return !state.started || state.userPaused; },
+    mute: function(on){ if (arguments.length) setMuted(!!on); else toggleMute(); return !!state.muted; },
+    muted: function(){ return !!state.muted; },
     volume: function(v){ if (arguments.length) setVol(v); return audio ? audio.volume : 0; },
     audio: function(){
       return {
         src: audio ? (audio.currentSrc || audio.src || '') : '',
         time: audio ? audio.currentTime : 0,
         paused: audio ? audio.paused : true,
+        muted: audio ? audio.muted : false,
+        rate: audio ? audio.playbackRate : 1,
         controls: audio ? audio.controls : false,
         duration: audio && isFinite(audio.duration) ? audio.duration : null
       };
