@@ -478,6 +478,11 @@
   .tr-slide, .ph-slide, .rhum-slide { display: grid; grid-template-columns: 5.2em minmax(0, 1fr) 3.2em; }
   .tr-slide > :last-child, .ph-slide > :last-child, .rhum-slide > :last-child { text-align: right; min-width: 0; }
   .hep-sliders label { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); }
+  /* graphics 4 Nov: each track fader reads its value in a window under its name (the mix strips' layout),
+     so the fader keeps its full length. The name is the label's text node, so it fills row 1 by itself. */
+  .hep-sliders label { grid-template-rows: auto auto; column-gap: 8px; row-gap: 1px; align-content: center; }
+  .hep-sliders label input { grid-area: 1 / 2 / 3 / 3; width: auto; }
+  .hep-sliders .fread { grid-area: 2 / 1; justify-self: start; min-width: calc(7ch + 12px); padding: 0 5px; line-height: 13px; }
   body[data-dev="heptode"] #heptodeRoot .mod { background: #161310; border-color: #3a2a22; }
   body[data-dev="heptode"] #heptodeRoot h3 { color: #f3e6d8; letter-spacing: 1.6px; }
   body[data-dev="heptode"] #heptodeRoot .chip[aria-pressed="true"] { background: #e7c4a8; border-color: #e7c4a8; color: #2a140c; }
@@ -641,10 +646,7 @@
      small recessed amber window, the deck's readout finish. A value hook paints it on every write
      (a drag, a project, a song, the engine's sync), so no caller has to remember to. The window is
      hidden from screen readers; the fader carries the same text as aria-valuetext. */
-  .fread { flex: 0 0 auto; box-sizing: border-box; min-width: 7.4ch; padding: 2px 5px; border: 1px solid #000; border-radius: 3px;
-    background: linear-gradient(180deg, #050403, #0d0a06); box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 10px rgba(255,150,40,0.05), 0 1px 0 rgba(255,236,210,0.08);
-    color: var(--amber2); text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 10px; line-height: 14px; letter-spacing: 0;
-    text-transform: none; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  /* the window itself (.fread) lives in desk.css since 4 Nov, so Gleam's own page draws it too */
   .mixrow .fread, #mixBus .fread { min-width: calc(7ch + 12px); }
   .deck .fread { font-size: 11px; line-height: 18px; padding: 3px 9px; border-radius: 4px; min-width: calc(4ch + 20px); text-shadow: 0 0 6px rgba(255,170,60,0.45); }
   .fname { white-space: nowrap; }
@@ -687,7 +689,7 @@
   .stripcol .sl { flex: 0 0 auto; font-size: 9px; line-height: 1; letter-spacing: 0.4px; color: #d2d2d2; text-align: center; }
   .volab { display: inline-flex; align-items: center; gap: 6px; color: #c8c8c8; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
   .volab input { width: 120px; accent-color: var(--amber); }
-  #mastVolV { color: var(--amber2); min-width: 3em; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+  #mastVolV { min-width: calc(4ch + 12px); }
   .strip .thumb { position: absolute; left: 2px; right: 2px; height: 14px; border-radius: 4px; background: linear-gradient(180deg, #4a3a2a, #1e140c); border: 1px solid #6a5238; box-shadow: 0 0 6px rgba(255,179,71,0.25); }
   .keyswrap { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
   .keys { position: relative; height: var(--kb-h); touch-action: none; user-select: none; }
@@ -1067,7 +1069,7 @@
       <button class="btn small" id="undoBtn" type="button" title="Undo the last change on this device. Ctrl+Z or Cmd+Z does the same.">undo</button>
       <button class="btn small" id="initBtn" type="button" title="Reset this device to its Init patch.">init</button>
       <button class="btn small" id="delP" hidden>delete</button>
-      <label class="volab" title="Master volume for everything in the rack. It is not stored in a patch.">vol <input id="mastVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><b id="mastVolV">100%</b></label>
+      <label class="volab" title="Master volume for everything in the rack. It is not stored in a patch.">vol <input id="mastVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><output id="mastVolV" class="fread" aria-hidden="true">100%</output></label>
       <button class="btn small" id="safeLim" type="button" aria-pressed="false" title="Safety limiter on the master, after the mix. Off leaves the sound exactly as it was.">limit</button>
       <span class="mastrec" id="mastRecWrap">
         <button type="button" class="btn small rec-master" id="mastRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV named for this device, or rack when several are playing.">&#9679; rec</button>
@@ -1615,6 +1617,7 @@
 
 <script type="module">
 import { makeKnob } from './knob.js';
+import { FREAD_FMT, hookFader } from './fread.js';
 import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
 import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz, springToneHz } from './rack.js';
 import { paintTubeState, paintTubeShow, fitCanvas, TUBE_LOOKS, LOOK_BY } from './tubepaint.js';
@@ -1775,8 +1778,6 @@ function setMasterVol(v, persist) {
   masterVol = v;
   const slider = $('mastVol');
   if (slider && slider.value !== String(v)) slider.value = String(v);
-  const lab = $('mastVolV');
-  if (lab) lab.textContent = Math.round(v * 100) + '%';
   if (persist) { try { localStorage.setItem(VOL_KEY, String(v)); } catch (e) {} }
   if (E && E.master) E.master.gain.value = v;
   return v;
@@ -2145,31 +2146,15 @@ MIX_ROWS.forEach(([id, s]) => {
 ['mixRoom', 'mixDelay', 'mixFb'].forEach(id => $(id).addEventListener('input', pushBus));
 // Fader readouts (graphics, 2 Nov). Each mix fader and the deck's tempo fader paints its value into the
 // <output> beside it and into aria-valuetext. The hook sits on the input's own value setter, so a drag, a
-// project, a song or syncHostUI all repaint it with no change at the callers. Display only.
-const FREAD_FMT = {
-  lvl: v => { if (v <= 0.0005) return 'off'; const d = 20 * Math.log10(v); return (Math.abs(d) < 0.05 ? '0.0' : d > -10 ? d.toFixed(1) : String(Math.round(d))) + ' dB'; },
-  pan: v => Math.abs(v) < 0.005 ? 'C' : (v < 0 ? 'L' : 'R') + Math.round(Math.abs(v) * 100),
-  pct: v => Math.round(v * 100) + '%',
-  sec: v => v.toFixed(2) + ' s',
-  ms: v => v < 0.9995 ? Math.round(v * 1000) + ' ms' : v.toFixed(2) + ' s',
-  tempo: v => Math.round(v) + '%',
-};
-const FREAD_VALUE = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-function hookFader(inp, out, fmt) {
-  if (!inp || !out) return;
-  let last = null;
-  const paint = () => { const t = fmt(+FREAD_VALUE.get.call(inp)); if (t === last) return; last = t; out.textContent = t; inp.setAttribute('aria-valuetext', t); };
-  Object.defineProperty(inp, 'value', { configurable: true, enumerable: true,
-    get() { return FREAD_VALUE.get.call(this); }, set(v) { FREAD_VALUE.set.call(this, v); paint(); } });
-  inp.addEventListener('input', paint); inp.addEventListener('change', paint);
-  paint();
-}
+// project, a song or syncHostUI all repaint it with no change at the callers. Display only. The hook and
+// the formats live in fread.js since 4 Nov (Heptode, Gleam and Resnatron use them too); the header VOL joins here.
 MIX_ROWS.forEach(([, s]) => [['Lvl', FREAD_FMT.lvl], ['Pan', FREAD_FMT.pan], ['Rev', FREAD_FMT.pct], ['Dly', FREAD_FMT.pct]]
   .forEach(([k, f]) => hookFader($('mix' + s + k), $('mix' + s + k + 'V'), f)));
 hookFader($('mixRoom'), $('mixRoomV'), FREAD_FMT.sec);
 hookFader($('mixDelay'), $('mixDelayV'), FREAD_FMT.ms);
 hookFader($('mixFb'), $('mixFbV'), FREAD_FMT.pct);
 hookFader($('tempoIn'), $('tempoV'), FREAD_FMT.tempo);
+hookFader($('mastVol'), $('mastVolV'), FREAD_FMT.pct);
 $('mixClear').addEventListener('click', () => setMixArmed([]));
 $('mixView').addEventListener('click', () => {
   const on = document.body.dataset.mixdesk !== '1';

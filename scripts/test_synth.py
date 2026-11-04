@@ -5089,6 +5089,117 @@ with sync_playwright() as pw:
     ck("Ms. no page errors (phone mix strips)", not mserr, mserr)
     msc.close()
 
+    # ---------------------------------------------------------------- Rd. fader readouts, the rest of the rack (graphics, 4 Nov)
+    # The 2 Nov windows (fread.js since 4 Nov) on the last faders that showed their value only by the cap: Heptode's tempo,
+    # morph and 14 track faders, Gleam's rate, depth, seed and level (on the rack and on its own page), Resnatron's level and
+    # the header VOL. Each window is an aria-hidden <output class="fread"> right after its fader, with the same text as the
+    # fader's aria-valuetext, repainted on any write (a drag, a track change, a patch). Track faders keep their length: the
+    # window sits under the name, as in a mix strip.
+    def rd_fmt(f, v):
+        if f == "pct": return f"{round(v * 100)}%"
+        if f == "lvl":
+            if v <= 0.0005: return "off"
+            d = 20 * math.log10(v)
+            return ("0.0" if abs(d) < 0.05 else f"{d:.1f}" if d > -10 else str(round(d))) + " dB"
+        if f == "ms": return f"{round(v * 1000)} ms" if v < 0.9995 else f"{v:.2f} s"
+        if f == "hz": return f"{round(v)} Hz" if v < 999.5 else (f"{v / 1000:.1f}" if v < 9995 else str(round(v / 1000))) + " kHz"
+        if f == "bpm": return f"{round(v)} BPM"
+        if f == "rate": return (f"{v:.2f}" if v < 9.995 else f"{v:.1f}") + "/s"
+        if f == "int": return str(round(v))
+        if f == "morph": return "A" if v <= 0.005 else "B" if v >= 0.995 else f"{round(v * 100)}% B"
+        return None
+    RD_F = {"hepTempo": "bpm", "hepMorph": "morph", "wave": "pct", "fm": "pct", "cutoff": "hz", "res": "pct", "drive": "pct", "a": "ms", "d": "ms", "s": "pct",
+            "r": "ms", "fenv": "pct", "delay": "pct", "reverb": "pct", "chorus": "pct", "level": "lvl", "gleamRate": "rate", "gleamDepth": "pct",
+            "gleamSeed": "int", "gleamLevel": "lvl", "rnLevel": "lvl", "mastVol": "pct"}
+    RD_MEAS = """(sel) => [...document.querySelectorAll(sel)].map(i => { const o = i.nextElementSibling, ok = !!o && o.tagName === 'OUTPUT' && o.classList.contains('fread');
+        const c = ok ? getComputedStyle(o) : null, r = ok ? o.getBoundingClientRect() : null, lab = i.closest('label'), lr = lab ? lab.getBoundingClientRect() : null, ir = i.getBoundingClientRect();
+        return { k: i.id || i.dataset.k, v: +i.value, ok, t: ok ? o.textContent : null, vt: i.getAttribute('aria-valuetext'), hidden: ok && o.getAttribute('aria-hidden'),
+          color: ok ? c.color : '', bg: ok ? c.backgroundImage : '', anim: ok ? c.animationName : '', tr: ok ? (parseFloat(c.transitionDuration) || 0) : 0,
+          clip: ok && o.scrollWidth > o.clientWidth + 1, inLab: ok && lr && r.left >= lr.left - 1 && r.right <= lr.right + 1 && r.top >= lr.top - 1 && r.bottom <= lr.bottom + 1,
+          w: r ? r.width : 0, iw: ir.width, ih: ir.height, iIn: lr ? ir.left >= lr.left - 1 && ir.right <= lr.right + 1 : true }; })"""
+    def rd_bad(rows): return [(r["k"], r["t"], r["vt"], rd_fmt(RD_F.get(r["k"]), r["v"])) for r in rows
+                              if not r["ok"] or r["hidden"] != "true" or r["t"] != r["vt"] or r["t"] != rd_fmt(RD_F.get(r["k"]), r["v"])]
+    RD_SEL = {"heptode": "#heptodeRoot input[type=range]", "gleam": "#gleamBar input[type=range]", "resnatron": "#rnLevel"}
+    rdx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); rdp = rdx.new_page(); rderr = []
+    rdp.on("pageerror", lambda e: rderr.append(str(e)))
+    rdp.goto(BASE); rdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rd = {"vol": rdp.evaluate(RD_MEAS, "#mastVol")}
+    for d_, sel in RD_SEL.items():
+        rdp.evaluate(f"document.querySelector('.devbtn[data-d=\"{d_}\"]').click()"); rdp.wait_for_timeout(350)
+        rd[d_] = rdp.evaluate(RD_MEAS, sel)
+    rd_all = [r for v in rd.values() for r in v]
+    rd_con = [_ob_con(r["color"], r["bg"]) for r in rd_all if r["ok"]] or [0]
+    ck(f"Rd. all {len(rd_all)} faders (Heptode {len(rd['heptode'])}, Gleam {len(rd['gleam'])}, Resnatron level, header VOL) have a readout window (an aria-hidden <output>) that reads the fader's value, also as aria-valuetext",
+       (len(rd["heptode"]), len(rd["gleam"]), len(rd["resnatron"]), len(rd["vol"])) == (16, 4, 1, 1) and not rd_bad(rd_all), rd_bad(rd_all)[:6])
+    ck(f"Rd. the windows are painted, nothing clipped or outside its label, text {min(rd_con):.1f}:1 or more on the window; reduced motion: no animation or fade",
+       all("gradient" in r["bg"] and not r["clip"] and r["inLab"] and r["iIn"] and r["w"] >= 30 and r["anim"] == "none" and r["tr"] == 0 for r in rd_all) and min(rd_con) >= 4.5,
+       [(r["k"], r["w"], r["clip"], r["inLab"], r["iIn"], r["anim"]) for r in rd_all if not ("gradient" in r["bg"] and not r["clip"] and r["inLab"] and r["iIn"] and r["w"] >= 30)][:6])
+    hep_tr = [r for r in rd["heptode"] if r["k"] not in ("hepTempo", "hepMorph")]
+    ck(f"Rd. at 1366 px Heptode's track faders keep their length ({min(r['iw'] for r in hep_tr):.0f} px, was 155; the window sits under the name), Gleam's {min(r['iw'] for r in rd['gleam']):.0f} px or more",
+       min(r["iw"] for r in hep_tr) >= 145 and min(r["iw"] for r in rd["gleam"]) >= 180, ([r["iw"] for r in hep_tr], [r["iw"] for r in rd["gleam"]]))
+    # a drag, then a write with no input event (the track chips call sync(), which only sets .value)
+    rdp.evaluate("document.querySelector('.devbtn[data-d=\"heptode\"]').click()"); rdp.wait_for_timeout(300)
+    rdp.evaluate("""() => { const set = (sel, v) => { const i = document.querySelector(sel); i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); };
+      set('#hepSliders input[data-k="cutoff"]', 640); set('#hepSliders input[data-k="a"]', 1.2); set('#hepSliders input[data-k="level"]', 0.5);
+      set('#hepTempo', 90); set('#hepSliders input[data-k="res"]', 0.4); }""")
+    rd1 = {r["k"]: r["t"] for r in rdp.evaluate(RD_MEAS, RD_SEL["heptode"])}
+    rdp.evaluate("""() => { const i = document.querySelector('#hepSliders input[data-k="cutoff"]'); i.value = 2400; i.dispatchEvent(new Event('input', { bubbles: true })); }""")
+    rd1b = {r["k"]: r["t"] for r in rdp.evaluate(RD_MEAS, RD_SEL["heptode"])}
+    want = {"cutoff": "640 Hz", "a": "1.20 s", "level": "-6.0 dB", "hepTempo": "90 BPM", "res": "40%"}
+    ck("Rd. moving a Heptode fader updates its window (640 Hz then 2.4 kHz, 1.20 s, -6.0 dB, 90 BPM, 40%)",
+       all(rd1[k] == v for k, v in want.items()) and rd1b["cutoff"] == "2.4 kHz", ({k: rd1[k] for k in want}, rd1b["cutoff"]))
+    rdp.evaluate("document.querySelectorAll('#hepChannels button')[1].click()"); rdp.wait_for_timeout(120)
+    rd2 = rdp.evaluate(RD_MEAS, RD_SEL["heptode"])
+    rdp.evaluate("document.querySelectorAll('#hepChannels button')[0].click()"); rdp.wait_for_timeout(120)
+    rd3 = {r["k"]: r["t"] for r in rdp.evaluate(RD_MEAS, RD_SEL["heptode"])}
+    rdp.evaluate("__synth.setMasterVol(0.42)"); rdp.wait_for_timeout(60)
+    rdv = rdp.evaluate(RD_MEAS, "#mastVol")[0]
+    ck("Rd. a value set with no input event shows too (track 2's sliders after its chip, track 1's 2.4 kHz back, the VOL at 42% from setMasterVol)",
+       not rd_bad(rd2) and rd3["cutoff"] == "2.4 kHz" and rdv["t"] == "42%" and not rd_bad([rdv]), (rd_bad(rd2)[:4], rd3["cutoff"], rdv["t"]))
+    rdp.evaluate("__synth.setMasterVol(1)")
+    rdp.evaluate("document.querySelector('.devbtn[data-d=\"gleam\"]').click()"); rdp.wait_for_timeout(300)
+    rdp.evaluate("""() => { const set = (id, v) => { const i = document.getElementById(id); i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); };
+      set('gleamRate', 2.5); set('gleamSeed', 4242); }""")
+    rdg = {r["k"]: r["t"] for r in rdp.evaluate(RD_MEAS, RD_SEL["gleam"])}
+    ck("Rd. moving a Gleam fader updates its window (2.50/s, seed 4242)", (rdg["gleamRate"], rdg["gleamSeed"]) == ("2.50/s", "4242"), rdg)
+    # rack-wide: no fader on any device's panel shows its value only by the cap any more
+    rd_bare = {}
+    for d_ in rdp.evaluate("[...document.querySelectorAll('.devbtn')].map(b => b.dataset.d)"):
+        rdp.evaluate(f"document.querySelector('.devbtn[data-d=\"{d_}\"]').click()"); rdp.wait_for_timeout(250)
+        bare = rdp.evaluate("""() => [...document.querySelectorAll('.panel input[type=range]')].filter(i => i.offsetParent && !i.closest('#mHost'))
+          .filter(i => { const box = i.closest('label') || i.parentElement; return !/[0-9]/.test(box.textContent) && !i.getAttribute('aria-valuetext'); })
+          .map(i => i.id || i.dataset.k || i.getAttribute('aria-label'))""")
+        if bare: rd_bare[d_] = bare
+    ck("Rd. on all 18 devices every panel fader shows a number beside it (none reads only by its cap)", not rd_bare, rd_bare)
+    ck("Rd. no page errors (fader readouts, rest of the rack, desktop)", not rderr, rderr)
+    rdx.close()
+    rdm = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rdmp = rdm.new_page(); rdmerr = []
+    rdmp.on("pageerror", lambda e: rdmerr.append(str(e)))
+    rdmp.goto(BASE); rdmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rdh = rdmp.evaluate("() => Math.round(document.querySelector('header').getBoundingClientRect().height)")
+    rdm_rows, rdm_sw = [], []
+    for d_, tab in (("heptode", "play"), ("heptode", "tracks"), ("gleam", "play"), ("resnatron", "play")):
+        rdmp.evaluate(f"document.querySelector('.devbtn[data-d=\"{d_}\"]').click()"); rdmp.wait_for_timeout(300)
+        rdmp.evaluate(f"document.querySelector('.tabs [data-go=\"{tab}\"]').click()"); rdmp.wait_for_timeout(250)
+        sel = "#hepTempo, #hepMorph" if tab == "play" and d_ == "heptode" else "#hepSliders input" if d_ == "heptode" else RD_SEL[d_]
+        rdm_rows += [dict(r, dev=d_) for r in rdmp.evaluate(RD_MEAS, sel)]
+        rdm_sw.append(rdmp.evaluate("document.documentElement.scrollWidth - innerWidth"))
+    rdm_rows += rdmp.evaluate(RD_MEAS, "#mastVol")
+    rdm_bad = [(r["k"], r["ih"], r["iw"], r["clip"], r["inLab"], r["iIn"]) for r in rdm_rows if r["ih"] < 44 or r["iw"] < 100 or r["clip"] or not r["inLab"] or not r["iIn"]]
+    ck(f"Rd. 375 px: {len(rdm_rows)} faders 44 px tall and {min(r['iw'] for r in rdm_rows):.0f} px wide or more with their windows inside the label, header {rdh} px (was 200), no sideways scroll",
+       len(rdm_rows) == 22 and not rdm_bad and not rd_bad(rdm_rows) and rdh <= 200 and max(rdm_sw) <= 0, (rdm_bad[:5], rd_bad(rdm_rows)[:4], rdh, rdm_sw))
+    rdmp.goto(BASE + "gleam/"); rdmp.wait_for_timeout(2500)
+    rdgp = {}
+    for w_ in (320, 375):
+        rdmp.set_viewport_size({"width": w_, "height": 667}); rdmp.wait_for_timeout(250)
+        rdgp[w_] = (rdmp.evaluate(RD_MEAS, "#gleamBar input[type=range]"), rdmp.evaluate("document.documentElement.scrollWidth - innerWidth"))
+    rdgp_con = [_ob_con(r["color"], r["bg"]) for v in rdgp.values() for r in v[0] if r["ok"]] or [0]
+    ck(f"Rd. Gleam's own page draws the same windows (desk.css), text {min(rdgp_con):.1f}:1, no sideways scroll at 320 and 375 px",
+       all(len(v[0]) == 4 and not rd_bad(v[0]) and all("gradient" in r["bg"] and r["iIn"] for r in v[0]) and v[1] <= 0 for v in rdgp.values()) and min(rdgp_con) >= 4.5,
+       {w_: (rd_bad(v[0])[:3], [r["iIn"] for r in v[0]], v[1]) for w_, v in rdgp.items()})
+    ck("Rd. no page errors (fader readouts, rest of the rack, phone and Gleam's page)", not rdmerr, rdmerr)
+    rdm.close()
+
     # ---------------------------------------------------------------- P. song library (tonejs midi, transport, routing, Halloween)
     pg.wait_for_function("() => __synth.player && __synth.player().ready()", timeout=10000)
     WANT = ["beethoven-sym5-i", "bach-toccata-fugue-dm", "joplin-maple-leaf-rag", "joplin-the-entertainer",

@@ -69,6 +69,7 @@ task can read it).
 | `frontend/public/synth/filtplot.js`, `filtplot.worker.js` | The filter response plot: a worker runs a silent copy of the `filament` processor (the worklet file evaluated with stand-ins for the AudioWorklet globals), rings its filters with a small impulse through `fresp()` and reads the response with a Goertzel pass; the page draws it |
 | `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent`; hosts the mixer, transport and device facades. The master gain feeds `makeMasterFx` after the mixer (a bypassed offline render skips the worklet; `masterFx: false` wires the gain straight through) |
 | `frontend/public/synth/masterfx.js`, `master.worklet.js`, `masterui.js` | Master bus after the mixer and the output chain: tempo-syncable stereo delay, Freeverb-style reverb, bus compressor/limiter. Each bypasses on its own. State is `filament_master` in localStorage, not a device patch |
+| `frontend/public/synth/fread.js` | Fader readouts (display only): `hookFader` (hooks an input's value setter so every write repaints its window and aria-valuetext), `addFread` (makes the window after a fader) and the formats `FREAD_FMT`. Used by the mix desk, the deck tempo, the header VOL, Heptode, Gleam and Resnatron; the `.fread` window style is in `desk.css` |
 | `frontend/public/synth/wav.js` | 24-bit / 44.1 kHz stereo WAV: live record of the master, and offline render of N seconds (10 minute cap) |
 | `frontend/public/synth/patches.js` | Filament patch schema v1, defaults, `normalize`, the factory set, the mod matrix's source and destination lists (`MOD_SRC`, `MOD_DST`; the worklet carries the same lists and the suite checks they match) |
 | `frontend/public/synth/smf.js` | Our own Standard MIDI File reader and writer (pure functions): `readSMF`, `songOf` (tempo map to seconds, multi-channel tracks split per channel, format 2 played in sequence), `writeSMF` (format 1, 480 ppq), `bytesOf` |
@@ -1363,9 +1364,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (3 Nov): 1. readouts for the faders still without one (Heptode's track, tempo and morph sliders; the header VOL
-readout is bare text); 2. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes; the patch menu); 3. rail plate
-titles at 761 to 959 px; 4. Rhumbatron's cavity caption; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (4 Nov): 1. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes; the patch menu);
+2. rail plate titles at 761 to 959 px; 3. Rhumbatron's cavity caption; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1487,11 +1487,21 @@ titles at 761 to 959 px; 4. Rhumbatron's cavity caption; then the rest as listed
   contrast 4.6:1 on the panel, measured). Flex order moves only the chips, so the tab order is still level, pan, mute, solo, sends, arm
   (the chips now sit above the faders they follow in that order). Desktop strips unchanged (97 px, grid; the 1366 px page differs from
   main only at the tempo label, compared). 44 px targets, no sideways scroll at 320, 360, 375, 390, 600 and 760 px. New checks: Ms. (8).
+- [x] 4 Nov: fader readouts, the rest of the rack (the top item of 3 Nov). Measured before at 1366 px: 21 panel faders on three
+  devices had no number anywhere in their label and no aria-valuetext (Heptode 16: tempo, morph and the 14 track faders; Gleam 4:
+  rate, depth, seed, level; Resnatron's level), and the header VOL "100%" was bare amber text. Seen: Heptode's Tracks card was two
+  columns of bare caps. Now: every one of them reads its value in the mix desk's recessed amber window (tempo in BPM, morph as
+  A, B or "40% B", cutoff in Hz or kHz, envelope times in ms or s, levels in dB, the rest in percent, Gleam's rate per second and
+  its seed as a number); the header VOL is the same window. The hook and formats moved from index.html into `fread.js` and the
+  window style into `desk.css`, so Gleam's own page (/synth/gleam/) draws it too. Heptode's track faders and Gleam's four keep
+  their length: the window sits under the name, as in a mix strip (Heptode track faders 155 px at 1366 before and after, measured
+  in the screenshot run; a first try with the window at the right cut them to 92 px). Measured after: text 13.8:1 on the window;
+  on all 18 devices no panel fader is left without a number beside it; 375 px: all 22 faders 44 px tall and 100 px or wider,
+  header 200 px (unchanged), no sideways scroll on the rack or on Gleam's page at 320 and 375 px. Costs: Heptode's Tracks card
+  is about 45 px taller at 1366 px (289 to 334); on a 375 px phone Gleam's faders are 104 to 110 px (were 119 to 126) and
+  Heptode's track rows a few px taller. Display only, no audio change. New checks: Rd. (11).
 - [ ] Lattice and Mote use their own chip palettes (blue and cyan) beside the amber elsewhere (seen). A call
   for James whether that is per-device character or drift.
-- [ ] Faders have no fill: the cap is the readout. Sliders without a number beside them (Heptode's track sliders, Heptode
-  tempo and morph) show their value only by position (seen). 2 Nov: the mix desk and the deck tempo have windows now
-  (`hookFader` in index.html); the same hook and `.fread` window fit Heptode's. The header VOL "100%" is still bare text.
 - [ ] Rhumbatron, Trochotron and Phantastron slider cards are 228 px wide at 1366 px, so their faders are 81 to 100 px.
   A wide card (`data-wide`) for those sections would double them (measured). 1 Nov: the row fill now widens the card that ends
   each of those devices' rows (Rhumbatron's Body, Trochotron's Shape, Phantastron's Bends); the cards mid-row are unchanged.

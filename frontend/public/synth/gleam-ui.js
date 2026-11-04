@@ -9,6 +9,7 @@ import {
   GENERATORS, generatorPoint, generatorEvents,
 } from './gleam.js';
 import { createGleamFx } from './gleam-fx.js';
+import { FREAD_FMT, addFread } from './fread.js';
 
 const WORKLET = new URL('./gleam.worklet.js', import.meta.url).href;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -655,6 +656,10 @@ const CSS = `
 .gleam-bar select { max-width: 100%; }
 .gleam-bar label.grow { display: inline-flex; align-items: center; gap: 6px; color: #8a8a8a; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; flex: 1 1 140px; min-width: 0; }
 .gleam-bar input[type="range"] { flex: 1; min-width: 0; accent-color: #ffb347; }
+/* graphics 4 Nov: the readout window sits under the slider's name (the mix strips' layout), so the fader keeps its length */
+.gleam-bar label.grow:has(.fread) { display: inline-grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 6px; row-gap: 1px; align-content: center; }
+.gleam-bar label.grow .fread { grid-area: 2 / 1; justify-self: start; padding: 0 5px; line-height: 13px; min-width: calc(6ch + 12px); }
+.gleam-bar label.grow:has(.fread) input[type="range"] { grid-area: 1 / 2 / 3 / 3; width: auto; }
 .gleam-read { font-size: 11px; color: #ffb347; font-variant-numeric: tabular-nums; min-height: 1.2em; }
 .gleam-link { text-decoration: none; display: inline-flex; align-items: center; }
 @media (max-width: 760px) {
@@ -761,6 +766,9 @@ export function mountGleamPad(container, host, opts) {
   levelLab.className = 'grow';
   levelLab.innerHTML = 'level <input id="gleamLevel" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Gleam level">';
   bar.appendChild(levelLab);
+  // fader readouts (graphics, 4 Nov): the same recessed amber window as the mix desk
+  [['gleamRate', FREAD_FMT.rate], ['gleamDepth', FREAD_FMT.pct], ['gleamSeed', FREAD_FMT.int], ['gleamLevel', FREAD_FMT.lvl]]
+    .forEach(([id, f]) => addFread(bar.querySelector('#' + id), f));
 
   const pointers = new Map();
   const trails = new Map();

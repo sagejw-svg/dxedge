@@ -10,6 +10,7 @@ import {
 } from './heptode.js';
 import { scoreFromBytes, prepareScore } from './heptode-score.js';
 import { trackColor } from './heptode-family.js';
+import { FREAD_FMT, addFread } from './fread.js';
 import { createHeptodeEngine, postHeptode, renderHeptode, VOICES } from './heptode-dsp.js';
 
 const WORKLET = new URL('./heptode.worklet.js', import.meta.url).href;
@@ -177,21 +178,22 @@ function btn(id, text, cls) {
   return b;
 }
 
+// The last field picks the readout format (fread.js).
 const SLIDERS = [
-  ['wave', 'wave', 0, 1, 0.01],
-  ['fm', 'fm', 0, 1, 0.01],
-  ['cutoff', 'cutoff', 80, 14000, 1],
-  ['res', 'res', 0, 0.92, 0.01],
-  ['drive', 'drive', 0, 1, 0.01],
-  ['a', 'attack', 0.001, 2, 0.001],
-  ['d', 'decay', 0.001, 2, 0.001],
-  ['s', 'sustain', 0, 1, 0.01],
-  ['r', 'release', 0.001, 3, 0.001],
-  ['fenv', 'filter env', 0, 1, 0.01],
-  ['delay', 'delay', 0, 1, 0.01],
-  ['reverb', 'reverb', 0, 1, 0.01],
-  ['chorus', 'chorus', 0, 1, 0.01],
-  ['level', 'level', 0, 1, 0.01],
+  ['wave', 'wave', 0, 1, 0.01, 'pct'],
+  ['fm', 'fm', 0, 1, 0.01, 'pct'],
+  ['cutoff', 'cutoff', 80, 14000, 1, 'hz'],
+  ['res', 'res', 0, 0.92, 0.01, 'pct'],
+  ['drive', 'drive', 0, 1, 0.01, 'pct'],
+  ['a', 'attack', 0.001, 2, 0.001, 'ms'],
+  ['d', 'decay', 0.001, 2, 0.001, 'ms'],
+  ['s', 'sustain', 0, 1, 0.01, 'pct'],
+  ['r', 'release', 0.001, 3, 0.001, 'ms'],
+  ['fenv', 'filter env', 0, 1, 0.01, 'pct'],
+  ['delay', 'delay', 0, 1, 0.01, 'pct'],
+  ['reverb', 'reverb', 0, 1, 0.01, 'pct'],
+  ['chorus', 'chorus', 0, 1, 0.01, 'pct'],
+  ['level', 'level', 0, 1, 0.01, 'lvl'],
 ];
 
 export function mountHeptodePanel(container, hooks) {
@@ -236,6 +238,7 @@ export function mountHeptodePanel(container, hooks) {
   tempo.value = '120';
   tempo.setAttribute('aria-label', 'Tempo');
   tempoRow.appendChild(tempo);
+  addFread(tempo, FREAD_FMT.bpm);
   play.appendChild(tempoRow);
 
   const drop = document.createElement('div');
@@ -271,6 +274,7 @@ export function mountHeptodePanel(container, hooks) {
   morph.value = '0';
   morph.setAttribute('aria-label', 'Morph between stored sounds');
   morphLab.appendChild(morph);
+  addFread(morph, FREAD_FMT.morph);
   mut.appendChild(morphLab);
   play.appendChild(mut);
 
@@ -288,7 +292,7 @@ export function mountHeptodePanel(container, hooks) {
   const sliders = document.createElement('div');
   sliders.className = 'hep-sliders';
   sliders.id = 'hepSliders';
-  SLIDERS.forEach(([key, label, min, max, step]) => {
+  SLIDERS.forEach(([key, label, min, max, step, fmt]) => {
     const lab = document.createElement('label');
     lab.textContent = label;
     const input = document.createElement('input');
@@ -299,6 +303,7 @@ export function mountHeptodePanel(container, hooks) {
     input.dataset.k = key;
     input.setAttribute('aria-label', label);
     lab.appendChild(input);
+    addFread(input, FREAD_FMT[fmt], 'hepTrack-' + key + 'V');
     sliders.appendChild(lab);
   });
   tracks.appendChild(sliders);

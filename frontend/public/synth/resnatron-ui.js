@@ -2,6 +2,7 @@
 // Touch and mouse both go through pointer events.
 
 import { getDevice } from './device.js';
+import { FREAD_FMT, addFread } from './fread.js';
 import {
   RN_SPEC, RN_ORDER, RN_FACTORY, RN_DEFAULT, normalizeResnatron, shareOf,
 } from './resnatron.js';
@@ -114,6 +115,7 @@ export function mountResnatronPanel(container, hooks) {
   const level = el('input', { type: 'range', id: 'rnLevel', min: '0', max: '1', step: '0.01', 'aria-label': 'Level' });
   const levelLab = el('label', { class: 'rn-level' });
   levelLab.append(document.createTextNode('level '), level);
+  addFread(level, FREAD_FMT.lvl);   // graphics 4 Nov: the mix desk's readout window
   bar.append(link, unplug, levelLab);
   const starters = el('div', { class: 'rn-bar', id: 'rnStarters' });
   RN_FACTORY.forEach(fp => {

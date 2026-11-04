@@ -100,3 +100,11 @@ html[data-ui="xl"] .dial { width: 112px; height: 80px; }
   html[data-ui] .volab input,
   html[data-ui] #mastVol { min-height: 44px; height: 44px; }
 }
+
+/* Fader readout window (graphics, 2 Nov; moved here 4 Nov so Gleam's own page draws it too).
+   A small recessed amber window beside a fader, painted by fread.js. Hidden from screen readers;
+   the fader carries the same text as aria-valuetext. No animation, so nothing for reduced motion. */
+.fread { flex: 0 0 auto; box-sizing: border-box; min-width: 7.4ch; padding: 2px 5px; border: 1px solid #000; border-radius: 3px;
+  background: linear-gradient(180deg, #050403, #0d0a06); box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 10px rgba(255,150,40,0.05), 0 1px 0 rgba(255,236,210,0.08);
+  color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 10px; line-height: 14px; letter-spacing: 0;
+  text-transform: none; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
