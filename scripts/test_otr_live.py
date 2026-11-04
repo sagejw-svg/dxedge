@@ -16,7 +16,7 @@ CHROME = os.environ.get("OTR_CHROMIUM", "/opt/google/chrome/chrome")
 BASE = f"http://127.0.0.1:{PORT}"
 
 HOST_TEST = b"""<!doctype html><html><head><title>host</title></head><body>
-<script src="/otr/live/listenotr-radio.js?v=2"></script>
+<script src="/otr/live/listenotr-radio.js?v=3"></script>
 <script>document.addEventListener('DOMContentLoaded', function(){
   var d = document.createElement('div'); d.id = 'otr-live'; document.body.appendChild(d);
 });</script></body></html>"""
@@ -250,11 +250,22 @@ def main():
         pg.wait_for_function("() => { const t = __listenotr.audio().time; return t > 90 && t < 112; }", timeout=4000)
         ck("play rejoins live instead of resuming the paused spot", 90 < pg.evaluate("__listenotr.audio().time") < 112)
 
-        # The bar is not a seek control.
+        # The bar is an elapsed indicator, not a seek control.
+        bar_ui = pg.evaluate("""() => {
+          const bar = document.getElementById('lrBar');
+          return { tag: bar.tagName, role: bar.getAttribute('role'), pe: getComputedStyle(bar).pointerEvents };
+        }""")
+        ck("the live progress bar is a read-only elapsed indicator",
+           bar_ui["tag"] == "DIV" and bar_ui["role"] == "progressbar" and bar_ui["pe"] == "none", bar_ui)
         before = pg.evaluate("__listenotr.audio().time")
         pg.click("#lrBar", force=True)
-        pg.wait_for_timeout(200)
-        ck("clicking the progress bar does not seek", abs(pg.evaluate("__listenotr.audio().time") - before) < 2)
+        pg.keyboard.press("ArrowRight")
+        pg.keyboard.press("ArrowLeft")
+        pg.wait_for_timeout(300)
+        ck("clicking or arrow keys do not seek the live broadcast", abs(pg.evaluate("__listenotr.audio().time") - before) < 3)
+        pg.evaluate("document.querySelector('#lrAudio').currentTime = 4")
+        pg.wait_for_function("() => { const t = __listenotr.audio().time; return t > 90 && t < 112; }", timeout=3000)
+        ck("a seek from outside the bar is pulled back onto the clock", 90 < pg.evaluate("__listenotr.audio().time") < 112)
 
         pg.evaluate("__listenotr.volume(0.2)")
         ck("volume is the listener's own", abs(pg.evaluate("__listenotr.volume()") - 0.2) < 0.001)
@@ -336,13 +347,39 @@ def main():
               return out;
             }""", ids)
         basic.evaluate("document.getElementById('moreBtn').click()")
-        live_ui = shown(basic, ["prevBtn", "backBtn", "fwdBtn", "skipBtn", "rateRow", "linkBtn", "moreRandom", "sleepSel", "popBtn2", "vol", "playBtn"])
+        live_ui = shown(basic, ["prevBtn", "backBtn", "fwdBtn", "skipBtn", "rateRow", "linkBtn", "moreRandom", "sleepSel", "popBtn2", "vol", "playBtn", "bar"])
         live_ui["play"] = basic.evaluate("document.getElementById('playBtn').textContent")
         live_ui["locked"] = basic.evaluate("document.body.classList.contains('otr-liveclock')")
-        ck("Advanced live hides speed, skip, seek, surprise and copy-moment, and the button is Mute",
-           live_ui["locked"] and "Mute" in live_ui["play"] and "Pause" not in live_ui["play"]
-           and not live_ui["prevBtn"] and not live_ui["backBtn"] and not live_ui["fwdBtn"] and not live_ui["skipBtn"]
-           and not live_ui["rateRow"] and not live_ui["linkBtn"] and not live_ui["moreRandom"]
+        PHRASE = "Disabled in live listen mode"
+        live_ui["tips"] = basic.evaluate("""(phrase) => {
+          const ids = ['prevBtn','backBtn','fwdBtn','skipBtn','linkBtn','moreRandom','bar','rateSel'];
+          const out = {};
+          ids.forEach(id => {
+            const el = document.getElementById(id);
+            const wrap = el.closest('.livetip');
+            out[id] = {
+              shown: getComputedStyle(el).display !== 'none',
+              disabled: el.tagName === 'DIV' ? el.getAttribute('aria-disabled') === 'true' : !!el.disabled,
+              aria: el.getAttribute('aria-label'),
+              title: (wrap && wrap.getAttribute('title')) || el.getAttribute('title'),
+              grey: parseFloat(getComputedStyle(el).opacity) < 0.7
+            };
+          });
+          const prev = document.getElementById('prevBtn').closest('.livetip');
+          prev.click();
+          out.tapped = prev.classList.contains('showtip') && prev.querySelector('.livebubble').textContent === phrase;
+          return out;
+        }""", PHRASE)
+        tips_ok = all(
+            live_ui["tips"][i]["shown"] and live_ui["tips"][i]["disabled"]
+            and live_ui["tips"][i]["aria"] == PHRASE and live_ui["tips"][i]["title"] == PHRASE
+            and live_ui["tips"][i]["grey"]
+            for i in ("prevBtn", "backBtn", "fwdBtn", "skipBtn", "linkBtn", "moreRandom", "bar", "rateSel")
+        )
+        ck("Advanced live greys out speed, skip, seek, surprise and copy-moment with the live tooltip",
+           live_ui["locked"] and tips_ok and live_ui["tips"]["tapped"]
+           and "Mute" in live_ui["play"] and "Pause" not in live_ui["play"]
+           and live_ui["prevBtn"] and live_ui["skipBtn"] and live_ui["rateRow"] and live_ui["linkBtn"] and live_ui["moreRandom"] and live_ui["bar"]
            and live_ui["sleepSel"] and live_ui["popBtn2"] and live_ui["vol"], live_ui)
         basic.evaluate("document.getElementById('moreClose').click()")
         basic.evaluate("__listenotr.setClock(__listenotr.unixFor('2026-11-04', 20*3600+10))")
@@ -357,10 +394,51 @@ def main():
         basic.evaluate("if (document.getElementById('morePanel').hidden) document.getElementById('moreBtn').click()")
         back = shown(basic, ["prevBtn", "skipBtn", "rateRow", "linkBtn", "moreRandom", "sleepSel", "popBtn2"])
         back["play"] = basic.evaluate("document.getElementById('playBtn').textContent")
+        back["restored"] = basic.evaluate("""() => {
+          const prev = document.getElementById('prevBtn');
+          const bar = document.getElementById('bar');
+          const rate = document.getElementById('rateSel');
+          return {
+            prevAria: prev.getAttribute('aria-label'),
+            prevDisabled: prev.disabled,
+            rateDisabled: rate.disabled,
+            barAria: bar.getAttribute('aria-label'),
+            barPe: getComputedStyle(bar).pointerEvents
+          };
+        }""")
         ck("a normal station restores speed, skip, surprise, copy-moment and play/pause",
            back["prevBtn"] and back["skipBtn"] and back["rateRow"] and back["linkBtn"] and back["moreRandom"]
-           and back["sleepSel"] and back["popBtn2"] and "Mute" not in back["play"], back)
+           and back["sleepSel"] and back["popBtn2"] and "Mute" not in back["play"]
+           and back["restored"]["prevAria"] == "Previous" and not back["restored"]["prevDisabled"]
+           and not back["restored"]["rateDisabled"] and back["restored"]["barAria"] != "Disabled in live listen mode"
+           and back["restored"]["barPe"] != "none", back)
         basic_ctx.close()
+
+        # Other stations: the seek bar and skip still move playback. Archive audio is the local tone.
+        lib, lerrs, lctx = open_page(url=BASE + "/otr/")
+        lib.wait_for_function("window.__otr && __otr.ready()", timeout=20000)
+        lib.evaluate("window.__otr.startChannel('crime')")
+        lib.wait_for_function("() => { const a = document.getElementById('audio'); return !a.paused && a.currentTime > 1 && a.duration > 20; }", timeout=20000)
+        spot = lib.evaluate("""() => {
+          const a = document.getElementById('audio');
+          const r = document.getElementById('bar').getBoundingClientRect();
+          const frac = a.duration ? a.currentTime / a.duration : 0;
+          return { x: r.x + r.width * (frac > 0.5 ? 0.12 : 0.88), y: r.y + r.height / 2, before: a.currentTime, qi: __otr.state.qi };
+        }""")
+        lib.mouse.click(spot["x"], spot["y"])
+        lib.wait_for_timeout(500)
+        sought = lib.evaluate("document.getElementById('audio').currentTime")
+        ck("on a normal station the seek bar still seeks", abs(sought - spot["before"]) > 8, (spot["before"], sought))
+        lib.click("#skipBtn")
+        lib.wait_for_function("(qi) => __otr.state.qi !== qi && !document.getElementById('audio').paused && document.getElementById('audio').duration > 20 && document.getElementById('audio').currentTime > 0.5", arg=spot["qi"], timeout=15000)
+        ck("on a normal station skip still moves to the next episode", lib.evaluate("__otr.state.qi") != spot["qi"])
+        lib.evaluate("document.activeElement && document.activeElement.blur()")
+        t_arrow = lib.evaluate("document.getElementById('audio').currentTime")
+        lib.keyboard.press("ArrowRight")
+        lib.wait_for_timeout(600)
+        ck("on a normal station the right arrow still seeks forward",
+           lib.evaluate("document.getElementById('audio').currentTime") - t_arrow > 8, (t_arrow, lib.evaluate("document.getElementById('audio').currentTime")))
+        lctx.close()
 
         phone, _, pctx = open_page(w=390, h=844)
         phone.evaluate("__listenotr.setClock(__listenotr.unixFor('2026-11-04', 21*3600+30))")
