@@ -14,6 +14,13 @@ header.top { position: relative; }
   touch-action: manipulation;
 }
 .otr-mode-switch button + button { border-left: 1px solid rgba(255,179,71,0.35); }
+/* Compact jump to the live station, Advanced only. Basic already has the big button. */
+#otrAdvLive {
+  color: var(--amber2); background: transparent; font-size: 13px; letter-spacing: 0;
+  padding: 8px 12px;
+}
+html[data-otr-mode="basic"] #otrAdvLive { display: none !important; }
+#otrAdvLive:hover { color: #fff; }
 html[data-otr-mode="basic"] #otrModeBasic,
 html[data-otr-mode="advanced"] #otrModeAdvanced {
   background: var(--amber); color: #1a1200;

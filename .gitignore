@@ -1,6 +1,11 @@
 # Compose interpolation for local and droplet secrets. Never commit.
 .env
 
+# Per-episode Listenotr intros, generated on the server when someone is listening.
+# The produced station pack under frontend/public/otr/live/pack/ is static and is committed.
+backend/data/otr-intros/
+backend/tests/_otr_intro_cache/
+
 __pycache__/
 *.pyc
 *.pyo

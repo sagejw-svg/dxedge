@@ -62,3 +62,7 @@ compute_limiter = RateLimiter(max_requests=10, window_seconds=60)
 # chatty by design, and it must never compete with the real API for the
 # same budget. Still capped so a loop cannot flood the events table.
 stat_limiter = RateLimiter(max_requests=120, window_seconds=60)
+
+# Listenotr live heartbeat. A tuned-in set pings every 20 seconds, so this is
+# chatty on purpose and must not share the general API budget. Still capped.
+live_limiter = RateLimiter(max_requests=30, window_seconds=60)

@@ -63,15 +63,15 @@ with sync_playwright() as p:
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(URL)
-    pg.wait_for_function("window.__otr && __otr.ready() && document.querySelectorAll('#otrPopular .otr-pop').length >= 6", timeout=20000)
+    pg.wait_for_function("window.__otr && __otr.ready() && document.querySelectorAll('#otrPopular .otr-pop').length >= 6 && document.querySelector('#otr-live [data-otr-live-player]')", timeout=20000)
     ck("Basic is showing and the full page is not", pg.is_visible("#otr-basic") and pg.is_visible("#otr-live") and not pg.is_visible("#console") and not pg.is_visible("#channelChips"))
-    ck("Listen Live mount is the placeholder until a player is added", pg.is_visible("#otrLiveBtn") and pg.evaluate("OTRBasic.placeholderVisible()"))
+    ck("the live station is mounted and the placeholder has stepped aside",
+       pg.locator("#otr-live [data-otr-live-player]").count() == 1 and not pg.evaluate("OTRBasic.placeholderVisible()"))
     box = pg.evaluate("""() => {
         const s = document.getElementById('otrModeSwitch').getBoundingClientRect();
-        const live = document.getElementById('otrLiveBtn').getBoundingClientRect();
         const bs = document.getElementById('otrModeBasic').getBoundingClientRect();
         const asw = document.getElementById('otrModeAdvanced').getBoundingClientRect();
-        return { sw: document.documentElement.scrollWidth, s, live, bs, asw, iw: innerWidth, ih: innerHeight };
+        return { sw: document.documentElement.scrollWidth, s, bs, asw, iw: innerWidth, ih: innerHeight };
     }""")
     ck("no horizontal scroll at 390", box["sw"] <= 390, box["sw"])
     ck("switch is a short bar at the top right, not a side panel",
@@ -79,7 +79,6 @@ with sync_playwright() as p:
        and box["s"]["width"] > box["s"]["height"] and box["s"]["height"] <= 64
        and box["s"]["right"] > box["iw"] - 24, box["s"])
     ck("both mode buttons are tall enough to tap", box["bs"]["height"] >= 40 and box["asw"]["height"] >= 40, (box["bs"], box["asw"]))
-    ck("Listen Live is a large button", box["live"]["height"] >= 80 and box["live"]["width"] >= 280, box["live"])
     ck("Basic is the pressed side", pg.get_attribute("#otrModeBasic", "aria-pressed") == "true" and pg.get_attribute("#otrModeAdvanced", "aria-pressed") == "false")
     names = pg.eval_on_selector_all("#otrPopular .otr-pop", "els => els.map(e => e.dataset.id)")
     ck("popular list leads with Suspense, Gunsmoke and The Shadow", names[:3] == ["suspense", "gunsmoke", "the-shadow"], names)
@@ -93,6 +92,13 @@ with sync_playwright() as p:
     ck("a popular show plays in the existing player and fills Now playing", now["show"] == "Suspense" and now["n"] > 1, now)
     ck("Up next names something after this episode", now["next"] and "Pick a show" not in now["next"] and "Nothing queued" not in now["next"], now["next"])
 
+    pg.evaluate("""() => {
+        document.querySelectorAll('#otr-live [data-otr-live-player]').forEach(n => n.remove());
+        document.getElementById('otr-live').removeAttribute('data-otr-live');
+    }""")
+    pg.wait_for_function("OTRBasic.placeholderVisible()", timeout=2000)
+    live_box = pg.evaluate("() => document.getElementById('otrLiveBtn').getBoundingClientRect().toJSON()")
+    ck("with the station removed, Listen Live is a large button again", live_box["height"] >= 80 and live_box["width"] >= 280, live_box)
     pg.evaluate("""() => {
         const n = document.createElement('div');
         n.id = 'otr-live-player';
