@@ -52,9 +52,24 @@ with sync_playwright() as p:
     ck("from the tube straight to the lamp on its radio", LA("radio()")["on"] and pg.evaluate("__otr.adv.tv.subject()") == "lamp")
     pg.locator("#tvStage").screenshot(path=f"{SP}/otr_lamp_radio_big.png")
 
+    # hover help: hold the mouse over a control
+    TIP = "__otr.adv.lamp.tip()"
+    m = at("sleep"); pg.mouse.move(m["x"], m["y"]); pg.wait_for_timeout(800); t = pg.evaluate(TIP)
+    ck("hovering the moon explains it: the sleep timer, its steps and its lights", t["shown"] and "Sleep timer: off" in t["text"] and "15, 30 and 60" in t["text"] and "lights" in t["text"], t)
+    bb = pg.locator("#radTip").bounding_box()
+    ck("the help sits by the pointer, inside the window", bb and 0 <= bb["x"] and bb["x"] + bb["width"] <= 1280 and 0 <= bb["y"] and abs(bb["x"] - m["x"]) < 300, bb)
+    for cid, word in [("play", "Play"), ("back", "Back 15 seconds"), ("fwd", "Forward 15 seconds"), ("next", "Skip"), ("prev", "Previous"), ("vol", "Volume"), ("eq2", "EQ at 1 kHz"), ("dial", "Tap or drag")]:
+        q = at(cid); pg.mouse.move(q["x"], q["y"]); pg.wait_for_timeout(700); t = pg.evaluate(TIP)
+        ck(f"hover help on {cid}", t["shown"] and word in t["text"], t)
+    d = at("dial"); pg.mouse.move(d["x"] + 9 * d["s"], d["y"] + 5 * d["s"]); pg.wait_for_timeout(300)
+    ck("off the controls the help goes away", not pg.evaluate(TIP)["shown"])
+    pg.mouse.move(5, 300); pg.wait_for_timeout(200)
+
     # big view: the radio's controls work, and do not pan, zoom or go black
     v0 = LA("radio()")["vol"]; k = at("vol")
-    pg.mouse.move(k["x"], k["y"]); pg.mouse.down(); pg.mouse.move(k["x"], k["y"] - 3 * k["s"], steps=4); pg.mouse.up(); pg.wait_for_timeout(400)
+    pg.mouse.move(k["x"], k["y"]); pg.mouse.down(); pg.mouse.move(k["x"], k["y"] - 3 * k["s"], steps=4)
+    t = pg.evaluate(TIP); ck("while turning the knob the help shows the live volume", t["shown"] and ("Volume %d%%" % round(LA("radio()")["vol"] * 100)) in t["text"], (t, LA("radio()")["vol"]))
+    pg.mouse.up(); pg.wait_for_timeout(400)
     v1 = LA("radio()")["vol"]
     ck("dragging the knob up turns the volume up (the page's own volume)", v1 > v0 - 1e-9 and abs(v1 - float(pg.eval_on_selector("#vol", "e => e.value"))) < 1e-6 and not LA("solo()"), (v0, v1))
     pg.mouse.move(k["x"], k["y"]); pg.mouse.down(); pg.mouse.move(k["x"], k["y"] + 6 * k["s"], steps=4); pg.mouse.up(); pg.wait_for_timeout(300)
@@ -94,7 +109,9 @@ with sync_playwright() as p:
     # the black view: the radio stays, its controls work, a click elsewhere still comes back
     LA("solo(true)"); pg.wait_for_timeout(500)
     ck("on black the radio is there and still nothing but icons", pg.inner_text("#lampSolo").strip() == "")
-    m = at("sleep", "solo"); pg.mouse.click(m["x"], m["y"]); pg.wait_for_timeout(300)
+    m = at("sleep", "solo"); pg.mouse.move(m["x"], m["y"]); pg.wait_for_timeout(800)
+    ck("on black, hovering the moon shows its help, inside the black view so real full screen shows it too", pg.evaluate(TIP)["shown"] and pg.evaluate("document.getElementById('lampSolo').contains(document.getElementById('radTip'))"))
+    pg.mouse.click(m["x"], m["y"]); pg.wait_for_timeout(300)
     ck("on black the radio's controls work and do not bring the page back", LA("solo()") and pg.eval_on_selector("#sleepSel", "e => e.value") == "15")
     pg.mouse.click(m["x"], m["y"]); pg.mouse.click(m["x"], m["y"]); pg.mouse.click(m["x"], m["y"]); pg.mouse.click(m["x"], m["y"]); pg.wait_for_timeout(300)
     ck("(and the timer is off again)", pg.eval_on_selector("#sleepSel", "e => e.value") == "off")
@@ -158,6 +175,12 @@ with sync_playwright() as p:
         q = m.evaluate(f"__otr.adv.lamp.radioAt('{cid}', 'big')")
         if m.evaluate(f"(document.elementFromPoint({q['x']}, {q['y']}) || {{}}).id") != "tvCv": hidden.append(cid)
     ck("375 px: no radio control sits under the zoom buttons", not hidden, hidden)
+    cdp = m.context.new_cdp_session(m); q = m.evaluate("__otr.adv.lamp.radioAt('sleep', 'big')"); before = m.eval_on_selector("#sleepSel", "e => e.value")
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": q["x"], "y": q["y"]}]}); m.wait_for_timeout(900)
+    tt = m.evaluate("__otr.adv.lamp.tip()")
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); m.wait_for_timeout(300)
+    ck("375 px: press and hold the moon to read its help", tt["shown"] and "Sleep timer" in tt["text"], tt)
+    ck("375 px: and holding it does not also change the timer", m.eval_on_selector("#sleepSel", "e => e.value") == before, (before, m.eval_on_selector("#sleepSel", "e => e.value")))
     sw = m.evaluate("document.documentElement.scrollWidth")
     ck("375 px: the top choice fits, no horizontal scroll", sw <= 375 and m.locator("#tvSubj").bounding_box()["height"] < 40, sw)
     ck("no page errors (phone)", not merrs, merrs[:3])

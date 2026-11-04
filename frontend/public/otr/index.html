@@ -520,6 +520,9 @@
   .lamp-solo[hidden] { display: none; }
   .lamp-solo.idle { cursor: none; }
   .lamp-solo canvas { display: block; width: 100%; height: 100%; }
+  /* hover help for the mini radio's controls */
+  .rad-tip { position: fixed; z-index: 220; pointer-events: none; max-width: 270px; padding: 7px 10px; border-radius: 7px; background: rgba(22,16,10,0.95); color: #f3e3c8; font-size: 12px; line-height: 1.45; white-space: pre-line; border: 1px solid rgba(255,190,110,0.35); box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+  .rad-tip[hidden] { display: none; }
   @media (max-width: 760px){ .tview { grid-template-columns: minmax(0,1fr); grid-template-rows: 60vh auto; overflow-y: auto; } }
   .tv-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
   canvas#tvCv { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
@@ -926,6 +929,8 @@
 </div>
 
 <div class="lamp-solo" id="lampSolo" hidden tabindex="-1" role="dialog" aria-modal="true" aria-label="The lava lamp on its own. Click, tap or press Escape to come back."><canvas id="soloCv" aria-hidden="true"></canvas></div>
+
+<div class="rad-tip" id="radTip" role="tooltip" hidden></div>
 
 <div class="dock" id="dock" aria-label="Now playing">
   <div class="dock-bar"><i id="dockFill"></i></div>
@@ -3314,7 +3319,7 @@
   function soloIsOpen(){ return !$('lampSolo').hidden; }
   function soloWake(){ try{ if(navigator.wakeLock && !SOLO.lock) navigator.wakeLock.request('screen').then(function(l){ if(!soloIsOpen()){ l.release().catch(function(){}); return; } SOLO.lock=l;
     l.addEventListener('release', function(){ if(SOLO.lock===l) SOLO.lock=null; }); }).catch(function(){}); }catch(e){} }
-  function soloPoke(){ var el=$('lampSolo'); el.classList.remove('idle'); clearTimeout(SOLO.idle); SOLO.idle=setTimeout(function(){ el.classList.add('idle'); }, 1500); }
+  function soloPoke(){ var el=$('lampSolo'); el.classList.remove('idle'); clearTimeout(SOLO.idle); SOLO.idle=setTimeout(function(){ if(!RTIP.id) el.classList.add('idle'); }, 1500); }
   function openLampSolo(){
     if(soloIsOpen()) return; var el=$('lampSolo');
     SOLO.prev=document.activeElement; SOLO.fs=false; el.hidden=false; document.body.style.overflow='hidden';
@@ -3326,24 +3331,25 @@
   }
   function closeLampSolo(){
     if(!soloIsOpen()) return; var el=$('lampSolo');
-    el.hidden=true; clearTimeout(SOLO.idle); if(!tvIsOpen()) document.body.style.overflow='';
+    el.hidden=true; clearTimeout(SOLO.idle); radTipHide(); if(!tvIsOpen()) document.body.style.overflow='';
     if(document.fullscreenElement===el && document.exitFullscreen) document.exitFullscreen().catch(function(){});
     SOLO.fs=false; if(SOLO.lock){ var l=SOLO.lock; SOLO.lock=null; l.release().catch(function(){}); }
     if(SOLO.prev && SOLO.prev.focus) try{ SOLO.prev.focus({ preventScroll:true }); }catch(e){}
   }
   // on black a click anywhere comes back, except on the mini radio, whose controls work here
-  $('lampSolo').addEventListener('pointerdown', function(e){ SOLO.eat=false; if(!SOLO.geom) return; var p=radPt(e,$('soloCv'),SOLO.geom), id=radHit(p); if(!id) return;
-    e.preventDefault(); SOLO.eat=true; try{ this.setPointerCapture(e.pointerId); }catch(_){ } radDown(id, p); });
-  $('lampSolo').addEventListener('pointermove', function(e){ soloPoke(); if(RAD.drag && SOLO.geom) radMove(radPt(e,$('soloCv'),SOLO.geom)); });
+  $('lampSolo').addEventListener('pointerdown', function(e){ SOLO.eat=false; if(!SOLO.geom) return; var p=radPt(e,$('soloCv'),SOLO.geom), id=radHit(p); if(!id){ radTipHide(); return; }
+    e.preventDefault(); SOLO.eat=true; try{ this.setPointerCapture(e.pointerId); }catch(_){ } radDown(id, p); radTipPress(e, id); });
+  $('lampSolo').addEventListener('pointermove', function(e){ soloPoke(); if(!SOLO.geom) return; var p=radPt(e,$('soloCv'),SOLO.geom); if(RAD.drag) radMove(p); radTipHover(e, radHit(p)); });
+  $('lampSolo').addEventListener('pointerleave', function(){ if(!RAD.drag) radTipHide(); });
   $('lampSolo').addEventListener('pointerup', function(e){ if(RAD.drag && SOLO.geom) radUp(radPt(e,$('soloCv'),SOLO.geom)); });
   $('lampSolo').addEventListener('pointercancel', function(){ radUp(null, true); });
-  $('lampSolo').addEventListener('wheel', function(e){ if(!SOLO.geom || radHit(radPt(e,$('soloCv'),SOLO.geom))!=='vol') return; e.preventDefault(); radSetVol(radVol()-e.deltaY*0.0015); }, { passive:false });
+  $('lampSolo').addEventListener('wheel', function(e){ if(!SOLO.geom || radHit(radPt(e,$('soloCv'),SOLO.geom))!=='vol') return; e.preventDefault(); radSetVol(radVol()-e.deltaY*0.0015); if(RTIP.id==='vol' && !$('radTip').hidden) radTipShow(); }, { passive:false });
   $('lampSolo').addEventListener('click', function(){ if(SOLO.eat){ SOLO.eat=false; return; } closeLampSolo(); });
   // leaving full screen by the browser's own means (Esc, a gesture) leaves the black view too
   document.addEventListener('fullscreenchange', function(){ if(SOLO.fs && document.fullscreenElement!==$('lampSolo')){ SOLO.fs=false; closeLampSolo(); } });
   document.addEventListener('visibilitychange', function(){ if(soloIsOpen() && document.visibilityState==='visible') soloWake(); });
   window.addEventListener('keydown', function(e){ if(soloIsOpen() && e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation(); closeLampSolo(); } }, true);
-  function closeTubeView(){
+  function closeTubeView(){ radTipHide();
     $('tview').hidden=true; document.body.style.overflow='';
     if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){});
     if(tvPrevFocus && tvPrevFocus.focus) try{ tvPrevFocus.focus({preventScroll:true}); }catch(e){}
@@ -3381,13 +3387,13 @@
     var cv=$('tvCv');
     cv.addEventListener('pointerdown', function(e){
       var rp=(tvGeom && TVZ.subj==='lamp' && radioOn()) ? radPt(e,cv,tvGeom) : null, rid=radHit(rp);
-      if(rid){ e.preventDefault(); cv.setPointerCapture(e.pointerId); tvTap.ctl=true; tvTap.ctlT=performance.now(); clearTimeout(tvTap.t); radDown(rid, rp); return; }
-      tvTap.ctl=false;
+      if(rid){ e.preventDefault(); cv.setPointerCapture(e.pointerId); tvTap.ctl=true; tvTap.ctlT=performance.now(); clearTimeout(tvTap.t); radDown(rid, rp); radTipPress(e, rid); return; }
+      tvTap.ctl=false; radTipHide();
       e.preventDefault(); cv.setPointerCapture(e.pointerId); tvPtr[e.pointerId]={ x:e.clientX, y:e.clientY };
       if(Object.keys(tvPtr).length===1) tvTap={ x:e.clientX, y:e.clientY, moved:false, multi:false, t:tvTap.t }; else tvTap.multi=true; cv.classList.add('drag'); });
     cv.addEventListener('pointermove', function(e){
-      if(RAD.drag){ if(tvGeom) radMove(radPt(e,cv,tvGeom)); return; }
-      if(!Object.keys(tvPtr).length && tvGeom && TVZ.subj==='lamp'){ var hov=radHit(radPt(e,cv,tvGeom)); cv.style.cursor = hov && hov!=='body' ? 'pointer' : ''; }
+      if(RAD.drag){ if(tvGeom){ radMove(radPt(e,cv,tvGeom)); radTipHover(e, RAD.drag.id); } return; }
+      if(!Object.keys(tvPtr).length && tvGeom && TVZ.subj==='lamp'){ var hov=radHit(radPt(e,cv,tvGeom)); cv.style.cursor = hov && hov!=='body' ? 'pointer' : ''; radTipHover(e, hov); }
       var p=tvPtr[e.pointerId]; if(!p) return; var ids=Object.keys(tvPtr);
       if(Math.abs(e.clientX-tvTap.x)+Math.abs(e.clientY-tvTap.y)>6) tvTap.moved=true;
       if(ids.length===1){ var s=tvGeom?tvGeom.s:1; TVZ.x-=(e.clientX-p.x)/s; TVZ.y-=(e.clientY-p.y)/s; clampPan(); }
@@ -3396,8 +3402,8 @@
       p.x=e.clientX; p.y=e.clientY;
     });
     function up(e){ if(RAD.drag){ radUp(tvGeom && e.type!=='pointercancel' ? radPt(e,cv,tvGeom) : null, e.type==='pointercancel'); } delete tvPtr[e.pointerId]; if(!Object.keys(tvPtr).length) cv.classList.remove('drag'); }
-    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    cv.addEventListener('wheel', function(e){ e.preventDefault(); if(tvGeom && TVZ.subj==='lamp' && radHit(radPt(e,cv,tvGeom))==='vol'){ radSetVol(radVol()-e.deltaY*0.0015); return; } var r=cv.getBoundingClientRect(); zoomAt(TVZ.z*Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, { passive:false });
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('pointerleave', function(){ if(!RAD.drag) radTipHide(); });
+    cv.addEventListener('wheel', function(e){ e.preventDefault(); if(tvGeom && TVZ.subj==='lamp' && radHit(radPt(e,cv,tvGeom))==='vol'){ radSetVol(radVol()-e.deltaY*0.0015); if(RTIP.id==='vol' && !$('radTip').hidden) radTipShow(); return; } var r=cv.getBoundingClientRect(); zoomAt(TVZ.z*Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, { passive:false });
     // a single click on the lamp itself (not a drag, not half of a double click) shows it alone on black
     cv.addEventListener('click', function(e){
       clearTimeout(tvTap.t); if(tvTap.ctl || TVZ.subj!=='lamp' || tvTap.moved || tvTap.multi || e.detail>1 || !tvGeom) return;
@@ -4432,7 +4438,7 @@
     else if(D.id==='vol') radSetVol(D.v0+(D.p0.y-p.y)/12+(p.x-D.p0.x)/24);
     else if(D.id!=='body') RAD.press = radHit(p)===D.id ? D.id : null;
   }
-  function radUp(p, cancel){ var D=RAD.drag; RAD.drag=null; if(!D){ RAD.press=null; return; }
+  function radUp(p, cancel){ var D=RAD.drag; RAD.drag=null; if(RTIP.lpShown) cancel=true; radTipRelease(); if(!D){ RAD.press=null; return; }
     if(D.id==='dial'){ var f=RAD.seek; RAD.seek=null; if(!cancel && f!=null && audio.duration) seekTo(f*audio.duration); }
     else if(!cancel && RAD.press===D.id){ if(RAD_DOM[D.id]) $(RAD_DOM[D.id]).click(); else if(D.id==='sleep') radSleepNext(); }
     RAD.press=null;
@@ -4449,6 +4455,44 @@
   function radTextW(c, str, size, w){ c.save(); c.setTransform(1,0,0,1,0,0); c.font=radFont(size,w); var m=c.measureText(str).width/RAD_K; c.restore(); return m; }
   function radText(c, str, x, y, size, w, align){ c.save(); c.translate(x,y); c.scale(1/RAD_K,1/RAD_K); c.font=radFont(size,w); c.textAlign=align||'left'; c.textBaseline='alphabetic'; c.fillText(str,0,0); c.restore(); }
   var RAD_STILL = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  // ---- hover help on the radio: what each control does and where it stands now ----
+  // Mouse and pen: hold still over a control for a moment. Touch: press and hold (the press is then not
+  // taken as a tap). While a slider, the knob or the dial is being dragged it shows the live value.
+  var RTIP={ id:null, x:0, y:0, timer:0, lp:0, lpShown:false };
+  function radTipText(id){
+    if(!id || id==='body') return '';
+    var dur=audio.duration, has=dur && isFinite(dur);
+    if(id==='dial'){ var nm=RAD.shown && RAD.shown.name;
+      return (nm ? 'Now playing: '+nm+'\n' : '')+(RAD.seek!=null && has ? 'Jump to '+fmt(RAD.seek*dur)+' of '+fmt(dur)+'.' : (has ? fmt(audio.currentTime)+' of '+fmt(dur)+'. ' : '')+'Tap or drag along the lower half to jump to that point.'); }
+    if(id==='sleep'){ var v=$('sleepSel').value, lab={ off:'off', '15':'15 minutes', '30':'30 minutes', '60':'60 minutes', end:'at the end of this episode' }[v]||v, left=SLEEP.until ? Math.max(0,(SLEEP.until-Date.now())/1000) : 0;
+      return 'Sleep timer: '+lab+(left && v!=='end' && v!=='off' ? ' ('+fmt(left)+' left)' : '')+'.\nClick to step through 15, 30 and 60 minutes, end of episode, and off. The four lights show which is set; they blink while the sound fades out.'; }
+    var B={ prev:'Previous episode', back:'Back 15 seconds', play: audio.paused ? 'Play' : 'Pause', fwd:'Forward 15 seconds', next:'Skip to the next one' };
+    if(B[id]){ var el=$(RAD_DOM[id]); return B[id]+(el && el.disabled ? ' (nothing playing yet)' : ''); }
+    if(/^eq/.test(id)){ var i=+id.slice(2), f=RAD_EQ[i], g=radEqVal(i);
+      return 'EQ at '+(f>=1000 ? (f/1000)+' kHz' : f+' Hz')+': '+(g>0?'+':'')+g.toFixed(1)+' dB.\nDrag up or down. It moves the rack EQ around this pitch, keeping the rest of your curve, and turns sound processing on. The lights show how loud this band is.'; }
+    if(id==='vol') return 'Volume '+Math.round(radVol()*100)+'%.\nDrag up or down, or scroll over it.';
+    return '';
+  }
+  function radTipHide(){ clearTimeout(RTIP.timer); RTIP.id=null; var el=$('radTip'); if(el) el.hidden=true; }
+  function radTipShow(){ var el=$('radTip'), t=radTipText(RTIP.id); if(!t){ el.hidden=true; return; }
+    // in real full screen only the full screen element is drawn, so the help has to live inside it then
+    var host=soloIsOpen() ? $('lampSolo') : document.body; if(el.parentNode!==host) host.appendChild(el);
+    if(el.textContent!==t) el.textContent=t; el.hidden=false;
+    var w=el.offsetWidth, h=el.offsetHeight, x=RTIP.x+14, y=RTIP.y-h-14;
+    if(x+w>innerWidth-6) x=Math.max(6, innerWidth-w-6); if(y<6) y=RTIP.y+20; el.style.left=x+'px'; el.style.top=y+'px'; }
+  function radTipHover(e, id){
+    RTIP.x=e.clientX; RTIP.y=e.clientY;
+    if(RAD.drag && RAD.drag.id!=='body' && !/^(prev|back|play|fwd|next|sleep)$/.test(RAD.drag.id)){ RTIP.id=RAD.drag.id; clearTimeout(RTIP.timer); radTipShow(); return; }
+    if(e.pointerType==='touch') return;
+    if(!id || id==='body'){ radTipHide(); return; }
+    if(id!==RTIP.id){ radTipHide(); RTIP.id=id; RTIP.timer=setTimeout(radTipShow, 450); }
+    else if(!$('radTip').hidden) radTipShow();
+  }
+  // touch: press and hold a control to read its help
+  function radTipPress(e, id){ clearTimeout(RTIP.lp); RTIP.lpShown=false; if(e.pointerType!=='touch' || !id || id==='body') return;
+    RTIP.x=e.clientX; RTIP.y=e.clientY;
+    RTIP.lp=setTimeout(function(){ RTIP.id=id; RTIP.lpShown=true; RAD.press=null; radTipShow(); }, 550); }
+  function radTipRelease(){ clearTimeout(RTIP.lp); if(RTIP.lpShown){ RTIP.lpShown=false; clearTimeout(RTIP.timer); RTIP.timer=setTimeout(radTipHide, 2500); } else if(!RTIP.id || $('radTip').hidden) radTipHide(); }
   function radRR(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r); c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath(); }
   function radIcon(c, id, x, y, u, playing){
     c.beginPath();
@@ -4929,6 +4973,7 @@
           for(var i=0;i<n;i++){ renderLamp(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
         solo: function(v){ if(v===true) openLampSolo(); else if(v===false) closeLampSolo(); return soloIsOpen(); },
         radio: function(){ return { on:radioOn(), eq:[0,1,2,3,4].map(radEqVal), lvl:RAD.lvl.slice(), vol:radVol(), sleep:$('sleepSel').value, sceneH:lampSceneH(), shown:RAD.shown }; },
+        tip: function(){ var el=$('radTip'); return { shown:!el.hidden, text:el.textContent, id:RTIP.id }; },
         radioAt: function(id, which){ var solo=which==='solo', cv=$(solo?'soloCv':'tvCv'), g=solo?SOLO.geom:tvGeom, p=radCenter(id); if(!g||!p) return null; var r=cv.getBoundingClientRect(); return { x:r.left+g.tx+p.x*g.s, y:r.top+g.ty+p.y*g.s, s:g.s }; },
         stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; }
       },
