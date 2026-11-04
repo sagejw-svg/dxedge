@@ -212,9 +212,48 @@ def intro_for(body, now=None, generate=None):
         return {"play": "ident", "reason": "tts-failed"}
     if not audio or len(audio) < 200:
         return {"play": "ident", "reason": "tts-empty"}
-    _write_cache(ep, audio)
+    _write_cache(ep, _normalize_level(audio))
     _budget_take(now)
     return {"play": "intro", "url": "/api/otr/live/intro/" + ep, "cached": False}
+
+
+def _normalize_level(audio):
+    """Raise a generated intro toward -16 LUFS, matching the shows.
+
+    The static announcer pack is already leveled on disk. A fresh ElevenLabs
+    file is not. If ffmpeg cannot read the bytes, they are stored unchanged.
+    """
+    if not audio or len(audio) < 200:
+        return audio
+    import subprocess
+    import tempfile
+    src = dst = None
+    try:
+        fd, src = tempfile.mkstemp(suffix=".mp3")
+        os.close(fd)
+        dst = src + ".norm.mp3"
+        with open(src, "wb") as fh:
+            fh.write(audio)
+        subprocess.run(
+            ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", src,
+             "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+             "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "128k", dst],
+            check=True, timeout=30,
+        )
+        with open(dst, "rb") as fh:
+            out = fh.read()
+        if len(out) > 200:
+            return out
+    except Exception:
+        return audio
+    finally:
+        for path in (src, dst):
+            if path:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+    return audio
 
 
 def _write_cache(ep, audio):

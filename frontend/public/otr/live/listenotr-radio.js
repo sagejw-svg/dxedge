@@ -420,7 +420,15 @@
     if (onHour && PACK && PACK.jingleVoice) seq.unshift(packClip(PACK.jingleVoice));
     if (onHour && PACK && PACK.jingle) seq.unshift(packClip(PACK.jingle));
     function total(arr) { var s = 0; for (var i = 0; i < arr.length; i++) s += arr[i].dur || 0; return s; }
-    while (seq.length > 1 && total(seq) > br.dur) seq.shift();
+    // A clip that would run past the break is left out. The episode is never
+    // cut to make room, and a clip that does play is not trimmed.
+    var room = Math.max(0, (br.dur || 0) - 0.35);
+    while (seq.length > 1 && total(seq) > room) seq.shift();
+    if (seq.length === 1 && (seq[0].dur || 0) > room) {
+      var idn = identClip(br.start);
+      if (idn && (idn.dur || 0) <= room) return [idn];
+      return [];
+    }
     return seq;
   }
   function init(catalog, schedule, pack){
@@ -459,10 +467,18 @@
   }
   function cueList(a) {
     var cues = (a.cues || []).map(function (c) { return { url: c.url, dur: c.dur || 6 }; });
+    if (state.badUrl) cues = cues.filter(function (c) { return c.url !== state.badUrl; });
     if (a.nextEp && state.intros[a.nextEp]) {
-      var intro = { url: state.intros[a.nextEp], dur: state.introDur[a.nextEp] || 12 };
-      if (cues.length) cues[cues.length - 1] = intro;
-      else cues = [intro];
+      var introDur = state.introDur[a.nextEp] || 0;
+      var ahead = 0;
+      for (var i = 0; i < cues.length - 1; i++) ahead += cues[i].dur || 0;
+      var room = (a.dur || 0) - ahead;
+      // Unknown length, or longer than the gap: keep the clip that already fits.
+      if (introDur > 0.2 && introDur <= room - 0.25) {
+        var intro = { url: state.intros[a.nextEp], dur: introDur };
+        if (cues.length) cues[cues.length - 1] = intro;
+        else cues = [intro];
+      }
     }
     return cues;
   }
@@ -495,12 +511,16 @@
   function onErr(){
     if (!audio || !audio.src || state.userPaused) return;
     state.err = true;
+    state.clipFails = (state.clipFails || 0) + 1;
+    var failed = audio.currentSrc || audio.src || '';
+    if (state.clipFails >= 2 && failed) state.badUrl = failed;
     render();
     setTimeout(function(){
       if (state.userPaused) return;
+      state.hold = false;
       state.loadedKey = null;
       follow();
-    }, 4000);
+    }, 700);
   }
   function load(a){
     var t = seekTarget(a);
@@ -524,18 +544,50 @@
     try { audio.load(); } catch (e2) {}
     try { audio.muted = !!state.muted; } catch (e3) {}
   }
+  function sameClip(url){
+    if (!audio || !url) return false;
+    var src = audio.currentSrc || audio.src || '';
+    return src.indexOf(url) >= 0 || url.indexOf(src) >= 0;
+  }
   function follow(){
     if (!booted || !audio || !state.started || state.userPaused) return;
     var a = onAir();
     var t = seekTarget(a);
+    // A finished announcer clip must not leave the episode stuck on hold.
+    if (state.hold && a && a.kind === 'show' && t.url) {
+      state.hold = false;
+      state.loadedKey = null;
+    }
     var token = a.key + '|' + t.token;
+    var srcNow = audio.currentSrc || audio.src || '';
+    var hearingClip = srcNow.indexOf('/live/pack/') >= 0 && !audio.ended && !audio.paused
+      && audio.currentTime > 0.2 && isFinite(audio.duration) && audio.currentTime + 0.25 < audio.duration;
+    // Finish the announcer file. The episode loads when that file ends.
+    if (hearingClip && !sameClip(t.url)) return;
+    if (hearingClip && a.kind === 'break' && audio.currentTime + 0.45 < (t.at || 0)) return;
     if (state.loadedKey !== token) { load(a); setMedia(a); return; }
-    if (state.hold || !t.url) return;
+    if (state.hold || !t.url) {
+      if (a.kind === 'show' && t.url) {
+        state.hold = false;
+        state.loadedKey = null;
+        load(a);
+      }
+      return;
+    }
     var d = audio.duration;
-    if (isFinite(d) && d > 0.2 && t.at >= d - 0.08) { hold(); return; }
+    if (isFinite(d) && d > 0.2 && t.at >= d - 0.08) {
+      if (a.kind === 'break' && !audio.ended && audio.currentTime + 0.3 < d) return;
+      hold();
+      return;
+    }
+    if (a.kind === 'break' && sameClip(t.url) && audio.currentTime > 0.2 && audio.currentTime + 0.45 < t.at) return;
     if (Math.abs((audio.currentTime || 0) - t.at) > 2) {
       state.want = t.at;
       applySeek();
+    }
+    if (audio.paused && !state.hold && t.url) {
+      var p = audio.play();
+      if (p && p.catch) p.catch(onPlayFail);
     }
   }
   function setMedia(a){
@@ -780,14 +832,37 @@
     }).then(function (r) { return r.json(); }).then(function (j) {
       if (j && j.play === 'intro' && j.url) {
         state.intros[a.nextEp] = j.url;
-        if (j.seconds) state.introDur[a.nextEp] = j.seconds;
-        state.loadedKey = null;
-        follow();
+        if (j.seconds) {
+          state.introDur[a.nextEp] = j.seconds;
+          state.loadedKey = null;
+          follow();
+          return;
+        }
+        var probe = document.createElement('audio');
+        probe.preload = 'metadata';
+        probe.src = j.url;
+        probe.addEventListener('loadedmetadata', function () {
+          if (!isFinite(probe.duration) || probe.duration < 0.2) return;
+          state.introDur[a.nextEp] = probe.duration;
+          state.loadedKey = null;
+          follow();
+        });
       }
     }).catch(function () {});
   }
   function tick(){
     pulse();
+    // If a clip ends or errors and nothing resumes, start the scheduled
+    // episode instead of staying silent.
+    if (state.started && !state.userPaused && audio && audio.paused) {
+      if (!state.stallAt) state.stallAt = Date.now();
+      else if (Date.now() - state.stallAt > 1500) {
+        state.stallAt = Date.now();
+        state.hold = false;
+        state.loadedKey = null;
+        follow();
+      }
+    } else state.stallAt = 0;
     if (document.hidden) return;
     render();
     follow();
@@ -906,7 +981,13 @@
     audio.addEventListener('play', lockRate);
     audio.addEventListener('playing', lockRate);
     audio.addEventListener('ratechange', lockRate);
-    audio.addEventListener('ended', function(){ if (!state.userPaused) hold(); });
+    audio.addEventListener('ended', function(){
+      if (state.userPaused) return;
+      state.hold = false;
+      state.loadedKey = null;
+      state.clipFails = 0;
+      follow();
+    });
     audio.addEventListener('error', onErr);
     var foot = $('lrFoot');
     foot.appendChild(document.createTextNode('Listen and volume only. Mute keeps your place on the clock. There is no pause and no way to skip ahead. Everyone listening is on this same moment. '));
