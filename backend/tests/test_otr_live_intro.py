@@ -150,7 +150,9 @@ def _says_otr(text):
     return False
 
 
-def test_spoken_text_says_old_time_radio_never_otr():
+def test_spoken_text_names_the_station_and_never_says_otr():
+    phrase = otr_live.SPOKEN_STATION
+    assert phrase == "Old Time Radio on listen O T R dot com"
     samples = [
         "You're listening to OTR.",
         "This is O.T.R. tonight.",
@@ -158,14 +160,18 @@ def test_spoken_text_says_old_time_radio_never_otr():
         "otr on the hour",
         "You're listening to Listenotr Radio.",
         "Up next on Listenotr Radio, Suspense.",
+        "Up next on old time radio, Suspense.",
         "A Listenotr presentation.",
     ]
     for raw in samples:
         spoken = otr_live.normalize_spoken(raw)
         assert not _says_otr(spoken), spoken
-        assert "old time radio" in spoken.lower()
+        assert phrase in spoken
+    # The spelled-out site is the approved form, and a second pass must not
+    # turn those letters into another copy of the station name.
+    assert otr_live.normalize_spoken(phrase) == phrase
     intro = otr_live.episode_intro_text("OTR Theatre", "The O.T.R. Hour")
-    assert intro == "Tonight, on old time radio Theatre. The old time radio Hour. Tune in."
+    assert intro == "Tonight, on " + phrase + " Theatre. The " + phrase + " Hour. Tune in."
     assert not _says_otr(intro)
     plain = otr_live.episode_intro_text("Suspense", "Sorry, Wrong Number")
     assert plain == "Tonight, on Suspense. Sorry, Wrong Number. Tune in."

@@ -321,8 +321,8 @@
         }
         it.audio = (spoken || cues[cues.length - 1] || {}).url || IDENT || '';
         it.line = following
-          ? "You're listening to Listenotr Radio. Up next, " + following.showName + '.'
-          : "You're listening to Listenotr Radio.";
+          ? "You're listening to Old Time Radio on listen O T R dot com. Up next, " + following.showName + '.'
+          : "You're listening to Old Time Radio on listen O T R dot com.";
       }
       if (it.kind === 'show') following = it;
     }
@@ -759,16 +759,7 @@
     if (document.hidden) return;
     render();
     follow();
-  }
-  function wireAdv() {
-    var b = document.getElementById('otrAdvLive');
-    if (!b || b.__lrWired) return;
-    b.__lrWired = true;
-    b.addEventListener('click', function () {
-      if (window.OTRMode) OTRMode.set('basic');
-      if (booted) userPlay();
-      else ready.then(function () { userPlay(); }).catch(function () {});
-    });
+    if (window.__otrPaintListenotr) { try { window.__otrPaintListenotr(); } catch (e) {} }
   }
 
   var CSS = [
@@ -897,7 +888,6 @@
     el.appendChild(host);
     el.setAttribute('data-otr-live', 'ready');
     bind();
-    wireAdv();
     ready.then(function(){
       booted = true;
       render();
@@ -912,8 +902,8 @@
     var el = document.getElementById('otr-live');
     if (el) mount(el);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bootMount(); wireAdv(); });
-  else { bootMount(); wireAdv(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootMount);
+  else bootMount();
   window.addEventListener('pagehide', function () {
     if (!state.started || state.userPaused || optedOut()) return;
     var payload = JSON.stringify({ s: sid() });

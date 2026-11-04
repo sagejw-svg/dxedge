@@ -22,7 +22,8 @@ def ck(n,c,d=''):
   if not c: F.append(n)
 OFFLINE=os.environ.get('OTR_OFFLINE')=='1'
 with sync_playwright() as p:
-  b=p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
+  exe=os.environ.get('OTR_CHROMIUM')
+  b=p.chromium.launch(executable_path=exe, args=['--autoplay-policy=no-user-gesture-required','--no-sandbox']) if exe else p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
   def page(tz='America/Los_Angeles', url='http://127.0.0.1:8797/otr/'):
     ctx=b.new_context(viewport={'width':1100,'height':900}, timezone_id=tz); pg=ctx.new_page(); errs=[]
     pg.on('pageerror',lambda e:errs.append(str(e))); pg.goto(url)
@@ -30,8 +31,11 @@ with sync_playwright() as p:
     return pg, errs
   pg,errs=page()
   ck('station.js loaded and the four networks registered in order', pg.evaluate('__otr.network.ids()')==['nbc','cbs','abc','mutual'])
-  cards4=pg.eval_on_selector_all('#networkChips .station','els=>els.map(e=>[e.dataset.net, e.querySelector(".st-now").textContent, e.querySelector(".st-left .l").textContent])')
-  ck('every network card shows something on the air', len(cards4)==4 and all(c[1] and c[2].endswith('left') for c in cards4), cards4)
+  pg.wait_for_function("() => { const n=document.querySelector('#networkChips .station[data-net=listenotr] .st-now'); return n && n.textContent.trim(); }", timeout=15000)
+  cards=pg.eval_on_selector_all('#networkChips .station','els=>els.map(e=>[e.dataset.net, e.querySelector(".st-now").textContent, e.querySelector(".st-left .l").textContent])')
+  nets=[c for c in cards if c[0]!='listenotr']
+  ck('Listenotr Radio (Live) leads the station list and is on the air', cards and cards[0][0]=='listenotr' and cards[0][1].strip() and cards[0][2].endswith('left'), cards[:2])
+  ck('every network card shows something on the air', len(nets)==4 and all(c[1] and c[2].endswith('left') for c in nets), nets)
   def at(dow,h,m): return pg.evaluate('([d,h,m])=>{ const x=new Date(); x.setDate(x.getDate()+((d-x.getDay()+7)%7)); x.setHours(h,m,0,0); return x.getTime()/1000; }',[dow,h,m])
   nbc=pg.evaluate('t=>__otr.network.onAir("nbc",t)', at(2,21,40)); print('   nbc tue 9:40:', nbc)
   ck('NBC Tuesday 9:40 PM is the comedy block (Fibber McGee or a neighbour running over)', nbc and nbc['showId'] in ('fibber-mcgee-and-molly','amos-and-andy','the-bob-hope-show') and nbc['slot'] in (21*60, 21*60+30, 22*60), nbc)
