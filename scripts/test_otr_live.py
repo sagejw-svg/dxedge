@@ -16,7 +16,7 @@ CHROME = os.environ.get("OTR_CHROMIUM", "/opt/google/chrome/chrome")
 BASE = f"http://127.0.0.1:{PORT}"
 
 HOST_TEST = b"""<!doctype html><html><head><title>host</title></head><body>
-<script src="/otr/live/listenotr-radio.js?v=4"></script>
+<script src="/otr/live/listenotr-radio.js?v=5"></script>
 <script>document.addEventListener('DOMContentLoaded', function(){
   var d = document.createElement('div'); d.id = 'otr-live'; document.body.appendChild(d);
 });</script></body></html>"""
@@ -142,8 +142,16 @@ def main():
            and any("the-jack-benny-show.mp3" in (c.get("url") or "") for c in (mystery_break.get("cues") or [])), mystery_break)
         def break_urls(it):
             return " ".join((c.get("url") or "") for c in (it.get("cues") or []))
-        ck("every break plays an up-next line or a station ID from the pack",
-           breaks and all(("up-next/" in break_urls(it) or "/idents/" in break_urls(it) or not it.get("cues")) for it in breaks))
+        def break_ok(it):
+            cues = it.get("cues") or []
+            if not cues:
+                return True
+            urls = break_urls(it)
+            named = [c for c in cues if "up-next/" in (c.get("url") or "")]
+            matched = all(it.get("nextShowId") and it["nextShowId"] in (c.get("url") or "") for c in named)
+            return matched and ("up-next/" in urls or "/idents/" in urls or "jingle" in urls)
+        ck("every break's up-next names the series that actually follows",
+           breaks and all(break_ok(it) for it in breaks))
         fit = pg.evaluate("""() => {
           const day = __listenotr.day('2026-11-04');
           const bad = [];
@@ -158,9 +166,24 @@ def main():
         ck("no announcer clip is scheduled past the end of its break", fit["badN"] == 0, fit)
         into_mystery = next(it for it in day if it["kind"] == "break" and it.get("nextShowId") == "suspense" and it.get("nextStart") == 20 * 3600)
         cue_urls = [c["url"] for c in (into_mystery.get("cues") or [])]
-        ck("the break into the 8 o'clock mystery opens with the jingle, then the voice ID",
-           len(cue_urls) >= 2 and cue_urls[0].endswith("jingle.mp3") and "jingle-voice-id.mp3" in cue_urls[1]
-           and any("up-next/suspense.mp3" in u for u in cue_urls), cue_urls)
+        jingle_at = next((i for i, u in enumerate(cue_urls) if u.endswith("/jingle.mp3") and i + 1 < len(cue_urls) and "jingle-voice-id.mp3" in cue_urls[i + 1]), -1)
+        ck("the break into the 8 o'clock mystery plays the jingle, then the voice ID, then Suspense",
+           jingle_at >= 0 and any("up-next/suspense.mp3" in u for u in cue_urls), cue_urls)
+        holes = pg.evaluate("""() => {
+          const day = __listenotr.day('2026-11-04');
+          let worst = 0, where = null;
+          day.forEach(function (it) {
+            if (it.kind !== 'break') return;
+            const segs = (it.cues || []).map(function (c) { return [c.at0 || 0, (c.at0 || 0) + (c.dur || 0)]; });
+            segs.sort(function (a, b) { return a[0] - b[0]; });
+            let cursor = 0, gap = 0;
+            segs.forEach(function (s) { gap = Math.max(gap, s[0] - cursor); cursor = Math.max(cursor, s[1]); });
+            gap = Math.max(gap, it.dur - cursor);
+            if (gap > worst) { worst = gap; where = { start: it.start, dur: it.dur, gap: gap }; }
+          });
+          return { worst: worst, where: where };
+        }""")
+        ck("no live break sits silent for more than a few seconds", holes["worst"] <= 4, holes)
 
         # Same instant, three zones. The lineup is Eastern, not the listener's zone.
         ms = pg.evaluate("__listenotr.unixFor('2026-11-04', 20*3600+400)")
@@ -282,11 +305,8 @@ def main():
         pg.evaluate("__listenotr.volume(0.2)")
         ck("volume is the listener's own", abs(pg.evaluate("__listenotr.volume()") - 0.2) < 0.001)
 
-        benny_at = mystery_break["start"]
-        for cue in mystery_break["cues"]:
-            if "the-jack-benny-show.mp3" in cue["url"]:
-                break
-            benny_at += cue["dur"]
+        benny_cue_at = next(c for c in mystery_break["cues"] if "the-jack-benny-show.mp3" in c["url"])
+        benny_at = mystery_break["start"] + benny_cue_at.get("at0", 0)
         brk_at = benny_at + 0.3
         pg.evaluate("(sod) => __listenotr.setClock(__listenotr.unixFor('2026-11-04', sod))", brk_at)
         pg.wait_for_function("() => __listenotr.audio().src.indexOf('the-jack-benny-show.mp3') >= 0", timeout=8000)

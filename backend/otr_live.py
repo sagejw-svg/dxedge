@@ -2,7 +2,7 @@
 
 The produced station-ID pack (jingle, generic IDs, "up next" lines, time-of-night
 intros) is static and already on disk. This module is only the extra: a
-"Tonight, on Suspense. {title}. Tune in." line for the episode that is about
+    "Next, on Suspense. {title}. Tune in." line for the episode that is about
 to start.
 
 That line is generated only when someone is tuned in during the short window
@@ -93,9 +93,9 @@ def episode_intro_text(show, title):
     show = _clip(show, 80) or "the next show"
     title = _clip(title, 90)
     if title:
-        line = "Tonight, on " + show + ". " + title + ". Tune in."
+        line = "Next, on " + show + ". " + title + ". Tune in."
     else:
-        line = "Tonight, on " + show + ". Tune in."
+        line = "Next, on " + show + ". Tune in."
     return normalize_spoken(line)
 
 

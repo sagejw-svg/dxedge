@@ -17,7 +17,7 @@
   var TIP = 'Disabled in live listen mode';
   var EVENING_H = 19;
   var LATE_H = 22;
-  var PAD = 0.35;
+  var SILENCE_PAD = 2.5;
   var EPOCH_KEY = '2026-01-01';
   var TZ = 'America/New_York';
 
@@ -32,7 +32,7 @@
     hour: '2-digit', minute: '2-digit', second: '2-digit'
   });
 
-  var CAT = null, PACK = null, items = [], total = 0, GAP = 8;
+  var CAT = null, PACK = null, SHOW_UP = {}, items = [], total = 0, GAP = 8;
   var seriesList = [], byId = {};
   var jingle = null, ids = [], ups = [], evening = null, late = null;
   var booted = false, fail = null, clockMs = null, epoch = 0;
@@ -116,7 +116,7 @@
     return {
       file: f.file, type: f.type, text: f.text || '',
       url: ASSET + f.file,
-      dur: (+f.seconds > 0 ? +f.seconds : 6) + PAD
+      dur: (+f.seconds > 0 ? +f.seconds : 6)
     };
   }
   function byType(type) {
@@ -143,10 +143,20 @@
       if (/evening/.test(c.file)) evening = c;
       else if (/late/.test(c.file)) late = c;
     });
-    if (jingle && ids.length && ups.length) {
-      var need = jingle.dur + maxDur(ids) + Math.max(evening ? evening.dur : 0, late ? late.dur : 0) + maxDur(ups);
-      GAP = Math.ceil(need + 1);
-    } else GAP = 8;
+    // Generic up-next lines do not name the next series, so they are not used.
+    // Each break gets the pack line for the show that actually follows.
+  }
+  function loadShowUps(pack) {
+    SHOW_UP = {};
+    var map = (pack && pack.upNext) || {};
+    Object.keys(map).forEach(function (id) {
+      var e = map[id];
+      if (!e || !e.file) return;
+      SHOW_UP[id] = {
+        file: e.file, type: 'up_next', dur: +e.dur > 0 ? +e.dur : 6,
+        url: ROOT + 'live/pack/' + e.file, showId: id
+      };
+    });
   }
 
   function isSciFi(s) {
@@ -184,20 +194,29 @@
     });
     var order = programOrder(seriesList.map(function (s) { return byId[s.id]; }));
     items = [];
-    var t = 0;
+    var t = 0, maxGap = 0;
     order.forEach(function (p, n) {
       var ep = p.show.eps[p.epIndex];
       var dur = epDur(ep);
+      var next = order[(n + 1) % order.length];
+      var up = SHOW_UP[next.show.id] || null;
+      var id = ids.length ? ids[n % ids.length] : null;
+      var gap = (jingle ? jingle.dur : 0) + (id ? id.dur : 0) + (up ? up.dur : 0) + SILENCE_PAD;
+      if (gap > maxGap) maxGap = gap;
       items.push({
         kind: 'show', start: t, dur: dur, catalogDur: dur, ordinal: n,
         showId: p.show.id, showName: p.show.name, epIndex: p.epIndex,
         title: ep[0] || '', date: ep[1] || '', url: epUrl(p.show, ep)
       });
       t += dur;
-      items.push({ kind: 'break', start: t, dur: GAP, ordinal: n, afterShow: dur });
-      t += GAP;
+      items.push({
+        kind: 'break', start: t, dur: gap, ordinal: n, afterShow: dur,
+        idClip: id, upClip: up
+      });
+      t += gap;
     });
     total = t;
+    GAP = maxGap || SILENCE_PAD;
     epoch = unixFor(EPOCH_KEY, 0);
   }
 
@@ -212,25 +231,39 @@
     return false;
   }
   function planCues(it, startMs) {
-    if (!ids.length || !ups.length) return [];
-    var prevEnd = startMs - it.afterShow * 1000;
+    var slot = jingle ? jingle.dur : 0;
+    var open = jingle;
+    var prevEnd = startMs - (it.afterShow || 0) * 1000;
     var gapEnd = startMs + it.dur * 1000;
+    // The evening and late-night greetings replace the jingle only when the
+    // whole file fits in that slot. They do not name an episode.
+    if (jingle && late && late.dur <= slot + 0.05 && markInside(prevEnd, gapEnd, LATE_H)) open = late;
+    else if (jingle && evening && evening.dur <= slot + 0.05 && markInside(prevEnd, gapEnd, EVENING_H)) open = evening;
     var seq = [];
-    if (jingle) seq.push(jingle);
-    seq.push(ids[it.ordinal % ids.length]);
-    if (markInside(prevEnd, gapEnd, LATE_H) && late) seq.push(late);
-    else if (markInside(prevEnd, gapEnd, EVENING_H) && evening) seq.push(evening);
-    seq.push(ups[it.ordinal % ups.length]);
+    if (open) seq.push(open);
+    if (it.idClip) seq.push(it.idClip);
+    if (it.upClip) seq.push(it.upClip);
     function sum(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i].dur; return s; }
-    while (seq.length > 1 && sum(seq) > it.dur + 0.001) seq.shift();
-    var at = 0, out = [];
-    for (var i = 0; i < seq.length; i++) {
+    var room = Math.max(0, it.dur - 0.2);
+    while (seq.length > 1 && sum(seq) > room) seq.shift();
+    if (seq.length === 1 && seq[0].dur > room) return [];
+    var at = 0;
+    var out = [];
+    if (open && seq.indexOf(open) >= 0) {
       out.push({
-        url: seq[i].url, file: seq[i].file, type: seq[i].type, text: seq[i].text,
-        dur: seq[i].dur, at0: at
+        url: open.url, file: open.file, type: open.type, text: open.text || '',
+        dur: open.dur, at0: 0, showId: null
       });
-      at += seq[i].dur;
+      at = slot || open.dur;
     }
+    seq.forEach(function (c) {
+      if (c === open) return;
+      out.push({
+        url: c.url, file: c.file, type: c.type, text: c.text || '',
+        dur: c.dur, at0: at, showId: c.showId || null
+      });
+      at += c.dur;
+    });
     return out;
   }
 
@@ -360,9 +393,11 @@
 
   var ready = Promise.all([
     fetch(ROOT + 'catalog.json').then(function (r) { if (!r.ok) throw new Error('catalog HTTP ' + r.status); return r.json(); }),
-    fetch(ASSET + 'manifest.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : { files: [] }; }).catch(function () { return { files: [] }; })
+    fetch(ASSET + 'manifest.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : { files: [] }; }).catch(function () { return { files: [] }; }),
+    fetch(ROOT + 'live/pack/manifest.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : { upNext: {} }; }).catch(function () { return { upNext: {} }; })
   ]).then(function (pair) {
     loadPack(pair[1]);
+    loadShowUps(pair[2]);
     build(pair[0]);
     booted = true;
   }).catch(function (e) { fail = e; throw e; });
@@ -476,7 +511,7 @@
       && audioEl.currentTime > 0.2 && audioEl.currentTime + 0.25 < (isFinite(d) ? d : 1e9);
     // Finish the announcer file even if the schedule has already reached the
     // episode. Cutting it off is what left the station silent.
-    if (hearingClip && (!onThis || (announcer && audioEl.currentTime + 0.4 < t.at))) return;
+    if (air && air.kind === 'break' && hearingClip && (!onThis || (announcer && audioEl.currentTime + 0.4 < t.at))) return;
     var fileDone = isFinite(d) && d > 0.2 && (audioEl.ended || audioEl.currentTime >= d - 0.05);
     if (!t.loop && fileDone && t.at >= d - 0.2) {
       t = { url: SILENCE, at: 0, token: 'hold', loop: true };
@@ -1010,7 +1045,7 @@
     if (!booted) return;
     if (armed && want && audioEl && audioEl.paused && suppressPause === 0 && !(pauseAt && Date.now() - pauseAt < 80)) {
       if (!stallAt) stallAt = Date.now();
-      else if (Date.now() - stallAt > 1500) {
+      else if (Date.now() - stallAt > 4000) {
         stallAt = Date.now();
         loadedKey = '';
         follow();

@@ -108,7 +108,7 @@ def test_listener_generates_once_then_uses_the_cache(caplog):
     second = otr_live.intro_for(body, now=1_005, generate=generate)
     assert first["play"] == "intro" and first["cached"] is False
     assert second["play"] == "intro" and second["cached"] is True
-    assert calls == ["Tonight, on Suspense. Sorry, Wrong Number. Tune in."]
+    assert calls == ["Next, on Suspense. Sorry, Wrong Number. Tune in."]
     assert len(calls) == 1
     assert SECRET not in caplog.text
     del os.environ["ELEVENLABS_API_KEY"]
@@ -171,14 +171,14 @@ def test_spoken_text_names_the_station_and_never_says_otr():
     # turn those letters into another copy of the station name.
     assert otr_live.normalize_spoken(phrase) == phrase
     intro = otr_live.episode_intro_text("OTR Theatre", "The O.T.R. Hour")
-    assert intro == "Tonight, on " + phrase + " Theatre. The " + phrase + " Hour. Tune in."
+    assert intro == "Next, on " + phrase + " Theatre. The " + phrase + " Hour. Tune in."
     assert not _says_otr(intro)
     plain = otr_live.episode_intro_text("Suspense", "Sorry, Wrong Number")
-    assert plain == "Tonight, on Suspense. Sorry, Wrong Number. Tune in."
+    assert plain == "Next, on Suspense. Sorry, Wrong Number. Tune in."
     assert not _says_otr(plain)
 
 
 def test_intro_sentence():
     assert otr_live.episode_intro_text("Suspense", "Sorry, Wrong Number") == (
-        "Tonight, on Suspense. Sorry, Wrong Number. Tune in."
+        "Next, on Suspense. Sorry, Wrong Number. Tune in."
     )
