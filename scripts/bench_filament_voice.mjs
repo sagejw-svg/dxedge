@@ -20,7 +20,7 @@
 // Poly 24 screaming and driven, SVF 12 morphed, screaming and swept, and the low pass gate in two of its modes at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, patch changes mid-note (stereo offset on, loop tube, model, drive), and filter
-// slot B in each of its routes (serial, parallel, split), the mod matrix with every slot on, tempo-synced LFOs, the arpeggiator, and 1939 mode.
+// slot B in each of its routes (serial, parallel, split), the mod matrix with every slot on, tempo-synced LFOs, the arpeggiator, and 1939 mode (four cases).
 // The c_ cases run Cathode, the mono device in the same file, on factory patches (see C_CASES).
 // Numbers are relative: headless Chrome in test 9 is the figure the log quotes.
 import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto'; import path from 'path';
@@ -80,6 +80,13 @@ const CASES = {
   // 1939 mode (5 Nov): 8 voices on the staircase with every tone tab in and the vibrato on, then the pedal
   // down and two notes let go into its long release. A ref without the mode plays the ordinary voice.
   era39: big('valve12', p => { p.era = { on: true, shape: 'bowed', tone: 1, vib: 20, tabs: { body: true, voice: true, edge: true, mellow: true, thin: true, open: true } }; }),
+  // 1939 mode, wider coverage for the equivalence check (5 Nov improvement): the plain square with no vibrato
+  // on two tabs; 4 voices stealing (the kill fade), notes up to MIDI 115 (the staircase's upper octaves
+  // drop out, and a note above its master's octave), velocity, bend and the wheel; and patch changes
+  // mid-note (tabs in and out, so a smoothed tab gain crosses its threshold, tone, shape, the mode off and on).
+  era39sq: big('valve12', p => { p.era = { on: true, shape: 'organ', tone: 0, vib: 0, tabs: { body: true, open: true } }; }),
+  era39steal: big('valve12', p => { p.voice.count = 4; p.era = { on: true, shape: 'piano', tone: 0.5, vib: 40, rate: 9, vel: 0.8, tabs: { voice: true, mellow: true, thin: true } }; }),
+  era39chg: big('valve12', p => { p.drift = 0; p.era = { on: true, shape: 'swell', tone: 0.3, vib: 10, tabs: { edge: true } }; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
 // Cathode (the mono device in the same worklet file): factory patches by name, a held line with glide,
@@ -127,6 +134,20 @@ async function one(dir, name) {
   if (name === 'arp') { events.push({ at: 96000, t: 'clock', tempo: 132, playing: true, beat: 0 }, { at: 48000 * 3.2, t: 'off', n: 60 }, { at: 48000 * 3.2, t: 'off', n: 64 },
     { at: 48000 * 4, t: 'sus', on: true }, { at: 48000 * 4.1, t: 'off', n: 48 }, { at: 48000 * 4.6, t: 'sus', on: false }); events.sort((a, b) => a.at - b.at); }
   if (name === 'era39') events.push({ at: 48000 * 3, t: 'sus', on: true }, { at: 48000 * 3.2, t: 'off', n: 48 }, { at: 48000 * 3.2, t: 'off', n: 64 });
+  if (name === 'era39sq') events.push({ at: 48000 * 3, t: 'sus', on: true }, { at: 48000 * 3.2, t: 'off', n: 55 }, { at: 48000 * 4, t: 'sus', on: false });
+  if (name === 'era39steal') { events.push({ at: 48000 * 1, t: 'bend', v: 0.5 }, { at: 48000 * 1.5, t: 'mw', v: 0.7 }, { at: 48000 * 2, t: 'bend', v: -0.3 },
+    { at: 48000 * 2.5, t: 'on', n: 96, v: 0.3 }, { at: 48000 * 2.7, t: 'on', n: 103, v: 1 }, { at: 48000 * 2.9, t: 'on', n: 115, v: 0.6 },
+    { at: 48000 * 3.5, t: 'off', n: 96 }, { at: 48000 * 3.5, t: 'off', n: 115 }, { at: 48000 * 4, t: 'at', v: 0.5 }); events.sort((a, b) => a.at - b.at); }
+  if (name === 'era39chg') {
+    const c = o => JSON.parse(JSON.stringify(o));
+    const q1 = c(CASES.era39chg); q1.era.tabs = { body: true, voice: true, open: true }; q1.era.tone = 0.9;
+    const q2 = c(q1); q2.era.tabs = { body: true }; q2.era.shape = 'chime';
+    const q3 = c(q2); q3.era.on = false;
+    const q4 = c(q2); q4.era.tabs = { mellow: true, thin: true, edge: true };
+    events.push({ at: 48000, t: 'patch', p: normalize(q1) }, { at: 96000, t: 'patch', p: normalize(q2) }, { at: 144000, t: 'patch', p: normalize(q3) },
+      { at: 192000, t: 'patch', p: normalize(q4) }, { at: 200000, t: 'off', n: 48 }, { at: 210000, t: 'on', n: 50, v: 0.5 });
+    events.sort((a, b) => a.at - b.at);
+  }
   if (name === 'lfo' || name === 'fm') events.push({ at: 48000 * 3, t: 'off', n: 60 }, { at: 48000 * 3.5, t: 'on', n: 62, v: 0.6 });
   if (name === 'change') {
     const c = o => JSON.parse(JSON.stringify(o));

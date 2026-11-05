@@ -4448,13 +4448,26 @@ with sync_playwright() as pw:
     ck("R. pan hard right keeps the right and silences the left", rms(hardL) < 1e-4 and rms(hardR) > a * 0.5, (rms(hardL), rms(hardR), a))
     ck("R. a default strip leaves a centred voice identical on left and right", float(np.max(np.abs(baseL - baseR))) == 0.0, float(np.max(np.abs(baseL - baseR))))
 
+    # The transport's beat runs on the AudioContext's clock, so the check reads it against that clock: it waits
+    # (polling, 5 s cap) until two clock pulses have come and a tenth of a beat has passed, then checks the beat
+    # against the context time elapsed since play at the tempo, and every pulse's tick and time stamp. Until
+    # 5 Nov it waited a fixed 180 ms of wall clock and wanted the beat in 0.1..0.7, so a timer that fired late
+    # on a busy main thread failed it (beat 1.84 in the 5 Nov nightly run, measured).
     live = pg.evaluate("""async () => {
       await __synth.engine().ctx.resume();
-      const got = [];
-      const off = __synth.deviceApi('filament').subscribe(e => got.push(e.type));
-      __synth.transport().play();
-      await new Promise(r => setTimeout(r, 180));
+      const got = [], ev = [];
+      const off = __synth.deviceApi('filament').subscribe(e => { got.push(e.type); ev.push({ type: e.type, tick: e.tick, time: e.time, beat: e.beat }); });
+      const p0 = __synth.transport().play();
+      const until = performance.now() + 5000;
+      while ((got.filter(t => t === 'clock').length < 2 || __synth.transport().state().beat < p0.beat + 0.1) && performance.now() < until)
+        await new Promise(r => setTimeout(r, 20));
       const mid = __synth.transport().state();
+      const spb = 60 / mid.tempo, clocks = ev.filter(e => e.type === 'clock');
+      const beatErr = Math.abs(mid.beat - (p0.beat + (mid.time - p0.time) / spb));
+      // the pulses are consecutive ticks, each at beat tick/24 and stamped that many beats after the first, which is stamped at play
+      const k0 = clocks.length ? clocks[0].tick : 0, b0 = clocks.length ? clocks[0].beat : 0, c0 = clocks.length ? clocks[0].time : NaN;
+      const tickErr = clocks.reduce((m, e, k) => Math.max(m, e.tick === k0 + k ? Math.abs(e.time - (c0 + (e.beat - b0) * spb)) + Math.abs(e.beat - e.tick / 24) : 1), 0);
+      const startErr = Math.abs(c0 - p0.time);
       __synth.transport().stop();
       const held = __synth.transport().state();
       __synth.transport().stop();
@@ -4463,10 +4476,11 @@ with sync_playwright() as pw:
       const cut = __synth.deviceApi('filament').setParameter('filt.cutoff', 1234);
       const read = __synth.deviceApi('filament').getParameter('filt.cutoff');
       __synth.registerDevice({ id: 'sequencer', name: 'Step Sequencer', instrument: false, midiInput: false, midiOutput: true, audioOutputs: 0, description: 'A device other code can register.' });
-      return { got, playing: mid.playing, beat: mid.beat, heldBeat: held.beat, heldPlaying: held.playing, home: home.beat, cut, read, ids: __synth.devices().map(d => d.id) };
+      return { got, playing: mid.playing, beat: mid.beat, beatErr, tickErr, startErr, nClock: clocks.length, p0beat: p0.beat, heldBeat: held.beat, heldPlaying: held.playing, home: home.beat, cut, read, ids: __synth.devices().map(d => d.id) };
     }""")
-    ck("R. play emits clock events a device can subscribe to", live["playing"] and "play" in live["got"] and live["got"].count("clock") >= 2 and 0.1 < live["beat"] < 0.7, live)
-    ck("R. stop holds the beat and a second stop returns to the start", (not live["heldPlaying"]) and live["heldBeat"] > 0.1 and live["home"] == 0, live)
+    ck(f"R. play emits clock events a device can subscribe to ({live['nClock']} pulses by beat {live['beat']:.3f}; the beat follows the context clock at the tempo within {live['beatErr']:.1e}, each pulse's tick, beat and time within {live['tickErr']:.1e}, the first pulse {1000 * live['startErr']:.1f} ms from play)",
+       live["playing"] and "play" in live["got"] and live["nClock"] >= 2 and live["beat"] >= live["p0beat"] + 0.1 and live["beatErr"] < 0.01 and live["tickErr"] < 1e-9 and live["startErr"] < 0.01, live)
+    ck("R. stop holds the beat and a second stop returns to the start", (not live["heldPlaying"]) and live["heldBeat"] >= live["beat"] and live["heldBeat"] > 0.1 and live["home"] == 0, live)
     ck("R. a parameter id round-trips, and a new device can register", live["cut"] == 1234 and live["read"] == 1234 and "sequencer" in live["ids"], live)
 
     # Idle rack stages: the ensemble's wet side (off, or mix 0) and the single-ended B side are
