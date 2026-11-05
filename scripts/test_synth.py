@@ -48,14 +48,26 @@ class SynthHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(204); self.end_headers(); return
         self.send_error(501)
 handler = functools.partial(SynthHandler, directory=ROOT)
-socketserver.TCPServer.allow_reuse_address = True
-httpd = socketserver.TCPServer(("127.0.0.1", PORT), handler)
+# Threaded: Chrome opens speculative connections it may never send a request on, and a single-threaded
+# server blocks on the first one until Chrome drops it, so every other page load waits (5 Nov 2026: a
+# cold boot in the R. section timed out at 30 s and stopped the run). One thread per connection.
+socketserver.ThreadingTCPServer.allow_reuse_address = True
+socketserver.ThreadingTCPServer.daemon_threads = True
+httpd = socketserver.ThreadingTCPServer(("127.0.0.1", PORT), handler)
 threading.Thread(target=httpd.serve_forever, daemon=True).start()
 BASE = f"http://127.0.0.1:{PORT}/synth/"
 F = []
 def ck(name, cond, detail=""):
     print(("PASS" if cond else "FAIL"), name, "" if cond else f"-> {detail}")
     if not cond: F.append(name)
+def _idle_server_check():
+    import socket, urllib.request, time as _t
+    idle = socket.create_connection(("127.0.0.1", PORT)); t0 = _t.time()
+    try: ok = len(urllib.request.urlopen(BASE, timeout=5).read()) > 0
+    except Exception: ok = False
+    finally: idle.close()
+    ck("harness: the test server answers a page load while another connection sits idle", ok, f"{_t.time() - t0:.1f} s")
+_idle_server_check()
 def info(name, detail): print("INFO", name, detail)
 
 SR = 48000
