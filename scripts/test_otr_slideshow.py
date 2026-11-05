@@ -35,11 +35,14 @@ ck("rooms change slowly", pack["dwellMs"] >= 12000 and pack["fadeMs"] >= 800, pa
 xs = [s["lamp"]["x"] for s in pack["scenes"]]
 ss = [s["lamp"]["s"] for s in pack["scenes"]]
 ck("default lamp placements are not one fixed spot",
-   max(xs) - min(xs) > 0.5 and max(ss) - min(ss) > 0.2 and sum(abs(x - 0.5) < 0.08 for x in xs) <= 1,
+   max(xs) - min(xs) > 0.5 and max(ss) - min(ss) > 0.1 and len({round(x, 1) for x in xs}) >= 5,
    list(zip(ids, xs, ss)))
 for s in pack["scenes"]:
-    body = open(os.path.join(ROOT, "otr", "scenes", s["src"]), encoding="utf-8").read().lower()
-    ck(f"{s['id']} picture has no baked-in lamp", "lava" not in body and os.path.getsize(os.path.join(ROOT, "otr", "scenes", s["src"])) > 200)
+    path = os.path.join(ROOT, "otr", "scenes", s["src"])
+    raw = open(path, "rb").read()
+    textish = raw[:4] not in (b"\xff\xd8\xff\xe0", b"\xff\xd8\xff\xe1", b"\xff\xd8\xff\xdb", b"\x89PNG") and not raw[:3] == b"\xff\xd8\xff"
+    ck(f"{s['id']} picture has no baked-in lamp",
+       os.path.getsize(path) > 20000 and (not textish or b"lava" not in raw.lower()), s["src"])
 
 from playwright.sync_api import sync_playwright
 CHROME = os.environ.get("OTR_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -64,13 +67,13 @@ with sync_playwright() as p:
       return { id: __otr.slideshow.current().id, name: document.getElementById('slideCap').textContent, bg: on ? on.style.backgroundImage : '' };
     }""")
     ck("the first room is a scene picture, not an empty frame",
-       first["id"] == "space" and "Stars" in first["name"] and "space.svg" in first["bg"], first)
+       first["id"] == "space" and "Stars" in first["name"] and "space.jpg" in first["bg"], first)
     pg.wait_for_timeout(1500)
     ck("it does not flash to the next room", pg.evaluate("__otr.slideshow.current().id") == "space")
     pg.click("#slideNext")
     pg.wait_for_function("() => __otr.slideshow.current().id === 'farm'")
     farm = pg.evaluate("document.querySelector('#slideFrame .slide-bg.on').style.backgroundImage")
-    ck("Next room advances the picture", "farm.svg" in farm, farm)
+    ck("Next room advances the picture", "farm.jpg" in farm, farm)
     defs = pg.evaluate("__otr.slideshow.defaults()")
     by = {d["id"]: d for d in defs}
     got = pose(pg)

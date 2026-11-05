@@ -1,5 +1,5 @@
 {
-  "note": "Each picture is only the room. The lava lamp is drawn on top, never inside the file. To add a room: drop a 16:9 SVG, PNG, or WebP in this folder (no lamp, no words, no military imagery) and add an entry below. x and y are where the lamp's feet stand, as fractions of the frame (0 is the left or top, 1 is the right or bottom). s is the lamp height as a fraction of the frame height. rot, tilt, and skew are degrees (tilt leans it back in perspective so it can sit on a table, shelf, rail, or floor). Vary these. Do not park every lamp in the center at the same size.",
+  "note": "Each picture is only the room. The lava lamp is drawn on top, never inside the file. To add a room: drop a 16:9 JPG, PNG, or WebP in this folder (a warm painted interior, no lamp, no words, no military imagery) and add an entry below. x and y are where the lamp's feet stand, as fractions of the frame (0 is the left or top, 1 is the right or bottom). Put the feet on a real surface in that picture: a tabletop, nightstand, desk, counter, crate, or floor. s is the lamp height as a fraction of the frame height. rot, tilt, and skew are degrees (tilt leans it back so it sits on the surface). Vary these so the lamp is not the same size in the same spot in every room.",
   "dwellMs": 18000,
   "fadeMs": 1400,
   "stream": {
@@ -10,14 +10,14 @@
     "fadeMs": 1400
   },
   "scenes": [
-    { "id": "space", "name": "Stars", "src": "space.svg", "lamp": { "x": 0.80, "y": 0.78, "s": 0.36, "rot": -7, "tilt": 16, "skew": 5 } },
-    { "id": "farm", "name": "Farm", "src": "farm.svg", "lamp": { "x": 0.20, "y": 0.86, "s": 0.44, "rot": 5, "tilt": 8, "skew": -3 } },
-    { "id": "bedroom", "name": "Bedroom", "src": "bedroom.svg", "lamp": { "x": 0.86, "y": 0.70, "s": 0.32, "rot": -4, "tilt": 18, "skew": 2 } },
-    { "id": "kitchen", "name": "Kitchen", "src": "kitchen.svg", "lamp": { "x": 0.64, "y": 0.62, "s": 0.26, "rot": 9, "tilt": 24, "skew": 6 } },
-    { "id": "living", "name": "Living room", "src": "living.svg", "lamp": { "x": 0.16, "y": 0.92, "s": 0.50, "rot": -9, "tilt": 4, "skew": -2 } },
-    { "id": "porch", "name": "Porch at night", "src": "porch.svg", "lamp": { "x": 0.58, "y": 0.66, "s": 0.34, "rot": 12, "tilt": 14, "skew": -7 } },
-    { "id": "study", "name": "Study", "src": "study.svg", "lamp": { "x": 0.30, "y": 0.48, "s": 0.22, "rot": -14, "tilt": 12, "skew": 4 } },
-    { "id": "diner", "name": "Diner", "src": "diner.svg", "lamp": { "x": 0.10, "y": 0.74, "s": 0.40, "rot": 6, "tilt": 20, "skew": 3 } },
-    { "id": "attic", "name": "Attic", "src": "attic.svg", "lamp": { "x": 0.72, "y": 0.88, "s": 0.46, "rot": 3, "tilt": 6, "skew": -5 } }
+    { "id": "space", "name": "Stars", "src": "space.jpg", "lamp": { "x": 0.85, "y": 0.625, "s": 0.14, "rot": -1, "tilt": 6, "skew": 0 } },
+    { "id": "farm", "name": "Farm", "src": "farm.jpg", "lamp": { "x": 0.18, "y": 0.70, "s": 0.16, "rot": 1, "tilt": 8, "skew": 0 } },
+    { "id": "bedroom", "name": "Bedroom", "src": "bedroom.jpg", "lamp": { "x": 0.74, "y": 0.50, "s": 0.26, "rot": -2, "tilt": 10, "skew": 1 } },
+    { "id": "kitchen", "name": "Kitchen", "src": "kitchen.jpg", "lamp": { "x": 0.28, "y": 0.58, "s": 0.15, "rot": 2, "tilt": 12, "skew": 1 } },
+    { "id": "living", "name": "Living room", "src": "living.jpg", "lamp": { "x": 0.66, "y": 0.92, "s": 0.20, "rot": -2, "tilt": 4, "skew": 0 } },
+    { "id": "porch", "name": "Porch at night", "src": "porch.jpg", "lamp": { "x": 0.62, "y": 0.515, "s": 0.14, "rot": 0, "tilt": 4, "skew": 0 } },
+    { "id": "study", "name": "Study", "src": "study.jpg", "lamp": { "x": 0.48, "y": 0.66, "s": 0.15, "rot": -2, "tilt": 10, "skew": 0 } },
+    { "id": "diner", "name": "Diner", "src": "diner.jpg", "lamp": { "x": 0.55, "y": 0.50, "s": 0.18, "rot": 2, "tilt": 12, "skew": 0 } },
+    { "id": "attic", "name": "Attic", "src": "attic.jpg", "lamp": { "x": 0.68, "y": 0.66, "s": 0.24, "rot": 1, "tilt": 6, "skew": -1 } }
   ]
 }
