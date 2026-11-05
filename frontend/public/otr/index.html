@@ -4628,7 +4628,7 @@
     var Y0=g.Y0, Y1=g.Y1;
 
     // the room: the lamp lights the wall behind it and pools on the table (none of it on its own on black)
-    var room=o.view!=='solo', radio=radioOn(), tableY=LFLOOR+(radio?RAD.extra:0);
+    var slide=o.view==='slide', room=o.view!=='solo' && !slide, radio=radioOn() && !slide, tableY=LFLOOR+(radio?RAD.extra:0);
     if(room && lit>0.01 && !thermal && !xray){ var br=110, bl=c.createRadialGradient(cx,92,4,cx,92,br); bl.addColorStop(0,rgba(glowC,clampN(0.2*lit,0,0.5))); bl.addColorStop(0.5,rgba(glowC,clampN(0.06*lit,0,0.2))); bl.addColorStop(1,rgba(glowC,0));
       c.fillStyle=bl; c.beginPath(); c.arc(cx,92,br,0,Math.PI*2); c.fill(); }
     if(room && P.synth){ c.save(); c.strokeStyle='rgba(255,40,200,0.22)'; c.lineWidth=0.5;
@@ -4697,15 +4697,17 @@
   function renderLamp(cv, now, view, z, px, py, q){
     var f=fitCanvas(cv, q); if(!f) return null; lampTick(now);
     var c=f.c, r=f.r, L=curLook(), W=cv.width, H=cv.height;
-    // with the radio the big view keeps the strip under the zoom buttons clear, so they never sit on its controls
-    var solo=view==='solo', SH=lampSceneH(), hh=f.h-(view==='big' && radioOn() ? Math.min(56, f.h*0.11) : 0);
+    // with the radio the big view keeps the strip under the zoom buttons clear, so they never sit on its controls.
+    // The slideshow view is the lamp alone, transparent, so a room picture can sit behind it.
+    var solo=view==='solo', slide=view==='slide', SH=slide?TH:lampSceneH(), hh=f.h-(view==='big' && radioOn() ? Math.min(56, f.h*0.11) : 0);
     var s=Math.min(f.w/TW, hh/SH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=hh/2-(SH/2+(py||0))*s;
-    if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
+    if(slide){ if(cv.style.filter) cv.style.filter=''; }
+    else if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
     c.setTransform(1,0,0,1,0,0);
-    var bg = solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
+    var bg = slide ? null : (solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null)); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
     c.setTransform(r*s,0,0,r*s,r*tx,r*ty);
     paintLamp(c, now, { detail:r*s, view:view, ppu:r*s, vis:{ x0:-tx/s, y0:-ty/s, x1:(f.w-tx)/s, y1:(f.h-ty)/s } });
-    c.setTransform(1,0,0,1,0,0); if(!solo) lookOverlay(c, W, H, L, now);
+    c.setTransform(1,0,0,1,0,0); if(!solo && !slide) lookOverlay(c, W, H, L, now);
     return { s:s, tx:tx, ty:ty, w:f.w, h:hh };
   }
   function drawLamp(now){ renderLamp($('lampCv'), now, 'rack'); }
@@ -5309,6 +5311,9 @@
         radioAt: function(id, which){ var solo=which==='solo', cv=$(solo?'soloCv':'tvCv'), g=solo?SOLO.geom:tvGeom, p=radCenter(id); if(!g||!p) return null; var r=cv.getBoundingClientRect(); return { x:r.left+g.tx+p.x*g.s, y:r.top+g.ty+p.y*g.s, s:g.s }; },
         stepCost: function(n){ lampSim(); var t0=performance.now(); n=n||600; for(var i=0;i<n;i++) LAMP.sim.step(); return (performance.now()-t0)/n; },
         crisp: function(){ var cv=$('lampCv'); drawLamp(performance.now()); var dpr=window.devicePixelRatio||1, st=LAMP.F.rack||{};
+          return { dpr:dpr, ratio: cv.clientWidth ? cv.width/cv.clientWidth : 0, pxPerCell: st.pxPerCell==null ? 99 : st.pxPerCell, bloom: st.bloomPx==null ? 99 : st.bloomPx, w:cv.width, cw:cv.clientWidth }; },
+        slide: function(cv, now){ var el=cv||$('slideLamp'); if(!el) return null; return renderLamp(el, now||performance.now(), 'slide'); },
+        slideCrisp: function(){ var cv=$('slideLamp'); if(!cv) return null; renderLamp(cv, performance.now(), 'slide'); var dpr=window.devicePixelRatio||1, st=LAMP.F.slide||{};
           return { dpr:dpr, ratio: cv.clientWidth ? cv.width/cv.clientWidth : 0, pxPerCell: st.pxPerCell==null ? 99 : st.pxPerCell, bloom: st.bloomPx==null ? 99 : st.bloomPx, w:cv.width, cw:cv.clientWidth }; }
       },
       // Test-only: decode the start of a real recording (byte range) and report the energy in the
@@ -5348,6 +5353,7 @@
   }
 })();
 </script>
+<script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'slideshow.js?v=1"><\/script>');</script>
 <script>
 /* Pop-out radio (/otr/pop/) and one radio at a time.
  * "pop out radio" opens the pocket radio in a small window (a new tab on phones) tuned to the network or
