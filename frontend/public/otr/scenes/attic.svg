@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#3a3128"/>
+  <polygon points="0,540 0,180 480,20 960,180 960,540" fill="#2a241c"/>
+  <polygon points="80,540 80,210 480,60 880,210 880,540" fill="#4a3b30"/>
+  <g stroke="#2a1c14" stroke-width="10">
+    <path d="M80 210 L480 60 L880 210"/>
+    <path d="M200 250 L200 540 M360 160 L360 540 M600 160 L600 540 M760 250 L760 540"/>
+  </g>
+  <rect x="560" y="120" width="150" height="120" rx="70" fill="#1d2433" stroke="#5c4030" stroke-width="10"/>
+  <g stroke="#9fd0ea" stroke-width="2" opacity="0.45">
+    <path d="M590 140 L600 200 M630 130 L640 210 M670 140 L680 200"/>
+  </g>
+  <rect x="0" y="430" width="960" height="110" fill="#5c4636"/>
+  <g stroke="#3a2a22" stroke-width="4">
+    <path d="M0 460 H960 M0 500 H960"/>
+  </g>
+  <rect x="120" y="340" width="180" height="100" rx="4" fill="#6b4632" stroke="#3a2418" stroke-width="6"/>
+  <path d="M120 340 H300" stroke="#8a6246" stroke-width="8"/>
+  <rect x="150" y="360" width="50" height="8" fill="#c9a36a"/>
+  <rect x="700" y="360" width="90" height="80" fill="#6e2e38"/>
+  <path d="M690 360 H800 L780 340 H710 Z" fill="#8d3b45"/>
+  <ellipse cx="400" cy="500" rx="50" ry="12" fill="#2a1c14" opacity="0.35"/>
+</svg>
