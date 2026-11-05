@@ -74,6 +74,23 @@
 //              is the SVF 12 loop at low-pass with its resonance held well short of oscillation
 //              (damping no lower than LPG_KMIN), so it never sings. Our own model.
 //
+// 1939 mode (patch.era, off by default): a second voice architecture for the same voices, after the
+// tube-era electronic organs and string keyboards (ideas only; our own design and code). Twelve master
+// oscillators, one per pitch class in the top octave (MIDI 108 to 119), run for the whole instrument, and
+// every note is its master divided by two per octave down, so octaves stay phase locked. Each master
+// counts its cycles (modulo 1024, enough for nine divisions), and a voice's phase is that count divided
+// down, taken again at every control tick, so a voice never drifts from its master. The divided wave is
+// a square (one flip-flop) blended toward a staircase (the square plus the next three octaves up at half,
+// a quarter and an eighth: a binary counter's falling stair, which is how divider organs made a saw).
+// It goes through V1 as usual, then a bank of fixed LC-style resonators per voice that do not follow
+// the key (three band-passes, a low-pass and a high-pass, plus a straight path), picked by a row of tone
+// tabs and summed in parallel. Seven envelope shapes on one switch. The sustain pedal does not hold notes
+// in this mode: while it is down, a released note fades over era.pedal seconds instead of the shape's
+// own release. Vibrato is six channels near the rate knob, each a little faster than the last; the masters
+// share them two pitch classes a channel, so a chord shimmers instead of wobbling as one. The other
+// sections (oscillators, both filters, the amp and filter envelopes, the LFOs, unison, the mod matrix and
+// glide) rest while it is on; V1, the voice count, tune, bend, the wheel, pressure and the rack still apply.
+//
 // Messages in (port): {t:'patch',p,load}, {t:'on',n,v}, {t:'off',n}, {t:'bend',v},
 //   {t:'mw',v}, {t:'at',v}, {t:'sus',on}, {t:'panic'}, {t:'release'}. Any of them may carry
 //   at:<frame> (an absolute frame, as currentFrame counts) to land on an exact sample; offline
@@ -448,7 +465,9 @@ const K_BMOR = 37;
 const K_BBAL = 38;
 const K_MA = 39;      // mod matrix amounts, one per slot (-1..1)
 const MSLOTS = 8;
-const NP = K_MA + MSLOTS;
+const K_ET = K_MA + MSLOTS;   // 1939 mode: tone (0 square .. 1 staircase)
+const K_EB = K_ET + 1;        // 1939 mode: the six tone tab gains (body, voice, edge, mellow, thin, open), 0 or 1, smoothed
+const NP = K_EB + 6;
 
 // ---------- envelopes ----------
 const E_IDLE = 0, E_ATT = 1, E_DEC = 2, E_SUS = 3, E_REL = 4;
@@ -495,6 +514,19 @@ class Filament extends AudioWorkletProcessor {
     this.mS = new Int32Array(MSLOTS); this.mD = new Int32Array(MSLOTS); this.mN = 0; this.mDm = 0; this.mL = 0; this.mRand = false;
     this.MD = new Float64Array(M_DST.length); this.mkT = new Float64Array(MK_N); this.v1Gain = 0.774; this.v1D = 3;
     this.P = null; this.S = new Float64Array(NP); this.Sp = new Float64Array(NP); this.T = new Float64Array(NP); this.CT = new Float64Array(NP * (128 / CTRL + 1));
+    // 1939 mode: the twelve masters' cycle counts (mod E_MOD), the six vibrato phases, a memo of the
+    // masters' base steps, per-tick scratch (each master's count at the tick and its step per 2x sample),
+    // and the fixed resonators' coefficients (a1, a2, a3, k each; trapezoidal state variable sections)
+    this.e39 = false; this.pb39 = NaN;
+    this.c39 = new Float64Array(12); for (let i = 0; i < 12; i++) this.c39[i] = (i * 0.381966) % 1;
+    this.vb39 = new Float64Array(6); for (let c = 0; c < 6; c++) this.vb39[c] = c / 6;
+    this.fb39 = new Float64Array(12); this.vm39 = new Float64Array(6);
+    this.C39 = new Float64Array(12 * (128 / CTRL + 1)); this.D39 = new Float64Array(12 * (128 / CTRL + 1));
+    this.lcK = new Float64Array(20);
+    for (let j = 0; j < 5; j++) {
+      const g = Math.tan(Math.PI * Math.min(E_LC[j][1], this.fs * 0.45) / this.fs), k = 1 / E_LC[j][2], a1 = 1 / (1 + g * (g + k));
+      this.lcK[j * 4] = a1; this.lcK[j * 4 + 1] = g * a1; this.lcK[j * 4 + 2] = g * g * a1; this.lcK[j * 4 + 3] = k;
+    }
     this.arp = new Arp(this); this.nowF = 0;     // the arpeggiator (off unless the patch turns it on); the frame a message lands on
     this.setPatch(o.patch || {}, true);
     this.target(this.S); this.Sp.set(this.S);
@@ -511,6 +543,7 @@ class Filament extends AudioWorkletProcessor {
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
       fBL: new Filt(), fBR: new Filt(), stB: false,  // filter slot B (left or both, right)
       fcA: 0, fcB: 0,                                // the last control tick's cutoffs (Hz) for A and B, left side (the response plot reads them)
+      lc: new Float64Array(10),                      // 1939 mode: the five resonators' two states each
       rnd: 0,                                        // the mod matrix's random source, drawn at each trigger (only when a slot uses it)
       dcx: 0, dcy: 0,
       nb0: 0, nb1: 0, nb2: 0,
@@ -537,7 +570,7 @@ class Filament extends AudioWorkletProcessor {
   lfoHz(l, q) { const sb = syncBeats(l); return sb ? this.ckTempo / (60 * sb) : clamp(num(l.rate, q ? 0.2 : 5), 0.01, 40); }
 
   // ----- patch handling -----
-  setPatch(p) { this.P = p; this.buildTables(); this.arpPatch(); }
+  setPatch(p) { this.P = p; this.e39 = !!(p && p.era && p.era.on); this.buildTables(); this.arpPatch(); }
   // ----- arpeggiator -----
   // Switched on, the notes the keys are holding move into it (they stop, and it starts stepping through
   // them); switched off, its note lets go and the keys still down (or on the pedal) play as a chord again.
@@ -627,6 +660,9 @@ class Filament extends AudioWorkletProcessor {
     T[K_BMOR] = clamp(num(fb.morph, 0), 0, 3); T[K_BBAL] = clamp(num(fb.bal, 0), -1, 1);
     const mo = P.mod;
     for (let i = 0; i < MSLOTS; i++) { const s = mo ? mo[M_KEYS[i]] : null; T[K_MA + i] = s ? clamp(num(s.amt, 0), -1, 1) : 0; }
+    const er = P.era || {}, tb = er.tabs || {};
+    T[K_ET] = clamp(num(er.tone, 0.6), 0, 1);
+    for (let i = 0; i < 6; i++) T[K_EB + i] = tb[E_TABS[i]] ? 1 : 0;
     return T;
   }
 
@@ -675,7 +711,7 @@ class Filament extends AudioWorkletProcessor {
   // ----- notes -----
   mode() { return ((this.P.voice || {}).mode) || 'poly'; }
   count() { return clamp(((this.P.voice || {}).count) | 0 || 8, 1, NV); }
-  uni() { return clamp(num((this.P.voice || {}).unison, 1) | 0, 1, 8); }
+  uni() { return this.e39 ? 1 : clamp(num((this.P.voice || {}).unison, 1) | 0, 1, 8); }   // 1939 mode: copies would be the same divided wave
   // Unison stacks copies from the same pool: polyphony is the voice count, and the pool grows to
   // count x unison (at most 16), so turning unison up costs voices only past 16.
   pool() { return Math.min(NV, this.count() * this.uni()); }
@@ -759,7 +795,7 @@ class Filament extends AudioWorkletProcessor {
           if (mode === 'mono') this.trigger(v, v.vel);
           continue;
         }
-        if (this.sus && !hard) { v.sust = true; v.gate = false; continue; }
+        if (this.sus && !hard && !this.e39) { v.sust = true; v.gate = false; continue; }   // 1939 mode: the pedal lengthens the release instead
         v.gate = false; if (v.as !== E_IDLE) { v.as = E_REL; v.fs = E_REL; }
       }
       return;
@@ -768,7 +804,7 @@ class Filament extends AudioWorkletProcessor {
       const v = this.voices[i];
       if (v.on && v.note === n && v.gate) {
         v.gate = false;
-        if (this.sus && !hard) v.sust = true; else { v.as = E_REL; v.fs = E_REL; }
+        if (this.sus && !hard && !this.e39) v.sust = true; else { v.as = E_REL; v.fs = E_REL; }
       }
       if (v.pending && v.pending.n === n) v.pending = null;
     }
@@ -1040,6 +1076,7 @@ class Filament extends AudioWorkletProcessor {
       else lG0[q] = this.lfoG[q];
       this.lfoG[q] = (lG0[q] + lRate[q] * frames / sr) % 1;
     }
+    if (this.e39) { this.render39(a, b, duck0); return; }
     const LV = this.LV, gsh = this.gsh;
     // An LFO nobody listens to costs nothing: skip it (its phase still runs).
     const lUse0 = S[K_LP] > 0 || this.T[K_LP] > 0 || S[K_LC] > 0 || this.T[K_LC] > 0 || S[K_LPW] > 0 || this.T[K_LPW] > 0 || S[K_LA] > 0 || this.T[K_LA] > 0 || mwvAny(P, this) || (this.mL & 1) !== 0;
@@ -1358,6 +1395,124 @@ class Filament extends AudioWorkletProcessor {
     for (let i = a * OS; i < b * OS; i++) { const l = L2[i], r = R2[i]; if (!(l < 1e3 && l > -1e3)) L2[i] = 0; if (!(r < 1e3 && r > -1e3)) R2[i] = 0; }
     this.v1Acc += v1Acc; this.v2Acc += v2Acc; this.accN += frames * OS;
   }
+
+  // ----- 1939 mode (patch.era): divide-down masters, V1, the fixed resonator bank, seven shapes -----
+  render39(a, b, duck0) {
+    const sr = this.sr, fs = this.fs, frames = b - a, P = this.P, E = P.era || {};
+    const S = this.S, Sp = this.Sp, CT = this.CT, nt = Math.ceil(frames / CTRL);
+    for (let t = 0; t < nt; t++) { const kk = t * CTRL / frames, o = t * NP; for (let j = 0; j < NP; j++) CT[o + j] = Sp[j] + (S[j] - Sp[j]) * kk; }
+    const vo = P.voice || {}, pbS = this.bend * num(vo.bend, 2) + num(P.tune, 0) / 100;
+    const vDepth = clamp(num(E.vib, 18), 0, 100) + this.mw * num((P.mw || {}).vib, 30) + this.at * num((P.at || {}).vib, 0);
+    const vRate = clamp(num(E.rate, 6.8), 3, 10);
+    const fb = this.fb39, vm = this.vm39, vb = this.vb39, c39 = this.c39, C = this.C39, D = this.D39;
+    // each master's step per 2x sample before vibrato; bend and tune move every octave together
+    if (pbS !== this.pb39) { this.pb39 = pbS; for (let pc = 0; pc < 12; pc++) fb[pc] = 440 * Math.pow(2, (E_TOP + pc - 69 + pbS) / 12) / fs; }
+    for (let t = 0; t < nt; t++) {
+      const tf = Math.min(CTRL, frames - t * CTRL), o = t * 12;
+      for (let c = 0; c < 6; c++) {
+        vm[c] = vDepth > 0 ? Math.pow(2, vDepth * Math.sin(TWO_PI * vb[c]) / 1200) : 1;
+        const ph = vb[c] + vRate * E_VR[c] * tf / sr; vb[c] = ph - Math.floor(ph);
+      }
+      for (let pc = 0; pc < 12; pc++) {
+        const d = fb[pc] * vm[pc % 6]; C[o + pc] = c39[pc]; D[o + pc] = d;
+        let c = c39[pc] + d * tf * OS; if (c >= E_MOD) c -= E_MOD; c39[pc] = c;
+      }
+    }
+    const si = E_SHAPES.indexOf(E.shape), en = E_ENV[si < 0 ? 2 : si];
+    const aA = coef(en[0] / 1.466, sr), aD = coef(en[1] / 4.6, sr), aS = en[2];
+    // the pedal: while it is down a released note fades over era.pedal seconds; up, over the shape's own release
+    const aR = coef((this.sus ? clamp(num(E.pedal, 3), 0.3, 12) : en[3]) / 4.6, sr);
+    const velA = clamp(num(E.vel, 0.3), 0, 1);
+    const v1Tab = this.v1Tab, dcA = 1 - TWO_PI * 15 / fs, L2 = this.L2, R2 = this.R2, lcK = this.lcK;
+    // the five sections' coefficients (E_LC order: body, voice, edge band-passes; mellow low-pass; thin high-pass)
+    const b1 = lcK[0], b2 = lcK[1], b3 = lcK[2], bk = lcK[3], c1 = lcK[4], c2 = lcK[5], c3 = lcK[6], ck = lcK[7];
+    const d1 = lcK[8], d2 = lcK[9], d3 = lcK[10], dk = lcK[11], e1 = lcK[12], e2 = lcK[13], e3 = lcK[14];
+    const h1 = lcK[16], h2 = lcK[17], h3 = lcK[18], hk = lcK[19];
+    const N = this.pool(), poly = this.mode() === 'poly';
+    let v1Acc = 0, v2Acc = 0;
+    for (let vi = 0; vi < NV; vi++) {
+      const v = this.voices[vi];
+      if (!v.on) continue;
+      if (vi >= N && poly && v.as !== E_REL && !v.killing) { v.as = E_REL; v.fs = E_REL; v.gate = false; }
+      v.fcA = 0; v.fcB = 0;
+      const n = v.note, pc = n % 12, k = (E_TOP + pc - n) / 12, sc = k >= 0 ? 1 / (1 << k) : (1 << -k);
+      if (v.pan !== v.lastPan) { v.lastPan = v.pan; v.gl = Math.cos((v.pan + 1) * Math.PI / 4); v.gr = Math.sin((v.pan + 1) * Math.PI / 4); }
+      const gl = v.gl, gr = v.gr, lc = v.lc;
+      let ae = v.ae, as = v.as, fade = v.fade, dcx = v.dcx, dcy = v.dcy;
+      let ph = 0, dt = 0, tone = 0, w1 = 0, w2 = 0, w3 = 0, nrm = 1, G1 = 1, mk1 = 1, vol = 0;
+      let g0 = 0, g1 = 0, g2 = 0, g3 = 0, g4 = 0, g5 = 0, gn = 1;
+      for (let i = a; i < b; i++) {
+        const fr = i - a;
+        // ---- control tick: the voice's phase is taken again from its master, so it never drifts ----
+        if (fr % CTRL === 0) {
+          const t = (fr / CTRL) | 0, cb = t * NP, o = t * 12;
+          const c0 = C[o + pc] * sc; ph = c0 - Math.floor(c0); dt = D[o + pc] * sc;
+          tone = CT[cb + K_ET];
+          // the staircase's upper octaves drop out smoothly as they near the band edge
+          w1 = clamp((0.2 - 2 * dt) * 10, 0, 1); w2 = clamp((0.2 - 4 * dt) * 10, 0, 1); w3 = clamp((0.2 - 8 * dt) * 10, 0, 1);
+          nrm = 1 / (1 + 0.5 * w1 + 0.25 * w2 + 0.125 * w3);
+          g0 = CT[cb + K_EB] * E_LC[0][3]; g1 = CT[cb + K_EB + 1] * E_LC[1][3]; g2 = CT[cb + K_EB + 2] * E_LC[2][3];
+          g3 = CT[cb + K_EB + 3] * E_LC[3][3]; g4 = CT[cb + K_EB + 4] * E_LC[4][3]; g5 = CT[cb + K_EB + 5];
+          const on = CT[cb + K_EB] + CT[cb + K_EB + 1] + CT[cb + K_EB + 2] + CT[cb + K_EB + 3] + CT[cb + K_EB + 4] + CT[cb + K_EB + 5];
+          gn = 1 / Math.sqrt(on > 1 ? on : 1);
+          G1 = CT[cb + K_V1G]; mk1 = CT[cb + K_V1MK]; vol = CT[cb + K_VOL];
+        }
+        // ---- the shape (output rate) ----
+        if (as === E_ATT) { ae += (1.3 - ae) * aA; if (ae >= 1) { ae = 1; as = E_DEC; } }
+        else if (as === E_DEC) { ae += (aS - ae) * aD; if (Math.abs(ae - aS) < 1e-4) as = E_SUS; }
+        else if (as === E_SUS) { ae += (aS - ae) * 0.01; if (ae < ENV_FLOOR) ae = 0; }
+        else if (as === E_REL) { ae += (0 - ae) * aR; if (ae < 1e-5) { ae = 0; as = E_IDLE; } }
+        if (v.killing) { fade -= 1 / (0.002 * sr); if (fade <= 0) fade = 0; }
+        const duck = duck0 + (this.duck - duck0) * (fr / frames);
+        const amp = ae * (1 - velA * (1 - v.vel)) * fade * duck * vol * 0.3 * gn;   // 0.3: a four-note chord on the defaults sits near Init's
+        const aL = amp * gl, aRg = amp * gr;
+        for (let s = 0; s < OS; s++) {
+          // the divided wave: a square, blended toward the staircase
+          let x = e39sq(ph, dt);
+          if (tone > 0) {
+            let p2 = ph + ph; if (p2 >= 1) p2 -= 1;
+            let p4 = p2 + p2; if (p4 >= 1) p4 -= 1;
+            let p8 = p4 + p4; if (p8 >= 1) p8 -= 1;
+            let st = x;
+            if (w1 > 0) st += 0.5 * w1 * e39sq(p2, dt * 2);
+            if (w2 > 0) st += 0.25 * w2 * e39sq(p4, dt * 4);
+            if (w3 > 0) st += 0.125 * w3 * e39sq(p8, dt * 8);
+            x += (st * nrm - x) * tone;
+          }
+          ph += dt; if (ph >= 1) ph -= 1;
+          x *= 0.6;
+          // V1, then the coupling cap (15 Hz)
+          v1Acc += x * x;
+          let y;
+          { const tp = (G1 * x + TT_R) * TT_SCALE;
+            if (tp <= 0) y = v1Tab[0]; else if (tp >= TT_N - 1) y = v1Tab[TT_N - 1];
+            else { const ti = tp | 0; y = v1Tab[ti] + (v1Tab[ti + 1] - v1Tab[ti]) * (tp - ti); }
+            y = y / G1 * mk1; }
+          dcy = y - dcx + dcA * dcy; dcx = y; y = dcy;
+          // the resonator bank, in parallel: each tab that is in adds its path
+          // (each section: v3 = in - s2, u1 = a1 s1 + a2 v3, u2 = s2 + a2 s1 + a3 v3; band u1 k, low u2, high in - k u1 - u2)
+          let out = g5 * y;
+          if (g0 > 1e-6) { const s1 = lc[0], s2 = lc[1], v3 = y - s2, u1 = b1 * s1 + b2 * v3, u2 = s2 + b2 * s1 + b3 * v3; lc[0] = 2 * u1 - s1; lc[1] = 2 * u2 - s2; out += g0 * bk * u1; }
+          if (g1 > 1e-6) { const s1 = lc[2], s2 = lc[3], v3 = y - s2, u1 = c1 * s1 + c2 * v3, u2 = s2 + c2 * s1 + c3 * v3; lc[2] = 2 * u1 - s1; lc[3] = 2 * u2 - s2; out += g1 * ck * u1; }
+          if (g2 > 1e-6) { const s1 = lc[4], s2 = lc[5], v3 = y - s2, u1 = d1 * s1 + d2 * v3, u2 = s2 + d2 * s1 + d3 * v3; lc[4] = 2 * u1 - s1; lc[5] = 2 * u2 - s2; out += g2 * dk * u1; }
+          if (g3 > 1e-6) { const s1 = lc[6], s2 = lc[7], v3 = y - s2, u1 = e1 * s1 + e2 * v3, u2 = s2 + e2 * s1 + e3 * v3; lc[6] = 2 * u1 - s1; lc[7] = 2 * u2 - s2; out += g3 * u2; }
+          if (g4 > 1e-6) { const s1 = lc[8], s2 = lc[9], v3 = y - s2, u1 = h1 * s1 + h2 * v3, u2 = s2 + h2 * s1 + h3 * v3; lc[8] = 2 * u1 - s1; lc[9] = 2 * u2 - s2; out += g4 * (y - hk * u1 - u2); }
+          v2Acc += out * out;
+          const idx = i * OS + s;
+          L2[idx] += out * aL; R2[idx] += out * aRg;
+        }
+      }
+      v.ae = ae; v.as = as; v.fade = fade; v.dcx = dcx; v.dcy = dcy;
+      for (let j = 0; j < 10; j++) if (lc[j] < 1e-20 && lc[j] > -1e-20) lc[j] = 0;
+      if (as === E_IDLE || (v.killing && fade <= 0)) {
+        v.on = false; v.as = E_IDLE; v.ae = 0; v.vg = 0; v.killing = false; v.fade = 1; v.st2 = false; v.stB = false;
+        v.fL.reset(); v.fR.reset(); v.fBL.reset(); v.fBR.reset(); lc.fill(0);
+        if (v.pending) { const pnd = v.pending; v.pending = null; this.startVoice(v, pnd.n, pnd.vel, false, pnd.j, pnd.U, pnd.pb); }
+      }
+    }
+    for (let i = a * OS; i < b * OS; i++) { const l = L2[i], r = R2[i]; if (!(l < 1e3 && l > -1e3)) L2[i] = 0; if (!(r < 1e3 && r > -1e3)) R2[i] = 0; }
+    this.v1Acc += v1Acc; this.v2Acc += v2Acc; this.accN += frames * OS;
+  }
 }
 
 // Valve 12 self-oscillation pitch calibration: cents to add at full resonance, per loop tube,
@@ -1419,6 +1574,31 @@ const SVF_CAL = [77.8, -230];
 const FR_AMP = 1e-4;
 const LPG_KMIN = 0.5, LPG_KMAX = Math.SQRT2 - LPG_KMIN, LPG_TA = 0.0025, LPG_D0 = 0.25, LPG_END = 1e-4;
 const LWAVES = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4, smooth: 5 };
+// 1939 mode. The masters sit at MIDI 108 to 119; a note is its master divided by 2^k, k octaves down.
+const E_TOP = 108, E_MOD = 1024;
+// the seven envelope shapes: attack, decay (s to -40 dB), sustain, release (s to -40 dB)
+const E_SHAPES = ['organ', 'accent', 'bowed', 'swell', 'piano', 'harp', 'chime'];
+const E_ENV = [[0.004, 0.1, 1, 0.08], [0.003, 0.22, 0.55, 0.25], [0.16, 0.4, 0.9, 0.35], [1.1, 0.5, 1, 0.7],
+  [0.003, 2.2, 0, 0.25], [0.002, 0.8, 0, 0.2], [0.002, 3.5, 0, 1.0]];
+// the resonator bank: [kind (0 band-pass, 1 low-pass, 2 high-pass), Hz, Q, gain]; then the straight path
+const E_TABS = ['body', 'voice', 'edge', 'mellow', 'thin', 'open'];
+// (the gains bring each tab alone to within about 3 dB of the others on a C4, measured with the staircase at 0.6)
+const E_LC = [[0, 300, 2.5, 1.0], [0, 850, 3, 2.5], [0, 2500, 3.5, 4.6], [1, 1100, 0.707, 1], [2, 700, 0.707, 1.6]];
+// the six vibrato channels' rates, as a share of the rate knob
+const E_VR = [0.94, 0.97, 1.0, 1.03, 1.06, 1.09];
+// A step of 2 smoothed over the samples either side of it: the residual to add at phase t (0..1, the
+// step at 0) with a phase step dt. Two-sided (it also corrects the sample before the edge), which is fine
+// here because the divided phase is known ahead.
+function e39blep(t, dt) {
+  if (t < dt) { const x = t / dt; return x + x - x * x - 1; }
+  if (t > 1 - dt) { const x = (t - 1) / dt; return x * x + x + x + 1; }
+  return 0;
+}
+// the flip-flop's square: up at 0, down at a half
+function e39sq(t, dt) {
+  let u = t + 0.5; if (u >= 1) u -= 1;
+  return (t < 0.5 ? 1 : -1) + e39blep(t, dt) - e39blep(u, dt);
+}
 // LFO tempo sync (lfo1.sync, lfo2.sync): 'off', or a note value whose length is one LFO cycle, in
 // quarter-note beats ('d' dotted, 'tr' triplet). patches.js carries the same table (LFO_SYNC_BEATS); the
 // suite checks they match. A synced LFO runs at tempo / 60 / beats Hz. A global one, while the rack's
@@ -1573,7 +1753,7 @@ function isStruct(a, b) {
   if (!a) return true;
   if (modKey(a) !== modKey(b)) return true;
   return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube', 'filt.gate',
-    'v1.tube', 'voice.mode'].some(k => get(a, k) !== get(b, k)) || slotBKey(a) !== slotBKey(b);
+    'v1.tube', 'voice.mode', 'era.on'].some(k => get(a, k) !== get(b, k)) || slotBKey(a) !== slotBKey(b);
 }
 // Filter slot B: the route (0 off, 1 serial, 2 parallel, 3 split) and the model (render()'s numbers;
 // the low pass gate is slot A only, so anything else reads as SVF 12). slotBKey changes when a swap

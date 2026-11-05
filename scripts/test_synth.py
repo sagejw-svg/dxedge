@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -1078,6 +1078,179 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.panic && __synth.panic()")
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Ar. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Er. 1939 mode (5 Nov)
+    # patch.era: divide-down masters, V1, the fixed resonator bank, seven envelope shapes, six-channel vibrato.
+    # A clean patch: V1 at 0 drive, no rack, the open tab only, the organ shape, no vibrato, no velocity.
+    _es_w, _es_p, _et_w, _et_p = _jl(_wk, "E_SHAPES"), _jl(_pj, "ERA_SHAPES"), _jl(_wk, "E_TABS"), _jl(_pj, "ERA_TABS")
+    ck(f"Er. the worklet and patches.js carry the same seven shapes and six tone tabs ({_es_w}, {_et_w})",
+       _es_w == _es_p == ["organ", "accent", "bowed", "swell", "piano", "harp", "chime"] and _et_w == _et_p == ["body", "voice", "edge", "mellow", "thin", "open"], (_es_w, _es_p, _et_w, _et_p))
+    en_ = pg.evaluate("""async () => { const m = await import('./patches.js'), d = m.normalize({}).era;
+      const j = m.normalize({ era: { on: 1, shape: 'kazoo', tone: 3, vib: 99, rate: 1, pedal: 50, vel: -1, tabs: { body: 0, voice: 0, mellow: 0, edge: 'x' } } }).era;
+      const k = m.normalize({ era: { tabs: { body: false, voice: false, mellow: false } } }).era.tabs;
+      return { d, j, k, v: m.normalize({ era: { on: true } }).v, fac: m.FACTORY.filter(p => p.era.on).map(p => p.name) }; }""")
+    ck(f"Er. the schema: a patch with no era loads with 1939 mode off (bowed, staircase 60%, 18 cents at 6.8 Hz, pedal 3 s, body, voice and mellow in); only the two new factory patches turn it on, so no other patch sounds different; ranges clamp, an unknown shape falls back, and no tab in reads as open (schema stays v:1) ({en_})",
+       en_["d"] == {"on": False, "shape": "bowed", "tone": 0.6, "vib": 18, "rate": 6.8, "pedal": 3, "vel": 0.3, "tabs": {"body": True, "voice": True, "edge": False, "mellow": True, "thin": False, "open": False}}
+       and en_["fac"] == ["Exposition Choir", "Parlor Harp"] and en_["v"] == 1
+       and en_["j"]["shape"] == "bowed" and en_["j"]["tone"] == 1 and en_["j"]["vib"] == 60 and en_["j"]["rate"] == 4 and en_["j"]["pedal"] == 10 and en_["j"]["vel"] == 0
+       and en_["j"]["tabs"]["edge"] is True and en_["k"]["open"] is True, en_)
+    _ETABS = ["body", "voice", "edge", "mellow", "thin", "open"]
+    def era_p(tabs=None, **e):
+        t_ = dict({k: False for k in _ETABS}, **(tabs or {"open": True}))
+        return patch(era=dict({"on": True, "shape": "organ", "tone": 0, "vib": 0, "rate": 6.8, "pedal": 3, "vel": 0, "tabs": t_}, **e))
+    def era_r(p_, events, seconds, **kw): return render(p_, events, seconds, rack=False, **kw)[0]
+    # pitch: every note is its master divided down, so each lands on equal temperament
+    pc_ = []
+    for n_ in (33, 45, 50, 61, 69, 81, 93, 106, 115):
+        L_ = era_r(era_p(), note(n_), 0.8)
+        pc_.append(round(cents(peak_freq(L_[SR // 4:]), 440 * 2 ** ((n_ - 69) / 12)), 2))
+    ck(f"Er. pitch: notes from A1 to G8 land within 0.5 cents of equal temperament ({pc_})", max(abs(c_) for c_ in pc_) <= 0.5, pc_)
+    # divide down: C4 is C3's master divided once less, so the two stay locked in phase; the ordinary oscillators wander
+    def ph_at(x, f, t0, w=4800):
+        a_ = int(t0 * SR); seg = x[a_:a_ + w]; t_ = np.arange(len(seg)) / SR + t0
+        return np.angle(np.sum(seg * np.hanning(len(seg)) * np.exp(-2j * np.pi * f * t_)))
+    fC3 = 440 * 2 ** ((48 - 69) / 12)
+    def rel_(x): return [float((ph_at(x, 2 * fC3, t0) - 2 * ph_at(x, fC3, t0)) % (2 * np.pi)) for t0 in (1.0, 1.5, 2.0, 2.5)]
+    def spread_(r): r = np.unwrap(np.array(r)); return float(r.max() - r.min())
+    La_ = era_r(era_p(), note(48) + note(60), 3.0)
+    Lb_ = era_r(era_p(), note(60) + note(48, 0.73), 3.0)
+    Lo_ = era_r(patch(osc1={"wave": "pulse", "pw": 0.5, "level": 0.8}, drift=1.5), note(48) + note(60), 3.0)
+    ra_, rb_, ro_ = rel_(La_), rel_(Lb_), rel_(Lo_)
+    dab_ = abs((ra_[0] - rb_[0] + np.pi) % (2 * np.pi) - np.pi)
+    ck(f"Er. divide down: C3 and C4 held together keep one phase relation from 1 to 2.6 s (spread {spread_(ra_):.4f} rad, want under 0.01); C3 struck 0.73 s after C4 lands on the same relation ({dab_:.4f} rad apart); the ordinary oscillators with drift wander {spread_(ro_):.3f} rad",
+       spread_(ra_) < 0.01 and spread_(rb_) < 0.01 and dab_ < 0.01 and spread_(ro_) > 0.05, (ra_, rb_, ro_))
+    # the tone: a square has no even harmonics; the staircase has them all, at about 1/n like a saw
+    hq_ = harmonics_db(era_r(era_p(tone=0), note(45), 1.0)[SR // 4:], 110, 5)
+    hs_ = harmonics_db(era_r(era_p(tone=1), note(45), 1.0)[SR // 4:], 110, 5)
+    ck(f"Er. tone: at 0 the divided square has no even harmonics (H2, H4 {hq_[0]:.0f}, {hq_[2]:.0f} dB) and H3 near -9.5 dB ({hq_[1]:.1f}); at 100% the staircase has H2, H3, H4 near -6, -9.5, -12 ({[round(h_, 1) for h_ in hs_[:3]]})",
+       hq_[0] < -50 and hq_[2] < -50 and abs(hq_[1] + 9.5) < 1 and abs(hs_[0] + 6) < 1.5 and abs(hs_[1] + 9.5) < 1.5 and abs(hs_[2] + 12) < 1.5, (hq_, hs_))
+    # the resonators are fixed: the strongest harmonic stays near each band's frequency while the key moves
+    def peak_h(x, f0):
+        hs = [tone_amp(x, f0 * k_) for k_ in range(1, int(8000 / f0))]; return f0 * (1 + int(np.argmax(hs)))
+    pk_ = {}
+    for tb_, lo_, hi_ in (("body", 220, 400), ("voice", 700, 1000), ("edge", 2000, 3000)):
+        pk_[tb_] = [round(peak_h(era_r(era_p(tabs={tb_: True}, tone=1), note(n_), 0.8)[SR // 4:], 440 * 2 ** ((n_ - 69) / 12))) for n_ in (36, 40)]
+    ck(f"Er. resonators: body, voice and edge each put the strongest harmonic near 300, 850 and 2500 Hz for both C2 and E2 ({pk_}): the bank does not follow the key",
+       all(220 <= f_ <= 400 for f_ in pk_["body"]) and all(700 <= f_ <= 1000 for f_ in pk_["voice"]) and all(2000 <= f_ <= 3000 for f_ in pk_["edge"]), pk_)
+    def band_db(x, lo, hi):
+        P_, f_ = welch(x[SR // 4:]); return 10 * math.log10(np.sum(P_[(f_ >= lo) & (f_ < hi)]) + 1e-30)
+    Lop_ = era_r(era_p(tone=1), note(48), 1.0); Lme_ = era_r(era_p(tabs={"mellow": True}, tone=1), note(48), 1.0); Lth_ = era_r(era_p(tabs={"thin": True}, tone=1), note(48), 1.0)
+    me_ = band_db(Lme_, 4000, 12000) - band_db(Lop_, 4000, 12000); th_ = band_db(Lth_, 100, 300) - band_db(Lop_, 100, 300)
+    Lbm_ = era_r(era_p(tabs={"body": True, "mellow": True}, tone=1), note(36), 1.0)
+    ck(f"Er. mellow takes 4 to 12 kHz {me_:.1f} dB under open, thin takes 100 to 300 Hz {th_:.1f} dB under (want 15 or more each); two tabs in add in parallel (body and mellow together: strongest harmonic {peak_h(Lbm_[SR // 4:], 65.406):.0f} Hz)",
+       me_ <= -15 and th_ <= -15 and np.all(np.isfinite(Lbm_)), (me_, th_))
+    lv_ = {t_: round(db(_arms(era_r(era_p(tabs={t_: True}, tone=0.6), note(60), 0.6)[SR // 5:])), 1) for t_ in _ETABS}
+    ck(f"Er. each tab alone on a C4 sits within 6 dB of the others ({lv_})", max(lv_.values()) - min(lv_.values()) <= 6, lv_)
+    # the seven shapes, held 2.5 s: the level in 10 ms windows, in dB from its peak
+    def env_db(x):
+        w_ = int(0.01 * SR); e_ = np.sqrt(np.mean(x[:len(x) // w_ * w_].reshape(-1, w_) ** 2, axis=1)); return 20 * np.log10(e_ / e_.max() + 1e-12)
+    sh_ = {}
+    for s_ in ("organ", "accent", "bowed", "swell", "piano", "harp", "chime"):
+        e_ = env_db(era_r(era_p(shape=s_), note(57, 0.0, 2.5), 3.3)); sh_[s_] = {t_: round(float(e_[int(t_ * 100)]), 1) for t_ in (0.02, 0.05, 0.1, 0.5, 1.0, 2.0, 2.4, 2.7)}
+    S_ = sh_
+    ck(f"Er. organ: full level by 20 ms ({S_['organ'][0.02]} dB), steady at 2 s ({S_['organ'][2.0]}), gone 0.2 s after the key ({S_['organ'][2.7]})", S_["organ"][0.02] >= -3 and S_["organ"][2.0] >= -1 and S_["organ"][2.7] <= -40, S_["organ"])
+    ck(f"Er. accent: a peak, then a held level 3.5 to 7 dB under it ({S_['accent'][1.0]} dB at 1 s)", -7 <= S_["accent"][1.0] <= -3.5 and S_["accent"][0.02] >= -2, S_["accent"])
+    ck(f"Er. bowed: slow in ({S_['bowed'][0.02]} dB at 20 ms, want -6 or under), full by 0.5 s ({S_['bowed'][0.5]})", S_["bowed"][0.02] <= -6 and S_["bowed"][0.5] >= -2, S_["bowed"])
+    ck(f"Er. swell: slower still ({S_['swell'][0.1]} dB at 100 ms, want -12 or under; {S_['swell'][2.0]} at 2 s)", S_["swell"][0.1] <= -12 and S_["swell"][2.0] >= -1.5, S_["swell"])
+    ck(f"Er. piano: struck, and fades while held ({S_['piano'][0.05]} dB at 50 ms, {S_['piano'][2.0]} at 2 s, want -25 or under)", S_["piano"][0.05] >= -3 and S_["piano"][2.0] <= -25, S_["piano"])
+    ck(f"Er. harp: struck, and gone sooner than piano ({S_['harp'][0.5]} dB at 0.5 s against piano's {S_['piano'][0.5]})", S_["harp"][0.5] <= S_["piano"][0.5] - 6 and S_["harp"][0.5] <= -15, (S_["harp"], S_["piano"]))
+    ck(f"Er. chime: struck, and rings longer than piano ({S_['chime'][1.0]} dB at 1 s against piano's {S_['piano'][1.0]})", S_["chime"][1.0] >= S_["piano"][1.0] + 3 and S_["chime"][0.02] >= -3, (S_["chime"], S_["piano"]))
+    # the sustain pedal lengthens the release instead of holding the note; lifted, the tail ends at the shape's release
+    def lvl_at(x, t0, w=0.02): a_ = int(t0 * SR); return db(_arms(x[a_:a_ + int(w * SR)]))
+    Lnp_ = era_r(era_p(), note(57, 0.0, 0.5), 4.6)
+    Lpd_ = era_r(era_p(pedal=3), [{"at": 0.2, "t": "sus", "on": True}] + note(57, 0.0, 0.5), 4.6)
+    Lpu_ = era_r(era_p(pedal=3), [{"at": 0.2, "t": "sus", "on": True}, {"at": 1.0, "t": "sus", "on": False}] + note(57, 0.0, 0.5), 1.6)
+    h0_ = lvl_at(Lnp_, 0.4)
+    pd_ = [round(lvl_at(L_, t_) - h0_, 1) for L_, t_ in ((Lnp_, 0.8), (Lpd_, 0.8), (Lpd_, 4.1), (Lpu_, 1.3))]
+    ck(f"Er. pedal: 0.3 s after the key, {pd_[0]} dB with the pedal up and {pd_[1]} dB with it down (pedal 3 s; want -40 or under, and -8 to -1); it does not hold the note ({pd_[2]} dB at 3.6 s); lifting it at 1 s ends the tail ({pd_[3]} dB at 1.3 s)",
+       pd_[0] <= -40 and -8 <= pd_[1] <= -1 and pd_[2] <= -35 and pd_[3] <= -40, pd_)
+    # vibrato: six channels, two pitch classes each, each a little faster than the last; octaves share theirs
+    def vib_of(x, f0):
+        seg = x[int(0.3 * SR):int(2.3 * SR)]; N_ = len(seg); X_ = np.fft.fft(seg); fq_ = np.fft.fftfreq(N_, 1 / SR)
+        # a smooth (Gaussian) band around the fundamental: a hard-edged one rings and reads about 5 cents of vibrato on a still note
+        X_ *= np.exp(-((fq_ - f0) / (0.15 * f0)) ** 2); X_[fq_ < 0] = 0; z_ = np.fft.ifft(X_); ph_ = np.unwrap(np.angle(z_))
+        fi_ = np.diff(ph_) * SR / (2 * np.pi); fi_ = fi_[2000:-2000]; ct_ = 1200 * np.log2(fi_ / f0); ct_ -= ct_.mean()
+        S2 = np.abs(np.fft.rfft(ct_ * np.hanning(len(ct_)), 16 * len(ct_))); fr_ = np.fft.rfftfreq(16 * len(ct_), 1 / SR)
+        m_ = (fr_ > 2) & (fr_ < 15); i_ = np.argmax(np.where(m_, S2, 0))
+        return round(float(fr_[i_]), 2), round(float(np.percentile(np.abs(ct_), 99)), 1)
+    vb_ = {n_: vib_of(era_r(era_p(vib=30), note(n_), 2.5), 440 * 2 ** ((n_ - 69) / 12)) for n_ in (60, 62, 72, 65)}
+    v0_ = vib_of(era_r(era_p(vib=0), note(60), 2.5), 440 * 2 ** (-9 / 12))
+    ck(f"Er. vibrato: C4 at {vb_[60][0]} Hz (want 6.39, channel 1 at 94% of 6.8), D4 at {vb_[62][0]} (6.80, channel 3), F4 at {vb_[65][0]} (7.41, channel 6 at 109%), C5 with C4 at {vb_[72][0]}; within 2%",
+       abs(vb_[60][0] - 6.392) < 0.13 and abs(vb_[62][0] - 6.8) < 0.14 and abs(vb_[65][0] - 7.412) < 0.15 and abs(vb_[72][0] - vb_[60][0]) < 0.05, vb_)
+    ck(f"Er. vibrato depth: 30 cents reads {vb_[60][1]} (want 25 to 33); at 0 the pitch holds still ({v0_[1]} cents)", 25 <= vb_[60][1] <= 33 and v0_[1] < 0.5, (vb_, v0_))
+    vw_ = vib_of(era_r(era_p(vib=0), [{"at": 0, "t": "mw", "v": 1}] + note(60), 2.5), 440 * 2 ** (-9 / 12))
+    ck(f"Er. the mod wheel adds its own vibrato depth (wheel up, era vibrato 0, wheel depth 30 cents: {vw_[1]} cents at {vw_[0]} Hz)", 25 <= vw_[1] <= 33 and abs(vw_[0] - 6.392) < 0.13, vw_)
+    # bend moves every octave together; unison is not stacked; velocity sets the level
+    bf_ = [round(cents(peak_freq(era_r(era_p(), [{"at": 0, "t": "bend", "v": 1}] + note(n_), 0.8)[SR // 4:]), 440 * 2 ** ((n_ + 2 - 69) / 12)), 2) for n_ in (45, 69)]
+    ck(f"Er. bend: full up with a range of 2 puts A2 and A4 on B2 and B4 ({bf_} cents)", max(abs(c_) for c_ in bf_) <= 0.5, bf_)
+    u1_ = db(_arms(era_r(era_p(), note(57), 0.6)[SR // 5:])); u4_ = db(_arms(era_r(dict(era_p(), voice={"mode": "poly", "count": 8, "level": 0.8, "unison": 4, "detune": 20}), note(57), 0.6)[SR // 5:]))
+    ck(f"Er. unison does not stack copies of the same divided wave ({u4_ - u1_:+.2f} dB with unison 4)", abs(u4_ - u1_) < 0.3, (u1_, u4_))
+    vh_, vl_ = [db(_arms(era_r(era_p(vel=1), note(57, v=v_), 0.6)[SR // 5:])) for v_ in (1.0, 0.25)]
+    v0h_, v0l_ = [db(_arms(era_r(era_p(vel=0), note(57, v=v_), 0.6)[SR // 5:])) for v_ in (1.0, 0.25)]
+    ck(f"Er. velocity: at 100% a 0.25 note is {vh_ - vl_:.1f} dB under a 1.0 (want 12 +/- 1); at 0 they match ({v0h_ - v0l_:.2f})", abs(vh_ - vl_ - 12.04) < 1 and abs(v0h_ - v0l_) < 0.1, (vh_, vl_, v0h_, v0l_))
+    # switched on over a held note: the duck, then the same note in 1939 mode
+    sw_on = era_p(); sw_off = patch(osc1={"wave": "saw", "level": 0.8})
+    Lsw_ = era_r(sw_off, note(45, 0.0, 1.2) + [{"at": 0.5, "t": "patch", "p": sw_on}], 1.1)
+    hb_, ha_ = harmonics_db(Lsw_[int(0.1 * SR):int(0.45 * SR)], 110, 3), harmonics_db(Lsw_[int(0.6 * SR):int(1.0 * SR)], 110, 3)
+    stp_ = np.abs(np.diff(Lsw_)); near_ = float(stp_[int(0.49 * SR):int(0.53 * SR)].max()); far_ = float(max(stp_[int(0.1 * SR):int(0.45 * SR)].max(), stp_[int(0.6 * SR):int(1.0 * SR)].max()))
+    ck(f"Er. switched on over a held note, the saw (H2 {hb_[0]:.1f} dB) becomes the divided square (H2 {ha_[0]:.1f} dB) through the duck: the largest step near the switch {near_:.4f} is no bigger than in the steady sound ({far_:.4f})",
+       hb_[0] > -10 and ha_[0] < -50 and near_ <= far_ * 1.05 and np.all(np.isfinite(Lsw_)), (hb_, ha_, near_, far_))
+    # fuzz with the rack: random settings, chords, pedal and bends stay finite and under 0 dBFS
+    rng_e = random.Random(1939); bad_e, pk_e = 0, 0.0
+    for _ in range(10):
+        ep_ = {"on": True, "shape": rng_e.choice(_es_p or ["organ"]), "tone": rng_e.random(), "vib": rng_e.uniform(0, 60), "rate": rng_e.uniform(4, 9), "pedal": rng_e.uniform(0.3, 10), "vel": rng_e.random(),
+               "tabs": {t_: rng_e.random() < 0.5 for t_ in _ETABS}}
+        fp_ = dict(patch(v1={"tube": rng_e.choice(["12AX7", "EL34", "300B"]), "drive": rng_e.uniform(0, 8)}), era=ep_)
+        ev_ = [e for k_ in rng_e.sample(range(24, 108), 4) for e in note(k_, rng_e.uniform(0, 0.3), rng_e.uniform(0.5, 1.0), rng_e.uniform(0.2, 1))] + [{"at": 0.4, "t": "sus", "on": True}, {"at": 0.6, "t": "bend", "v": rng_e.uniform(-1, 1)}]
+        L_, R_ = render(fp_, ev_, 1.4)
+        bad_e += int(not (np.all(np.isfinite(L_)) and np.all(np.isfinite(R_)))); pk_e = max(pk_e, float(np.max(np.abs(L_))), float(np.max(np.abs(R_))))
+    ck(f"Er. fuzz, 10 random 1939 patches with chords, the pedal and bends, through the rack: finite and under 0 dBFS (peak {db(pk_e):.2f} dBFS)", bad_e == 0 and pk_e <= 1.0, (bad_e, pk_e))
+    # the two factory patches: loud enough beside the default pad
+    def loud_of(p_, ns):
+        L_, R_ = render(p_, [e for k_ in ns for e in note(k_, 0.05, 1.8)], 2.6); x_ = (L_ ** 2 + R_ ** 2) / 2; w_ = int(0.3 * SR)
+        return 10 * math.log10(np.convolve(x_, np.ones(w_) / w_, "valid").max() + 1e-12)
+    ldn_ = {n_: round(loud_of(pg.evaluate("n => __synth.factoryPatch(n)", n_), [48, 55, 60, 64]), 1) for n_ in ("Wide Novachord Strings", "Exposition Choir", "Parlor Harp")}
+    ck(f"Er. Exposition Choir and Parlor Harp on a four-note chord are within 4 dB of the default pad ({ldn_} dB)",
+       abs(ldn_["Exposition Choir"] - ldn_["Wide Novachord Strings"]) <= 4 and abs(ldn_["Parlor Harp"] - ldn_["Wide Novachord Strings"]) <= 4, ldn_)
+    # the page: the section, its switch, shape chips, tabs and knobs; the other sections rest while it is on
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    eui_ = pg.evaluate("""() => { const s = document.getElementById('mEra');
+      return { vis: !!s.offsetParent, off: s.classList.contains('off'), on: document.getElementById('eraOnBtn').textContent,
+        shapes: [...s.querySelectorAll('[data-chips="era.shape"] .chip')].map(b => b.textContent), sel: s.querySelector('[data-chips="era.shape"] .chip[aria-pressed="true"]').textContent,
+        tabs: [...s.querySelectorAll('[data-tab39]')].map(b => b.textContent + (b.getAttribute('aria-pressed') === 'true' ? '+' : '')),
+        knobs: [...s.querySelectorAll('#kEra [data-path]')].map(k => k.dataset.path), rest: document.getElementById('mOsc1').classList.contains('rest39') }; }""")
+    ck(f"Er. the 1939 mode section: off, seven shape chips on bowed, six tabs (body, voice and mellow in), five knobs, and the oscillators not resting ({eui_})",
+       eui_ == {"vis": True, "off": True, "on": "off", "shapes": ["organ", "accent", "bowed", "swell", "piano", "harp", "chime"], "sel": "bowed",
+                "tabs": ["body+", "voice+", "edge", "mellow+", "thin", "open"], "knobs": ["era.tone", "era.vib", "era.rate", "era.pedal", "era.vel"], "rest": False}, eui_)
+    pg.click("#eraOnBtn"); pg.click('#mEra .chip[data-v="harp"]'); pg.click('#mEra [data-tab39="edge"]'); pg.click('#mEra [data-tab39="body"]'); pg.wait_for_timeout(100)
+    eui1_ = pg.evaluate("""() => ({ era: __synth.patch().era, pilot: !document.getElementById('eraPilot').classList.contains('off'), on: document.getElementById('eraOnBtn').textContent,
+      rest: ['mOsc1', 'mOsc2', 'mSub', 'mFilt', 'mFiltB', 'mEnvA', 'mEnvF', 'mLfo', 'mLfo2', 'mMatrix'].filter(id => document.getElementById(id).classList.contains('rest39')).length,
+      v1: document.getElementById('mV1').classList.contains('rest39'), edge: document.querySelector('[data-tab39="edge"]').getAttribute('aria-pressed') })""")
+    ck(f"Er. the switch, a shape chip and two tabs write the patch (on, harp, edge in, body out), the pilot lights, and ten sections rest while V1 does not ({eui1_})",
+       eui1_["era"]["on"] is True and eui1_["era"]["shape"] == "harp" and eui1_["era"]["tabs"]["edge"] is True and eui1_["era"]["tabs"]["body"] is False
+       and eui1_["pilot"] and eui1_["on"] == "on" and eui1_["rest"] == 10 and not eui1_["v1"] and eui1_["edge"] == "true", eui1_)
+    for t_ in ("voice", "edge", "mellow"): pg.click(f'#mEra [data-tab39="{t_}"]')
+    pg.wait_for_timeout(100)
+    tl_ = pg.evaluate("__synth.patch().era.tabs")
+    ck(f"Er. taking the last tab out brings open in, so the voice never goes silent ({tl_})", tl_ == {"body": False, "voice": False, "edge": False, "mellow": False, "thin": False, "open": True}, tl_)
+    lv39_ = pg.evaluate("""async () => { __synth.noteOn(60, 0.8); await new Promise(r => setTimeout(r, 300)); const m = __synth.meter(); __synth.noteOff(60); return { dev: m.dev, voices: m.voices, notes: m.notes, v1: m.v1 }; }""")
+    ck(f"Er. live: a key plays one voice in 1939 mode and V1 sees it ({lv39_})", lv39_["dev"] == "filament" and lv39_["voices"] == 1 and lv39_["notes"] == [60] and lv39_["v1"] > 0.01, lv39_)
+    pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(250)
+    eui2_ = pg.evaluate("() => ({ era: __synth.patch().era, on: document.getElementById('eraOnBtn').getAttribute('aria-pressed'), rest: document.getElementById('mFilt').classList.contains('rest39') })")
+    ck(f"Er. a reload keeps 1939 mode and the panel shows it ({eui2_})", eui2_["era"]["on"] is True and eui2_["era"]["shape"] == "harp" and eui2_["on"] == "true" and eui2_["rest"], eui2_)
+    pg.click("#eraOnBtn"); pg.wait_for_timeout(100)
+    ck("Er. switched off from the panel: the other sections wake", pg.evaluate("__synth.patch().era.on") is False and not pg.evaluate("document.getElementById('mFilt').classList.contains('rest39')"))
+    ph39 = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); perr39 = []
+    ph39.on("pageerror", lambda e: perr39.append(str(e)))
+    ph39.goto(BASE); ph39.wait_for_function("window.__synth && __synth.ready()", timeout=20000); ph39.wait_for_timeout(200)
+    ph39.tap('.tabs [data-go="osc"]'); ph39.wait_for_timeout(200)
+    small39 = ph39.evaluate("""() => [...document.querySelectorAll('#mEra button, #mEra .knob')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.textContent || '').trim().slice(0, 16) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck(f"Er. 375px: the Osc tab shows the 1939 section with every button and knob 44 px or more, no horizontal scroll ({small39})",
+       ph39.is_visible("#mEra") and not small39 and ph39.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 375"), small39)
+    ck("Er. 375px: no page errors", not perr39, perr39)
+    ph39.close()
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Er. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Pn. the patch arrows (review 31 Oct, R1031-2)
     # The menu groups factory patches by category; the arrows used to walk the factory list's own order, so on
@@ -3054,6 +3227,9 @@ with sync_playwright() as pw:
     big.pop("echo"); big["spring"] = {"on": True, "mix": 40, "decay": 6, "tone": 10, "drip": 100, "drive": 5}
     cpu9("valve12, 8 voices, spring reverb on (decay 6 s, drip 100%)", big, ev8)
     big.pop("spring")
+    big["era"] = {"on": True, "shape": "bowed", "tone": 1, "vib": 20, "tabs": {"body": True, "voice": True, "edge": True, "mellow": True, "thin": True, "open": True}}
+    cpu9("1939 mode, 8 voices, the staircase with all six tabs in, vibrato on", big, ev8)
+    big.pop("era")
     ck("9. the CPU page: no page errors", not cperr, cperr)
     cpx.close()
     if pg_was == "running": pg.evaluate("() => __synth.engine().ctx.resume()")

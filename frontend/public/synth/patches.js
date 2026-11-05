@@ -33,6 +33,10 @@ export const ECHO_ENUMS = { 'echo.mode': ECHO_MODES, 'echo.sync': ECHO_SYNC };
 // Spring reverb (patch.spring), after the tape echo: rack-wide like the echo (Cathode and Dekatron copy it).
 // The rack (rack.js makeSpring, spring.worklet.js) does the sound.
 export const SPRING_RANGE = { 'spring.mix': [0, 100], 'spring.decay': [0.5, 6], 'spring.tone': [0, 10], 'spring.drip': [0, 100], 'spring.drive': [0, 10] };
+// 1939 mode (patch.era): the seven envelope shapes and the six tone tabs. voice.worklet.js carries the
+// same lists (E_SHAPES, E_TABS); the suite checks they match.
+export const ERA_SHAPES = ['organ', 'accent', 'bowed', 'swell', 'piano', 'harp', 'chime'];
+export const ERA_TABS = ['body', 'voice', 'edge', 'mellow', 'thin', 'open'];
 const modSlots = () => Object.fromEntries(MOD_SLOTS.map(k => [k, { src: 'off', dst: 'off', amt: 0 }]));
 
 export const DEFAULT = {
@@ -68,6 +72,13 @@ export const DEFAULT = {
   // the arpeggiator: off by default. div is a step's note value at the rack tempo, oct 1 to 4 octaves,
   // gate the share of a step a note holds, swing how late every second step lands (0.5 = 3:1), latch keeps let-go keys
   arp: { on: false, mode: 'up', div: '1/16', oct: 1, gate: 0.5, swing: 0, latch: false },
+  // 1939 mode: off by default. A second voice architecture (voice.worklet.js render39): divide-down masters,
+  // V1, a bank of fixed resonators picked by the tone tabs, one of seven envelope shapes, six-channel vibrato.
+  // tone blends the divided square (0) toward the staircase (1); vib is the vibrato depth in cents and rate
+  // its speed in Hz; pedal is how long a released note fades while the sustain pedal is down (s); vel how
+  // much velocity sets the level. At least one tab is always in (none reads as open).
+  era: { on: false, shape: 'bowed', tone: 0.6, vib: 18, rate: 6.8, pedal: 3, vel: 0.3,
+    tabs: { body: true, voice: true, edge: false, mellow: true, thin: false, open: false } },
   out: {
     tube: 'EL34', topology: 'pp', drive: 3, bias: 0, sag: 2, tone: 0, level: 0,
     spkOn: false, cab: 'monitor', spkInt: 6,
@@ -100,6 +111,7 @@ export const RANGE = {
 };
 MOD_SLOTS.forEach(k => { RANGE['mod.' + k + '.amt'] = [-1, 1]; });
 Object.assign(RANGE, ECHO_RANGE, SPRING_RANGE);
+RANGE['era.tone'] = [0, 1]; RANGE['era.vib'] = [0, 60]; RANGE['era.rate'] = [4, 9]; RANGE['era.pedal'] = [0.3, 10]; RANGE['era.vel'] = [0, 1];
 RANGE['arp.oct'] = [1, 4]; RANGE['arp.gate'] = [0.05, 1]; RANGE['arp.swing'] = [0, 0.5];
 // The graphic EQ's fields, shared with Cathode (the rack is the same for both devices).
 export const EQ_RANGE = { 'out.eqBands': [10, 31], 'out.eqPre': [-12, 12] };
@@ -131,6 +143,7 @@ export const ENUMS = {
   'lfo2.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo2.mode': ['global', 'voice'],
   'lfo1.sync': LFO_SYNC, 'lfo2.sync': LFO_SYNC,
   'arp.mode': ARP_MODES, 'arp.div': ARP_DIVS,
+  'era.shape': ERA_SHAPES,
   'ens.mode': ['I', 'II', 'I+II', 'strings'],
   ...ECHO_ENUMS,
   'voice.mode': ['poly', 'mono', 'legato'],
@@ -166,6 +179,7 @@ export function normalize(p) {
   if (!CATS.includes(out.cat)) out.cat = 'Keys';
   out.voice.count = Math.round(out.voice.count); out.voice.unison = Math.round(out.voice.unison);
   out.arp.oct = Math.round(out.arp.oct);
+  if (!ERA_TABS.some(t => out.era.tabs[t])) out.era.tabs.open = true;
   out.v = SCHEMA;
   return out;
 }
@@ -376,5 +390,17 @@ const F = [
     envA: { a: 0.001, d: 1.3, s: 0, r: 1.5, vel: 0.55 }, envF: { a: 0.001, d: 0.45, s: 0, r: 0.6 },
     stereo: { pan: 'alt', spread: 0.5 }, drift: 0.8,
     out: { level: 1.5, tube: '300B', topology: 'se', drive: 2, roomOn: true, room: 'hall', rmMix: 30, rmDecay: 3.4, wOn: true, width: 135 } },
+  // 1939 mode (5 Nov 2026): the divide-down voice, the fixed resonators and the six-channel vibrato
+  { name: 'Exposition Choir', cat: 'Pad',
+    era: { on: true, shape: 'bowed', tone: 0.45, vib: 22, rate: 6.6, pedal: 4, vel: 0.25, tabs: { body: true, voice: true, mellow: true } },
+    ens: { on: true, mode: 'strings', mix: 35 },
+    v1: { tube: '12AT7', drive: 3 },
+    stereo: { pan: 'alt', spread: 0.4 },
+    out: { level: 2.5, tube: '300B', topology: 'se', drive: 3, roomOn: true, room: 'hall', rmMix: 20, rmDecay: 2.8, wOn: true, width: 115 } },
+  { name: 'Parlor Harp', cat: 'Pluck',
+    era: { on: true, shape: 'harp', tone: 0.9, vib: 6, rate: 6.2, pedal: 2.5, vel: 0.5, tabs: { body: false, voice: true, edge: true, mellow: false, open: true } },
+    v1: { tube: '12AX7', drive: 2.5 },
+    stereo: { pan: 'key', spread: 0.5 },
+    out: { level: 7, tube: 'EL84', topology: 'pp', drive: 3, roomOn: true, room: 'studio', rmMix: 18, wOn: true, width: 120 } },
 ];
 export const FACTORY = F.map(p => normalize(p));

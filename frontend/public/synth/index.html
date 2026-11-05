@@ -575,6 +575,8 @@
   .mod h3 .pilot.off { background: #333; box-shadow: none; }
   .mod h3 .sw { margin-left: auto; }
   .mod.off .knobs { opacity: 0.45; }
+  .mod.rest39 > :not(h3) { opacity: 0.45; }
+  .mod.rest39 h3::after { content: 'resting: 1939 mode'; letter-spacing: 0.5px; text-transform: none; font-weight: 400; color: #7a6a4a; }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
   .chip { background: #121212; color: var(--muted); border: 1px solid #2c2c2c; border-radius: 5px; padding: 3px 7px; font-size: 11px; cursor: pointer; min-height: 26px; }
   .chip:hover { border-color: #555; }
@@ -1179,6 +1181,11 @@
         <div class="chips"><span class="cl">sub</span><span data-chips="sub.wave" class="chips" style="margin:0"></span><span data-chips="sub.oct" class="chips" style="margin:0"></span></div>
         <div class="chips"><span class="cl">noise</span><span data-chips="noise.color" class="chips" style="margin:0"></span></div>
         <div class="knobs" id="kSub"></div></section>
+      <section class="mod off" data-dev="filament" data-tab="osc" id="mEra"><h3><span class="pilot off" id="eraPilot"></span>1939 mode<button class="chip sw" id="eraOnBtn" aria-pressed="false" title="1939 mode on or off: a divide-down voice with fixed resonators plays in place of the oscillators, both filters and the amp envelope">off</button></h3>
+        <div class="chips"><span class="cl">shape</span><span data-chips="era.shape" class="chips" style="margin:0" role="group" aria-label="1939 mode envelope shape"></span></div>
+        <div class="chips" id="eraTabs" role="group" aria-label="1939 mode tone tabs"><span class="cl">tabs</span><button class="chip" type="button" data-tab39="body" aria-pressed="false" title="Body: a fixed resonance near 300 Hz">body</button><button class="chip" type="button" data-tab39="voice" aria-pressed="false" title="Voice: a fixed resonance near 850 Hz, the vocal one">voice</button><button class="chip" type="button" data-tab39="edge" aria-pressed="false" title="Edge: a fixed resonance near 2.5 kHz, reedy">edge</button><button class="chip" type="button" data-tab39="mellow" aria-pressed="false" title="Mellow: a low-pass at 1.1 kHz">mellow</button><button class="chip" type="button" data-tab39="thin" aria-pressed="false" title="Thin: a high-pass at 700 Hz">thin</button><button class="chip" type="button" data-tab39="open" aria-pressed="false" title="Open: the divided wave straight through">open</button></div>
+        <div class="knobs" id="kEra"></div>
+        <div class="note">Twelve master oscillators, one per note name, and every octave divided down from them, so octaves stay locked in phase. The resonators are fixed: they do not follow the key, so each note sits differently in them. Tabs add in parallel. The sustain pedal lengthens the release (pedal) instead of holding notes. While it is on, the oscillators, both filters, the envelopes, the LFOs, unison and the mod matrix rest; V1, voices, tune, bend, the wheel and the rack still play.</div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mV1"><h3><span class="pilot"></span>V1 drive tube</h3><div class="chips" data-chips="v1.tube"></div><div class="knobs" id="kV1"></div>
         <div class="note">Before the filters. More drive, more saturation into the filter.</div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
@@ -2711,6 +2718,12 @@ K('kLfo', 'lfo1.pitch', 'vibrato', { min: 0, max: 100, step: 1, fmt: v => Math.r
 K('kLfo', 'lfo1.cutoff', 'cutoff', { min: 0, max: 4, step: 0.01, fmt: v => v.toFixed(2) + 'oct' });
 K('kLfo', 'lfo1.pw', 'pwm', { min: 0, max: 0.9, step: 0.01, fmt: pct });
 K('kLfo', 'lfo1.amp', 'tremolo', { min: 0, max: 1, step: 0.01, fmt: pct });
+// 1939 mode
+K('kEra', 'era.tone', 'stair', { min: 0, max: 1, step: 0.01, fmt: pct, name: '1939 mode staircase', title: 'Tone: 0 is the divided square, hollow; 100% adds the next three octaves up into a staircase, bright like a saw' });
+K('kEra', 'era.vib', 'vibrato', { min: 0, max: 60, step: 1, fmt: v => Math.round(v) + 'c', name: '1939 mode vibrato depth', title: 'Vibrato depth in cents, on six channels at slightly different rates (the mod wheel adds its own depth)' });
+K('kEra', 'era.rate', 'vib rate', { min: 4, max: 9, step: 0.05, fmt: v => v.toFixed(1) + 'Hz', name: '1939 mode vibrato rate', title: 'Vibrato rate: the six channels run from 94% to 109% of this' });
+K('kEra', 'era.pedal', 'pedal', { map: LOG(0.3, 10), fmt: fmtS, name: '1939 mode pedal release', title: 'While the sustain pedal is down, a released note fades over this long instead of the shape\'s own release' });
+K('kEra', 'era.vel', 'velocity', { min: 0, max: 1, step: 0.01, fmt: pct, name: '1939 mode velocity', title: 'How much velocity sets the level' });
 K('kVoice', 'voice.unison', 'unison', { min: 1, max: 8, step: 1, round: true, fmt: v => v === 1 ? 'off' : 'x' + v, title: 'Unison: stack 1 to 8 voices on each note' });
 K('kVoice', 'voice.detune', 'detune', { min: 0, max: 50, step: 0.5, fmt: v => v.toFixed(1) + 'c', title: 'Unison detune: the outer copies sit this many cents either side' });
 K('kVoice', 'voice.count', 'voices', { min: 1, max: 16, step: 1, round: true, fmt: v => '' + v });
@@ -2920,7 +2933,17 @@ const TG = [toggle('syncBtn', 'osc2.sync'), toggle('cSyncBtn', 'vco2.sync'), tog
             toggle('ensOnBtn', 'ens.on', on => on ? 'on' : 'off'), toggle('eqOnBtn', 'out.eqOn', on => on ? 'on' : 'off'),
             toggle('echoOnBtn', 'echo.on', on => on ? 'on' : 'off'),
             toggle('springOnBtn', 'spring.on', on => on ? 'on' : 'off'),
-            toggle('arpOnBtn', 'arp.on', on => on ? 'on' : 'off'), toggle('arpLatchBtn', 'arp.latch')];
+            toggle('arpOnBtn', 'arp.on', on => on ? 'on' : 'off'), toggle('arpLatchBtn', 'arp.latch'),
+            toggle('eraOnBtn', 'era.on', on => on ? 'on' : 'off')];
+// 1939 mode's tone tabs: each one in or out; the last one in cannot go out (open comes in instead)
+document.querySelectorAll('[data-tab39]').forEach(b => b.addEventListener('click', () => {
+  if (dev !== 'filament') return;
+  if (!undoArmed) rememberUndo();
+  const t = cur.era.tabs, k = b.dataset.tab39;
+  t[k] = !t[k];
+  if (!Object.values(t).some(Boolean)) t.open = true;
+  afterChange('era.tabs.' + k); pushPatch(false);
+}));
 // touching a bypassed module's control switches it on (the /otr rack rule)
 [['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on'], ['mEq', 'out.eqOn'], ['mEcho', 'echo.on'], ['mSpring', 'spring.on']].forEach(([id, path]) => {
   $(id).addEventListener('pointerdown', e => { if (e.target.closest('.sw')) return; if (!getPath(cur, path)) { setPath(cur, path, true); afterChange(path); pushPatch(false); } });
@@ -3000,6 +3023,10 @@ function afterF() {
   const l2on = cur.lfo2.pitch > 0 || cur.lfo2.cutoff > 0 || cur.lfo2.pw > 0 || cur.lfo2.amp > 0 || cur.lfo2.pan > 0;
   $('lfo2Pilot').classList.toggle('off', !l2on);
   refreshLfoSync(); refreshArp();
+  const e39 = !!(cur.era && cur.era.on);
+  $('eraPilot').classList.toggle('off', !e39); $('mEra').classList.toggle('off', !e39);
+  document.querySelectorAll('[data-tab39]').forEach(b => b.setAttribute('aria-pressed', String(!!(cur.era && cur.era.tabs[b.dataset.tab39]))));
+  ['mOsc1', 'mOsc2', 'mSub', 'mFilt', 'mFiltB', 'mEnvA', 'mEnvF', 'mLfo', 'mLfo2', 'mMatrix'].forEach(id => $(id).classList.toggle('rest39', e39));
   kn('voice.detune').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
   $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube;
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
