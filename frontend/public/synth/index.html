@@ -111,6 +111,37 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 8px rgba(255,179,71,0.45); }
   .bar .uisize button:focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
   .saveform input { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 170px; font-size: 12px; }
+  /* desktop header (graphics, 5 Nov): the same on every device. Before, the patch bar's width followed the
+     longest patch name (the select sized itself to it), so on 16 of 18 devices the bar squeezed the description
+     into a 312 to 341 px column of 5 to 9 lines, the tip link fell to a row of its own, and the rack moved
+     between 186 and 294 px from the top as you changed device. Now: the title and description on the left with
+     the tip link at the top right, and under them the patch bar as one control strip across the width, in the
+     recessed tray finish of the rail and the outboard tray. The select has one width, and the description
+     area keeps the height of the longest description at this width (--intro-h, set by fitIntro below), so
+     the strip and the rack stay put when the device changes. The phone header (760 px and under) is unchanged. */
+  @media (min-width: 761px) {
+    .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand sup" "bar bar"; gap: 8px 20px; align-items: start; }
+    .top > .brand { grid-area: brand; position: relative; }
+    .top > .sup { grid-area: sup; margin-top: 2px; }
+    .top .intro { max-width: 960px; min-height: var(--intro-h, 0px); }
+    .top .intro-measure { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; display: block; min-height: 0; }
+    .top > .bar { grid-area: bar; gap: 6px; padding: 5px 8px; border: 1px solid #050505; border-radius: 6px;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 3px), linear-gradient(180deg, #060606, #0d0c0a);
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.05); }
+    .top > .bar #patchSel { width: 240px; max-width: 240px; flex: 0 0 auto; text-overflow: ellipsis; }
+    .top > .bar .uisize { margin-left: auto; }
+    .top > .bar .saveform.open ~ #midiBtn, .top > .bar .saveform.open ~ #learnBtn, .top > .bar .saveform.open ~ .bsep { display: none; }
+    .top > .bar .bsep { flex: 0 0 auto; align-self: stretch; width: 1px; margin: 2px 3px; background: #050505; box-shadow: 1px 0 0 rgba(255,255,255,0.06); }
+  }
+  /* 1020 to 1199 px: the strip stays one row (a narrower select and volume slot, MIDI without "Connect");
+     761 to 1019 px it takes two rows, so the separators go (one would end a row). */
+  @media (min-width: 1020px) and (max-width: 1199px) {
+    .top > .bar #patchSel { width: 200px; max-width: 200px; }
+    .top > .bar .volab input { width: 70px; }
+    .top > .bar #midiBtn .long { display: none; }
+  }
+  @media (min-width: 761px) and (max-width: 1019px) { .top > .bar .bsep { display: none; } }
+  @media (max-width: 760px) { .top .bar .bsep, .top .intro-measure { display: none; } }
 
   /* the instrument: walnut cheeks, brushed panel */
   .inst { position: relative; border-radius: 12px; padding: 0 18px; background: linear-gradient(90deg, var(--walnut3), var(--walnut2) 3px, var(--walnut1) 9px, var(--walnut2) 14px, var(--walnut3) 18px, transparent 18px, transparent calc(100% - 18px), var(--walnut3) calc(100% - 18px), var(--walnut2) calc(100% - 14px), var(--walnut1) calc(100% - 9px), var(--walnut2) calc(100% - 3px), var(--walnut3)); }
@@ -1071,14 +1102,17 @@
       <button class="btn small" id="undoBtn" type="button" title="Undo the last change on this device. Ctrl+Z or Cmd+Z does the same.">undo</button>
       <button class="btn small" id="initBtn" type="button" title="Reset this device to its Init patch.">init</button>
       <button class="btn small" id="delP" hidden>delete</button>
+      <span class="bsep" aria-hidden="true"></span>
       <label class="volab" title="Master volume for everything in the rack. It is not stored in a patch.">vol <input id="mastVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><output id="mastVolV" class="fread" aria-hidden="true">100%</output></label>
       <button class="btn small" id="safeLim" type="button" aria-pressed="false" title="Safety limiter on the master, after the mix. Off leaves the sound exactly as it was.">limit</button>
+      <span class="bsep" aria-hidden="true"></span>
       <span class="mastrec" id="mastRecWrap">
         <button type="button" class="btn small rec-master" id="mastRec" data-master-rec aria-pressed="false" title="Record the master output. Press again to stop and download a 24-bit WAV named for this device, or rack when several are playing.">&#9679; rec</button>
         <span class="rec-time" id="mastTime" data-rec-time aria-live="polite"></span>
         <button type="button" class="btn small" id="mastJump" title="Open the Master panel: effects, record, and render wav">master</button>
       </span>
       <span class="saveform" id="saveForm"><input id="saveName" maxlength="40" aria-label="Patch name"><button class="btn small" id="saveOk">ok</button><button class="btn small" id="saveNo">cancel</button></span>
+      <span class="bsep" aria-hidden="true"></span>
       <button class="btn small" id="midiBtn"><span class="long">Connect </span>MIDI</button>
       <button class="btn small" id="learnBtn" aria-pressed="false" hidden title="MIDI learn: press, click a knob, move a knob on your keyboard">learn</button>
       <div class="uisize" id="uiSize" role="group" aria-label="Control size">
@@ -3874,6 +3908,25 @@ const keyFit = new ResizeObserver(() => {
   lastAvail = w; buildKeys();
 });
 keyFit.observe($('keyswrap'));
+// desktop header (graphics, 5 Nov): the description area keeps the height of the longest device's description at
+// the current width, so the patch strip and the rack do not move when the device changes. One hidden measuring
+// paragraph takes each description's text in turn; display only.
+const introBrand = document.querySelector('.top > .brand');
+const introMeasure = document.createElement('p'); introMeasure.className = 'intro intro-measure'; introMeasure.setAttribute('aria-hidden', 'true');
+introBrand.appendChild(introMeasure);
+let introW = -1;
+function fitIntro(force) {
+  if (window.matchMedia('(max-width: 760px)').matches) { introBrand.style.removeProperty('--intro-h'); introW = -1; return; }
+  const w = introBrand.clientWidth; if (!force && Math.abs(w - introW) < 1) return; introW = w;
+  const live = [...introBrand.querySelectorAll('.intro[data-dev]')];
+  const mw = Math.min(w, parseFloat(getComputedStyle(introMeasure).maxWidth) || w);
+  introMeasure.style.width = mw + 'px';
+  let h = 0; for (const p of live) { introMeasure.textContent = p.textContent; h = Math.max(h, introMeasure.offsetHeight); }
+  introMeasure.textContent = '';
+  introBrand.style.setProperty('--intro-h', Math.ceil(h) + 'px');
+}
+if (window.ResizeObserver) new ResizeObserver(() => fitIntro(false)).observe(introBrand);
+fitIntro(true); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitIntro(true));
 function setOct(o) { baseOct = clampN(o, 0, 7); store.set('filament_oct', baseOct); buildKeys(); }
 $('octDn').addEventListener('click', () => setOct(baseOct - 1)); $('octUp').addEventListener('click', () => setOct(baseOct + 1));
 $('holdBtn').addEventListener('click', () => setSustain(!sustainOn));

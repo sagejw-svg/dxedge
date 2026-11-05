@@ -5057,6 +5057,57 @@ with sync_playwright() as pw:
     rrp.goto(BASE); rrp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
     ck("Rl. reduced motion: no transitions on the rail plates", all(float(d.rstrip("s")) == 0 for x in rrp.evaluate(RL_MEAS)["bs"] for d in x["dur"].split(",")))
     rrm.close()
+    # Hd. the desktop header (graphics, 5 Nov 2026): the same on every device. Before, the select sized itself to the
+    # longest patch name, so on 16 of 18 devices the patch bar squeezed the description into a 312 to 341 px column and
+    # the rack moved between 186 and 294 px from the top as the device changed (measured at 1366 px).
+    HD_MEAS = """() => { const R = s => { const e = document.querySelector(s); const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
+      const bar = document.querySelector('.top > .bar'); const cs = getComputedStyle(bar);
+      const kids = [...bar.children].filter(e => e.offsetParent); const mids = kids.map(e => { const q = e.getBoundingClientRect(); return q.top + q.height / 2; }).sort((a, b) => a - b);
+      const intro = [...document.querySelectorAll('.top .intro[data-dev]')].filter(e => e.offsetParent);
+      const ms = document.querySelector('.top .intro-measure');
+      return { rail: R('.rail').t, sel: R('#patchSel').w, bar: R('.top > .bar'), brand: R('.top > .brand'), sup: R('.top > .sup'),
+        rows: mids.filter((c, i) => i === 0 || c - mids[i - 1] > 12).length, kidsIn: kids.every(e => { const q = e.getBoundingClientRect(); const b = bar.getBoundingClientRect(); return q.left >= b.left - 0.5 && q.right <= b.right + 0.5; }),
+        intros: intro.length, introClip: intro.length ? intro[0].scrollHeight > intro[0].clientHeight + 1 : true, introBottom: intro.length ? intro[0].getBoundingClientRect().bottom : 0,
+        introColor: intro.length ? getComputedStyle(intro[0]).color : '', bodyBg: getComputedStyle(document.body).backgroundColor,
+        bg: cs.backgroundImage, shadow: cs.boxShadow, seps: [...bar.querySelectorAll('.bsep')].filter(e => e.offsetParent).length,
+        msHidden: ms ? (getComputedStyle(ms).visibility === 'hidden' && ms.getAttribute('aria-hidden') === 'true' && ms.textContent === '') : false,
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    hdx = b.new_context(viewport={"width": 1366, "height": 1000}); hdp = hdx.new_page(); hderr = []
+    hdp.on("pageerror", lambda e: hderr.append(str(e)))
+    hdp.goto(BASE); hdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    HD_DEVS = hdp.evaluate("[...document.querySelectorAll('.rail .devbtn')].map(b => b.dataset.d)")
+    for w, one_row in [(1366, True), (1024, True), (800, False), (1920, True)]:
+        hdp.set_viewport_size({"width": w, "height": 1000}); hdp.wait_for_timeout(250)
+        ms = []
+        for d in HD_DEVS:
+            hdp.click(f".rail .devbtn[data-d={d}]"); hdp.wait_for_timeout(60); ms.append((d, hdp.evaluate(HD_MEAS)))
+        rails = [m["rail"] for _, m in ms]; sels = [m["sel"] for _, m in ms]
+        info(f"Hd. {w} px", f"rack top {min(rails):.0f} to {max(rails):.0f} px, select {min(sels):.0f} px, strip rows {sorted(set(m['rows'] for _, m in ms))}")
+        ck(f"Hd. at {w} px the rack and the patch strip stay put when the device changes (all {len(HD_DEVS)} devices, one select width)",
+           max(rails) - min(rails) <= 1 and max(sels) - min(sels) <= 1 and max(m["bar"]["t"] for _, m in ms) - min(m["bar"]["t"] for _, m in ms) <= 1, (rails, sels))
+        ck(f"Hd. at {w} px each device's description shows whole above the strip, with the tip link at the top right",
+           all(m["intros"] == 1 and not m["introClip"] and m["introBottom"] <= m["bar"]["t"] + 0.5 and m["sup"]["b"] <= m["bar"]["t"] and m["sup"]["l"] >= m["brand"]["r"] - 0.5
+               and m["sup"]["t"] <= m["brand"]["t"] + 40 for _, m in ms), [(d, m["intros"], m["introClip"], m["introBottom"], m["bar"]["t"], m["sup"]) for d, m in ms][:3])
+        ck(f"Hd. at {w} px the strip is {'one row' if one_row else 'two rows'} across the width, every control inside it, no sideways scroll",
+           all(m["rows"] == (1 if one_row else 2) and m["kidsIn"] and m["bar"]["w"] >= w - 40 and m["sw"] <= m["iw"] for _, m in ms), [(d, m["rows"], m["kidsIn"], m["sw"]) for d, m in ms][:4])
+    m0 = ms[0][1]
+    ck("Hd. the patch strip is a recessed tray (the rail's finish) with engraved separators, and the measuring line is hidden",
+       "gradient" in m0["bg"] and "inset" in m0["shadow"] and m0["seps"] == 3 and m0["msHidden"], (m0["bg"][:60], m0["shadow"][:60], m0["seps"], m0["msHidden"]))
+    hd_con = _ob_con(m0["introColor"], m0["bodyBg"])
+    ck(f"Hd. the description reads on the page ({hd_con:.1f}:1, want 4.5 or more)", hd_con >= 4.5, (m0["introColor"], m0["bodyBg"]))
+    hdp.set_viewport_size({"width": 1366, "height": 1000}); hdp.wait_for_timeout(250)
+    hd_r0 = hdp.evaluate(HD_MEAS)["rail"]; hdp.click("#saveP"); hdp.wait_for_timeout(150); hd_s = hdp.evaluate(HD_MEAS)
+    ck("Hd. at 1366 px naming a patch keeps the strip on one row (MIDI steps aside while the name box is open)",
+       hd_s["rows"] == 1 and abs(hd_s["rail"] - hd_r0) <= 1 and hdp.evaluate("getComputedStyle(document.getElementById('midiBtn')).display") == "none", (hd_s["rows"], hd_s["rail"], hd_r0))
+    hdp.click("#saveNo"); hdp.wait_for_timeout(100)
+    ck("Hd. cancel brings MIDI back", hdp.evaluate("getComputedStyle(document.getElementById('midiBtn')).display") != "none")
+    hdp.screenshot(path=os.path.join(SHOTS, "synth_header.png"), clip={"x": 0, "y": 0, "width": 1366, "height": 230})
+    hdp.set_viewport_size({"width": 375, "height": 667}); hdp.wait_for_timeout(250)
+    hd_ph = hdp.evaluate("() => ({ seps: [...document.querySelectorAll('.top .bsep')].filter(e => e.offsetParent).length, intros: [...document.querySelectorAll('.top .intro')].filter(e => e.offsetParent).length, minH: document.querySelector('.top > .brand').style.getPropertyValue('--intro-h'), sw: document.documentElement.scrollWidth })")
+    ck("Hd. at 375 px the phone header is as before: no description, no separators, no reserved height, no sideways scroll",
+       hd_ph["seps"] == 0 and hd_ph["intros"] == 0 and hd_ph["minH"] == "" and hd_ph["sw"] <= 375, hd_ph)
+    ck("Hd. no page errors (desktop header)", not hderr, hderr)
+    hdx.close()
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)

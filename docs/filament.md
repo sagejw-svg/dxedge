@@ -1411,8 +1411,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (4 Nov): 1. phone first screen, the rest (a slimmer phone chassis, once the Tube show item closes; the patch menu);
-2. rail plate titles at 761 to 959 px; 3. Rhumbatron's cavity caption; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (5 Nov): 1. phone first screen, the rest (the patch menu now; a slimmer phone chassis once the Tube show item closes);
+2. rail plate titles at 761 to 959 px; 3. Rhumbatron's cavity caption; 4. Klystron's source row; 5. Orthicon's picture list; then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1547,6 +1547,29 @@ Rank of the open items (4 Nov): 1. phone first screen, the rest (a slimmer phone
   header 200 px (unchanged), no sideways scroll on the rack or on Gleam's page at 320 and 375 px. Costs: Heptode's Tracks card
   is about 45 px taller at 1366 px (289 to 334); on a 375 px phone Gleam's faders are 104 to 110 px (were 119 to 126) and
   Heptode's track rows a few px taller. Display only, no audio change. New checks: Rd. (11).
+- [x] 5 Nov: desktop header, the same on every device. Measured before at 1366 px: the patch select sized itself to the
+  device's longest patch name (144 to 230 px), so on 16 of 18 devices the patch bar fitted beside the title and squeezed the
+  description into a 312 to 341 px column of 5 to 9 lines, the tip link fell onto a row of its own under it, and the rack's top
+  moved between 186 and 294 px as the device changed (Filament and Phantastron, whose wider selects pushed the bar under the
+  description, were the only two laid out like that). Also measured: 230 to 282 px at 1024, 264 to 300 at 800, 142 to 198 at
+  1920. Seen: a ragged header that jumped on every rail click. Now: title and description on the left with the tip link at the
+  top right, and under them the patch bar as one control strip across the width in the recessed tray finish of the rail and
+  the outboard tray, with three engraved separators (patches; volume and limit; rec and master; MIDI) and the size switch at
+  the right end. The select is one width (240 px; 200 px from 1020 to 1199 px, where VOL's slot narrows and MIDI drops
+  "Connect" so the strip keeps one row); the description is up to 960 px wide and its area keeps the height of the longest
+  description at the current width (`fitIntro`, one hidden measuring line, run on resize and after fonts load; a new device's
+  description is included without a code change). While a patch name is being typed the MIDI key steps aside, so the strip
+  stays one row at 1366 px. Measured after: the rack's top is the same on all 18 devices at each width (196 px at 1366, 214 at
+  1024, 266 at 800, 196 at 1920); the strip is one row from 1020 px up and two rows from 761 to 1019; no sideways scroll; the
+  description 8.2:1 on the page. Costs: Filament's description leaves its third reserved line empty at 1366 px (the rack 10 px
+  lower than before for Filament: 186 to 196), long patch names are clipped in the 200 px select at 1020 to 1199 px; on 1920 px
+  the rack sits up to 54 px lower than before for the devices that had the shortest header (142 to 196 for Filament, Cathode, Thyratron). The phone header (760 px and under) is unchanged
+  (screenshots identical above the chassis on all 18 devices and 7 tabs). Display only, no audio change. New checks: Hd. (18).
+- [ ] Klystron's source row (5 Nov, seen at 1366 px): the vowel, file and mic chips sit beside Load and Mic, which are drawn as
+  header buttons, and the source's name ("Vowel") is bare text at the end of the row. One chip style, and the name in a
+  readout window like the MIDI deck's, would match the rest of the rack.
+- [ ] Orthicon's picture list (5 Nov, seen at 1366 px): the starter pictures under the paint tools (Harmonic Stack, Twin Sweep
+  and the rest) read dimmer than the tool chips above them (not measured).
 - [ ] Lattice and Mote use their own chip palettes (blue and cyan) beside the amber elsewhere (seen). A call
   for James whether that is per-device character or drift.
 - [ ] Rhumbatron, Trochotron and Phantastron slider cards are 228 px wide at 1366 px, so their faders are 81 to 100 px.
@@ -1564,6 +1587,7 @@ Rank of the open items (4 Nov): 1. phone first screen, the rest (a slimmer phone
   A small engraved caption in the house face, like Gleam's field edges, would match.
 
 ## Open items for James
+- Graphics 5 Nov, desktop header: the top of the page looks different on a computer. Before, the header changed shape with the device: on 16 of the 18 the patch bar sat to the right of a narrow 5 to 9 line description, the tip link dropped onto its own row, and the rack jumped up or down by as much as 108 px when you clicked another device on the rail (only Filament and Phantastron had the bar under the description). After, every device has the same header: the title and a wider description at the left, the tip link at the top right, and under them the patch bar as one recessed control strip across the page (the rail's finish) with thin engraved dividers and the S, M, L, XL switch at its right end. The rack no longer moves when you change device. Calls you may want changed: the description area is as tall as the longest description (Gleam's), so Filament shows a blank third line; on a very wide screen the rack sits up to 54 px lower than it did for Filament; from 1020 to 1199 px the MIDI key reads just MIDI and long patch names are clipped. Phones are unchanged.
 - Nightly 5 Nov, 1939 mode (first slice): please listen. On Filament, Osc tab, switch on 1939 mode (or load Exposition Choir or Parlor Harp). Hold a chord, try each shape and the tabs, then hold the sustain pedal (space) and let go of the keys. Calls I made that you may want changed: (1) the pedal lengthens the release (0.3 to 10 s, "pedal" knob) instead of holding notes, which is how I read "release on the sustain pedal" in the brief; (2) the resonators are fixed at 300 Hz, 850 Hz and 2.5 kHz band-passes, a 1.1 kHz low-pass and a 700 Hz high-pass, picked by six tabs (body, voice, edge, mellow, thin, open), my own voicing by measurement, not by ear; (3) while it is on, the oscillators, filters, envelopes, LFOs, unison and the mod matrix rest and say so in their titles; V1, the voice count, tune, bend, wheel, pressure and the rack still apply; (4) the masters sit at MIDI 108 to 119, so notes 120 to 127 are a master multiplied, not divided; (5) the two new patch names. Still open under the item: LC resonators as a filter model in the ordinary voice, the response plot for the bank, and matrix destinations. Unless you say otherwise in Notes from James, the next nightly builds the next part of this item (the LC filter model) before moving on.
 - Review 4 Nov (`docs/filament-review.md`): R1104-4, a design call. Panic now empties the tape echo (1 Nov) and the master delay and reverb (tonight), but the Mix desk's delay and room returns and the patch's own output room still ring out after it (default patch: its hall room reads -40 dB half a second after Panic, and with the master reverb on that tail refills the reverb). All of them decay on their own. Options: Panic cuts every tail (a short dip on the desk returns and the room's wet gain), or only the ones that can run away, as now. Say which you want.
 - Nightly 4 Nov, the big tube view: please look at it (the small arrow button at the top right of the chassis, or double click a tube). Play a chord with it open on V1, then V3 with the output pushed, and try the looks. Calls I made that you may want changed: a single click on a tube still jumps to its tab as before, so the view opens on a double click or the button; the look applies to the big view only, not the chassis (in /otr the filter also changes the rack's tube); the chassis rests while the view is open. With this, the Tube show item is done except the '73-style monosynth's tubes, which wait for that synth and its name. Unless you say otherwise in Notes from James, the next nightly moves on to the next unchecked 0.3 item, 1939 mode.
