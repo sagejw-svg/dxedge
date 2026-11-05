@@ -5348,6 +5348,23 @@ with sync_playwright() as pw:
       n: __synth.player().choices().length })""")
     ck(f"Rv. the footer's song library note does not limit a channel to Filament, Cathode and Dekatron ({rvf['n']} choices on a channel) (review R1102-2)",
        rvf["n"] > 4 and "Filament, Cathode, Dekatron, or off" not in rvf["foot"] and "any device on the rack" in rvf["foot"], rvf["foot"][:200])
+    # review R1105-1: the section on/off switches were named only "on" or "off" (their text), 11 of them on the rack
+    rvs_want = {"eraOnBtn": "1939 mode", "arpOnBtn": "Arpeggiator", "ensOnBtn": "Ensemble", "echoOnBtn": "Tape echo", "springOnBtn": "Spring reverb",
+                "eqOnBtn": "Graphic EQ", "spkOnBtn": "Speaker", "roomOnBtn": "Room", "fxDelay": "Master delay", "fxRev": "Master reverb", "fxComp": "Master compressor"}
+    rvs = frp.evaluate("""ids => ids.map(id => { const b = document.getElementById(id); return b ? [id, b.getAttribute('aria-label'), b.textContent.trim(), b.getAttribute('aria-pressed')] : [id, null, null, null]; })""", list(rvs_want))
+    rvs_bad = [r for r in rvs if r[1] != rvs_want[r[0]] or r[2] not in ("on", "off") or r[3] not in ("true", "false")]
+    ck(f"Rv. the {len(rvs)} section on/off switches carry their section as the screen reader name; the text stays on or off and aria-pressed carries the state (review R1105-1)",
+       len(rvs) == 11 and not rvs_bad, rvs_bad)
+    # review R1105-2: a blank (or space-only) project or mix name was saved as Untitled or Mix while the field stayed blank
+    rvn = frp.evaluate("""() => { const pn = document.getElementById('projName'), mn = document.getElementById('mixName'), p0 = pn.value, m0 = mn.value;
+      const kp = localStorage.getItem('dxrack_project');
+      pn.value = '   '; document.getElementById('projSave').click(); const p1 = pn.value, ps = JSON.parse(localStorage.getItem('dxrack_project')).name;
+      mn.value = ''; document.getElementById('mixSave').click(); const m1 = mn.value;
+      pn.value = '  Night set  '; document.getElementById('projSave').click(); const p2 = pn.value;
+      pn.value = p0; mn.value = m0; if (kp == null) localStorage.removeItem('dxrack_project'); else localStorage.setItem('dxrack_project', kp);
+      return { p1, ps, m1, p2 }; }""")
+    ck(f"Rv. save project and save mix show the name they saved: blank reads Untitled and Mix, spaces are trimmed ({rvn}) (review R1105-2)",
+       rvn["p1"] == "Untitled" and rvn["ps"] == "Untitled" and rvn["m1"] == "Mix" and rvn["p2"] == "Night set", rvn)
     frx.close()
     frm = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); frmp = frm.new_page(); frmerr = []
     frmp.on("pageerror", lambda e: frmerr.append(str(e)))

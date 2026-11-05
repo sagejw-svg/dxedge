@@ -27,7 +27,7 @@ export function mountMaster(api) {
     '</div>' +
     '<div class="fxrow" id="fxDelayRow">' +
       '<span class="fxname">delay</span>' +
-      '<button type="button" class="chip sw" id="fxDelay" aria-pressed="false">off</button>' +
+      '<button type="button" class="chip sw" id="fxDelay" aria-label="Master delay" aria-pressed="false">off</button>' +
       '<button type="button" class="chip" id="fxSync" aria-pressed="true">sync</button>' +
       '<select id="fxDiv" class="btn small" aria-label="Delay division"></select>' +
       '<button type="button" class="chip" id="fxPing" aria-pressed="false">ping-pong</button>' +
@@ -35,12 +35,12 @@ export function mountMaster(api) {
     '</div>' +
     '<div class="fxrow" id="fxRevRow">' +
       '<span class="fxname">reverb</span>' +
-      '<button type="button" class="chip sw" id="fxRev" aria-pressed="false">off</button>' +
+      '<button type="button" class="chip sw" id="fxRev" aria-label="Master reverb" aria-pressed="false">off</button>' +
       '<span class="knobs" id="fxRevKn"></span>' +
     '</div>' +
     '<div class="fxrow" id="fxCompRow">' +
       '<span class="fxname">comp</span>' +
-      '<button type="button" class="chip sw" id="fxComp" aria-pressed="false">off</button>' +
+      '<button type="button" class="chip sw" id="fxComp" aria-label="Master compressor" aria-pressed="false">off</button>' +
       '<button type="button" class="chip" id="fxLim" aria-pressed="true">limit</button>' +
       '<span class="knobs" id="fxCompKn"></span>' +
     '</div>' +

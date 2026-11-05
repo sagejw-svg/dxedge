@@ -1215,7 +1215,7 @@
         <div class="chips"><span class="cl">sub</span><span data-chips="sub.wave" class="chips" style="margin:0"></span><span data-chips="sub.oct" class="chips" style="margin:0"></span></div>
         <div class="chips"><span class="cl">noise</span><span data-chips="noise.color" class="chips" style="margin:0"></span></div>
         <div class="knobs" id="kSub"></div></section>
-      <section class="mod off" data-dev="filament" data-tab="osc" id="mEra"><h3><span class="pilot off" id="eraPilot"></span>1939 mode<button class="chip sw" id="eraOnBtn" aria-pressed="false" title="1939 mode on or off: a divide-down voice with fixed resonators plays in place of the oscillators, both filters and the amp envelope">off</button></h3>
+      <section class="mod off" data-dev="filament" data-tab="osc" id="mEra"><h3><span class="pilot off" id="eraPilot"></span>1939 mode<button class="chip sw" id="eraOnBtn" aria-label="1939 mode" aria-pressed="false" title="1939 mode on or off: a divide-down voice with fixed resonators plays in place of the oscillators, both filters and the amp envelope">off</button></h3>
         <div class="chips"><span class="cl">shape</span><span data-chips="era.shape" class="chips" style="margin:0" role="group" aria-label="1939 mode envelope shape"></span></div>
         <div class="chips" id="eraTabs" role="group" aria-label="1939 mode tone tabs"><span class="cl">tabs</span><button class="chip" type="button" data-tab39="body" aria-pressed="false" title="Body: a fixed resonance near 300 Hz">body</button><button class="chip" type="button" data-tab39="voice" aria-pressed="false" title="Voice: a fixed resonance near 850 Hz, the vocal one">voice</button><button class="chip" type="button" data-tab39="edge" aria-pressed="false" title="Edge: a fixed resonance near 2.5 kHz, reedy">edge</button><button class="chip" type="button" data-tab39="mellow" aria-pressed="false" title="Mellow: a low-pass at 1.1 kHz">mellow</button><button class="chip" type="button" data-tab39="thin" aria-pressed="false" title="Thin: a high-pass at 700 Hz">thin</button><button class="chip" type="button" data-tab39="open" aria-pressed="false" title="Open: the divided wave straight through">open</button></div>
         <div class="knobs" id="kEra"></div>
@@ -1239,7 +1239,7 @@
         <div class="chips lsync"><span class="cl">sync</span><select class="btn" id="lfo2Sync" aria-label="LFO 2 tempo sync" title="Tempo sync: one LFO cycle lasts this note value at the rack tempo (Rack tab). Off runs at the rate knob."></select><span class="lshz" id="lfo2Hz"></span></div><div class="knobs" id="kLfo2"></div>
         <div class="note">Stereo phase offsets the right side: on tremolo it auto-pans, on cutoff the sweep moves between the speakers. Sync ties either LFO to the rack tempo; a global synced LFO lines up with the bar while the rack plays.</div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mVoice"><h3><span class="pilot"></span>Voice</h3><div class="chips" data-chips="voice.mode"></div><div class="knobs" id="kVoice"></div></section>
-      <section class="mod" data-dev="filament" data-tab="play mod" id="mArp"><h3><span class="pilot" id="arpPilot"></span>Arpeggiator<button class="chip sw" id="arpOnBtn" aria-pressed="false" title="Arpeggiator on or off: while it is on, held keys play one note a step">off</button></h3>
+      <section class="mod" data-dev="filament" data-tab="play mod" id="mArp"><h3><span class="pilot" id="arpPilot"></span>Arpeggiator<button class="chip sw" id="arpOnBtn" aria-label="Arpeggiator" aria-pressed="false" title="Arpeggiator on or off: while it is on, held keys play one note a step">off</button></h3>
         <div class="chips" data-chips="arp.mode"></div>
         <div class="chips lsync" id="arpRate"><span class="cl">step</span><select class="btn" id="arpDiv" aria-label="Arpeggiator step length" title="One step lasts this note value at the rack tempo (Rack tab, 40 to 240 BPM)"></select><span class="lshz" id="arpHz"></span><button class="chip" id="arpLatchBtn" type="button" aria-pressed="false" title="Latch: the arpeggio keeps playing after you let go; the next chord replaces it">latch</button></div>
         <div class="knobs" id="kArp"></div>
@@ -1286,17 +1286,17 @@
           </div>
         </div>
         <div class="knobs" id="kStereo"></div></section>
-      <section class="mod" data-tab="stereo rack" id="mEns"><h3><span class="pilot" id="ensPilot"></span>Ensemble<button class="chip sw" id="ensOnBtn" aria-pressed="false">off</button></h3><div class="chips" data-chips="ens.mode"></div><div class="knobs" id="kEns"></div>
+      <section class="mod" data-tab="stereo rack" id="mEns"><h3><span class="pilot" id="ensPilot"></span>Ensemble<button class="chip sw" id="ensOnBtn" aria-label="Ensemble" aria-pressed="false">off</button></h3><div class="chips" data-chips="ens.mode"></div><div class="knobs" id="kEns"></div>
         <div class="note">Bucket brigade chorus before the output tubes. I and II sweep slow, I+II shimmers, strings is the three-phase ensemble of the string machines.</div></section>
-      <section class="mod" data-tab="rack" id="mEcho"><h3><span class="pilot" id="echoPilot"></span>Tape echo<button class="chip sw" id="echoOnBtn" aria-pressed="false" title="Tape echo on or off">off</button></h3>
+      <section class="mod" data-tab="rack" id="mEcho"><h3><span class="pilot" id="echoPilot"></span>Tape echo<button class="chip sw" id="echoOnBtn" aria-label="Tape echo" aria-pressed="false" title="Tape echo on or off">off</button></h3>
         <div class="chips" data-chips="echo.mode" role="group" aria-label="Echo heads"></div>
         <div class="chips lsync" id="echoRate"><span class="cl">sync</span><select class="btn" id="echoSync" aria-label="Tape echo tempo sync" title="Tempo sync: the echo lands this note value later at the rack tempo. Off uses the time knob."></select><span class="lshz" id="echoMs"></span></div>
         <div class="knobs" id="kEcho"></div>
         <div class="note">A tape loop after the ensemble. The record amp saturates when you push drive, and every repeat goes back through it and the tone filter, so each one is darker than the last. Ping-pong alternates the sides; offset adds a second head on the right at one and a half times the spacing. Wow and flutter wobble the tape.</div></section>
-      <section class="mod" data-tab="rack" id="mSpring"><h3><span class="pilot" id="springPilot"></span>Spring reverb<button class="chip sw" id="springOnBtn" aria-pressed="false" title="Spring reverb on or off">off</button></h3>
+      <section class="mod" data-tab="rack" id="mSpring"><h3><span class="pilot" id="springPilot"></span>Spring reverb<button class="chip sw" id="springOnBtn" aria-label="Spring reverb" aria-pressed="false" title="Spring reverb on or off">off</button></h3>
         <div class="knobs" id="kSpring"></div>
         <div class="note">A tube-driven tank after the tape echo: two springs of different lengths, one per side. Every echo comes back smeared into a falling chirp; drip sets how far. Tone darkens each reflection, drive pushes the tube that drives the springs.</div></section>
-      <section class="mod" data-tab="rack" id="mEq" data-wide><h3><span class="pilot" id="eqPilot"></span>Graphic EQ<button class="chip sw" id="eqOnBtn" aria-pressed="false">off</button></h3>
+      <section class="mod" data-tab="rack" id="mEq" data-wide><h3><span class="pilot" id="eqPilot"></span>Graphic EQ<button class="chip sw" id="eqOnBtn" aria-label="Graphic EQ" aria-pressed="false">off</button></h3>
         <div class="chips" id="eqBandChips" role="group" aria-label="Number of bands"><span class="cl">bands</span></div>
         <div class="chips" id="eqPresetChips" role="group" aria-label="EQ preset"></div>
         <div class="eq-read" id="eqRead"><span class="dim">drag the faders, or sweep across to draw a curve</span></div>
@@ -1310,8 +1310,8 @@
       </section>
       <section class="mod" data-tab="rack" id="mOut" data-wide><h3><span class="pilot"></span>Output tubes, V3 and V4</h3><div class="chips" data-chips="out.tube"></div><div class="chips" data-chips="out.topology"></div>
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>
-      <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
-      <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
+      <section class="mod" data-tab="rack" id="mSpk"><h3><span class="pilot" id="spkPilot"></span>Speaker<button class="chip sw" id="spkOnBtn" aria-label="Speaker" aria-pressed="false">on</button></h3><div class="chips" data-chips="out.cab"></div><div class="knobs" id="kSpk"></div></section>
+      <section class="mod" data-tab="rack stereo" id="mRoom"><h3><span class="pilot" id="roomPilot"></span>Room<button class="chip sw" id="roomOnBtn" aria-label="Room" aria-pressed="true">on</button></h3><div class="chips" data-chips="out.room"></div><div class="knobs" id="kRoom"></div></section>
       <div id="drumRoot"></div>
       <div id="latticeRoot"></div>
       <div id="thyRoot"></div>
@@ -2206,10 +2206,11 @@ $('mixView').addEventListener('click', () => {
   if (on) document.body.dataset.mixdesk = '1'; else delete document.body.dataset.mixdesk;
   $('mixView').setAttribute('aria-pressed', String(on));
 });
-$('mixSave').addEventListener('click', () => { const s = collectSession(); saveSession(localStorage, s); toast('Saved mix "' + s.name + '" in this browser.'); });
+$('mixSave').addEventListener('click', () => { const s = collectSession(); $('mixName').value = s.name; saveSession(localStorage, s); toast('Saved mix "' + s.name + '" in this browser.'); });
 $('mixLoad').addEventListener('click', () => { const s = loadSession(localStorage); if (!s) { toast('No mix saved in this browser.'); return; } applySession(s); toast('Loaded mix "' + s.name + '".'); });
 $('mixDown').addEventListener('click', () => {
   const s = collectSession();
+  $('mixName').value = s.name;
   const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = sessionFileName(s);
@@ -2239,10 +2240,11 @@ if (window.dxDesktop) {
     window.dxDesktop.chooseRecordingsFolder().then(dir => { if (dir) { $('mixFolder').title = dir; toast('Recordings will save to ' + dir); } }).catch(() => {});
   });
 }
-$('projSave').addEventListener('click', () => { const p = collectProject(); saveLocal(localStorage, p); toast('Saved "' + p.name + '" in this browser.'); });
+$('projSave').addEventListener('click', () => { const p = collectProject(); $('projName').value = p.name; saveLocal(localStorage, p); toast('Saved "' + p.name + '" in this browser.'); });
 $('projLoad').addEventListener('click', () => { const p = loadLocal(localStorage); if (!p) { toast('No project saved in this browser.'); return; } applyProject(p); toast('Loaded "' + p.name + '".'); });
 $('projDown').addEventListener('click', () => {
   const p = collectProject();
+  $('projName').value = p.name;
   const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = projectFileName(p);

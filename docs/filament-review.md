@@ -25,7 +25,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
 | R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
-| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 2 Nov | measured |
+| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 5 Nov | measured |
 | R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail; still open 2 Nov | measured |
 | R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
 | R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
@@ -45,7 +45,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note"; still open 29 Oct | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
-| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 24 Oct | measured (Gleam inferred) |
+| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 5 Nov | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
@@ -54,9 +54,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 2 Nov (4 buttons, no name, both sizes) | measured (2 Nov) |
-| R1020-8 | confusing | h | Desktop rack: 481 tab stops (2 Nov; 452 on 30 Oct, 426 on 27 Oct) and no skip link; the library is stop 466 | measured |
-| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "off" x9 (the tape echo and spring reverb switches are new), the tube chips x3, "cutoff" x4, "level" x4 (2 Nov, after the R1102-1 fix) | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 5 Nov (4 buttons, no name or title) | measured (5 Nov) |
+| R1020-8 | confusing | h | Desktop rack: 503 tab stops (5 Nov; 481 on 2 Nov, 426 on 27 Oct) and no skip link; the library is stop 487 | measured |
+| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1) | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 1 Nov | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
@@ -66,7 +66,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1468,3 +1468,90 @@ Confusing. Measured. Fixed tonight (same change as R1104-2).
 Areas a, b, f, g, h; the phone only for the boot check. Suggested next: f, g, h, including whether a
 project restores the master bus effects' on and off state cleanly now that switching on clears them.
 
+
+## 2026-11-05 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `362d38b`, sw.js
+`dxedge-v183` (1939 mode and the fixed-width desktop header had landed overnight). Chromium 1243
+headless (the `chromium-1194` path in the task prompt is still gone) at 1366 x 900 and 375 x 812
+(touch, 2x). No page errors on the rack, Hexode, Anode, Iris or Gleam at either size. Audio was read
+from the live output with the master recorder (`engine().fx.recordStart` and `recordStop`), an
+analyser tapped on the vendored pages' destination, and offline renders through `__synth.render`.
+Focus tonight: projects and the library with the new 1939 mode, and names and focus for its section.
+
+### What worked (measured)
+
+- Project with 1939 mode: Parlor Harp with the staircase at 33% and vibrato at 41c, saved, another
+  factory patch loaded (1939 off), load saved: the whole `era` block comes back (on, harp, tabs,
+  edited values). The downloaded file (`filament-era-test-1939.json` for the name "Era test / 1939!")
+  carries the same block, and uploading it back restores it and the name.
+- A malformed project file says "That file is not a project."; load saved with nothing saved says
+  "No project saved in this browser."
+- Library with Exposition Choir (1939 mode, the pedal lengthens the release): all 21 songs, 3 s each:
+  peak 0.92 to 0.98, RMS 0.22 to 0.31, no NaN, no sample at full scale. 2.5 s after stop every song
+  reads 0.0013 peak or less, sustain off, no held notes, 0 voices.
+- Level of the two 1939 patches against the other 25 Filament factory patches (offline, a four-note
+  chord at velocity 0.8): Exposition Choir -15.9 dB RMS, Parlor Harp -22.1 dB, inside the
+  -26.8 to -12.2 dB spread of the rest. No NaN.
+- Library loop: Oh! Susanna (15.9 s) wraps to 0:00.2 after 0:15.1, stop leaves no held notes.
+- Hexode at both sizes: a held A peaks 0.25 and goes to 0 after release; links back to `/synth/` and
+  Anode. Anode starts on a click (peak 0.14 desktop, 0.20 phone), links back to `/synth/` and Hexode,
+  no sideways scroll at 375 px. Iris and Gleam load at both sizes and link back.
+- Rack tab walk: 503 stops at 1366 px, 104 at 375 px, 0 unnamed, an outline or ring on every one,
+  nothing zero-sized. The 1939 section's shape and tab chips sit in named groups and its five knobs
+  carry "1939 mode ..." names.
+- The master bus survives a page reload (delay and reverb on, reverb mix 0.4, switch reads on).
+
+### Findings
+
+**R1105-1. Eleven section switches are named only "on" or "off".** Area h. Confusing. Measured.
+Fixed tonight.
+- Steps: Tab through the rack with a screen reader, or read the accessible name of `#eraOnBtn`,
+  `#arpOnBtn`, `#echoOnBtn`, `#fxDelay` and the rest.
+- Expected: a name that says what the switch turns on, with the state in `aria-pressed`.
+- Actual: the 1939 mode, arpeggiator, ensemble, tape echo, spring reverb, graphic EQ, speaker, room,
+  master delay, master reverb and master compressor switches had no `aria-label`, so each was read
+  as its text: "off" x9 and "on" x3 at the defaults on the desktop walk (the 1939 switch is new).
+- Fix: each switch carries its section name as `aria-label` ("1939 mode", "Tape echo", "Master
+  delay" and so on); the visible text stays on or off. This closes the on and off part of R1020-9.
+  Check: "Rv. the 11 section on/off switches carry their section as the screen reader name"
+  (fails on the live site: `aria-label` null on all four sampled).
+
+**R1105-2. A blank project or mix name is saved as Untitled or Mix but the field stays blank.**
+Area f. Confusing. Measured. Fixed tonight.
+- Steps: clear the project name (or type only spaces), press save project. Same for the mix name
+  and save mix.
+- Expected: the field shows the name that was saved.
+- Actual: the toast says Saved "Untitled" and the stored project is "Untitled", but the field stays
+  empty (or keeps the spaces), so the next download and the next look at the field disagree with
+  what is stored. The mix name does the same with "Mix".
+- Fix: save and download write the normalized name back to the field. Check: "Rv. save project and
+  save mix show the name they saved" (fails on the live site: fields read "   " and "").
+
+### Still open, re-measured tonight
+
+- R1020-3: a downloaded project still carries 14 devices (no Thyratron, Dekatron, Lattice, Gleam)
+  and no master bus. Load saved after switching the master delay and reverb off leaves them off.
+- R1030-3: Greensleeves still runs Dekatron's pattern (Dekatron strip 0.49 at 2 s, playing true).
+- R1030-4: the channel chips still offer Heptode (sound not re-measured tonight).
+- R1020-7: Anode still has four "⟳" buttons with no name or title after start.
+- R1024-3: Hexode's 13 operator toggles still have no name.
+- Hexode still scrolls sideways at 375 px (1154 px wide).
+- R1025-5 and R1017-10: phone footer links still 13 px tall; pitch and mod strips still 22 x 117 px.
+- R1020-8: 503 desktop stops now (the 1939 section adds 19); the library is stop 487, save project 451.
+- R1020-9, what is left after R1105-1: "sine" x5, "saw" x4, "tri" x4, "level" x4, "cutoff" x4,
+  "mix" x4, the tube chips x3, "attack", "decay", "release", "drive" x3.
+
+### Not reported
+
+- Every library song peaks 0.92 to 0.98 at the defaults on the live output. The output stage holds
+  it under full scale and no sample clipped, and the 2 Nov run measured the same range with the
+  default patch, so this is the rack's level, not 1939 mode.
+- With an `aria-label` on a switch inside an `h3`, the heading's computed name repeats the section
+  ("Tape echo Tape echo"). Screen readers read the heading and the button separately, so left as is.
+
+### Not covered tonight
+
+Areas a, b, c, d, e. Suggested next: a and b on 1939 mode (each shape, tab and knob against an
+offline render, the pedal knob with CC64, old patches with no `era`), and whether the Osc-tab
+sections that "rest" in 1939 mode still change the sound.
