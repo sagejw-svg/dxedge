@@ -5232,6 +5232,45 @@ with sync_playwright() as pw:
        hd_ph["seps"] == 0 and hd_ph["intros"] == 0 and hd_ph["minH"] == "" and hd_ph["sw"] <= 375, hd_ph)
     ck("Hd. no page errors (desktop header)", not hderr, hderr)
     hdx.close()
+    # Pk. the patch keys (graphics, 6 Nov 2026): a joined stepper (previous, the name, next) and joined edit keys
+    # (save, undo, init, delete), with the name in a recessed amber readout. Before, six loose keys left the name
+    # 100 px on a 375 px phone ("Wide Nov").
+    PK_MEAS = """() => { const R = id => { const e = document.getElementById(id); if (!e || e.hidden || !e.getClientRects().length) return null; const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, w: q.width, h: q.height }; };
+      const sel = document.getElementById('patchSel'), cs = getComputedStyle(sel);
+      const ed = ['saveP', 'undoBtn', 'initBtn', 'delP'].map(R).filter(Boolean), st = ['prevP', 'patchSel', 'nextP'].map(R);
+      const join = a => a.every((k, i) => i === 0 || (Math.abs(k.l - a[i - 1].r) < 0.6 && Math.abs(k.t - a[i - 1].t) < 0.6));
+      const lastEd = [...document.querySelectorAll('#patchEdit > .btn')].filter(e => !e.hidden).pop();
+      return { sel: R('patchSel'), st, ed, stJoin: join(st), edJoin: join(ed), small: [...st, ...ed].filter(k => k.w < 44 || k.h < 44).length,
+        app: cs.appearance, bg: cs.backgroundImage, color: cs.color, shadow: cs.boxShadow,
+        endR: parseFloat(getComputedStyle(lastEd).borderTopRightRadius), startR: parseFloat(getComputedStyle(document.getElementById('saveP')).borderTopLeftRadius),
+        midR: parseFloat(getComputedStyle(document.getElementById('undoBtn')).borderTopRightRadius), lastId: lastEd.id,
+        trays: ['patchStep', 'patchEdit'].every(id => getComputedStyle(document.getElementById(id)).boxShadow.includes('inset')),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pkerr = []
+    for pk_w, pk_mob in ((375, True), (390, True), (1366, False)):
+        pkx = b.new_context(viewport={"width": pk_w, "height": {375: 667, 390: 844}.get(pk_w, 1000)}, is_mobile=pk_mob, has_touch=pk_mob, reduced_motion="reduce")
+        pkp = pkx.new_page(); pkp.on("pageerror", lambda e: pkerr.append(str(e)))
+        pkp.goto(BASE); pkp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); pkp.wait_for_timeout(200)
+        pk = pkp.evaluate(PK_MEAS)
+        info(f"Pk. {pk_w} px", f"name window {pk['sel']['w']:.0f} px, stepper joined {pk['stJoin']}, edit keys joined {pk['edJoin']}")
+        ck(f"Pk. at {pk_w} px previous, the name and next are one joined stepper, and save, undo and init one joined switch, each in a recessed tray",
+           pk["stJoin"] and pk["edJoin"] and len(pk["ed"]) == 3 and pk["trays"] and pk["startR"] > 0 and pk["endR"] > 0 and pk["midR"] == 0 and pk["lastId"] == "initBtn", pk)
+        pk_con = _ob_con(pk["color"], pk["bg"])
+        ck(f"Pk. at {pk_w} px the patch name is a recessed amber readout with its own caret ({pk_con:.1f}:1, want 4.5 or more)",
+           pk["app"] == "none" and "url(" in pk["bg"] and "gradient" in pk["bg"] and "inset" in pk["shadow"] and pk_con >= 4.5, (pk["app"], pk["bg"][:80], pk["color"]))
+        if pk_mob:
+            ck(f"Pk. on a {pk_w} px phone the name window is {pk['sel']['w']:.0f} px (want 125 or more; 100 and 115 before), every key 44 px, no sideways scroll",
+               pk["sel"]["w"] >= 125 and pk["small"] == 0 and pk["sw"] <= pk["iw"] == pk_w, pk)
+        else:
+            ck("Pk. at 1366 px the name window keeps its 240 px", abs(pk["sel"]["w"] - 240) < 1, pk["sel"])
+        pkp.click("#saveP"); pkp.wait_for_timeout(100); pkp.fill("#saveName", "Pk Test"); pkp.click("#saveOk"); pkp.wait_for_timeout(200)
+        pk2 = pkp.evaluate(PK_MEAS)
+        ck(f"Pk. at {pk_w} px a user patch adds delete to the joined edit keys, rounded at its end, init square",
+           pk2["edJoin"] and len(pk2["ed"]) == 4 and pk2["lastId"] == "delP" and pk2["endR"] > 0
+           and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") == 0 and pk2["sw"] <= pk2["iw"], pk2)
+        pkp.on("dialog", lambda d: d.accept()); pkp.click("#delP"); pkp.wait_for_timeout(150)
+        pkx.close()
+    ck("Pk. no page errors (patch keys)", not pkerr, pkerr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)

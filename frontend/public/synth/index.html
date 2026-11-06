@@ -110,6 +110,27 @@
   .bar .uisize button[aria-pressed="true"] { color: #1a1206; border-color: #ffb347; background: linear-gradient(180deg, #ffc56c, #f2a63f);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 8px rgba(255,179,71,0.45); }
   .bar .uisize button:focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
+  /* Patch keys (graphics, 6 Nov): two joined switches in the size switch's finish, a stepper (previous, the
+     patch name, next) and the edit keys (save, undo, init, and delete on a user patch). The name sits in a
+     recessed amber readout window, the fader readouts' finish, with a small engraved caret instead of the
+     browser's arrow. Before, six loose keys with gaps between them left the name 100 px on a 375 px phone
+     ("Wide Nov"); joined, the same row gives it about 130 px. Static, so nothing for reduced motion. */
+  .bar .pstep, .bar .pedit { display: inline-flex; flex-wrap: nowrap; gap: 0; align-items: stretch; border-radius: 7px;
+    box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(255,255,255,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  .bar .pstep > .btn, .bar .pedit > .btn { margin: 0; border-radius: 0; border-color: #2c2c2c; border-left-width: 0;
+    background: linear-gradient(180deg, #1e1e1e, #121212); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+  .bar .pstep > :first-child, .bar .pedit > :first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  .bar .pstep > :last-child, .bar .pedit > :last-child:not([hidden]), .bar .pedit > :has(+ [hidden]:last-child) { border-radius: 0 6px 6px 0; }
+  .bar .pstep > .btn:hover, .bar .pedit > .btn:hover { color: var(--amber2); border-color: #2c2c2c; }
+  .bar .pstep > .btn:focus-visible, .bar .pedit > .btn:focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
+  .bar .pstep #prevP, .bar .pstep #nextP { font-size: 14px; }
+  .bar .pstep #patchSel { -webkit-appearance: none; appearance: none; border-color: #000; border-left-width: 1px; padding: 3px 22px 3px 9px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M.8.8 4.5 4.6 8.2.8' fill='none' stroke='%23c98a3a' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 8px center,
+      linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .pstep #patchSel:hover { border-color: #000; color: #ffe2b0; }
+  .bar .pstep #patchSel option { background: #121212; color: var(--text); text-shadow: none; }
   .saveform input { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 170px; font-size: 12px; }
   /* desktop header (graphics, 5 Nov): the same on every device. Before, the patch bar's width followed the
      longest patch name (the select sized itself to it), so on 16 of 18 devices the bar squeezed the description
@@ -845,6 +866,9 @@
     .bar #mastTime::before { content: ''; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--red); box-shadow: 0 0 5px var(--red); }
     .top > .sup { min-height: 44px; }
     .bar #patchSel { flex: 1 1 0; width: 0; min-width: 0; max-width: none; }
+    /* basis auto, not 0: a zero basis let the volume slot join the first row at 390 px and squeeze the name to 33 px */
+    .bar .pstep { flex: 1 1 auto; min-width: 0; } .bar .pedit { flex: 0 0 auto; }
+    .bar .pedit > .btn { padding-left: 8px; padding-right: 8px; }
     .bar .saveform.open ~ #midiBtn, .bar .saveform.open ~ #learnBtn { display: none; }
     .sup { padding: 4px 11px; font-size: 11px; }
     #midiBtn .long { display: none; }
@@ -1095,13 +1119,8 @@
       <p class="intro" data-dev="resnatron">Resnatron is a patch bay of cavities. Nothing is pre-wired. Drag a gold jack onto a silver one, or tap one then the other. Starter patches are saved cables. Copy link shares the bay. The red rec button saves what you hear as a WAV.</p>
     </div>
     <div class="bar" role="group" aria-label="Patches">
-      <button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button>
-      <select class="btn" id="patchSel" aria-label="Patch"></select>
-      <button class="btn small" id="nextP" aria-label="Next patch">&rsaquo;</button>
-      <button class="btn small" id="saveP">save</button>
-      <button class="btn small" id="undoBtn" type="button" title="Undo the last change on this device. Ctrl+Z or Cmd+Z does the same.">undo</button>
-      <button class="btn small" id="initBtn" type="button" title="Reset this device to its Init patch.">init</button>
-      <button class="btn small" id="delP" hidden>delete</button>
+      <span class="pstep" id="patchStep"><button class="btn small" id="prevP" aria-label="Previous patch">&lsaquo;</button><select class="btn" id="patchSel" aria-label="Patch"></select><button class="btn small" id="nextP" aria-label="Next patch">&rsaquo;</button></span>
+      <span class="pedit" id="patchEdit"><button class="btn small" id="saveP">save</button><button class="btn small" id="undoBtn" type="button" title="Undo the last change on this device. Ctrl+Z or Cmd+Z does the same.">undo</button><button class="btn small" id="initBtn" type="button" title="Reset this device to its Init patch.">init</button><button class="btn small" id="delP" hidden>delete</button></span>
       <span class="bsep" aria-hidden="true"></span>
       <label class="volab" title="Master volume for everything in the rack. It is not stored in a patch.">vol <input id="mastVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><output id="mastVolV" class="fread" aria-hidden="true">100%</output></label>
       <button class="btn small" id="safeLim" type="button" aria-pressed="false" title="Safety limiter on the master, after the mix. Off leaves the sound exactly as it was.">limit</button>
