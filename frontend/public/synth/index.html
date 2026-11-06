@@ -1225,11 +1225,13 @@
       <section class="mod" data-dev="filament" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
         <div class="chips" id="loopChips"><span class="cl">V2 loop</span><span data-chips="filt.tube" class="chips" style="margin:0"></span></div>
         <div class="chips" id="gateChips"><span class="cl">gate</span><span data-chips="filt.gate" class="chips" style="margin:0"></span></div>
+        <div class="chips" id="lcTabsA" role="group" aria-label="Filter LC bank tone tabs"><span class="cl">tabs</span><button class="chip" type="button" data-tablc="body" data-slot="filt" aria-pressed="false" title="Body: the low resonance, at 300 Hz with the cutoff at 850 Hz">body</button><button class="chip" type="button" data-tablc="voice" data-slot="filt" aria-pressed="false" title="Voice: the vocal resonance, at the cutoff (850 Hz at 850)">voice</button><button class="chip" type="button" data-tablc="edge" data-slot="filt" aria-pressed="false" title="Edge: the reedy resonance, about three times the cutoff (2.5 kHz at 850)">edge</button><button class="chip" type="button" data-tablc="mellow" data-slot="filt" aria-pressed="false" title="Mellow: a low-pass about 1.3 times the cutoff (1.1 kHz at 850)">mellow</button><button class="chip" type="button" data-tablc="thin" data-slot="filt" aria-pressed="false" title="Thin: a high-pass a little under the cutoff (700 Hz at 850)">thin</button><button class="chip" type="button" data-tablc="open" data-slot="filt" aria-pressed="false" title="Open: straight through, beside the others">open</button></div>
         <div class="eq-read" id="fpRead" aria-live="off"><span class="dim">response</span></div>
         <canvas id="fpCv" role="img" aria-label="Filter response"></canvas>
         <div class="knobs" id="kFilt"></div><div class="note" id="filtNote"></div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mFiltB" data-wide><h3><span class="pilot" id="filtBPilot"></span>Filter B</h3><div class="chips" id="routeChips" data-chips="filtB.route"></div>
         <div class="chips" id="filtBModel" data-chips="filtB.model"></div>
+        <div class="chips" id="lcTabsB" role="group" aria-label="Filter B LC bank tone tabs"><span class="cl">tabs</span><button class="chip" type="button" data-tablc="body" data-slot="filtB" aria-pressed="false" title="Body: the low resonance, at 300 Hz with the cutoff at 850 Hz">body</button><button class="chip" type="button" data-tablc="voice" data-slot="filtB" aria-pressed="false" title="Voice: the vocal resonance, at the cutoff (850 Hz at 850)">voice</button><button class="chip" type="button" data-tablc="edge" data-slot="filtB" aria-pressed="false" title="Edge: the reedy resonance, about three times the cutoff (2.5 kHz at 850)">edge</button><button class="chip" type="button" data-tablc="mellow" data-slot="filtB" aria-pressed="false" title="Mellow: a low-pass about 1.3 times the cutoff (1.1 kHz at 850)">mellow</button><button class="chip" type="button" data-tablc="thin" data-slot="filtB" aria-pressed="false" title="Thin: a high-pass a little under the cutoff (700 Hz at 850)">thin</button><button class="chip" type="button" data-tablc="open" data-slot="filtB" aria-pressed="false" title="Open: straight through, beside the others">open</button></div>
         <div class="knobs" id="kFiltB"></div><div class="note" id="filtBNote"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mEnvA"><h3><span class="pilot"></span>Amp envelope</h3><div class="knobs" id="kEnvA"></div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mEnvF"><h3><span class="pilot"></span>Filter envelope</h3><div class="knobs" id="kEnvF"></div></section>
@@ -2687,10 +2689,10 @@ const WAVE_L = { saw: 'saw', pulse: 'pulse', tri: 'tri', sine: 'sine' };
 document.querySelectorAll('[data-chips]').forEach(el => {
   const p = el.dataset.chips;
   const labels = {
-    'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12', poly24: 'Poly 24', svf12: 'SVF 12', lpg: 'LP gate' },
+    'sub.oct': { 1: '-1 oct', 2: '-2 oct' }, 'filt.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12', poly24: 'Poly 24', svf12: 'SVF 12', lpg: 'LP gate', lc: 'LC bank' },
     'filt.gate': { both: 'filter + VCA', lp: 'filter only', vca: 'VCA only' },
     'filtB.route': { off: 'A only', serial: 'serial A > B', parallel: 'parallel', split: 'split L/R' },
-    'filtB.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12', poly24: 'Poly 24', svf12: 'SVF 12' },
+    'filtB.model': { valve12: 'Valve 12', ladder24: 'Ladder 24', diode18: 'Diode 18', sk12: 'Sallen-Key 12', poly24: 'Poly 24', svf12: 'SVF 12', lc: 'LC bank' },
     'lfo1.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' },
     'lfo1.mode': { global: 'global', voice: 'per voice' }, 'lfo2.mode': { global: 'global', voice: 'per voice' },
     'lfo2.wave': { sine: 'sine', tri: 'tri', saw: 'saw', square: 'square', sh: 'S&H', smooth: 'smooth' }, 'stereo.pan': { center: 'centre', alt: 'alternate', key: 'keyboard', random: 'random' },
@@ -2980,6 +2982,15 @@ document.querySelectorAll('[data-tab39]').forEach(b => b.addEventListener('click
   if (!Object.values(t).some(Boolean)) t.open = true;
   afterChange('era.tabs.' + k); pushPatch(false);
 }));
+// the LC bank model's tone tabs (slot A in filt.tabs, B in filtB.tabs): the same rule as 1939 mode's
+document.querySelectorAll('[data-tablc]').forEach(b => b.addEventListener('click', () => {
+  if (dev !== 'filament') return;
+  if (!undoArmed) rememberUndo();
+  const sl = b.dataset.slot, t = cur[sl].tabs, k = b.dataset.tablc;
+  t[k] = !t[k];
+  if (!Object.values(t).some(Boolean)) t.open = true;
+  afterChange(sl + '.tabs.' + k); pushPatch(false);
+}));
 // touching a bypassed module's control switches it on (the /otr rack rule)
 [['kSpk', 'out.spkOn'], ['mSpk', 'out.spkOn'], ['kRoom', 'out.roomOn'], ['mRoom', 'out.roomOn'], ['mEns', 'ens.on'], ['mEq', 'out.eqOn'], ['mEcho', 'echo.on'], ['mSpring', 'spring.on']].forEach(([id, path]) => {
   $(id).addEventListener('pointerdown', e => { if (e.target.closest('.sw')) return; if (!getPath(cur, path)) { setPath(cur, path, true); afterChange(path); pushPatch(false); } });
@@ -3033,6 +3044,10 @@ function afterF() {
   ['filtB.cutoff', 'filtB.res', 'filtB.keytrack', 'filtB.env', 'filtB.morph', 'filtB.bal'].forEach(p => { kn(p).k.el.style.opacity = bOn ? '' : '0.45'; });
   kn('filtB.morph').k.el.style.display = fb.model === 'svf12' ? '' : 'none';
   kn('filtB.bal').k.el.style.display = route === 'parallel' ? '' : 'none';
+  $('lcTabsA').style.display = cur.filt.model === 'lc' ? '' : 'none';
+  $('lcTabsB').style.display = fb.model === 'lc' ? '' : 'none';
+  $('lcTabsB').style.opacity = bOn ? '' : '0.45';
+  document.querySelectorAll('[data-tablc]').forEach(b => b.setAttribute('aria-pressed', String(!!(cur[b.dataset.slot] && cur[b.dataset.slot].tabs && cur[b.dataset.slot].tabs[b.dataset.tablc]))));
   $('filtBNote').textContent = route === 'serial' ? 'Serial: A feeds B. Two low-passes stack into a steeper slope; a low-pass into a high-pass makes a band.'
     : route === 'parallel' ? 'Parallel: V1 feeds both, and the two are summed at equal power. A / B leans toward one. Different models or cutoffs give two peaks.'
     : route === 'split' ? 'Split: A plays the left side and B the right, a stereo filter you can play. Stereo offset moves A down and B up. Two very different filters can thin out in mono: hold mono check.'
@@ -3051,6 +3066,8 @@ function afterF() {
     ? 'Sallen-Key 12: 2-pole low-pass with a clipping gain stage, and a high-pass in front of it. It screams from about 9 on resonance and squares off past it; drive and loud notes clip it hard.'
     : cur.filt.model === 'svf12'
     ? 'SVF 12: a 2-pole state variable filter. Morph sweeps its output from low-pass through band-pass and high-pass to notch. It sings from about 9 on resonance (except at notch, which cancels the peak); drive makes it slew.'
+    : cur.filt.model === 'lc'
+    ? 'LC bank: 1939 mode\'s fixed resonators as a filter. Three resonances (body, voice, edge), a low-pass (mellow) and a high-pass (thin), picked by the tabs and summed in parallel. Cutoff moves the whole bank (at 850 Hz it sits where 1939 mode has it), so key tracking and the envelope make it a moving vowel; resonance narrows the peaks so they ring, but it never sings on its own. Drive pushes a soft clip after the bank.'
     : lpg
     ? 'Low pass gate: a light cell (a lamp and a photoresistor) follows the amp envelope, lighting in a few milliseconds and letting go slowly, and its light sets the cutoff and the level together, so notes darken as they fade. Lag sets how slowly it lets go; gate picks what it drives. Resonance stays gentle: it never sings.'
     : cur.filt.model === 'poly24'

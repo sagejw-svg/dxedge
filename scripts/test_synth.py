@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -699,7 +699,7 @@ with sync_playwright() as pw:
         L2, _ = render(patch(osc1={"wave": "sine", "level": 0.02, "fixed": 1000}, filt=fl), note(60, v=0.79), 1.0, rack=False)
         return {250: tone_amp(L1[SR // 2:], 250), 1000: tone_amp(L2[SR // 2:], 1000), 4000: tone_amp(L1[SR // 2:], 4000)}
     fp_err = {}
-    for m_ in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12", "lpg"):
+    for m_ in ("valve12", "ladder24", "diode18", "sk12", "poly24", "svf12", "lpg", "lc"):
         op_ = two_tone(m_, 20000, 0); po_ = fp_of(patch(filt={"model": m_, "cutoff": 20000, "res": 0}), 20000)["a"]
         for res in (0, 0.6):
             ms_ = two_tone(m_, 1000, res); pp_ = fp_of(patch(filt={"model": m_, "cutoff": 1000, "res": res}), 1000)["a"]
@@ -1263,6 +1263,116 @@ with sync_playwright() as pw:
     ph39.close()
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Er. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Lc. the LC bank as a filter model (6 Nov)
+    # filt.model / filtB.model 'lc': 1939 mode's five fixed sections (E_LC) in a filter slot, picked by the slot's tabs.
+    # The model below is the five sections as analog prototypes through the bilinear map at the 2x rate, the cutoff
+    # moving them together (850 Hz puts them where 1939 mode has them) and the resonance scaling their Q.
+    _LCT = ["body", "voice", "edge", "mellow", "thin", "open"]
+    _lc_w = _rem.search(r"LC_T0 = \[([^\]]*)\]", _wk); _lc_w = [int(x_) for x_ in _lc_w.group(1).split(",")] if _lc_w else None
+    _elc = _rem.search(r"const E_LC = (\[\[.*?\]\]);", _wk); _elc = json.loads(_elc.group(1)) if _elc else None
+    _lcg = _rem.search(r"LC_G = ([0-9.]+)", _wk); _lcg = float(_lcg.group(1)) if _lcg else None
+    lcn_ = pg.evaluate("""async () => { const m = await import('./patches.js'), d = m.normalize({});
+      const j = m.normalize({ filt: { model: 'lc', tabs: { body: 0, voice: 0, mellow: 0 } }, filtB: { route: 'serial', model: 'lc', tabs: { edge: 1 } } });
+      return { a: d.filt.tabs, b: d.filtB.tabs, jm: j.filt.model, jbm: j.filtB.model, ja: j.filt.tabs, jb: j.filtB.tabs, v: j.v,
+        enA: m.ENUMS['filt.model'], enB: m.ENUMS['filtB.model'], fac: m.FACTORY.filter(p => p.filt.model === 'lc' || p.filtB.model === 'lc').map(p => p.name) }; }""")
+    _dt = {"body": True, "voice": True, "edge": False, "mellow": True, "thin": False, "open": False}
+    ck(f"Lc. the schema: a patch with no tabs gets body, voice and mellow on both slots (the worklet's LC_T0 {_lc_w} agrees); 'lc' is a model in slot A and slot B; no tab in reads as open; no factory patch uses it, so no patch sounds different (schema stays v:1) ({lcn_})",
+       lcn_["a"] == _dt and lcn_["b"] == _dt and _lc_w == [int(lcn_["a"][t_]) for t_ in _LCT] and "lc" in lcn_["enA"] and "lc" in lcn_["enB"]
+       and lcn_["jm"] == "lc" and lcn_["jbm"] == "lc" and lcn_["ja"]["open"] is True and lcn_["jb"]["edge"] is True and lcn_["jb"]["body"] is True
+       and not lcn_["fac"] and lcn_["v"] == 1, lcn_)
+    def lc_tabs(**k_): return {t_: bool(k_.get(t_, False)) for t_ in _LCT}
+    def lc_model(f, cut, res, tb):
+        fs_ = 2 * SR; qm = 10 ** (res - 0.3); qb = qm ** 0.5; n_ = max(1, sum(tb[t_] for t_ in _LCT)); h_ = 0
+        for j_, (kd, hz, q_, g_) in enumerate(_elc):
+            if not tb[_LCT[j_]]: continue
+            gg = math.tan(math.pi * min(max(hz * cut / 850, 16), SR * 0.45) / fs_); s_ = 1j * math.tan(math.pi * f / fs_) / gg
+            k_ = 1 / (q_ * (qm if kd == 0 else qb)); d_ = s_ * s_ + k_ * s_ + 1
+            h_ += g_ * (qb if kd == 0 else 1) * (k_ * s_ / d_ if kd == 0 else 1 / d_ if kd == 1 else s_ * s_ / d_)
+        if tb["open"]: h_ += 1
+        return abs(h_) / math.sqrt(n_)
+    def lc_amp(fz, filt, **kw):
+        L_, _ = render(patch(osc1={"wave": "sine", "level": 0.02, "fixed": fz}, filt=filt, **kw), note(60, v=0.79), 0.7, rack=False)
+        return tone_amp(L_[SR // 4:], fz)
+    LFQ = (150, 300, 600, 850, 1100, 2500, 5000)
+    lref_ = {f_: lc_amp(f_, {"model": "lc", "cutoff": 850, "res": 0.3, "tabs": lc_tabs(open=True)}) for f_ in LFQ}
+    lce_ = {}
+    for tb_, cut_, res_ in [(lc_tabs(**{t_: True}), c_, r_) for t_ in _LCT[:5] for c_, r_ in ((850, 0.3), (400, 0), (1700, 1))] + [(lc_tabs(body=True, voice=True, mellow=True), 850, 0.3), (lc_tabs(edge=True, thin=True, open=True), 600, 0.7)]:
+        e_ = []
+        for f_ in LFQ:
+            m_ = db(lc_amp(f_, {"model": "lc", "cutoff": cut_, "res": res_, "tabs": tb_}) / lref_[f_])
+            if m_ > -40: e_.append(round(m_ - db(lc_model(f_, cut_, res_, tb_) / lc_model(f_, cut_, res_, lc_tabs(open=True))), 2))
+        lce_["+".join(t_ for t_ in _LCT if tb_[t_]) + f"@{cut_}/{res_}"] = e_
+    lcw_ = max(abs(x_) for v_ in lce_.values() for x_ in v_)
+    ck(f"Lc. the voice's response matches the bank (1939 mode's E_LC sections, moved by the cutoff, Q scaled by the resonance) for each tab alone at 850 Hz/0.3, 400 Hz/0, 1700 Hz/1 and two mixes, 150 Hz to 5 kHz, within 0.3 dB (worst {lcw_:.2f} dB)",
+       _elc is not None and lcw_ <= 0.3 and all(len(v_) >= 5 for v_ in lce_.values()), lce_)
+    pr_ = {r_: round(db(lc_amp(850, {"model": "lc", "cutoff": 850, "res": r_, "tabs": lc_tabs(voice=True)}) / lc_amp(425, {"model": "lc", "cutoff": 850, "res": r_, "tabs": lc_tabs(voice=True)})), 1) for r_ in (0, 0.3, 1)}
+    ck(f"Lc. resonance narrows the peaks: the voice tab's 850 Hz over 425 Hz is {pr_} dB at resonance 0, 0.3 and 1 (rising, at least 15 dB from 0 to 1)", pr_[0] < pr_[0.3] < pr_[1] and pr_[1] - pr_[0] >= 15, pr_)
+    L_, _ = render(patch(osc1={"level": 0}, filt={"model": "lc", "cutoff": 850, "res": 1, "tabs": lc_tabs(body=True, voice=True, edge=True)}), note(60), 1.0, rack=False)
+    ck(f"Lc. it never sings: full resonance with no input stays silent ({db(_arms(L_)):.0f} dBFS, want under -120)", db(_arms(L_)) < -120 and np.all(np.isfinite(L_)), db(_arms(L_)))
+    def lc_ch(filt):
+        L_, _ = render(patch(filt=filt), [e for n_ in (48, 55, 60, 64) for e in note(n_)], 1.0, rack=False); return db(_arms(L_[SR // 2:]))
+    lv_ = {"valve12": lc_ch({"model": "valve12", "cutoff": 1800, "res": 0.3, "keytrack": 0.5}), "lc": lc_ch({"model": "lc", "cutoff": 1800, "res": 0.3, "keytrack": 0.5})}
+    lr_ = {r_: lc_ch({"model": "lc", "cutoff": 850, "res": r_}) for r_ in (0, 0.3, 0.6, 1)}
+    ck(f"Lc. level: a saw chord on the default tabs sits within 3 dB of Valve 12 at the same knobs ({lv_['lc'] - lv_['valve12']:+.1f} dB), and within 3 dB of itself from resonance 0 to 1 ({[round(v_ - lr_[0.3], 1) for v_ in lr_.values()]})",
+       abs(lv_["lc"] - lv_["valve12"]) <= 3 and max(lr_.values()) - min(lr_.values()) <= 3, (lv_, lr_))
+    def lc_h3(d_):
+        L_, _ = render(patch(osc1={"wave": "sine", "level": 0.8, "fixed": 300}, filt={"model": "lc", "cutoff": 850, "res": 0.3, "drive": d_, "tabs": lc_tabs(open=True)}), note(60), 0.7, rack=False)
+        return db(tone_amp(L_[SR // 4:], 900) / tone_amp(L_[SR // 4:], 300))
+    h3_ = {d_: round(lc_h3(d_), 1) for d_ in (0, 3, 10)}
+    ck(f"Lc. drive pushes the soft clip after the bank: H3 of a loud 300 Hz sine {h3_} dB at drive 0, 3 and 10 (rising, 15 dB or more from 3 to 10)", h3_[0] < h3_[3] < h3_[10] and h3_[10] - h3_[3] >= 15, h3_)
+    worst_, bad_ = 0.0, 0
+    for cut_ in (16, 850, 20000):
+        L_, R_ = render(patch(osc1={"wave": "saw", "level": 1}, osc2={"wave": "pulse", "level": 1}, sub={"level": 1}, v1={"drive": 10},
+                              filt={"model": "lc", "cutoff": cut_, "res": 1, "drive": 10, "env": 1, "tabs": lc_tabs(body=True, voice=True, edge=True, mellow=True, thin=True, open=True)}), [e for k_ in (24, 48, 72, 96) for e in note(k_, 0.0)], 1.0, rack=False)
+        bad_ += int(np.sum(~np.isfinite(L_)) + np.sum(~np.isfinite(R_))); worst_ = max(worst_, float(np.max(np.abs(L_))))
+    ck(f"Lc. extremes (cutoff 16 Hz, 850 Hz, 20 kHz; full resonance, drive and envelope; every tab; a hot four-octave chord) stay finite and bounded (peak {worst_:.2f})", bad_ == 0 and worst_ < 2, (bad_, worst_))
+    # slot B: serial after a wide open A, and split (B is the right side only)
+    lbs_ = {f_: lc_amp(f_, {"model": "svf12", "cutoff": 20000}, filtB={"route": "serial", "model": "lc", "cutoff": 1700, "res": 1, "keytrack": 0, "env": 0, "tabs": lc_tabs(voice=True)}) for f_ in (850, 1700)}
+    lbo_ = {f_: lc_amp(f_, {"model": "svf12", "cutoff": 20000}) for f_ in (850, 1700)}
+    sb_ = db(lbs_[1700] / lbo_[1700]) - db(lbs_[850] / lbo_[850]); sbm_ = db(lc_model(1700, 1700, 1, lc_tabs(voice=True)) / lc_model(850, 1700, 1, lc_tabs(voice=True)))
+    Ls_, Rs_ = render(patch(osc1={"wave": "sine", "level": 0.02, "fixed": 850}, filt={"model": "svf12", "cutoff": 20000}, filtB={"route": "split", "model": "lc", "cutoff": 1700, "res": 1, "keytrack": 0, "env": 0, "tabs": lc_tabs(voice=True)}), note(60, v=0.79), 0.7, rack=False)
+    spl_ = db(tone_amp(Rs_[SR // 4:], 850) / tone_amp(Ls_[SR // 4:], 850)); splm_ = db(lc_model(850, 1700, 1, lc_tabs(voice=True)) * (_lcg or 0))
+    ck(f"Lc. slot B: serial after a wide open A, its voice tab at 1700 Hz puts 1700 Hz {sb_:.1f} dB over 850 Hz (the model {sbm_:.1f}, within 0.5); split, the right side alone takes the bank (850 Hz on the right {spl_:.1f} dB against the left; the model with the level LC_G {_lcg} {splm_:.1f}, within 0.5)",
+       abs(sb_ - sbm_) <= 0.5 and abs(spl_ - splm_) <= 0.5, (lbs_, lbo_, spl_))
+    # a tab change over a held note rides the duck: no step beyond the waveform's own
+    lcb_ = patch(osc1={"wave": "saw", "level": 0.8}, filt={"model": "lc", "cutoff": 850, "res": 0.6, "tabs": lc_tabs(body=True)})
+    lcc_ = patch(osc1={"wave": "saw", "level": 0.8}, filt={"model": "lc", "cutoff": 850, "res": 0.6, "tabs": lc_tabs(edge=True)})
+    L_, _ = render(lcb_, note(45, 0.05) + [{"at": 0.4, "t": "patch", "load": False, "p": lcc_}], 0.8, rack=False)
+    d2_ = np.abs(np.diff(L_, 2)); sw_, pre_, post_ = float(d2_[int(0.395 * SR):int(0.42 * SR)].max()), float(d2_[int(0.2 * SR):int(0.38 * SR)].max()), float(d2_[int(0.5 * SR):].max())
+    eb_ = tone_amp(L_[int(0.5 * SR):], 2530) / tone_amp(L_[int(0.15 * SR):int(0.38 * SR)], 2530)
+    ck(f"Lc. a tab change over a held note (body to edge) has no click (largest second difference at the switch {sw_:.4f} against {max(pre_, post_):.4f} steady) and takes effect (2.5 kHz {db(eb_):+.1f} dB)",
+       sw_ <= 1.2 * max(pre_, post_) and db(eb_) >= 10, (sw_, pre_, post_, db(eb_)))
+    # the panel: an LC bank chip in each slot; the tabs show only on that model and write the slot's own tabs
+    pg.evaluate("p => __synth.setPatch(p)", patch(filtB={"route": "serial", "model": "svf12"})); pg.wait_for_timeout(150)
+    lu0_ = pg.evaluate("() => ({ a: !!document.querySelector('#mFilt .chip[data-v=\"lc\"]'), b: !!document.querySelector('#filtBModel .chip[data-v=\"lc\"]'), ta: !!document.getElementById('lcTabsA').offsetParent, tb: !!document.getElementById('lcTabsB').offsetParent })")
+    pg.click('#mFilt .chip[data-v="lc"]'); pg.click('#filtBModel .chip[data-v="lc"]'); pg.wait_for_timeout(100)
+    pg.click('#lcTabsA [data-tablc="edge"]'); pg.click('#lcTabsB [data-tablc="body"]'); pg.wait_for_timeout(100)
+    lu1_ = pg.evaluate("""() => ({ pa: __synth.patch().filt, pb: __synth.patch().filtB, ta: !!document.getElementById('lcTabsA').offsetParent, tb: !!document.getElementById('lcTabsB').offsetParent,
+      ea: document.querySelector('#lcTabsA [data-tablc="edge"]').getAttribute('aria-pressed'), bb: document.querySelector('#lcTabsB [data-tablc="body"]').getAttribute('aria-pressed'),
+      note: document.getElementById('filtNote').textContent.slice(0, 8), names: [...document.querySelectorAll('#lcTabsA [data-tablc]')].map(b => b.textContent) })""")
+    ck(f"Lc. the panel: an LC bank chip in Filter and Filter B; the tab rows hide on other models ({lu0_}), show on the LC bank, and each writes its own slot (A edge in, B body out) with aria-pressed to match ({lu1_})",
+       lu0_ == {"a": True, "b": True, "ta": False, "tb": False} and lu1_["pa"]["model"] == "lc" and lu1_["pb"]["model"] == "lc" and lu1_["ta"] and lu1_["tb"]
+       and lu1_["pa"]["tabs"]["edge"] is True and lu1_["pb"]["tabs"]["body"] is False and lu1_["pa"]["tabs"]["body"] is True and lu1_["ea"] == "true" and lu1_["bb"] == "false"
+       and lu1_["note"] == "LC bank:" and lu1_["names"] == _LCT, (lu0_, lu1_))
+    for t_ in ("body", "voice", "edge", "mellow"): pg.click(f'#lcTabsA [data-tablc="{t_}"]')
+    pg.wait_for_timeout(100)
+    tla_ = pg.evaluate("__synth.patch().filt.tabs")
+    ck(f"Lc. taking slot A's last tab out brings open in ({tla_})", tla_ == lc_tabs(open=True), tla_)
+    lvl_ = pg.evaluate("""async () => { __synth.noteOn(57, 0.8); await new Promise(r => setTimeout(r, 300)); const m = __synth.meter(); __synth.noteOff(57); return { voices: m.voices, notes: m.notes, v1: m.v1 }; }""")
+    ck(f"Lc. live: a key plays through the LC bank in both slots ({lvl_})", lvl_["voices"] == 1 and lvl_["notes"] == [57] and lvl_["v1"] > 0.01, lvl_)
+    phl = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); perrl = []
+    phl.on("pageerror", lambda e: perrl.append(str(e)))
+    phl.goto(BASE); phl.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phl.wait_for_timeout(200)
+    phl.tap('.tabs [data-go="filter"]'); phl.wait_for_timeout(200)
+    phl.tap('#mFilt .chip[data-v="lc"]'); phl.tap('#routeChips .chip[data-v="serial"]'); phl.tap('#filtBModel .chip[data-v="lc"]'); phl.wait_for_timeout(200)
+    smalll = phl.evaluate("""() => [...document.querySelectorAll('#mFilt button, #mFiltB button')].filter(e => e.offsetParent).filter(e => { const r = e.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).map(e => (e.textContent || '').trim().slice(0, 16) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height))""")
+    ck(f"Lc. 375px: both tab rows show on the Filter tab with every button 44 px or more, no horizontal scroll ({smalll})",
+       phl.is_visible("#lcTabsA") and phl.is_visible("#lcTabsB") and not smalll and phl.evaluate("document.documentElement.scrollWidth <= innerWidth && innerWidth === 375"), smalll)
+    ck("Lc. 375px: no page errors", not perrl, perrl)
+    phl.evaluate("__synth.setPatch && 0"); phl.close()
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Lc. no page errors", not errs, errs)
 
     # ---------------------------------------------------------------- Pn. the patch arrows (review 31 Oct, R1031-2)
     # The menu groups factory patches by category; the arrows used to walk the factory list's own order, so on
@@ -3213,7 +3323,7 @@ with sync_playwright() as pw:
     cpu9("Cathode (Plate Screamer, one voice, both filters screaming)", cp.evaluate("__synth.cathodePatch('Plate Screamer')"), note(60, 0.0))
     big = patch(osc1={"wave": "saw"}, osc2={"wave": "pulse", "level": 0.6, "fine": 7}, sub={"level": 0.3}, filt={"model": "ladder24", "cutoff": 1500, "res": 0.5}, drift=1.5)
     ev8 = [e for n in (48, 52, 55, 59, 60, 64, 67, 71) for e in note(n, 0.0)]
-    for model in ("ladder24", "valve12", "diode18", "sk12", "poly24", "svf12", "lpg"):
+    for model in ("ladder24", "valve12", "diode18", "sk12", "poly24", "svf12", "lpg", "lc"):
         big["filt"]["model"] = model
         cpu9(f"{model}, 8 voices", big, ev8)
     big["filt"]["model"] = "valve12"; big["filt"]["offset"] = 0.5
@@ -3485,8 +3595,8 @@ with sync_playwright() as pw:
     # filter slot B (27 Oct): the Filter B section on the Filter tab
     rch = pg.evaluate("""() => [...document.querySelectorAll('#routeChips .chip')].map(b => b.dataset.v + ':' + b.textContent + ':' + b.getAttribute('aria-pressed'))""")
     bmc = pg.evaluate("""() => [...document.querySelectorAll('#filtBModel .chip')].map(b => b.dataset.v)""")
-    ck(f"Fb. the Filter B section offers A only (lit), serial, parallel and split, and B's six models without the low pass gate; its pilot is dark ({rch}; {bmc})",
-       rch == ["off:A only:true", "serial:serial A > B:false", "parallel:parallel:false", "split:split L/R:false"] and bmc == ["valve12", "ladder24", "diode18", "sk12", "poly24", "svf12"]
+    ck(f"Fb. the Filter B section offers A only (lit), serial, parallel and split, and B's seven models (the LC bank since 6 Nov) without the low pass gate; its pilot is dark ({rch}; {bmc})",
+       rch == ["off:A only:true", "serial:serial A > B:false", "parallel:parallel:false", "split:split L/R:false"] and bmc == ["valve12", "ladder24", "diode18", "sk12", "poly24", "svf12", "lc"]
        and pg.evaluate("document.getElementById('filtBPilot').classList.contains('off')") and pg.is_visible("#mFiltB"), (rch, bmc))
     pg.click('#routeChips .chip[data-v="serial"]'); pg.wait_for_timeout(60)
     ck("Fb. the serial chip sets filtB.route, lights the pilot and says what serial does",

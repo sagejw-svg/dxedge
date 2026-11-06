@@ -989,7 +989,17 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
   - [x] Section "1939 mode" on the Osc tab (switch, shape chips, tabs, five knobs); the oscillators, both filters,
         the envelopes, the LFOs and the matrix show "resting" while it is on. Factory patches Exposition Choir (Pad)
         and Parlor Harp (Pluck)
-  - [ ] LC resonators as a filter model in slots A and B for the ordinary voice (the design's filter table)
+  - [x] LC resonators as a filter model in slots A and B for the ordinary voice (the design's filter table) - 6 Nov 2026 (nightly).
+        Model `lc` ("LC bank") in `filt.model` and `filtB.model`; render()'s model 7, `Filt.lc()` in voice.worklet.js. The same
+        five sections as 1939 mode's bank (`E_LC`), each a trapezoidal state variable section, summed in parallel with the
+        straight path by the slot's own tabs (`filt.tabs`, `filtB.tabs`, the six 1939 tab names; default body, voice and
+        mellow; none in reads as open), then a soft clip (tanh) that the filter drive pushes. The cutoff moves the whole
+        bank (`LC_REF` 850 Hz puts it where 1939 mode has it), so key tracking, the envelope, the LFOs, the wheel and the
+        matrix's cut and res move it like a vowel; the resonance scales the Q by 10^(res - 0.3) (half at 0, 1939 mode's at
+        0.3, five times at 1), the band-passes with sqrt(Q) of make-up so a broad sound keeps its level. Linear up to the
+        clip, so it rings but never sings. A tab change on a slot running it rides the patch duck and restarts that slot's
+        filters. The response plot draws it (fresp runs the same code). Panel: an "LC bank" chip in Filter and Filter B
+        and a tabs row under each that shows only on that model. No factory patch uses it, so nothing sounds different.
   - [ ] The filter response plot draws the resonator bank while 1939 mode is on (it still draws slot A, which rests)
   - [ ] 1939 mode as a mod matrix destination set (tone, tab levels), if wanted
 - [ ] Punched paper roll step sequencer

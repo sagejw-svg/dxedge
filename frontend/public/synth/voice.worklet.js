@@ -7,7 +7,7 @@
 // the only decimators are the two on the sum.
 //
 //   osc 1, osc 2 (sync, FM, ring), sub, noise -> mixer -> V1 tube -> coupling cap
-//   -> filter (Valve 12, Ladder 24, Diode 18, Sallen-Key 12, Poly 24, SVF 12 or Low pass gate) -> VCA -> pan -> L/R (2x) -> half-band -> out
+//   -> filter (Valve 12, Ladder 24, Diode 18, Sallen-Key 12, Poly 24, SVF 12, Low pass gate or LC bank) -> VCA -> pan -> L/R (2x) -> half-band -> out
 //
 // Filter slots A and B. The filter above is slot A. Slot B (patch.filtB) is off by default; when on
 // it runs any model but the low pass gate, with its own cutoff, resonance, key tracking, envelope
@@ -73,6 +73,10 @@
 //              both, the filter only, or the VCA only; filt.lag sets how slowly it lets go). The filter
 //              is the SVF 12 loop at low-pass with its resonance held well short of oscillation
 //              (damping no lower than LPG_KMIN), so it never sings. Our own model.
+//   LC bank:   1939 mode's fixed resonator bank (below) as a filter model in either slot: three band-passes, a
+//              low-pass and a high-pass, picked by the slot's tone tabs (filt.tabs, filtB.tabs) and summed in
+//              parallel with the straight path, then a soft clip. The cutoff moves the whole bank together and
+//              the resonance scales its Q (LC_REF, LC_Q0). Linear before the clip, so it rings but never sings.
 //
 // 1939 mode (patch.era, off by default): a second voice architecture for the same voices, after the
 // tube-era electronic organs and string keyboards (ideas only; our own design and code). Twelve master
@@ -273,12 +277,42 @@ const F_S1 = 0, F_S2 = 1, F_S3 = 2, F_S4 = 3, F_ZI = 4, F_BP = 5, F_SH = 6, F_SA
   F_Y0 = 21, F_Y1 = 22, F_HY0 = 23, F_HY1 = 24, F_HIK = 25,
   // SVF 12: the morph weights for the low, band and high outputs (set at control rate; the band
   // weight carries its sqrt 2 make-up), and the last high-pass value (the first integrator's input)
-  F_WL = 26, F_WB = 27, F_WH = 28, F_HL = 29, F_N = 30;
+  F_WL = 26, F_WB = 27, F_WH = 28, F_HL = 29,
+  // LC bank (model 7): the five sections' states (two each, E_LC order), their coefficients (a1, a2, a3, k
+  // each) and the six paths' gains (the five sections and the straight path; tab in or out, make-up included)
+  F_LS = 30, F_LK = 40, F_LW = 60, F_N = 66;
 class Filt {
   constructor() { this.s = new Float64Array(F_N); this.s[F_COMP] = 1; this.s[F_WL] = 1; this.s[F_AH] = 1; this.s[F_LG] = 1.3; this.s[F_G] = 0.1; this.s[F_MKEY] = -1; }
-  reset() { const s = this.s; s[F_S1] = s[F_S2] = s[F_S3] = s[F_S4] = s[F_ZI] = s[F_BP] = s[F_SH] = s[F_SAG] = 0; s[F_Y0] = s[F_Y1] = s[F_HY0] = s[F_HY1] = s[F_HL] = 0; }
-  bad() { const s = this.s; return !(Math.abs(s[F_S1]) < 1e6 && Math.abs(s[F_S2]) < 1e6 && Math.abs(s[F_S3]) < 1e6 && Math.abs(s[F_S4]) < 1e6 && Math.abs(s[F_BP]) < 1e6); }
-  flush() { const s = this.s; for (let i = 0; i < 4; i++) if (Math.abs(s[i]) < 1e-20) s[i] = 0; }
+  reset() { const s = this.s; s[F_S1] = s[F_S2] = s[F_S3] = s[F_S4] = s[F_ZI] = s[F_BP] = s[F_SH] = s[F_SAG] = 0; s[F_Y0] = s[F_Y1] = s[F_HY0] = s[F_HY1] = s[F_HL] = 0; for (let i = F_LS; i < F_LS + 10; i++) s[i] = 0; }
+  bad() {
+    const s = this.s;
+    if (!(Math.abs(s[F_S1]) < 1e6 && Math.abs(s[F_S2]) < 1e6 && Math.abs(s[F_S3]) < 1e6 && Math.abs(s[F_S4]) < 1e6 && Math.abs(s[F_BP]) < 1e6)) return true;
+    for (let i = F_LS; i < F_LS + 10; i++) if (!(s[i] < 1e6 && s[i] > -1e6)) return true;
+    return false;
+  }
+  flush() { const s = this.s; for (let i = 0; i < 4; i++) if (Math.abs(s[i]) < 1e-20) s[i] = 0; for (let i = F_LS; i < F_LS + 10; i++) if (s[i] < 1e-20 && s[i] > -1e-20) s[i] = 0; }
+  // LC bank: 1939 mode's five fixed sections (body, voice and edge band-passes, the mellow low-pass, the thin
+  // high-pass) and the straight path, summed in parallel by the tabs that are in, then a soft tube-like clip.
+  // Each section is a trapezoidal state variable filter (v3 = in - s2, u1 = a1 s1 + a2 v3, u2 = s2 + a2 s1 + a3 v3;
+  // band k u1, low u2, high in - k u1 - u2). Linear and passive up to the clip, so it rings but never sings.
+  // A section whose tab is out costs nothing; its state sits at rest.
+  lc() {
+    const s = this.s, x = s[F_IN];
+    let out = s[F_LW + 5] * x, w = s[F_LW];
+    if (w !== 0) { const s1 = s[F_LS], s2 = s[F_LS + 1], v3 = x - s2, u1 = s[F_LK] * s1 + s[F_LK + 1] * v3, u2 = s2 + s[F_LK + 1] * s1 + s[F_LK + 2] * v3; s[F_LS] = 2 * u1 - s1; s[F_LS + 1] = 2 * u2 - s2; out += w * s[F_LK + 3] * u1; }
+    w = s[F_LW + 1];
+    if (w !== 0) { const s1 = s[F_LS + 2], s2 = s[F_LS + 3], v3 = x - s2, u1 = s[F_LK + 4] * s1 + s[F_LK + 5] * v3, u2 = s2 + s[F_LK + 5] * s1 + s[F_LK + 6] * v3; s[F_LS + 2] = 2 * u1 - s1; s[F_LS + 3] = 2 * u2 - s2; out += w * s[F_LK + 7] * u1; }
+    w = s[F_LW + 2];
+    if (w !== 0) { const s1 = s[F_LS + 4], s2 = s[F_LS + 5], v3 = x - s2, u1 = s[F_LK + 8] * s1 + s[F_LK + 9] * v3, u2 = s2 + s[F_LK + 9] * s1 + s[F_LK + 10] * v3; s[F_LS + 4] = 2 * u1 - s1; s[F_LS + 5] = 2 * u2 - s2; out += w * s[F_LK + 11] * u1; }
+    w = s[F_LW + 3];
+    if (w !== 0) { const s1 = s[F_LS + 6], s2 = s[F_LS + 7], v3 = x - s2, u1 = s[F_LK + 12] * s1 + s[F_LK + 13] * v3, u2 = s2 + s[F_LK + 13] * s1 + s[F_LK + 14] * v3; s[F_LS + 6] = 2 * u1 - s1; s[F_LS + 7] = 2 * u2 - s2; out += w * u2; }
+    w = s[F_LW + 4];
+    if (w !== 0) { const s1 = s[F_LS + 8], s2 = s[F_LS + 9], v3 = x - s2, u1 = s[F_LK + 16] * s1 + s[F_LK + 17] * v3, u2 = s2 + s[F_LK + 17] * s1 + s[F_LK + 18] * v3; s[F_LS + 8] = 2 * u1 - s1; s[F_LS + 9] = 2 * u2 - s2; out += w * (x - s[F_LK + 19] * u1 - u2); }
+    // the clip: tanh as tdx()'s Pade approximant, held flat past 4.9 (where the approximant tops out)
+    let q = out * LC_IS; if (q > 4.9) q = 4.9; else if (q < -4.9) q = -4.9;
+    const a = q * q;
+    s[F_OUT] = q * ((a + 105) * a + 945) / ((15 * a + 420) * a + 945) * LC_OS;
+  }
   // Ladder 24: the transistor ladder after Teemu Voipio's cheap non-linear ZDF method.
   ladder() {
     const s = this.s, y = s[F_IN], fq = s[F_G], r = s[F_K];
@@ -391,8 +425,8 @@ class Filt {
     s[F_S1] = 2 * bp - s1; s[F_S2] = 2 * lp - s2; s[F_BP] = bp; s[F_HL] = hp;
     s[F_OUT] = s[F_WL] * lp + s[F_WB] * bp + s[F_WH] * hp;
   }
-  // Slot B's dispatch (slot A's is written out in render()); m as in render(): 0 Valve 12 .. 5 SVF 12
-  run(m, lTab) { if (m === 1) this.ladder(); else if (m === 4) this.ota(); else if (m === 5) this.svf(); else if (m === 2) this.diode(); else if (m === 3) this.sk(); else this.valve(lTab); }
+  // Slot B's dispatch (slot A's is written out in render()); m as in render(): 0 Valve 12 .. 5 SVF 12, 7 LC bank
+  run(m, lTab) { if (m === 7) this.lc(); else if (m === 1) this.ladder(); else if (m === 4) this.ota(); else if (m === 5) this.svf(); else if (m === 2) this.diode(); else if (m === 3) this.sk(); else this.valve(lTab); }
   // Valve 12: a 2-pole SVF lowpass whose resonance is positive feedback of the band-pass through
   // the loop tube's curve, a coupling-cap high-pass and a supply-sag follower, linearised at the
   // previous band-pass value and solved exactly (one Newton step).
@@ -523,6 +557,8 @@ class Filament extends AudioWorkletProcessor {
     this.fb39 = new Float64Array(12); this.vm39 = new Float64Array(6);
     this.C39 = new Float64Array(12 * (128 / CTRL + 1)); this.D39 = new Float64Array(12 * (128 / CTRL + 1));
     this.lcK = new Float64Array(20);
+    // the LC bank model's tabs in or out (1 or 0, E_TABS order) for slots A and B, from the patch
+    this.lcTA = new Float64Array(6); this.lcTB = new Float64Array(6);
     for (let j = 0; j < 5; j++) {
       const g = Math.tan(Math.PI * Math.min(E_LC[j][1], this.fs * 0.45) / this.fs), k = 1 / E_LC[j][2], a1 = 1 / (1 + g * (g + k));
       this.lcK[j * 4] = a1; this.lcK[j * 4 + 1] = g * a1; this.lcK[j * 4 + 2] = g * g * a1; this.lcK[j * 4 + 3] = k;
@@ -610,6 +646,7 @@ class Filament extends AudioWorkletProcessor {
     this.v1Tab = this.table(v1.tube || '12AX7', +v1.bias || 0);
     this.lTube = this.tubes[f.tube] || this.tubes['12AT7'] || { gain: 0.701, hp: 25 };
     this.lTab = this.table(f.tube || '12AT7', +f.bias || 0);
+    lcTabs(this.lcTA, f.tabs); lcTabs(this.lcTB, (P.filtB || {}).tabs);
     // Sallen-Key 12's high-pass partner: off at the bottom of its knob (20 Hz)
     { const hp = num(f.hp, 20); this.skGh = hp > 20.5 ? Math.tan(Math.PI * Math.min(hp, this.sr * 0.2) / this.fs) : 0; }
     {   // oscillation where the coupling-cap lead atan(rho/w) equals the band-pass lag past 90 degrees
@@ -846,10 +883,11 @@ class Filament extends AudioWorkletProcessor {
       let any = false; for (let i = 0; i < NV; i++) if (this.voices[i].on) { any = true; break; }
       if (!any) {
         if (this.pendingPatch) {
-          const oldModel = (this.P.filt || {}).model, oldB = slotBKey(this.P);
+          const oldModel = (this.P.filt || {}).model, oldB = slotBKey(this.P), oldLc = lcKey(this.P).split('/');
           this.setPatch(this.pendingPatch); this.pendingPatch = null; this.duck = 1; this.duckDir = 0;
-          if ((this.P.filt || {}).model !== oldModel) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
-          if (slotBKey(this.P) !== oldB) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
+          const nLc = lcKey(this.P).split('/');
+          if ((this.P.filt || {}).model !== oldModel || nLc[0] !== oldLc[0]) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
+          if (slotBKey(this.P) !== oldB || nLc[1] !== oldLc[1]) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
         }
         this.target(this.S); this.Sp.set(this.S);
         for (let q = 0; q < 2; q++) {
@@ -921,12 +959,27 @@ class Filament extends AudioWorkletProcessor {
   // through this.cc so nothing is boxed: cc[0] = fc (Hz), cc[1] = resonance 0..1.
   // Skipped when the inputs match the last call for this filter, which is every tick of a held
   // note whose cutoff is not moving: the coefficients already in F.s are the ones it would write.
-  fcoef(F, model, skh) {
-    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 7 + model;
+  fcoef(F, model, skh, tb) {
+    const sr = this.sr, fs = this.fs, res = this.cc[1], s = F.s, key = this.coefEpoch * 8 + model;
     if (s[F_MFC] === this.cc[0] && s[F_MRES] === res && s[F_MKEY] === key) return;
     s[F_MFC] = this.cc[0]; s[F_MRES] = res; s[F_MKEY] = key;
     let fc = clamp(this.cc[0], 16, sr * 0.45);
-    if (model === 6) {
+    if (model === 7) {
+      // LC bank: the cutoff moves the five sections together (at LC_REF they sit where 1939 mode has them),
+      // and the resonance scales their Q (LC_Q: 1 at 0.3, so 0.3 is 1939 mode's voicing): the band-passes by
+      // q, the low- and high-pass by its square root. The band-passes keep unity peak gain, plus sqrt(q) of
+      // make-up so a broad sound keeps its level as they narrow. Several tabs in share 1/sqrt(n), as in 1939 mode.
+      const qm = Math.pow(10, res - LC_Q0), qb = Math.sqrt(qm), r = fc / LC_REF, t = tb || LC_T0;
+      const n = t[0] + t[1] + t[2] + t[3] + t[4] + t[5], gn = LC_G / Math.sqrt(n > 1 ? n : 1);
+      for (let j = 0; j < 5; j++) {
+        const e = E_LC[j], bp = e[0] === 0, fj = clamp(e[1] * r, 16, sr * 0.45), g = Math.tan(Math.PI * fj / fs);
+        const k = 1 / (e[2] * (bp ? qm : qb)), a1 = 1 / (1 + g * (g + k)), o = F_LK + j * 4;
+        s[o] = a1; s[o + 1] = g * a1; s[o + 2] = g * g * a1; s[o + 3] = k;
+        s[F_LW + j] = t[j] * e[3] * gn * (bp ? qb : 1);
+      }
+      s[F_LW + 5] = t[5] * gn; s[F_G] = Math.tan(Math.PI * fc / fs); s[F_K] = 0; s[F_COMP] = 1;
+      return;
+    } else if (model === 6) {
       // Low pass gate: no calibration (it never self-oscillates, and the knob is the -3 dB point at
       // zero resonance with the vactrol fully lit)
     } else if (model === 5) {
@@ -999,19 +1052,19 @@ class Filament extends AudioWorkletProcessor {
   // 1 serial, 2 parallel, 3 split) and leaves the parallel gains in this.frG and the lengths run in this.frL.
   fresp(hA, hB, n, cutA, cutB) {
     const P = this.P, f = P.filt || {}, fb = P.filtB || {}, route = routeOf(P);
-    const m = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : 0;
+    const m = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : f.model === 'lc' ? 7 : 0;
     const lG = 1.3 * Math.pow((this.lTube.gain || 0.774) / 0.774, LGX), sagA = clamp(num(f.sag, 3), 0, 10) / 10;
     if (!this.frF) { this.frF = new Filt(); this.frG = new Float64Array(2); this.frL = new Int32Array(2); }
-    this.frL[0] = this.frun(this.frF, m, cutA, num(f.res, 0), this.skGh, num(f.morph, 0), hA, n, lG, sagA);
-    this.frL[1] = route ? this.frun(this.frF, modelBOf(fb.model), cutB, num(fb.res, 0), 0, num(fb.morph, 0), hB, n, lG, sagA) : 0;
+    this.frL[0] = this.frun(this.frF, m, cutA, num(f.res, 0), this.skGh, num(f.morph, 0), hA, n, lG, sagA, this.lcTA);
+    this.frL[1] = route ? this.frun(this.frF, modelBOf(fb.model), cutB, num(fb.res, 0), 0, num(fb.morph, 0), hB, n, lG, sagA, this.lcTB) : 0;
     const bal = clamp(num(fb.bal, 0), -1, 1);
     this.frG[0] = Math.sqrt(0.5 * (1 - bal)); this.frG[1] = Math.sqrt(0.5 * (1 + bal));
     return route;
   }
-  frun(F, m, cut, res, skh, mor, h, n, lG, sagA) {
+  frun(F, m, cut, res, skh, mor, h, n, lG, sagA, tb) {
     const s = F.s, cc = this.cc, c0 = cc[0], c1 = cc[1];
     F.reset(); s[F_MKEY] = -1; s[F_LG] = lG; s[F_SAGA] = sagA; s[F_V2] = 0;
-    cc[0] = cut; cc[1] = clamp(res, 0, 1); this.fcoef(F, m, skh); cc[0] = c0; cc[1] = c1;
+    cc[0] = cut; cc[1] = clamp(res, 0, 1); this.fcoef(F, m, skh, tb); cc[0] = c0; cc[1] = c1;
     if (m === 6) { s[F_WL] = 1; s[F_WB] = 0; s[F_WH] = 0; }
     else if (m === 5) { const q = clamp(mor, 0, 3);
       s[F_WL] = q < 1 ? 1 - q : q < 2 ? 0 : q - 2; s[F_WB] = (q < 1 ? q : q < 2 ? 2 - q : 0) * SVF_K0; s[F_WH] = q < 1 ? 0 : q < 2 ? q - 1 : 1; }
@@ -1047,11 +1100,12 @@ class Filament extends AudioWorkletProcessor {
     // ever overlap at a non-zero gain; amp ramps from duck0 to this.duck across each block.
     const duck0 = this.duck;
     if (this.duckDir === -1 && duck0 <= 0) {
-      const oldModel = (this.P.filt || {}).model, oldB = slotBKey(this.P);
+      const oldModel = (this.P.filt || {}).model, oldB = slotBKey(this.P), oldLc = lcKey(this.P).split('/');
       if (this.pendingPatch) { this.setPatch(this.pendingPatch); this.pendingPatch = null; }
       this.target(this.S); this.Sp.set(this.S);
-      if ((this.P.filt || {}).model !== oldModel) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
-      if (slotBKey(this.P) !== oldB) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
+      const nLc = lcKey(this.P).split('/');
+      if ((this.P.filt || {}).model !== oldModel || nLc[0] !== oldLc[0]) for (const v of this.voices) { v.fL.reset(); v.fR.reset(); }
+      if (slotBKey(this.P) !== oldB || nLc[1] !== oldLc[1]) for (const v of this.voices) { v.fBL.reset(); v.fBR.reset(); }
       this.duckDir = 1;
     }
     if (this.duckDir !== 0) {
@@ -1091,7 +1145,7 @@ class Filament extends AudioWorkletProcessor {
     const off2 = num(o2.oct, 0) * 12 + num(o2.semi, 0) + num(o2.fine, 0) / 100;
     const fix1 = num(o1.fixed, 0), fix2 = num(o2.fixed, 0);
     const sync = !!o2.sync, pink = nz.color === 'pink';
-    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : 0;
+    const model = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : f.model === 'lc' ? 7 : 0;
     // Low pass gate: what the vactrol drives (0 both, 1 the filter only, 2 the VCA only) and how
     // slowly it lets go. Per-sample rates: 1 / (tau * sr + 1), close to 1 - exp(-1 / (tau * sr)).
     const isLpg = model === 6, lpgMode = f.gate === 'lp' ? 1 : f.gate === 'vca' ? 2 : 0;
@@ -1116,7 +1170,8 @@ class Filament extends AudioWorkletProcessor {
     // Two filters per voice only when something makes left and right differ.
     const st2 = Math.abs(S[K_OFF]) > 1e-4 || Math.abs(this.T[K_OFF]) > 0 ||
       (S[K_LC] > 0 && S[K_L1PH] > 0.01) || (S[K_L2C] > 0 && S[K_L2PH] > 0.01);
-    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3, isOta = model === 4, isSvf = model === 5 || model === 6;
+    const cc = this.cc, isLadder = model === 1, isDiode = model === 2, isSk = model === 3, isOta = model === 4, isSvf = model === 5 || model === 6, isLc = model === 7;
+    const lcTA = this.lcTA, lcTB = this.lcTB;
     const skGh = this.skGh;
     // Filter slot B: route 0 off, 1 serial, 2 parallel, 3 split. A runs a right-hand filter when the
     // sides differ, except in split (A is the left side only); B runs one in serial and parallel.
@@ -1235,7 +1290,7 @@ class Filament extends AudioWorkletProcessor {
           // the low pass gate's cutoff follows the vactrol's conductance
           const gc = lpgCut ? vg : 1;
           cc[0] = CT[cb + K_CUT] * cm[1] * gc; v.fcA = cc[0];
-          this.fcoef(FL, model, skGh);
+          this.fcoef(FL, model, skGh, lcTA);
           if (route) {
             // slot B: its own key tracking and envelope amount; velocity, wheel, pressure and the
             // LFOs move it as they move A. In split it is the right side, so it takes the right LFO
@@ -1246,11 +1301,11 @@ class Filament extends AudioWorkletProcessor {
             cc[1] = clamp(CT[cb + K_BRES] + MD[MD_RESB], 0, 1);
             const eB = route === 3 ? octB + lcR + (st2 ? half : 0) : octB + lcL - (st2 ? half : 0);
             if (eB !== cm[8]) { cm[8] = eB; cm[9] = Math.pow(2, eB); }
-            cc[0] = CT[cb + K_BCUT] * cm[9]; v.fcB = cc[0]; this.fcoef(FBL, modelB, 0);
+            cc[0] = CT[cb + K_BCUT] * cm[9]; v.fcB = cc[0]; this.fcoef(FBL, modelB, 0, lcTB);
             if (stB) {
               const eBR = octB + lcR + half;
               if (eBR !== cm[10]) { cm[10] = eBR; cm[11] = Math.pow(2, eBR); }
-              cc[0] = CT[cb + K_BCUT] * cm[11]; this.fcoef(FBR, modelB, 0);
+              cc[0] = CT[cb + K_BCUT] * cm[11]; this.fcoef(FBR, modelB, 0, lcTB);
             }
             if (modelB === 5) {
               const m = clamp(CT[cb + K_BMOR], 0, 3);
@@ -1265,7 +1320,7 @@ class Filament extends AudioWorkletProcessor {
           if (stA) {
             const eR = oct + CT[cb + K_LC] * l1R + CT[cb + K_L2C] * l2R + half;
             if (eR !== cm[2]) { cm[2] = eR; cm[3] = Math.pow(2, eR); }
-            cc[0] = CT[cb + K_CUT] * cm[3] * gc; this.fcoef(FR, model, skGh);
+            cc[0] = CT[cb + K_CUT] * cm[3] * gc; this.fcoef(FR, model, skGh, lcTA);
           }
           if (isLpg) { fl[F_WL] = 1; fl[F_WB] = 0; fl[F_WH] = 0; frs[F_WL] = 1; frs[F_WB] = 0; frs[F_WH] = 0; }
           else if (isSvf) {
@@ -1351,9 +1406,9 @@ class Filament extends AudioWorkletProcessor {
           dcy = y - dcx + dcA * dcy; dcx = y; y = dcy * fdG;
           // filter(s)
           fl[F_IN] = y;
-          if (isLadder) FL.ladder(); else if (isOta) FL.ota(); else if (isSvf) FL.svf(); else if (isDiode) FL.diode(); else if (isSk) FL.sk(); else FL.valve(lTab);
+          if (isLadder) FL.ladder(); else if (isOta) FL.ota(); else if (isSvf) FL.svf(); else if (isDiode) FL.diode(); else if (isSk) FL.sk(); else if (isLc) FL.lc(); else FL.valve(lTab);
           let yl = fl[F_OUT], yr = yl;
-          if (stA) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isOta) FR.ota(); else if (isSvf) FR.svf(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else FR.valve(lTab); yr = frs[F_OUT]; }
+          if (stA) { frs[F_IN] = y; if (isLadder) FR.ladder(); else if (isOta) FR.ota(); else if (isSvf) FR.svf(); else if (isDiode) FR.diode(); else if (isSk) FR.sk(); else if (isLc) FR.lc(); else FR.valve(lTab); yr = frs[F_OUT]; }
           if (route) {
             if (route === 1) {              // serial: A into B
               fbl[F_IN] = yl; FBL.run(modelB, lTab); const bl = fbl[F_OUT];
@@ -1586,6 +1641,13 @@ const E_TABS = ['body', 'voice', 'edge', 'mellow', 'thin', 'open'];
 const E_LC = [[0, 300, 2.5, 1.0], [0, 850, 3, 2.5], [0, 2500, 3.5, 4.6], [1, 1100, 0.707, 1], [2, 700, 0.707, 1.6]];
 // the six vibrato channels' rates, as a share of the rate knob
 const E_VR = [0.94, 0.97, 1.0, 1.03, 1.06, 1.09];
+// The LC bank as a filter model in slots A and B (filt.model and filtB.model 'lc', render()'s model 7): the same
+// five sections as 1939 mode's bank. The cutoff moves them together, LC_REF Hz putting them where 1939 mode has
+// them; the resonance scales their Q by 10^(res - LC_Q0), so 0.3 is 1939 mode's voicing, 0 half of it, 1 five
+// times. LC_T0 is the tabs a patch with none gets (body, voice, mellow). LC_G sets the level against the other
+// models (measured, see the suite's Lc. checks); LC_IS and LC_OS place the output clip: about 0.1 dB at 0.25,
+// tanh above (out = LC_OS tanh(in LC_IS)).
+const LC_REF = 850, LC_Q0 = 0.3, LC_T0 = [1, 1, 0, 1, 0, 0], LC_G = 1.4, LC_IS = 0.8, LC_OS = 1.25;
 // A step of 2 smoothed over the samples either side of it: the residual to add at phase t (0..1, the
 // step at 0) with a phase step dt. Two-sided (it also corrects the sample before the edge), which is fine
 // here because the divided phase is known ahead.
@@ -1753,13 +1815,25 @@ function isStruct(a, b) {
   if (!a) return true;
   if (modKey(a) !== modKey(b)) return true;
   return ['osc1.wave', 'osc2.wave', 'osc2.sync', 'sub.wave', 'sub.oct', 'noise.color', 'filt.model', 'filt.tube', 'filt.gate',
-    'v1.tube', 'voice.mode', 'era.on'].some(k => get(a, k) !== get(b, k)) || slotBKey(a) !== slotBKey(b);
+    'v1.tube', 'voice.mode', 'era.on'].some(k => get(a, k) !== get(b, k)) || slotBKey(a) !== slotBKey(b) || lcKey(a) !== lcKey(b);
 }
 // Filter slot B: the route (0 off, 1 serial, 2 parallel, 3 split) and the model (render()'s numbers;
 // the low pass gate is slot A only, so anything else reads as SVF 12). slotBKey changes when a swap
 // should duck and start B's filters from rest.
 function routeOf(P) { const r = (P && P.filtB || {}).route; return r === 'serial' ? 1 : r === 'parallel' ? 2 : r === 'split' ? 3 : 0; }
-function modelBOf(m) { return m === 'valve12' ? 0 : m === 'ladder24' ? 1 : m === 'diode18' ? 2 : m === 'sk12' ? 3 : m === 'poly24' ? 4 : 5; }
+function modelBOf(m) { return m === 'valve12' ? 0 : m === 'ladder24' ? 1 : m === 'diode18' ? 2 : m === 'sk12' ? 3 : m === 'poly24' ? 4 : m === 'lc' ? 7 : 5; }
+// the LC bank model's tabs, in or out, into t (E_TABS order); no tabs object means the default (body, voice,
+// mellow), and none in reads as open, as in patches.js
+function lcTabs(t, tb) {
+  let n = 0;
+  for (let j = 0; j < 6; j++) { t[j] = tb && typeof tb === 'object' ? (tb[E_TABS[j]] ? 1 : 0) : LC_T0[j]; n += t[j]; }
+  if (!n) t[5] = 1;
+}
+// a tab change on a slot that runs the LC bank rides the duck (the bank's paths switch in whole)
+function lcKey(P) {
+  const f = (P && P.filt) || {}, b = (P && P.filtB) || {}, bits = tb => E_TABS.map(k => (tb && tb[k] ? 1 : 0)).join('');
+  return (f.model === 'lc' ? bits(f.tabs) : '') + '/' + (routeOf(P) && b.model === 'lc' ? bits(b.tabs) : '');
+}
 function slotBKey(P) { const r = routeOf(P); return r ? r * 8 + modelBOf((P.filtB || {}).model) : 0; }
 function get(o, path) { const ks = path.split('.'); let x = o; for (const k of ks) { if (x == null) return undefined; x = x[k]; } return x; }
 

@@ -48,10 +48,14 @@ export const DEFAULT = {
   sub: { wave: 'square', oct: 1, level: 0 },
   noise: { color: 'white', level: 0 },
   v1: { tube: '12AX7', drive: 3, bias: 0 },
-  filt: { model: 'valve12', cutoff: 1800, res: 0.3, drive: 3, keytrack: 0.5, env: 0.3, vel: 0.3, tube: '12AT7', bias: 0, sag: 3, offset: 0, hp: 20, morph: 0, lag: 0.3, gate: 'both' },
+  // tabs: the LC bank model's (model 'lc') tone tabs, the same six as 1939 mode's; read only on that model.
+  // At least one is always in (none reads as open).
+  filt: { model: 'valve12', cutoff: 1800, res: 0.3, drive: 3, keytrack: 0.5, env: 0.3, vel: 0.3, tube: '12AT7', bias: 0, sag: 3, offset: 0, hp: 20, morph: 0, lag: 0.3, gate: 'both',
+    tabs: { body: true, voice: true, edge: false, mellow: true, thin: false, open: false } },
   // filter slot B: off by default. route serial (A into B), parallel (summed; bal leans toward A or B)
   // or split (A left, B right). Any model but the low pass gate. Shares A's drive, velocity, loop tube.
-  filtB: { route: 'off', model: 'svf12', cutoff: 2000, res: 0, keytrack: 0.5, env: 0, morph: 0, bal: 0 },
+  filtB: { route: 'off', model: 'svf12', cutoff: 2000, res: 0, keytrack: 0.5, env: 0, morph: 0, bal: 0,
+    tabs: { body: true, voice: true, edge: false, mellow: true, thin: false, open: false } },
   envA: { a: 0.005, d: 0.4, s: 0.8, r: 0.4, vel: 0.5 },
   envF: { a: 0.005, d: 0.5, s: 0.3, r: 0.4 },
   // sync 'off' runs at rate (Hz); a note value (LFO_SYNC) runs from the rack tempo instead and ignores rate
@@ -134,10 +138,10 @@ export const ENUMS = {
   'osc1.wave': ['saw', 'pulse', 'tri', 'sine'], 'osc2.wave': ['saw', 'pulse', 'tri', 'sine'],
   'sub.wave': ['square', 'sine'], 'noise.color': ['white', 'pink'],
   'v1.tube': ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'],
-  'filt.model': ['valve12', 'ladder24', 'diode18', 'sk12', 'poly24', 'svf12', 'lpg'],
+  'filt.model': ['valve12', 'ladder24', 'diode18', 'sk12', 'poly24', 'svf12', 'lpg', 'lc'],
   'filt.gate': ['both', 'lp', 'vca'],
   'filtB.route': ['off', 'serial', 'parallel', 'split'],
-  'filtB.model': ['valve12', 'ladder24', 'diode18', 'sk12', 'poly24', 'svf12'],
+  'filtB.model': ['valve12', 'ladder24', 'diode18', 'sk12', 'poly24', 'svf12', 'lc'],
   'filt.tube': ['12AX7', '12AT7', '12AU7', '300B', 'EL84', '6V6', 'EL34', '6L6', 'KT88'],
   'lfo1.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo1.mode': ['global', 'voice'],
   'lfo2.wave': ['sine', 'tri', 'saw', 'square', 'sh', 'smooth'], 'lfo2.mode': ['global', 'voice'],
@@ -180,6 +184,8 @@ export function normalize(p) {
   out.voice.count = Math.round(out.voice.count); out.voice.unison = Math.round(out.voice.unison);
   out.arp.oct = Math.round(out.arp.oct);
   if (!ERA_TABS.some(t => out.era.tabs[t])) out.era.tabs.open = true;
+  if (!ERA_TABS.some(t => out.filt.tabs[t])) out.filt.tabs.open = true;
+  if (!ERA_TABS.some(t => out.filtB.tabs[t])) out.filtB.tabs.open = true;
   out.v = SCHEMA;
   return out;
 }
