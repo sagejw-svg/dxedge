@@ -720,7 +720,7 @@
           <div class="morep-h"><span class="label">more</span><button class="rack-x" id="moreClose" aria-label="Close more options">×</button></div>
           <label class="mrow" id="rateRow" title="Playback speed"><span>Speed</span>
             <select id="rateSel"><option value="1">1x</option><option value="1.1">1.1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></label>
-          <label class="mrow" title="Stop playing after a while, with a fade out"><span>Sleep timer</span>
+          <label class="mrow" title="Stop playing after a while, or at the end of this episode, with a fade out"><span>Sleep timer</span>
             <select id="sleepSel"><option value="off">off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="end">end of episode</option></select></label>
           <button class="mrow" id="popBtn2" title="Open a pocket radio in its own window; it picks up the station you are on"><span>Pop out radio</span><span class="mv">open</span></button>
           <button class="mrow" id="linkBtn" disabled title="Copy a link that opens this episode at this moment"><span>Copy link to this moment</span><span class="mv">copy</span></button>
@@ -1844,11 +1844,26 @@
       $('vizIdle').style.display='none';
       $('playBtn').disabled=false;
       setLiveTransportLabel();
-      if(SLEEP.mode==='end' && SLEEP.liveKey && a.key && a.key!==SLEEP.liveKey){
-        __listenotr.mute(true);
-        clearSleep();
-        setLiveTransportLabel();
-        toast('Sleep timer: muted');
+      if(SLEEP.mode==='end' && a.key){
+        if(SLEEP.liveWait){
+          if(a.kind==='show'){
+            SLEEP.liveKey = a.key; SLEEP.liveWait = false;
+            $('sleepLeft').textContent = 'mutes after this episode';
+          }
+        } else if(!SLEEP.liveKey){
+          if(a.kind==='show'){
+            SLEEP.liveKey = a.key;
+            $('sleepLeft').textContent = 'mutes after this episode';
+          } else {
+            SLEEP.liveWait = true;
+            $('sleepLeft').textContent = 'mutes after the next episode';
+          }
+        } else if(a.key!==SLEEP.liveKey){
+          __listenotr.mute(true);
+          clearSleep();
+          setLiveTransportLabel();
+          toast('Sleep timer: muted');
+        }
       }
       setStatus(__listenotr.paused() ? 'paused' : 'playing');
       paintLiveElapsed(a);
@@ -2276,12 +2291,12 @@
 
   // ---- sleep timer: 15/30/60 minutes or end of episode, fading out before it stops ----
   // The fade lowers the element volume. iPhone Safari ignores scripted volume, so there it simply stops.
-  var SLEEP = { mode:'off', until:0, timer:null, liveKey:'' }, SLEEP_FADE = 30, END_FADE = 15;
+  var SLEEP = { mode:'off', until:0, timer:null, liveKey:'', liveWait:false }, SLEEP_FADE = 30, END_FADE = 15;
   function baseVol(){ var v=parseFloat($('vol').value); return isNaN(v)?0.9:v; }
   function fadeTo(frac){ try{ audio.volume = Math.max(0, Math.min(1, baseVol()*frac)); }catch(e){} }
   function clearSleep(restore){
     if(SLEEP.timer) clearInterval(SLEEP.timer);
-    SLEEP.mode='off'; SLEEP.until=0; SLEEP.timer=null; SLEEP.liveKey='';
+    SLEEP.mode='off'; SLEEP.until=0; SLEEP.timer=null; SLEEP.liveKey=''; SLEEP.liveWait=false;
     $('sleepSel').value='off'; $('sleepLeft').textContent='';
     if(restore!==false) fadeTo(1);
   }
@@ -2307,9 +2322,17 @@
     if(v==='off'){ clearSleep(); return; }
     clearSleep(); this.value=v; SLEEP.mode=v;
     if(v==='end'){
-      $('sleepLeft').textContent = state.network==='listenotr' ? 'mutes after this episode' : 'stops after this episode';
-      if(state.network==='listenotr' && window.__listenotr && __listenotr.onAir){
-        var liveNow=__listenotr.onAir(); SLEEP.liveKey = liveNow && liveNow.key || '';
+      // A duration timer was cleared above. Listenotr stays on the clock and mutes;
+      // a station break is not the episode, so wait for the show that follows it.
+      var liveNow = state.network==='listenotr' && window.__listenotr && __listenotr.onAir && __listenotr.onAir();
+      if(liveNow && liveNow.kind==='show' && liveNow.key){
+        SLEEP.liveKey = liveNow.key;
+        $('sleepLeft').textContent = 'mutes after this episode';
+      } else if(liveNow){
+        SLEEP.liveWait = true;
+        $('sleepLeft').textContent = 'mutes after the next episode';
+      } else {
+        $('sleepLeft').textContent = 'stops after this episode';
       }
       return;
     }

@@ -706,25 +706,14 @@
     document.querySelectorAll('#networkChips .station').forEach(function (c) {
       c.classList.toggle('on', c.dataset.net === 'scifi');
     });
-    var crossed = lastKind === 'show' && air.kind === 'break';
     lastKind = air.kind || '';
-    if (window.__otr && __otr.sleepMode && __otr.sleepMode() === 'end' && audioEl) {
+    if (window.__otr && __otr.sleepMode && __otr.sleepMode() === 'end' && audioEl && want) {
       var base = parseFloat((document.getElementById('vol') || {}).value);
       if (isNaN(base)) base = 0.9;
+      var leftEl = document.getElementById('sleepLeft');
+      if (leftEl) leftEl.textContent = air.kind === 'break' ? 'stops after the next episode' : 'stops after this episode';
       if (air.kind === 'show' && air.dur - air.offset < 15)
         audioEl.volume = Math.max(0, base * (air.dur - air.offset) / 15);
-      if (crossed && want) {
-        want = false;
-        bumpSuppress();
-        audioEl.loop = false;
-        try { audioEl.pause(); } catch (e) {}
-        var sel = document.getElementById('sleepSel');
-        if (sel && sel.value !== 'off') {
-          sel.value = 'off';
-          try { sel.dispatchEvent(new Event('change')); } catch (e2) {}
-        }
-        paintTransport();
-      }
     }
   }
   function paintCard() {
@@ -977,30 +966,51 @@
     });
     document.getElementById('sfMute').addEventListener('click', onTransport);
     var sleep = { mode: 'off', until: 0, timer: null };
-    document.getElementById('sfSleep').addEventListener('change', function () {
+    function sfBaseVol() {
+      var el = document.getElementById('sfVol');
+      var v = el ? parseFloat(el.value) : 0.9;
+      return isNaN(v) ? 0.9 : v;
+    }
+    function sfRestoreVol() { if (audioEl) audioEl.volume = sfBaseVol(); }
+    function sfStatus(text) {
+      var st = document.getElementById('sfStatus');
+      if (st) st.textContent = text || '';
+    }
+    function sfClearTimer() {
       if (sleep.timer) clearInterval(sleep.timer);
-      sleep.mode = this.value;
+      sleep.timer = null;
       sleep.until = 0;
-      if (sleep.mode === 'off' || sleep.mode === 'end') return;
+    }
+    document.getElementById('sfSleep').addEventListener('change', function () {
+      sfClearTimer();
+      sfRestoreVol();
+      sleep.mode = this.value;
+      if (sleep.mode === 'off') { sfStatus(''); return; }
+      if (sleep.mode === 'end') {
+        var air = onAir();
+        sfStatus(air && air.kind === 'break' ? 'Stops at the end of the next episode' : 'Stops at the end of this episode');
+        return;
+      }
       sleep.until = Date.now() + parseInt(sleep.mode, 10) * 60000;
       sleep.timer = setInterval(function () {
         if (sleep.mode === 'off' || sleep.mode === 'end') return;
         var left = (sleep.until - Date.now()) / 1000;
-        var st = document.getElementById('sfStatus');
         if (left <= 0) {
           want = false;
           bumpSuppress();
           audioEl.loop = false;
           try { audioEl.pause(); } catch (e) {}
-          audioEl.volume = +document.getElementById('sfVol').value;
+          sfRestoreVol();
+          sfClearTimer();
           sleep.mode = 'off';
-          document.getElementById('sfSleep').value = 'off';
-          if (st) st.textContent = 'Sleep timer stopped. Listen rejoins the broadcast.';
+          var sel = document.getElementById('sfSleep');
+          if (sel) sel.value = 'off';
+          sfStatus('Sleep timer stopped. Listen rejoins the broadcast.');
           paintTransport();
           return;
         }
-        if (st) st.textContent = fmt(left) + ' left on the sleep timer';
-        if (left < 30 && want) audioEl.volume = Math.max(0, (+document.getElementById('sfVol').value) * (left / 30));
+        sfStatus(fmt(left) + ' left on the sleep timer');
+        if (left < 30 && want) audioEl.volume = Math.max(0, sfBaseVol() * (left / 30));
       }, 500);
     });
     window.__scifiSleep = sleep;
@@ -1020,25 +1030,78 @@
     if (next) next.textContent = air.nextShow ? (air.nextShow + (air.nextTitle ? ' - ' + niceTitle(air.nextTitle) : '')) : '';
     paintProgress();
     paintTransport();
-    var crossed = lastKind === 'show' && air.kind === 'break';
     lastKind = air.kind || '';
     var sleep = window.__scifiSleep;
-    if (sleep && sleep.mode === 'end' && want && air.kind === 'show' && air.dur - air.offset < 15) {
-      audioEl.volume = Math.max(0, (+document.getElementById('sfVol').value) * ((air.dur - air.offset) / 15));
+    if (sleep && sleep.mode === 'end' && want && audioEl) {
+      var st = document.getElementById('sfStatus');
+      if (st) st.textContent = air.kind === 'break' ? 'Stops at the end of the next episode' : 'Stops at the end of this episode';
+      if (air.kind === 'show' && air.dur - air.offset < 15) {
+        var volEl = document.getElementById('sfVol');
+        var base = volEl ? parseFloat(volEl.value) : 0.9;
+        if (isNaN(base)) base = 0.9;
+        audioEl.volume = Math.max(0, base * ((air.dur - air.offset) / 15));
+      }
     }
-    if (sleep && sleep.mode === 'end' && want && crossed) {
-      want = false;
-      bumpSuppress();
+  }
+
+  // End-of-episode sleep stops on the show -> break boundary, before follow()
+  // loads the station break or the next episode. Live locks stay as they are.
+  function episodeEndDue(air) {
+    if (!air || !want || lastKind !== 'show' || air.kind !== 'break') return false;
+    if (mode === 'page') {
+      var sleep = window.__scifiSleep;
+      return !!(sleep && sleep.mode === 'end');
+    }
+    return mode === 'main' && !!(window.__otr && __otr.sleepMode && __otr.sleepMode() === 'end');
+  }
+  function haltIfEpisodeEnded(air) {
+    if (!episodeEndDue(air)) return false;
+    want = false;
+    bumpSuppress();
+    if (audioEl) {
       audioEl.loop = false;
       try { audioEl.pause(); } catch (e) {}
-      audioEl.volume = +document.getElementById('sfVol').value;
-      sleep.mode = 'off';
+    }
+    if (mode === 'page') {
+      var sleep = window.__scifiSleep;
+      if (sleep) {
+        if (sleep.timer) clearInterval(sleep.timer);
+        sleep.timer = null;
+        sleep.until = 0;
+        sleep.mode = 'off';
+      }
+      if (audioEl) {
+        var volEl = document.getElementById('sfVol');
+        var base = volEl ? parseFloat(volEl.value) : 0.9;
+        audioEl.volume = isNaN(base) ? 0.9 : base;
+      }
       var sel = document.getElementById('sfSleep');
       if (sel) sel.value = 'off';
       var st = document.getElementById('sfStatus');
       if (st) st.textContent = 'Sleep timer stopped at the end of the episode. Listen rejoins the broadcast.';
-      paintTransport();
+    } else {
+      if (audioEl) {
+        var vol = parseFloat((document.getElementById('vol') || {}).value);
+        audioEl.volume = isNaN(vol) ? 0.9 : vol;
+      }
+      var selm = document.getElementById('sleepSel');
+      if (selm) {
+        selm.value = 'off';
+        try { selm.dispatchEvent(new Event('change')); } catch (e2) {}
+      }
+      var left = document.getElementById('sleepLeft');
+      if (left) left.textContent = 'stopped at end of episode';
+      var toast = document.getElementById('toast');
+      if (toast) {
+        toast.style.pointerEvents = 'none';
+        toast.textContent = 'Sleep timer: stopped';
+        toast.classList.add('show');
+        clearTimeout(haltIfEpisodeEnded._t);
+        haltIfEpisodeEnded._t = setTimeout(function () { toast.classList.remove('show'); }, 1900);
+      }
     }
+    paintTransport();
+    return true;
   }
 
   function tick() {
@@ -1057,11 +1120,11 @@
       else {
         claim();
         lock();
-        follow();
+        if (!haltIfEpisodeEnded(onAir())) follow();
         paintMain();
       }
     } else if (mode === 'page') {
-      follow();
+      if (!haltIfEpisodeEnded(onAir())) follow();
       paintPage();
     }
     paintCard();
