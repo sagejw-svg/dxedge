@@ -870,6 +870,7 @@
     .bar .pstep { flex: 1 1 auto; min-width: 0; } .bar .pedit { flex: 0 0 auto; }
     .bar .pedit > .btn { padding-left: 8px; padding-right: 8px; }
     .bar .saveform.open ~ #midiBtn, .bar .saveform.open ~ #learnBtn { display: none; }
+    .bar .saveform input { min-height: 44px; box-sizing: border-box; } /* review R1103-3: the name field matches the 44 px keys beside it */
     .sup { padding: 4px 11px; font-size: 11px; }
     #midiBtn .long { display: none; }
     select.btn { max-width: 190px; }
@@ -1238,7 +1239,7 @@
         <div class="chips"><span class="cl">shape</span><span data-chips="era.shape" class="chips" style="margin:0" role="group" aria-label="1939 mode envelope shape"></span></div>
         <div class="chips" id="eraTabs" role="group" aria-label="1939 mode tone tabs"><span class="cl">tabs</span><button class="chip" type="button" data-tab39="body" aria-pressed="false" title="Body: a fixed resonance near 300 Hz">body</button><button class="chip" type="button" data-tab39="voice" aria-pressed="false" title="Voice: a fixed resonance near 850 Hz, the vocal one">voice</button><button class="chip" type="button" data-tab39="edge" aria-pressed="false" title="Edge: a fixed resonance near 2.5 kHz, reedy">edge</button><button class="chip" type="button" data-tab39="mellow" aria-pressed="false" title="Mellow: a low-pass at 1.1 kHz">mellow</button><button class="chip" type="button" data-tab39="thin" aria-pressed="false" title="Thin: a high-pass at 700 Hz">thin</button><button class="chip" type="button" data-tab39="open" aria-pressed="false" title="Open: the divided wave straight through">open</button></div>
         <div class="knobs" id="kEra"></div>
-        <div class="note">Twelve master oscillators, one per note name, and every octave divided down from them, so octaves stay locked in phase. The resonators are fixed: they do not follow the key, so each note sits differently in them. Tabs add in parallel. The sustain pedal lengthens the release (pedal) instead of holding notes. While it is on, the oscillators, both filters, the envelopes, the LFOs, unison and the mod matrix rest; V1, voices, tune, bend, the wheel and the rack still play.</div></section>
+        <div class="note">Twelve master oscillators, one per note name, and every octave divided down from them, so octaves stay locked in phase. The resonators are fixed: they do not follow the key, so each note sits differently in them. Tabs add in parallel. The sustain pedal lengthens the release (pedal) instead of holding notes. While it is on, the oscillators, both filters, the envelopes, the LFOs, unison, glide and the mod matrix rest; V1, voices, tune, bend, the wheel and the rack still play.</div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mV1"><h3><span class="pilot"></span>V1 drive tube</h3><div class="chips" data-chips="v1.tube"></div><div class="knobs" id="kV1"></div>
         <div class="note">Before the filters. More drive, more saturation into the filter.</div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
@@ -3099,7 +3100,11 @@ function afterF() {
   $('eraPilot').classList.toggle('off', !e39); $('mEra').classList.toggle('off', !e39);
   document.querySelectorAll('[data-tab39]').forEach(b => b.setAttribute('aria-pressed', String(!!(cur.era && cur.era.tabs[b.dataset.tab39]))));
   ['mOsc1', 'mOsc2', 'mSub', 'mFilt', 'mFiltB', 'mEnvA', 'mEnvF', 'mLfo', 'mLfo2', 'mMatrix'].forEach(id => $(id).classList.toggle('rest39', e39));
-  kn('voice.detune').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = cur.voice.unison > 1 ? '' : '0.45';
+  const uniOn = cur.voice.unison > 1 && !e39;
+  kn('voice.detune').k.el.style.opacity = uniOn ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = uniOn ? '' : '0.45';
+  // review R1106-1: 1939 mode ignores unison and glide (the masters set the pitch), so their knobs rest and say so
+  ['voice.unison', 'voice.glide'].forEach(p_ => { const el_ = kn(p_).k.el; if (el_.dataset.t0 === undefined) el_.dataset.t0 = el_.title || '';
+    el_.style.opacity = e39 ? '0.45' : ''; el_.title = e39 ? 'Resting: 1939 mode. ' + el_.dataset.t0 : el_.dataset.t0; });
   $('nameV1').textContent = cur.v1.tube; $('nameV2').textContent = cur.filt.tube;
   document.querySelector('[data-t="v2"]').classList.toggle('off', !valve);
   refreshMod();

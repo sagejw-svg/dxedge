@@ -19,7 +19,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 |-|-|-|-|-|
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
 | R1104-4 | confusing | c, d | Panic leaves the Mix desk delay and room returns and the patch's own output room ringing; the room's tail then refills the master reverb | measured |
-| R1103-3 | confusing | b, h | Phone: the save name field is 28 px tall (the rest of the patch bar is 44 px) | measured |
+| R1106-2 | confusing | a | LC bank with the stereo offset: at 1 octave the sides differ far more than on the other models (side 1.7 dB over the left channel, Valve 12 -8 dB) and mono loses 0.55 dB; the LC note does not carry the mono warning the Ladder and Poly notes do | measured (width, mono), inferred (impact) |
 | R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
 | R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch (2 Nov: the spring reverb is a patch field too, so it follows the same way) | measured (cut), inferred (impact, spring) |
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
@@ -66,7 +66,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1555,3 +1555,97 @@ Area f. Confusing. Measured. Fixed tonight.
 Areas a, b, c, d, e. Suggested next: a and b on 1939 mode (each shape, tab and knob against an
 offline render, the pedal knob with CC64, old patches with no `era`), and whether the Osc-tab
 sections that "rest" in 1939 mode still change the sound.
+
+
+## 2026-11-06 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `e9277b6`, sw.js
+`dxedge-v185`. Playwright's own Chromium headless (the `chromium-1194` path in the task prompt is
+still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus
+tonight: area a on the two newest Filament parts (1939 mode, 5 Nov, and the LC bank filter model,
+6 Nov) and on Cathode's copies of the tape echo and spring reverb (not covered on 3 Nov); area b on
+every factory patch on all 18 devices, offline renders of every Filament and Cathode factory patch,
+an old user patch, a user patch on the LC bank in both slots, and the new joined patch keys (6 Nov).
+
+### What worked (measured)
+
+- Area b, all 129 factory patches on the 18 devices picked from the patch menu at 1366 px (Filament
+  27 with Exposition Choir and Parlor Harp, Cathode 19, Thyratron 6, Gleam 7, Mote 3, Heptode 1,
+  Geissler 3, Pentagrid 6, Orthicon 5, Trochotron 6, Gyrotron 3, Klystron 5, Phantastron 6, Additron 5,
+  Rhumbatron 7, Resnatron 4, Dekatron 8, Lattice 8): each one shows under its own name, no errors.
+- Offline, through the rack (a four-note chord for Filament, A2 for Cathode): all 27 Filament and 19
+  Cathode factory patches are finite, peak 0.14 to 0.89 (none over 0 dBFS) and RMS -32 to -16 dBFS
+  (Glass Music Box -32.3 and Eerie Bells -31.0 are the quietest; both are short struck sounds).
+- An old user patch written the way a pre-November save looks (no `era`, no `tabs`, no echo or
+  spring) loads from the menu with 1939 mode off, the default LC tabs (body, voice, mellow), the echo
+  off, and its own cutoff; it renders finite at -21 dBFS.
+- A user patch on the LC bank in both slots (A voice and edge, B serial with body and thin) saved
+  from the save form comes back after a reload as the current patch with both slots' models and tabs
+  identical, both tab rows showing and aria-pressed matching. Delete removes it ("Deleted ...").
+- Edits mark the patch: the LC bank chip, an LC tab, a 1939 tab, a 1939 shape and the 1939 switch
+  each turn the menu entry into "* name (edited)". Undo reverts an LC tab and a 1939 tab, and the
+  chip's aria-pressed follows. Init gives 1939 mode off, Valve 12 and the default tabs.
+- Area a, 1939 mode: each of the five knobs at Home and at End writes only its own field (stair 0 to
+  1, vibrato 0 to 60, rate 4 to 9, pedal 0.3 to 10, velocity 0 to 1), with the readout matching, and
+  each changes the sound except pedal, which acts only with the pedal down (as documented). The
+  arpeggiator runs in 1939 mode (8 note edges over 2 s of a held triad at 1/8, 120 BPM, against 1
+  with it off).
+- LC bank on the panel: with it picked, Filter shows the model chips, the tabs row, and cutoff, res,
+  drive, key trk, env, velocity and stereo off; the V2 loop and gate rows hide; the note explains the
+  bank. The response plot draws it (peak 3.0 dB at 876 Hz on Plate Bass's knobs).
+- Cathode's tape echo and spring reverb: every echo knob (7) and spring knob (5) writes only its own
+  field in Cathode's patch, and offline each is heard on a short Cathode note (tail 0.5 to 1.5 s:
+  -54 dB off, -25 dB with the echo, -34 dB with the spring). Dekatron and Thyratron hide both sections.
+- Chips and switches on five of the newest panels (Resnatron 109 buttons, Rhumbatron 69, Additron 84,
+  Klystron 69, Phantastron 76) each change the patch or their pressed state, except buttons that act
+  only in context: Resnatron's jacks (a click starts a cable), Phantastron's "lift wires" with no
+  wires, Additron's "perc off" when already off.
+- Patch keys (6 Nov graphics): at 1366 px the stepper and edit switch are one row, the name select
+  has a 2 px amber focus ring and ArrowDown on it moves to the next patch. At 375 px on four devices
+  every key is 44 px tall, the name window is 137 px, no sideways scroll.
+
+### Findings
+
+**R1106-1. In 1939 mode the glide and unison knobs look live but do nothing.** Area a. Confusing.
+Measured. Fixed tonight.
+- Steps: Filament, switch on 1939 mode (or load Exposition Choir), voice mode mono, glide 0.3; play
+  C3 then G3 legato.
+- Expected: the pitch glides, or the glide knob shows that it rests, as the oscillator, filter,
+  envelope, LFO and matrix sections do.
+- Actual: the pitch jumps straight to G3 (195.8 Hz 20 ms after the key, against a glide through 138,
+  151, 163 and 171 Hz with 1939 mode off). The worklet's own comment says glide and unison rest in this
+  mode, but the Voice section's unison and glide knobs stayed at full brightness with no word, and
+  the 1939 section's note listed unison but not glide.
+- Fix: while 1939 mode is on, the unison and glide knobs dim (like detune does with unison off) and
+  their title reads "Resting: 1939 mode"; detune and unison spread dim too; the note now lists glide.
+  Check: "Er. the unison and glide knobs rest while 1939 mode is on" (fails on the live site: both
+  knobs at full opacity with no title, both states).
+
+**R1103-3 (3 Nov). Phone save name field 28 px.** Area b, h. Confusing. Measured. Fixed tonight.
+- Still 170 x 28 px tonight beside 44 px ok and cancel. Now 44 px tall in the phone header
+  (`.bar .saveform input`, under 761 px). Check: "Pn. 375px: the save form's name field is 44 px tall"
+  (fails on the live site: 28).
+
+**R1106-2. LC bank and the stereo offset spread far wider than the other models.** Area a.
+Confusing. Measured (width, mono), inferred (impact).
+- Steps: Filament, Filter on LC bank (voice tab, cutoff 850, res 0.3), stereo off at +1.00 oct; play
+  A2 and A3.
+- Measured: the side signal (L minus R) is 1.7 dB louder than the left channel on its own at 1 octave
+  (Valve 12 at the same knobs: -8.0 dB), and the mono sum is 0.55 dB under the stereo level (Valve 12
+  0.18, Ladder 24 0.43). With narrow band-passes, an octave apart puts each side's peak where the other
+  has none, so the offset reads as two different vowels left and right.
+- Inference: a player expecting the offset to widen gently will hear a split; the LC note does not
+  carry the "a wide stereo offset can thin out in mono" warning the Ladder 24 and Poly 24 notes carry.
+  Options for James: the warning in the LC note, or the offset scaled down on this model.
+
+### Still open, re-measured tonight
+
+- R1022-5: deleting a Filament user patch still lands on Plate Bass.
+- R1025-3: delete still removes a user patch at once with no question.
+- Known from the graphics backlog (6 Nov), seen again: with a user patch loaded on a phone, the delete
+  key joins the edit switch and the name window drops to 80 px ("Phone..." for a 28-character name).
+
+### Not covered tonight
+
+Areas c to h. R1103-1 (Lattice WAV) was not re-run. Suggested next: c, d and e, including 1939 mode
+with the deck (a take on Exposition Choir, export, play back) and the LC bank in Render WAV.

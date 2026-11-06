@@ -1241,6 +1241,8 @@ with sync_playwright() as pw:
     ck(f"Er. the switch, a shape chip and two tabs write the patch (on, harp, edge in, body out), the pilot lights, and ten sections rest while V1 does not ({eui1_})",
        eui1_["era"]["on"] is True and eui1_["era"]["shape"] == "harp" and eui1_["era"]["tabs"]["edge"] is True and eui1_["era"]["tabs"]["body"] is False
        and eui1_["pilot"] and eui1_["on"] == "on" and eui1_["rest"] == 10 and not eui1_["v1"] and eui1_["edge"] == "true", eui1_)
+    # review 6 Nov, R1106-1: 1939 mode ignores unison and glide, but their knobs in Voice looked live
+    erk1_ = pg.evaluate("""() => Object.fromEntries(['unison', 'glide', 'voices'].map(n => { const k = [...document.querySelectorAll('#kVoice .knob')].find(e => e.getAttribute('aria-label') === n); return [n, k ? (k.style.opacity || '1') + (k.title.startsWith('Resting: 1939 mode') ? ' resting' : '') : null]; }))""")
     for t_ in ("voice", "edge", "mellow"): pg.click(f'#mEra [data-tab39="{t_}"]')
     pg.wait_for_timeout(100)
     tl_ = pg.evaluate("__synth.patch().era.tabs")
@@ -1252,6 +1254,9 @@ with sync_playwright() as pw:
     ck(f"Er. a reload keeps 1939 mode and the panel shows it ({eui2_})", eui2_["era"]["on"] is True and eui2_["era"]["shape"] == "harp" and eui2_["on"] == "true" and eui2_["rest"], eui2_)
     pg.click("#eraOnBtn"); pg.wait_for_timeout(100)
     ck("Er. switched off from the panel: the other sections wake", pg.evaluate("__synth.patch().era.on") is False and not pg.evaluate("document.getElementById('mFilt').classList.contains('rest39')"))
+    erk0_ = pg.evaluate("""() => Object.fromEntries(['unison', 'glide', 'voices'].map(n => { const k = [...document.querySelectorAll('#kVoice .knob')].find(e => e.getAttribute('aria-label') === n); return [n, k ? (k.style.opacity || '1') + (k.title.startsWith('Resting: 1939 mode') ? ' resting' : '') : null]; }))""")
+    ck(f"Er. the unison and glide knobs rest while 1939 mode is on (dimmed, titled 'Resting: 1939 mode'; voices stays live) and wake when it is off (on {erk1_}, off {erk0_})",
+       erk1_ == {"unison": "0.45 resting", "glide": "0.45 resting", "voices": "1"} and erk0_ == {"unison": "1", "glide": "1", "voices": "1"}, (erk1_, erk0_))
     ph39 = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); perr39 = []
     ph39.on("pageerror", lambda e: perr39.append(str(e)))
     ph39.goto(BASE); ph39.wait_for_function("window.__synth && __synth.ready()", timeout=20000); ph39.wait_for_timeout(200)
@@ -1400,6 +1405,14 @@ with sync_playwright() as pw:
       document.getElementById('saveNo').click(); return { f, names, open }; }""")
     ck(f"Pn. save refuses a factory name in any case ('{sv_['f'].lower()}' beside '{sv_['f']}'): the menu lists it once and the form stays open ({sv_['names']})",
        sv_["names"] == [sv_["f"]] and sv_["open"] is True, sv_)
+    # review 3 Nov, R1103-3 (fixed 6 Nov): on a phone the save name field was 28 px tall beside 44 px keys
+    phs_ = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True)
+    phs_.goto(BASE); phs_.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phs_.wait_for_timeout(200)
+    phs_.tap("#saveP"); phs_.wait_for_timeout(100)
+    sfh_ = phs_.evaluate("""() => Object.fromEntries(['saveName', 'saveOk', 'saveNo'].map(id => [id, Math.round(document.getElementById(id).getBoundingClientRect().height)]))""")
+    sfw_ = phs_.evaluate("document.documentElement.scrollWidth <= innerWidth")
+    phs_.tap("#saveNo"); phs_.close()
+    ck(f"Pn. 375px: the save form's name field is 44 px tall like ok and cancel, with no horizontal scroll ({sfh_})", min(sfh_.values()) >= 44 and sfw_, (sfh_, sfw_))
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Pn. no page errors", not errs, errs)
 
