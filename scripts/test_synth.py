@@ -4554,6 +4554,45 @@ with sync_playwright() as pw:
                if ptypes["out"].get(dv, {}).get(k) != t]
     ck("R. parameter tables: whole-number knobs are int, amounts and levels are float, every int is whole at both ends",
        not pt_miss and not ptypes["bad"], {"wrong": pt_miss, "notWhole": ptypes["bad"]})
+    # Parameter ranges (6 Nov): every number row has a real range and every factory patch sits inside its
+    # device's table. Until then Mote, Orthicon and Heptode gave the stereo, ens and out rows they carry
+    # (and Heptode's loop points and live channel) min = max = the default, so a host mapping a knob over
+    # min..max had nothing to map.
+    prange = pg.evaluate("""async () => {
+      const d = await import('/synth/device.js');
+      const fac = { filament: (await import('/synth/patches.js')).FACTORY, cathode: (await import('/synth/cathode.js')).C_FACTORY,
+        thyratron: (await import('/synth/thyratron.js')).THY_FACTORY };
+      const flat = [], outside = [], seen = {};
+      for (const x of d.listDevices()) {
+        const P = x.parameters || {};
+        let nums = 0;
+        for (const k of Object.keys(P)) {
+          const i = P[k];
+          if (i.type === 'int' || i.type === 'float') {
+            nums++;
+            if (!(Number.isFinite(i.min) && Number.isFinite(i.max) && i.min < i.max && i.default >= i.min && i.default <= i.max)) flat.push(x.id + ':' + k + ' ' + i.min + '..' + i.max);
+          }
+          if (i.type === 'choice' && !i.choices.includes(i.default)) flat.push(x.id + ':' + k + ' default ' + i.default);
+        }
+        const list = Array.isArray(x.factory) ? x.factory : (fac[x.id] || []);
+        let checked = 0;
+        for (const p of list) for (const k of Object.keys(P)) {
+          const v = k.split('.').reduce((o, y) => (o == null ? o : o[y]), p);
+          if (v === undefined) continue;
+          checked++;
+          const i = P[k];
+          if ((i.type === 'int' || i.type === 'float') && !(v >= i.min && v <= i.max)) outside.push(x.id + '/' + p.name + ':' + k + '=' + v);
+          if (i.type === 'choice' && !i.choices.includes(v)) outside.push(x.id + '/' + p.name + ':' + k + '=' + v);
+        }
+        seen[x.id] = { rows: nums, patches: list.length, values: checked };
+      }
+      return { flat, outside, seen };
+    }""")
+    pr_need = {"filament", "cathode", "thyratron", "mote", "orthicon", "heptode", "pentagrid", "resnatron"}
+    pr_thin = sorted(k for k in pr_need if not prange["seen"].get(k, {}).get("values"))
+    ck("R. parameter ranges: every number row spans min < max around its default, and every factory patch lies inside its device's table",
+       not prange["flat"] and not prange["outside"] and not pr_thin,
+       {"flat": prange["flat"][:12], "nFlat": len(prange["flat"]), "outside": prange["outside"][:12], "notChecked": pr_thin, "seen": prange["seen"]})
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})

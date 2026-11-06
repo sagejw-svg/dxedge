@@ -7,7 +7,7 @@
 // The page leaves the shared output tubes alone. ens and out are carried so a
 // host that expects them still finds the fields.
 
-import { DEFAULT as F_DEFAULT, clone } from './patches.js';
+import { DEFAULT as F_DEFAULT, SHARED_RANGE, SHARED_ENUMS, clone } from './patches.js';
 import { parameterTable, RACK_API, registerDevice } from './device.js';
 
 export { RACK_API };
@@ -149,8 +149,11 @@ const ENUMS = {
   brush: BRUSHES.slice(),
 };
 
-// whole numbers: the root note (normalizeOrthicon rounds it), the EQ's bands
-export const ORTH_PARAMETERS = parameterTable(ORTH_DEFAULT, RANGE, ENUMS, ['root', 'out.eqBands']);
+// whole numbers: the root note (normalizeOrthicon rounds it), the EQ's bands. The carried stereo, ens
+// and out rows take Filament's ranges and choices (SHARED_*). They are merged into a copy: normalizeOrthicon
+// clamps every key of RANGE at the top level, so RANGE itself must hold only Orthicon's own fields.
+export const ORTH_PARAMETERS = parameterTable(ORTH_DEFAULT, Object.assign({}, SHARED_RANGE, RANGE),
+  Object.assign({}, SHARED_ENUMS, ENUMS), ['root', 'out.eqBands']);
 
 export const orthiconDevice = {
   id: ORTH_ID,

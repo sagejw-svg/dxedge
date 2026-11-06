@@ -1057,6 +1057,32 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 6 Nov (improvement, code health, the 30 Oct parameter ranges item): every number row in every device's parameter
+  table now has a real range. Measured before, in Node and in the page, on origin/main `c86f17e`: 51 rows had min = max
+  = the default (16 each on Mote and Orthicon, 19 on Heptode): the `stereo.*`, `ens.mix` and `out.*` fields these
+  devices carry from Filament's defaults, and Heptode's `loop0`, `loop1` and `live`. Fix: `patches.js` exports
+  `SHARED_RANGE` and `SHARED_ENUMS` (copies of Filament's rows under `stereo.`, `ens.` and `out.`), and the three
+  devices pass them merged into a copy of their own tables (Orthicon's normalizer clamps every key of its RANGE at the
+  top level, so its RANGE stays its own). The same merge gives these devices the 7 choice rows they carry and their
+  tables left out (`stereo.pan`, `ens.mode`, `out.tube`, `out.topology`, `out.cab`, `out.room`, `out.eqPreset`):
+  41 to 48 rows on Mote, 38 to 45 on Orthicon, 34 to 41 on Heptode. Heptode: `live` is 0..15 (its normalizer's clamp),
+  and the loop points (seconds of score time, no ceiling until now) are clamped to 0..86400 s in `normalizeHeptode`
+  and on a score load, so the table can state a range. Output (measured): every other device's table is identical to
+  main's, Filament's RANGE and ENUMS are unchanged, and the three normalizers give the same JSON as main's on 1218
+  inputs (factory, defaults, and 400 seeded random patches each, values to 2 past each end; Heptode loop points to
+  600 s). No patch sound changes; a loop point past 24 hours would now be clamped (none of the library songs is
+  longer than a few minutes; inferred). New check "R. parameter ranges": every int and float row on all 18 devices
+  has min < max around its default, every choice default is one of its choices, and every factory patch value
+  (7144 values across 18 devices, Filament, Cathode and Thyratron from their FACTORY lists) lies inside its table;
+  it fails on main (51 flat rows).
+  Found on the way (measured, not fixed): three tables are narrower than what the normalizer keeps. Phantastron and
+  Trochotron `seed` read 0..999999 but the normalizer keeps any whole number up to 2^32 - 1 (Phantastron's seed
+  field says max 999999 but a typed value is not clamped); Gyrotron `root` reads 36..84 but the normalizer keeps 24..96.
+  Clamping in the normalizers would change user patches outside the table (a seed is the sound), so the fix is
+  likely the table, after checking each control. Next for this job unless something higher comes up.
+  Why not a higher item: R1103-1 still waits on James (schema and storage). CPU: the last two CPU attempts (5 Nov,
+  1939 voice; 3 Nov note) measured noise or had no bit-exact hot spot left, and tonight's test 9 lines on main sit
+  in the usual range (below). Test health: nothing failed or flaked on main tonight.
 - Done 5 Nov (improvement, test health): "R. play emits clock events a device can subscribe to" reads the transport against
   the AudioContext clock, not the wall clock. It failed on main in the 5 Nov nightly run (beat 1.84 after a nominal
   180 ms wait; that run read it as load). The beat is the context time since play over the beat length, so a fixed
@@ -1189,7 +1215,7 @@ and proven by measurement), test suite health, load time and memory, code health
   loop drew last, after a fixed 1.2 s of live audio, and `GON.scale` adapts 8% a frame from wherever the last live
   signal left it (inferred from `drawGonio`), so a slow frame loop can leave the cloud squeezed. If it fails again,
   read the count after the scale settles rather than at a fixed time.
-- Found 30 Oct (improvement, not fixed): some parameter table rows carry no range, so min and max both equal the
+- Found 30 Oct (improvement; done 6 Nov, see above): some parameter table rows carry no range, so min and max both equal the
   default. Measured in Node from each device's table: on Mote, Orthicon and Heptode every `stereo.*`, `ens.mix` and `out.*`
   row (for example `out.drive` 3..3, `out.eqBands` 10..10), and Heptode's `live` (0..0, a channel 0 to 15), `loop0` and
   `loop1`. Nothing in the repo reads those ranges today (inferred: `engine.js` only hands the table out). A fix is ranges
@@ -1772,6 +1798,7 @@ Rank of the open items (6 Nov): 1. rail plate titles at 761 to 959 px; 2. Rhumba
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-11-06 (improvement, scheduled task, about 5:25 to 6:30 AM PT): code health, the 30 Oct parameter ranges item. Main first: the suite on origin/main `c86f17e` ALL PASS (1647 checks, about 22 minutes, in a clean worktree); `scripts/test_synth_imported.py` ALL PASS. No review finding marked broken that this job can fix (R1103-1 still waits on James). Fixed: 51 parameter table rows on Mote (16), Orthicon (16) and Heptode (19) had min = max = the default; they now take Filament's ranges for the carried stereo, ens and out fields (`SHARED_RANGE`, `SHARED_ENUMS` in `patches.js`), plus 7 choice rows each that the tables had left out; Heptode's live channel is 0..15 and its loop points 0..86400 s (now clamped there). Measured: 0 flat rows on 18 devices (51 before); every other device's table identical to main's; the three normalizers give main's JSON on 1218 inputs; 7144 factory values inside their tables. New check "R. parameter ranges" (fails on main). Found, not fixed: Phantastron and Trochotron seed and Gyrotron root tables are narrower than their normalizers (backlog). Cache `dxedge-v187`. No patch sound changed. Suite: ALL PASS (1648 checks). CPU (test 9, main tonight, steady): Cathode 17.6%; Valve 12 16.2%, Ladder 24 18.8%, 16 voices with ensemble 28.4%, 1939 mode 11.3%. Commit: this one.
 - 2026-11-06 (review, scheduled task, about 4:20 to 5:45 AM PT): areas a (1939 mode's five knobs, shapes and arp; the LC bank panel, plot, stereo offset; Cathode's tape echo and spring copies; chips and switches on Resnatron, Rhumbatron, Additron, Klystron and Phantastron) and b (all 129 factory patches on 18 devices from the menu; offline renders of all 27 Filament and 19 Cathode factory patches, none over 0 dBFS, no NaN; an old user patch with no era or tabs; an LC user patch saved, reloaded, deleted; the joined patch keys at 1366 and 375 px) on the live site at origin/main `e9277b6`, sw.js `dxedge-v185`. Findings: 0 broken, 2 confusing (R1106-1 fixed, R1106-2 open for James), 0 missing; R1103-3 re-measured and fixed; R1022-5 and R1025-3 still open. Fixes: R1106-1, the unison and glide knobs rest in 1939 mode, and the 1939 note lists glide; R1103-3, the phone save name field is 44 px. Two checks (Er. and Pn.), each failing on the live site. Cache `dxedge-v186`. No patch sound changed. Suite: ALL PASS (1647 checks). Commit: this one.
 - 2026-11-06 (graphics, scheduled task, about 3:14 to 4:30 AM PT): main first: suite on origin/main `4a6ec99` ALL PASS (1632 checks; a first run was discarded because it served the working tree while this job edited it, so the baseline was re-run in a clean worktree). Screenshots at 1366x1000 (every rail device, full page) and 375x667 (every device, every Filament tab). Built the top open phone item, the patch menu: joined patch stepper and edit keys, the name in an amber readout window (desktop too). Found and fixed on the way: a zero flex basis let the volume slot join the first row at 390 px and squeeze the name to 33 px (caught by check 10). Commit `a602932`, ALL PASS (1645 checks, 13 new Pk.). Backlog re-ranked; new item for a user patch's name window on a phone.
 - 2026-11-06 (check and debug, scheduled task, about 2:08 to 2:50 AM PT): reviewed 4 commits since 5 Nov 6 PM PT on origin/main `66daf05`: Claude's 12:28 AM nightly `ebd8d8a` (the LC bank as a filter model in slots A and B) and its log line `66daf05`, and the health bot's state `b3e7f20` and `04d0b18` (scripts/health only). Read `ebd8d8a`: no test removed (the Fb. and model loops were widened to take LC, not loosened), no new license or vendor folder, no trademark name, nothing under /otr, no factory patch changed; a tab change cannot reuse stale bank coefficients (setPatch bumps the coefficient epoch). Suite on origin/main ALL PASS (1632 checks, about 22 minutes); `scripts/test_synth_imported.py` ALL PASS. Live (cache-busted): /synth/ ready at 1366 and 375 px, no page errors, no console errors, no sideways scroll; the only failed request was the page-view beacon `/api/stat` aborted as the 375 px page closed (the test closing the tab, not a fault). /synth/fm/ and /synth/acid/ no errors; Hexode still scrolls sideways at 375 px (779 px, the known vendored item from 15 Oct). An offline render of middle C through __synth.render was non-silent on all 18 rack devices (about -20 to -23 dBFS RMS). Live sw.js `dxedge-v185` matched main. No defects; nothing fixed. Measured: this environment has no `/opt/pw-browsers/chromium-1194`, so the suites ran on their `/opt/google/chrome` fallback.

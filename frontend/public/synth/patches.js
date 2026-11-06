@@ -159,6 +159,13 @@ export const ENUMS = {
   'out.eqPreset': EQ_PRESET_IDS,
 };
 MOD_SLOTS.forEach(k => { ENUMS['mod.' + k + '.src'] = MOD_SRC; ENUMS['mod.' + k + '.dst'] = MOD_DST; });
+// The shared stereo, ensemble and output fields' ranges and choices, for a device that carries copies
+// of them (Mote, Orthicon, Heptode) without its own normalizer for them. Passed to parameterTable
+// so those rows read the same as Filament's: until 6 Nov 2026 they had no range (min and max were
+// both the default). A copy, so a device that adds its own rows cannot change Filament's.
+const SHARED = k => /^(stereo|ens|out)\./.test(k);
+export const SHARED_RANGE = Object.fromEntries(Object.entries(RANGE).filter(([k]) => SHARED(k)).map(([k, v]) => [k, v.slice()]));
+export const SHARED_ENUMS = Object.fromEntries(Object.entries(ENUMS).filter(([k]) => SHARED(k)).map(([k, v]) => [k, v.slice()]));
 export const CATS = ['Bass', 'Lead', 'Pad', 'Keys', 'Pluck', 'FX', 'Halloween'];
 
 export function clone(o) { return JSON.parse(JSON.stringify(o)); }

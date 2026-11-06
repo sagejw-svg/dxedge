@@ -5,7 +5,7 @@
 // no drive and no effects). A program number may choose a General-MIDI-family
 // envelope, still without coloration. The player then morphs that voice.
 
-import { DEFAULT as F_DEFAULT, clone } from './patches.js';
+import { DEFAULT as F_DEFAULT, SHARED_RANGE, SHARED_ENUMS, clone } from './patches.js';
 import { parameterTable, RACK_API, registerDevice } from './device.js';
 import { CHANNELS, FAMILIES, familyFor, familyOf } from './heptode-family.js';
 
@@ -61,6 +61,10 @@ function copyTrack(src, fallback) {
   return t;
 }
 
+// Loop points are seconds of score time. The ceiling (a day) is only there so the parameter table can
+// give them a range; no MIDI file the library or a user is likely to load comes near it.
+const LOOP_MAX = 86400;
+
 export const HEPTODE_DEFAULT = {
   v: HEPTODE_SCHEMA,
   device: HEPTODE_ID,
@@ -99,8 +103,8 @@ export function normalizeHeptode(p) {
   if (p.poly != null && isFinite(+p.poly)) out.poly = clamp(+p.poly | 0, 4, 32);
   if (p.tempo != null && isFinite(+p.tempo)) out.tempo = clamp(+p.tempo, 40, 240);
   out.loop = !!p.loop;
-  if (p.loop0 != null && isFinite(+p.loop0)) out.loop0 = Math.max(0, +p.loop0);
-  if (p.loop1 != null && isFinite(+p.loop1)) out.loop1 = Math.max(0, +p.loop1);
+  if (p.loop0 != null && isFinite(+p.loop0)) out.loop0 = clamp(+p.loop0, 0, LOOP_MAX);
+  if (p.loop1 != null && isFinite(+p.loop1)) out.loop1 = clamp(+p.loop1, 0, LOOP_MAX);
   if (out.loop1 < out.loop0) out.loop1 = out.loop0;
   if (p.morph != null && isFinite(+p.morph)) out.morph = clamp(+p.morph, 0, 1);
   if (p.live != null && isFinite(+p.live)) out.live = clamp(+p.live | 0, 0, 15);
@@ -257,7 +261,7 @@ export function applyScoreMeta(patch, score) {
   if (score && score.bpm) out.tempo = clamp(score.bpm, 40, 240);
   if (score && score.length) {
     out.loop0 = 0;
-    out.loop1 = score.length;
+    out.loop1 = Math.min(LOOP_MAX, score.length);
   }
   return out;
 }
@@ -274,6 +278,9 @@ const RANGE = {
   poly: [4, 32],
   tempo: [40, 240],
   morph: [0, 1],
+  loop0: [0, LOOP_MAX],
+  loop1: [0, LOOP_MAX],
+  live: [0, 15],
   'fx.delay': [0.04, 1],
   'fx.feedback': [0, 0.85],
   'fx.reverb': [0, 1],
@@ -281,7 +288,9 @@ const RANGE = {
 };
 
 // whole numbers: the voice count and the live channel (normalizeHeptode truncates both), the EQ's bands
-export const HEPTODE_PARAMETERS = parameterTable(HEPTODE_DEFAULT, RANGE, ENUMS, ['poly', 'live', 'out.eqBands']);
+// The carried stereo, ens and out rows take Filament's ranges and choices (SHARED_*).
+export const HEPTODE_PARAMETERS = parameterTable(HEPTODE_DEFAULT, Object.assign({}, SHARED_RANGE, RANGE),
+  Object.assign({}, SHARED_ENUMS, ENUMS), ['poly', 'live', 'out.eqBands']);
 
 export const heptodeDevice = {
   id: HEPTODE_ID,

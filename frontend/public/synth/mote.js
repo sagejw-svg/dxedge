@@ -5,7 +5,7 @@
 // The page leaves the shared output tubes alone. ens and out are carried so a
 // host that expects them still finds the fields.
 
-import { DEFAULT as F_DEFAULT, clone } from './patches.js';
+import { DEFAULT as F_DEFAULT, SHARED_RANGE, SHARED_ENUMS, clone } from './patches.js';
 import { parameterTable, RACK_API, registerDevice } from './device.js';
 
 export { RACK_API };
@@ -152,8 +152,10 @@ const RANGE = {
   'tail.mix': TAIL_RANGE.mix,
 };
 
-// whole numbers: only the shared output stage's EQ bands
-export const MOTE_PARAMETERS = parameterTable(MOTE_DEFAULT, RANGE, ENUMS, ['out.eqBands']);
+// whole numbers: only the shared output stage's EQ bands. The carried stereo, ens and out rows take
+// Filament's ranges and choices (SHARED_*); RANGE stays Mote's own.
+export const MOTE_PARAMETERS = parameterTable(MOTE_DEFAULT, Object.assign({}, SHARED_RANGE, RANGE),
+  Object.assign({}, SHARED_ENUMS, ENUMS), ['out.eqBands']);
 
 // Shipped sources. Generated for this project and dedicated CC0. See sources/README.md.
 export const MOTE_FILES = [
