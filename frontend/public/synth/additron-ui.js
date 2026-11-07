@@ -1,6 +1,7 @@
 // Additron on the page: the spectrum you draw, the stops, the morph, the rotor.
 
 import { makeKnob } from './knob.js';
+import { houseFont } from './fread.js';
 import {
   additronDevice, normalizeAdditron, AD_DEFAULT, PARTS, FOOT, REG, spectrumOf,
 } from './additron.js';
@@ -301,8 +302,11 @@ export function mountAdditronPanel(container, hooks) {
       ctx.fillStyle = p.edit === 'b' ? '#f0c09a' : '#e7a06a';
       ctx.fillRect(x + 2, h - 16 - ah, Math.max(1, col - 5), ah);
       if (foot) {
+        // footage names in the house face, stepped down until one fits its column (graphics, 7 Nov)
         ctx.fillStyle = '#c8a48a';
-        ctx.font = '10px sans-serif';
+        let fs = 10;
+        ctx.font = fs + 'px ' + houseFont();
+        while (fs > 7 && ctx.measureText(foot.name).width > col - 2) { fs -= 0.5; ctx.font = fs + 'px ' + houseFont(); }
         ctx.textAlign = 'center';
         ctx.fillText(foot.name, x + col / 2, h - 3);
       }

@@ -5399,6 +5399,96 @@ with sync_playwright() as pw:
         pkp.on("dialog", lambda d: d.accept()); pkp.click("#delP"); pkp.wait_for_timeout(150)
         pkx.close()
     ck("Pk. no page errors (patch keys)", not pkerr, pkerr)
+    # Cf. canvas lettering in the house face (graphics, 7 Nov 2026). Before, six canvases on five devices set the browser's
+    # sans-serif (Klystron's mouth pad, Phantastron's board, Additron's spectrum, Rhumbatron's cavity, Heptode's place
+    # field; Gleam's effect mode too). Now every canvas font on the rack is the --font-mono stack, Rhumbatron's caption is
+    # an engraved tag naming the body and the exciter with a lamp that lights while a finger is down, and Klystron's two
+    # formants sit in a recessed amber readout window at the bottom centre, clear of the vowel letters.
+    CF_INIT = """(() => { const C = CanvasRenderingContext2D.prototype, fd = Object.getOwnPropertyDescriptor(C, 'font'), ft = C.fillText;
+      window.__cf = { fonts: {}, text: {} };
+      const idOf = c => (c && (c.id || c.className)) || '?';
+      Object.defineProperty(C, 'font', { configurable: true, get() { return fd.get.call(this); },
+        set(v) { const k = idOf(this.canvas) + ' | ' + String(v).replace(/[\\d.]+px/, 'Npx'); __cf.fonts[k] = (__cf.fonts[k] || 0) + 1; fd.set.call(this, v); } });
+      C.fillText = function (t, x, y, mw) { try { const id = idOf(this.canvas), m = this.getTransform(), a = this.textAlign, w = this.measureText(String(t)).width * m.a;
+          const px = m.a * x + m.c * y + m.e, left = a === 'center' ? px - w / 2 : (a === 'right' || a === 'end') ? px - w : px;
+          (__cf.text[id] = __cf.text[id] || {})[String(t)] = { l: left, w, y: m.b * x + m.d * y + m.f, fs: parseFloat(fd.get.call(this).match(/([\\d.]+)px/)[1]) * m.d,
+            base: this.textBaseline, cw: this.canvas.width, ch: this.canvas.height, s: this.canvas.width / Math.max(1, this.canvas.clientWidth) }; } catch (e) {}
+        return ft.call(this, t, x, y, mw); }; })();"""
+    CF_PIX = """([sel, x0, y0, x1, y1]) => { const c = document.querySelector(sel), d = c.getContext('2d').getImageData(Math.max(0, Math.floor(x0)), Math.max(0, Math.floor(y0)),
+        Math.max(1, Math.ceil(x1 - x0)), Math.max(1, Math.ceil(y1 - y0))).data, L = [];
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+      for (let i = 0; i < d.length; i += 4) L.push(0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]));
+      L.sort((a, b) => a - b); const fg = L[Math.floor(L.length * 0.995)], bg = L[Math.floor(L.length * 0.5)];
+      return { con: (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05), fg, bg }; }"""
+    CF_DEVS = ["filament", "cathode", "thyratron", "gleam", "dekatron", "lattice", "mote", "heptode", "geissler", "pentagrid", "orthicon",
+               "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron"]
+    CF_CANV = {"rhumbatron": "#rhumCanvas", "klystron": "#klPad", "phantastron": "#phBoard", "additron": "#adCanvas", "heptode": "#heptodePlace"}
+    cferr = []
+    for cf_w, cf_mob in ((1366, False), (375, True)):
+        cfx = b.new_context(viewport={"width": cf_w, "height": 667 if cf_mob else 1000}, is_mobile=cf_mob, has_touch=cf_mob, device_scale_factor=2)
+        cfx.add_init_script(CF_INIT); cfp = cfx.new_page(); cfp.on("pageerror", lambda e: cferr.append(str(e)))
+        cfp.goto(BASE); cfp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); cfp.wait_for_timeout(200)
+        cf_vis = {}
+        for d in CF_DEVS:
+            cfp.click(f'.devbtn[data-d="{d}"]'); cfp.wait_for_timeout(250)
+            if cf_mob:
+                for t in cfp.eval_on_selector_all('[role="tab"][data-go]', "els => els.filter(e => e.offsetParent).map(e => e.dataset.go)"):
+                    cfp.click(f'[role="tab"][data-go="{t}"]'); cfp.wait_for_timeout(150)
+                    if d in CF_CANV and cfp.eval_on_selector(CF_CANV[d], "e => !!e.offsetParent"): break
+            if d == "gleam":
+                cfp.evaluate("() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^effect$/i.test(x.textContent.trim())); if (b) b.click(); }")
+                cfp.wait_for_timeout(250)
+                cfp.evaluate("() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^field$/i.test(x.textContent.trim())); if (b) b.click(); }")
+            if d in CF_CANV:
+                cfp.eval_on_selector(CF_CANV[d], "e => { e.scrollIntoView({ block: 'center' }); }"); cfp.wait_for_timeout(250)
+                cf_vis[d] = cfp.evaluate("__cf.text[" + json.dumps(CF_CANV[d][1:]) + "] || {}")
+                if d == "rhumbatron":
+                    r = cfp.eval_on_selector("#rhumCanvas", "e => { const q = e.getBoundingClientRect(); return { x: q.left, y: q.top, w: q.width, h: q.height, s: e.width / e.clientWidth }; }")
+                    off = cfp.evaluate(CF_PIX, ["#rhumCanvas", 18 * r["s"], 18 * r["s"], 24 * r["s"], 24 * r["s"]])
+                    cfp.mouse.move(r["x"] + r["w"] * 0.6, r["y"] + r["h"] * 0.6); cfp.mouse.down(); cfp.wait_for_timeout(120)
+                    on = cfp.evaluate(CF_PIX, ["#rhumCanvas", 18 * r["s"], 18 * r["s"], 24 * r["s"], 24 * r["s"]])
+                    cfp.mouse.up(); cfp.wait_for_timeout(120); cfp.evaluate("__synth.panic && __synth.panic()")
+                    cf_vis["_lamp"] = (off["fg"], on["fg"])
+                if d == "klystron":
+                    kr0 = next((v for k, v in cf_vis[d].items() if k.startswith("F1 ") and k.endswith(" Hz")), None)
+                    if kr0: cf_vis["_klpix"] = cfp.evaluate(CF_PIX, ["#klPad", kr0["l"], kr0["y"] - kr0["fs"] * 0.6, kr0["l"] + kr0["w"], kr0["y"] + kr0["fs"] * 0.6])
+        cf_f = cfp.evaluate("__cf.fonts")
+        cf_bad = {k: v for k, v in cf_f.items() if "SF Mono" not in k and "monospace" not in k}
+        info(f"Cf. {cf_w} px canvas fonts", f"{len(cf_f)} font strings set, {len(cf_bad)} not the house face")
+        ck(f"Cf. at {cf_w} px every canvas font on the rack's 18 devices is the house face (none set the browser's sans-serif)",
+           not cf_bad and len(cf_f) >= 15, cf_bad)
+        rh = cf_vis.get("rhumbatron", {}); rh_cap = rh.get("STRING · PLUCK")
+        ck(f"Cf. at {cf_w} px Rhumbatron's cavity carries the engraved caption STRING · PLUCK (was a lower-case word in sans-serif)",
+           rh_cap is not None and not any(k in rh for k in ("string", "bore", "plate")), sorted(rh)[:6])
+        if rh_cap:
+            hh = rh_cap["fs"] * 0.75
+            rc = cfp.evaluate(CF_PIX, ["#rhumCanvas", rh_cap["l"], rh_cap["y"] - hh, rh_cap["l"] + rh_cap["w"], rh_cap["y"] + hh])
+            ck(f"Cf. at {cf_w} px the cavity caption reads on its plate ({rc['con']:.1f}:1, want 4.5 or more)", rc["con"] >= 4.5, rc)
+        lamp = cf_vis.get("_lamp", (0, 0))
+        ck(f"Cf. at {cf_w} px the caption's lamp lights while a finger is on the cavity (luminance {lamp[0]:.3f} to {lamp[1]:.3f})", lamp[1] > lamp[0] * 3 and lamp[1] > 0.1, lamp)
+        kl = cf_vis.get("klystron", {}); kr = next((v for k, v in kl.items() if k.startswith("F1 ") and k.endswith(" Hz")), None)
+        if kr:
+            kpad, khh = 6 * kr["s"], kr["fs"] * 0.8
+            box = (kr["l"] - kpad, kr["y"] - khh, kr["l"] + kr["w"] + kpad, kr["y"] + khh)
+            vow = [(k, v) for k, v in kl.items() if len(k) == 1]
+            hit = [k for k, v in vow if not (v["l"] + v["w"] < box[0] or v["l"] > box[2] or v["y"] < box[1] or v["y"] - v["fs"] > box[3])]
+            kc = cf_vis.get("_klpix", {"con": 0})
+            centre = abs((box[0] + box[2]) / 2 - kr["cw"] / 2) < 2 * kr["s"]
+        else:
+            hit, kc, centre, vow = ["no readout"], {"con": 0}, False, []
+        ck(f"Cf. at {cf_w} px Klystron's formants sit in a readout window at the bottom centre, clear of the {len(vow)} vowel letters, and read on it ({kc['con']:.1f}:1)",
+           kr is not None and len(vow) == 5 and not hit and centre and kc["con"] >= 4.5, (hit, kc, sorted(kl)[:7]))
+        ad = sorted((v for k, v in cf_vis.get("additron", {}).items() if k.endswith("'")), key=lambda v: v["l"])
+        ad_clash = [i for i in range(1, len(ad)) if ad[i]["l"] < ad[i - 1]["l"] + ad[i - 1]["w"] + 1]
+        ck(f"Cf. at {cf_w} px Additron's {len(ad)} footage names fit their columns without touching", len(ad) == 9 and not ad_clash, [(round(v["l"]), round(v["w"])) for v in ad])
+        ph = cf_vis.get("phantastron", {}); ph_gap = (ph["BITS"]["y"] - ph["BITS"]["fs"] * 0.8) - ph["ROM"]["y"] if "ROM" in ph and "BITS" in ph else -99
+        ck(f"Cf. at {cf_w} px Phantastron's chip lettering ends above the BITS pad's label ({ph_gap / max(1, ph.get('ROM', {}).get('s', 1)):.0f} px clear; it ran into it on a phone)", ph_gap > 0, ph_gap)
+        ck(f"Cf. at {cf_w} px Phantastron's chip and Heptode's place numbers are drawn (PH-1, ROM, 1)",
+           all(k in cf_vis.get("phantastron", {}) for k in ("PH-1", "ROM", "VCC")) and "1" in cf_vis.get("heptode", {}), (sorted(cf_vis.get("phantastron", {}))[:5], sorted(cf_vis.get("heptode", {}))[:3]))
+        if cf_mob:
+            ck("Cf. 375 px: no sideways scroll after visiting every device", cfp.evaluate("document.documentElement.scrollWidth") <= 375)
+        cfx.close()
+    ck("Cf. no page errors (canvas lettering)", not cferr, cferr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)

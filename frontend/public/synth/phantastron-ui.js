@@ -2,6 +2,7 @@
 // Drag a wire from a source pad (VCC, GND, CLK, NSE, OUT) to a bend
 // (RATE, BITS, LOOP, FB, PITCH, FORM). The same pair again lifts it.
 
+import { houseFont } from './fread.js';
 import {
   phantastronDevice, normalizePhantastron, PHANTA_DEFAULT, PADS, CARTS, toggleWire,
 } from './phantastron.js';
@@ -174,19 +175,37 @@ function drawBoard(canvas, patch, drag, meter) {
   const chipX = W * 0.34;
   const chipY = H * 0.30;
   const chipW = W * 0.32;
-  const chipH = H * 0.16;
+  // The chip stops above the BITS pad's label (graphics, 7 Nov): on a phone's 200 px board it ran into it,
+  // so a short chip carries its two words on one line.
+  const bits = padById('bits');
+  const chipH = Math.min(H * 0.16, (bits ? bits.y * H : H * 0.55) - 30 - chipY);
   g.fillStyle = '#1c1814';
   g.strokeStyle = '#c4a574';
   g.lineWidth = 1.5;
   g.fillRect(chipX, chipY, chipW, chipH);
   g.strokeRect(chipX, chipY, chipW, chipH);
-  g.fillStyle = '#e7d7b0';
-  g.font = '600 12px sans-serif';
+  if ('letterSpacing' in g) g.letterSpacing = '2px';
   g.textAlign = 'center';
-  g.fillText('PH-1', chipX + chipW / 2, chipY + chipH * 0.48);
-  g.font = '10px sans-serif';
-  g.fillStyle = '#a89878';
-  g.fillText('ROM', chipX + chipW / 2, chipY + chipH * 0.78);
+  g.font = '600 12px ' + houseFont();
+  if (chipH >= 30) {
+    g.fillStyle = '#e7d7b0';
+    g.fillText('PH-1', chipX + chipW / 2, chipY + chipH * 0.48);
+    g.font = '10px ' + houseFont();
+    g.fillStyle = '#a89878';
+    g.fillText('ROM', chipX + chipW / 2, chipY + chipH * 0.78);
+  } else {
+    const a = g.measureText('PH-1 ').width;
+    g.font = '10px ' + houseFont();
+    const b = g.measureText('ROM').width;
+    const x0 = chipX + (chipW - a - b) / 2, yb = chipY + chipH / 2 + 4;
+    g.textAlign = 'left';
+    g.fillStyle = '#a89878';
+    g.fillText('ROM', x0 + a, yb);
+    g.font = '600 12px ' + houseFont();
+    g.fillStyle = '#e7d7b0';
+    g.fillText('PH-1', x0, yb);
+  }
+  if ('letterSpacing' in g) g.letterSpacing = '0px';
   const wires = (patch && patch.wires) || [];
   wires.forEach((w, i) => {
     const a = padById(w[0]);
@@ -226,7 +245,7 @@ function drawBoard(canvas, patch, drag, meter) {
     g.fillStyle = '#1a1208';
     g.fill();
     g.fillStyle = '#e7f0d8';
-    g.font = '600 10px sans-serif';
+    g.font = '600 10px ' + houseFont();
     g.textAlign = 'center';
     g.fillText(p.label, x, y - 18);
   });

@@ -3,6 +3,7 @@
 // so the rest of the page can still scroll.
 
 import { makeKnob } from './knob.js';
+import { houseFont, canvasReadout } from './fread.js';
 import {
   klystronDevice, normalizeKlystron, KLY_DEFAULT, SOURCES, WAVES, VOWELS, formantsOf,
 } from './klystron.js';
@@ -316,8 +317,9 @@ export function mountKlystronPanel(container, hooks) {
       c.beginPath();
       c.moveTo(0, h * i / 4); c.lineTo(w, h * i / 4); c.stroke();
     }
+    const s = w / Math.max(1, pad.clientWidth || w);
     c.fillStyle = 'rgba(255, 220, 196, 0.7)';
-    c.font = Math.max(11, Math.round(w * 0.035)) + 'px sans-serif';
+    c.font = '600 ' + Math.max(11, Math.round(w * 0.035)) + 'px ' + houseFont();
     VOWELS.forEach(v => {
       c.fillText(v.label, v.x * w * 0.86 + w * 0.05, (1 - v.y) * h * 0.82 + h * 0.12);
     });
@@ -331,9 +333,9 @@ export function mountKlystronPanel(container, hooks) {
     c.strokeStyle = '#fff4ea';
     c.stroke();
     const fm = formantsOf(p.mouth.x, p.mouth.y);
-    c.fillStyle = '#ffe8d6';
-    c.font = Math.max(11, Math.round(w * 0.032)) + 'px sans-serif';
-    c.fillText(Math.round(fm.f1) + ' / ' + Math.round(fm.f2) + ' Hz', 10, h - 12);
+    // the two formants in a recessed amber readout window, the fader readouts' finish (graphics, 7 Nov)
+    // at the bottom centre, the one edge no vowel letter sits on
+    canvasReadout(c, 'F1 ' + Math.round(fm.f1) + '  F2 ' + Math.round(fm.f2) + ' Hz', w / 2, h - 28 * s, s, 11, 'center');
   }
 
   function place(clientX, clientY) {

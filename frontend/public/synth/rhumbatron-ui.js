@@ -1,5 +1,6 @@
 // Rhumbatron on the page: the cavity you can touch, and the dxrack/1 adapter.
 
+import { canvasEngrave, houseFont } from './fread.js';
 import { rhumbatronDevice, normalizeRhumbatron, RHUM_DEFAULT, BODIES, EXCITERS } from './rhumbatron.js';
 
 const WORKLET = new URL('./rhumbatron.worklet.js', import.meta.url).href;
@@ -116,6 +117,35 @@ function section(tab, id, title) {
   return s;
 }
 
+// The cavity's caption (graphics, 7 Nov): an engraved tag at the top left naming the body and how it
+// is driven, on a small recessed plate with a lamp that lights while a finger is on the cavity. In the
+// house face, like the section names; it was the browser's sans-serif.
+function caption(ctx, p, down) {
+  const text = (BODY_LABEL[p.body] || p.body) + ' \u00b7 ' + (EXCITER_LABEL[p.exciter] || p.exciter);
+  ctx.save();
+  ctx.font = '600 10px ' + houseFont();
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  const tw = ctx.measureText(text.toUpperCase()).width;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  const x = 10, y = 10, hgt = 22, wid = Math.ceil(tw + 34);
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, wid, hgt, 4); else ctx.rect(x, y, wid, hgt);
+  ctx.fillStyle = 'rgba(6, 3, 2, 0.62)'; ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)'; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255, 226, 196, 0.10)';
+  ctx.beginPath(); ctx.moveTo(x + 4, y + hgt + 0.5); ctx.lineTo(x + wid - 4, y + hgt + 0.5); ctx.stroke();
+  const lx = x + 11, ly = y + hgt / 2;
+  if (down) {
+    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, 9);
+    g.addColorStop(0, 'rgba(255, 190, 110, 0.55)'); g.addColorStop(1, 'rgba(255, 140, 40, 0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lx, ly, 9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = down ? '#ffc37a' : '#5a3a26';
+  ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  canvasEngrave(ctx, text, x + 21, ly, 1, { size: 10, spacing: 2 });
+}
+
 function drawCavity(canvas, p, down) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = Math.max(10, canvas.clientWidth);
@@ -156,9 +186,7 @@ function drawCavity(canvas, p, down) {
     ctx.beginPath();
     ctx.arc(sx, sy, down ? 9 : 7, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#f6e6d4';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('plate', 12, 20);
+    caption(ctx, p, down);
     return;
   }
   if (p.body === 'tube') {
@@ -175,9 +203,7 @@ function drawCavity(canvas, p, down) {
     ctx.beginPath();
     ctx.arc(x0 + (x1 - x0) * p.position, (y0 + y1) / 2, 8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#f6e6d4';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('bore', 12, 20);
+    caption(ctx, p, down);
     return;
   }
   const y = h * 0.55;
@@ -205,9 +231,7 @@ function drawCavity(canvas, p, down) {
   ctx.lineTo(px - 8, y);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = '#f6e6d4';
-  ctx.font = '12px sans-serif';
-  ctx.fillText('string', 12, 20);
+  caption(ctx, p, down);
 }
 
 export function mountRhumbatronPanel(container, hooks) {

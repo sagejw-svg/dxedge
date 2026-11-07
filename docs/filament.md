@@ -1487,8 +1487,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (6 Nov): 1. rail plate titles at 761 to 959 px; 2. Rhumbatron's cavity caption; 3. Klystron's source row;
-4. Orthicon's picture list; 5. a user patch's name window on a phone; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (7 Nov): 1. Klystron's source row; 2. Phantastron's seed field (a white browser box); 3. Orthicon's picture list;
+4. a user patch's name window on a phone; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1651,6 +1651,21 @@ Rank of the open items (6 Nov): 1. rail plate titles at 761 to 959 px; 2. Rhumba
   122 at 360, 82 at 320; every key still 44 px on a phone; no sideways scroll; desktop keeps its 240 px window and the
   strip stays one row from 1020 px up with the rack's top where it was (the Hd. checks pass unchanged). Static, so nothing for reduced motion. Display only,
   no audio change. Commit `a602932`. New checks: Pk. (13).
+- [x] 7 Nov: canvas lettering in the house face, rack-wide (grew out of the 3 Nov Rhumbatron caption item). Measured before (a
+  probe on the canvas font setter, every device at 1366 and 375 px): six font strings on five canvases were the browser's
+  sans-serif: Klystron's mouth pad (the vowel letters and the formant line), Phantastron's board (the chip and the pad names),
+  Additron's spectrum (the footage names), Rhumbatron's cavity (its caption) and Heptode's place field (the track numbers);
+  Gleam's effect-mode edge labels too (read in the code). Seen: Rhumbatron's caption was a bare lower-case "string" at the top
+  left; Klystron's "730 / 1278 Hz" was bare text; measured: on a 375 px phone Phantastron's chip (ROM) ran about 1 px into the
+  BITS pad's label. Now: every canvas font on the rack is the --font-mono stack (`houseFont()` in `fread.js`, looked up once);
+  Rhumbatron's caption is an engraved tag on a small recessed plate naming the body and the exciter (STRING · PLUCK), with a
+  lamp that lights while a finger is on the cavity (10.8:1 measured on its plate); Klystron's formants read F1 730 F2 1278 Hz in
+  a recessed amber readout window drawn on the pad (`canvasReadout`, the `.fread` finish, 13.2:1 measured), at the bottom centre
+  where no vowel letter sits; Phantastron's chip lettering is spaced capitals and a short chip (a phone's board) puts PH-1 ROM
+  on one line, 10 px clear of BITS; Additron's footage names step down from 10 px until each fits its column (no change seen at
+  375 or 1366 px). Static, so nothing for reduced motion. Display only, no audio change. New checks: Cf. (18).
+- [ ] Phantastron's seed field (7 Nov, seen at 1366 px): the SEED box in Bends is the browser's white input with black text, the
+  only white control on the rack. A dark recessed field like the patch name window would match.
 - [ ] A user patch's name window on a phone (6 Nov, measured): the delete key (57 px) joins the edit keys on a user
   patch, so the name window drops to 80 px at 375 ("My Te..."). At 320 the edit keys wrap to a row of their own instead
   (name 220 px, the header one row taller while a user patch is loaded). Options: delete inside the save form, or a
@@ -1672,9 +1687,6 @@ Rank of the open items (6 Nov): 1. rail plate titles at 761 to 959 px; 2. Rhumba
   phone, "Wide Nov") is done 6 Nov (see below).
 - [ ] Rail plates on a 761 to 959 px window (27 Oct, measured): the role drops because the plates are 103 to 136 px; a
   title on each plate (the role) would keep it reachable by hover there.
-- [ ] Rhumbatron's cavity (3 Nov, seen at 1366 px): the canvas caption ("string", "bore", "plate") is drawn in the browser's
-  default sans-serif at its top left, where the other panels' canvas text is in the house mono (seen, not measured across every canvas).
-  A small engraved caption in the house face, like Gleam's field edges, would match.
 
 ## Open items for James
 - Nightly 7 Nov, 1939 mode's plot: please look. On Filament, Osc tab, switch 1939 mode on: the filter response plot now sits under the tone tabs and draws the bank they make ("1939 bank: body + voice + mellow", peak near 880 Hz on the defaults); a tab redraws it. With the mode off it goes back to the Filter section as before. Call I made that you may want changed: the plot moves between sections (one plot, so the Filter tab has none while 1939 mode is on) rather than showing twice. The next open 1939 mode item is the mod matrix destination set (tone, tab levels), marked "if wanted": say if you want it, otherwise the next nightly moves on to the punched paper roll step sequencer.

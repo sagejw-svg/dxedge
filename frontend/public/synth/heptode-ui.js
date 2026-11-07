@@ -10,7 +10,7 @@ import {
 } from './heptode.js';
 import { scoreFromBytes, prepareScore } from './heptode-score.js';
 import { trackColor } from './heptode-family.js';
-import { FREAD_FMT, addFread } from './fread.js';
+import { FREAD_FMT, addFread, houseFont } from './fread.js';
 import { createHeptodeEngine, postHeptode, renderHeptode, VOICES } from './heptode-dsp.js';
 
 const WORKLET = new URL('./heptode.worklet.js', import.meta.url).href;
@@ -509,10 +509,10 @@ export function mountHeptodePanel(container, hooks) {
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#1a120c';
-      ctx.font = '11px sans-serif';
+      ctx.font = '600 11px ' + houseFont();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(i + 1), x, y);
+      ctx.fillText(String(i + 1), x, y + 0.5);
     });
   }
 

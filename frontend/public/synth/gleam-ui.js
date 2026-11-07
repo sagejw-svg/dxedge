@@ -9,7 +9,7 @@ import {
   GENERATORS, generatorPoint, generatorEvents,
 } from './gleam.js';
 import { createGleamFx } from './gleam-fx.js';
-import { FREAD_FMT, addFread } from './fread.js';
+import { FREAD_FMT, addFread, houseFont } from './fread.js';
 
 const WORKLET = new URL('./gleam.worklet.js', import.meta.url).href;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1101,7 +1101,7 @@ export function mountGleamPad(container, host, opts) {
     }
     if (p.mode === 'effect') {
       ctx2.fillStyle = 'rgba(255, 179, 71, 0.55)';
-      ctx2.font = (12 * (window.devicePixelRatio || 1)) + 'px sans-serif';
+      ctx2.font = (12 * (window.devicePixelRatio || 1)) + 'px ' + houseFont();
       ctx2.fillText('filter', 12, h - 16);
       ctx2.fillText('feedback', 12, 22);
     }    drawHint(now, p, w, h);
