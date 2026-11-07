@@ -1239,7 +1239,7 @@
         <div class="chips"><span class="cl">shape</span><span data-chips="era.shape" class="chips" style="margin:0" role="group" aria-label="1939 mode envelope shape"></span></div>
         <div class="chips" id="eraTabs" role="group" aria-label="1939 mode tone tabs"><span class="cl">tabs</span><button class="chip" type="button" data-tab39="body" aria-pressed="false" title="Body: a fixed resonance near 300 Hz">body</button><button class="chip" type="button" data-tab39="voice" aria-pressed="false" title="Voice: a fixed resonance near 850 Hz, the vocal one">voice</button><button class="chip" type="button" data-tab39="edge" aria-pressed="false" title="Edge: a fixed resonance near 2.5 kHz, reedy">edge</button><button class="chip" type="button" data-tab39="mellow" aria-pressed="false" title="Mellow: a low-pass at 1.1 kHz">mellow</button><button class="chip" type="button" data-tab39="thin" aria-pressed="false" title="Thin: a high-pass at 700 Hz">thin</button><button class="chip" type="button" data-tab39="open" aria-pressed="false" title="Open: the divided wave straight through">open</button></div>
         <div class="knobs" id="kEra"></div>
-        <div class="note">Twelve master oscillators, one per note name, and every octave divided down from them, so octaves stay locked in phase. The resonators are fixed: they do not follow the key, so each note sits differently in them. Tabs add in parallel. The sustain pedal lengthens the release (pedal) instead of holding notes. While it is on, the oscillators, both filters, the envelopes, the LFOs, unison, glide and the mod matrix rest; V1, voices, tune, bend, the wheel and the rack still play.</div></section>
+        <div class="note">Twelve master oscillators, one per note name, and every octave divided down from them, so octaves stay locked in phase. The resonators are fixed: they do not follow the key, so each note sits differently in them. Tabs add in parallel. The plot under the tabs is the bank they make. The sustain pedal lengthens the release (pedal) instead of holding notes. While it is on, the oscillators, both filters, the envelopes, the LFOs, unison, glide and the mod matrix rest; V1, voices, tune, bend, the wheel and the rack still play.</div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mV1"><h3><span class="pilot"></span>V1 drive tube</h3><div class="chips" data-chips="v1.tube"></div><div class="knobs" id="kV1"></div>
         <div class="note">Before the filters. More drive, more saturation into the filter.</div></section>
       <section class="mod" data-dev="filament" data-tab="filter" id="mFilt" data-wide><h3><span class="pilot"></span>Filter</h3><div class="chips" data-chips="filt.model"></div>
@@ -3100,6 +3100,10 @@ function afterF() {
   $('eraPilot').classList.toggle('off', !e39); $('mEra').classList.toggle('off', !e39);
   document.querySelectorAll('[data-tab39]').forEach(b => b.setAttribute('aria-pressed', String(!!(cur.era && cur.era.tabs[b.dataset.tab39]))));
   ['mOsc1', 'mOsc2', 'mSub', 'mFilt', 'mFiltB', 'mEnvA', 'mEnvF', 'mLfo', 'mLfo2', 'mMatrix'].forEach(id => $(id).classList.toggle('rest39', e39));
+  // the response plot goes where the sound is shaped: under the tone tabs in 1939 mode (it draws the bank),
+  // back in Filter otherwise. One canvas, so the frame loop still draws it once.
+  const fpIn = e39 ? $('mEra') : $('mFilt');
+  if ($('fpCv').parentNode !== fpIn) (e39 ? $('kEra') : $('kFilt')).before($('fpRead'), $('fpCv'));
   const uniOn = cur.voice.unison > 1 && !e39;
   kn('voice.detune').k.el.style.opacity = uniOn ? '' : '0.45'; kn('stereo.uspread').k.el.style.opacity = uniOn ? '' : '0.45';
   // review R1106-1: 1939 mode ignores unison and glide (the masters set the pitch), so their knobs rest and say so
@@ -3166,10 +3170,12 @@ function fpRead() {
   const tail = sings ? ' &middot; <b>sings</b> near ' + fmtF(Math.round(pk.f)) + 'Hz'
     : pk.db > 1 && pk.db > pass + 1 ? ' &middot; peak ' + sgnDb(pk.db) + ' at ' + fmtF(Math.round(pk.f)) + 'Hz'
     : pass > 1 ? ' &middot; passband ' + sgnDb(pass) : '';
-  const t = (r === FP.live ? 'playing' : 'knobs at middle C') + ': A ' + fmtF(Math.round(r.cutA)) + 'Hz' + B + tail;
+  // 1939 mode: the fixed bank, so no cutoff and no note; the tabs that are in name the curve
+  const t = r.bank ? '1939 bank: ' + (r.tabs39 || []).join(' + ') + tail
+    : (r === FP.live ? 'playing' : 'knobs at middle C') + ': A ' + fmtF(Math.round(r.cutA)) + 'Hz' + B + tail;
   if (el.dataset.t === t) return;
   el.dataset.t = t; el.innerHTML = '<span class="dim">' + t.replace(/^([^:]+):/, '$1:</span>');
-  $('fpCv').setAttribute('aria-label', 'Filter response, ' + t.replace(/&middot;/g, ',').replace(/<[^>]+>/g, ''));
+  $('fpCv').setAttribute('aria-label', (r.bank ? '1939 mode resonator bank response, ' : 'Filter response, ') + t.replace(/&middot;/g, ',').replace(/<[^>]+>/g, ''));
 }
 function drawFp(now, m) {
   const fb = cur.filtB || {}, cutA = cur.filt.cutoff, cutB = fb.cutoff || 2000;
@@ -3179,7 +3185,8 @@ function drawFp(now, m) {
   if (!FP.busy && !FP.err) {
     if (FP.dirty || !FP.knob) {
       FP.busy = true; FP.dirty = false;
-      fpAsk(cur, cutA, cutB).then(d => { FP.busy = false; const r = fpGot(d); if (r) { FP.knob = r; FP.stale = true; } });
+      const tabs39 = cur.era && cur.era.on ? Object.keys(cur.era.tabs).filter(t => cur.era.tabs[t]) : null;
+      fpAsk(cur, cutA, cutB).then(d => { FP.busy = false; const r = fpGot(d); if (r) { if (r.bank) r.tabs39 = tabs39 || []; FP.knob = r; FP.stale = true; } });
     } else if (playing && now - FP.lastT >= FP.gap) {
       const L = FP.live, mv = !L || FP.stale || Math.abs(Math.log2(m.fcA / L.cutA)) > 1 / 48 || (L.route && Math.abs(Math.log2((m.fcB || cutB) / L.cutB)) > 1 / 48);
       if (mv) {
@@ -3200,7 +3207,7 @@ function drawFp(now, m) {
 // tests: the plotted curve (the knobs, or the live one), read at frequencies
 function fpSummary(r) {
   if (!r) return null; const pk = peakOf(r, r.route === 3 ? 'a' : 'sum');
-  return { route: r.route, cutA: r.cutA, cutB: r.cutB, ringA: r.ringA, ringB: r.ringB, peakDb: pk.db, peakHz: pk.f, ms: r.ms };
+  return { route: r.route, cutA: r.cutA, cutB: r.cutB, ringA: r.ringA, ringB: r.ringB, peakDb: pk.db, peakHz: pk.f, ms: r.ms, bank: !!r.bank };
 }
 
 // ---------------------------------------------------------------- graphic EQ (rack-wide)
@@ -4918,14 +4925,14 @@ window.__synth = {
   routeHit: (dest, on, n, v) => routeHit(dest, on, n, v),   // tests: the song library's path to a device, past the page's keys
   // the filter response plot: what it shows, and its curves read at frequencies (dB)
   filterPlot: () => ({ ready: !!FP.knob, err: FP.err, live: !!(FP.live && FP.liveMix > 0.5), liveMix: FP.liveMix, knob: fpSummary(FP.knob), playing: fpSummary(FP.live),
-    ms: FP.ms, drawMs: FP.drawMs, n: FP.n, read: $('fpRead').textContent, label: $('fpCv').getAttribute('aria-label'),
+    ms: FP.ms, drawMs: FP.drawMs, n: FP.n, read: $('fpRead').textContent, label: $('fpCv').getAttribute('aria-label'), home: $('fpCv').parentNode.id,
     painted: (() => { const c = $('fpCv'); if (!c.width) return 0; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 4) s += x[i] + x[i + 1]; return s / (x.length / 4); })() }),
   filterPlotAt: (freqs, which, key) => { const r = which === 'live' ? FP.live : FP.knob; return r ? freqs.map(hz => dbAt(r, key || 'sum', hz)) : null; },
   // the same lab on any Filament patch, without touching the page's curves (sr: a lab at that rate,
   // for comparing with offline renders; the page's follows the live context)
   filterRespOf: async (p, cutA, cutB, freqs, sr) => {
     const d = await fpAsk(normalize(p), cutA, cutB == null ? 2000 : cutB, sr); if (d.err) return { err: d.err }; const r = d.r;
-    return { sr: r.sr, route: r.route, ringA: r.ringA, ringB: r.ringB, ms: r.ms, peak: peakOf(r, r.route === 3 ? 'a' : 'sum'), sum: freqs.map(hz => dbAt(r, 'sum', hz)), a: freqs.map(hz => dbAt(r, 'a', hz)), b: r.b ? freqs.map(hz => dbAt(r, 'b', hz)) : null }; },
+    return { sr: r.sr, route: r.route, ringA: r.ringA, ringB: r.ringB, ms: r.ms, bank: !!r.bank, peak: peakOf(r, r.route === 3 ? 'a' : 'sum'), sum: freqs.map(hz => dbAt(r, 'sum', hz)), a: freqs.map(hz => dbAt(r, 'a', hz)), b: r.b ? freqs.map(hz => dbAt(r, 'b', hz)) : null }; },
   setTubeShow: mode => setShow(mode),
   device: () => dev,
   setDevice: d => setDevice(d),

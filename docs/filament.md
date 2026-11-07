@@ -65,8 +65,8 @@ task can read it).
 | File | What it is |
 |-|-|
 | `frontend/public/synth/index.html` | The page: panel, chassis, keyboard, MIDI, patches, test hook `window.__synth` |
-| `frontend/public/synth/voice.worklet.js` | Both devices' engines (AudioWorklet): processor `filament` (oscillators, V1, filter slots A and B, envelopes, LFOs, the mod matrix, the arpeggiator (class `Arp`), voices, 1939 mode (`render39`: divide-down masters, the fixed resonator bank, the seven shapes, six-channel vibrato); `fresp()` for the response plot, never called on the audio thread) and processor `cathode` (one voice, the patch graph, diode-clipped SVF high-pass and low-pass) |
-| `frontend/public/synth/filtplot.js`, `filtplot.worker.js` | The filter response plot: a worker runs a silent copy of the `filament` processor (the worklet file evaluated with stand-ins for the AudioWorklet globals), rings its filters with a small impulse through `fresp()` and reads the response with a Goertzel pass; the page draws it |
+| `frontend/public/synth/voice.worklet.js` | Both devices' engines (AudioWorklet): processor `filament` (oscillators, V1, filter slots A and B, envelopes, LFOs, the mod matrix, the arpeggiator (class `Arp`), voices, 1939 mode (`render39`: divide-down masters, the fixed resonator bank, the seven shapes, six-channel vibrato); `fresp()` for the response plot, and `frun39()` for 1939 mode's bank on it, never called on the audio thread) and processor `cathode` (one voice, the patch graph, diode-clipped SVF high-pass and low-pass) |
+| `frontend/public/synth/filtplot.js`, `filtplot.worker.js` | The filter response plot: a worker runs a silent copy of the `filament` processor (the worklet file evaluated with stand-ins for the AudioWorklet globals), rings its filters with a small impulse through `fresp()` and reads the response with a Goertzel pass; the page draws it. In 1939 mode the curve is the fixed resonator bank (`bank` on the response) and the plot sits in the 1939 mode section |
 | `frontend/public/synth/engine.js` | Builds the devices + rack in any context; `setDevice`; `renderOffline`; `midiEvent`; hosts the mixer, transport and device facades. The master gain feeds `makeMasterFx` after the mixer (a bypassed offline render skips the worklet; `masterFx: false` wires the gain straight through) |
 | `frontend/public/synth/masterfx.js`, `master.worklet.js`, `masterui.js` | Master bus after the mixer and the output chain: tempo-syncable stereo delay, Freeverb-style reverb, bus compressor/limiter. Each bypasses on its own. State is `filament_master` in localStorage, not a device patch |
 | `frontend/public/synth/fread.js` | Fader readouts (display only): `hookFader` (hooks an input's value setter so every write repaints its window and aria-valuetext), `addFread` (makes the window after a fader) and the formats `FREAD_FMT`. Used by the mix desk, the deck tempo, the header VOL, Heptode, Gleam and Resnatron; the `.fread` window style is in `desk.css` |
@@ -1000,7 +1000,16 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         clip, so it rings but never sings. A tab change on a slot running it rides the patch duck and restarts that slot's
         filters. The response plot draws it (fresp runs the same code). Panel: an "LC bank" chip in Filter and Filter B
         and a tabs row under each that shows only on that model. No factory patch uses it, so nothing sounds different.
-  - [ ] The filter response plot draws the resonator bank while 1939 mode is on (it still draws slot A, which rests)
+  - [x] The filter response plot draws the resonator bank while 1939 mode is on - 7 Nov 2026 (nightly).
+        `fresp()` in voice.worklet.js checks `e39` first: in 1939 mode it returns route 0 and fills slot A's response from
+        `frun39()`, a unit impulse through the five sections as `render39` runs them (`lcK`, the tabs' `E_LC` gains, open as
+        the straight path, all over the square root of the tabs in). The bank is fixed, so the curve ignores the cutoff, the
+        key and slot B, and a note draws no live curve. The lab tags the response `bank`; the page then reads "1939 bank:"
+        and the tabs that are in, with the peak, and draws no cutoff mark. The plot itself (readout and canvas, one element
+        each) moves under the tone tabs in the 1939 mode section while the mode is on (Osc tab, phones too) and back into
+        Filter above its knobs when it is off, so it is never shown dimmed under "resting". Measured: the plot against the
+        voice (a C2 staircase's harmonics, each against open alone) within 0.06 dB on five tab sets, 65 Hz to 3.6 kHz.
+        Display only: nothing in the audio path changed.
   - [ ] 1939 mode as a mod matrix destination set (tone, tab levels), if wanted
 - [ ] Punched paper roll step sequencer
 - [ ] Theremin mode with the magic eye as tuning indicator

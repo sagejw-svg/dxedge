@@ -1055,6 +1055,8 @@ class Filament extends AudioWorkletProcessor {
     const m = f.model === 'ladder24' ? 1 : f.model === 'diode18' ? 2 : f.model === 'sk12' ? 3 : f.model === 'poly24' ? 4 : f.model === 'svf12' ? 5 : f.model === 'lpg' ? 6 : f.model === 'lc' ? 7 : 0;
     const lG = 1.3 * Math.pow((this.lTube.gain || 0.774) / 0.774, LGX), sagA = clamp(num(f.sag, 3), 0, 10) / 10;
     if (!this.frF) { this.frF = new Filt(); this.frG = new Float64Array(2); this.frL = new Int32Array(2); }
+    // 1939 mode: the voices skip both slots and run the fixed bank, so the plot draws the bank (route 0)
+    if (this.e39) { this.frL[0] = this.frun39(hA, n); this.frL[1] = 0; this.frG[0] = 1; this.frG[1] = 0; return 0; }
     this.frL[0] = this.frun(this.frF, m, cutA, num(f.res, 0), this.skGh, num(f.morph, 0), hA, n, lG, sagA, this.lcTA);
     this.frL[1] = route ? this.frun(this.frF, modelBOf(fb.model), cutB, num(fb.res, 0), 0, num(fb.morph, 0), hB, n, lG, sagA, this.lcTB) : 0;
     const bal = clamp(num(fb.bal, 0), -1, 1);
@@ -1089,6 +1091,36 @@ class Filament extends AudioWorkletProcessor {
     const used = i;
     for (; i < n; i++) h[i] = 0;
     s[F_V2] = 0;
+    return used;
+  }
+  // 1939 mode's resonator bank as render39 runs it: each tab that is in adds its section (E_LC order) at its
+  // gain, open adds the straight path, and the sum is over the square root of the tabs in. From a unit impulse
+  // into fresh states (the bank is linear, so the size does not matter). It does not follow the key or the
+  // cutoff, so a set of tabs has one curve. Stops early the way frun() does. Not on the audio thread.
+  frun39(h, n) {
+    const tb = (this.P.era || {}).tabs || {}, K = this.lcK;
+    const st = this.fr39 || (this.fr39 = new Float64Array(10)), g = this.fr39g || (this.fr39g = new Float64Array(6));
+    let on = 0;
+    for (let j = 0; j < 6; j++) { const t = tb[E_TABS[j]] ? 1 : 0; on += t; g[j] = t * (j < 5 ? E_LC[j][3] : 1); }
+    const gn = 1 / Math.sqrt(on > 1 ? on : 1);
+    st.fill(0);
+    let pk = 0, bk = 0, i = 0;
+    for (; i < n; i++) {
+      const y = i === 0 ? 1 : 0; let out = g[5] * y;
+      for (let j = 0; j < 5; j++) {
+        if (g[j] === 0) continue;
+        const o = j * 4, s1 = st[2 * j], s2 = st[2 * j + 1], v3 = y - s2;
+        const u1 = K[o] * s1 + K[o + 1] * v3, u2 = s2 + K[o + 1] * s1 + K[o + 2] * v3;
+        st[2 * j] = 2 * u1 - s1; st[2 * j + 1] = 2 * u2 - s2;
+        const kind = E_LC[j][0];
+        out += g[j] * (kind === 0 ? K[o + 3] * u1 : kind === 1 ? u2 : y - K[o + 3] * u1 - u2);
+      }
+      out *= gn; h[i] = out;
+      const a = out < 0 ? -out : out; if (a > pk) pk = a; if (a > bk) bk = a;
+      if ((i & 255) === 255) { if (i > 1024 && bk < pk * 1e-7) { i++; break; } bk = 0; }
+    }
+    const used = i;
+    for (; i < n; i++) h[i] = 0;
     return used;
   }
 

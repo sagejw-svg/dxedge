@@ -7,6 +7,7 @@
 // impulse through fresh filters at the 2x rate, using the same fcoef() and filter code the voices run.
 // A Goertzel pass reads each impulse response at the plot's frequencies. Serial multiplies A and B,
 // parallel sums them with their phases at the route's gains, split keeps them apart (A left, B right).
+// In 1939 mode (the patch's era.on) the voices skip both slots, and fresp() rings the fixed resonator bank instead.
 // The lab runs in a worker (filtplot.worker.js), off the audio thread and the page's main thread; the
 // page draws with drawFilterPlot().
 
@@ -53,7 +54,8 @@ export async function createFilterLab(sr, tubes, url) {
         else if (route === 2) sum[i] = db(Math.hypot(gA * reA[i] + gB * reB[i], gA * imA[i] + gB * imB[i]));
         else sum[i] = a[i];                      // split: no sum; A is the left side
       }
-      return { route, f, a, b, sum, ringA, ringB, cutA, cutB, ms: performance.now() - t0 };
+      // bank: 1939 mode is on, and the curve is its fixed resonator bank (no cutoff, no slot B)
+      return { route, f, a, b, sum, ringA, ringB, cutA, cutB, bank: !!proc.e39, ms: performance.now() - t0 };
     },
   };
 }
@@ -105,7 +107,7 @@ export const dY = (d, G) => G.T + (FP_TOP - d) / (FP_TOP - FP_BOT) * G.ih;
 const GRID_F = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
 const fmt = f => f >= 1000 ? (f / 1000) + 'k' : String(f);
 
-// st: { knob, live (a response or null), liveMix 0..1, font }
+// st: { knob, live (a response or null), liveMix 0..1, font }. A 1939 mode bank curve (r.bank) has no cutoff mark.
 export function drawFilterPlot(fc, st) {
   const c = fc.c, G = plotGeom(fc.w, fc.h);
   c.clearRect(0, 0, G.w, G.h);
@@ -137,7 +139,7 @@ export function drawFilterPlot(fc, st) {
     // the live cutoff marks
     mark(c, G, lv.cutA, 'rgba(255,200,120,' + (0.6 * mix) + ')');
     if (lv.route) mark(c, G, lv.cutB, 'rgba(130,200,255,' + (0.6 * mix) + ')');
-  } else if (k) {
+  } else if (k && !k.bank) {
     mark(c, G, k.cutA, 'rgba(255,200,120,0.35)');
     if (k.route) mark(c, G, k.cutB, 'rgba(130,200,255,0.35)');
   }

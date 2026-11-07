@@ -11,7 +11,7 @@ self.onmessage = async e => {
     lab.setPatch(m.patch);
     const r = lab.response(m.cutA, m.cutB);
     const tr = [r.a.buffer, r.sum.buffer]; if (r.b) tr.push(r.b.buffer);
-    self.postMessage({ id: m.id, r: { sr: m.sr, route: r.route, f: r.f.slice(), a: r.a, b: r.b, sum: r.sum, ringA: r.ringA, ringB: r.ringB, cutA: r.cutA, cutB: r.cutB, ms: r.ms } }, tr);
+    self.postMessage({ id: m.id, r: { sr: m.sr, route: r.route, f: r.f.slice(), a: r.a, b: r.b, sum: r.sum, ringA: r.ringA, ringB: r.ringB, cutA: r.cutA, cutB: r.cutB, bank: r.bank, ms: r.ms } }, tr);
   } catch (err) {
     if (labs[m.sr]) labs[m.sr].catch(() => { delete labs[m.sr]; });
     self.postMessage({ id: m.id, err: String((err && err.message) || err) });

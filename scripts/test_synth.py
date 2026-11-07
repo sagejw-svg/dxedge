@@ -1269,6 +1269,79 @@ with sync_playwright() as pw:
     pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
     ck("Er. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Eb. the response plot in 1939 mode (7 Nov)
+    # In 1939 mode the voices skip both filter slots and run the fixed bank, so the plot draws the bank (fresp's
+    # frun39) under the tone tabs. Measured against the voice: a staircase C2 through a set of tabs, each harmonic
+    # against the same note on open alone (V1 and the coupling cap come before the bank, so they cancel).
+    _eb_h = [1, 2, 3, 4, 5, 7, 9, 11, 13, 17, 21, 26, 33, 38, 45, 55]
+    _f0 = 440 * 2 ** ((36 - 69) / 12)
+    _eb_f = [_f0 * k_ for k_ in _eb_h]
+    Lob_ = era_r(era_p(tone=1), note(36), 1.0)[SR // 4:]
+    ob_ = [tone_amp(Lob_, f_) for f_ in _eb_f]; obm_ = max(ob_)
+    eb_err = {}
+    for nm_, tb_ in (("voice", {"voice": True}), ("body+mellow", {"body": True, "mellow": True}), ("default", {"body": True, "voice": True, "mellow": True}),
+                     ("edge+thin+open", {"edge": True, "thin": True, "open": True}), ("all", {k_: True for k_ in _ETABS})):
+        Lt_ = era_r(era_p(tabs=tb_, tone=1), note(36), 1.0)[SR // 4:]
+        pl_ = fp_of(era_p(tabs=tb_, tone=1), 1000, fq=_eb_f)
+        e_ = []
+        for i_, f_ in enumerate(_eb_f):
+            if ob_[i_] < obm_ * 0.01: continue                  # a harmonic the staircase barely has
+            meas = db(tone_amp(Lt_, f_) / ob_[i_])
+            if meas > -30: e_.append(round(pl_["a"][i_] - meas, 2))
+        eb_err[nm_] = e_ if pl_.get("bank") and pl_["route"] == 0 else ["not a bank curve", pl_.get("bank"), pl_["route"]]
+    eb_w = max((abs(x_) for v_ in eb_err.values() for x_ in v_ if isinstance(x_, float)), default=99)
+    ck(f"Eb. the plot draws the bank the voice plays: five tab sets, a C2 staircase's harmonics from 65 Hz to 3.6 kHz, within 0.3 dB (worst {eb_w:.2f} dB)",
+       eb_w <= 0.3 and all(len(v_) >= 8 and all(isinstance(x_, float) for x_ in v_) for v_ in eb_err.values()), eb_err)
+    info("Eb. plot minus measured, dB, at the C2 harmonics", eb_err)
+    e1_ = fp_of(era_p(tabs={"body": True, "voice": True, "mellow": True}), 200, 300, fq=FQS)
+    e2_ = fp_of(era_p(tabs={"body": True, "voice": True, "mellow": True}, vib=40), 8000, 9000, fq=FQS)
+    eo_ = fp_of(patch(filt={"model": "lc", "cutoff": 850}), 850, fq=FQS)
+    ck(f"Eb. the bank does not follow the cutoff (200 Hz against 8 kHz, {max(abs(x_ - y_) for x_, y_ in zip(e1_['a'], e2_['a'])):.4f} dB apart) or slot B (route {e1_['route']}); with 1939 mode off the plot is the slot again (bank {eo_['bank']})",
+       e1_["bank"] and e1_["route"] == 0 and max(abs(x_ - y_) for x_, y_ in zip(e1_["a"], e2_["a"])) <= 0.001 and eo_["bank"] is False, (e1_, e2_, eo_))
+    # the page: the plot moves under the tabs, names them, follows a tab, draws no live curve, and goes home when it is off
+    pg.evaluate("p => __synth.setPatch(p)", era_p(tabs={"body": True, "voice": True, "mellow": True}, shape="organ", tone=0.6))
+    try: pg.wait_for_function("(() => { const f = __synth.filterPlot(); return f.knob && f.knob.bank && f.home === 'mEra' && f.read.startsWith('1939 bank'); })()", timeout=5000); eb_ok = True
+    except Exception as e_: eb_ok = False
+    eb1_ = pg.evaluate("""() => { const f = __synth.filterPlot(), c = document.getElementById('fpCv'); let o = 1;
+      for (let e = c; e && e.id !== 'mEra'; e = e.parentElement) o *= +getComputedStyle(e).opacity;
+      return { home: f.home, read: f.read, label: f.label, peakHz: f.knob && f.knob.peakHz, peakDb: f.knob && f.knob.peakDb, op: o, vis: !!c.offsetParent,
+        afterTabs: document.getElementById('eraTabs').nextElementSibling === document.getElementById('fpRead'), painted: f.painted }; }""")
+    ck(f"Eb. 1939 mode on: the plot sits under the tone tabs, undimmed, and reads the bank (body + voice + mellow, peak near 850 Hz) with no cutoff ({eb1_})",
+       eb_ok and eb1_["home"] == "mEra" and eb1_["afterTabs"] and eb1_["op"] == 1 and eb1_["read"].startswith("1939 bank: body + voice + mellow") and "peak +" in eb1_["read"]
+       and "A " not in eb1_["read"] and 700 <= (eb1_["peakHz"] or 0) <= 1000 and eb1_["label"].startswith("1939 mode resonator bank response") and eb1_["painted"] > 5, eb1_)
+    e25a_ = pg.evaluate("__synth.filterPlotAt([2500], 'knob')")[0]
+    pg.click('#mEra [data-tab39="edge"]')
+    try: pg.wait_for_function("__synth.filterPlot().read.includes('edge')", timeout=5000); ed_ok = True
+    except Exception as e_: ed_ok = False
+    e25b_ = pg.evaluate("__synth.filterPlotAt([2500], 'knob')")[0]
+    ck(f"Eb. a tab redraws the bank: edge in lifts 2.5 kHz from {e25a_:+.1f} to {e25b_:+.1f} dB and the readout names it ('{pg.evaluate('__synth.filterPlot().read')}')",
+       ed_ok and e25b_ - e25a_ >= 6, (e25a_, e25b_))
+    eb2_ = pg.evaluate("""async () => { __synth.noteOn(60, 0.8); await new Promise(r => setTimeout(r, 500)); const f = __synth.filterPlot(); __synth.noteOff(60); return { live: f.live, read: f.read, m: __synth.meter().voices }; }""")
+    ck(f"Eb. a note in 1939 mode draws no live curve (the bank does not move with the note) and the readout stays on the bank ({eb2_})",
+       eb2_["live"] is False and eb2_["read"].startswith("1939 bank") and eb2_["m"] >= 1, eb2_)
+    pg.evaluate("p => __synth.setPatch(p)", patch(filt={"model": "ladder24", "cutoff": 700, "res": 0.3, "keytrack": 0}))
+    try: pg.wait_for_function("(() => { const f = __synth.filterPlot(); return f.home === 'mFilt' && f.knob && !f.knob.bank && f.knob.cutA === 700 && f.read.startsWith('knobs at middle C'); })()", timeout=5000); eh_ok = True
+    except Exception as e_: eh_ok = False
+    eb3_ = pg.evaluate("() => ({ home: __synth.filterPlot().home, read: __synth.filterPlot().read, label: __synth.filterPlot().label, next: document.getElementById('fpCv').nextElementSibling.id })")
+    ck(f"Eb. 1939 mode off: the plot goes back into Filter above its knobs and reads slot A again ({eb3_})",
+       eh_ok and eb3_["home"] == "mFilt" and eb3_["next"] == "kFilt" and eb3_["label"].startswith("Filter response"), eb3_)
+    phb = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); perrb = []
+    phb.on("pageerror", lambda e: perrb.append(str(e)))
+    phb.goto(BASE); phb.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phb.wait_for_timeout(200)
+    phb.evaluate("p => __synth.setPatch(p)", era_p(tabs={"voice": True, "edge": True}))
+    phb.tap('.tabs [data-go="osc"]')
+    try: phb.wait_for_function("(() => { const f = __synth.filterPlot(); return f.home === 'mEra' && f.knob && f.knob.bank && f.painted > 5; })()", timeout=8000); pb_ok = True
+    except Exception as e_: pb_ok = False
+    pbv_ = phb.evaluate("""() => { const r = document.getElementById('fpCv').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), right: Math.round(r.right),
+      vis: !!document.getElementById('fpCv').offsetParent, scroll: document.documentElement.scrollWidth <= innerWidth, read: __synth.filterPlot().read }; }""")
+    ck(f"Eb. 375px: the Osc tab shows the bank's plot in the 1939 section, inside the screen, painted, no horizontal scroll ({pbv_})",
+       pb_ok and pbv_["vis"] and pbv_["h"] >= 100 and pbv_["left"] >= 0 and pbv_["right"] <= 375 and pbv_["scroll"] and pbv_["read"].startswith("1939 bank: voice + edge"), pbv_)
+    phb.evaluate("p => __synth.setPatch(p)", patch()); phb.wait_for_timeout(100)
+    ck("Eb. 375px: no page errors", not perrb, perrb)
+    phb.close()
+    pg.evaluate("p => __synth.setPatch(p)", patch()); pg.wait_for_timeout(100)
+    ck("Eb. no page errors", not errs, errs)
+
     # ---------------------------------------------------------------- Lc. the LC bank as a filter model (6 Nov)
     # filt.model / filtB.model 'lc': 1939 mode's five fixed sections (E_LC) in a filter slot, picked by the slot's tabs.
     # The model below is the five sections as analog prototypes through the bilinear map at the 2x rate, the cutoff
