@@ -4925,7 +4925,7 @@ window.__synth = {
   routeHit: (dest, on, n, v) => routeHit(dest, on, n, v),   // tests: the song library's path to a device, past the page's keys
   // the filter response plot: what it shows, and its curves read at frequencies (dB)
   filterPlot: () => ({ ready: !!FP.knob, err: FP.err, live: !!(FP.live && FP.liveMix > 0.5), liveMix: FP.liveMix, knob: fpSummary(FP.knob), playing: fpSummary(FP.live),
-    ms: FP.ms, drawMs: FP.drawMs, n: FP.n, read: $('fpRead').textContent, label: $('fpCv').getAttribute('aria-label'), home: $('fpCv').parentNode.id,
+    ms: FP.ms, drawMs: FP.drawMs, n: FP.n, read: $('fpRead').textContent, label: $('fpCv').getAttribute('aria-label'), home: $('fpCv').parentNode.id, busy: FP.busy,
     painted: (() => { const c = $('fpCv'); if (!c.width) return 0; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 4) s += x[i] + x[i + 1]; return s / (x.length / 4); })() }),
   filterPlotAt: (freqs, which, key) => { const r = which === 'live' ? FP.live : FP.knob; return r ? freqs.map(hz => dbAt(r, key || 'sum', hz)) : null; },
   // the same lab on any Filament patch, without touching the page's curves (sr: a lab at that rate,

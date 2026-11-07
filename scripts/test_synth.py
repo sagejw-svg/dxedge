@@ -1330,10 +1330,13 @@ with sync_playwright() as pw:
     phb.goto(BASE); phb.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phb.wait_for_timeout(200)
     phb.evaluate("p => __synth.setPatch(p)", era_p(tabs={"voice": True, "edge": True}))
     phb.tap('.tabs [data-go="osc"]')
-    try: phb.wait_for_function("(() => { const f = __synth.filterPlot(); return f.home === 'mEra' && f.knob && f.knob.bank && f.painted > 5; })()", timeout=8000); pb_ok = True
+    # (a fresh page: its first curve also loads the lab, so 15 s as in the Fp. first-load check; one run of 7 Nov
+    # missed an 8 s wait with no curve at all, not reproduced in 14 runs alone or under load, so the state is logged)
+    try: phb.wait_for_function("(() => { const f = __synth.filterPlot(); return f.home === 'mEra' && f.knob && f.knob.bank && f.painted > 5; })()", timeout=15000); pb_ok = True
     except Exception as e_: pb_ok = False
-    pbv_ = phb.evaluate("""() => { const r = document.getElementById('fpCv').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), right: Math.round(r.right),
-      vis: !!document.getElementById('fpCv').offsetParent, scroll: document.documentElement.scrollWidth <= innerWidth, read: __synth.filterPlot().read }; }""")
+    pbv_ = phb.evaluate("""() => { const r = document.getElementById('fpCv').getBoundingClientRect(), f = __synth.filterPlot(); return { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), right: Math.round(r.right),
+      vis: !!document.getElementById('fpCv').offsetParent, scroll: document.documentElement.scrollWidth <= innerWidth, read: f.read,
+      home: f.home, n: f.n, err: f.err, busy: f.busy, dev: __synth.device(), era: __synth.patch().era.on }; }""")
     ck(f"Eb. 375px: the Osc tab shows the bank's plot in the 1939 section, inside the screen, painted, no horizontal scroll ({pbv_})",
        pb_ok and pbv_["vis"] and pbv_["h"] >= 100 and pbv_["left"] >= 0 and pbv_["right"] <= 375 and pbv_["scroll"] and pbv_["read"].startswith("1939 bank: voice + edge"), pbv_)
     phb.evaluate("p => __synth.setPatch(p)", patch()); phb.wait_for_timeout(100)
