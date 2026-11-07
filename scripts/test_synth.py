@@ -1327,17 +1327,36 @@ with sync_playwright() as pw:
        eh_ok and eb3_["home"] == "mFilt" and eb3_["next"] == "kFilt" and eb3_["label"].startswith("Filter response"), eb3_)
     phb = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); perrb = []
     phb.on("pageerror", lambda e: perrb.append(str(e)))
-    phb.goto(BASE); phb.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phb.wait_for_timeout(200)
+    # A timeline of the plot's state and the page's long tasks, kept by a timer, so a miss says whether the curve
+    # came late, the frame loop stalled, or the page was still booting (improvement 7 Nov).
+    phb.add_init_script("""window.__ebLong = []; try { new PerformanceObserver(l => { for (const e_ of l.getEntries()) if (e_.duration >= 200) __ebLong.push([Math.round(e_.startTime), Math.round(e_.duration)]); }).observe({ type: 'longtask', buffered: true }); } catch (e_) {}""")
+    phb.goto(BASE); phb.wait_for_function("window.__synth && __synth.ready()", timeout=20000)
+    # The page boots on after ready(): every hosted device attaches and the boot queue drains, a few seconds of
+    # main-thread work on a fresh page (3 to 7 s measured on a 2-core box, long tasks up to 0.6 s). The plot's
+    # first curve was asked for inside that window (measured: booted() false through every passing timeline) and
+    # missed the 8 s and then 15 s wait in four full suite runs on 7 Nov (nightly 1, graphics 2, improvement 1),
+    # with the state n 1, busy false, readout 'response': the curve had just landed and no frame had drawn it.
+    # Not reproduced in 14 runs of this block outside the full suite (inferred cause: the boot's main-thread
+    # work under the full suite's load). This check is about where the bank's plot sits on a phone and that it
+    # is painted, not about boot time, so it starts once the boot is done (the R. section's 30 s allowance).
+    try: phb.wait_for_function("__synth.booted()", timeout=30000); pbb_ok = True
+    except Exception as e_: pbb_ok = False
     phb.evaluate("p => __synth.setPatch(p)", era_p(tabs={"voice": True, "edge": True}))
+    phb.evaluate("""() => { window.__ebLog = []; window.__ebFr = 0; const t0 = performance.now(); let last = '';
+      (function rf() { __ebFr++; requestAnimationFrame(rf); })();
+      window.__ebT = setInterval(() => { const f = __synth.filterPlot(); const s = [f.n, f.busy, f.read.slice(0, 24), !!f.knob, !!(f.knob && f.knob.bank), __synth.booted(), !!document.getElementById('fpCv').offsetParent, document.visibilityState].join('|');
+        if (s !== last) { __ebLog.push([Math.round(performance.now() - t0), __ebFr, s]); last = s; } }, 100); }""")
     phb.tap('.tabs [data-go="osc"]')
-    # (a fresh page: its first curve also loads the lab, so 15 s as in the Fp. first-load check; one run of 7 Nov
-    # missed an 8 s wait with no curve at all, not reproduced in 14 runs alone or under load, so the state is logged)
-    try: phb.wait_for_function("(() => { const f = __synth.filterPlot(); return f.home === 'mEra' && f.knob && f.knob.bank && f.painted > 5; })()", timeout=15000); pb_ok = True
+    # the curve, its paint and its readout; polled on a timer (not on animation frames, which a stalled frame
+    # loop would also stop), 15 s as in the Fp. first-load check: the lab still loads here on its first curve
+    try: phb.wait_for_function("(() => { const f = __synth.filterPlot(); return f.home === 'mEra' && f.knob && f.knob.bank && f.painted > 5 && f.read.startsWith('1939 bank'); })()", timeout=15000, polling=100); pb_ok = pbb_ok
     except Exception as e_: pb_ok = False
     pbv_ = phb.evaluate("""() => { const r = document.getElementById('fpCv').getBoundingClientRect(), f = __synth.filterPlot(); return { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), right: Math.round(r.right),
       vis: !!document.getElementById('fpCv').offsetParent, scroll: document.documentElement.scrollWidth <= innerWidth, read: f.read,
-      home: f.home, n: f.n, err: f.err, busy: f.busy, dev: __synth.device(), era: __synth.patch().era.on }; }""")
-    ck(f"Eb. 375px: the Osc tab shows the bank's plot in the 1939 section, inside the screen, painted, no horizontal scroll ({pbv_})",
+      home: f.home, n: f.n, err: f.err, busy: f.busy, dev: __synth.device(), era: __synth.patch().era.on, booted: __synth.booted(),
+      log: (window.__ebLog || []).slice(-12), frames: window.__ebFr, long: (window.__ebLong || []).slice(-8) }; }""")
+    phb.evaluate("clearInterval(window.__ebT)")
+    ck(f"Eb. 375px: the Osc tab shows the bank's plot in the 1939 section, inside the screen, painted, no horizontal scroll ({ {k_: v_ for k_, v_ in pbv_.items() if k_ not in ('log', 'long')} })",
        pb_ok and pbv_["vis"] and pbv_["h"] >= 100 and pbv_["left"] >= 0 and pbv_["right"] <= 375 and pbv_["scroll"] and pbv_["read"].startswith("1939 bank: voice + edge"), pbv_)
     phb.evaluate("p => __synth.setPatch(p)", patch()); phb.wait_for_timeout(100)
     ck("Eb. 375px: no page errors", not perrb, perrb)
