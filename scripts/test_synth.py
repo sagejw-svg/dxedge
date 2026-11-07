@@ -5016,6 +5016,34 @@ with sync_playwright() as pw:
         sus_left = pg.evaluate(f"() => __synth.voiceMeters()['{sus_dev}']")
     ck(f"Mx. pedal down on {sus_dev}, arm {sus_other}, pedal up: the sustained note on {sus_dev} lets go",
        sus_mid.get(sus_dev, 0) >= 1 and sus_left == 0, {"held": sus_mid, "left after 6 s": sus_left})
+    # Review 7 Nov (R1107-1): a strip going back to unity (unmute, level back to full, pan back to centre,
+    # another strip's solo let go) was rerouted straight to the wire at once, skipping the 20 ms glide, so a
+    # held note jumped from its faded level to full in one sample: a click (5x the sine's own largest step
+    # at 220 Hz on the live site). Each case below records the master around both moves on a held A2 sine.
+    pg.evaluate("() => { __synth.panic(); __synth.mixArm([]); }")
+    pg.evaluate("p => __synth.setPatch(p)", patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.005, "d": 0.1, "s": 1, "r": 0.05}))
+    pg.wait_for_timeout(300)
+    uni_cases = [("unmute", "filament", {"mute": True}, {"mute": False}), ("level 0.3 back to 1", "filament", {"level": 0.3}, {"level": 1}),
+                 ("pan hard left back to centre", "filament", {"pan": -1}, {"pan": 0}), ("Cathode's solo let go", "cathode", {"solo": True}, {"solo": False})]
+    uni_res = []
+    for uname, uid, ua, ub in uni_cases:
+        r = pg.evaluate("""async ([id, a, b]) => {
+          const w = ms => new Promise(r => setTimeout(r, ms)), D = { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 };
+          __synth.setMixer('filament', D); __synth.setMixer('cathode', D); await w(400);
+          __synth.noteOn(45, 0.8); await w(350); await __synth.recordStart(); await w(250);
+          __synth.setMixer(id, a); await w(300); __synth.setMixer(id, b); await w(450);
+          const rec = await __synth.recordStop(); __synth.noteOff(45); await w(150);
+          return rec && rec.b64; }""", [uid, ua, ub])
+        uwav = parse_wav(base64.b64decode(r)) if r else None
+        if not uwav: uni_res.append((uname, None)); continue
+        u8 = np.frombuffer(uwav["data"][:len(uwav["data"]) // 6 * 6], np.uint8).reshape(-1, 6).astype(np.int32)
+        v = u8[:, 0] | (u8[:, 1] << 8) | (u8[:, 2] << 16); v = np.where(v & 0x800000, v - 0x1000000, v) / 8388607.0
+        srr = uwav["rate"]; d = np.abs(np.diff(v))
+        steady = float(np.max(d[int(0.03 * srr):int(0.2 * srr)])); worst = float(np.max(d[int(0.03 * srr):int(0.95 * srr)]))
+        uni_res.append((uname, round(worst / max(steady, 1e-9), 2)))
+    ck("Mx. a strip going back to unity glides there with no click (unmute, level, pan, a solo let go: largest step within 1.5x the held sine's own)",
+       all(x is not None and x < 1.5 for _, x in uni_res), uni_res)
+    pg.evaluate("() => __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 })")
     pg.evaluate("() => { __synth.panic(); __synth.mixArm(['filament', 'cathode']); }")
     pg.evaluate("""() => {
       __synth.mixArm([]);

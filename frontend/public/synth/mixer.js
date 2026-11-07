@@ -215,6 +215,22 @@ export function createMixer(ctx) {
     if (ch.meterFrom) { try { ch.meterFrom.disconnect(ch.an); } catch (e) {} }
     try { ch.source.connect(ch.an); ch.meterFrom = ch.source; } catch (e) { ch.meterFrom = null; }
   }
+  // Going back to a simpler route (unmute, level back to full, pan back to centre, a solo let go)
+  // waits for the gains to glide to unity first. Rerouting at once skipped the glide: the signal
+  // jumped from its faded level to full in one sample, a click (review 7 Nov, R1107-1). Going the
+  // other way is seamless, because the gains of a route not in use rest at unity.
+  const RANK = { direct: 0, gain: 1, pan: 2 };
+  const SETTLE_MS = 200;    // ten time constants of setP: the gains are within 5e-5 of their targets
+  function holdRoute(ch, mode) {
+    if (!live || !ch.source || !(ch.route in RANK) || RANK[mode] >= RANK[ch.route]) {
+      if (ch.settle) { clearTimeout(ch.settle); ch.settle = null; }
+      return mode;
+    }
+    if (ch.settled) return mode;
+    if (ch.settle) clearTimeout(ch.settle);
+    ch.settle = setTimeout(() => { ch.settle = null; ch.settled = true; apply(); ch.settled = false; }, SETTLE_MS);
+    return ch.route;
+  }
   function apply() {
     if (!destination) return;
     const list = Object.keys(channels).map(k => channels[k]);
@@ -222,7 +238,7 @@ export function createMixer(ctx) {
     list.forEach(ch => {
       const g = audibleGain(ch.strip, anySolo);
       const centered = ch.strip.pan === 0;
-      const mode = g === 1 && centered ? 'direct' : centered ? 'gain' : 'pan';
+      const mode = holdRoute(ch, g === 1 && centered ? 'direct' : centered ? 'gain' : 'pan');
       if (ch.source && ch.route !== mode) {
         try { ch.source.disconnect(); } catch (e) {}
         ch.sendFrom = null;
@@ -235,7 +251,7 @@ export function createMixer(ctx) {
         if (mode === 'pan' && destination && !ch.split) ensurePan(ch);
         setP(ch.input.gain, g);
         if (mode === 'pan' && ch.gL) {
-          const b = balanceGains(ch.strip.pan);
+          const b = balanceGains(ch.strip.pan);   // centred while the pan route is held: 1, 1
           setP(ch.gL.gain, b.l);
           setP(ch.gR.gain, b.r);
         }

@@ -62,11 +62,11 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
-| R1017-9 | confusing | d | No output protection unless limit is switched on: delay plus reverb can hard-clip at 0 dBFS; still open 26 Oct | measured |
+| R1017-9 | confusing | d | No output protection unless the compressor is on: delay plus reverb can hard-clip at 0 dBFS; still open 7 Nov (226,954 samples at full scale in 4 s) | measured |
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1649,3 +1649,86 @@ Confusing. Measured (width, mono), inferred (impact).
 
 Areas c to h. R1103-1 (Lattice WAV) was not re-run. Suggested next: c, d and e, including 1939 mode
 with the deck (a take on Exposition Choir, export, play back) and the LC bank in Render WAV.
+
+
+## 2026-11-07 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `f3c2f16`, sw.js
+`dxedge-v188` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path
+in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors
+on the live site in any run. Audio was read from the live output with the master recorder
+(`__synth.recordStart` and `recordStop`, the 24-bit WAV decoded in the script), from the deck's own
+Render WAV download, and from offline renders through `__synth.renderMidi`. Focus tonight: 1939 mode
+and the LC bank with the keys, the pedal and the deck (the 6 Nov suggestion), and what the mixer does
+to a held note when a strip changes.
+
+### What worked (measured)
+
+- Deck take on Exposition Choir (1939 mode) over `__synth.midi`: a note, CC64 down, two more notes,
+  all three keys up, CC64 up 0.6 s later, a last note. The take holds 10 events in order; the export
+  is format 1, 480 ppq, one part "Filament: Exposition Choir" with both CC64 messages at 0.30 and
+  1.40 s. Played back, its level follows the performance window by window (within 2 dB after the
+  first 0.25 s), 0 voices after. Imported back it is assigned to Filament; Stop 0.9 s in leaves
+  0 voices and the pedal up.
+- Render WAV against the live output for a three-chord file on Exposition Choir, Parlor Harp, Plate
+  Bass with the LC bank picked, and Wide Novachord Strings: 48 kHz 16-bit, 5.0 s (3 s of song and the
+  2 s tail), RMS over the first 2 s within 0.7 dB of the live output on all four, no NaN, no sample at
+  full scale. The LC bank and 1939 mode are both heard in the render.
+- A file whose pedal goes down and never comes up, looped six times: Stop leaves silence (-240 dB),
+  0 voices, and the next key from the keyboard releases normally. A note with no note-off: the file
+  ends by itself and nothing sounds. Deck tempo 200% and 50% on a 2 s note: 1.03 s and 4.02 s of
+  sound; Render WAV at 50% writes 8 s plus the tail.
+- 1939 mode with the keys: bend at full up and down is +200 and -201 cents on Exposition Choir and
+  Parlor Harp (range 2); CC1 changes the sound (difference -25.9 dB against a level of -23.5 dB, and
+  two renders without it are identical). The hold button lengthens the release (-44 dB 1.5 s after
+  onset, against -62 dB without). A key held through Z, through a rail switch to Cathode, and through
+  a window blur leaves 0 voices. Space on the page is the pedal and lets go.
+- Phone 375 px with touch: a two-finger hold (a key and the pitch strip) bends, and lifting the strip
+  finger returns it to 0.00; keys sound and release under the finger; no sideways scroll.
+- Mixer moves away from unity on a fresh strip glide with no click: level 1 to 0.5, pan centre to
+  hard left, pan hard left to half left, and the room send on and off (largest sample step equal to
+  the held sine's own, 0.0048).
+- Master bus: with the compressor and limit on (ceiling -1 dBFS) an eight-note Screaming 12AX7 chord
+  through reverb at mix 1, size 1 and the delay at feedback 0.95, mix 1 peaks at -2.5 dBFS with no
+  clipped sample. The master delay at feedback 0.95 decays about 1.8 dB a second.
+
+### Findings
+
+**R1107-1. A strip going back to unity clicks.** Area d. Broken. Measured. Fixed tonight.
+- Steps: hold a note (a sine or a bass shows it best). In the Mix desk press mute and then mute
+  again; or pull the level down and back to full; or pan hard left and back to centre; or solo
+  another strip and let it go.
+- Expected: the sound comes back over the same short glide it went away with.
+- Actual: the note jumps from its faded level to full in one sample. On a held A2 sine through the
+  live output the largest sample step was 48x the sine's own on unmute, 33x on level back to full,
+  25x on pan back to centre and 16x on a solo let go (at A3 about 5x; on Wide Novachord Strings it is
+  buried in the saw's own steps). After one of those, the next move away clicks too: mute after a
+  level 0.5 and back to full jumped 5x at A3, because the unused gain had stayed at 0.5.
+- Cause (code): a strip at unity is wired straight through with no gain node. Going back there
+  rerouted at once, so the 20 ms glide the gain had just started never played.
+- Fix: going back to a simpler route waits 200 ms for the gains to reach unity (within 5e-5), then
+  reroutes, so the gain left behind is at unity for the next move away. A strip at its defaults is still a straight
+  wire. Check: "Mx. a strip going back to unity glides there with no click" (fails on the live
+  site at 16x to 48x; 1.0x on the fixed tree for all four cases).
+
+### Still open, re-measured tonight
+
+- R1017-9: with the compressor off, reverb at mix 1, size 1 and the delay at feedback 0.95, mix 1,
+  the same chord holds 226,954 samples at full scale in 4 s. The limit chip only acts with the
+  compressor on.
+- R1017-4: deck Render WAV is still 48 kHz 16-bit.
+
+### Not reported
+
+- At deck tempo 50% the position and length read in file time (0:02.5 of 0:04.0 at 5 s). That
+  matches the file and the track list, and Render WAV's own status gives the real length.
+- On the phone the keyboard's first black key (C#4) sits half under the strip column; touching that
+  half reaches the keybed, not the key. Inferred to be part of what R1017-11 describes (the first
+  visible key is D4).
+- The deck WAV name stamp follows the browser's clock zone (UTC headless), as on 4 Nov.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1104-4 (Panic and the other tails) and R1101-2 and R1101-3 (tape echo) were
+not re-run. Suggested next: f, g and h, including a project saved with a strip muted or panned and
+loaded while a note holds (now that going back to unity waits 200 ms).
