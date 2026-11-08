@@ -171,6 +171,7 @@
 <div class="toast" id="toast" role="status"></div>
 <audio id="audio" preload="auto"></audio>
 
+<script src="/otr/core/airdate.js?v=1"></script>
 <script src="/otr/station.js"></script>
 <script src="/otr/core/radio-core.js"></script>
 <script src="/otr/core/live-source.js"></script>
@@ -272,14 +273,13 @@
     setHTML('logStatus', status);
     if (res) {
       setText('logShow', res.show);
-      setText('logEp', res.isAd ? 'A vintage advertisement' : res.title);
+      setText('logEp', res.isAd ? 'A vintage advertisement' : (window.OTRAirDate ? OTRAirDate.withAirDate(res.title, res.date) : res.title));
       var meta = [];
       if (res.slot) meta.push(slotLine(res.slot));
-      if (res.date) meta.push('First aired ' + res.date);
       if (!s.power) meta.push('On the air now');
       setText('logMeta', meta.join('. ') + (meta.length ? '.' : ''));
       var nx = (s.next || [])[0], nr = nx && core.resolve(nx);
-      setHTML('logNext', nr ? 'Next: <b>' + esc(nr.show) + '</b>' + (nr.title ? ', ' + esc(nr.title) : '') : '');
+      setHTML('logNext', nr ? 'Next: <b>' + esc(nr.show) + '</b>' + (nr.title ? ', ' + esc(window.OTRAirDate ? OTRAirDate.withAirDate(nr.title, nr.date) : nr.title) : '') : '');
     }
     var pb = $('playBtn');
     pb.disabled = false;

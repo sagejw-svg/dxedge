@@ -80,6 +80,11 @@
       x = x.toLowerCase().replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); });
     return x;
   }
+  function airTitle(title, date) {
+    var nice = niceTitle(title);
+    var api = window.OTRAirDate;
+    return api ? api.withAirDate(nice, date) : nice;
+  }
   function wallClock(unixMs) {
     var d = new Date(unixMs), g = {};
     wallFmt.formatToParts(d).forEach(function (p) { if (p.type !== 'literal') g[p.type] = p.value; });
@@ -326,6 +331,7 @@
       cue: cue,
       nextShow: next ? next.showName : null,
       nextTitle: next ? next.title : null,
+      nextDate: next ? (next.date || '') : null,
       nextShowId: next ? next.showId : null,
       nextUrl: next ? next.url : null
     };
@@ -687,11 +693,11 @@
     if (showEl) showEl.textContent = air.kind === 'break' ? 'Sci-Fi (Live)' : (air.show || 'Sci-Fi (Live)');
     if (epEl) epEl.textContent = air.kind === 'break'
       ? (air.cue && air.cue.text ? air.cue.text : 'Station break')
-      : niceTitle(air.title || '');
-    if (dateEl) dateEl.textContent = air.kind === 'break' ? 'Eastern clock' : (air.date || '');
+      : airTitle(air.title || '', air.date);
+    if (dateEl) dateEl.textContent = air.kind === 'break' ? 'Eastern clock' : '';
     if (up) {
       up.innerHTML = air.nextShow
-        ? '<b>up next</b> &nbsp;' + esc(air.nextShow) + (air.nextTitle ? ' - ' + esc(niceTitle(air.nextTitle)) : '')
+        ? '<b>up next</b> &nbsp;' + esc(air.nextShow) + (air.nextTitle ? ' - ' + esc(airTitle(air.nextTitle, air.nextDate)) : '')
         : '';
     }
     if (on) on.textContent = (want ? 'on air' : 'on the clock') + ' \u00b7 Sci-Fi (Live)';
@@ -722,7 +728,7 @@
     var air = onAir();
     if (!air) return;
     var show = air.kind === 'break' ? 'Station break' : (air.show || 'Sci-Fi (Live)');
-    var title = air.kind === 'break' ? (air.nextShow || '') : niceTitle(air.title || '');
+    var title = air.kind === 'break' ? (air.nextShow || '') : airTitle(air.title || '', air.date);
     var now = card.querySelector('.st-now');
     var html = '<b>' + esc(show) + '</b>' + (title ? '<span class="sep"> \u00b7 </span>' + esc(title) : '');
     if (now && now._h !== html) { now.innerHTML = html; now._h = html; }
@@ -1026,8 +1032,8 @@
     var kick = document.getElementById('sfKicker');
     if (kick) kick.textContent = air.kind === 'break' ? 'Station break' : 'Now playing';
     if (show) show.textContent = air.kind === 'break' ? 'Sci-Fi (Live)' : (air.show || '');
-    if (ep) ep.textContent = air.kind === 'break' ? (air.cue && air.cue.text ? air.cue.text : 'Station break') : niceTitle(air.title || '');
-    if (next) next.textContent = air.nextShow ? (air.nextShow + (air.nextTitle ? ' - ' + niceTitle(air.nextTitle) : '')) : '';
+    if (ep) ep.textContent = air.kind === 'break' ? (air.cue && air.cue.text ? air.cue.text : 'Station break') : airTitle(air.title || '', air.date);
+    if (next) next.textContent = air.nextShow ? (air.nextShow + (air.nextTitle ? ' - ' + airTitle(air.nextTitle, air.nextDate) : '')) : '';
     paintProgress();
     paintTransport();
     lastKind = air.kind || '';

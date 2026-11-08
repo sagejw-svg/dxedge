@@ -391,7 +391,7 @@
         var art = s.stream.favicon ? [{ src:s.stream.favicon }] : (this.artwork ? [{ src:this.artwork, sizes:'512x512', type:'image/png' }] : []);
         ms.metadata = new MediaMetadata({ title:s.stream.name, artist:s.stream.place || s.stream.tags.join(', '), album:'Live radio', artwork:art });
       } else if (s.res && s.power && window.MediaMetadata) {
-        ms.metadata = new MediaMetadata({ title:s.res.isAd ? 'Commercial break' : s.res.title, artist:s.res.isAd ? (st ? st.name : '') : s.res.show,
+        ms.metadata = new MediaMetadata({ title:s.res.isAd ? 'Commercial break' : (window.OTRAirDate ? OTRAirDate.withAirDate(s.res.title, s.res.date) : s.res.title), artist:s.res.isAd ? (st ? st.name : '') : s.res.show,
           album:(st ? st.name + ' on ' + (st.freq / 10) + ' kc' : 'Old Time Radio'), artwork:this.artwork ? [{ src:this.artwork, sizes:'512x512', type:'image/png' }] : [] });
       }
     } catch (e) {}
