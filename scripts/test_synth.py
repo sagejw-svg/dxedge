@@ -4724,7 +4724,10 @@ with sync_playwright() as pw:
       // the pulses are consecutive ticks, each at beat tick/24 and stamped that many beats after the first, which is stamped at play
       const k0 = clocks.length ? clocks[0].tick : 0, b0 = clocks.length ? clocks[0].beat : 0, c0 = clocks.length ? clocks[0].time : NaN;
       const tickErr = clocks.reduce((m, e, k) => Math.max(m, e.tick === k0 + k ? Math.abs(e.time - (c0 + (e.beat - b0) * spb)) + Math.abs(e.beat - e.tick / 24) : 1), 0);
-      const startErr = Math.abs(c0 - p0.time);
+      // the first pulse is the tick at or before the play position, stamped where that tick falls: at play when play
+      // starts on a tick (beat 0), up to one tick earlier when a held position sits between ticks (8 Nov: held at beat
+      // 0.023, the pulse for tick 0 came 11.6 ms before play and the old check, which wanted it at play, failed)
+      const startErr = Math.abs(c0 - (p0.time + (b0 - p0.beat) * spb)) + (k0 === Math.floor(p0.beat * 24 + 1e-9) ? 0 : 1);
       __synth.transport().stop();
       const held = __synth.transport().state();
       __synth.transport().stop();
@@ -4735,7 +4738,7 @@ with sync_playwright() as pw:
       __synth.registerDevice({ id: 'sequencer', name: 'Step Sequencer', instrument: false, midiInput: false, midiOutput: true, audioOutputs: 0, description: 'A device other code can register.' });
       return { got, playing: mid.playing, beat: mid.beat, beatErr, tickErr, startErr, nClock: clocks.length, p0beat: p0.beat, heldBeat: held.beat, heldPlaying: held.playing, home: home.beat, cut, read, ids: __synth.devices().map(d => d.id) };
     }""")
-    ck(f"R. play emits clock events a device can subscribe to ({live['nClock']} pulses by beat {live['beat']:.3f}; the beat follows the context clock at the tempo within {live['beatErr']:.1e}, each pulse's tick, beat and time within {live['tickErr']:.1e}, the first pulse {1000 * live['startErr']:.1f} ms from play)",
+    ck(f"R. play emits clock events a device can subscribe to ({live['nClock']} pulses by beat {live['beat']:.3f}; the beat follows the context clock at the tempo within {live['beatErr']:.1e}, each pulse's tick, beat and time within {live['tickErr']:.1e}, the first pulse {1000 * live['startErr']:.1f} ms from its tick's place, play at beat {live['p0beat']:.3f})",
        live["playing"] and "play" in live["got"] and live["nClock"] >= 2 and live["beat"] >= live["p0beat"] + 0.1 and live["beatErr"] < 0.01 and live["tickErr"] < 1e-9 and live["startErr"] < 0.01, live)
     ck("R. stop holds the beat and a second stop returns to the start", (not live["heldPlaying"]) and live["heldBeat"] >= live["beat"] and live["heldBeat"] > 0.1 and live["home"] == 0, live)
     ck("R. a parameter id round-trips, and a new device can register", live["cut"] == 1234 and live["read"] == 1234 and "sequencer" in live["ids"], live)
