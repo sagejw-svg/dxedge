@@ -4599,22 +4599,30 @@
   function lampWatch(){ var st=LAMP.stat=LAMP.sim.stats();
     if(LAMP.warming && ADV.lampOn && st.melt>0.9 && st.up>0.12) LAMP.warming=false;
     if(!LAMP.warming && st.melt<0.1) LAMP.warming=true; }
+  function lampGap(now, prev){
+    if(!prev) return 0;
+    var raw=(now-prev)/1000;
+    // A hidden tab, a stalled frame, or a clock jump must not fast-forward the wax.
+    if(!(raw>0) || raw>1/30) return 0;
+    return raw;
+  }
   function lampTick(now){
     if(bedtimeOn()){
-      var bdt = LAMP.bedLast ? Math.min(0.1, (now-LAMP.bedLast)/1000) : 0;
+      var bdt = lampGap(now, LAMP.bedLast);
       LAMP.bedLast = now;
-      if(bdt<0) bdt = 0;
       if(ADV.lampOn && !lampHeld()) LAMP.bedT = (LAMP.bedT||0) + bdt;
       if(LAMP.sim) LAMP.sim.S.music = 0;
       if(now-(LAMP.statT||0)>500){ LAMP.statT=now; syncLampStat(); }
       return;
     }
-    var sim=lampSim(), dt=LAMP.last ? Math.min(0.1,(now-LAMP.last)/1000) : 0; LAMP.last=now; if(dt<=0) return;
+    var sim=lampSim(), dt=lampGap(now, LAMP.last); LAMP.last=now; if(dt<=0) return;
     sim.S.on=!!ADV.lampOn; sim.S.power=clampN(ADV.lampW,15,40)/25;
     var lv = ADV.lampMusic ? (TV.lvOverride!=null ? TV.lvOverride : level()) : 0;
     LAMP.music += (lv-LAMP.music)*(1-Math.exp(-dt/1.5)); sim.S.music = ADV.lampMusic ? clampN(LAMP.music*1.6,0,1) : 0;
     var spd = LAMP.warming && ADV.lampOn ? Math.max(3, ADV.lampTime) : ADV.lampTime;
-    LAMP.acc += dt*spd; var n=0; while(LAMP.acc>=sim.DT && n<16){ sim.step(); LAMP.acc-=sim.DT; n++; } if(n>=16) LAMP.acc=0;
+    LAMP.acc += dt*spd; var n=0, maxSteps=Math.max(2, Math.round(spd)+1);
+    while(LAMP.acc>=sim.DT && n<maxSteps){ sim.step(); LAMP.acc-=sim.DT; n++; }
+    if(n>=maxSteps) LAMP.acc=Math.min(LAMP.acc, sim.DT);
     sim.alpha=clampN(LAMP.acc/sim.DT,0,1);   // how far between the last step and the next this frame falls
     if(now-LAMP.statT>500){ LAMP.statT=now; lampWatch(); syncLampStat(); }
   }
@@ -4676,16 +4684,20 @@
   function smin(a, b, k){ var h=k-Math.abs(a-b); return h<=0 ? Math.min(a,b) : Math.min(a,b)-h*h*0.25/k; }
   var WAX_FAR=50;
   function lampField(view, sim, vis, ppu, cover){
-    // the window of the lamp to sample: wax (or the whole inside for Thermal) cut to what is on screen
-    var prims=waxPrims(sim), g=sim.geo, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, i, j, p;
-    if(cover){ x0=LCX-23; x1=LCX+23; y0=g.Y0; y1=g.Y1+1; }
-    for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
-    x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
+    // Sample the bottle on a grid that does not follow the wax. A window hugged to the
+    // blobs changes its origin and its cell size whenever a neck breaks or a drop
+    // spreads, and the whole silhouette jumps.
+    var prims=waxPrims(sim), g=sim.geo, i, j, p;
+    var x0=Math.max(LCX-23, vis.x0), x1=Math.min(LCX+23, vis.x1);
+    var y0=Math.max(g.Y0-1, vis.y0), y1=Math.min(g.Y1+2, vis.y1);
+    if(cover){ x0=Math.min(x0, LCX-23); x1=Math.max(x1, LCX+23); y0=Math.min(y0, g.Y0); y1=Math.max(y1, g.Y1+1); }
     if(x1<=x0 || y1<=y0) return null;
     // One device pixel per cell. If the whole bottle would be more than the cell budget, coarsen,
-    // but never back to the old three-pixel cells.
+    // but never back to the old three-pixel cells. Cell size depends on the view, not on the wax.
     var cs=Math.max(0.05, 1.0/ppu), area=(x1-x0)*(y1-y0), budget=48000;
     if(area/(cs*cs)>budget) cs=Math.sqrt(area/budget);
+    x0=Math.floor(x0/cs)*cs; y0=Math.floor(y0/cs)*cs;
+    x1=Math.ceil(x1/cs)*cs; y1=Math.ceil(y1/cs)*cs;
     var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
     if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FB=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FW=new Float32Array(N); }
     var F=st.F, FB=st.FB, FT=st.FT, FF=st.FF, FW=st.FW; F.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FW.fill(0,0,N);
@@ -4737,16 +4749,16 @@
           if(A>0 || look==='neon'){ var fw=FW[k]||1e-6, T=FT[k]/fw, mf=FF[k]/fw, h=Math.min(1,Math.max(0,-dd)/2.5);
             var zl=waxZ(a>0?F[k-1]:dd), zr=waxZ(a<W-1?F[k+1]:dd), zu=waxZ(b>0?F[k-W]:dd), zd=waxZ(b<H-1?F[k+W]:dd);
             var nx=-(zr-zl)/(2*cs), ny=-(zd-zu)/(2*cs), nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
-            var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp; spec*=spec; spec*=spec; spec*=spec;   // ^16
+            var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp*0.35;   // soft sheen; a sharp highlight strobes as the normal crosses a cell
             if(thermal){ var tc=thermRGB((T-22)/45), sh=0.7+0.3*dl; R=tc[0]*sh; G=tc[1]*sh; Bc=tc[2]*sh; }
             else if(look==='blacklight'){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
             else if(look==='neon'){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
             else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
             else if(mf<0.6){ var li=Lb*(0.42+0.58*dl)*0.4, rim=(1-h)*0.13*Lb;   // solid wax: dull and opaque
-              R=solidC[0]*(0.16+0.95*li+rim)+255*spec*0.25; G=solidC[1]*(0.16+0.95*li+rim)+245*spec*0.25; Bc=solidC[2]*(0.16+0.95*li+rim)+235*spec*0.25; }
+              R=solidC[0]*(0.16+0.95*li+rim)+255*spec*0.08; G=solidC[1]*(0.16+0.95*li+rim)+245*spec*0.08; Bc=solidC[2]*(0.16+0.95*li+rim)+235*spec*0.08; }
             else { var th=Math.sqrt(Math.min(1,Math.max(0,-dd)/7.5)), E=Lw*(0.22+0.78*th)*(0.8+0.2*dl), X=E*(3.2+2.2*hotW), hot=Math.max(0,T-50)*0.01*lit;
               // exposed like the glow it is: bright colours run toward white near the bulb, deeper and more saturated up high
-              R=255*(1-Math.exp(-wl[0]/255*X))+255*hot*0.4+255*spec*0.05; G=255*(1-Math.exp(-wl[1]/255*X))+150*hot*0.4+245*spec*0.05; Bc=255*(1-Math.exp(-wl[2]/255*X))+60*hot*0.4+235*spec*0.05;
+              R=255*(1-Math.exp(-wl[0]/255*X))+255*hot*0.4+40*spec; G=255*(1-Math.exp(-wl[1]/255*X))+150*hot*0.4+30*spec; Bc=255*(1-Math.exp(-wl[2]/255*X))+60*hot*0.4+20*spec;
               A*=0.7+0.3*Math.min(1,th*1.6); } }   // the thinnest edges let the liquid show through
         }
         if(thermal && A<1){ var tl=sim.sampleTL(x,y), lc=thermRGB((tl-22)/45); R=R*A+lc[0]*0.55*(1-A); G=G*A+lc[1]*0.55*(1-A); Bc=Bc*A+lc[2]*0.55*(1-A); A=1; }
@@ -4768,6 +4780,46 @@
 
   // a colour seen through more of itself, or by less light: each channel falls off faster the weaker it is
   function lampDeep(c0, ii){ return c0.map(function(v){ var t=v/255; return Math.round(255*t*Math.pow(Math.max(0,ii), 1+1.1*(1-t))+3); }); }
+  // One wax shape for Bedtime Amber. Stacked ellipses draw a hard circle through
+  // each other as they pass, which reads as a blob blinking on and off.
+  function paintBedtimeWax(c, sim, blobs, wax, amber, ppu){
+    var g=sim.geo, x0=LCX-22, x1=LCX+22, y0=g.Y0, y1=g.Y1;
+    var cs=Math.max(0.45, 1/Math.max(ppu||1, 0.5)), area=(x1-x0)*(y1-y0);
+    if(area/(cs*cs)>24000) cs=Math.sqrt(area/24000);
+    x0=Math.floor(x0/cs)*cs; y0=Math.floor(y0/cs)*cs;
+    var W=Math.ceil((x1-x0)/cs), H=Math.ceil((y1-y0)/cs);
+    var st=LAMP.bedWax||(LAMP.bedWax={});
+    if(!st.cv || st.cv.width!==W || st.cv.height!==H){
+      st.cv=document.createElement('canvas'); st.cv.width=W; st.cv.height=H;
+      st.cx=st.cv.getContext('2d', { willReadFrequently:true });
+      st.img=st.cx.createImageData(W, H);
+      st.W=W; st.H=H;
+    }
+    var D=st.img.data, kBlend=6;
+    function edist(b, x, y){
+      var rx=b.r, ry=b.r*0.92, dx=(x-b.x)/rx, dy=(y-b.y)/ry, q=Math.sqrt(dx*dx+dy*dy);
+      return (q-1)*Math.min(rx, ry);
+    }
+    function smin(a, b, k){ var h=Math.max(k-Math.abs(a-b),0)/k; return Math.min(a,b)-h*h*k*0.25; }
+    for(var j=0;j<H;j++){
+      var y=y0+(j+0.5)*cs, win=sim.inner(Math.min(Math.max(y, g.Y0), g.Y1));
+      var depth=Math.max(0, Math.min(1, (y-g.Y0)/Math.max(1, g.Y1-g.Y0)));
+      var R=wax[0]+(amber[0]-wax[0])*0.22*depth, G=wax[1]+(amber[1]-wax[1])*0.22*depth, Bc=wax[2]+(amber[2]-wax[2])*0.22*depth;
+      for(var i=0;i<W;i++){
+        var x=x0+(i+0.5)*cs, d=80, bi;
+        for(bi=0; bi<blobs.length; bi++) d=smin(d, edist(blobs[bi], x, y), kBlend);
+        var pi=(j*W+i)*4, edge=(win-Math.abs(x-LCX))/0.8;
+        var A=Math.max(0, Math.min(1, 0.5-d/0.8));
+        A*=Math.max(0, Math.min(1, edge));
+        var body=Math.max(0, Math.min(1, -d/5)), shade=1+0.06*body;
+        D[pi]=Math.min(255, R*shade); D[pi+1]=Math.min(255, G*shade); D[pi+2]=Math.min(255, Bc*shade); D[pi+3]=Math.round(A*255);
+      }
+    }
+    st.cx.putImageData(st.img, 0, 0);
+    c.save(); c.imageSmoothingEnabled=true;
+    c.drawImage(st.cv, x0, y0, W*cs, H*cs);
+    c.restore();
+  }
   function paintBedtime(c, now, o){
     var sim=lampSim(), g=sim.geo, fin=(LBASE_BY[ADV.lampBase]||LAMP_BASES[0]).m, cx=LCX;
     var P=(window.OTRBedtime&&OTRBedtime.PALETTE)||{liq:[49,16,14],wax:[142,48,32],amber:[181,102,39]};
@@ -4802,10 +4854,7 @@
     for(var a=0;a<=Math.PI*2*3.2;a+=0.25){ var rr=2.5+a*0.42, px=cx+Math.cos(a)*rr, py=Y1-1.1+Math.sin(a)*rr*0.16; if(a===0) c.moveTo(px,py); else c.lineTo(px,py); }
     c.stroke(); c.restore();
     c.save(); ins(); c.clip();
-    var core=mix(wax, amber, 0.16);
-    for(var i=0;i<blobs.length;i++){ var b=blobs[i], grd=c.createRadialGradient(b.x, b.y-b.r*0.15, b.r*0.2, b.x, b.y, b.r);
-      grd.addColorStop(0, rgba(core, 0.96)); grd.addColorStop(0.72, rgba(wax, 0.98)); grd.addColorStop(1, rgba(wax, 1));
-      c.fillStyle=grd; c.beginPath(); c.ellipse(b.x, b.y, b.r, b.r*0.9, 0, 0, Math.PI*2); c.fill(); }
+    paintBedtimeWax(c, sim, blobs, wax, amber, o.ppu||1);
     c.restore();
     if(dim>0.02) add(function(){ var bg=c.createRadialGradient(cx,Y1+1,0,cx,Y1+1,14);
       bg.addColorStop(0, rgba(amber, Math.min(0.26, 0.2*dim))); bg.addColorStop(1, rgba(amber, 0));
@@ -5518,6 +5567,7 @@
           return { on:bedtimeOn(), held:held, motion:ADV.lampMotion||'auto', reduce:lampReduce(), bright:ADV.lampBright,
             period: window.OTRBedtime ? OTRBedtime.PERIOD : 0, t:LAMP.bedT||0,
             blobs: window.OTRBedtime ? OTRBedtime.blobs(LAMP.bedT||0, !!ADV.lampOn) : [],
+            clock: function(t){ if(typeof t==='number' && isFinite(t)){ LAMP.bedT=t; LAMP.bedLast=0; } return LAMP.bedT||0; },
             note: ($('lampBedNote') && !$('lampBedNote').hidden) ? $('lampBedNote').textContent : '',
             cols: LAMP_COLS.map(function(x){ return x.id; }) };
         },

@@ -37,8 +37,8 @@ from playwright.sync_api import sync_playwright
 
 ADVANCE = """(ms) => {
   let t = performance.now();
-  const n = Math.ceil(ms / 100);
-  for (let i = 0; i < n; i++) { t += 100; __otr.adv.lamp.render(t); }
+  const n = Math.max(1, Math.round(ms / 16));
+  for (let i = 0; i < n; i++) { t += 16; __otr.adv.lamp.render(t); }
   return __otr.adv.lamp.bedtime();
 }"""
 
@@ -193,6 +193,103 @@ with sync_playwright() as p:
     }""")
     ck("live now-playing dates the episode, not a station break", live_now["ok"], live_now)
     ck("live page has no script errors", not lerrs, lerrs[:2])
+
+    # Temporal continuity of the bedtime wax, including a stalled clock and a pause.
+    cont = pg.evaluate("""() => {
+      __otr.adv.open(true);
+      __otr.adv.lamp.set({ col: 'bedtime', motion: 'slow', on: true });
+      __otr.adv.tv.open('lamp');
+      const cv = document.getElementById('tvCv');
+      function shot(t) {
+        __otr.adv.lamp.bedtime().clock(t);
+        __otr.adv.lamp.render(1);
+        const x0 = Math.floor(cv.width * 0.42), y0 = Math.floor(cv.height * 0.18);
+        const w = Math.floor(cv.width * 0.16), h = Math.floor(cv.height * 0.46);
+        const img = cv.getContext('2d').getImageData(x0, y0, w, h).data;
+        const lum = new Uint8Array(img.length / 4);
+        for (let i = 0, p = 0; i < img.length; i += 4, p++) lum[p] = img[i];
+        return lum;
+      }
+      let spike = 0, y1 = null, y2 = null;
+      for (let t = 0; t <= 120.001; t += 0.05) {
+        __otr.adv.lamp.bedtime().clock(t);
+        const y = __otr.adv.lamp.bedtime().blobs[0].y;
+        if (y1 != null && y2 != null) spike = Math.max(spike, Math.abs((y - y1) - (y1 - y2)));
+        y2 = y1; y1 = y;
+      }
+      let prev2 = null, prev = shot(0), osc = 0, steps = 0;
+      for (let t = 0.5; t <= 120.001; t += 0.5) {
+        const cur = shot(t);
+        if (prev && prev2 && cur.length === prev.length) {
+          for (let p = 0; p < cur.length; p += 2) {
+            const d1 = prev[p] - prev2[p], d2 = cur[p] - prev[p];
+            if (d1 * d2 < 0 && Math.abs(d1) > 28 && Math.abs(d2) > 28) osc++;
+          }
+          steps++;
+        }
+        prev2 = prev; prev = cur;
+      }
+      const gap = (() => {
+        const a = __otr.adv.lamp.bedtime().clock(10);
+        __otr.adv.lamp.render(5000);
+        __otr.adv.lamp.render(5000 + 30000);
+        return __otr.adv.lamp.bedtime().t - a;
+      })();
+      const heldT = __otr.adv.lamp.bedtime().clock(40);
+      __otr.adv.lamp.set({ motion: 'still' });
+      __otr.adv.lamp.render(8000);
+      __otr.adv.lamp.render(8000 + 16);
+      __otr.adv.lamp.render(8000 + 4000);
+      const afterHold = __otr.adv.lamp.bedtime().t;
+      __otr.adv.tv.close();
+      return { osc, steps, spike: +spike.toFixed(4), gap, heldT, afterHold };
+    }""")
+    ck("bedtime wax does not blink or jump across a full two-minute cycle", cont["osc"] == 0 and cont["spike"] < 0.05, cont)
+    ck("a 30s stall does not fast-forward the drift", abs(cont["gap"]) < 0.001, cont)
+    ck("hold still across frames does not move the clock", abs(cont["afterHold"] - cont["heldT"]) < 0.001, cont)
+
+    # The physics lamp's grid used to follow the wax, so the outline chattered.
+    phys = pg.evaluate("""async () => {
+      __otr.adv.lamp.set({ col: 'classic', on: true, motion: 'auto' });
+      __otr.adv.lamp.reset(4242);
+      __otr.adv.lamp.advance(240);
+      __otr.adv.tv.open('lamp');
+      await new Promise(r => requestAnimationFrame(r));
+      const cv = document.getElementById('tvCv');
+      const ctx = cv.getContext('2d');
+      const x0 = Math.floor(cv.width * 0.40), y0 = Math.floor(cv.height * 0.14);
+      const w = Math.floor(cv.width * 0.20), h = Math.floor(cv.height * 0.52);
+      const n = w * h;
+      const ring = [null, null, null, null, null, null];
+      let k = 0, frames = 0, blinks = 0;
+      const t0 = performance.now();
+      while (performance.now() - t0 < 2500) {
+        await new Promise(r => requestAnimationFrame(r));
+        const img = ctx.getImageData(x0, y0, w, h).data;
+        const lum = new Float32Array(n);
+        for (let i = 0, p = 0; i < img.length; i += 4, p++) lum[p] = img[i] * 0.2126 + img[i+1] * 0.7152 + img[i+2] * 0.0722;
+        ring[k % 6] = lum; k++; frames++;
+        if (k >= 6) {
+          const a = ring[(k - 5) % 6], b = ring[(k - 3) % 6], c = ring[(k - 1) % 6];
+          for (let p = 0; p < n; p++) {
+            const d1 = b[p] - a[p], d2 = c[p] - b[p];
+            if (d1 * d2 < 0 && Math.abs(d1) > 22 && Math.abs(d2) > 22) blinks++;
+          }
+        }
+      }
+      __otr.adv.tv.close();
+      return { frames, perFrame: blinks / Math.max(1, frames), blinks };
+    }""")
+    ck("physics lamp outline no longer chatters in the big view", phys["perFrame"] < 2.0, phys)
+    print("physics blinks/frame", round(phys["perFrame"], 2), "bedtime osc", cont["osc"], "spike", cont["spike"], "gap", cont["gap"])
+    pg.evaluate("""() => {
+      __otr.adv.lamp.set({ col:'bedtime', motion:'still', on:true });
+      __otr.adv.tv.open('lamp');
+      __otr.adv.lamp.bedtime().clock(72);
+      __otr.adv.lamp.render(1);
+    }""")
+    pg.wait_for_timeout(250)
+    pg.locator("#tvStage").screenshot(path=f"{SHOTS}/otr-bedtime-overlap.png")
     b.close()
 
 httpd.shutdown()
