@@ -57,6 +57,10 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
+      # Late Night replay master only. Not the git tree and not the app
+      # container. Empty until the finished file is copied onto the host.
+      # See nginx/nginx.conf location ^~ /otr/media/latenight/.
+      - /var/lib/dxedge/otr-media:/var/lib/dxedge/otr-media:ro
     depends_on:
       backend:
         condition: service_healthy

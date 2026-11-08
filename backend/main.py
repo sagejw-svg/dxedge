@@ -1075,6 +1075,12 @@ async def serve_frontend(request: Request, full_path: str):
         return response
 
     if full_path:
+        # The Late Night master is about 1 GB and is not in this tree.
+        # nginx serves it from a host directory. Never answer the reserved
+        # path with a file from dist or with the SPA shell: a 200 HTML body
+        # would look like a video to a careless client.
+        if full_path == "otr/media" or full_path.startswith("otr/media/"):
+            raise HTTPException(404, "Not found")
         # Try direct file match first
         static_path = os.path.join(DIST, full_path)
         if os.path.isfile(static_path):

@@ -1,0 +1,88 @@
+{
+  "id": "latenight-scifi",
+  "title": "Old Time Radio Late Night — Tales of Tomorrow",
+  "station": "Old Time Radio on listenotr.com",
+  "page": "/otr/latenight/",
+  "duration": 7136.308,
+  "durationClock": "1:58:56",
+  "picture": {
+    "width": 1280,
+    "height": 720,
+    "fps": 30,
+    "video": "H264",
+    "audio": "AAC"
+  },
+  "poster": "/otr/scenes/space.jpg",
+  "media": {
+    "status": "pending",
+    "placeholder": true,
+    "url": "/otr/media/latenight/latenight_master.mp4",
+    "bytesApprox": 982996026,
+    "tolerance": 0.12,
+    "note": "Stable path /otr/media/latenight/latenight_master.mp4. A GET with Range bytes=0-1 has answered 206 video/mp4, Content-Range bytes 0-1/982996026. Playback still requires that same shape of GET on this visit. A 200 of the whole file, a HEAD response, HTML, or a 404 does not count. This page does not download the file to hash it. status and placeholder are notes, not a playback switch."
+  },
+  "credits": {
+    "line": "Episodes stream from the Internet Archive (archive.org); catalog curated by Rob Dawson / codebox (oldtime.radio, MIT).",
+    "sources": [
+      {
+        "label": "Dimension X — \"Outer Limit\" (Apr 8, 1950)",
+        "url": "https://archive.org/download/OTRR_Dimension_X_Singles/Dimension_X_1950-04-08__01_OuterLimit.mp3"
+      },
+      {
+        "label": "X Minus One — \"Tunnel Under The World\" (Sep 4, 1956)",
+        "url": "https://archive.org/download/OTRR_X_Minus_One_Singles/XMinusOne56-09-04066TunnelUnderTheWorld.mp3"
+      },
+      {
+        "label": "Dimension X — \"With Folded Hands\" (Apr 15, 1950)",
+        "url": "https://archive.org/download/OTRR_Dimension_X_Singles/Dimension_X_1950-04-15__02_WithFoldedHands.mp3"
+      },
+      {
+        "label": "X Minus One — \"Surface Tension\" (Aug 28, 1956)",
+        "url": "https://archive.org/download/OTRR_X_Minus_One_Singles/XMinusOne56-08-28065SurfaceTension.mp3"
+      }
+    ]
+  },
+  "chapters": [
+    { "id": "open-jingle", "kind": "open", "label": "Opening", "detail": "Station jingle", "start": 0.0, "clock": "0:00:00" },
+    { "id": "open-intro", "kind": "open", "label": "Late-night intro", "start": 16.351, "clock": "0:00:16" },
+    {
+      "id": "dx-outer-limit",
+      "kind": "ep",
+      "label": "Dimension X — \"Outer Limit\" (Apr 8, 1950)",
+      "start": 31.794,
+      "clock": "0:00:31",
+      "source": "https://archive.org/download/OTRR_Dimension_X_Singles/Dimension_X_1950-04-08__01_OuterLimit.mp3"
+    },
+    { "id": "break-1-id", "kind": "brk", "label": "Station break", "detail": "Station ID", "start": 1843.655, "clock": "0:30:43" },
+    { "id": "break-1-next", "kind": "brk", "label": "Up next", "start": 1855.197, "clock": "0:30:55" },
+    {
+      "id": "x1-tunnel",
+      "kind": "ep",
+      "label": "X Minus One — \"Tunnel Under The World\" (Sep 4, 1956)",
+      "start": 1860.981,
+      "clock": "0:31:00",
+      "source": "https://archive.org/download/OTRR_X_Minus_One_Singles/XMinusOne56-09-04066TunnelUnderTheWorld.mp3"
+    },
+    { "id": "break-2-id", "kind": "brk", "label": "Station break", "detail": "Station ID", "start": 3607.85, "clock": "1:00:07" },
+    { "id": "break-2-next", "kind": "brk", "label": "Up next", "start": 3617.163, "clock": "1:00:17" },
+    {
+      "id": "dx-folded-hands",
+      "kind": "ep",
+      "label": "Dimension X — \"With Folded Hands\" (Apr 15, 1950)",
+      "start": 3622.807,
+      "clock": "1:00:22",
+      "source": "https://archive.org/download/OTRR_Dimension_X_Singles/Dimension_X_1950-04-15__02_WithFoldedHands.mp3"
+    },
+    { "id": "break-3-id", "kind": "brk", "label": "Station break", "detail": "Station ID", "start": 5389.241, "clock": "1:29:49" },
+    { "id": "break-3-next", "kind": "brk", "label": "Up next", "start": 5398.136, "clock": "1:29:58" },
+    {
+      "id": "x1-surface",
+      "kind": "ep",
+      "label": "X Minus One — \"Surface Tension\" (Aug 28, 1956)",
+      "start": 5403.919,
+      "clock": "1:30:03",
+      "source": "https://archive.org/download/OTRR_X_Minus_One_Singles/XMinusOne56-08-28065SurfaceTension.mp3"
+    },
+    { "id": "close-jingle", "kind": "close", "label": "Sign-off", "detail": "Station jingle", "start": 7120.957, "clock": "1:58:40" }
+  ]
+}

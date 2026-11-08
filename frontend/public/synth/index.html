@@ -441,6 +441,35 @@
   body[data-dev="klystron"] .devbtn[aria-pressed="true"] { color: #ffe8d6; border-color: #ffb089; background: rgba(255, 176, 137, 0.12); }
   body[data-dev="klystron"] .devbtn[aria-pressed="true"] i { background: #ffb089; box-shadow: 0 0 7px #ffb089; }
   body[data-dev="klystron"] .tabs button[aria-selected="true"] { color: #ffe8d6; border-color: #ffb089; background: rgba(255, 176, 137, 0.12); }
+  /* Klystron's vowel and source rows (graphics, 8 Nov): joined switches in the patch keys' recessed finish, the lit
+     key in Klystron's peach, and the source's name in a recessed readout window (the MIDI deck's finish) with a
+     lamp: peach on the vowel pad, amber with a file loaded, red while the microphone is live (pulsing; steady with
+     reduced motion), dark when a saved patch names a file or mic that is not loaded. Before, Load and Mic were
+     header buttons beside file and mic chips that did the same, and the name was bare text. */
+  #klRoot .klsw { display: inline-flex; flex-wrap: nowrap; gap: 0; align-items: stretch; margin: 0; border-radius: 7px;
+    box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(255,236,220,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #klRoot .klsw > .chip { margin: 0; border-radius: 0; border-color: #3a2419; border-left-width: 0; min-width: 34px; min-height: 30px; padding: 3px 10px;
+    background: linear-gradient(180deg, #24180f, #150e0a); color: #d9b9a4; box-shadow: inset 0 1px 0 rgba(255,236,220,0.07); }
+  #klRoot .klsw > .chip:first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  #klRoot .klsw > .chip:last-child { border-radius: 0 6px 6px 0; }
+  #klRoot .klsw > .chip:hover:not([aria-pressed="true"]) { color: #ffd2b8; border-color: #3a2419; }
+  #klRoot .klsw > .chip:focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
+  body[data-dev="klystron"] #klRoot .klsw > .chip[aria-pressed="true"] { color: #2a140e; border-color: #ffb089; background: linear-gradient(180deg, #ffc8a8, #f29a6c);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 8px rgba(255,176,137,0.45); }
+  .klvrow { margin: 8px 0 6px; }
+  #klVowels > .chip { min-width: 40px; font-size: 13px; }
+  .klsrc { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin: 2px 0 4px; min-width: 0; }
+  .kltag { flex: 0 0 auto; min-width: 50px; font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #c9a58e; }
+  .klread { display: inline-flex; align-items: center; gap: 7px; flex: 0 1 auto; min-width: 0; max-width: 260px; min-height: 26px; padding: 3px 10px;
+    border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(255,236,210,0.08);
+    font-size: 11px; color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
+  .klread .klname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .klread i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2a2a2a; box-shadow: inset 0 0 2px #000; }
+  .klread[data-src="vowel"] i { background: #ffb089; box-shadow: 0 0 6px #ffb089; }
+  .klread[data-src="file"] i { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .klread[data-src="mic"] i { background: var(--red); box-shadow: 0 0 8px var(--red); animation: deckRec 1.2s ease-in-out infinite; }
+  .klread[data-src="idle"] { color: #b89a7a; text-shadow: none; }
   body[data-dev="phantastron"] #mStereo, body[data-dev="phantastron"] #mEns, body[data-dev="phantastron"] #mOut,
   body[data-dev="phantastron"] #mSpk, body[data-dev="phantastron"] #mRoom, body[data-dev="phantastron"] #chassis { display: none !important; }
   #phBoard { width: 100%; height: 280px; max-width: 100%; display: block; touch-action: none; border-radius: 8px; background: #10261c; cursor: crosshair; }
@@ -800,6 +829,22 @@
   .rec-time:empty { display: none; }
   .dbody { margin-top: 7px; border-top: 1px solid #050505; box-shadow: inset 0 1px 0 rgba(255,255,255,0.045); padding-top: 7px; }
   .dbody[hidden] { display: none; }
+  /* the paper roll (0.3): a third strip under the library. The roll is a canvas of punched paper moving past a
+     brass reader; the lamp in the first window is amber while run is on, green while the roll plays. */
+  #library { margin-bottom: 0; } #roll { margin-bottom: 6px; }
+  #rollStat::before { content: ''; flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2a2a2a; box-shadow: inset 0 0 2px #000; }
+  #roll:has(#rollRun[aria-pressed="true"]) #rollStat::before { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  #roll:has(#rollPlay[aria-pressed="true"]) #rollStat::before { background: var(--green); box-shadow: 0 0 7px var(--green); }
+  #rollPos { justify-content: center; min-width: 11ch; }
+  canvas#rollCv { display: block; width: 100%; height: 132px; border: 1px solid #000; border-radius: 5px; background: #0b0a09; touch-action: manipulation;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.05); }
+  canvas#rollCv:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  #rollStep { min-width: 15ch; justify-content: center; }
+  #rollBody .chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  #rollBody .cl { font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-right: 2px; }
+  #rollBody .tempo input { width: 96px; }
+  #rollLenV { min-width: 3ch; justify-content: center; }
+  #rollPick { max-width: 100%; }
   .tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
   .tempo input { width: 130px; accent-color: var(--amber); min-height: 34px; }
   .library select.btn { max-width: 100%; }
@@ -1053,10 +1098,12 @@
     .stripcol .sl { font-size: 8px; letter-spacing: 0; }
     .btn, .btn.small { min-height: 44px; min-width: 44px; padding: 4px 10px; }
     .chip { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 12px; }
+    #klRoot .klsw > .chip { min-height: 44px; min-width: 44px; } .kltag { display: none; } .klread { flex: 1 1 auto; min-height: 32px; max-width: none; }
     .tabs button { min-height: 44px; min-width: 44px; padding: 7px 3px; letter-spacing: 0; font-size: 11px; }
     .kctl .hide-s { display: none; }
     .deck { padding: 6px; margin: 6px 4px 0; } .deck::before, .deck::after, .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
     #libPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
+    #rollPick { min-height: 44px; height: 44px; flex: 1 1 100%; } canvas#rollCv { height: 120px; } #rollBody .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; }
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
     #mixBus label { flex: 1 1 100%; } #mixBus input[type="range"] { flex: 1 1 auto; width: auto; }
     .volab { flex: 1 1 160px; min-width: 0; max-width: 100%; }
@@ -1090,7 +1137,7 @@
   }
   /* under 360 px the name takes its own line so a long name is not cut; the chips share the next */
   @media (max-width: 359px) { .mixrow .who { flex-basis: 100%; } .mixrow .chip { flex: 1 1 0; } }
-  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before { animation: none !important; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before, .klread i { animation: none !important; }
     .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .rail::before, .rail::after, .racklinks::before, .racklinks::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>
 </head>
@@ -1633,6 +1680,55 @@
       </div>
     </section>
 
+    <section class="deck roll" id="roll" aria-label="Paper roll: a 16-step sequencer on the rack transport">
+      <div class="drow">
+        <span class="label">roll</span>
+        <button class="btn small" id="rollBtn" aria-expanded="false" aria-controls="rollBody">roll &#9662;</button>
+        <button class="btn small" id="rollRun" aria-pressed="false" title="Run the roll whenever the rack transport plays">run</button>
+        <button class="btn small" id="rollPlay" aria-pressed="false" title="Play the roll from the start. Uses the rack transport.">&#9654; play</button>
+        <button class="btn small" id="rollStop" title="Stop the rack transport">&#9632; stop</button>
+        <span class="dstat" id="rollStat"></span>
+        <span class="dstat" id="rollPos"></span>
+      </div>
+      <div class="dbody" id="rollBody" hidden>
+        <canvas id="rollCv" tabindex="0" role="img" aria-label="The paper roll: each column is a step, a hole is a note. Tap a step to pick it, tap it again to punch or close its hole. Arrow keys pick and move, Enter punches."></canvas>
+        <div class="drow">
+          <button class="btn small" id="rollPrev" aria-label="Previous step">&#9664;</button>
+          <span class="dstat" id="rollStep">step 1/16</span>
+          <button class="btn small" id="rollNext" aria-label="Next step">&#9654;</button>
+          <button class="btn small" id="rollDn" aria-label="Note down a semitone">&minus;</button>
+          <button class="btn small" id="rollUp" aria-label="Note up a semitone">+</button>
+          <button class="btn small" id="rollOctDn" aria-label="Note down an octave">oct &minus;</button>
+          <button class="btn small" id="rollOctUp" aria-label="Note up an octave">oct +</button>
+          <span class="chips" role="group" aria-label="This step">
+            <button type="button" class="chip" id="rollG" aria-pressed="false" title="Punch a hole: the step plays">punch</button>
+            <button type="button" class="chip" id="rollA" aria-pressed="false" title="Accent: the accent velocity">accent</button>
+            <button type="button" class="chip" id="rollS" aria-pressed="false" title="Slide: hold the note into the next one">slide</button>
+            <button type="button" class="chip" id="rollT" aria-pressed="false" title="Tie: carry the note before through this step">tie</button>
+            <button type="button" class="chip" id="rollKey" aria-pressed="false" title="Key in: each key you play sets this step and moves on">key in</button>
+          </span>
+        </div>
+        <div class="drow">
+          <select class="btn" id="rollPick" aria-label="Factory rolls"></select>
+          <span class="cl">length</span>
+          <button class="btn small" id="rollLenDn" aria-label="Fewer steps">&minus;</button>
+          <span class="dstat" id="rollLenV">16</span>
+          <button class="btn small" id="rollLenUp" aria-label="More steps">+</button>
+          <span class="chips" id="rollRates" role="group" aria-label="Step length"><span class="cl">step</span></span>
+          <button class="btn small" id="rollClear" title="Close every hole">clear</button>
+        </div>
+        <div class="drow">
+          <label class="tempo">gate <input type="range" id="rollGate" aria-label="Gate, how long each note holds"><output class="fread" id="rollGateV" for="rollGate" aria-hidden="true"></output></label>
+          <label class="tempo">swing <input type="range" id="rollSwing" aria-label="Swing"><output class="fread" id="rollSwingV" for="rollSwing" aria-hidden="true"></output></label>
+          <label class="tempo">velocity <input type="range" id="rollVel" aria-label="Velocity"><output class="fread" id="rollVelV" for="rollVel" aria-hidden="true"></output></label>
+          <label class="tempo">accent <input type="range" id="rollAcc" aria-label="Accent velocity"><output class="fread" id="rollAccV" for="rollAcc" aria-hidden="true"></output></label>
+          <label class="tempo">transpose <input type="range" id="rollTr" aria-label="Transpose, semitones"><output class="fread" id="rollTrV" for="rollTr" aria-hidden="true"></output></label>
+        </div>
+        <div class="drow"><span class="chips" id="rollDest" role="group" aria-label="The device the roll plays"><span class="cl">plays</span></span></div>
+        <p class="note">Sixteen steps of punched paper, read as it passes the brass bar. A hole plays its note; accent plays it at the accent velocity; slide holds it into the next hole so a one-voice device glides; tie carries the note before it through the step. Run on and the roll plays whenever the rack transport does, beside a song from the library and Dekatron's pattern. Play here starts the transport from the top. It plays the device lit on the rail, or the one you pick. Key in: each key you play sets the picked step and moves on. The roll is kept in this browser.</p>
+      </div>
+    </section>
+
     <div class="keybed" id="keybed">
       <div class="strips">
         <div class="stripcol"><div class="strip" id="pbStrip" role="slider" aria-label="Pitch bend" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0" tabindex="0"><div class="thumb"></div></div><span class="sl">PITCH</span></div>
@@ -1653,6 +1749,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to any device on the rack (its row of chips lists them), or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
+    <p><b style="color:var(--muted)">Paper roll.</b> Open roll for a 16-step sequencer drawn as punched paper. Tap a step to pick it and tap again to punch it; set its note, accent, slide or tie with the buttons below the paper, or turn on key in and play the notes. Play on the strip starts the rack transport. With run lit the roll plays whenever the transport does, beside a song or a Dekatron pattern, on the device lit on the rail or the one you pick.</p>
     <p><b style="color:var(--muted)">Sculpt.</b> A hand instrument on its own page: <a href="/synth/hand-sculpt/">pinch a glowing orb</a> and move it in the space in front of you. The camera picture stays in the browser.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
@@ -1688,6 +1785,7 @@ import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, showO
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
 import { createPlayer } from './player.js';
+import { createRoll } from './paperroll-ui.js';
 import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
@@ -2298,7 +2396,7 @@ $('projFile').addEventListener('change', () => {
 // Shift and other modifiers reissued keydown without repeat, the count went to
 // 2, and the single keyup left the gate open.
 const holds = new Map();      // note -> Set of source ids
-let deck = null, player = null;   // the MIDI deck and the library player, built further down
+let deck = null, player = null, roll = null;   // the MIDI deck, the library player and the paper roll, built further down
 let sustainOn = false;
 function held(n) { const s = holds.get(n); return !!(s && s.size); }
 function heldNotes() { const out = []; holds.forEach((s, n) => { if (s && s.size) out.push(n); }); return out; }
@@ -2354,6 +2452,7 @@ function noteOn(n, v, src) {
   // Dekatron, Thyratron, Lattice and Gleam flare from the note-on count on their own meter (see frame()),
   // which this note reaches too, so the key does not flare them a second time
   showKeyed.set(n, performance.now()); if (!ONSET_METER.has(dev)) showNote(SHOW, v);
+  if (roll) roll.keyIn(n, v);
   if (mixArmed.length) {
     const targets = mixArmed.slice();
     noteRoutes.set(n, targets);
@@ -4199,6 +4298,14 @@ player = createPlayer({
     syncHostUI();
   },
 });
+roll = createRoll({
+  dev: () => dev, ctx: () => ctx, engine: () => E, wake, withEngine, toast, store,
+  patchOf: d => (d === dev ? cur : DS[d].cur),
+  devices: () => listDevices(),
+  wakeDevice: id => wakeDevice(id), sleepDevice: id => sleepDevice(id),
+  busy: d => !!(player && player.test.devices().includes(d)),
+  reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+});
 
 // ---------------------------------------------------------------- the chassis
 const TUBE_ST = {};
@@ -4429,6 +4536,7 @@ function frame(now) {
   if (document.hidden) return;
   if (now - lastFrame < 33) return;                  // at most 30 a second
   const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0; lastNow = now; lastFrame = now;
+  if (roll) roll.frame(now);
   const m = E ? E.meter : { v1: 0, v2: 0, voices: 0, cpu: 0 };
   const running = ctx && ctx.state === 'running';
   let oL = 0, oR = 0, pk = 0;
@@ -5485,6 +5593,7 @@ window.__synth = {
   midi: data => midiMsg({ data: Uint8Array.from(data) }),
   deck: () => deck.test,
   player: () => player.test,
+  roll: () => roll.test,
   // the graphic EQ: the maths the plot uses, and what the live rack is running
   eq: {
     response: (f, gains, n, fs) => eqResponse(f, gains, n, fs || 48000), fit: (id, n) => eqFit(id, n), target: (id, f) => eqTarget(id, f),

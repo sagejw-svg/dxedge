@@ -18,6 +18,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
+| R1108-3 | confusing | f | The paper roll's play starts Dekatron's own step pattern too: Blank Roll's play is a drum beat only (Dekatron strip 0.56), Octave Pump on Filament comes with the factory beat under it; same root as R1030-3 | measured |
+| R1108-4 | confusing | f | The paper roll offers Heptode as a device chip, but it plays nothing (17 strikes, strip 0); same as R1030-4 for the library | measured |
+| R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5) | measured (run kept, strikes), inferred (surprise) |
 | R1104-4 | confusing | c, d | Panic leaves the Mix desk delay and room returns and the patch's own output room ringing; the room's tail then refills the master reverb | measured |
 | R1106-2 | confusing | a | LC bank with the stereo offset: at 1 octave the sides differ far more than on the other models (side 1.7 dB over the left channel, Valve 12 -8 dB) and mono loses 0.55 dB; the LC note does not carry the mono warning the Ladder and Poly notes do | measured (width, mono), inferred (impact) |
 | R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
@@ -45,7 +48,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note"; still open 29 Oct | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
-| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus; still open 5 Nov | measured (Gleam inferred) |
+| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 8 Nov | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
@@ -54,8 +57,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 5 Nov (4 buttons, no name or title) | measured (5 Nov) |
-| R1020-8 | confusing | h | Desktop rack: 503 tab stops (5 Nov; 481 on 2 Nov, 426 on 27 Oct) and no skip link; the library is stop 487 | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 8 Nov (4 buttons, no name or title) | measured (8 Nov) |
+| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491 | measured |
 | R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1) | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 1 Nov | measured |
@@ -66,7 +69,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1732,3 +1735,113 @@ to a held note when a strip changes.
 Areas a, b, f, g, h. R1104-4 (Panic and the other tails) and R1101-2 and R1101-3 (tape echo) were
 not re-run. Suggested next: f, g and h, including a project saved with a strip muted or panned and
 loaded while a note holds (now that going back to unity waits 200 ms).
+
+## 2026-11-08 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `2d404d4`, sw.js
+`dxedge-v192` (the paper roll and Klystron's new source row had landed overnight). Chromium 1243
+headless (the `chromium-1194` path in the task prompt is still gone) at 1366 x 900 and 375 x 812
+(touch, 2x). No page or console errors on the rack, Hexode or Anode at either size. Focus tonight:
+the new paper roll as a musician would use it (every device it offers, with the library, the rail,
+Panic, tempo and rate changes, key in, a reload, a project), then the vendored pages and a tab walk
+with the roll open. Sound was read from the strip meters and the lit device's meter (`notes`,
+`voices`) and, on the vendored pages, an analyser tapped on the destination.
+
+### What worked (measured)
+
+- Roll play on Octave Pump at 120 BPM: 26 strikes 0.125 s apart to the ms, none late, none dropped;
+  the status reads "Octave Pump · 16 × 1/16 · lit device"; a tempo change to 180 BPM goes to 0.0833 s
+  and 1/8 then to 0.1667 s with no burst. At 1/32, 240 BPM, swing 60% and gate 100%: 69 strikes in 2 s,
+  none dropped. Length 16 to 1 to 16 under a running roll keeps the grid.
+- Every device the roll offers sounds except Heptode (R1108-4): Arc Arpeggio peaks from 0.018
+  (Phantastron) to 0.80 (Geissler); after stop each one decays to silence (Thyratron and Lattice
+  tails measured over 5 s, nothing held).
+- Switching the rail from Filament to Cathode mid-roll moves the strikes to Cathode (10 on Filament,
+  12 on Cathode) and stop leaves both silent. Panic stops the transport and the roll.
+- The roll's stop also stops a library song (one transport), as its name says.
+- Arrow keys on the focused paper pick and move steps (step 1 C2 to C#2, then step 2) without moving
+  the octave; a reload keeps the pattern, the edits and the "*" on the name.
+- Phone 375: the open strip has no sideways scroll and every button, chip, list and slider is 44 px
+  or more. Reduced motion: the paper holds still (position 0) while the roll plays.
+- Tab walk with the roll open: 553 stops at 1366 px, 152 at 375 px, 0 unnamed, a ring on every one;
+  the roll's 49 stops all carry names ("Step length 1/16", "The roll plays Cathode" and so on).
+  Klystron's new rows: the five vowel keys and the three source keys sit in named groups ("Vowel",
+  "Mouth source") with `aria-pressed` that follows the pick.
+- A project saved with Filament muted and panned L50, loaded while A3 is held, brings back mute and
+  pan and keeps the note held; unmuting after it works (the suggestion from 7 Nov).
+- Hexode: a held A peaks 0.26 and is silent after release at both sizes; links back to `/synth/` and
+  Anode. Anode starts from its start button (peak 0.30 desktop, 0.50 phone), links back to `/synth/` and Hexode,
+  no sideways scroll at 375 px.
+
+### Findings
+
+**R1108-1. Stopping the paper roll can leave a note held on Filament or Cathode.** Area f. Broken.
+Measured. Fixed tonight.
+- Steps: open roll, pick Octave Pump, press play on Filament (or Cathode), press stop a second later.
+  Raise the gate to 100% to make it happen every time.
+- Expected: stop lets every note go.
+- Actual: the note sounding at the stop keeps ringing until Panic (`meter().notes` [36] 3 s after
+  stop, strip 0.16 at 4 s). Gate 100% or 90%: 4 of 4 stops on each device. The default gate (45%):
+  1 of 4 on Filament, 2 of 4 on Cathode. The roll's own log was balanced (every on has its off), so
+  the roll thought it had let go.
+- Cause (code): the roll sends each off up to 150 ms early with its frame. Stop sends `flush` to
+  Filament and Cathode, which drops every queued library or roll event, those offs included, and
+  then sent offs only for notes whose off had not been sent yet.
+- Fix: `paperroll-ui.js` keeps the offs it has queued on Filament and Cathode and sends any that
+  were still in the future again, now, after the flush (the same way it already treats the notes
+  still waiting). Check: "Pr. stop lets go of the note that is sounding" (3 stops each on Filament
+  and Cathode at gate 100%; on the unfixed tree [1, 1, 1] on both, fixed [0, 0, 0]).
+
+**R1108-2. Key in stays on with the roll strip closed.** Area f. Confusing. Measured. Fixed tonight.
+- Steps: open roll, press key in, close the strip with roll ▾, play a few keys (or MIDI notes).
+- Expected: the keys only play; nothing changes out of sight.
+- Actual: each key rewrites the picked step and moves on (step 2 became F#4 with the strip closed),
+  marks the roll edited, and the lamp that would show it is hidden.
+- Fix: closing the strip turns key in off, and key in does nothing while the strip is closed. Check:
+  "Pr. closing the roll strip turns key in off" (unfixed: key in still on, step 1 set to 70).
+
+**R1108-3. The roll's play brings Dekatron's own pattern with it.** Area f. Confusing. Measured.
+- Steps: fresh page, open roll, pick Blank Roll (or keep Octave Pump), press play.
+- Expected (first-time user): the roll plays and nothing else.
+- Actual: the transport starts and Dekatron's factory beat plays under it (Dekatron strip peak 0.56
+  with Blank Roll, which strikes nothing). The roll's note says it plays "beside Dekatron's pattern",
+  so this is stated, but the play button reads as the roll's own. Same root as R1030-3; one answer
+  can cover both (hold the pattern unless Dekatron is lit or armed, or say it on the strip).
+
+**R1108-4. Heptode is offered on the roll but plays nothing.** Area f. Confusing. Measured.
+- Steps: roll, "plays" chips, pick Heptode, play.
+- Actual: 17 strikes sent, Heptode strip 0 throughout. Same as R1030-4 in the library; dropping
+  Heptode from both lists, or making it answer notes, is the same decision.
+
+**R1108-5. Run stays on for good after one play, reloads included.** Area f. Confusing. Measured
+(run kept, strikes), inferred (surprise).
+- Steps: press the roll's play once, stop, reload the page, play a library song.
+- Actual: run is still on after the reload (lamp amber), and the song brings the roll in (20 roll
+  strikes under Beethoven 5). This follows James's call (1) of 8 Nov ("it then stays on until you
+  switch it off"), but the same note says a song should never bring the roll in by surprise, and a
+  week later it will. Options: keep run per page (not stored), or store it and show the amber lamp on
+  the library strip too.
+
+### Still open, re-measured tonight
+
+- R1020-3: a project still carries 14 devices (no Thyratron, Dekatron, Lattice, Gleam) and no master
+  bus, and now no roll either (the roll's roadmap lists that as not in its first slice).
+- R1020-7: Anode's four "⟳" buttons still have no name or title, at both sizes.
+- R1020-8: 553 desktop stops with the roll open; the roll starts at stop 491.
+- Hexode still scrolls sideways at 375 px (1154 px wide).
+- R1017-8: the Filament strip meter still read 0.14 while the strip was muted.
+
+### Not reported
+
+- The roll's stop and the header's transport stop share the name "Stop the rack transport"; they do
+  the same thing, so the same name is right.
+- A computer key on the focused paper still plays (A sounds C3, Z moves the octave): the paper takes
+  only the arrows and Enter. Consistent with the rest of the rack.
+- The vowel keys are named by their letter ("u", "o") inside the "Vowel" group, which a screen
+  reader reads as "u, Vowel"; enough.
+
+### Not covered tonight
+
+Areas a, b, c, d, e. The song library's 21 songs were not replayed one by one (the roll was the
+focus). Suggested next: a and b (Klystron's new source row against its sound, the roll's six
+factory rolls on Cathode and Thyratron with slides), then c with the roll's key in from MIDI.

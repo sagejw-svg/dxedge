@@ -52,7 +52,7 @@ export const CORE_RANGE = {
   drag: [0, 1],
   bodyCount: [0, 8],
   wellCount: [0, 4],
-  root: [36, 84],
+  root: [24, 96], // what normalizeCore keeps; the root knob reads this row
   key: [0, 11],
   timbre: [0, 1],
   fold: [0, 1],

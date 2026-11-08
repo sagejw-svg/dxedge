@@ -4688,6 +4688,75 @@ with sync_playwright() as pw:
     ck("R. parameter ranges: every number row spans min < max around its default, and every factory patch lies inside its device's table",
        not prange["flat"] and not prange["outside"] and not pr_thin,
        {"flat": prange["flat"][:12], "nFlat": len(prange["flat"]), "outside": prange["outside"][:12], "notChecked": pr_thin, "seen": prange["seen"]})
+    # Table against normalizer (8 Nov): each number row's ends are what the device's normalizer keeps. A value far
+    # past either end loads inside the row, and each end loads as itself. Until 8 Nov Phantastron's and
+    # Trochotron's seed rows read 0..999999 while the normalizer keeps any uint32 (Trochotron's random button picks
+    # up to 1e9), and Gyrotron's root row read 36..84 while the normalizer keeps 24..96. The one known exception is
+    # the stereo, ens and out fields Mote, Heptode and Orthicon carry: those normalizers pin them to Filament's
+    # defaults (the fields do nothing on these devices), so their table ends do not load; any other row that
+    # does not load its own ends fails. Choice rows: every choice loads as itself and an unknown value loads as
+    # one of the choices (the same pinned fields excepted).
+    pnorm = pg.evaluate("""async () => {
+      const d = await import('/synth/device.js');
+      const own = { filament: (await import('/synth/patches.js')).normalize, cathode: (await import('/synth/cathode.js')).normalizeC };
+      const get = (o, k) => k.split('.').reduce((a, y) => (a == null ? a : a[y]), o);
+      const put = (o, k, v) => { const ks = k.split('.'); let a = o; for (let i = 0; i < ks.length - 1; i++) { if (a[ks[i]] == null || typeof a[ks[i]] !== 'object') a[ks[i]] = {}; a = a[ks[i]]; } a[ks[ks.length - 1]] = v; };
+      const pinned = id => ['mote', 'heptode', 'orthicon'].includes(id);
+      const r = { wide: [], ends: [], choice: [], noNorm: [], noPath: [], rows: 0, choices: 0, pinned: 0 };
+      // a row id is its patch path, except Lattice's four macro rows, which are the macros array's slots
+      const pathOf = (id, k) => (id === 'lattice' && /^macro[1-4]$/.test(k) ? 'macros.' + (+k[5] - 1) : k);
+      for (const x of d.listDevices()) {
+        const norm = x.normalize || own[x.id];
+        if (!norm) { r.noNorm.push(x.id); continue; }
+        const base = norm({});
+        const load = (k, v) => { const q = pathOf(x.id, k), p = JSON.parse(JSON.stringify(base)); put(p, q, v); try { return get(norm(p), q); } catch (e) { return 'threw ' + e.message; } };
+        for (const [k, i] of Object.entries(x.parameters || {})) {
+          if (get(base, pathOf(x.id, k)) === undefined) { r.noPath.push(x.id + ':' + k); continue; }
+          const carried = pinned(x.id) && /^(stereo|ens|out)\\./.test(k);
+          if (i.type === 'choice') {
+            const bad = i.choices.filter(c => load(k, c) !== c), unk = load(k, 'not-a-choice');
+            if (!i.choices.includes(unk)) r.choice.push(x.id + ':' + k + ' unknown->' + unk);
+            else if (bad.length && !carried) r.choice.push(x.id + ':' + k + ' drops ' + bad.join(','));
+            else if (bad.length) r.pinned++; else r.choices++;
+            continue;
+          }
+          if (i.type !== 'int' && i.type !== 'float') continue;
+          const span = i.max - i.min, hi = load(k, i.max + 10 * span + 7), lo = load(k, i.min - 10 * span - 7);
+          if (!(typeof hi === 'number' && hi <= i.max && hi >= i.min && typeof lo === 'number' && lo <= i.max && lo >= i.min)) {
+            r.wide.push(x.id + ':' + k + ' ' + i.min + '..' + i.max + ' keeps ' + lo + '..' + hi); continue; }
+          const top = load(k, i.max), bot = load(k, i.min);
+          if (top !== i.max || bot !== i.min) { if (carried) r.pinned++; else r.ends.push(x.id + ':' + k + ' ' + i.min + '..' + i.max + ' loads ' + bot + '..' + top); continue; }
+          r.rows++;
+        }
+      }
+      r.n = d.listDevices().length;
+      return r;
+    }""")
+    ck(f"R. table against normalizer: on all {pnorm['n']} devices a value past either end of a number row loads inside it and each end loads as itself ({pnorm['rows']} rows), every choice loads as itself and an unknown one as a choice ({pnorm['choices']} rows); only the {pnorm['pinned']} stereo, ens and out rows Mote, Heptode and Orthicon pin to Filament's defaults are excused",
+       not pnorm["wide"] and not pnorm["ends"] and not pnorm["choice"] and not pnorm["noNorm"] and not pnorm["noPath"] and pnorm["n"] >= 18 and pnorm["rows"] > 400 and pnorm["choices"] > 100 and pnorm["pinned"] == 69,
+       {k: pnorm[k] for k in ("wide", "ends", "choice", "noNorm", "noPath", "n", "rows", "choices", "pinned")})
+    # The panels that set those rows (8 Nov): a typed seed past a uint32 is held at the top instead of wrapped round
+    # by the normalizer's >>> 0 (5e9 used to load as 705032704), and Gyrotron's root knob spans its row, so a patch
+    # with root 30 reads 30 (it read 36, and a touch moved the root there).
+    rp = b.new_page(viewport={"width": 1366, "height": 1000}); rperr = []
+    rp.on("pageerror", lambda e: rperr.append(str(e)))
+    rp.goto(BASE); rp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rseed = {}
+    for dv_, sel_ in (("trochotron", "#trSeed"), ("phantastron", "#phSeed")):
+        rp.evaluate("d => __synth.setDevice(d)", dv_); rp.wait_for_selector(sel_, state="visible", timeout=10000)
+        rp.fill(sel_, "5000000000"); rp.press(sel_, "Enter")
+        rp.wait_for_timeout(150)
+        rseed[dv_] = {"seed": rp.evaluate("__synth.patch().seed"), "max": rp.get_attribute(sel_, "max")}
+    rp.evaluate("__synth.setDevice('gyrotron')"); rp.wait_for_selector("#gyCanvas", state="visible", timeout=10000)
+    rp.evaluate("() => __synth.setPatch({ device: 'gyrotron', name: 'Low Root', root: 30 })")
+    rp.wait_for_function("() => __synth.patch().root === 30", timeout=5000); rp.wait_for_timeout(100)
+    rroot = rp.evaluate("""() => { let a = document.getElementById('gyCanvas'), k = null; while (a && !(k = a.querySelector('.knob[data-path="root"]'))) a = a.parentElement;
+      return k && { root: __synth.patch().root, min: k.getAttribute('aria-valuemin'), max: k.getAttribute('aria-valuemax'), now: k.getAttribute('aria-valuenow'), kv: k.querySelector('.kv').textContent }; }""")
+    rp.close()
+    ck(f"R. a typed seed of 5000000000 is held at 4294967295 on Trochotron and Phantastron (not wrapped to 705032704), and each field's max says so ({rseed})",
+       all(v_ == {"seed": 4294967295, "max": "4294967295"} for v_ in rseed.values()) and len(rseed) == 2, rseed)
+    ck(f"R. Gyrotron's root knob spans its table row (24..96) and a patch with root 30 reads 30 on it ({rroot})",
+       rroot == {"root": 30, "min": "24", "max": "96", "now": "30", "kv": "30"} and not rperr, (rroot, rperr))
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})
@@ -4724,7 +4793,10 @@ with sync_playwright() as pw:
       // the pulses are consecutive ticks, each at beat tick/24 and stamped that many beats after the first, which is stamped at play
       const k0 = clocks.length ? clocks[0].tick : 0, b0 = clocks.length ? clocks[0].beat : 0, c0 = clocks.length ? clocks[0].time : NaN;
       const tickErr = clocks.reduce((m, e, k) => Math.max(m, e.tick === k0 + k ? Math.abs(e.time - (c0 + (e.beat - b0) * spb)) + Math.abs(e.beat - e.tick / 24) : 1), 0);
-      const startErr = Math.abs(c0 - p0.time);
+      // the first pulse is the tick at or before the play position, stamped where that tick falls: at play when play
+      // starts on a tick (beat 0), up to one tick earlier when a held position sits between ticks (8 Nov: held at beat
+      // 0.023, the pulse for tick 0 came 11.6 ms before play and the old check, which wanted it at play, failed)
+      const startErr = Math.abs(c0 - (p0.time + (b0 - p0.beat) * spb)) + (k0 === Math.floor(p0.beat * 24 + 1e-9) ? 0 : 1);
       __synth.transport().stop();
       const held = __synth.transport().state();
       __synth.transport().stop();
@@ -4735,7 +4807,7 @@ with sync_playwright() as pw:
       __synth.registerDevice({ id: 'sequencer', name: 'Step Sequencer', instrument: false, midiInput: false, midiOutput: true, audioOutputs: 0, description: 'A device other code can register.' });
       return { got, playing: mid.playing, beat: mid.beat, beatErr, tickErr, startErr, nClock: clocks.length, p0beat: p0.beat, heldBeat: held.beat, heldPlaying: held.playing, home: home.beat, cut, read, ids: __synth.devices().map(d => d.id) };
     }""")
-    ck(f"R. play emits clock events a device can subscribe to ({live['nClock']} pulses by beat {live['beat']:.3f}; the beat follows the context clock at the tempo within {live['beatErr']:.1e}, each pulse's tick, beat and time within {live['tickErr']:.1e}, the first pulse {1000 * live['startErr']:.1f} ms from play)",
+    ck(f"R. play emits clock events a device can subscribe to ({live['nClock']} pulses by beat {live['beat']:.3f}; the beat follows the context clock at the tempo within {live['beatErr']:.1e}, each pulse's tick, beat and time within {live['tickErr']:.1e}, the first pulse {1000 * live['startErr']:.1f} ms from its tick's place, play at beat {live['p0beat']:.3f})",
        live["playing"] and "play" in live["got"] and live["nClock"] >= 2 and live["beat"] >= live["p0beat"] + 0.1 and live["beatErr"] < 0.01 and live["tickErr"] < 1e-9 and live["startErr"] < 0.01, live)
     ck("R. stop holds the beat and a second stop returns to the start", (not live["heldPlaying"]) and live["heldBeat"] >= live["beat"] and live["heldBeat"] > 0.1 and live["home"] == 0, live)
     ck("R. a parameter id round-trips, and a new device can register", live["cut"] == 1234 and live["read"] == 1234 and "sequencer" in live["ids"], live)
@@ -5536,6 +5608,62 @@ with sync_playwright() as pw:
             ck("Cf. 375 px: no sideways scroll after visiting every device", cfp.evaluate("document.documentElement.scrollWidth") <= 375)
         cfx.close()
     ck("Cf. no page errors (canvas lettering)", not cferr, cferr)
+    # Ks. Klystron's vowel and source rows (graphics, 8 Nov 2026). Before, vowel, file and mic chips sat beside Load and
+    # Mic header buttons that did the same two things, and the source's name was bare text at the end of the row (seen
+    # at 1366 px; on a 375 px phone Load's word sat at the top of its key). Now: two joined switches in a recessed tray,
+    # one control per source, and the name in a recessed readout window whose lamp follows the source.
+    KS_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, w: q.width, h: q.height }; };
+      const join = a => a.every((k, i) => i === 0 || (Math.abs(k.l - a[i - 1].r) < 0.6 && Math.abs(k.t - a[i - 1].t) < 0.6));
+      const vk = [...document.querySelectorAll('#klVowels > .chip')].map(R), sk = [...document.querySelectorAll('#klSources .klsw > *')];
+      const rd = document.getElementById('klRead'), cs = getComputedStyle(rd), lamp = getComputedStyle(rd.querySelector('i'));
+      return { nv: vk.length, vJoin: join(vk), src: sk.map(e => e.id || e.dataset.src), sTag: sk.map(e => e.tagName), sJoin: join(sk.map(R)),
+        trays: [...document.querySelectorAll('#klRoot .klsw')].every(e => getComputedStyle(e).boxShadow.includes('inset')),
+        loose: document.querySelectorAll('#klSources .btn').length, ctl: document.querySelectorAll('#klSources button').length,
+        small: [...vk, ...sk.map(R)].filter(k => k.w < 44 || k.h < 44).length, minH: Math.min(...[...vk, ...sk.map(R)].map(k => k.h)),
+        win: R(rd), row: R(document.getElementById('klSources')), color: cs.color, bg: cs.backgroundImage, shadow: cs.boxShadow,
+        state: rd.dataset.src, name: document.getElementById('klName').textContent, lampBg: lamp.backgroundColor, anim: lamp.animationName,
+        pressed: sk.filter(e => e.getAttribute('aria-pressed') === 'true').map(e => e.id || e.dataset.src),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    kserr = []
+    for ks_w, ks_mob, ks_rm in ((1366, False, "no-preference"), (375, True, "reduce")):
+        ksx = b.new_context(viewport={"width": ks_w, "height": 667 if ks_mob else 1000}, is_mobile=ks_mob, has_touch=ks_mob, reduced_motion=ks_rm)
+        ksp = ksx.new_page(); ksp.on("pageerror", lambda e: kserr.append(str(e)))
+        ksp.add_init_script("""(() => { if (!navigator.mediaDevices) return; navigator.mediaDevices.getUserMedia = async () => {
+          const c = new AudioContext(); const o = c.createOscillator(), d = c.createMediaStreamDestination(); o.connect(d); o.start(); return d.stream; }; })()""")
+        ksp.goto(BASE); ksp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        ksp.evaluate("__synth.setDevice('klystron')"); ksp.wait_for_timeout(300)
+        ks = ksp.evaluate(KS_MEAS)
+        info(f"Ks. {ks_w} px", f"source row {ks['row']['w']:.0f} px, readout {ks['win']['w']:.0f} px, keys {ks['minH']:.0f} px tall")
+        ck(f"Ks. at {ks_w} px the five vowels and the three sources are joined switches in a recessed tray, one control per source (no Load or Mic beside them)",
+           ks["nv"] == 5 and ks["vJoin"] and ks["src"] == ["vowel", "klFileBtn", "klMic"] and ks["sTag"] == ["BUTTON"] * 3 and ks["sJoin"]
+           and ks["trays"] and ks["loose"] == 0 and ks["ctl"] == 3, ks)
+        ks_con = _ob_con(ks["color"], ks["bg"])
+        ck(f"Ks. at {ks_w} px the source's name sits in a recessed readout window ({ks_con:.1f}:1, want 4.5 or more) with a peach lamp on the vowel pad",
+           ks["state"] == "vowel" and ks["name"] == "Vowel" and "gradient" in ks["bg"] and "inset" in ks["shadow"] and ks_con >= 4.5
+           and ks["lampBg"] == "rgb(255, 176, 137)" and ks["pressed"] == ["vowel"], ks)
+        if ks_mob:
+            ck(f"Ks. on a {ks_w} px phone every vowel and source key is 44 px or more, the row stays one line, no sideways scroll",
+               ks["small"] == 0 and ks["row"]["h"] < 60 and ks["win"]["r"] <= ks["row"]["r"] + 0.5 and ks["sw"] <= ks["iw"] == ks_w, ks)
+        else:
+            ck("Ks. at 1366 px the keys keep a compact height (30 px or more) and the window ends inside the card",
+               ks["minH"] >= 29.5 and ks["win"]["r"] <= ks["row"]["r"] + 0.5, ks)
+        ksp.set_input_files("#klFile", files=[{"name": "ks-long-recording-name-for-the-window.wav", "mimeType": "audio/wav", "buffer": base64.b64decode(tiny)}])
+        ksp.wait_for_timeout(500)
+        kf = ksp.evaluate(KS_MEAS)
+        ck(f"Ks. at {ks_w} px a loaded file lights the file key and an amber lamp, its name clipped inside the window, no sideways scroll",
+           kf["state"] == "file" and "ks-long-recording" in kf["name"] and kf["pressed"] == ["klFileBtn"] and kf["lampBg"] == "rgb(255, 179, 71)"
+           and kf["win"]["r"] <= kf["row"]["r"] + 0.5 and kf["sw"] <= kf["iw"], kf)
+        ksp.click("#klMic"); ksp.wait_for_timeout(300)
+        km = ksp.evaluate(KS_MEAS)
+        want_anim = "none" if ks_rm == "reduce" else "deckRec"
+        ck(f"Ks. at {ks_w} px a live microphone lights the mic key and a red lamp ({'steady with reduced motion' if ks_rm == 'reduce' else 'pulsing'})",
+           km["state"] == "mic" and km["name"] == "Microphone" and km["pressed"] == ["klMic"] and km["lampBg"] == "rgb(255, 92, 92)" and km["anim"] == want_anim, km)
+        ksp.click("#klSources [data-src='vowel']"); ksp.wait_for_timeout(150)
+        kv = ksp.evaluate(KS_MEAS)
+        ck(f"Ks. at {ks_w} px the vowel key stops the microphone and brings the peach lamp back",
+           kv["state"] == "vowel" and kv["pressed"] == ["vowel"] and ksp.evaluate("__synth.patch().source") == "vowel", kv)
+        ksx.close()
+    ck("Ks. no page errors (Klystron's source row)", not kserr, kserr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
@@ -6243,6 +6371,216 @@ with sync_playwright() as pw:
        stairs_fil == "Sub Heartbeat" and stairs_cat == "Creak Pulse" and stairs_drum == "Bones", (stairs_fil, stairs_cat, stairs_drum, stairs))
     pg.evaluate("__synth.transport().stop()")
     ck("P. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Pr. the paper roll (0.3, 8 Nov)
+    # A 16-step sequencer for the whole rack on the transport, drawn as punched paper passing a reader.
+    # The plan is pure (paperroll.js); the strip schedules it 150 ms ahead with each note's frame. These
+    # check the schema, the plan (ties, slides, accents, swing), the live timing against the transport,
+    # an offline render of the score, the editor, persistence, the phone strip and reduced motion.
+    prx = b.new_context(viewport={"width": 1366, "height": 1000}); pr = prx.new_page(); prerr = []
+    pr.on("pageerror", lambda e: prerr.append(str(e)))
+    pr.goto(BASE); pr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    sch = pr.evaluate("""async () => {
+      const M = await import('/synth/paperroll.js');
+      const d = M.normalizeRoll({});
+      const bad = M.normalizeRoll({ len: 99, rate: 'x', gate: 5, swing: -1, vel: 0, acc: 9, tr: -99, name: '  ', steps: [{ n: 300, g: 'yes', a: 1, s: true, t: 1 }, null] });
+      const fac = M.ROLL_FACTORY.map(f => JSON.stringify(M.normalizeRoll(JSON.parse(JSON.stringify(f)))) === JSON.stringify(f));
+      return { d: { len: d.len, rate: d.rate, gate: d.gate, swing: d.swing, vel: d.vel, acc: d.acc, tr: d.tr, n: d.steps.length, g: d.steps.filter(s => s.g).length, kind: d.kind, v: d.v },
+        bad: { len: bad.len, rate: bad.rate, gate: bad.gate, swing: bad.swing, vel: bad.vel, acc: bad.acc, tr: bad.tr, name: bad.name, s0: bad.steps[0], s1: bad.steps[1], n: bad.steps.length },
+        fac, names: M.ROLL_FACTORY.map(f => f.name), run: __synth.roll().state().run };
+    }""")
+    ck("Pr. schema: an empty roll is 16 rests at 1/16, gate 50%, no swing; v1",
+       sch["d"] == {"len": 16, "rate": "16", "gate": 0.5, "swing": 0, "vel": 0.7, "acc": 1, "tr": 0, "n": 16, "g": 0, "kind": "paperroll", "v": 1}, sch["d"])
+    ck("Pr. schema: out of range fields clamp, a short step list fills to 16, a bad step loads as a rest",
+       sch["bad"]["len"] == 16 and sch["bad"]["rate"] == "16" and sch["bad"]["gate"] == 1 and sch["bad"]["swing"] == 0 and sch["bad"]["vel"] == 0.05
+       and sch["bad"]["acc"] == 1 and sch["bad"]["tr"] == -24 and sch["bad"]["name"] == "Blank Roll" and sch["bad"]["n"] == 16
+       and sch["bad"]["s0"] == {"n": 127, "g": 0, "a": 1, "s": 1, "t": 1} and sch["bad"]["s1"] == {"n": 48, "g": 0, "a": 0, "s": 0, "t": 0}, sch["bad"])
+    ck(f"Pr. the {len(sch['names'])} factory rolls are already normal, and run is off on a fresh page (a song never brings the roll in)",
+       all(sch["fac"]) and len(sch["names"]) >= 5 and sch["run"] is False, (sch["names"], sch["fac"], sch["run"]))
+    plan = pr.evaluate("""async () => {
+      const M = await import('/synth/paperroll.js');
+      const tie = M.ROLL_FACTORY.find(f => f.name === 'Tie and Slide');
+      const p = M.rollPlan(tie, 0, 16, 0).notes.map(x => [x.k, x.n, x.len, x.slide, +x.on.toFixed(4), +x.off.toFixed(4), x.v]);
+      const S = (n, g, a, s, t) => ({ n, g, a, s, t });
+      const base = { len: 4, gate: 0.5, vel: 0.6, acc: 0.9 };
+      const swing = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { swing: 0.5, steps: [S(60, 1), S(62, 1), S(64, 1), S(65, 1)] })), 0, 4, 0).notes.map(x => +x.on.toFixed(4));
+      const rest = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { steps: [S(60, 0), S(62, 1, 0, 0, 1), S(64, 0, 0, 0, 1), S(65, 1)] })), 0, 4, 0).notes.map(x => [x.k, x.n, x.len]);
+      const same = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { steps: [S(60, 1, 0, 1), S(60, 1), S(64, 0), S(65, 0)] })), 0, 4, 0).notes.map(x => [x.k, +x.off.toFixed(4), x.slide]);
+      const wrap = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { steps: [S(60, 0, 0, 0, 1), S(62, 0), S(64, 0), S(67, 1)] })), 0, 8, 0).notes.map(x => [x.k, x.n, x.len]);
+      const rates = Object.keys(M.ROLL_RATES).map(r => [r, +M.stepBeat(M.normalizeRoll({ rate: r }), 3).toFixed(4)]);
+      const tr = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { tr: 12, steps: [S(60, 1, 1), S(127, 1), S(0, 0), S(0, 0)] })), 0, 2, 0).notes.map(x => [x.n, x.v]);
+      return { p, swing, rest, same, wrap, rates, tr };
+    }""")
+    WANT_TS = [[0, 38, 3, False, 0, 0.625, 1], [3, 45, 1, True, 0.75, 1.02, 0.7], [4, 50, 1, False, 1, 1.125, 0.7], [6, 48, 1, True, 1.5, 1.77, 1],
+               [7, 45, 1, False, 1.75, 1.875, 0.7], [8, 43, 2, True, 2, 2.52, 1], [10, 41, 1, True, 2.5, 2.77, 0.7], [11, 38, 1, False, 2.75, 2.875, 0.7],
+               [13, 50, 1, True, 3.25, 3.52, 1], [14, 45, 1, True, 3.5, 3.77, 0.7], [15, 41, 1, False, 3.75, 3.875, 0.7]]
+    ck("Pr. plan: Tie and Slide holds D2 through two ties (2.5 steps), each slide overlaps the next strike by 0.08 step, accents strike at the accent velocity",
+       plan["p"] == WANT_TS, plan["p"])
+    ck(f"Pr. plan: swing 50% moves every second step half a step late {plan['swing']}; a tie after a rest strikes if punched; a slide into the same pitch does not overlap",
+       plan["swing"] == [0, 0.375, 0.5, 0.875] and plan["rest"] == [[1, 62, 2], [3, 65, 1]] and plan["same"] == [[0, 0.25, False], [1, 0.375, False]], plan)
+    ck(f"Pr. plan: a tie on step 1 carries the last step's note across the loop seam ({plan['wrap']}); step lengths {plan['rates']}; transpose clamps at 127",
+       plan["wrap"] == [[3, 67, 2], [7, 67, 2]] and dict(plan["rates"]) == {"8": 1.5, "8t": 1.0, "16": 0.75, "16t": 0.5, "32": 0.375} and plan["tr"] == [[72, 0.9], [127, 0.6]], plan)
+    # live: four steps at 120 BPM on Filament, each note half a step long
+    LIVE = {"name": "Test Four", "len": 4, "rate": "16", "gate": 0.5, "vel": 0.6, "acc": 1.0,
+            "steps": [{"n": 60, "g": 1, "a": 1}, {"n": 64, "g": 1}, {"n": 67, "g": 1}, {"n": 72, "g": 1}]}
+    def roll_take(js_mid=None, secs=1.6):
+        pr.evaluate("""() => { const R = __synth.roll(); __synth.transport().stop(); __synth.transport().stop(); __synth.transport().setTempo(120); R.clearLog(); R.play(); }""")
+        if js_mid:
+            pr.wait_for_timeout(int(secs * 500)); pr.evaluate(js_mid); pr.wait_for_timeout(int(secs * 500))
+        else:
+            pr.wait_for_timeout(int(secs * 1000))
+        mid = pr.evaluate("""async () => { let v = 0; for (let i = 0; i < 8; i++) { v = Math.max(v, (__synth.meter() || {}).voices || 0); await new Promise(r => setTimeout(r, 40)); }
+          return { st: __synth.roll().state(), m: Object.assign({}, __synth.meter(), { voices: v }) }; }""")
+        pr.evaluate("__synth.roll().stop()"); pr.wait_for_timeout(450)
+        return mid, pr.evaluate("() => ({ log: __synth.roll().log(), st: __synth.roll().state() })")
+    pr.evaluate("p => { __synth.setDevice('filament'); __synth.roll().set(p); __synth.roll().dest('lit'); }", LIVE)
+    mid, got = roll_take()
+    ons = [e for e in got["log"] if e["t"] == "on"]; offs = [e for e in got["log"] if e["t"] == "off"]
+    strikes = [e for e in got["log"] if e["t"] in ("on", "skip")]
+    def wgaps(log_): st_ = [e for e in log_ if e["t"] in ("on", "skip")]; return [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(st_, st_[1:])]
+    gaps = wgaps(got["log"])
+    lens = []
+    for e in ons[:-3]:
+        o = [f for f in offs if f["n"] == e["n"] and f["at"] >= e["at"] - 1e-9]
+        if o: lens.append(round(min(f["at"] for f in o) - e["at"], 4))
+    late_ = [round(e["at"] - e["want"], 4) for e in ons if e["at"] > e["want"] + 1e-6]
+    ck(f"Pr. live at 120 BPM: {len(strikes)} steps planned 0.125 s apart (within 1 ms), each strike held 62.5 ms, C4 E4 G4 C5 in turn on Filament, accent at 1.0",
+       len(ons) >= 6 and all(abs(g_ - 0.125) <= 0.001 for g_ in gaps) and all(abs(l_ - 0.0625) <= 0.001 for l_ in lens) and len(lens) == len(ons) - 3
+       and [e["n"] for e in strikes[:8]] == [60, 64, 67, 72] * 2 and all(e["dev"] == "filament" for e in ons)
+       and all(e["v"] == (1 if e["n"] == 60 else 0.6) for e in ons) and all(0 <= e["at"] - e["want"] <= 0.06 + 1e-9 for e in ons), (gaps, lens, [(e["t"], e["n"], e.get("v"), e["dev"]) for e in strikes[:8]]))
+    ck(f"Pr. live: the voices sounded while it ran ({mid['m'] and mid['m'].get('voices')}), and stop let every note go (no off left waiting, nothing armed)",
+       mid["st"]["playing"] and mid["m"] and (mid["m"].get("voices") or 0) >= 1 and len(offs) == len(ons) and got["st"]["pend"] == 0 and got["st"]["armed"] == [] and not got["st"]["playing"],
+       (mid["m"], len(ons), len(offs), got["st"]["pend"], got["st"]["armed"]))
+    info("Pr. live", f"{len(ons)} strikes, {len(late_)} sent after their time (largest {max(late_) if late_ else 0} s), {len(strikes) - len(ons)} dropped as more than 60 ms late")
+    # tempo change and rate change under a running roll (the planned times: a strike the timer reaches late plays at once)
+    _, got_t = roll_take("__synth.transport().setTempo(60)", 2.4)
+    tg = wgaps(got_t["log"])
+    ck(f"Pr. a tempo change from 120 to 60 BPM under the roll: the steps go from 0.125 to 0.25 s apart, none closer than 0.125 s ({sorted(set(tg))})",
+       tg and abs(tg[0] - 0.125) <= 0.001 and abs(tg[-1] - 0.25) <= 0.001 and min(tg) >= 0.124 and all(abs(g_ - 0.125) <= 0.001 or abs(g_ - 0.25) <= 0.001 for g_ in tg), tg)
+    _, got_r = roll_take("__synth.roll().edit(p => { p.rate = '8'; })", 2.0)
+    rg = wgaps(got_r["log"])
+    ck(f"Pr. 1/16 to 1/8 under the roll: the next step lands on the new grid with no burst ({sorted(set(rg))})",
+       rg and abs(rg[0] - 0.125) <= 0.001 and abs(rg[-1] - 0.25) <= 0.001 and min(rg) >= 0.124 and all(abs(g_ - 0.125) <= 0.001 or abs(g_ - 0.25) <= 0.001 for g_ in rg), rg)
+    pr.evaluate("__synth.roll().edit(p => { p.rate = '16'; })")
+    # run off: the transport plays, the roll does not
+    pr.evaluate("() => { __synth.roll().run(false); __synth.roll().clearLog(); __synth.transport().locate(0); __synth.transport().play(); }")
+    pr.wait_for_timeout(600); quiet = pr.evaluate("__synth.roll().log().length"); pr.evaluate("__synth.transport().stop()"); pr.wait_for_timeout(200)
+    ck("Pr. with run off the transport plays and the roll stays silent", quiet == 0, quiet)
+    # another device: Cathode off the rail
+    pr.evaluate("() => { __synth.roll().dest('cathode'); }")
+    mid_c, got_c = roll_take(None, 1.0)
+    cons = [e for e in got_c["log"] if e["t"] == "on"]
+    ck(f"Pr. the roll plays Cathode while Filament stays lit ({len(cons)} strikes)",
+       len(cons) >= 6 and all(e["dev"] == "cathode" for e in cons) and pr.evaluate("__synth.device()") == "filament" and "cathode" in mid_c["st"]["armed"], (len(cons), mid_c["st"]["armed"]))
+    pr.evaluate("__synth.roll().dest('lit')")
+    # the score rendered offline: each strike's pitch in its own window, on time
+    sine_r = patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.001, "d": 0.05, "s": 1, "r": 0.01}, ens={"on": False},
+                   voice={"mode": "poly", "unison": 1}, stereo={"pan": "center", "spread": 0}, out={"roomOn": False, "wOn": False, "spkOn": False, "drive": 0})
+    sc = pr.evaluate("() => __synth.roll().score(8, 120, 'filament')")
+    Lr, _Rr = dec(pr.evaluate("a => __synth.render2(a)", {"patches": {"filament": sine_r}, "device": "filament", "events": sc, "seconds": 1.2, "rack": False}))
+    F4 = [261.626, 329.628, 391.995, 523.251]
+    okp = []
+    for j in range(8):
+        seg = Lr[int((j * 0.125 + 0.008) * SR):int((j * 0.125 + 0.055) * SR)]
+        amps = [tone_amp(seg, f) for f in F4]
+        okp.append(int(np.argmax(amps)) == j % 4 and max(amps) > 0.02)
+    gapz = [float(np.sqrt(np.mean(Lr[int((j * 0.125 + 0.080) * SR):int((j * 0.125 + 0.120) * SR)] ** 2))) for j in range(8)]
+    o0 = onset(Lr, 0.0, float(np.max(np.abs(Lr[:int(0.06 * SR)]))))
+    ck(f"Pr. the score renders: each step's pitch leads its own window, silent between strikes (rms {max(gapz):.4f}), first onset {None if o0 is None else round(o0 * 1000, 2)} ms",
+       all(okp) and max(gapz) < 0.01 and o0 is not None and o0 <= 0.003, (okp, gapz, o0))
+    # the editor on the strip, key in, persistence
+    pr.evaluate("__synth.roll().open(true)"); pr.wait_for_timeout(150)
+    jclick = lambda sel_: pr.evaluate("s => document.querySelector(s).click()", sel_)
+    jclick("#rollPrev"); jclick("#rollNext"); jclick("#rollNext")
+    s1 = pr.evaluate("__synth.roll().state().sel")
+    jclick("#rollUp"); jclick("#rollOctUp"); jclick("#rollT"); jclick("#rollA")
+    st1 = pr.evaluate("__synth.roll().state()")
+    jclick("#rollRates .chip[data-v='8t']"); jclick("#rollLenDn")
+    pr.evaluate("() => { const e = document.getElementById('rollGate'); e.value = '80'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+    st2 = pr.evaluate("__synth.roll().state()")
+    ck(f"Pr. editor: the arrows pick a step, + and oct + raise it 13 semitones, tie and accent set, 1/8T, length 3, gate 80% (status '{pr.inner_text('#rollStat')}')",
+       s1 == 1 and st1["pat"]["steps"][1] == {"n": 77, "g": 1, "a": 1, "s": 0, "t": 1} and st2["pat"]["rate"] == "8t" and st2["pat"]["len"] == 3
+       and abs(st2["pat"]["gate"] - 0.8) < 1e-9 and st2["edited"] and "Test Four *" in pr.inner_text("#rollStat") and "1/8T" in pr.inner_text("#rollStat"),
+       (s1, st1["pat"]["steps"][1], st2["pat"]["rate"], st2["pat"]["len"], st2["pat"]["gate"]))
+    pr.evaluate("() => { __synth.roll().keyIn(true); __synth.roll().sel(0); __synth.noteOn(62, 0.8); __synth.noteOff(62); __synth.noteOn(69, 0.8); __synth.noteOff(69); __synth.roll().keyIn(false); }")
+    st3 = pr.evaluate("__synth.roll().state()")
+    ck("Pr. key in: two keys set steps 1 and 2 (punched, tie cleared) and move the pick on",
+       st3["pat"]["steps"][0]["n"] == 62 and st3["pat"]["steps"][1]["n"] == 69 and st3["pat"]["steps"][1]["t"] == 0 and st3["pat"]["steps"][1]["g"] == 1 and st3["sel"] == 2, (st3["pat"]["steps"][:2], st3["sel"]))
+    cvp = pr.evaluate("""() => { const R = __synth.roll(); R.draw(); const c = document.getElementById('rollCv'), g = c.getContext('2d');
+      const d = g.getImageData(0, 0, c.width, c.height).data; let paper = 0, dark = 0, brass = 0, n = d.length / 4;
+      for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], bb = d[i + 2];
+        if (r > 190 && gg > 175 && bb > 140 && r >= bb) paper++; else if (r < 40 && gg < 35 && bb < 30) dark++;
+        if (r > 190 && gg > 150 && bb < 130 && r > bb + 70) brass++; }
+      const r = c.getBoundingClientRect(); return { paper: paper / n, dark: dark / n, brass, w: r.width, h: r.height, ms: R.stats().ms }; }""")
+    ck(f"Pr. the roll is painted: paper {cvp['paper']:.0%}, holes and spools {cvp['dark']:.0%}, the brass reader lit ({cvp['brass']} px); draw {cvp['ms']:.2f} ms",
+       cvp["paper"] > 0.4 and 0.01 < cvp["dark"] < 0.5 and cvp["brass"] > 50 and cvp["h"] >= 100, cvp)
+    info("Pr. draw", f"one frame of the roll {cvp['ms']:.2f} ms at {cvp['w']:.0f}x{cvp['h']:.0f}")
+    # tap on the canvas: pick a step, tap it again to punch or close it
+    pr.evaluate("() => { document.getElementById('rollCv').scrollIntoView({ block: 'center' }); __synth.roll().sel(0); }"); pr.wait_for_timeout(100)
+    tap = pr.evaluate("""() => { const c = document.getElementById('rollCv'), r = c.getBoundingClientRect(); const x0 = Math.max(44, Math.min(120, r.width * 0.11)), sw = Math.max(16, Math.min(64, (r.width - x0 - 10) / 16)); return { x: r.left + x0 + 2.5 * sw, y: r.top + r.height / 2 }; }""")
+    pr.evaluate("__synth.transport().stop(); __synth.transport().stop()"); pr.wait_for_timeout(80)
+    g_before = pr.evaluate("__synth.roll().state().pat.steps[2].g")
+    pr.mouse.click(tap["x"], tap["y"]); sel_t = pr.evaluate("__synth.roll().state().sel")
+    pr.mouse.click(tap["x"], tap["y"]); g_after = pr.evaluate("__synth.roll().state().pat.steps[2].g")
+    ck("Pr. a tap picks step 3 on the paper, a second tap closes its hole", sel_t == 2 and g_before == 1 and g_after == 0, (sel_t, g_before, g_after))
+    pr.reload(); pr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    kept = pr.evaluate("__synth.roll().state()")
+    ck("Pr. the roll is kept in this browser across a reload (pattern, edits, run)",
+       kept["pat"]["name"] == "Test Four" and kept["pat"]["len"] == 3 and kept["pat"]["rate"] == "8t" and kept["pat"]["steps"][0]["n"] == 62 and kept["edited"] and kept["run"] is True,
+       (kept["pat"]["name"], kept["pat"]["len"], kept["pat"]["rate"], kept["run"]))
+    pr.evaluate("() => { __synth.roll().set(__synth.roll().factory()[1]); __synth.roll().open(true); }")
+    pr.select_option("#rollPick", "3"); fac3 = pr.evaluate("__synth.roll().state()")
+    ck("Pr. the roll list loads a factory roll (Tie and Slide), not edited", fac3["pat"]["name"] == "Tie and Slide" and not fac3["edited"], (fac3["pat"]["name"], fac3["edited"]))
+    # review 8 Nov, R1108-1: a stop flushed Filament's and Cathode's queue, offs included, so a note that had
+    # struck with its off still queued stayed on (every stop at gate 100%, measured on the live site)
+    held_r = {}
+    for dv in ("filament", "cathode"):
+        pr.evaluate("""d => { __synth.transport().stop(); __synth.setDevice(d); const R = __synth.roll(); R.set(R.factory()[1]); R.edit(p => { p.gate = 1; }); R.dest('lit'); __synth.setMixer('dekatron', { mute: true }); }""", dv)
+        pr.wait_for_timeout(1200)
+        held_r[dv] = []
+        for wt in (1000, 1160, 1330):
+            pr.evaluate("() => { __synth.transport().setTempo(120); __synth.roll().play(); }"); pr.wait_for_timeout(wt)
+            pr.evaluate("__synth.roll().stop()"); pr.wait_for_timeout(1200)
+            held_r[dv].append(pr.evaluate("() => ((__synth.meter() || {}).notes || []).length"))
+            pr.evaluate("__synth.panic()"); pr.wait_for_timeout(200)
+    ck(f"Pr. stop lets go of the note that is sounding: Octave Pump at gate 100%, three stops each on Filament and Cathode, no note held after ({held_r})",
+       all(not any(v) for v in held_r.values()), held_r)
+    # review 8 Nov, R1108-2: key in stayed on with the strip closed, so the keys rewrote steps out of sight
+    pr.evaluate("() => { __synth.setDevice('filament'); __synth.setMixer('dekatron', { mute: false }); const R = __synth.roll(); R.set(R.factory()[1]); R.open(true); R.sel(0); R.keyIn(true); R.open(false); __synth.noteOn(70, 0.8); __synth.noteOff(70); }")
+    ki_r = pr.evaluate("() => ({ st: __synth.roll().state(), pressed: document.getElementById('rollKey').getAttribute('aria-pressed') })")
+    ck("Pr. closing the roll strip turns key in off; a key played after leaves the roll as it was",
+       (not ki_r["st"]["keyIn"]) and ki_r["st"]["pat"]["steps"][0]["n"] == 36 and ki_r["st"]["sel"] == 0 and not ki_r["st"]["edited"] and ki_r["pressed"] == "false",
+       (ki_r["st"]["keyIn"], ki_r["st"]["pat"]["steps"][0], ki_r["st"]["sel"], ki_r["st"]["edited"], ki_r["pressed"]))
+    pr.evaluate("__synth.transport().stop()")
+    ck("Pr. no page errors (desktop)", not prerr, prerr)
+    prx.close()
+    # the phone strip
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        ppx = b.new_context(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); pp = ppx.new_page(); pperr = []
+        pp.on("pageerror", lambda e: pperr.append(str(e)))
+        pp.goto(BASE); pp.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+        pp.evaluate("document.getElementById('rollBtn').click()"); pp.wait_for_timeout(250)
+        pv = pp.evaluate("""() => { const small = [...document.querySelectorAll('#roll button, #roll select, #roll input[type=range]')].filter(e => e.getClientRects().length)
+            .map(e => [e.id || e.textContent.trim(), e.getBoundingClientRect()]).filter(([s, r]) => r.width < 44 || r.height < 44).map(([s, r]) => s + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          const c = document.getElementById('rollCv').getBoundingClientRect();
+          return { small, sw: document.documentElement.scrollWidth, iw: innerWidth, cl: c.left, cr: c.right, ch: c.height, open: !document.getElementById('rollBody').hidden }; }""")
+        pp.evaluate("__synth.roll().play()"); pp.wait_for_timeout(700)
+        pd = pp.evaluate("__synth.roll().draw()"); pp.evaluate("__synth.roll().stop()")
+        if pw_ == 375: pp.locator("#roll").screenshot(path=os.path.join(SHOTS, "synth_roll_phone.png"))
+        ck(f"Pr. {pw_}px: the open roll strip has every button, chip, list and slider 44 px or more, the paper inside the screen, no sideways scroll ({pv['small']})",
+           pv["open"] and not pv["small"] and pv["sw"] <= pv["iw"] == pw_ and pv["cl"] >= 0 and pv["cr"] <= pw_ and pv["ch"] >= 100, pv)
+        ck(f"Pr. {pw_}px: the paper moves while it plays (position {pd['stats']['pos']:.2f} steps), no page errors", pd["stats"]["pos"] > 0.5 and not pperr, (pd, pperr))
+        ppx.close()
+    # reduced motion: the paper holds still and the column being read is lit
+    rrx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); rr = rrx.new_page(); rrerr = []
+    rr.on("pageerror", lambda e: rrerr.append(str(e)))
+    rr.goto(BASE); rr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    rr.evaluate("__synth.roll().open(true); __synth.roll().play()"); rr.wait_for_timeout(800)
+    rd = rr.evaluate("__synth.roll().draw()"); rn = len([e for e in rr.evaluate("__synth.roll().log()") if e["t"] == "on"])
+    rr.evaluate("__synth.roll().stop()")
+    ck(f"Pr. reduced motion: the paper holds still (position {rd['stats']['pos']}) while the roll plays ({rn} strikes), no page errors",
+       rd["stats"]["pos"] == 0 and rn >= 4 and not rrerr, (rd, rn, rrerr))
+    rrx.close()
 
     # ---------------------------------------------------------------- W. Lattice wavetable
     def fold(freq, sr):

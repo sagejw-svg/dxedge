@@ -6,7 +6,7 @@
 import { makeKnob } from './knob.js';
 import { gyrotronDevice, normalizeGyrotron, GYRO_DEFAULT, midiOf } from './gyrotron.js';
 import { voiceForNote } from './drums.js';
-import { SCALE_IDS, TOOLS, ROUTES } from './gyrotron-world.js';
+import { SCALE_IDS, TOOLS, ROUTES, CORE_RANGE } from './gyrotron-world.js';
 
 const WORKLET = new URL('./gyrotron.worklet.js', import.meta.url).href;
 
@@ -290,7 +290,8 @@ export function mountGyrotronPanel(container, hooks) {
   addKnob(kOrbit, 'pull', 'pull', 0, 1, 0.01, pct);
   addKnob(kOrbit, 'drag', 'drag', 0, 1, 0.01, pct);
   addKnob(kOrbit, 'key', 'key', 0, 11, 1, num);
-  addKnob(kOrbit, 'root', 'root', 36, 84, 1, num);
+  // the patch keeps a root of 24..96 (normalizeCore), so the knob spans the same row and can show any of them
+  addKnob(kOrbit, 'root', 'root', CORE_RANGE.root[0], CORE_RANGE.root[1], 1, num);
   addKnob(kOrbit, 'bodyCount', 'bodies', 0, 8, 1, num);
   addKnob(kOrbit, 'wellCount', 'wells', 0, 4, 1, num);
   addKnob(kTone, 'timbre', 'timbre', 0, 1, 0.01, pct);
