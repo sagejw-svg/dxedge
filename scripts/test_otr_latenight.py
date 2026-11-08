@@ -128,6 +128,196 @@ def short_program(size):
     }
 
 
+OLD_SW = r"""
+self.addEventListener('install', function () { self.skipWaiting(); });
+self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', function (event) {
+  var url = new URL(event.request.url);
+  if (event.request.method !== 'GET') return;
+  if (url.origin !== location.origin) return;
+  var path = url.pathname;
+  var js = path.endsWith('.js');
+  var otr = path.indexOf('/otr/') === 0;
+  if (!js && !otr) return;
+  // The worker that shipped before the media exemption: refetch the URL and
+  // drop Range, then the probe sees HTTP 200 for the whole file.
+  event.respondWith(fetch(event.request.url, { cache: 'reload', credentials: 'same-origin' }));
+});
+"""
+
+NEW_SW = r"""
+self.addEventListener('install', function () { self.skipWaiting(); });
+self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', function (event) {
+  var url = new URL(event.request.url);
+  if (url.pathname.indexOf('/otr/media/') === 0) return;
+});
+"""
+
+
+def worker_case(browser, ck, fixture, size):
+    """An older controlling worker drops Range. The page must update that
+    worker before the GET, or it would download the file and show the
+    range error. HEAD is answered wrongly on purpose and must not decide it."""
+    port = 8813
+    script = {"body": OLD_SW}
+    naked = []
+    ranged = []
+
+    class W(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *a, **k):
+            super().__init__(*a, directory=PUBLIC, **k)
+
+        def log_message(self, *a):
+            pass
+
+        def do_HEAD(self):
+            self._serve(True)
+
+        def do_GET(self):
+            self._serve(False)
+
+        def _serve(self, head):
+            path = self.path.split("?", 1)[0]
+            if path == "/sw-range-test.js":
+                body = script["body"].encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                if not head:
+                    self.wfile.write(body)
+                return
+            if path == "/sw-boot.html":
+                body = b"<!doctype html><title>boot</title>"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                if not head:
+                    self.wfile.write(body)
+                return
+            if path == "/otr/latenight/program.json":
+                body = json.dumps(short_program(size)).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                if not head:
+                    self.wfile.write(body)
+                return
+            if path == MEDIA:
+                self._media(head)
+                return
+            if head:
+                self.send_error(405)
+                return
+            super().do_GET()
+
+        def _media(self, head):
+            data = open(fixture, "rb").read()
+            rng = self.headers.get("Range")
+            method = "HEAD" if head else "GET"
+            if method == "HEAD":
+                # A HEAD range response that is not 206 must not unlock playback.
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.send_header("Content-Length", "5")
+                self.end_headers()
+                return
+            if not rng:
+                naked.append(len(data))
+                chunk = data[:32]
+                self.send_response(200)
+                self.send_header("Content-Type", "video/mp4")
+                self.send_header("Content-Length", str(len(chunk)))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+                self.wfile.write(chunk)
+                return
+            ranged.append(rng)
+            spec = rng.split("=", 1)[1].split(",")[0]
+            a, _, b = spec.partition("-")
+            start = int(a) if a else 0
+            end = int(b) if b else len(data) - 1
+            end = min(end, len(data) - 1)
+            if start >= len(data) or start > end:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{len(data)}")
+                self.end_headers()
+                return
+            chunk = data[start:end + 1]
+            self.send_response(206)
+            self.send_header("Content-Type", "video/mp4")
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Range", f"bytes {start}-{end}/{len(data)}")
+            self.send_header("Content-Length", str(len(chunk)))
+            self.end_headers()
+            self.wfile.write(chunk)
+
+    socketserver.TCPServer.allow_reuse_address = True
+    srv = socketserver.ThreadingTCPServer(("127.0.0.1", port), W)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{port}"
+    try:
+        ctx = browser.new_context(service_workers="allow")
+        pg = ctx.new_page()
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto(base + "/sw-boot.html")
+        pg.evaluate("""async () => {
+          await navigator.serviceWorker.register('/sw-range-test.js', {scope: '/'});
+          if (!navigator.serviceWorker.controller) {
+            await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true}));
+          }
+          await navigator.serviceWorker.ready;
+        }""")
+        pg.wait_for_function("navigator.serviceWorker.controller", timeout=8000)
+        dropped = pg.evaluate("""async () => {
+          const res = await fetch('/otr/media/latenight/latenight_master.mp4', {
+            method: 'GET', headers: {Range: 'bytes=0-1'}, cache: 'no-store'
+          });
+          const info = {status: res.status, range: res.headers.get('content-range'), type: res.headers.get('content-type')};
+          if (res.body && res.body.cancel) await res.body.cancel();
+          return info;
+        }""")
+        ck("an older worker turns a ranged GET into 200 with no content-range",
+           dropped["status"] == 200 and not dropped["range"] and naked, dropped)
+        script["body"] = NEW_SW
+        naked.clear()
+        ranged.clear()
+        pg.goto(base + "/otr/latenight/")
+        pg.wait_for_function("window.LateNight && LateNight.state() !== 'loading'", timeout=20000)
+        pg.wait_for_timeout(800)
+        got = pg.evaluate("""() => {
+          const v = document.getElementById('lnVideo');
+          return {
+            state: LateNight.state(),
+            status: document.getElementById('lnStatus').textContent,
+            hint: document.getElementById('lnHint').textContent,
+            src: LateNight.videoSrc(),
+            paused: v.paused,
+            autoplay: v.autoplay,
+            preload: v.preload,
+            worker: LateNight.prepareWorker ? true : false
+          };
+        }""")
+        ck("the page updates that worker and then plays from a real range",
+           got["state"] == "ready" and got["paused"] and got["autoplay"] is False
+           and got["preload"] == "none" and MEDIA in got["src"]
+           and "did not return the video in byte ranges" not in got["status"], got)
+        ck("that recovery never requests the whole file",
+           not naked and any(r.startswith("bytes=0-1") for r in ranged)
+           and "bytes=0-" not in ranged, {"naked": naked, "ranged": ranged[:8]})
+        ck("no page errors while replacing the older worker", not errs, errs[:4])
+        ctx.close()
+    finally:
+        srv.shutdown()
+
+
 def main():
     fails = []
 
@@ -174,7 +364,7 @@ def main():
         '"start": 7120.957', '"duration": 7136.308', '"durationClock": "1:58:56"',
         '"placeholder": true', '"status": "pending"',
         "/otr/media/latenight/latenight_master.mp4",
-        "PLACEHOLDER ONLY",
+        '"bytesApprox": 982996026',
     ):
         ck(f"program.json keeps {token}", token in program_text)
     chapters = program["chapters"]
@@ -301,6 +491,10 @@ def main():
           tiny: LateNight.decideProbe({status:206, contentType:'video/mp4', contentRange:'bytes 0-1/100', bytesApprox:983000000}),
           ok: LateNight.decideProbe({status:206, contentType:'video/mp4', contentRange:'bytes 0-1/983000000', bytesApprox:983000000, tolerance:0.12}),
           mib: LateNight.decideProbe({status:206, contentType:'video/mp4', contentRange:'bytes 0-1/1030750208', bytesApprox:983000000, tolerance:0.12}),
+          published: LateNight.decideProbe({status:206, contentType:'video/mp4', contentRange:'bytes 0-1/982996026', bytesApprox:982996026, tolerance:0.12}),
+          full: LateNight.decideProbe({status:200, contentType:'video/mp4', contentRange:null, bytesApprox:982996026}),
+          rangedBut200: LateNight.decideProbe({status:200, contentType:'video/mp4', contentRange:'bytes 0-1/982996026', bytesApprox:982996026}),
+          msg: LateNight.message('range'),
           cue: LateNight.resolveCue(LateNight.chapters(), '0:00:31').time,
           cue2: LateNight.resolveCue(LateNight.chapters(), '1:58:40').time,
           at: LateNight.chapterAt(LateNight.chapters(), 1861).id
@@ -310,6 +504,10 @@ def main():
            and probes["html"]["play"] is False and probes["html"]["reason"] == "range"
            and probes["tiny"]["play"] is False and probes["tiny"]["reason"] == "size"
            and probes["ok"]["play"] is True and probes["mib"]["play"] is True
+           and probes["published"]["play"] is True
+           and probes["full"]["play"] is False and probes["full"]["reason"] == "range"
+           and probes["rangedBut200"]["play"] is False and probes["rangedBut200"]["reason"] == "range"
+           and probes["msg"] == "The replay address did not return the video in byte ranges, so it cannot be seeked. Nothing is playing."
            and abs(probes["cue"] - 31.794) < 0.001
            and abs(probes["cue2"] - 7120.957) < 0.001
            and probes["at"] == "x1-tunnel", probes)
@@ -382,7 +580,7 @@ def main():
         }""")
         ck("a proved file can be seeked from a timestamp and does not autoplay",
            MEDIA in ready["src"] and ready["autoplay"] is False and ready["attr"] is False
-           and ready["paused"] is True and ready["preload"] == "metadata" and ready["controls"] is True
+           and ready["paused"] is True and ready["preload"] in ("none", "metadata") and ready["controls"] is True
            and ready["label"] == "Fixture replay" and ready["track"] is True
            and ready["current"] == "b" and 2.5 <= ready["time"] < 4, ready)
         ck("the probe asked for a byte range", any(r.startswith("bytes=0-1") for r in RANGES), RANGES[:6])
@@ -460,6 +658,7 @@ def main():
         ck("no page errors on the radio page", not herrs, herrs[:4])
         home.screenshot(path="/tmp/otr-latenight-shots/radio-link-mobile.png")
         ctx.close()
+        worker_case(browser, ck, FIXTURE, size)
         browser.close()
 
     srv.shutdown()

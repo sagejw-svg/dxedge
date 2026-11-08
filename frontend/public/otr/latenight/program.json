@@ -17,9 +17,9 @@
     "status": "pending",
     "placeholder": true,
     "url": "/otr/media/latenight/latenight_master.mp4",
-    "bytesApprox": 983000000,
+    "bytesApprox": 982996026,
     "tolerance": 0.12,
-    "note": "PLACEHOLDER ONLY. Not a live asset. This is the stable path reserved for the finished master (1:58:56, about 983 MB). The file is not in this repository and was not verified on the server when this file was written. The player does not set a video source until a byte-range probe of this same-origin path returns 206, Content-Type video/mp4, and a total size within tolerance of bytesApprox. status and placeholder are notes for operators. They are not a playback switch."
+    "note": "Stable path /otr/media/latenight/latenight_master.mp4. A GET with Range bytes=0-1 has answered 206 video/mp4, Content-Range bytes 0-1/982996026. Playback still requires that same shape of GET on this visit. A 200 of the whole file, a HEAD response, HTML, or a 404 does not count. This page does not download the file to hash it. status and placeholder are notes, not a playback switch."
   },
   "credits": {
     "line": "Episodes stream from the Internet Archive (archive.org); catalog curated by Rob Dawson / codebox (oldtime.radio, MIT).",
