@@ -620,6 +620,7 @@
   var base = window.__OTR_ASSET_BASE || '/otr/';
   document.write('<script src="' + base + 'core/airdate.js?v=1"><\/script>');
   document.write('<script src="' + base + 'core/bedtime-lamp.js?v=1"><\/script>');
+  document.write('<link rel="stylesheet" href="' + base + 'player.css?v=1">');
 })();
 </script>
 </head>
@@ -642,9 +643,10 @@
         <span class="sup-h">☕ Tip the developer</span>
         <span class="sup-s">helps cover hosting and development</span></a>
     </div>
-    <div class="otr-mode-switch" id="otrModeSwitch" role="group" aria-label="Basic or Advanced">
+    <div class="otr-mode-switch" id="otrModeSwitch" role="group" aria-label="Basic, Advanced, or Player">
       <button type="button" id="otrModeBasic" aria-pressed="true">Basic</button>
       <button type="button" id="otrModeAdvanced" aria-pressed="false">Advanced</button>
+      <button type="button" id="otrModePlayer" aria-pressed="false">Player</button>
     </div>
   </header>
 
@@ -819,7 +821,8 @@
         </div>
       </div>
     </div>
-    <div class="rack-row2">
+    <button type="button" class="player-more" id="playerMoreSound" aria-expanded="false" aria-controls="rackRow2">More sound</button>
+    <div class="rack-row2" id="rackRow2">
       <div class="mod" id="deMod">
         <div class="mod-h"><span class="label">de-esser</span><span class="sp"></span>
           <button class="pwr small" id="dePower" aria-pressed="false"><span class="sw"></span>bypass</button></div>
@@ -5649,5 +5652,6 @@
 </script>
 <script src="/lib/stat.js"></script>
 <script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'basic.js?v=1"><\/script>');</script>
+<script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'player.js?v=1"><\/script>');</script>
 </body>
 </html>

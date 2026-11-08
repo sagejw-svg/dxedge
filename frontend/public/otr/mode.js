@@ -10,21 +10,24 @@
   'use strict';
   var KEY = 'otr_mode';
 
+  function known(mode) {
+    return mode === 'basic' || mode === 'advanced' || mode === 'player';
+  }
   function choose(stored, webdriver) {
-    if (stored === 'basic' || stored === 'advanced') return stored;
+    if (known(stored)) return stored;
     return webdriver ? 'advanced' : 'basic';
   }
   function read() {
     try { return localStorage.getItem(KEY); } catch (e) { return null; }
   }
   function apply(mode) {
-    if (mode !== 'basic' && mode !== 'advanced') mode = 'basic';
+    if (!known(mode)) mode = 'basic';
     document.documentElement.setAttribute('data-otr-mode', mode);
     try { document.dispatchEvent(new CustomEvent('otr-mode', { detail: mode })); } catch (e) {}
     return mode;
   }
   function set(mode) {
-    mode = mode === 'advanced' ? 'advanced' : 'basic';
+    if (!known(mode)) mode = 'basic';
     try { localStorage.setItem(KEY, mode); } catch (e) {}
     return apply(mode);
   }
@@ -41,7 +44,8 @@
     '.otr-mode-switch{position:absolute;top:0;right:0;z-index:5;display:inline-flex;max-width:100%}',
     '@media (max-width:640px){header.top{padding-top:52px}}',
     '@media (min-width:781px){#supportTop{margin-top:48px}}',
-    'html[data-otr-mode="advanced"] #otr-basic{display:none !important}',
+    'html[data-otr-mode="advanced"] #otr-basic,',
+    'html[data-otr-mode="player"] #otr-basic{display:none !important}',
     'html[data-otr-mode="basic"] #console,',
     'html[data-otr-mode="basic"] #rack,',
     'html[data-otr-mode="basic"] #contWrap,',
