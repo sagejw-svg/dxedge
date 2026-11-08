@@ -14,6 +14,7 @@
   var COPY = {
     missing: 'The Late Night replay is not on the server yet. Chapters and credits are below. Nothing is playing.',
     range: 'The replay address did not return the video in byte ranges, so it cannot be seeked. Nothing is playing.',
+    worker: 'An older saved copy of this site is still handling requests. This page did not download the video. Reload once. Nothing is playing.',
     type: 'The replay address answered, but not with the video file. Nothing is playing.',
     size: 'A file answered, but it is not the finished program. Nothing is playing.',
     guide: 'The program guide did not load. Nothing is playing.'
@@ -211,8 +212,16 @@
     function go() {
       try { video.currentTime = t; } catch (e) {}
     }
-    if (video.readyState >= 1) go();
-    else video.addEventListener('loadedmetadata', go);
+    if (video.readyState >= 1) {
+      go();
+      return;
+    }
+    video.addEventListener('loadedmetadata', go);
+    // Opening the page stays at preload none so Chrome does not request
+    // Range bytes=0- for the whole file while it is paused. A chapter or
+    // timestamp is what starts the load.
+    if (video.preload === 'none') video.preload = 'metadata';
+    try { video.load(); } catch (e) {}
   }
   function selectChapter(ch) {
     if (!ch) return;
@@ -238,7 +247,8 @@
     var video = $('lnVideo');
     if (!video) return;
     video.autoplay = false;
-    video.preload = 'metadata';
+    // none: metadata makes Chrome request Range bytes=0- and pull the whole file while paused.
+    video.preload = 'none';
     video.controls = true;
     video.playsInline = true;
     video.setAttribute('aria-label', program.title || 'Late Night replay');
@@ -291,7 +301,58 @@
     setStatus(text);
     setHint('This page is the finished program, separate from the live broadcast.');
   }
-  function probe(url, media) {
+  function hasWorker() {
+    try {
+      return !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+    } catch (e) {
+      return false;
+    }
+  }
+  // A worker from before /otr/media/ was left to the browser refetches by URL
+  // and drops Range, so a ranged GET comes back 200 for the whole file.
+  // Update that worker and let it claim the page before any GET. HEAD is not
+  // used: this server answers HEAD, but a 200 GET without Range is the failure
+  // the video element would hit, and a HEAD 206 is not proof the GET will seek.
+  function prepareWorker() {
+    if (!hasWorker()) return Promise.resolve('none');
+    var prev;
+    try { prev = navigator.serviceWorker.controller; } catch (e) { return Promise.resolve('error'); }
+    var ready;
+    try { ready = navigator.serviceWorker.getRegistration(); } catch (e2) { return Promise.resolve('error'); }
+    return Promise.resolve(ready).then(function (reg) {
+      if (!reg || !reg.update) return 'uncontrolled';
+      return new Promise(function (resolve) {
+        var settled = false;
+        var sawInstall = false;
+        function finish(v) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try { navigator.serviceWorker.removeEventListener('controllerchange', onChange); } catch (e) {}
+          try { reg.removeEventListener('updatefound', onFound); } catch (e2) {}
+          resolve(v);
+        }
+        function onChange() {
+          if (!navigator.serviceWorker.controller || navigator.serviceWorker.controller !== prev) finish('updated');
+        }
+        function onFound() { sawInstall = true; }
+        // No new worker started: the one in control is already the server's copy.
+        // A new worker that has not claimed yet must not be given a GET, because
+        // the previous worker would turn it into a full-file download.
+        var timer = setTimeout(function () { finish(sawInstall ? 'timeout' : 'current'); }, 8000);
+        try { navigator.serviceWorker.addEventListener('controllerchange', onChange); } catch (e) {}
+        try { reg.addEventListener('updatefound', onFound); } catch (e3) {}
+        Promise.resolve(reg.update()).then(function () {
+          if (!navigator.serviceWorker.controller || navigator.serviceWorker.controller !== prev) {
+            finish('updated');
+            return;
+          }
+          if (!reg.installing && !reg.waiting) finish('current');
+        }).catch(function () { finish('error'); });
+      });
+    }).catch(function () { return 'error'; });
+  }
+  function probeOnce(url, media) {
     var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 8000);
     return fetch(url, {
@@ -309,11 +370,22 @@
         bytesApprox: media && media.bytesApprox,
         tolerance: media && media.tolerance
       });
+      // Never read a 200 body. An older worker turns the ranged GET into a
+      // full-file response of about 1 GB.
       if (res.body && res.body.cancel) res.body.cancel().catch(function () {});
+      else if (ctrl) ctrl.abort();
       return decision;
     }, function () {
       clearTimeout(timer);
       return decideProbe({ status: 0 });
+    });
+  }
+  function probe(url, media) {
+    return prepareWorker().then(function (state) {
+      if (state === 'timeout' || state === 'error') {
+        return { play: false, state: 'unavailable', reason: 'worker' };
+      }
+      return probeOnce(url, media);
     });
   }
   function boot(data) {
@@ -366,6 +438,8 @@
     chapterAt: chapterAt,
     resolveCue: resolveCue,
     decideProbe: decideProbe,
+    prepareWorker: prepareWorker,
+    message: function (reason) { return COPY[reason] || ''; },
     mediaUrl: mediaUrl,
     toVtt: toVtt,
     program: function () { return program; },
