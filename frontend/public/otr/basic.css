@@ -15,16 +15,22 @@ header.top { position: relative; }
 }
 .otr-mode-switch button + button { border-left: 1px solid rgba(255,179,71,0.35); }
 html[data-otr-mode="basic"] #otrModeBasic,
-html[data-otr-mode="advanced"] #otrModeAdvanced {
+html[data-otr-mode="advanced"] #otrModeAdvanced,
+html[data-otr-mode="player"] #otrModePlayer {
   background: var(--amber); color: #1a1200;
 }
 html[data-otr-mode="basic"] #otrModeAdvanced,
-html[data-otr-mode="advanced"] #otrModeBasic {
+html[data-otr-mode="basic"] #otrModePlayer,
+html[data-otr-mode="advanced"] #otrModeBasic,
+html[data-otr-mode="advanced"] #otrModePlayer,
+html[data-otr-mode="player"] #otrModeBasic,
+html[data-otr-mode="player"] #otrModeAdvanced {
   background: transparent; color: var(--muted);
 }
 .otr-mode-switch button:hover { color: #fff; }
 html[data-otr-mode="basic"] #otrModeBasic:hover,
-html[data-otr-mode="advanced"] #otrModeAdvanced:hover { color: #1a1200; }
+html[data-otr-mode="advanced"] #otrModeAdvanced:hover,
+html[data-otr-mode="player"] #otrModePlayer:hover { color: #1a1200; }
 
 @media (max-width: 640px) {
   header.top { padding-top: 52px; }
@@ -35,7 +41,8 @@ html[data-otr-mode="advanced"] #otrModeAdvanced:hover { color: #1a1200; }
   #supportTop { margin-top: 48px; }
 }
 
-html[data-otr-mode="advanced"] #otr-basic { display: none !important; }
+html[data-otr-mode="advanced"] #otr-basic,
+html[data-otr-mode="player"] #otr-basic { display: none !important; }
 html[data-otr-mode="basic"] #console,
 html[data-otr-mode="basic"] #rack,
 html[data-otr-mode="basic"] #contWrap,
@@ -49,7 +56,8 @@ html[data-otr-mode="basic"] #lampSolo { display: none !important; }
 html[data-otr-mode="basic"] .intro { display: none; }
 
 #otr-basic { display: flex; flex-direction: column; gap: 16px; margin: 4px 0 28px; }
-html[data-otr-mode="advanced"] #otr-basic { display: none !important; }
+html[data-otr-mode="advanced"] #otr-basic,
+html[data-otr-mode="player"] #otr-basic { display: none !important; }
 
 .otr-kicker {
   font-size: 10px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; margin: 0 0 6px;
