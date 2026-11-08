@@ -603,6 +603,7 @@
   var base = /\/otr(\/|$)/.test(path) ? '/otr/' : path.replace(/[^/]*$/, '');
   window.__OTR_ASSET_BASE = base;
   document.write('<link rel="stylesheet" href="' + base + 'basic.css?v=1">');
+  document.write('<link rel="stylesheet" href="' + base + 'latenight/link.css?v=1">');
   document.write('<script src="' + base + 'mode.js?v=1"><\/script>');
   document.write('<script src="' + base + 'live/listenotr-radio.js?v=5"><\/script>');
   document.write('<script src="' + base + 'live/scifi/scifi-live.js?v=3"><\/script>');
@@ -615,6 +616,8 @@
     <div class="brand">
       <div class="label">dxedge // audio</div>
       <h1>OLD TIME <span>RADIO</span></h1>
+      <!-- Late Night replay only. Does not change the player, sleep timer, lamp, or dates. -->
+      <p class="ln-watch"><a id="watchLater" href="/otr/latenight/">Watch later <span>Late Night replay</span></a></p>
       <p class="intro">Classic radio from the 1930s to the 1950s, free from the
         <a href="https://archive.org/details/oldtimeradio" target="_blank" rel="noopener">Internet Archive</a>.</p>
     </div>

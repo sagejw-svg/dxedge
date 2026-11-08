@@ -1,0 +1,21 @@
+/* Styles for the Watch later link on /otr/ only.
+   The replay page does not use this file. */
+.ln-watch { margin: 8px 0 0; max-width: 100%; }
+.ln-watch a {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 179, 71, 0.42);
+  border-radius: 999px;
+  color: #ffd08a;
+  text-decoration: none;
+  background: rgba(255, 179, 71, 0.06);
+  box-sizing: border-box;
+}
+.ln-watch a:hover { background: rgba(255, 179, 71, 0.14); color: #fff; text-decoration: none; }
+.ln-watch a span { color: #a6a6a6; font-size: 11px; }
+.ln-watch a:focus-visible { outline: 2px solid #ffb347; outline-offset: 2px; }
