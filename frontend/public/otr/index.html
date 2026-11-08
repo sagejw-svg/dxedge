@@ -79,6 +79,7 @@
   .np .show { font-size: 18px; color: #fff; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
   .np .ep { font-size: 13.5px; color: var(--amber2); margin-top: 2px; overflow-wrap: anywhere; }
   .np .date { font-size: 11.5px; color: var(--dim); margin-top: 3px; }
+  .ep-date { color: var(--dim); }
   .np .src { font-size: 11px; color: var(--green); margin-top: 3px; letter-spacing: .5px; display:none; overflow-wrap:anywhere; }
   .np .src.note { color: var(--muted); letter-spacing: 0; }
   .np .src a { color: var(--amber); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
@@ -462,6 +463,9 @@
   canvas#lampCv { width: 144px; height: 240px; display: block; flex: none; cursor: zoom-in; border-radius: 8px; }
   .lamp-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; width: 100%; }
   .lamp-stat { font-size: 10.5px; color: var(--muted); line-height: 1.45; min-height: 3em; text-align: center; }
+  .lamp-bed { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lamp-bed[hidden], .lamp-note[hidden] { display: none; }
+  .lamp-note { font-size: 11px; color: var(--dim); line-height: 1.45; margin: 0; }
   @media (max-width: 1039px){
     .rack-body { grid-template-columns: 300px minmax(0, 1fr); }
     #lampMod { grid-column: 1; grid-row: 2; } #eqMod { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; }
@@ -607,6 +611,15 @@
   document.write('<script src="' + base + 'mode.js?v=1"><\/script>');
   document.write('<script src="' + base + 'live/listenotr-radio.js?v=5"><\/script>');
   document.write('<script src="' + base + 'live/scifi/scifi-live.js?v=3"><\/script>');
+})();
+</script>
+<script>
+/* Airdate labels and the bedtime lamp. Kept out of the loader above so a
+   stylesheet line can be added there without this block sitting on it. */
+(function () {
+  var base = window.__OTR_ASSET_BASE || '/otr/';
+  document.write('<script src="' + base + 'core/airdate.js?v=1"><\/script>');
+  document.write('<script src="' + base + 'core/bedtime-lamp.js?v=1"><\/script>');
 })();
 </script>
 </head>
@@ -776,6 +789,11 @@
             <div class="lamp-info">
               <div class="lamp-stat" id="lampStat" aria-live="polite">warming up</div>
               <select id="lampColSel" aria-label="Wax and liquid colours"></select>
+              <div class="lamp-bed" id="lampBed" hidden>
+                <button type="button" class="tchip" id="lampStill" aria-pressed="false" title="Hold the picture still. Reduced motion starts here.">Hold still</button>
+                <button type="button" class="tchip" id="lampDark" title="The lamp on a dark screen. The audio keeps playing.">Dark screen</button>
+              </div>
+              <p class="lamp-note" id="lampBedNote" hidden>A dim amber lamp for a dark room. Lower your screen brightness.</p>
             </div>
           </div>
         </div>
@@ -986,11 +1004,14 @@
     <div class="tv-sec tv-lamp"><div class="kl">lamp</div>
       <div class="chips2"><button class="pwr small" id="tvLampPower" aria-pressed="true"><span class="sw"></span>on</button>
         <button class="tchip" id="tvLampMusic" aria-pressed="false" title="Louder audio feeds the bulb a little more power. It shows up slowly, through the wax, the way real heat would.">♪ music warms the bulb</button>
-        <button class="tchip" id="tvLampCold" title="A new lamp: cold wax on the bottom, a new random seed">start cold</button></div>
+        <button class="tchip" id="tvLampCold" title="A new lamp: cold wax on the bottom, a new random seed">start cold</button>
+        <button type="button" class="tchip" id="tvLampStill" hidden>Hold still</button>
+        <button type="button" class="tchip" id="tvLampDark" hidden title="The lamp on a dark screen. The audio keeps playing.">Dark screen</button></div>
       <div class="knobs left" id="tvLampKnobs"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">wax / liquid</div><div class="chips2" id="tvLampCols" role="group" aria-label="Wax and liquid colours"></div></div>
     <div class="tv-sec tv-lamp"><div class="kl">base</div><div class="chips2" id="tvLampBases" role="group" aria-label="Base finish"></div></div>
-    <div class="mod-note tv-lamp">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. ⛶ (or a click on the lamp) shows it on its own, full screen with everything else black; click again or press Esc to come back. Lava lamp + radio stands it on a mini radio whose dial, buttons, EQ and knob work here and on black. None of this changes the sound.</div>
+    <div class="mod-note tv-lamp" id="tvLampNote">Nothing here is an animation. The wax is simulated: the bulb heats the coil and the bottom of the glass, warm wax expands and rises, cools under the cap and sinks, necks stretch thin and pinch off, blobs that stay pressed together merge, and the liquid circulates around them, so it never repeats. Turn the bulb up and it runs hot (the wax stays up); turn it down and it gets lazy. Switch it off and the wax settles and sets. The first warm-up is shown at 3x. ⛶ (or a click on the lamp) shows it on its own, full screen with everything else black; click again or press Esc to come back. Lava lamp + radio stands it on a mini radio whose dial, buttons, EQ and knob work here and on black. None of this changes the sound.</div>
+    <p class="mod-note tv-lamp" id="tvBedNote" hidden>A dim amber lamp for a dark room. Lower your screen brightness.</p>
     <div class="mod-note tv-tube">Drag to look around, scroll or pinch to zoom (up to 8x), double-click to jump in or back out. + and − zoom, 0 fits, arrows move, Esc closes. Brightness, Response, Speed and Flicker change only the picture, never the sound. The filter also applies to the tube in the rack.</div>
   </aside>
 </div>
@@ -1420,8 +1441,8 @@
     items.forEach(function(x){
       var s=byId[x.f.showId], e=s.eps[x.f.epIndex], left=Math.max(0,(1-x.r)*(e[2]||0));
       var c=document.createElement('div'); c.className='chip cont'; c.dataset.key=x.k;
-      c.title='Resume '+s.name+': '+e[0];
-      c.innerHTML='<span class="c-show">'+escapeHtml(s.name)+'</span><span class="c-title">'+escapeHtml(niceTitle(e[0]))+'</span>'+
+      c.title='Resume '+s.name+': '+epText(e[0], e[1]);
+      c.innerHTML='<span class="c-show">'+escapeHtml(s.name)+'</span><span class="c-title">'+epHtml(e[0], e[1])+'</span>'+
         '<span class="c-left">'+(e[2]?fmt(left)+' left':Math.round(x.r*100)+'% in')+'</span><span class="c-x" title="remove" aria-label="remove from continue listening">✕</span>';
       c.onclick=function(ev){
         if(ev.target.classList.contains('c-x')){ ev.stopPropagation(); var saved=PROG[x.k]; delete PROG[x.k]; persistHistory(); renderContinue();
@@ -1503,6 +1524,29 @@
     if(w.length>=3 && w.every(function(v){ return !/^[a-z]/.test(v); }))
       y=w.map(function(v,i){ return i>0 && SMALLW[v.toLowerCase()] ? v.toLowerCase() : v; }).join(' ');
     return y || x;
+  }
+  // Catalog airdate after the episode name. Unknown dates are left off.
+  // The separate date line is cleared wherever this is used, so the same
+  // day is not shown twice.
+  function epParts(title, date){
+    var nice = niceTitle(title);
+    var api = window.OTRAirDate, info = api ? api.formatAirDate(date) : null;
+    if(info && api.titleHasDate(nice, info)) info = null;
+    return { title: nice || '', date: info ? info.text : '' };
+  }
+  function epText(title, date){
+    var p = epParts(title, date);
+    return p.date ? (p.title ? p.title + ' \u00b7 ' + p.date : p.date) : p.title;
+  }
+  function epHtml(title, date){
+    var p = epParts(title, date);
+    return escapeHtml(p.title) + (p.date ? '<span class="ep-date"> \u00b7 ' + escapeHtml(p.date) + '</span>' : '');
+  }
+  function setNpEp(title, date, plain){
+    var el = $('npEp');
+    if(plain != null) el.textContent = plain;
+    else el.innerHTML = epHtml(title, date);
+    $('npDate').textContent = '';
   }
 
   function markActiveChip(){
@@ -1586,7 +1630,7 @@
         html='<span class="ad">commercial break</span>'+(ns?' then <b>'+escapeHtml(ns.name)+'</b>':'');
       } else {
         var s=byId[a.item.showId], e=s.eps[a.item.epIndex];
-        html='<b>'+escapeHtml(s.name)+'</b> &middot; '+escapeHtml(niceTitle(e[0]));
+        html='<b>'+escapeHtml(s.name)+'</b> &middot; '+epHtml(e[0], e[1]);
       }
       if(el._h!==html){ el.innerHTML=html; el._h=html; }
       card.querySelector('.st-bar i').style.width=(100*a.offset/a.dur).toFixed(1)+'%';
@@ -1637,8 +1681,8 @@
     if(a){ var r = resolve(a.item);
       if(r){
         $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
-        $('npEp').textContent = r.isAd ? 'Vintage advertisement' : niceTitle(r.title);
-        $('npDate').textContent = r.date || '';
+        if(r.isAd) setNpEp(null, null, 'Vintage advertisement');
+        else setNpEp(r.title, r.date);
         var sum=$('npSummary'), more=$('npMore');
         if(r.summary){ sum.textContent=r.summary; sum.style.display='block'; more.style.display=r.summary.length>210?'block':'none'; }
         else { sum.style.display='none'; more.style.display='none'; }
@@ -1832,8 +1876,10 @@
     if(!card || !window.__listenotr || !__listenotr.booted()) return;
     var a=__listenotr.onAir(); if(!a) return;
     var show = a.kind==='break' ? 'Station break' : (a.show || 'Listenotr Radio');
-    var title = a.kind==='break' ? (a.nextShow ? ('up next, '+a.nextShow) : 'Listenotr Radio') : niceTitle(a.title||'');
-    var html='<b>'+escapeHtml(show)+'</b>'+(title?'<span class="sep"> &middot; </span>'+escapeHtml(title):'');
+    var titleHtml = a.kind==='break'
+      ? escapeHtml(a.nextShow ? ('up next, '+a.nextShow) : 'Listenotr Radio')
+      : epHtml(a.title||'', a.date);
+    var html='<b>'+escapeHtml(show)+'</b>'+(titleHtml?'<span class="sep"> &middot; </span>'+titleHtml:'');
     var el=card.querySelector('.st-now'); if(el._h!==html){ el.innerHTML=html; el._h=html; }
     card.querySelector('.st-bar i').style.width=(a.dur? (100*a.offset/a.dur).toFixed(1):'0')+'%';
     card.querySelector('.st-left .l').textContent=fmt(Math.max(0, a.dur-a.offset))+' left';
@@ -1841,9 +1887,9 @@
     var nx=card.querySelector('.st-next'); if(nx._h!==next){ nx.innerHTML=next; nx._h=next; }
     if(state.network==='listenotr'){
       $('npShow').textContent = a.kind==='break' ? 'Listenotr Radio (Live)' : show;
-      $('npEp').textContent = a.kind==='break' ? (a.line||'Station break') : title;
-      $('npDate').textContent = a.kind==='break' ? '' : (a.date||'');
-      if($('upnext')) $('upnext').innerHTML = a.nextShow ? ('<b>up next</b> &nbsp;'+escapeHtml(a.nextShow)+(a.nextTitle?' - '+escapeHtml(niceTitle(a.nextTitle)):'') ) : '';
+      if(a.kind==='break') setNpEp(null, null, a.line||'Station break');
+      else setNpEp(a.title||'', a.date);
+      if($('upnext')) $('upnext').innerHTML = a.nextShow ? ('<b>up next</b> &nbsp;'+escapeHtml(a.nextShow)+(a.nextTitle?' - '+epHtml(a.nextTitle, a.nextDate):'') ) : '';
       $('vizIdle').style.display='none';
       $('playBtn').disabled=false;
       setLiveTransportLabel();
@@ -1940,7 +1986,7 @@
     NET_ORDER.forEach(function(id){
       var N=NETS[id], card=document.querySelector('#networkChips .station[data-net="'+id+'"]'); if(!card) return;
       var a=N.onAir(now); if(!a){ card.querySelector('.st-now').textContent='off air'; return; }
-      var d=N.describe(a.item), html='<b>'+escapeHtml(d.show)+'</b><span class="sep"> &middot; </span>'+escapeHtml(niceTitle(d.title));
+      var d=N.describe(a.item), html='<b>'+escapeHtml(d.show)+'</b><span class="sep"> &middot; </span>'+epHtml(d.title, d.date);
       var el=card.querySelector('.st-now'); if(el._h!==html){ el.innerHTML=html; el._h=html;
         card.title = (N.grid.tagline || ('Tune in to '+N.name)) + (a.item.fill ? '. Playing in place of '+String(d.label||'the scheduled show').replace(/\s*\(fill\)$/,'') : ''); }
       card.querySelector('.st-bar i').style.width=(100*a.offset/a.item.dur).toFixed(1)+'%';
@@ -2002,7 +2048,7 @@
     markActiveChip(); setPlayerMode('cued');
     $('vizIdle').style.display='none'; $('playBtn').disabled=false;
     var a=N.onAir(Date.now()/1000);
-    if(a){ var r=resolve(a.item); if(r){ $('npShow').textContent=r.show.name; $('npEp').textContent=niceTitle(r.title); $('npDate').textContent=r.date||''; renderSlotLine(a.item); } }
+    if(a){ var r=resolve(a.item); if(r){ $('npShow').textContent=r.show.name; setNpEp(r.title, r.date); renderSlotLine(a.item); } }
     setStatus('ready'); updateDock();
   }
   function renderSlotLine(it){
@@ -2454,7 +2500,7 @@
     if(!('mediaSession' in navigator)) return;
     try{
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: r.isAd ? 'Commercial Break' : (r.title + (state.enhActive ? (isAI(state.src && state.src.entry) ? ' (AI enhanced)' : ' (enhanced)') : '')),
+        title: r.isAd ? 'Commercial Break' : (epText(r.title, r.date) + (state.enhActive ? (isAI(state.src && state.src.entry) ? ' (AI enhanced)' : ' (enhanced)') : '')),
         artist: r.isAd ? 'Vintage advertisement' : r.show.name,
         album: 'Old Time Radio' + (state.network && NETS[state.network] ? (' · '+NETS[state.network].name) : state.channel ? (' · '+titleCase(state.channel)) : (state.stationLabel ? (' · '+state.stationLabel) : ''))
 
@@ -2485,8 +2531,8 @@
     $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false; $('backBtn').disabled=false; $('fwdBtn').disabled=false; $('linkBtn').disabled=!!r.isAd;
     $('vizIdle').style.display='none';
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
-    $('npEp').textContent = r.isAd ? (r.title==='Commercial'?'Vintage advertisement':r.title) : niceTitle(r.title);
-    $('npDate').textContent = r.date || '';
+    if(r.isAd) setNpEp(null, null, r.title==='Commercial'?'Vintage advertisement':r.title);
+    else setNpEp(r.title, r.date);
     renderSlotLine(state.network && it.net ? it : null);
     var sum = $('npSummary'), more=$('npMore');
     if(r.summary){ sum.textContent = r.summary; sum.style.display='block';
@@ -2499,7 +2545,7 @@
     } else arch.style.display='none';
     // up next
     var nx = state.queue[state.qi+1];
-    if(nx){ var nr=resolve(nx); $('upnext').innerHTML = nr ? ('<b>up next</b> &nbsp;'+ (nr.isAd?'Commercial':escapeHtml(nr.show.name)+' - '+escapeHtml(niceTitle(nr.title)))
+    if(nx){ var nr=resolve(nx); $('upnext').innerHTML = nr ? ('<b>up next</b> &nbsp;'+ (nr.isAd?'Commercial':escapeHtml(nr.show.name)+' - '+epHtml(nr.title, nr.date))
               + (!nr.isAd && pickSource(nx, nr).enh ? '<span class="enh-tag">enhanced</span>' : '')) : ''; }
     else $('upnext').innerHTML='';
     renderSrcLine();
@@ -2691,9 +2737,9 @@
   function tuneTarget(tg){ wakeAudio(); if(tg.kind==='net'){ startNetwork(tg.id); setGuideNet(tg.id); } else startChannel(tg.id); }
   function nowOn(tg){
     var now=Date.now()/1000;
-    if(tg.kind==='net'){ var N=NETS[tg.id], a=N && N.onAir(now); if(!a) return null; var d=N.describe(a.item); return { show:d.show, title:niceTitle(d.title) }; }
+    if(tg.kind==='net'){ var N=NETS[tg.id], a=N && N.onAir(now); if(!a) return null; var d=N.describe(a.item); return { show:d.show, title:epText(d.title, d.date) }; }
     var b=onAirNow(tg.id, now), r=b && resolve(b.item); if(!r) return null;
-    return r.isAd ? { show:'a commercial break', title:'' } : { show:r.show.name, title:niceTitle(r.title) };
+    return r.isAd ? { show:'a commercial break', title:'' } : { show:r.show.name, title:epText(r.title, r.date) };
   }
   function lastProgress(){
     var best=null;
@@ -2707,7 +2753,7 @@
     if(back){
       var s=byId[back.f.showId], e=s.eps[back.f.epIndex], dur=e[2]||0;
       $('startLab').textContent='welcome back';
-      $('startTitle').textContent=s.name+' · '+niceTitle(e[0]);
+      $('startTitle').textContent=s.name+' · '+epText(e[0], e[1]);
       $('startSub').textContent='';
       $('startProg').hidden=!dur; $('startFill').style.width=(back.r*100).toFixed(1)+'%'; $('startTime').textContent=dur ? fmt(back.r*dur)+' of '+fmt(dur) : '';
       $('startGo').textContent='▶ Pick up where you left off'; $('startGo').disabled=false;
@@ -2728,7 +2774,7 @@
   function renderCueResume(){
     var back=lastProgress(), w=$('cueResume'); if(!back){ w.hidden=true; return; }
     var s=byId[back.f.showId], e=s.eps[back.f.epIndex], dur=e[2]||0;
-    $('cueResumeBtn').textContent='or pick up '+s.name+', '+niceTitle(e[0])+(dur ? ' ('+fmt(back.r*dur)+' of '+fmt(dur)+')' : '');
+    $('cueResumeBtn').textContent='or pick up '+s.name+', '+epText(e[0], e[1])+(dur ? ' ('+fmt(back.r*dur)+' of '+fmt(dur)+')' : '');
     $('cueResumeBtn').onclick=function(){ wakeAudio(); playEpisode(back.f.showId, back.f.epIndex); };
     w.hidden=false;
   }
@@ -2798,8 +2844,10 @@
       var end=Math.min(hits.length, shown+PAGE), frag=document.createDocumentFragment();
       for(var i=shown;i<end;i++){
         var h=hits[i], d=document.createElement('div'); d.className='result'; d.dataset.i=i;
-        d.innerHTML='<div class="r-show">'+escapeHtml(h.show)+' &middot; '+escapeHtml(byId[h.sid].eps[h.epIndex][1]||'')+(h.enh && state.source==='enhanced' ? '<span class="enh-tag">enhanced</span>' : '')+heardMark(h.sid, h.epIndex)+'</div>'+
-          '<div class="r-title">'+hl(h.title,terms)+'</div><div class="r-sum">'+hl(h.sum,terms)+'</div>';
+        var aired = (window.OTRAirDate ? OTRAirDate.withAirDate(h.title, byId[h.sid].eps[h.epIndex][1]) : h.title);
+        var dateSuffix = aired.indexOf(h.title)===0 ? aired.slice(h.title.length) : '';
+        d.innerHTML='<div class="r-show">'+escapeHtml(h.show)+(h.enh && state.source==='enhanced' ? '<span class="enh-tag">enhanced</span>' : '')+heardMark(h.sid, h.epIndex)+'</div>'+
+          '<div class="r-title">'+hl(h.title,terms)+(dateSuffix ? '<span class="ep-date">'+escapeHtml(dateSuffix)+'</span>' : '')+'</div><div class="r-sum">'+hl(h.sum,terms)+'</div>';
         d.onclick=(function(h, d){ return function(){
           Array.prototype.forEach.call(res.querySelectorAll('.result.on'), function(x){ x.classList.remove('on'); });
           d.classList.add('on'); playEpisode(h.sid, h.epIndex); }; })(h, d);
@@ -3123,7 +3171,8 @@
     { id:'orange',  name:'Orange / clear', wax:[255,118,18],  liq:[255,236,205], uv:[255,150,40],  neon:[255,140,0], clear:true },
     { id:'purple',  name:'Pink / purple',  wax:[255,84,168],  liq:[118,36,206],  uv:[255,110,220], neon:[255,60,220] },
     { id:'green',   name:'Yellow / green', wax:[255,212,34],  liq:[34,186,84],   uv:[230,255,60],  neon:[160,255,40] },
-    { id:'bclear',  name:'Blue / clear',   wax:[44,110,255],  liq:[226,240,255], uv:[90,170,255],  neon:[60,140,255], clear:true }
+    { id:'bclear',  name:'Blue / clear',   wax:[44,110,255],  liq:[226,240,255], uv:[90,170,255],  neon:[60,140,255], clear:true },
+    { id:'bedtime', name:'Bedtime Amber', wax:[142,48,32], liq:[49,16,14], uv:[142,48,32], neon:[181,102,39], bedtime:true }
   ];
   var LAMP_BASES = [
     { id:'gold',   name:'Gold',   m:['#2a1c06','#7a5718','#e8c06a','#fff0c2','#a07226'] },
@@ -3131,6 +3180,10 @@
     { id:'black',  name:'Black',  m:['#060606','#1a1a1a','#4a4a4a','#9a9a9a','#262626'] }
   ];
   var LCOL_BY={}, LBASE_BY={}; LAMP_COLS.forEach(function(x){ LCOL_BY[x.id]=x; }); LAMP_BASES.forEach(function(x){ LBASE_BY[x.id]=x; });
+  if(window.OTRBedtime && LCOL_BY.bedtime){
+    var bedP = OTRBedtime.PALETTE;
+    LCOL_BY.bedtime.wax = bedP.wax; LCOL_BY.bedtime.liq = bedP.liq; LCOL_BY.bedtime.uv = bedP.wax; LCOL_BY.bedtime.neon = bedP.amber;
+  }
 
   var ADV_DEF = { on:false, open:false, eqOn:true, tubeOn:true, bands:31, gains:null, pre:0, preset:'flat',
                   tube:'12AX7', drive:3, bias:0, sag:2, tone:0, out:0,
@@ -3139,7 +3192,8 @@
                   roomOn:false, room:'living', rmDecay:0.55, rmMix:20, rmTone:4,
                   wOn:false, width:100, wChar:9,
                   tvFilter:'natural', tvBright:100, tvResp:100, tvSpeed:50, tvFlicker:35,
-                  lampOn:true, lampCol:'classic', lampBase:'gold', lampW:25, lampMusic:false, lampBright:100, lampTime:1, lampRadio:false };
+                  lampOn:true, lampCol:'classic', lampBase:'gold', lampW:25, lampMusic:false, lampBright:100, lampTime:1, lampRadio:false,
+                  lampMotion:'auto', lampBrightKeep:null, lampBaseKeep:null };
   var advFresh = load('otr_adv', null) === null;
   var ADV = (function(){
     var d=JSON.parse(JSON.stringify(ADV_DEF));
@@ -3152,6 +3206,9 @@
     if(!LOOK_BY[d.tvFilter]) d.tvFilter='natural';
     if(!LCOL_BY[d.lampCol]) d.lampCol='classic'; if(!LBASE_BY[d.lampBase]) d.lampBase='gold';
     d.lampW=clampN(+d.lampW||25,15,40); d.lampBright=clampN(+d.lampBright||0,0,200); d.lampTime=clampN(+d.lampTime||1,1,8); d.lampOn=d.lampOn!==false; d.lampMusic=!!d.lampMusic;
+    if(d.lampMotion!=='still' && d.lampMotion!=='slow') d.lampMotion='auto';
+    d.lampBrightKeep = (d.lampBrightKeep==null || d.lampBrightKeep==='') ? null : clampN(+d.lampBrightKeep,0,200);
+    if(!LBASE_BY[d.lampBaseKeep]) d.lampBaseKeep=null;
     d.deListen=false;                                              // listen is a momentary tool, never restored
     if(!Array.isArray(d.gains) || d.gains.length!==d.bands) d.gains=presetGains(PRESET_BY[d.preset]?d.preset:'flat', d.bands);
     d.gains=d.gains.map(function(g){ return clampN(+g||0,-12,12); });
@@ -3622,24 +3679,81 @@
   LAMP_KNOBS.forEach(function(k){ k.value=ADV[k.key]; k.onChange=function(v){ ADV[k.key]=v; saveAdv(); syncLampUI(); }; advKnobs[k.key]=makeKnob($('tvLampKnobs'), k); });
   LAMP_COLS.forEach(function(x){
     var b=document.createElement('button'); b.className='tchip'; b.dataset.id=x.id; b.textContent=x.name;
-    b.onclick=function(){ ADV.lampCol=x.id; saveAdv(); syncLampUI(); }; $('tvLampCols').appendChild(b);
+    if(x.bedtime) b.title = (window.OTRBedtime && OTRBedtime.note) || '';
+    b.onclick=function(){ applyLampCol(x.id); }; $('tvLampCols').appendChild(b);
     var op=document.createElement('option'); op.value=x.id; op.textContent=x.name; $('lampColSel').appendChild(op);
   });
   LAMP_BASES.forEach(function(x){ var b=document.createElement('button'); b.className='tchip'; b.dataset.id=x.id; b.textContent=x.name;
     b.onclick=function(){ ADV.lampBase=x.id; saveAdv(); syncLampUI(); }; $('tvLampBases').appendChild(b); });
-  $('lampColSel').onchange=function(){ ADV.lampCol=this.value; saveAdv(); syncLampUI(); };
+  $('lampColSel').onchange=function(){ applyLampCol(this.value); };
+  function bedtimeOn(){ return ADV.lampCol==='bedtime'; }
+  function lampReduce(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  function lampHeld(){
+    var m = ADV.lampMotion || 'auto';
+    if(m==='still') return true;
+    if(m==='slow') return false;
+    return bedtimeOn() && lampReduce();
+  }
+  function applyLampCol(id){
+    if(!LCOL_BY[id]) id='classic';
+    if(id==='bedtime' && ADV.lampCol!=='bedtime'){
+      ADV.lampBrightKeep = ADV.lampBright;
+      ADV.lampBaseKeep = ADV.lampBase;
+      ADV.lampBright = Math.min(ADV.lampBright, 48);
+      if(LBASE_BY.black) ADV.lampBase = 'black';
+      if(advKnobs.lampBright) advKnobs.lampBright.set(ADV.lampBright);
+    } else if(id!=='bedtime' && ADV.lampCol==='bedtime'){
+      if(ADV.lampBrightKeep!=null){ ADV.lampBright = ADV.lampBrightKeep; ADV.lampBrightKeep = null; if(advKnobs.lampBright) advKnobs.lampBright.set(ADV.lampBright); }
+      if(ADV.lampBaseKeep && LBASE_BY[ADV.lampBaseKeep]){ ADV.lampBase = ADV.lampBaseKeep; ADV.lampBaseKeep = null; }
+    }
+    ADV.lampCol = id; saveAdv(); syncLampUI();
+  }
+  function toggleLampHold(){ ADV.lampMotion = lampHeld() ? 'slow' : 'still'; saveAdv(); syncLampUI(); }
   function setLampOn(on){ ADV.lampOn=!!on; saveAdv(); syncLampUI(); }
   $('lampPower').onclick=function(){ setLampOn(!ADV.lampOn); }; $('tvLampPower').onclick=function(){ setLampOn(!ADV.lampOn); };
-  $('tvLampMusic').onclick=function(){ ADV.lampMusic=!ADV.lampMusic; saveAdv(); syncLampUI(); if(ADV.lampMusic && !ADV.on) toast('Music heat follows the sound once it plays'); };
-  $('tvLampCold').onclick=function(){ lampRestart(); toast('A new lamp, cold from the box'); };
+  $('tvLampMusic').onclick=function(){
+    if(bedtimeOn()){ toast('Bedtime Amber stays steady. It does not follow the audio'); return; }
+    ADV.lampMusic=!ADV.lampMusic; saveAdv(); syncLampUI(); if(ADV.lampMusic && !ADV.on) toast('Music heat follows the sound once it plays');
+  };
+  $('tvLampCold').onclick=function(){
+    if(bedtimeOn()){ toast('Bedtime Amber keeps one steady picture'); return; }
+    lampRestart(); toast('A new lamp, cold from the box');
+  };
+  function syncLampHold(btn){
+    if(!btn) return;
+    var held = lampHeld();
+    btn.hidden = !bedtimeOn();
+    btn.setAttribute('aria-pressed', held?'true':'false');
+    btn.textContent = held ? 'Held still' : 'Hold still';
+  }
+  if($('lampStill')) $('lampStill').onclick = toggleLampHold;
+  if($('tvLampStill')) $('tvLampStill').onclick = toggleLampHold;
+  function openBedtimeDark(){ if(!bedtimeOn()) applyLampCol('bedtime'); openLampSolo(); }
+  if($('lampDark')) $('lampDark').onclick = openBedtimeDark;
+  if($('tvLampDark')) $('tvLampDark').onclick = openBedtimeDark;
+  if(window.matchMedia){
+    var bedMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(bedMq.addEventListener) bedMq.addEventListener('change', function(){ syncLampUI(); });
+  }
   function syncLampUI(){
-    var c=LCOL_BY[ADV.lampCol]||LAMP_COLS[0];
+    var c=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], bed=!!c.bedtime;
     [$('lampPower'),$('tvLampPower')].forEach(function(b){ b.setAttribute('aria-pressed', ADV.lampOn?'true':'false'); b.lastChild.textContent=ADV.lampOn?'on':'off'; });
     $('tvLampMusic').setAttribute('aria-pressed', ADV.lampMusic?'true':'false');
+    $('tvLampMusic').disabled = bed;
     $('lampColSel').value=ADV.lampCol;
     document.querySelectorAll('#tvLampCols .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampCol?'true':'false'); });
     document.querySelectorAll('#tvLampBases .tchip').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.id===ADV.lampBase?'true':'false'); });
-    if(TVZ.subj==='lamp'){ var w=c.name.split(' / '); $('tvKind').textContent=w[0]+' wax · '+w[1]+' liquid · '+Math.round(ADV.lampW)+' W'; }
+    if(TVZ.subj==='lamp'){
+      if(bed) $('tvKind').textContent = 'dim amber · dark room';
+      else { var w=c.name.split(' / '); $('tvKind').textContent=w[0]+' wax · '+w[1]+' liquid · '+Math.round(ADV.lampW)+' W'; }
+    }
+    var note = (window.OTRBedtime && OTRBedtime.note) || 'A dim amber lamp for a dark room. Lower your screen brightness.';
+    ['lampBed','lampBedNote','tvBedNote','tvLampDark'].forEach(function(id){ var el=$(id); if(el) el.hidden = !bed; });
+    if($('lampBedNote') && bed) $('lampBedNote').textContent = note;
+    if($('tvBedNote') && bed) $('tvBedNote').textContent = note;
+    if($('tvLampNote')) $('tvLampNote').hidden = bed;
+    syncLampHold($('lampStill')); syncLampHold($('tvLampStill'));
+    var solo=$('lampSolo'); if(solo) solo.style.background = bed ? '#080504' : '';
     if(LAMP && LAMP.stat) syncLampStat();
   }
   function syncTubeView(){
@@ -4488,17 +4602,39 @@
   function lampWatch(){ var st=LAMP.stat=LAMP.sim.stats();
     if(LAMP.warming && ADV.lampOn && st.melt>0.9 && st.up>0.12) LAMP.warming=false;
     if(!LAMP.warming && st.melt<0.1) LAMP.warming=true; }
+  function lampGap(now, prev){
+    if(!prev) return 0;
+    var raw=(now-prev)/1000;
+    // A hidden tab, a stalled frame, or a clock jump must not fast-forward the wax.
+    if(!(raw>0) || raw>1/30) return 0;
+    return raw;
+  }
   function lampTick(now){
-    var sim=lampSim(), dt=LAMP.last ? Math.min(0.1,(now-LAMP.last)/1000) : 0; LAMP.last=now; if(dt<=0) return;
+    if(bedtimeOn()){
+      var bdt = lampGap(now, LAMP.bedLast);
+      LAMP.bedLast = now;
+      if(ADV.lampOn && !lampHeld()) LAMP.bedT = (LAMP.bedT||0) + bdt;
+      if(LAMP.sim) LAMP.sim.S.music = 0;
+      if(now-(LAMP.statT||0)>500){ LAMP.statT=now; syncLampStat(); }
+      return;
+    }
+    var sim=lampSim(), dt=lampGap(now, LAMP.last); LAMP.last=now; if(dt<=0) return;
     sim.S.on=!!ADV.lampOn; sim.S.power=clampN(ADV.lampW,15,40)/25;
     var lv = ADV.lampMusic ? (TV.lvOverride!=null ? TV.lvOverride : level()) : 0;
     LAMP.music += (lv-LAMP.music)*(1-Math.exp(-dt/1.5)); sim.S.music = ADV.lampMusic ? clampN(LAMP.music*1.6,0,1) : 0;
     var spd = LAMP.warming && ADV.lampOn ? Math.max(3, ADV.lampTime) : ADV.lampTime;
-    LAMP.acc += dt*spd; var n=0; while(LAMP.acc>=sim.DT && n<16){ sim.step(); LAMP.acc-=sim.DT; n++; } if(n>=16) LAMP.acc=0;
+    LAMP.acc += dt*spd; var n=0, maxSteps=Math.max(2, Math.round(spd)+1);
+    while(LAMP.acc>=sim.DT && n<maxSteps){ sim.step(); LAMP.acc-=sim.DT; n++; }
+    if(n>=maxSteps) LAMP.acc=Math.min(LAMP.acc, sim.DT);
     sim.alpha=clampN(LAMP.acc/sim.DT,0,1);   // how far between the last step and the next this frame falls
     if(now-LAMP.statT>500){ LAMP.statT=now; lampWatch(); syncLampStat(); }
   }
   function lampStatus(){
+    if(bedtimeOn()){
+      if(!ADV.lampOn) return 'off';
+      if(lampHeld()) return 'held still';
+      return 'slow drift, about 2 min';
+    }
     var st=LAMP.stat; if(!st) return ''; var w=Math.round(st.waxT)+'°C';
     if(!ADV.lampOn) return st.melt>0.1 || st.waxT>27 ? 'off, cooling · wax '+w : 'off · the wax has set';
     if(LAMP.warming) return 'warming up'+(ADV.lampTime<3?' (shown 3x)':'')+' · wax '+w;
@@ -4551,16 +4687,20 @@
   function smin(a, b, k){ var h=k-Math.abs(a-b); return h<=0 ? Math.min(a,b) : Math.min(a,b)-h*h*0.25/k; }
   var WAX_FAR=50;
   function lampField(view, sim, vis, ppu, cover){
-    // the window of the lamp to sample: wax (or the whole inside for Thermal) cut to what is on screen
-    var prims=waxPrims(sim), g=sim.geo, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, i, j, p;
-    if(cover){ x0=LCX-23; x1=LCX+23; y0=g.Y0; y1=g.Y1+1; }
-    for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
-    x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
+    // Sample the bottle on a grid that does not follow the wax. A window hugged to the
+    // blobs changes its origin and its cell size whenever a neck breaks or a drop
+    // spreads, and the whole silhouette jumps.
+    var prims=waxPrims(sim), g=sim.geo, i, j, p;
+    var x0=Math.max(LCX-23, vis.x0), x1=Math.min(LCX+23, vis.x1);
+    var y0=Math.max(g.Y0-1, vis.y0), y1=Math.min(g.Y1+2, vis.y1);
+    if(cover){ x0=Math.min(x0, LCX-23); x1=Math.max(x1, LCX+23); y0=Math.min(y0, g.Y0); y1=Math.max(y1, g.Y1+1); }
     if(x1<=x0 || y1<=y0) return null;
     // One device pixel per cell. If the whole bottle would be more than the cell budget, coarsen,
-    // but never back to the old three-pixel cells.
+    // but never back to the old three-pixel cells. Cell size depends on the view, not on the wax.
     var cs=Math.max(0.05, 1.0/ppu), area=(x1-x0)*(y1-y0), budget=48000;
     if(area/(cs*cs)>budget) cs=Math.sqrt(area/budget);
+    x0=Math.floor(x0/cs)*cs; y0=Math.floor(y0/cs)*cs;
+    x1=Math.ceil(x1/cs)*cs; y1=Math.ceil(y1/cs)*cs;
     var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
     if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FB=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FW=new Float32Array(N); }
     var F=st.F, FB=st.FB, FT=st.FT, FF=st.FF, FW=st.FW; F.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FW.fill(0,0,N);
@@ -4612,16 +4752,16 @@
           if(A>0 || look==='neon'){ var fw=FW[k]||1e-6, T=FT[k]/fw, mf=FF[k]/fw, h=Math.min(1,Math.max(0,-dd)/2.5);
             var zl=waxZ(a>0?F[k-1]:dd), zr=waxZ(a<W-1?F[k+1]:dd), zu=waxZ(b>0?F[k-W]:dd), zd=waxZ(b<H-1?F[k+W]:dd);
             var nx=-(zr-zl)/(2*cs), ny=-(zd-zu)/(2*cs), nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
-            var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp; spec*=spec; spec*=spec; spec*=spec;   // ^16
+            var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp*0.35;   // soft sheen; a sharp highlight strobes as the normal crosses a cell
             if(thermal){ var tc=thermRGB((T-22)/45), sh=0.7+0.3*dl; R=tc[0]*sh; G=tc[1]*sh; Bc=tc[2]*sh; }
             else if(look==='blacklight'){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
             else if(look==='neon'){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
             else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
             else if(mf<0.6){ var li=Lb*(0.42+0.58*dl)*0.4, rim=(1-h)*0.13*Lb;   // solid wax: dull and opaque
-              R=solidC[0]*(0.16+0.95*li+rim)+255*spec*0.25; G=solidC[1]*(0.16+0.95*li+rim)+245*spec*0.25; Bc=solidC[2]*(0.16+0.95*li+rim)+235*spec*0.25; }
+              R=solidC[0]*(0.16+0.95*li+rim)+255*spec*0.08; G=solidC[1]*(0.16+0.95*li+rim)+245*spec*0.08; Bc=solidC[2]*(0.16+0.95*li+rim)+235*spec*0.08; }
             else { var th=Math.sqrt(Math.min(1,Math.max(0,-dd)/7.5)), E=Lw*(0.22+0.78*th)*(0.8+0.2*dl), X=E*(3.2+2.2*hotW), hot=Math.max(0,T-50)*0.01*lit;
               // exposed like the glow it is: bright colours run toward white near the bulb, deeper and more saturated up high
-              R=255*(1-Math.exp(-wl[0]/255*X))+255*hot*0.4+255*spec*0.05; G=255*(1-Math.exp(-wl[1]/255*X))+150*hot*0.4+245*spec*0.05; Bc=255*(1-Math.exp(-wl[2]/255*X))+60*hot*0.4+235*spec*0.05;
+              R=255*(1-Math.exp(-wl[0]/255*X))+255*hot*0.4+40*spec; G=255*(1-Math.exp(-wl[1]/255*X))+150*hot*0.4+30*spec; Bc=255*(1-Math.exp(-wl[2]/255*X))+60*hot*0.4+20*spec;
               A*=0.7+0.3*Math.min(1,th*1.6); } }   // the thinnest edges let the liquid show through
         }
         if(thermal && A<1){ var tl=sim.sampleTL(x,y), lc=thermRGB((tl-22)/45); R=R*A+lc[0]*0.55*(1-A); G=G*A+lc[1]*0.55*(1-A); Bc=Bc*A+lc[2]*0.55*(1-A); A=1; }
@@ -4643,7 +4783,101 @@
 
   // a colour seen through more of itself, or by less light: each channel falls off faster the weaker it is
   function lampDeep(c0, ii){ return c0.map(function(v){ var t=v/255; return Math.round(255*t*Math.pow(Math.max(0,ii), 1+1.1*(1-t))+3); }); }
+  // One wax shape for Bedtime Amber. Stacked ellipses draw a hard circle through
+  // each other as they pass, which reads as a blob blinking on and off.
+  function paintBedtimeWax(c, sim, blobs, wax, amber, ppu){
+    var g=sim.geo, x0=LCX-22, x1=LCX+22, y0=g.Y0, y1=g.Y1;
+    var cs=Math.max(0.45, 1/Math.max(ppu||1, 0.5)), area=(x1-x0)*(y1-y0);
+    if(area/(cs*cs)>24000) cs=Math.sqrt(area/24000);
+    x0=Math.floor(x0/cs)*cs; y0=Math.floor(y0/cs)*cs;
+    var W=Math.ceil((x1-x0)/cs), H=Math.ceil((y1-y0)/cs);
+    var st=LAMP.bedWax||(LAMP.bedWax={});
+    if(!st.cv || st.cv.width!==W || st.cv.height!==H){
+      st.cv=document.createElement('canvas'); st.cv.width=W; st.cv.height=H;
+      st.cx=st.cv.getContext('2d', { willReadFrequently:true });
+      st.img=st.cx.createImageData(W, H);
+      st.W=W; st.H=H;
+    }
+    var D=st.img.data, kBlend=6;
+    function edist(b, x, y){
+      var rx=b.r, ry=b.r*0.92, dx=(x-b.x)/rx, dy=(y-b.y)/ry, q=Math.sqrt(dx*dx+dy*dy);
+      return (q-1)*Math.min(rx, ry);
+    }
+    function smin(a, b, k){ var h=Math.max(k-Math.abs(a-b),0)/k; return Math.min(a,b)-h*h*k*0.25; }
+    for(var j=0;j<H;j++){
+      var y=y0+(j+0.5)*cs, win=sim.inner(Math.min(Math.max(y, g.Y0), g.Y1));
+      var depth=Math.max(0, Math.min(1, (y-g.Y0)/Math.max(1, g.Y1-g.Y0)));
+      var R=wax[0]+(amber[0]-wax[0])*0.22*depth, G=wax[1]+(amber[1]-wax[1])*0.22*depth, Bc=wax[2]+(amber[2]-wax[2])*0.22*depth;
+      for(var i=0;i<W;i++){
+        var x=x0+(i+0.5)*cs, d=80, bi;
+        for(bi=0; bi<blobs.length; bi++) d=smin(d, edist(blobs[bi], x, y), kBlend);
+        var pi=(j*W+i)*4, edge=(win-Math.abs(x-LCX))/0.8;
+        var A=Math.max(0, Math.min(1, 0.5-d/0.8));
+        A*=Math.max(0, Math.min(1, edge));
+        var body=Math.max(0, Math.min(1, -d/5)), shade=1+0.06*body;
+        D[pi]=Math.min(255, R*shade); D[pi+1]=Math.min(255, G*shade); D[pi+2]=Math.min(255, Bc*shade); D[pi+3]=Math.round(A*255);
+      }
+    }
+    st.cx.putImageData(st.img, 0, 0);
+    c.save(); c.imageSmoothingEnabled=true;
+    c.drawImage(st.cv, x0, y0, W*cs, H*cs);
+    c.restore();
+  }
+  function paintBedtime(c, now, o){
+    var sim=lampSim(), g=sim.geo, fin=(LBASE_BY[ADV.lampBase]||LAMP_BASES[0]).m, cx=LCX;
+    var P=(window.OTRBedtime&&OTRBedtime.PALETTE)||{liq:[49,16,14],wax:[142,48,32],amber:[181,102,39]};
+    var on=!!ADV.lampOn, B=clampN(ADV.lampBright,0,200)/100, dim=on?Math.min(0.5, B*0.38):0;
+    var blobs=(window.OTRBedtime?OTRBedtime.blobs(LAMP.bedT||0, on):[]);
+    var add=function(fn){ c.save(); c.globalCompositeOperation='lighter'; fn(); c.restore(); };
+    var liq=P.liq, wax=P.wax, amber=P.amber, Y0=g.Y0, Y1=g.Y1;
+    var slide=o.view==='slide', room=o.view!=='solo' && !slide, radio=radioOn() && !slide, tableY=LFLOOR+(radio?RAD.extra:0);
+    if(room && dim>0.02) add(function(){
+      var pr=c.createRadialGradient(cx,tableY+2,1,cx,tableY+2,22);
+      pr.addColorStop(0, rgba(amber, Math.min(0.07, 0.05*dim))); pr.addColorStop(1, rgba(amber, 0));
+      c.save(); c.translate(cx,tableY+2); c.scale(1,0.22); c.translate(-cx,-(tableY+2));
+      c.fillStyle=pr; c.beginPath(); c.arc(cx,tableY+2,22,0,Math.PI*2); c.fill(); c.restore();
+    });
+    if(room){
+      var tg=c.createLinearGradient(0,tableY,0,tableY+30); tg.addColorStop(0,'#100c0a'); tg.addColorStop(1,'#080504');
+      c.fillStyle=tg; c.fillRect(-TW,tableY,TW*3,TH); c.fillStyle='#1a1410'; c.fillRect(-TW,tableY,TW*3,0.6);
+    }
+    if(radio) paintRadio(c, now, o, dim, amber, add);
+    lampGlass(c, sim, 0, 26, 128); c.fillStyle='rgba(205,220,230,0.02)'; c.fill();
+    var ins=function(){ c.beginPath(); var y; c.moveTo(cx-sim.inner(Y1),Y1); for(y=Y1-1.5;y>Y0;y-=1.5) c.lineTo(cx-sim.inner(y),y);
+      c.lineTo(cx-sim.inner(Y0),Y0); c.lineTo(cx+sim.inner(Y0),Y0); for(y=Y0+1.5;y<Y1;y+=1.5) c.lineTo(cx+sim.inner(y),y); c.lineTo(cx+sim.inner(Y1),Y1); c.closePath(); };
+    var lg=c.createLinearGradient(0,Y0,0,Y1+1);
+    lg.addColorStop(0, rgba(liq,1)); lg.addColorStop(0.78, rgba(liq,1)); lg.addColorStop(1, rgba(mix(liq, amber, 0.22*dim), 1));
+    ins(); c.fillStyle=lg; c.fill();
+    if(dim>0.02) add(function(){ var cg=c.createRadialGradient(0,0,0,0,0,1);
+      cg.addColorStop(0, rgba(amber, Math.min(0.2, 0.14*dim))); cg.addColorStop(1, rgba(amber, 0));
+      ins(); c.translate(cx,Y1+4); c.scale(14,22); c.fillStyle=cg; c.fill(); });
+    lampGlass(c, sim, 1.4, 30, Y0); c.fillStyle='rgba(8,5,4,0.94)'; c.fill();
+    c.strokeStyle='rgba(255,255,255,0.08)'; c.lineWidth=0.5; c.beginPath(); c.ellipse(cx, Y0, sim.inner(Y0), sim.inner(Y0)*0.12, 0, 0, Math.PI); c.stroke();
+    c.save(); c.strokeStyle='rgba(120,90,70,0.4)'; c.lineWidth=0.7; c.beginPath();
+    for(var a=0;a<=Math.PI*2*3.2;a+=0.25){ var rr=2.5+a*0.42, px=cx+Math.cos(a)*rr, py=Y1-1.1+Math.sin(a)*rr*0.16; if(a===0) c.moveTo(px,py); else c.lineTo(px,py); }
+    c.stroke(); c.restore();
+    c.save(); ins(); c.clip();
+    paintBedtimeWax(c, sim, blobs, wax, amber, o.ppu||1);
+    c.restore();
+    if(dim>0.02) add(function(){ var bg=c.createRadialGradient(cx,Y1+1,0,cx,Y1+1,14);
+      bg.addColorStop(0, rgba(amber, Math.min(0.26, 0.2*dim))); bg.addColorStop(1, rgba(amber, 0));
+      c.save(); c.translate(cx,Y1+1); c.scale(1,0.4); c.translate(-cx,-(Y1+1)); c.fillStyle=bg; c.beginPath(); c.arc(cx,Y1+1,14,0,Math.PI*2); c.fill(); c.restore(); });
+    var fr=c.createLinearGradient(cx-22,0,cx+22,0), gt=[180,170,160];
+    fr.addColorStop(0, rgba(gt, 0.08)); fr.addColorStop(0.2, rgba(gt, 0)); fr.addColorStop(0.8, rgba(gt, 0)); fr.addColorStop(1, rgba(gt, 0.08));
+    lampGlass(c, sim, 0, 26, 127); c.fillStyle=fr; c.fill();
+    lampGlass(c, sim, 0, 27, 126, true); c.strokeStyle='rgba(255,255,255,0.12)'; c.lineWidth=0.6; c.stroke();
+    var capPath=function(){ c.beginPath(); c.moveTo(cx-13.9,31.2); c.quadraticCurveTo(cx-11.2,19,cx-7.8,9.2); c.lineTo(cx+7.8,9.2); c.quadraticCurveTo(cx+11.2,19,cx+13.9,31.2); c.ellipse(cx,31.2,13.9,1.9,0,0,Math.PI,false); c.closePath(); };
+    capPath(); c.fillStyle=metalGrad(c,cx-14,cx+14,fin); c.fill();
+    c.beginPath(); c.ellipse(cx,9.2,7.8,1.25,0,0,Math.PI*2); c.fillStyle=fin[1]; c.fill();
+    var basePath=function(){ c.beginPath(); c.moveTo(cx-19.6,LBASE); c.bezierCurveTo(cx-21,150,cx-24,176,cx-33,LFLOOR); c.ellipse(cx,LFLOOR,33,4.8,0,Math.PI,0,true); c.bezierCurveTo(cx+24,176,cx+21,150,cx+19.6,LBASE); c.ellipse(cx,LBASE,19.6,3.1,0,0,Math.PI,false); c.closePath(); };
+    basePath(); c.fillStyle=metalGrad(c,cx-30,cx+30,fin); c.fill();
+    var sg=c.createLinearGradient(0,LBASE,0,LFLOOR); sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(1,'rgba(0,0,0,0.55)'); c.fillStyle=sg; c.fill();
+    if(dim>0.02) add(function(){ var rg=c.createLinearGradient(0,LBASE,0,LBASE+16); rg.addColorStop(0, rgba(amber, Math.min(0.1, 0.08*dim))); rg.addColorStop(1, rgba(amber, 0)); basePath(); c.fillStyle=rg; c.fill(); });
+    c.beginPath(); c.ellipse(cx,LBASE,19.6,3.1,0,0,Math.PI); c.strokeStyle = dim>0.02 ? rgba(amber, Math.min(0.35, 0.22*dim)) : 'rgba(255,255,255,0.1)'; c.lineWidth=0.7; c.stroke();
+    if(o.view==='rack' && !on){ c.fillStyle='#6a6a6a'; c.font='9px '+(FONT||getComputedStyle(document.body).fontFamily); c.textAlign='center'; c.fillText('OFF', cx, TH-3+(radio?RAD.extra:0)); c.textAlign='start'; }
+  }
   function paintLamp(c, now, o){
+    if(bedtimeOn()){ paintBedtime(c, now, o); return; }
     var sim=lampSim(), g=sim.geo, L=curLook(), look=L.id, P=L.p, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], fin=(LBASE_BY[ADV.lampBase]||LAMP_BASES[0]).m, cx=LCX, d=o.detail||1;
     var B=clampN(ADV.lampBright,0,200)/100, on=!!ADV.lampOn, pw=on ? clampN(ADV.lampW,15,40)/25*(1+0.25*sim.S.music) : 0;
     var warm=LAMP.stat ? clampN((LAMP.stat.tBot-22)/28,0,1) : 0, lit=on ? Math.min(1.5,pw)*B*(0.55+0.45*Math.min(1,warm+0.5)) : 0;
@@ -4725,15 +4959,15 @@
     var c=f.c, r=f.r, L=curLook(), W=cv.width, H=cv.height;
     // with the radio the big view keeps the strip under the zoom buttons clear, so they never sit on its controls.
     // The slideshow view is the lamp alone, transparent, so a room picture can sit behind it.
-    var solo=view==='solo', slide=view==='slide', SH=slide?TH:lampSceneH(), hh=f.h-(view==='big' && radioOn() ? Math.min(56, f.h*0.11) : 0);
+    var solo=view==='solo', slide=view==='slide', bed=bedtimeOn(), SH=slide?TH:lampSceneH(), hh=f.h-(view==='big' && radioOn() ? Math.min(56, f.h*0.11) : 0);
     var s=Math.min(f.w/TW, hh/SH)*(view==='big'?0.94:solo?0.96:1)*(z||1), tx=f.w/2-(TW/2+(px||0))*s, ty=hh/2-(SH/2+(py||0))*s;
-    if(slide){ if(cv.style.filter) cv.style.filter=''; }
+    if(slide || bed){ if(cv.style.filter) cv.style.filter=''; }
     else if(cv.style.filter!==(L.css||'')) cv.style.filter=L.css||'';
     c.setTransform(1,0,0,1,0,0);
-    var bg = slide ? null : (solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null)); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
+    var bg = slide ? null : (bed ? '#080504' : (solo ? '#000' : L.p.bg || (view==='big' ? '#060504' : null))); if(bg){ c.fillStyle=bg; c.fillRect(0,0,W,H); } else c.clearRect(0,0,W,H);
     c.setTransform(r*s,0,0,r*s,r*tx,r*ty);
     paintLamp(c, now, { detail:r*s, view:view, ppu:r*s, vis:{ x0:-tx/s, y0:-ty/s, x1:(f.w-tx)/s, y1:(f.h-ty)/s } });
-    c.setTransform(1,0,0,1,0,0); if(!solo && !slide) lookOverlay(c, W, H, L, now);
+    c.setTransform(1,0,0,1,0,0); if(!solo && !slide && !bed) lookOverlay(c, W, H, L, now);
     return { s:s, tx:tx, ty:ty, w:f.w, h:hh };
   }
   function drawLamp(now){ renderLamp($('lampCv'), now, 'rack'); }
@@ -5280,6 +5514,8 @@
     tab: function(name){ if(name) showTab(name); return curTab; },
     mode: function(){ return playerMode; },
     niceTitle: function(t){ return niceTitle(t); },
+    airTitle: function(t, d){ return epText(t, d); },
+    airDate: function(d){ return window.OTRAirDate ? OTRAirDate.formatAirDate(d) : null; },
     dockShown: function(){ return $('dock').classList.contains('show'); },
     network: {
       ready: function(){ return NET_ORDER.length>0; },
@@ -5329,6 +5565,16 @@
         set: function(o){ Object.keys(o||{}).forEach(function(k){ if(('lamp'+k.charAt(0).toUpperCase()+k.slice(1)) in ADV_DEF) ADV['lamp'+k.charAt(0).toUpperCase()+k.slice(1)]=o[k]; }); Object.keys(advKnobs).forEach(function(k){ if(/^lamp/.test(k)) advKnobs[k].set(ADV[k]); }); saveAdv(); syncLampUI(); return JSON.parse(JSON.stringify(ADV)); },
         blobs: function(){ lampSim(); LAMP.sim.stats(); return LAMP.sim.L.map(function(o){ return { x:o.x, y:o.y, r:o.r, T:o.T, f:o.f, b:o.blob }; }); },
         cols: function(){ return LAMP_COLS.map(function(x){ return x.id; }); },
+        bedtime: function(){
+          var held=lampHeld();
+          return { on:bedtimeOn(), held:held, motion:ADV.lampMotion||'auto', reduce:lampReduce(), bright:ADV.lampBright,
+            period: window.OTRBedtime ? OTRBedtime.PERIOD : 0, t:LAMP.bedT||0,
+            blobs: window.OTRBedtime ? OTRBedtime.blobs(LAMP.bedT||0, !!ADV.lampOn) : [],
+            clock: function(t){ if(typeof t==='number' && isFinite(t)){ LAMP.bedT=t; LAMP.bedLast=0; } return LAMP.bedT||0; },
+            note: ($('lampBedNote') && !$('lampBedNote').hidden) ? $('lampBedNote').textContent : '',
+            cols: LAMP_COLS.map(function(x){ return x.id; }) };
+        },
+        render: function(now){ return renderLamp($('lampCv'), now||performance.now(), 'rack'); },
         bench: function(n, which){ var cv=$(which==='rack'?'lampCv':'tvCv'), t0=performance.now(); n=n||30;
           for(var i=0;i<n;i++){ renderLamp(cv, t0+i*16, which==='rack'?'rack':'big', which==='rack'?1:TVZ.z, TVZ.x, TVZ.y, which==='rack'?1:(TVQ.lock||1)); cv.getContext('2d').getImageData(0,0,1,1); } return (performance.now()-t0)/n; },
         solo: function(v){ if(v===true) openLampSolo(); else if(v===false) closeLampSolo(); return soloIsOpen(); },

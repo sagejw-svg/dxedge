@@ -132,6 +132,11 @@
       y = y.toLowerCase().replace(/\b[a-z]/g, function(c){ return c.toUpperCase(); });
     return y;
   }
+  function airTitle(title, date){
+    var nice = niceTitle(title);
+    var api = window.OTRAirDate;
+    return api ? api.withAirDate(nice, date) : nice;
+  }
 
   function wallClock(unixMs){
     var d = new Date(unixMs), g = {};
@@ -309,6 +314,7 @@
       it.nextShowId = following ? following.showId : null;
       it.nextShow = following ? following.showName : null;
       it.nextTitle = following ? following.title : null;
+      it.nextDate = following ? (following.date || '') : '';
       it.nextStart = following ? following.start : 0;
       it.nextEp = following && following.epId || null;
       it.nextIsTomorrow = isTom;
@@ -342,7 +348,7 @@
       show: it.showName || null, title: it.title || null, date: it.date || null,
       trimmed: !!it.trimmed, audio: it.audio || null, url: it.url || null,
       line: it.line || null, nextShowId: it.nextShowId || null, nextShow: it.nextShow || null,
-      nextTitle: it.nextTitle || null, nextStart: it.nextStart == null ? null : it.nextStart,
+      nextTitle: it.nextTitle || null, nextDate: it.nextDate || null, nextStart: it.nextStart == null ? null : it.nextStart,
       nextEp: it.nextEp || null, epId: it.epId || null,
       cues: it.cues ? it.cues.map(function (c) { return { url: c.url, dur: c.dur, at0: c.at0 || 0 }; }) : null,
       nextIsTomorrow: !!it.nextIsTomorrow
@@ -385,7 +391,7 @@
         map[it.blockId] = row;
         rows.push(row);
       }
-      row.shows.push({ showId: it.showId, show: it.showName, title: it.title, epIndex: it.epIndex });
+      row.shows.push({ showId: it.showId, show: it.showName, title: it.title, date: it.date || '', epIndex: it.epIndex });
     });
     return rows;
   }
@@ -644,7 +650,7 @@
     try {
       if (state.mediaKey === a.key) return;
       state.mediaKey = a.key;
-      var title = a.kind === 'break' ? 'Station break' : (niceTitle(a.title) || a.show || 'Listenotr Radio');
+      var title = a.kind === 'break' ? 'Station break' : (airTitle(a.title, a.date) || a.show || 'Listenotr Radio');
       var artist = a.kind === 'break' ? 'Listenotr Radio' : (a.show || 'Listenotr Radio');
       navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: artist, album: 'Listenotr Radio' });
       navigator.mediaSession.setActionHandler('play', function(){
@@ -727,7 +733,7 @@
     var url = shareUrl(), a = booted ? onAir() : null;
     var text = !a ? "You're listening to Listenotr Radio."
       : (a.kind === 'break' ? (a.line || "You're listening to Listenotr Radio.")
-        : ('On Listenotr Radio right now: ' + (a.show || 'a show') + (a.title ? ' — ' + niceTitle(a.title) : '') + '.'));
+        : ('On Listenotr Radio right now: ' + (a.show || 'a show') + (a.title ? ' — ' + airTitle(a.title, a.date) : '') + '.'));
     if (navigator.share) {
       navigator.share({ title: 'Listenotr Radio', text: text, url: url }).catch(function(e){
         if (e && e.name === 'AbortError') return;
@@ -755,7 +761,7 @@
     if (row.shows.length === 1 && row.shows[0].title) {
       var ep = document.createElement('span');
       ep.className = 'lr-epn';
-      ep.textContent = niceTitle(row.shows[0].title);
+      ep.textContent = airTitle(row.shows[0].title, row.shows[0].date);
       what.appendChild(ep);
     }
     li.appendChild(when);
@@ -803,8 +809,8 @@
     text('lrClock', clock12s(w.sod) + ' ET');
     text('lrKicker', a.kind === 'break' ? 'Station break' : 'Now playing');
     text('lrShow', a.kind === 'break' ? 'Listenotr Radio' : (a.show || ''));
-    text('lrEp', a.kind === 'break' ? (a.line || '') : niceTitle(a.title || ''));
-    text('lrMeta', a.kind === 'break' ? (a.label || '') : [a.date, a.label].filter(Boolean).join(' · '));
+    text('lrEp', a.kind === 'break' ? (a.line || '') : airTitle(a.title || '', a.date));
+    text('lrMeta', a.label || '');
     var frac = a.dur > 0 ? Math.max(0, Math.min(1, a.offset / a.dur)) : 0;
     var fill = $('lrFill');
     if (fill) fill.style.width = (frac * 100).toFixed(1) + '%';
@@ -816,7 +822,7 @@
     text('lrLeft', a.kind === 'break' ? (fmt(a.dur - a.offset) + ' until the next show') : (fmt(a.dur - a.offset) + ' left'));
     var when = a.nextShow ? (a.nextIsTomorrow ? '12:00 AM' : clock12((a.nextStart || 0) / 60)) : '';
     text('lrNext', a.nextShow ? (a.nextShow + ' · ' + when) : '—');
-    text('lrNextEp', a.nextTitle ? niceTitle(a.nextTitle) : '');
+    text('lrNextEp', a.nextTitle ? airTitle(a.nextTitle, a.nextDate) : '');
     var st = '';
     if (state.started && state.userPaused) st = 'Stopped. Listen rejoins the broadcast, live.';
     else if (state.started && state.muted) st = 'Muted. The broadcast stays on the clock.';
