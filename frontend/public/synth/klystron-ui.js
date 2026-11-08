@@ -175,20 +175,31 @@ export function mountKlystronPanel(container, hooks) {
   const stage = section('play', 'mKlyStage', 'Mouth');
   stage.dataset.wide = '1';
   const pad = el('canvas', { id: 'klPad', 'aria-label': 'Vowel pad. Across is front to back, up is open to close.' });
-  const vowels = el('div', { class: 'chips', id: 'klVowels' });
-  const srcRow = el('div', { class: 'chips', id: 'klSources' });
-  const fileLabel = el('label', { class: 'btn small filebtn', id: 'klFileBtn' }, 'Load');
-  const file = el('input', { type: 'file', id: 'klFile', accept: 'audio/*,.wav,.mp3,.ogg,.flac' });
-  fileLabel.appendChild(file);
-  const mic = el('button', { type: 'button', class: 'btn small', id: 'klMic' }, 'Mic');
-  const name = el('span', { class: 'note', id: 'klName' }, 'Vowel');
-  srcRow.appendChild(fileLabel);
-  srcRow.appendChild(mic);
-  srcRow.appendChild(name);
+  // Source row (graphics, 8 Nov): one joined switch (vowel, file, mic) and the source's name in a recessed
+  // readout window with a lamp. Before, vowel, file and mic chips sat beside Load and Mic header buttons that
+  // did the same two things, and the name was bare text at the end of the row. The file key opens the picker
+  // (the input stays in the page for drops and tests); the mic key is the old Mic button.
+  const vowels = el('div', { class: 'chips klsw', id: 'klVowels', role: 'group', 'aria-label': 'Vowel' });
+  const vowelRow = el('div', { class: 'klsrc klvrow' });
+  vowelRow.appendChild(el('span', { class: 'kltag', 'aria-hidden': 'true' }, 'vowel'));
+  vowelRow.appendChild(vowels);
+  const srcRow = el('div', { class: 'klsrc', id: 'klSources' });
+  const srcSw = el('div', { class: 'klsw', role: 'group', 'aria-label': 'Mouth source' });
+  const fileLabel = el('button', { type: 'button', class: 'chip', id: 'klFileBtn', 'data-src': 'file', title: 'Load a recording as the mouth' }, 'file');
+  const file = el('input', { type: 'file', id: 'klFile', accept: 'audio/*,.wav,.mp3,.ogg,.flac', hidden: '', 'aria-hidden': 'true', tabindex: '-1' });
+  const mic = el('button', { type: 'button', class: 'chip', id: 'klMic', 'data-src': 'mic', title: 'Use the microphone as the mouth (the browser asks permission)' }, 'mic');
+  const nameWin = el('span', { class: 'klread', id: 'klRead', 'data-src': 'vowel' });
+  const name = el('span', { class: 'klname', id: 'klName' }, 'Vowel');
+  nameWin.appendChild(el('i', { 'aria-hidden': 'true' }));
+  nameWin.appendChild(name);
+  srcRow.appendChild(el('span', { class: 'kltag', 'aria-hidden': 'true' }, 'source'));
+  srcRow.appendChild(srcSw);
+  srcRow.appendChild(nameWin);
+  srcRow.appendChild(file);
   const hint = el('p', { class: 'note' });
-  hint.textContent = 'Drag the pad to move the vowel. Load a recording or press Mic (the browser asks permission) and the same pad tilts that sound. Freeze holds a grain cloud. The red rec button saves what you hear as a WAV.';
+  hint.textContent = 'Drag the pad to move the vowel. Press file to load a recording or mic to use the microphone (the browser asks permission), and the same pad tilts that sound. Freeze holds a grain cloud. The red rec button saves what you hear as a WAV.';
   stage.appendChild(pad);
-  stage.appendChild(vowels);
+  stage.appendChild(vowelRow);
   stage.appendChild(srcRow);
   stage.appendChild(hint);
 
@@ -273,21 +284,24 @@ export function mountKlystronPanel(container, hooks) {
   });
 
   SOURCES.forEach(id => {
+    if (id !== 'vowel') return;
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip';
     b.dataset.src = id;
-    b.textContent = id === 'vowel' ? 'vowel' : id === 'file' ? 'file' : 'mic';
+    b.textContent = 'vowel';
+    b.title = 'The pad is the mouth';
     b.addEventListener('click', () => {
-      if (id === 'mic') { mic.click(); return; }
-      if (id === 'file') { file.click(); return; }
       hooks.host.stopMic();
       hooks.patch().source = 'vowel';
       hooks.edited();
       sync();
     });
-    srcRow.insertBefore(b, fileLabel);
+    srcSw.appendChild(b);
   });
+  srcSw.appendChild(fileLabel);
+  srcSw.appendChild(mic);
+  fileLabel.addEventListener('click', () => file.click());
 
   function fit() {
     const r = pad.getBoundingClientRect();
@@ -424,7 +438,7 @@ export function mountKlystronPanel(container, hooks) {
       if (k && k.set) k.set(read(path));
     });
     waves.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === p.carrier.wave)));
-    srcRow.querySelectorAll('.chip[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === p.source)));
+    srcSw.querySelectorAll('.chip[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === p.source)));
     vowels.querySelectorAll('.chip').forEach(b => {
       const v = VOWELS.find(x => x.id === b.dataset.vowel);
       const on = p.source === 'vowel' && v && Math.abs(p.mouth.x - v.x) < 0.02 && Math.abs(p.mouth.y - v.y) < 0.02;
@@ -433,7 +447,10 @@ export function mountKlystronPanel(container, hooks) {
     freeze.setAttribute('aria-pressed', String(!!p.grain.freeze));
     mic.setAttribute('aria-pressed', String(p.source === 'mic' && hooks.host.micOn()));
     const buf = hooks.host.buffer();
-    name.textContent = p.source === 'mic' ? 'Microphone' : p.source === 'file' ? (buf && buf.name ? buf.name : 'File') : 'Vowel';
+    const live = p.source === 'mic' && hooks.host.micOn();
+    name.textContent = p.source === 'mic' ? (live ? 'Microphone' : 'Microphone (off)') : p.source === 'file' ? (buf && buf.name ? buf.name : 'File') : 'Vowel';
+    nameWin.dataset.src = p.source === 'mic' ? (live ? 'mic' : 'idle') : p.source === 'file' ? (buf ? 'file' : 'idle') : 'vowel';
+    nameWin.title = name.textContent;
     draw();
   }
 

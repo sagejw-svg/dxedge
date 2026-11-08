@@ -1531,8 +1531,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (7 Nov): 1. Klystron's source row; 2. Phantastron's seed field (a white browser box); 3. Orthicon's picture list;
-4. a user patch's name window on a phone; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (8 Nov): 1. Phantastron's seed field (a white browser box) and its bare "no bends" status; 2. Orthicon's picture list;
+3. a user patch's name window on a phone; 4. rail plate titles at 761 to 959 px; 5. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1708,15 +1708,25 @@ Rank of the open items (7 Nov): 1. Klystron's source row; 2. Phantastron's seed 
   where no vowel letter sits; Phantastron's chip lettering is spaced capitals and a short chip (a phone's board) puts PH-1 ROM
   on one line, 10 px clear of BITS; Additron's footage names step down from 10 px until each fits its column (no change seen at
   375 or 1366 px). Static, so nothing for reduced motion. Display only, no audio change. Commit `f33b0fa`. New checks: Cf. (18).
+- [x] 8 Nov: Klystron's source row (the top item of 7 Nov). Seen before at 1366 px: the vowel, file and mic chips sat beside Load
+  and Mic, drawn as header buttons, that did the same two things (file and Load both opened the picker; mic and Mic both asked for
+  the microphone), and the source's name ("Vowel") was bare grey text at the end of the row; at 375 px Load's word sat at the top
+  of its key and "Vowel" hung above the row's middle. The five vowel chips were 26 px loose keys. Now: two rows with engraved tags
+  (VOWEL, SOURCE; the tags drop on a phone): the vowels u o a e i as one joined switch, and vowel, file and mic as one joined
+  switch, both in the patch keys' recessed finish with the lit key in Klystron's peach. One control per source: the file key is a
+  real button (it opens the picker, so it is now reachable by keyboard; the old Load was a label around a hidden input) and the
+  mic key is the old Mic button (same id). The name sits in a recessed readout window with a lamp: peach on the vowel pad, amber
+  with a file loaded, red while the microphone is live (pulsing; steady with reduced motion), dark grey text when a saved patch
+  names a file or mic that is not loaded ("Microphone (off)"). A long file name is clipped with an ellipsis inside the window.
+  Measured after: text 13.8:1 on the window; at 1366 px keys 30 px tall, the row 488 px inside its card; at 375 px every key
+  44 px, the source row one line, the window 153 px, no sideways scroll. Display only, no audio change. New checks: Ks. (13).
 - [ ] Phantastron's seed field (7 Nov, seen at 1366 px): the SEED box in Bends is the browser's white input with black text, the
-  only white control on the rack. A dark recessed field like the patch name window would match.
+  only white control on the rack. A dark recessed field like the patch name window would match. 8 Nov, seen: the bends row ends
+  in bare "no bends" text after the chips, the same pattern Klystron's source name had; a readout window would match.
 - [ ] A user patch's name window on a phone (6 Nov, measured): the delete key (57 px) joins the edit keys on a user
   patch, so the name window drops to 80 px at 375 ("My Te..."). At 320 the edit keys wrap to a row of their own instead
   (name 220 px, the header one row taller while a user patch is loaded). Options: delete inside the save form, or a
   shorter key.
-- [ ] Klystron's source row (5 Nov, seen at 1366 px): the vowel, file and mic chips sit beside Load and Mic, which are drawn as
-  header buttons, and the source's name ("Vowel") is bare text at the end of the row. One chip style, and the name in a
-  readout window like the MIDI deck's, would match the rest of the rack.
 - [ ] Orthicon's picture list (5 Nov, seen at 1366 px): the starter pictures under the paint tools (Harmonic Stack, Twin Sweep
   and the rest) read dimmer than the tool chips above them (not measured).
 - [ ] Lattice and Mote use their own chip palettes (blue and cyan) beside the amber elsewhere (seen). A call
@@ -1733,6 +1743,7 @@ Rank of the open items (7 Nov): 1. Klystron's source row; 2. Phantastron's seed 
   title on each plate (the role) would keep it reachable by hover there.
 
 ## Open items for James
+- Graphics 8 Nov, Klystron's source row: please look (Mouth card, under the pad). Before: vowel, file and mic chips, then Load and Mic drawn as header buttons that did the same two things, then the source's name as bare grey text. After: a VOWEL row (u o a e i as one joined switch) and a SOURCE row (vowel, file, mic as one joined switch, lit key peach), with the source's name in a dark recessed window with a lamp (peach vowel, amber file, red pulsing while the mic is live). Load and Mic are gone as separate buttons: file opens the picker every time you press it, mic toggles the microphone, and dropping a file on the pad still works. Say if you want a separate "load another" key back, or the tags off on desktop.
 - Nightly 8 Nov, the paper roll: please try it. Under the song library, open roll, press play: Octave Pump plays the lit device at the rack tempo. Try Tie and Slide on Cathode or Thyratron (the slides should glide; I can only measure the overlap, 0.08 step, not hear the glide). Calls I made that you may want changed: (1) run is off on a fresh page, so a library song never brings the roll in; play on the roll strip turns it on and it then stays on (lamp amber) until you switch it off; (2) a step the timer reaches more than 60 ms late is dropped instead of played late; (3) a tie with nothing before it strikes if punched. Not in this slice: the roll in the project file, named user rolls and chains, the deck recording it, the master Render WAV including it. Say which matter most and the next nightly picks it up; otherwise it moves on to the next 0.3 item. The 7 Nov 1939 mode question is still open.
 - Nightly 7 Nov, 1939 mode's plot: please look. On Filament, Osc tab, switch 1939 mode on: the filter response plot now sits under the tone tabs and draws the bank they make ("1939 bank: body + voice + mellow", peak near 880 Hz on the defaults); a tab redraws it. With the mode off it goes back to the Filter section as before. Call I made that you may want changed: the plot moves between sections (one plot, so the Filter tab has none while 1939 mode is on) rather than showing twice. The next open 1939 mode item is the mod matrix destination set (tone, tab levels), marked "if wanted": say if you want it, otherwise the next nightly moves on to the punched paper roll step sequencer.
 - Review 6 Nov (`docs/filament-review.md`): (1) R1106-2, confusing: the LC bank with the stereo offset splits much wider than the other models (at 1 octave the side signal is 1.7 dB over the left channel; Valve 12 -8 dB) and mono loses 0.55 dB, because each side's narrow peaks land where the other side has none. Options: add the mono warning the Ladder 24 and Poly 24 notes carry to the LC note, or scale the offset down on this model. Your call on the sound. (2) Fixed tonight: in 1939 mode the unison and glide knobs now rest (dimmed, titled "Resting: 1939 mode"), since the mode ignores both (R1106-1); and the phone save name field is 44 px tall (R1103-3). Still open and yours: R1103-1 (Lattice WAV not kept), R1022-5 and R1025-3 (delete).

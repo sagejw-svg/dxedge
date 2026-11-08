@@ -5539,6 +5539,62 @@ with sync_playwright() as pw:
             ck("Cf. 375 px: no sideways scroll after visiting every device", cfp.evaluate("document.documentElement.scrollWidth") <= 375)
         cfx.close()
     ck("Cf. no page errors (canvas lettering)", not cferr, cferr)
+    # Ks. Klystron's vowel and source rows (graphics, 8 Nov 2026). Before, vowel, file and mic chips sat beside Load and
+    # Mic header buttons that did the same two things, and the source's name was bare text at the end of the row (seen
+    # at 1366 px; on a 375 px phone Load's word sat at the top of its key). Now: two joined switches in a recessed tray,
+    # one control per source, and the name in a recessed readout window whose lamp follows the source.
+    KS_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, w: q.width, h: q.height }; };
+      const join = a => a.every((k, i) => i === 0 || (Math.abs(k.l - a[i - 1].r) < 0.6 && Math.abs(k.t - a[i - 1].t) < 0.6));
+      const vk = [...document.querySelectorAll('#klVowels > .chip')].map(R), sk = [...document.querySelectorAll('#klSources .klsw > *')];
+      const rd = document.getElementById('klRead'), cs = getComputedStyle(rd), lamp = getComputedStyle(rd.querySelector('i'));
+      return { nv: vk.length, vJoin: join(vk), src: sk.map(e => e.id || e.dataset.src), sTag: sk.map(e => e.tagName), sJoin: join(sk.map(R)),
+        trays: [...document.querySelectorAll('#klRoot .klsw')].every(e => getComputedStyle(e).boxShadow.includes('inset')),
+        loose: document.querySelectorAll('#klSources .btn').length, ctl: document.querySelectorAll('#klSources button').length,
+        small: [...vk, ...sk.map(R)].filter(k => k.w < 44 || k.h < 44).length, minH: Math.min(...[...vk, ...sk.map(R)].map(k => k.h)),
+        win: R(rd), row: R(document.getElementById('klSources')), color: cs.color, bg: cs.backgroundImage, shadow: cs.boxShadow,
+        state: rd.dataset.src, name: document.getElementById('klName').textContent, lampBg: lamp.backgroundColor, anim: lamp.animationName,
+        pressed: sk.filter(e => e.getAttribute('aria-pressed') === 'true').map(e => e.id || e.dataset.src),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    kserr = []
+    for ks_w, ks_mob, ks_rm in ((1366, False, "no-preference"), (375, True, "reduce")):
+        ksx = b.new_context(viewport={"width": ks_w, "height": 667 if ks_mob else 1000}, is_mobile=ks_mob, has_touch=ks_mob, reduced_motion=ks_rm)
+        ksp = ksx.new_page(); ksp.on("pageerror", lambda e: kserr.append(str(e)))
+        ksp.add_init_script("""(() => { if (!navigator.mediaDevices) return; navigator.mediaDevices.getUserMedia = async () => {
+          const c = new AudioContext(); const o = c.createOscillator(), d = c.createMediaStreamDestination(); o.connect(d); o.start(); return d.stream; }; })()""")
+        ksp.goto(BASE); ksp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        ksp.evaluate("__synth.setDevice('klystron')"); ksp.wait_for_timeout(300)
+        ks = ksp.evaluate(KS_MEAS)
+        info(f"Ks. {ks_w} px", f"source row {ks['row']['w']:.0f} px, readout {ks['win']['w']:.0f} px, keys {ks['minH']:.0f} px tall")
+        ck(f"Ks. at {ks_w} px the five vowels and the three sources are joined switches in a recessed tray, one control per source (no Load or Mic beside them)",
+           ks["nv"] == 5 and ks["vJoin"] and ks["src"] == ["vowel", "klFileBtn", "klMic"] and ks["sTag"] == ["BUTTON"] * 3 and ks["sJoin"]
+           and ks["trays"] and ks["loose"] == 0 and ks["ctl"] == 3, ks)
+        ks_con = _ob_con(ks["color"], ks["bg"])
+        ck(f"Ks. at {ks_w} px the source's name sits in a recessed readout window ({ks_con:.1f}:1, want 4.5 or more) with a peach lamp on the vowel pad",
+           ks["state"] == "vowel" and ks["name"] == "Vowel" and "gradient" in ks["bg"] and "inset" in ks["shadow"] and ks_con >= 4.5
+           and ks["lampBg"] == "rgb(255, 176, 137)" and ks["pressed"] == ["vowel"], ks)
+        if ks_mob:
+            ck(f"Ks. on a {ks_w} px phone every vowel and source key is 44 px or more, the row stays one line, no sideways scroll",
+               ks["small"] == 0 and ks["row"]["h"] < 60 and ks["win"]["r"] <= ks["row"]["r"] + 0.5 and ks["sw"] <= ks["iw"] == ks_w, ks)
+        else:
+            ck("Ks. at 1366 px the keys keep a compact height (30 px or more) and the window ends inside the card",
+               ks["minH"] >= 29.5 and ks["win"]["r"] <= ks["row"]["r"] + 0.5, ks)
+        ksp.set_input_files("#klFile", files=[{"name": "ks-long-recording-name-for-the-window.wav", "mimeType": "audio/wav", "buffer": base64.b64decode(tiny)}])
+        ksp.wait_for_timeout(500)
+        kf = ksp.evaluate(KS_MEAS)
+        ck(f"Ks. at {ks_w} px a loaded file lights the file key and an amber lamp, its name clipped inside the window, no sideways scroll",
+           kf["state"] == "file" and "ks-long-recording" in kf["name"] and kf["pressed"] == ["klFileBtn"] and kf["lampBg"] == "rgb(255, 179, 71)"
+           and kf["win"]["r"] <= kf["row"]["r"] + 0.5 and kf["sw"] <= kf["iw"], kf)
+        ksp.click("#klMic"); ksp.wait_for_timeout(300)
+        km = ksp.evaluate(KS_MEAS)
+        want_anim = "none" if ks_rm == "reduce" else "deckRec"
+        ck(f"Ks. at {ks_w} px a live microphone lights the mic key and a red lamp ({'steady with reduced motion' if ks_rm == 'reduce' else 'pulsing'})",
+           km["state"] == "mic" and km["name"] == "Microphone" and km["pressed"] == ["klMic"] and km["lampBg"] == "rgb(255, 92, 92)" and km["anim"] == want_anim, km)
+        ksp.click("#klSources [data-src='vowel']"); ksp.wait_for_timeout(150)
+        kv = ksp.evaluate(KS_MEAS)
+        ck(f"Ks. at {ks_w} px the vowel key stops the microphone and brings the peach lamp back",
+           kv["state"] == "vowel" and kv["pressed"] == ["vowel"] and ksp.evaluate("__synth.patch().source") == "vowel", kv)
+        ksx.close()
+    ck("Ks. no page errors (Klystron's source row)", not kserr, kserr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)

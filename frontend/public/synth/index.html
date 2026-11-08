@@ -441,6 +441,35 @@
   body[data-dev="klystron"] .devbtn[aria-pressed="true"] { color: #ffe8d6; border-color: #ffb089; background: rgba(255, 176, 137, 0.12); }
   body[data-dev="klystron"] .devbtn[aria-pressed="true"] i { background: #ffb089; box-shadow: 0 0 7px #ffb089; }
   body[data-dev="klystron"] .tabs button[aria-selected="true"] { color: #ffe8d6; border-color: #ffb089; background: rgba(255, 176, 137, 0.12); }
+  /* Klystron's vowel and source rows (graphics, 8 Nov): joined switches in the patch keys' recessed finish, the lit
+     key in Klystron's peach, and the source's name in a recessed readout window (the MIDI deck's finish) with a
+     lamp: peach on the vowel pad, amber with a file loaded, red while the microphone is live (pulsing; steady with
+     reduced motion), dark when a saved patch names a file or mic that is not loaded. Before, Load and Mic were
+     header buttons beside file and mic chips that did the same, and the name was bare text. */
+  #klRoot .klsw { display: inline-flex; flex-wrap: nowrap; gap: 0; align-items: stretch; margin: 0; border-radius: 7px;
+    box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(255,236,220,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #klRoot .klsw > .chip { margin: 0; border-radius: 0; border-color: #3a2419; border-left-width: 0; min-width: 34px; min-height: 30px; padding: 3px 10px;
+    background: linear-gradient(180deg, #24180f, #150e0a); color: #d9b9a4; box-shadow: inset 0 1px 0 rgba(255,236,220,0.07); }
+  #klRoot .klsw > .chip:first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  #klRoot .klsw > .chip:last-child { border-radius: 0 6px 6px 0; }
+  #klRoot .klsw > .chip:hover:not([aria-pressed="true"]) { color: #ffd2b8; border-color: #3a2419; }
+  #klRoot .klsw > .chip:focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
+  body[data-dev="klystron"] #klRoot .klsw > .chip[aria-pressed="true"] { color: #2a140e; border-color: #ffb089; background: linear-gradient(180deg, #ffc8a8, #f29a6c);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 8px rgba(255,176,137,0.45); }
+  .klvrow { margin: 8px 0 6px; }
+  #klVowels > .chip { min-width: 40px; font-size: 13px; }
+  .klsrc { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin: 2px 0 4px; min-width: 0; }
+  .kltag { flex: 0 0 auto; min-width: 50px; font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #c9a58e; }
+  .klread { display: inline-flex; align-items: center; gap: 7px; flex: 0 1 auto; min-width: 0; max-width: 260px; min-height: 26px; padding: 3px 10px;
+    border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(255,236,210,0.08);
+    font-size: 11px; color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
+  .klread .klname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .klread i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2a2a2a; box-shadow: inset 0 0 2px #000; }
+  .klread[data-src="vowel"] i { background: #ffb089; box-shadow: 0 0 6px #ffb089; }
+  .klread[data-src="file"] i { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .klread[data-src="mic"] i { background: var(--red); box-shadow: 0 0 8px var(--red); animation: deckRec 1.2s ease-in-out infinite; }
+  .klread[data-src="idle"] { color: #b89a7a; text-shadow: none; }
   body[data-dev="phantastron"] #mStereo, body[data-dev="phantastron"] #mEns, body[data-dev="phantastron"] #mOut,
   body[data-dev="phantastron"] #mSpk, body[data-dev="phantastron"] #mRoom, body[data-dev="phantastron"] #chassis { display: none !important; }
   #phBoard { width: 100%; height: 280px; max-width: 100%; display: block; touch-action: none; border-radius: 8px; background: #10261c; cursor: crosshair; }
@@ -1069,6 +1098,7 @@
     .stripcol .sl { font-size: 8px; letter-spacing: 0; }
     .btn, .btn.small { min-height: 44px; min-width: 44px; padding: 4px 10px; }
     .chip { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 12px; }
+    #klRoot .klsw > .chip { min-height: 44px; min-width: 44px; } .kltag { display: none; } .klread { flex: 1 1 auto; min-height: 32px; max-width: none; }
     .tabs button { min-height: 44px; min-width: 44px; padding: 7px 3px; letter-spacing: 0; font-size: 11px; }
     .kctl .hide-s { display: none; }
     .deck { padding: 6px; margin: 6px 4px 0; } .deck::before, .deck::after, .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
@@ -1107,7 +1137,7 @@
   }
   /* under 360 px the name takes its own line so a long name is not cut; the chips share the next */
   @media (max-width: 359px) { .mixrow .who { flex-basis: 100%; } .mixrow .chip { flex: 1 1 0; } }
-  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before { animation: none !important; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before, .klread i { animation: none !important; }
     .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .rail::before, .rail::after, .racklinks::before, .racklinks::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>
 </head>
