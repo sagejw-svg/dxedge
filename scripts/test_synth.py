@@ -6462,6 +6462,26 @@ with sync_playwright() as pw:
     pr.evaluate("() => { __synth.roll().set(__synth.roll().factory()[1]); __synth.roll().open(true); }")
     pr.select_option("#rollPick", "3"); fac3 = pr.evaluate("__synth.roll().state()")
     ck("Pr. the roll list loads a factory roll (Tie and Slide), not edited", fac3["pat"]["name"] == "Tie and Slide" and not fac3["edited"], (fac3["pat"]["name"], fac3["edited"]))
+    # review 8 Nov, R1108-1: a stop flushed Filament's and Cathode's queue, offs included, so a note that had
+    # struck with its off still queued stayed on (every stop at gate 100%, measured on the live site)
+    held_r = {}
+    for dv in ("filament", "cathode"):
+        pr.evaluate("""d => { __synth.transport().stop(); __synth.setDevice(d); const R = __synth.roll(); R.set(R.factory()[1]); R.edit(p => { p.gate = 1; }); R.dest('lit'); __synth.setMixer('dekatron', { mute: true }); }""", dv)
+        pr.wait_for_timeout(1200)
+        held_r[dv] = []
+        for wt in (1000, 1160, 1330):
+            pr.evaluate("() => { __synth.transport().setTempo(120); __synth.roll().play(); }"); pr.wait_for_timeout(wt)
+            pr.evaluate("__synth.roll().stop()"); pr.wait_for_timeout(1200)
+            held_r[dv].append(pr.evaluate("() => ((__synth.meter() || {}).notes || []).length"))
+            pr.evaluate("__synth.panic()"); pr.wait_for_timeout(200)
+    ck(f"Pr. stop lets go of the note that is sounding: Octave Pump at gate 100%, three stops each on Filament and Cathode, no note held after ({held_r})",
+       all(not any(v) for v in held_r.values()), held_r)
+    # review 8 Nov, R1108-2: key in stayed on with the strip closed, so the keys rewrote steps out of sight
+    pr.evaluate("() => { __synth.setDevice('filament'); __synth.setMixer('dekatron', { mute: false }); const R = __synth.roll(); R.set(R.factory()[1]); R.open(true); R.sel(0); R.keyIn(true); R.open(false); __synth.noteOn(70, 0.8); __synth.noteOff(70); }")
+    ki_r = pr.evaluate("() => ({ st: __synth.roll().state(), pressed: document.getElementById('rollKey').getAttribute('aria-pressed') })")
+    ck("Pr. closing the roll strip turns key in off; a key played after leaves the roll as it was",
+       (not ki_r["st"]["keyIn"]) and ki_r["st"]["pat"]["steps"][0]["n"] == 36 and ki_r["st"]["sel"] == 0 and not ki_r["st"]["edited"] and ki_r["pressed"] == "false",
+       (ki_r["st"]["keyIn"], ki_r["st"]["pat"]["steps"][0], ki_r["st"]["sel"], ki_r["st"]["edited"], ki_r["pressed"]))
     pr.evaluate("__synth.transport().stop()")
     ck("Pr. no page errors (desktop)", not prerr, prerr)
     prx.close()

@@ -29,6 +29,10 @@ export function createRoll(api) {
   // the scheduler
   let playing = false, timer = 0, anchor = null, pendingTempo = null, k = 0, cov = 0, schedBeat = 0, unsub = null;
   const pend = [];                    // notes on, waiting for their off: { n, dev, offBeat, onTime }
+  // Offs already sent to Filament or Cathode for a later frame. A stop's flush drops them from the
+  // worklet's queue with the strikes, so letGo sends them again now (review R1108-1: a note that had
+  // struck and whose off was still queued stayed on after stop).
+  const queuedOffs = [];              // { n, dev, at, entry: its log entry }
   const armed = new Set(), woken = new Set();
   const flares = [];                  // { time, n } of notes struck, for the reader lamp
   const log = [];                     // delivered messages, for the test hook
@@ -54,7 +58,7 @@ export function createRoll(api) {
       E.playing(d, true);
     } else if (d !== 'dekatron' && api.wakeDevice) { api.wakeDevice(d); woken.add(d); }
   }
-  function send(d, msg, at, want) {
+  function send(d, msg, at, want, entry) {
     const E = api.engine(), c = api.ctx();
     if (!E || !c) return;
     const framed = Object.assign({}, msg, { at: Math.round(at * c.sampleRate), pb: true });
@@ -65,8 +69,12 @@ export function createRoll(api) {
       }
     } else if (d === 'filament' || d === 'cathode') E.sendTo(d, framed);
     else if (E.devices[d]) E.devices[d].midi(framed);
-    log.push({ t: msg.t, n: msg.n, v: msg.v, dev: d, at, want: want == null ? at : want, now: c.currentTime });
+    // a resent off (after a stop's flush) moves its first entry to the time it now goes, so the log keeps one off per strike
+    if (entry) { entry.at = at; entry.resent = true; return entry; }
+    const e = { t: msg.t, n: msg.n, v: msg.v, dev: d, at, want: want == null ? at : want, now: c.currentTime };
+    log.push(e);
     if (log.length > 600) log.splice(0, log.length - 600);
+    return e;
   }
   // The transport stopped: Filament and Cathode drop what is still queued (the library player does the
   // same on the same stop), then every note the roll holds goes off now. Another device gets its off
@@ -74,6 +82,8 @@ export function createRoll(api) {
   function letGo() {
     const E = api.engine(), c = api.ctx(), now = c ? c.currentTime : 0;
     if (E) armed.forEach(d => { if (d === 'filament' || d === 'cathode') E.sendTo(d, { t: 'flush' }); });
+    queuedOffs.forEach(x => { if (x.at > now) send(x.dev, { t: 'off', n: x.n }, now, null, x.entry); });
+    queuedOffs.length = 0;
     pend.forEach(x => send(x.dev, { t: 'off', n: x.n }, (x.dev === 'filament' || x.dev === 'cathode') ? now : Math.max(now, x.onTime + 0.002)));
     pend.length = 0;
     if (E) armed.forEach(d => {
@@ -103,7 +113,9 @@ export function createRoll(api) {
     for (let j = 0; j < pend.length;) {
       const x = pend[j];
       if (x.offBeat <= upTo + 1e-9) {
-        send(x.dev, { t: 'off', n: x.n }, Math.max(timeAt(x.offBeat) + x.late, x.onTime + 0.001));
+        const at = Math.max(timeAt(x.offBeat) + x.late, x.onTime + 0.001);
+        const entry = send(x.dev, { t: 'off', n: x.n }, at);
+        if (x.dev === 'filament' || x.dev === 'cathode') queuedOffs.push({ n: x.n, dev: x.dev, at, entry });
         pend.splice(j, 1);
       } else j++;
     }
@@ -139,6 +151,7 @@ export function createRoll(api) {
       }
     }
     flushOffs(horizon);
+    { const now = c.currentTime; for (let j = queuedOffs.length - 1; j >= 0; j--) if (queuedOffs[j].at < now - 0.05) queuedOffs.splice(j, 1); }
     paintStat();
   }
   function startFrom(ev) {
@@ -190,7 +203,7 @@ export function createRoll(api) {
     save(); regrid(); paintAll();
   }
   function keyNote(n) {
-    if (!keyIn || n < 0 || n > 127) return false;
+    if (!keyIn || !open || n < 0 || n > 127) return false;
     const s = step(); s.n = n; s.g = 1; s.t = 0;
     sel = mod(sel + 1, pat.len);
     changed();
@@ -245,6 +258,8 @@ export function createRoll(api) {
   function paintAll() { paintButtons(); paintStat(); paintEdit(); dirty = true; }
   function openBody(on) {
     open = !!on; $('rollBody').hidden = !open; $('rollBtn').setAttribute('aria-expanded', String(open));
+    // Key in only while the strip is open: closed, the keys would rewrite steps nobody can see (review R1108-2).
+    if (!open && keyIn) { keyIn = false; paintEdit(); }
     if (open) { paintDest(); paintEdit(); dirty = true; }
   }
 
