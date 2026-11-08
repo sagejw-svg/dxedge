@@ -6244,6 +6244,196 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.transport().stop()")
     ck("P. no page errors", not errs, errs)
 
+    # ---------------------------------------------------------------- Pr. the paper roll (0.3, 8 Nov)
+    # A 16-step sequencer for the whole rack on the transport, drawn as punched paper passing a reader.
+    # The plan is pure (paperroll.js); the strip schedules it 150 ms ahead with each note's frame. These
+    # check the schema, the plan (ties, slides, accents, swing), the live timing against the transport,
+    # an offline render of the score, the editor, persistence, the phone strip and reduced motion.
+    prx = b.new_context(viewport={"width": 1366, "height": 1000}); pr = prx.new_page(); prerr = []
+    pr.on("pageerror", lambda e: prerr.append(str(e)))
+    pr.goto(BASE); pr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    sch = pr.evaluate("""async () => {
+      const M = await import('/synth/paperroll.js');
+      const d = M.normalizeRoll({});
+      const bad = M.normalizeRoll({ len: 99, rate: 'x', gate: 5, swing: -1, vel: 0, acc: 9, tr: -99, name: '  ', steps: [{ n: 300, g: 'yes', a: 1, s: true, t: 1 }, null] });
+      const fac = M.ROLL_FACTORY.map(f => JSON.stringify(M.normalizeRoll(JSON.parse(JSON.stringify(f)))) === JSON.stringify(f));
+      return { d: { len: d.len, rate: d.rate, gate: d.gate, swing: d.swing, vel: d.vel, acc: d.acc, tr: d.tr, n: d.steps.length, g: d.steps.filter(s => s.g).length, kind: d.kind, v: d.v },
+        bad: { len: bad.len, rate: bad.rate, gate: bad.gate, swing: bad.swing, vel: bad.vel, acc: bad.acc, tr: bad.tr, name: bad.name, s0: bad.steps[0], s1: bad.steps[1], n: bad.steps.length },
+        fac, names: M.ROLL_FACTORY.map(f => f.name), run: __synth.roll().state().run };
+    }""")
+    ck("Pr. schema: an empty roll is 16 rests at 1/16, gate 50%, no swing; v1",
+       sch["d"] == {"len": 16, "rate": "16", "gate": 0.5, "swing": 0, "vel": 0.7, "acc": 1, "tr": 0, "n": 16, "g": 0, "kind": "paperroll", "v": 1}, sch["d"])
+    ck("Pr. schema: out of range fields clamp, a short step list fills to 16, a bad step loads as a rest",
+       sch["bad"]["len"] == 16 and sch["bad"]["rate"] == "16" and sch["bad"]["gate"] == 1 and sch["bad"]["swing"] == 0 and sch["bad"]["vel"] == 0.05
+       and sch["bad"]["acc"] == 1 and sch["bad"]["tr"] == -24 and sch["bad"]["name"] == "Blank Roll" and sch["bad"]["n"] == 16
+       and sch["bad"]["s0"] == {"n": 127, "g": 0, "a": 1, "s": 1, "t": 1} and sch["bad"]["s1"] == {"n": 48, "g": 0, "a": 0, "s": 0, "t": 0}, sch["bad"])
+    ck(f"Pr. the {len(sch['names'])} factory rolls are already normal, and run is off on a fresh page (a song never brings the roll in)",
+       all(sch["fac"]) and len(sch["names"]) >= 5 and sch["run"] is False, (sch["names"], sch["fac"], sch["run"]))
+    plan = pr.evaluate("""async () => {
+      const M = await import('/synth/paperroll.js');
+      const tie = M.ROLL_FACTORY.find(f => f.name === 'Tie and Slide');
+      const p = M.rollPlan(tie, 0, 16, 0).notes.map(x => [x.k, x.n, x.len, x.slide, +x.on.toFixed(4), +x.off.toFixed(4), x.v]);
+      const S = (n, g, a, s, t) => ({ n, g, a, s, t });
+      const base = { len: 4, gate: 0.5, vel: 0.6, acc: 0.9 };
+      const swing = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { swing: 0.5, steps: [S(60, 1), S(62, 1), S(64, 1), S(65, 1)] })), 0, 4, 0).notes.map(x => +x.on.toFixed(4));
+      const rest = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { steps: [S(60, 0), S(62, 1, 0, 0, 1), S(64, 0, 0, 0, 1), S(65, 1)] })), 0, 4, 0).notes.map(x => [x.k, x.n, x.len]);
+      const same = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { steps: [S(60, 1, 0, 1), S(60, 1), S(64, 0), S(65, 0)] })), 0, 4, 0).notes.map(x => [x.k, +x.off.toFixed(4), x.slide]);
+      const wrap = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { steps: [S(60, 0, 0, 0, 1), S(62, 0), S(64, 0), S(67, 1)] })), 0, 8, 0).notes.map(x => [x.k, x.n, x.len]);
+      const rates = Object.keys(M.ROLL_RATES).map(r => [r, +M.stepBeat(M.normalizeRoll({ rate: r }), 3).toFixed(4)]);
+      const tr = M.rollPlan(M.normalizeRoll(Object.assign({}, base, { tr: 12, steps: [S(60, 1, 1), S(127, 1), S(0, 0), S(0, 0)] })), 0, 2, 0).notes.map(x => [x.n, x.v]);
+      return { p, swing, rest, same, wrap, rates, tr };
+    }""")
+    WANT_TS = [[0, 38, 3, False, 0, 0.625, 1], [3, 45, 1, True, 0.75, 1.02, 0.7], [4, 50, 1, False, 1, 1.125, 0.7], [6, 48, 1, True, 1.5, 1.77, 1],
+               [7, 45, 1, False, 1.75, 1.875, 0.7], [8, 43, 2, True, 2, 2.52, 1], [10, 41, 1, True, 2.5, 2.77, 0.7], [11, 38, 1, False, 2.75, 2.875, 0.7],
+               [13, 50, 1, True, 3.25, 3.52, 1], [14, 45, 1, True, 3.5, 3.77, 0.7], [15, 41, 1, False, 3.75, 3.875, 0.7]]
+    ck("Pr. plan: Tie and Slide holds D2 through two ties (2.5 steps), each slide overlaps the next strike by 0.08 step, accents strike at the accent velocity",
+       plan["p"] == WANT_TS, plan["p"])
+    ck(f"Pr. plan: swing 50% moves every second step half a step late {plan['swing']}; a tie after a rest strikes if punched; a slide into the same pitch does not overlap",
+       plan["swing"] == [0, 0.375, 0.5, 0.875] and plan["rest"] == [[1, 62, 2], [3, 65, 1]] and plan["same"] == [[0, 0.25, False], [1, 0.375, False]], plan)
+    ck(f"Pr. plan: a tie on step 1 carries the last step's note across the loop seam ({plan['wrap']}); step lengths {plan['rates']}; transpose clamps at 127",
+       plan["wrap"] == [[3, 67, 2], [7, 67, 2]] and dict(plan["rates"]) == {"8": 1.5, "8t": 1.0, "16": 0.75, "16t": 0.5, "32": 0.375} and plan["tr"] == [[72, 0.9], [127, 0.6]], plan)
+    # live: four steps at 120 BPM on Filament, each note half a step long
+    LIVE = {"name": "Test Four", "len": 4, "rate": "16", "gate": 0.5, "vel": 0.6, "acc": 1.0,
+            "steps": [{"n": 60, "g": 1, "a": 1}, {"n": 64, "g": 1}, {"n": 67, "g": 1}, {"n": 72, "g": 1}]}
+    def roll_take(js_mid=None, secs=1.6):
+        pr.evaluate("""() => { const R = __synth.roll(); __synth.transport().stop(); __synth.transport().stop(); __synth.transport().setTempo(120); R.clearLog(); R.play(); }""")
+        if js_mid:
+            pr.wait_for_timeout(int(secs * 500)); pr.evaluate(js_mid); pr.wait_for_timeout(int(secs * 500))
+        else:
+            pr.wait_for_timeout(int(secs * 1000))
+        mid = pr.evaluate("""async () => { let v = 0; for (let i = 0; i < 8; i++) { v = Math.max(v, (__synth.meter() || {}).voices || 0); await new Promise(r => setTimeout(r, 40)); }
+          return { st: __synth.roll().state(), m: Object.assign({}, __synth.meter(), { voices: v }) }; }""")
+        pr.evaluate("__synth.roll().stop()"); pr.wait_for_timeout(450)
+        return mid, pr.evaluate("() => ({ log: __synth.roll().log(), st: __synth.roll().state() })")
+    pr.evaluate("p => { __synth.setDevice('filament'); __synth.roll().set(p); __synth.roll().dest('lit'); }", LIVE)
+    mid, got = roll_take()
+    ons = [e for e in got["log"] if e["t"] == "on"]; offs = [e for e in got["log"] if e["t"] == "off"]
+    strikes = [e for e in got["log"] if e["t"] in ("on", "skip")]
+    def wgaps(log_): st_ = [e for e in log_ if e["t"] in ("on", "skip")]; return [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(st_, st_[1:])]
+    gaps = wgaps(got["log"])
+    lens = []
+    for e in ons[:-3]:
+        o = [f for f in offs if f["n"] == e["n"] and f["at"] >= e["at"] - 1e-9]
+        if o: lens.append(round(min(f["at"] for f in o) - e["at"], 4))
+    late_ = [round(e["at"] - e["want"], 4) for e in ons if e["at"] > e["want"] + 1e-6]
+    ck(f"Pr. live at 120 BPM: {len(strikes)} steps planned 0.125 s apart (within 1 ms), each strike held 62.5 ms, C4 E4 G4 C5 in turn on Filament, accent at 1.0",
+       len(ons) >= 6 and all(abs(g_ - 0.125) <= 0.001 for g_ in gaps) and all(abs(l_ - 0.0625) <= 0.001 for l_ in lens) and len(lens) == len(ons) - 3
+       and [e["n"] for e in strikes[:8]] == [60, 64, 67, 72] * 2 and all(e["dev"] == "filament" for e in ons)
+       and all(e["v"] == (1 if e["n"] == 60 else 0.6) for e in ons) and all(0 <= e["at"] - e["want"] <= 0.06 + 1e-9 for e in ons), (gaps, lens, [(e["t"], e["n"], e.get("v"), e["dev"]) for e in strikes[:8]]))
+    ck(f"Pr. live: the voices sounded while it ran ({mid['m'] and mid['m'].get('voices')}), and stop let every note go (no off left waiting, nothing armed)",
+       mid["st"]["playing"] and mid["m"] and (mid["m"].get("voices") or 0) >= 1 and len(offs) == len(ons) and got["st"]["pend"] == 0 and got["st"]["armed"] == [] and not got["st"]["playing"],
+       (mid["m"], len(ons), len(offs), got["st"]["pend"], got["st"]["armed"]))
+    info("Pr. live", f"{len(ons)} strikes, {len(late_)} sent after their time (largest {max(late_) if late_ else 0} s), {len(strikes) - len(ons)} dropped as more than 60 ms late")
+    # tempo change and rate change under a running roll (the planned times: a strike the timer reaches late plays at once)
+    _, got_t = roll_take("__synth.transport().setTempo(60)", 2.4)
+    tg = wgaps(got_t["log"])
+    ck(f"Pr. a tempo change from 120 to 60 BPM under the roll: the steps go from 0.125 to 0.25 s apart, none closer than 0.125 s ({sorted(set(tg))})",
+       tg and abs(tg[0] - 0.125) <= 0.001 and abs(tg[-1] - 0.25) <= 0.001 and min(tg) >= 0.124 and all(abs(g_ - 0.125) <= 0.001 or abs(g_ - 0.25) <= 0.001 for g_ in tg), tg)
+    _, got_r = roll_take("__synth.roll().edit(p => { p.rate = '8'; })", 2.0)
+    rg = wgaps(got_r["log"])
+    ck(f"Pr. 1/16 to 1/8 under the roll: the next step lands on the new grid with no burst ({sorted(set(rg))})",
+       rg and abs(rg[0] - 0.125) <= 0.001 and abs(rg[-1] - 0.25) <= 0.001 and min(rg) >= 0.124 and all(abs(g_ - 0.125) <= 0.001 or abs(g_ - 0.25) <= 0.001 for g_ in rg), rg)
+    pr.evaluate("__synth.roll().edit(p => { p.rate = '16'; })")
+    # run off: the transport plays, the roll does not
+    pr.evaluate("() => { __synth.roll().run(false); __synth.roll().clearLog(); __synth.transport().locate(0); __synth.transport().play(); }")
+    pr.wait_for_timeout(600); quiet = pr.evaluate("__synth.roll().log().length"); pr.evaluate("__synth.transport().stop()"); pr.wait_for_timeout(200)
+    ck("Pr. with run off the transport plays and the roll stays silent", quiet == 0, quiet)
+    # another device: Cathode off the rail
+    pr.evaluate("() => { __synth.roll().dest('cathode'); }")
+    mid_c, got_c = roll_take(None, 1.0)
+    cons = [e for e in got_c["log"] if e["t"] == "on"]
+    ck(f"Pr. the roll plays Cathode while Filament stays lit ({len(cons)} strikes)",
+       len(cons) >= 6 and all(e["dev"] == "cathode" for e in cons) and pr.evaluate("__synth.device()") == "filament" and "cathode" in mid_c["st"]["armed"], (len(cons), mid_c["st"]["armed"]))
+    pr.evaluate("__synth.roll().dest('lit')")
+    # the score rendered offline: each strike's pitch in its own window, on time
+    sine_r = patch(osc1={"wave": "sine", "level": 0.8}, envA={"a": 0.001, "d": 0.05, "s": 1, "r": 0.01}, ens={"on": False},
+                   voice={"mode": "poly", "unison": 1}, stereo={"pan": "center", "spread": 0}, out={"roomOn": False, "wOn": False, "spkOn": False, "drive": 0})
+    sc = pr.evaluate("() => __synth.roll().score(8, 120, 'filament')")
+    Lr, _Rr = dec(pr.evaluate("a => __synth.render2(a)", {"patches": {"filament": sine_r}, "device": "filament", "events": sc, "seconds": 1.2, "rack": False}))
+    F4 = [261.626, 329.628, 391.995, 523.251]
+    okp = []
+    for j in range(8):
+        seg = Lr[int((j * 0.125 + 0.008) * SR):int((j * 0.125 + 0.055) * SR)]
+        amps = [tone_amp(seg, f) for f in F4]
+        okp.append(int(np.argmax(amps)) == j % 4 and max(amps) > 0.02)
+    gapz = [float(np.sqrt(np.mean(Lr[int((j * 0.125 + 0.080) * SR):int((j * 0.125 + 0.120) * SR)] ** 2))) for j in range(8)]
+    o0 = onset(Lr, 0.0, float(np.max(np.abs(Lr[:int(0.06 * SR)]))))
+    ck(f"Pr. the score renders: each step's pitch leads its own window, silent between strikes (rms {max(gapz):.4f}), first onset {None if o0 is None else round(o0 * 1000, 2)} ms",
+       all(okp) and max(gapz) < 0.01 and o0 is not None and o0 <= 0.003, (okp, gapz, o0))
+    # the editor on the strip, key in, persistence
+    pr.evaluate("__synth.roll().open(true)"); pr.wait_for_timeout(150)
+    jclick = lambda sel_: pr.evaluate("s => document.querySelector(s).click()", sel_)
+    jclick("#rollPrev"); jclick("#rollNext"); jclick("#rollNext")
+    s1 = pr.evaluate("__synth.roll().state().sel")
+    jclick("#rollUp"); jclick("#rollOctUp"); jclick("#rollT"); jclick("#rollA")
+    st1 = pr.evaluate("__synth.roll().state()")
+    jclick("#rollRates .chip[data-v='8t']"); jclick("#rollLenDn")
+    pr.evaluate("() => { const e = document.getElementById('rollGate'); e.value = '80'; e.dispatchEvent(new Event('input', { bubbles: true })); }")
+    st2 = pr.evaluate("__synth.roll().state()")
+    ck(f"Pr. editor: the arrows pick a step, + and oct + raise it 13 semitones, tie and accent set, 1/8T, length 3, gate 80% (status '{pr.inner_text('#rollStat')}')",
+       s1 == 1 and st1["pat"]["steps"][1] == {"n": 77, "g": 1, "a": 1, "s": 0, "t": 1} and st2["pat"]["rate"] == "8t" and st2["pat"]["len"] == 3
+       and abs(st2["pat"]["gate"] - 0.8) < 1e-9 and st2["edited"] and "Test Four *" in pr.inner_text("#rollStat") and "1/8T" in pr.inner_text("#rollStat"),
+       (s1, st1["pat"]["steps"][1], st2["pat"]["rate"], st2["pat"]["len"], st2["pat"]["gate"]))
+    pr.evaluate("() => { __synth.roll().keyIn(true); __synth.roll().sel(0); __synth.noteOn(62, 0.8); __synth.noteOff(62); __synth.noteOn(69, 0.8); __synth.noteOff(69); __synth.roll().keyIn(false); }")
+    st3 = pr.evaluate("__synth.roll().state()")
+    ck("Pr. key in: two keys set steps 1 and 2 (punched, tie cleared) and move the pick on",
+       st3["pat"]["steps"][0]["n"] == 62 and st3["pat"]["steps"][1]["n"] == 69 and st3["pat"]["steps"][1]["t"] == 0 and st3["pat"]["steps"][1]["g"] == 1 and st3["sel"] == 2, (st3["pat"]["steps"][:2], st3["sel"]))
+    cvp = pr.evaluate("""() => { const R = __synth.roll(); R.draw(); const c = document.getElementById('rollCv'), g = c.getContext('2d');
+      const d = g.getImageData(0, 0, c.width, c.height).data; let paper = 0, dark = 0, brass = 0, n = d.length / 4;
+      for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], bb = d[i + 2];
+        if (r > 190 && gg > 175 && bb > 140 && r >= bb) paper++; else if (r < 40 && gg < 35 && bb < 30) dark++;
+        if (r > 190 && gg > 150 && bb < 130 && r > bb + 70) brass++; }
+      const r = c.getBoundingClientRect(); return { paper: paper / n, dark: dark / n, brass, w: r.width, h: r.height, ms: R.stats().ms }; }""")
+    ck(f"Pr. the roll is painted: paper {cvp['paper']:.0%}, holes and spools {cvp['dark']:.0%}, the brass reader lit ({cvp['brass']} px); draw {cvp['ms']:.2f} ms",
+       cvp["paper"] > 0.4 and 0.01 < cvp["dark"] < 0.5 and cvp["brass"] > 50 and cvp["h"] >= 100, cvp)
+    info("Pr. draw", f"one frame of the roll {cvp['ms']:.2f} ms at {cvp['w']:.0f}x{cvp['h']:.0f}")
+    # tap on the canvas: pick a step, tap it again to punch or close it
+    pr.evaluate("() => { document.getElementById('rollCv').scrollIntoView({ block: 'center' }); __synth.roll().sel(0); }"); pr.wait_for_timeout(100)
+    tap = pr.evaluate("""() => { const c = document.getElementById('rollCv'), r = c.getBoundingClientRect(); const x0 = Math.max(44, Math.min(120, r.width * 0.11)), sw = Math.max(16, Math.min(64, (r.width - x0 - 10) / 16)); return { x: r.left + x0 + 2.5 * sw, y: r.top + r.height / 2 }; }""")
+    pr.evaluate("__synth.transport().stop(); __synth.transport().stop()"); pr.wait_for_timeout(80)
+    g_before = pr.evaluate("__synth.roll().state().pat.steps[2].g")
+    pr.mouse.click(tap["x"], tap["y"]); sel_t = pr.evaluate("__synth.roll().state().sel")
+    pr.mouse.click(tap["x"], tap["y"]); g_after = pr.evaluate("__synth.roll().state().pat.steps[2].g")
+    ck("Pr. a tap picks step 3 on the paper, a second tap closes its hole", sel_t == 2 and g_before == 1 and g_after == 0, (sel_t, g_before, g_after))
+    pr.reload(); pr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    kept = pr.evaluate("__synth.roll().state()")
+    ck("Pr. the roll is kept in this browser across a reload (pattern, edits, run)",
+       kept["pat"]["name"] == "Test Four" and kept["pat"]["len"] == 3 and kept["pat"]["rate"] == "8t" and kept["pat"]["steps"][0]["n"] == 62 and kept["edited"] and kept["run"] is True,
+       (kept["pat"]["name"], kept["pat"]["len"], kept["pat"]["rate"], kept["run"]))
+    pr.evaluate("() => { __synth.roll().set(__synth.roll().factory()[1]); __synth.roll().open(true); }")
+    pr.select_option("#rollPick", "3"); fac3 = pr.evaluate("__synth.roll().state()")
+    ck("Pr. the roll list loads a factory roll (Tie and Slide), not edited", fac3["pat"]["name"] == "Tie and Slide" and not fac3["edited"], (fac3["pat"]["name"], fac3["edited"]))
+    pr.evaluate("__synth.transport().stop()")
+    ck("Pr. no page errors (desktop)", not prerr, prerr)
+    prx.close()
+    # the phone strip
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        ppx = b.new_context(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); pp = ppx.new_page(); pperr = []
+        pp.on("pageerror", lambda e: pperr.append(str(e)))
+        pp.goto(BASE); pp.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+        pp.evaluate("document.getElementById('rollBtn').click()"); pp.wait_for_timeout(250)
+        pv = pp.evaluate("""() => { const small = [...document.querySelectorAll('#roll button, #roll select, #roll input[type=range]')].filter(e => e.getClientRects().length)
+            .map(e => [e.id || e.textContent.trim(), e.getBoundingClientRect()]).filter(([s, r]) => r.width < 44 || r.height < 44).map(([s, r]) => s + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          const c = document.getElementById('rollCv').getBoundingClientRect();
+          return { small, sw: document.documentElement.scrollWidth, iw: innerWidth, cl: c.left, cr: c.right, ch: c.height, open: !document.getElementById('rollBody').hidden }; }""")
+        pp.evaluate("__synth.roll().play()"); pp.wait_for_timeout(700)
+        pd = pp.evaluate("__synth.roll().draw()"); pp.evaluate("__synth.roll().stop()")
+        if pw_ == 375: pp.locator("#roll").screenshot(path=os.path.join(SHOTS, "synth_roll_phone.png"))
+        ck(f"Pr. {pw_}px: the open roll strip has every button, chip, list and slider 44 px or more, the paper inside the screen, no sideways scroll ({pv['small']})",
+           pv["open"] and not pv["small"] and pv["sw"] <= pv["iw"] == pw_ and pv["cl"] >= 0 and pv["cr"] <= pw_ and pv["ch"] >= 100, pv)
+        ck(f"Pr. {pw_}px: the paper moves while it plays (position {pd['stats']['pos']:.2f} steps), no page errors", pd["stats"]["pos"] > 0.5 and not pperr, (pd, pperr))
+        ppx.close()
+    # reduced motion: the paper holds still and the column being read is lit
+    rrx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); rr = rrx.new_page(); rrerr = []
+    rr.on("pageerror", lambda e: rrerr.append(str(e)))
+    rr.goto(BASE); rr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    rr.evaluate("__synth.roll().open(true); __synth.roll().play()"); rr.wait_for_timeout(800)
+    rd = rr.evaluate("__synth.roll().draw()"); rn = len([e for e in rr.evaluate("__synth.roll().log()") if e["t"] == "on"])
+    rr.evaluate("__synth.roll().stop()")
+    ck(f"Pr. reduced motion: the paper holds still (position {rd['stats']['pos']}) while the roll plays ({rn} strikes), no page errors",
+       rd["stats"]["pos"] == 0 and rn >= 4 and not rrerr, (rd, rn, rrerr))
+    rrx.close()
+
     # ---------------------------------------------------------------- W. Lattice wavetable
     def fold(freq, sr):
         f = abs(freq) % sr

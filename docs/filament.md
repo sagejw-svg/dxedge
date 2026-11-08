@@ -75,6 +75,8 @@ task can read it).
 | `frontend/public/synth/smf.js` | Our own Standard MIDI File reader and writer (pure functions): `readSMF`, `songOf` (tempo map to seconds, multi-channel tracks split per channel, format 2 played in sequence), `writeSMF` (format 1, 480 ppq), `bytesOf` |
 | `frontend/public/synth/deck.js` | The MIDI deck above the keys: recorder, import with the track list and device chips, the player (150 ms lookahead, 25 ms timer, frame-exact `at`), Render WAV. Its clock is private; it still uses `smf.js` |
 | `frontend/public/synth/player.js` | Song library player. Loads a bundled file, an opened file, or a drop, and plays it on `host.transport` (play, stop, tempo). Each MIDI channel routes to a device |
+| `frontend/public/synth/paperroll.js` | The paper roll's pure part: the pattern schema (`kind: 'paperroll'`, `v: 1`; 16 steps of note, punch, accent, slide, tie; length, step rate, gate, swing, velocity, accent velocity, transpose), `normalizeRoll`, `rollPlan` (the notes that start on a run of steps, ties and slides resolved), `rollScore`, six factory rolls |
+| `frontend/public/synth/paperroll-ui.js` | The paper roll strip under the song library: the step editor, the scheduler on `host.transport` (150 ms lookahead, a 25 ms timer, frame stamps, the library player's delivery paths; a strike more than 60 ms late is dropped), the canvas of punched paper moving past a brass reader. State in localStorage `filament_roll` |
 | `frontend/public/synth/midisong.js` | Pure parse and route helpers for the library player. Parsing is the vendored `@tonejs/midi`. Time is quarter-note beats, so the transport tempo is the playback tempo |
 | `frontend/public/synth/vendor/tonejs-midi.js` | `@tonejs/midi` 2.0.28 (MIT) bundled with `midi-file` 1.2.4 and `array-flatten` 3.0.0. See `THIRD_PARTY_NOTICES.md` |
 | `frontend/public/synth/midi/` | Bundled `.mid` files and `catalog.json` (title, composer, composition status, CC0 sequence note, and Halloween preset names) |
@@ -1011,7 +1013,29 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         voice (a C2 staircase's harmonics, each against open alone) within 0.06 dB on five tab sets, 65 Hz to 3.6 kHz.
         Display only: nothing in the audio path changed.
   - [ ] 1939 mode as a mod matrix destination set (tone, tab levels), if wanted
-- [ ] Punched paper roll step sequencer
+- [ ] Punched paper roll step sequencer - first slice 8 Nov 2026 (nightly). A strip under the song library ("roll"), rack-wide.
+  - [x] The pattern: 16 steps, each a note, a punched hole (plays), accent (the accent velocity), slide (held 0.08 step into the
+        next strike so a one-voice device plays them legato; into the same pitch it holds to the strike without overlap) and tie
+        (the step does not strike; the note before carries on through it, across the loop seam too; a tie with nothing before it
+        strikes if punched). Length 1 to 16, step 1/8, 1/8T, 1/16, 1/16T or 1/32, gate 5 to 100%, swing 0 to 60% (every second step
+        late), velocity, accent velocity, transpose +/-24. `paperroll.js`, pure; old or partial patterns load with defaults.
+  - [x] The scheduler on the rack transport: run on and the roll plays whenever the transport does, beside a library song and
+        Dekatron's pattern; play on the strip turns run on and starts the transport from the top. Run is off on a fresh page, so
+        a song never brings the roll in by surprise. Plays the device lit on the rail, or any rack device picked on the strip
+        (the library player's delivery paths, frame-stamped, 150 ms ahead). A note's off waits until it is inside the lookahead,
+        so a tempo change moves it; a rate or length change picks the grid up from the last scheduled beat. Stop flushes what
+        Filament and Cathode still hold queued and lets every note go.
+  - [x] The roll drawn as punched paper passing a brass reader: holes by pitch (a C row named on the take-up side), accents
+        ringed, ties as slots, slides as channels to the next hole, a glue seam where the loop joins, sprocket holes, step numbers,
+        spools at both ends; the reader's slit and lamp light as a hole passes. Reduced motion: the paper holds still and the
+        column being read is lit. Drawn in the page's 30 fps frame loop only while the strip is open.
+  - [x] Editing: tap a step on the paper to pick it, tap again to punch or close it; arrow keys and Enter on the paper; step
+        arrows, note -/+ and octave -/+, punch, accent, slide, tie, key in (each key or MIDI note sets the picked step and moves on),
+        length, step chips, clear, five sliders, the device chips, six factory rolls (Blank Roll, Octave Pump, Walking Tens, Tie and
+        Slide, Arc Arpeggio, Slow Bells). Kept in localStorage `filament_roll`. Phones: every target 44 px, no sideways scroll.
+  - [ ] Still open: the roll in the project file (`project.js`); several named user rolls and a chain of rolls (song mode); the
+        MIDI deck recording the roll's notes, and the master Render WAV including it; the on-screen keys lighting with the roll's
+        notes; per-step velocity or probability, if wanted.
 - [ ] Theremin mode with the magic eye as tuning indicator
 - [ ] Share links (`?p=`), JSON export/import, Surprise me
 - [x] WAV recording (10 minute cap) - 14 Oct, master bus: live record and offline render, 24-bit 44.1 kHz stereo. (The MIDI file render in slice 2 is a separate button: 48 kHz 16-bit of a take. Still open.)
