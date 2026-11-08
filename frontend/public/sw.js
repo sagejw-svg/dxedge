@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v190'
+const CACHE_NAME = 'dxedge-v191'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -49,11 +49,15 @@ self.addEventListener('fetch', (event) => {
   // /news is private. Leave it to the browser so the basic-auth dialog can
   // appear. A service worker that answers /news/ itself never shows one,
   // and it must not keep a copy of the paper for a later visit.
+  // /otr/media/ is the Late Night master, about 1 GB. This worker refetches
+  // by URL and would drop the Range header, then try to clone the whole
+  // file into Cache Storage. Leave that path to the browser.
   if (url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/ws/') ||
       url.pathname.startsWith('/health/') ||
       url.pathname === '/news' ||
       url.pathname.startsWith('/news/') ||
+      url.pathname.startsWith('/otr/media/') ||
       url.origin !== location.origin) {
     return // Let the browser handle it
   }
