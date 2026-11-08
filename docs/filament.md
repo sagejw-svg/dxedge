@@ -1090,6 +1090,43 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 8 Nov (improvement, code health and robustness, the 6 Nov "tables narrower than the normalizer" item): every
+  number row's ends are now what its device's normalizer keeps. Measured before, in the page on origin/main `2d404d4`,
+  by loading each row's default patch with the value set far past each end and at each end: 3 rows let the
+  normalizer keep values outside the table. Phantastron and Trochotron `seed` read 0..999999 while the normalizer keeps
+  any uint32 (`>>> 0`; Trochotron's random button picks up to 1e9, so about 999 in 1000 random seeds sat outside the
+  table, inferred from the code), and Gyrotron `root` read 36..84 (as did its knob) while `normalizeCore` keeps
+  24..96. 478 other number rows and all 115 checked choice rows were clean. Fix: the two seed rows read 0..4294967295
+  (`SEED_MAX` in phantastron.js and trochotron.js); Gyrotron's `root` row reads 24..96 and the root knob reads that
+  row. On the panels (measured): a typed seed of 5000000000 loaded as 705032704 on both devices (the normalizer
+  wrapped it); it is now held at 4294967295, and both seed fields carry that max (Trochotron's had none, Phantastron's
+  said 999999). A Gyrotron patch with root 30 showed 36 on the knob (and a touch would have moved the root there, inferred); it
+  reads 30. No normalizer, worklet or DSP file changed, so no patch sounds different; the root knob's pointer sits at a
+  different angle for the same root (its travel now covers 72 semitones, not 48). New checks: "R. table against
+  normalizer" (all 18 devices; fails on main with the 3 rows), "R. a typed seed of 5000000000 is held" and "R.
+  Gyrotron's root knob spans its table row" (both fail on main).
+  Found on the way (measured, not fixed): Mote, Heptode and Orthicon pin the 16 stereo, ens and out number rows and 7
+  choice rows they carry (the 6 Nov `SHARED_RANGE` rows) to Filament's defaults, so a host that sets one gets the
+  default back; the new check excuses exactly those 69 rows. Inferred from the code and the rack notes: the fields do
+  nothing on these devices (the shared output knobs stay on Filament's patch while one of them is lit). Whether the
+  table should call them fixed, or the devices should drop them, is a design call, not a bug fix.
+  Test health, not changed (inferred from reading the code): the 7 Nov "Ls. the rack transport reaches the worklet"
+  miss (transport 1.39 against the worklet's 1.0057) is not a wall-clock read. Both sides take the beat from the same
+  context frame count (the posted frame and `currentFrame`), so a slow main thread alone cannot open that gap. Next
+  time it fails, the detail line (frame, now, tb) says which side moved.
+  Why not a higher item: R1103-1 still waits on James. CPU: the last two attempts measured noise, and tonight's test 9
+  lines on main ran beside other browser work on the 2-core box, so they cannot show a change. Test health: main
+  passed tonight (1714 checks) and the 7 Nov watch items did not recur.
+  Test health, watch, next for this job (measured tonight): "Mx. a strip going back to unity glides there with no
+  click" failed 1 of 3 full runs here (unmute read 42.4x the sine's own step; the other three cases 1.0 to 1.18), on a
+  tree with no mixer change, and the 4 AM review saw it once (pan back to centre, 37x). Inferred, not proven: the
+  mixer's 200 ms settle before it reroutes to the wire (`holdRoute` in mixer.js) is a `setTimeout`, so it counts
+  wall-clock time while the glide (`setP`) runs on audio time; if headless Chrome's audio clock falls behind under
+  the suite's load, the reroute lands before the gain has reached unity and the jump is the click the check looks
+  for. A fix would wait for 200 ms of `ctx.currentTime` since the last move (re-arm the timer for what is left);
+  that leaves the normal case unchanged. Measure it first: run the Mx. block repeatedly with the box loaded and log
+  the context time elapsed when the timer fires.
+
 - Done 7 Nov (improvement, test health, forced: main failed it): "Eb. 375px: the Osc tab shows the bank's plot" waits
   for the fresh phone page's boot before it starts, and keeps a timeline. Measured: origin/main `f3c2f16` ran 1674 PASS,
   1 FAIL, that check, state `n 1, busy false, read 'response'` after the 15 s wait (the same state the graphics job
@@ -1132,7 +1169,7 @@ and proven by measurement), test suite health, load time and memory, code health
   Trochotron `seed` read 0..999999 but the normalizer keeps any whole number up to 2^32 - 1 (Phantastron's seed
   field says max 999999 but a typed value is not clamped); Gyrotron `root` reads 36..84 but the normalizer keeps 24..96.
   Clamping in the normalizers would change user patches outside the table (a seed is the sound), so the fix is
-  likely the table, after checking each control. Next for this job unless something higher comes up.
+  likely the table, after checking each control. Done 8 Nov, see above.
   Why not a higher item: R1103-1 still waits on James (schema and storage). CPU: the last two CPU attempts (5 Nov,
   1939 voice; 3 Nov note) measured noise or had no bit-exact hot spot left, and tonight's test 9 lines on main sit
   in the usual range (below). Test health: nothing failed or flaked on main tonight.
@@ -1877,6 +1914,7 @@ Rank of the open items (8 Nov): 1. Phantastron's seed field (a white browser box
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-11-08 (improvement, scheduled task, about 5:25 to 7:15 AM PT): code health and robustness, the 6 Nov item. Main first: suite on origin/main `2d404d4` in a clean worktree ALL PASS (1714 checks); `scripts/test_synth_imported.py` ALL PASS. Fixed: three parameter table rows were narrower than what their normalizers keep (measured on main: Phantastron and Trochotron `seed` 0..999999 against any uint32; Gyrotron `root` 36..84 against 24..96). The seed rows now read 0..4294967295, Gyrotron's root row reads 24..96 and its knob reads the row. On the panels (measured): a typed seed of 5000000000 loaded as 705032704 (wrapped) and is now held at 4294967295; a Gyrotron patch with root 30 read 36 on its knob and now reads 30. No normalizer, worklet or DSP changed, so no patch sounds different; the root knob's pointer sits at a different angle for the same root. New checks: R. table against normalizer (481 number rows and 115 choice rows on 18 devices; the 69 carried stereo, ens and out rows Mote, Heptode and Orthicon pin to Filament's defaults are excused and written up in the backlog), R. typed seed, R. Gyrotron root knob; all three fail on main. Rebased onto the review's `6639417`; cache `dxedge-v194`. Suite: ALL PASS (1719 checks) on the pushed tree; one earlier full run of the same tree failed the old Mx. unity click check once (backlog: a wall-clock settle timer, inferred). `scripts/test_synth_imported.py` ALL PASS. CPU (test 9, this box): Cathode 17.5%; valve12 8 voices 13.0%; ladder24 13.3%; LC bank 9.5%; 16 voices with ensemble 23.8%; tape echo on 11.4%; spring on 15.3%; 1939 mode 11.0%. Commit: this one.
 - 2026-11-08 (review, scheduled task, about 4:20 to 5:35 AM PT): areas f (the new paper roll on all 17 devices it offers, with a library song, a rail switch, Panic, tempo, rate and length changes under it, key in, a reload; a project saved with a muted, panned strip and loaded under a held note), g (Hexode and Anode at 1366 and 375 px) and h (tab walks with the roll open, names and rings, phone targets, reduced motion, Klystron's new rows) on the live site at origin/main `2d404d4`, sw.js `dxedge-v192`. Findings: 1 broken (fixed), 4 confusing (1 fixed), 0 missing; R1020-3, R1020-7, R1020-8, R1017-8 and Hexode's 1154 px at 375 re-measured, still open. Fixes: R1108-1, stopping the roll could leave the sounding note held on Filament or Cathode (every stop at gate 100%, 1 to 2 of 4 at the default gate), because the stop's flush dropped offs already queued; `paperroll-ui.js` now sends those again after the flush (its test log keeps one off per strike, moved to the time it goes). The first suite run on this tree failed the old check "Pr. live: ... stop let every note go" because the resent off was logged twice; fixed in the code, not the check. R1108-2, key in stayed on with the strip closed, so the keys rewrote steps out of sight; closing the strip turns it off. Two Pr. checks, both failing on the unfixed tree (measured). Cache `dxedge-v193`. No patch sound changed. Suite: ALL PASS on this tree (count in the commit message). Commit: this one.
 - 2026-11-08 (graphics, scheduled task, about 3:00 to 4:30 AM PT): main first: origin/main `63a5cf6`, suite in a clean worktree ALL PASS (1701 checks). Screenshots at 1366x1000 (every rail device) and 375x667 (every device and tab), no page errors, no sideways scroll. Built the top backlog item, Klystron's source row: the vowels and the sources (vowel, file, mic) as joined switches in the patch keys' recessed finish, the duplicate Load and Mic buttons folded into the file and mic keys, and the source's name in a recessed readout window with a lamp (peach vowel, amber file, red pulsing mic; steady with reduced motion). Text 13.8:1; phone keys 44 px. Display only, no audio change. Commit `5318d04`. Suite ALL PASS (1714 checks; 13 new Ks.). Next: Phantastron's seed field and its "no bends" status, Orthicon's picture list, a user patch's name window on a phone.
 - 2026-11-08 (check and debug, scheduled task, about 2:07 to 3:00 AM PT): reviewed 7 commits since 7 Nov 6 PM PT on origin/main `ccce5fd`: Claude's 12:28 AM nightly `5e87eef` (the paper roll, first slice), its log line `727f986` and the R. clock pulse check `ccce5fd`; the Late Night replay page `d8a973b` (Cursor Agent, merged by James as PR #91 `6b4d64c`; under /otr, nginx and the backend, nothing under /synth); the health bot's state `6c82390` and `62cdfce` (scripts/health only). Read the diffs: no test removed; `ccce5fd` changes one check with a stated reason (the first pulse is checked at its own tick's place, plus a new condition that it is the tick at or before play), a corrected expectation, not a loosened one; no new license or vendor folder, no trademark name, no factory patch changed; the /otr edit is James's own merged PR, not a synth edit. Suite on origin/main in a clean worktree ALL PASS (1701 checks, about 25 minutes, no hang); `scripts/test_synth_imported.py` ALL PASS. Live (cache-busted): /synth/ ready at 1366 and 375 px, no page errors, no console errors, no sideways scroll; the only failed request was the `/api/stat` beacon aborted as the page closed; /synth/fm/ and /synth/acid/ no errors (Hexode still 1154 px wide at 375, known). Offline renders of middle C on the live page: Filament, Cathode and Dekatron all sound (RMS 0.40, 0.29, 0.29; peaks up to 0.996; no NaN). These are louder than the 7 Nov line's figures, so the same script was run on `6b4d64c` (before the paper roll) and on `ccce5fd`: within 0.01 RMS of each other, so the difference is the render settings (velocity 100, 1.2 s), not a regression (inferred from that comparison). Live sw.js `dxedge-v192` matched main. Defects found: none. Fixes: none. Suite again on the pushed tree: ALL PASS (1701 checks). Commit: this docs line only.

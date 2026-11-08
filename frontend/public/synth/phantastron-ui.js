@@ -4,7 +4,7 @@
 
 import { houseFont } from './fread.js';
 import {
-  phantastronDevice, normalizePhantastron, PHANTA_DEFAULT, PADS, CARTS, toggleWire,
+  phantastronDevice, normalizePhantastron, PHANTA_DEFAULT, PADS, CARTS, toggleWire, SEED_MAX,
 } from './phantastron.js';
 
 const WORKLET = new URL('./phantastron.worklet.js', import.meta.url).href;
@@ -282,7 +282,7 @@ export function mountPhantastronPanel(container, hooks) {
   const row = el('div', { class: 'ph-bar' });
   const seedLab = el('label', { class: 'ph-slide' });
   seedLab.append(el('span', { class: 'geiss-lab' }, 'seed'));
-  const seed = el('input', { id: 'phSeed', type: 'number', min: '0', max: '999999', step: '1', 'aria-label': 'Phrase seed' });
+  const seed = el('input', { id: 'phSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', 'aria-label': 'Phrase seed' });
   seedLab.append(seed);
   const run = el('button', { type: 'button', class: 'chip', id: 'phRun', 'aria-pressed': 'false' }, 'run');
   row.append(seedLab, run);
@@ -355,7 +355,7 @@ export function mountPhantastronPanel(container, hooks) {
   bindSlide(form, 'form');
   bindSlide(noise, 'noise');
   bindSlide(pitch, 'pitch', v => Math.round(v));
-  seed.addEventListener('change', () => mutate({ seed: Math.max(0, Math.floor(+seed.value || 0)) }));
+  seed.addEventListener('change', () => mutate({ seed: Math.min(SEED_MAX, Math.max(0, Math.floor(+seed.value || 0))) }));
   seed.addEventListener('keydown', e => { if (e.key === 'Enter') seed.blur(); e.stopPropagation(); });
 
   canvas.addEventListener('pointerdown', e => {

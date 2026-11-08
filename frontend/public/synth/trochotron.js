@@ -79,9 +79,13 @@ const ENUMS = {
   route: ROUTES.slice(),
 };
 
+// the largest seed a patch keeps: the generators read the seed as a uint32
+export const SEED_MAX = 4294967295;
+
 const RANGE = {
   level: [0, 1],
-  seed: [0, 999999],
+  // the normalizer keeps any whole number a uint32 holds (seed >>> 0); the random button picks up to 1e9
+  seed: [0, SEED_MAX],
   depth: [1, 6],
   key: [0, 11],
   tempo: [40, 240],

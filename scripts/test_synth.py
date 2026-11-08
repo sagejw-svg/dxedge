@@ -4688,6 +4688,75 @@ with sync_playwright() as pw:
     ck("R. parameter ranges: every number row spans min < max around its default, and every factory patch lies inside its device's table",
        not prange["flat"] and not prange["outside"] and not pr_thin,
        {"flat": prange["flat"][:12], "nFlat": len(prange["flat"]), "outside": prange["outside"][:12], "notChecked": pr_thin, "seen": prange["seen"]})
+    # Table against normalizer (8 Nov): each number row's ends are what the device's normalizer keeps. A value far
+    # past either end loads inside the row, and each end loads as itself. Until 8 Nov Phantastron's and
+    # Trochotron's seed rows read 0..999999 while the normalizer keeps any uint32 (Trochotron's random button picks
+    # up to 1e9), and Gyrotron's root row read 36..84 while the normalizer keeps 24..96. The one known exception is
+    # the stereo, ens and out fields Mote, Heptode and Orthicon carry: those normalizers pin them to Filament's
+    # defaults (the fields do nothing on these devices), so their table ends do not load; any other row that
+    # does not load its own ends fails. Choice rows: every choice loads as itself and an unknown value loads as
+    # one of the choices (the same pinned fields excepted).
+    pnorm = pg.evaluate("""async () => {
+      const d = await import('/synth/device.js');
+      const own = { filament: (await import('/synth/patches.js')).normalize, cathode: (await import('/synth/cathode.js')).normalizeC };
+      const get = (o, k) => k.split('.').reduce((a, y) => (a == null ? a : a[y]), o);
+      const put = (o, k, v) => { const ks = k.split('.'); let a = o; for (let i = 0; i < ks.length - 1; i++) { if (a[ks[i]] == null || typeof a[ks[i]] !== 'object') a[ks[i]] = {}; a = a[ks[i]]; } a[ks[ks.length - 1]] = v; };
+      const pinned = id => ['mote', 'heptode', 'orthicon'].includes(id);
+      const r = { wide: [], ends: [], choice: [], noNorm: [], noPath: [], rows: 0, choices: 0, pinned: 0 };
+      // a row id is its patch path, except Lattice's four macro rows, which are the macros array's slots
+      const pathOf = (id, k) => (id === 'lattice' && /^macro[1-4]$/.test(k) ? 'macros.' + (+k[5] - 1) : k);
+      for (const x of d.listDevices()) {
+        const norm = x.normalize || own[x.id];
+        if (!norm) { r.noNorm.push(x.id); continue; }
+        const base = norm({});
+        const load = (k, v) => { const q = pathOf(x.id, k), p = JSON.parse(JSON.stringify(base)); put(p, q, v); try { return get(norm(p), q); } catch (e) { return 'threw ' + e.message; } };
+        for (const [k, i] of Object.entries(x.parameters || {})) {
+          if (get(base, pathOf(x.id, k)) === undefined) { r.noPath.push(x.id + ':' + k); continue; }
+          const carried = pinned(x.id) && /^(stereo|ens|out)\\./.test(k);
+          if (i.type === 'choice') {
+            const bad = i.choices.filter(c => load(k, c) !== c), unk = load(k, 'not-a-choice');
+            if (!i.choices.includes(unk)) r.choice.push(x.id + ':' + k + ' unknown->' + unk);
+            else if (bad.length && !carried) r.choice.push(x.id + ':' + k + ' drops ' + bad.join(','));
+            else if (bad.length) r.pinned++; else r.choices++;
+            continue;
+          }
+          if (i.type !== 'int' && i.type !== 'float') continue;
+          const span = i.max - i.min, hi = load(k, i.max + 10 * span + 7), lo = load(k, i.min - 10 * span - 7);
+          if (!(typeof hi === 'number' && hi <= i.max && hi >= i.min && typeof lo === 'number' && lo <= i.max && lo >= i.min)) {
+            r.wide.push(x.id + ':' + k + ' ' + i.min + '..' + i.max + ' keeps ' + lo + '..' + hi); continue; }
+          const top = load(k, i.max), bot = load(k, i.min);
+          if (top !== i.max || bot !== i.min) { if (carried) r.pinned++; else r.ends.push(x.id + ':' + k + ' ' + i.min + '..' + i.max + ' loads ' + bot + '..' + top); continue; }
+          r.rows++;
+        }
+      }
+      r.n = d.listDevices().length;
+      return r;
+    }""")
+    ck(f"R. table against normalizer: on all {pnorm['n']} devices a value past either end of a number row loads inside it and each end loads as itself ({pnorm['rows']} rows), every choice loads as itself and an unknown one as a choice ({pnorm['choices']} rows); only the {pnorm['pinned']} stereo, ens and out rows Mote, Heptode and Orthicon pin to Filament's defaults are excused",
+       not pnorm["wide"] and not pnorm["ends"] and not pnorm["choice"] and not pnorm["noNorm"] and not pnorm["noPath"] and pnorm["n"] >= 18 and pnorm["rows"] > 400 and pnorm["choices"] > 100 and pnorm["pinned"] == 69,
+       {k: pnorm[k] for k in ("wide", "ends", "choice", "noNorm", "noPath", "n", "rows", "choices", "pinned")})
+    # The panels that set those rows (8 Nov): a typed seed past a uint32 is held at the top instead of wrapped round
+    # by the normalizer's >>> 0 (5e9 used to load as 705032704), and Gyrotron's root knob spans its row, so a patch
+    # with root 30 reads 30 (it read 36, and a touch moved the root there).
+    rp = b.new_page(viewport={"width": 1366, "height": 1000}); rperr = []
+    rp.on("pageerror", lambda e: rperr.append(str(e)))
+    rp.goto(BASE); rp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    rseed = {}
+    for dv_, sel_ in (("trochotron", "#trSeed"), ("phantastron", "#phSeed")):
+        rp.evaluate("d => __synth.setDevice(d)", dv_); rp.wait_for_selector(sel_, state="visible", timeout=10000)
+        rp.fill(sel_, "5000000000"); rp.press(sel_, "Enter")
+        rp.wait_for_timeout(150)
+        rseed[dv_] = {"seed": rp.evaluate("__synth.patch().seed"), "max": rp.get_attribute(sel_, "max")}
+    rp.evaluate("__synth.setDevice('gyrotron')"); rp.wait_for_selector("#gyCanvas", state="visible", timeout=10000)
+    rp.evaluate("() => __synth.setPatch({ device: 'gyrotron', name: 'Low Root', root: 30 })")
+    rp.wait_for_function("() => __synth.patch().root === 30", timeout=5000); rp.wait_for_timeout(100)
+    rroot = rp.evaluate("""() => { let a = document.getElementById('gyCanvas'), k = null; while (a && !(k = a.querySelector('.knob[data-path="root"]'))) a = a.parentElement;
+      return k && { root: __synth.patch().root, min: k.getAttribute('aria-valuemin'), max: k.getAttribute('aria-valuemax'), now: k.getAttribute('aria-valuenow'), kv: k.querySelector('.kv').textContent }; }""")
+    rp.close()
+    ck(f"R. a typed seed of 5000000000 is held at 4294967295 on Trochotron and Phantastron (not wrapped to 705032704), and each field's max says so ({rseed})",
+       all(v_ == {"seed": 4294967295, "max": "4294967295"} for v_ in rseed.values()) and len(rseed) == 2, rseed)
+    ck(f"R. Gyrotron's root knob spans its table row (24..96) and a patch with root 30 reads 30 on it ({rroot})",
+       rroot == {"root": 30, "min": "24", "max": "96", "now": "30", "kv": "30"} and not rperr, (rroot, rperr))
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
 
     tone = patch(osc1={"wave": "sine", "level": 0.5}, stereo={"pan": "center", "spread": 0})

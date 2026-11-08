@@ -1,7 +1,7 @@
 // Trochotron on the page: the seed, the fractal, and the note strip.
 // The score is built on the main thread. The worklet is what plays it.
 
-import { trochotronDevice, normalizeTrochotron, TROCHO_DEFAULT } from './trochotron.js';
+import { trochotronDevice, normalizeTrochotron, TROCHO_DEFAULT, SEED_MAX } from './trochotron.js';
 import { pieceOf, shareOf, parseShare, midiOf, logisticR, GENERATORS, SCALE_NAMES, KEYS, ROUTES } from './trochotron-gen.js';
 
 const WORKLET = new URL('./trochotron.worklet.js', import.meta.url).href;
@@ -323,7 +323,7 @@ export function mountTrochotronPanel(container, hooks) {
   const play = section('play', 'mTrPlay', 'Seed');
   play.dataset.full = '';
   const bar = el('div', { class: 'tr-bar' });
-  const seed = el('input', { id: 'trSeed', type: 'number', min: '0', step: '1', 'aria-label': 'Seed' });
+  const seed = el('input', { id: 'trSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', 'aria-label': 'Seed' });
   const random = el('button', { id: 'trRandom', class: 'btn small', type: 'button' }, 'random');
   const playBtn = el('button', { id: 'trPlayBtn', class: 'btn small', type: 'button' }, 'play');
   const stopBtn = el('button', { id: 'trStopBtn', class: 'btn small', type: 'button' }, 'stop');
@@ -423,7 +423,8 @@ export function mountTrochotronPanel(container, hooks) {
     drawPiece(canvas, piece, p, host.meter().beat || 0);
   }
   function commitSeed() {
-    const n = Math.max(0, Math.floor(+seed.value || 0));
+    // a typed seed past a uint32 is held at the top, not wrapped round by the normalizer's >>> 0
+    const n = Math.min(SEED_MAX, Math.max(0, Math.floor(+seed.value || 0)));
     if (n !== current().seed) mutate({ seed: n });
   }
   seed.addEventListener('change', commitSeed);

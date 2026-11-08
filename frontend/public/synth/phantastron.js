@@ -264,9 +264,12 @@ export const PHANTA_FACTORY = [
 export const PHANTA_CATS = CATS.slice();
 
 const ENUMS = { cart: CARTS.slice() };
+// the largest seed a patch keeps: the phrase generator reads the seed as a uint32
+export const SEED_MAX = 4294967295;
 const RANGE = {
   level: [0, 1],
-  seed: [0, 999999],
+  // the normalizer keeps any whole number a uint32 holds (seed >>> 0), so the table says that
+  seed: [0, SEED_MAX],
   clock: [0.25, 4],
   bits: [1, 12],
   loop: [0, 1],
