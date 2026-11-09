@@ -33,6 +33,30 @@
         { "id": "thanksgiving-hearth", "name": "Thanksgiving hearth", "src": "thanksgiving/hearth.jpg", "lamp": { "x": 0.78, "y": 0.64, "s": 0.22, "rot": 2, "tilt": 6, "skew": 1 } },
         { "id": "thanksgiving-kitchen", "name": "Thanksgiving kitchen", "src": "thanksgiving/kitchen.jpg", "lamp": { "x": 0.40, "y": 0.58, "s": 0.15, "rot": 1, "tilt": 10, "skew": -1 } }
       ]
+    },
+    {
+      "id": "christmas-2026",
+      "name": "Christmas",
+      "tz": "America/Los_Angeles",
+      "from": "2026-12-18",
+      "to": "2026-12-26",
+      "scenes": [
+        { "id": "christmas-tree", "name": "Christmas tree", "src": "christmas/tree.jpg", "lamp": { "x": 0.30, "y": 0.78, "s": 0.20, "rot": -2, "tilt": 6, "skew": 0 } },
+        { "id": "christmas-hearth", "name": "Christmas hearth", "src": "christmas/hearth.jpg", "lamp": { "x": 0.72, "y": 0.60, "s": 0.17, "rot": 1, "tilt": 8, "skew": 1 } },
+        { "id": "christmas-parlor", "name": "Christmas parlor", "src": "christmas/parlor.jpg", "lamp": { "x": 0.46, "y": 0.84, "s": 0.22, "rot": 2, "tilt": 5, "skew": -1 } }
+      ]
+    },
+    {
+      "id": "newyear-2026",
+      "name": "New Year's",
+      "tz": "America/Los_Angeles",
+      "from": "2026-12-30",
+      "to": "2027-01-01",
+      "scenes": [
+        { "id": "newyear-clock", "name": "New Year's clock", "src": "newyear/clock.jpg", "lamp": { "x": 0.24, "y": 0.68, "s": 0.16, "rot": -1, "tilt": 9, "skew": 0 } },
+        { "id": "newyear-parlor", "name": "New Year's parlor", "src": "newyear/parlor.jpg", "lamp": { "x": 0.80, "y": 0.74, "s": 0.19, "rot": 2, "tilt": 7, "skew": 1 } },
+        { "id": "newyear-street", "name": "New Year's street", "src": "newyear/street.jpg", "lamp": { "x": 0.52, "y": 0.62, "s": 0.14, "rot": 0, "tilt": 4, "skew": -1 } }
+      ]
     }
   ]
 }
