@@ -8,6 +8,12 @@
  * "which item, how many seconds in" and seeks there. Pause and volume are
  * local. There is no skip and no seek. Play again rejoins live.
  *
+ * holidays.json is optional. A range names inclusive civil dates in its own
+ * timezone and a pool of catalog episodes. On those dates some blocks play
+ * one of those episodes instead of the usual daily pick. The block grid in
+ * schedule.json stays. Outside the range, the day is the normal grid again.
+ * Christmas or New Year's is another object in that file, not a code change.
+ *
  * This is the stand-in for a real encoder, so a test night can go out before
  * Icecast exists. To move over later:
  *   1. Run Liquidsoap against this same schedule.json: same Eastern blocks,
@@ -48,7 +54,8 @@
   var TZ = 'America/New_York';
   var DAY = 86400;
   var BLOCKS = [], byId = {}, byTheme = {}, SCHED = null, CAT = null;
-  var BREAK_MIN = 18, IDENT = '', UPNEXT = {}, PACK = null;
+  var BREAK_MIN = 18, IDENT = '', UPNEXT = {}, PACK = null, HOLIDAYS = null;
+  var poolCache = {}, planCache = {}, zoneFmt = {};
   var booted = false, fail = null, clockMs = null, timer = null, obs = null;
   var state = {
     started: false, userPaused: true, muted: false, loadedKey: null, hold: false,
@@ -161,6 +168,195 @@
     return guess;
   }
 
+  // Civil clock for a holiday range. The broadcast grid stays Eastern; the
+  // range decides which civil dates, in its own zone, borrow episodes.
+  function formatter(tz){
+    if (!zoneFmt[tz]) zoneFmt[tz] = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    return zoneFmt[tz];
+  }
+  function zoneParts(unixMs, tz){
+    var d = new Date(unixMs), g = {};
+    formatter(tz).formatToParts(d).forEach(function(p){ if (p.type !== 'literal') g[p.type] = p.value; });
+    var hour = +g.hour;
+    if (hour === 24) hour = 0;
+    return {
+      dateKey: g.year + '-' + g.month + '-' + g.day,
+      hour: hour, minute: +g.minute, second: +g.second,
+      sod: hour * 3600 + (+g.minute) * 60 + (+g.second) + d.getMilliseconds() / 1000
+    };
+  }
+  function unixIn(tz, dateKey, sod){
+    var y = +dateKey.slice(0, 4), mo = +dateKey.slice(5, 7), da = +dateKey.slice(8, 10);
+    var sec = Math.floor(sod), ms = Math.round((sod - sec) * 1000);
+    if (ms === 1000) { sec += 1; ms = 0; }
+    var h = Math.floor(sec / 3600), mi = Math.floor(sec / 60) % 60, s = sec % 60;
+    var guess = Date.UTC(y, mo - 1, da, h, mi, s, ms);
+    for (var i = 0; i < 6; i++) {
+      var w = zoneParts(guess, tz);
+      var want = Date.UTC(y, mo - 1, da, h, mi, s, ms);
+      var got = Date.UTC(+w.dateKey.slice(0, 4), +w.dateKey.slice(5, 7) - 1, +w.dateKey.slice(8, 10), w.hour, w.minute, w.second, Math.round((w.sod % 1) * 1000));
+      if (want === got) return guess;
+      guess += want - got;
+    }
+    return guess;
+  }
+  function daysBetween(a, b){
+    var A = Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10));
+    var B = Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10));
+    return Math.round((B - A) / 86400000);
+  }
+  function ranges(){ return (HOLIDAYS && HOLIDAYS.ranges) || []; }
+  function rangeForDate(dateKey){
+    var list = ranges();
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      if (r && r.from && r.to && dateKey >= r.from && dateKey <= r.to) return r;
+    }
+    return null;
+  }
+  function rangeAt(ms){
+    var list = ranges();
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      if (!r || !r.from || !r.to) continue;
+      var d = zoneParts(ms, r.tz || 'America/Los_Angeles').dateKey;
+      if (d >= r.from && d <= r.to) return { range: r, date: d };
+    }
+    return null;
+  }
+  function quotaFor(range, dateKey){
+    var c = range.counts || {};
+    if (range.center && dateKey === range.center) return +c.center || +c.peak || 0;
+    var peak = range.peak || [];
+    for (var i = 0; i < peak.length; i++) if (peak[i] === dateKey) return +c.peak || 0;
+    return +c.shoulder || 0;
+  }
+  // A listed title that is not in the catalog is skipped. So is anything that
+  // is not a full half-hour episode: a vignette, or an hour show the grid would cut in half.
+  function resolvePool(range){
+    if (poolCache[range.id]) return poolCache[range.id];
+    var out = [];
+    (range.episodes || []).forEach(function(spec){
+      var show = spec && byId[spec.show];
+      if (!show || !show.eps) return;
+      for (var i = 0; i < show.eps.length; i++) {
+        if (show.eps[i][0] !== spec.title) continue;
+        var dur = show.eps[i][2] > 0 ? show.eps[i][2] : 1800;
+        if (dur < 8 * 60 || dur > 30 * 60) return;
+        out.push({ showId: show.id, epIndex: i, title: show.eps[i][0], dur: dur });
+        return;
+      }
+    });
+    poolCache[range.id] = out;
+    return out;
+  }
+  function channelsOf(showId){
+    var show = byId[showId];
+    return (show && show.ch) || [];
+  }
+  function themeMatch(slot, ep){ return channelsOf(ep.showId).indexOf(slot.theme) >= 0; }
+  // Pins for one civil date in the range's zone. The Eastern block that contains
+  // that instant is where the episode airs. Each episode is used once that date.
+  function planCivil(range, dateKey){
+    var key = range.id + '|' + dateKey;
+    if (planCache[key]) return planCache[key];
+    var pool = resolvePool(range);
+    var n = Math.min(quotaFor(range, dateKey), pool.length);
+    var tz = range.tz || 'America/Los_Angeles';
+    var startMs = unixIn(tz, dateKey, 0);
+    var endMs = unixIn(tz, addDays(dateKey, 1), 0);
+    var dates = [addDays(dateKey, -1), dateKey, addDays(dateKey, 1)];
+    var slots = [];
+    dates.forEach(function(ed){
+      BLOCKS.forEach(function(b){
+        var ms = unixFor(ed, b.start);
+        if (ms >= startMs && ms < endMs) slots.push({ eastern: ed, start: b.start, ms: ms, id: b.id, theme: b.theme });
+      });
+    });
+    slots.sort(function(a, b){ return a.ms - b.ms; });
+    var step = +((range.counts && range.counts.shoulder) || 1);
+    if (!(step > 0)) step = 1;
+    var rot = pool.length ? (daysBetween(range.from, dateKey) * step) % pool.length : 0;
+    var chosen = [];
+    for (var i = 0; i < n; i++) chosen.push(pool[(rot + i) % pool.length]);
+    chosen.sort(function(a, b){
+      var ma = 0, mb = 0;
+      for (var s = 0; s < slots.length; s++) {
+        if (themeMatch(slots[s], a)) ma++;
+        if (themeMatch(slots[s], b)) mb++;
+      }
+      return ma - mb;
+    });
+    var taken = {}, pins = [];
+    for (var k = 0; k < chosen.length; k++) {
+      var prefer = [], any = [];
+      for (var s = 0; s < slots.length; s++) {
+        if (taken[s]) continue;
+        any.push(s);
+        if (themeMatch(slots[s], chosen[k])) prefer.push(s);
+      }
+      var bag = prefer.length ? prefer : any;
+      if (!bag.length) break;
+      var at = Math.floor((k + 0.5) * bag.length / chosen.length);
+      if (at >= bag.length) at = bag.length - 1;
+      var idx = bag[at];
+      taken[idx] = 1;
+      var slot = slots[idx];
+      pins.push({
+        eastern: slot.eastern, blockId: slot.id, start: slot.start, theme: slot.theme,
+        showId: chosen[k].showId, epIndex: chosen[k].epIndex, title: chosen[k].title
+      });
+    }
+    planCache[key] = pins;
+    return pins;
+  }
+  function rankOf(range, dateKey){
+    if (range.center && dateKey === range.center) return 3;
+    var peak = range.peak || [];
+    for (var i = 0; i < peak.length; i++) if (peak[i] === dateKey) return 2;
+    return 1;
+  }
+  // Pins that fall on this Eastern broadcast day. The same episode is kept once.
+  function pinsForEastern(dateKey){
+    var best = {}, byBlock = {};
+    ranges().forEach(function(range){
+      var tz = range.tz || 'America/Los_Angeles';
+      var dates = {};
+      BLOCKS.forEach(function(b){
+        var d = zoneParts(unixFor(dateKey, b.start), tz).dateKey;
+        if (d >= range.from && d <= range.to) dates[d] = 1;
+      });
+      Object.keys(dates).forEach(function(d){
+        var rank = rankOf(range, d);
+        planCivil(range, d).forEach(function(pin){
+          if (pin.eastern !== dateKey) return;
+          var ek = pin.showId + ':' + pin.epIndex;
+          var prev = best[ek];
+          if (prev && (prev.rank > rank || (prev.rank === rank && prev.pin.start <= pin.start))) return;
+          if (prev) delete byBlock[prev.pin.blockId];
+          best[ek] = { pin: pin, rank: rank };
+          byBlock[pin.blockId] = pin;
+        });
+      });
+    });
+    return byBlock;
+  }
+  function pickPinned(pin){
+    var show = byId[pin.showId];
+    if (!show || !show.eps || !show.eps[pin.epIndex]) return null;
+    var ep = show.eps[pin.epIndex];
+    var dur = ep[2] > 0 ? ep[2] : 1800;
+    return {
+      showId: show.id, showName: show.name, epIndex: pin.epIndex,
+      title: ep[0], date: ep[1] || '', file: ep[4] || '',
+      catalogDur: dur, url: epUrl(show, ep), holiday: true
+    };
+  }
+
   function expand(spans){
     var blocks = [];
     (spans || []).forEach(function(sp){
@@ -255,6 +451,7 @@
     it.title = pick.title; it.date = pick.date; it.url = pick.url; it.file = pick.file;
     it.epId = pick.showId + '.' + (hashStr(String(pick.file || pick.epIndex)) >>> 0).toString(16);
     it.trimmed = playDur < pick.catalogDur;
+    it.holiday = !!pick.holiday;
     return it;
   }
   function makeBreak(block, start, dur){
@@ -266,11 +463,19 @@
       var remain = block.end - t;
       if (remain < BREAK_MIN + 60) { items.push(makeBreak(block, t, remain)); break; }
       var maxDur = remain - BREAK_MIN;
-      var pick = pickEpisode(block, dateKey, nth, maxDur, used, avoid, false);
-      if (!pick && block.show) pick = pickEpisode(block, dateKey, nth, maxDur, used, avoid, true);
+      // A holiday pin is the first episode in the block, played whole. The
+      // break after it is the only place a station ID goes. No tune-in intro.
+      var pick = (nth === 0 && block.pin) ? pickPinned(block.pin) : null;
+      if (pick && (pick.catalogDur < 8 * 60 || pick.catalogDur > block.seconds)) pick = null;
+      if (!pick) {
+        pick = pickEpisode(block, dateKey, nth, maxDur, used, avoid, false);
+        if (!pick && block.show) pick = pickEpisode(block, dateKey, nth, maxDur, used, avoid, true);
+      }
       nth++;
       if (!pick) { items.push(makeBreak(block, t, remain)); break; }
-      var playDur = Math.min(pick.catalogDur, maxDur);
+      // A holiday episode plays out. The break after it is whatever is left in
+      // the block, so a file a few seconds over the usual gap is not shaved.
+      var playDur = (pick.holiday && pick.catalogDur <= remain) ? pick.catalogDur : Math.min(pick.catalogDur, maxDur);
       if (playDur < 60) { items.push(makeBreak(block, t, remain)); break; }
       items.push(makeShow(block, t, playDur, pick));
       used[pick.showId + ':' + pick.epIndex] = 1;
@@ -291,8 +496,16 @@
     return items;
   }
   function buildItems(dateKey){
+    var pins = pinsForEastern(dateKey);
     var used = {}, items = [];
-    BLOCKS.forEach(function(b){ items = items.concat(fillBlock(b, dateKey, used)); });
+    Object.keys(pins).forEach(function(id){
+      var p = pins[id];
+      used[p.showId + ':' + p.epIndex] = 1;
+    });
+    BLOCKS.forEach(function(b){
+      var block = pins[b.id] ? Object.assign({}, b, { pin: pins[b.id] }) : b;
+      items = items.concat(fillBlock(block, dateKey, used));
+    });
     return items;
   }
   var linked = {};
@@ -340,7 +553,7 @@
       label: it.label, theme: it.theme, night: !!it.night,
       showId: it.showId || null, epIndex: it.epIndex == null ? null : it.epIndex,
       show: it.showName || null, title: it.title || null, date: it.date || null,
-      trimmed: !!it.trimmed, audio: it.audio || null, url: it.url || null,
+      trimmed: !!it.trimmed, holiday: !!it.holiday, audio: it.audio || null, url: it.url || null,
       line: it.line || null, nextShowId: it.nextShowId || null, nextShow: it.nextShow || null,
       nextTitle: it.nextTitle || null, nextStart: it.nextStart == null ? null : it.nextStart,
       nextEp: it.nextEp || null, epId: it.epId || null,
@@ -475,10 +688,13 @@
     tail.forEach(function (c) { c.at0 = at; at += c.dur; });
     return fillers.concat(tail);
   }
-  function init(catalog, schedule, pack){
+  function init(catalog, schedule, pack, holidays){
     CAT = catalog;
     SCHED = schedule;
     PACK = pack || null;
+    HOLIDAYS = holidays || null;
+    poolCache = {};
+    planCache = {};
     setZone(schedule.tz || TZ);
     catalog.shows.forEach(function(s){
       if (!s || !s.eps || !s.eps.length || s.adv || s.id === 'commercials') return;
@@ -492,13 +708,19 @@
     UPNEXT = schedule.upNext || {};
     IDENT = (PACK && PACK.ident) ? assetPack(PACK.ident.file || PACK.ident) : (schedule.ident || '');
     BLOCKS = expand(schedule.spans || []);
+    ranges().forEach(resolvePool);
   }
 
   var ready = Promise.all([
     fetch(asset('catalog.json')).then(function(r){ if (!r.ok) throw new Error('catalog HTTP ' + r.status); return r.json(); }),
     fetch(asset('live/schedule.json'), { cache: 'no-cache' }).then(function(r){ if (!r.ok) throw new Error('schedule HTTP ' + r.status); return r.json(); }),
-    fetch(asset('live/pack/manifest.json'), { cache: 'no-cache' }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
-  ]).then(function(pair){ init(pair[0], pair[1], pair[2]); }).catch(function(e){ fail = e; throw e; });
+    fetch(asset('live/pack/manifest.json'), { cache: 'no-cache' }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    fetch(asset('live/holidays.json'), { cache: 'no-cache' }).then(function(r){
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error('holidays HTTP ' + r.status);
+      return r.json();
+    })
+  ]).then(function(pair){ init(pair[0], pair[1], pair[2], pair[3]); }).catch(function(e){ fail = e; throw e; });
 
   function absUrl(url){ return new URL(url, location.origin).href; }
   function hold(){ state.hold = true; try { audio.pause(); } catch (e) {} }
@@ -1105,6 +1327,29 @@
     lineup: function(dateKey){ return lineupRows(dateKey); },
     wall: function(ms){ return wallClock(ms == null ? nowMs() : ms); },
     unixFor: function(dateKey, sod){ return unixFor(dateKey, sod); },
+    unixIn: function(tz, dateKey, sod){ return unixIn(tz, dateKey, sod); },
+    civil: function(ms, tz){ return zoneParts(ms == null ? nowMs() : ms, tz || TZ).dateKey; },
+    // dateKey is a civil date in the range's own zone, not the listener's zone.
+    holidayOn: function(dateKey){
+      var r = rangeForDate(dateKey);
+      if (!r) return null;
+      var pins = planCivil(r, dateKey);
+      return {
+        id: r.id, name: r.name || r.id, tz: r.tz || 'America/Los_Angeles', date: dateKey,
+        center: r.center === dateKey, peak: (r.peak || []).indexOf(dateKey) >= 0,
+        count: pins.length,
+        episodes: pins.map(function(p){
+          return {
+            showId: p.showId, epIndex: p.epIndex, title: p.title,
+            eastern: p.eastern, start: p.start, theme: p.theme
+          };
+        })
+      };
+    },
+    holidayAt: function(ms){
+      var hit = rangeAt(ms == null ? nowMs() : ms);
+      return hit ? { id: hit.range.id, date: hit.date, tz: hit.range.tz || 'America/Los_Angeles' } : null;
+    },
     setClock: function(ms){ clockMs = ms; if (booted) { render(); follow(); } },
     clearClock: function(){ clockMs = null; if (booted) { render(); follow(); } },
     play: function(){ userPlay(); },
