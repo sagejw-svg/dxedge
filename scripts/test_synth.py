@@ -6582,6 +6582,133 @@ with sync_playwright() as pw:
        rd["stats"]["pos"] == 0 and rn >= 4 and not rrerr, (rd, rn, rrerr))
     rrx.close()
 
+    # ---------------------------------------------------------------- Th. Theremin mode (0.3, 9 Nov)
+    # A pad on Filament's Play tab: across is pitch, up is volume, one sliding note; the magic eye shows
+    # its tuning. The worklet takes {t:'thm',on,p,a} and holds one voice (note 128) at that fractional
+    # pitch and level. These check the sound (pitch, slide, level, release, keys and 1939 mode leave it
+    # alone), the pad's mapping, the pointer, the keys, the eye, persistence and the phone.
+    th_ = lambda at, on, p_, a_: {"at": at, "t": "thm", "on": on, "p": p_, "a": a_}
+    tsp = patch(osc1={"wave": "sine", "level": 0.8})
+    Lt, _ = render(tsp, [th_(0, True, 57, 1), th_(1.0, True, 57.5, 1), th_(2.0, True, 69, 1), th_(3.0, True, 69, 0.5), th_(3.5, True, 69, 0.1),
+                         th_(4.0, True, 69, 0), th_(4.5, True, 69, 1), th_(5.0, False, 69, 1)], 5.6, rack=False)
+    tseg = lambda a_, b_: Lt[int(a_ * SR):int(b_ * SR)]
+    tc = [1200 * math.log2(peak_freq(tseg(a_, b_)) / f_) for (a_, b_, f_) in ((0.3, 0.9, 220.0), (1.3, 1.9, 220 * 2 ** (0.5 / 12)), (2.3, 2.9, 440.0))]
+    ck(f"Th. the pad's note sounds at its fractional pitch: 57, 57.5 and 69 within 0.5 cent ({[round(c_, 3) for c_ in tc]})", max(abs(c_) for c_ in tc) <= 0.5, tc)
+    zx = tseg(1.98, 2.15); zc = np.where((zx[:-1] < 0) & (zx[1:] >= 0))[0]; zf = SR / np.diff(zc)
+    mid = int(np.sum((zf > 240) & (zf < 420)))
+    ck(f"Th. a move slides, it does not jump: 226 Hz to 440 Hz with {mid} cycles between 240 and 420 Hz, never falling (by more than the 4 Hz a whole-sample period reads)",
+       mid >= 3 and all(zf[i + 1] >= zf[i] - 6 for i in range(len(zf) - 1)) and abs(np.mean(zf[-8:]) - 440) < 3, [round(v_) for v_ in zf])
+    ta1 = tone_amp(tseg(2.5, 2.95), 440)
+    tlv = (db(tone_amp(tseg(3.2, 3.45), 440) / ta1), db(tone_amp(tseg(3.7, 3.95), 440) / ta1))
+    tsil, toff = db(np.sqrt(np.mean(tseg(4.2, 4.45) ** 2))), db(np.sqrt(np.mean(tseg(5.15, 5.5) ** 2)))
+    ck(f"Th. the level follows a: 0.5 is -6.0 dB, 0.1 is -20.0 dB (measured {tlv[0]:.2f}, {tlv[1]:.2f}), 0 is silence ({tsil:.0f} dB)",
+       abs(tlv[0] + 6.02) <= 0.2 and abs(tlv[1] + 20) <= 0.3 and tsil < -100, (tlv, tsil))
+    ck(f"Th. on false lets the note go with the patch's release (0.15 s later {toff:.0f} dB)", toff < -100, toff)
+    Lk, _ = render(tsp, [th_(0, True, 57, 1), {"at": 0.2, "t": "on", "n": 72, "v": 0.8}, {"at": 0.4, "t": "off", "n": 72}, {"at": 0.5, "t": "release"}], 1.0, rack=False)
+    tk = (db(tone_amp(Lk[int(0.05 * SR):int(0.19 * SR)], 220)), db(tone_amp(Lk[int(0.42 * SR):int(0.49 * SR)], 220)), db(np.sqrt(np.mean(Lk[int(0.7 * SR):] ** 2))))
+    ck(f"Th. a key played and let go beside it leaves the pad's note sounding ({tk[1]:.1f} dB against {tk[0]:.1f}); the page letting go of keys (release) ends it too ({tk[2]:.0f} dB)",
+       abs(tk[1] - tk[0]) < 0.5 and tk[2] < -100, tk)
+    Le, _ = render(patch(osc1={"wave": "sine"}, era={"on": True}), [th_(0, True, 57, 1)], 0.6, rack=False)
+    ck("Th. 1939 mode ignores the pad (its divided masters cannot slide): silence", db(np.sqrt(np.mean(Le[int(0.2 * SR):] ** 2))) < -100)
+    Lu, _ = render(patch(osc1={"wave": "sine"}, voice={"mode": "mono", "glide": 0.5}), [{"at": 0, "t": "on", "n": 45, "v": 0.8}, th_(0.3, True, 57, 1), th_(0.6, True, 69, 1)], 1.0, rack=False)
+    tu = 1200 * math.log2(peak_freq(Lu[int(0.75 * SR):int(0.98 * SR)]) / 440)
+    ck(f"Th. in mono mode the pad takes the voice and ignores the patch's 0.5 s glide (440 Hz {tu:+.2f} cents 0.15 s after the move)", abs(tu) < 1, tu)
+    thx = b.new_context(viewport={"width": 1366, "height": 1000}); tp = thx.new_page(); therr = []
+    tp.on("pageerror", lambda e: therr.append(str(e)))
+    tp.goto(BASE); tp.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    tmap = tp.evaluate("""async () => { const M = await import('/synth/theremin.js'); const d = M.normalizeThm({}), bad = M.normalizeThm({ low: 7, span: 9, snap: 4, depth: -3, on: 'yes' });
+      const sn = Object.assign({}, d, { snap: 1 }), half = Object.assign({}, d, { snap: 0.5 });
+      return { d, bad, p0: M.padPitch(0, d), p1: M.padPitch(1, d), pm: M.padPitch(0.5, d), s1: M.padPitch((60.4 - 48) / 36, sn), s5: M.padPitch((60.4 - 48) / 36, half),
+        l0: M.padLevel(0.02, d), l1: M.padLevel(1, d), lh: M.padLevel(0.03 + 0.97 * 0.5, d), t: M.tuneOf(60.3), tf: M.tuneOf(59.8) }; }""")
+    ck("Th. settings: C3 up 3 octaves, no snap, 36 dB, off by default; bad fields load as the defaults",
+       tmap["d"] == {"on": False, "low": 48, "span": 3, "snap": 0, "depth": 36} and tmap["bad"] == {"on": False, "low": 48, "span": 3, "snap": 1, "depth": 12}, tmap["bad"])
+    ck(f"Th. the pad's map: left C3 (48), right C6 (84), the middle F#4; snap 100% lands on 60, 50% keeps half the 40 cents ({tmap['s5']:.3f})",
+       tmap["p0"] == 48 and tmap["p1"] == 84 and tmap["pm"] == 66 and abs(tmap["s1"] - 60) < 1e-9 and abs(tmap["s5"] - 60.2) < 1e-9, tmap)
+    ck(f"Th. the volume map: the bottom 3% is silence, the top is 0 dB, halfway is -18 dB of 36 ({db(tmap['lh']):.2f})",
+       tmap["l0"] == 0 and abs(tmap["l1"] - 1) < 1e-12 and abs(db(tmap["lh"]) + 18) < 0.01, tmap)
+    ck("Th. tuning: 60.3 is C4 +30 cents, 59.8 is C4 -20", tmap["t"]["name"] == "C4" and abs(tmap["t"]["cents"] - 30) < 1e-6 and tmap["tf"]["name"] == "C4" and abs(tmap["tf"]["cents"] + 20) < 1e-6, (tmap["t"], tmap["tf"]))
+    tvis = tp.evaluate("() => { const s = document.getElementById('mThm'); return { shown: !!s.offsetParent, h: document.getElementById('thmCv').getBoundingClientRect().height, on: __synth.theremin().state().on, eye: __synth.eye().mode }; }")
+    ck("Th. the Theremin section shows on Filament's desktop panel, the pad 200 px tall, off on a fresh page, the eye on level", tvis["shown"] and tvis["h"] >= 190 and not tvis["on"] and tvis["eye"] == "level", tvis)
+    # a real pointer on the pad: down switches the mode on and plays, the pitch follows the position
+    cb = tp.evaluate("() => { const c = document.getElementById('thmCv'); c.scrollIntoView({ block: 'center' }); const r = c.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }")
+    on0 = tp.evaluate("__synth.tubeShow().onsets")
+    def th_wait(js):        # the eye moves in the frame loop, which a busy box can starve for a while: wait for it (up to 5 s)
+        try: tp.wait_for_function(js, timeout=5000)
+        except Exception: pass
+    tp.mouse.move(cb[0] + cb[2] * 0.5, cb[1] + cb[3] * 0.2); tp.mouse.down(); tp.wait_for_timeout(300)
+    th_wait("() => { const e = __synth.eye(); return e.mode === 'tune' && e.lv > 0.95; }")
+    tpd = tp.evaluate("() => ({ st: __synth.theremin().state(), eye: __synth.eye(), read: document.getElementById('thmRead').textContent, on: document.getElementById('thmOnBtn').getAttribute('aria-pressed'), on1: __synth.tubeShow().onsets })")
+    tmt = tp.evaluate("() => (__synth.meter() || {}).thm || null")
+    ck(f"Th. a press on the pad switches the mode on and plays F#4 at 80% height ({tpd['read']}); the meter reports it sounding at {tmt and round(tmt['p'], 3)}",
+       tpd["st"]["on"] and tpd["st"]["held"] and abs(tpd["st"]["pitch"] - 66) < 0.05 and tpd["on"] == "true" and tmt is not None and abs(tmt["p"] - tpd["st"]["pitch"]) < 0.01 and tpd["read"].startswith("F#4"), (tpd, tmt))
+    ck(f"Th. the press flares the tubes once (onsets {on0} to {tpd['on1']}), and the meter's note list leaves the pad's note out",
+       tpd["on1"] == on0 + 1 and 128 not in (tp.evaluate("(__synth.meter() || {}).notes") or []), (on0, tpd["on1"]))
+    ck(f"Th. on a note the magic eye reads tune and closes (lv {tpd['eye']['lv']:.2f})", tpd["eye"]["mode"] == "tune" and tpd["eye"]["lv"] > 0.9 and abs(tpd["eye"]["cents"]) < 2, tpd["eye"])
+    tp.mouse.move(cb[0] + cb[2] * ((66.25 - 48) / 36), cb[1] + cb[3] * 0.2); tp.wait_for_timeout(300)
+    th_wait("() => { const e = __synth.eye(); return e.cents > 22 && Math.abs(e.lv - 0.5) < 0.03; }")
+    te1 = tp.evaluate("__synth.eye()")
+    tp.mouse.move(cb[0] + cb[2] * ((65.6 - 48) / 36), cb[1] + cb[3] * 0.2); tp.wait_for_timeout(300)
+    th_wait("() => { const e = __synth.eye(); return e.cents < -37 && e.skew < -0.75; }")
+    te2 = tp.evaluate("__synth.eye()")
+    ck(f"Th. 25 cents sharp opens the eye halfway and leans it sharp (lv {te1['lv']:.2f}, skew {te1['skew']:.2f}); 40 cents flat opens it wider the other way (lv {te2['lv']:.2f}, skew {te2['skew']:.2f})",
+       abs(te1["cents"] - 25) < 3 and 0.4 < te1["lv"] < 0.6 and te1["skew"] > 0.3 and abs(te2["cents"] + 40) < 3 and te2["lv"] < 0.3 and te2["skew"] < -0.6, (te1, te2))
+    tp.mouse.up(); tp.wait_for_timeout(300)
+    th_wait("() => __synth.eye().mode === 'level' && !(__synth.meter() || {}).thm")
+    tup = tp.evaluate("() => ({ st: __synth.theremin().state(), eye: __synth.eye(), thm: (__synth.meter() || {}).thm || null, lab: document.getElementById('eyeLab').textContent })")
+    ck("Th. letting go ends the note; the eye goes back to level", not tup["st"]["held"] and tup["thm"] is None and tup["eye"]["mode"] == "level" and tup["lab"] == "level" and tup["st"]["on"], tup)
+    # keys: Enter plays, the arrows move it a semitone, Escape stops
+    tp.focus("#thmCv"); tp.keyboard.press("Enter"); tp.wait_for_timeout(100); k1 = tp.evaluate("__synth.theremin().state()")
+    tp.keyboard.press("ArrowRight"); tp.keyboard.press("ArrowRight"); tp.keyboard.press("Shift+ArrowLeft"); tp.wait_for_timeout(100); k2 = tp.evaluate("__synth.theremin().state()")
+    tp.keyboard.press("Escape"); tp.wait_for_timeout(100); k3 = tp.evaluate("__synth.theremin().state()")
+    ck(f"Th. keys on the pad: Enter plays (pitch {k1['pitch']}), two rights and a Shift left move it 1.9 semitones ({k2['pitch'] - k1['pitch'] if k2['pitch'] else None}), Escape stops",
+       k1["held"] and abs(k1["pitch"] - 60) < 1e-6 and k2["held"] and abs(k2["pitch"] - k1["pitch"] - 1.9) < 1e-6 and not k3["held"], (k1, k2, k3))
+    # the rail moving off Filament, Panic and 1939 mode all let the note go
+    tlet = {}
+    for how, js in (("rail", "() => { __synth.setDevice('cathode'); }"), ("panic", "() => __synth.panic()"),
+                    ("1939 mode", "() => { const p = __synth.patch(); p.era = Object.assign({}, p.era || {}, { on: true }); __synth.setPatch(p); }")):
+        tp.evaluate("() => { __synth.setDevice('filament'); const p = __synth.patch(); if (p.era && p.era.on) { p.era.on = false; __synth.setPatch(p); } }"); tp.wait_for_timeout(300)
+        tp.evaluate("__synth.theremin().press(0.5, 0.8)"); tp.wait_for_timeout(300)
+        was = tp.evaluate("__synth.theremin().state().held"); tp.evaluate(js); tp.wait_for_timeout(400)
+        tlet[how] = (was, tp.evaluate("__synth.theremin().state().held"), tp.evaluate("() => ((__synth.meter() || {}).voices || 0)") if how != "rail" else None)
+    ck(f"Th. moving the rail to Cathode, Panic and switching 1939 mode on each let the pad's note go ({tlet})", all(v_[0] and not v_[1] for v_ in tlet.values()), tlet)
+    rest = tp.evaluate("() => { const r = __synth.theremin().press(0.5, 0.8); return { r, held: __synth.theremin().state().held, read: document.getElementById('thmRead').textContent }; }")
+    ck(f"Th. while 1939 mode is on the pad rests ({rest['read']})", not rest["r"] and not rest["held"] and "1939" in rest["read"], rest)
+    tp.evaluate("() => { const p = __synth.patch(); p.era.on = false; __synth.setPatch(p); __synth.theremin().set({ low: 36, span: 2, snap: 0.25, depth: 48 }); }")
+    tp.reload(); tp.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    tk_ = tp.evaluate("() => { const s = __synth.theremin().state(); return { low: s.low, span: s.span, snap: s.snap, depth: s.depth, on: s.on, pressed: [...document.querySelectorAll('#thmLow .chip[aria-pressed=true], #thmSpan .chip[aria-pressed=true]')].map(b => b.textContent) }; }")
+    ck("Th. the settings come back after a reload (C2, 2 octaves, snap 25%, 48 dB, on), and the chips show them",
+       tk_ == {"low": 36, "span": 2, "snap": 0.25, "depth": 48, "on": True, "pressed": ["C2", "2 oct"]}, tk_)
+    tp.evaluate("__synth.theremin().press(0.6, 0.7)"); tp.wait_for_timeout(800)
+    tdraw = tp.evaluate("() => { const c = document.getElementById('thmCv'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 4) s += x[i]; return { ms: __synth.theremin().state().drawMs, lit: s / (x.length / 4), w: c.width }; }")
+    tp.evaluate("__synth.theremin().release()")
+    info("Th. pad draw time a frame (ms) and canvas width", (round(tdraw["ms"], 3), tdraw["w"]))
+    ck(f"Th. the pad is painted ({tdraw['lit']:.1f} mean red) and draws in under 4 ms a frame ({tdraw['ms']:.2f} ms)", tdraw["lit"] > 3 and tdraw["ms"] < 4, tdraw)
+    ck("Th. no page errors (desktop)", not therr, therr)
+    thx.close()
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        tpx = b.new_context(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); tq = tpx.new_page(); tqerr = []
+        tq.on("pageerror", lambda e: tqerr.append(str(e)))
+        tq.goto(BASE); tq.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+        tabs0 = tq.evaluate("() => ({ pad: !!document.querySelector('.tabs [data-go=pad]').offsetParent, shown: !!document.getElementById('mThm').offsetParent, play: [...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length })")
+        tq.tap('.tabs [data-go="pad"]'); tq.wait_for_timeout(200)
+        tq.evaluate("() => { const s = document.getElementById('mThm'); s.scrollIntoView(); }"); tq.wait_for_timeout(200)
+        tv_ = tq.evaluate("""() => { const sec = document.getElementById('mThm');
+          const small = [...sec.querySelectorAll('button, .knob')].filter(e => e.getClientRects().length).map(e => [e.textContent.trim() || e.getAttribute('aria-label'), e.getBoundingClientRect()])
+            .filter(([s, r]) => r.width < 44 || r.height < 44).map(([s, r]) => s + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          const c = document.getElementById('thmCv').getBoundingClientRect();
+          return { shown: !!sec.offsetParent, small, sw: document.documentElement.scrollWidth, iw: innerWidth, cl: c.left, cr: c.right, ch: c.height, mods: [...document.querySelectorAll('.mod')].filter(m => m.offsetParent).map(m => m.id) }; }""")
+        bx = tq.evaluate("() => { const r = document.getElementById('thmCv').getBoundingClientRect(); return [r.left + r.width * 0.25, r.top + r.height * 0.5]; }")
+        tq.touchscreen.tap(bx[0], bx[1]); tq.wait_for_timeout(150)
+        if pw_ == 375: tq.locator("#mThm").screenshot(path=os.path.join(SHOTS, "synth_theremin_phone.png"))
+        ck(f"Th. {pw_}px: the Pad tab shows the Theremin section alone ({tv_['mods']}), not the Play tab ({tabs0}), every button and knob 44 px or more, the pad 240 px tall inside the screen, no sideways scroll ({tv_['small']})",
+           tabs0["pad"] and not tabs0["shown"] and tabs0["play"] <= 4 and tv_["mods"] == ["mThm"] and not tv_["small"] and tv_["sw"] <= tv_["iw"] == pw_ and tv_["cl"] >= 0 and tv_["cr"] <= pw_ and tv_["ch"] >= 230, (tv_, tabs0))
+        tst = tq.evaluate("__synth.theremin().state()")
+        ck(f"Th. {pw_}px: a tap plays and ends (switched on: {tst['on']}, {tst['sent']} messages), no page errors", tst["on"] and not tst["held"] and tst["sent"] >= 2 and not tqerr, (tst, tqerr))
+        tq.evaluate("__synth.setDevice('cathode')"); tq.wait_for_timeout(250)
+        tcat = tq.evaluate("() => ({ tab: document.body.dataset.tab, pad: !!document.querySelector('.tabs [data-go=pad]').offsetParent })")
+        ck(f"Th. {pw_}px: on Cathode the Pad tab is gone and the panel is back on Play ({tcat})", tcat == {"tab": "play", "pad": False}, tcat)
+        tpx.close()
+
     # ---------------------------------------------------------------- W. Lattice wavetable
     def fold(freq, sr):
         f = abs(freq) % sr

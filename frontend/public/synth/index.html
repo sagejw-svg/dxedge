@@ -760,6 +760,8 @@
   .eq-read .dim { color: var(--dim); }
   canvas#eqCv { width: 100%; height: 190px; display: block; touch-action: none; cursor: crosshair; border-radius: 6px; outline: none; border: 1px solid var(--border); background: #070707; }
   canvas#eqCv:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
+  canvas#thmCv { width: 100%; height: 200px; display: block; border-radius: 6px; border: 1px solid var(--border); background: #070707; margin-bottom: 4px; touch-action: none; cursor: crosshair; }
+  canvas#thmCv:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   canvas#fpCv { width: 100%; height: 150px; display: block; border-radius: 6px; border: 1px solid var(--border); background: #070707; margin-bottom: 4px; }
   #mEq.off canvas#eqCv { opacity: 0.75; }
 
@@ -955,6 +957,7 @@
     body[data-tab="bend"] .mod[data-tab~="bend"] { display: block; }
     body[data-tab="spin"] .mod[data-tab~="spin"] { display: block; }
     body[data-tab="cavity"] .mod[data-tab~="cavity"] { display: block; }
+    body[data-tab="pad"] .mod[data-tab~="pad"] { display: block; }
     body[data-dev="dekatron"] .tabs [data-go="osc"], body[data-dev="dekatron"] .tabs [data-go="filter"],
     body[data-dev="dekatron"] .tabs [data-go="mod"], body[data-dev="dekatron"] .tabs [data-go="stereo"],
     body[data-dev="dekatron"] .tabs [data-go="patch"] { display: none !important; }
@@ -1112,6 +1115,7 @@
     .strip { width: 22px; }
     canvas#eqCv { height: 170px; }
     canvas#fpCv { height: 128px; }
+    canvas#thmCv { height: 240px; }
     .knob { width: 52px; }
     .knob svg { width: 40px; height: 40px; }
     #wavSecs { min-height: 44px; min-width: 44px; }
@@ -1235,7 +1239,7 @@
         <figure class="tube" data-t="v4" data-tab-go="rack" title="V3 and V4, the output pair"><canvas id="tubeV4" aria-hidden="true"></canvas><figcaption><span class="role">V4 <span id="topoV4">PP</span></span><br><b id="nameV4">EL34</b></figcaption></figure>
       </div>
       <div class="plate" aria-hidden="true"><span data-dev="filament">FILAMENT<small>tube synthesizer &middot; model 01</small></span><span data-dev="cathode">CATHODE<small>semi-modular &middot; model 02</small></span><span data-dev="dekatron">DEKATRON<small>drum pattern &middot; model 03</small></span><span data-dev="thyratron">THYRATRON<small>ladder monosynth &middot; model 05</small></span><span data-dev="lattice">LATTICE<small>wavetable &middot; model 04</small></span><span data-dev="gleam">GLEAM<small>touch field &middot; model 06</small></span><span data-dev="mote">MOTE<small>granular &middot; model 07</small></span><span data-dev="heptode">HEPTODE<small>midi files &middot; model 08</small></span><span data-dev="geissler">GEISSLER<small>meadow &middot; model 09</small></span><span data-dev="pentagrid">PENTAGRID<small>shortwave &middot; model 10</small></span><span data-dev="orthicon">ORTHICON<small>spectral painter &middot; model 11</small></span><span data-dev="trochotron">TROCHOTRON<small>fractal seed &middot; model 12</small></span><span data-dev="gyrotron">GYROTRON<small>gravity wells &middot; model 13</small></span><span data-dev="klystron">KLYSTRON<small>talk box &middot; model 14</small></span><span data-dev="phantastron">PHANTASTRON<small>bent toy &middot; model 15</small></span><span data-dev="additron">ADDITRON<small>additive organ &middot; model 16</small></span><span data-dev="rhumbatron">RHUMBATRON<small>physical model &middot; model 17</small></span><span data-dev="resnatron">RESNATRON<small>patch bay &middot; model 18</small></span></div>
-      <div class="eye" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" style="font-size:8.5px;letter-spacing:1px">level</span></div>
+      <div class="eye" id="eyeBox" title="Magic eye: closes as the output nears full scale"><canvas id="eyeCv" aria-hidden="true"></canvas><span class="label el" id="eyeLab" style="font-size:8.5px;letter-spacing:1px">level</span></div>
       <div class="vu" title="Left and right VU"><canvas id="vuCv" aria-label="VU meters" role="img"></canvas></div>
       <div class="vlamps" id="vLamps" aria-hidden="true" title="Voice lamps: one per sounding voice"></div>
       <button type="button" class="tvbtn" id="tvChassisBtn" aria-label="Tube view: one tube full size" title="Tube view (or double click a tube)">&#x2922;</button>
@@ -1249,6 +1253,7 @@
 
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" data-go="play" aria-selected="true">Play</button>
+      <button role="tab" data-go="pad" aria-selected="false" data-dev="filament" title="Theremin mode: the pad">Pad</button>
       <button role="tab" data-go="grain" aria-selected="false" data-dev="mote">Grain</button>
       <button role="tab" data-go="space" aria-selected="false" data-dev="mote">Space</button>
       <button role="tab" data-go="tracks" aria-selected="false" data-dev="heptode">Tracks</button>
@@ -1315,6 +1320,13 @@
         <div class="note">Hold keys and it plays them one a step at the rack tempo. While the rack plays, steps land on its beat. The sustain pedal holds keys you let go.</div></section>
       <section class="mod" data-dev="filament" data-tab="play mod" id="mCtl"><h3><span class="pilot"></span>Wheel and pressure</h3><div class="knobs" id="kCtl"></div>
         <div class="note">Mod wheel and aftertouch come from a MIDI keyboard, or the MOD strip by the keys.</div></section>
+      <section class="mod" data-dev="filament" data-tab="pad" id="mThm" data-wide><h3><span class="pilot off" id="thmPilot"></span>Theremin<button class="chip sw" id="thmOnBtn" aria-label="Theremin mode" aria-pressed="false" title="Theremin mode on or off: the pad plays one sliding note, and the magic eye shows how close it is to a note">off</button></h3>
+        <div class="chips" id="thmLow" role="group" aria-label="Theremin pad starts at"><span class="cl">from</span></div>
+        <div class="chips" id="thmSpan" role="group" aria-label="Theremin pad width"><span class="cl">across</span></div>
+        <div class="eq-read" id="thmRead" aria-live="off"></div>
+        <canvas id="thmCv" tabindex="0" role="application" aria-roledescription="theremin pad" aria-label="Theremin pad: across is pitch, up is volume. Enter starts and stops the tone, left and right arrows move it a semitone (Shift for 10 cents), up and down change the level, Escape stops."></canvas>
+        <div class="knobs" id="kThm"></div>
+        <div class="note">Touch and slide: across is pitch, up is volume, the bottom edge is silence. One note at a time, played by this patch (its envelopes, filters and unison). While you play, the magic eye on the chassis closes as you reach a note and leans to the sharp or flat side. Snap pulls toward the nearest note.</div></section>
       <section class="mod" data-dev="filament" data-tab="mod" id="mMatrix" data-wide><h3><span class="pilot off" id="matrixPilot"></span>Mod matrix<span class="mmcount" id="mmCount"></span></h3>
         <div class="mmx" id="mmx"></div>
         <div class="note">Eight slots, each a source to a destination. The amount reads in the destination's units: pitch in semitones, cutoff in octaves (Key at +5.0 oct is full key tracking), V1 drive in drive units, the rest in percent. Envelopes, LFOs, key and random work per voice; random is new on every note.</div></section>
@@ -1786,6 +1798,7 @@ import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from '
 import { createDeck } from './deck.js';
 import { createPlayer } from './player.js';
 import { createRoll } from './paperroll-ui.js';
+import { createTheremin } from './theremin-ui.js';
 import { listDevices } from './device.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
@@ -2396,7 +2409,7 @@ $('projFile').addEventListener('change', () => {
 // Shift and other modifiers reissued keydown without repeat, the count went to
 // 2, and the single keyup left the gate open.
 const holds = new Map();      // note -> Set of source ids
-let deck = null, player = null, roll = null;   // the MIDI deck, the library player and the paper roll, built further down
+let deck = null, player = null, roll = null, thm = null;   // the MIDI deck, the library player and the paper roll, built further down
 let sustainOn = false;
 function held(n) { const s = holds.get(n); return !!(s && s.size); }
 function heldNotes() { const out = []; holds.forEach((s, n) => { if (s && s.size) out.push(n); }); return out; }
@@ -3564,6 +3577,7 @@ function setDevice(d) {
   DS[dev] = { cur, curKey, edited, user };
   dev = d; ({ cur, curKey, edited, user } = DS[d]);
   showDevice();
+  if (thm) thm.onDevice();
   if (E) syncHostUI();
   store.set('synth_dev', d);
   const tab = document.body.dataset.tab;
@@ -3594,6 +3608,7 @@ function setDevice(d) {
   if (tab === 'cavity' && d !== 'rhumbatron') goTab('play');
   if (d === 'rhumbatron' && tab !== 'play' && tab !== 'cavity' && tab !== 'rack' && tab !== 'mix') goTab('play');
   if (d === 'resnatron' && tab !== 'play' && tab !== 'rack' && tab !== 'mix') goTab('play');
+  if (tab === 'pad' && d !== 'filament') goTab('play');
   const run = () => {
     const sleepOthers = except => {
       const keep = id => id === except || mixArmed.includes(id);
@@ -3946,6 +3961,7 @@ refreshAll(); fillSelect();
 
 // ---------------------------------------------------------------- phone tabs
 function goTab(t) {
+  if (t === 'pad' && dev !== 'filament') t = 'play';   // Theremin mode's pad is Filament's
   if (t === 'patch' && dev !== 'cathode') t = 'play';
   if (t === 'voice' && dev !== 'dekatron') t = 'play';
   if (dev === 'dekatron' && t !== 'play' && t !== 'voice' && t !== 'rack' && t !== 'mix') t = 'play';
@@ -4179,6 +4195,7 @@ $('monoBtn').addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'En
 // does not stop the transport. Panic (the button, or MIDI CC 120/123) does.
 function releaseInput() {
   dropHolds();
+  if (thm) thm.release();
   if ($('monoBtn').getAttribute('aria-pressed') === 'true') mono(false);
   if (PB.active()) PB.release();
   withEngine(() => E.releaseKeys());
@@ -4328,6 +4345,12 @@ function setShow(mode) {
 SHOW_MODES.forEach(mo => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = mo; b.textContent = mo;
   b.addEventListener('click', () => setShow(mo)); $('showChips').appendChild(b); });
 { const vl = $('vLamps'); for (let i = 0; i < 16; i++) vl.appendChild(document.createElement('i')); }
+// Theremin mode (0.3): the pad on Filament's Play tab; the magic eye shows its tuning (frame())
+thm = createTheremin({
+  dev: () => dev, engine: () => E, withEngine, wake, store, makeKnob, fitCanvas,
+  era: () => { const p = dev === 'filament' ? cur : DS.filament && DS.filament.cur; return !!(p && p.era && p.era.on); },
+  flare: v => { if (dev === 'filament') showNote(SHOW, v); },
+});
 refreshShowChips();
 let lampsShown = -1;
 function paintVoiceLamps(n) {
@@ -4469,12 +4492,14 @@ TVIEW.ptr = new Map();
   tvSync();
 }
 let vuL = 0, vuR = 0, eyeLv = 0, anBuf = null, lastFrame = 0, lastNow = 0;
+const EYE = { mode: 'level', lv: 0, skew: 0, cents: null };   // what the magic eye drew last (test hook)
 function rms(an) { if (!anBuf || anBuf.length !== an.fftSize) anBuf = new Float32Array(an.fftSize); an.getFloatTimeDomainData(anBuf); let s = 0, p = 0; for (let i = 0; i < anBuf.length; i++) { const v = anBuf[i]; s += v * v; const a = Math.abs(v); if (a > p) p = a; } return [Math.sqrt(s / anBuf.length), p]; }
-function drawEye(lv) {
+// skew (Theremin mode's tuning, -1 flat .. 1 sharp) turns the shadow toward that side
+function drawEye(lv, skew) {
   const f = fitCanvas($('eyeCv')); if (!f) return; const c = f.c, w = f.w, h = f.h, cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 2;
   c.clearRect(0, 0, w, h);
   c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fillStyle = '#041007'; c.fill();
-  const open = (1 - clampN(lv, 0, 1)) * Math.PI * 0.42 + 0.03, top = -Math.PI / 2;
+  const open = (1 - clampN(lv, 0, 1)) * Math.PI * 0.42 + 0.03, top = -Math.PI / 2 + clampN(skew || 0, -1, 1) * 0.6;
   const g = c.createRadialGradient(cx, cy, R * 0.2, cx, cy, R); g.addColorStop(0, 'rgba(120,255,170,0.95)'); g.addColorStop(1, 'rgba(0,200,110,0.55)');
   c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R, top + open, top - open + Math.PI * 2); c.closePath(); c.fillStyle = g; c.fill();
   c.beginPath(); c.arc(cx, cy, R * 0.3, 0, Math.PI * 2); c.fillStyle = '#0b0b0b'; c.fill();
@@ -4640,7 +4665,11 @@ function frame(now) {
   eyeLv += (clampN(pk / 0.89, 0, 1) - eyeLv) * (1 - Math.exp(-dt / (pk / 0.89 > eyeLv ? 0.03 : 0.4)));
   if (!TVIEW.open) {                      // all of these are under the big tube view while it is open
     drawVU(vuL, vuR);
-    drawEye(eyeLv);
+    const te = thm ? thm.eye(E && E.meters ? E.meters.filament : null, dt) : null;
+    EYE.mode = te ? 'tune' : 'level'; EYE.lv = te ? te.lv : eyeLv; EYE.skew = te ? te.skew : 0; EYE.cents = te ? te.cents : null;
+    if ($('eyeLab').textContent !== EYE.mode) { $('eyeLab').textContent = EYE.mode; $('eyeBox').title = te ? 'Magic eye: Theremin mode tuning, closed on a note, leaning to the sharp or flat side' : 'Magic eye: closes as the output nears full scale'; }
+    drawEye(EYE.lv, EYE.skew);
+    if (thm) thm.frame(now);
     const sec = $('mStereo'); if (sec.offsetParent) { const s0 = GON.scale; drawGonio(running); gonioWatch(s0); }
     paintHost();
     if ($('mEq').offsetParent) drawEq(now);
@@ -5594,6 +5623,8 @@ window.__synth = {
   deck: () => deck.test,
   player: () => player.test,
   roll: () => roll.test,
+  theremin: () => thm.test,
+  eye: () => ({ ...EYE }),
   // the graphic EQ: the maths the plot uses, and what the live rack is running
   eq: {
     response: (f, gains, n, fs) => eqResponse(f, gains, n, fs || 48000), fit: (id, n) => eqFit(id, n), target: (id, f) => eqTarget(id, f),

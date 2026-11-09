@@ -103,10 +103,16 @@
 //   notes survive the keyboard moving to the other device) and {t:'flush'} (drop every queued
 //   pb event that has not landed yet; sent on stop). {t:'release'} lets go of keys the page was
 //   holding (blur, tab hide, device change) and leaves pb notes sounding.
+//   {t:'thm',on,p,a} is Theremin mode (the pad on the Play tab): while on, one note (THN, outside the
+//   MIDI range, so no key's off can end it) sounds at the fractional pitch p (MIDI units, smoothed over
+//   about 20 ms), its level scaled by a (0..1, smoothed over about 12 ms). It plays the ordinary voice
+//   with the patch's envelopes, filters and unison; in 1939 mode it is ignored (the divided masters
+//   cannot slide). on false lets it go like a key.
 // Messages out: {t:'meter', v1, v2, voices, cpu, notes} about 30 times a second.
 
 const OS = 2;
 const NV = 16;                         // voice pool (patch.voice.count picks how many are used)
+const THN = 128;                       // Theremin mode's note number: outside 0..127, so only {t:'thm'} starts or ends it
 const CTRL = 8;                        // control rate: every 8 output frames
 const TWO_PI = Math.PI * 2;
 
@@ -552,6 +558,7 @@ class Filament extends AudioWorkletProcessor {
     // masters' base steps, per-tick scratch (each master's count at the tick and its step per 2x sample),
     // and the fixed resonators' coefficients (a1, a2, a3, k each; trapezoidal state variable sections)
     this.e39 = false; this.pb39 = NaN;
+    this.thP = 60; this.thA = 0; this.thOn = false;   // Theremin mode: target pitch, level, whether the pad is held
     this.c39 = new Float64Array(12); for (let i = 0; i < 12; i++) this.c39[i] = (i * 0.381966) % 1;
     this.vb39 = new Float64Array(6); for (let c = 0; c < 6; c++) this.vb39[c] = c / 6;
     this.fb39 = new Float64Array(12); this.vm39 = new Float64Array(6);
@@ -574,7 +581,7 @@ class Filament extends AudioWorkletProcessor {
   newVoice(i) {
     return {
       i, on: false, note: 60, vel: 0.8, gate: false, sust: false, pb: false, age: 0, pan: 0, gl: 0.7071, gr: 0.7071,
-      pitch: 60, pitchT: 60, o1: new Osc(), o2: new Osc(), sub: new Osc(),
+      pitch: 60, pitchT: 60, tg: 0, o1: new Osc(), o2: new Osc(), sub: new Osc(),
       ae: 0, as: E_IDLE, fe: 0, fs: E_IDLE, vg: 0, pending: null, fade: 1, killing: false,
       fL: new Filt(), fR: new Filt(), st2: false, uPos: 0, lastPan: 9,
       fBL: new Filt(), fBR: new Filt(), stB: false,  // filter slot B (left or both, right)
@@ -606,7 +613,11 @@ class Filament extends AudioWorkletProcessor {
   lfoHz(l, q) { const sb = syncBeats(l); return sb ? this.ckTempo / (60 * sb) : clamp(num(l.rate, q ? 0.2 : 5), 0.01, 40); }
 
   // ----- patch handling -----
-  setPatch(p) { this.P = p; this.e39 = !!(p && p.era && p.era.on); this.buildTables(); this.arpPatch(); }
+  setPatch(p) {
+    this.P = p; this.e39 = !!(p && p.era && p.era.on); this.buildTables(); this.arpPatch();
+    // 1939 mode cannot slide a divided note: a theremin note stops here (a mode change rides the patch duck, so silently)
+    if (this.e39) { this.thOn = false; this.held = this.held.filter(h => h !== THN); for (const v of this.voices) if (v.note === THN && v.on) { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.sust = false; v.pending = null; v.fL.reset(); v.fR.reset(); v.fBL.reset(); v.fBR.reset(); } }
+  }
   // ----- arpeggiator -----
   // Switched on, the notes the keys are holding move into it (they stop, and it starts stepping through
   // them); switched off, its note lets go and the keys still down (or on the pedal) play as a chord again.
@@ -618,7 +629,7 @@ class Filament extends AudioWorkletProcessor {
       A.on = true;
       for (let i = 0; i < NV; i++) {
         const v = this.voices[i];
-        if (v.on && v.gate && !v.killing && A.find(v.note) < 0) { const n = v.note, vel = v.vel, pb = v.pb; this.noteOff(n, true); A.keyOn(n, vel, pb, f); }
+        if (v.on && v.gate && !v.killing && v.note !== THN && A.find(v.note) < 0) { const n = v.note, vel = v.vel, pb = v.pb; this.noteOff(n, true); A.keyOn(n, vel, pb, f); }
       }
     } else {
       A.on = false;
@@ -727,13 +738,14 @@ class Filament extends AudioWorkletProcessor {
       case 'sus': this.sus = !!m.on; if (!this.sus) { this.releaseSustained(); if (this.arp.on) this.arp.susOff(); } break;
       case 'panic':
         this.arp.panic();
-        this.held = []; this.kbdHeld.clear(); this.sus = false;
+        this.held = []; this.kbdHeld.clear(); this.sus = false; this.thOn = false;
         this.voices.forEach(v => { v.on = false; v.as = E_IDLE; v.ae = 0; v.gate = false; v.sust = false; v.pb = false; v.pending = null; });
         break;
       case 'release': this.releaseInput(); break;
       case 'play': this.playing = !!m.on; break;
       case 'clock': { const f = m.at != null ? m.at : currentFrame, b = this.arp.beatAt(f); this.setClock(m, f); this.arp.clock(f, b); break; }
       case 'flush': this.events = this.events.filter(e => !e.pb); break;
+      case 'thm': this.thm(m); break;
       case 'active':      // the rack moved the keyboard to another device: let go of every key, let the tails ring
         this.active = !!m.on;
         if (!this.active && !this.playing) {
@@ -746,6 +758,23 @@ class Filament extends AudioWorkletProcessor {
   }
 
   // ----- notes -----
+  // the pitch a note number starts at: its own, or the theremin's for THN
+  pof(n) { return n === THN ? this.thP : n; }
+  // Theremin mode: on starts THN (or keeps it), every message moves its pitch and level; off lets it go.
+  thm(m) {
+    const p = num(m.p, this.thP);
+    this.thP = clamp(p, 0, 127.99); this.thA = clamp(num(m.a, 0), 0, 1);
+    const on = !!m.on && !this.e39;
+    let held = false;
+    for (let i = 0; i < NV; i++) {
+      const v = this.voices[i];
+      if (v.on && v.note === THN && !v.killing) { v.pitchT = this.thP; if (v.gate) held = true; }
+      if (v.pending && v.pending.n === THN) held = true;
+    }
+    if (on && !held) this.noteOn(THN, 1, false);
+    else if (!on && this.thOn) this.noteOff(THN, true);
+    this.thOn = on;
+  }
   mode() { return ((this.P.voice || {}).mode) || 'poly'; }
   count() { return clamp(((this.P.voice || {}).count) | 0 || 8, 1, NV); }
   uni() { return this.e39 ? 1 : clamp(num((this.P.voice || {}).unison, 1) | 0, 1, 8); }   // 1939 mode: copies would be the same divided wave
@@ -763,11 +792,13 @@ class Filament extends AudioWorkletProcessor {
         const v = this.voices[j];
         if (j >= U) { if (v.on && v.gate) { v.gate = false; v.as = E_REL; v.fs = E_REL; } continue; }
         const legato = mode === 'legato' && v.gate && v.on;
-        v.note = n; v.pitchT = n; v.vel = vel; v.gate = true; v.sust = false; v.pb = pb;
+        const pn = this.pof(n);
+        v.note = n; v.pitchT = pn; v.vel = vel; v.gate = true; v.sust = false; v.pb = pb;
         v.uPos = U > 1 ? j / (U - 1) * 2 - 1 : 0;
-        if (!v.on) { v.pitch = n; this.startVoice(v, n, vel, true, j, U, pb); }
+        if (!v.on) { v.pitch = pn; this.startVoice(v, n, vel, true, j, U, pb); }
         else if (!legato) this.trigger(v, vel);
-        if (glideOff) v.pitch = n;
+        if (glideOff) v.pitch = pn;
+        if (n === THN) v.tg = v.tg || this.thA;
       }
       return;
     }
@@ -792,13 +823,15 @@ class Filament extends AudioWorkletProcessor {
     v.on = true; v.note = n; v.vel = vel; v.gate = true; v.sust = false; v.pb = !!pb; v.killing = false; v.fade = 1; v.pending = null;
     v.age = ++this.order;
     v.uPos = (U || 1) > 1 ? (j || 0) / (U - 1) * 2 - 1 : 0;
-    if (!mono || num((P.voice || {}).glide, 0) <= 0) v.pitch = n;
-    v.pitchT = n;
+    const pn = this.pof(n);
+    if (!mono || num((P.voice || {}).glide, 0) <= 0) v.pitch = pn;
+    v.pitchT = pn;
+    v.tg = n === THN ? this.thA : 0;
     // pan (unison copies share their note's pan and spread around it)
     const st = P.stereo || {}, spread = clamp(num(st.spread, 0.5), 0, 1), pm = st.pan || 'alt';
     let pan = 0;
     if (!j) { if (pm === 'alt') { this.altPan = -this.altPan; pan = this.altPan * spread; }
-      else if (pm === 'key') pan = clamp((n - 60) / 30, -1, 1) * spread;
+      else if (pm === 'key') pan = clamp((pn - 60) / 30, -1, 1) * spread;
       else if (pm === 'random') pan = (Math.random() * 2 - 1) * spread;
       this.lastPan = pan; }
     else pan = this.lastPan || 0;
@@ -827,8 +860,8 @@ class Filament extends AudioWorkletProcessor {
         const v = this.voices[j];
         if (this.held.length) {             // fall back to the previous held note
           const m = this.held[this.held.length - 1];
-          v.note = m; v.pitchT = m;
-          if (num((this.P.voice || {}).glide, 0) <= 0) v.pitch = m;
+          v.note = m; v.pitchT = this.pof(m);
+          if (num((this.P.voice || {}).glide, 0) <= 0) v.pitch = v.pitchT;
           if (mode === 'mono') this.trigger(v, v.vel);
           continue;
         }
@@ -931,6 +964,11 @@ class Filament extends AudioWorkletProcessor {
     this.meterOut(n, t0);
     return true;
   }
+  thm1() {
+    if (!this.thOn) return null;
+    for (let i = 0; i < NV; i++) { const v = this.voices[i]; if (v.on && v.gate && v.note === THN) return { p: v.pitch, a: v.tg, bend: this.bend * num((this.P.voice || {}).bend, 2) + num(this.P.tune, 0) / 100 }; }
+    return null;
+  }
   // meters, about 30 a second
   meterOut(n, t0) {
     this.cpuMs += Date.now() - t0; this.cpuFrames += n;
@@ -941,8 +979,10 @@ class Filament extends AudioWorkletProcessor {
       let nv = null; for (let i = 0; i < NV; i++) { const w = this.voices[i]; if (w.on && !w.killing && (!nv || w.age > nv.age)) nv = w; }
       this.port.postMessage({
         t: 'meter', dev: 'filament', v1: Math.sqrt(this.v1Acc / Math.max(1, this.accN)), v2: Math.sqrt(this.v2Acc / Math.max(1, this.accN)),
-        voices: act.length, notes: act.filter(v => v.gate || v.sust).map(v => v.note),
+        voices: act.length, notes: act.filter(v => (v.gate || v.sust) && v.note !== THN).map(v => v.note),
         cpu: this.cpuMs / (this.cpuFrames / this.sr * 1000),
+        // Theremin mode: the sounding pitch (smoothed, before vibrato and drift) and level, for the magic eye; null when it is not held
+        thm: this.thm1(),
         fcA: nv ? nv.fcA : 0, fcB: nv && routeOf(this.P) ? nv.fcB : 0,
         // the clock as this worklet sees it at the end of the block, and the two global LFO phases there
         clk: { tempo: this.ckTempo, playing: this.ckPlay, beat: this.beatAt(currentFrame + n), frame: currentFrame + n },
@@ -1188,6 +1228,8 @@ class Filament extends AudioWorkletProcessor {
     const fA = coef(Math.max(0.001, num(ef.a, 0.005)) / 1.466, sr), fD = coef(Math.max(0.001, num(ef.d, 0.3)) / 4.6, sr), fS = clamp(num(ef.s, 0.5), 0, 1), fR = coef(Math.max(0.003, num(ef.r, 0.3)) / 4.6, sr);
     const velA = clamp(num(ea.vel, 0.5), 0, 1);
     const vo = P.voice || {}, glide = Math.max(0, num(vo.glide, 0)), gk = glide > 0 ? 1 - Math.exp(-CTRL / (glide * sr)) : 1;
+    // Theremin mode: its pitch slides over about 20 ms whatever the glide knob says, its level over about 12 ms
+    const gkT = 1 - Math.exp(-CTRL / (0.02 * sr)), thK = 1 - Math.exp(-1 / (0.012 * sr)), thA = this.thA;
     const bendR = num(vo.bend, 2), driftC = clamp(num(P.drift, 1.5), 0, 8);
     const mwv = num((P.mw || {}).vib, 30), mwc = num((P.mw || {}).cut, 0), atc = num((P.at || {}).cut, 1), atv = num((P.at || {}).vib, 0);
     const lG = 1.3 * Math.pow((this.lTube.gain || 0.774) / 0.774, LGX);
@@ -1236,6 +1278,8 @@ class Filament extends AudioWorkletProcessor {
       let dt1 = v.dt1, dt2 = v.dt2, dts = v.dts, pw1 = v.pw1, pw2 = v.pw2, ampL = 1, ampR = 1, gl = 0.7071, gr = 0.7071;
       let fdG = 1, fdC = 1;
       let fade = v.fade;
+      const isT = v.note === THN, gkv = isT ? gkT : gk;
+      let tg = v.tg;
       let l1 = 0, l2 = 0, ls = 0, ln = 0, fm = 0, ring = 0, G1 = 1, mk1 = 1, vol = 0;
       const use2 = l2Any || sync, useS = lsAny;
       for (let i = a; i < b; i++) {
@@ -1296,7 +1340,7 @@ class Filament extends AudioWorkletProcessor {
           if (--v.driftN <= 0) { v.driftT = Math.random() * 2 - 1; v.drift2T = Math.random() * 2 - 1; v.driftN = (0.3 + Math.random() * 0.6) * sr / CTRL; }
           v.drift += (v.driftT - v.drift) * 0.0003; v.drift2 += (v.drift2T - v.drift2) * 0.0003;
           // pitch: LFOs, wheel and pressure, unison detune, drift
-          v.pitch += (v.pitchT - v.pitch) * gk;
+          v.pitch += (v.pitchT - v.pitch) * gkv;
           const vib = ((CT[cb + K_LP] + this.mw * mwv + this.at * atv) * l1L + CT[cb + K_L2P] * l2L) / 100;
           const det = v.uPos * CT[cb + K_DET] / 100;
           const pn = v.pitch + this.bend * bendR + sx + vib + det + driftC * v.drift / 100 + MD[MD_PITCH] * 12;
@@ -1398,6 +1442,7 @@ class Filament extends AudioWorkletProcessor {
         if (v.killing) { fade -= 1 / (0.002 * sr); if (fade <= 0) { fade = 0; } }
         const duck = duck0 + (this.duck - duck0) * (fr / frames);
         let lev = ae * (1 - velA * (1 - v.vel));
+        if (isT) { tg += (thA - tg) * thK; lev *= tg; }
         if (isLpg) {
           // the vactrol: lit by the envelope (with velocity), fast on, slow off, slower as it darkens
           const lt = lev > 1 ? 1 : lev;
@@ -1462,7 +1507,7 @@ class Filament extends AudioWorkletProcessor {
       // write back
       v.dcx = dcx; v.dcy = dcy; v.nb0 = nb0; v.nb1 = nb1; v.nb2 = nb2;
       v.ae = ae; v.fe = fe; v.as = as; v.fs = fst; v.vg = vg; v.dt1 = dt1; v.dt2 = dt2; v.dts = dts; v.pw1 = pw1; v.pw2 = pw2;
-      v.fade = fade;
+      v.fade = fade; v.tg = tg;
       v2Acc += fl[F_V2] + (stA ? frs[F_V2] : 0); fl[F_V2] = 0; frs[F_V2] = 0;
       // flush denormals / blow-ups
       if (FL.bad() || FR.bad()) { FL.reset(); FR.reset(); } else { FL.flush(); FR.flush(); }

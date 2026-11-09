@@ -77,6 +77,8 @@ task can read it).
 | `frontend/public/synth/player.js` | Song library player. Loads a bundled file, an opened file, or a drop, and plays it on `host.transport` (play, stop, tempo). Each MIDI channel routes to a device |
 | `frontend/public/synth/paperroll.js` | The paper roll's pure part: the pattern schema (`kind: 'paperroll'`, `v: 1`; 16 steps of note, punch, accent, slide, tie; length, step rate, gate, swing, velocity, accent velocity, transpose), `normalizeRoll`, `rollPlan` (the notes that start on a run of steps, ties and slides resolved), `rollScore`, six factory rolls |
 | `frontend/public/synth/paperroll-ui.js` | The paper roll strip under the song library: the step editor, the scheduler on `host.transport` (150 ms lookahead, a 25 ms timer, frame stamps, the library player's delivery paths; a strike more than 60 ms late is dropped), the canvas of punched paper moving past a brass reader. State in localStorage `filament_roll` |
+| `frontend/public/synth/theremin.js` | Theremin mode's pure part: the page settings (`filament_theremin`: on, the pad's left note C1 to C4, 1 to 5 octaves across, snap, volume range 12 to 60 dB), `normalizeThm`, `padPitch` (across to a fractional MIDI pitch, snap pulling toward the nearest note), `padLevel` (up to a level: the bottom 3% is silence, then the range in dB to 0 dB at the top), `tuneOf` (nearest note and cents). Our own code. |
+| `frontend/public/synth/theremin-ui.js` | The Theremin section (Filament's Pad tab on a phone): the pad (pointer, one note at a time, and keys: Enter, arrows, Escape), the chips and knobs, the readout, the pad drawn in the page's frame loop, and `eye()`, which the frame loop asks for the magic eye's tuning while the pad is held. Sends `{t:'thm',on,p,a}` to Filament's worklet. Our own code. |
 | `frontend/public/synth/midisong.js` | Pure parse and route helpers for the library player. Parsing is the vendored `@tonejs/midi`. Time is quarter-note beats, so the transport tempo is the playback tempo |
 | `frontend/public/synth/vendor/tonejs-midi.js` | `@tonejs/midi` 2.0.28 (MIT) bundled with `midi-file` 1.2.4 and `array-flatten` 3.0.0. See `THIRD_PARTY_NOTICES.md` |
 | `frontend/public/synth/midi/` | Bundled `.mid` files and `catalog.json` (title, composer, composition status, CC0 sequence note, and Halloween preset names) |
@@ -1036,7 +1038,29 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
   - [ ] Still open: the roll in the project file (`project.js`); several named user rolls and a chain of rolls (song mode); the
         MIDI deck recording the roll's notes, and the master Render WAV including it; the on-screen keys lighting with the roll's
         notes; per-step velocity or probability, if wanted.
-- [ ] Theremin mode with the magic eye as tuning indicator
+- [ ] Theremin mode with the magic eye as tuning indicator - first slice 9 Nov 2026 (nightly). Filament only.
+  - [x] The pad: a Theremin section on Filament's panel (a full row on a desktop; on a phone its own Pad tab after Play, the pad
+        240 px tall, since the Play tab already shows four sections). Across is
+        pitch, up is volume, one finger or the mouse plays one continuous note; a second finger is ignored. The pad starts at
+        C1, C2, C3 or C4 (default C3) and spans 1 to 5 octaves (default 3); snap (0 to 100%) pulls the pitch toward the nearest
+        note; range (12 to 60 dB, default 36) is how many dB lie between the bottom and the top; the bottom 3% is silence. Lines
+        mark each semitone (a C named and bright). The readout names the note, the cents and the level. A press on the pad
+        while the mode is off switches it on. Keys on the focused pad: Enter starts and stops, left and right move a semitone
+        (Shift: 10 cents), up and down 5% of the level, Escape stops. The settings are the page's (localStorage
+        `filament_theremin`), not the patch's, so no patch field and no schema change. One flare on the tubes per press.
+  - [x] The voice: the worklet takes `{t:'thm',on,p,a}` and holds one note numbered 128 (outside MIDI, so no key's off ends
+        it) at the fractional pitch p, smoothed over about 20 ms whatever the glide knob says, and scales its level by a,
+        smoothed over about 12 ms. It is the patch's ordinary voice: envelopes, both filters, unison, the LFOs, bend, the
+        wheel and the rack apply; in mono and legato modes it takes the voice like a key. The meter's note list leaves it
+        out and posts its sounding pitch and level (`thm`). The rail moving off Filament, Panic, the page letting go of keys
+        (blur, tab hidden) and 1939 mode switching on each end it. In 1939 mode the pad rests (the divided masters cannot
+        slide). Nothing else in the voice changed: all bench cases are bit-identical with the pad unused.
+  - [x] The magic eye as tuning indicator: while the pad is held, the chassis eye reads "tune" and closes as the sounding
+        pitch (the meter's, plus bend and tune) reaches the nearest note, wide open at 50 cents off, its shadow leaning to the
+        sharp or flat side; let go and it is the level eye again. Smoothed over 40 ms in the frame loop.
+  - [ ] Still open: Theremin mode on Cathode (and the other rack devices); the MIDI deck recording the pad (a pitch and level
+        lane, not notes); vibrato from the pad (a wobble of the finger already works); a factory patch or two voiced for it
+        (a sine with slow attack and a little vibrato is the classic sound); the big tube view showing the eye.
 - [ ] Share links (`?p=`), JSON export/import, Surprise me
 - [x] WAV recording (10 minute cap) - 14 Oct, master bus: live record and offline render, 24-bit 44.1 kHz stereo. (The MIDI file render in slice 2 is a separate button: 48 kHz 16-bit of a take. Still open.)
 - [ ] Tube view, faces (walnut, studio rack black, black light), lava lamp module (the tube view landed 4 Nov under the Tube show item; faces and the lava lamp module are still open)
