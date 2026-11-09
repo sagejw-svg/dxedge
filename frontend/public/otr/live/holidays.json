@@ -28,6 +28,57 @@
         { "show": "command-performance", "title": "Thanksgiving Special" },
         { "show": "the-mel-blanc-show", "title": "Thanksgiving Party" }
       ]
+    },
+    {
+      "id": "christmas-2026",
+      "name": "Christmas",
+      "tz": "America/Los_Angeles",
+      "from": "2026-12-18",
+      "to": "2026-12-26",
+      "peak": ["2026-12-24", "2026-12-25"],
+      "counts": { "shoulder": 4, "peak": 10 },
+      "episodes": [
+        { "show": "burns-and-allen", "title": "Gracie's Christmas Carol" },
+        { "show": "the-six-shooter", "title": "Britt Ponsett's Christmas Carol" },
+        { "show": "the-new-adventures-of-sherlock-holmes", "title": "The Night Before Christmas" },
+        { "show": "the-great-gildersleeve", "title": "Twas the Night Before Christmas" },
+        { "show": "one-mans-family", "title": "Christmas Morning At The Barbours" },
+        { "show": "father-knows-best", "title": "Christmas Program" },
+        { "show": "the-phil-harris-alice-faye-show", "title": "Annual Christmas Show" },
+        { "show": "the-milton-berle-show", "title": "Salute To Christmas" },
+        { "show": "fibber-mcgee-and-molly", "title": "Christmas Shopping" },
+        { "show": "the-harold-peary-show", "title": "Santa at the Childrens Christmas Party" },
+        { "show": "red-ryder", "title": "Christmas Story" },
+        { "show": "the-great-gildersleeve", "title": "Christmas Eve at Home" },
+        { "show": "our-miss-brooks", "title": "A Letter To Santaaka Dept. Store Contest" },
+        { "show": "amos-and-andy", "title": "Andy Plays Santa (Re-used #051, but slightly new script)" },
+        { "show": "the-aldrich-family", "title": "Christmas Eve With The Family" },
+        { "show": "dragnet", "title": "Twenty-Two Rifle for Christmas" }
+      ]
+    },
+    {
+      "id": "newyear-2026",
+      "name": "New Year's",
+      "tz": "America/Los_Angeles",
+      "from": "2026-12-30",
+      "to": "2027-01-01",
+      "peak": ["2026-12-31", "2027-01-01"],
+      "counts": { "shoulder": 4, "peak": 8 },
+      "episodes": [
+        { "show": "the-jack-benny-show", "title": "New Year's Eve date with a French girl" },
+        { "show": "gunsmoke", "title": "Pucketts New Year" },
+        { "show": "the-milton-berle-show", "title": "Salute To The New Year" },
+        { "show": "the-phil-harris-alice-faye-show", "title": "New Years Resolution" },
+        { "show": "the-great-gildersleeve", "title": "Big New Years Eve Party" },
+        { "show": "fibber-mcgee-and-molly", "title": "New Year's Celebration" },
+        { "show": "wild-bill-hickok", "title": "Happy New Year" },
+        { "show": "our-miss-brooks", "title": "Babysitting On New Years Eve" },
+        { "show": "amos-and-andy", "title": "Mysterious New Year's Card (Elected Best show of 1948)" },
+        { "show": "the-harold-peary-show", "title": "New Years Barn Dance" },
+        { "show": "the-life-of-riley", "title": "New Years Eve- 10 Dates For Babs" },
+        { "show": "it-pays-to-be-ignorant", "title": "What is a New Years Resolution" },
+        { "show": "quiet-please", "title": "Rain on New Year's Eve" }
+      ]
     }
   ]
 }
