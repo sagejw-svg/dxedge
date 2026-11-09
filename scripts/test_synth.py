@@ -5151,6 +5151,50 @@ with sync_playwright() as pw:
         uni_res.append((uname, round(worst / max(steady, 1e-9), 2)))
     ck("Mx. a strip going back to unity glides there with no click (unmute, level, pan, a solo let go: largest step within 1.5x the held sine's own)",
        all(x is not None and x < 1.5 for _, x in uni_res), uni_res)
+    # Improvement 9 Nov: the wait before the reroute above is counted on the audio clock. It was a 200 ms
+    # wall-clock timer, while the glide runs on ctx.currentTime; under load the audio clock fell behind
+    # (measured: 177 ms of audio in 276 ms of wall time), and the check above failed now and then (42x). Here
+    # the audio clock stops outright: a mixer on its own context, a stereo DC source, the context suspended
+    # right after the move back and held 450 ms (past the old timer), then resumed. Deterministic: the largest
+    # sample step is read in units of the glide's own first step (0.5 / 960), so a reroute before the glide
+    # lands is the whole jump (960x on main), and the glide alone is 1x or less.
+    stall = pg.evaluate("""async () => {
+      const { createMixer } = await import('/synth/mixer.js');
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const cases = [['unmute', 'a', { mute: true }, { mute: false }], ['level 0.3 back to 1', 'a', { level: 0.3 }, { level: 1 }],
+                     ['pan hard left back to centre', 'a', { pan: -1 }, { pan: 0 }], ['a solo let go', 'b', { solo: true }, { solo: false }]];
+      const CAP = "registerProcessor('mx-stall-cap', class extends AudioWorkletProcessor { process(i) { const x = i[0]; if (x && x.length) this.port.postMessage([x[0].slice(), (x[1] || x[0]).slice()]); return true; } });";
+      const url = URL.createObjectURL(new Blob([CAP], { type: 'application/javascript' }));
+      const out = [];
+      for (const [name, id, a, b] of cases) {
+        const ctx = new AudioContext({ sampleRate: 48000 });
+        try { await ctx.resume(); await ctx.audioWorklet.addModule(url); } catch (e) { out.push([name, null, String(e)]); continue; }
+        const mx = createMixer(ctx), sum = ctx.createGain(), hush = ctx.createGain(); hush.gain.value = 0;
+        const cap = new AudioWorkletNode(ctx, 'mx-stall-cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit' });
+        const dc = ctx.createConstantSource(); dc.offset.value = 0.5;
+        const st = ctx.createChannelMerger(2); dc.connect(st, 0, 0); dc.connect(st, 0, 1);
+        const L = [], R = []; let on = false;
+        cap.port.onmessage = e => { if (on) { L.push(e.data[0]); R.push(e.data[1]); } };
+        sum.connect(cap); cap.connect(hush); hush.connect(ctx.destination);
+        mx.attach('a', st); mx.connect(sum); dc.start();
+        await w(300); on = true; await w(200);
+        mx.set(id, a); await w(300);
+        mx.set(id, b); await ctx.suspend(); await w(450);
+        const route = () => (mx.route ? mx.route('a') : 'no route()'), held = route();
+        await ctx.resume(); await w(600);
+        on = false;
+        let worst = 0;
+        for (const side of [L, R]) {
+          const n = side.reduce((s, x) => s + x.length, 0), v = new Float32Array(n); let o = 0;
+          side.forEach(x => { v.set(x, o); o += x.length; });
+          for (let i = 1; i < n; i++) worst = Math.max(worst, Math.abs(v[i] - v[i - 1]));
+        }
+        out.push([name, +(worst / (0.5 / 960)).toFixed(2), held, route()]);
+        try { dc.stop(); await ctx.close(); } catch (e) {}
+      }
+      return out; }""")
+    ck("Mx. with the audio clock stopped right after a strip goes back to unity, the reroute waits for the glide on the audio clock (largest step within 1.5x the glide's own; held route while stopped, the wire after)",
+       len(stall) == 4 and all(s[1] is not None and s[1] < 1.5 and s[2] in ("gain", "pan") and s[3] == "direct" for s in stall), stall)
     pg.evaluate("() => __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 })")
     pg.evaluate("() => { __synth.panic(); __synth.mixArm(['filament', 'cathode']); }")
     pg.evaluate("""() => {

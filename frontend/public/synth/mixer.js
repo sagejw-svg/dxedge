@@ -219,8 +219,19 @@ export function createMixer(ctx) {
   // waits for the gains to glide to unity first. Rerouting at once skipped the glide: the signal
   // jumped from its faded level to full in one sample, a click (review 7 Nov, R1107-1). Going the
   // other way is seamless, because the gains of a route not in use rest at unity.
+  // The wait is counted on the audio clock, not the wall clock: the glide runs on ctx.currentTime, and
+  // that clock can fall behind a timer (a loaded machine, a stalled audio thread) or stop (a suspended
+  // context). A plain 200 ms timer then rerouted with the gain still short of unity, the same click
+  // (improvement 9 Nov; measured: audio 177 ms against wall 276 ms under load, and a full jump when the
+  // context was suspended right after an unmute). The timer only polls; the audio clock decides.
   const RANK = { direct: 0, gain: 1, pan: 2 };
-  const SETTLE_MS = 200;    // ten time constants of setP: the gains are within 5e-5 of their targets
+  const SETTLE_S = 0.2;     // ten time constants of setP: the gains are within 5e-5 of their targets
+  function settleWait(ch) {
+    ch.settle = null;
+    const left = ch.settleAt - ctx.currentTime;
+    if (left > 0 && ctx.state !== 'closed') { ch.settle = setTimeout(() => settleWait(ch), Math.max(10, left * 1000)); return; }
+    ch.settled = true; apply(); ch.settled = false;
+  }
   function holdRoute(ch, mode) {
     if (!live || !ch.source || !(ch.route in RANK) || RANK[mode] >= RANK[ch.route]) {
       if (ch.settle) { clearTimeout(ch.settle); ch.settle = null; }
@@ -228,7 +239,8 @@ export function createMixer(ctx) {
     }
     if (ch.settled) return mode;
     if (ch.settle) clearTimeout(ch.settle);
-    ch.settle = setTimeout(() => { ch.settle = null; ch.settled = true; apply(); ch.settled = false; }, SETTLE_MS);
+    ch.settleAt = ctx.currentTime + SETTLE_S;   // apply() restarts every glide from this moment
+    ch.settle = setTimeout(() => settleWait(ch), SETTLE_S * 1000);
     return ch.route;
   }
   function apply() {
@@ -277,6 +289,7 @@ export function createMixer(ctx) {
       return ch.input;
     },
     get(id) { return normalizeStrip(channels[id] && channels[id].strip); },
+    route(id) { return (channels[id] && channels[id].route) || ''; },   // 'direct', 'gain' or 'pan' (read by the suite)
     set(id, partial) {
       const ch = channels[id] || make(id);
       ch.strip = normalizeStrip(Object.assign({}, ch.strip, partial || {}));
