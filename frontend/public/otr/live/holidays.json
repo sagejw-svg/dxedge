@@ -1,0 +1,33 @@
+{
+  "_readme": [
+    "Date-ranged episode overrides for Listenotr Radio. schedule.json stays the daily block grid.",
+    "A range is active on inclusive civil dates in tz. from and to are YYYY-MM-DD and may cross New Year.",
+    "episodes are catalog show ids plus the exact episode title. The player resolves the index from catalog.json. A title that is not in the catalog is skipped. Episodes shorter than eight minutes, or longer than a half-hour block, are skipped so the grid never cuts them in half.",
+    "counts.shoulder is how many of those episodes to place on other days in the range. counts.peak is for dates in peak. counts.center is for the center date, when the week should be heaviest. Each episode is used at most once on a civil date. Placement rotates by counts.shoulder each day and prefers a block whose theme is that show's channel. The rest of the day is the normal pick.",
+    "Outside every range, the day is schedule.json again. Add Christmas or New Year's by appending another range. Sci-Fi Live does not read this file."
+  ],
+  "ranges": [
+    {
+      "id": "thanksgiving-2026",
+      "name": "Thanksgiving",
+      "tz": "America/Los_Angeles",
+      "from": "2026-11-23",
+      "to": "2026-11-29",
+      "center": "2026-11-26",
+      "peak": ["2026-11-25", "2026-11-26", "2026-11-27"],
+      "counts": { "shoulder": 4, "peak": 8, "center": 10 },
+      "episodes": [
+        { "show": "lum-and-abner", "title": "Thanksgiving Dinner" },
+        { "show": "father-knows-best", "title": "Happy Thanksgiving" },
+        { "show": "the-harold-peary-show", "title": "Thanksgiving Play" },
+        { "show": "the-aldrich-family", "title": "The Last Turkeyaka The Thanksgiving Turkey" },
+        { "show": "our-miss-brooks", "title": "Thanksgiving Weekend" },
+        { "show": "abbott-and-costello", "title": "Formal ThanksGiving Dinner Party" },
+        { "show": "dr-christian", "title": "Prelude To Thanksgiving" },
+        { "show": "the-milton-berle-show", "title": "Salute To Thanksgiving" },
+        { "show": "command-performance", "title": "Thanksgiving Special" },
+        { "show": "the-mel-blanc-show", "title": "Thanksgiving Party" }
+      ]
+    }
+  ]
+}

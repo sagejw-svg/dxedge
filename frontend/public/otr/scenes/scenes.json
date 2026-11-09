@@ -19,5 +19,20 @@
     { "id": "study", "name": "Study", "src": "study.jpg", "lamp": { "x": 0.48, "y": 0.66, "s": 0.15, "rot": -2, "tilt": 10, "skew": 0 } },
     { "id": "diner", "name": "Diner", "src": "diner.jpg", "lamp": { "x": 0.55, "y": 0.50, "s": 0.18, "rot": 2, "tilt": 12, "skew": 0 } },
     { "id": "attic", "name": "Attic", "src": "attic.jpg", "lamp": { "x": 0.68, "y": 0.66, "s": 0.24, "rot": 1, "tilt": 6, "skew": -1 } }
+  ],
+  "seasonNote": "seasons is a date-ranged hook for extra rooms. from and to are inclusive civil dates in tz. A season's pictures are used only when the files are actually there. If none of them are, the year-round rooms above stay as they are. Add Christmas the same way: another object, no code change. Do not draw the lamp into the file.",
+  "seasons": [
+    {
+      "id": "thanksgiving-2026",
+      "name": "Thanksgiving",
+      "tz": "America/Los_Angeles",
+      "from": "2026-11-23",
+      "to": "2026-11-29",
+      "scenes": [
+        { "id": "thanksgiving-table", "name": "Thanksgiving table", "src": "thanksgiving/table.jpg", "lamp": { "x": 0.22, "y": 0.72, "s": 0.18, "rot": -1, "tilt": 8, "skew": 0 } },
+        { "id": "thanksgiving-hearth", "name": "Thanksgiving hearth", "src": "thanksgiving/hearth.jpg", "lamp": { "x": 0.78, "y": 0.64, "s": 0.22, "rot": 2, "tilt": 6, "skew": 1 } },
+        { "id": "thanksgiving-kitchen", "name": "Thanksgiving kitchen", "src": "thanksgiving/kitchen.jpg", "lamp": { "x": 0.40, "y": 0.58, "s": 0.15, "rot": 1, "tilt": 10, "skew": -1 } }
+      ]
+    }
   ]
 }
