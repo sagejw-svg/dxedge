@@ -18,6 +18,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
+| R1109-1 | confusing | a | Theremin: the on and off switch does not stop the pad; with it off, a press switches it on and plays | measured |
+| R1109-2 | confusing | a | Theremin: on a mono patch a key takes the pad's voice while the readout and glow still show the pad's note | measured (mono), inferred (full poly pool) |
 | R1108-3 | confusing | f | The paper roll's play starts Dekatron's own step pattern too: Blank Roll's play is a drum beat only (Dekatron strip 0.56), Octave Pump on Filament comes with the factory beat under it; same root as R1030-3 | measured |
 | R1108-4 | confusing | f | The paper roll offers Heptode as a device chip, but it plays nothing (17 strikes, strip 0); same as R1030-4 for the library | measured |
 | R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5) | measured (run kept, strikes), inferred (surprise) |
@@ -41,7 +43,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
-| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov) | measured |
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 9 Nov | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
@@ -69,7 +71,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1845,3 +1847,100 @@ Measured. Fixed tonight.
 Areas a, b, c, d, e. The song library's 21 songs were not replayed one by one (the roll was the
 focus). Suggested next: a and b (Klystron's new source row against its sound, the roll's six
 factory rolls on Cathode and Thyratron with slides), then c with the roll's key in from MIDI.
+
+
+## 2026-11-09 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `75f767a`, sw.js
+`dxedge-v195` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194`
+path in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console
+errors in any run. Focus tonight: area a on Theremin mode (new last night, Filament's Pad section),
+Klystron's joined vowel and source rows (graphics, 8 Nov), and a keyboard sweep of every knob on all
+18 devices; area b on every factory patch from the menu, offline renders of all 27 Filament factory
+patches with the keys and with the pad, user patches saved, reloaded and deleted on Klystron,
+Additron and Resnatron, and the save form's edge cases on Filament, Cathode and Lattice.
+
+### What worked (measured)
+
+- Area b, all 129 factory patches on the 18 devices picked from the menu at 1366 px (Filament 27,
+  Cathode 19, Thyratron 6, Gleam 7, Mote 3, Heptode 1, Geissler 3, Pentagrid 6, Orthicon 5, Trochotron 6,
+  Gyrotron 3, Klystron 5, Phantastron 6, Additron 5, Rhumbatron 7, Resnatron 4, Dekatron 8, Lattice 8):
+  each one shows under its own name, not as edited, no errors.
+- Offline, through the rack, a four-note chord on all 27 Filament factory patches: finite, peak 0.15 to
+  0.90 (none over 0 dBFS), RMS -27.8 to -13.2 dBFS (Eerie Bells and Glass Music Box quietest, as on 6 Nov).
+- The same 27 played from the pad (C4 at 0.8, a slide to G4 +30 cents at full level, let go): finite,
+  peak 0.12 to 0.60. Exposition Choir and Parlor Harp are silent on the pad because they are 1939 mode
+  patches; the readout says "resting: 1939 mode cannot slide a note", as designed.
+- Knob sweep, Home and End by keyboard on every visible slider: Filament 113, Cathode 65, Thyratron 28,
+  Mote 17, Gyrotron 17, Klystron 18, Additron 15, Pentagrid 14, Dekatron 13, Geissler 12, Orthicon 9, and
+  the pitch and mod strips on the rest. Every one changes its device's patch except the two Theremin
+  knobs (page settings, by design) and the pitch and mod strips (spring back, by design). No readout
+  showed NaN, undefined or Infinity.
+- User patches on Klystron, Additron and Resnatron: saved from the form, current after a reload, in the
+  menu, delete shown and working (it lands on Buncher Ah, Copper Flute and Cavity Saw).
+- Save form: Enter saves, Escape cancels, a factory name is still refused (R1103-2).
+- Theremin pad, sound (offline, sine patch): a jump across the whole pad (C3 to C6 in one message), the
+  level from the floor to the top, and the release all stay within the steady sine's own sample step
+  (0.0184 to 0.0186 against 0.0186), so no clicks; the tail after release is -146 dB. Pitch bend at
+  full reaches the pad's note (440 Hz to 494 Hz, +2 semitones).
+- Theremin pad, page: a menu pick or the next arrow while the pad is held keeps the note sounding and
+  a later move slides it; Panic, the rail and 1939 mode let it go (as the suite checks). A window blur
+  ends the note; a mouse still held needs a fresh press. With the pedal down, letting go silences the
+  note (its level goes to 0) and keeps one voice until the pedal comes up, then 0 voices: nothing stuck.
+  Snap and range knobs reach 0 to 100% and 12 to 60 dB by Home and End, and the map follows (halfway
+  is -31 dB at 60 dB of range, -5.9 dB at 12). The pad shows a 2 px amber focus ring.
+- Phone 375 px: Filament's tabs are Play, Pad, Osc, Filter, Mod, Stereo, Rack, Mix; the pad is 313 x 240
+  px with every chip and the on switch 44 px tall; a touch drag plays and slides (to 76.05) without
+  scrolling the page, and lifting ends it. No sideways scroll.
+- Klystron: the source switch shows vowel lit, file and mic not; the vowel row's i lights alone after a
+  click and marks the patch edited.
+
+### Findings
+
+**R1109-1. The Theremin on and off switch does not stop the pad.** Area a. Confusing. Measured.
+- Steps: Filament, Theremin section, switch it off; press the pad.
+- Expected: off means the pad rests (a guard against a stray touch), or there is no switch.
+- Actual: the press switches the mode back on and plays (state on, note sounding, the switch reads
+  "on"). The readout says so ("off: touch the pad to switch it on"), so off only changes the pilot lamp
+  and the readout. A design call for James: make off a real rest, or drop the switch and keep the lamp.
+
+**R1109-2. On a mono patch a key takes the pad's voice, and the pad's readout does not say so.** Area a.
+Confusing. Measured (mono), inferred (a full poly pool).
+- Steps: Filament, voice mode mono, hold the pad at F#4, play C4 on the keys, let it go.
+- Actual: while the key is down C4 sounds (the meter's pad note is gone, notes [60]) but the readout keeps
+  "F#4 ±0 cents, -7 dB", the pad's glow stays, and the eye drops back to level. Key up: the pad's note
+  comes back (mono falls back to the held list). From the code, in poly the same steal happens once
+  every voice is in use, and there the pad does not come back until it is moved.
+- Options: the pad keeps its voice (keys play around it), or the readout says "a key has the voice".
+
+**R1109-3. Save with an empty name did nothing and left the last toast up.** Area b. Confusing.
+Measured. Fixed tonight.
+- Steps: save, clear the name (or type only spaces), press ok or Enter.
+- Actual: the form stayed open with no word; if a toast was still up it read "Saved ..." from the save
+  before, which reads as success.
+- Fix: the toast says "Type a name for the patch first." and focus stays in the name.
+
+**R1109-4. Closing the save form dropped keyboard focus to the page.** Area b (and h). Confusing.
+Measured. Fixed tonight.
+- Steps: Tab to save, Enter, then Escape, cancel, or type a name and Enter.
+- Actual: focus went to the page body each time; the next Tab went on from the MIDI button.
+- Fix: closing the form hands focus back to save. Enter in the name field now holds back its default,
+  because with focus already back on save the same key would have pressed it and opened the form again.
+- Check: "Pn. save with an empty name says so ..." and "Pn. closing the save form by Escape, cancel or a
+  save hands focus back to save" (both fail on the live tree: toast "", focus BODY three times).
+
+### Still open, re-measured tonight
+
+- R1025-3: delete still removes a user patch at once with no question (Klystron, Additron, Resnatron).
+- R1103-1: not re-run; `lattice*.js` is unchanged since 3 Nov, so it stands.
+
+### Notes (not findings)
+
+- The pad keeps its place for Enter as a position, not a pitch: after "from" C1, Enter plays C2 where it
+  played C4 before. The code comment says so; a keyboard user may expect the pitch to stay.
+- The MIDI deck does not record the pad (listed under the Theremin item's "still open").
+
+### Not covered tonight
+
+Areas c to h. Suggested next: c, d and e, including the pad with the deck armed, the pad under the
+master echo, and the pad on a phone with a second finger on the keys.

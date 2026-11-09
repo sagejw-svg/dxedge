@@ -1500,6 +1500,23 @@ with sync_playwright() as pw:
       document.getElementById('saveNo').click(); return { f, names, open }; }""")
     ck(f"Pn. save refuses a factory name in any case ('{sv_['f'].lower()}' beside '{sv_['f']}'): the menu lists it once and the form stays open ({sv_['names']})",
        sv_["names"] == [sv_["f"]] and sv_["open"] is True, sv_)
+    # review 9 Nov, R1109-3: ok with an empty name did nothing and left the last toast ("Saved ...") up;
+    # R1109-4: closing the form (Escape, cancel, a save) dropped keyboard focus to the page body
+    sfa_ = lambda: pg.evaluate("(() => { const a = document.activeElement; return a ? (a.id || a.tagName) : null; })()")
+    sfo_ = lambda: pg.evaluate("document.getElementById('saveForm').classList.contains('open')")
+    sfr_ = {}
+    pg.focus("#saveP"); pg.keyboard.press("Enter"); pg.wait_for_timeout(60)
+    pg.fill("#saveName", "   "); pg.keyboard.press("Enter"); pg.wait_for_timeout(60)
+    sfr_["empty"] = (pg.evaluate("document.getElementById('toast').textContent"), sfo_(), sfa_())
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(60); sfr_["escape"] = (sfo_(), sfa_())
+    pg.focus("#saveP"); pg.keyboard.press("Enter"); pg.wait_for_timeout(60); pg.evaluate("document.getElementById('saveNo').click()"); pg.wait_for_timeout(60); sfr_["cancel"] = (sfo_(), sfa_())
+    pg.focus("#saveP"); pg.keyboard.press("Enter"); pg.wait_for_timeout(60); pg.fill("#saveName", "Pn focus check"); pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
+    sfr_["save"] = (sfo_(), sfa_(), pg.evaluate("document.getElementById('patchSel').selectedOptions[0].textContent"))
+    if sfr_["save"][2] == "Pn focus check": pg.evaluate("document.getElementById('delP').click()"); pg.wait_for_timeout(80)
+    ck(f"Pn. save with an empty name says so and keeps the form open with focus in the name ({sfr_['empty']})",
+       sfr_["empty"][0] == "Type a name for the patch first." and sfr_["empty"][1] is True and sfr_["empty"][2] == "saveName", sfr_)
+    ck(f"Pn. closing the save form by Escape, cancel or a save hands focus back to save ({sfr_['escape']}, {sfr_['cancel']}, {sfr_['save']})",
+       sfr_["escape"] == (False, "saveP") and sfr_["cancel"] == (False, "saveP") and sfr_["save"][:2] == (False, "saveP"), sfr_)
     # review 3 Nov, R1103-3 (fixed 6 Nov): on a phone the save name field was 28 px tall beside 44 px keys
     phs_ = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True)
     phs_.goto(BASE); phs_.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phs_.wait_for_timeout(200)

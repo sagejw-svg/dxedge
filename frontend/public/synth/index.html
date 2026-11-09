@@ -3547,18 +3547,23 @@ function step(d) {
 }
 $('prevP').addEventListener('click', () => step(-1)); $('nextP').addEventListener('click', () => step(1));
 $('saveP').addEventListener('click', () => { $('saveForm').classList.add('open'); $('saveName').value = curKey.startsWith('u:') ? cur.name : cur.name + ' 2'; $('saveName').focus(); $('saveName').select(); });
-$('saveNo').addEventListener('click', () => $('saveForm').classList.remove('open'));
+// Closing the form hands focus back to save, so a keyboard user is not dropped at the top of the page (review 9 Nov, R1109-4)
+function closeSave() { $('saveForm').classList.remove('open'); $('saveP').focus({ preventScroll: true }); }
+$('saveNo').addEventListener('click', closeSave);
 function doSave() {
-  const name = $('saveName').value.trim().slice(0, 40); if (!name) return;
+  const name = $('saveName').value.trim().slice(0, 40);
+  // an empty name said nothing, and the last toast (often "Saved ...") was still up (review 9 Nov, R1109-3)
+  if (!name) { toast('Type a name for the patch first.'); $('saveName').focus(); return; }
   // any case: "plate bass" beside Plate Bass read as the factory patch in the menu (review 3 Nov, R1103-2)
   if (D().factory.some(p => p.name.toLowerCase() === name.toLowerCase())) { toast('That name belongs to a factory patch.'); return; }
   cur.name = name; const p = D().normalize(cur);
   user = user.filter(u => u.name !== name).concat([p]); store.set(D().kUser, user);
-  curKey = 'u:' + name; edited = false; fillSelect(); $('saveForm').classList.remove('open');
+  curKey = 'u:' + name; edited = false; fillSelect(); closeSave();
   store.set(D().kCur, { key: curKey, patch: cur }); toast('Saved "' + name + '" in this browser.');
 }
 $('saveOk').addEventListener('click', doSave);
-$('saveName').addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); if (e.key === 'Escape') $('saveForm').classList.remove('open'); e.stopPropagation(); });
+// Enter's default is held back: focus is on save by then, and the key would press it and open the form again
+$('saveName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } if (e.key === 'Escape') closeSave(); e.stopPropagation(); });
 $('delP').addEventListener('click', () => {
   if (!curKey.startsWith('u:')) return; const name = curKey.slice(2);
   user = user.filter(u => u.name !== name); store.set(D().kUser, user); toast('Deleted "' + name + '".'); loadKey('f:' + D().factory[0].name);
