@@ -17,6 +17,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean) | measured |
+| R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code | measured (delay), inferred (reverb) |
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
 | R1109-1 | confusing | a | Theremin: the on and off switch does not stop the pad; with it off, a press switches it on and plays | measured |
 | R1109-2 | confusing | a | Theremin: on a mono patch a key takes the pad's voice while the readout and glow still show the pad's note | measured (mono), inferred (full poly pool) |
@@ -63,15 +65,15 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491 | measured |
 | R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1) | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
-| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 1 Nov | measured |
+| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120) | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
 | R1017-9 | confusing | d | No output protection unless the compressor is on: delay plus reverb can hard-clip at 0 dBFS; still open 7 Nov (226,954 samples at full scale in 4 s) | measured |
-| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
-| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
+| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
+| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1944,3 +1946,101 @@ Measured. Fixed tonight.
 
 Areas c to h. Suggested next: c, d and e, including the pad with the deck armed, the pad under the
 master echo, and the pad on a phone with a second finger on the keys.
+
+## 2026-11-10 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `2770f23`, sw.js
+`dxedge-v199`. Playwright's own Chromium 1243 headless (the `chromium-1194` path is still gone) at
+1366 x 900 and 375 x 812 (touch, 2x). No page or console errors on the live site in any run. Audio was
+read from the live output with the master recorder (24-bit WAV decoded in the script) and from the deck's
+Render WAV downloads. Clicks are the largest sample-to-sample step over the steady signal's own largest
+step, on a held A2 sine (Filament, osc 1 sine, osc 2 off). Focus tonight: what a knob move on the master
+bus does to a held note, the deck's Render WAV after a mix of takes and files, and the pedal and keys
+across a rail switch and a patch link (new on 10 Nov).
+
+### What worked (measured)
+
+- Deck take on Wide Novachord Strings: three notes from the keys, 6 events, "take 0:01.5, 3 notes";
+  played back and stopped, 0 voices left.
+- A file built in the test with a tempo change (120 BPM for two beats, then 60) reads its notes at 0, 1
+  and 2 s and a length of 3 s, as it should. A file with running status and note-on velocity 0 as the
+  off reads 2 notes, 1 s, plays to its end and stops by itself with 0 voices.
+- Loop on, deck tempo moved to 180% while playing: still looping 3.5 s later; Stop leaves 0 voices and no
+  key lit.
+- Render WAV files: RIFF size matches the file, 48 kHz 16-bit stereo, no NaN, peaks 0.33 and 0.47.
+- Armed on Thyratron, a note: the deck says "armed: the recorder takes Filament and Cathode only".
+- Pedal (CC64) down on Filament, a note, key up, rail to Cathode: the pedal state is let go, and after
+  the pedal-up 0 voices on both.
+- Computer key A held on Filament, a Cathode patch link applied (`__synth.share.apply`), A let go:
+  the rail moves to Cathode, 0 voices on both, no key left down, sustain off.
+- Master compressor switched on over the held sine: 1.07x (no click). Master volume in 1% steps (an arrow
+  key): 1.0x.
+- Phone 375 px: a tap on a key sounds and lets go; the deck opens with no sideways scroll and no button
+  under 44 px.
+
+### Findings
+
+**R1110-1. Master bus moves click on a held note.** Area d. Broken. Measured. Fixed tonight.
+- Steps: hold a note (a sine or a bass shows it best), switch the master delay on, then turn the master
+  tempo knob one BPM, or change the delay division, its mix or the reverb's mix, or switch the delay on.
+- Expected: the echoes follow the new time and the mix moves without a tick.
+- Actual (live): one BPM (120 to 121) with the delay synced at 1/8 was 31x the sine's own step; delay
+  time 375 to 376 ms free 4x; 1/8 to 1/4 22x; delay mix 0.35 to 0.37 2x and 0.35 to 0.8 21x; reverb mix
+  0.28 to 0.30 4x and 0.28 to 0.8 42x; switching the delay on 9x (the first echo of the held note starts
+  at full level, 15x at 0.53 s).
+- Cause (code): `master.worklet.js` read the delay at the new length from the next sample and used the
+  new mix at once.
+- Fix: a new delay time crossfades from the old tap to the new one over 20 ms (a change during a fade
+  waits for it to end); the delay and reverb mixes ramp (at most 5 ms for 0 to 1, landing exactly),
+  from 0 when the effect is switched on; a delay switched on fills its line over the same glide. All start at their
+  targets, so an offline render is unchanged. Measured on a local server, old tree against new, with the
+  windows the check uses: tempo 12.7x to 1.0x, division 3.1x to 1.0x, delay mix 77x to 1.12x, reverb mix
+  24x to 1.04x, delay on 3.3x to 1.0x, ping-pong tempo 4.2x to 1.22x. A first try with a 10 ms one-pole
+  glide failed two Panic checks (a delay switched back on must match a new bus within 4 blocks); the
+  ramp lands exactly and passes them. Check: "Mx. a master bus move glides
+  with no click" (within 2x).
+
+**R1110-2. Render WAV renders the old take after a file is imported.** Area e. Confusing. Measured.
+Fixed tonight.
+- Steps: record a take and play it, then import a .mid file (its tracks show, its play key lights), then
+  press Render WAV.
+- Expected: the file on show.
+- Actual: `filament-take-....wav`, 3.5 s (the take's 1.5 s and the tail), not the 4 s file; the file
+  renders only after it has been played once. The reverse held too: after playing a file, a new take
+  rendered the file.
+- Cause (code): `deck.js` chose by the last thing played.
+- Fix: an import makes the file the deck's subject and a finished take makes the take; playing either
+  still does. Check: "M. Render WAV renders what came in last" (fails on the old tree: both downloads
+  were the take).
+
+**R1110-3. Master volume jumps in one sample.** Area d. Confusing. Measured. Not fixed.
+- Steps: hold a note, click the vol slider far from its thumb (100% to 30%).
+- Actual: 12x to 22x the held sine's step (two runs). An arrow key's 1% step is clean (1.0x).
+- Note: `setMasterVol` sets `E.master.gain.value`. A `setTargetAtTime` glide would fix it, but the
+  check "Desk. master volume is the output gain and is not a patch" reads the gain straight after the
+  set, so it would need to wait for the glide. Left for James (Open items) rather than change that check.
+
+**R1110-4. Switching a master effect off cuts it at once.** Area d. Confusing. Measured (delay), inferred
+(reverb).
+- Steps: hold a note with the master delay on, switch the delay off.
+- Actual: the echoes stop and the dry level returns in one sample: 2.7x the held sine's step. The
+  worklet's off branch passes the input straight through, and the reverb's is the same.
+- Note: an off that fades would mean the effect keeps running until its tail is gone, which touches the
+  "off is a straight wire" rule. A design call; not fixed.
+
+### Still open, re-measured tonight
+
+- R1017-5: the rack transport at 90 BPM leaves the master delay's tempo at 120.
+- R1017-10 and R1017-11 (phone): strips 22 px wide; octave readout C3 with C4 the first key.
+
+### Not reported
+
+- The Theremin pad is not recorded by the deck: already listed as still open under the Theremin roadmap
+  item.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1104-4 (Panic and the other tails) and R1101-2 and R1101-3 (tape echo) were not
+re-run. Suggested next: a and b, including the new patch links (`?p=`) for every device's factory patches
+from a phone, and Phantastron's new seed stepper.
+

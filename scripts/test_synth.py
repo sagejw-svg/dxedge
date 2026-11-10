@@ -2412,6 +2412,26 @@ with sync_playwright() as pw:
        and float(np.max(np.abs(pcm))) <= 1.0, (db(tone_amp(seg, 261.63)), db(tone_amp(seg, 73.42)), db(tone_amp(seg, 480.0))))
     ck("M. Render WAV: a progress note, then the result", "rendered" in pg.inner_text("#wavStat"), pg.inner_text("#wavStat"))
 
+    # Review 10 Nov (R1110-2): Render WAV picked the take whenever the take was the last thing played, so
+    # a file imported after that (on show in the track list, its play key lit) rendered the old take
+    # instead. It now renders what came in last: the file after an import, the take after a recording.
+    pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.noteOn(60, 0.8); await w(200); __synth.noteOff(60); await w(100); __synth.deck().stopRec();
+      __synth.deck().play('take'); await w(300); __synth.deck().stop(); }""")
+    pg.evaluate("a => __synth.deck().importBytes(a, 'after.mid')", TWO)
+    with pg.expect_download(timeout=60000) as dl:
+        pg.click("#wavBtn")
+    wsrc = [dl.value.suggested_filename]
+    pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.noteOn(62, 0.8); await w(200); __synth.noteOff(62); await w(100); __synth.deck().stopRec(); }""")
+    with pg.expect_download(timeout=60000) as dl:
+        pg.click("#wavBtn")
+    wsrc.append(dl.value.suggested_filename)
+    ck("M. Render WAV renders what came in last: a file imported after a take was played, then a take recorded after that",
+       wsrc[0].startswith("filament-after-") and wsrc[1].startswith("filament-take-"), wsrc)
+
     # Review 17 Oct: Render WAV went through no master bus, so a reverb you could hear was missing
     # from the file. The deck now hands the master state to the offline render.
     pg.evaluate("a => __synth.deck().importBytes(a, 'melody.mid')", MEL)
@@ -5151,6 +5171,40 @@ with sync_playwright() as pw:
         uni_res.append((uname, round(worst / max(steady, 1e-9), 2)))
     ck("Mx. a strip going back to unity glides there with no click (unmute, level, pan, a solo let go: largest step within 1.5x the held sine's own)",
        all(x is not None and x < 1.5 for _, x in uni_res), uni_res)
+    # Review 10 Nov (R1110-1): a master bus move landed in one sample. On the held A2 sine through the live
+    # output one BPM on the master tempo knob with the delay synced was 31x the sine's own largest step, a
+    # delay mix 0.35 to 0.8 21x, a reverb mix 0.28 to 0.8 42x, switching the delay on 9x. The delay now
+    # crossfades to a new time over 20 ms, the wet mixes ramp (5 ms for 0 to 1, landing exactly), and a delay switched on fills its line
+    # over the same glide (its first echo of a held note started at full level: 15x).
+    mb_cases = [("tempo 120 to 121, delay on 1/8", {"delay": {"on": True, "sync": True, "div": "1/8", "mix": 0.35, "feedback": 0.35}}, {"tempo": 121}),
+                ("delay 1/8 to 1/4", {"delay": {"on": True, "sync": True, "div": "1/8", "mix": 0.35, "feedback": 0.35}}, {"delay": {"div": "1/4"}}),
+                ("delay mix 0.35 to 0.8", {"delay": {"on": True, "sync": True, "div": "1/8", "mix": 0.35, "feedback": 0.35}}, {"delay": {"mix": 0.8}}),
+                ("reverb mix 0.28 to 0.8", {"reverb": {"on": True, "mix": 0.28}}, {"reverb": {"mix": 0.8}}),
+                ("delay switched on", {"delay": {"on": False}}, {"delay": {"on": True, "mix": 0.35}})]
+    mb_m0 = pg.evaluate("() => JSON.parse(JSON.stringify(__synth.master()))")
+    mb_res = []
+    for mname, ma, mb in mb_cases:
+        r = pg.evaluate("""async ([a, b]) => {
+          const w = ms => new Promise(r => setTimeout(r, ms));
+          __synth.setMaster({ tempo: 120, delay: { on: false }, reverb: { on: false }, comp: { on: false } }); await w(200);
+          __synth.setMaster(a); await w(200);
+          __synth.noteOn(45, 0.8); await w(600); await __synth.recordStart(); await w(250);
+          __synth.setMaster(b); await w(700);
+          const rec = await __synth.recordStop(); __synth.noteOff(45); await w(300);
+          return rec && rec.b64; }""", [ma, mb])
+        mwav = parse_wav(base64.b64decode(r)) if r else None
+        if not mwav: mb_res.append((mname, None)); continue
+        u8 = np.frombuffer(mwav["data"][:len(mwav["data"]) // 6 * 6], np.uint8).reshape(-1, 6).astype(np.int32)
+        v = u8[:, 0] | (u8[:, 1] << 8) | (u8[:, 2] << 16); v = np.where(v & 0x800000, v - 0x1000000, v) / 8388607.0
+        srr = mwav["rate"]; d = np.abs(np.diff(v))
+        # the larger of the steady steps before the move and after it has settled (a reverb mix of 0.8 is
+        # rougher than the sine alone; that is the effect, not a click)
+        steady = max(float(np.max(d[int(0.03 * srr):int(0.2 * srr)])), float(np.max(d[int(0.75 * srr):int(0.95 * srr)])))
+        worst = float(np.max(d[int(0.03 * srr):int(0.95 * srr)]))
+        mb_res.append((mname, round(worst / max(steady, 1e-9), 2)))
+    pg.evaluate("m => __synth.setMaster(m)", mb_m0)
+    ck("Mx. a master bus move glides with no click (tempo with the delay synced, delay division, delay and reverb mix, delay on: largest step within 2x the steady signal's own)",
+       all(x is not None and x < 2 for _, x in mb_res), mb_res)
     # Improvement 9 Nov: the wait before the reroute above is counted on the audio clock. It was a 200 ms
     # wall-clock timer, while the glide runs on ctx.currentTime; under load the audio clock fell behind
     # (measured: 177 ms of audio in 276 ms of wall time), and the check above failed now and then (42x). Here

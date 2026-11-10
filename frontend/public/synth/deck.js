@@ -113,7 +113,7 @@ export function createDeck(api) {
   function stopRec() {
     if (T.armed) { T.armed = false; showTake(); return; }
     if (!T.rec) return;
-    T.rec = false; T.length = now() - T.t0;
+    T.rec = false; T.length = now() - T.t0; P.last = 'take';
     Object.keys(T.held).forEach(d => T.held[d].forEach(n => T.events.push({ time: T.length, dev: d, m: { t: 'off', n } })));
     T.held = {};
     // A pedal still down at Stop goes up at the end of the take, so an exported file does not leave
@@ -151,6 +151,7 @@ export function createDeck(api) {
     if (!song.parts.some(p => p.notes)) { $('fileStat').textContent = (name || 'That file') + ' has no notes to play.'; return false; }
     if (P.playing) stop();
     Fi.name = name || 'file.mid'; Fi.song = song; Fi.assign = defaultAssign(song.parts, api.dev());
+    P.last = 'file';     // Render WAV takes what came in last: this file, until a take is recorded or played (R1110-2)
     openBody(true); showFile();
     return true;
   }

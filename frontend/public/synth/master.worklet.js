@@ -70,6 +70,8 @@ Line.prototype.write = function (x) {
   if (++this.w >= this.n) this.w = 0;
 };
 
+// one step of a straight ramp toward t, at most k a sample, landing exactly on t
+function glide(v, t, k) { return v < t ? (t - v <= k ? t : v + k) : (v - t <= k ? t : v - k); }
 function coef(sec) {
   const t = sec > 0.0001 ? sec : 0.0001;
   return 1 - Math.exp(-1 / (t * sampleRate));
@@ -103,6 +105,19 @@ class FilamentMaster extends AudioWorkletProcessor {
     this.rec = false; this.recStop = false;
     this.fadeN = 0; this.fadeLen = 1; this.wg = 1;
     this.apply(opt.master || {});
+    // Review 10 Nov (R1110-1): a delay time, a tempo, a mix or a reverb mix change used to land in one sample,
+    // a click on anything held (31x a held A2 sine's own step for one BPM). The delay now crossfades from the
+    // old tap to the new one over 20 ms (a change during a fade waits for it), and both wet mixes glide with a
+    // straight ramp of at most 5 ms for the whole 0 to 1, from 0 when the effect is switched on, landing
+    // exactly on their target (240 samples at most at 48 kHz), so a bus switched back on is the same as a
+    // new one well inside a Panic check's 4 blocks. They start at their targets, so a render
+    // is unchanged.
+    this.xN = Math.max(1, Math.round(0.02 * sampleRate)); this.xI = 0;
+    this.useL = this.dSampL; this.useR = this.dSampR; this.toL = this.dSampL; this.toR = this.dSampR;
+    this.kMix = 1 / Math.max(1, Math.round(0.005 * sampleRate));
+    const s0 = this.s || {};
+    this.mD = s0.delay && s0.delay.on ? +s0.delay.mix || 0 : 0; this.gIn = 1;
+    this.mR = s0.reverb && s0.reverb.on ? +s0.reverb.mix || 0 : 0;
     this.port.onmessage = e => {
       const m = e.data;
       if (!m) return;
@@ -139,6 +154,8 @@ class FilamentMaster extends AudioWorkletProcessor {
   // returns stayed that much quieter (down to silent) until the next Panic. The fade now runs to its end,
   // which empties both lines and puts wg back to 1.
   clearDelay() { this.dL.b.fill(0); this.dR.b.fill(0); }
+  // An effect that is off holds no glide: it comes back on from a dry mix and at its own delay time.
+  restDelay() { this.mD = 0; this.gIn = 0; this.xI = 0; this.useL = this.toL = this.dSampL; this.useR = this.toR = this.dSampR; }
   clearReverb() {
     this.cL.concat(this.cR).forEach(c => { c.b.fill(0); c.f = 0; });
     this.aL.concat(this.aR).forEach(a => a.b.fill(0));
@@ -147,29 +164,38 @@ class FilamentMaster extends AudioWorkletProcessor {
 
   delay(l, r) {
     const d = this.s.delay || {};
-    if (!d.on) { this.yL = l; this.yR = r; return; }
-    const fb = +d.feedback || 0, mix = +d.mix || 0;
+    if (!d.on) { this.restDelay(); this.yL = l; this.yR = r; return; }
+    const fb = +d.feedback || 0, dL0 = l, dR0 = r;
+    const mix = this.mD = glide(this.mD, +d.mix || 0, this.kMix);
+    const gi = this.gIn = glide(this.gIn, 1, this.kMix);      // switched on, the line fills in over the same glide
+    l *= gi; r *= gi;
+    if (this.xI === 0 && (this.useL !== this.dSampL || this.useR !== this.dSampR)) { this.toL = this.dSampL; this.toR = this.dSampR; this.xI = this.xN; }
+    let tapL, tapR;
+    if (this.xI > 0) {
+      const g = (this.xN - this.xI + 1) / this.xN;
+      tapL = this.dL.read(this.useL) * (1 - g) + this.dL.read(this.toL) * g;
+      tapR = this.dR.read(this.useR) * (1 - g) + this.dR.read(this.toR) * g;
+      if (--this.xI === 0) { this.useL = this.toL; this.useR = this.toR; }
+    } else { tapL = this.dL.read(this.useL); tapR = this.dR.read(this.useR); }
     let wetL, wetR;
     if (d.ping) {
-      const tapL = this.dL.read(this.dSampL), tapR = this.dR.read(this.dSampR);
       this.dL.write(0.5 * (l + r) + tapR * fb);
       this.dR.write(tapL);
       wetL = tapR; wetR = tapL;
     } else {
-      const tapL = this.dL.read(this.dSampL), tapR = this.dR.read(this.dSampR);
       this.dL.write(l + tapL * fb);
       this.dR.write(r + tapR * fb);
       wetL = tapL; wetR = tapR;
     }
     wetL *= this.wg; wetR *= this.wg;
     const dry = 1 - mix;
-    this.yL = l * dry + wetL * mix;
-    this.yR = r * dry + wetR * mix;
+    this.yL = dL0 * dry + wetL * mix;
+    this.yR = dR0 * dry + wetR * mix;
   }
 
   reverb(l, r) {
     const rv = this.s.reverb || {};
-    if (!rv.on) { this.yL = l; this.yR = r; return; }
+    if (!rv.on) { this.mR = 0; this.yL = l; this.yR = r; return; }
     const fb = 0.28 * (+rv.size || 0) + 0.7;
     const damp = Math.min(0.95, (+rv.damp || 0) * 0.9);
     const ing = 0.12;
@@ -179,7 +205,7 @@ class FilamentMaster extends AudioWorkletProcessor {
     const dl = sl - this.dcLx + 0.995 * this.dcLy;
     const dr = sr - this.dcRx + 0.995 * this.dcRy;
     this.dcLx = sl; this.dcLy = dl; this.dcRx = sr; this.dcRy = dr;
-    const mix = +rv.mix || 0, width = rv.width == null ? 1 : +rv.width;
+    const mix = this.mR = glide(this.mR, +rv.mix || 0, this.kMix), width = rv.width == null ? 1 : +rv.width;
     const wet1 = mix * (width * 0.5 + 0.5) * this.wg, wet2 = mix * ((1 - width) * 0.5) * this.wg, dry = 1 - mix;
     this.yL = l * dry + dl * wet1 + dr * wet2;
     this.yR = r * dry + dr * wet1 + dl * wet2;
@@ -222,6 +248,7 @@ class FilamentMaster extends AudioWorkletProcessor {
     // A Panic fade that a full bypass cut short (every effect switched off within its 10 ms) ends here at
     // once: nothing of the delay or reverb is heard while bypassed, so there is nothing left to fade.
     if (bypass && this.fadeN > 0) { this.fadeN = 0; this.clearDelay(); this.clearReverb(); this.wg = 1; }
+    if (bypass) { this.restDelay(); this.mR = 0; }
     for (let i = 0; i < n; i++) {
       let l = inL ? inL[i] : 0, r = inR ? inR[i] : l;
       if (!bypass) {
