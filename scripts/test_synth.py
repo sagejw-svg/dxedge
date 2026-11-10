@@ -5725,6 +5725,70 @@ with sync_playwright() as pw:
            kv["state"] == "vowel" and kv["pressed"] == ["vowel"] and ksp.evaluate("__synth.patch().source") == "vowel", kv)
         ksx.close()
     ck("Ks. no page errors (Klystron's source row)", not kserr, kserr)
+    # Ps. Phantastron's seed row and bends readout (graphics, 10 Nov 2026). Before, the seed was the browser's white
+    # number box (the only white control on the rack, seen at 1366 px) and the wired bends were bare "no bends" text
+    # after the chips. Now: the seed in a recessed amber window between previous and next keys (one joined stepper),
+    # run a key with a lamp, and the bends in a recessed readout window whose lamp lights once a wire is in.
+    PS_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, w: q.width, h: q.height }; };
+      const sd = document.getElementById('phSeed'), cs = getComputedStyle(sd), keys = [...document.querySelectorAll('#phSeedStep > *')];
+      const kr = keys.map(R), join = kr.every((k, i) => i === 0 || (Math.abs(k.l - kr[i - 1].r) < 0.6 && Math.abs(k.t - kr[i - 1].t) < 0.6));
+      const run = document.getElementById('phRun'), rl = getComputedStyle(run.querySelector('i'));
+      const ww = document.getElementById('phWireWin'), wc = getComputedStyle(ww), wl = getComputedStyle(ww.querySelector('i'));
+      const card = R(document.getElementById('phBend')), pcard = R(document.getElementById('phPlay'));
+      return { ids: keys.map(e => e.id), join, seedBg: cs.backgroundImage, seedBgC: cs.backgroundColor, seedColor: cs.color, seedShadow: cs.boxShadow,
+        appearance: cs.appearance, seedVal: sd.value, seedW: R(sd).w, step: R(document.getElementById('phSeedStep')), keyMin: Math.min(...kr.map(k => Math.min(k.w, k.h))),
+        run: R(run), runPressed: run.getAttribute('aria-pressed'), runText: run.textContent, runLamp: rl.backgroundColor, runAnim: rl.animationName,
+        win: ww.offsetParent ? R(ww) : null, card, pcard, on: ww.dataset.on, wtext: document.getElementById('phWires').textContent, wtitle: ww.title,
+        wColor: wc.color, wBg: wc.backgroundImage, wShadow: wc.boxShadow, wLamp: wl.backgroundColor, wAnim: wl.animationName,
+        white: [...document.querySelectorAll('#phRoot input, #phRoot select')].filter(e => e.offsetParent && /rgb\\(255, 255, 255\\)/.test(getComputedStyle(e).backgroundColor)).map(e => e.id),
+        seed: __synth.patch().seed, prun: !!__synth.patch().run, sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pserr = []
+    for ps_w, ps_mob, ps_rm in ((1366, False, "no-preference"), (375, True, "reduce")):
+        psx = b.new_context(viewport={"width": ps_w, "height": 667 if ps_mob else 1000}, is_mobile=ps_mob, has_touch=ps_mob, reduced_motion=ps_rm)
+        psp = psx.new_page(); psp.on("pageerror", lambda e: pserr.append(str(e)))
+        psp.goto(BASE); psp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        psp.evaluate("__synth.setDevice('phantastron')"); psp.wait_for_timeout(300)
+        if ps_mob: psp.click(".tabs [data-go='bend']"); psp.wait_for_timeout(200)
+        ps = psp.evaluate(PS_MEAS)
+        ps_con = _ob_con(ps["seedColor"], ps["seedBg"])
+        info(f"Ps. {ps_w} px", f"seed window {ps['seedW']:.0f} px, stepper {ps['step']['w']:.0f} px, keys {ps['keyMin']:.0f} px, run {ps['run']['h']:.0f} px tall")
+        ck(f"Ps. at {ps_w} px the seed is a recessed amber window ({ps_con:.1f}:1, want 4.5 or more) between previous and next keys, one joined stepper, no white field left on Phantastron",
+           ps["ids"] == ["phSeedDn", "phSeed", "phSeedUp"] and ps["join"] and "gradient" in ps["seedBg"] and "inset" in ps["seedShadow"] and ps_con >= 4.5
+           and ps["appearance"] == "textfield" and ps["seedVal"] == "17" and not ps["white"], ps)
+        psp.click("#phSeedUp"); psp.wait_for_timeout(100)
+        up = psp.evaluate(PS_MEAS)
+        psp.click("#phSeedDn"); psp.click("#phSeedDn"); psp.wait_for_timeout(100)
+        dn = psp.evaluate(PS_MEAS)
+        ck(f"Ps. at {ps_w} px next and previous step the seed by one, in the patch and in the window (17, 18, 16)",
+           up["seed"] == 18 and up["seedVal"] == "18" and dn["seed"] == 16 and dn["seedVal"] == "16", (up["seed"], up["seedVal"], dn["seed"], dn["seedVal"]))
+        psp.click("#phRun"); psp.wait_for_timeout(150)
+        rn = psp.evaluate(PS_MEAS)
+        psp.click("#phRun"); psp.wait_for_timeout(150)
+        ro = psp.evaluate(PS_MEAS)
+        ck(f"Ps. at {ps_w} px run is a key with a lamp: dark at rest, lit while the toy runs, steady (no animation)",
+           ps["runLamp"] == "rgb(38, 51, 43)" and rn["prun"] and rn["runPressed"] == "true" and rn["runText"] == "running" and rn["runLamp"] == "rgb(255, 243, 196)"
+           and rn["runAnim"] == "none" and not ro["prun"] and ro["runLamp"] == "rgb(38, 51, 43)" and ro["runText"] == "run", (ps["runLamp"], rn, ro["runLamp"]))
+        if ps_mob:
+            ck(f"Ps. on a {ps_w} px phone the seed keys and run are 44 px or more, the row ends inside the card, no sideways scroll",
+               ps["keyMin"] >= 44 and ps["run"]["h"] >= 44 and ps["run"]["r"] <= ps["card"]["r"] and ps["step"]["r"] <= ps["card"]["r"] and ps["sw"] <= ps["iw"] == ps_w, ps)
+            psp.click(".tabs [data-go='play']"); psp.wait_for_timeout(200)
+        else:
+            ck("Ps. at 1366 px the seed keys keep a compact height (30 px or more) and the seed shows ten digits (110 px or less wide)",
+               ps["keyMin"] >= 29.5 and ps["seedW"] <= 110 and ps["step"]["r"] <= ps["card"]["r"], ps)
+        w0 = psp.evaluate(PS_MEAS)
+        w0_con = _ob_con(w0["wColor"], w0["wBg"])
+        ck(f"Ps. at {ps_w} px the bends sit in a recessed readout window, dark lamp and dim text with none wired ({w0_con:.1f}:1, want 4.5 or more)",
+           w0["win"] is not None and w0["on"] == "0" and w0["wtext"] == "no bends" and "gradient" in w0["wBg"] and "inset" in w0["wShadow"]
+           and w0["wLamp"] == "rgb(38, 51, 43)" and w0_con >= 4.5 and w0["win"]["r"] <= w0["pcard"]["r"], w0)
+        psp.evaluate("() => { const q = __synth.patch(); q.wires = [['vcc','rate'],['clk','bits'],['nse','form'],['out','fb'],['gnd','loop'],['clk','pitch']]; __synth.setPatch(q); }")
+        psp.wait_for_timeout(200)
+        w1 = psp.evaluate(PS_MEAS)
+        w1_con = _ob_con(w1["wColor"], w1["wBg"])
+        ck(f"Ps. at {ps_w} px six wired bends light a gold lamp and amber text ({w1_con:.1f}:1), the list clipped inside the window and whole in its title, no sideways scroll",
+           w1["on"] == "1" and w1["wLamp"] == "rgb(231, 197, 106)" and w1["wAnim"] == "none" and w1_con >= 4.5 and "VCC\u2192RATE" in w1["wtext"]
+           and w1["wtitle"].count("\u2192") == 6 and w1["win"]["r"] <= w1["pcard"]["r"] + 0.5 and w1["win"]["h"] < 50 and w1["sw"] <= w1["iw"], w1)
+        psx.close()
+    ck("Ps. no page errors (Phantastron's seed row and bends readout)", not pserr, pserr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)

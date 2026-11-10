@@ -478,6 +478,38 @@
   .ph-slide { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ph-slide input { flex: 1 1 auto; min-width: 0; }
   .ph-read { color: #d7e7c4; font-size: 12px; }
+  /* Phantastron's seed row and bends readout (graphics, 10 Nov). The seed sits in a recessed amber readout window
+     (the patch name window's finish) between previous and next keys, one joined stepper in the board's green, and
+     run is a key with a lamp (gold while the toy runs). The wired bends sit in a recessed readout window with a lamp:
+     dark and dim with no wires, gold with amber text once one is in. Before, the seed was the browser's white number
+     box and "no bends" bare text after the chips. Static, so nothing for reduced motion. */
+  .ph-tag { flex: 0 0 auto; min-width: 4.2em; }
+  #phRoot .ph-step { display: inline-flex; flex-wrap: nowrap; gap: 0; align-items: stretch; border-radius: 7px;
+    box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(231,240,216,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #phRoot .ph-step > .chip { margin: 0; border-radius: 0; border-color: #24402f; border-left-width: 0; min-width: 32px; min-height: 30px; padding: 3px 9px;
+    background: linear-gradient(180deg, #1b2e23, #0f1c15); color: #d7e7c4; box-shadow: inset 0 1px 0 rgba(231,240,216,0.07); font-size: 14px; line-height: 1; }
+  #phRoot .ph-step > :first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  #phRoot .ph-step > :last-child { border-radius: 0 6px 6px 0; }
+  #phRoot .ph-step > .chip:hover { color: #f0d7a0; border-color: #24402f; }
+  #phRoot .ph-step > :focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
+  #phSeed { -moz-appearance: textfield; appearance: textfield; box-sizing: border-box; width: 11.5ch; min-width: 0; margin: 0; padding: 3px 8px;
+    border: 1px solid #000; border-radius: 0; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; caret-color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 12px; letter-spacing: 0;
+    text-align: center; font-variant-numeric: tabular-nums; }
+  #phSeed::-webkit-inner-spin-button, #phSeed::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #phSeed:hover { color: #ffe2b0; }
+  #phSeed:focus-visible { outline: 2px solid #e7c56a; outline-offset: 1px; position: relative; z-index: 1; }
+  #phRoot .ph-run { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; }
+  #phRoot .ph-run i, .ph-wires i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #26332b; box-shadow: inset 0 0 2px #000; }
+  body[data-dev="phantastron"] #phRoot .ph-run[aria-pressed="true"] i { background: #fff3c4; box-shadow: 0 0 0 1px #7a5414, 0 0 7px #fff3c4; }
+  .ph-wires { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 9em; min-width: 0; max-width: 100%; min-height: 26px; padding: 3px 10px; box-sizing: border-box;
+    border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(231,240,216,0.07);
+    font-size: 11px; color: #a3b39c; letter-spacing: 0.4px; }
+  .ph-wires .ph-wname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+  .ph-wires[data-on="1"] { color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
+  .ph-wires[data-on="1"] i { background: #e7c56a; box-shadow: 0 0 6px #e7c56a; }
   #phSeed { width: 7.5em; max-width: 100%; }
   body[data-dev="phantastron"] #phRoot .mod { background: #143024; border-color: #2a4a38; }
   body[data-dev="phantastron"] #phRoot h3 { color: #e7f0d8; letter-spacing: 1.6px; }
@@ -1046,6 +1078,7 @@
     #rnRoot input, #rnRoot select, #rnRoot .rn-jack, #rnRoot .chip, #rnRoot .btn { min-height: 44px; min-width: 44px; }
     #heptodeRoot input[type="range"], #hepSong, #pentagridText, #pentagridRoot input, #trRoot input, #trRoot select, #trSeed, #orthiconSeed, #klRoot button, #klRoot input, #phRoot input, #phSeed, #rhumRoot input { min-height: 44px; }
     #phRoot .ph-slide input { min-width: 44px; }
+    #phRoot .ph-step > .chip, #phRoot .ph-run { min-height: 44px; min-width: 44px; } .ph-tag { display: none; } .ph-wires { flex-basis: 100%; min-height: 32px; }
     body[data-dev="additron"] .tabs [data-go="osc"], body[data-dev="additron"] .tabs [data-go="filter"],
     body[data-dev="additron"] .tabs [data-go="mod"], body[data-dev="additron"] .tabs [data-go="stereo"],
     body[data-dev="additron"] .tabs [data-go="patch"], body[data-dev="additron"] .tabs [data-go="voice"],

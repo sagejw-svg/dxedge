@@ -1637,8 +1637,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (8 Nov): 1. Phantastron's seed field (a white browser box) and its bare "no bends" status; 2. Orthicon's picture list;
-3. a user patch's name window on a phone; 4. rail plate titles at 761 to 959 px; 5. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (10 Nov): 1. the Rack tab's project, mix and patch link rows (loose keys and plain boxes); 2. Orthicon's picture list;
+3. a user patch's name window on a phone; 4. Phantastron's cartridge row on a phone; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1826,9 +1826,18 @@ Rank of the open items (8 Nov): 1. Phantastron's seed field (a white browser box
   names a file or mic that is not loaded ("Microphone (off)"). A long file name is clipped with an ellipsis inside the window.
   Measured after: text 13.8:1 on the window; at 1366 px keys 30 px tall, the row 488 px inside its card; at 375 px every key
   44 px, the source row one line, the window 153 px, no sideways scroll. Display only, no audio change. New checks: Ks. (13).
-- [ ] Phantastron's seed field (7 Nov, seen at 1366 px): the SEED box in Bends is the browser's white input with black text, the
-  only white control on the rack. A dark recessed field like the patch name window would match. 8 Nov, seen: the bends row ends
-  in bare "no bends" text after the chips, the same pattern Klystron's source name had; a readout window would match.
+- [x] 10 Nov: Phantastron's seed row and bends readout (the top item of 8 Nov). Seen before at 1366 px: the SEED box in Bends was
+  the browser's white number box with black text and its own spin arrows, the only white control on the rack, beside a loose run
+  chip; the board's bar ended in bare "no bends" text after the chips (wired bends were bare text too, their double spaces kept).
+  Now: the seed sits in a recessed amber readout window (the patch name window's finish, 13.8:1 measured) between previous and
+  next keys, one joined stepper in the board's green; the window is still the number field (type a seed, Enter; the R. check for a
+  typed 5000000000 passes unchanged) and the keys step it by one. Run is a key with a lamp, dark at rest and lit while the toy runs
+  (steady). The bends sit in a recessed readout window with a lamp: dark lamp and dim text "no bends" (8.9:1), gold lamp and amber
+  text once a wire is in (13.8:1); six bends are clipped with an ellipsis inside the window and listed whole in its title. Static,
+  so nothing for reduced motion (lamps checked as not animated with reduce on). Measured after: seed window 90 px (ten digits fit),
+  keys 30 px tall at 1366 and 44 px at 375, no sideways scroll at 375. Cost: the readout takes its own line under the chips, so the
+  Board card is 32 px taller at 1366 px (438 to 470) and 38 px on a 375 px phone (491 to 529). UI only: no DSP, worklet,
+  normalizer or patch touched. New checks: Ps. (13).
 - [ ] A user patch's name window on a phone (6 Nov, measured): the delete key (57 px) joins the edit keys on a user
   patch, so the name window drops to 80 px at 375 ("My Te..."). At 320 the edit keys wrap to a row of their own instead
   (name 220 px, the header one row taller while a user patch is loaded). Options: delete inside the save form, or a
@@ -1845,6 +1854,13 @@ Rank of the open items (8 Nov): 1. Phantastron's seed field (a white browser box
   (99 px) and the tabs (52 px). A slimmer phone chassis (tubes and VU at about 80% height) would give the panel another
   20 to 30 px; it touches the tube canvases, so it waits for the Tube show item. The patch menu part (100 px on a 375 px
   phone, "Wide Nov") is done 6 Nov (see below).
+- [ ] The Rack tab's project, mix and patch link rows (10 Nov, seen at 1366 and 375 px on every device): "Untitled" with save project,
+  load saved, download and upload; "Mix" with save mix, load mix, download mix and upload mix; and the patch link box (10 Nov) with
+  copy patch link, download patch and upload patch are loose keys beside plain dark text boxes, under a mix desk that is all
+  faceplates and readout windows. Joined switches in the patch keys' finish, with each name in a recessed readout window, would match.
+- [ ] Phantastron's cartridge row on a phone (10 Nov, seen at 375 px): the six cartridge chips and lift wires take three rows
+  (babble alone on the second, lift wires alone on the third) above the bends readout. A joined cartridge switch with lift wires
+  beside the readout would save a row.
 - [ ] Rail plates on a 761 to 959 px window (27 Oct, measured): the role drops because the plates are 103 to 136 px; a
   title on each plate (the role) would keep it reachable by hover there.
 

@@ -264,8 +264,14 @@ export function mountPhantastronPanel(container, hooks) {
   const carts = el('div', { class: 'ph-bar', id: 'phCarts' });
   CARTS.forEach(c => carts.append(el('button', { type: 'button', class: 'chip', 'data-cart': c }, c)));
   const lift = el('button', { type: 'button', class: 'chip', id: 'phLift' }, 'lift wires');
-  const read = el('span', { id: 'phWires', class: 'ph-read' }, 'no bends');
-  bar.append(carts, lift, read);
+  // Bends readout (graphics, 10 Nov): the wired bends in a recessed readout window with a lamp, dark with no
+  // wires and gold once one is in. Before, "no bends" was bare text after the chips. A long list is clipped with
+  // an ellipsis inside the window and the whole list goes in its title.
+  const readWin = el('span', { class: 'ph-wires', id: 'phWireWin', 'data-on': '0' });
+  readWin.append(el('i', { 'aria-hidden': 'true' }));
+  const read = el('span', { id: 'phWires', class: 'ph-wname' }, 'no bends');
+  readWin.append(read);
+  bar.append(carts, lift, readWin);
   const note = el('p', { class: 'note' }, 'Touch a pad and drag to another. VCC pulls the bend high, GND sticks it low, CLK and NSE wobble it, OUT feeds the voice back. Drop the same wire again to lift it. The keys play the toy.');
   play.append(canvas, bar, note);
 
@@ -279,13 +285,19 @@ export function mountPhantastronPanel(container, hooks) {
   const pitch = slider('phPitch', 'pitch', -24, 24, 1);
   const grid = el('div', { class: 'ph-grid' });
   grid.append(clock.wrap, bits.wrap, loop.wrap, feedback.wrap, form.wrap, noise.wrap, pitch.wrap);
-  const row = el('div', { class: 'ph-bar' });
-  const seedLab = el('label', { class: 'ph-slide' });
-  seedLab.append(el('span', { class: 'geiss-lab' }, 'seed'));
-  const seed = el('input', { id: 'phSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', 'aria-label': 'Phrase seed' });
-  seedLab.append(seed);
-  const run = el('button', { type: 'button', class: 'chip', id: 'phRun', 'aria-pressed': 'false' }, 'run');
-  row.append(seedLab, run);
+  // Seed row (graphics, 10 Nov): the seed sits in a recessed amber readout window between previous and next keys,
+  // one joined stepper in the patch keys' finish, and run is a key with a lamp. Before, the seed was the browser's
+  // white number box, the only white control on the rack. The window is still a number field (type a seed, Enter).
+  const row = el('div', { class: 'ph-bar ph-seedrow' });
+  const seedTag = el('span', { class: 'geiss-lab ph-tag', 'aria-hidden': 'true' }, 'seed');
+  const seedStep = el('span', { class: 'ph-step', id: 'phSeedStep', role: 'group', 'aria-label': 'Phrase seed' });
+  const seedDn = el('button', { type: 'button', class: 'chip', id: 'phSeedDn', 'aria-label': 'Previous seed' }, '\u2039');
+  const seed = el('input', { id: 'phSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', inputmode: 'numeric', 'aria-label': 'Phrase seed' });
+  const seedUp = el('button', { type: 'button', class: 'chip', id: 'phSeedUp', 'aria-label': 'Next seed' }, '\u203a');
+  seedStep.append(seedDn, seed, seedUp);
+  const run = el('button', { type: 'button', class: 'chip ph-run', id: 'phRun', 'aria-pressed': 'false' });
+  run.append(el('i', { 'aria-hidden': 'true' }), el('span', { class: 'ph-runname' }, 'run'));
+  row.append(seedTag, seedStep, run);
   const bendNote = el('p', { class: 'note' }, 'Clock is the toy\'s timebase: slower is lower and grainier. Bits are the DAC. Loop sticks the phrase. Feedback is the howl. Run leaves the toy talking with no key.');
   bend.append(grid, row, bendNote);
   container.append(play, bend);
@@ -322,8 +334,10 @@ export function mountPhantastronPanel(container, hooks) {
     pitch.val.textContent = (p.pitch > 0 ? '+' : '') + Math.round(p.pitch);
     if (document.activeElement !== seed) seed.value = String(p.seed);
     run.setAttribute('aria-pressed', String(!!p.run));
-    run.textContent = p.run ? 'running' : 'run';
+    run.lastChild.textContent = p.run ? 'running' : 'run';
     read.textContent = p.wires.length ? p.wires.map(fmtWire).join('  ') : 'no bends';
+    readWin.dataset.on = p.wires.length ? '1' : '0';
+    readWin.title = p.wires.length ? 'Bends: ' + p.wires.map(fmtWire).join(', ') : 'No bends wired';
     drawBoard(canvas, p, drag, host.meter());
   }
   function paint() { drawBoard(canvas, current(), drag, host.meter()); }
@@ -357,6 +371,14 @@ export function mountPhantastronPanel(container, hooks) {
   bindSlide(pitch, 'pitch', v => Math.round(v));
   seed.addEventListener('change', () => mutate({ seed: Math.min(SEED_MAX, Math.max(0, Math.floor(+seed.value || 0))) }));
   seed.addEventListener('keydown', e => { if (e.key === 'Enter') seed.blur(); e.stopPropagation(); });
+  function stepSeed(d) {
+    if (hooks.wake) hooks.wake();
+    const v = Math.min(SEED_MAX, Math.max(0, current().seed + d));
+    seed.value = String(v);
+    mutate({ seed: v });
+  }
+  seedDn.addEventListener('click', () => stepSeed(-1));
+  seedUp.addEventListener('click', () => stepSeed(1));
 
   canvas.addEventListener('pointerdown', e => {
     if (hooks.wake) hooks.wake();
