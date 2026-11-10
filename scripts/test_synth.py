@@ -2257,6 +2257,28 @@ with sync_playwright() as pw:
     ck("M. a SMPTE-timed file is refused with a clear message", ok is False and "SMPTE" in pg.inner_text("#fileStat"), pg.inner_text("#fileStat"))
     ok = pg.evaluate("a => __synth.deck().importBytes(a, 'junk.mid')", list(b"RIFF....junk"))
     ck("M. a file that is not MIDI is refused with a clear message", ok is False and "not a Standard MIDI File" in pg.inner_text("#fileStat"))
+    # Robustness (10 Nov). A dense one-track file: a part's lowest and highest note were Math.min(...notes), which
+    # overflows the stack past about 124000 notes, so a 1 MB file was refused with "Maximum call stack size
+    # exceeded". The file is built in the page, byte by byte like the others here (concat, not a spread, for the
+    # same reason). 130000 notes, A on and off 12 ticks apart at 96 ppq, pitches 48 to 71 in turn.
+    DENSE = """n => { const t = [];
+      for (let i = 0; i < n; i++) t.push(0, 0x90, 48 + i % 24, 100, 12, 0x80, 48 + i % 24, 0);
+      t.push(0, 0xFF, 0x2F, 0); const L = t.length;
+      return [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96, 0x4D, 0x54, 0x72, 0x6B, (L >>> 24) & 255, (L >> 16) & 255, (L >> 8) & 255, L & 255].concat(t); }"""
+    dense_r = pg.evaluate("""([mk, n]) => { const a = (0, eval)(mk)(n); let ok; try { ok = __synth.deck().importBytes(a, 'dense.mid'); } catch (e) { ok = 'threw ' + e.message; }
+      let parts; try { parts = __synth.smf.read(a).song.parts.map(p => [p.notes, p.lo, p.hi]); } catch (e) { parts = 'threw ' + e.message; }
+      return { ok, bytes: a.length, stat: document.getElementById('fileStat').textContent, parts }; }""", [DENSE, 130000])
+    ck("M. a dense one-track file (130000 notes, about 1 MB) loads, with its lowest and highest note",
+       dense_r["ok"] is True and dense_r["parts"] == [[130000, 48, 71]] and "stack" not in dense_r["stat"], dense_r)
+    # A tempo of 0 microseconds a quarter put every later note at the same instant and read as "Infinity BPM"; it is
+    # skipped, so the file plays at the default 120 BPM: notes at 0 and 0.5 s, each half a second long.
+    Z0 = [0] + tempo(0) + [0, 0x90, 60, 100] + vlq(96) + [0x80, 60, 0] + [0, 0x90, 64, 100] + vlq(96) + [0x80, 64, 0] + EOT
+    r = pg.evaluate("a => __synth.smf.read(a)", mthd(0, 1, 96) + mtrk(Z0)); s_ = r["song"]
+    t_ = [round(e["time"], 4) for e in s_["parts"][0]["events"]] if s_["parts"] else []
+    ok = pg.evaluate("a => __synth.deck().importBytes(a, 'zero-tempo.mid')", mthd(0, 1, 96) + mtrk(Z0))
+    ck("M. a tempo of 0 in a file is skipped: 120 BPM, notes at 0 and 0.5 s, 1 s long, and the deck says 120 BPM",
+       r["tempos"] == [] and s_["bpm"] == 120 and t_ == [0, 0.5, 0.5, 1.0] and abs(s_["length"] - 1.0) < 1e-9 and ok is True and "120 BPM" in pg.inner_text("#fileStat"),
+       (r["tempos"], s_["bpm"], t_, s_["length"], pg.inner_text("#fileStat")))
 
     # round trip: write then read gives the same events, timing within one tick at 480 ppq, 120 BPM (1.04 ms)
     parts = [{"name": "Filament: Test", "ch": 0, "events": [{"time": 0.0, "data": [0x90, 60, 100]}, {"time": 0.1234, "data": [0xE0, 0, 96]}, {"time": 0.3337, "data": [0xB0, 1, 77]},
@@ -7790,6 +7812,28 @@ with sync_playwright() as pw:
     }""")
     pg.wait_for_function("() => __synth.heptodeState().notes >= 3", timeout=5000)
     ck("H. dropping a .mid file loads its notes", pg.evaluate("__synth.heptodeState().notes") >= 3 and "phrase" in pg.evaluate("__synth.heptodeState().name").lower(), pg.evaluate("__synth.heptodeState()"))
+    # Robustness (10 Nov): a file the reader refuses, dropped on the roll, threw out of the file reader's callback (a
+    # page error, and the toast kept the last file's line). Now the toast carries the reader's message and the
+    # loaded score stays. Polled, not waited on, so a tree that never says it fails this check instead of the run.
+    hep_before = pg.evaluate("__synth.heptodeState()"); n_err = len(errs)
+    pg.evaluate("""() => { document.getElementById('toast').textContent = '';
+      const dt = new DataTransfer(); dt.items.add(new File([new TextEncoder().encode('RIFF....this is not midi')], 'junk.mid'));
+      document.getElementById('hepDrop').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt })); }""")
+    for _ in range(30):
+        pg.wait_for_timeout(100)
+        if "not a Standard MIDI File" in pg.inner_text("#toast") or len(errs) > n_err: break
+    hep_after = pg.evaluate("__synth.heptodeState()")
+    ck("H. a dropped file that is not MIDI says so, with no page error, and the loaded file stays",
+       "junk: This is not a Standard MIDI File" in pg.inner_text("#toast") and len(errs) == n_err
+       and hep_after["notes"] == hep_before["notes"] and hep_after["name"] == hep_before["name"], (pg.inner_text("#toast"), errs[n_err:], hep_after["notes"], hep_after["name"]))
+    # A dense one-channel file (130000 notes, built as in the M. check) threw "Maximum call stack size exceeded"
+    # out of the channel's lowest and highest note; it loads now (thinned to the panel's note cap, as before for
+    # any heavy file). Then the phrase goes back in for the checks below.
+    hep_dense = pg.evaluate("""([mk, n]) => { const a = (0, eval)(mk)(n); let ok; try { ok = __synth.heptodeLoad(a, 'dense'); } catch (e) { ok = 'threw ' + e.message; }
+      const s = __synth.heptodeState(); return { ok, notes: s.notes, name: s.name, toast: document.getElementById('toast').textContent }; }""", [DENSE, 130000])
+    ck("H. a dense one-channel file (130000 notes) loads", hep_dense["ok"] is True and hep_dense["notes"] > 0 and hep_dense["name"] == "dense"
+       and "stack" not in hep_dense["toast"], hep_dense)
+    pg.evaluate("() => __synth.heptodeLoad(__synth.heptodeFixture(), 'phrase')")
     pg.wait_for_timeout(150)
     hep_full = pg.evaluate(ROLL)
     ck("H. with a song loaded the roll leaves its empty state and its notes are painted in the window",

@@ -3,7 +3,7 @@
 // strip (there are sixteen). Performance mode drops notes that cannot be
 // heard under the polyphony cap so a very dense file stays responsive.
 
-import { readSMF, tickTimer } from './smf.js';
+import { readSMF, tickTimer, noteRange } from './smf.js';
 import { CHANNELS } from './heptode-family.js';
 
 function heapPush(h, x) {
@@ -200,13 +200,13 @@ export function scoreFromSMF(smf, name) {
   const tracks = [];
   for (let ch = 0; ch < CHANNELS; ch++) {
     if (!counts[ch]) continue;
-    const pitches = notes.filter(e => e.tr === ch).map(e => e.n);
+    const [lo, hi] = noteRange(notes.filter(e => e.tr === ch).map(e => e.n));
     tracks.push({
       ch,
       name: names[ch].join(' / ') || ('Channel ' + (ch + 1)),
       notes: counts[ch],
-      lo: pitches.length ? Math.min(...pitches) : 0,
-      hi: pitches.length ? Math.max(...pitches) : 0,
+      lo,
+      hi,
     });
   }
   const score = pack(notes, ctrls, { name: name || 'MIDI file', length, bpm, tempos, tracks });

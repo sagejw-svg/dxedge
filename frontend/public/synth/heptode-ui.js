@@ -533,8 +533,19 @@ export function mountHeptodePanel(container, hooks) {
     sync();
     if (hooks.toast) hooks.toast((cooked.name || 'MIDI') + ' · ' + cooked.t.length + ' notes');
   }
+  // A file the reader refuses (not MIDI, cut short, SMPTE timing) used to throw out of the file reader's
+  // callback: a page error, no word on the panel and the toast still showing the last file (measured 10 Nov);
+  // the throw also skipped clearing the picker, so choosing the same file again fired no change (from the code).
+  // Now the reader's plain message is the toast and the score that was loaded stays. Returns whether it loaded.
   function takeBytes(bytes, name) {
-    publish(scoreFromBytes(bytes, name), name);
+    let raw;
+    try { raw = scoreFromBytes(bytes, name); }
+    catch (e) {
+      if (hooks.toast) hooks.toast((name || 'That file') + ': ' + (e && e.message || 'this file could not be read.'));
+      return false;
+    }
+    publish(raw, name);
+    return true;
   }
 
   file.addEventListener('change', () => {
@@ -542,8 +553,8 @@ export function mountHeptodePanel(container, hooks) {
     if (!f) return;
     const reader = new FileReader();
     reader.onload = () => {
-      takeBytes(new Uint8Array(reader.result), f.name.replace(/\.mid$/i, ''));
       file.value = '';
+      takeBytes(new Uint8Array(reader.result), f.name.replace(/\.mid$/i, ''));
     };
     reader.readAsArrayBuffer(f);
   });
