@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -9845,6 +9845,177 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(80)
     ck("Rn. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Sh. patch links and patch files (0.3, 10 Nov)
+    # ?p= carries one device's whole patch (share.js: a dxpatch document, deflated, base64url), and a JSON file carries
+    # the same document. Opening a link loads the patch on its device the way a pick from the menu does, then takes ?p=
+    # off the address. Every value comes back through the device's own normalizer.
+    sh = pg.evaluate("""async () => {
+      const S = __synth.share, out = { bad: [], plainBad: [], n: 0, maxLen: {}, tags: new Set() };
+      for (const { device, patches } of S.factories()) {
+        let mx = 0;
+        for (const p of patches) {
+          const want = JSON.stringify(S.normalize(device, p));
+          const t = await S.encode(device, p), back = await S.decode(t);
+          if (!back || back.device !== device || JSON.stringify(S.normalize(device, back.patch)) !== want) out.bad.push(device + ':' + p.name);
+          const t2 = await S.encode(device, p, false), b2 = await S.decode(t2);
+          if (!t2.startsWith('1j') || !b2 || JSON.stringify(S.normalize(device, b2.patch)) !== want) out.plainBad.push(device + ':' + p.name);
+          out.tags.add(t.slice(0, 2)); mx = Math.max(mx, t.length); out.n++;
+        }
+        out.maxLen[device] = mx;
+      }
+      out.tags = [...out.tags];
+      return out; }""")
+    info("Sh. longest ?p= text per device (characters)", sh["maxLen"])
+    ck(f"Sh. every factory patch on all {len(sh['maxLen'])} devices round-trips through a link, deflated and plain ({sh['n']} patches, longest {max(sh['maxLen'].values())} characters)",
+       len(sh["maxLen"]) == 18 and sh["n"] >= 120 and not sh["bad"] and not sh["plainBad"] and sh["tags"] == ["1z"] and max(sh["maxLen"].values()) < 2000, sh)
+    # a linked patch plays (Filament and Cathode, an edited patch each). A render is not sample-identical even twice in
+    # a row (free-running phases start at random), so the level is compared, with two renders of the original logged
+    # beside it as the yardstick.
+    sh_src = pg.evaluate("""async () => {
+      const f = __synth.factoryPatch('Wide Novachord Strings'); f.filt.cutoff = 1234.5; f.name = 'Sh Strings';
+      const c = __synth.cathodePatch('Plate Screamer'); c.name = 'Sh Screamer';
+      const back = async (d, p) => (await __synth.share.decode(await __synth.share.encode(d, p))).patch;
+      return { f, c, f2: await back('filament', f), c2: await back('cathode', c) }; }""")
+    def _sh_band(L, R):
+        x = (L + R)[int(0.05 * SR):int(0.5 * SR)]
+        frames = [np.abs(np.fft.rfft(x[i:i + 4096] * np.hanning(4096))) for i in range(0, len(x) - 4096, 2048)]
+        spec = np.mean(frames, axis=0); edges = np.geomspace(100, 16000, 25); fr = np.fft.rfftfreq(4096, 1 / SR)
+        bands = np.array([np.sqrt(np.mean(spec[(fr >= a) & (fr < b)] ** 2)) for a, b in zip(edges[:-1], edges[1:])])
+        return 20 * np.log10(np.sqrt(np.mean(x ** 2)) + 1e-12), 20 * np.log10(bands + 1e-9)
+    shd = []
+    for a_, b_ in (("f", "f2"), ("c", "c2")):
+        r0, s0 = _sh_band(*render(sh_src[a_], note(57, 0.0, 0.5), 0.8))
+        r1, s1 = _sh_band(*render(sh_src[a_], note(57, 0.0, 0.5), 0.8))
+        r2, s2 = _sh_band(*render(sh_src[b_], note(57, 0.0, 0.5), 0.8))
+        loud = s0 > s0.max() - 40
+        shd.append({"level": round(float(r0), 2), "twice_dB": round(float(abs(r1 - r0)), 3), "link_dB": round(float(abs(r2 - r0)), 3),
+                    "twice_band": round(float(np.max(np.abs(s1 - s0)[loud])), 2), "link_band": round(float(np.max(np.abs(s2 - s0)[loud])), 2)})
+    info("Sh. original twice against original and linked (level dB, worst band dB in the top 40 dB)", shd)
+    # The patch itself is identical after the trip (the checks above compare it field for field), so this is a sanity
+    # bound on the render, not a proof: two renders of one patch measured up to 1.7 dB apart in level (10 Nov), so the
+    # bound is 3 dB or twice that night's own gap between two renders of the original, whichever is larger.
+    ck(f"Sh. a linked patch plays at the original's level (Filament, Cathode: within {shd[0]['link_dB']:.2f} and {shd[1]['link_dB']:.2f} dB; two renders of the original {shd[0]['twice_dB']:.2f} and {shd[1]['twice_dB']:.2f} dB apart)",
+       all(d["level"] > -40 and d["link_dB"] <= max(3, 2 * d["twice_dB"]) for d in shd), shd)
+    # damaged and hostile links: nothing loads, nothing throws, nothing reaches a prototype
+    shx = pg.evaluate("""async () => {
+      const S = __synth.share, enc = new TextEncoder();
+      const b64 = bytes => { let s = ''; bytes.forEach(x => { s += String.fromCharCode(x); }); return btoa(s).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, ''); };
+      const plain = obj => '1j' + b64(enc.encode(typeof obj === 'string' ? obj : JSON.stringify(obj)));
+      const deflate = async bytes => { const cs = new CompressionStream('deflate-raw'); const w = cs.writable.getWriter(); w.write(bytes); w.close();
+        return new Uint8Array(await new Response(cs.readable).arrayBuffer()); };
+      const good = await S.encode('filament', __synth.factoryPatch('Wide Novachord Strings'));
+      const bomb = '1z' + b64(await deflate(enc.encode('{"kind":"dxpatch","v":1,"device":"filament","patch":{"name":"' + ' '.repeat(1 << 20) + '"}}')));
+      const r = {};
+      r.junk = await S.decode('not a patch!!!');
+      r.short = await S.decode('1z');
+      r.cut = await S.decode(good.slice(0, good.length - 12));
+      r.tag = await S.decode('2z' + good.slice(2));
+      r.v2 = await S.decode(plain({ kind: 'dxpatch', v: 2, device: 'filament', patch: { name: 'x' } }));
+      r.dev = await Promise.all(['constructor', '__proto__', 'toString', 'hasOwnProperty', 'nope', ''].map(d => S.decode(plain({ kind: 'dxpatch', v: 1, device: d, patch: { name: 'x' } }))));
+      r.arr = await S.decode(plain({ kind: 'dxpatch', v: 1, device: 'filament', patch: [1, 2] }));
+      r.notdoc = await S.decode(plain({ kind: 'dxrack', v: 1, device: 'filament', patch: { name: 'x' } }));
+      r.bombLen = bomb.length; r.bomb = await S.decode(bomb);
+      r.long = await S.decode('1j' + 'A'.repeat(70000));
+      const evil = plain('{"kind":"dxpatch","v":1,"device":"filament","patch":{"name":"Sh Evil","__proto__":{"polluted":1},"filt":{"cutoff":1e9,"res":-5,"constructor":{"prototype":{"polluted":2}}}}}');
+      const ap = await S.apply(evil);
+      r.evil = ap && { dev: ap.device, name: ap.patch.name, cut: ap.patch.filt.cutoff, res: ap.patch.filt.res, own: Object.prototype.hasOwnProperty.call(ap.patch, '__proto__'),
+        proto: Object.getPrototypeOf(ap.patch) === Object.prototype, polluted: ({}).polluted, objPoll: Object.prototype.polluted };
+      r.evilWant = (() => { const n = S.normalize('filament', { filt: { cutoff: 1e9, res: -5 } }); return { cut: n.filt.cutoff, res: n.filt.res }; })();
+      return r; }""")
+    ck("Sh. junk, a cut-off link, an unknown tag or version, an array, a project and a device named constructor, __proto__ or toString all read as no patch",
+       all(shx[k] is None for k in ("junk", "short", "cut", "tag", "v2", "arr", "notdoc")) and all(d is None for d in shx["dev"]), shx)
+    ck(f"Sh. a deflate bomb ({shx['bombLen']} characters inflating to 1 MB) and a 70000 character link read as no patch",
+       shx["bomb"] is None and shx["long"] is None and shx["bombLen"] < 65536, (shx["bomb"], shx["long"], shx["bombLen"]))
+    ck(f"Sh. a hostile link loads clamped (cutoff {shx['evil'] and shx['evil']['cut']}, res {shx['evil'] and shx['evil']['res']}) and its __proto__ and constructor keys reach no prototype",
+       shx["evil"] and shx["evil"]["dev"] == "filament" and shx["evil"]["name"] == "Sh Evil" and shx["evil"]["cut"] == shx["evilWant"]["cut"] and shx["evil"]["cut"] < 1e9
+       and shx["evil"]["res"] == shx["evilWant"]["res"] and not shx["evil"]["own"] and shx["evil"]["proto"] and shx["evil"].get("polluted") is None and shx["evil"].get("objPoll") is None, shx["evil"])
+    # opening a link on a fresh page: the rail moves to the link's device, the patch is the link's, undo goes back, the
+    # address loses ?p= and keeps the rest, and a reload keeps the patch without opening the link again
+    sh_q = pg.evaluate("""async () => { const p = __synth.cathodePatch('Plate Screamer'); p.name = 'Linked Screamer';
+      return { q: await __synth.share.encode('cathode', p), want: JSON.stringify(__synth.share.normalize('cathode', p)) }; }""")
+    shc = b.new_context(viewport={"width": 1366, "height": 1000}); shp = shc.new_page(); sherr = []; shp.on("pageerror", lambda e: sherr.append(str(e)))
+    shp.goto(BASE + "?keep=1&p=" + sh_q["q"]); shp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sh_boot = shp.evaluate("__synth.share.boot()"); shp.wait_for_timeout(250)
+    sh_st = shp.evaluate("""() => ({ dev: __synth.device(), patch: JSON.stringify(__synth.patch()), key: __synth.share.key(), menu: __synth.share.menu(),
+      search: location.search, toast: document.getElementById('toast').textContent })""")
+    ck(f"Sh. a link opened on a fresh page loads its patch on its own device ({sh_st['dev']}, menu '{sh_st['menu']}') and leaves the address without ?p=",
+       sh_boot == {"device": "cathode", "name": "Linked Screamer"} and sh_st["dev"] == "cathode" and sh_st["patch"] == sh_q["want"] and sh_st["key"] == "share"
+       and sh_st["menu"] == "* Linked Screamer (edited)" and sh_st["search"] == "?keep=1" and "Linked Screamer" in sh_st["toast"], sh_st)
+    shp.evaluate("__synth.undo()"); shp.wait_for_timeout(150)
+    sh_undo = shp.evaluate("__synth.patch().name")
+    shp.evaluate("q => __synth.share.apply(q)", sh_q["q"]); shp.wait_for_timeout(200)
+    shp.reload(); shp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); shp.wait_for_timeout(250)
+    sh_rl = shp.evaluate("({ dev: __synth.device(), patch: JSON.stringify(__synth.patch()), boot: null })")
+    sh_rl["boot"] = shp.evaluate("__synth.share.boot()")
+    ck(f"Sh. undo after a link goes back to the patch before it ({sh_undo}), and a reload keeps the linked patch without reading a link",
+       sh_undo == "Plate Screamer" and sh_rl["dev"] == "cathode" and sh_rl["patch"] == sh_q["want"] and sh_rl["boot"] is None, (sh_undo, sh_rl["dev"], sh_rl["boot"]))
+    shp.goto(BASE + "?p=1zNOTALINK"); shp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sh_bad = shp.evaluate("async () => { const b = await __synth.share.boot(); return { b, dev: __synth.device(), patch: JSON.stringify(__synth.patch()), search: location.search, toast: document.getElementById('toast').textContent }; }")
+    ck("Sh. a damaged link at boot says it could not be read and leaves the lit patch alone",
+       sh_bad["b"] is None and sh_bad["dev"] == "cathode" and sh_bad["patch"] == sh_q["want"] and sh_bad["search"] == "" and "could not be read" in sh_bad["toast"], sh_bad)
+    shc.close()
+    ck("Sh. no page errors (links opened on fresh pages)", not sherr, sherr)
+    # patch files: the document, the name, the download key, the upload key, and what is refused
+    shf = pg.evaluate("""async () => {
+      const S = __synth.share; await __synth.setDevice('filament'); __synth.load('Wide Novachord Strings');
+      await new Promise(r => setTimeout(r, 80));
+      const before = JSON.stringify(__synth.patch()), doc = S.fileDoc(), name = S.fileName();
+      const thy = __synth.thyPatch('Walnut Bass'); thy.name = 'Sh Walnut';
+      const a = await S.importText(JSON.stringify({ kind: 'dxpatch', v: 1, device: 'thyratron', name: 'Sh Walnut', patch: thy }, null, 2));
+      await new Promise(r => setTimeout(r, 120));
+      const aDev = __synth.device(), aSame = JSON.stringify(__synth.patch()) === JSON.stringify(S.normalize('thyratron', thy)), aKey = S.key();
+      const bare = __synth.thyPatch('Walnut Bass'); delete bare.device; bare.name = 'Sh Bare';
+      const bb = await S.importText(JSON.stringify(bare)); const bDev = __synth.device(), bName = __synth.patch().name;
+      const held = JSON.stringify(__synth.patch());
+      const proj = await S.importText(JSON.stringify({ kind: 'dxrack', v: 1, name: 'P' })), mix = await S.importText(JSON.stringify({ kind: 'dxmix', v: 1 }));
+      const junk = await S.importText('{ not json'), big = await S.importText(' '.repeat(300000));
+      return { before, doc, name, a, aDev, aSame, aKey, bb, bDev, bName, proj, mix, junk, big, heldSame: held === JSON.stringify(__synth.patch()) }; }""")
+    ck(f"Sh. a patch file is a dxpatch document named for the device and the patch ({shf['name']})",
+       shf["doc"]["kind"] == "dxpatch" and shf["doc"]["v"] == 1 and shf["doc"]["device"] == "filament" and shf["doc"]["name"] == "Wide Novachord Strings"
+       and json.loads(shf["before"]) == shf["doc"]["patch"], (shf["doc"]["kind"], shf["name"]))
+    ck("Sh. a Thyratron patch file loads on Thyratron from Filament; a bare patch loads on the lit device",
+       shf["a"]["ok"] and shf["aDev"] == "thyratron" and shf["aSame"] and shf["aKey"] == "import" and shf["bb"]["ok"] and shf["bDev"] == "thyratron" and shf["bName"] == "Sh Bare"
+       and shf["name"] == "filament-wide-novachord-strings.json", shf)
+    ck("Sh. a project, a mix, broken JSON and a 300 kB file are refused with a reason, and the lit patch stays",
+       not shf["proj"]["ok"] and "project" in shf["proj"]["msg"] and not shf["mix"]["ok"] and "mix" in shf["mix"]["msg"] and not shf["junk"]["ok"] and not shf["big"]["ok"] and shf["heldSame"], shf)
+    # the keys on the Rack tab: copy patch link (with the clipboard), download patch, upload patch
+    pg.evaluate("() => { const p = __synth.cathodePatch('Plate Screamer'); p.name = 'Sh Keys'; return __synth.setPatch(p); }"); pg.wait_for_timeout(150)
+    shk_want = pg.evaluate("JSON.stringify(__synth.share.normalize('cathode', __synth.patch()))")
+    pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE.split("/synth/")[0])
+    pg.evaluate("document.getElementById('shareCopy').click()")
+    pg.wait_for_function("document.getElementById('shareUrl').value.includes('?p=')", timeout=5000)
+    shk = pg.evaluate("""async () => { const v = document.getElementById('shareUrl').value; let clip = ''; try { clip = await navigator.clipboard.readText(); } catch (e) { clip = 'ERR ' + e; }
+      const d = await __synth.share.decode(new URL(v).searchParams.get('p'));
+      return { v: v.slice(0, 60), len: v.length, clipSame: clip === v, dev: d && d.device, same: d && JSON.stringify(__synth.share.normalize(d.device, d.patch)), toast: document.getElementById('toast').textContent,
+        path: new URL(v).pathname, params: [...new URL(v).searchParams.keys()] }; }""")
+    ck(f"Sh. copy patch link puts a {shk['len']} character link to the lit patch in the box and on the clipboard",
+       shk["clipSame"] and shk["dev"] == "cathode" and shk["same"] == shk_want and shk["path"] == "/synth/" and shk["params"] == ["p"] and "Link copied" in shk["toast"], shk)
+    with pg.expect_download() as shdl:
+        pg.evaluate("document.getElementById('shareDown').click()")
+    sh_path = os.path.join(SHOTS, "sh_patch_test.json"); shdl.value.save_as(sh_path)
+    with open(sh_path) as fh: sh_file = json.load(fh)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    pg.set_input_files("#shareFile", sh_path); pg.wait_for_timeout(400)
+    shu = pg.evaluate("({ dev: __synth.device(), same: JSON.stringify(__synth.patch()), toast: document.getElementById('toast').textContent, val: document.getElementById('shareFile').value })")
+    ck(f"Sh. download patch saves {shdl.value.suggested_filename}, and upload patch loads it back on Cathode from Filament",
+       shdl.value.suggested_filename == "cathode-sh-keys.json" and sh_file["kind"] == "dxpatch" and sh_file["device"] == "cathode"
+       and shu["dev"] == "cathode" and shu["same"] == shk_want and "Loaded" in shu["toast"] and shu["val"] == "", (shdl.value.suggested_filename, shu))
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
+    # phones: the row sits in the Rack tab's Mix section, every key 44 px, no sideways scroll
+    for sh_w in (375, 320):
+        shm = b.new_context(viewport={"width": sh_w, "height": 667}, is_mobile=True, has_touch=True); shmp = shm.new_page(); shme = []; shmp.on("pageerror", lambda e: shme.append(str(e)))
+        shmp.goto(BASE); shmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); shmp.wait_for_timeout(200)
+        shmp.tap('.tabs [data-go="rack"]'); shmp.wait_for_timeout(250)
+        shmp.evaluate("document.getElementById('shareBar').scrollIntoView({ block: 'center' })"); shmp.wait_for_timeout(100)
+        shr = shmp.evaluate("""() => { const R = id => { const e = document.getElementById(id); const q = e.getBoundingClientRect(); return { w: Math.round(q.width), h: Math.round(q.height), vis: !!e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' }; };
+          const lab = document.querySelector('label[for="shareFile"]').getBoundingClientRect();
+          return { url: R('shareUrl'), copy: R('shareCopy'), down: R('shareDown'), up: { w: Math.round(lab.width), h: Math.round(lab.height) }, sw: document.documentElement.scrollWidth, iw: innerWidth }; }""")
+        ck(f"Sh. {sh_w} px phone: the patch link row shows on the Rack tab, every key and the box 44 px tall, no sideways scroll",
+           shr["copy"]["vis"] and shr["url"]["vis"] and all(shr[k]["h"] >= 44 and shr[k]["w"] >= 44 for k in ("copy", "down", "up")) and shr["url"]["h"] >= 44 and shr["sw"] <= shr["iw"], shr)
+        shm.close()
+        ck(f"Sh. {sh_w} px phone: no page errors", not shme, shme)
+    ck("Sh. no page errors (main page)", not errs, errs)
 
     b.close()
 

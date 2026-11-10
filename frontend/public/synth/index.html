@@ -704,6 +704,7 @@
   @media (min-width: 1100px) { #mMatrix { grid-column: 1 / -1; } }
   .hostbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 8px; }
   .hostbar input[type="number"], .hostbar input[type="text"] { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 6.2em; font-size: 12px; }
+  .hostbar #shareUrl { flex: 1 1 14em; min-width: 0; width: auto; color: var(--amber2); text-overflow: ellipsis; }
   .hostbar .pos { color: var(--amber2); font-variant-numeric: tabular-nums; min-width: 8em; }
   /* mix desk: each device is a channel strip with its own faceplate, lamp and LED ladder.
      The row the keys play is .keyed (not .keys: that class is the keyboard, 150 px tall). */
@@ -1111,7 +1112,7 @@
     #mixBus label { flex: 1 1 100%; } #mixBus input[type="range"] { flex: 1 1 auto; width: auto; }
     .volab { flex: 1 1 160px; min-width: 0; max-width: 100%; }
     .volab input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; height: 44px; }
-    #mHost input[type="range"], #hostTempo, #projName, #mixName { min-height: 44px; height: 44px; }
+    #mHost input[type="range"], #hostTempo, #projName, #mixName, #shareUrl { min-height: 44px; height: 44px; }
     .strip { width: 22px; }
     canvas#eqCv { height: 170px; }
     canvas#fpCv { height: 128px; }
@@ -1638,7 +1639,13 @@
           <button class="btn small" id="mixDown">download mix</button>
           <label class="btn small filebtn" for="mixFile">upload mix<input id="mixFile" type="file" accept="application/json,.json"></label>
         </div>
-        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. Save mix keeps this desk in the browser. The project buttons below keep the patches and the tempo as well.</div>
+        <div class="hostbar" id="shareBar">
+          <input id="shareUrl" type="text" readonly placeholder="patch link" aria-label="Link to the lit device's patch">
+          <button class="btn small" id="shareCopy" title="Make a link that carries the lit device's patch and copy it. Opening the link loads the patch; nothing is stored on a server.">copy patch link</button>
+          <button class="btn small" id="shareDown" title="Download the lit device's patch as a JSON file">download patch</button>
+          <label class="btn small filebtn" for="shareFile" title="Load a patch file (JSON). It plays on the device it was made for.">upload patch<input id="shareFile" type="file" accept="application/json,.json"></label>
+        </div>
+        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. Save mix keeps this desk in the browser. The project buttons below keep the patches and the tempo as well. Copy patch link makes a link that carries the lit device's patch, and nothing goes to a server; download patch and upload patch do the same with a file.</div>
       </section>
       <section class="mod" data-tab="rack mix" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
     </div>
@@ -1800,6 +1807,7 @@ import { createPlayer } from './player.js';
 import { createRoll } from './paperroll-ui.js';
 import { createTheremin } from './theremin-ui.js';
 import { listDevices } from './device.js';
+import { encodePatch, decodePatch, readDoc, patchDoc, patchFileName, safeJSON, MAX_JSON } from './share.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
 import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
@@ -2399,6 +2407,74 @@ $('projFile').addEventListener('change', () => {
     catch (e) { toast('That file is not a project.'); }
     $('projFile').value = '';
   };
+  reader.readAsText(f);
+});
+
+// ---------------------------------------------------------------- patch links and patch files (0.3, 10 Nov 2026)
+// One device's patch at a time: the lit one. share.js writes and reads the document; the device's own
+// normalizer has the last word on every field, so a link from an older or newer page still loads in range.
+const knownDev = id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(DEVS, id);
+// what a patch does not carry on these devices (the sound or picture is the page's, not the patch's)
+const NOT_IN_PATCH = { mote: 'The loaded sound is not in it.', klystron: 'A loaded recording is not in it.', lattice: 'A dropped WAV is not in it.', orthicon: 'A painted or dropped picture is not in it.' };
+// Loads a { device, patch } on its device, the way a pick from the menu does (undo goes back), and shows it
+// as an edit of nothing in the menu. Returns the rail switch's promise when the device had to change.
+function applyPatchDoc(doc, key) {
+  if (!doc || !knownDev(doc.device)) return null;
+  const np = DEVS[doc.device].normalize(doc.patch);
+  const switched = doc.device !== dev ? setDevice(doc.device) : null;
+  rememberUndo();
+  cur = np; curKey = key; edited = true;
+  refreshAll(); fillSelect(); pushPatch(true);
+  return switched;
+}
+async function patchLink() {
+  const text = await encodePatch(dev, D().normalize(cur));
+  const url = new URL(location.href);
+  url.search = ''; url.hash = '';
+  url.searchParams.set('p', text);
+  return url.toString();
+}
+$('shareCopy').addEventListener('click', async () => {
+  const name = D().name, pname = cur.name;
+  let url;
+  try { url = await patchLink(); } catch (e) { toast('Could not make a link for this patch.'); return; }
+  $('shareUrl').value = url;
+  let copied = false;
+  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); copied = true; } } catch (e) { copied = false; }
+  const extra = NOT_IN_PATCH[dev] ? ' ' + NOT_IN_PATCH[dev] : '';
+  toast((copied ? 'Link copied: ' : 'Link ready in the box: ') + name + ', "' + pname + '".' + extra, 4000);
+  if (!copied) { $('shareUrl').focus(); $('shareUrl').select(); }
+});
+$('shareUrl').addEventListener('focus', () => { try { $('shareUrl').select(); } catch (e) {} });
+$('shareUrl').addEventListener('keydown', e => e.stopPropagation());
+$('shareDown').addEventListener('click', () => {
+  const p = D().normalize(cur);
+  const blob = new Blob([JSON.stringify(patchDoc(dev, p), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = patchFileName(dev, p.name);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  toast('Downloaded ' + a.download);
+});
+// A patch file, a bare patch (it plays on the device it names, or the lit one), never a project or a mix.
+function importPatchText(text) {
+  const raw = typeof text === 'string' && text.length <= MAX_JSON ? safeJSON(text) : undefined;
+  const doc = readDoc(raw, knownDev, dev);
+  if (!doc) {
+    const msg = raw && raw.kind === 'dxrack' ? 'That is a project file. Upload it with the project keys above.'
+      : raw && raw.kind === 'dxmix' ? 'That is a mix file. Upload it with upload mix.' : 'That file is not a patch.';
+    toast(msg); return Promise.resolve({ ok: false, msg });
+  }
+  return Promise.resolve(applyPatchDoc(doc, 'import')).then(() => {
+    const msg = 'Loaded "' + cur.name + '" on ' + D().name + '.';
+    toast(msg); return { ok: true, msg, device: dev };
+  });
+}
+$('shareFile').addEventListener('change', () => {
+  const f = $('shareFile').files && $('shareFile').files[0]; if (!f) return;
+  if (f.size > MAX_JSON) { toast('That file is too large to be a patch.'); $('shareFile').value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = () => { importPatchText(String(reader.result)); $('shareFile').value = ''; };
   reader.readAsText(f);
 });
 
@@ -4998,6 +5074,22 @@ function applyOrthiconShare() {
   if (orthiconPanel) orthiconPanel.sync();
 }
 applyOrthiconShare();
+// ?p= (a patch link): read once, then taken off the address, so a reload keeps what was played since
+// the way it does for any patch. The other parameters on the address stay.
+function applyPatchLink() {
+  let q = '';
+  try { q = new URLSearchParams(location.search).get('p') || ''; } catch (e) { q = ''; }
+  if (!q) return Promise.resolve(null);
+  return decodePatch(q, knownDev).catch(() => null).then(doc => {
+    try { const u = new URL(location.href); u.searchParams.delete('p'); history.replaceState(history.state, '', u); } catch (e) { /* keep the address */ }
+    if (!doc) { toast('That patch link could not be read.'); return null; }
+    return Promise.resolve(applyPatchDoc(doc, 'share')).then(() => {
+      toast('Loaded the linked patch "' + cur.name + '" on ' + D().name + '.' + (NOT_IN_PATCH[dev] ? ' ' + NOT_IN_PATCH[dev] : ''), 4000);
+      return doc;
+    });
+  });
+}
+const patchLinkBoot = applyPatchLink();
 
 // A strip meter is a ladder of LED segments: amber, then pale amber, red from 92%. Unlit
 // segments stay faintly visible so a silent strip still reads as a meter. The canvas backing
@@ -5078,6 +5170,22 @@ window.__synth = {
   setTubeShow: mode => setShow(mode),
   device: () => dev,
   setDevice: d => setDevice(d),
+  // patch links and files (tests): the link for the lit patch, encode and decode any patch, a link applied
+  // as if opened, a file's text imported as if picked, and the boot's ?p= promise
+  share: {
+    link: () => patchLink(),
+    encode: (d, p, deflate) => encodePatch(d, p, { deflate: deflate !== false }),
+    decode: t => decodePatch(t, knownDev),
+    apply: t => decodePatch(t, knownDev).then(doc => (doc ? Promise.resolve(applyPatchDoc(doc, 'share')).then(() => ({ device: dev, key: curKey, edited, patch: clone(cur) })) : null)),
+    importText: t => importPatchText(t),
+    fileDoc: () => patchDoc(dev, D().normalize(cur)),
+    fileName: () => patchFileName(dev, cur.name),
+    normalize: (d, p) => (knownDev(d) ? DEVS[d].normalize(p) : null),
+    boot: () => patchLinkBoot.then(doc => (doc ? { device: doc.device, name: doc.name } : null)),
+    key: () => curKey,
+    factories: () => Object.keys(DEVS).map(d => ({ device: d, patches: DEVS[d].factory.map(p => clone(p)) })),
+    menu: () => { const o = $('patchSel').selectedOptions[0]; return o ? o.textContent : ''; },
+  },
   patch: () => clone(cur),
   setPatch: p => {
     if (p && p.device === 'dekatron') {
