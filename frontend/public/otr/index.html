@@ -4379,7 +4379,9 @@
         if(ov>0){ var push=(same?8:22)*ov*dt, wa=b.v/(a.v+b.v), wb=a.v/(a.v+b.v);
           a.vx-=push*ux*wa; a.vy-=push*uy*wa; b.vx+=push*ux*wb; b.vy+=push*uy*wb; }
         if(!same && a.f>0.7 && b.f>0.7){ var tm=(a.T+b.T)/2, rr=a.r*b.r/(a.r+b.r), need=1.6*Math.exp(-(tm-50)/9)*(0.6+0.8*rnd())*Math.min(1,rr*rr/2.56);   // the film drains faster under a small drop
-          CONTACT[key]=(CONTACT[key]||0)+dt*(0.5+ov); if(CONTACT[key]>need){ delete CONTACT[key]; link(a,b,0.35*Math.min(a.r,b.r),dd); } }
+          // (the new neck is never thinner than the 0.5 at which necks part, or a droplet under 1.43 across
+          // would be joined and then parted again on the very next step, every time it tried)
+          CONTACT[key]=(CONTACT[key]||0)+dt*(0.5+ov); if(CONTACT[key]>need){ delete CONTACT[key]; link(a,b,Math.max(0.55,0.35*Math.min(a.r,b.r)),dd); } }
         var q2=(same?(BF[a.blob]?KN:KF):0.05)*Math.min(a.r,b.r)*(b.T-a.T)*dt; a.e+=q2/(a.v*CW); b.e-=q2/(b.v*CW);
       } if(fused) break; }
       // move; keep inside the glass, above the dished floor, below the surface
@@ -4420,6 +4422,8 @@
       // drop duplicate links between the same two parcels
       var seen={}; for(i=LINKS.length-1;i>=0;i--){ var l2=LINKS[i], key=Math.min(l2.a.id,l2.b.id)+':'+Math.max(l2.a.id,l2.b.id); if(seen[key]) LINKS.splice(i,1); else seen[key]=1; }
       L.splice(L.indexOf(b),1);
+      // b is gone and its number is never used again: drop the contact timers it was in, or they are kept for ever
+      for(var ck in CONTACT){ var cp=ck.split(':'); if(+cp[0]===b.id || +cp[1]===b.id) delete CONTACT[ck]; }
     }
 
     // ---- the liquid ----
@@ -4476,17 +4480,22 @@
   // ---- the lava lamp: state, clock, painter ----
   // Same 120 x 200 logical space as the tube. The lamp stands on the floor at y=190: a spun-metal
   // cone base (190..126) with the bulb inside, the glass bottle (128..26, its outline is the
-  // simulation's), and a cone cap (31..8). The wax is a metaball field over the parcels and necks,
-  // shaded per pixel. The field is one device pixel per cell (the canvas itself is devicePixelRatio),
-  // with a steep threshold at the surface so the outline stays crisp instead of a scaled-up blur.
+  // simulation's), and a cone cap (31..8). The wax is a distance field over the parcels and necks,
+  // shaded cell by cell (one device pixel per cell while the budget allows; the canvas itself is
+  // devicePixelRatio). Its outline is traced from the field as a path and the shading is drawn through
+  // it, so the edge is sharp at any zoom instead of a scaled-up blur.
   var LCX=60, LFLOOR=190, LBASE=126;
   var LAMP={ sim:null, last:0, acc:0, warming:true, stat:null, statT:0, music:0, seed:0, F:{} };
   function lampSim(){ if(!LAMP.sim){ LAMP.seed=(Math.random()*4294967296)>>>0; LAMP.sim=makeLava(LAMP.seed); LAMP.warming=true; LAMP.stat=LAMP.sim.stats(); } return LAMP.sim; }
   function lampRestart(seed){ LAMP.seed = seed==null ? (Math.random()*4294967296)>>>0 : seed>>>0; LAMP.sim=makeLava(LAMP.seed); LAMP.warming=true; LAMP.acc=0; LAMP.stat=LAMP.sim.stats(); syncLampStat(); }
   // advance the simulation to wall-clock time; the first warm-up runs at 3x
   function lampAdvance(sec){ var sim=lampSim(), n=Math.round(sec/sim.DT); for(var i=0;i<n;i++){ sim.step(); if(i%60===0) lampWatch(); } lampWatch(); }
-  function lampWatch(){ var st=LAMP.stat=LAMP.sim.stats();
-    if(LAMP.warming && ADV.lampOn && st.melt>0.9 && st.up>0.12) LAMP.warming=false;
+  function lampWatch(){ var sim=LAMP.sim, st=LAMP.stat=sim.stats();
+    // Warm-up is over when the wax is molten and some of it has risen. On a weak bulb it never rises, so it
+    // is also over once the wax has been molten for a quarter of an hour: that lamp is lazy, not warming,
+    // and should not be run at 3x and called "warming up" for the rest of the evening.
+    if(st.melt>0.9){ if(sim.moltenT==null) sim.moltenT=st.t; } else sim.moltenT=null;
+    if(LAMP.warming && ADV.lampOn && st.melt>0.9 && (st.up>0.12 || st.t-sim.moltenT>900)) LAMP.warming=false;
     if(!LAMP.warming && st.melt<0.1) LAMP.warming=true; }
   function lampTick(now){
     var sim=lampSim(), dt=LAMP.last ? Math.min(0.1,(now-LAMP.last)/1000) : 0; LAMP.last=now; if(dt<=0) return;
@@ -4521,118 +4530,345 @@
 
   // wax primitives, as shapes with a distance: each parcel an ellipse (flattened on the floor and under
   // the cap, and a little across its motion, the way a drop pushing through a liquid flattens; a long
-  // tail is a neck, never speed), each neck a rod as thick as the neck between the two parcels' centres.
+  // tail is a neck, never speed), each neck a rod between the two parcels' centres, as thick as the neck
+  // at its ends and drawn in at the waist as it nears the length at which it parts.
   // Parcels of one blob are melted together with a smooth minimum, so where they meet, and where a neck
   // joins a blob, the surface rounds into a fillet instead of adding up into a bump; different blobs are
   // only ever touching, never blended, so each keeps its own outline.
-  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.9, WAX_KN=2.2, WAX_KMAX=6;   // blend widths: a parcel melts into its blob over about its own radius
+  var WAX_GROW=1.0, WAX_KA=0.6, WAX_KB=1.9, WAX_KN=2.2, WAX_KMAX=6, WAX_REACH=0.75;   // blend widths: a parcel melts into its blob over about its own radius, and is sampled out to WAX_REACH of that
+  // The physics changes its mind in a single step: a neck is there and then it is not, two blobs are two
+  // and then one, two parcels are two and then one bigger one. The picture takes a moment over each
+  // (seconds of lamp time): WAX_JOIN for two blobs that have joined to flow into one (and for two that
+  // have come apart while still pressed together to become two again), WAX_SNAP for a parted neck to
+  // pinch through and draw back into its blobs, WAX_FUSE for a parcel that has swallowed its neighbour
+  // to round off. WAX_WAIST is how far a neck draws in at its middle before it parts, and WAX_NEAR the
+  // spacing (in radii) below which a neck is wholly inside its two parcels and is not drawn. From a gap
+  // of WAX_GAP0 between two linked parcels to WAX_GAP1, their neck takes over as the only thing joining
+  // them (see the note in waxPrims).
+  var WAX_JOIN=1.2, WAX_SNAP=0.7, WAX_FUSE=0.8, WAX_WAIST=0.6, WAX_NEAR=0.40, WAX_GAP0=2.5, WAX_GAP1=4.5;
+  function waxEase(u){ return u<=0 ? 0 : u>=1 ? 1 : u*u*(3-2*u); }
+  function waxKey(a,b){ return a.id<b.id ? a.id+':'+b.id : b.id+':'+a.id; }
+  // the radius of a neck at its waist: its own radius while it is short, less as it nears the length at
+  // which the physics breaks it (longer than its own circumference)
+  function waxWaist(l){ var a=l.a, b=l.b, dx=b.x-a.x, dy=b.y-a.y, rn=Math.max(0.45,l.rn), q=(Math.sqrt(dx*dx+dy*dy)-(a.r+b.r)*0.8)/(2*Math.PI*rn); q=q<0?0:q>1?1:q; return rn*(1-WAX_WAIST*q*q); }
+  // Compare this step with the last one the picture saw, and note what happened in between: links that
+  // are new between blobs that were apart (a join), links that have gone while both their parcels are
+  // still there (a parted neck if the two are apart, a parting if they are still pressed together),
+  // parcels that have grown by swallowing a neighbour (a fusion). A join or a parting is a bond: m runs
+  // from 0 (two bodies) to 1 (one), up while the link is there and down once it is not, so a pair that
+  // joins and parts and joins again never jumps. Kept on the simulation, so every view of the lamp sees
+  // the same thing; the physics never reads any of it.
+  function waxWatch(sim){
+    var V=sim.pic||(sim.pic={ t:-1, links:{}, bonds:{}, ghosts:[], was:{} }), L=sim.L, K=sim.LINKS, t=sim.S.t, i, j, l, o, key, bd;
+    if(t===V.t) return V;                                              // another view has already looked at this step
+    var dt=t-V.t, live=V.t>=0 && dt>0 && dt<0.5, now={}, here={}, gone=[];   // after a jump in time (a restart, a fast-forward) nothing is eased
+    if(!live){ V.bonds={}; V.ghosts.length=0; }
+    for(i=0;i<L.length;i++) here[L[i].id]=L[i];
+    if(live){
+      for(key in V.was) if(!here[key]) gone.push(V.was[key]);
+      for(i=0;i<L.length && gone.length;i++){ o=L[i]; var w=V.was[o.id]; if(!w || o.v<=w.v*1.03) continue;
+        var best=null, bv=1e9; for(j=0;j<gone.length;j++){ var dv=Math.abs(gone[j].v-(o.v-w.v)); if(dv<bv){ bv=dv; best=gone[j]; } }
+        // as long as the two were, end to end, along the line between them
+        var fx=best.x-w.x, fy=best.y-w.y, half=(Math.sqrt(fx*fx+fy*fy)+Math.sqrt(w.v/Math.PI)+Math.sqrt(best.v/Math.PI))/2;
+        o.fs=Math.max(0,Math.min(0.35, half/o.r-1)); o.fa=Math.atan2(fy,fx); o.ft=t; }
+    }
+    for(i=0;i<K.length;i++){ l=K[i]; key=waxKey(l.a,l.b); now[key]=l; bd=V.bonds[key];
+      if(bd) bd.on=true;                                               // (joined again while still parting)
+      else if(live && !V.links[key] && l.a.pb!=null && l.b.pb!=null && l.a.pb!==l.b.pb) V.bonds[key]={ a:l.a, b:l.b, m:0, on:true }; }
+    for(key in V.links){ if(now[key]) continue; var k0=V.links[key], A=here[k0.a], B=here[k0.b]; bd=V.bonds[key];
+      if(!live || !A || !B){ delete V.bonds[key]; continue; }
+      if(bd){ bd.on=false; continue; }                                 // it had not finished joining: it eases back the way it came
+      var gx=B.x-A.x, gy=B.y-A.y, gd=Math.sqrt(gx*gx+gy*gy);
+      // Still pressed together: one body eases into two. A neck: it leaves a tail on each blob, and if the
+      // two blobs it joined are pressed together somewhere else as well, they ease apart there too (far:
+      // everywhere but round the place the neck parted, where the two tails must not melt into each other).
+      if(gd<(A.r+B.r)*0.95) V.bonds[key]={ a:A, b:B, m:1, on:false };
+      else { V.ghosts.push({ a:A, b:B, rn:Math.max(0.45,k0.rn), rm:k0.rm, t:t }); V.bonds[key]={ a:A, b:B, m:1, on:false, far:3+2.5*Math.max(0.45,k0.rn) }; } }
+    V.links={}; for(key in now){ l=now[key]; V.links[key]={ a:l.a.id, b:l.b.id, rn:l.rn, rm:waxWaist(l) }; }
+    for(key in V.bonds){ bd=V.bonds[key]; if(here[bd.a.id]!==bd.a || here[bd.b.id]!==bd.b){ delete V.bonds[key]; continue; }
+      bd.m+=(bd.on ? dt : -dt)/WAX_JOIN; if(bd.on ? bd.m>=1 : bd.m<=0) delete V.bonds[key]; }
+    for(i=V.ghosts.length-1;i>=0;i--){ var gh=V.ghosts[i]; if(t-gh.t>=WAX_SNAP || here[gh.a.id]!==gh.a || here[gh.b.id]!==gh.b || now[waxKey(gh.a,gh.b)]) V.ghosts.splice(i,1); }
+    V.was={}; for(i=0;i<L.length;i++){ o=L[i]; V.was[o.id]={ x:o.x, y:o.y, v:o.v }; }
+    V.t=t; return V;
+  }
   function waxPrims(sim){
-    var out=[], L=sim.L, i, al=sim.alpha||0;
-    for(i=0;i<L.length;i++){ var o0=L[i]; o0.rx = o0.px!=null ? o0.px+(o0.x-o0.px)*al : o0.x; o0.ry = o0.py!=null ? o0.py+(o0.y-o0.py)*al : o0.y; }
-    for(i=0;i<L.length;i++){ var o=L[i], ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*WAX_GROW/(1+0.8*ee), b=o.r*WAX_GROW*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
-      var sx=1+0.32*o.rest+0.22*o.sq, sy=1-0.38*o.rest-0.28*o.sq;
-      // M = diag(sx,sy) R diag(a,b) maps the unit circle onto the parcel; keep its inverse and its extents
-      var m00=sx*ca*a, m01=-sx*sa*b, m10=sy*sa*a, m11=sy*ca*b, det=m00*m11-m01*m10, kk=Math.min(WAX_KMAX, WAX_KA+WAX_KB*o.r);
-      out.push({ n:0, b:o.blob, x:o.rx, y:o.ry, i00:m11/det, i01:-m01/det, i10:-m10/det, i11:m00/det, ex:Math.sqrt(m00*m00+m01*m01)+0.6*kk, ey:Math.sqrt(m10*m10+m11*m11)+0.6*kk, k:kk, T:o.T, f:o.f });
+    var out=[], L=sim.L, K=sim.LINKS, n=L.length, i, o, l, key, bd, al=sim.alpha||0, V=waxWatch(sim), tn=sim.S.t+al*sim.DT, par=[], sub=[], yg=[], JE={}, JK={}, JH={};
+    function top(P,a){ while(P[a]!==a){ P[a]=P[P[a]]; a=P[a]; } return a; }
+    function tie(P,a,b){ a=top(P,a); b=top(P,b); if(a!==b) P[a]=b; }
+    // a bond, on the two bodies it is between: how far they are melted together, and over what width
+    function bond(a, b, e, far){ var jk=Math.min(WAX_KMAX, WAX_KA+WAX_KB*Math.min(a.r,b.r)), gs=[a.g,b.g], hole=null;
+      if(far){ var hx=b.rx-a.rx, hy=b.ry-a.ry, hd=Math.sqrt(hx*hx+hy*hy)||1e-6, ha=(hd+a.r-b.r)/2; ha=ha<0.1?0.1:ha>hd-0.1?hd-0.1:ha; hole={ x:a.rx+hx/hd*ha, y:a.ry+hy/hd*ha, r:far }; }
+      for(var s=0;s<2;s++) if(!(JE[gs[s]]>=e)){ JE[gs[s]]=e; JK[gs[s]]=jk; JH[gs[s]]=hole; } }
+    for(i=0;i<n;i++){ var o0=L[i]; o0.ix=i; par[i]=i; sub[i]=i; o0.rx = o0.px!=null ? o0.px+(o0.x-o0.px)*al : o0.x; o0.ry = o0.py!=null ? o0.py+(o0.y-o0.py)*al : o0.y; }
+    // which parcels make one blob (every link, and every pair still parting), and inside a blob which
+    // make one body already (every link but the ones still joining); read from the links as they are
+    // now, not from the physics' own blob numbers, which are a step behind
+    for(i=0;i<K.length;i++){ l=K[i]; bd=V.bonds[waxKey(l.a,l.b)]; tie(par,l.a.ix,l.b.ix); if(bd) yg[i]=waxEase(bd.m); else { yg[i]=-1; tie(sub,l.a.ix,l.b.ix); } }
+    for(key in V.bonds){ bd=V.bonds[key]; if(!bd.on) tie(par,bd.a.ix,bd.b.ix); }
+    for(i=0;i<n;i++){ o=L[i]; o.vb=L[top(par,i)].id; o.g=L[top(sub,i)].id; }
+    for(i=0;i<K.length;i++) if(yg[i]>=0) bond(K[i].a, K[i].b, yg[i]);
+    // Two linked parcels that have drawn apart are joined by their neck and by nothing else. Left to the
+    // smooth minimum they also reach for each other across the gap: close to, that fills the neck out, but
+    // from about three units apart the two reaches no longer meet and show as a notch each side of the
+    // neck. So each keeps, for every such partner, the direction it lies in and how far this has gone
+    // (0 up to WAX_GAP0 apart, 1 from WAX_GAP1), and melts onto nothing that way.
+    for(i=0;i<n;i++) L[i].cn=null;
+    for(i=0;i<K.length;i++){ l=K[i]; var ca0=l.a, cb0=l.b, cx=cb0.rx-ca0.rx, cy=cb0.ry-ca0.ry, cd=Math.sqrt(cx*cx+cy*cy)||1e-6, cg=waxEase((cd-ca0.r-cb0.r-WAX_GAP0)/(WAX_GAP1-WAX_GAP0)); if(cg<=0) continue;
+      (ca0.cn||(ca0.cn=[])).push({ ux:cx/cd, uy:cy/cd, s:cg }); (cb0.cn||(cb0.cn=[])).push({ ux:-cx/cd, uy:-cy/cd, s:cg }); }
+    for(key in V.bonds){ bd=V.bonds[key]; if(!bd.on) bond(bd.a, bd.b, waxEase(bd.m), bd.far); }
+    for(i=0;i<n;i++){ o=L[i]; var ee=o.el*(1-o.rest)*(1-o.sq), a=o.r*WAX_GROW/(1+0.8*ee), b=o.r*WAX_GROW*(1+ee), ca=Math.cos(o.ang), sa=Math.sin(o.ang);
+      var sx=1+0.32*o.rest+0.22*o.sq, sy=1-0.38*o.rest-0.28*o.sq, n00=ca*a, n01=-sa*b, n10=sa*a, n11=ca*b;
+      // a parcel that has just swallowed its neighbour is still as long as the two were, and rounds off
+      if(o.ft!=null){ var fu=(tn-o.ft)/WAX_FUSE; if(fu>=1 || fu<0) o.ft=null; else { var st=1+o.fs*(1-waxEase(fu)), si=1/st, cf=Math.cos(o.fa), sf=Math.sin(o.fa), s00=st*cf*cf+si*sf*sf, s01=(st-si)*cf*sf, s11=st*sf*sf+si*cf*cf;
+          var t00=s00*n00+s01*n10, t01=s00*n01+s01*n11, t10=s01*n00+s11*n10, t11=s01*n01+s11*n11; n00=t00; n01=t01; n10=t10; n11=t11; } }
+      // M = diag(sx,sy) (stretch) R diag(a,b) maps the unit circle onto the parcel; keep its inverse and its extents
+      var m00=sx*n00, m01=sx*n01, m10=sy*n10, m11=sy*n11, det=m00*m11-m01*m10, kk=Math.min(WAX_KMAX, WAX_KA+WAX_KB*o.r), fro=m00*m00+m01*m01+m10*m10+m11*m11;
+      out.push({ n:0, b:o.vb, g:o.g, je:JE[o.g], jk:JK[o.g], jh:JH[o.g], x:o.rx, y:o.ry, i00:m11/det, i01:-m01/det, i10:-m10/det, i11:m00/det, ex:Math.sqrt(m00*m00+m01*m01)+WAX_REACH*kk, ey:Math.sqrt(m10*m10+m11*m11)+WAX_REACH*kk, k:kk, cn:o.cn, ir:Math.sqrt(Math.max(0,(fro-Math.sqrt(Math.max(0,fro*fro-4*det*det)))/2)), T:o.T, f:o.f });   // ir: its shorter radius
     }
-    for(i=0;i<sim.LINKS.length;i++){ var l=sim.LINKS[i], A=l.a, Bq=l.b, dx=Bq.rx-A.rx, dy=Bq.ry-A.ry, d=Math.sqrt(dx*dx+dy*dy); if(d<(A.r+Bq.r)*0.55) continue;
-      var rn=Math.max(0.45,l.rn), kn=Math.min(WAX_KMAX, WAX_KA+WAX_KN*rn), pad=rn+0.6*kn;
-      out.push({ n:1, b:A.blob, x:(A.rx+Bq.rx)/2, y:(A.ry+Bq.ry)/2, ax:A.rx, ay:A.ry, bx:dx, by:dy, bb:dx*dx+dy*dy, rn:rn, k:kn, ex:Math.abs(dx)/2+pad, ey:Math.abs(dy)/2+pad, T:(A.T+Bq.T)/2, T0:A.T, T1:Bq.T, f:Math.min(A.f,Bq.f) });
-    }
+    // a rod from P toward the other parcel: radius rn at its ends, rm at its waist, which is sp of the way along
+    function rod(P, bx, by, rn, rm, sp, T0, T1, f, show){ var kn=Math.min(WAX_KMAX, WAX_KA+WAX_KN*rn)*show, pad; rn*=show; rm*=show; pad=rn+WAX_REACH*kn;
+      out.push({ n:1, b:P.vb, g:P.g, je:JE[P.g], jk:JK[P.g], jh:JH[P.g], x:P.rx+bx/2, y:P.ry+by/2, ax:P.rx, ay:P.ry, bx:bx, by:by, bb:bx*bx+by*by||1e-9, rm:rm, dr:rn-rm, sp:sp, ia:1/sp, ib:sp<1?1/(1-sp):0, k:kn, ex:Math.abs(bx)/2+pad, ey:Math.abs(by)/2+pad, T:(T0+T1)/2, T0:T0, T1:T1, f:f }); }
+    // A neck between two parcels that have closed up on each other is inside them and is not drawn. It
+    // comes in gradually as they part (thickness and blend width together), not all at once at one spacing:
+    // a thick neck arriving in a single step makes the whole blob jump.
+    for(i=0;i<K.length;i++){ if(yg[i]>=0) continue; l=K[i]; var A=l.a, Bq=l.b, dx=Bq.rx-A.rx, dy=Bq.ry-A.ry, d=Math.sqrt(dx*dx+dy*dy), show=waxEase((d/(A.r+Bq.r)-WAX_NEAR)/(0.55-WAX_NEAR)); if(show<=0) continue;
+      var sp=(d+A.r-Bq.r)/(2*d); rod(A, dx, dy, Math.max(0.45,l.rn), waxWaist(l), sp<0.05?0.05:sp>0.95?0.95:sp, A.T, Bq.T, Math.min(A.f,Bq.f), show); }
+    // a neck that has parted: a tail on each blob, thinning to a point where the neck was thinnest, then drawing back in
+    for(i=0;i<V.ghosts.length;i++){ var gh=V.ghosts[i], u=(tn-gh.t)/WAX_SNAP; if(u>=1) continue; if(u<0) u=0;
+      var P=gh.a, Q=gh.b, ex=Q.rx-P.rx, ey=Q.ry-P.ry, dd=Math.sqrt(ex*ex+ey*ey)||1e-6, hP=(dd+P.r-Q.r)/2; hP=hP<0.1?0.1:hP>dd-0.1?dd-0.1:hP;
+      var hQ=dd-hP, tip=Math.max(0.04, gh.rm*(1-waxEase(u/0.3))), back=waxEase((u-0.12)/0.88), lp=hP+(Math.min(hP,P.r*0.5)-hP)*back, lq=hQ+(Math.min(hQ,Q.r*0.5)-hQ)*back;
+      rod(P, ex/dd*lp, ey/dd*lp, gh.rn, tip, 1, P.T, P.T, P.f, 1); rod(Q, -ex/dd*lq, -ey/dd*lq, gh.rn, tip, 1, Q.T, Q.T, Q.f, 1); }
+    for(i=0;i<n;i++) L[i].pb=L[i].vb;
     return out;
   }
   // signed distance (lamp units, negative inside) from a point to one primitive
   function waxDist(p, x, y){
-    if(p.n){ var px=x-p.ax, py=y-p.ay, t=(px*p.bx+py*p.by)/p.bb; t=t<0?0:t>1?1:t; var qx=px-p.bx*t, qy=py-p.by*t; return Math.sqrt(qx*qx+qy*qy)-p.rn; }
-    var rx=x-p.x, ry=y-p.y, qx=p.i00*rx+p.i01*ry, qy=p.i10*rx+p.i11*ry, ql=Math.sqrt(qx*qx+qy*qy); if(ql<1e-4) ql=1e-4;
+    if(p.n){ var px=x-p.ax, py=y-p.ay, t=(px*p.bx+py*p.by)/p.bb; t=t<0?0:t>1?1:t; var qx=px-p.bx*t, qy=py-p.by*t, u=t<p.sp ? (p.sp-t)*p.ia : (t-p.sp)*p.ib; return Math.sqrt(qx*qx+qy*qy)-p.rm-p.dr*u*u; }
+    var rx=x-p.x, ry=y-p.y, qx=p.i00*rx+p.i01*ry, qy=p.i10*rx+p.i11*ry, ql=Math.sqrt(qx*qx+qy*qy); if(ql<1e-4){ qx=1e-4; qy=0; ql=1e-4; }   // (dead centre: step off it, or the distance is 0/0)
     var gx=(p.i00*qx+p.i10*qy)/ql, gy=(p.i01*qx+p.i11*qy)/ql;                     // gradient of |q|: (|q|-1)/|grad| is the distance near the edge
     return (ql-1)/Math.sqrt(gx*gx+gy*gy);
   }
   function smin(a, b, k){ var h=k-Math.abs(a-b); return h<=0 ? Math.min(a,b) : Math.min(a,b)-h*h*0.25/k; }
-  var WAX_FAR=50;
+  var WAX_FAR=50, WAX_SEAM=0.06;
+  // Two bodies of wax pressed together do not overlap: each flattens against the other along the line
+  // where they meet. lo is the distance to the nearer body and hi to the farther; the depth falls to
+  // almost nothing (WAX_SEAM) along the line where the two are equal, so the shading shows a crease
+  // between two rounded bodies. The bottom of the crease is rounded over sw, or it would show the grid
+  // when the picture is scaled up, and it reaches two units out from the other body and no further
+  // (a part is only sampled so far from itself, and beyond that its distance is not known).
+  function waxCrease(lo, hi, sw){ var hs=(hi-lo)*0.5, v=sw-WAX_SEAM-Math.sqrt(hs*hs+sw*sw); return v<=lo ? lo : hi>1 ? lo+(v-lo)*(2-hi) : v; }
+  // the cells one body of wax can reach
+  function waxReach(S, W, H, x0, y0, cs){ var grp=S.prims, ga0=W, ga1=-1, gb0=H, gb1=-1, m=2*cs, i, p;
+    for(i=0;i<grp.length;i++){ p=grp[i]; if(!p.n){ var crr=Math.max(p.ex,p.ey)+m; p.cr=crr*crr; }
+      p.a0=Math.max(0,Math.floor((p.x-p.ex-m-x0)/cs)); p.a1=Math.min(W-1,Math.ceil((p.x+p.ex+m-x0)/cs)); p.b0=Math.max(0,Math.floor((p.y-p.ey-m-y0)/cs)); p.b1=Math.min(H-1,Math.ceil((p.y+p.ey+m-y0)/cs));
+      if(p.a1<p.a0 || p.b1<p.b0) continue;
+      if(p.a0<ga0) ga0=p.a0; if(p.a1>ga1) ga1=p.a1; if(p.b0<gb0) gb0=p.b0; if(p.b1>gb1) gb1=p.b1; }
+    S.a0=ga0; S.a1=ga1; S.b0=gb0; S.b1=gb1; return ga1>=ga0 && gb1>=gb0; }
+  // its parts melted together into FB, and its temperature, melt and half-thickness into the weighted sums
+  // (the half-thickness is how deep the wax can get there: a parcel's shorter radius, a neck's own). This is where
+  // the time goes (every part, every cell it can reach), so the two distance functions are written out
+  // in line with everything that does not change along a row lifted out of it; waxDist is the same sum.
+  // The blend fades to nothing between kf and the edge of a part's reach (the farther of the two
+  // distances decides, and the fade is eased at both ends), so the field has no step and no crease
+  // where a part stops being sampled.
+  function waxMelt(S, FB, FT, FF, FR, FW, W, x0, y0, cs){ var grp=S.prims, i, p, a, b, q, d, w, f, h, lo, hi, fo;
+    for(b=S.b0;b<=S.b1;b++) FB.fill(WAX_FAR, b*W+S.a0, b*W+S.a1+1);
+    for(i=0;i<grp.length;i++){ p=grp[i]; var k=p.k, ik=k>0?1/k:0, k4=k>0?0.25/k:0, kf=k*(WAX_REACH-0.25), ikf=k>0?4/k:0, pf=p.f, pT=p.T;
+      if(p.n){ var ax=p.ax, ay=p.ay, bx=p.bx, by=p.by, ibb=1/p.bb, sp=p.sp, ia=p.ia, ib=p.ib, rm=p.rm, dr=p.dr, T0=p.T0, dT=p.T1-p.T0;
+        for(b=p.b0;b<=p.b1;b++){ var py=y0+b*cs-ay; q=b*W+p.a0;
+          for(a=p.a0;a<=p.a1;a++,q++){ var px=x0+a*cs-ax, t=(px*bx+py*by)*ibb; t=t<0?0:t>1?1:t; var qx=px-bx*t, qy=py-by*t, u=t<sp ? (sp-t)*ia : (t-sp)*ib, rl=rm+dr*u*u; d=Math.sqrt(qx*qx+qy*qy)-rl;
+            f=FB[q]; if(f<d){ lo=f; hi=d; } else { lo=d; hi=f; } h=k-hi+lo; if(h>0 && hi>kf){ fo=(hi-kf)*ikf; h= fo>=1 ? 0 : h*(1-fo*fo*(3-2*fo)); } FB[q]= h<=0 ? lo : lo-h*h*k4;
+            if(d<k){ w=d<0 ? (d<-1.5 ? 2.5 : 1-d) : (1-d*ik)*(1-d*ik); FW[q]+=w; FT[q]+=w*(T0+dT*t); FF[q]+=w*pf; FR[q]+=w*(rl>0.05?rl:0.05); } } } }
+      else { var cx=p.x, cy=p.y, i00=p.i00, i01=p.i01, i10=p.i10, i11=p.i11, cr=p.cr, ir=p.ir, cn=p.cn, nc=cn ? cn.length : 0, c;
+        for(b=p.b0;b<=p.b1;b++){ var ry=y0+b*cs-cy, r2=cr-ry*ry; if(r2<=0) continue;
+          var hw=Math.sqrt(r2), sa=Math.ceil((cx-hw-x0)/cs), ea=Math.floor((cx+hw-x0)/cs), c0=i01*ry, c1=i11*ry; if(sa<p.a0) sa=p.a0; if(ea>p.a1) ea=p.a1; q=b*W+sa;
+          for(a=sa;a<=ea;a++,q++){ var rx=x0+a*cs-cx, ex=i00*rx+c0, ey=i10*rx+c1, ql=Math.sqrt(ex*ex+ey*ey); if(ql<1e-4){ ex=1e-4; ey=0; ql=1e-4; }
+            var gx=i00*ex+i10*ey, gy=i01*ex+i11*ey; d=(ql-1)*ql/Math.sqrt(gx*gx+gy*gy);
+            f=FB[q]; if(f<d){ lo=f; hi=d; } else { lo=d; hi=f; } h=k-hi+lo; if(h>0 && hi>kf){ fo=(hi-kf)*ikf; h= fo>=1 ? 0 : h*(1-fo*fo*(3-2*fo)); }
+            // toward a linked parcel it has drawn away from (within about 30 degrees, fading out by 55) it melts onto nothing
+            if(nc && h>0){ var rr=Math.sqrt(rx*rx+ry*ry)||1e-6, off=0; for(c=0;c<nc;c++){ var cz=(rx*cn[c].ux+ry*cn[c].uy)/rr; if(cz>0.574){ var cw=cz>=0.866 ? 1 : (cz-0.574)/0.292; cw=cw*cw*(3-2*cw)*cn[c].s; if(cw>off) off=cw; } } h*=1-off; }
+            FB[q]= h<=0 ? lo : lo-h*h*k4;
+            if(d<k){ w=d<0 ? (d<-1.5 ? 2.5 : 1-d) : (1-d*ik)*(1-d*ik); FW[q]+=w; FT[q]+=w*pT; FF[q]+=w*pf; FR[q]+=w*ir; } } } } } }
+  // one blob laid over the others: the nearest wins, and the next nearest is remembered
+  function waxLay(A, F, F2, W, a0, a1, b0, b1){ var a, b, q;
+    for(b=b0;b<=b1;b++){ for(a=a0, q=b*W+a0; a<=a1; a++, q++){ var v=A[q]; if(v<F[q]){ F2[q]=F[q]; F[q]=v; } else if(v<F2[q]) F2[q]=v; } } }
   function lampField(view, sim, vis, ppu, cover){
-    // the window of the lamp to sample: wax (or the whole inside for Thermal) cut to what is on screen
-    var prims=waxPrims(sim), g=sim.geo, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, i, j, p;
-    if(cover){ x0=LCX-23; x1=LCX+23; y0=g.Y0; y1=g.Y1+1; }
-    for(i=0;i<prims.length;i++){ p=prims[i]; x0=Math.min(x0,p.x-p.ex); x1=Math.max(x1,p.x+p.ex); y0=Math.min(y0,p.y-p.ey); y1=Math.max(y1,p.y+p.ey); }
-    x0=Math.max(x0,vis.x0,LCX-23); x1=Math.min(x1,vis.x1,LCX+23); y0=Math.max(y0,vis.y0,g.Y0-1); y1=Math.min(y1,vis.y1,g.Y1+2);
+    // Sample the part of the bottle that is on screen, on a grid that does not follow the wax. A window
+    // hugged to the blobs moves its origin and changes its cell size as they move, and the picture shimmers.
+    // (cover asked for the whole inside for Thermal; the window is always that now, so it is not read.)
+    var prims=waxPrims(sim), g=sim.geo, i, j, p;
+    var x0=Math.max(LCX-23, vis.x0), x1=Math.min(LCX+23, vis.x1), y0=Math.max(g.Y0-1, vis.y0), y1=Math.min(g.Y1+2, vis.y1);
     if(x1<=x0 || y1<=y0) return null;
-    // One device pixel per cell. If the whole bottle would be more than the cell budget, coarsen,
-    // but never back to the old three-pixel cells.
+    // One device pixel per cell. If that would be more than the cell budget, coarsen (the outline is traced
+    // from the field as a path, so it stays sharp whatever the cell size). Two cells of margin all round,
+    // so an outline cut off by the edge of the view closes outside it.
     var cs=Math.max(0.05, 1.0/ppu), area=(x1-x0)*(y1-y0), budget=48000;
     if(area/(cs*cs)>budget) cs=Math.sqrt(area/budget);
-    var W=Math.ceil((x1-x0)/cs)+1, H=Math.ceil((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
-    if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.FB=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FW=new Float32Array(N); }
-    var F=st.F, FB=st.FB, FT=st.FT, FF=st.FF, FW=st.FW; F.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FW.fill(0,0,N);
-    // one blob at a time: melt its parts together, then lay it over the others as a hard union
-    var groups={}, order=[];
-    for(i=0;i<prims.length;i++){ p=prims[i]; var key=p.b==null ? 'p'+i : p.b; if(!groups[key]){ groups[key]=[]; order.push(key); } groups[key].push(p); }
-    var m=2*cs;
-    for(j=0;j<order.length;j++){ var grp=groups[order[j]], ga0=W, ga1=-1, gb0=H, gb1=-1;
-      for(i=0;i<grp.length;i++){ p=grp[i]; if(!p.n){ var crr=Math.max(p.ex,p.ey)+m; p.cr=crr*crr; }
-        p.a0=Math.max(0,Math.floor((p.x-p.ex-m-x0)/cs)); p.a1=Math.min(W-1,Math.ceil((p.x+p.ex+m-x0)/cs)); p.b0=Math.max(0,Math.floor((p.y-p.ey-m-y0)/cs)); p.b1=Math.min(H-1,Math.ceil((p.y+p.ey+m-y0)/cs));
-        if(p.a0<ga0) ga0=p.a0; if(p.a1>ga1) ga1=p.a1; if(p.b0<gb0) gb0=p.b0; if(p.b1>gb1) gb1=p.b1; }
-      if(ga1<ga0 || gb1<gb0) continue;
-      for(var b=gb0;b<=gb1;b++) FB.fill(WAX_FAR, b*W+ga0, b*W+ga1+1);
-      for(i=0;i<grp.length;i++){ p=grp[i];
-        for(b=p.b0;b<=p.b1;b++){ var y=y0+b*cs, row=b*W;
-          for(var a=p.a0;a<=p.a1;a++){ var x=x0+a*cs, q=row+a; if(!p.n){ var ux=x-p.x, uy=y-p.y; if(ux*ux+uy*uy>p.cr) continue; } var d=waxDist(p,x,y);
-            FB[q]=smin(FB[q], d, p.k);
-            if(d<p.k){ var w=d<0 ? 1+Math.min(1.5,-d) : (1-d/p.k)*(1-d/p.k), T=p.T;
-              if(p.n){ var tt=((x-p.ax)*p.bx+(y-p.ay)*p.by)/p.bb; tt=tt<0?0:tt>1?1:tt; T=p.T0+(p.T1-p.T0)*tt; }
-              FW[q]+=w; FT[q]+=w*T; FF[q]+=w*p.f; } } } }
-      for(b=gb0;b<=gb1;b++){ for(var a2=ga0, q2=b*W+ga0; a2<=ga1; a2++, q2++) if(FB[q2]<F[q2]) F[q2]=FB[q2]; }
+    x0=(Math.floor(x0/cs)-2)*cs; y0=(Math.floor(y0/cs)-2)*cs; x1=(Math.ceil(x1/cs)+2)*cs; y1=(Math.ceil(y1/cs)+2)*cs;
+    var W=Math.round((x1-x0)/cs)+1, H=Math.round((y1-y0)/cs)+1, N=W*H, st=LAMP.F[view]||(LAMP.F[view]={});
+    if(!st.F || st.F.length<N){ st.F=new Float32Array(N); st.F2=new Float32Array(N); st.FB=new Float32Array(N); st.FA=new Float32Array(N); st.FT=new Float32Array(N); st.FF=new Float32Array(N); st.FR=new Float32Array(N); st.FW=new Float32Array(N); st.Z=new Float32Array(N); }
+    var F=st.F, F2=st.F2, FB=st.FB, FA=st.FA, FT=st.FT, FF=st.FF, FR=st.FR, FW=st.FW; F.fill(WAX_FAR,0,N); F2.fill(WAX_FAR,0,N); FT.fill(0,0,N); FF.fill(0,0,N); FR.fill(0,0,N); FW.fill(0,0,N);
+    // One blob at a time: melt its parts together, then lay it over the others as a hard union, keeping
+    // the distance to the next nearest blob as well. A blob that two bodies have just joined to make is
+    // built body by body and eased from the two pressed together to the two melted into one.
+    var blobs={}, border=[], ua0=W, ua1=-1, ub0=H, ub1=-1, a, b, q, B, S, sw=Math.max(0.25, 1.2*cs);
+    for(i=0;i<prims.length;i++){ p=prims[i]; B=blobs[p.b]; if(!B){ B=blobs[p.b]={ subs:{}, order:[] }; border.push(p.b); }
+      S=B.subs[p.g]; if(!S){ S=B.subs[p.g]={ prims:[], je:p.je==null?1:p.je, jk:p.jk||WAX_KMAX, jh:p.jh }; B.order.push(p.g); } S.prims.push(p); }
+    for(j=0;j<border.length;j++){ B=blobs[border[j]];
+      if(B.order.length===1){ S=B.subs[B.order[0]]; if(!waxReach(S, W, H, x0, y0, cs)) continue; waxMelt(S, FB, FT, FF, FR, FW, W, x0, y0, cs); waxLay(FB, F, F2, W, S.a0, S.a1, S.b0, S.b1);
+        if(S.a0<ua0) ua0=S.a0; if(S.a1>ua1) ua1=S.a1; if(S.b0<ub0) ub0=S.b0; if(S.b1>ub1) ub1=S.b1; continue; }
+      var ba0=W, ba1=-1, bb0=H, bb1=-1, live=[];
+      for(i=0;i<B.order.length;i++){ S=B.subs[B.order[i]]; if(!waxReach(S, W, H, x0, y0, cs)) continue; live.push(S); if(S.a0<ba0) ba0=S.a0; if(S.a1>ba1) ba1=S.a1; if(S.b0<bb0) bb0=S.b0; if(S.b1>bb1) bb1=S.b1; }
+      if(!live.length) continue;
+      for(b=bb0;b<=bb1;b++) FA.fill(WAX_FAR, b*W+ba0, b*W+ba1+1);
+      for(i=0;i<live.length;i++){ S=live[i]; waxMelt(S, FB, FT, FF, FR, FW, W, x0, y0, cs); var e=S.je, kj=S.jk, jh=S.jh, ir2=jh ? 1/(jh.r*jh.r) : 0;
+        for(b=S.b0;b<=S.b1;b++){ var hy=jh ? y0+b*cs-jh.y : 0; for(a=S.a0, q=b*W+S.a0; a<=S.a1; a++, q++){ var fa=FA[q], fb=FB[q];
+          if(!i || fa>=WAX_FAR){ if(fb<fa) FA[q]=fb; continue; } if(fb>=WAX_FAR) continue;
+          // pressed together (a crease along the line where they meet) at one end, melted into one at the
+          // other; round the place a neck has just parted, pressed together whatever the bond says
+          var lo=fa<fb?fa:fb, hi=fa<fb?fb:fa, hg=hi<2 ? waxCrease(lo, hi, sw) : lo, hh=kj-hi+lo, sm=hh<=0 ? lo : lo-hh*hh*0.25/kj, el=e;
+          if(jh){ var hx=x0+a*cs-jh.x, h2=(hx*hx+hy*hy)*ir2; if(h2<1) el=e*h2*h2; }
+          FA[q]=hg+(sm-hg)*el; } } }
+      waxLay(FA, F, F2, W, ba0, ba1, bb0, bb1);
+      if(ba0<ua0) ua0=ba0; if(ba1>ua1) ua1=ba1; if(bb0<ub0) ub0=bb0; if(bb1>ub1) ub1=bb1;
     }
+    // Blobs pressed together: the crease between them (and a dimple where it reaches the outline) until
+    // the film drains and they join. F2 is then done with as a second distance and keeps the depth below
+    // the outline, crease or no crease.
+    for(b=ub0;b<=ub1;b++){ for(a=ua0, q=b*W+ua0; a<=ua1; a++, q++){ var f1=F[q], f2=F2[q]; F2[q]=f1; if(f2<2) F[q]=waxCrease(f1, f2, sw); } }
     st.pxPerCell = cs * ppu; st.cs = cs;
-    return { F:F, FT:FT, FF:FF, FW:FW, W:W, H:H, x0:x0, y0:y0, cs:cs, st:st };
+    return { F:F, FO:F2, FT:FT, FF:FF, FR:FR, FW:FW, Z:st.Z, W:W, H:H, x0:x0, y0:y0, cs:cs, st:st, prims:prims, a0:ua0, a1:ua1, b0:ub0, b1:ub1 };
   }
-  // a rounded profile across the wax for its shading: steep at the outline, flat once well inside
-  var WAX_RZ=4.2;
-  function waxZ(d){ if(d>=0) return 0; var t=-d; return t>=WAX_RZ ? WAX_RZ : Math.sqrt(t*(2*WAX_RZ-t)); }
+  // How much wax lies between each part of the bottle and the bulb. The wax is lit from underneath, so
+  // the underside of a blob is bright, its top sits in its own shade, and a blob above another is dimmer
+  // still. A coarse map of the whole bottle (it does not depend on the view): every parcel and neck is
+  // stamped in, the thickness is summed up from the floor, then spread sideways a little, because the
+  // liquid and the wax scatter the light.
+  var WAX_SC=1.25;
+  function waxShade(sim, prims){
+    var g=sim.geo, sc=WAX_SC, x0=LCX-23, y0=g.Y0-1, W=Math.ceil(46/sc)+1, H=Math.ceil((g.Y1+2-y0)/sc)+1, N=W*H, S=LAMP.SH||(LAMP.SH={});
+    if(!S.C || S.C.length!==N){ S.C=new Float32Array(N); S.O=new Float32Array(N); }
+    var C=S.C, O=S.O, i, a, b, q; C.fill(0);
+    for(i=0;i<prims.length;i++){ var p=prims[i], ex=p.ex-WAX_REACH*p.k+sc, ey=p.ey-WAX_REACH*p.k+sc, a0=Math.max(0,Math.floor((p.x-ex-x0)/sc)), a1=Math.min(W-1,Math.ceil((p.x+ex-x0)/sc)), b0=Math.max(0,Math.floor((p.y-ey-y0)/sc)), b1=Math.min(H-1,Math.ceil((p.y+ey-y0)/sc));
+      for(b=b0;b<=b1;b++) for(a=a0;a<=a1;a++){ var d=waxDist(p, x0+a*sc, y0+b*sc); if(d<sc*0.5){ var cv=d<-sc*0.5 ? 1 : 0.5-d/sc; q=b*W+a; if(cv>C[q]) C[q]=cv; } } }
+    for(a=0;a<W;a++){ var acc=0; for(b=H-1;b>=0;b--){ q=b*W+a; var cc=C[q]*sc; O[q]=acc+0.5*cc; acc+=cc; } }
+    for(var pass=0;pass<3;pass++) for(b=0;b<H;b++){ var row=b*W, prev=O[row]; for(a=0;a<W;a++){ q=row+a; var cur=O[q], nxt=a<W-1?O[q+1]:cur; O[q]=(prev+2*cur+nxt)*0.25; prev=cur; } }
+    S.W=W; S.H=H; S.x0=x0; S.y0=y0; return S;
+  }
+  // The outline of the wax as a path: where the field crosses zero, cell by cell (marching squares), the
+  // crossings joined up into closed loops. Drawn through this as a clip, the wax has a sharp anti-aliased
+  // edge at any zoom, however coarse the field under it. Samples off the grid count as liquid, so every
+  // loop closes.
+  var WAX_MS=(function(){ var from=[], to=[], c, e;   // for each corner pattern: the side the outline comes in by and the side it leaves by (0 top, 1 right, 2 bottom, 3 left)
+    for(c=0;c<16;c++){ var bit=[c&1, c&2, c&4, c&8], fi=-1, ti=-1; for(e=0;e<4;e++){ var p0=bit[e], p1=bit[(e+1)&3]; if(!p0 && p1) fi=e; if(p0 && !p1) ti=e; } from.push(fi); to.push(ti); }
+    return { from:from, to:to }; })();
+  function waxOutline(c, fd, a0, a1, b0, b1){
+    var F=fd.F, W=fd.W, H=fd.H, cs=fd.cs, x0=fd.x0, y0=fd.y0, st=fd.st, PW=W+2, NE=2*PW*(H+2), a, b, i;
+    if(!st.NX || st.NX.length<NE){ st.NX=new Int32Array(NE); st.NX.fill(-1); st.EX=new Float32Array(NE); st.EY=new Float32Array(NE); st.ES=new Int32Array(NE); }
+    var NX=st.NX, EX=st.EX, EY=st.EY, ES=st.ES, ns=0, FAR=WAX_FAR, MF=WAX_MS.from, MT=WAX_MS.to;
+    // side e of the cell whose top-left sample is (a,b): its id, and where the outline crosses it
+    function seg(a, b, e0, e1, f00, f10, f11, f01){
+      var base=2*((b+1)*PW+(a+1)), id0, id1, x, y;
+      if(e0===0){ id0=base; x=a+f00/(f00-f10); y=b; } else if(e0===1){ id0=base+3; x=a+1; y=b+f10/(f10-f11); } else if(e0===2){ id0=base+2*PW; x=a+f01/(f01-f11); y=b+1; } else { id0=base+1; x=a; y=b+f00/(f00-f01); }
+      id1 = e1===0 ? base : e1===1 ? base+3 : e1===2 ? base+2*PW : base+1;
+      NX[id0]=id1; EX[id0]=x0+x*cs; EY[id0]=y0+y*cs; ES[ns++]=id0;
+    }
+    for(b=b0-1;b<=b1;b++){ var rowA=b>=0 && b<H, rowB=b+1>=0 && b+1<H, ra=b*W, rb=(b+1)*W, f00=FAR, f01=FAR;
+      if(a0-1>=0){ if(rowA) f00=F[ra+a0-1]; if(rowB) f01=F[rb+a0-1]; }
+      for(a=a0-1;a<=a1;a++){ var in1=a+1<W, f10=rowA && in1 ? F[ra+a+1] : FAR, f11=rowB && in1 ? F[rb+a+1] : FAR;
+        var code=(f00<0?1:0)|(f10<0?2:0)|(f11<0?4:0)|(f01<0?8:0);
+        if(code!==0 && code!==15){
+          if(code===5){ if(f00+f10+f11+f01<0){ seg(a,b,3,2,f00,f10,f11,f01); seg(a,b,1,0,f00,f10,f11,f01); } else { seg(a,b,3,0,f00,f10,f11,f01); seg(a,b,1,2,f00,f10,f11,f01); } }
+          else if(code===10){ if(f00+f10+f11+f01<0){ seg(a,b,0,3,f00,f10,f11,f01); seg(a,b,2,1,f00,f10,f11,f01); } else { seg(a,b,0,1,f00,f10,f11,f01); seg(a,b,2,3,f00,f10,f11,f01); } }
+          else seg(a,b,MF[code],MT[code],f00,f10,f11,f01);
+        }
+        f00=f10; f01=f11; } }
+    c.beginPath();
+    for(i=0;i<ns;i++){ var e=ES[i], nx=NX[e]; if(nx<0) continue;
+      c.moveTo(EX[e],EY[e]); NX[e]=-1; var guard=ns;
+      while(nx!==e && nx>=0 && guard-->0){ var n2=NX[nx]; if(n2<0) break; c.lineTo(EX[nx],EY[nx]); NX[nx]=-1; nx=n2; }
+      c.closePath(); }
+  }
+  // How the molten wax takes the light. WAX_AMB: what reaches it from the glowing liquid all round, less
+  // toward the edge of a blob by WAX_CORE (the thicker it is the more it glows). WAX_DIR: what comes up
+  // from the bulb; WAX_LEN: how far that carries through wax; WAX_LIMB: how much of it an edge that does
+  // not face the bulb loses; WAX_BED: how much is held back from wax lying on the bottom, which the bulb
+  // already shines through. WAX_RIM: how deep the translucent edge is; WAX_RIMK: how much of the liquid's
+  // light comes through it.
+  var WAX_AMB=0.48, WAX_DIR=0.66, WAX_LEN=20, WAX_RIM=0.5, WAX_RIMK=0.15, WAX_CORE=0.45, WAX_LIMB=0.4, WAX_BED=0.4;
+  var WAX_EXP=(function(){ var t=new Float32Array(2050), i; for(i=0;i<2050;i++) t[i]=Math.exp(-i/256); return t; })();   // exp(-x) for x from 0 to 8, in steps of 1/256
   function lampPaintWax(c, view, sim, look, o, lit){
-    var thermal=look==='thermal', fd=lampField(view, sim, o.vis, o.ppu, thermal); if(!fd) return;
-    var F=fd.F, FT=fd.FT, FF=fd.FF, FW=fd.FW, W=fd.W, H=fd.H, cs=fd.cs, st=fd.st, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], g=sim.geo;
+    var thermal=look==='thermal', neon=look==='neon', uvL=look==='blacklight', xray=look==='xray', vec=!thermal && !neon;
+    var fd=lampField(view, sim, o.vis, o.ppu, thermal); if(!fd) return;
+    // A hair of glow, in source pixels. The old blur(1.6/cs) was several device pixels once the
+    // coarse field was scaled up, which is what made the wax look fuzzy.
+    fd.st.bloomPx = 0.55;
+    if(!thermal && fd.a1<fd.a0) return;                                 // no wax in view
+    var F=fd.F, FO=fd.FO, FT=fd.FT, FF=fd.FF, FR=fd.FR, FW=fd.FW, Z=fd.Z, W=fd.W, H=fd.H, cs=fd.cs, st=fd.st, col=LCOL_BY[ADV.lampCol]||LAMP_COLS[0], g=sim.geo;
     if(!st.cv){ st.cv=document.createElement('canvas'); }
-    if(st.cv.width!==W || st.cv.height!==H){ st.cv.width=W; st.cv.height=H; st.cx=st.cv.getContext('2d'); st.img=st.cx.createImageData(W,H); }
-    var D=st.img.data, wc=look==='blacklight' ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35), lim=cs*(look==='neon'?2.5:1.5);
+    if(st.cv.width!==W || st.cv.height!==H || !st.px){ st.cv.width=W; st.cv.height=H; st.cx=st.cv.getContext('2d'); st.img=st.cx.createImageData(W,H); st.px=new Uint32Array(st.img.data.buffer); }
+    var D=st.img.data; st.px.fill(0);
+    var a0=thermal?0:Math.max(0,fd.a0-2), a1=thermal?W-1:Math.min(W-1,fd.a1+2), b0=thermal?0:Math.max(0,fd.b0-2), b1=thermal?H-1:Math.min(H-1,fd.b1+2), a, b, k;
+    // A rounded profile across the wax for its shading: steep at the outline and level once the wax is as
+    // deep as it gets there (its half-thickness), so a droplet is a dome, a neck is half a cylinder, a big
+    // blob is flat in the middle, and there is no ridge down the middle of anything.
+    for(b=b0;b<=b1;b++) for(a=a0, k=b*W+a0; a<=a1; a++, k++){ var zt=-F[k]; if(zt<=0){ Z[k]=0; continue; } var zr=FR[k]/(FW[k]||1e-6); if(zr<0.3) zr=0.3; Z[k]= zt>=zr ? zr : Math.sqrt(zt*(2*zr-zt)); }
+    var wc=uvL ? col.uv : col.wax, solidC=mix(col.wax,[226,218,206],0.35), lim=cs*(neon?2.5:vec?2:1.5);
     var hx=-0.38, hy=-0.52, hz=0.76;                                   // the room light, up and to the left
-    // Molten wax does not reflect much (it is barely denser optically than the liquid); it glows. It scatters
-    // the bulb's light, so the thicker it is the brighter (light centre, deeper edges), it is brightest near
-    // the bulb, where it goes nearly white, and it is lit by light that has come up through the coloured
-    // liquid, so it takes on the liquid's tint the higher it is (white wax in blue liquid glows pale blue).
-    var liqN=col.liq.map(function(v){ return v/255; }), tintK=col.clear ? 0.35 : 1, uvL=look==='blacklight';
-    for(var b=0;b<H;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.45+0.55*Math.exp(-above/55))+0.1;
-      var Lw=lit*(0.62+0.38*Math.exp(-above/70))+0.08, tint=tintK*(0.3+0.45*(1-Math.exp(-above/45))), hotW=0.35+0.65*Math.exp(-above/38);
-      var wl=[wc[0]*(1-tint*(1-liqN[0])), wc[1]*(1-tint*(1-liqN[1])), wc[2]*(1-tint*(1-liqN[2]))];
-      for(var a=0;a<W;a++){ var k=b*W+a, x=fd.x0+a*cs, dd=F[k], pi=k*4, edge=(wIn-Math.abs(x-LCX))/cs+0.5;
-        if(edge<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; }
+    // Molten wax does not reflect much (it is barely denser optically than the liquid); it glows. It is lit
+    // from underneath and it scatters the light, so each blob is brightest along its underside and deepest
+    // at its top, a blob in the shade of another is dimmer, and the thin edge lets the liquid's light through.
+    // It is brightest near the bulb, where it goes nearly white, and it is lit by light that has come up
+    // through the coloured liquid, so it takes on the liquid's tint the higher it is (white wax in blue
+    // liquid glows pale blue).
+    // th is how thick the wax is at a point, from 0 at the outline to 1 where it is 7.5 deep; like the
+    // profile, it levels off at the middle of a blob instead of meeting itself in a ridge.
+    // Past its nominal setting the bulb brightens the liquid faster than the wax: the liquid lets the light
+    // through and the wax does not, so a hot lamp shows its wax darker against the liquid, not washed into it.
+    var liqN=col.liq.map(function(v){ return v/255; }), tintK=col.clear ? 0.35 : 1, litW=lit<=1 ? lit : 1+(lit-1)*0.35;
+    var SH=vec && !uvL && !xray ? waxShade(sim, fd.prims) : null, SO=SH&&SH.O, SW=SH?SH.W:0, SHh=SH?SH.H:0, isc=1/WAX_SC, iLen=1/WAX_LEN, iRim=1/WAX_RIM, i2c=1/(2*cs), EX=WAX_EXP;
+    for(b=b0;b<=b1;b++){ var y=fd.y0+b*cs, wIn=sim.inner(Math.min(y,g.Y1)), above=g.Y1-y, Lb=lit*(0.45+0.55*Math.exp(-above/55))+0.1;
+      var Lw=litW*(0.62+0.38*Math.exp(-above/70))+0.08, tint=tintK*(0.3+0.45*(1-Math.exp(-above/45))), hotW=0.35+0.65*Math.exp(-above/38), Lr=litW*(0.45+0.55*Math.exp(-above/60));
+      var w0=wc[0]*(1-tint*(1-liqN[0]))/255, w1=wc[1]*(1-tint*(1-liqN[1]))/255, w2=wc[2]*(1-tint*(1-liqN[2]))/255, gain=3.2+2.2*hotW, lk=1/(g.Y1+16-y), top=g.Y0-y, bed=above>=5 ? 1 : 1-WAX_BED*(1-above*0.2)*(1-above*0.2);
+      var sy=0, sy1=0, sv=0; if(SH){ var fy=(y-SH.y0)*isc; if(fy<0) fy=0; else if(fy>SHh-1.001) fy=SHh-1.001; sy=(fy|0)*SW; sy1=sy+SW; sv=fy-(fy|0); }
+      for(a=a0;a<=a1;a++){ k=b*W+a; var x=fd.x0+a*cs, dd=F[k], pi=k*4;
         var A=0, R=0, G=0, Bc=0;
+        if(vec){ var cut=Math.abs(x-LCX)-wIn; if(top>cut) cut=top; if(cut>dd) F[k]=cut; }   // the outline stops at the glass and at the surface (the shading above has already been read from the uncut field)
+        if(dd>=lim && !thermal) continue;
         if(dd<lim){
-          A=Math.max(0,Math.min(1,0.5-dd/(cs*0.55)));
-          if(A>0 || look==='neon'){ var fw=FW[k]||1e-6, T=FT[k]/fw, mf=FF[k]/fw, h=Math.min(1,Math.max(0,-dd)/2.5);
-            var zl=waxZ(a>0?F[k-1]:dd), zr=waxZ(a<W-1?F[k+1]:dd), zu=waxZ(b>0?F[k-W]:dd), zd=waxZ(b<H-1?F[k+W]:dd);
-            var nx=-(zr-zl)/(2*cs), ny=-(zd-zu)/(2*cs), nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
+          A = vec ? 1 : Math.max(0,Math.min(1,0.5-dd/(cs*0.55)));
+          if(A>0 || neon){ var fw=FW[k]||1e-6, T=FT[k]/fw, mf=FF[k]/fw, dp=dd<0?-dd:0, h=Math.min(1,dp/2.5);
+            var zl=Z[a>a0?k-1:k], zr=Z[a<a1?k+1:k], zu=Z[b>b0?k-W:k], zd=Z[b<b1?k+W:k];
+            var nx=-(zr-zl)*i2c, ny=-(zd-zu)*i2c, nl=1/Math.sqrt(nx*nx+ny*ny+1), nz=nl; nx*=nl; ny*=nl;
             var dl=0.5+0.5*ny, sp=Math.max(0,nx*hx+ny*hy+nz*hz), spec=sp*sp; spec*=spec; spec*=spec; spec*=spec;   // ^16
             if(thermal){ var tc=thermRGB((T-22)/45), sh=0.7+0.3*dl; R=tc[0]*sh; G=tc[1]*sh; Bc=tc[2]*sh; }
-            else if(look==='blacklight'){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
-            else if(look==='neon'){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
-            else if(look==='xray'){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
-            else if(mf<0.6){ var li=Lb*(0.42+0.58*dl)*0.4, rim=(1-h)*0.13*Lb;   // solid wax: dull and opaque
-              R=solidC[0]*(0.16+0.95*li+rim)+255*spec*0.25; G=solidC[1]*(0.16+0.95*li+rim)+245*spec*0.25; Bc=solidC[2]*(0.16+0.95*li+rim)+235*spec*0.25; }
-            else { var th=Math.sqrt(Math.min(1,Math.max(0,-dd)/7.5)), E=Lw*(0.22+0.78*th)*(0.8+0.2*dl), X=E*(3.2+2.2*hotW), hot=Math.max(0,T-50)*0.01*lit;
-              // exposed like the glow it is: bright colours run toward white near the bulb, deeper and more saturated up high
-              R=255*(1-Math.exp(-wl[0]/255*X))+255*hot*0.4+255*spec*0.05; G=255*(1-Math.exp(-wl[1]/255*X))+150*hot*0.4+245*spec*0.05; Bc=255*(1-Math.exp(-wl[2]/255*X))+60*hot*0.4+235*spec*0.05;
-              A*=0.7+0.3*Math.min(1,th*1.6); } }   // the thinnest edges let the liquid show through
+            else if(uvL){ var em=(0.55+0.6*(1-h))*(0.55+0.45*Math.min(1.4,lit+0.3)); R=wc[0]*em; G=wc[1]*em; Bc=wc[2]*em; }
+            else if(neon){ var e2=Math.exp(-Math.pow(dd/(cs*1.6+0.02),2)), nc=col.neon; A=Math.max(A,e2); R=nc[0]*e2+20*(1-e2); G=nc[1]*e2; Bc=nc[2]*e2+40*(1-e2); A*=0.35+0.65*e2; }
+            else if(xray){ var xi=0.3+0.7*h; R=150*xi+60; G=195*xi+50; Bc=235*xi+20; A*=0.55+0.4*h; }
+            else { var ms=mf<=0.45 ? 0 : mf>=0.75 ? 1 : (mf-0.45)/0.3; ms=ms*ms*(3-2*ms);     // how molten: the two looks melt into each other
+              if(ms<1){ var li=Lb*(0.42+0.58*dl)*0.4, rim=(1-h)*0.13*Lb, sb=0.16+0.95*li+rim;   // solid wax: dull and opaque
+                R=solidC[0]*sb+255*spec*0.25; G=solidC[1]*sb+245*spec*0.25; Bc=solidC[2]*sb+235*spec*0.25; }
+              if(ms>0){
+                // the wax under this point, toward the bulb
+                var fx=(x-SH.x0)*isc; if(fx<0) fx=0; else if(fx>SW-1.001) fx=SW-1.001; var sa=fx|0, su=fx-sa;
+                var occ=(SO[sy+sa]*(1-su)+SO[sy+sa+1]*su)*(1-sv)+(SO[sy1+sa]*(1-su)+SO[sy1+sa+1]*su)*sv;
+                var ndl=ny+nx*(LCX-x)*lk; if(ndl>1) ndl=1; else if(ndl<-1) ndl=-1;
+                var hr=FR[k]/fw, hu=dp<hr ? dp/hr : 1, hd=dp>hr ? dp : hr, th=hu*(2-hu)*(hd>=7.5 ? 1 : Math.sqrt(hd/7.5)), so=occ*iLen*256, se=FO[k]<0 ? -FO[k]*iRim*256 : 0, E=Lw*(WAX_AMB*(1-WAX_CORE*(1-th))+WAX_DIR*bed*EX[so<2048?so|0:2048]*(0.45+0.275*(1+ndl))*(1-WAX_LIMB*(1-th)*(ndl>0?1-ndl:1))), edge=EX[se<2048?se|0:2048], X=(E*gain+WAX_RIMK*Lr*edge)*256, hot=Math.max(0,T-50)*0.01*lit;
+                // exposed like the glow it is: bright colours run toward white near the bulb, deeper and more saturated up high
+                var u0=w0*X, u1=w1*X, u2=w2*X, mr=255*(1-EX[u0<2048?u0|0:2048])+255*hot*0.4, mg=255*(1-EX[u1<2048?u1|0:2048])+150*hot*0.4, mb=255*(1-EX[u2<2048?u2|0:2048])+60*hot*0.4;
+                R+=(mr-R)*ms; G+=(mg-G)*ms; Bc+=(mb-Bc)*ms; A*=1-0.1*edge*ms; } }   // the thin edge lets the liquid show through
+          }
         }
         if(thermal && A<1){ var tl=sim.sampleTL(x,y), lc=thermRGB((tl-22)/45); R=R*A+lc[0]*0.55*(1-A); G=G*A+lc[1]*0.55*(1-A); Bc=Bc*A+lc[2]*0.55*(1-A); A=1; }
-        A*=Math.min(1,edge);
+        if(!vec){ var eg=(wIn-Math.abs(x-LCX))/cs+0.5; if(eg<=0 || y<g.Y0-0.2){ D[pi+3]=0; continue; } A*=Math.min(1,eg); }
         D[pi]=R>255?255:R; D[pi+1]=G>255?255:G; D[pi+2]=Bc>255?255:Bc; D[pi+3]=A*255;
       } }
     st.cx.putImageData(st.img,0,0);
-    c.save(); c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs);
-    // A hair of glow, in source pixels. The old blur(1.6/cs) was several device pixels once the
-    // coarse field was scaled up, which is what made the wax look fuzzy.
-    st.bloomPx = 0.55;
+    c.save();
+    // the wax is cut out along its traced outline; the picture under the cut is smooth, so scaling it up
+    // costs nothing in sharpness
+    if(vec){ waxOutline(c, fd, a0, a1, b0, b1); c.clip(); }
+    c.imageSmoothingEnabled=true; c.drawImage(st.cv, fd.x0-cs/2, fd.y0-cs/2, W*cs, H*cs);
     if((look==='natural'||look==='night'||look==='vintage'||look==='blacklight') && lit>0.01 && st.cx && ('filter' in st.cx)){
       if(!st.bcv){ st.bcv=document.createElement('canvas'); }
       if(st.bcv.width!==W || st.bcv.height!==H){ st.bcv.width=W; st.bcv.height=H; st.bcx=st.bcv.getContext('2d'); }
