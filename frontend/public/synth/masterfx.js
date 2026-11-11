@@ -6,6 +6,8 @@
 // The reverb's structure is the public-domain Freeverb design; the worklet header
 // records that. The delay and the compressor are original.
 
+import { loadWorklet } from './worklets.js';
+
 const WORKLET = new URL('./master.worklet.js', import.meta.url).href;
 
 export const DIVS = [
@@ -167,7 +169,7 @@ export async function makeMasterFx(ctx, initial) {
   const busActive = s => !!(s && (s.delay.on || s.reverb.on || s.comp.on || s.comp.safety));
   const needNow = busActive(state);
   if (!offlineContext(ctx) || needNow) {
-    if (!ctx.__filamentMaster) { await ctx.audioWorklet.addModule(WORKLET); ctx.__filamentMaster = true; }
+    if (!ctx.__filamentMaster) { await loadWorklet(ctx, WORKLET); ctx.__filamentMaster = true; }
   }
   let node = null, source = null, dest = null, viaWorklet = null, force = false;
   let insert = null, lastInsert = false;

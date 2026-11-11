@@ -13,6 +13,7 @@ import { makeMasterFx } from './masterfx.js';
 import { createMixer } from './mixer.js';
 import { createTransport } from './transport.js';
 import { RACK_API, getDevice, listDevices, registerDevice } from './device.js';
+import { loadWorklet } from './worklets.js';
 
 export const deviceOf = p => (p && p.device === 'cathode' ? 'cathode' : 'filament');
 export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : normalize(p));
@@ -34,7 +35,11 @@ export function rackState(p) {
 }
 
 export async function createEngine(ctx, opts = {}) {
-  if (!ctx.__filament) { await ctx.audioWorklet.addModule(WORKLET); ctx.__filament = true; }
+  // The spring's module loads beside the voice's rather than after it (an offline render pays both
+  // on every new context); awaited below, and the catch only keeps an early failure from going unhandled.
+  const springLoad = opts.rack !== false ? loadSpring(ctx) : null;
+  if (springLoad) springLoad.catch(() => {});
+  if (!ctx.__filament) { await loadWorklet(ctx, WORKLET); ctx.__filament = true; }
   const E = { ctx, C: null, master: ctx.createGain(), meter: { v1: 0, v2: 0, voices: 0, cpu: 0, notes: [] }, nodes: {}, patches: {}, meters: {} };
   E.master.gain.value = opts.volume == null ? 1 : opts.volume;
   let patch = normalizeAny(opts.patch);
@@ -43,7 +48,7 @@ export async function createEngine(ctx, opts = {}) {
     E.C = makeSynthChain(ctx);
     E.ens = makeEnsemble(ctx);
     E.echo = makeTapeEcho(ctx, await probeEchoLatency(ctx.sampleRate));                 // ensemble > tape echo > the chain (EQ, output tubes, ...)
-    await loadSpring(ctx);
+    await springLoad;
     E.spring = makeSpring(ctx);                                                          // tape echo > spring reverb > the chain
     E.ens.output.connect(E.echo.input);
     E.echo.output.connect(E.spring.input);

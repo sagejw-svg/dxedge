@@ -6,12 +6,13 @@
 
 import { latticeDevice, normalizeLattice, LATTICE_DEFAULT, SRC_IDS, DEST_IDS, SRC_LABELS, DEST_LABELS, TABLE_IDS, WARP_IDS, MODE_IDS, ROUTE_IDS, LFO_N } from './lattice.js';
 import { previewFrame, tableFromMono, FRAMES, CYCLE, MIPS } from './lattice-dsp.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./lattice.worklet.js', import.meta.url).href;
 const TABLE_LEN = MIPS * FRAMES * CYCLE;
 
 export async function createLatticeNode(ctx, { patch, events, active, table, destination } = {}) {
-  if (!ctx.__lattice) { await ctx.audioWorklet.addModule(WORKLET); ctx.__lattice = true; }
+  if (!ctx.__lattice) { await loadWorklet(ctx, WORKLET); ctx.__lattice = true; }
   const node = new AudioWorkletNode(ctx, 'lattice', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

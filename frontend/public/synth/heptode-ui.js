@@ -12,6 +12,7 @@ import { scoreFromBytes, prepareScore } from './heptode-score.js';
 import { trackColor } from './heptode-family.js';
 import { FREAD_FMT, addFread, houseFont } from './fread.js';
 import { createHeptodeEngine, postHeptode, renderHeptode, VOICES } from './heptode-dsp.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./heptode.worklet.js', import.meta.url).href;
 
@@ -28,7 +29,7 @@ function copyScore(score) {
 }
 
 export async function createHeptodeNode(ctx, { patch, events, active, destination, score, playing } = {}) {
-  if (!ctx.__heptode) { await ctx.audioWorklet.addModule(WORKLET); ctx.__heptode = true; }
+  if (!ctx.__heptode) { await loadWorklet(ctx, WORKLET); ctx.__heptode = true; }
   const node = new AudioWorkletNode(ctx, 'heptode', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

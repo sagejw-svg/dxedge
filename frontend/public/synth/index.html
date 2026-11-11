@@ -1893,7 +1893,8 @@
 import { makeKnob } from './knob.js';
 import { FREAD_FMT, hookFader } from './fread.js';
 import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
-import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz, springToneHz } from './rack.js';
+import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz, springToneHz, loadSpring } from './rack.js';
+import { preloadWorklets } from './worklets.js';
 import { paintTubeState, paintTubeShow, fitCanvas, TUBE_LOOKS, LOOK_BY } from './tubepaint.js';
 import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, showOnsets, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
@@ -2069,6 +2070,10 @@ function ensureEngine() {
   try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); }
   catch (e) { toast('This browser cannot start Web Audio.'); return Promise.reject(e); }
   const bootPatch = dev === 'dekatron' || dev === 'lattice' || dev === 'thyratron' || dev === 'gleam' || dev === 'mote' || dev === 'heptode' || dev === 'geissler' || dev === 'pentagrid' || dev === 'orthicon' || dev === 'trochotron' || dev === 'gyrotron' || dev === 'klystron' || dev === 'phantastron' || dev === 'additron' || dev === 'rhumbatron' || dev === 'resnatron' ? DS.filament.cur : cur;
+  // The engine's three worklet modules start loading together (worklets.js says why); createEngine and
+  // the master bus then wait on these same loads instead of asking for each in turn.
+  preloadWorklets(ctx, [new URL('./voice.worklet.js', import.meta.url).href, new URL('./master.worklet.js', import.meta.url).href]);
+  loadSpring(ctx).catch(() => {});
   enginePromise = createEngine(ctx, {
     patch: bootPatch,
     tempo: bootProj && bootProj.tempo,
@@ -2083,6 +2088,10 @@ function ensureEngine() {
     // rail's or armed: the generators (Mote, Geissler, Orthicon, Gyrotron) otherwise played on their
     // own for the rest of the chain, about 7 s on the live site, to anyone who clicked during it.
     const nap = id => () => { if (id !== dev && !mixArmed.includes(id)) hostOf(id).setActive(false); };
+    // Every hosted device's module starts loading now, all at once, rather than each waiting for the
+    // attach before it. Not earlier: the engine's modules, which the first sound needs, go first. The
+    // attaches below still run one after another in this order, so the graph is the same.
+    preloadWorklets(ctx, HOSTED_WORKLETS);
     const ready = drumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('dekatron')).then(() => latticeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('lattice'))).then(() => thyHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('thyratron'))).then(() => gleamHost.attach(ctx, null, E).then(nap('gleam'))).then(() => moteHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('mote'))).then(() => heptodeHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('heptode'))).then(() => geisslerHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('geissler'))).then(() => pentaHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('pentagrid'))).then(() => orthiconHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('orthicon'))).then(() => trHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('trochotron'))).then(() => gyHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('gyrotron'))).then(() => klHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('klystron'))).then(() => phHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('phantastron'))).then(() => adHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('additron'))).then(() => rhumHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('rhumbatron'))).then(() => rnHost.attach(ctx, E.ens ? E.ens.input : E.master, E).then(nap('resnatron'))).then(() => {
       // Every hosted device starts asleep, except the one the rail already shows: the chain of
       // attaches can finish after the page is playable, and an 'active: false' there would cut a
@@ -2213,6 +2222,10 @@ function releaseRailVoice() {
   if (node) node.port.postMessage({ t: 'active', on: false });
 }
 function patchFor(id) { return id === dev ? cur : (DS[id] && DS[id].cur); }
+// Each hosted device's worklet module, in HOSTED's order (Dekatron's file is drums.worklet.js); the
+// boot preloads them (see ensureEngine). The URLs are the ones each device's own module asks for.
+const HOSTED_WORKLETS = ['drums', 'lattice', 'thyratron', 'gleam', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron', 'additron', 'rhumbatron', 'resnatron']
+  .map(n => new URL(`./${n}.worklet.js`, import.meta.url).href);
 const HOSTED = ['dekatron', 'lattice', 'thyratron', 'gleam', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron', 'additron', 'rhumbatron', 'resnatron'];
 // What a generator (Geissler, Gyrotron) calls to wake a device it plays and to let it sleep when
 // its notes end. It never sleeps the device on the rail or one armed in the mixer: that would

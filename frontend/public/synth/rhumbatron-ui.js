@@ -2,6 +2,7 @@
 
 import { canvasEngrave, houseFont } from './fread.js';
 import { rhumbatronDevice, normalizeRhumbatron, RHUM_DEFAULT, BODIES, EXCITERS } from './rhumbatron.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./rhumbatron.worklet.js', import.meta.url).href;
 const BODY_LABEL = { string: 'string', tube: 'bore', membrane: 'plate' };
@@ -10,7 +11,7 @@ const EXCITER_LABEL = { pluck: 'pluck', strike: 'strike', bow: 'bow', blow: 'blo
 function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
 
 export async function createRhumbatronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__rhumbatron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__rhumbatron = true; }
+  if (!ctx.__rhumbatron) { await loadWorklet(ctx, WORKLET); ctx.__rhumbatron = true; }
   const node = new AudioWorkletNode(ctx, 'rhumbatron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

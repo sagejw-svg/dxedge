@@ -12,11 +12,12 @@ import {
   smearGrid, blurGrid, shiftGrid, stretchGrid, freezeColumn, quantizeGrid,
   DRAWN, drawnGrid, generatePicture, overGrid, summarizeGrid, pictureShare,
 } from './orthicon-dsp.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./orthicon.worklet.js', import.meta.url).href;
 
 export async function createOrthiconNode(ctx, { patch, events, active, destination, grid } = {}) {
-  if (!ctx.__orthicon) { await ctx.audioWorklet.addModule(WORKLET); ctx.__orthicon = true; }
+  if (!ctx.__orthicon) { await loadWorklet(ctx, WORKLET); ctx.__orthicon = true; }
   const node = new AudioWorkletNode(ctx, 'orthicon', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
@@ -47,7 +48,7 @@ function isRack(engine) {
 
 // Record whatever is connected to the capture worklet. Resolves with {L, R, sr, n}.
 export async function recordOrthicon(ctx, source, seconds) {
-  if (!ctx.__orthicon) { await ctx.audioWorklet.addModule(WORKLET); ctx.__orthicon = true; }
+  if (!ctx.__orthicon) { await loadWorklet(ctx, WORKLET); ctx.__orthicon = true; }
   if (ctx.state !== 'running') await ctx.resume();
   const cap = new AudioWorkletNode(ctx, 'orthicon-capture', {
     numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],

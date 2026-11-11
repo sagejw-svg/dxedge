@@ -10,6 +10,7 @@ import {
 } from './gleam.js';
 import { createGleamFx } from './gleam-fx.js';
 import { FREAD_FMT, addFread, houseFont } from './fread.js';
+import { loadWorklet as loadModule } from './worklets.js';
 
 const WORKLET = new URL('./gleam.worklet.js', import.meta.url).href;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -20,7 +21,7 @@ function isRack(engine) {
 
 async function loadWorklet(ctx) {
   if (ctx.__gleamWorklet) return;
-  await ctx.audioWorklet.addModule(WORKLET);
+  await loadModule(ctx, WORKLET);
   ctx.__gleamWorklet = true;
 }
 

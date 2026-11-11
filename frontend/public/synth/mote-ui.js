@@ -6,11 +6,12 @@
 
 import { makeKnob } from './knob.js';
 import { moteDevice, normalizeMote, MOTE_DEFAULT, MOTE_FILES, WINDOWS, LFO_DEST } from './mote.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./mote.worklet.js', import.meta.url).href;
 
 export async function createMoteNode(ctx, { patch, events, active, destination, buffer } = {}) {
-  if (!ctx.__mote) { await ctx.audioWorklet.addModule(WORKLET); ctx.__mote = true; }
+  if (!ctx.__mote) { await loadWorklet(ctx, WORKLET); ctx.__mote = true; }
   const node = new AudioWorkletNode(ctx, 'mote', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
@@ -39,7 +40,7 @@ function isRack(engine) {
 
 // Record whatever is connected to a capture worklet. Resolves with {L, R, sr, n}.
 export async function recordNode(ctx, source, seconds) {
-  if (!ctx.__mote) { await ctx.audioWorklet.addModule(WORKLET); ctx.__mote = true; }
+  if (!ctx.__mote) { await loadWorklet(ctx, WORKLET); ctx.__mote = true; }
   if (ctx.state !== 'running') await ctx.resume();
   const cap = new AudioWorkletNode(ctx, 'mote-capture', {
     numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
