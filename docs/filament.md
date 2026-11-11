@@ -1690,8 +1690,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (10 Nov): 1. the Rack tab's project, mix and patch link rows (loose keys and plain boxes); 2. Orthicon's picture list;
-3. a user patch's name window on a phone; 4. Phantastron's cartridge row on a phone; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
+Rank of the open items (11 Nov): 1. Orthicon's picture list; 2. a user patch's name window on a phone; 3. Phantastron's cartridge row on a phone;
+4. rail plate titles at 761 to 959 px; 5. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
   also the keyboard's class (`height: var(--kb-h)`, `touch-action: none`, `user-select: none`), so that strip
@@ -1891,6 +1891,24 @@ Rank of the open items (10 Nov): 1. the Rack tab's project, mix and patch link r
   keys 30 px tall at 1366 and 44 px at 375, no sideways scroll at 375. Cost: the readout takes its own line under the chips, so the
   Board card is 32 px taller at 1366 px (438 to 470) and 38 px on a 375 px phone (491 to 529). UI only: no DSP, worklet,
   normalizer or patch touched. New checks: Ps. (13).
+- [x] 11 Nov: the Rack tab's project, mix and patch rows (the top item of 10 Nov). Seen before at 1366 and 375 px: "Untitled" with
+  save project, load saved, download and upload; "Mix" with its four keys; and the patch link box with copy patch link, download patch,
+  upload patch and surprise me, all loose keys beside plain dark text boxes under a desk of faceplates. Measured before: "Untitled"
+  sat in a 74 px box at 1366 px (the last letters under the edge); the three rows took 112 px at 1366 and seven loose rows (348 px) on
+  a 375 px phone. Now: one faceplate (the mix strips' finish) holds three rows, each an engraved tag (PROJECT, MIX, PATCH, the deck's
+  name plate finish), the name in a recessed amber readout window (the patch name window's finish; still the same text field, caret
+  amber, an amber ring on focus) and the keys as one joined switch in the patch keys' finish. The keys say save, load, download,
+  upload and copy link, since the tag names the row; each key's screen reader name keeps the whole phrase ("Save project", "Copy link
+  to the lit patch", the file inputs "Upload mix" and so on, each holding the visible word). The patch link's window has a lamp: dark
+  with no link, amber once copy link fills it (CSS :has on the placeholder, no script); the placeholder reads "no link yet". From
+  1100 px the project and mix rows share a line and the patch row runs under them. On a phone the tag and the window share the first
+  line and the joined keys fill the second; surprise me keeps its own key. Measured after: name text 13.8:1, tags 11.7:1, the
+  placeholder 6.2:1 on the window's lightest stop; "Untitled" not clipped (the window is 315 px at 1366, 221 at 800, 225 at 375, 170 at 320); keys
+  28 px at 1366 and 44 px or more at 375 and 320; no sideways scroll at 320, 375, 800, 1024, 1366 and 1920. Cost: the faceplate is
+  364 px tall on a 375 px phone, about 16 px more than the seven loose rows (padding); at 1366 px it is 81 px, about 31 px less.
+  Static, so nothing for reduced motion (the lamp is checked as not animated with reduce on). UI only: no script, DSP, worklet or patch
+  touched beyond the markup and CSS; the ids are unchanged. Caught on the way by check 10 at 390 px: with the keys on the same line the
+  window shrank to 9 px on a wider phone, so on a phone the keys always take their own line (window 262 px at 412). New checks: Hf. (30).
 - [ ] A user patch's name window on a phone (6 Nov, measured): the delete key (57 px) joins the edit keys on a user
   patch, so the name window drops to 80 px at 375 ("My Te..."). At 320 the edit keys wrap to a row of their own instead
   (name 220 px, the header one row taller while a user patch is loaded). Options: delete inside the save form, or a
@@ -1907,10 +1925,6 @@ Rank of the open items (10 Nov): 1. the Rack tab's project, mix and patch link r
   (99 px) and the tabs (52 px). A slimmer phone chassis (tubes and VU at about 80% height) would give the panel another
   20 to 30 px; it touches the tube canvases, so it waits for the Tube show item. The patch menu part (100 px on a 375 px
   phone, "Wide Nov") is done 6 Nov (see below).
-- [ ] The Rack tab's project, mix and patch link rows (10 Nov, seen at 1366 and 375 px on every device): "Untitled" with save project,
-  load saved, download and upload; "Mix" with save mix, load mix, download mix and upload mix; and the patch link box (10 Nov) with
-  copy patch link, download patch and upload patch are loose keys beside plain dark text boxes, under a mix desk that is all
-  faceplates and readout windows. Joined switches in the patch keys' finish, with each name in a recessed readout window, would match.
 - [ ] Phantastron's cartridge row on a phone (10 Nov, seen at 375 px): the six cartridge chips and lift wires take three rows
   (babble alone on the second, lift wires alone on the third) above the bends readout. A joined cartridge switch with lift wires
   beside the readout would save a row.
@@ -1918,6 +1932,7 @@ Rank of the open items (10 Nov): 1. the Rack tab's project, mix and patch link r
   title on each plate (the role) would keep it reachable by hover there.
 
 ## Open items for James
+- Graphics 11 Nov, the Rack tab's project, mix and patch rows: a look and wording change. Before: three loose rows of keys ("save project", "load saved", "download", "upload"; "save mix" and its three; "copy patch link", "download patch", "upload patch", "surprise me") beside plain dark text boxes. After: one faceplate under the mix desk, each row an engraved tag (PROJECT, MIX, PATCH), the name in an amber readout window, and the keys joined into one switch that now say just save, load, download, upload and copy link (the tag names the row; screen readers still hear "Save project" and so on). The patch link window has a lamp that lights once a link is in it. Calls you may want changed: (1) the shorter key words; say if you want the full phrases back (on a phone they would wrap to a third line per row); (2) surprise me stays its own key after the joined patch keys rather than joining them, since it is not a file action.
 - Nightly 11 Nov, Surprise me: please press it a few times on Filament and on Cathode and listen (Rack tab, Mix section, the patch link row, "surprise me"). Calls I made that you may want changed: (1) the key sits in the patch link row, not the header, for the same 44 px reason as the link; say if you want it up by init; (2) one strength only (no "how wild" switch); the draws stay fairly tame: no arpeggiator, 1939 mode, Filter B, low pass gate, EQ, patch cables or pitch routes, and resonance stays under the singing point; (3) the level is set by measuring, so every draw lands at about the same loudness (a held chord peaking near -6 dBFS), which may sit a little under the loudest factory patches; (4) the rack effects (ensemble, tape echo, spring, room, output tubes) are drawn too, so a press also changes the room and echo; (5) it draws for Filament and Cathode only; the other 16 devices say so. Nothing I can hear: the in-tune and loudness checks are measurements, so whether the draws are musical is your call.
 - Review 10 Nov (`docs/filament-review.md`), two master bus calls: (1) R1110-3, the master vol slider jumps in one sample (100% to 30% on a held sine clicks, 12x to 22x the sine's own step). A 10 ms `setTargetAtTime` glide in `setMasterVol` fixes it, but the check "Desk. master volume is the output gain and is not a patch" reads the gain straight after the set; it would have to wait about 60 ms for the glide. Your call whether that change to the check is fine. (2) R1110-4, switching the master delay (or reverb) off cuts its echoes and steps the dry level back in one sample (2.7x). A fade would keep the effect running until its tail dies, which bends "off is a straight wire". Fade, or keep the hard cut? Tonight's fix (R1110-1) glides the delay time and both mixes and fades the delay in when switched on; worth a listen: turn the master tempo knob or the delay division while echoes ring, which now crossfades instead of ticking.
 - Nightly 10 Nov, patch links and patch files: please try them. Rack tab, Mix section, the row under the mix files: copy patch link, then open the link in another tab or on your phone; download patch and upload patch do the same with a file. Calls I made that you may want changed: (1) the row sits on the Rack tab beside the project and mix files, not in the header's patch row, because a fifth key there would cost the patch name window about 44 px on a phone (say if you want a key up there anyway); (2) one device's patch per link, the lit one, not the whole rack (a project carries 14 patches, so its link would be roughly 8000 characters, estimated by adding the per-device lengths measured tonight); (3) `?p=` comes off the address once it has loaded, so a reload keeps your edits instead of loading the link again (Trochotron's, Resnatron's and Orthicon's own links stay on the address, as before); (4) a linked patch shows as "* name (edited)" and is not saved under Yours until you press save; (5) a browser without CompressionStream (Safari before 16.4, Firefox before 113) writes a longer plain link that every browser reads, but cannot open the short form; (6) Mote's loaded sound, Klystron's recording, Lattice's dropped WAV and Orthicon's painted picture are not part of a patch, so they are not in the link; the toast says so on those four. Next in this item: Surprise me. Say if you want it shaped a particular way (which devices, how wild); otherwise the next nightly builds it for Filament and Cathode first.

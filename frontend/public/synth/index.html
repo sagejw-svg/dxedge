@@ -776,7 +776,57 @@
   .mixrow label { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 6px; row-gap: 2px; align-content: center; }
   .mixrow label .fname { grid-area: 1 / 1; align-self: end; line-height: 11px; } .mixrow label .fread { grid-area: 2 / 1; align-self: start; padding: 1px 5px; line-height: 13px; }
   .mixrow label input[type="range"] { grid-area: 1 / 2 / 3 / 3; width: 100%; }
-  #mixName { width: 10em; max-width: 100%; }
+  /* project, mix and patch rows (graphics, 11 Nov): one faceplate (the mix strips' finish) under the desk. Each row
+     is an engraved tag, the name in a recessed amber readout window (the patch name window's finish) and its keys as
+     one joined switch in the patch keys' finish. The patch link's window has a lamp, lit amber once a link is in it
+     (CSS :has on the placeholder, no script). Before, loose keys beside plain dark text boxes; "Untitled" was clipped
+     in a 74 px box. The window's rim is a box shadow, so the input inside keeps its own 44 px on a phone.
+     Static, so nothing for reduced motion. */
+  #mHost > .hfiles { grid-column: 1 / -1; }
+  .hfiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; margin: 4px 0 8px; padding: 8px 10px; min-width: 0;
+    border: 1px solid #262626; border-radius: 7px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.014) 0 1px, transparent 1px 3px), linear-gradient(180deg, #191919, #101010 58%, #0b0b0b);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 1px 0 rgba(0,0,0,0.7); }
+  .hfiles .hfile { flex-wrap: nowrap; align-items: stretch; gap: 8px; margin: 0; min-width: 0; }
+  .htag { flex: 0 0 auto; align-self: center; box-sizing: border-box; width: 66px; padding: 3px 4px 3px 8px; border: 1px solid #2c2c2c; border-radius: 3px;
+    background: linear-gradient(180deg, #0c0c0c, #151515); box-shadow: inset 0 1px 2px rgba(0,0,0,0.85), 0 1px 0 rgba(255,255,255,0.05);
+    color: #cfcfcf; text-shadow: 0 -1px 0 #000; font-size: 9.5px; letter-spacing: 1.6px; text-transform: uppercase; line-height: 14px; white-space: nowrap; }
+  .hwin { display: flex; align-items: center; gap: 7px; flex: 1 1 9em; min-width: 0; padding: 0 0 0 9px; border-radius: 4px;
+    background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 0 0 1px #000, inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(255,236,210,0.08); }
+  .hwin:focus-within { box-shadow: inset 0 0 0 1px #000, inset 0 1px 3px rgba(0,0,0,0.95), 0 0 0 2px var(--amber); }
+  #mHost .hwin > input { flex: 1 1 auto; align-self: stretch; box-sizing: border-box; width: 0; min-width: 0; height: auto; min-height: 26px; margin: 0; padding: 3px 9px 3px 0;
+    border: 0; border-radius: 0; background: transparent; outline: none;
+    color: #ffd08a; caret-color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 12px; letter-spacing: 0.2px; text-overflow: ellipsis; }
+  #mHost .hwin > input::placeholder { color: #a58d6c; text-shadow: none; opacity: 1; }
+  #mHost .hwin > input::selection { background: rgba(255,179,71,0.35); color: #fff3dc; }
+  .hlamp { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2a2a2a; box-shadow: inset 0 0 2px #000; }
+  .hwin:has(> input:not(:placeholder-shown)) > .hlamp { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .hjoin { display: inline-flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 0; align-items: stretch; border-radius: 7px;
+    box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(255,255,255,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  .hjoin > .btn { display: inline-flex; align-items: center; justify-content: center; margin: 0; border-radius: 0; border-color: #2c2c2c; border-left-width: 0;
+    background: linear-gradient(180deg, #1e1e1e, #121212); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); white-space: nowrap; line-height: 16px; }
+  .hjoin > :first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  .hjoin > :last-child { border-radius: 0 6px 6px 0; }
+  .hjoin > .btn:hover { color: var(--amber2); border-color: #2c2c2c; }
+  .hjoin > .btn:focus-visible, .hjoin > .btn:focus-within { position: relative; z-index: 1; outline-offset: 1px; }
+  .hfile > #surpriseBtn { flex: 0 0 auto; display: inline-flex; align-items: center; white-space: nowrap; line-height: 16px; }
+  @media (min-width: 761px) { #projBar .hwin, #mixBar .hwin { flex: 0 1 17em; } }
+  @media (min-width: 1100px) {
+    .hfiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
+    #shareBar { grid-column: 1 / -1; }
+    #projBar .hwin, #mixBar .hwin { flex: 1 1 9em; }
+  }
+  /* a phone: the tag and the window share the first line, the keys fill the second */
+  @media (max-width: 760px) {
+    .hfiles { padding: 7px 8px; gap: 8px; }
+    .hfiles .hfile { flex-wrap: wrap; row-gap: 6px; }
+    .htag { width: 62px; }
+    .hwin { flex: 1 1 0; min-height: 44px; }
+    #mHost .hwin > input { min-height: 44px; height: 44px; }
+    .hjoin { flex: 1 1 100%; }
+    .hjoin > .btn { flex: 1 1 auto; padding: 4px 8px; }
+  }
   body[data-mixdesk="1"] .panel .mod:not(#mHost):not(#mMaster) { display: none !important; }
   body[data-mixdesk="1"] #mHost, body[data-mixdesk="1"] #mMaster { display: block !important; }
   .filebtn input { display: none; }
@@ -1658,28 +1708,39 @@
           <label><span class="fname">delay</span> <input type="range" id="mixLDly" min="0" max="1" step="0.01" value="0" aria-label="Lattice delay send"><output class="fread" id="mixLDlyV" for="mixLDly" aria-hidden="true"></output></label>
           <button class="chip" id="mixLArm" aria-pressed="false" aria-label="Arm Lattice">arm</button>
         </div>
-        <div class="hostbar">
-          <input id="projName" type="text" maxlength="40" value="Untitled" aria-label="Project name">
-          <button class="btn small" id="projSave">save project</button>
-          <button class="btn small" id="projLoad">load saved</button>
-          <button class="btn small" id="projDown">download</button>
-          <label class="btn small filebtn" for="projFile">upload<input id="projFile" type="file" accept="application/json,.json"></label>
+        <div class="hfiles" role="group" aria-label="Project, mix and patch files">
+          <div class="hostbar hfile" id="projBar">
+            <span class="htag" aria-hidden="true">project</span>
+            <span class="hwin"><input id="projName" type="text" maxlength="40" value="Untitled" aria-label="Project name" title="Project name"></span>
+            <span class="hjoin" role="group" aria-label="Project">
+              <button class="btn small" id="projSave" aria-label="Save project" title="Keep this project (the patches, the mix and the tempo) in this browser">save</button>
+              <button class="btn small" id="projLoad" aria-label="Load saved project" title="Load the project saved in this browser">load</button>
+              <button class="btn small" id="projDown" aria-label="Download project" title="Download the project as a JSON file">download</button>
+              <label class="btn small filebtn" for="projFile" title="Load a project file (JSON)">upload<input id="projFile" type="file" accept="application/json,.json" aria-label="Upload project"></label>
+            </span>
+          </div>
+          <div class="hostbar hfile" id="mixBar">
+            <span class="htag" aria-hidden="true">mix</span>
+            <span class="hwin"><input id="mixName" type="text" maxlength="40" value="Mix" aria-label="Mix session name" title="Mix session name"></span>
+            <span class="hjoin" role="group" aria-label="Mix">
+              <button class="btn small" id="mixSave" aria-label="Save mix" title="Keep this desk (levels, pans, sends, arms and the bus) in this browser">save</button>
+              <button class="btn small" id="mixLoad" aria-label="Load mix" title="Load the mix saved in this browser">load</button>
+              <button class="btn small" id="mixDown" aria-label="Download mix" title="Download the mix as a JSON file">download</button>
+              <label class="btn small filebtn" for="mixFile" title="Load a mix file (JSON)">upload<input id="mixFile" type="file" accept="application/json,.json" aria-label="Upload mix"></label>
+            </span>
+          </div>
+          <div class="hostbar hfile" id="shareBar">
+            <span class="htag" aria-hidden="true">patch</span>
+            <span class="hwin"><i class="hlamp" aria-hidden="true"></i><input id="shareUrl" type="text" readonly placeholder="no link yet" aria-label="Link to the lit device's patch" title="Link to the lit device's patch"></span>
+            <span class="hjoin" role="group" aria-label="Patch">
+              <button class="btn small" id="shareCopy" aria-label="Copy link to the lit patch" title="Make a link that carries the lit device's patch and copy it. Opening the link loads the patch; nothing is stored on a server.">copy link</button>
+              <button class="btn small" id="shareDown" aria-label="Download patch" title="Download the lit device's patch as a JSON file">download</button>
+              <label class="btn small filebtn" for="shareFile" title="Load a patch file (JSON). It plays on the device it was made for.">upload<input id="shareFile" type="file" accept="application/json,.json" aria-label="Upload patch"></label>
+            </span>
+            <button class="btn small" id="surpriseBtn" title="A random patch for Filament or Cathode, inside musical limits: in tune, never silent, and set to a level well under the limiter. Undo goes back; save keeps it.">surprise me</button>
+          </div>
         </div>
-        <div class="hostbar">
-          <input id="mixName" type="text" maxlength="40" value="Mix" aria-label="Mix session name">
-          <button class="btn small" id="mixSave">save mix</button>
-          <button class="btn small" id="mixLoad">load mix</button>
-          <button class="btn small" id="mixDown">download mix</button>
-          <label class="btn small filebtn" for="mixFile">upload mix<input id="mixFile" type="file" accept="application/json,.json"></label>
-        </div>
-        <div class="hostbar" id="shareBar">
-          <input id="shareUrl" type="text" readonly placeholder="patch link" aria-label="Link to the lit device's patch">
-          <button class="btn small" id="shareCopy" title="Make a link that carries the lit device's patch and copy it. Opening the link loads the patch; nothing is stored on a server.">copy patch link</button>
-          <button class="btn small" id="shareDown" title="Download the lit device's patch as a JSON file">download patch</button>
-          <label class="btn small filebtn" for="shareFile" title="Load a patch file (JSON). It plays on the device it was made for.">upload patch<input id="shareFile" type="file" accept="application/json,.json"></label>
-          <button class="btn small" id="surpriseBtn" title="A random patch for Filament or Cathode, inside musical limits: in tune, never silent, and set to a level well under the limiter. Undo goes back; save keeps it.">surprise me</button>
-        </div>
-        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. Save mix keeps this desk in the browser. The project buttons below keep the patches and the tempo as well. Copy patch link makes a link that carries the lit device's patch, and nothing goes to a server; download patch and upload patch do the same with a file. Surprise me draws a random patch on Filament or Cathode: in tune, never silent, and levelled under the limiter.</div>
+        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. The mix row's save keeps this desk in the browser; the project row's keys keep the patches and the tempo as well. On the patch row, copy link makes a link that carries the lit device's patch, and nothing goes to a server; download and upload do the same with a file. Surprise me draws a random patch on Filament or Cathode: in tune, never silent, and levelled under the limiter.</div>
       </section>
       <section class="mod" data-tab="rack mix" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
     </div>

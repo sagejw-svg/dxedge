@@ -5865,6 +5865,58 @@ with sync_playwright() as pw:
            and w1["wtitle"].count("\u2192") == 6 and w1["win"]["r"] <= w1["pcard"]["r"] + 0.5 and w1["win"]["h"] < 50 and w1["sw"] <= w1["iw"], w1)
         psx.close()
     ck("Ps. no page errors (Phantastron's seed row and bends readout)", not pserr, pserr)
+    # Hf. the Rack tab's project, mix and patch rows (graphics, 11 Nov 2026). Before, loose keys beside plain dark text
+    # boxes ("Untitled" clipped in a 74 px box at 1366 px), seven loose rows on a 375 px phone. Now: one faceplate, each
+    # row an engraved tag, the name in a recessed amber readout window and its keys as one joined switch; the patch
+    # link's window has a lamp that lights once a link is in it.
+    HF_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const face = document.querySelector('#mHost > .hfiles'), fr = face ? R(face) : null, fc = face ? getComputedStyle(face) : null;
+      const rows = ['projBar', 'mixBar', 'shareBar'].map(id => { const row = document.getElementById(id); const tag = row.querySelector('.htag'), win = row.querySelector('.hwin'), inp = win.querySelector('input');
+        const keys = [...row.querySelectorAll('.hjoin > .btn')], kr = keys.map(R), ic = getComputedStyle(inp), wc = getComputedStyle(win), tc = getComputedStyle(tag);
+        const join = kr.every((k, i) => i === 0 || (Math.abs(k.l - kr[i - 1].r) < 1.1 && Math.abs(k.t - kr[i - 1].t) < 0.6));
+        const lamp = win.querySelector('.hlamp'), lc = lamp && getComputedStyle(lamp);
+        const label = keys.map(k => { const inn = k.querySelector('input[type=file]'); const nm = inn ? inn.getAttribute('aria-label') : k.getAttribute('aria-label'); return !!nm && nm.toLowerCase().includes(k.textContent.trim().toLowerCase()); });
+        const all = [...row.children].map(R);
+        return { id, inside: fr ? all.every(q => q.l >= fr.l - 0.5 && q.r <= fr.r + 0.5) : false, tag: tag.textContent, tagColor: tc.color, tagBg: tc.backgroundImage,
+          winBg: wc.backgroundImage, winShadow: wc.boxShadow, color: ic.color, inBg: ic.backgroundColor, ph: getComputedStyle(inp, '::placeholder').color,
+          clip: inp.scrollWidth > inp.clientWidth + 1, win: R(win), inp: R(inp), keyMin: Math.min(...kr.map(k => Math.min(k.w, k.h))), keyH: kr.map(k => k.h), join, label, n: keys.length,
+          lamp: lc ? lc.backgroundColor : null, lampAnim: lc ? lc.animationName : null, val: inp.value }; });
+      const sp = document.getElementById('surpriseBtn');
+      return { face: !!face, faceBg: fc && fc.backgroundImage, rows, surprise: R(sp), rowsH: fr && fr.h, sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    hferr = []
+    for hf_w, hf_mob, hf_rm in ((1366, False, "no-preference"), (800, False, "no-preference"), (375, True, "reduce"), (320, True, "no-preference"), (412, True, "no-preference")):
+        hfx = b.new_context(viewport={"width": hf_w, "height": 667 if hf_mob else 1000}, is_mobile=hf_mob, has_touch=hf_mob, reduced_motion=hf_rm)
+        hfp = hfx.new_page(); hfp.on("pageerror", lambda e: hferr.append(str(e)))
+        hfp.goto(BASE); hfp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        if hf_mob: hfp.tap('.tabs [data-go="rack"]'); hfp.wait_for_timeout(250)
+        hfp.evaluate("document.getElementById('shareBar').scrollIntoView({ block: 'center' })"); hfp.wait_for_timeout(100)
+        hf = hfp.evaluate(HF_MEAS); rows = {r["id"]: r for r in hf["rows"]}
+        cons = {k: (_ob_con(r["color"], r["winBg"]), _ob_con(r["tagColor"], r["tagBg"])) for k, r in rows.items()}
+        ph_con = _ob_con(rows["shareBar"]["ph"], rows["shareBar"]["winBg"])
+        info(f"Hf. {hf_w} px", f"faceplate {hf['rowsH']:.0f} px tall; windows {', '.join('%s %.0f' % (k, r['win']['w']) for k, r in rows.items())} px; text {min(c[0] for c in cons.values()):.1f}:1, tags {min(c[1] for c in cons.values()):.1f}:1, placeholder {ph_con:.1f}:1")
+        ck(f"Hf. at {hf_w} px the project, mix and patch rows sit on one faceplate: each an engraved tag, the name in a recessed amber window and its keys as one joined switch",
+           hf["face"] and "gradient" in (hf["faceBg"] or "") and [r["tag"] for r in hf["rows"]] == ["project", "mix", "patch"]
+           and all(r["inside"] and r["join"] and "gradient" in r["winBg"] and "inset" in r["winShadow"] and r["inBg"] == "rgba(0, 0, 0, 0)" for r in hf["rows"])
+           and [r["n"] for r in hf["rows"]] == [4, 4, 3], hf)
+        ck(f"Hf. at {hf_w} px the names read in their windows (text {min(c[0] for c in cons.values()):.1f}:1, tags {min(c[1] for c in cons.values()):.1f}:1, the empty link's placeholder {ph_con:.1f}:1; want 4.5 or more) and Untitled and Mix are not clipped",
+           all(c[0] >= 4.5 and c[1] >= 4.5 for c in cons.values()) and ph_con >= 4.5 and not rows["projBar"]["clip"] and not rows["mixBar"]["clip"], (cons, ph_con, rows["projBar"]["clip"]))
+        ck(f"Hf. at {hf_w} px every key's screen reader name holds its visible word (save is Save project, upload is Upload mix)", all(all(r["label"]) for r in hf["rows"]), [r["label"] for r in hf["rows"]])
+        ck(f"Hf. at {hf_w} px each name window keeps room for its name ({min(r['win']['w'] for r in hf['rows']):.0f} px or more, want 120): the keys never squeeze it shut",
+           all(r["win"]["w"] >= 120 for r in hf["rows"]), [(r["id"], r["win"]["w"]) for r in hf["rows"]])
+        if hf_mob:
+            ck(f"Hf. on a {hf_w} px phone every key and the surprise key are 44 px or more, the name boxes 44 px tall, no sideways scroll",
+               all(r["keyMin"] >= 44 and r["inp"]["h"] >= 44 for r in hf["rows"]) and hf["surprise"]["h"] >= 44 and hf["sw"] <= hf["iw"] == hf_w, hf)
+        elif hf_w >= 1100:
+            ck("Hf. at 1366 px the keys keep the desk's compact height (28 px) and the project and mix rows share a line, the patch row under them",
+               all(abs(h - 28) < 1 for r in hf["rows"] for h in r["keyH"]) and abs(rows["projBar"]["win"]["t"] - rows["mixBar"]["win"]["t"]) < 1
+               and rows["shareBar"]["win"]["t"] > rows["projBar"]["win"]["b"] and rows["projBar"]["win"]["w"] >= 160 and hf["sw"] <= hf["iw"], hf)
+        hfp.evaluate("document.getElementById('shareCopy').click()"); hfp.wait_for_timeout(400)
+        h1 = hfp.evaluate(HF_MEAS)["rows"][2]
+        ck(f"Hf. at {hf_w} px the patch link's lamp is dark with no link and lit amber once copy link has filled the window, steady (no animation)",
+           rows["shareBar"]["lamp"] == "rgb(42, 42, 42)" and rows["shareBar"]["val"] == "" and h1["val"].startswith("http") and h1["lamp"] == "rgb(255, 179, 71)" and h1["lampAnim"] == "none",
+           (rows["shareBar"]["lamp"], h1["lamp"], h1["val"][:40]))
+        hfx.close()
+    ck("Hf. no page errors (the project, mix and patch rows)", not hferr, hferr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
