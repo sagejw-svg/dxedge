@@ -829,7 +829,12 @@
   }
   body[data-mixdesk="1"] .panel .mod:not(#mHost):not(#mMaster) { display: none !important; }
   body[data-mixdesk="1"] #mHost, body[data-mixdesk="1"] #mMaster { display: block !important; }
-  .filebtn input { display: none; }
+  /* the file input stays in the tab order (transparent over its label, not display: none), so Tab reaches upload and Enter opens
+     the picker; the label wears the ring (review R1111-1) */
+  .filebtn { position: relative; }
+  .filebtn input { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); margin: 0; padding: 0; border: 0; opacity: 0; overflow: hidden; pointer-events: none; }
+  .filebtn:has(> input:focus-visible) { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .hjoin > .filebtn:has(> input:focus-visible) { position: relative; z-index: 1; outline-offset: 1px; }
   #mMaster { min-width: 0; max-width: 100%; }
   #mMaster .fxrow { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin: 2px 0 6px; min-width: 0; max-width: 100%; }
   #mMaster .knobs { display: flex; flex-wrap: wrap; max-width: 100%; }
@@ -2459,13 +2464,14 @@ $('mixFile').addEventListener('change', () => {
   const f = $('mixFile').files && $('mixFile').files[0]; if (!f) return;
   const reader = new FileReader();
   reader.onload = () => {
+    let raw = null;
     try {
       // Only a mix file. A project or any other JSON would reset every strip and overwrite the saved mix.
-      const raw = JSON.parse(String(reader.result));
+      raw = JSON.parse(String(reader.result));
       if (!raw || raw.kind !== 'dxmix') throw new Error('not a mix');
       const s = applySession(raw); toast('Loaded mix "' + s.name + '".');
     }
-    catch (e) { toast('That file is not a mix.'); }
+    catch (e) { toast(wrongFileMsg(raw, 'mix')); }
     $('mixFile').value = '';
   };
   reader.readAsText(f);
@@ -2495,17 +2501,31 @@ $('projFile').addEventListener('change', () => {
   reader.onload = () => {
     // normalizeProject turns any JSON into a default project, so a mix file or a patch
     // picked here by mistake would reset every device and overwrite the saved project.
+    let raw = null;
     try {
-      const raw = JSON.parse(String(reader.result));
+      raw = JSON.parse(String(reader.result));
       if (!raw || raw.kind !== 'dxrack') throw new Error('not a project');
       const p = applyProject(raw); toast('Loaded "' + p.name + '".');
     }
-    catch (e) { toast('That file is not a project.'); }
+    catch (e) { toast(wrongFileMsg(raw, 'project')); }
     $('projFile').value = '';
   };
   reader.readAsText(f);
 });
 
+// Which faceplate row a JSON file belongs on: project (dxrack), mix (dxmix) or patch (dxpatch, or a bare patch that
+// names a known device). An upload key given another row's file says which row takes it (review R1111-2).
+function fileKindOf(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return '';
+  if (raw.kind === 'dxrack') return 'project';
+  if (raw.kind === 'dxmix') return 'mix';
+  if (raw.kind === 'dxpatch' || (!raw.kind && typeof raw.device === 'string' && Object.prototype.hasOwnProperty.call(DEVS, raw.device))) return 'patch';
+  return '';
+}
+function wrongFileMsg(raw, want) {
+  const k = fileKindOf(raw);
+  return k && k !== want ? 'That is a ' + k + ' file, not a ' + want + '. Upload it on the ' + k + ' row.' : 'That file is not a ' + want + '.';
+}
 // ---------------------------------------------------------------- patch links and patch files (0.3, 10 Nov 2026)
 // One device's patch at a time: the lit one. share.js writes and reads the document; the device's own
 // normalizer has the last word on every field, so a link from an older or newer page still loads in range.
@@ -2557,8 +2577,7 @@ function importPatchText(text) {
   const raw = typeof text === 'string' && text.length <= MAX_JSON ? safeJSON(text) : undefined;
   const doc = readDoc(raw, knownDev, dev);
   if (!doc) {
-    const msg = raw && raw.kind === 'dxrack' ? 'That is a project file. Upload it with the project keys above.'
-      : raw && raw.kind === 'dxmix' ? 'That is a mix file. Upload it with upload mix.' : 'That file is not a patch.';
+    const msg = wrongFileMsg(raw, 'patch');
     toast(msg); return Promise.resolve({ ok: false, msg });
   }
   return Promise.resolve(applyPatchDoc(doc, 'import')).then(() => {

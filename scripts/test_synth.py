@@ -10229,6 +10229,40 @@ with sync_playwright() as pw:
            shr["copy"]["vis"] and shr["url"]["vis"] and all(shr[k]["h"] >= 44 and shr[k]["w"] >= 44 for k in ("copy", "down", "up")) and shr["url"]["h"] >= 44 and shr["sw"] <= shr["iw"], shr)
         shm.close()
         ck(f"Sh. {sh_w} px phone: no page errors", not shme, shme)
+    # Review 11 Nov (R1111-1): the three upload keys (project, mix, patch) are labels over a file input that was
+    # display: none, so Tab went from download straight past upload and a keyboard could not upload anything.
+    rv_up = {}
+    for rv_before, rv_input in (("projDown", "projFile"), ("mixDown", "mixFile"), ("shareDown", "shareFile")):
+        pg.focus("#" + rv_before); pg.keyboard.press("Tab"); pg.wait_for_timeout(50)
+        rv_at = pg.evaluate("""() => { const a = document.activeElement, l = a && a.closest('label.filebtn'); const cs = l ? getComputedStyle(l) : null;
+          return { id: a ? a.id : '', name: a ? a.getAttribute('aria-label') : '', ring: !!cs && cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2 }; }""")
+        # Enter on a focused file input clicks it, and that click is what opens the picker. Headless Chrome shows the
+        # picker itself only now and then (measured 11 Nov: 3 of 9 Enter presses and 4 of 9 Space presses, on any of
+        # the three inputs), so the check reads the click: it reaches the input and nothing cancels it.
+        rv_open = False
+        if rv_at["id"] == rv_input:
+            pg.evaluate("""(id) => { window.__rvClicks = []; document.getElementById(id).addEventListener('click', e => {
+              setTimeout(() => window.__rvClicks.push({ id: e.target.id, cancelled: e.defaultPrevented }), 0); }, { once: true }); }""", rv_input)
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
+            rv_clicks = pg.evaluate("window.__rvClicks")
+            rv_open = len(rv_clicks) == 1 and rv_clicks[0]["id"] == rv_input and not rv_clicks[0]["cancelled"]
+        rv_up[rv_input] = dict(rv_at, opens=rv_open)
+    ck("Sh. Tab reaches each upload key (project, mix, patch) after its download key, shows a ring, and Enter clicks it (opens the picker)",
+       all(v["id"] == k and v["ring"] and v["opens"] and v["name"] for k, v in rv_up.items()), rv_up)
+    # Review 11 Nov (R1111-2): with three upload keys on one faceplate, a file picked on the wrong row said only
+    # "not a project" or "not a mix"; the patch row already said which row takes it. Every row says so now.
+    rv_proj = pg.evaluate("() => __synth.project()")
+    rv_docs = {"project": rv_proj, "mix": {"v": 1, "kind": "dxmix", "name": "Mix"}, "patch": {"kind": "dxpatch", "v": 1, "device": "filament", "name": "Rv", "patch": {"v": 1, "name": "Rv"}}}
+    rv_msgs = {}
+    for rv_row, rv_inp in (("project", "projFile"), ("mix", "mixFile"), ("patch", "shareFile")):
+        for rv_kind, rv_doc in rv_docs.items():
+            if rv_kind == rv_row: continue
+            pg.evaluate("document.getElementById('toast').textContent = ''")
+            pg.set_input_files("#" + rv_inp, files=[{"name": rv_kind + ".json", "mimeType": "application/json", "buffer": json.dumps(rv_doc).encode()}])
+            pg.wait_for_function("document.getElementById('toast').textContent.length > 0", timeout=3000)
+            rv_msgs[rv_row + "<-" + rv_kind] = pg.evaluate("document.getElementById('toast').textContent")
+    ck("Sh. an upload key given another row's file names the row that takes it (project, mix, patch)",
+       all(("on the " + k.split("<-")[1] + " row") in m and ("not a " + k.split("<-")[0]) in m for k, m in rv_msgs.items()), rv_msgs)
     ck("Sh. no page errors (main page)", not errs, errs)
 
     # ---------------------------------------------------------------- Su. Surprise me (0.3, 11 Nov 2026)

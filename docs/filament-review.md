@@ -17,6 +17,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1111-3 | broken | all | dxedge.net was down during the 11 Nov review: every URL (/, /synth/, /sw.js, /otr/, www) answered 502 Bad Gateway from nginx from 12:24 to at least 12:41 UTC; the review ran on the repo tree | measured |
+| R1111-4 | confusing | f | Surprise me drops its draw without a word when the rail moves during the render (about 1.4 s); the toast still holds the previous surprise's text | measured (dropped), inferred (what a user sees) |
 | R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean) | measured |
 | R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code | measured (delay), inferred (reverb) |
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
@@ -32,7 +34,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
 | R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
-| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 5 Nov | measured |
+| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 11 Nov (all 21 songs, Dekatron strip 0.28 to 0.62) | measured |
 | R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail; still open 2 Nov | measured |
 | R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
 | R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
@@ -47,12 +49,12 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
 | R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 9 Nov | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
-| R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
-| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
+| R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall; still open 11 Nov | measured |
+| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes) | measured |
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note"; still open 29 Oct | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
-| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 8 Nov | measured (Gleam inferred) |
+| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 11 Nov (14 devices) | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
@@ -61,8 +63,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 8 Nov (4 buttons, no name or title) | measured (8 Nov) |
-| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491 | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 11 Nov (4 buttons, no name or title) | measured (11 Nov) |
+| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link | measured |
 | R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1) | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120) | measured |
@@ -73,7 +75,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2044,3 +2046,120 @@ Areas a, b, f, g, h. R1104-4 (Panic and the other tails) and R1101-2 and R1101-3
 re-run. Suggested next: a and b, including the new patch links (`?p=`) for every device's factory patches
 from a phone, and Phantastron's new seed stepper.
 
+
+## 2026-11-11 (review, areas f, g, h)
+
+The live site was down for this run (R1111-3): every dxedge.net URL answered 502 Bad Gateway from nginx
+from 12:24 UTC (4:24 AM PT) to at least 12:41 UTC, while other hosts loaded fine from the same box.
+So everything below was measured on the repo tree at origin/main `b5596c6` (sw.js `dxedge-v203`, the
+same code the 2 AM check found live and matching), served by a local static server the way the suite
+serves it, with the service worker blocked. Chromium 1243 headless (the `chromium-1194` path is still
+gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus tonight:
+what landed since the last f, g, h night: patch links and patch files (10 Nov), Surprise me (11 Nov) and
+the Rack tab's new project, mix and patch faceplate (11 Nov), then the project round trip, all 21 library
+songs, the vendored and linked pages, and a keyboard walk of the faceplate.
+
+### What worked (measured)
+
+- Patch files on all 18 devices: a dxpatch file of each device's second factory patch, uploaded while
+  lit on Filament, lands on its own device with the patch identical field for field, menu
+  "* name (edited)", toast "Loaded ... on <device>." Thyratron, Lattice, Gleam and the other devices
+  that attach late are included.
+- Copy link (the key, not the hook): a 1277 character link to Filament Lead, the same text in the box
+  and on the clipboard, toast "Link copied: Filament, "Filament Lead"", the window's lamp turns amber.
+  Opened in a fresh context: same patch, `?p=` gone from the address, a held C4 sounds, undo is lit;
+  undo goes back to that page's own previous patch and a reload keeps it. A Cathode link opened on a
+  page lit on Thyratron switches the rail to Cathode with the patch, and undo stays on Cathode.
+- Surprise me: the key is disabled with `aria-busy` while it renders (1.4 s here); the patch lands with
+  its toast; its link opens the same patch elsewhere; a held A3 keeps sounding through a press and
+  releases cleanly after; on Thyratron it says it draws for Filament and Cathode only.
+- Project: save, change patch, tempo, mute and name, load saved: 0 differences against the saved
+  project. Download (`filament-review-nov11.json`), upload in a fresh context: 0 differences, and 0
+  after a reload. A project given to the patch row, and the reverse, are refused and leave everything.
+- Library: all 21 songs load, play 2.5 s with their routed devices sounding (Filament 0.09 to 0.44,
+  Cathode 0.12 to 0.92 strip peak), stop, and 2.5 s later no strip is above 0.003 and no note is
+  held on Filament or Cathode.
+- Vendored and linked pages, both sizes: Hexode plays a held key (peak 0.26) and links to /synth/ and
+  Anode; Anode starts from its start key (0.48 desktop, 0.65 phone) and links back to /synth/ and
+  Hexode; Gleam's full page sounds under a drag (0.04); Iris and Hand Orchestra load with their links
+  (camera not tested). No page errors on any of them.
+- Phone 375 on the Rack tab: no sideways scroll; every faceplate key and window is 44 px tall
+  (project keys 64 to 90 px wide, patch keys 87 to 108 px).
+
+### Findings
+
+**R1111-1. A keyboard cannot upload a project, a mix or a patch.** Area h. Broken. Measured. Fixed tonight.
+- Steps: Rack tab, Tab through the faceplate from the project name.
+- Expected: save, load, download, upload on each row, each with a ring; Enter on upload opens the picker.
+- Actual: Tab went from download straight to the next row's name window (projDown to mixName, mixDown
+  to shareUrl, shareDown to surprise me). The three upload keys are labels over a file input set to
+  `display: none` (since the rack framework, 13 Oct), so neither is in the tab order. The same rule
+  hid Mote's Load file, Heptode's Open MIDI and Orthicon's Image and Audio from the keyboard.
+- Fix: `.filebtn input` is transparent instead, laid over its label (same size, no pointer events), so
+  it stays in the tab order; the label wears the amber ring while its input has keyboard focus. Mouse
+  and touch still open the picker through the label (checked at both sizes); the phone layout is
+  unchanged (labels 77 to 87 x 44 px). Mote's and Heptode's file keys are now reached by Tab too.
+- Check: "Sh. Tab reaches each upload key ... and Enter clicks it". It reads the click Enter makes on
+  the input, not the picker: headless Chrome showed the picker for only 3 of 9 Enter and 4 of 9 Space
+  presses on the fixed tree, on any of the three inputs, while the click reached the input every time.
+  Unfixed: Tab lands on mixName, shareUrl and surpriseBtn.
+- Found on the way: the first version hid the input at 1 px, and the suite's phone checks ("10. 375px" and
+  "390px": every mix desk control 44 px or more) read the input itself, so it failed four checks. The
+  input now covers its label, border included (a second try at the padding box measured 42 px), which
+  passes them without touching the checks.
+
+**R1111-2. A file on the wrong row says only "not a project" or "not a mix".** Area f. Confusing.
+Measured. Fixed tonight.
+- Steps: Rack tab; upload a patch file with the project row's upload (or a project with the mix row's).
+- Expected: the row says which row takes that file, as the patch row already did.
+- Actual: "That file is not a project." and "That file is not a mix." With three keys all reading
+  "upload" on one faceplate since today's graphics change, the wrong row is an easy pick.
+- Fix: one helper names the file's kind (project, mix, patch, or a bare patch that names a device) and
+  every row says "That is a patch file, not a project. Upload it on the patch row." and so on; anything
+  else still says "That file is not a project." (or mix, or patch). The patch row's two messages
+  changed wording to match ("on the project row" instead of "with the project keys above").
+- Check: "Sh. an upload key given another row's file names the row that takes it" (6 cases). Unfixed:
+  4 of 6 had no row named.
+
+**R1111-3. dxedge.net down.** All areas. Broken. Measured.
+- Steps: open https://dxedge.net/synth/ (or /, /sw.js, /otr/, www).
+- Actual: 502 Bad Gateway, `server: nginx/1.31.1`, on 4 tries from 12:24 to 12:27 UTC and again at
+  12:41 UTC. example.com, ntfy.sh and google.com loaded from the same box, so it is the site, not this
+  network (inferred). The last pushes to main were the graphics run's at 12:15 UTC; whether the deploy
+  caused it is not known from here. Nothing in this job can reach the droplet. James was paged (the
+  ntfy topic answered 429, so the page went by the routine's own notification).
+
+**R1111-4. Surprise me drops its draw without a word when the rail moves.** Area f. Confusing.
+Measured (dropped), inferred (what a user sees).
+- Steps: Filament, press surprise me, switch the rail to Cathode within the render (about 1.4 s).
+- Expected: the patch lands on Filament anyway, or a toast says it was dropped.
+- Actual: nothing lands and no new toast; the toast text is still the previous press's
+  "Surprise: ... on Filament". The code returns `why: 'moved'` on purpose (leave the new device alone),
+  so this is about saying so. A one-line toast ("Surprise for Filament dropped: the rail moved") would do.
+
+### Still open, re-measured tonight
+
+- R1020-3: a project still carries 14 devices (no Thyratron, Dekatron, Lattice, Gleam) and no master bus.
+- R1030-3: Dekatron's pattern plays under all 21 library songs (strip peak 0.28 to 0.62), including
+  the eight with no channel 10.
+- R1020-4: the eight Halloween songs replace the lit Filament patch (Haunted Organ, Horror Pad, Eerie
+  Bells and so on).
+- R1020-7: Anode's four "⟳" buttons still have no name or title.
+- R1020-8: 525 desktop tab stops with the roll closed, no skip link.
+- R1024-3: Hexode has 13 unnamed controls at both sizes; Hexode still 1154 px wide at 375 px.
+- R1025-5: the phone footer links are still 13 px tall.
+
+### Not reported
+
+- After a patch link, undo goes back to the page's previous patch and shows it as "(edited)" even when
+  that was an unedited factory patch. Same family as R1025-3 (undo restores the sound, not the entry).
+- Filament Lead reports two voices for one held key (`notes` [60, 60]): its unison, not a stuck note
+  (both released).
+- Lattice's Import WAV uses its own hidden input (`display: block`, zero width), not `.filebtn`; it was
+  not walked tonight.
+
+### Not covered tonight
+
+Areas a, b, c, d, e. Nothing on the live site (down). Iris and Hand Orchestra were not played (camera).
+Suggested next: a and b (Surprise me's draws by ear against the factory set, Klystron's source row),
+and a recheck of every live page once the site is back.
