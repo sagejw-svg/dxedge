@@ -1410,11 +1410,20 @@ with sync_playwright() as pw:
     ck(f"Lc. resonance narrows the peaks: the voice tab's 850 Hz over 425 Hz is {pr_} dB at resonance 0, 0.3 and 1 (rising, at least 15 dB from 0 to 1)", pr_[0] < pr_[0.3] < pr_[1] and pr_[1] - pr_[0] >= 15, pr_)
     L_, _ = render(patch(osc1={"level": 0}, filt={"model": "lc", "cutoff": 850, "res": 1, "tabs": lc_tabs(body=True, voice=True, edge=True)}), note(60), 1.0, rack=False)
     ck(f"Lc. it never sings: full resonance with no input stays silent ({db(_arms(L_)):.0f} dBFS, want under -120)", db(_arms(L_)) < -120 and np.all(np.isfinite(L_)), db(_arms(L_)))
+    # Each oscillator starts at a random phase (voice.worklet.js), and a chord's notes share partials
+    # (C3 and C4, the G's third harmonic and C's second), so one render's level moves with how those land:
+    # measured 11 Nov, 10 renders a setting, single renders spread 0.9 to 2.2 dB within a setting and 3.1 dB
+    # across resonance in a failing suite run, while the power means across resonance spread 1.1 dB. The level
+    # is the power mean of LC_N renders, so the bounds read the level, not the draw.
+    LC_N = 4
     def lc_ch(filt):
-        L_, _ = render(patch(filt=filt), [e for n_ in (48, 55, 60, 64) for e in note(n_)], 1.0, rack=False); return db(_arms(L_[SR // 2:]))
+        ps_ = []
+        for _ in range(LC_N):
+            L_, _ = render(patch(filt=filt), [e for n_ in (48, 55, 60, 64) for e in note(n_)], 1.0, rack=False); ps_.append(_arms(L_[SR // 2:]) ** 2)
+        return db(math.sqrt(sum(ps_) / len(ps_)))
     lv_ = {"valve12": lc_ch({"model": "valve12", "cutoff": 1800, "res": 0.3, "keytrack": 0.5}), "lc": lc_ch({"model": "lc", "cutoff": 1800, "res": 0.3, "keytrack": 0.5})}
     lr_ = {r_: lc_ch({"model": "lc", "cutoff": 850, "res": r_}) for r_ in (0, 0.3, 0.6, 1)}
-    ck(f"Lc. level: a saw chord on the default tabs sits within 3 dB of Valve 12 at the same knobs ({lv_['lc'] - lv_['valve12']:+.1f} dB), and within 3 dB of itself from resonance 0 to 1 ({[round(v_ - lr_[0.3], 1) for v_ in lr_.values()]})",
+    ck(f"Lc. level: a saw chord on the default tabs sits within 3 dB of Valve 12 at the same knobs ({lv_['lc'] - lv_['valve12']:+.1f} dB), and within 3 dB of itself from resonance 0 to 1 ({[round(v_ - lr_[0.3], 1) for v_ in lr_.values()]}; each the power mean of {LC_N} renders)",
        abs(lv_["lc"] - lv_["valve12"]) <= 3 and max(lr_.values()) - min(lr_.values()) <= 3, (lv_, lr_))
     def lc_h3(d_):
         L_, _ = render(patch(osc1={"wave": "sine", "level": 0.8, "fixed": 300}, filt={"model": "lc", "cutoff": 850, "res": 0.3, "drive": d_, "tabs": lc_tabs(open=True)}), note(60), 0.7, rack=False)

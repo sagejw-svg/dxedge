@@ -1149,6 +1149,39 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 11 Nov (improvement, test health, forced: main failed it): "Lc. level: a saw chord on the default tabs sits
+  within 3 dB of Valve 12 ..., and within 3 dB of itself from resonance 0 to 1" read the level of one render. The suite on
+  origin/main `b5596c6` ran 1848 PASS, 1 FAIL, that check: resonance 0, 0.3, 0.6 and 1 read -15.06, -15.41, -13.52 and
+  -16.66 dBFS, a 3.14 dB spread against the 3 dB bound. Cause (measured): every oscillator starts at a random phase
+  (`Osc` in voice.worklet.js), and the chord's notes share partials (C3 and C4; G's third harmonic on C's second), so
+  how those partials add moves the level from render to render. 10 renders of each setting in a separate page, same
+  tree, same patch: single renders spread 0.9 to 2.2 dB within one setting; the power means across resonance spread
+  1.06 dB. Fix: `lc_ch` now returns the power mean of `LC_N` = 4 renders, and the check's name says so. The bounds
+  are unchanged (3 dB to Valve 12, 3 dB across resonance), so it proves what it did, read on the level rather than
+  on one draw. Estimated from those 40 renders (each setting modelled as normal in dB, 200000 draws): one render
+  fails about 0.8% of runs; four renders, 0 of 200000, 99.9th percentile spread 2.19 dB. Cost: 18 more 1 s renders
+  without the rack, about 3 s of suite time (the Lc. block 37 s on main, 40 s on this tree, one run each). No product
+  code changed, so no patch sounds different. On this tree the check reads -0.5 dB to Valve 12 and [-0.6, 0.0,
+  0.8, 0.1] dB across resonance.
+  Found on the way (measured, not shipped; on branch `claude/worklet-preload-1111`, next for this job unless main
+  fails): the live page's boot attaches its sixteen hosted devices one after another, and each attach waits for its
+  own `addModule` (fetch, imports, evaluation) before the next one starts. On origin/main, headless at 1366 px, local
+  server, the 19 `addModule` calls of a boot sum to 1.1 to 1.2 s idle (2.7 to 3.9 s with the suite beside it) and
+  `__synth.booted()` comes 1.74 to 1.92 s after load (`ready()` 0.83 to 1.00 s). The branch adds `worklets.js`
+  (`loadWorklet`: one `addModule` per context and URL, every caller shares the promise; `preloadWorklets`), routes the
+  18 `addModule` sites in the hosts, engine.js and masterfx.js through it, starts the engine's voice, spring and
+  master modules together, and starts the sixteen device modules together once the engine is up (not before, so the
+  first sound's modules go first). The attaches still run in the same order and build the same nodes. Measured, 6
+  boots each, alternating trees, idle box: booted 1.27 to 1.43 s (main 1.74 to 1.92), ready 0.99 to 1.22 s (main 0.83
+  to 1.00, so possibly 30 to 50 ms later, inside the noise of 6 runs). Not yet done: the full suite on it, and the
+  proof that renders are unchanged (hash a set of offline renders on both trees; avoid the strings ensemble, which
+  is not repeatable, see 25 Oct). The suite's held-Resnatron checks (M. and P., they hold that module's
+  `addModule`) still hold the boot back with the preload, read from the code. Also measured: an offline render's
+  fixed cost is about 200 ms, of which the voice's and the spring's `addModule` are about 150 ms; whether loading
+  them together shortens it was inside the noise tonight (suite running beside it).
+  Suite timing on main tonight (measured, two probe pages beside it at times): about 29 minutes, test 9 153 s, then
+  7. 56 s, C. 56 s, Tv. 49 s. This tree alone: about 26 minutes.
+
 - Done 10 Nov (improvement, robustness, MIDI file import on the deck and Heptode): a file the reader refuses no
   longer throws out of Heptode's file callback, a dense one-channel file loads, and a tempo of 0 is skipped. Why this
   item: R1103-1 still waits on James; CPU: test 9 still moves several points between runs with no voice change
@@ -2073,6 +2106,7 @@ Rank of the open items (11 Nov): 1. Orthicon's picture list; 2. a user patch's n
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-11-11 (improvement, scheduled task, about 5:25 to 6:50 AM PT): test health, forced: main failed. Main first: origin/main `b5596c6` ran 1848 PASS, 1 FAIL, "Lc. level: ... within 3 dB of itself from resonance 0 to 1" (3.14 dB spread); `scripts/test_synth_imported.py` ALL PASS; the chromium-1194 path is still missing, both ran on the fallback. Cause: random oscillator start phases and shared partials in the test chord move one render's level (measured: single renders spread up to 2.2 dB within one setting, power means across resonance 1.06 dB). The check now reads the power mean of 4 renders a setting with the same 3 dB bounds; estimated failure rate from about 0.8% of runs to under 1 in 200000; about 3 s more suite time. Test code only, no product file, so no patch sounds different. Also measured and left on branch `claude/worklet-preload-1111` (not on main): preloading the worklet modules cuts the boot to booted from 1.74 to 1.92 s to 1.27 to 1.43 s locally; see Improvement backlog, 11 Nov. CPU (test 9, this tree): Cathode 28.2%; valve12 8 voices 21.7%; ladder24 22.6%; LC bank 15.9%; 16 voices with ensemble 25.2%; tape echo on 26.3%; spring on 25.9%; 1939 mode 15.7% (no worklet changed). Suite: ALL PASS (1849 checks, about 26 min) on the first tree; main then moved (review `602bbad`), so rebased onto it, cache `dxedge-v205`, and the full suite re-run: ALL PASS (1851 checks, about 25 min); `scripts/test_synth_imported.py` ALL PASS. Commit: this one.
 - 2026-11-11 (review, scheduled task, about 4:20 to 5:30 AM PT): areas f (patch links and patch files on all 18 devices, Surprise me, project save, load, download and upload, all 21 library songs), g (Hexode, Anode, Gleam's full page, Iris and Hand Orchestra load) and h (a keyboard walk of the Rack tab's new faceplate, phone sizes, tab stops), measured on the repo tree at origin/main `b5596c6` served locally, because dxedge.net answered 502 on every URL from 12:24 UTC (R1111-3, paged; ntfy answered 429). Findings: 2 broken (1 fixed), 2 confusing (1 fixed), 0 missing; R1020-3, R1020-4, R1020-7, R1020-8, R1024-3, R1025-5 and R1030-3 still open. Fixes: R1111-1, the project, mix and patch upload keys (and Mote's, Heptode's and Orthicon's file keys) were out of the tab order because their file input was display: none; now transparent over its label, in the tab order, with the ring on the label. R1111-2, an upload key given another row's file now names the row that takes it. Two Sh. checks, each failing on the old tree. Cache `dxedge-v204`. No patch sound changed. Suite: ALL PASS on this tree (count in the commit message). Commit: this one.
 - 2026-11-11 (graphics, scheduled task, about 3:20 to 4:20 AM PT): the Rack tab's project, mix and patch rows (top of the Graphics backlog). One faceplate under the mix desk; each row an engraved tag, the name in a recessed amber readout window, the keys one joined switch (save, load, download, upload, copy link; screen reader names keep the whole phrase); the patch link window has a lamp, amber once a link is in it. Markup and CSS only, ids unchanged, no audio change. Commit `da634fb`, cache `dxedge-v203`. Suite: ALL PASS (1849 checks, 30 new Hf.). The suite run on origin/main was started first but was overlapped by the edits, so main's health rests on the 2 AM check and debug run (ALL PASS 1819 on the same code) and this run's ALL PASS; main did not move during the night. See Open items for the shorter key words.
 - 2026-11-11 (check and debug, scheduled task, about 2:08 to 2:35 AM PT): reviewed 2 commits since 10 Nov 6 PM PT on origin/main `6e517a4`: Claude's 12:28 AM nightly `f91a591` (Surprise me on Filament and Cathode, surprise.js) and its log line `6e517a4`. Read `f91a591`: no test removed or loosened (the only removed lines are the suite docstring and the Mix note, both rewritten), 22 new Su. check calls; surprise.js is our own code, no new license or vendor folder, no trademark name, nothing under /otr, no factory patch touched. Suite on origin/main ALL PASS (1819 checks, about 22 minutes, no hang; the chromium-1194 path is still missing, it ran on its fallback); `scripts/test_synth_imported.py` ALL PASS. Live (cache-busted): /synth/ ready at 1366 and 375 px, no page errors, no console errors, no sideways scroll; the only failed request was the `/api/stat` beacon aborted as the page closed; /synth/fm/ and /synth/acid/ no errors (Hexode still scrolls sideways at 375, known). Offline renders on the live page: Filament, Cathode and Dekatron all sound (RMS -21.7, -17.6, -12.3 dBFS; no NaN). Live surprise.js, index.html and sw.js match the repo; sw.js `dxedge-v202` matches. Defects: none. Fixes: none.
