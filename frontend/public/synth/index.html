@@ -1677,8 +1677,9 @@
           <button class="btn small" id="shareCopy" title="Make a link that carries the lit device's patch and copy it. Opening the link loads the patch; nothing is stored on a server.">copy patch link</button>
           <button class="btn small" id="shareDown" title="Download the lit device's patch as a JSON file">download patch</button>
           <label class="btn small filebtn" for="shareFile" title="Load a patch file (JSON). It plays on the device it was made for.">upload patch<input id="shareFile" type="file" accept="application/json,.json"></label>
+          <button class="btn small" id="surpriseBtn" title="A random patch for Filament or Cathode, inside musical limits: in tune, never silent, and set to a level well under the limiter. Undo goes back; save keeps it.">surprise me</button>
         </div>
-        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. Save mix keeps this desk in the browser. The project buttons below keep the patches and the tempo as well. Copy patch link makes a link that carries the lit device's patch, and nothing goes to a server; download patch and upload patch do the same with a file.</div>
+        <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. Save mix keeps this desk in the browser. The project buttons below keep the patches and the tempo as well. Copy patch link makes a link that carries the lit device's patch, and nothing goes to a server; download patch and upload patch do the same with a file. Surprise me draws a random patch on Filament or Cathode: in tune, never silent, and levelled under the limiter.</div>
       </section>
       <section class="mod" data-tab="rack mix" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
     </div>
@@ -1841,6 +1842,7 @@ import { createRoll } from './paperroll-ui.js';
 import { createTheremin } from './theremin-ui.js';
 import { listDevices } from './device.js';
 import { encodePatch, decodePatch, readDoc, patchDoc, patchFileName, safeJSON, MAX_JSON } from './share.js';
+import { surprisePatch, fitLevel, fitStats, fitNotes, FIT, FIT_HOLD, FIT_SECONDS, SURPRISE_DEVICES } from './surprise.js';
 import { readSMF, songOf, writeSMF, bytesOf } from './smf.js';
 import { mountMaster } from './masterui.js';
 import { drawFilterPlot, peakOf, dbAt } from './filtplot.js';
@@ -2503,6 +2505,49 @@ function importPatchText(text) {
     toast(msg); return { ok: true, msg, device: dev };
   });
 }
+// ---------------------------------------------------------------- Surprise me (0.3, 11 Nov 2026)
+// surprise.js draws a patch from a seed inside its limits; here the draw is rendered offline (a held chord, or
+// one note on Cathode, at full velocity through the rack, no master effects) at a known output level, and
+// out.level is set from what came back so it peaks under FIT.peak; a draw too quiet to fit is drawn again.
+// The result loads like a patch link: undo goes back, the menu reads "* name (edited)", save keeps it.
+const SURP = { busy: false, last: null };
+async function surpriseDraw(device, seed) {
+  const t0 = performance.now();
+  let s = seed >>> 0, tries = 0, stats = null, lvl = null, p = null;
+  while (tries < FIT.tries) {
+    tries++;
+    p = DEVS[device].normalize(surprisePatch(device, s));
+    p.out.level = FIT.probe;
+    const ev = [];
+    fitNotes(device, p.cat).forEach(n => { ev.push({ at: 0.02, t: 'on', n, v: 1 }); ev.push({ at: FIT_HOLD, t: 'off', n }); });
+    const buf = await renderOffline({ patch: p, events: ev, seconds: FIT_SECONDS, rack: true, masterFx: false });
+    stats = fitStats(buf.getChannelData(0), buf.getChannelData(1), buf.sampleRate);
+    lvl = fitLevel(stats);
+    if (lvl != null) break;
+    s = (Math.imul(s, 2654435761) + 1) >>> 0;        // the next seed in a fixed walk, so a replay finds the same patch
+  }
+  if (lvl == null) return { patch: null, seed: s, tries, stats, ms: Math.round(performance.now() - t0) };
+  p.out.level = lvl;
+  return { patch: DEVS[device].normalize(p), seed: s, tries, stats, level: lvl, ms: Math.round(performance.now() - t0) };
+}
+async function surpriseMe(seed) {
+  if (!SURPRISE_DEVICES.includes(dev)) { toast('Surprise me draws patches for Filament and Cathode for now.'); return { ok: false, why: 'device' }; }
+  if (SURP.busy) return { ok: false, why: 'busy' };
+  const device = dev, btn = $('surpriseBtn');
+  if (seed == null) { const a = new Uint32Array(1); try { crypto.getRandomValues(a); } catch (e) { a[0] = (Math.random() * 4294967296) >>> 0; } seed = a[0]; }
+  SURP.busy = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+  let r;
+  try { r = await surpriseDraw(device, seed); }
+  catch (e) { r = { patch: null, err: String(e && e.message || e) }; }
+  finally { SURP.busy = false; btn.disabled = false; btn.removeAttribute('aria-busy'); }
+  SURP.last = Object.assign({ device, asked: seed >>> 0 }, r);
+  if (!r.patch) { toast('No patch this time. Press surprise me again.'); return { ok: false, why: r.err || 'quiet', r }; }
+  if (dev !== device) return { ok: false, why: 'moved', r };    // the rail moved while it rendered: leave the new device alone
+  applyPatchDoc({ device, patch: r.patch }, 'surprise');
+  toast('Surprise: "' + cur.name + '" (' + cur.cat + ') on ' + D().name + '. Undo goes back; save keeps it.', 4000);
+  return { ok: true, r };
+}
+$('surpriseBtn').addEventListener('click', () => { surpriseMe(); });
 $('shareFile').addEventListener('change', () => {
   const f = $('shareFile').files && $('shareFile').files[0]; if (!f) return;
   if (f.size > MAX_JSON) { toast('That file is too large to be a patch.'); $('shareFile').value = ''; return; }
@@ -5218,6 +5263,16 @@ window.__synth = {
     key: () => curKey,
     factories: () => Object.keys(DEVS).map(d => ({ device: d, patches: DEVS[d].factory.map(p => clone(p)) })),
     menu: () => { const o = $('patchSel').selectedOptions[0]; return o ? o.textContent : ''; },
+  },
+  // Surprise me (tests): press it with a seed (as the button does, the patch lands on the lit device), draw and
+  // fit without loading, the raw draw before the normalizer and the fit, and the last press's numbers
+  surprise: {
+    press: seed => surpriseMe(seed == null ? null : seed >>> 0).then(x => ({ ok: x.ok, why: x.why || null, device: dev, key: curKey, edited, patch: clone(cur), menu: ($('patchSel').selectedOptions[0] || {}).textContent || '', toast: $('toast').textContent })),
+    draw: (d, seed) => surpriseDraw(d, seed >>> 0).then(r => Object.assign({}, r, { patch: r.patch && clone(r.patch) })),
+    raw: (d, seed) => surprisePatch(d, seed >>> 0),
+    last: () => (SURP.last ? Object.assign({}, SURP.last, { patch: SURP.last.patch && clone(SURP.last.patch) }) : null),
+    busy: () => SURP.busy,
+    fit: () => Object.assign({}, FIT, { hold: FIT_HOLD, seconds: FIT_SECONDS }),
   },
   patch: () => clone(cur),
   setPatch: p => {

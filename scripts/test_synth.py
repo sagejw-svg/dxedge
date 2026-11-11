@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -10178,6 +10178,169 @@ with sync_playwright() as pw:
         shm.close()
         ck(f"Sh. {sh_w} px phone: no page errors", not shme, shme)
     ck("Sh. no page errors (main page)", not errs, errs)
+
+    # ---------------------------------------------------------------- Su. Surprise me (0.3, 11 Nov 2026)
+    # surprise.js draws a Filament or Cathode patch from a seed inside built-in limits; the page renders the draw
+    # offline at a known output level and sets out.level from it. Checked here: the draws' fields against the
+    # limits (200 seeds a device), and, measured on fitted draws by the suite's own renders: under the limiter's
+    # -1 dBFS threshold with a margin, never silent, in tune (the strongest partials on harmonics), mono-safe.
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    su_lim = pg.evaluate("""() => {
+      const out = {};
+      const leaves = (o, pre, acc) => { for (const k of Object.keys(o)) { const v = o[k], q = pre ? pre + '.' + k : k; if (v && typeof v === 'object' && !Array.isArray(v)) leaves(v, q, acc); else acc.push([q, v]); } return acc; };
+      const get = (o, q) => q.split('.').reduce((x, k) => (x == null ? undefined : x[k]), o);
+      for (const d of ['filament', 'cathode']) {
+        const r = { n: 0, same: 0, moved: [], cats: {}, bad: [], names: new Set(), dup: 0, det: true };
+        for (let i = 0; i < 200; i++) {
+          const seed = (i * 2654435761 + 7) >>> 0, raw = __synth.surprise.raw(d, seed), p = __synth.share.normalize(d, raw);
+          if (JSON.stringify(__synth.surprise.raw(d, seed)) !== JSON.stringify(raw)) r.det = false;
+          r.n++; r.cats[p.cat] = (r.cats[p.cat] || 0) + 1; if (r.names.has(p.name)) r.dup++; r.names.add(p.name);
+          // every number the draw sets is already in range: the normalizer leaves it as drawn
+          const mv = leaves(raw, '', []).filter(([q, v]) => typeof v !== 'object' && get(p, q) !== v && !(q === 'osc2.oct' && false));
+          if (!mv.length) r.same++; else if (r.moved.length < 4) r.moved.push([seed, mv.slice(0, 3)]);
+          const B = why => { if (r.bad.length < 8) r.bad.push([seed, why]); };
+          if (p.tune !== 0) B('tune ' + p.tune);
+          if (p.drift > 2.5) B('drift ' + p.drift);
+          if (p.out.eqOn || p.out.level !== 0) B('out');
+          if (d === 'filament') {
+            if (p.osc1.fixed || p.osc2.fixed) B('fixed');
+            if (p.osc1.semi !== 0 || Math.abs(p.osc1.fine) > 3 || p.osc1.oct > 0) B('osc1 pitch');
+            const iv = p.osc2.oct * 12 + p.osc2.semi;
+            if (![0, 12, -12, 7, 19, -5].includes(iv)) B('interval ' + iv);
+            if (Math.abs(p.osc2.fine) > ([0, 12, -12].includes(iv) ? 10 : 1.5)) B('osc2 fine ' + p.osc2.fine);
+            if (p.osc2.ring || (p.osc2.fm && ![0, 12, -12].includes(iv))) B('ring/fm');
+            if (p.lfo1.pitch > 9 || p.lfo2.pitch > 0 || p.lfo1.amp || p.lfo2.amp || p.lfo1.sync !== 'off') B('lfo');
+            if (p.filt.res > 0.75 || p.filt.model === 'lpg' || p.filt.offset !== 0 || p.filtB.route !== 'off') B('filter');
+            if (p.arp.on || p.era.on) B('arp/era');
+            if (Object.values(p.mod).some(m => m.dst !== 'off' && !['cut', 'pw', 'pan', 'morph'].includes(m.dst))) B('mod dst');
+            if (p.osc1.level < 0.6 || p.voice.level < 0.65 || p.envA.a > 1) B('level/attack');
+            if (p.voice.unison > 3 || p.voice.detune > 16 || p.out.width > 120) B('spread');
+          } else {
+            if (p.pm.b !== 0 || Math.abs(p.pm.a) > 0.08) B('pm');
+            const semi = p.vco2.semi, oct = Math.log2(p.vco1.scale / p.vco2.scale);
+            if (![0, 7, -5].includes(semi) || ![-1, 0, 1].includes(oct) || (semi !== 0 && oct !== 0)) B('interval ' + semi + ' ' + oct);
+            if (Math.abs(p.vco2.fine) > (semi === 0 ? 9 : 1.5)) B('vco2 fine');
+            if (p.vco1.wave === 'noise' || p.vco2.wave === 'ring' || p.cables.length) B('wave/cables');
+            if (p.lpf.peak > 0.72 || p.hpf.peak > 0.4 || p.hpf.cutoff > 150) B('filters');
+            if (p.vco1.level < 0.6 || p.vca.level < 0.65 || p.eg2.a > 1.2) B('level/attack');
+          }
+        }
+        r.names = r.names.size; out[d] = r;
+      }
+      return out; }""")
+    for d_ in ("filament", "cathode"):
+        r_ = su_lim[d_]; cats_want = {"filament": {"Bass", "Lead", "Pad", "Keys", "Pluck"}, "cathode": {"Bass", "Lead", "Sweep"}}[d_]
+        ck(f"Su. {d_}: 200 draws are a pure function of the seed, every field already in range (the normalizer moves none), names unique ({r_['names']})",
+           r_["det"] and r_["same"] == r_["n"] and r_["dup"] == 0, {k: r_[k] for k in ("det", "same", "n", "moved", "dup")})
+        ck(f"Su. {d_}: 200 draws keep the limits (tune 0, harmonic intervals, small detune and vibrato, no pitch or level routes, resonance under singing)",
+           not r_["bad"], r_["bad"])
+        ck(f"Su. {d_}: every archetype turns up in 200 draws ({r_['cats']})", set(r_["cats"]) == cats_want, r_["cats"])
+
+    su_fit = pg.evaluate("__synth.surprise.fit()")
+    def su_events(p_, dev_):
+        root = 36 if p_["cat"] == "Bass" else 60
+        ns = [root] if (dev_ == "cathode" or p_["cat"] == "Bass") else [root, root + 4, root + 7]
+        return ns, [e for n_ in ns for e in note(n_, 0.02, su_fit["hold"], v=1.0)]
+    def su_partials(x, base, f_top, k=3):
+        # the strongest k partials below f_top, each as cents from the nearest multiple of base
+        n_ = 1 << 17; X = np.abs(np.fft.rfft(x[:n_] * np.hanning(min(len(x), n_)), n_)); f_ = np.fft.rfftfreq(n_, 1 / SR)
+        band = (f_ > base * 0.9) & (f_ < f_top); idx = np.where(band)[0]; got = []
+        Xb = X.copy()
+        for _ in range(k):
+            j = idx[np.argmax(Xb[idx])]
+            if Xb[j] < X[idx].max() * 0.03: break
+            # the partial's power-weighted mean frequency within 40 cents of its peak: unison voices and detuned
+            # oscillators split a partial into close peaks a few cents either side, and the ear hears their middle
+            w_ = (f_ > f_[j] * 2 ** (-40 / 1200)) & (f_ < f_[j] * 2 ** (40 / 1200))
+            fq = float(np.sum(f_[w_] * X[w_] ** 2) / np.sum(X[w_] ** 2))
+            m_ = max(1, round(fq / base)); got.append((round(float(fq), 1), m_, round(1200 * math.log2(fq / (m_ * base)), 1)))
+            Xb[(f_ > fq - 25) & (f_ < fq + 25)] = 0
+        return got
+    su_rows = {"filament": [], "cathode": []}; su_ms = []
+    for d_ in ("filament", "cathode"):
+        for i_ in range(12):
+            seed_ = (i_ * 40503 + 11) & 0xffffffff
+            dr = pg.evaluate("a => __synth.surprise.draw(a[0], a[1])", [d_, seed_])
+            if not dr["patch"]:
+                su_rows[d_].append({"seed": seed_, "none": True, "tries": dr["tries"]}); continue
+            su_ms.append(dr["ms"]); P_ = dr["patch"]
+            ns_, ev_ = su_events(P_, d_)
+            L_, R_ = render(P_, ev_, su_fit["seconds"], rack=True, masterFx=False)
+            pk_ = db(max(np.max(np.abs(L_)), np.max(np.abs(R_))))
+            w_ = int(0.1 * SR); e_ = (L_ ** 2 + R_ ** 2) / 2
+            rms_ = db(math.sqrt(max(np.mean(e_[s0:s0 + w_]) for s0 in range(0, len(e_) - w_, w_ // 2))))
+            seg_ = slice(int(0.3 * SR), int(1.3 * SR))
+            st_ = math.sqrt((np.mean(L_[seg_] ** 2) + np.mean(R_[seg_] ** 2)) / 2); mo_ = math.sqrt(np.mean(((L_[seg_] + R_[seg_]) / 2) ** 2))
+            # tuning: one note, the voice alone (no echo, room or spring to smear it)
+            root_ = ns_[0]; f0_ = 440 * 2 ** ((root_ - 69) / 12)
+            Lv_, _ = render(P_, note(root_, 0.0, 1.5, v=0.8), 1.6, rack=False)
+            if d_ == "filament": base_ = f0_ * 2 ** P_["osc1"]["oct"] / 4
+            else: base_ = f0_ * 8 / P_["vco1"]["scale"] / 4
+            parts_ = su_partials(Lv_[int(0.35 * SR):int(1.45 * SR)], base_, base_ * 12)
+            su_rows[d_].append({"seed": seed_, "cat": P_["cat"], "name": P_["name"], "level": dr["level"], "tries": dr["tries"], "peak": round(pk_, 2), "rms": round(rms_, 2),
+                                "fold": round(db(st_) - db(mo_), 2), "parts": parts_, "model": P_.get("filt", {}).get("model") if d_ == "filament" else None})
+    info("Su. fitted draws (seed, cat, level, peak dBFS, loudest 100 ms dBFS, mono fold dB, partials (Hz, harmonic, cents))",
+         {d_: [(r_["seed"], r_.get("cat"), r_.get("level"), r_.get("peak"), r_.get("rms"), r_.get("fold"), r_.get("parts")) for r_ in su_rows[d_]] for d_ in su_rows})
+    info("Su. draw and fit time in the page (ms, each: up to 4 offline renders of 1.6 s)", su_ms)
+    for d_ in ("filament", "cathode"):
+        rows_ = [r_ for r_ in su_rows[d_] if not r_.get("none")]
+        ck(f"Su. {d_}: 12 seeds each give a patch (none too quiet to fit after {su_fit['tries']} tries)", len(rows_) == 12, su_rows[d_])
+        pk_max = max(r_["peak"] for r_ in rows_); rms_min = min(r_["rms"] for r_ in rows_); rms_max = max(r_["rms"] for r_ in rows_)
+        ck(f"Su. {d_}: a fitted draw's held chord at full velocity peaks under the limiter's -1 dBFS threshold with 2 dB to spare (worst {pk_max:.2f} dBFS; the fit aims at {su_fit['peak']})",
+           pk_max <= -3.0, [(r_["seed"], r_["peak"]) for r_ in rows_])
+        ck(f"Su. {d_}: never silent, never hot: the loudest 100 ms of every fitted draw sits between -30 and -14 dBFS ({rms_min:.1f} to {rms_max:.1f}; the fit aims at {su_fit['rms']} at most)",
+           rms_min >= -30 and rms_max <= -14, [(r_["seed"], r_["rms"]) for r_ in rows_])
+        badp = [(r_["seed"], r_["parts"]) for r_ in rows_ if len(r_["parts"]) == 0 or any(abs(c_) > 20 for (_f, _m, c_) in r_["parts"])]
+        ck(f"Su. {d_}: in tune: the strongest partials of every draw sit within 20 cents of a harmonic of the note (worst {max(abs(c_) for r_ in rows_ for (_f, _m, c_) in r_['parts']):.1f} cents)",
+           not badp, badp)
+        ck(f"Su. {d_}: mono-safe: every fitted draw loses 3 dB or less folded to mono (worst {max(r_['fold'] for r_ in rows_):.2f})", all(r_["fold"] <= 3.0 for r_ in rows_), [(r_["seed"], r_["fold"]) for r_ in rows_])
+    ck(f"Su. the draw and fit take under 6 s in the page (worst {max(su_ms) if su_ms else None} ms)", su_ms and max(su_ms) < 6000, su_ms)
+
+    # the key: on Filament and Cathode it loads a draw like a patch link (undo goes back); elsewhere it says so
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    su_before = pg.evaluate("JSON.stringify(__synth.patch())")
+    su_p = pg.evaluate("__synth.surprise.press(4242)")
+    su_last = pg.evaluate("__synth.surprise.last()")
+    su_d = pg.evaluate("s => __synth.surprise.raw('filament', s)", su_last["seed"])   # the seed the fit kept (4242 unless it was too quiet)
+    def su_strip(p_): q_ = json.loads(json.dumps(p_)); q_["out"]["level"] = 0; return q_
+    su_want = pg.evaluate("a => __synth.share.normalize('filament', a)", su_d)
+    ck(f"Su. surprise me on Filament loads the seed's draw ('{su_p['menu']}'), out.level set by the fit ({su_p['patch']['out']['level']} dB), the toast names it",
+       su_p["ok"] and su_p["device"] == "filament" and su_p["key"] == "surprise" and su_p["edited"] and su_p["menu"].startswith("* ") and su_p["menu"].endswith("(edited)")
+       and su_last["asked"] == 4242 and (su_last["tries"] == 1) == (su_last["seed"] == 4242) and su_strip(su_p["patch"]) == su_strip(su_want) and su_p["patch"]["out"]["level"] == su_last["level"] and "Surprise" in su_p["toast"], (su_p["menu"], su_p["toast"], su_last.get("tries"), su_last.get("seed")))
+    pg.evaluate("document.getElementById('undoBtn').click()"); pg.wait_for_timeout(100)
+    ck("Su. undo after surprise me goes back to the patch before it", pg.evaluate("JSON.stringify(__synth.patch())") == su_before)
+    pg.evaluate("__synth.setDevice('cathode')"); pg.wait_for_timeout(150)
+    su_pc = pg.evaluate("__synth.surprise.press(777)")
+    ck(f"Su. surprise me on Cathode loads a Cathode draw ('{su_pc['menu']}', {su_pc['patch'].get('cat')})",
+       su_pc["ok"] and su_pc["device"] == "cathode" and su_pc["patch"].get("device") == "cathode" and su_pc["patch"]["cat"] in ("Bass", "Lead", "Sweep") and su_pc["menu"].startswith("* "), su_pc["menu"])
+    su_two = pg.evaluate("Promise.all([__synth.surprise.press(1), __synth.surprise.press(2)]).then(x => x.map(y => [y.ok, y.why]))")
+    ck(f"Su. a second press while the first renders is ignored ({su_two})", su_two == [[True, None], [False, "busy"]], su_two)
+    pg.evaluate("__synth.setDevice('thyratron')"); pg.wait_for_timeout(150)
+    su_tb = pg.evaluate("JSON.stringify(__synth.patch())")
+    pg.evaluate("document.getElementById('surpriseBtn').click()"); pg.wait_for_timeout(150)
+    su_tt = pg.evaluate("({ same: JSON.stringify(__synth.patch()), toast: document.getElementById('toast').textContent })")
+    ck(f"Su. on Thyratron the key leaves the patch alone and says which devices it draws for ('{su_tt['toast']}')", su_tt["same"] == su_tb and "Filament and Cathode" in su_tt["toast"], su_tt["toast"])
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    pg.evaluate("document.getElementById('surpriseBtn').click()")
+    pg.wait_for_function("!__synth.surprise.busy() && __synth.surprise.last() && __synth.surprise.last().asked !== 1", timeout=15000)
+    su_k = pg.evaluate("({ key: __synth.share.key(), menu: __synth.share.menu(), lvl: __synth.patch().out.level, dis: document.getElementById('surpriseBtn').disabled })")
+    ck(f"Su. the key itself draws a patch on Filament ('{su_k['menu']}') and is ready again", su_k["key"] == "surprise" and not su_k["dis"] and su_k["menu"].startswith("* "), su_k)
+    for su_w in (375, 320):
+        sm = b.new_context(viewport={"width": su_w, "height": 667}, is_mobile=True, has_touch=True); smp = sm.new_page(); sme = []; smp.on("pageerror", lambda e: sme.append(str(e)))
+        smp.goto(BASE); smp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); smp.wait_for_timeout(200)
+        smp.tap('.tabs [data-go="rack"]'); smp.wait_for_timeout(250)
+        smp.evaluate("document.getElementById('surpriseBtn').scrollIntoView({ block: 'center' })"); smp.wait_for_timeout(100)
+        smr = smp.evaluate("""() => { const e = document.getElementById('surpriseBtn'), q = e.getBoundingClientRect();
+          return { w: Math.round(q.width), h: Math.round(q.height), vis: !!e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden', sw: document.documentElement.scrollWidth, iw: innerWidth }; }""")
+        ck(f"Su. {su_w} px phone: surprise me shows on the Rack tab, 44 px or more, no sideways scroll ({smr['w']}x{smr['h']})",
+           smr["vis"] and smr["w"] >= 44 and smr["h"] >= 44 and smr["sw"] <= smr["iw"], smr)
+        smp.tap("#surpriseBtn")
+        try: smp.wait_for_function("__synth.surprise.last() && !__synth.surprise.busy()", timeout=20000); smok = smp.evaluate("__synth.share.key()")
+        except Exception as e_: smok = "timeout " + str(e_)[:80]
+        ck(f"Su. {su_w} px phone: a tap draws a patch ({smok})", smok == "surprise", smok)
+        sm.close()
+        ck(f"Su. {su_w} px phone: no page errors", not sme, sme)
+    ck("Su. no page errors (main page)", not errs, errs)
 
     b.close()
 
