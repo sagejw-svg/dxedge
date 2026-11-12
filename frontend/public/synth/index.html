@@ -425,6 +425,49 @@
   body[data-dev="orthicon"] #orthiconRoot .knob .val { stroke: #c6e38a; }
   body[data-dev="orthicon"] #orthiconRoot .knob .ptr { stroke: #f4ffe4; }
   body[data-dev="orthicon"] #orthiconRoot .knob .kv { color: #d5ecb0; }
+  /* Orthicon's Picture card (graphics, 12 Nov): the canvas sits in a recessed bezel, and each control row under it is an
+     engraved tag (brush, edit, source, pictures, seed) and one joined switch in a recessed tray, the lit key in Orthicon's
+     green. The tray is the divider: its black shows through a 1 px gap between keys, so a switch that wraps on a narrow
+     card reads as a keypad with no holes (keys grow to fill each line). The picture's name sits in a recessed readout
+     window with a lamp: green for a drawn, generated or painted picture, amber for an image or an analysed recording,
+     red while the mic or the rack is being captured (pulsing; steady with reduced motion), dark on a cleared canvas.
+     Before, five loose rows of chips and header buttons, the name bare grey text, the seed the browser's number box. */
+  #orthiconCanvas { border-color: #000; box-shadow: 0 0 0 1px #2a3328, 0 1px 0 1px rgba(231,240,216,0.05), 0 0 18px rgba(198,227,138,0.05); }
+  #mOrthStage .orrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; max-width: 100%; min-width: 0; }
+  #mOrthStage .orrow:first-of-type { margin-top: 10px; }
+  #mOrthStage .orrow + .note { margin-top: 10px; }
+  #mOrthStage .ortag { flex: 0 0 66px; white-space: nowrap; font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #a9bd8c;
+    text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(231,240,216,0.08); }
+  #mOrthStage .orsw { display: flex; flex-wrap: wrap; gap: 1px; margin: 0; flex: 0 1 auto; min-width: 0; max-width: calc(100% - 76px);
+    background: #000; border: 1px solid #000; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 1px 0 rgba(231,240,216,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #mOrthStage .orsw > .chip, #mOrthStage .orsw > .btn { flex: 1 1 auto; margin: 0; border: 0; border-radius: 0; min-height: 30px; padding: 3px 10px;
+    display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 11.5px; font-weight: 400;
+    background: linear-gradient(180deg, #1d2518, #10150d); color: #c9d8b2; box-shadow: inset 0 1px 0 rgba(231,240,216,0.07); }
+  #mOrthStage .orsw > .btn { text-transform: lowercase; }
+  #mOrthStage .orsw > .chip:hover:not([aria-pressed="true"]):not(:disabled), #mOrthStage .orsw > .btn:hover:not([aria-pressed="true"]) { color: #ecf8d6; }
+  #mOrthStage .orsw > :disabled { color: #7d8a6c; cursor: default; }
+  body[data-dev="orthicon"] #orthiconRoot .orsw > [aria-pressed="true"] { color: #1a220c; font-weight: 600; background: linear-gradient(180deg, #d9f0a6, #b3d473);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 8px rgba(255,255,230,0.25); }
+  #mOrthStage .orsw > :focus-visible, #mOrthStage .orsw > .filebtn:has(> input:focus-visible) { outline: 2px solid #c6e38a; outline-offset: -3px; }
+  #mOrthStage #orthiconSeed { -moz-appearance: textfield; appearance: textfield; box-sizing: border-box; flex: 0 0 auto; align-self: stretch; height: auto; min-height: 30px; width: 11.5ch; min-width: 0; margin: 0;
+    padding: 3px 8px; border: 0; border-radius: 0; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; caret-color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 12px; letter-spacing: 0;
+    text-align: center; font-variant-numeric: tabular-nums; }
+  #mOrthStage #orthiconSeed::-webkit-inner-spin-button, #mOrthStage #orthiconSeed::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #mOrthStage #orthiconSeed:focus-visible { outline: 2px solid #e7c56a; outline-offset: -3px; }
+  #mOrthStage .orread { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 9em; min-width: 0; max-width: 300px; min-height: 26px; padding: 3px 10px;
+    border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(231,240,216,0.07);
+    font-size: 11px; color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
+  #mOrthStage .orread .orname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #mOrthStage .orread i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #26332b; box-shadow: inset 0 0 2px #000; }
+  #mOrthStage .orread[data-src="pic"] i { background: #c6e38a; box-shadow: 0 0 6px #c6e38a; }
+  #mOrthStage .orread[data-src="file"] i { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  #mOrthStage .orread[data-src="empty"] { color: #b89a7a; text-shadow: none; }
+  #mOrthStage .orrow:has(#orthiconMic[aria-pressed="true"], #orthiconRack[aria-pressed="true"]) .orread i {
+    background: var(--red); box-shadow: 0 0 8px var(--red); animation: deckRec 1.2s ease-in-out infinite; }
   body[data-dev="orthicon"] .devbtn[aria-pressed="true"] { color: #f3ffe4; border-color: #c6e38a; background: rgba(198, 227, 138, 0.1); }
   body[data-dev="orthicon"] .devbtn[aria-pressed="true"] i { background: #c6e38a; box-shadow: 0 0 7px #c6e38a; }
   body[data-dev="orthicon"] .tabs button[aria-selected="true"] { color: #f3ffe4; border-color: #c6e38a; background: rgba(198, 227, 138, 0.1); }
@@ -1179,6 +1222,11 @@
     body[data-dev="additron"] .tabs [data-go="shape"], body[data-dev="additron"] .tabs [data-go="cavity"] { display: none !important; }
     #pentagridDial { height: 180px; }
     #orthiconCanvas { height: 200px; }
+    #mOrthStage .ortag { display: none; }
+    #mOrthStage .orsw { flex: 1 1 100%; max-width: 100%; }
+    #mOrthStage .orsw > .chip, #mOrthStage .orsw > .btn { min-height: 44px; min-width: 44px; padding: 4px 9px; }
+    #mOrthStage #orthiconSeed { width: 10ch; min-height: 44px; }
+    #mOrthStage .orread { flex: 1 1 100%; max-width: 100%; min-height: 32px; }
     #trCanvas { height: 200px; }
     #gyCanvas { height: 200px; }
     #klPad { height: 200px; }
@@ -1265,7 +1313,8 @@
   }
   /* under 360 px the name takes its own line so a long name is not cut; the chips share the next */
   @media (max-width: 359px) { .mixrow .who { flex-basis: 100%; } .mixrow .chip { flex: 1 1 0; } }
-  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before, .klread i { animation: none !important; }
+  @media (max-width: 359px) { #mOrthStage .orsw > .chip, #mOrthStage .orsw > .btn { padding: 4px 6px; font-size: 11px; } }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before, .klread i, #mOrthStage .orread i { animation: none !important; }
     .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .rail::before, .rail::after, .racklinks::before, .racklinks::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>
 </head>

@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -5926,6 +5926,93 @@ with sync_playwright() as pw:
            (rows["shareBar"]["lamp"], h1["lamp"], h1["val"][:40]))
         hfx.close()
     ck("Hf. no page errors (the project, mix and patch rows)", not hferr, hferr)
+    # Op. Orthicon's Picture card (graphics, 12 Nov 2026). Before, five loose rows of chips and header buttons under the canvas,
+    # the picture's name bare grey text, the seed the browser's number box, and on a 375 px phone eleven ragged rows (the card
+    # 1062 px tall, seen). Now: each row an engraved tag and one joined switch in a recessed tray (the keys grow to fill a
+    # wrapped line, so a narrow card reads as a keypad), the lit key in Orthicon's green, the seed a recessed amber window, and
+    # the name in a recessed readout window with a lamp: green for a picture, amber for a file, red while a capture runs.
+    OP_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const ids = ['orthiconBrushes', 'orthiconEdits', 'orthiconSources', 'orthiconPictures', 'orthiconGenerateRow'];
+      const sws = ids.map(id => { const sw = document.getElementById(id), cs = getComputedStyle(sw), row = sw.parentElement, tag = row.querySelector('.ortag');
+        const keys = [...sw.children].filter(k => k.offsetParent), kr = keys.map(R);
+        const join = kr.every((k, i) => i === 0 || (Math.abs(k.t - kr[i - 1].t) < 0.6 ? Math.abs(k.l - kr[i - 1].r) <= 1.6 : k.t >= kr[i - 1].b - 0.6));
+        const unlit = keys.filter(k => k.tagName !== 'INPUT' && k.getAttribute('aria-pressed') !== 'true' && !k.disabled).map(k => { const c = getComputedStyle(k); return { color: c.color, bg: c.backgroundImage, rad: c.borderTopLeftRadius }; });
+        const lit = keys.filter(k => k.getAttribute('aria-pressed') === 'true').map(k => { const c = getComputedStyle(k); return { color: c.color, bg: c.backgroundImage }; });
+        return { id, cls: sw.classList.contains('orsw'), role: sw.getAttribute('role'), label: sw.getAttribute('aria-label'), bg: cs.backgroundColor, shadow: cs.boxShadow,
+          rad: cs.borderTopLeftRadius, box: R(sw), n: keys.length, join, lines: new Set(kr.map(k => Math.round(k.t))).size, unlit, lit,
+          minKey: Math.min(...kr.map(k => Math.min(k.w, k.h))), keyH: Math.min(...kr.map(k => k.h)),
+          tag: tag ? { text: tag.textContent, shown: !!tag.offsetParent, color: getComputedStyle(tag).color, r: R(tag) } : null }; });
+      const win = document.getElementById('orthiconNow'), wc = getComputedStyle(win), wl = getComputedStyle(win.querySelector('i'));
+      const sd = document.getElementById('orthiconSeed'), sc = getComputedStyle(sd), img = getComputedStyle(document.getElementById('orthiconImageBtn'));
+      const card = R(document.getElementById('mOrthStage')), st = getComputedStyle(document.getElementById('mOrthStage'));
+      return { sws, card, cardBg: st.backgroundColor,
+        win: { box: R(win), src: win.dataset.src, text: document.getElementById('orthiconName').textContent, title: win.title, color: wc.color, bg: wc.backgroundImage,
+          shadow: wc.boxShadow, lamp: wl.backgroundColor, anim: wl.animationName },
+        seed: { color: sc.color, bg: sc.backgroundImage, shadow: sc.boxShadow, appearance: sc.appearance, w: R(sd).w, val: sd.value },
+        imgAlign: img.alignItems, imgDisplay: img.display,
+        white: [...document.querySelectorAll('#orthiconRoot input, #orthiconRoot select, #orthiconRoot button')].filter(e => e.offsetParent && /rgb\\(255, 255, 255\\)/.test(getComputedStyle(e).backgroundColor)).map(e => e.id || e.textContent),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    def _op_wav():
+        import io, wave as _w
+        bio = io.BytesIO(); wf = _w.open(bio, "wb"); wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(22050)
+        wf.writeframes(b"".join(int(12000 * math.sin(2 * math.pi * 440 * i / 22050)).to_bytes(2, "little", signed=True) for i in range(22050)))
+        wf.close(); return bio.getvalue()
+    operr = []
+    for op_w, op_mob, op_rm in ((1366, False, "no-preference"), (375, True, "reduce")):
+        opx = b.new_context(viewport={"width": op_w, "height": 667 if op_mob else 1000}, is_mobile=op_mob, has_touch=op_mob, reduced_motion=op_rm)
+        opp = opx.new_page(); opp.on("pageerror", lambda e: operr.append(str(e)))
+        opp.goto(BASE); opp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        opp.evaluate("__synth.setDevice('orthicon')"); opp.wait_for_timeout(400)
+        if op_mob: opp.click(".tabs [data-go='play']"); opp.wait_for_timeout(200)
+        op = opp.evaluate(OP_MEAS); S = {x["id"]: x for x in op["sws"]}
+        unlit_con = min(_ob_con(u["color"], u["bg"]) for x in op["sws"] for u in x["unlit"])
+        lit_con = min(_ob_con(u["color"], u["bg"]) for x in op["sws"] for u in x["lit"])
+        info(f"Op. {op_w} px", f"Picture card {op['card']['h']:.0f} px tall; lines {', '.join('%s %d' % (x['id'][8:], x['lines']) for x in op['sws'])}; keys {min(x['minKey'] for x in op['sws']):.0f} px; unlit {unlit_con:.1f}:1, lit {lit_con:.1f}:1")
+        ck(f"Op. at {op_w} px the five rows are joined switches in a recessed tray (brush 5, edit 9, source 4, pictures 8, seed 4), keys square-cornered and touching, named groups",
+           all(x["cls"] and x["role"] == "group" and x["label"] and x["bg"] == "rgb(0, 0, 0)" and "inset" in x["shadow"] and x["rad"] == "7px" and x["join"]
+               and all(u["rad"] == "0px" for u in x["unlit"]) for x in op["sws"])
+           and [S[k]["n"] for k in ("orthiconBrushes", "orthiconEdits", "orthiconSources", "orthiconPictures", "orthiconGenerateRow")] == [5, 9, 4, 8, 4], op["sws"])
+        ck(f"Op. at {op_w} px key text reads on its key (unlit {unlit_con:.1f}:1, lit {lit_con:.1f}:1, want 4.5 or more); the lit brush is Orthicon's green",
+           unlit_con >= 4.5 and lit_con >= 4.5 and S["orthiconBrushes"]["lit"] and "gradient" in S["orthiconBrushes"]["lit"][0]["bg"], (unlit_con, lit_con, S["orthiconBrushes"]["lit"]))
+        sd_con = _ob_con(op["seed"]["color"], op["seed"]["bg"]); w_con = _ob_con(op["win"]["color"], op["win"]["bg"])
+        ck(f"Op. at {op_w} px the seed is a recessed amber window ({sd_con:.1f}:1) and no Orthicon control is a white field; the file keys centre their word",
+           "gradient" in op["seed"]["bg"] and "inset" in op["seed"]["shadow"] and op["seed"]["appearance"] == "textfield" and sd_con >= 4.5 and not op["white"]
+           and op["imgDisplay"] in ("flex", "inline-flex") and op["imgAlign"] == "center", (op["seed"], op["white"], op["imgDisplay"], op["imgAlign"]))
+        ck(f"Op. at {op_w} px the picture's name sits in a recessed readout window ({w_con:.1f}:1) with a green lamp for a drawn picture, titled with the name",
+           "gradient" in op["win"]["bg"] and "inset" in op["win"]["shadow"] and w_con >= 4.5 and op["win"]["src"] == "pic" and op["win"]["lamp"] == "rgb(198, 227, 138)"
+           and op["win"]["text"] and op["win"]["title"] == op["win"]["text"] and op["win"]["box"]["r"] <= op["card"]["r"], op["win"])
+        opp.click("#orthiconClear"); opp.wait_for_timeout(150)
+        cl = opp.evaluate(OP_MEAS)["win"]
+        opp.click("#orthiconPictures [data-picture='stack']"); opp.wait_for_timeout(150)
+        st_ = opp.evaluate(OP_MEAS); pk = [u for u in st_["sws"] if u["id"] == "orthiconPictures"][0]
+        ck(f"Op. at {op_w} px a cleared canvas darkens the lamp; a starter picture lights its key and the green lamp again",
+           cl["src"] == "empty" and cl["lamp"] == "rgb(38, 51, 43)" and st_["win"]["src"] == "pic" and st_["win"]["lamp"] == "rgb(198, 227, 138)" and len(pk["lit"]) == 1,
+           (cl, st_["win"], pk["lit"]))
+        opp.set_input_files("#orthiconAudio", files=[{"name": "tone.wav", "mimeType": "audio/wav", "buffer": _op_wav()}])
+        try: opp.wait_for_function("document.getElementById('orthiconNow').dataset.src === 'file'", timeout=5000)
+        except Exception: pass
+        fl = opp.evaluate(OP_MEAS)["win"]
+        opp.evaluate("document.getElementById('orthiconMic').setAttribute('aria-pressed', 'true')"); opp.wait_for_timeout(80)
+        lv = opp.evaluate(OP_MEAS)["win"]
+        opp.evaluate("document.getElementById('orthiconMic').setAttribute('aria-pressed', 'false')"); opp.wait_for_timeout(80)
+        ck(f"Op. at {op_w} px an analysed file lights the lamp amber; a live capture lights it red, " + ("steady with reduced motion" if op_rm == "reduce" else "pulsing"),
+           fl["src"] == "file" and fl["lamp"] == "rgb(255, 179, 71)" and lv["lamp"] != fl["lamp"]
+           and _dk_rgbs(lv["lamp"])[0][0] > 150 and _dk_rgbs(lv["lamp"])[0][1] < 120
+           and (lv["anim"] == "none" if op_rm == "reduce" else lv["anim"] == "deckRec"), (fl, lv))
+        if op_mob:
+            ck(f"Op. on a {op_w} px phone every key and the seed are 44 px or more, the tags drop, the switches end inside the card, no sideways scroll",
+               all(x["minKey"] >= 44 and not x["tag"]["shown"] and x["box"]["r"] <= op["card"]["r"] + 0.5 for x in op["sws"]) and op["sw"] <= op["iw"] == op_w, op)
+            ck(f"Op. on a {op_w} px phone the brushes and the sources each fit one line, the edits two, the pictures three or fewer",
+               S["orthiconBrushes"]["lines"] == 1 and S["orthiconSources"]["lines"] == 1 and S["orthiconEdits"]["lines"] == 2 and S["orthiconPictures"]["lines"] <= 3,
+               [(x["id"], x["lines"]) for x in op["sws"]])
+        else:
+            tag_con = min(_ob_con(x["tag"]["color"], op["cardBg"]) for x in op["sws"])
+            ck(f"Op. at 1366 px each switch is one line of compact keys (30 px or more), every switch starts at the same column after its engraved tag ({tag_con:.1f}:1)",
+               all(x["lines"] == 1 and x["keyH"] >= 29.5 and x["tag"]["shown"] and x["tag"]["r"]["r"] <= x["box"]["l"] for x in op["sws"])
+               and len({round(x["box"]["l"]) for x in op["sws"]}) == 1 and tag_con >= 4.5 and op["seed"]["w"] <= 110,
+               [(x["id"], x["lines"], x["keyH"], x["box"]["l"]) for x in op["sws"]])
+        opx.close()
+    ck("Op. no page errors (Orthicon's Picture card)", not operr, operr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
