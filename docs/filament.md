@@ -1186,6 +1186,12 @@ and proven by measurement), test suite health, load time and memory, code health
   for before Dekatron's node (the first attach) is built, which fails on main (15 asked for later); two asks share
   one promise and one `addModule`; a failed load rejects and is tried again; a failed preload raises no page error.
   Plus one INFO line, the boot times of 3 cold loads. Cache `dxedge-v209`.
+  Test fixed on the way (test health, measured): the first suite run on this tree failed "R. save project before the
+  boot finishes keeps ..." (booted already true). That check held the boot back with a `context.route()` abort of
+  resnatron.worklet.js, which never fired: 0 route hits on either tree (a worklet's module fetch does not reach
+  Playwright's routes), so its window was only the boot's own length, and booted() went true 1.9 s after ready() on
+  main and 0.4 s after on this tree, inside the check's 400 ms wait. The hold is now in the page, the way the M.
+  checks hold Resnatron (its `addModule` waits on a promise nothing resolves). 3 of 3 passes on each tree, standalone.
   Not done (inferred from the code): an offline render pays the voice's and spring's `addModule` on every new context,
   now started together; whether that shortens a render was inside the noise on 11 Nov and was not measured again.
 

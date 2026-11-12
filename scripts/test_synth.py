@@ -5046,11 +5046,17 @@ with sync_playwright() as pw:
     # Review 27 Oct (R1027-1): the saved arms and desk bus come back only when the boot finishes (several
     # seconds on a phone or a slow link). Save project or save mix in that window wrote no arms and the
     # default bus over the saved ones. Holding one device's worklet back keeps the page in that window.
+    # 12 Nov 2026: the hold was a context.route() abort of resnatron.worklet.js, which never fired (measured:
+    # 0 route hits; a worklet's module fetch does not reach Playwright's routes here), so the window was only
+    # the boot's own length, and the check passed while the boot took more than 400 ms after ready(). With the
+    # worklet modules loading together it can finish inside that, so the hold is now in the page, the way the
+    # M. checks hold it: Resnatron's addModule waits on a promise nothing resolves.
     bctx = b.new_context(viewport={"width": 1366, "height": 900}, service_workers="block"); bpg = bctx.new_page()
     bpg.goto(BASE); bpg.wait_for_function("window.__synth && __synth.booted()", timeout=30000)
     bpg.evaluate("""() => { const p = __synth.project(); p.name = 'Early'; p.armed = ['cathode', 'thyratron'];
       p.bus = { reverbSeconds: 2.2, delayTime: 0.5, delayFeedback: 0.6 }; localStorage.setItem('dxrack_project', JSON.stringify(p)); }""")
-    bctx.route("**/resnatron.worklet.js", lambda r: r.abort())
+    bctx.add_init_script("""(() => { const am = AudioWorklet.prototype.addModule; const hold = new Promise(() => {});
+      AudioWorklet.prototype.addModule = function (url, o) { return String(url).includes('resnatron.worklet') ? hold : am.call(this, url, o); }; })()""")
     bpg.reload(); bpg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); bpg.wait_for_timeout(400)
     early = bpg.evaluate("""() => { const booted = __synth.booted(); document.getElementById('projSave').click();
       const p = JSON.parse(localStorage.getItem('dxrack_project')); const m = __synth.mixSession();
