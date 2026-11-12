@@ -7,13 +7,14 @@ import {
   normalizePentagrid, PENTA_DEFAULT, PENTA_BAND, MODES,
   bandOf, condFromSolar, stationNear, makeQso,
 } from './pentagrid.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./pentagrid.worklet.js', import.meta.url).href;
 const TUNE_MIN = 3500;
 const TUNE_MAX = 30000;
 
 export async function createPentagridNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__pentagrid) { await ctx.audioWorklet.addModule(WORKLET); ctx.__pentagrid = true; }
+  if (!ctx.__pentagrid) { await loadWorklet(ctx, WORKLET); ctx.__pentagrid = true; }
   const node = new AudioWorkletNode(ctx, 'pentagrid', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizePentagrid(patch), events: events || [], active: active !== false },

@@ -7,6 +7,7 @@ import { houseFont, canvasReadout } from './fread.js';
 import {
   klystronDevice, normalizeKlystron, KLY_DEFAULT, SOURCES, WAVES, VOWELS, formantsOf,
 } from './klystron.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./klystron.worklet.js', import.meta.url).href;
 
@@ -15,7 +16,7 @@ function isRack(engine) {
 }
 
 export async function createKlystronNode(ctx, { patch, events, active, destination, buffer } = {}) {
-  if (!ctx.__klystron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__klystron = true; }
+  if (!ctx.__klystron) { await loadWorklet(ctx, WORKLET); ctx.__klystron = true; }
   const node = new AudioWorkletNode(ctx, 'klystron', {
     numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

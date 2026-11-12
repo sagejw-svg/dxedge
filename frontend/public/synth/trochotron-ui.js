@@ -3,6 +3,7 @@
 
 import { trochotronDevice, normalizeTrochotron, TROCHO_DEFAULT, SEED_MAX } from './trochotron.js';
 import { pieceOf, shareOf, parseShare, midiOf, logisticR, GENERATORS, SCALE_NAMES, KEYS, ROUTES } from './trochotron-gen.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./trochotron.worklet.js', import.meta.url).href;
 const GEN_LABEL = {
@@ -13,7 +14,7 @@ const GEN_LABEL = {
 function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
 
 export async function createTrochotronNode(ctx, { patch, notes, events, active, destination, playing } = {}) {
-  if (!ctx.__trochotron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__trochotron = true; }
+  if (!ctx.__trochotron) { await loadWorklet(ctx, WORKLET); ctx.__trochotron = true; }
   const node = new AudioWorkletNode(ctx, 'trochotron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

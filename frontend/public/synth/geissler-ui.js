@@ -9,6 +9,7 @@ import { voiceForNote } from './drums.js';
 import {
   SPECIES, SPECIES_NAME, TOOLS, SCALE_IDS, GRID_IDS, ROUTES,
 } from './geissler-world.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./geissler.worklet.js', import.meta.url).href;
 
@@ -21,7 +22,7 @@ const SCALE_LABEL = { major: 'major', minor: 'minor', penta: 'penta', dorian: 'd
 const GRID_LABEL = { free: 'free', 4: '1/4', 8: '1/8', 16: '1/16' };
 
 export async function createGeisslerNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__geissler) { await ctx.audioWorklet.addModule(WORKLET); ctx.__geissler = true; }
+  if (!ctx.__geissler) { await loadWorklet(ctx, WORKLET); ctx.__geissler = true; }
   const node = new AudioWorkletNode(ctx, 'geissler', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

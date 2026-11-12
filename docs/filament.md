@@ -1162,6 +1162,33 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 12 Nov (improvement, load time): worklet modules load together at boot, one `addModule` per context and URL.
+  This is the 11 Nov branch `claude/worklet-preload-1111`, rebased onto origin/main `9c737be`, finished and shipped.
+  Why this item: no review finding marked broken is open that this job can fix (R1103-1 waits on James; R1111-3, the
+  site down on 11 Nov, has passed: the 12 Nov runs loaded it live). CPU: test 9 still moves several points between
+  runs with no voice change, so a sub-noise gain cannot be shown. The 11 Nov run named this branch next.
+  What changed: `worklets.js` (`loadWorklet`: the first ask on a context starts `addModule`, every later caller gets
+  the same promise, a failed load is forgotten so the next ask tries again; `preloadWorklets` starts several and
+  swallows their errors, since the attach that needs a module reports it). The 18 `addModule` sites in engine.js,
+  masterfx.js and the sixteen hosted devices' modules go through it (the spring's own cache in rack.js and Iris's
+  page are untouched). The boot starts the voice, master and spring modules together, then the sixteen hosted modules
+  together once the engine is up; the attaches still run one after another in the same order and build the same nodes.
+  Measured, headless Chrome, local server, 1366 px, idle box, 8 boots a tree, alternating: `__synth.booted()` 1483 to
+  1896 ms after navigation on main (median 1738), 1110 to 1355 ms on this tree (median 1238), about 0.5 s sooner;
+  `ready()` 755 to 948 ms on main (median 827), 744 to 904 ms here (median 816), so the first sound is not later.
+  Sound unchanged (measured): 22 offline renders (Filament with and without the rack, Cathode, Filament through the
+  master bus, Dekatron triggers and a factory pattern, Resnatron Cavity Saw, and each of the 16 hosted devices'
+  render functions) hashed with SHA-256 over both channels, 2 runs a tree, with `Math.random` seeded in each worklet
+  scope (the voice's oscillators start at a random phase): 22 of 22 identical across both trees and both runs (two of
+  them, Dekatron and Resnatron at their defaults with note events, are silent and say nothing). No worklet file, DSP,
+  normalizer or patch changed, so no patch sounds different.
+  New checks (Wl., 5): each of the 19 modules is added once on the live context; all sixteen hosted modules are asked
+  for before Dekatron's node (the first attach) is built, which fails on main (15 asked for later); two asks share
+  one promise and one `addModule`; a failed load rejects and is tried again; a failed preload raises no page error.
+  Plus one INFO line, the boot times of 3 cold loads. Cache `dxedge-v209`.
+  Not done (inferred from the code): an offline render pays the voice's and spring's `addModule` on every new context,
+  now started together; whether that shortens a render was inside the noise on 11 Nov and was not measured again.
+
 - Done 11 Nov (improvement, test health, forced: main failed it): "Lc. level: a saw chord on the default tabs sits
   within 3 dB of Valve 12 ..., and within 3 dB of itself from resonance 0 to 1" read the level of one render. The suite on
   origin/main `b5596c6` ran 1848 PASS, 1 FAIL, that check: resonance 0, 0.3, 0.6 and 1 read -15.06, -15.41, -13.52 and

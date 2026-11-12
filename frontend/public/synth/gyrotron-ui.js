@@ -7,6 +7,7 @@ import { makeKnob } from './knob.js';
 import { gyrotronDevice, normalizeGyrotron, GYRO_DEFAULT, midiOf } from './gyrotron.js';
 import { voiceForNote } from './drums.js';
 import { SCALE_IDS, TOOLS, ROUTES, CORE_RANGE } from './gyrotron-world.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./gyrotron.worklet.js', import.meta.url).href;
 
@@ -24,7 +25,7 @@ const TOOL_LABEL = { well: 'well', body: 'body', fling: 'fling' };
 export { midiOf };
 
 export async function createGyrotronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__gyrotron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__gyrotron = true; }
+  if (!ctx.__gyrotron) { await loadWorklet(ctx, WORKLET); ctx.__gyrotron = true; }
   const node = new AudioWorkletNode(ctx, 'gyrotron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

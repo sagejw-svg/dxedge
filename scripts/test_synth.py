@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -10643,6 +10643,65 @@ with sync_playwright() as pw:
         ck(f"Fc. {fc_w} px phone: a tap sets rack black, no sideways scroll, no page errors", fmp.evaluate("__synth.face().face") == "rack"
            and fmp.evaluate("document.documentElement.scrollWidth <= innerWidth") and not fme, fme)
         fm.close()
+
+    # Wl. worklet modules (worklets.js, 12 Nov 2026). The boot used to ask for each hosted device's module only
+    # when the attach before it had finished; now the sixteen start together once the engine is up, and every
+    # caller on a context shares one addModule per URL. A fresh page logs each addModule and each worklet
+    # node it builds (a wrapper on the prototype and a subclass of AudioWorkletNode, this page only).
+    wlx = b.new_context(viewport={"width": 1366, "height": 1000}); wlp = wlx.new_page(); wle = []
+    wlp.on("pageerror", lambda e: wle.append(str(e)))
+    wlp.add_init_script("""(() => {
+      const log = window.__wlLog = [];
+      const add = AudioWorklet.prototype.addModule;
+      AudioWorklet.prototype.addModule = function (u, o) { log.push(['add', String(u).split('/').pop().split('?')[0], this]); return add.call(this, u, o); };
+      const N = window.AudioWorkletNode;
+      window.AudioWorkletNode = class extends N { constructor(c, n, o) { super(c, n, o); log.push(['node', n, c.audioWorklet]); } };
+    })()""")
+    wlp.goto(BASE); wlp.wait_for_function("window.__synth && __synth.booted()", timeout=60000); wlp.wait_for_timeout(300)
+    wlr = wlp.evaluate("""() => {
+      const live = __wlLog.filter(e => e[0] === 'node' && e[1] === 'filament').map(e => e[2])[0] || __wlLog.find(e => e[0] === 'add')[2];
+      const on = __wlLog.filter(e => e[2] === live);
+      const adds = on.filter(e => e[0] === 'add').map(e => e[1]);
+      const firstDrum = on.findIndex(e => e[0] === 'node' && e[1] === 'dekatron');
+      const hosted = ['drums', 'lattice', 'thyratron', 'gleam', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron', 'additron', 'rhumbatron', 'resnatron'].map(n => n + '.worklet.js');
+      const before = new Set(on.slice(0, firstDrum < 0 ? on.length : firstDrum).filter(e => e[0] === 'add').map(e => e[1]));
+      return { adds, dup: adds.filter((a, i) => adds.indexOf(a) !== i), missing: hosted.concat(['voice.worklet.js', 'master.worklet.js', 'spring.worklet.js']).filter(h => !adds.includes(h)),
+               late: hosted.filter(h => !before.has(h)), firstDrum };
+    }""")
+    ck(f"Wl. the live context adds each worklet module once ({len(wlr['adds'])} adds; repeated: {wlr['dup']}; missing of the 19: {wlr['missing']})",
+       not wlr["dup"] and not wlr["missing"], wlr)
+    ck(f"Wl. all sixteen hosted devices' modules are asked for before Dekatron's node, the first attach, is built (asked for later: {wlr['late']})",
+       wlr["firstDrum"] >= 0 and not wlr["late"], wlr)
+    wlu = wlp.evaluate("""async () => {
+      const { loadWorklet, preloadWorklets } = await import('./worklets.js');
+      const ctx = new OfflineAudioContext(2, 128, 48000);
+      const n0 = __wlLog.length, adds = () => __wlLog.slice(n0).filter(e => e[0] === 'add' && e[2] === ctx.audioWorklet).length;
+      const url = new URL('./drums.worklet.js', location.href).href, bad = new URL('./no-such.worklet.js', location.href).href;
+      const p1 = loadWorklet(ctx, url), p2 = loadWorklet(ctx, url);
+      await p1; const sameP = p1 === p2, oneAdd = adds();
+      let node = true; try { new AudioWorkletNode(ctx, 'dekatron', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] }); } catch (e) { node = false; }
+      let e1 = null, e2 = null;
+      try { await loadWorklet(ctx, bad); } catch (e) { e1 = e.name || String(e); }
+      try { await loadWorklet(ctx, bad); } catch (e) { e2 = e.name || String(e); }
+      const badAdds = __wlLog.slice(n0).filter(e => e[0] === 'add' && e[1] === 'no-such.worklet.js').length;
+      preloadWorklets(ctx, [bad]);
+      await new Promise(r => setTimeout(r, 400));
+      return { sameP, oneAdd, node, e1, e2, badAdds };
+    }""")
+    ck(f"Wl. loadWorklet: two asks on one context share one promise and one addModule, and the processor is there after ({wlu})",
+       wlu["sameP"] and wlu["oneAdd"] == 1 and wlu["node"], wlu)
+    ck(f"Wl. loadWorklet: a module that fails to load rejects for its caller and is tried again on the next ask ({wlu['e1']}, {wlu['e2']}, {wlu['badAdds']} adds)",
+       wlu["e1"] and wlu["e2"] and wlu["badAdds"] == 2, wlu)
+    wlp.wait_for_timeout(200)
+    ck("Wl. a preload of a module that fails raises no page error (the attach that needs it reports it)", not wle, wle)
+    wlx.close()
+    wlt = []
+    for _ in range(3):
+        wtx = b.new_context(viewport={"width": 1366, "height": 1000}); wtp = wtx.new_page()
+        wtp.add_init_script("(function poll(){ const S = window.__synth; if (S && S.ready && S.ready() && !window.__tr) window.__tr = performance.now(); if (S && S.booted && S.booted()) { window.__tb = performance.now(); return; } setTimeout(poll, 5); })()")
+        wtp.goto(BASE); wtp.wait_for_function("window.__tb", timeout=60000)
+        wlt.append([round(v) for v in wtp.evaluate("[window.__tr, window.__tb]")]); wtx.close()
+    info("Wl. boot (ready, booted) in ms from navigation, 3 cold loads, local server, 1366 px", wlt)
 
     b.close()
 

@@ -5,11 +5,12 @@ import { houseFont } from './fread.js';
 import {
   additronDevice, normalizeAdditron, AD_DEFAULT, PARTS, FOOT, REG, spectrumOf,
 } from './additron.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./additron.worklet.js', import.meta.url).href;
 
 export async function createAdditronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__additron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__additron = true; }
+  if (!ctx.__additron) { await loadWorklet(ctx, WORKLET); ctx.__additron = true; }
   const node = new AudioWorkletNode(ctx, 'additron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

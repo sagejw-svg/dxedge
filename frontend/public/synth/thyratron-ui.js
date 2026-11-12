@@ -5,6 +5,7 @@
 import { makeKnob } from './knob.js';
 import { getDevice } from './device.js';
 import { normalizeThy, THY_DEFAULT, THY_WAVES, THY_RANGES } from './thyratron.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./thyratron.worklet.js', import.meta.url).href;
 
@@ -12,7 +13,7 @@ const WAVE_LABEL = { tri: 'tri', saw: 'saw', mix: 'mix', square: 'sq', wide: 'wi
 const RANGE_LABEL = { lo: 'LO', '32': "32'", '16': "16'", '8': "8'", '4': "4'", '2': "2'" };
 
 export async function createThyNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__thyratron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__thyratron = true; }
+  if (!ctx.__thyratron) { await loadWorklet(ctx, WORKLET); ctx.__thyratron = true; }
   const node = new AudioWorkletNode(ctx, 'thyratron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeThy(patch), events: events || [], active: active !== false },

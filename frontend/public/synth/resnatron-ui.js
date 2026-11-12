@@ -6,12 +6,13 @@ import { FREAD_FMT, addFread } from './fread.js';
 import {
   RN_SPEC, RN_ORDER, RN_FACTORY, RN_DEFAULT, normalizeResnatron, shareOf,
 } from './resnatron.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./resnatron.worklet.js', import.meta.url).href;
 const CABLE_COL = ['#e0a36a', '#f2d3a2', '#7ec8c3', '#d98b6a', '#c9b6ff', '#e7e2d4'];
 
 export async function createResnatronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__resnatron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__resnatron = true; }
+  if (!ctx.__resnatron) { await loadWorklet(ctx, WORKLET); ctx.__resnatron = true; }
   const node = new AudioWorkletNode(ctx, 'resnatron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeResnatron(patch), events: events || [], active: active !== false },

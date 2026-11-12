@@ -6,6 +6,7 @@ import { houseFont } from './fread.js';
 import {
   phantastronDevice, normalizePhantastron, PHANTA_DEFAULT, PADS, CARTS, toggleWire, SEED_MAX,
 } from './phantastron.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./phantastron.worklet.js', import.meta.url).href;
 const WIRE_COL = ['#ffb347', '#7dffb3', '#ff6b6b', '#d38cff', '#7ad7ff', '#f2e7c9'];
@@ -15,7 +16,7 @@ function isRack(engine) {
 }
 
 export async function createPhantastronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__phantastron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__phantastron = true; }
+  if (!ctx.__phantastron) { await loadWorklet(ctx, WORKLET); ctx.__phantastron = true; }
   const node = new AudioWorkletNode(ctx, 'phantastron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {

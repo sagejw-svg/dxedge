@@ -8,6 +8,7 @@
 import { makeKnob } from './knob.js';
 import { drumDevice, normalizeDrum, DRUM_DEFAULT, VOICES, VOICE_LABELS, createHostClock } from './drums.js';
 import { createDrumEngine, postDrum, renderDrum } from './drums-dsp.js';
+import { loadWorklet } from './worklets.js';
 
 const WORKLET = new URL('./drums.worklet.js', import.meta.url).href;
 const KNOBS = [
@@ -20,7 +21,7 @@ const KNOBS = [
 ];
 
 export async function createDrumNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__dekatron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__dekatron = true; }
+  if (!ctx.__dekatron) { await loadWorklet(ctx, WORKLET); ctx.__dekatron = true; }
   const node = new AudioWorkletNode(ctx, 'dekatron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeDrum(patch), events: events || [], active: active !== false },
