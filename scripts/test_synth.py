@@ -1526,6 +1526,28 @@ with sync_playwright() as pw:
        sfr_["empty"][0] == "Type a name for the patch first." and sfr_["empty"][1] is True and sfr_["empty"][2] == "saveName", sfr_)
     ck(f"Pn. closing the save form by Escape, cancel or a save hands focus back to save ({sfr_['escape']}, {sfr_['cancel']}, {sfr_['save']})",
        sfr_["escape"] == (False, "saveP") and sfr_["cancel"] == (False, "saveP") and sfr_["save"][:2] == (False, "saveP"), sfr_)
+    # review 12 Nov, R1112-2: the save form offered name + " 2" for every patch that was not a user patch, so a Surprise me
+    # draw or a linked patch offered "Copper Line 2345 2", and a factory patch offered "<name> 2" even when a user patch
+    # already had that name (a save then replaced it). A free name is offered as is; a taken one gets the first free number.
+    snf_ = pg.evaluate("""async () => {
+      const w = () => new Promise(r => setTimeout(r, 40)), sel = document.getElementById('patchSel');
+      const offer = async () => { document.getElementById('saveP').click(); await w(); const v = document.getElementById('saveName').value; document.getElementById('saveNo').click(); await w(); return v; };
+      const pick = async n => { const o = [...sel.options].find(o => o.textContent === n); sel.value = o.value; sel.dispatchEvent(new Event('change')); await w(); };
+      const f = __synth.factory()[0];
+      const out = { f: f.name };
+      await __synth.share.apply(await __synth.share.encode(__synth.device(), Object.assign({}, f, { name: 'Pn Unused Name 4821' }))); await w();
+      out.fresh = await offer();
+      await __synth.share.apply(await __synth.share.encode(__synth.device(), Object.assign({}, f, { name: f.name.toLowerCase() }))); await w();
+      out.lower = await offer();
+      await pick(f.name); out.factory = await offer();
+      document.getElementById('saveP').click(); await w(); document.getElementById('saveName').value = f.name + ' 2'; document.getElementById('saveOk').click(); await w();
+      out.user = await offer();
+      await pick(f.name); out.factory2 = await offer();
+      await pick(f.name + ' 2'); document.getElementById('delP').click(); await w();
+      return out; }""")
+    ck(f"Pn. save offers a free name as it is and a taken one with the first free number (link '{snf_['fresh']}', '{snf_['lower']}', factory '{snf_['factory']}', user '{snf_['user']}', factory with '{snf_['f']} 2' saved '{snf_['factory2']}')",
+       snf_["fresh"] == "Pn Unused Name 4821" and snf_["lower"] == snf_["f"].lower() + " 2" and snf_["factory"] == snf_["f"] + " 2"
+       and snf_["user"] == snf_["f"] + " 2" and snf_["factory2"] == snf_["f"] + " 3", snf_)
     # review 3 Nov, R1103-3 (fixed 6 Nov): on a phone the save name field was 28 px tall beside 44 px keys
     phs_ = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True)
     phs_.goto(BASE); phs_.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phs_.wait_for_timeout(200)
@@ -10311,6 +10333,18 @@ with sync_playwright() as pw:
     ck(f"Sh. download patch saves {shdl.value.suggested_filename}, and upload patch loads it back on Cathode from Filament",
        shdl.value.suggested_filename == "cathode-sh-keys.json" and sh_file["kind"] == "dxpatch" and sh_file["device"] == "cathode"
        and shu["dev"] == "cathode" and shu["same"] == shk_want and "Loaded" in shu["toast"] and shu["val"] == "", (shdl.value.suggested_filename, shu))
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
+    # review 12 Nov, R1112-3: copy link said what a patch leaves out (Orthicon's picture, Mote's sound, Klystron's recording,
+    # Lattice's WAV) but download patch said only "Downloaded <file>", though the file carries the same patch
+    shnt = {}
+    for d_, want_ in (("orthicon", "picture"), ("cathode", None)):
+        pg.evaluate(f"Promise.resolve(__synth.setDevice('{d_}'))"); pg.wait_for_timeout(1500)
+        with pg.expect_download() as shdl2:
+            pg.evaluate("document.getElementById('shareDown').click()")
+        shnt[d_] = (shdl2.value.suggested_filename, pg.evaluate("document.getElementById('toast').textContent"))
+    ck(f"Sh. download patch says what the file leaves out where copy link does ({shnt['orthicon'][1]!r}) and nothing more elsewhere ({shnt['cathode'][1]!r})",
+       shnt["orthicon"][1].startswith("Downloaded orthicon-") and "picture is not in it" in shnt["orthicon"][1]
+       and shnt["cathode"][1].startswith("Downloaded cathode-") and "not in it" not in shnt["cathode"][1], shnt)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
     # phones: the row sits in the Rack tab's Mix section, every key 44 px, no sideways scroll
     for sh_w in (375, 320):

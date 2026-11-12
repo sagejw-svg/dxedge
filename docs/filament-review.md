@@ -17,7 +17,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
-| R1111-3 | broken | all | dxedge.net was down during the 11 Nov review: every URL (/, /synth/, /sw.js, /otr/, www) answered 502 Bad Gateway from nginx from 12:24 to at least 12:41 UTC; the review ran on the repo tree | measured |
+| R1112-1 | confusing | a, b | Orthicon: a starter picture from the Picture card (Bell Partials, Harmonic Stack ...) is gone after a reload, a link or a saved user patch reopened; the scan plays Ember Ridge's picture while the readout shows the patch's name, and the link's note says only a "painted or dropped" picture is left out | measured |
 | R1111-4 | confusing | f | Surprise me drops its draw without a word when the rail moves during the render (about 1.4 s); the toast still holds the previous surprise's text | measured (dropped), inferred (what a user sees) |
 | R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean) | measured |
 | R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code | measured (delay), inferred (reverb) |
@@ -47,7 +47,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
-| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 9 Nov | measured |
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog) | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall; still open 11 Nov | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes) | measured |
@@ -58,7 +58,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
-| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 3 Nov | measured |
+| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 12 Nov (Cathode, phone: Grid Bias Bass) | measured |
 | R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
@@ -75,7 +75,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2163,3 +2163,96 @@ Measured (dropped), inferred (what a user sees).
 Areas a, b, c, d, e. Nothing on the live site (down). Iris and Hand Orchestra were not played (camera).
 Suggested next: a and b (Surprise me's draws by ear against the factory set, Klystron's source row),
 and a recheck of every live page once the site is back.
+
+## 2026-11-12 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `bd6b166`, sw.js
+`dxedge-v207` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path
+in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in
+any run. The site was back (200) after the 11 Nov outage (R1111-3). Focus tonight: what landed since the
+last a and b night (9 Nov): patch links and files (10 Nov), Surprise me (11 Nov), faces and Orthicon's
+Picture card (12 Nov), Phantastron's seed stepper (10 Nov); plus every factory patch, user patches on five
+more devices, and the first day's patches.
+
+### What worked (measured)
+
+- Area b, all 129 factory patches on the 18 devices picked from the menu: each shows under its own name,
+  not as edited, no errors.
+- Old patches still load: the 12 Filament factory patches from 12 Oct (`69a1385`) and the 11 Cathode ones
+  from 13 Oct (`d094c5b`), imported as bare patch files, load on the lit device as "* name (edited)" and
+  render finite, none over 0 dBFS. Against today's factory patch of the same name the chord is within
+  1 dB on 17 of 23; Diode Squelch (3.9 dB), Magic Eye Sweep (3.3), Bakelite Organ (2.1) and Wide Novachord
+  Strings (1.0) differ, which reads as later voicing changes to those factory patches, not a load fault.
+- Patch links opened on a fresh page, 11 devices (Thyratron, Lattice, Additron, Rhumbatron, Klystron,
+  Cathode, Dekatron, Mote, Gyrotron, Phantastron, Resnatron): the rail moves to the device, the menu reads
+  "* Review <device> (edited)", `?p=` leaves the address, the patch equals the normalized original, and a
+  held C major chord recorded from the live output sits within 0.7 dB of the same factory patch picked
+  from the menu on Thyratron, Lattice, Additron, Rhumbatron and Cathode. Mote, Dekatron, Gyrotron,
+  Phantastron and Resnatron land 1.7 to 4.5 dB apart; they run patterns, orbits or random phrases, and
+  their own run-to-run spread was not measured. Klystron: see the notes.
+- User patches through the form on Lattice, Dekatron, Gyrotron, Pentagrid and Thyratron, and a Surprise me
+  draw on Filament: saved, current after a reload, in the menu, deleted with a toast. Phone 375 px, Cathode:
+  save name, ok and cancel are 44 px and fit, delete is 57 x 44 px, no sideways scroll.
+- Phone 375 px: every tab of all 18 devices (75 tabs) has no sideways scroll.
+- Faces: on all 18 devices, at 1366 px, no text that reads at 3:1 or better on walnut drops below 3:1 under
+  rack black or black light (a screenshot with text hidden gives each label's real background; 353 to 648
+  labels a device). The low-contrast labels that exist are the same on all three faces.
+- Phantastron seed: next and previous step by one; 0 is the floor and 4294967295 the ceiling on both keys;
+  typed -5 lands on 0, 1e12 on the ceiling, 12.7 on 12.
+- Orthicon's Picture card: each starter picture lights its key and names itself in the window; Generate
+  with seed 42 reads "Generated 42 · major" and sounds; an empty or negative seed falls back to 1.
+
+### Findings
+
+**R1112-1. Orthicon: a starter picture does not survive a reload, a link or a saved patch.** Area a, b.
+Confusing. Measured.
+- Steps: Orthicon, Scan tab, pick Bell Partials on the Picture card, play C4 (RMS -21.5 dBFS). Then either
+  reload, or copy link and open it, or save as "Bell mine", reload and pick it.
+- Expected: the picture comes back, since it is one of the page's own eight, not a painting or a file.
+- Actual: the patch's `picture` is `custom` in each case and the scan plays Ember Ridge's picture again
+  (RMS -13.3 to -13.7 dBFS, the level of the factory patch). After the reload of the saved patch the
+  window reads "Bell mine" over the ridge picture. Copy link and download warn only that "a painted or
+  dropped picture is not in it". Switching the rail away and back without a reload keeps it.
+- Cause (code): picking a starter picture draws it into the canvas and sets `picture: 'custom'`; the
+  patch's picture field only knows the five factory pictures (`PICTURES` in `orthicon.js`).
+- Left for James (Open items): carry the starter picture's id in the patch (a schema change), or say so in
+  the notes.
+
+**R1112-2. Save offered "<name> 2" for a name nobody had.** Area b. Confusing. Measured. Fixed tonight.
+- Steps: Filament, Rack tab, surprise me (seed 12345 gives "Copper Line 2345"), save.
+- Expected: the form offers "Copper Line 2345".
+- Actual: it offered "Copper Line 2345 2". The same for a patch from a link or a file. And on a factory
+  patch it offered "Plate Bass 2" even when a user patch already had that name, so pressing ok replaced it
+  with no word (part of R1022-6).
+- Fix: a user patch still offers its own name; any other patch offers its name when no factory or user
+  patch has it, and otherwise the first free number ("Plate Bass 3"). Check: "Pn. save offers a free name
+  as it is and a taken one with the first free number" (fails on the live tree: "Pn Unused Name 4821 2",
+  and "Plate Bass 2" with a "Plate Bass 2" saved).
+
+**R1112-3. Download patch did not say what the file leaves out.** Area b. Confusing. Measured. Fixed tonight.
+- Steps: Orthicon (or Mote, Klystron, Lattice), Rack tab, download.
+- Actual: the toast said "Downloaded orthicon-ember-ridge.json"; copy link on the same patch says "A
+  painted or dropped picture is not in it.", and the file carries the same patch.
+- Fix: the download toast adds the same sentence on those four devices. Check: "Sh. download patch says
+  what the file leaves out where copy link does" (fails on the live tree).
+
+### Still open, re-measured tonight
+
+- R1022-5: deleting a Cathode user patch on a phone lands on Grid Bias Bass, not Plate Screamer.
+- R1025-3: delete still removes a user patch at once with no dialog (Lattice, Dekatron, Gyrotron, Pentagrid,
+  Thyratron, Cathode).
+- R1022-3: Phantastron's Nursery Clock, one C4 held 1.5 s, records at -47 dBFS RMS from the live output.
+
+### Notes (not findings)
+
+- Klystron's Held Frost freezes the grains it has: opened from a link on a fresh page it recorded at
+  -28 dBFS, picked from the menu on a page that had played other patches -39 dBFS. Inferred: the freeze
+  holds whatever the buffer had, so the same patch sounds different by history. Expected for a freeze.
+- Neighbouring Phantastron seeds (7 and 8 on Nursery Clock) correlate at 0.8 over 1.5 s: a step of one
+  changes the phrase only a little.
+- Surprise me names end in the seed's last four digits, so a saved draw keeps a number in its name.
+
+### Not covered tonight
+
+Areas c to h. Area a by ear on Surprise me draws, and the knob sweep, were not repeated (9 Nov).
+Suggested next: c, d and e, including a take on a Surprise me draw and the patch link row with the deck.

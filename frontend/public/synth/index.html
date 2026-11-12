@@ -2658,7 +2658,9 @@ $('shareDown').addEventListener('click', () => {
   a.href = URL.createObjectURL(blob); a.download = patchFileName(dev, p.name);
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-  toast('Downloaded ' + a.download);
+  // the file carries what the link carries, so it says what is left out the way copy link does (review 12 Nov, R1112-3)
+  const extra = NOT_IN_PATCH[dev] ? ' ' + NOT_IN_PATCH[dev] : '';
+  toast('Downloaded ' + a.download + '.' + extra, extra ? 4000 : undefined);
 });
 // A patch file, a bare patch (it plays on the device it names, or the lit one), never a project or a mix.
 function importPatchText(text) {
@@ -3868,7 +3870,20 @@ function step(d) {
   let i = list.indexOf(curKey); i = i < 0 ? (d > 0 ? 0 : list.length - 1) : (i + d + list.length) % list.length; loadKey(list[i]);
 }
 $('prevP').addEventListener('click', () => step(-1)); $('nextP').addEventListener('click', () => step(1));
-$('saveP').addEventListener('click', () => { $('saveForm').classList.add('open'); $('saveName').value = curKey.startsWith('u:') ? cur.name : cur.name + ' 2'; $('saveName').focus(); $('saveName').select(); });
+// The name the save form offers: a user patch keeps its own; any other patch keeps its name when no factory or user
+// patch has it, and otherwise takes the first free number. Before, every non-user patch got " 2", so a Surprise me
+// draw or a linked patch offered "Copper Line 2345 2", and a factory patch offered "Plate Bass 2" even when a user
+// patch already had that name, which a save then replaced (review 12 Nov, R1112-2).
+function saveNameFor() {
+  if (curKey.startsWith('u:')) return cur.name;
+  const low = n => n.toLowerCase();
+  const taken = n => D().factory.some(p => low(p.name) === low(n)) || user.some(u => low(u.name) === low(n));
+  const base = String(cur.name || '').trim().slice(0, 40) || 'Patch';
+  if (!taken(base)) return base;
+  for (let i = 2; i < 1000; i++) { const s = ' ' + i, n = base.slice(0, 40 - s.length).trimEnd() + s; if (!taken(n)) return n; }
+  return base;
+}
+$('saveP').addEventListener('click', () => { $('saveForm').classList.add('open'); $('saveName').value = saveNameFor(); $('saveName').focus(); $('saveName').select(); });
 // Closing the form hands focus back to save, so a keyboard user is not dropped at the top of the page (review 9 Nov, R1109-4)
 function closeSave() { $('saveForm').classList.remove('open'); $('saveP').focus({ preventScroll: true }); }
 $('saveNo').addEventListener('click', closeSave);
