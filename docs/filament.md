@@ -1099,6 +1099,19 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         wanted (it would cost the patch name window about 44 px on a phone).
 - [x] WAV recording (10 minute cap) - 14 Oct, master bus: live record and offline render, 24-bit 44.1 kHz stereo. (The MIDI file render in slice 2 is a separate button: 48 kHz 16-bit of a take. Still open.)
 - [ ] Tube view, faces (walnut, studio rack black, black light), lava lamp module (the tube view landed 4 Nov under the Tube show item; faces and the lava lamp module are still open)
+  - [x] Faces - 12 Nov 2026 (nightly). A Face section on every device's Rack tab with three chips: walnut (the default),
+        rack black and black light. Kept in this browser (localStorage `filament_face`), never in a patch or a project. The
+        head script sets `<html data-face>` before the first paint, so a stored face does not flash walnut. Walnut has no
+        CSS rules of its own, so the default looks exactly as before (measured: all 5890 styled elements in the instrument
+        and header compute the same as on origin/main). Rack black: anodized rack ears with a screw every 44 px in place of
+        the walnut cheeks, a black satin panel and chassis, cool grey module plates and titles. Black light: dark violet
+        cheeks with a fluorescent edge line, a violet-black panel and chassis, glowing module edges and titles, a cyan
+        nameplate, and the four chassis tubes painted in the Black light tube look (the big tube view keeps its own look).
+        CSS and page code only (index.html); nothing in the audio path, no patch field, no schema change.
+  - [ ] Still open for faces: the rack rail, the outboard row, the mix desk, the MIDI deck, the keybed and the device
+        panels with their own finish (Klystron, Phantastron, Additron and the rest) keep the walnut-era colours under the
+        other two faces; a face per device or in the project file, if wanted.
+  - [ ] Lava lamp module (with its "music warms the bulb" switch)
 - Tube show (James, 13 Oct note) - first slice 16 Oct, nightly. Exaggerated on purpose. State in `tubeshow.js`,
   drawing in `tubepaint.js` (below the additions line), inputs from the meters and analysers the page already reads.
   - [x] Note flares: V1 at once, V2 20 ms later, the output pair 45 ms later, scaled by velocity, 150 ms decay

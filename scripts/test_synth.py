@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -10436,6 +10436,92 @@ with sync_playwright() as pw:
         sm.close()
         ck(f"Su. {su_w} px phone: no page errors", not sme, sme)
     ck("Su. no page errors (main page)", not errs, errs)
+
+    # ---------------------------------------------------------------- Fc. faces (0.3, 12 Nov 2026)
+    FC_JS = """() => { const props = ['backgroundImage', 'backgroundColor', 'color', 'borderTopColor', 'boxShadow', 'textShadow'];
+      return ['.inst', '.inst-in', '#chassis', '.plate', '.plate small', '#mOsc1', '#mOsc1 h3', '#mOsc1 .knob .kl', '#mOsc1 .knob .kv']
+        .map(q => { const e = document.querySelector(q); if (!e) return q + ' missing'; const c = getComputedStyle(e); return q + ' ' + props.map(p => c[p]).join(' | '); }); }"""
+    def fc_lum(rgb):
+        f = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        r, g, b_ = [f(v / 255) for v in rgb]; return 0.2126 * r + 0.7152 * g + 0.0722 * b_
+    def fc_ratio(a, c):
+        la, lc = fc_lum(a), fc_lum(c); return (max(la, lc) + 0.05) / (min(la, lc) + 0.05)
+    import re as _fcre
+    def fc_rgbs(txt):
+        return [tuple(int(x) for x in m) for m in _fcre.findall(r"rgb\((\d+), (\d+), (\d+)\)", txt)]
+    fcx = b.new_context(viewport={"width": 1366, "height": 1000}); fp = fcx.new_page(); ferr = []; fp.on("pageerror", lambda e: ferr.append(str(e)))
+    fp.goto(BASE); fp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fp.wait_for_timeout(300)
+    f0 = fp.evaluate("__synth.face()")
+    fchips = fp.evaluate("[...document.querySelectorAll('#faceChips .chip')].map(b => b.dataset.v + ':' + b.getAttribute('aria-pressed'))")
+    ck(f"Fc. a fresh browser gets the walnut face, chassis tubes in the natural look ({f0})",
+       f0["face"] == "walnut" and f0["attr"] == "walnut" and f0["looks"] == ["natural"] * 4, f0)
+    ck(f"Fc. three face chips, walnut pressed ({fchips})", fchips == ["walnut:true", "rack:false", "blacklight:false"], fchips)
+    fw = fp.evaluate(FC_JS)
+    fp.evaluate("document.documentElement.removeAttribute('data-face')"); fp.wait_for_timeout(50)
+    fnone = fp.evaluate(FC_JS)
+    fp.evaluate("document.documentElement.dataset.face = 'walnut'")
+    ck("Fc. walnut adds no rule: the cabinet, panel, chassis, plate, a module and its labels compute the same with no face set",
+       fw == fnone, [a for a, c in zip(fw, fnone) if a != c][:3])
+    fpatch0 = fp.evaluate("JSON.stringify(__synth.patch())")
+    fsty = {"walnut": fw}; fcon = {}
+    for fv in ("rack", "blacklight"):
+        fp.click(f'#faceChips .chip[data-v="{fv}"]'); fp.wait_for_timeout(200)
+        fsty[fv] = fp.evaluate(FC_JS)
+    fp.click('#faceChips .chip[data-v="rack"]'); fp.wait_for_timeout(150)
+    fr = fp.evaluate("({ f: __synth.face(), ls: localStorage.getItem('filament_face'), pressed: [...document.querySelectorAll('#faceChips .chip')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.v) })")
+    ck(f"Fc. rack black: the chip sets the face, keeps it in this browser and leaves the chassis tubes natural ({fr})",
+       fr["f"]["face"] == "rack" and fr["f"]["attr"] == "rack" and fr["ls"] == "rack" and fr["pressed"] == ["rack"] and fr["f"]["looks"] == ["natural"] * 4, fr)
+    fdiff = {fv: sum(1 for a, c in zip(fsty[fv], fw) if a != c) for fv in ("rack", "blacklight")}
+    ck(f"Fc. each face changes the cabinet, the panel, the chassis and the module plates ({fdiff} of {len(fw)} styled parts differ from walnut)",
+       all(fsty[fv][i] != fw[i] for fv in ("rack", "blacklight") for i in (0, 1, 2, 5)) and fsty["rack"][0] != fsty["blacklight"][0], fdiff)
+    ck("Fc. rack black and black light carry no walnut in the cheeks", all("rgb(58, 35, 20)" not in fsty[fv][0] and "rgb(90, 56, 32)" not in fsty[fv][0] for fv in ("rack", "blacklight"))
+       and "rgb(58, 35, 20)" in fw[0], [fsty[fv][0][:120] for fv in ("rack", "blacklight")])
+    for fv in ("walnut", "rack", "blacklight"):
+        st = fsty[fv]; panel = fc_rgbs(st[1].split(" | ")[0].split(" ", 1)[1]); brightest = max(panel, key=fc_lum) if panel else (0, 0, 0)
+        cols = {"module title": fc_rgbs(st[6].split(" | ")[2])[0], "knob label": fc_rgbs(st[7].split(" | ")[2])[0], "knob value": fc_rgbs(st[8].split(" | ")[2])[0]}
+        rat = {k: round(fc_ratio(c, brightest), 1) for k, c in cols.items()}; fcon[fv] = rat
+        ck(f"Fc. {fv}: module titles, knob labels and values read at 4.5:1 or more against the panel's lightest stop ({rat})", all(v >= 4.5 for v in rat.values()), (rat, brightest))
+    fp.click('#faceChips .chip[data-v="blacklight"]'); fp.wait_for_timeout(600)
+    fb = fp.evaluate("__synth.face()")
+    FC_PIX = """() => { const cv = document.getElementById('tubeV1'), c = cv.getContext('2d'), d = c.getImageData(0, 0, cv.width, cv.height).data; let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; } return [r / n, g / n, b / n]; }"""
+    fpix_b = fp.evaluate(FC_PIX)
+    fp.click('#faceChips .chip[data-v="walnut"]'); fp.wait_for_timeout(600)
+    fpix_w = fp.evaluate(FC_PIX); fw2 = fp.evaluate("__synth.face()")
+    ck(f"Fc. black light paints the chassis tubes in the black light look, walnut takes them back to natural ({fb['looks'][0]}, {fw2['looks'][0]})",
+       fb["looks"] == ["blacklight"] * 4 and fw2["looks"] == ["natural"] * 4, (fb, fw2))
+    ck(f"Fc. the V1 canvas turns violet under black light (mean RGB {[round(v) for v in fpix_b]} against {[round(v) for v in fpix_w]} in walnut)",
+       fpix_b[2] > fpix_b[1] and fpix_b[2] / max(1, fpix_b[1]) > 1.3 * fpix_w[2] / max(1, fpix_w[1]), (fpix_b, fpix_w))
+    ck("Fc. a face never touches the patch", fp.evaluate("JSON.stringify(__synth.patch())") == fpatch0)
+    fp.click('#faceChips .chip[data-v="blacklight"]'); fp.wait_for_timeout(100)
+    fp.reload(); fp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fp.wait_for_timeout(300)
+    frl = fp.evaluate("({ f: __synth.face(), pressed: document.querySelector('#faceChips .chip[aria-pressed=\"true\"]').dataset.v })")
+    ck(f"Fc. a reload keeps black light ({frl})", frl["f"]["face"] == "blacklight" and frl["f"]["attr"] == "blacklight" and frl["pressed"] == "blacklight" and frl["f"]["looks"] == ["blacklight"] * 4, frl)
+    for fbad in ("neon", "__proto__", ""):
+        fp.evaluate("v => localStorage.setItem('filament_face', v)", fbad); fp.reload(); fp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        fbd = fp.evaluate("__synth.face()")
+        ck(f"Fc. a stored face of {fbad!r} loads walnut", fbd["face"] == "walnut" and fbd["attr"] == "walnut" and fbd["looks"] == ["natural"] * 4, fbd)
+    ck("Fc. setFace refuses a face that does not exist", fp.evaluate("__synth.setFace('toString')") is False and fp.evaluate("__synth.face().face") == "walnut")
+    fnot = []
+    for fd in fp.evaluate("[...document.querySelectorAll('.devbtn')].map(b => b.dataset.d)"):
+        fp.evaluate("d => __synth.setDevice(d)", fd); fp.wait_for_timeout(120)
+        if not fp.is_visible("#faceChips .chip[data-v=\"rack\"]"): fnot.append(fd)
+    ck(f"Fc. the Face section shows on every rack device ({len(fp.evaluate('[...document.querySelectorAll(\'.devbtn\')]'))} devices; missing: {fnot})", not fnot, fnot)
+    fcx.close()
+    ck("Fc. no page errors", not ferr, ferr)
+    for fc_w in (375, 320):
+        fm = b.new_context(viewport={"width": fc_w, "height": 667}, is_mobile=True, has_touch=True); fmp = fm.new_page(); fme = []; fmp.on("pageerror", lambda e: fme.append(str(e)))
+        fmp.goto(BASE); fmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fmp.wait_for_timeout(200)
+        fmp.tap('.tabs [data-go="rack"]'); fmp.wait_for_timeout(250)
+        fmp.evaluate("document.getElementById('mFace').scrollIntoView({ block: 'center' })"); fmp.wait_for_timeout(100)
+        fmr = fmp.evaluate("""() => ({ sizes: [...document.querySelectorAll('#faceChips .chip')].map(e => { const q = e.getBoundingClientRect(); return [Math.round(q.width), Math.round(q.height)]; }),
+          sw: document.documentElement.scrollWidth, iw: innerWidth, vis: !!document.getElementById('mFace').offsetParent })""")
+        ck(f"Fc. {fc_w} px phone: the Face section is on the Rack tab, chips 44 px or more, no sideways scroll ({fmr['sizes']})",
+           fmr["vis"] and all(w_ >= 44 and h_ >= 44 for w_, h_ in fmr["sizes"]) and fmr["sw"] <= fmr["iw"], fmr)
+        fmp.tap('#faceChips .chip[data-v="rack"]'); fmp.wait_for_timeout(150)
+        ck(f"Fc. {fc_w} px phone: a tap sets rack black, no sideways scroll, no page errors", fmp.evaluate("__synth.face().face") == "rack"
+           and fmp.evaluate("document.documentElement.scrollWidth <= innerWidth") and not fme, fme)
+        fm.close()
 
     b.close()
 
