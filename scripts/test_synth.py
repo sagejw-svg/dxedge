@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -10648,6 +10648,92 @@ with sync_playwright() as pw:
         fmp.tap('#faceChips .chip[data-v="rack"]'); fmp.wait_for_timeout(150)
         ck(f"Fc. {fc_w} px phone: a tap sets rack black, no sideways scroll, no page errors", fmp.evaluate("__synth.face().face") == "rack"
            and fmp.evaluate("document.documentElement.scrollWidth <= innerWidth") and not fme, fme)
+        fm.close()
+
+    # ---------------------------------------------------------------- Fd. faces, second slice (13 Nov 2026)
+    # The rail, the outboard tray, the mix desk (strips and the file faceplate), the MIDI deck, song library and paper
+    # roll strips, and the keybed now take the face too. Walnut still adds no rule; the amber accents keep their rules.
+    FD_PARTS = [("rail bay", ".rail"), ("rail tag", ".rail .label"), ("rail plate", "#devC"), ("rail plate role", "#devC small"),
+                ("outboard tray", ".racklinks"), ("outboard plate", ".racklinks .devlink"), ("outboard role", ".racklinks .devlink small"),
+                ("mix strip", '.mixrow[data-mix="lattice"]'), ("mix strip name", '.mixrow[data-mix="lattice"] .who'), ("mix fader name", '.mixrow[data-mix="lattice"] label'),
+                ("file faceplate", ".hfiles"), ("file tag", ".htag"), ("MIDI deck", "#deck"), ("deck tag", "#deck .label"), ("song library", "#library"),
+                ("paper roll strip", "#roll"), ("keybed", "#keybed"), ("bend strip", "#pbStrip"), ("strip name", ".stripcol .sl"), ("key controls", ".kctl"),
+                ("white key", ".key.w"), ("black key", ".key.b"), ("white key name", ".key.w .kn")]
+    import re as _fdre0; _fdre = _fdre0.compile(r"rgba\((\d+, \d+, \d+), 1\)")
+    FD_JS = """(parts) => { const props = ['backgroundImage', 'backgroundColor', 'color', 'borderTopColor', 'boxShadow'];
+      const out = {}; for (const [n, q] of parts) { const e = document.querySelector(q); if (!e) { out[n] = null; continue; }
+        const c = getComputedStyle(e); out[n] = props.map(p => c[p]); } return out; }"""
+    def fd_stops(st):   # the opaque colour stops of a computed background (gradient stops, else the background colour)
+        cs = fc_rgbs(st[0]) if st[0] != "none" else []
+        return cs or fc_rgbs(st[1])
+    def fd_min_ratio(text_st, bg_st):
+        col = fc_rgbs(text_st[2])[0]; stops = fd_stops(bg_st)
+        return round(min(fc_ratio(col, c_) for c_ in stops), 2) if stops else 0
+    FD_TEXT = [("rail plate", "rail plate"), ("rail plate role", "rail plate"), ("rail tag", "rail tag"), ("outboard plate", "outboard plate"),
+               ("outboard role", "outboard plate"), ("mix strip name", "mix strip"), ("mix fader name", "mix strip"), ("file tag", "file tag"),
+               ("deck tag", "deck tag"), ("strip name", "keybed"), ("key controls", "keybed"), ("white key name", "white key")]
+    fdx = b.new_context(viewport={"width": 1366, "height": 1000}); fdp = fdx.new_page(); fde = []; fdp.on("pageerror", lambda e: fde.append(str(e)))
+    fdp.goto(BASE); fdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fdp.wait_for_timeout(300)
+    fdp.mouse.move(2, 2)
+    fd = {"walnut": fdp.evaluate(FD_JS, FD_PARTS)}
+    fdp.evaluate("document.documentElement.removeAttribute('data-face')"); fdp.wait_for_timeout(50)
+    fd_none = fdp.evaluate(FD_JS, FD_PARTS)
+    fdp.evaluate("document.documentElement.dataset.face = 'walnut'")
+    ck(f"Fd. walnut adds no rule to the rail, outboard tray, mix desk, transport strips or keybed ({len(FD_PARTS)} parts compute the same with no face set)",
+       fd["walnut"] == fd_none and all(v is not None for v in fd_none.values()), [k for k in fd_none if fd_none[k] != fd["walnut"][k] or fd_none[k] is None][:4])
+    fd_lit0 = fdp.evaluate("""() => { const k = document.querySelector('.key.w'), r = document.querySelector('.mixrow[data-mix="lattice"]'); const g = e => { const c = getComputedStyle(e); return [c.backgroundImage, c.color, c.borderTopColor, c.boxShadow]; };
+      k.classList.add('down'); r.classList.add('armed'); const o = { lit: g(document.getElementById('devF')), key: g(k), armed: g(r) }; r.classList.remove('armed'); r.classList.add('keyed'); o.keyed = g(r);
+      k.classList.remove('down'); r.classList.remove('keyed'); return o; }""")
+    fdp.hover(".racklinks .devlink"); fdp.wait_for_timeout(200)
+    fd_hov0 = fdp.evaluate("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
+    fdp.mouse.move(2, 2)
+    fdpatch0 = fdp.evaluate("JSON.stringify(__synth.patch())")
+    fd_lit = {}; fd_hov = {}
+    for fv in ("rack", "blacklight"):
+        fdp.click(f'#faceChips .chip[data-v="{fv}"]'); fdp.mouse.move(2, 2); fdp.wait_for_timeout(250)
+        fd[fv] = fdp.evaluate(FD_JS, FD_PARTS)
+        fd_lit[fv] = fdp.evaluate("""() => { const k = document.querySelector('.key.w'), r = document.querySelector('.mixrow[data-mix="lattice"]'); const g = e => { const c = getComputedStyle(e); return [c.backgroundImage, c.color, c.borderTopColor, c.boxShadow]; };
+          k.classList.add('down'); r.classList.add('armed'); const o = { lit: g(document.getElementById('devF')), key: g(k), armed: g(r) }; r.classList.remove('armed'); r.classList.add('keyed'); o.keyed = g(r);
+          k.classList.remove('down'); r.classList.remove('keyed'); return o; }""")
+        fdp.hover(".racklinks .devlink"); fdp.wait_for_timeout(200)
+        fd_hov[fv] = fdp.evaluate("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
+        fdp.mouse.move(2, 2)
+    FD_SURF = ["rail bay", "rail plate", "outboard tray", "outboard plate", "mix strip", "file faceplate", "MIDI deck", "song library", "paper roll strip", "keybed", "bend strip"]
+    for fv in ("rack", "blacklight"):
+        same = [n for n in FD_SURF if fd[fv][n][0] == fd["walnut"][n][0]]
+        ck(f"Fd. {fv}: the rail, outboard tray, mix desk, deck, library, roll and keybed surfaces all change from walnut (unchanged: {same})", not same, same)
+        ck(f"Fd. {fv}: the outboard plates lose their warm walnut brass (no rgb(42, 37, 30) stop)", "rgb(42, 37, 30)" not in fd[fv]["outboard plate"][0]
+           and "rgb(42, 37, 30)" in fd["walnut"]["outboard plate"][0], fd[fv]["outboard plate"][0][:140])
+        # rack black keeps walnut's ivory keys and their engraving on purpose (checked below), so only black light's key names count here
+        rat = {t: fd_min_ratio(fd[fv][t], fd[fv][bg]) for t, bg in FD_TEXT if fv == "blacklight" or t != "white key name"}
+        low = {k: v for k, v in rat.items() if v < 4.5}
+        ck(f"Fd. {fv}: every label on these parts reads at 4.5:1 or more against the darkest or lightest stop behind it (lowest {min(rat.values())}; under: {low})", not low, rat)
+        # the accents only: the lit plate's text and edge, a held key's face, an armed strip's edge and glow, the keyed strip's edge
+        fd_acc = lambda o: {"lit": o["lit"][1:3], "key": o["key"][0], "armed": o["armed"][2:4], "keyed": o["keyed"][2]}
+        ck(f"Fd. {fv}: the lit rail plate, a held key, an armed strip and the keyed strip keep their amber and green (same as walnut)", fd_acc(fd_lit[fv]) == fd_acc(fd_lit0),
+           {k: (fd_acc(fd_lit[fv])[k], fd_acc(fd_lit0)[k]) for k in fd_acc(fd_lit0) if fd_acc(fd_lit[fv])[k] != fd_acc(fd_lit0)[k]})
+        ck(f"Fd. {fv}: hovering an outboard plate still lights it amber ({fd_hov[fv]})", [fc_rgbs(_fdre.sub(r"rgb(\1)", v))[:1] for v in fd_hov[fv]] == [fc_rgbs(v)[:1] for v in fd_hov0], (fd_hov[fv], fd_hov0))
+    info("Fd. walnut label contrast on the same parts (lowest stop)", {t: fd_min_ratio(fd["walnut"][t], fd["walnut"][bg]) for t, bg in FD_TEXT})
+    ck("Fd. rack black keeps the ivory keys; black light makes the white keys fluoresce violet", fd["rack"]["white key"] == fd["walnut"]["white key"]
+       and fd["blacklight"]["white key"][0] != fd["walnut"]["white key"][0] and fd["blacklight"]["black key"][0] != fd["walnut"]["black key"][0])
+    ck("Fd. a face never touches the patch (second slice)", fdp.evaluate("JSON.stringify(__synth.patch())") == fdpatch0)
+    fdp.click('#faceChips .chip[data-v="walnut"]'); fdp.wait_for_timeout(150)
+    ck("Fd. walnut again computes exactly what it did before a face was tried", fdp.evaluate(FD_JS, FD_PARTS) == fd["walnut"])
+    fdx.close()
+    ck("Fd. no page errors", not fde, fde)
+    for fd_w in (375, 320):
+        fm = b.new_context(viewport={"width": fd_w, "height": 667}, is_mobile=True, has_touch=True); fmp = fm.new_page(); fme = []; fmp.on("pageerror", lambda e: fme.append(str(e)))
+        fmp.goto(BASE); fmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fmp.wait_for_timeout(200)
+        fdm = {}
+        for fv in ("walnut", "rack", "blacklight"):
+            fmp.evaluate("f => __synth.setFace(f)", fv); fmp.wait_for_timeout(150)
+            fdm[fv] = fmp.evaluate("""() => ({ fade: getComputedStyle(document.querySelector('.rail'), '::after').backgroundImage, bed: getComputedStyle(document.getElementById('keybed')).backgroundImage,
+              plate: getComputedStyle(document.getElementById('devC')).backgroundImage, sw: document.documentElement.scrollWidth, iw: innerWidth,
+              tgt: [...document.querySelectorAll('.rail .devbtn, .racklinks .devlink')].map(e => e.getBoundingClientRect()).filter(q => q.width).map(q => Math.min(q.width, q.height)).reduce((a, c) => Math.min(a, c), 99) })""")
+        fdc = all(fdm[fv][k] != fdm["walnut"][k] for fv in ("rack", "blacklight") for k in ("fade", "bed", "plate"))
+        ck(f"Fd. {fd_w} px phone: the rail's scroll fade, its plates and the keybed take each face; targets {min(fdm[fv]['tgt'] for fv in fdm)} px or more; no sideways scroll",
+           fdc and all(fdm[fv]["sw"] <= fdm[fv]["iw"] and fdm[fv]["tgt"] >= 44 for fv in fdm) and "rgb(10, 4, 20)" in fdm["blacklight"]["fade"] and not fme,
+           ({fv: {k: str(v)[:70] for k, v in fdm[fv].items()} for fv in fdm}, fme))
         fm.close()
 
     # Wl. worklet modules (worklets.js, 12 Nov 2026). The boot used to ask for each hosted device's module only

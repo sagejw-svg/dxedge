@@ -223,6 +223,66 @@
   html[data-face="blacklight"] .mod h3 { color: #d4c2ff; text-shadow: 0 0 6px rgba(170,110,255,0.6); }
   html[data-face="blacklight"] .knob .kl { color: #e2d8ff; }
   html[data-face="blacklight"] .knob .kv { color: #ffd6a0; text-shadow: 0 0 5px rgba(255,170,60,0.45); }
+  /* faces, second slice (13 Nov 2026): the rack rail, the outboard tray, the mix desk (its strips and the file
+     faceplate), the three transport strips (MIDI deck, song library, paper roll) and the keybed. Still no walnut rule.
+     The amber accents (the lit device, readout windows, the keys you hold) stay amber in every face, so a pressed
+     key or a lit rail plate keeps the rule it has: the key rules below skip .down, the plate rules skip the lit one. */
+  html[data-face="rack"] .rail, html[data-face="rack"] .racklinks { border-color: #030304; background: linear-gradient(180deg, #050506, #0b0c0d);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.92), 0 1px 0 rgba(200,215,235,0.05); }
+  html[data-face="rack"] .rail .label, html[data-face="rack"] .racklinks .label, html[data-face="rack"] .deck .label, html[data-face="rack"] .htag {
+    color: #c9cfd8; border-color: #2f3237; background: linear-gradient(180deg, #0b0c0e, #141619); }
+  html[data-face="rack"] .devbtn:not([aria-pressed="true"]) { color: #b9c0ca; border-color: #2c2f34;
+    background: repeating-linear-gradient(90deg, rgba(200,215,235,0.02) 0 1px, transparent 1px 3px), linear-gradient(180deg, #1c1e21, #131417 60%, #0e0f11);
+    box-shadow: inset 0 1px 0 rgba(210,220,235,0.06), 0 1px 2px rgba(0,0,0,0.8); }
+  html[data-face="rack"] .devbtn:not([aria-pressed="true"]) small { color: #959ca6; }
+  html[data-face="rack"] .devbtn:not([aria-pressed="true"]) i { background: #2e3136; }
+  html[data-face="rack"] .racklinks .devlink { background: repeating-linear-gradient(90deg, rgba(220,230,245,0.025) 0 1px, transparent 1px 3px), linear-gradient(180deg, #24272b, #181a1d 60%, #121315); }
+  html[data-face="rack"] .racklinks .devlink:not(:hover):not(:focus-visible) { color: #d3d9e1; border-color: #363a40; box-shadow: inset 0 1px 0 rgba(215,225,240,0.08), 0 1px 2px rgba(0,0,0,0.8); }
+  html[data-face="rack"] .racklinks .devlink small { color: #a3aab4; }
+  html[data-face="rack"] .mixrow, html[data-face="rack"] .hfiles, html[data-face="rack"] .deck {
+    background: repeating-linear-gradient(90deg, rgba(200,215,235,0.014) 0 1px, transparent 1px 3px), linear-gradient(180deg, #18191c, #0f1012 58%, #0a0a0b); }
+  html[data-face="rack"] .mixrow:not(.keyed):not(.armed), html[data-face="rack"] .hfiles, html[data-face="rack"] .deck { border-color: #2a2d31; }
+  html[data-face="rack"] .mixrow:not(.armed), html[data-face="rack"] .hfiles, html[data-face="rack"] .deck { box-shadow: inset 0 1px 0 rgba(210,220,235,0.05), 0 1px 0 rgba(0,0,0,0.7); }
+  html[data-face="rack"] .mixrow:not(.keyed) .who { color: #b3bac4; }
+  html[data-face="rack"] .mixrow label { color: #9aa1ab; }
+  html[data-face="rack"] .mixmeter { border-color: #24272b; }
+  html[data-face="rack"] .keybed { background: linear-gradient(180deg, #0a0b0c, #131417); }
+  html[data-face="rack"] .strip { border-color: #2c2f34; background: linear-gradient(90deg, #060607, #1a1c1f, #060607); }
+  html[data-face="rack"] .stripcol .sl, html[data-face="rack"] .kctl { color: #ccd2da; }
+  html[data-face="blacklight"] .rail, html[data-face="blacklight"] .racklinks { border-color: rgba(170,110,255,0.3); background: linear-gradient(180deg, #06020c, #0d0618);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(140,60,255,0.14); }
+  html[data-face="blacklight"] .rail .label, html[data-face="blacklight"] .racklinks .label, html[data-face="blacklight"] .deck .label, html[data-face="blacklight"] .htag {
+    color: #d4c2ff; border-color: rgba(170,110,255,0.42); background: linear-gradient(180deg, #0a0414, #140a26); text-shadow: 0 0 6px rgba(170,110,255,0.6); }
+  html[data-face="blacklight"] .devbtn:not([aria-pressed="true"]) { color: #d9ccff; border-color: rgba(170,110,255,0.34);
+    background: repeating-linear-gradient(90deg, rgba(190,140,255,0.02) 0 1px, transparent 1px 3px), linear-gradient(180deg, #170b2a, #100620 60%, #0a0414);
+    box-shadow: inset 0 1px 0 rgba(200,160,255,0.07), 0 0 6px rgba(140,60,255,0.12); }
+  html[data-face="blacklight"] .devbtn:not([aria-pressed="true"]) small { color: #b89cff; }
+  html[data-face="blacklight"] .devbtn:not([aria-pressed="true"]) i { background: #2a1748; }
+  html[data-face="blacklight"] .racklinks .devlink { background: repeating-linear-gradient(90deg, rgba(190,140,255,0.025) 0 1px, transparent 1px 3px), linear-gradient(180deg, #1a0d30, #120824 60%, #0b0518); }
+  html[data-face="blacklight"] .racklinks .devlink:not(:hover):not(:focus-visible) { color: #8ff7ee; border-color: rgba(90,255,240,0.34); text-shadow: 0 0 6px rgba(90,255,240,0.45);
+    box-shadow: inset 0 1px 0 rgba(200,160,255,0.08), 0 0 7px rgba(90,255,240,0.1); }
+  html[data-face="blacklight"] .racklinks .devlink small { color: #c2abff; text-shadow: none; }
+  html[data-face="blacklight"] .mixrow, html[data-face="blacklight"] .hfiles, html[data-face="blacklight"] .deck {
+    background: repeating-linear-gradient(90deg, rgba(190,140,255,0.016) 0 1px, transparent 1px 3px), linear-gradient(180deg, #120827, #0b0518 58%, #07030f); }
+  html[data-face="blacklight"] .mixrow:not(.keyed):not(.armed), html[data-face="blacklight"] .hfiles, html[data-face="blacklight"] .deck { border-color: rgba(170,110,255,0.32); }
+  html[data-face="blacklight"] .mixrow:not(.armed), html[data-face="blacklight"] .hfiles, html[data-face="blacklight"] .deck { box-shadow: 0 0 8px rgba(140,60,255,0.13), inset 0 0 14px rgba(120,50,255,0.06); }
+  html[data-face="blacklight"] .mixrow:not(.keyed) .who { color: #d9ccff; }
+  html[data-face="blacklight"] .mixrow label { color: #b9a5ef; }
+  html[data-face="blacklight"] .mixmeter { border-color: rgba(170,110,255,0.3); }
+  html[data-face="blacklight"] .keybed { background: linear-gradient(180deg, #0a0414, #120826); border-top-color: rgba(170,110,255,0.4); }
+  html[data-face="blacklight"] .strip { border-color: rgba(170,110,255,0.38); background: linear-gradient(90deg, #05020a, #1a0d30, #05020a); box-shadow: 0 0 6px rgba(140,60,255,0.15); }
+  html[data-face="blacklight"] .stripcol .sl, html[data-face="blacklight"] .kctl { color: #e2d8ff; }
+  /* under the black light the white keys fluoresce a little violet, and the black keys go violet-black */
+  html[data-face="blacklight"] .key.w:not(.down) { background: linear-gradient(180deg, #e4dcf7, #f3eeff 70%, #cdc2ea); border-color: #4a3d66; box-shadow: 0 0 5px rgba(170,110,255,0.28); }
+  html[data-face="blacklight"] .key.b:not(.down) { background: linear-gradient(180deg, #0d0618, #24173d 85%, #170c28); }
+  html[data-face="blacklight"] .key.w .kn { color: #4a3b6e; }
+  html[data-face="blacklight"] .key.b .kn { color: #a996d6; }
+  @media (max-width: 760px) {
+    html[data-face="rack"] .rail::before, html[data-face="rack"] .racklinks::before { background: linear-gradient(90deg, #08090a 30%, rgba(8,9,10,0.82) 62%, rgba(8,9,10,0)); }
+    html[data-face="rack"] .rail::after, html[data-face="rack"] .racklinks::after { background: linear-gradient(270deg, #08090a 30%, rgba(8,9,10,0.82) 62%, rgba(8,9,10,0)); }
+    html[data-face="blacklight"] .rail::before, html[data-face="blacklight"] .racklinks::before { background: linear-gradient(90deg, #0a0414 30%, rgba(10,4,20,0.82) 62%, rgba(10,4,20,0)); }
+    html[data-face="blacklight"] .rail::after, html[data-face="blacklight"] .racklinks::after { background: linear-gradient(270deg, #0a0414 30%, rgba(10,4,20,0.82) 62%, rgba(10,4,20,0)); }
+  }
   /* the big tube view (4 Nov 2026): one chassis tube full size, with the show, a look, zoom and pan */
   .tvbtn { position: absolute; top: 3px; right: 4px; z-index: 2; min-width: 28px; min-height: 24px; padding: 0 6px; border-radius: 4px; border: 1px solid #2c2c2c;
     background: rgba(12,12,12,0.72); color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer; }
@@ -1564,7 +1624,7 @@
       </section>
       <section class="mod" data-tab="rack" id="mFace"><h3><span class="pilot"></span>Face</h3>
         <div class="chips" id="faceChips" role="group" aria-label="Face"><span class="cl">face</span></div>
-        <div class="eq-read"><span class="dim">the cabinet and panel finish, kept in this browser; black light also paints the chassis tubes in the black light look. Never the sound or the patch.</span></div>
+        <div class="eq-read"><span class="dim">the finish of the cabinet, panel, rail, mix desk, transport strips and keybed, kept in this browser; black light also paints the chassis tubes in the black light look. Never the sound or the patch.</span></div>
       </section>
       <section class="mod" data-tab="rack" id="mOut" data-wide><h3><span class="pilot"></span>Output tubes, V3 and V4</h3><div class="chips" data-chips="out.tube"></div><div class="chips" data-chips="out.topology"></div>
         <div class="knobs" id="kOut"></div><div class="note">Push-pull cancels the even harmonics; single ended keeps them (the 300B sound).</div></section>

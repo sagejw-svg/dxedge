@@ -1108,9 +1108,20 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         cheeks with a fluorescent edge line, a violet-black panel and chassis, glowing module edges and titles, a cyan
         nameplate, and the four chassis tubes painted in the Black light tube look (the big tube view keeps its own look).
         CSS and page code only (index.html); nothing in the audio path, no patch field, no schema change.
-  - [ ] Still open for faces: the rack rail, the outboard row, the mix desk, the MIDI deck, the keybed and the device
-        panels with their own finish (Klystron, Phantastron, Additron and the rest) keep the walnut-era colours under the
-        other two faces; a face per device or in the project file, if wanted.
+  - [x] Faces across the rail, outboard tray, mix desk, transport strips and keybed - 13 Nov 2026 (nightly). Rack black:
+        the rail bay and outboard tray in a cooler recess, the rail's unlit plates and the outboard plates in brushed
+        grey steel (no warm brass), the mix strips, the file faceplate and the three transport strips (MIDI deck, song
+        library, paper roll) in the module plates' cool satin, cool grey tags, a cool keybed and bend and mod strips;
+        the keys stay ivory. Black light: violet bays with a glow, violet plates with lavender names, the outboard names
+        in the nameplate's cyan, violet strips and tags, a violet keybed, and the white keys fluorescing a little violet
+        with violet-black sharps. On a phone the rail's and outboard tray's scroll fades take the face's colour. The amber
+        and green accents keep their own rules in every face: the lit rail plate, a held key, an armed strip, the keyed
+        strip, the outboard plate's hover and the amber readout windows. Walnut still has no rule of its own (measured: all
+        5997 elements at 1366 px and 5971 at 375 px compute the same as on origin/main). CSS only (index.html) plus the
+        Face section's note; nothing in the audio path, no patch field, no schema change.
+  - [ ] Still open for faces: the device panels with their own finish (Klystron, Phantastron, Additron, Pentagrid,
+        Orthicon and the rest) keep their own colours under rack black and black light; the paper roll's paper and the
+        big tube view are drawn, not styled, and stay as they are; a face per device or in the project file, if wanted.
   - [ ] Lava lamp module (with its "music warms the bulb" switch)
 - Tube show (James, 13 Oct note) - first slice 16 Oct, nightly. Exaggerated on purpose. State in `tubeshow.js`,
   drawing in `tubepaint.js` (below the additions line), inputs from the meters and analysers the page already reads.
