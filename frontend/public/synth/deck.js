@@ -208,7 +208,11 @@ export function createDeck(api) {
   function releaseAt(t) {         // note offs for whatever playback still holds, sustain off
     P.used.forEach(d => {
       P.sounding[d].forEach((k, n) => { for (let i = 0; i < k; i++) send({ dev: d, m: { t: 'off', n } }, t); });
-      api.engine().sendTo(d, { t: 'sus', on: false, at: Math.round(t * api.ctx().sampleRate), pb: true });
+      const at = Math.round(t * api.ctx().sampleRate);
+      api.engine().sendTo(d, { t: 'sus', on: false, at, pb: true });
+      // bend, wheel and pressure back to rest too, so a file or take that ends bent does not start
+      // its next loop pass out of tune (review R1113-1)
+      ['bend', 'mw', 'at'].forEach(k => api.engine().sendTo(d, { t: k, v: 0, at, pb: true }));
     });
   }
   function pump() {

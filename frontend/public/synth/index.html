@@ -4678,8 +4678,17 @@ function midiMsg(e) {
     case 'cc':
       if (learning && learnPath) return learnCC(ev.c);
       if (ccMap[ev.c]) ccTo(ev.c, ev.v);
+      else if (ev.c === 121) resetControllers();   // Reset All Controllers (review R1113-2)
       break;
   }
+}
+// CC 121: pitch bend to centre, the wheel and pressure to 0, the pedal up, the strips back home.
+// Keyboards and DAWs send it on stop; before, a bend held over it stayed (review R1113-2).
+function resetControllers() {
+  PB.set(0); perf('bend', 0); rec({ t: 'bend', v: 0 });
+  MW.set(0); perf('mw', 0); rec({ t: 'mw', v: 0 });
+  perf('at', 0); rec({ t: 'at', v: 0 });
+  if (sustainOn) setSustain(false);
 }
 const knByKey = key => KN[key] || KN['filament:' + key];    // maps saved before Cathode used bare paths
 function learnCC(c) { Object.keys(ccMap).forEach(k => { if (ccMap[k] === learnPath) delete ccMap[k]; }); ccMap[c] = learnPath; store.set('filament_midimap', ccMap); toast('CC ' + c + ' now moves ' + learnPath.replace(':', ' ')); learnPath = null; document.querySelectorAll('.knob.learn').forEach(x => x.classList.remove('learn')); showCC(); }

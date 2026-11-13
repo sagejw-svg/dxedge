@@ -2485,6 +2485,50 @@ with sync_playwright() as pw:
     ck("M. Render WAV renders what came in last: a file imported after a take was played, then a take recorded after that",
        wsrc[0].startswith("filament-after-") and wsrc[1].startswith("filament-take-"), wsrc)
 
+    # Review 13 Nov: two pitch faults heard through the live output (the master recorder, 24-bit WAV).
+    def _rec24(r_):
+        b_ = base64.b64decode(r_["b64"]); i_ = 12; sr_ = 0; dat_ = b""
+        while i_ + 8 <= len(b_):
+            cid_, sz_ = b_[i_:i_ + 4], int.from_bytes(b_[i_ + 4:i_ + 8], "little")
+            if cid_ == b"fmt ": sr_ = int.from_bytes(b_[i_ + 12:i_ + 16], "little")
+            if cid_ == b"data": dat_ = b_[i_ + 8:i_ + 8 + sz_]
+            i_ += 8 + sz_ + (sz_ & 1)
+        a_ = np.frombuffer(dat_[:len(dat_) // 6 * 6], dtype=np.uint8).reshape(-1, 3).astype(np.int32)
+        v_ = a_[:, 0] | (a_[:, 1] << 8) | (a_[:, 2] << 16); v_ = np.where(v_ >= 1 << 23, v_ - (1 << 24), v_) / float(1 << 23)
+        return sr_, v_.reshape(-1, 2)[:, 0]
+    def _pitch(x_, sr_, t0_, t1_):
+        s_ = x_[int(t0_ * sr_):int(t1_ * sr_)]
+        if len(s_) < 256: return 0.0
+        w_ = np.abs(np.fft.rfft(s_ * np.hanning(len(s_)), 1 << 18)); return float(np.argmax(w_) * sr_ / (1 << 18))
+    def _onsets(x_, sr_, thr=0.02, hop=0.02):
+        n_ = int(len(x_) / sr_ / hop); e_ = [float(np.sqrt(np.mean(x_[int(i * hop * sr_):int((i + 1) * hop * sr_)] ** 2))) for i in range(n_)]
+        return [i * hop for i in range(1, n_) if e_[i] > thr and e_[i - 1] <= thr]
+    # R1113-1: a looping file that ends with the pitch bend up started every later pass bent (a sine A3 at
+    # 220 Hz came round at 247 Hz). The loop wrap now sends bend, wheel and pressure back to rest.
+    pg.evaluate("__synth.panic()"); pg.evaluate("p => __synth.setPatch(p)", sine); pg.wait_for_timeout(150)
+    BEND_END = mthd(0, 1, 96) + mtrk([0] + tempo(500000) + [0, 0x90, 57, 100] + vlq(77) + [0x80, 57, 0]
+                                     + vlq(10) + [0xE0, 0x7F, 0x7F] + vlq(105) + [0xFF, 0x2F, 0])
+    pg.evaluate("a => __synth.deck().importBytes(a, 'bendend.mid')", BEND_END)
+    pg.click("#loopBtn"); pg.evaluate("() => __synth.recordStart()"); pg.wait_for_timeout(150)
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(2700)
+    pg.click("#stopBtn"); pg.click("#loopBtn")
+    sr_b, Lb = _rec24(pg.evaluate("() => __synth.recordStop()"))
+    ons = _onsets(Lb, sr_b); hz = [round(_pitch(Lb, sr_b, o + 0.05, o + 0.3), 1) for o in ons]
+    ck(f"M. loop: a file that ends with the bend up comes round in tune (passes at {hz} Hz)",
+       len(hz) >= 2 and all(abs(h - 220) < 3 for h in hz), (ons, hz))
+    # R1113-2: CC 121 (Reset All Controllers) was ignored, so a bend held over it stayed.
+    pg.evaluate("__synth.panic()"); pg.evaluate("__synth.midi([0xE0, 0, 64])"); pg.wait_for_timeout(100)
+    pg.evaluate("() => __synth.recordStart()"); pg.wait_for_timeout(100)
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.midi([0x90, 57, 100]); await w(300); __synth.midi([0xE0, 0x7F, 0x7F]); __synth.midi([0xB0, 1, 127]);
+      __synth.midi([0xB0, 64, 127]); await w(400); __synth.midi([0xB0, 121, 0]); await w(500); }""")
+    rs_ = pg.evaluate("() => ({ pb: +document.getElementById('pbStrip').getAttribute('aria-valuenow'), mw: +document.getElementById('mwStrip').getAttribute('aria-valuenow'), sus: __synth.state().sustain })")
+    sr_c, Lc = _rec24(pg.evaluate("() => __synth.recordStop()")); pg.evaluate("__synth.midi([0x80, 57, 0])"); pg.evaluate("__synth.panic()")
+    oc = _onsets(Lc, sr_c); o0 = oc[0] if oc else 0.0
+    hz_b, hz_r = _pitch(Lc, sr_c, o0 + 0.45, o0 + 0.68), _pitch(Lc, sr_c, o0 + 0.8, o0 + 1.15)
+    ck(f"M. CC 121 resets the controllers: bent {hz_b:.1f} Hz, then {hz_r:.1f} Hz (A3 220); strips home, pedal up ({rs_})",
+       abs(hz_b - 246.9) < 7 and abs(hz_r - 220) < 3 and abs(rs_["pb"]) < 0.01 and abs(rs_["mw"]) < 0.01 and rs_["sus"] is False, (oc, hz_b, hz_r, rs_))
+
     # Review 17 Oct: Render WAV went through no master bus, so a reverb you could hear was missing
     # from the file. The deck now hands the master state to the offline render.
     pg.evaluate("a => __synth.deck().importBytes(a, 'melody.mid')", MEL)

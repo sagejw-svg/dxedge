@@ -17,6 +17,11 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1113-4 | confusing | d | Rack tempo 120.5 typed in the box reads "121" while the transport runs at 120.5 (the box rounds; the clock does not) | measured |
+| R1113-5 | confusing | e | A failed .mid import replaces the deck's status line with the error, but the previous file stays loaded, listed and playable under it | measured |
+| R1113-6 | confusing | e | A .mid cut short says "This MIDI file has data with no status byte", not that the file is incomplete | measured |
+| R1113-3 | missing | c | MIDI program change is ignored: a keyboard's patch buttons do nothing (no patch change, no word) | measured (ignored), inferred (expectation) |
+| R1113-7 | missing | e | Recording along with a playing file: the take starts at its own first note and plays alone, so a part played over a backing file does not line up with it | inferred (code) |
 | R1112-1 | confusing | a, b | Orthicon: a starter picture from the Picture card (Bell Partials, Harmonic Stack ...) is gone after a reload, a link or a saved user patch reopened; the scan plays Ember Ridge's picture while the readout shows the patch's name, and the link's note says only a "painted or dropped" picture is left out | measured |
 | R1111-4 | confusing | f | Surprise me drops its draw without a word when the rail moves during the render (about 1.4 s); the toast still holds the previous surprise's text | measured (dropped), inferred (what a user sees) |
 | R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean) | measured |
@@ -71,11 +76,11 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
-| R1017-9 | confusing | d | No output protection unless the compressor is on: delay plus reverb can hard-clip at 0 dBFS; still open 7 Nov (226,954 samples at full scale in 4 s) | measured |
+| R1017-9 | confusing | d | No output protection unless the compressor is on: delay plus reverb can hard-clip at 0 dBFS; still open 7 Nov (226,954 samples at full scale in 4 s); 13 Nov: the master "limit" switch now holds the ceiling (-1.0 dBFS peak with delay feedback 0.95 and reverb size 1), but it is off by default | measured |
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2256,3 +2261,105 @@ Confusing. Measured.
 
 Areas c to h. Area a by ear on Surprise me draws, and the knob sweep, were not repeated (9 Nov).
 Suggested next: c, d and e, including a take on a Surprise me draw and the patch link row with the deck.
+
+## 2026-11-13 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `93ebfae`, sw.js
+`dxedge-v211` (live matched main). Playwright's own Chromium 1243 headless (the `chromium-1194` path is
+still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors on the live site in any
+run. Audio was read from the live output with the master recorder (24-bit WAV decoded in the script)
+and from `__synth.renderWav`. Pitch is the FFT peak over 0.25 s on a sine patch (Filament, osc 1 sine,
+ensemble and room off). Focus tonight: what a MIDI keyboard or DAW sends besides notes (CC 121, program
+change, repeated note-ons, two sources on one note), the deck's loop with controllers, bad and odd
+.mid files, the tempo box, and the master bus at its extremes.
+
+### What worked (measured)
+
+- Pitch bend range: full up and down on A3 read 246.6 Hz and 196.2 Hz (2 semitones, as the patch says).
+- Two MIDI note-ons on A3 with one note-off: silent after the off, nothing held.
+- A3 from MIDI and the same on-screen key held with the mouse: the MIDI off leaves the mouse's note
+  sounding (1 voice); mouse up leaves 0 voices.
+- Computer keys do not play while typing in the tempo, project name, mix name, patch link or render
+  length boxes.
+- 30 fast retriggers of C4 with the pedal down: 1 voice, not 30.
+- Master bus extremes on Screaming 12AX7 with a 7-note chord at full velocity: no NaN in any render.
+  Compressor at threshold -60, ratio 20, attack 0.1 ms, release 5 ms, knee 0, makeup 24: peak -29.9 dBFS
+  with or without its limiter. The master "limit" switch alone holds -1.0 dBFS with delay feedback 0.95,
+  mix 1 and reverb size 1, damp 0, mix 1, and -6.0 dBFS with the ceiling at -6.
+- Deck import messages: a non-MIDI file says "not a Standard MIDI File (no MThd header)", a header with
+  no tracks says "no tracks". A format 0 file with channels 1, 2 and 10 in one track splits into three
+  parts, assigned Filament, Cathode and off.
+- Phone 375 px: the deck opens with no sideways scroll and no control under 44 px; armed, two taps on
+  a key record a two-note take.
+
+### Findings
+
+**R1113-1. A looping file or take that ends bent comes round out of tune.** Area e. Broken. Measured.
+Fixed tonight.
+- Steps: import (or record) something whose last controller move leaves the pitch bend up (or the
+  wheel up), switch loop on, play.
+- Expected: every pass sounds like the first.
+- Actual (live): a 1 s file, A3 from 0 to 0.4 s and a full bend up at 0.45 s: the first pass at 220.0 Hz,
+  every later pass at 247 Hz (2 semitones sharp) until Stop.
+- Cause (code): at the loop's end `deck.js` sent note offs and a pedal-up, but left bend, wheel and
+  pressure where the file had put them; Stop resets them, the loop did not.
+- Fix: the end of each pass now also sends bend, wheel and pressure back to rest at the same sample.
+  Measured on a local server, old tree against new: passes 220.0, 247.0, 247.0 Hz against 220.0, 220.0,
+  220.0 Hz. Check: "M. loop: a file that ends with the bend up comes round in tune".
+
+**R1113-2. MIDI CC 121 (Reset All Controllers) is ignored.** Area c. Broken. Measured. Fixed tonight.
+- Steps: hold a note from a MIDI keyboard, bend up (and push the wheel, press the pedal), then send CC 121
+  (many keyboards and DAWs send it on stop or on a reset button).
+- Expected: bend to centre, wheel and pressure to 0, pedal up, as the MIDI spec asks.
+- Actual (live): the note stayed at 247.6 Hz after CC 121 (A3 bent 2 semitones); the strips stayed up
+  and sustain stayed on. Only CC 120 and 123 were handled (as Panic).
+- Fix: the page's MIDI input resets bend, wheel and pressure (and their strips) and lets go of the pedal
+  on CC 121, unless the user has mapped CC 121 to a knob with Learn. Files are unchanged (the player
+  already drops CCs it does not use). Measured on a local server: after CC 121 the note read 247.6 Hz
+  (old) and 220.0 Hz (new); strips 1 and 1 against 0 and 0; sustain on against off. Check: "M. CC 121
+  resets the controllers".
+
+**R1113-3. Program change does nothing.** Area c. Missing. Measured (ignored), inferred (expectation).
+- Steps: send a program change (0xC0, 5) over MIDI, as a keyboard's patch buttons do.
+- Actual: the patch stays; nothing says the message was seen. `midiEvent` returns nothing for 0xC0.
+- Note: which list a program number picks (the lit device's factory list, the menu order, user patches
+  too) is a design call. Left for James (Open items).
+
+**R1113-4. The tempo box rounds what it shows, not what it sets.** Area d. Confusing. Measured.
+- Steps: type 120.5 in the rack's tempo box, press Enter.
+- Expected: the box and the clock agree.
+- Actual: the box reads 121, the transport runs at 120.5 (and the master delay's own tempo stays 120,
+  R1017-5). `commitTempo` passes the raw value to `setTempo` and shows `Math.round` of it.
+- Note: either round the value set (the box's step is 1) or show the decimal. Not fixed tonight (two
+  fixes already).
+
+**R1113-5. A failed import leaves the old file behind a new error.** Area e. Confusing. Measured.
+- Steps: import a good .mid (three tracks show), then import a file that is not MIDI.
+- Actual: the status line reads "bad.mid: This is not a Standard MIDI File (no MThd header)." while
+  good.mid's three tracks stay listed and its play key stays enabled and plays good.mid.
+- Expected: the error, plus a word that the previous file is still loaded (or its name back in the
+  status line after the error).
+
+**R1113-6. A file cut short gives a puzzling message.** Area e. Confusing. Measured.
+- Steps: import a .mid truncated in the middle of its track (a broken download).
+- Actual: "This MIDI file has data with no status byte." Expected: that the file ends early or is
+  damaged.
+
+**R1113-7. Recording along with a file does not line up.** Area e. Missing. Inferred (code).
+- Steps: import a backing file, press its play, arm rec and play along.
+- Actual (code): the take's zero is its own first note, the file's notes are not recorded, and play
+  take plays the take alone (play stops any other playback). So an overdub is not possible, and an
+  exported take does not line up with the file it was played over.
+- Note: a feature (record from the file's start, or merge the take into the file), not a defect. Open
+  items.
+
+### Still open, re-measured tonight
+
+- R1017-5: the rack transport at 100 BPM leaves the master's tempo at 120.
+- R1017-9: see the table; the "limit" switch protects the output, but it is off by default.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1110-3, R1110-4, R1104-4, R1101-2 and R1101-3 were not re-run. Suggested next:
+f, g and h, including the paper roll's play with a song (R1108-3 to R1108-5) and focus order on the
+deck after an import.
