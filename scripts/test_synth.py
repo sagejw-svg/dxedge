@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -5686,12 +5686,83 @@ with sync_playwright() as pw:
             ck("Pk. at 1366 px the name window keeps its 240 px", abs(pk["sel"]["w"] - 240) < 1, pk["sel"])
         pkp.click("#saveP"); pkp.wait_for_timeout(100); pkp.fill("#saveName", "Pk Test"); pkp.click("#saveOk"); pkp.wait_for_timeout(200)
         pk2 = pkp.evaluate(PK_MEAS)
-        ck(f"Pk. at {pk_w} px a user patch adds delete to the joined edit keys, rounded at its end, init square",
-           pk2["edJoin"] and len(pk2["ed"]) == 4 and pk2["lastId"] == "delP" and pk2["endR"] > 0
-           and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") == 0 and pk2["sw"] <= pk2["iw"], pk2)
-        pkp.on("dialog", lambda d: d.accept()); pkp.click("#delP"); pkp.wait_for_timeout(150)
+        if pk_mob:
+            # graphics 13 Nov: on a phone delete moved from the patch row into the save form (Pd. below)
+            ck(f"Pk. on a {pk_w} px phone a user patch keeps save, undo and init as the joined edit keys, init rounded at its end, and the name window as wide as a factory patch's ({pk2['sel']['w']:.0f} against {pk['sel']['w']:.0f} px)",
+               pk2["edJoin"] and len(pk2["ed"]) == 3
+               and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") > 0
+               and abs(pk2["sel"]["w"] - pk["sel"]["w"]) < 1 and pk2["sw"] <= pk2["iw"], pk2)
+            pkp.click("#saveP"); pkp.wait_for_timeout(100); pkp.click("#delF"); pkp.wait_for_timeout(150)
+        else:
+            ck(f"Pk. at {pk_w} px a user patch adds delete to the joined edit keys, rounded at its end, init square",
+               pk2["edJoin"] and len(pk2["ed"]) == 4 and pk2["lastId"] == "delP" and pk2["endR"] > 0
+               and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") == 0 and pk2["sw"] <= pk2["iw"], pk2)
+            pkp.on("dialog", lambda d: d.accept()); pkp.click("#delP"); pkp.wait_for_timeout(150)
         pkx.close()
     ck("Pk. no page errors (patch keys)", not pkerr, pkerr)
+    # Pd. delete in the save form on a phone (graphics, 13 Nov 2026). Before, a user patch added a 57 px delete key to the
+    # patch row, so the name window fell from 136 to 80 px at 375 ("My Te...") and at 320 px the edit keys wrapped onto a
+    # row of their own (the header 50 px taller while a user patch was loaded). Now, under 761 px, delete is the last key
+    # of the save form's joined switch (red), and the save form's name field is the patch name's recessed amber window.
+    PD_MEAS = """() => { const R = id => { const e = document.getElementById(id); if (!e || e.hidden || !e.getClientRects().length) return null; const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const ks = ['saveOk', 'saveNo', 'delF'].map(R).filter(Boolean), cs = id => getComputedStyle(document.getElementById(id));
+      const tray = document.querySelector('#saveForm .sfkeys');
+      return { sel: R('patchSel'), bar: R('patchStep') && document.querySelector('.top > .bar').getBoundingClientRect().height, edT: R('saveP') && R('saveP').t, stT: R('prevP').t,
+        delP: R('delP'), inp: R('saveName'), ks, join: ks.every((k, i) => i === 0 || (Math.abs(k.l - ks[i - 1].r) < 0.6 && Math.abs(k.t - ks[i - 1].t) < 0.6)),
+        small: ks.filter(k => k.w < 44 || k.h < 44).length, tray: tray ? getComputedStyle(tray).boxShadow.includes('inset') : false,
+        delC: cs('delF').color, delBg: cs('delF').backgroundImage, okC: cs('saveOk').color, okBg: cs('saveOk').backgroundImage,
+        inC: cs('saveName').color, inBg: cs('saveName').backgroundImage, inSh: cs('saveName').boxShadow,
+        endR: parseFloat(cs('delF').borderTopRightRadius), noR: parseFloat(cs('saveNo').borderTopRightRadius),
+        label: document.getElementById('delF').getAttribute('aria-label') || '', focus: document.activeElement && document.activeElement.id,
+        users: [...document.querySelectorAll('#patchSel option')].map(o => o.value).filter(v => v.startsWith('u:')),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pderr = []
+    for pd_w, pd_mob in ((320, True), (375, True), (760, True), (1366, False)):
+        pdx = b.new_context(viewport={"width": pd_w, "height": 667 if pd_mob else 1000}, is_mobile=pd_mob, has_touch=pd_mob, reduced_motion="reduce")
+        pdp = pdx.new_page(); pdp.on("pageerror", lambda e: pderr.append(str(e)))
+        pdp.goto(BASE); pdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); pdp.wait_for_timeout(200)
+        pd0 = pdp.evaluate(PD_MEAS)
+        pdp.click("#saveP"); pdp.wait_for_timeout(100)
+        pdf = pdp.evaluate(PD_MEAS)
+        ck(f"Pd. at {pd_w} px the save form on a factory patch is ok and cancel joined in a recessed tray, no delete, cancel rounded at its end",
+           pdf["join"] and len(pdf["ks"]) == 2 and pdf["tray"] and pdf["noR"] > 0, pdf)
+        pdp.fill("#saveName", "Pd Test Patch"); pdp.click("#saveOk"); pdp.wait_for_timeout(200)
+        pd1 = pdp.evaluate(PD_MEAS)
+        pdp.click("#saveP"); pdp.wait_for_timeout(100)
+        pd2 = pdp.evaluate(PD_MEAS)
+        in_con = _ob_con(pd2["inC"], pd2["inBg"])
+        ck(f"Pd. at {pd_w} px the save form's name field is a recessed amber window ({in_con:.1f}:1, want 4.5 or more)",
+           "gradient" in pd2["inBg"] and "inset" in pd2["inSh"] and in_con >= 4.5, (pd2["inC"], pd2["inBg"][:60], pd2["inSh"][:60]))
+        if pd_mob:
+            del_con = _ob_con(pd2["delC"], pd2["delBg"])
+            info(f"Pd. {pd_w} px", f"name window factory {pd0['sel']['w']:.0f}, user {pd1['sel']['w']:.0f} px; header {pd0['bar']:.0f} / {pd1['bar']:.0f} px; delete {del_con:.1f}:1")
+            ck(f"Pd. on a {pd_w} px phone a user patch leaves the patch row as it was: no delete key there, the name window {pd1['sel']['w']:.0f} px (factory {pd0['sel']['w']:.0f}), the edit keys on the name's row, the header the same height",
+               pd1["delP"] is None and abs(pd1["sel"]["w"] - pd0["sel"]["w"]) < 1 and abs(pd1["edT"] - pd1["stT"]) < 1 and abs(pd1["bar"] - pd0["bar"]) < 1, (pd0, pd1))
+            ck(f"Pd. on a {pd_w} px phone the save form on a user patch ends in a red delete key ({del_con:.1f}:1) joined to ok and cancel, every key 44 px, labelled with the patch's name, no sideways scroll",
+               pd2["join"] and len(pd2["ks"]) == 3 and pd2["small"] == 0 and pd2["endR"] > 0 and pd2["noR"] == 0 and del_con >= 4.5
+               and "rgb(255, 92, 92)" in pd2["delC"] and '"Pd Test Patch"' in pd2["label"] and pd2["sw"] <= pd2["iw"], pd2)
+            pdp.fill("#saveName", "Some Other Name"); pdp.click("#delF"); pdp.wait_for_timeout(200)
+            pd3 = pdp.evaluate(PD_MEAS)
+            ck(f"Pd. on a {pd_w} px phone the form's delete removes the loaded user patch (not the typed name), closes the form and hands focus to save",
+               "u:Pd Test Patch" not in pd3["users"] and not pd3["users"] and pd3["inp"] is None and pd3["focus"] == "saveP"
+               and pdp.evaluate("document.getElementById('patchSel').value").startswith("f:"), pd3)
+        else:
+            ck("Pd. at 1366 px a user patch keeps delete in the patch row and the save form has none",
+               pd1["delP"] is not None and len(pd2["ks"]) == 2 and pd2["noR"] > 0 and pd2["sw"] <= pd2["iw"], (pd1["delP"], pd2["ks"]))
+            pdp.click("#saveNo"); pdp.wait_for_timeout(80); pdp.click("#delP"); pdp.wait_for_timeout(150)
+        pdx.close()
+    # and from 490 to 760 px the volume slot joined the name's row and squeezed the name to 34 to 87 px (measured on main
+    # 13 Nov: 34 at 500, 44 at 700, 49 at 760); the step now has a floor, so the name keeps about 130 px or more
+    for pd_w in (520, 667, 740):
+        pdx = b.new_context(viewport={"width": pd_w, "height": 375 if pd_w == 667 else 700}, is_mobile=True, has_touch=True)
+        pdp = pdx.new_page(); pdp.on("pageerror", lambda e: pderr.append(str(e)))
+        pdp.goto(BASE); pdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); pdp.wait_for_timeout(150)
+        pdn = pdp.evaluate(PD_MEAS)
+        ck(f"Pd. at {pd_w} px the patch name window is {pdn['sel']['w']:.0f} px (want 120 or more; 34 to 87 before), the header {pdn['bar']:.0f} px"
+           + (" (98 as before)" if pd_w != 520 else " (three rows, as on a phone)") + ", no sideways scroll",
+           pdn["sel"]["w"] >= 120 and pdn["sw"] <= pd_w and (abs(pdn["bar"] - 98) < 1 if pd_w != 520 else pdn["bar"] < 160), pdn)
+        pdx.close()
+    ck("Pd. no page errors (delete in the save form)", not pderr, pderr)
     # Cf. canvas lettering in the house face (graphics, 7 Nov 2026). Before, six canvases on five devices set the browser's
     # sans-serif (Klystron's mouth pad, Phantastron's board, Additron's spectrum, Rhumbatron's cavity, Heptode's place
     # field; Gleam's effect mode too). Now every canvas font on the rack is the --font-mono stack, Rhumbatron's caption is

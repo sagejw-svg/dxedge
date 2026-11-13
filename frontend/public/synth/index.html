@@ -135,7 +135,25 @@
     color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar .pstep #patchSel:hover { border-color: #000; color: #ffe2b0; }
   .bar .pstep #patchSel option { background: #121212; color: var(--text); text-shadow: none; }
-  .saveform input { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; width: 170px; font-size: 12px; }
+  /* Save form (graphics, 13 Nov): the name field is a recessed amber window (the patch name's finish) and ok, cancel
+     and, on a phone, delete are one joined switch in a recessed tray like the edit keys. Before, a white-edged grey
+     field and two loose keys. Delete reads red, the rec key's colour, so it does not look like another ok. */
+  .saveform input { background: linear-gradient(180deg, #050403, #0d0a06); color: #ffd08a; caret-color: var(--amber); border: 1px solid #000;
+    border-radius: 6px; padding: 6px 8px; width: 170px; font-size: 12px; text-shadow: 0 0 5px rgba(255,170,60,0.35);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06), 0 1px 0 rgba(255,255,255,0.06); }
+  .saveform input::selection { background: rgba(255,179,71,0.35); color: #fff3dc; }
+  .saveform .sfkeys { display: inline-flex; flex-wrap: nowrap; gap: 0; align-items: stretch; border-radius: 7px;
+    box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(255,255,255,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  .saveform .sfkeys > .btn { margin: 0; border-radius: 0; border-color: #2c2c2c; border-left-width: 0;
+    background: linear-gradient(180deg, #1e1e1e, #121212); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+  .saveform .sfkeys > :first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  .saveform .sfkeys > #saveNo, .saveform .sfkeys > #delF { border-radius: 0 6px 6px 0; }
+  .saveform .sfkeys > #saveNo:has(+ #delF:not([hidden])) { border-radius: 0; }
+  .saveform .sfkeys > .btn:hover { color: var(--amber2); border-color: #2c2c2c; }
+  .saveform .sfkeys > .btn:focus-visible { position: relative; z-index: 1; outline-offset: 1px; }
+  .saveform .sfkeys > #delF { color: var(--red); }
+  .saveform .sfkeys > #delF:hover { color: #ff8a8a; }
+  @media (min-width: 761px) { .saveform .sfkeys > #delF { display: none; } .saveform .sfkeys > #saveNo, .saveform .sfkeys > #saveNo:has(+ #delF:not([hidden])) { border-radius: 0 6px 6px 0; } }
   /* desktop header (graphics, 5 Nov): the same on every device. Before, the patch bar's width followed the
      longest patch name (the select sized itself to it), so on 16 of 18 devices the bar squeezed the description
      into a 312 to 341 px column of 5 to 9 lines, the tip link fell to a row of its own, and the rack moved
@@ -1141,9 +1159,18 @@
     .bar #patchSel { flex: 1 1 0; width: 0; min-width: 0; max-width: none; }
     /* basis auto, not 0: a zero basis let the volume slot join the first row at 390 px and squeeze the name to 33 px */
     .bar .pstep { flex: 1 1 auto; min-width: 0; } .bar .pedit { flex: 0 0 auto; }
+    /* graphics 13 Nov: from 480 to 760 px the volume slot joined the name's row and squeezed the name to 44 to 54 px
+       ("W."); a floor keeps the name about 170 px there, and on a phone the floor sits under the width it already had */
+    .bar .pstep { min-width: min(220px, 100% - 140px); }
     .bar .pedit > .btn { padding-left: 8px; padding-right: 8px; }
     .bar .saveform.open ~ #midiBtn, .bar .saveform.open ~ #learnBtn { display: none; }
     .bar .saveform input { min-height: 44px; box-sizing: border-box; } /* review R1103-3: the name field matches the 44 px keys beside it */
+    /* graphics 13 Nov: delete leaves the patch row for the save form, so a user patch's name window is as wide as a
+       factory patch's (80 px at 375 before) and the edit keys never wrap to a row of their own at 320 px */
+    .bar .pedit > #delP { display: none; }
+    .bar .pedit > #initBtn { border-radius: 0 6px 6px 0; }
+    .bar .saveform.open { flex: 1 1 auto; min-width: 0; }
+    .bar .saveform input { flex: 1 1 120px; width: 0; min-width: 96px; }
     .sup { padding: 4px 11px; font-size: 11px; }
     #midiBtn .long { display: none; }
     select.btn { max-width: 190px; }
@@ -1415,7 +1442,7 @@
         <span class="rec-time" id="mastTime" data-rec-time aria-live="polite"></span>
         <button type="button" class="btn small" id="mastJump" title="Open the Master panel: effects, record, and render wav">master</button>
       </span>
-      <span class="saveform" id="saveForm"><input id="saveName" maxlength="40" aria-label="Patch name"><button class="btn small" id="saveOk">ok</button><button class="btn small" id="saveNo">cancel</button></span>
+      <span class="saveform" id="saveForm" role="group" aria-label="Save patch"><input id="saveName" maxlength="40" aria-label="Patch name"><span class="sfkeys"><button class="btn small" id="saveOk">ok</button><button class="btn small" id="saveNo">cancel</button><button class="btn small" id="delF" type="button" hidden>delete</button></span></span>
       <span class="bsep" aria-hidden="true"></span>
       <button class="btn small" id="midiBtn"><span class="long">Connect </span>MIDI</button>
       <button class="btn small" id="learnBtn" aria-pressed="false" hidden title="MIDI learn: press, click a knob, move a knob on your keyboard">learn</button>
@@ -3928,6 +3955,8 @@ function fillSelect() {
     user.forEach(p => { const o = document.createElement('option'); o.value = 'u:' + p.name; o.textContent = p.name; g.appendChild(o); }); sel.appendChild(g); }
   sel.value = edited ? '__edit' : curKey;
   $('delP').hidden = !(curKey.startsWith('u:') && !edited);
+  $('delF').hidden = $('delP').hidden;
+  $('delF').setAttribute('aria-label', $('delF').hidden ? 'Delete' : 'Delete "' + curKey.slice(2) + '" from this browser');
 }
 function loadKey(key) {
   const e = allPatches().find(x => x.key === key); if (!e) return;
@@ -3969,15 +3998,21 @@ function doSave() {
   cur.name = name; const p = D().normalize(cur);
   user = user.filter(u => u.name !== name).concat([p]); store.set(D().kUser, user);
   curKey = 'u:' + name; edited = false; fillSelect(); closeSave();
-  store.set(D().kCur, { key: curKey, patch: cur }); toast('Saved "' + name + '" in this browser.');
+  store.set(D().kCur, { key: curKey, patch: cur });
+  toast('Saved "' + name + '" in this browser.' + (matchMedia('(max-width: 760px)').matches ? ' Tap save to find its delete key.' : ''));
 }
 $('saveOk').addEventListener('click', doSave);
 // Enter's default is held back: focus is on save by then, and the key would press it and open the form again
 $('saveName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } if (e.key === 'Escape') closeSave(); e.stopPropagation(); });
-$('delP').addEventListener('click', () => {
+function delUser() {
   if (!curKey.startsWith('u:')) return; const name = curKey.slice(2);
   user = user.filter(u => u.name !== name); store.set(D().kUser, user); toast('Deleted "' + name + '".'); loadKey('f:' + D().factory[0].name);
-});
+}
+$('delP').addEventListener('click', delUser);
+// On a phone the delete key lives in the save form (graphics, 13 Nov): in the patch row it cut the name window to
+// 80 px at 375 px ("My Te..."), and at 320 px it pushed the edit keys onto a row of their own. The form's key
+// deletes the loaded user patch, never the name typed in the field, and says so in its label.
+$('delF').addEventListener('click', () => { closeSave(); delUser(); });
 
 // ---------------------------------------------------------------- the rack rail
 // The keyboard, wheels and MIDI play the lit device; the panel, patch list and chassis show it.
