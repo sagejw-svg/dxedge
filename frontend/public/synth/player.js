@@ -221,7 +221,9 @@ export function createPlayer(api) {
     let next;
     try { next = parseMidi(bytes); }
     catch (e) {
-      $('libStat').textContent = (fileName || 'That file') + ': ' + e.message;
+      // the previous song stays loaded and play still plays it, so the status says so (review R1114-1)
+      const kept = song ? ' Still loaded: ' + (meta && meta.title || song.name || 'the previous song') + '.' : '';
+      $('libStat').textContent = (fileName || 'That file') + ': ' + e.message + kept;
       api.toast(e.message, 5000);
       return false;
     }

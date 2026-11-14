@@ -146,9 +146,11 @@ export function createDeck(api) {
   const Fi = { name: '', song: null, assign: [] };
   function importBytes(bytes, name) {
     let song;
+    // A file that fails leaves the previous one loaded (its tracks, play and Render WAV), so the status says so (review R1113-5)
+    const kept = Fi.song ? ' Still loaded: ' + Fi.name + '.' : '';
     try { song = songOf(readSMF(bytes)); }
-    catch (e) { $('fileStat').textContent = (name || 'That file') + ': ' + e.message; api.toast(e.message, 5000); return false; }
-    if (!song.parts.some(p => p.notes)) { $('fileStat').textContent = (name || 'That file') + ' has no notes to play.'; return false; }
+    catch (e) { $('fileStat').textContent = (name || 'That file') + ': ' + e.message + kept; api.toast(e.message, 5000); return false; }
+    if (!song.parts.some(p => p.notes)) { $('fileStat').textContent = (name || 'That file') + ' has no notes to play.' + kept; return false; }
     if (P.playing) stop();
     Fi.name = name || 'file.mid'; Fi.song = song; Fi.assign = defaultAssign(song.parts, api.dev());
     P.last = 'file';     // Render WAV takes what came in last: this file, until a take is recorded or played (R1110-2)

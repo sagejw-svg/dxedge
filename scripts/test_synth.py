@@ -2357,6 +2357,16 @@ with sync_playwright() as pw:
     pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
     sg = pg.evaluate("__synth.deck().song()")
     ck("M. defaults: first melodic track on Filament, the lowest-pitched on Cathode, channel 10 off", sg["assign"] == ["filament", "cathode", "off"], sg)
+    # A file that fails leaves the previous one loaded, playable and rendering, so the status names it (review R1113-5)
+    kept = pg.evaluate("""() => { const r = [];
+      for (const [a, nm] of [[[82, 73, 70, 70, 1, 2, 3, 4], 'bad.mid'], [[77, 84, 104, 100, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96, 77, 84, 114, 107, 0, 0, 0, 4, 0, 255, 47, 0], 'empty.mid']]) {
+        const ok = __synth.deck().importBytes(a, nm);
+        r.push({ ok, stat: document.getElementById('fileStat').textContent, song: (__synth.deck().song() || {}).name, play: !document.getElementById('playFile').disabled });
+      }
+      return r; }""")
+    ck("M. a failed import says the previous file is still loaded (review R1113-5)",
+       all(k["ok"] is False and k["stat"].endswith("Still loaded: two.mid.") and k["play"] for k in kept) and "not a Standard MIDI File" in kept[0]["stat"] and "no notes" in kept[1]["stat"], kept)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
     tri = cpatch(vco1={"wave": "tri", "scale": 8, "level": 0.8})
     _, (L, R) = render_deck(sine, tri)
     seg = L[int(0.2 * SR):int(0.9 * SR)]; seg2 = L[int(1.2 * SR):int(1.9 * SR)]
@@ -6733,6 +6743,11 @@ with sync_playwright() as pw:
       __synth.transport().setTempo(120);
       return { ok, name: __synth.player().song().name, route: __synth.player().routing(), ons, slowAt: slow.at, score: __synth.player().score() };
     }""")
+    # A file that fails leaves the previous song loaded and playable, so the status names it (review R1114-1)
+    lkept = pg.evaluate("""() => { const ok = __synth.player().importBytes([1, 2, 3, 4, 5, 6, 7, 8], 'junk.mid');
+      return { ok, stat: document.getElementById('libStat').textContent, song: (__synth.player().song() || {}).name, play: !document.getElementById('libPlay').disabled }; }""")
+    ck("P. a failed import says the previous song is still loaded (review R1114-1)",
+       lkept["ok"] is False and lkept["stat"].startswith("junk.mid: ") and lkept["stat"].endswith("Still loaded: route-test.mid.") and lkept["song"] == "route-test" and lkept["play"], lkept)
     ons = route["ons"]
     ck("P. channel 1 goes to Filament and channel 2 to Cathode",
        route["ok"] and route["name"] == "route-test" and route["route"].get("1") == "filament" and route["route"].get("2") == "cathode", route["route"])

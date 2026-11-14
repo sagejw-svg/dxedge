@@ -17,8 +17,10 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1114-4 | missing | g | Hexode has no on-screen keys: on a phone with no hardware keyboard or MIDI, only Demo 1 and Demo 2 make a sound | measured (no keys), inferred (impact) |
+| R1114-2 | confusing | f | A damaged .mid (Greensleeves cut to half its bytes) loads in the song library with no warning, as "Greensleeves · 96 BPM · 1 channel" (the whole file has 3) | measured |
+| R1114-3 | confusing | e, f | A deck take exported as .mid and opened in the song library is titled "Tempo" (the name of the take's tempo track) | measured |
 | R1113-4 | confusing | d | Rack tempo 120.5 typed in the box reads "121" while the transport runs at 120.5 (the box rounds; the clock does not) | measured |
-| R1113-5 | confusing | e | A failed .mid import replaces the deck's status line with the error, but the previous file stays loaded, listed and playable under it | measured |
 | R1113-6 | confusing | e | A .mid cut short says "This MIDI file has data with no status byte", not that the file is incomplete | measured |
 | R1113-3 | missing | c | MIDI program change is ignored: a keyboard's patch buttons do nothing (no patch change, no word) | measured (ignored), inferred (expectation) |
 | R1113-7 | missing | e | Recording along with a playing file: the take starts at its own first note and plays alone, so a part played over a backing file does not line up with it | inferred (code) |
@@ -31,7 +33,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1109-2 | confusing | a | Theremin: on a mono patch a key takes the pad's voice while the readout and glow still show the pad's note | measured (mono), inferred (full poly pool) |
 | R1108-3 | confusing | f | The paper roll's play starts Dekatron's own step pattern too: Blank Roll's play is a drum beat only (Dekatron strip 0.56), Octave Pump on Filament comes with the factory beat under it; same root as R1030-3 | measured |
 | R1108-4 | confusing | f | The paper roll offers Heptode as a device chip, but it plays nothing (17 strikes, strip 0); same as R1030-4 for the library | measured |
-| R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5) | measured (run kept, strikes), inferred (surprise) |
+| R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5); still open 14 Nov (37 strikes under Beethoven 5 after a reload) | measured (run kept, strikes), inferred (surprise) |
 | R1104-4 | confusing | c, d | Panic leaves the Mix desk delay and room returns and the patch's own output room ringing; the room's tail then refills the master reverb | measured |
 | R1106-2 | confusing | a | LC bank with the stereo offset: at 1 octave the sides differ far more than on the other models (side 1.7 dB over the left channel, Valve 12 -8 dB) and mono loses 0.55 dB; the LC note does not carry the mono warning the Ladder and Poly notes do | measured (width, mono), inferred (impact) |
 | R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
@@ -39,7 +41,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
 | R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
-| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 11 Nov (all 21 songs, Dekatron strip 0.28 to 0.62) | measured |
+| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 11 Nov (all 21 songs, Dekatron strip 0.28 to 0.62); 14 Nov: Beethoven 5, routed to channels 1 to 3 only, Dekatron strip 0.52 | measured |
 | R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail; still open 2 Nov | measured |
 | R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
 | R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
@@ -69,8 +71,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
 | R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 11 Nov (4 buttons, no name or title) | measured (11 Nov) |
-| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link | measured |
-| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1) | measured |
+| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link; 14 Nov: 531, no skip link | measured |
+| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1); 14 Nov: the ensemble mode chips are named only "I", "II", "I+II" | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120) | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
@@ -80,7 +82,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2363,3 +2365,100 @@ Fixed tonight.
 Areas a, b, f, g, h. R1110-3, R1110-4, R1104-4, R1101-2 and R1101-3 were not re-run. Suggested next:
 f, g and h, including the paper roll's play with a song (R1108-3 to R1108-5) and focus order on the
 deck after an import.
+
+## 2026-11-14 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `b4b3248`, sw.js
+`dxedge-v212` (the 2 AM check found live and main matching). Playwright's own Chromium 1243 headless (the
+`chromium-1194` path is still gone) at 1366 x 900 and 375 x 812 (touch). No page or console errors on the
+rack or on any vendored or linked page in any run. Audio on the vendored pages was read with an analyser
+tapped in front of each page's destination. Focus tonight: what failed imports and odd files do in the
+song library, the roll and a song after a reload, a project loaded mid-song, a keyboard walk of every
+desktop tab stop for a visible ring, focus order after a deck import, reduced motion across all 18
+devices, and the outboard pages at both sizes.
+
+### What worked (measured)
+
+- Focus: a Tab walk of all 531 desktop stops; every stop changes its own style or its label's on focus
+  except the project, mix and patch link name windows, and those three wear an amber ring on their
+  window (checked by screenshot). No control on the rack without a name at either size (531 desktop,
+  107 phone).
+- Deck import from the keyboard: after a two-track file loads, Tab goes file, play, loop, tempo,
+  render wav, then each track's Filament, Cathode and off chips in order, then the library.
+- Song library: Beethoven 5 plays (Filament 0.22, Cathode 0.39 strip peak), stops, and 2.5 s later
+  every strip reads 0 and no note is held. Saving the project and loading it while the song plays
+  keeps the song playing with nothing held.
+- Library errors: a junk file and an empty file say "This is not a MIDI file the player can read."
+- Reduced motion: the only running CSS animation on an idle page is the correlation marker. With no
+  input, a canvas still moved only on devices whose own strip meter moved in the same window (Mote,
+  Geissler, Pentagrid, Orthicon, Gyrotron) and on the tubes and eye of the three tube devices, whose
+  steady glow follows the level; nothing moved on the other ten. Inferred: that motion follows sound,
+  as the Tv. and Tb. checks intend.
+- Outboard pages, both sizes: Hexode (computer key A, peak 0.34 desktop, 0.30 phone), Anode (start,
+  0.66 and 0.80), Gleam (a drag, 0.04 and 0.05), Iris (fake camera, 0.36), Sculpt (0.06) all sound;
+  each links back to /synth/. Hand Orchestra and Aether stay silent without hands in view (expected).
+- Phone 375 px: no sideways scroll on the rack; the only controls under 24 px are the six footer links.
+
+### Findings
+
+**R1114-1. A failed song library import leaves the old song loaded behind the error.** Area f.
+Confusing. Measured. Fixed tonight.
+- Steps: load Greensleeves, then open (or drop) a file that is not MIDI.
+- Expected: the error, and a word that Greensleeves is still what play plays.
+- Actual: the status reads only "junk.mid: This is not a MIDI file the player can read."; play stays
+  lit and plays Greensleeves. Same as R1113-5 on the deck.
+- Fix: the error ends with "Still loaded: <title>." when a song is loaded. Check: "P. a failed import
+  says the previous song is still loaded (review R1114-1)" (fails on `b4b3248`: no "Still loaded").
+
+**R1113-5 (from 13 Nov), fixed tonight.** The deck's failed import (not MIDI, or a file with no notes)
+now ends "Still loaded: two.mid." when a file is loaded. Check: "M. a failed import says the previous
+file is still loaded (review R1113-5)" (fails on `b4b3248`).
+
+**R1114-2. A damaged .mid loads in the library with no word.** Area f. Confusing. Measured.
+- Steps: open a .mid cut short (here the library's own Greensleeves, first 406 of 812 bytes).
+- Expected: "This file ends early or is damaged", or the song with a warning.
+- Actual: it loads as "Greensleeves · 96 BPM · 1 channel" (the whole file has 3), with no warning,
+  and plays what survived. The deck's own reader refuses such a file (R1113-6, with a puzzling message);
+  the library's reader (vendored @tonejs/midi) is lenient. Not fixed: the check would go in our reading
+  around the vendored parser; left as a finding.
+
+**R1114-3. A deck take opened in the song library is called "Tempo".** Areas e, f. Confusing. Measured.
+- Steps: record a two-note take on the deck, export it (or take the bytes the export writes), open the
+  .mid with the library's open .mid.
+- Expected: the file's name, or the take's track name.
+- Actual: "Tempo · 120 BPM · 1 channel". `writeSMF` names its first track "Tempo", and the library
+  takes the first track's name as the song's name. Suggested: the library falls back to the file
+  name when the name is "Tempo" (or the writer names track 0 after the file). Not fixed tonight (two
+  fixes already).
+
+**R1114-4. Hexode cannot be played by touch.** Area g. Missing. Measured (no keys), inferred (impact).
+- Steps: open /synth/fm/ on a phone (the rack's outboard tray links to it).
+- Expected: some way to play a note.
+- Actual: no on-screen keyboard; the page says computer keys and MIDI play it. A phone with neither
+  has only Demo 1 and Demo 2. Anode, Gleam and the rack all play by touch. Vendored code; a design
+  call (add keys, or say on the outboard link that it needs a keyboard). Left for James.
+
+### Still open, re-measured tonight
+
+- R1030-3: Dekatron's pattern under Beethoven 5 (strip 0.52); the song routes only channels 1 to 3.
+- R1108-5: after one roll play and a reload, run is still on; Beethoven 5 then brings 37 roll strikes.
+- R1020-3: a project still carries 14 devices (no Thyratron, Gleam, Dekatron, Lattice) and no master
+  bus or roll.
+- R1020-7: Anode's four regenerate buttons are still named only "⟳".
+- R1020-8: 531 desktop tab stops, no skip link.
+- R1020-9: Filament's ensemble chips are named "I", "II", "I+II" with no section.
+- R1024-3: Hexode, 13 unnamed controls at both sizes; 1154 px wide at 375.
+- R1025-5: the six phone footer links are 13 px tall.
+
+### Notes (not findings)
+
+- The deck and the library both open .mid files and play them differently (deck: tracks to Filament or
+  Cathode, its own tempo percent, Render WAV; library: channels to any device on the rack transport).
+  Already listed as a known limit in `docs/filament.md`; worth a line in each section's help text.
+- Enter on the deck's import key did not raise a file chooser in headless Chrome (same headless
+  behaviour noted 11 Nov); the click reaches the input.
+
+### Not covered tonight
+
+Areas a to e. Iris, Sculpt, Hand Orchestra and Aether were not played with real hands or a camera.
+Suggested next: a and b, including Orthicon's starter pictures (R1112-1) and the Theremin switch (R1109-1).
