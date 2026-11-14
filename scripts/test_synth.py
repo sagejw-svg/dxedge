@@ -10839,6 +10839,14 @@ with sync_playwright() as pw:
     FD_JS = """(parts) => { const props = ['backgroundImage', 'backgroundColor', 'color', 'borderTopColor', 'boxShadow'];
       const out = {}; for (const [n, q] of parts) { const e = document.querySelector(q); if (!e) { out[n] = null; continue; }
         const c = getComputedStyle(e); out[n] = props.map(p => c[p]); } return out; }"""
+    def fd_settled(js, arg=None, cap=40):   # read until two reads 100 ms apart agree (a hover or face transition has ended); 14 Nov: two runs read mid-transition
+        prev = fdp.evaluate(js, arg) if arg is not None else fdp.evaluate(js)
+        for _ in range(cap):
+            fdp.wait_for_timeout(100)
+            cur = fdp.evaluate(js, arg) if arg is not None else fdp.evaluate(js)
+            if cur == prev: return cur
+            prev = cur
+        return prev
     def fd_stops(st):   # the opaque colour stops of a computed background (gradient stops, else the background colour)
         cs = fc_rgbs(st[0]) if st[0] != "none" else []
         return cs or fc_rgbs(st[1])
@@ -10851,7 +10859,7 @@ with sync_playwright() as pw:
     fdx = b.new_context(viewport={"width": 1366, "height": 1000}); fdp = fdx.new_page(); fde = []; fdp.on("pageerror", lambda e: fde.append(str(e)))
     fdp.goto(BASE); fdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fdp.wait_for_timeout(300)
     fdp.mouse.move(2, 2)
-    fd = {"walnut": fdp.evaluate(FD_JS, FD_PARTS)}
+    fd = {"walnut": fd_settled(FD_JS, FD_PARTS)}
     fdp.evaluate("document.documentElement.removeAttribute('data-face')"); fdp.wait_for_timeout(50)
     fd_none = fdp.evaluate(FD_JS, FD_PARTS)
     fdp.evaluate("document.documentElement.dataset.face = 'walnut'")
@@ -10861,18 +10869,18 @@ with sync_playwright() as pw:
       k.classList.add('down'); r.classList.add('armed'); const o = { lit: g(document.getElementById('devF')), key: g(k), armed: g(r) }; r.classList.remove('armed'); r.classList.add('keyed'); o.keyed = g(r);
       k.classList.remove('down'); r.classList.remove('keyed'); return o; }""")
     fdp.hover(".racklinks .devlink"); fdp.wait_for_timeout(200)
-    fd_hov0 = fdp.evaluate("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
+    fd_hov0 = fd_settled("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
     fdp.mouse.move(2, 2)
     fdpatch0 = fdp.evaluate("JSON.stringify(__synth.patch())")
     fd_lit = {}; fd_hov = {}
     for fv in ("rack", "blacklight"):
         fdp.click(f'#faceChips .chip[data-v="{fv}"]'); fdp.mouse.move(2, 2); fdp.wait_for_timeout(250)
-        fd[fv] = fdp.evaluate(FD_JS, FD_PARTS)
+        fd[fv] = fd_settled(FD_JS, FD_PARTS)
         fd_lit[fv] = fdp.evaluate("""() => { const k = document.querySelector('.key.w'), r = document.querySelector('.mixrow[data-mix="lattice"]'); const g = e => { const c = getComputedStyle(e); return [c.backgroundImage, c.color, c.borderTopColor, c.boxShadow]; };
           k.classList.add('down'); r.classList.add('armed'); const o = { lit: g(document.getElementById('devF')), key: g(k), armed: g(r) }; r.classList.remove('armed'); r.classList.add('keyed'); o.keyed = g(r);
           k.classList.remove('down'); r.classList.remove('keyed'); return o; }""")
         fdp.hover(".racklinks .devlink"); fdp.wait_for_timeout(200)
-        fd_hov[fv] = fdp.evaluate("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
+        fd_hov[fv] = fd_settled("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
         fdp.mouse.move(2, 2)
     FD_SURF = ["rail bay", "rail plate", "outboard tray", "outboard plate", "mix strip", "file faceplate", "MIDI deck", "song library", "paper roll strip", "keybed", "bend strip"]
     for fv in ("rack", "blacklight"):
@@ -10893,8 +10901,9 @@ with sync_playwright() as pw:
     ck("Fd. rack black keeps the ivory keys; black light makes the white keys fluoresce violet", fd["rack"]["white key"] == fd["walnut"]["white key"]
        and fd["blacklight"]["white key"][0] != fd["walnut"]["white key"][0] and fd["blacklight"]["black key"][0] != fd["walnut"]["black key"][0])
     ck("Fd. a face never touches the patch (second slice)", fdp.evaluate("JSON.stringify(__synth.patch())") == fdpatch0)
-    fdp.click('#faceChips .chip[data-v="walnut"]'); fdp.wait_for_timeout(150)
-    ck("Fd. walnut again computes exactly what it did before a face was tried", fdp.evaluate(FD_JS, FD_PARTS) == fd["walnut"])
+    fdp.click('#faceChips .chip[data-v="walnut"]'); fdp.mouse.move(2, 2); fdp.wait_for_timeout(150)
+    fd_again = fd_settled(FD_JS, FD_PARTS)
+    ck("Fd. walnut again computes exactly what it did before a face was tried", fd_again == fd["walnut"], [k for k in fd_again if fd_again[k] != fd["walnut"][k]])
     fdx.close()
     ck("Fd. no page errors", not fde, fde)
     for fd_w in (375, 320):
