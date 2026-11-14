@@ -160,7 +160,7 @@ const PRODUCTS = [
     tagline: 'No-compromise wire antenna for HF',
     description: 'The EFHW has become the go-to field antenna for portable and home use. A single wire from 40m through 10m with a 49:1 unun. Easy to deploy, works without a tuner on harmonically related bands. Many commercial options or build your own.',
     price: '$50-150',
-    link: 'https://myantennas.com/wp/product-category/antennas/efhw-multi-band/',
+    link: 'https://myantennas.com/product-category/antennas/efhw-multi-band/',
     badge: 'Field Favorite',
     badgeColor: '#00ff9d',
     specs: ['40m-10m multiband', '49:1 unun', 'Wire antenna', 'Portable friendly'],
