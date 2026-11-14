@@ -140,7 +140,7 @@ task can read it).
 | `frontend/public/synth/resnatron.worklet.js` | AudioWorklet processor `resnatron` |
 | `frontend/public/synth/resnatron-ui.js` | The bay, drag cables, and `createResnatronHost`. `attach` calls `addDevice` |
 | `frontend/public/synth/iris/` | Iris, a camera instrument on its own page. `iris.js` is the patch and the pixel measurements, `iris-dsp.js` the voice, `iris.worklet.js` the processor, `iris-ui.js` the panel |
-| `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire |
+| `frontend/public/synth/mixer.js` | Per-device level, pan, mute and solo into the shared ensemble. Defaults are a straight wire; a live strip is rewired only while silent, and a sounding strip keeps its chain and glides ("Wiring" at the top of the file) |
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure. `engine.js` posts its state (`{t:'clock'}`) to the Filament and Cathode worklets on play, stop, tempo and locate, for tempo-synced LFOs |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, the tape echo, the spring reverb's mix around its worklet, and the graphic EQ's presets, fitting, resampling and live spectrum tap; in tubepaint.js: the four-tube state, the tube show overlay, and the big tube view's zoom, pan, quality and wide chassis) |
@@ -1172,6 +1172,48 @@ The 5:30 AM improvement job (scheduled task) ships one engineering improvement a
 features, in this order: a review finding marked broken, CPU (test 9's hottest path, sound unchanged
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
+
+- Done 14 Nov (improvement, test health turned robustness, the graphics job's 14 Nov "Mx. pan hard left back to centre"
+  flake): a sounding mixer strip keeps its chain, so its moves no longer rewire it mid-sound. One commit (code, checks,
+  this entry and the log line).
+  Why this item: no review finding marked broken is open that this job can fix (R1103-1 still waits on James). CPU:
+  test 9 still moves several points between runs with no code change. The 3 AM graphics run saw "Mx. a strip going
+  back to unity glides ... pan hard left back to centre" fail once at 43.6x the held sine's step and asked for a look.
+  Cause (measured): a live strip move rewired the strip with two main-thread graph calls (`source.disconnect()`, then
+  `connect`). The audio thread can render a quantum between them, so the strip went silent for 128 samples, a click.
+  A held A2 sine cut to zero for one quantum steps up to about 70x its own largest step, so 43.6x fits. Repro
+  (`gap_repro.py`, scratch): a stereo DC 0.5 through `createMixer` on a live context, 32 moves (level 0.999, pan -1,
+  mute, a solo elsewhere, each and back). Main, no stall: 0 of 32 dropped out (the box was quiet enough). Main, the
+  main thread held 6 ms after every `disconnect()`: 25 of 32 dropped out (steps of 0.5). A disconnect cannot be
+  scheduled on the audio clock, so the fix is to not make one in a sounding signal path.
+  Tried first and not shipped: every live strip on its full chain from attach (no rewire at all). Gapless and
+  bit-exact at unity, but measured on the full page's "Realtime AudioWorklet" thread, 4 alternating rounds of 10 s:
+  idle 24.4 to 25.7% of a core on main, 27.3 to 29.8% with it (about +3.4 points, 18 strips, 5 nodes each); an
+  8-note chord 44.2 to 48.7% against 47.4 to 53.3%. Too much to pay on every page for a rare click.
+  What shipped (`mixer.js`, "Wiring" at the top): a live strip is rewired only while its source is silent (its
+  pre-fader meter reads exact zeros), where a lost quantum is silence anyway. A sounding strip on its chain keeps it,
+  and every move, back to unity included, is a glide on the audio clock. A strip at its defaults goes back to the
+  wire the next time it is silent at a move, so the chain costs only while it is used. The 9 Nov 200 ms settle hold
+  (`holdRoute`, `settleWait`) is gone with the rewire it timed; R1107-1 stays fixed because a sounding strip is never
+  rewired on its way back. The strip input is now 2 channels, speakers, so a mono source reaches both sides of the
+  pan splitter (inferred from the code: no device has a mono output today, every worklet declares 2 channels).
+  Left (stated in the code): the first move off the wire of a strip that is sounding is still one rewire with sound.
+  Offline wiring is unchanged (direct, gain, pan; nothing renders between graph calls made before a render).
+  Measured, same repro on this tree: 0 of 32 moves dropped out with the 6 ms stall. Sound: offline mixer renders
+  (defaults, level, pan, pan with level, mute, a solo elsewhere, a mono source at pan -1 and at level 0.5) hash the
+  same on both trees; the sends case is not repeatable on main itself (3 runs, 3 hashes: the room convolver), and a
+  mono source panned to 0.5 now has its right side (it was silent there on main). Live: a strip moved and brought
+  back to its defaults while sounding passes its samples unchanged, max difference exactly 0 on both sides. No
+  patch, worklet or DSP touched, so no patch sounds different. Live CPU with this tree, same method: idle 23.7 to
+  27.8% (main 24.0 to 26.0%), chord 46.2 to 47.6% (main 45.5 to 46.7%); the idle graph is identical on both trees
+  (every strip on the wire), so the spread is noise.
+  New checks (Mx., 2): with the main thread held 6 ms after every disconnect, 24 moves of a sounding strip (after its
+  first) have no step over 0.05, and a silent strip moved and back returns to the wire (main: 13 to 18 of 24 moves
+  dropped out over three runs); a sounding strip moved and back at its defaults passes its samples unchanged and a
+  mono source reaches both sides. The 9 Nov audio-clock stall check now expects the strip to stay on its chain.
+  Cache `dxedge-v215` (rebased onto the 14 Nov review `99f2529`, which took v214).
+  Suite note (measured): running the main suite, this tree's suite and CPU probes at once tonight ran the box out of
+  memory (the cgroup OOM killer took a 3.5 GB renderer); run suites one at a time on this box.
 
 - Done 12 Nov (improvement, load time): worklet modules load together at boot, one `addModule` per context and URL.
   This is the 11 Nov branch `claude/worklet-preload-1111`, rebased onto origin/main `9c737be`, finished and shipped.
@@ -2226,6 +2268,7 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-11-14 (improvement, scheduled task, about 5:26 to 7:20 AM PT): robustness, from the 3 AM graphics job's one-off "Mx. pan hard left back to centre" failure (43.6x). Cause, measured: a live mixer strip move rewired the strip with two graph calls and the audio thread could render a quantum between them, a 128-sample dropout; with the main thread held 6 ms after each disconnect, 25 of 32 moves dropped out on main. Fix: `mixer.js` rewires a live strip only while its source is silent; a sounding strip keeps its chain and every move is a glide (the 9 Nov settle hold is gone). After: 0 of 32 with the same stall. Rejected on measurement: every strip on its chain always (+3.4 points of the audio thread idle). Left: the first move off the wire of a sounding strip is still one rewire. Sound: offline mixer renders hash the same on both trees (the sends case is not repeatable even on main); a strip moved and back while sounding passes samples unchanged (max diff 0); live audio thread CPU at idle and with a chord within noise of main; no patch, worklet or DSP touched. A mono source panned now keeps both sides (no device is mono today, inferred). Two new Mx. checks (each fails on main), one updated. Main first: origin/main `ec6c93c` ran 1938 PASS and 1 FAIL, "Su. the draw and fit take under 6 s" (9.7 s), with this job's CPU probes and a second suite beside it until the box ran out of memory (the run was then stopped by its time limit in the last section); the 3 AM graphics run had ALL PASS 1960 on the same code. Suite on this tree alone before the rebase: ALL PASS (1962 checks, 27 min); rebased onto the review `99f2529`, cache `dxedge-v215`, full suite re-run on exactly the pushed tree: ALL PASS (count in the commit message). `scripts/test_synth_imported.py` ALL PASS (29) on both trees. CPU (test 9, this tree): Cathode 27.2%, valve12 8 voices 23.2%, ladder24 12.9%, 16 voices with ensemble 32.9%, EQ 31 bands 28.6%, tape echo 19.4%, spring 21.2%, 1939 mode 14.6% (no worklet changed). Commit: this one.
 - 2026-11-14 (review, scheduled task, about 4:20 to 6:45 AM PT): areas f (library failed, empty and damaged files, a deck take opened in the library, a project loaded mid-song, the roll after a reload), g (Hexode, Anode, Gleam, Iris, Sculpt, Hand Orchestra, Aether at 1366 and 375 px) and h (a Tab walk of all 531 desktop stops for a visible ring, names at both sizes, focus after a deck import, reduced motion on all 18 devices) on the live site at origin/main `b4b3248`, sw.js `dxedge-v212`. Findings: 0 broken, 3 confusing (1 fixed), 1 missing; plus R1113-5 from 13 Nov fixed. Re-measured and still open R1020-3, R1020-7, R1020-8 (531 stops), R1020-9, R1024-3, R1025-5, R1030-3, R1108-5. Fixes: R1114-1 and R1113-5, a failed .mid import in the library or on the deck now says the previous file is still loaded; checks "P. ... (review R1114-1)" and "M. ... (review R1113-5)", both failing on `b4b3248`. Status text only, no sound changed. Cache `dxedge-v214`. Suite: ALL PASS on this tree (count in the commit message). Commit: this one.
 - 2026-11-14 (graphics, scheduled task, about 3:15 to 5:30 AM PT): Phantastron's cartridge row (the top Graphics backlog item). The six cartridges are one joined switch under an engraved CART tag (board green, the lit key gold), and the bends readout and lift wires share the line under it beside a BENDS tag; the tags drop on a phone. Measured: the Board card 529 to 429 px on a 375 px phone (babble and lift wires no longer take a row each), 545 to 445 at 360, 545 to 490 at 320 (six 44 px keys do not fit one line there, so babble takes a second), 470 to 466 at 1366; keys 44 px or more on a phone, no sideways scroll at 320 to 1920; lit key 8.7:1, unlit 11.0:1. Display only: no handler, patch, DSP or worklet touched. Commits `938f84b` (the row, Pc. checks (22), cache v213) and `96dbe5a` (test only: the Fd. face reads wait until two reads 100 ms apart agree). Why the second: three suite runs on `938f84b` failed one or two unrelated checks each, all timing: run 1 Fd. black light outboard hover read mid-transition (253 for 255, alpha 0.99); run 2 Fd. walnut again plus Mx. pan hard left back to centre (43.6x the sine's step, the only audio one); run 3 Fd. walnut again. The walnut-again sequence passed 4 of 4 in isolation on both main and the branch, so inference: a 150 ms read racing a CSS transition under suite load. Mx. was not touched and passed in runs 1, 3 and 4; worth a look by check and debug if it shows again. Main before: ALL PASS 1938. Pushed tree: ALL PASS 1960. No audio change.
 - 2026-11-14 (check and debug, scheduled task, about 2:07 to 2:40 AM PT): reviewed 3 commits since 13 Nov 6 PM PT on origin/main `7d5be28`, all by DXEdge Health Bot: `e5a163e` (a product link in Products.jsx, drops the /wp/ segment, plus health state), `6f829d6` and `7d5be28` (health state only); nothing under /synth or /otr. There is no 14 Nov 12:28 AM nightly commit on main (measured: nothing from the nightly after `1d444d5` at 4:53 AM 13 Nov), and no 13 Nov check and debug line, so I also read the 13 Nov Filament commits `42d040a`, `dd6b520` and `1d444d5`: no test removed or loosened (the one removed Pk. delete-key check in `dd6b520` moved behind a desktop width, with a phone check and the new Pd. checks in its place, matching the stated move of delete into the save form on phones), no new license or vendor file, no trademark name, nothing under /otr, no factory patch touched. Suite on origin/main ALL PASS (1938 checks, about 24 min, no hang; the chromium-1194 path is still missing, it ran on its fallback); `scripts/test_synth_imported.py` ALL PASS (29). Live /synth/ ready at 1366 and 375 px, no page errors, no console errors, no sideways scroll; the only failed request was the `/api/stat` beacon aborted as the page closed; /synth/fm/ and /synth/acid/ no errors (Hexode still scrolls sideways at 375, known). Offline renders on the live page: Filament, Cathode and Dekatron all sound (RMS -24.9, -23.3, -26.5 dBFS). Live sw.js `dxedge-v212` matched main. Defects found: none. Fixes: none. Commit: this log line only.

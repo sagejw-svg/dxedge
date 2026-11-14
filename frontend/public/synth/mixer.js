@@ -4,11 +4,33 @@
 // (a short room and a feedback delay) that join the same destination, so one
 // master recording hears the mix.
 //
-// A strip at its defaults (level 1, pan centred, not muted, nobody soloed,
-// sends at zero) is wired straight through, with no extra node, so it does
-// not change the sound. Pan is a balance: centre is exactly unity on both
-// sides, and a hard pan turns one side down without boosting the other.
-// Send returns are built only when a send is above zero.
+// Pan is a balance: centre is exactly unity on both sides, and a hard pan turns
+// one side down without boosting the other. Send returns are built only when a
+// send is above zero.
+//
+// Wiring. On an offline context a strip at its defaults is wired straight to the
+// destination with no extra node, and a moved one goes through the least it needs
+// (a gain, or the gain, a splitter, a gain per side and a merger for a pan). An
+// offline render runs nothing between graph calls made before it, so any wiring
+// is safe there.
+// On a live context a rewire is two main-thread calls (disconnect, then connect),
+// and the audio thread can render a quantum between them: on a busy machine the
+// strip went silent for 128 samples at a move, a click (improvement 14 Nov; with
+// the main thread held 6 ms after each disconnect, 16 of 24 moves dropped out on
+// origin/main; the suite's live "back to unity" check failed once at 43.6x the
+// held sine's step). A disconnect cannot be scheduled on the audio clock. So a
+// live strip is rewired only while its source is silent (its meter reads exact
+// zeros), where a lost quantum is silence anyway. A strip that carries sound and
+// has its chain (the gain, splitter, side gains and merger) keeps it, and every
+// move is a glide on the audio clock. One rewire with sound is left: the first
+// move off the defaults of a sounding strip still on the wire. Keeping every
+// strip on its chain all the time removes that too, but measured 14 Nov it costs
+// the audio thread about 3.4 points of a core on the idle page (18 strips, 5
+// nodes each), so a strip at its defaults goes back to the wire when it is next
+// silent at a move. This also keeps R1107-1 fixed (a strip back at unity jumped
+// to full in one sample when it was rewired before its glide ended): a sounding
+// strip glides back on its chain and is never rewired then, so the 200 ms hold
+// that timed that rewire on the audio clock (improvement 9 Nov) is gone with it.
 
 export const STRIP = { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 };
 
@@ -77,7 +99,12 @@ export function createMixer(ctx) {
     param.value = v;
   }
   function make(id) {
+    // Two channels, speakers: a mono source reaches both sides of the splitter (a mono input to the
+    // splitter itself would land on the left only), and a stereo one passes unchanged.
     const input = ctx.createGain();
+    input.channelCount = 2;
+    input.channelCountMode = 'explicit';
+    input.channelInterpretation = 'speakers';
     input.gain.value = 1;
     const ch = {
       id, input, source: null, strip: normalizeStrip(null),
@@ -109,7 +136,7 @@ export function createMixer(ctx) {
       if (ch.sendFrom === ch.input) ch.sendFrom = null;
       ch.input.connect(destination);
       ch.inputRoute = 'dest';
-    } else if (mode === 'pan' && ch.inputRoute !== 'pan') {
+    } else if ((mode === 'pan' || mode === 'chain') && ch.inputRoute !== 'pan') {
       ensurePan(ch);
       try { ch.input.disconnect(); } catch (e) {}
       if (ch.sendFrom === ch.input) ch.sendFrom = null;
@@ -152,7 +179,7 @@ export function createMixer(ctx) {
   }
   function postNode(ch) {
     if (ch.route === 'direct') return ch.source;
-    if (ch.route === 'pan' && ch.merge) return ch.merge;
+    if ((ch.route === 'pan' || ch.route === 'chain') && ch.merge) return ch.merge;
     if (ch.route === 'gain') return ch.input;
     return null;
   }
@@ -215,33 +242,17 @@ export function createMixer(ctx) {
     if (ch.meterFrom) { try { ch.meterFrom.disconnect(ch.an); } catch (e) {} }
     try { ch.source.connect(ch.an); ch.meterFrom = ch.source; } catch (e) { ch.meterFrom = null; }
   }
-  // Going back to a simpler route (unmute, level back to full, pan back to centre, a solo let go)
-  // waits for the gains to glide to unity first. Rerouting at once skipped the glide: the signal
-  // jumped from its faded level to full in one sample, a click (review 7 Nov, R1107-1). Going the
-  // other way is seamless, because the gains of a route not in use rest at unity.
-  // The wait is counted on the audio clock, not the wall clock: the glide runs on ctx.currentTime, and
-  // that clock can fall behind a timer (a loaded machine, a stalled audio thread) or stop (a suspended
-  // context). A plain 200 ms timer then rerouted with the gain still short of unity, the same click
-  // (improvement 9 Nov; measured: audio 177 ms against wall 276 ms under load, and a full jump when the
-  // context was suspended right after an unmute). The timer only polls; the audio clock decides.
-  const RANK = { direct: 0, gain: 1, pan: 2 };
-  const SETTLE_S = 0.2;     // ten time constants of setP: the gains are within 5e-5 of their targets
-  function settleWait(ch) {
-    ch.settle = null;
-    const left = ch.settleAt - ctx.currentTime;
-    if (left > 0 && ctx.state !== 'closed') { ch.settle = setTimeout(() => settleWait(ch), Math.max(10, left * 1000)); return; }
-    ch.settled = true; apply(); ch.settled = false;
+  // A live strip's source has given exact zeros for the meter's last 256 samples (a sleeping device, a
+  // finished tail). The meter is the pre-fader analyser on the source.
+  function silent(ch) {
+    if (!ch.source || !ch.an || ch.meterFrom !== ch.source) return !ch.source;
+    ch.an.getFloatTimeDomainData(ch.bin);
+    for (let i = 0; i < ch.bin.length; i++) if (ch.bin[i] !== 0) return false;
+    return true;
   }
-  function holdRoute(ch, mode) {
-    if (!live || !ch.source || !(ch.route in RANK) || RANK[mode] >= RANK[ch.route]) {
-      if (ch.settle) { clearTimeout(ch.settle); ch.settle = null; }
-      return mode;
-    }
-    if (ch.settled) return mode;
-    if (ch.settle) clearTimeout(ch.settle);
-    ch.settleAt = ctx.currentTime + SETTLE_S;   // apply() restarts every glide from this moment
-    ch.settle = setTimeout(() => settleWait(ch), SETTLE_S * 1000);
-    return ch.route;
+  // Called only when the chain is about to be entered or left, i.e. while nothing sounds through it.
+  function restChain(ch) {
+    [ch.input, ch.gL, ch.gR].forEach(n => { if (n) { n.gain.cancelScheduledValues(0); n.gain.value = 1; } });
   }
   function apply() {
     if (!destination) return;
@@ -250,8 +261,14 @@ export function createMixer(ctx) {
     list.forEach(ch => {
       const g = audibleGain(ch.strip, anySolo);
       const centered = ch.strip.pan === 0;
-      const mode = holdRoute(ch, g === 1 && centered ? 'direct' : centered ? 'gain' : 'pan');
+      // see "Wiring" at the top of this file
+      let mode = g === 1 && centered ? 'direct' : centered ? 'gain' : 'pan';
+      if (live) {
+        if (mode !== 'direct') mode = 'chain';
+        if (ch.route === 'chain' && mode === 'direct' && !silent(ch)) mode = 'chain';   // sounding: stay, glide back to unity
+      }
       if (ch.source && ch.route !== mode) {
+        if (live) restChain(ch);   // a chain not in use rests at unity, so the next entry starts from there
         try { ch.source.disconnect(); } catch (e) {}
         ch.sendFrom = null;
         ch.meterFrom = null;
@@ -260,10 +277,10 @@ export function createMixer(ctx) {
         ch.route = mode;
       } else if (ch.source && mode !== 'direct') arm(ch, mode);
       if (mode !== 'direct') {
-        if (mode === 'pan' && destination && !ch.split) ensurePan(ch);
+        if (mode !== 'gain' && destination && !ch.split) ensurePan(ch);
         setP(ch.input.gain, g);
-        if (mode === 'pan' && ch.gL) {
-          const b = balanceGains(ch.strip.pan);   // centred while the pan route is held: 1, 1
+        if (mode !== 'gain' && ch.gL) {
+          const b = balanceGains(ch.strip.pan);   // centred: exactly 1, 1
           setP(ch.gL.gain, b.l);
           setP(ch.gR.gain, b.r);
         }
@@ -289,7 +306,7 @@ export function createMixer(ctx) {
       return ch.input;
     },
     get(id) { return normalizeStrip(channels[id] && channels[id].strip); },
-    route(id) { return (channels[id] && channels[id].route) || ''; },   // 'direct', 'gain' or 'pan' (read by the suite)
+    route(id) { return (channels[id] && channels[id].route) || ''; },   // live 'direct' or 'chain'; offline 'direct', 'gain' or 'pan' (read by the suite)
     set(id, partial) {
       const ch = channels[id] || make(id);
       ch.strip = normalizeStrip(Object.assign({}, ch.strip, partial || {}));

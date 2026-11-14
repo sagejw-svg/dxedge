@@ -5325,6 +5325,8 @@ with sync_playwright() as pw:
     # right after the move back and held 450 ms (past the old timer), then resumed. Deterministic: the largest
     # sample step is read in units of the glide's own first step (0.5 / 960), so a reroute before the glide
     # lands is the whole jump (960x on main), and the glide alone is 1x or less.
+    # Improvement 14 Nov: a sounding live strip is not rewired back to the wire any more (see "Wiring" in
+    # mixer.js): it keeps its chain and glides, so the route reads 'chain' while stopped and after.
     stall = pg.evaluate("""async () => {
       const { createMixer } = await import('/synth/mixer.js');
       const w = ms => new Promise(r => setTimeout(r, ms));
@@ -5360,8 +5362,92 @@ with sync_playwright() as pw:
         try { dc.stop(); await ctx.close(); } catch (e) {}
       }
       return out; }""")
-    ck("Mx. with the audio clock stopped right after a strip goes back to unity, the reroute waits for the glide on the audio clock (largest step within 1.5x the glide's own; held route while stopped, the wire after)",
-       len(stall) == 4 and all(s[1] is not None and s[1] < 1.5 and s[2] in ("gain", "pan") and s[3] == "direct" for s in stall), stall)
+    ck("Mx. with the audio clock stopped right after a sounding strip goes back to unity, the move still glides on the audio clock (largest step within 1.5x the glide's own; the strip stays on its chain, no rewire)",
+       len(stall) == 4 and all(s[1] is not None and s[1] < 1.5 and s[2] == "chain" and s[3] == "chain" for s in stall), stall)
+    # Improvement 14 Nov: a move used to rewire the strip with two graph calls (disconnect, then connect), and
+    # the audio thread can render a quantum between them: on a busy machine the strip went silent for 128
+    # samples, a click (the live "back to unity" check above failed once at 43.6x the held sine's step). Here
+    # the main thread is held 6 ms after every disconnect(), so any such window is hit every time: a stereo
+    # DC 0.5 on strip a, moved once first (its first move off the wire is the one rewire with sound left,
+    # see mixer.js), then 3 rounds of level 0.999, pan hard left, mute and a solo on strip b, each and back.
+    # Any step over 0.05 is a dropout (the glides step 0.0005 or less). On origin/main 16 of the 24 moves
+    # dropped out (64 steps of 0.5, measured). A silent strip c is moved and moved back: it takes its chain
+    # and goes back to the wire (the chain costs the audio thread; a silent strip has nothing to lose).
+    # Then, with no stall: a sounding strip moved and back at its defaults passes its samples unchanged (a
+    # stereo pair through the strip against the same pair wired past it), and a mono source reaches both sides.
+    gapless = pg.evaluate("""async () => {
+      const { createMixer } = await import('/synth/mixer.js');
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const CAP = "registerProcessor('mx-gap-cap', class extends AudioWorkletProcessor { process(i) { const x = i[0]; if (x && x.length) this.port.postMessage(x.map(c => c.slice())); return true; } });";
+      const url = URL.createObjectURL(new Blob([CAP], { type: 'application/javascript' }));
+      const join = (B, k) => { const n = B.reduce((s, x) => s + x[k].length, 0), v = new Float32Array(n); let o = 0; B.forEach(x => { v.set(x[k], o); o += x[k].length; }); return v; };
+      const out = {};
+      { // 1. moves with the main thread held after every disconnect
+        const ctx = new AudioContext({ sampleRate: 48000 }); await ctx.resume(); await ctx.audioWorklet.addModule(url);
+        const mx = createMixer(ctx), sum = ctx.createGain(), hush = ctx.createGain(); hush.gain.value = 0;
+        const cap = new AudioWorkletNode(ctx, 'mx-gap-cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit' });
+        const dc = ctx.createConstantSource(); dc.offset.value = 0.5;
+        const st = ctx.createChannelMerger(2); dc.connect(st, 0, 0); dc.connect(st, 0, 1);
+        const z = ctx.createConstantSource(); z.offset.value = 0; const st2 = ctx.createChannelMerger(2); z.connect(st2, 0, 0); z.connect(st2, 0, 1);
+        const z3 = ctx.createConstantSource(); z3.offset.value = 0;
+        sum.connect(cap); cap.connect(hush); hush.connect(ctx.destination);
+        mx.attach('a', st); mx.attach('b', st2); mx.attach('c', z3); mx.connect(sum); dc.start(); z.start(); z3.start();
+        await w(200); mx.set('a', { level: 0.999 }); await w(250); mx.set('a', { level: 1 }); await w(300);
+        const B = []; let on = false; cap.port.onmessage = e => { if (on) B.push(e.data); };
+        const orig = AudioNode.prototype.disconnect; let held = 0;
+        AudioNode.prototype.disconnect = function (...a) { const r = orig.apply(this, a); held++; const t = performance.now() + 6; while (performance.now() < t) {} return r; };
+        const moves = [['a', { level: 0.999 }, { level: 1 }], ['a', { pan: -1 }, { pan: 0 }], ['a', { mute: true }, { mute: false }], ['b', { solo: true }, { solo: false }]];
+        try {
+          await w(300); on = true; await w(100);
+          for (let c = 0; c < 3; c++) for (const [id, a, b] of moves) { mx.set(id, a); await w(250); mx.set(id, b); await w(350); }
+          await w(200);
+        } finally { AudioNode.prototype.disconnect = orig; }
+        on = false;
+        mx.set('c', { level: 0.5 }); const cOff = mx.route('c'); await w(300); mx.set('c', { level: 1 }); const cBack = mx.route('c');
+        let worst = 0, jumps = 0;
+        for (const k of [0, 1]) { const v = join(B, k); for (let i = 1; i < v.length; i++) { const d = Math.abs(v[i] - v[i - 1]); if (d > worst) worst = d; if (d > 0.05) jumps++; } }
+        out.moves = { worst: +worst.toFixed(4), jumps, held, seconds: +(B.length * 128 / 48000).toFixed(1), route: mx.route('a'), b: mx.route('b'), c: [cOff, cBack] };
+        try { dc.stop(); z.stop(); z3.stop(); await ctx.close(); } catch (e) {}
+      }
+      { // 2. defaults pass the samples unchanged; a mono source reaches both sides
+        const ctx = new AudioContext({ sampleRate: 48000 }); await ctx.resume(); await ctx.audioWorklet.addModule(url);
+        const mx = createMixer(ctx), sum = ctx.createGain(), hush = ctx.createGain(); hush.gain.value = 0;
+        const cap = new AudioWorkletNode(ctx, 'mx-gap-cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 6, channelCountMode: 'explicit', channelInterpretation: 'discrete' });
+        const all = ctx.createChannelMerger(6), sp = ctx.createChannelSplitter(2), sp2 = ctx.createChannelSplitter(2);
+        const osc = ctx.createOscillator(); osc.frequency.value = 233.3;
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 3.1; const lg = ctx.createGain(); lg.gain.value = 0.3; lfo.connect(lg);
+        const st = ctx.createChannelMerger(2); osc.connect(st, 0, 0); lg.connect(st, 0, 1);   // two different sides
+        const mono = ctx.createOscillator(); mono.frequency.value = 411.7;
+        const mxm = createMixer(ctx), msum = ctx.createGain();
+        mx.attach('a', st); mx.connect(sum); mxm.attach('m', mono); mxm.connect(msum);
+        sum.connect(sp); sp.connect(all, 0, 0); sp.connect(all, 1, 1);
+        const ref = ctx.createChannelMerger(2); osc.connect(ref, 0, 0); lg.connect(ref, 0, 1);   // the same sides past the mixer (it rewires st's outputs)
+        const sp3 = ctx.createChannelSplitter(2); ref.connect(sp3); sp3.connect(all, 0, 2); sp3.connect(all, 1, 3);
+        msum.channelCount = 2; msum.channelCountMode = 'explicit'; msum.connect(sp2); sp2.connect(all, 0, 4); sp2.connect(all, 1, 5);
+        all.connect(cap); cap.connect(hush); hush.connect(ctx.destination);
+        osc.start(); lfo.start(); mono.start();
+        const B = []; let on = false; cap.port.onmessage = e => { if (on) B.push(e.data); };
+        await w(200); mx.set('a', { level: 0.5, pan: 0.4 }); await w(300); mx.set('a', { level: 1, pan: 0 }); await w(600);
+        on = true; await w(500); on = false;
+        const v = [0, 1, 2, 3, 4, 5].map(k => join(B, k));
+        let dl = 0, dr = 0, peakL = 0, peakR = 0, ml = 0, mr = 0, mdiff = 0;
+        for (let i = 0; i < v[0].length; i++) {
+          dl = Math.max(dl, Math.abs(v[0][i] - v[2][i])); dr = Math.max(dr, Math.abs(v[1][i] - v[3][i]));
+          peakL = Math.max(peakL, Math.abs(v[0][i])); peakR = Math.max(peakR, Math.abs(v[1][i]));
+          ml = Math.max(ml, Math.abs(v[4][i])); mr = Math.max(mr, Math.abs(v[5][i])); mdiff = Math.max(mdiff, Math.abs(v[4][i] - v[5][i]));
+        }
+        out.unity = { dl, dr, peakL: +peakL.toFixed(3), peakR: +peakR.toFixed(3), monoL: +ml.toFixed(3), monoR: +mr.toFixed(3), mdiff, n: v[0].length, route: mx.route('a') };
+        try { osc.stop(); lfo.stop(); mono.stop(); await ctx.close(); } catch (e) {}
+      }
+      return out; }""")
+    gm = gapless.get("moves", {})
+    ck(f"Mx. a sounding strip's moves never drop it out, even with the main thread held 6 ms after every disconnect (24 moves on a DC 0.5: largest step {gm.get('worst')}, steps over 0.05: {gm.get('jumps')}, want 0); a silent strip moved and back returns to the wire",
+       gm.get("jumps") == 0 and gm.get("worst") is not None and gm["worst"] < 0.05 and gm.get("seconds", 0) > 7 and gm.get("route") == "chain"
+       and gm.get("b") == "direct" and gm.get("c") == ["chain", "direct"], gm)
+    gu = gapless.get("unity", {})
+    ck("Mx. a sounding live strip moved and back at its defaults passes its samples unchanged on both sides, and a mono source reaches both sides at the same level",
+       gu.get("n", 0) > 10000 and gu.get("dl") == 0 and gu.get("dr") == 0 and gu.get("peakL", 0) > 0.9 and 0.25 < gu.get("peakR", 0) < 0.35
+       and gu.get("monoL", 0) > 0.9 and gu.get("mdiff") == 0 and gu.get("route") == "chain", gu)
     pg.evaluate("() => __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 })")
     pg.evaluate("() => { __synth.panic(); __synth.mixArm(['filament', 'cathode']); }")
     pg.evaluate("""() => {
