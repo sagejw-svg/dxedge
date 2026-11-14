@@ -666,6 +666,30 @@
   .ph-wires .ph-wname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
   .ph-wires[data-on="1"] { color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
   .ph-wires[data-on="1"] i { background: #e7c56a; box-shadow: 0 0 6px #e7c56a; }
+  /* Phantastron's cartridge row (graphics, 14 Nov). An engraved CART tag and the six cartridges as one joined switch in a
+     recessed tray, the seed stepper's board green, the lit key gold; the tray's black shows through a 1 px gap and the
+     keys grow to fill each line, so a switch that wraps on a narrow card reads as a keypad with no holes (Orthicon's
+     Picture card finish). Under it a BENDS tag, the bends readout and lift wires at its right end. Before, six loose
+     chips and lift wires on one row; on a 375 px phone three rows (babble alone, then lift wires alone) above the
+     readout. Static, so nothing for reduced motion. */
+  #phRoot .ph-cartrow, #phRoot .ph-wirerow { flex-wrap: nowrap; gap: 6px 10px; margin: 8px 0 0; }
+  #phRoot .ph-wirerow { margin-bottom: 8px; align-items: stretch; }
+  #phRoot .ph-cartrow .ph-tag, #phRoot .ph-wirerow .ph-tag { align-self: center; }
+  #phRoot .ph-join { display: flex; flex-wrap: wrap; gap: 1px; flex: 1 1 auto; min-width: 0; margin: 0;
+    background: #000; border: 1px solid #000; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 1px 0 rgba(231,240,216,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #phRoot .ph-join > .chip { flex: 1 1 auto; margin: 0; border: 0; border-radius: 0; min-height: 30px; padding: 3px 6px;
+    display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 11.5px; font-weight: 400;
+    background: linear-gradient(180deg, #1b2e23, #0f1c15); color: #d7e7c4; box-shadow: inset 0 1px 0 rgba(231,240,216,0.07); }
+  #phRoot .ph-join > .chip:hover:not([aria-pressed="true"]) { color: #f0d7a0; }
+  body[data-dev="phantastron"] #phRoot .ph-join > .chip[aria-pressed="true"] { color: #1a1408; font-weight: 600; border: 0;
+    background: linear-gradient(180deg, #f3d98e, #d5ae4c); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 8px rgba(255,250,220,0.25); }
+  #phRoot .ph-join > :focus-visible { position: relative; z-index: 1; outline: 2px solid #e7c56a; outline-offset: -3px; }
+  #phRoot .ph-wirerow .ph-wires { flex: 1 1 auto; }
+  #phRoot .ph-lift { flex: 0 0 auto; margin: 0; min-height: 30px; padding: 3px 11px; border-color: #24402f; border-radius: 6px; font-size: 11.5px;
+    background: linear-gradient(180deg, #1b2e23, #0f1c15); color: #d7e7c4;
+    box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(231,240,216,0.07); }
+  #phRoot .ph-lift:hover { color: #f0d7a0; border-color: #24402f; }
   #phSeed { width: 7.5em; max-width: 100%; }
   body[data-dev="phantastron"] #phRoot .mod { background: #143024; border-color: #2a4a38; }
   body[data-dev="phantastron"] #phRoot h3 { color: #e7f0d8; letter-spacing: 1.6px; }
@@ -1299,6 +1323,10 @@
     #heptodeRoot input[type="range"], #hepSong, #pentagridText, #pentagridRoot input, #trRoot input, #trRoot select, #trSeed, #orthiconSeed, #klRoot button, #klRoot input, #phRoot input, #phSeed, #rhumRoot input { min-height: 44px; }
     #phRoot .ph-slide input { min-width: 44px; }
     #phRoot .ph-step > .chip, #phRoot .ph-run { min-height: 44px; min-width: 44px; } .ph-tag { display: none; } .ph-wires { flex-basis: 100%; min-height: 32px; }
+    #phRoot .ph-join { flex: 1 1 100%; }
+    #phRoot .ph-join > .chip, #phRoot .ph-lift { min-height: 44px; min-width: 44px; padding: 4px 4px; font-size: 12px; }
+    #phRoot .ph-lift { padding: 4px 12px; }
+    #phRoot .ph-wirerow .ph-wires { flex: 1 1 0; min-height: 44px; }
     body[data-dev="additron"] .tabs [data-go="osc"], body[data-dev="additron"] .tabs [data-go="filter"],
     body[data-dev="additron"] .tabs [data-go="mod"], body[data-dev="additron"] .tabs [data-go="stereo"],
     body[data-dev="additron"] .tabs [data-go="patch"], body[data-dev="additron"] .tabs [data-go="voice"],

@@ -261,10 +261,17 @@ export function mountPhantastronPanel(container, hooks) {
   const host = hooks.host;
   const play = section('play', 'phPlay', 'Board');
   const canvas = el('canvas', { id: 'phBoard', 'aria-label': 'Circuit board. Drag a wire between bend points.' });
-  const bar = el('div', { class: 'ph-bar' });
-  const carts = el('div', { class: 'ph-bar', id: 'phCarts' });
+  // Cartridge row (graphics, 14 Nov): an engraved CART tag and the six cartridges as one joined switch in a recessed
+  // tray (the seed stepper's finish, the lit key gold), and under it the bends readout with lift wires at its right
+  // end under a BENDS tag. Before, six loose chips and lift wires on one row (three rows on a 375 px phone: babble
+  // alone on the second, lift wires alone on the third, then the readout). The tags drop on a phone.
+  const bar = el('div', { class: 'ph-bar ph-cartrow' });
+  const cartTag = el('span', { class: 'geiss-lab ph-tag', 'aria-hidden': 'true' }, 'cart');
+  const carts = el('div', { class: 'ph-join', id: 'phCarts', role: 'group', 'aria-label': 'Cartridge' });
   CARTS.forEach(c => carts.append(el('button', { type: 'button', class: 'chip', 'data-cart': c }, c)));
-  const lift = el('button', { type: 'button', class: 'chip', id: 'phLift' }, 'lift wires');
+  const lift = el('button', { type: 'button', class: 'chip ph-lift', id: 'phLift' }, 'lift wires');
+  const wireRow = el('div', { class: 'ph-bar ph-wirerow' });
+  const wireTag = el('span', { class: 'geiss-lab ph-tag', 'aria-hidden': 'true' }, 'bends');
   // Bends readout (graphics, 10 Nov): the wired bends in a recessed readout window with a lamp, dark with no
   // wires and gold once one is in. Before, "no bends" was bare text after the chips. A long list is clipped with
   // an ellipsis inside the window and the whole list goes in its title.
@@ -272,9 +279,10 @@ export function mountPhantastronPanel(container, hooks) {
   readWin.append(el('i', { 'aria-hidden': 'true' }));
   const read = el('span', { id: 'phWires', class: 'ph-wname' }, 'no bends');
   readWin.append(read);
-  bar.append(carts, lift, readWin);
+  bar.append(cartTag, carts);
+  wireRow.append(wireTag, readWin, lift);
   const note = el('p', { class: 'note' }, 'Touch a pad and drag to another. VCC pulls the bend high, GND sticks it low, CLK and NSE wobble it, OUT feeds the voice back. Drop the same wire again to lift it. The keys play the toy.');
-  play.append(canvas, bar, note);
+  play.append(canvas, bar, wireRow, note);
 
   const bend = section('bend', 'phBend', 'Bends');
   const clock = slider('phClock', 'clock', 0.25, 4, 0.01);

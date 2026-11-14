@@ -1780,8 +1780,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (13 Nov): 1. Phantastron's cartridge row on a phone; 2. Orthicon's Scan card; 3. a user patch wraps the
-desktop patch bar at 1024 px; 4. Gyrotron's route menu; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
+Rank of the open items (14 Nov): 1. Orthicon's Scan card; 2. a user patch wraps the desktop patch bar at 1024 px; 3. Gyrotron's
+route menu; 4. Rhumbatron's body and exciter chips; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
 The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rack black and black light) belongs to the nightly; this job leaves those parts alone until it closes. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
@@ -2046,9 +2046,20 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
   (99 px) and the tabs (52 px). A slimmer phone chassis (tubes and VU at about 80% height) would give the panel another
   20 to 30 px; it touches the tube canvases, so it waits for the Tube show item. The patch menu part (100 px on a 375 px
   phone, "Wide Nov") is done 6 Nov (see below).
-- [ ] Phantastron's cartridge row on a phone (10 Nov, seen at 375 px): the six cartridge chips and lift wires take three rows
-  (babble alone on the second, lift wires alone on the third) above the bends readout. A joined cartridge switch with lift wires
-  beside the readout would save a row.
+- [x] 14 Nov: Phantastron's cartridge row (the top item of 13 Nov). Seen before at 375 px: the six cartridge chips and lift
+  wires took three rows (babble alone on the second, lift wires alone on the third) above the bends readout; at 1366 px six loose
+  chips and lift wires on one row with no name. Measured before: Board card 529 px tall at 375, 545 at 320 and 360, 470 at 1366,
+  485 at 800, 533 at 1024, 480 at 1920. Now: an engraved CART tag and the six cartridges as one joined switch in a recessed tray
+  (the seed stepper's board green, the lit key gold, the Orthicon Picture card's keypad finish: the tray's black shows through a
+  1 px gap and the keys grow to fill each line), and under it a BENDS tag, the bends readout and lift wires at its right end; the
+  tags drop on a phone. Tab order unchanged (the cartridges, then lift wires). Measured after: lit key 8.7:1, unlit 11.0:1 (worst
+  stop); the switch is one line at 360 px and up (two at 320, where six 44 px keys do not fit; babble takes the second line);
+  every key 44 px or more on a phone; no sideways scroll at 320 to 1920. Board card 429 px at 375 to 412 (100 less), 445 at 360,
+  490 at 320, 466 at 1366, 481 at 800, 528 at 1024, 466 at 1920; 600 and 760 px unchanged (414, 398). Static, so nothing for
+  reduced motion. Display only: no handler, patch, DSP or worklet touched. New checks: Pc. (22).
+- [ ] Rhumbatron's body and exciter chips (14 Nov, seen at 375 px): string, bore and plate, then pluck, strike, bow and blow as
+  two rows of loose chips over the cavity, the last of the device panels with chips that are not in a joined switch. The same
+  tag and joined switch (BODY, EXCITER) would match Phantastron and Orthicon.
 - [ ] Rail plates on a 761 to 959 px window (27 Oct, measured): the role drops because the plates are 103 to 136 px; a
   title on each plate (the role) would keep it reachable by hover there.
 

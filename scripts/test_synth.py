@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -6017,6 +6017,67 @@ with sync_playwright() as pw:
            and w1["wtitle"].count("\u2192") == 6 and w1["win"]["r"] <= w1["pcard"]["r"] + 0.5 and w1["win"]["h"] < 50 and w1["sw"] <= w1["iw"], w1)
         psx.close()
     ck("Ps. no page errors (Phantastron's seed row and bends readout)", not pserr, pserr)
+    # Pc. Phantastron's cartridge row (graphics, 14 Nov 2026). Before, six loose chips and lift wires on one row; on a
+    # 375 px phone three rows (babble alone on the second, lift wires alone on the third) above the bends readout, the
+    # Board card 529 px tall. Now: a CART tag and the six cartridges as one joined switch in a recessed tray (lit key
+    # gold), and a BENDS tag with the readout and lift wires on the next line; the tags drop on a phone.
+    def _pc_con(fg, bgimg):
+        f = _dk_lum(_dk_rgbs(fg)[0]); stops = _ob_stops(bgimg) or [[0, 0, 0]]
+        return min((max(f, _dk_lum(c)) + 0.05) / (min(f, _dk_lum(c)) + 0.05) for c in stops)
+    PC_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const sw = document.getElementById('phCarts'), swc = getComputedStyle(sw), keys = [...sw.querySelectorAll('[data-cart]')], kr = keys.map(R);
+      const tops = [...new Set(kr.map(k => Math.round(k.t)))];
+      const join = kr.every((k, i) => i === 0 || Math.abs(k.t - kr[i - 1].t) > 1 || Math.abs(k.l - kr[i - 1].r) < 1.1);
+      const lit = keys.filter(k => k.getAttribute('aria-pressed') === 'true'), unlit = keys.find(k => k.getAttribute('aria-pressed') !== 'true');
+      const lc = lit[0] && getComputedStyle(lit[0]), uc = getComputedStyle(unlit);
+      const tags = [...document.querySelectorAll('#phPlay .ph-tag')].map(t => t.offsetParent ? t.textContent.trim().toUpperCase() + '|' + getComputedStyle(t).textTransform : null);
+      const lift = document.getElementById('phLift'), win = document.getElementById('phWireWin');
+      return { lines: tops.length, join, n: keys.length, keyMinW: Math.min(...kr.map(k => k.w)), keyMinH: Math.min(...kr.map(k => k.h)),
+        trayBg: swc.backgroundColor, trayShadow: swc.boxShadow, role: sw.getAttribute('role'), label: sw.getAttribute('aria-label'),
+        lit: lit.map(k => k.dataset.cart), litBg: lc ? lc.backgroundImage : '', litColor: lc ? lc.color : '', unBg: uc.backgroundImage, unColor: uc.color,
+        tags, sw: R(sw), lift: R(lift), win: R(win), card: R(document.getElementById('phPlay')), liftText: lift.textContent,
+        order: [...document.querySelectorAll('#phPlay button')].map(b => b.dataset.cart || b.id),
+        cart: __synth.patch().cart, wires: __synth.patch().wires.length, wtext: document.getElementById('phWires').textContent,
+        anim: [...keys, lift].map(k => getComputedStyle(k).animationName).filter(a => a !== 'none'),
+        sw2: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pcerr = []
+    for pc_w, pc_mob, pc_rm in ((1366, False, "no-preference"), (800, False, "no-preference"), (375, True, "reduce"), (320, True, "no-preference")):
+        pcx = b.new_context(viewport={"width": pc_w, "height": 667 if pc_mob else 1000}, is_mobile=pc_mob, has_touch=pc_mob, reduced_motion=pc_rm)
+        pcp = pcx.new_page(); pcp.on("pageerror", lambda e: pcerr.append(str(e)))
+        pcp.goto(BASE); pcp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        pcp.evaluate("__synth.setDevice('phantastron')"); pcp.wait_for_timeout(300)
+        if pc_mob: pcp.click(".tabs [data-go='play']"); pcp.wait_for_timeout(200)
+        pc = pcp.evaluate(PC_MEAS)
+        lit_con, un_con = _pc_con(pc["litColor"], pc["litBg"]), _pc_con(pc["unColor"], pc["unBg"])
+        info(f"Pc. {pc_w} px", f"Board card {pc['card']['h']:.0f} px tall, switch {pc['sw']['w']:.0f} px on {pc['lines']} line(s), keys {pc['keyMinW']:.0f}x{pc['keyMinH']:.0f} px or more, lit {lit_con:.1f}:1, unlit {un_con:.1f}:1")
+        ck(f"Pc. at {pc_w} px the six cartridges are one joined switch in a recessed tray (a named group), the patch's cartridge lit gold ({lit_con:.1f}:1) and the rest board green ({un_con:.1f}:1), both 4.5:1 or more",
+           pc["n"] == 6 and pc["join"] and pc["trayBg"] == "rgb(0, 0, 0)" and "inset" in pc["trayShadow"] and pc["role"] == "group" and pc["label"] == "Cartridge"
+           and pc["lit"] == [pc["cart"]] and "gradient" in pc["litBg"] and "gradient" in pc["unBg"] and lit_con >= 4.5 and un_con >= 4.5, pc)
+        ck(f"Pc. at {pc_w} px the bends readout and lift wires share the line under the switch, both inside the card, and the tab order is the cartridges then lift wires",
+           abs(pc["win"]["t"] - pc["lift"]["t"]) < 1 and pc["win"]["r"] <= pc["lift"]["l"] and pc["win"]["t"] >= pc["sw"]["b"]
+           and pc["lift"]["r"] <= pc["card"]["r"] and pc["sw"]["r"] <= pc["card"]["r"] + 0.5 and pc["liftText"] == "lift wires"
+           and pc["order"][:7] == ["lull", "count", "chirp", "bark", "tone", "babble", "phLift"], pc)
+        ck(f"Pc. at {pc_w} px the keys hold still (no animation; static, so reduced motion has nothing to stop)", not pc["anim"], pc["anim"])
+        if pc_mob:
+            ck(f"Pc. on a {pc_w} px phone the tags drop, every cartridge key and lift wires are 44 px or more, no sideways scroll",
+               all(t is None for t in pc["tags"]) and pc["keyMinW"] >= 44 and pc["keyMinH"] >= 44 and pc["lift"]["h"] >= 44 and pc["lift"]["w"] >= 44
+               and pc["sw2"] <= pc["iw"] == pc_w, pc)
+            if pc_w == 375:
+                ck("Pc. on a 375 px phone the six cartridges take one line and the Board card is 480 px or less (was 529: babble and lift wires each had a row)",
+                   pc["lines"] == 1 and pc["card"]["h"] <= 480, (pc["lines"], pc["card"]))
+        else:
+            ck(f"Pc. at {pc_w} px CART and BENDS are engraved tags at the left of the two rows, the switch on one line, keys 30 px tall",
+               pc["tags"] == ["CART|uppercase", "BENDS|uppercase"] and pc["lines"] == 1 and pc["keyMinH"] >= 29.5 and pc["lift"]["h"] >= 29.5, pc)
+        pcp.click("#phCarts [data-cart='chirp']"); pcp.wait_for_timeout(150)
+        pk = pcp.evaluate(PC_MEAS)
+        pcp.evaluate("() => { const q = __synth.patch(); q.wires = [['vcc','rate'],['gnd','loop']]; __synth.setPatch(q); }"); pcp.wait_for_timeout(150)
+        pw_ = pcp.evaluate(PC_MEAS)
+        pcp.click("#phLift"); pcp.wait_for_timeout(150)
+        pl = pcp.evaluate(PC_MEAS)
+        ck(f"Pc. at {pc_w} px a cartridge key sets the cartridge and lights only itself, and lift wires still clears the board",
+           pk["cart"] == "chirp" and pk["lit"] == ["chirp"] and pw_["wires"] == 2 and pl["wires"] == 0 and pl["wtext"] == "no bends", (pk["lit"], pk["cart"], pw_["wires"], pl["wires"], pl["wtext"]))
+        pcx.close()
+    ck("Pc. no page errors (Phantastron's cartridge row)", not pcerr, pcerr)
     # Hf. the Rack tab's project, mix and patch rows (graphics, 11 Nov 2026). Before, loose keys beside plain dark text
     # boxes ("Untitled" clipped in a 74 px box at 1366 px), seven loose rows on a 375 px phone. Now: one faceplate, each
     # row an engraved tag, the name in a recessed amber readout window and its keys as one joined switch; the patch
