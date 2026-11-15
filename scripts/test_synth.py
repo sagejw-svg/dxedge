@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -11274,6 +11274,82 @@ with sync_playwright() as pw:
         wtp.goto(BASE); wtp.wait_for_function("window.__tb", timeout=60000)
         wlt.append([round(v) for v in wtp.evaluate("[window.__tr, window.__tb]")]); wtx.close()
     info("Wl. boot (ready, booted) in ms from navigation, 3 cold loads, local server, 1366 px", wlt)
+
+    # Sn. subnormals in a silent tail (15 Nov 2026). A state that decays by a constant factor toward zero sinks
+    # into subnormal doubles, where arithmetic is many times slower, and a factor over 0.5 sticks at the smallest
+    # one for good, so a silent device kept paying for it. Each hosted device's processor runs on a blank
+    # same-origin page with stub worklet globals (the way scripts/scan_device_subnormals.mjs runs it in Node):
+    # one factory patch, a chord held 1 s, then 13 s of silence; its state is read every 4 blocks over the
+    # last 2.5 s. On origin/main `479f58d`: Dekatron's and Lattice's DC blockers, Additron's rotor crossover,
+    # Phantastron's output follower, Pentagrid's crackle spike and Gleam's meter peak.
+    snx = b.new_context(); snp = snx.new_page(); sne = []
+    snp.on("pageerror", lambda e: sne.append(str(e)))
+    snp.goto(BASE + "device.js")
+    snr = snp.evaluate("""async () => {
+      const SR = 48000, B = 128, MIN = 2.2250738585072014e-308, procs = {};
+      globalThis.sampleRate = SR; globalThis.currentFrame = 0; globalThis.currentTime = 0;
+      globalThis.registerProcessor = (n, c) => { procs[n] = c; };
+      globalThis.AudioWorkletProcessor = class { constructor() { this.port = { postMessage() {}, onmessage: null }; } };
+      let seed = 1;
+      Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      const scan = root => {
+        const hits = new Set(), seen = new Set();
+        const walk = (o, p, d) => {
+          if (o == null || d > 7) return;
+          if (typeof o === 'number') { if (o !== 0 && Math.abs(o) < MIN) hits.add(p); return; }
+          if (typeof o !== 'object' || seen.has(o)) return;
+          seen.add(o);
+          if (o instanceof Float64Array) { for (let i = 0; i < o.length; i++) if (o[i] !== 0 && Math.abs(o[i]) < MIN) { hits.add(p + '[]'); break; } return; }
+          if (ArrayBuffer.isView(o)) return;
+          if (Array.isArray(o)) { o.forEach(v => walk(v, p + '[]', d + 1)); return; }
+          if (o instanceof Map) { for (const v of o.values()) walk(v, p + '{}', d + 1); return; }
+          for (const k of Object.keys(o)) if (k !== 'port') walk(o[k], p ? p + '.' + k : k, d + 1);
+        };
+        walk(root, '', 0); return hits;
+      };
+      const reg = await import('./device.js');
+      const list = [['dekatron', 'drums'], ['thyratron', 'thyratron'], ['lattice', 'lattice', 'Soft Pluck'], ['gleam', 'gleam'],
+        ['mote', 'mote'], ['heptode', 'heptode'], ['geissler', 'geissler'], ['pentagrid', 'pentagrid', 'Shift Pair'],
+        ['orthicon', 'orthicon'], ['trochotron', 'trochotron'], ['gyrotron', 'gyrotron'], ['klystron', 'klystron'],
+        ['phantastron', 'phantastron'], ['additron', 'additron'], ['rhumbatron', 'rhumbatron'], ['resnatron', 'resnatron']];
+      const out = [];
+      for (const [id, mod, pick] of list) {
+        const dm = await import('./' + mod + '.js'); await import('./' + mod + '.worklet.js');
+        const desc = reg.getDevice(id) || Object.values(dm).find(v => v && typeof v === 'object' && v.id === id && v.processor);
+        const fac = (desc.factory && desc.factory.length) ? desc.factory : Object.entries(dm).find(([k, v]) => /FACTORY$/.test(k) && Array.isArray(v))[1];
+        const fp = pick ? fac.find(f => f.name === pick) : fac[0];
+        seed = 1;
+        const patch = desc.normalize ? desc.normalize(fp.patch || fp) : (fp.patch || fp);
+        const proc = new procs[desc.processor]({ processorOptions: { patch, events: [], active: true } });
+        const send = m => { if (proc.port.onmessage) proc.port.onmessage({ data: m }); };
+        const msgs = desc.messages || [], notes = [48, 55, 60, 64];
+        const L = new Float32Array(B), R = new Float32Array(B), iL = new Float32Array(B), iR = new Float32Array(B);
+        const n = Math.ceil(14 * SR / B), off = 2 + Math.round(SR / B), from = Math.round(11.5 * SR / B);
+        const fields = new Set(); let peak = 0, scans = 0;
+        for (let k = 0; k < n; k++) {
+          if (k === 2) {
+            if (id === 'dekatron') ['kick', 'snare', 'hatC', 'hatO', 'clap', 'tom', 'rim'].forEach(v => send({ t: 'trig', voice: v, v: 0.9 }));
+            else if (msgs.includes('on')) notes.forEach(x => send({ t: 'on', n: x, v: 0.8 }));
+          }
+          if (k === off && msgs.includes('off')) notes.forEach(x => send({ t: 'off', n: x }));
+          globalThis.currentFrame = k * B; globalThis.currentTime = k * B / SR;
+          L.fill(0); R.fill(0);
+          proc.process([[iL, iR]], [[L, R]], {});
+          if (k < off) for (let i = 0; i < B; i++) { const a = Math.max(Math.abs(L[i]), Math.abs(R[i])); if (a > peak) peak = a; }
+          if (k >= from && k % 4 === 0) { scans++; for (const f of scan(proc)) fields.add(f); }
+        }
+        out.push({ id, name: fp.name, peak: +peak.toFixed(3), scans, fields: [...fields] });
+      }
+      return out;
+    }""")
+    sn_bad = {r["id"]: r["fields"] for r in snr if r["fields"]}
+    ck(f"Sn. a silent tail holds no subnormal state: {len(snr)} hosted devices, a chord held 1 s then 13 s of silence, state read every 4 blocks over the last 2.5 s (holding one: {sn_bad or 'none'})",
+       len(snr) == 16 and all(r["scans"] > 100 for r in snr) and not sn_bad, snr)
+    sn_q = [r["id"] for r in snr if not r["peak"] > 0]
+    ck(f"Sn. every scanned device sounded while the chord was held, so the tail followed real playing (silent: {sn_q or 'none'}), no page errors",
+       not sn_q and not sne, [snr, sne])
+    snx.close()
 
     b.close()
 

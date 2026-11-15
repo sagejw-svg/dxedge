@@ -296,6 +296,9 @@ export function renderGleam(eng, L, R, slots, start, wetL, wetR) {
   if (qi < q.length) eng.queue = q.slice(qi);
   else eng.queue = [];
   eng.peak = eng.peak * 0.6 + peak * 0.4;
+  // The meter's smoothed peak shrinks by 0.6 a block in silence and would stick at the smallest subnormal
+  // double; below 1e-150 (far under anything a meter shows) it is 0.
+  if (eng.peak < 1e-150) eng.peak = 0;
   eng.meterN += n;
   if (eng.meterN >= sr * 0.04) {
     eng.meterN = 0;

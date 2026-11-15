@@ -153,6 +153,7 @@ task can read it).
 | `scripts/test_synth_imported.py` | Smoke test for Hexode and Anode: they load, stay quiet, and make a sound |
 | `scripts/bench_filament_voice.mjs` | Filament voice worklet in Node with a seeded random: CPU per case, with `--ref <git ref>` an A/B that says whether the output is bit-identical, with `--profile <case>` self time per function, and with `--subnormals` the state fields that end a block holding a subnormal number (exit 3 if any). `--seconds N` sets the render length (default 6). For CPU work; not part of the suite |
 | `scripts/bench_spring.mjs` | The spring reverb tank (`spring.worklet.js`) in Node on a fixed input of our own (test 9's chord, a noise burst, silence, knob moves and clears): CPU per case, and with `--ref <git ref>` an A/B that says whether the output is bit-identical (exit 1 if not). `--seconds`, `--rounds`, `--sr`, `--cases`. For CPU work; not part of the suite |
+| `scripts/scan_device_subnormals.mjs` | The sixteen hosted devices' worklet processors in Node (stub worklet globals, seeded random): every factory patch, a chord, its tail and the chord again; prints which state fields hold a subnormal double, an output hash per case and CPU (`--dir` another tree to compare hashes, `--devices`, `--seconds`, `--rounds`, `--json`) |
 | `docs/filament-licensing.md` | Licensing rules, the register of approved and reference-only resources, notes on our own rights |
 
 ## Roadmap
@@ -1193,6 +1194,49 @@ features, in this order: a review finding marked broken, CPU (test 9's hottest p
 and proven by measurement), test suite health, load time and memory, code health, robustness.
 "Measured" means a script read it; "inferred" means it comes from reading the code. Newest first.
 
+- Done 15 Nov (improvement, CPU, the hosted devices' silent tails): six devices no longer sink state into subnormal
+  doubles once they go quiet. One commit (code, a scan script, checks, this entry and the log line).
+  Why this item: no review finding marked broken is open that this job can fix (R1103-1 still waits on James). CPU: test
+  9 is all Filament and its voice has no bit-exact hot spot left (27 Oct), but the 26 Oct note below said the other
+  devices' worklets had never been scanned for subnormals. This is that scan.
+  How (measured): `scripts/scan_device_subnormals.mjs` (new) runs each hosted device's processor in Node with stub
+  worklet globals and a seeded random, on every factory patch (83 cases): a four-note chord held 1 s (Dekatron: each
+  voice triggered), released, the tail, and the chord again at 75% of the run. After every block it walks the
+  processor's state for doubles with 0 < |x| < 2.2e-308. On origin/main `479f58d`, 24 s a case: 36 of 83 cases hold one,
+  on six devices: Dekatron's output DC blocker (`eng.dcL`, `dcR`, 41 to 42% of blocks, from about 7.5 s after the last
+  hit), Lattice's DC blocker (`dcL`, `dcR`, 24 to 30% on the four patches whose tail reaches about 10 s), Additron's rotor
+  crossover low band (`eng.low`, 44 to 61%), Phantastron's output follower (`eng.outEnv`, the OUT wire's source, 74%),
+  Pentagrid's crackle spike (`eng.crack`, between spikes, 3 to 59%) and Gleam's meter peak (`eng.peak`, once a block).
+  Each decays by a fixed factor over 0.5 (0.998, 0.9, 0.99, 0.6), so it never reaches 0: it sticks at 5e-324 for good,
+  and a lit device that has gone silent keeps doing subnormal arithmetic every sample. Thyratron, Mote, Heptode,
+  Geissler, Orthicon, Trochotron, Gyrotron, Klystron, Rhumbatron and Resnatron hold none.
+  What changed: each of those states is set to exactly 0 at the end of a block when it is under 1e-150 (`DC_FLOOR` in
+  `drums-dsp.js` and `lattice-dsp.js`, `LOW_FLOOR` in `additron-dsp.js`, `ENV_FLOOR` in `phantastron-dsp.js`,
+  `CRACK_FLOOR` in `pentagrid-dsp.js`, inline in `gleam-dsp.js`), the rule the Filament voice (26 Oct) and the spring
+  (2 Nov) already follow. 1e-150 is far below float32's smallest value, so nothing at that level can reach a sample.
+  Sound (measured): all 83 factory-patch renders hash the same on both trees in Node (24 s each, the chord played
+  again after the tail included, -0 counted as +0), and the 40 cases of the six changed devices hash the same in
+  headless Chrome (14 s, the same harness on a page). No patch sounds different.
+  CPU (measured, headless Chrome 153, the processor on a page's main thread, a chord, 12 s into the tail, then 20 s of
+  a lit silent device timed, best of 3, median of 3 alternating rounds, % of real time): Additron Copper Flute 2.02 to
+  1.04, Pentagrid Shift Pair 1.50 to 0.80, Phantastron Nursery Clock 0.60 to 0.37, Lattice Soft Pluck 1.32 to 0.87,
+  Dekatron Spark 1.51 to 1.33 (new runs 1.13 to 1.86, noisy), Gleam 0.14 to 0.14 (its state is touched once a block).
+  Node, whole 24 s case, best of 3 runs of 3 rounds, median over each device's patches: Pentagrid 1.35 to 0.84%,
+  Additron 2.90 to 2.27%, Dekatron 1.60 to 1.42%, Phantastron 1.33 to 1.23%, Lattice 11.57 to 11.54% (its four costly
+  pads never reach a silent tail in 24 s). Inferred, not measured: the same saving in the AudioWorklet thread, where
+  nothing flushes subnormals either (measured 26 Oct). Test 9 does not cover these devices' tails, so its lines cannot
+  show it.
+  New checks (Sn., 2): every hosted device (one factory patch each; Lattice Soft Pluck and Pentagrid Shift Pair, the
+  ones whose tails reach it) after a chord held 1 s and 13 s of silence holds no subnormal state, read every 4 blocks
+  over the last 2.5 s on a blank same-origin page; and each sounded while the chord was held. The first fails on
+  origin/main with exactly the six devices above. About 30 s of suite time on a loaded box.
+  Left (measured, not changed): Phantastron's per-voice smoother `v.lp` (Market Bits, about 2% of blocks) goes
+  subnormal while a voice's 70 ms release is still running; the voice resets it to 0 when it ends. Cathode's first
+  DC blocker (26 Oct note below) still waits on the noise-seed sound question.
+  Main first: the suite on origin/main `479f58d` ran 1394 PASS and 0 FAIL before this job's own 30 minute limit
+  stopped it in the P. section (this job's CPU benches shared the 2-core box with it); the 4 AM review ran ALL PASS
+  (2019) on the same commit. Cache `dxedge-v219`.
+
 - Done 14 Nov (improvement, test health turned robustness, the graphics job's 14 Nov "Mx. pan hard left back to centre"
   flake): a sounding mixer strip keeps its chain, so its moves no longer rewire it mid-sound. One commit (code, checks,
   this entry and the log line).
@@ -1693,7 +1737,8 @@ and proven by measurement), test suite health, load time and memory, code health
   when `hpS[D_S1]` is exactly 0 at the end of a block, and a subnormal input keeps it from ever being 0, so the
   seed never fires there today; at 0 it fires and the output changes (Filter Kick at 6 s, measured). Whether the
   seed should fire there is a sound question, so it waits. Other devices' worklets were not scanned
-  (`--subnormals` covers Filament and Cathode only); most snap their envelopes at a threshold already (read).
+  (`--subnormals` covers Filament and Cathode only); most snap their envelopes at a threshold already (read). 15 Nov: scanned,
+  see that entry above.
 - Done 26 Oct (nightly, a broken finding): Pentagrid could go silent until reload. "M. pentagrid: recorded ... matches
   live" and the next Pentagrid check both read silence (output 0.000) in 2 of 5 full suite runs that night, one of them
   on a clean origin/main `37175c4`. A log of what the page sent Pentagrid (new test hook `__synth.pentaSent()`) showed
@@ -2310,6 +2355,7 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
   first unchecked item (the graphic EQ).
 
 ## Nightly log
+- 2026-11-15 (improvement, scheduled task, about 5:25 to 7:20 AM PT): CPU, the hosted devices' silent tails. A new Node scan (`scripts/scan_device_subnormals.mjs`, all 16 hosted devices, 83 factory-patch cases) found six devices whose state sticks at a subnormal double once they go quiet, so a lit silent device kept doing slow arithmetic every sample: Dekatron's and Lattice's output DC blockers, Additron's rotor crossover, Phantastron's output follower, Pentagrid's crackle spike, Gleam's meter peak. Each is now set to 0 below 1e-150 at the end of a block (the 26 Oct and 2 Nov rule). Sound: 83 of 83 renders bit-identical to origin/main in Node, 40 of 40 for the six devices in headless Chrome; no patch sounds different. CPU, a lit silent device in headless Chrome (median of 3, % of real time): Additron 2.02 to 1.04, Pentagrid 1.50 to 0.80, Phantastron 0.60 to 0.37, Lattice 1.32 to 0.87, Dekatron 1.51 to 1.33 (noisy), Gleam unchanged; the worklet thread's saving is inferred. New checks Sn. (2; the first fails on origin/main with those six). Main first: origin/main `479f58d` ran 1394 PASS and 0 FAIL before this job's 30 minute limit cut it (my benches shared the box); the 4 AM review ran ALL PASS 2019 on it. Chromium: the 1194 path is still missing, run on /opt/google/chrome. Cache `dxedge-v219`. Suite on the pushed tree: ALL PASS (2021 checks); `scripts/test_synth_imported.py` ALL PASS. CPU (test 9): Cathode 24.3%; Filament 8 voices 20.3% (Ladder 24) and 15.6% (Valve 12); Dekatron Spark 17.4%. Commit: this one.
 - 2026-11-15 (review, scheduled task, about 4:20 to 5:10 AM PT): areas a (every control on Orthicon, including the new Scan card switches, Additron and Rhumbatron at both ends with offline renders; the wax lamp's switch, colours, bases, fresh wax, music and knobs; Theremin off switch re-measured) and b (all 129 factory patches from the menu; user patches saved, reloaded and deleted on Rhumbatron, Orthicon, Trochotron, Mote, Geissler, Phantastron and Cathode on a phone; 23 first-version patches from 15 Oct imported) on the live site at origin/main `4d330c6`, sw.js `dxedge-v217`. Findings: 0 broken, 2 confusing (R1115-1 Rhumbatron blow equals bow, R1115-2 Orthicon loop off holds the last column), 0 missing. Fixes: R1022-5 (delete lands on the device's own first sound, not Plate Bass or Grid Bias Bass) and the R1115-2 Scan note; new checks in Pn. and Or., each failing on the live tree. Still open: R1109-1, R1112-1, R1025-3. Cache `dxedge-v218`. Suite on the pushed tree: ALL PASS (2019 checks). Look at: Open items (Review 15 Nov). Commit: this one (the review commit on main after `4d330c6`).
 - 2026-11-15 (graphics, scheduled task, about 3:13 to 4:05 AM PT): Orthicon's Scan card (the top Graphics backlog item). Main first: origin/main `85eb185`, suite ALL PASS (1990 checks; the chromium-1194 path is still missing, it ran on its fallback). Screenshots of all 18 devices at 1366 px and every phone tab at 375 px; two new backlog items (a short card stretched beside the Rack card at 1024 px, measured on Orthicon: the Scan card 2,272 px tall with about 1,800 px empty, before and after; Trochotron's white seed box, seen). The build: phase, engine, scale and play are each an engraved tag and one joined switch in a recessed tray (the Picture card's CSS now serves both cards); on a wide card the four groups share a line, on a phone each takes a line and the tags stay in a 50 px column. Measured: the card 208 to 196 px at 1366, 233 to 201 at 1920, 224 to 252 at 800, 458 to 533 at 375, 537 to 609 at 320; unlit key 10.5:1, lit 13.3:1, tags 9.0:1; keys 44 px on a phone, no sideways scroll at 320 to 1920. Display only: handlers, patch fields and tab order unchanged, no DSP, worklet or patch touched. Commit `5b0bc9e` (cache `dxedge-v217`), new checks Os. (27). Suite on the pushed tree: ALL PASS (2017 checks). Live check (about 4:10 AM PT, cache-busted): sw.js `dxedge-v217`, orthicon-ui.js and index.html match `5b0bc9e`; Orthicon's Scan card on the live page has the four switches (196 px tall at 1366, 533 at 375, no sideways scroll). Of 7 live loads, the first (right after the deploy) logged "Failed to load worklet module script: heptode.worklet.js" and the next timed out before ready at 375 px; the other 5 were ready in about 3 s with no page errors and no failed requests, and heptode.worklet.js answers 200. Inference, not measured: a transient right after the deploy, not this change (it touched no worklet or boot code); check and debug may want to watch for it. Look at: Open items.
 - 2026-11-15 (check and debug, scheduled task, about 2:07 to 2:50 AM PT): reviewed 5 commits since 14 Nov 6 PM PT on origin/main `5273313`: the health bot's state commits `313a28c`, `6e0dae4`, `2bb7d66` (scripts/health only) and Claude's 12:28 AM nightly `d7850f1` (the wax lamp, waxlamp.js) and its log line `5273313`; also read the 14 Nov daytime commits since the last check (`938f84b`, `96dbe5a`, `99f2529`, `717fe7e`). Read `d7850f1`: nothing under /otr (the lamp is copied from /otr per decision 5, header names the source commit), no test removed or loosened (the replaced Mx. stall check and Fd. walnut reads match their commits' stated reasons), no new vendor or license file, "lava" only in code comments and internal names, the UI says "Wax lamp", storage reads and writes wrapped in try/catch. Suite on origin/main ALL PASS (1990 checks, about 25 min, no hang; the chromium-1194 path is still missing, run with SYNTH_CHROMIUM set to chromium-1243); `scripts/test_synth_imported.py` ALL PASS (29). Live (cache-busted): /synth/ ready at 1366 and 375 px, no page errors, no console errors, no sideways scroll, all 18 devices registered; the only failed request was the `/api/stat` beacon aborted as the page closed; /synth/fm/ and /synth/acid/ no errors (Hexode still scrolls sideways at 375, known). Offline renders on the live page: Filament, Cathode and Dekatron all sound (RMS -24.4, -18.0, -27.7 dBFS; no NaN). Live sw.js `dxedge-v216` matched main. Defects found: none. Fixes: none. Commit: this one (log line only).

@@ -17,6 +17,10 @@ const SINE = new Float32Array(SINE_N + 1);
 for (let i = 0; i <= SINE_N; i++) SINE[i] = Math.sin((i / SINE_N) * Math.PI * 2);
 
 const DELAY_N = 4096;
+// Below this a decaying state is set to exactly 0 at the end of a block, so it never sinks into subnormal
+// doubles (slow arithmetic, and a decay by a factor over 0.5 sticks at the smallest one for good). 1e-150 is
+// far below float32's smallest value, so nothing at that level can reach a sample. See docs/filament.md, 15 Nov.
+const LOW_FLOOR = 1e-150;
 const PERC_PART = { off: -1, '2': 3, '3': 5, '5': 9 };
 
 function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
@@ -333,6 +337,8 @@ export function renderAdditron(eng, L, R) {
     if (al > peak) peak = al;
     if (ar > peak) peak = ar;
   }
+  // The rotor's crossover low band decays toward 0 once every voice has ended; stop it there.
+  if (eng.low < LOW_FLOOR && eng.low > -LOW_FLOOR) eng.low = 0;
   eng.peak = peak;
   eng.sounding = sounding;
   eng.played += frames;

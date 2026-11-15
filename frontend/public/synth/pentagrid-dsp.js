@@ -13,6 +13,10 @@ import {
   normalizePentagrid, PENTA_BAND, morsePlan, planSpan, makeQso, ditSeconds,
 } from './pentagrid.js';
 
+// Below this a decaying state is set to exactly 0 at the end of a block, so it never sinks into subnormal
+// doubles (slow arithmetic, and a decay by a factor over 0.5 sticks at the smallest one for good). 1e-150 is
+// far below float32's smallest value, so nothing at that level can reach a sample. See docs/filament.md, 15 Nov.
+const CRACK_FLOOR = 1e-150;
 const MAX_NOTES = 8;
 const CHIME = [523.25, 659.25, 783.99];
 const VOWELS = [
@@ -474,6 +478,8 @@ export function renderRadio(eng, outL, outR, start) {
     eng.accN++;
     eng.time += 1 / sr;
   }
+  // A crackle spike shrinks by 0.9 a sample until the next one; between spikes stop it at 0, not in subnormals.
+  if (eng.crack < CRACK_FLOOR && eng.crack > -CRACK_FLOOR) eng.crack = 0;
   if (qi) q.splice(0, qi);
   eng.meterN += n;
   eng.cpuMs += Date.now() - t0;
