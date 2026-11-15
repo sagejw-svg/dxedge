@@ -335,12 +335,20 @@ export function mountOrthiconPanel(container, hooks) {
   stage.appendChild(hint);
 
   const scan = section('scan', 'mOrthScan', 'Scan');
-  const choiceRow = document.createElement('div');
-  choiceRow.className = 'chips'; choiceRow.id = 'orthiconChoices';
-  scan.appendChild(choiceRow);
+  // Graphics 15 Nov: phase, engine, scale and play are each a tagged joined switch (the Picture card's tagRow), not one loose row.
+  const scanRows = document.createElement('div');
+  scanRows.className = 'orrows'; scanRows.id = 'orthiconScanRows';
+  scan.appendChild(scanRows);
+  const choiceSw = {};
+  [['phase', 'orthiconPhase', 'Phase'], ['engine', 'orthiconEngine', 'Engine'], ['scale', 'orthiconScale', 'Scale mask']].forEach(([path, id, label]) => {
+    const sw = document.createElement('div');
+    sw.id = id;
+    choiceSw[path] = sw;
+    scanRows.appendChild(tagRow(path, sw, label));
+  });
   const toggles = document.createElement('div');
-  toggles.className = 'chips'; toggles.id = 'orthiconToggles';
-  scan.appendChild(toggles);
+  toggles.id = 'orthiconToggles';
+  scanRows.appendChild(tagRow('play', toggles, 'Playhead'));
   const knobsEl = document.createElement('div');
   knobsEl.className = 'knobs'; knobsEl.id = 'kOrthScan';
   scan.appendChild(knobsEl);
@@ -534,7 +542,7 @@ export function mountOrthiconPanel(container, hooks) {
   const choiceBtns = [];
   function choices(path, values, labels) {
     values.forEach(v => {
-      const b = chip(choiceRow, (labels && labels[v]) || v, false, () => {
+      const b = chip(choiceSw[path], (labels && labels[v]) || v, false, () => {
         setPath(hooks.patch(), path, v);
         hooks.edited();
         sync();

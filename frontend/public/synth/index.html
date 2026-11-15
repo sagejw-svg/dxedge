@@ -511,23 +511,32 @@
      red while the mic or the rack is being captured (pulsing; steady with reduced motion), dark on a cleared canvas.
      Before, five loose rows of chips and header buttons, the name bare grey text, the seed the browser's number box. */
   #orthiconCanvas { border-color: #000; box-shadow: 0 0 0 1px #2a3328, 0 1px 0 1px rgba(231,240,216,0.05), 0 0 18px rgba(198,227,138,0.05); }
-  #mOrthStage .orrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; max-width: 100%; min-width: 0; }
-  #mOrthStage .orrow:first-of-type { margin-top: 10px; }
+  :is(#mOrthStage, #mOrthScan) .orrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; max-width: 100%; min-width: 0; }
+  :is(#mOrthStage, #mOrthScan) .orrow:first-of-type { margin-top: 10px; }
+  /* Orthicon's Scan card (graphics, 15 Nov): the phase, engine, scale and play chips were one loose row run together
+     ("coherent random additive inverse FFT off major ..."), so which chips belonged together read only from which was lit.
+     Now each group is a tagged joined switch, the Picture card's finish.
+     On a wide card the four groups share a line, each tag beside its switch; a narrower card wraps whole groups. */
+  #mOrthScan .orrows { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 30px; margin-top: 10px; }
+  #mOrthScan .orrows > .orrow { margin-top: 0; flex: 0 1 auto; flex-wrap: nowrap; }
+  #mOrthScan .orrows .ortag { flex: 0 0 auto; }
+  #mOrthScan .orrows .orsw { max-width: none; }
+  #mOrthScan .orrows + .knobs { margin-top: 12px; }
   #mOrthStage .orrow + .note { margin-top: 10px; }
-  #mOrthStage .ortag { flex: 0 0 66px; white-space: nowrap; font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #a9bd8c;
+  :is(#mOrthStage, #mOrthScan) .ortag { flex: 0 0 66px; white-space: nowrap; font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #a9bd8c;
     text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(231,240,216,0.08); }
-  #mOrthStage .orsw { display: flex; flex-wrap: wrap; gap: 1px; margin: 0; flex: 0 1 auto; min-width: 0; max-width: calc(100% - 76px);
+  :is(#mOrthStage, #mOrthScan) .orsw { display: flex; flex-wrap: wrap; gap: 1px; margin: 0; flex: 0 1 auto; min-width: 0; max-width: calc(100% - 76px);
     background: #000; border: 1px solid #000; border-radius: 7px; overflow: hidden;
     box-shadow: 0 1px 0 rgba(231,240,216,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
-  #mOrthStage .orsw > .chip, #mOrthStage .orsw > .btn { flex: 1 1 auto; margin: 0; border: 0; border-radius: 0; min-height: 30px; padding: 3px 10px;
+  :is(#mOrthStage, #mOrthScan) .orsw > .chip, :is(#mOrthStage, #mOrthScan) .orsw > .btn { flex: 1 1 auto; margin: 0; border: 0; border-radius: 0; min-height: 30px; padding: 3px 10px;
     display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-size: 11.5px; font-weight: 400;
     background: linear-gradient(180deg, #1d2518, #10150d); color: #c9d8b2; box-shadow: inset 0 1px 0 rgba(231,240,216,0.07); }
-  #mOrthStage .orsw > .btn { text-transform: lowercase; }
-  #mOrthStage .orsw > .chip:hover:not([aria-pressed="true"]):not(:disabled), #mOrthStage .orsw > .btn:hover:not([aria-pressed="true"]) { color: #ecf8d6; }
-  #mOrthStage .orsw > :disabled { color: #7d8a6c; cursor: default; }
+  :is(#mOrthStage, #mOrthScan) .orsw > .btn { text-transform: lowercase; }
+  :is(#mOrthStage, #mOrthScan) .orsw > .chip:hover:not([aria-pressed="true"]):not(:disabled), :is(#mOrthStage, #mOrthScan) .orsw > .btn:hover:not([aria-pressed="true"]) { color: #ecf8d6; }
+  :is(#mOrthStage, #mOrthScan) .orsw > :disabled { color: #7d8a6c; cursor: default; }
   body[data-dev="orthicon"] #orthiconRoot .orsw > [aria-pressed="true"] { color: #1a220c; font-weight: 600; background: linear-gradient(180deg, #d9f0a6, #b3d473);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 8px rgba(255,255,230,0.25); }
-  #mOrthStage .orsw > :focus-visible, #mOrthStage .orsw > .filebtn:has(> input:focus-visible) { outline: 2px solid #c6e38a; outline-offset: -3px; }
+  :is(#mOrthStage, #mOrthScan) .orsw > :focus-visible, :is(#mOrthStage, #mOrthScan) .orsw > .filebtn:has(> input:focus-visible) { outline: 2px solid #c6e38a; outline-offset: -3px; }
   #mOrthStage #orthiconSeed { -moz-appearance: textfield; appearance: textfield; box-sizing: border-box; flex: 0 0 auto; align-self: stretch; height: auto; min-height: 30px; width: 11.5ch; min-width: 0; margin: 0;
     padding: 3px 8px; border: 0; border-radius: 0; background: linear-gradient(180deg, #050403, #0d0a06);
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
@@ -1351,9 +1360,14 @@
     body[data-dev="additron"] .tabs [data-go="shape"], body[data-dev="additron"] .tabs [data-go="cavity"] { display: none !important; }
     #pentagridDial { height: 180px; }
     #orthiconCanvas { height: 200px; }
-    #mOrthStage .ortag { display: none; }
-    #mOrthStage .orsw { flex: 1 1 100%; max-width: 100%; }
-    #mOrthStage .orsw > .chip, #mOrthStage .orsw > .btn { min-height: 44px; min-width: 44px; padding: 4px 9px; }
+    :is(#mOrthStage, #mOrthScan) .ortag { display: none; }
+    :is(#mOrthStage, #mOrthScan) .orsw { flex: 1 1 100%; max-width: 100%; }
+    :is(#mOrthStage, #mOrthScan) .orsw > .chip, :is(#mOrthStage, #mOrthScan) .orsw > .btn { min-height: 44px; min-width: 44px; padding: 4px 9px; }
+    /* the Scan card keeps its tags on a phone, in a narrow column: "off" alone would not say it is the scale */
+    #mOrthScan .orrows { display: block; margin-top: 0; }
+    #mOrthScan .orrows > .orrow { margin-top: 8px; flex-wrap: wrap; }
+    #mOrthScan .orrows .ortag { display: block; flex: 0 0 50px; letter-spacing: 1px; }
+    #mOrthScan .orrows .orsw { flex: 1 1 0; max-width: calc(100% - 60px); }
     #mOrthStage #orthiconSeed { width: 10ch; min-height: 44px; }
     #mOrthStage .orread { flex: 1 1 100%; max-width: 100%; min-height: 32px; }
     #trCanvas { height: 200px; }
@@ -1442,7 +1456,7 @@
   }
   /* under 360 px the name takes its own line so a long name is not cut; the chips share the next */
   @media (max-width: 359px) { .mixrow .who { flex-basis: 100%; } .mixrow .chip { flex: 1 1 0; } }
-  @media (max-width: 359px) { #mOrthStage .orsw > .chip, #mOrthStage .orsw > .btn { padding: 4px 6px; font-size: 11px; } }
+  @media (max-width: 359px) { :is(#mOrthStage, #mOrthScan) .orsw > .chip, :is(#mOrthStage, #mOrthScan) .orsw > .btn { padding: 4px 6px; font-size: 11px; } }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before, .klread i, #mOrthStage .orread i { animation: none !important; }
     .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .rail::before, .rail::after, .racklinks::before, .racklinks::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>

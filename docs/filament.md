@@ -1842,8 +1842,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (14 Nov): 1. Orthicon's Scan card; 2. a user patch wraps the desktop patch bar at 1024 px; 3. Gyrotron's
-route menu; 4. Rhumbatron's body and exciter chips; 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
+Rank of the open items (15 Nov): 1. a user patch wraps the desktop patch bar at 1024 px; 2. a short card stretched beside the Rack card at 1024 px;
+3. Gyrotron's route menu; 4. Rhumbatron's body and exciter chips; 5. Trochotron's seed row; 6. rail plate titles at 761 to 959 px; 7. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
 The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rack black and black light) belongs to the nightly; this job leaves those parts alone until it closes. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
@@ -2079,9 +2079,28 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
   one line each, edits two, pictures three, every key 44 px, no sideways scroll; card 597 px at 1366 (13 more: the row gaps), 675 at
   800, 933 at 375 (129 less), 1041 at 320 (184 less). Display only: ids, handlers and tab order unchanged; no audio, DSP, worklet or
   patch touched. New checks: Op. (16).
-- [ ] Orthicon's Scan card (12 Nov, seen at 1366 px): the phase, engine, scale and loop chips run together as one loose row
-  ("coherent random additive inverse FFT off major minor ...") with nothing between the groups, so which chips belong together
-  reads only from which one is lit. The Picture card's tagged joined switches (12 Nov) would fit: PHASE, ENGINE, SCALE, PLAY.
+- [x] 15 Nov: Orthicon's Scan card (the top item of 14 Nov). Seen before at 1366 px: the phase, engine, scale and play chips ran
+  together as two loose rows ("coherent random additive inverse FFT off major minor pentatonic whole chromatic", then "loop hold
+  keys") with nothing between the groups, so which chips belonged together read only from which one was lit; at 375 px four ragged
+  rows ("inverse FFT" sharing a row with "off major minor"). Now: each group is an engraved tag (PHASE, ENGINE, SCALE, PLAY) and one
+  joined switch in a recessed tray, the Picture card's finish (the same CSS rules now serve both cards; the lit key Orthicon's
+  green). On a wide card the four groups share one line, each tag beside its switch, and a narrower card wraps whole groups; on a
+  phone each group takes its own line and, unlike the Picture card, the tags stay in a 50 px column at the left, because "off"
+  alone would not say it is the scale. Measured after: unlit key 10.5:1, lit 13.3:1, tags 9.0:1; at 1366 px all four on one line,
+  keys 30 px, the card 208 to 196 px; 1920 px 233 to 201; 800 px 224 to 252 (two lines of groups); 375 px 458 to 533 (phase, engine
+  and play one line each, the scale two, keys 44 px); 320 px 537 to 609 (the scale three lines); no sideways scroll at 320 to 1920.
+  Tab order unchanged (coherent, random, additive, inverse FFT, the six scales, loop, hold, keys). Static, so nothing for reduced
+  motion. Display only: the chips' handlers, the patch fields and sync are the same; no DSP, worklet or patch touched. The old
+  `#orthiconChoices` wrapper is gone (nothing else read it); the switches are `#orthiconPhase`, `#orthiconEngine`,
+  `#orthiconScale` and `#orthiconToggles`. New checks: Os. (27).
+- [ ] A short card stretched beside the Rack card at 1024 px (15 Nov, measured): on Orthicon the Scan card (309 px wide) shares a
+  grid row with the Rack card (`#mHost`, spanning two columns, 2,272 px tall), so the Scan card is 2,272 px tall with about 1,800 px
+  of empty panel under its knobs (seen). Same before and after tonight's change. Inference, not measured on every device: any
+  device whose last panel row puts one card beside the Rack card at 3 columns does the same. Start-aligning that card, or giving
+  the Rack card its own row at 3 columns, would fix it; the row fill (`panelFill`) is the place to look.
+- [ ] Trochotron's seed row (15 Nov, seen at 1366 and 375 px): the seed is the browser's white number box ("42"), the only white
+  field left on the rack, beside loose random, play, stop, copy link and export .mid keys; the key select and "built-in voice" in
+  Shape are plain selects. The Orthicon and Phantastron seed windows (recessed amber) and a tagged joined switch would match.
 - [x] 13 Nov: the patch name window on a phone and a small tablet (the top item of 12 Nov, plus a defect found tonight).
   Measured before: a user patch added a 57 px delete key to the joined edit keys, so the name window fell from 137 to 80 px at
   375 px ("My Te..."), 122 to 65 at 360, 152 to 95 at 390, and at 320 px the edit keys wrapped onto a row of their own (the
