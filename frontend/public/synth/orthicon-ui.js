@@ -354,7 +354,7 @@ export function mountOrthiconPanel(container, hooks) {
   scan.appendChild(knobsEl);
   const scanNote = document.createElement('div');
   scanNote.className = 'note';
-  scanNote.textContent = 'Speed is columns per second. Hold freezes the playhead. Loop wraps the picture. The curve bends brightness into amplitude. Coherent phase keeps a steady tone; random phase stirs it. The scale mask silences rows that are off the scale.';
+  scanNote.textContent = 'Speed is columns per second. Hold freezes the playhead. Loop wraps the picture; with loop off the scan plays once and then holds the last column until loop or hold moves it. The curve bends brightness into amplitude. Coherent phase keeps a steady tone; random phase stirs it. The scale mask silences rows that are off the scale.';
   scan.appendChild(scanNote);
 
   container.appendChild(stage);

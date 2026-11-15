@@ -1548,6 +1548,26 @@ with sync_playwright() as pw:
     ck(f"Pn. save offers a free name as it is and a taken one with the first free number (link '{snf_['fresh']}', '{snf_['lower']}', factory '{snf_['factory']}', user '{snf_['user']}', factory with '{snf_['f']} 2' saved '{snf_['factory2']}')",
        snf_["fresh"] == "Pn Unused Name 4821" and snf_["lower"] == snf_["f"].lower() + " 2" and snf_["factory"] == snf_["f"] + " 2"
        and snf_["user"] == snf_["f"] + " 2" and snf_["factory2"] == snf_["f"] + " 3", snf_)
+    # review 22 Oct, R1022-5 (re-measured 15 Nov): delete landed on the first patch in the factory list, not the device's
+    # own first sound, so Filament went to Plate Bass and Cathode to Grid Bias Bass. Delete now lands where a fresh page opens.
+    pdl_ = b.new_page(viewport={"width": 1366, "height": 900})
+    pdl_.goto(BASE); pdl_.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=60000); pdl_.wait_for_timeout(200)
+    pdl_r = pdl_.evaluate("""async () => {
+      const w = (ms) => new Promise(r => setTimeout(r, ms || 60)), out = [];
+      for (const d of __synth.share.factories().map(f => f.device)) {
+        await Promise.resolve(__synth.setDevice(d)); await w(150);
+        const opens = __synth.share.menu();
+        document.getElementById('saveP').click(); await w();
+        document.getElementById('saveName').value = 'Pdl Review ' + d; document.getElementById('saveOk').click(); await w();
+        const saved = __synth.share.menu();
+        document.getElementById('delP').click(); await w(100);
+        out.push({ d, opens, saved, lands: __synth.share.menu(), key: __synth.share.key() });
+      }
+      return out; }""")
+    pdl_.close()
+    pdl_bad = [x for x in pdl_r if x["saved"] != "Pdl Review " + x["d"] or x["lands"] != x["opens"] or x["key"] != "f:" + x["opens"]]
+    ck(f"Pn. delete lands on the patch the device opens with on a fresh page, on all {len(pdl_r)} devices (review R1022-5; Filament {next((x['lands'] for x in pdl_r if x['d'] == 'filament'), None)}, Cathode {next((x['lands'] for x in pdl_r if x['d'] == 'cathode'), None)})",
+       len(pdl_r) >= 18 and not pdl_bad, pdl_bad or pdl_r)
     # review 3 Nov, R1103-3 (fixed 6 Nov): on a phone the save name field was 28 px tall beside 44 px keys
     phs_ = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True)
     phs_.goto(BASE); phs_.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phs_.wait_for_timeout(200)
@@ -8880,6 +8900,13 @@ with sync_playwright() as pw:
        pg.evaluate("__synth.device()") == "orthicon" and pg.is_visible("#orthiconCanvas") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
     help_o = pg.evaluate("""() => [...document.querySelectorAll('#mOrthStage .note, .intro[data-dev="orthicon"]')].map(n => n.textContent).join(' ')""")
     ck("Or. help says Capture rack is an input, not an export", "Capture rack is an input, not an export" in help_o, help_o)
+    # review 15 Nov, R1115-2: with loop off the scan runs to the last column and holds it (a key or a new picture does not
+    # restart it); the Scan card's note said only "Loop wraps the picture". The note now says what off does.
+    scan_note = pg.evaluate("""() => [...document.querySelectorAll('#orthiconRoot .note')].map(n => n.textContent).find(t => t.includes('columns per second')) || ''""")
+    lo_L, _lo_R = orender(dict(pg.evaluate("__synth.orthiconPatch('Ember Ridge')"), loop=False, speed=48), [], 4.0)
+    lo_a, lo_b = orms(lo_L[int(2.5 * SR):int(3.25 * SR)]), orms(lo_L[int(3.25 * SR):int(4.0 * SR)])
+    ck(f"Or. with loop off the scan holds its last column ({db(lo_a):.1f} then {db(lo_b):.1f} dBFS after the pass) and the Scan note says so (review R1115-2)",
+       "loop off" in scan_note and "last column" in scan_note and lo_a > 0.01 and abs(db(lo_a) - db(lo_b)) < 1.0, (scan_note, db(lo_a), db(lo_b)))
     pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'custom', brush: 'hard', brushSize: 1.2, keyboard: false, hold: true, engine: 'add', phase: 'coherent', width: 0, level: 1 })""")
     pg.wait_for_timeout(150)
     pg.evaluate("() => __synth.orthiconClear()")

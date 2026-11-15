@@ -17,6 +17,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1115-1 | confusing | a | Rhumbatron: blow is sample-identical to bow on every body; on the plate, bow and blow are sample-identical to pluck, so two of the four exciter chips change nothing there | measured |
+| R1115-2 | confusing | a | Orthicon with loop off: the scan runs to the last column and holds it for good; a key or a new picture does not restart it, nor Generate by the code (15 Nov: the Scan note now says so; what should restart it is open) | measured (Generate inferred) |
 | R1114-4 | missing | g | Hexode has no on-screen keys: on a phone with no hardware keyboard or MIDI, only Demo 1 and Demo 2 make a sound | measured (no keys), inferred (impact) |
 | R1114-2 | confusing | f | A damaged .mid (Greensleeves cut to half its bytes) loads in the song library with no warning, as "Greensleeves · 96 BPM · 1 channel" (the whole file has 3) | measured |
 | R1114-3 | confusing | e, f | A deck take exported as .mid and opened in the song library is titled "Tempo" (the name of the take's tempo track) | measured |
@@ -24,12 +26,12 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1113-6 | confusing | e | A .mid cut short says "This MIDI file has data with no status byte", not that the file is incomplete | measured |
 | R1113-3 | missing | c | MIDI program change is ignored: a keyboard's patch buttons do nothing (no patch change, no word) | measured (ignored), inferred (expectation) |
 | R1113-7 | missing | e | Recording along with a playing file: the take starts at its own first note and plays alone, so a part played over a backing file does not line up with it | inferred (code) |
-| R1112-1 | confusing | a, b | Orthicon: a starter picture from the Picture card (Bell Partials, Harmonic Stack ...) is gone after a reload, a link or a saved user patch reopened; the scan plays Ember Ridge's picture while the readout shows the patch's name, and the link's note says only a "painted or dropped" picture is left out | measured |
+| R1112-1 | confusing | a, b | Orthicon: a starter picture from the Picture card (Bell Partials, Harmonic Stack ...) is gone after a reload, a link or a saved user patch reopened; the scan plays Ember Ridge's picture while the readout shows the patch's name, and the link's note says only a "painted or dropped" picture is left out; still open 15 Nov (Bell Partials comes back as Ember Ridge's ridge after a reload) | measured |
 | R1111-4 | confusing | f | Surprise me drops its draw without a word when the rail moves during the render (about 1.4 s); the toast still holds the previous surprise's text | measured (dropped), inferred (what a user sees) |
 | R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean) | measured |
 | R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code | measured (delay), inferred (reverb) |
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
-| R1109-1 | confusing | a | Theremin: the on and off switch does not stop the pad; with it off, a press switches it on and plays | measured |
+| R1109-1 | confusing | a | Theremin: the on and off switch does not stop the pad; with it off, a press switches it on and plays; still open 15 Nov | measured |
 | R1109-2 | confusing | a | Theremin: on a mono patch a key takes the pad's voice while the readout and glow still show the pad's note | measured (mono), inferred (full poly pool) |
 | R1108-3 | confusing | f | The paper roll's play starts Dekatron's own step pattern too: Blank Roll's play is a drum beat only (Dekatron strip 0.56), Octave Pump on Filament comes with the factory beat under it; same root as R1030-3 | measured |
 | R1108-4 | confusing | f | The paper roll offers Heptode as a device chip, but it plays nothing (17 strikes, strip 0); same as R1030-4 for the library | measured |
@@ -54,7 +56,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
-| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog) | measured |
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog); 15 Nov: 7 more devices, no dialog | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall; still open 11 Nov | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes) | measured |
@@ -65,7 +67,6 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
-| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 12 Nov (Cathode, phone: Grid Bias Bass) | measured |
 | R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
@@ -2462,3 +2463,98 @@ file is still loaded (review R1113-5)" (fails on `b4b3248`).
 
 Areas a to e. Iris, Sculpt, Hand Orchestra and Aether were not played with real hands or a camera.
 Suggested next: a and b, including Orthicon's starter pictures (R1112-1) and the Theremin switch (R1109-1).
+
+## 2026-11-15 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `4d330c6`, sw.js
+`dxedge-v217` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path is
+still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus tonight:
+what landed since the last a and b night (12 Nov): Orthicon's Scan card as joined switches (graphics,
+15 Nov) and the wax lamp on the Rack tab (nightly, 15 Nov); a full control sweep with offline renders on
+Orthicon, Additron and Rhumbatron; every factory patch; user patches on six devices not covered on 12 Nov;
+and the first day's (15 Oct) patches of four devices.
+
+### What worked (measured)
+
+- Area a, offline renders through `window.__synth` with a held C4: every visible control on Orthicon
+  (7 knobs, 13 switches), Additron (13 knobs, the morph slider, 14 keys) and Rhumbatron (6 sliders,
+  7 chips), each at both ends (End and Home for knobs and sliders): each moves the patch field its label
+  names, and every render is finite with no sample over 0 dBFS (highest peak 0.884, Orthicon inverse FFT).
+  Level at 0 is silent on all three. Every switch on Orthicon's new Scan card lights its own key and
+  changes the field it names; scale major, minor, pentatonic, whole and chromatic each change the sound.
+- Additron's click: at 100% the first 10 ms carry about 15 dB more high-frequency energy than at 0, so it
+  works, but it is quiet next to the note (-37 against -22 dBFS). Perc decay changes nothing while perc is
+  off, as expected.
+- Orthicon's high knob moves the sound on a wide picture (Harmonic Stack: centroid 189 Hz at 1 kHz, 567 Hz
+  at 16 kHz). On Ember Ridge the first 1.5 s sit in the lowest rows, so high changes nothing audible there.
+- Wax lamp: the switch turns it off ("off · the wax has set") and on; four colourways tried give four
+  different pictures; three bases listed; fresh wax draws a new seed and starts warming again; "music
+  warms the bulb" presses; bulb and speed knobs named; every setting comes back after a reload.
+- Area b, all 129 factory patches on the 18 devices picked from the menu: each shows under its own name,
+  not edited, no errors. Rhumbatron's next arrow walks the menu and wraps.
+- User patches through the form on Rhumbatron, Orthicon, Trochotron, Mote, Geissler and Phantastron:
+  saved, current after a reload, deleted with a toast, and delete lands on the device's own first sound.
+- Old patches: the 23 factory patches of Rhumbatron (7), Additron (5), Orthicon (5) and Trochotron (6) as
+  they were on 15 Oct (`7fd1418`), imported as patch files, load as "* name (edited)"; the 17 rendered
+  (Trochotron not rendered) match today's factory patch of the same name to 0.1 dB.
+- Phone 375 px: every tab of Cathode, Rhumbatron and Orthicon has no sideways scroll and no control under
+  24 px except the bend and mod strips, which are tall and narrow by design.
+
+### Findings
+
+**R1115-1. Rhumbatron: blow is bow, and on the plate both are pluck.** Area a. Confusing. Measured.
+- Steps: Rhumbatron, Copper Wire; pick bow, render a held A3; pick blow, render again. Then the same on
+  bore and on plate, and pluck on plate.
+- Expected: four exciters, four ways of putting energy in (a bow drags, a breath pushes).
+- Actual: blow and bow renders are sample-identical (difference 0.0) on string, bore and plate, and on the
+  factory patches Horsehair and Chimney Bore. On the plate, bow and blow are also sample-identical to pluck;
+  only strike differs. So on a plate two of the four chips do nothing, and blow never differs from bow.
+- Cause (code): `rhumbatron-dsp.js` treats `bow` and `blow` the same everywhere, and the plate path only
+  asks whether the exciter is strike.
+- Left for James (Open items): give blow its own excitation (a breath noise and a reed-like limit), or merge
+  the two chips; and on a plate, dim the chips that do not apply or make bow sustain the plate.
+
+**R1115-2. Orthicon with loop off holds the last column for good.** Area a. Confusing. Measured
+(key, picture), inferred from the code (Generate). The note fixed tonight; the restart left for James.
+- Steps: Orthicon, Ember Ridge, speed 48 (a pass is 2 s), loop off. Wait 3 s. Play a key, then pick a
+  starter picture.
+- Expected: the help said only "Loop wraps the picture", so off reads as "play the picture once". A user
+  would expect it to stop, or a key or a new picture to start the pass again.
+- Actual: after one pass the playhead sits on column 95 of 96 (meter column 0.99) and the last column drones
+  at the same level (-14.9 dBFS from 2.5 to 4 s offline). A key (keys off) and a new picture leave it there;
+  only loop on (or hold on and off) moves it. A new picture with loop off plays only its last column.
+- Fix (wording only): the Scan note now says "with loop off the scan plays once and then holds the last
+  column until loop or hold moves it". Check: "Or. with loop off the scan holds its last column ... and the
+  Scan note says so (review R1115-2)" (fails on the live tree: the note has no such words).
+- Left for James (Open items): should a new picture, Generate or a key restart a one-shot scan, and should
+  loop off end in silence instead of a drone? Rewinding on every new grid would also rewind on each paint
+  stroke, so it needs a call.
+
+**R1022-5 (from 22 Oct), fixed tonight.** Delete landed on the first patch in list order: Filament on Plate
+Bass, Cathode on Grid Bias Bass (desktop and phone, re-measured tonight), while a fresh page opens on Wide
+Novachord Strings and Plate Screamer. Delete now loads the device's own first sound (`first` in the device
+table), falling back to list order if that name is missing. Check: "Pn. delete lands on the patch the device
+opens with on a fresh page, on all 18 devices (review R1022-5 ...)" (fails on the live tree: Filament and
+Cathode; the other 16 already matched).
+
+### Still open, re-measured tonight
+
+- R1109-1: with the Theremin switched off, a press on the pad switches it on and sends a note.
+- R1112-1: Bell Partials picked on Orthicon comes back after a reload as Ember Ridge's ridge, the patch
+  still `picture: 'custom'`.
+- R1025-3: delete still removes a user patch at once with no dialog (Rhumbatron, Orthicon, Trochotron,
+  Mote, Geissler, Phantastron, Cathode on a phone).
+
+### Notes (not findings)
+
+- A patch file that equals a factory patch loads as "* name (edited)". It reads as a change that is not
+  there; noted, not reported, since a file is an outside source.
+- Additron's "full" and "quint" keys keep the shape on stops while "odd" switches it to hand. Inferred:
+  odd cannot be set on the drawbars, so it goes to the drawn harmonics. Consistent, but not said.
+- Rhumbatron's pressure knob on a pluck changes the sound only a little (about 2 to 3 dB across the
+  spectrum end to end).
+
+### Not covered tonight
+
+Areas c to h. Phone sweeps were limited to three devices. Suggested next: c, d and e, including a take on
+Orthicon with loop off and the wax lamp's music warming with the deck playing.

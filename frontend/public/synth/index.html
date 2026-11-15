@@ -4072,7 +4072,9 @@ $('saveOk').addEventListener('click', doSave);
 $('saveName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } if (e.key === 'Escape') closeSave(); e.stopPropagation(); });
 function delUser() {
   if (!curKey.startsWith('u:')) return; const name = curKey.slice(2);
-  user = user.filter(u => u.name !== name); store.set(D().kUser, user); toast('Deleted "' + name + '".'); loadKey('f:' + D().factory[0].name);
+  // land on the device's own first sound (where a fresh page opens), not the first patch in list order (review R1022-5)
+  const home = D().factory.some(p => p.name === D().first) ? D().first : D().factory[0].name;
+  user = user.filter(u => u.name !== name); store.set(D().kUser, user); toast('Deleted "' + name + '".'); loadKey('f:' + home);
 }
 $('delP').addEventListener('click', delUser);
 // On a phone the delete key lives in the save form (graphics, 13 Nov): in the patch row it cut the name window to
