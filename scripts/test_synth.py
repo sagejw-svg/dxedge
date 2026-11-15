@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -11021,6 +11021,109 @@ with sync_playwright() as pw:
            fdc and all(fdm[fv]["sw"] <= fdm[fv]["iw"] and fdm[fv]["tgt"] >= 44 for fv in fdm) and "rgb(10, 4, 20)" in fdm["blacklight"]["fade"] and not fme,
            ({fv: {k: str(v)[:70] for k, v in fdm[fv].items()} for fv in fdm}, fme))
         fm.close()
+
+    # ---------------------------------------------------------------- Ll. the wax lamp (0.3, 15 Nov 2026; the brief's lava lamp module)
+    # The /otr lamp (waxlamp.js) in a Rack tab section: a page setting, never the sound. Its simulation is seeded,
+    # so a restart with a seed and a run of simulated seconds is repeatable; "music warms the bulb" reads the output
+    # level the frame loop measures. It paints only while its canvas is in view.
+    LL_RUN = """(a) => { const L = __synth.lamp; L.set('lampW', a.w); L.set('lampMusic', !!a.music); L.restart(a.seed);
+      let up = 0, top = 0, st = null; for (let i = 0; i < a.sec / 10; i++) { st = L.advance(10, a.lv); up = Math.max(up, st.up); top = Math.max(top, st.top); }
+      return { up, top, melt: st.melt, waxT: st.waxT, tBot: st.tBot, music: L.state().music, status: L.state().status }; }"""
+    LL_PIX = """() => { const cv = document.getElementById('lampCv'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let n = 0, r = 0, g = 0, b = 0, lit = 0; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] > 0) { n++; r += d[i]; g += d[i + 1]; b += d[i + 2]; if (d[i] + d[i + 1] + d[i + 2] > 240) lit++; } }
+      return { share: n / (d.length / 4), lit: lit / (d.length / 4), rgb: n ? [r / n, g / n, b / n] : [0, 0, 0], w: cv.width, h: cv.height }; }"""
+    llx = b.new_context(viewport={"width": 1366, "height": 1000}); lp = llx.new_page(); lerr = []; lp.on("pageerror", lambda e: lerr.append(str(e)))
+    lp.goto(BASE); lp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); lp.wait_for_timeout(300)
+    l0 = lp.evaluate("""() => ({ st: __synth.lamp.state(), on: document.getElementById('lampOnBtn').getAttribute('aria-pressed'),
+      cols: [...document.querySelectorAll('#lampColSel option')].map(o => o.value), bases: [...document.querySelectorAll('#lampBaseSel option')].map(o => o.value),
+      knobs: [...document.querySelectorAll('#kLamp .knob')].map(k => k.getAttribute('aria-label')), tab: document.getElementById('mLamp').dataset.tab,
+      ls: localStorage.getItem('filament_lamp') })""")
+    ck(f"Ll. a fresh browser: the Wax lamp section on the Rack tab, switched on, 25 W, 1x, red / yellow on gold, music off ({l0['st']['set']})",
+       l0["tab"] == "rack" and l0["on"] == "true" and l0["st"]["set"] == {"lampOn": True, "lampCol": "classic", "lampBase": "gold", "lampW": 25, "lampTime": 1, "lampMusic": False}
+       and l0["ls"] is None and l0["st"]["look"] == "natural", l0)
+    ck(f"Ll. six wax colourways, three base finishes, bulb and speed knobs ({len(l0['cols'])}, {len(l0['bases'])}, {l0['knobs']})",
+       l0["cols"] == ["classic", "blue", "orange", "purple", "green", "bclear"] and l0["bases"] == ["gold", "silver", "black"]
+       and l0["knobs"] == ["Wax lamp bulb", "Wax lamp speed"], l0)
+    lp.evaluate("window.scrollTo(0, 0)"); lp.wait_for_timeout(400)
+    lf0 = lp.evaluate("__synth.lamp.state()"); lp.wait_for_timeout(1200); lf1 = lp.evaluate("__synth.lamp.state()")
+    ck(f"Ll. off screen the lamp rests: no paints in 1.2 s ({lf0['frames']} -> {lf1['frames']}, in view {lf1['inView']})",
+       not lf1["inView"] and lf1["frames"] == lf0["frames"], (lf0, lf1))
+    lp.evaluate("document.getElementById('mLamp').scrollIntoView({ block: 'center' })"); lp.wait_for_timeout(2000)
+    lf2 = lp.evaluate("__synth.lamp.state()"); lpx = lp.evaluate(LL_PIX)
+    ck(f"Ll. in view it paints, at most about 15 times a second ({lf2['frames'] - lf1['frames']} paints in 2 s) and the canvas is painted ({lpx['share']:.2f} of it, {lpx['lit']:.3f} lit)",
+       lf2["inView"] and 15 <= lf2["frames"] - lf1["frames"] <= 34 and lpx["share"] > 0.5 and lpx["lit"] > 0.01, (lf2, lpx))
+    info("Ll. paint time a frame (simulation steps included), 1366 px, headless, mean and worst ms", [round(lf2["drawMs"], 2), round(lf2["worstMs"], 2)])
+    ck(f"Ll. a cold lamp says it is warming up ({lf2['status']!r})", lf2["warming"] and lf2["status"].startswith("warming up"), lf2)
+    # the physics, seeded: a 25 W bulb melts the cake and sends wax up within 400 s; a 15 W bulb melts it but it stays down
+    lr25 = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 400, "lv": 0})
+    lr15 = lp.evaluate(LL_RUN, {"w": 15, "seed": 12345, "sec": 400, "lv": 0})
+    ck(f"Ll. 25 W: the wax melts ({lr25['melt']:.2f}) and rises (most risen {lr25['up']:.2f} of it, top {lr25['top']:.2f} of the bottle) within 400 s",
+       lr25["melt"] > 0.9 and lr25["up"] > 0.12 and lr25["top"] > 0.5, lr25)
+    ck(f"Ll. 15 W: a lazy lamp, the wax stays down (most risen {lr15['up']:.2f}, wax {lr15['waxT']:.1f} C against {lr25['waxT']:.1f} C at 25 W)",
+       lr15["up"] < 0.05 and lr15["waxT"] < lr25["waxT"], lr15)
+    lr25b = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 400, "lv": 0})
+    ck("Ll. the same seed and settings run the same wax", lr25b == lr25, (lr25b, lr25))
+    # music warms the bulb: the same 120 s with the switch on at full level runs hotter; off, the level does nothing
+    lm_on = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 120, "lv": 1, "music": True})
+    lm_off = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 120, "lv": 1, "music": False})
+    lm_0 = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 120, "lv": 0})
+    ck(f"Ll. music warms the bulb: at full level the wax is {lm_on['waxT'] - lm_off['waxT']:.1f} C warmer and the bottom {lm_on['tBot'] - lm_off['tBot']:.1f} C warmer after 120 s",
+       lm_on["waxT"] - lm_off["waxT"] > 2 and lm_on["tBot"] - lm_off["tBot"] > 2 and lm_on["music"] == 1, (lm_on, lm_off))
+    ck("Ll. with the switch off the music level changes nothing", lm_off == lm_0 and lm_off["music"] == 0, (lm_off, lm_0))
+    # the live path: the frame loop hands the lamp the output level; a held chord lifts the heat, the status says so
+    lp.evaluate("__synth.lamp.set('lampMusic', true); __synth.lamp.restart(5)")
+    llv = lp.evaluate("""async () => { await __synth.engine().ctx.resume(); [48, 55, 60, 64].forEach(n => __synth.noteOn(n, 1));
+      await new Promise(r => setTimeout(r, 3000)); const s = __synth.lamp.state(); [48, 55, 60, 64].forEach(n => __synth.noteOff(n)); __synth.panic(); return s; }""")
+    ck(f"Ll. live: a held chord reaches the lamp (level {llv['level']:.2f}) and warms the bulb ({llv['music']:.2f} of the music heat after 3 s)",
+       llv["level"] > 0.05 and llv["music"] > 0.05, llv)
+    # the controls: switch, colours, base, knobs, kept in this browser, never in the patch
+    lpatch0 = lp.evaluate("JSON.stringify(__synth.patch())")
+    lp.click("#lampOnBtn"); lp.select_option("#lampColSel", "blue"); lp.select_option("#lampBaseSel", "black")
+    lp.focus("#kLamp .knob[aria-label='Wax lamp bulb']"); [lp.keyboard.press("ArrowUp") for _ in range(5)]
+    lc = lp.evaluate("({ st: __synth.lamp.state(), ls: JSON.parse(localStorage.getItem('filament_lamp')), on: document.getElementById('lampOnBtn').getAttribute('aria-pressed'), off: document.getElementById('mLamp').classList.contains('off') })")
+    ck(f"Ll. the switch, colours, base and bulb set the lamp and are kept in this browser ({lc['ls']})",
+       lc["ls"] == {"lampOn": False, "lampCol": "blue", "lampBase": "black", "lampW": 30, "lampTime": 1, "lampMusic": True} and lc["on"] == "false" and lc["off"]
+       and lc["st"]["set"] == lc["ls"], lc)
+    lp.wait_for_timeout(1500)
+    ck(f"Ll. switched off, the bulb gives no heat and the status says so ({lp.evaluate('__synth.lamp.state().status')!r})",
+       lp.evaluate("__synth.lamp.state().power") == 0 and lp.evaluate("__synth.lamp.state().status").startswith("off"))
+    ck("Ll. the lamp never touches the patch", lp.evaluate("JSON.stringify(__synth.patch())") == lpatch0)
+    lp.click('#faceChips .chip[data-v="blacklight"]'); lp.evaluate("document.getElementById('mLamp').scrollIntoView({ block: 'center' })"); lp.wait_for_timeout(500)
+    ck("Ll. under the black light face the lamp is painted in the black light look", lp.evaluate("__synth.lamp.state().look") == "blacklight")
+    lp.click('#faceChips .chip[data-v="walnut"]')
+    lp.reload(); lp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); lp.wait_for_timeout(200)
+    lrl = lp.evaluate("__synth.lamp.state().set")
+    ck(f"Ll. a reload keeps the lamp's settings ({lrl})", lrl == lc["ls"], lrl)
+    for lbad in ('{"lampW":999,"lampTime":-3,"lampCol":"__proto__","lampBase":"toString","lampOn":"no"}', "not json", "[1,2]"):
+        lp.evaluate("v => localStorage.setItem('filament_lamp', v)", lbad); lp.reload(); lp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        lbs = lp.evaluate("__synth.lamp.state().set")
+        ck(f"Ll. stored settings {lbad[:24]!r} load in range ({lbs})", 15 <= lbs["lampW"] <= 40 and 1 <= lbs["lampTime"] <= 8
+           and lbs["lampCol"] in l0["cols"] and lbs["lampBase"] in l0["bases"] and isinstance(lbs["lampOn"], bool), lbs)
+    lnot = []
+    for ld in lp.evaluate("[...document.querySelectorAll('.devbtn')].map(b => b.dataset.d)"):
+        lp.evaluate("d => __synth.setDevice(d)", ld); lp.wait_for_timeout(120)
+        if not lp.is_visible("#lampCv"): lnot.append(ld)
+    ck(f"Ll. the Wax lamp section shows on every rack device (missing: {lnot})", not lnot, lnot)
+    llx.close()
+    ck("Ll. no page errors", not lerr, lerr)
+    # reduced motion: a fresh page starts with the lamp off and the speed held at 1x
+    lrx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); lrp = lrx.new_page()
+    lrp.goto(BASE); lrp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    lrs = lrp.evaluate("__synth.lamp.set('lampTime', 8)") and lrp.evaluate("__synth.lamp.state()")
+    ck(f"Ll. reduced motion: a fresh page has the lamp off and the speed held at 1x ({lrs['set']})", lrs["still"] and lrs["set"]["lampOn"] is False and lrs["set"]["lampTime"] == 1, lrs)
+    lrx.close()
+    for ll_w in (375, 320):
+        lm = b.new_context(viewport={"width": ll_w, "height": 667}, is_mobile=True, has_touch=True); lmp = lm.new_page(); lme = []; lmp.on("pageerror", lambda e: lme.append(str(e)))
+        lmp.goto(BASE); lmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); lmp.wait_for_timeout(200)
+        lmp.tap('.tabs [data-go="rack"]'); lmp.wait_for_timeout(250)
+        lmp.evaluate("document.getElementById('mLamp').scrollIntoView({ block: 'center' })"); lmp.wait_for_timeout(1200)
+        lmr = lmp.evaluate("""() => ({ sizes: [...document.querySelectorAll('#mLamp button, #mLamp select')].map(e => { const q = e.getBoundingClientRect(); return [e.id, Math.round(q.width), Math.round(q.height)]; }),
+          sw: document.documentElement.scrollWidth, iw: innerWidth, frames: __synth.lamp.state().frames, cw: document.getElementById('lampCv').getBoundingClientRect().width })""")
+        ck(f"Ll. {ll_w} px phone: the lamp paints, every key and menu 44 px or more, no sideways scroll ({lmr['sizes']})",
+           lmr["frames"] > 3 and all(w_ >= 44 and h_ >= 44 for _, w_, h_ in lmr["sizes"]) and lmr["sw"] <= lmr["iw"] and lmr["cw"] <= ll_w, lmr)
+        lmp.tap("#lampMusicBtn"); lmp.wait_for_timeout(100)
+        ck(f"Ll. {ll_w} px phone: a tap switches music warms the bulb, no page errors", lmp.evaluate("__synth.lamp.state().set.lampMusic") is True and not lme, lme)
+        lm.close()
 
     # Wl. worklet modules (worklets.js, 12 Nov 2026). The boot used to ask for each hosted device's module only
     # when the attach before it had finished; now the sixteen start together once the engine is up, and every

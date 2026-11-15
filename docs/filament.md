@@ -144,6 +144,7 @@ task can read it).
 | `frontend/public/synth/transport.js` | Master clock: tempo 40–240, play/stop, 24 ppq. `clockTicks` and `describeTick` are pure. `engine.js` posts its state (`{t:'clock'}`) to the Filament and Cathode worklets on play, stop, tempo and locate, for tempo-synced LFOs |
 | `frontend/public/synth/project.js` | Project JSON (`kind: 'dxrack'`, `v: 1`): both synth patches, mixer, tempo, keyboard device. localStorage key `dxrack_project` |
 | `frontend/public/synth/rack.js`, `tubepaint.js`, `knob.js` | Copied from /otr at f9f5d2b (decision 5) plus marked "Filament additions" (in rack.js: the push-pull stage, mono check, ceiling, ensemble, the tape echo, the spring reverb's mix around its worklet, and the graphic EQ's presets, fitting, resampling and live spectrum tap; in tubepaint.js: the four-tube state, the tube show overlay, and the big tube view's zoom, pan, quality and wide chassis) |
+| `frontend/public/synth/waxlamp.js` | The wax lamp (the brief's lava lamp module; "Wax lamp" on the page): the /otr lamp's wax simulation and painter copied from /otr at 573e0dd (decision 5; lines 3119-3133 and 4242-4975, verbatim), plus marked "Filament additions" (`createLamp`, the Rack tab section, settings in localStorage `filament_lamp`, no radio). Paints with tubepaint.js's helpers and looks |
 | `frontend/public/synth/spring.worklet.js` | AudioWorklet processor `filament-spring`: the spring reverb tank (a tube driver, two dispersive allpass loops, one per side). Our own model; `makeSpring` in rack.js wraps it |
 | `frontend/public/synth/fm/` | Hexode, a vendored six-operator FM page (MIT, Matt Montag). The name on the page is Hexode. See `CHANGES.md` and `THIRD_PARTY_NOTICES.md` |
 | `frontend/public/synth/acid/` | Anode, a vendored acid bass groovebox (CC BY 4.0, David Whiting / Vitling). The page credits the author. Drums in this copy are synthesized. See `CHANGES.md` |
@@ -1098,7 +1099,7 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         its own picture link, and Trochotron and Resnatron their own links); a key for the link in the header's patch row, if
         wanted (it would cost the patch name window about 44 px on a phone).
 - [x] WAV recording (10 minute cap) - 14 Oct, master bus: live record and offline render, 24-bit 44.1 kHz stereo. (The MIDI file render in slice 2 is a separate button: 48 kHz 16-bit of a take. Still open.)
-- [ ] Tube view, faces (walnut, studio rack black, black light), lava lamp module (the tube view landed 4 Nov under the Tube show item; faces and the lava lamp module are still open)
+- [ ] Tube view, faces (walnut, studio rack black, black light), lava lamp module (the tube view landed 4 Nov under the Tube show item; faces 12 and 13 Nov; the lava lamp module 15 Nov; open: the device panels' own finishes under the faces, and the lamp's follow-ups below)
   - [x] Faces - 12 Nov 2026 (nightly). A Face section on every device's Rack tab with three chips: walnut (the default),
         rack black and black light. Kept in this browser (localStorage `filament_face`), never in a patch or a project. The
         head script sets `<html data-face>` before the first paint, so a stored face does not flash walnut. Walnut has no
@@ -1122,7 +1123,26 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
   - [ ] Still open for faces: the device panels with their own finish (Klystron, Phantastron, Additron, Pentagrid,
         Orthicon and the rest) keep their own colours under rack black and black light; the paper roll's paper and the
         big tube view are drawn, not styled, and stay as they are; a face per device or in the project file, if wanted.
-  - [ ] Lava lamp module (with its "music warms the bulb" switch)
+  - [x] Lava lamp module (with its "music warms the bulb" switch) - 15 Nov 2026 (nightly). A "Wax lamp" section on every
+        device's Rack tab (the last one, after Master, so no device's cards move to make room; on a wide screen the lamp sits
+        beside its controls): the lamp in a canvas, its switch, the wax and liquid colourways (six), the base finish
+        (gold, chrome, black), "fresh wax" (a cold cake and a new seed), "music warms the bulb", and bulb (15 to 40 W) and
+        speed (1x to 8x) knobs. On the page it is called the wax lamp (see Open items: "lava lamp" is close to the LAVA registered mark). It is the /otr lamp, copied, not redrawn: `waxlamp.js` carries /otr's simulation and painter
+        verbatim from 573e0dd (decision 5), so the wax is simulated, not animated: parcels of wax with their own heat and
+        volume, necks that thin and pinch off, a coarse liquid grid with its own flow, a coil and bulb that heat the bottom;
+        a cold lamp warms up over a few minutes (shown at 3x). "Music warms the bulb" reads the output level the frame loop
+        already measures (the louder side's RMS times 2.2, /otr's level()), smoothed over 1.5 s, and feeds the bulb up to 60%
+        more power. A page setting kept in this browser (localStorage `filament_lamp`), never a patch or a project; stored
+        values are normalized (own keys only, so `__proto__` is not a colourway). The lamp paints only while its canvas is in
+        view (an IntersectionObserver; a wide screen shows every section, so the Rack tab alone is not enough) and at most
+        about 15 times a second; the wax waits while it is off screen. Under the black light face it is painted in the black
+        light look. Reduced motion: a fresh page starts with it off and the speed stays at 1x. No radio under it (that is
+        /otr's). Nothing in the audio path. Measured (Ll.): seed 12345 at 25 W melts and rises within 400 s (71% of the wax
+        up at the most, the top of the bottle reached), at 15 W stays down (0%, wax 42.6 against 45.9 C); music at full level
+        runs the wax 4.3 C and the bottom 8.3 C warmer over 120 s; a held chord reaches it live (level 0.43).
+  - [ ] Still open for the lamp: the lamp on the chassis (the brief draws an optional lamp beside the tubes; tonight it is a
+        Rack tab section), the lamp in the big tube view (the /otr view has it as a subject, with zoom and looks), and its
+        brightness knob (/otr's 0 to 200%; tonight 100%).
 - Tube show (James, 13 Oct note) - first slice 16 Oct, nightly. Exaggerated on purpose. State in `tubeshow.js`,
   drawing in `tubepaint.js` (below the additions line), inputs from the meters and analysers the page already reads.
   - [x] Note flares: V1 at once, V2 20 ms later, the output pair 45 ms later, scaled by velocity, 150 ms decay
@@ -2118,6 +2138,7 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
   lit state on the rack; a call for James with the Lattice and Mote palette item.
 
 ## Open items for James
+- Nightly 15 Nov, the wax lamp (the brief's lava lamp module): please look. Rack tab, the "Wax lamp" section, the last one on the page after Master (on a computer, scroll to the bottom). It sits last because any card earlier in the panel moved every device's cards (measured: Phantastron's cartridge switch wrapped at 1366 px). It is the /otr lamp, copied verbatim, so a cold lamp takes a few minutes to warm up (shown at 3x); try "music warms the bulb" with a chord held. Calls you may want changed: (1) the name. On the page it is "Wax lamp", not "lava lamp": LAVA is a registered mark of Haggerty Enterprises (the Lava Brand lamps; their own generic word is "motion lamp"), and the Filament rule is no other company's marks in the UI. Measured fact: USPTO records show LAVA registrations owned by Haggerty; whether "lava lamp" alone is protected is for your IP attorney, not me. /otr's live page says "lava lamp" (not touched, never edited from here). Say if you want the name back, or another one. (2) It is a Rack tab section, not on the chassis beside the tubes (the brief draws it there as optional); (3) on by default, but under reduced motion a fresh page starts with it off and the speed stays at 1x; (4) it only runs while its canvas is in view, so the wax waits while you are elsewhere; (5) no radio, no brightness knob and no big view (all /otr's) yet; (6) a page setting kept in this browser, like the face, never in a patch or project. Next: unless you say otherwise, the next nightly moves on to the last unchecked 0.3 item, about 40 factory patches. The '73-style monosynth still waits for its name here in Notes from James.
 - Review 14 Nov (`docs/filament-review.md`), one call and two small ones: (1) R1114-4, Hexode (/synth/fm/) has no on-screen keys, so a phone with no hardware keyboard or MIDI can only play its two demos. Add a touch keyboard to the vendored page, or say on the outboard link that it needs a keyboard? (2) R1114-3, a deck take opened in the song library is titled "Tempo" (the writer's track 0 name); a one-line fallback to the file name would do it, left for a later night. (3) R1114-2, a damaged .mid loads in the library as a partial song with no warning (the vendored parser is lenient). Tonight's fixes are status text only: a failed .mid import on the deck or in the library now ends "Still loaded: <name>."
 - Graphics 14 Nov, Phantastron's cartridge row (Board card): a look change, no sound change. Before: six loose chips and lift wires on one row; on a phone three rows (babble alone, then lift wires alone) above the bends readout. After: CART and the six cartridges as one joined switch (lit key gold, like the run lamp), then BENDS, the bends readout and lift wires on the next line; on a phone the card is 100 px shorter. Calls you may want changed: (1) at 320 px the switch wraps and babble takes the second line as a full width key (the Orthicon Picture card's keypad behaviour); (2) the tag says CART, short for cartridge.
 - Check 14 Nov: the 12:28 AM nightly build pushed nothing to main tonight (last nightly commit `fe9983a`, 13 Nov), and the 13 Nov 2 AM check and debug left no log line. Inference, not measured: those runs failed to start or failed before a push. Worth a look at both scheduled tasks' run history. Main itself is healthy (ALL PASS 1938, live clean).

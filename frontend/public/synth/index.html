@@ -1030,6 +1030,20 @@
   canvas#eqCv:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
   canvas#thmCv { width: 100%; height: 200px; display: block; border-radius: 6px; border: 1px solid var(--border); background: #070707; margin-bottom: 4px; touch-action: none; cursor: crosshair; }
   canvas#thmCv:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  /* the wax lamp (0.3, the brief's lava lamp module): the /otr lamp in its own Rack tab section; a page setting, never the sound */
+  canvas#lampCv { width: 100%; height: 240px; display: block; border-radius: 6px; border: 1px solid var(--border); background: #070707; margin-bottom: 2px; }
+  html[data-face="blacklight"] canvas#lampCv { background: #07000f; }
+  .lamprow { align-items: center; }
+  .lamprow { flex-wrap: nowrap; }
+  .lamprow .cl { min-width: 34px; }
+  .lamprow select.btn { flex: 1 1 0; width: 0; min-width: 0; max-width: none; }
+  #mLamp.off canvas#lampCv { opacity: 0.85; }
+  @media (min-width: 1100px) {   /* alone on the last row: the lamp on the left, its controls beside it */
+    #mLamp { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); column-gap: 18px; align-content: start; }
+    #mLamp > h3 { grid-column: 1 / -1; }
+    #mLamp > canvas#lampCv { grid-column: 1; grid-row: 2 / span 6; height: 300px; }
+    #mLamp > :not(h3):not(canvas) { grid-column: 2; max-width: 520px; }
+  }
   canvas#fpCv { width: 100%; height: 150px; display: block; border-radius: 6px; border: 1px solid var(--border); background: #070707; margin-bottom: 4px; }
   #mEq.off canvas#eqCv { opacity: 0.75; }
 
@@ -1951,6 +1965,15 @@
         <div class="note">Each letter is a device that is already loaded. Level, pan, mute and solo sit in front of the shared ensemble. Centre pan, full level and zero sends leave the sound alone. Arm one device and the keys and MIDI play that device. Arm several and they play together. With no arm lit, the keys follow the device lit on the rail. Reverb and delay are shared sends; the returns join the mix, so the red record button writes one WAV of everything you hear. The mix row's save keeps this desk in the browser; the project row's keys keep the patches and the tempo as well. On the patch row, copy link makes a link that carries the lit device's patch, and nothing goes to a server; download and upload do the same with a file. Surprise me draws a random patch on Filament or Cathode: in tune, never silent, and levelled under the limiter.</div>
       </section>
       <section class="mod" data-tab="rack mix" id="mMaster" data-wide><h3><span class="pilot off" id="fxPilot"></span>Master</h3><div id="masterHost"></div></section>
+      <!-- the wax lamp sits last, after Master, so no device's cards move to make room for it -->
+      <section class="mod" data-tab="rack" id="mLamp"><h3><span class="pilot" id="lampPilot"></span>Wax lamp<button class="chip sw" id="lampOnBtn" type="button" aria-label="Wax lamp" aria-pressed="true" title="The lamp's switch">on</button></h3>
+        <canvas id="lampCv" role="img" aria-label="Wax lamp: the wax rises, cools under the cap and sinks"></canvas>
+        <div class="eq-read" id="lampStat">warming up</div>
+        <div class="chips lamprow"><span class="cl">wax</span><select class="btn" id="lampColSel" aria-label="Wax lamp: wax and liquid colours" title="Wax and liquid colours"></select></div>
+        <div class="chips lamprow"><span class="cl">base</span><select class="btn" id="lampBaseSel" aria-label="Wax lamp: base finish" title="The base and cap"></select><button class="btn small" id="lampNewBtn" type="button" title="A fresh lamp: cold wax on the bottom, a new seed">fresh wax</button></div>
+        <div class="chips lamprow"><button class="chip" id="lampMusicBtn" type="button" aria-pressed="false" title="Louder sound feeds the bulb a little more power. It shows up slowly, through the wax, the way real heat would.">music warms the bulb</button></div>
+        <div class="knobs" id="kLamp"></div>
+        <div class="note">A picture, never the sound. The wax is simulated, not animated: the bulb heats it, it rises, cools under the cap and sinks, so it never repeats. A cold lamp takes a few minutes to warm up (shown at 3x). It rests while this section is off screen.</div></section>
     </div>
 
     <section class="deck" id="deck" aria-label="MIDI files: record a take, import a file, play it">
@@ -2104,6 +2127,7 @@ import { mountUiSize, bindFineControls, applyUiSize } from './desk.js';
 import { TUBES, TUBE_BY, EQ_N, EQ_PRESETS, eqCentres, eqResponse, eqFit, eqTarget, eqResample, tubeData, echoSeconds, echoToneHz, springToneHz, loadSpring } from './rack.js';
 import { preloadWorklets } from './worklets.js';
 import { paintTubeState, paintTubeShow, fitCanvas, TUBE_LOOKS, LOOK_BY } from './tubepaint.js';
+import { createLamp } from './waxlamp.js';
 import { SHOW_MODES, SHOW_KEY, makeShow, setShowMode, showNote, showNotes, showOnsets, stepShow, showFor, showState } from './tubeshow.js';
 import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from './engine.js';
 import { createDeck } from './deck.js';
@@ -4857,6 +4881,10 @@ function applyFace(f, keep) {
 FACES.forEach(([v, name]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.v = v; b.textContent = name;
   b.addEventListener('click', () => applyFace(v, true)); $('faceChips').appendChild(b); });
 applyFace(document.documentElement.dataset.face || 'walnut', false) || applyFace('walnut', false);
+// The wax lamp (0.3, 15 Nov 2026; the brief's lava lamp module): the /otr lamp in a Rack tab section (waxlamp.js). A page setting kept in this
+// browser (localStorage filament_lamp), never a patch or a project. frame() paints it only while the section is on
+// screen; "music warms the bulb" reads the output level the frame loop already measures, never the audio path.
+const lamp = createLamp({ makeKnob, reduceMotion });
 let lampsShown = -1;
 function paintVoiceLamps(n) {
   if (n === lampsShown) return; lampsShown = n;
@@ -5178,6 +5206,7 @@ function frame(now) {
     const sec = $('mStereo'); if (sec.offsetParent) { const s0 = GON.scale; drawGonio(running); gonioWatch(s0); }
     paintHost();
     if ($('mEq').offsetParent) drawEq(now);
+    if ($('mLamp').offsetParent) lamp.frame(now, Math.max(oL, oR), FACE);
     if (dev === 'filament' && $('fpCv').offsetParent) drawFp(now, E && E.meters ? E.meters.filament : null);
   }
   const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
@@ -5572,6 +5601,7 @@ window.__synth = {
   pentaSent: () => ({ sent: pentaHost.sent(), meter: Object.assign({}, pentaHost.meter()), node: !!pentaHost.node(), dev, now: Math.round(performance.now()) }),   // tests
   panelFills: () => panelFillRuns,   // tests: how often the row fill has run (graphics, 1 Nov)
   tubeShow: () => Object.assign(showState(SHOW), { meterFlares: showOns.got, meterDev: showOns.dev }),
+  lamp: lamp.test,
   face: () => ({ face: FACE, attr: document.documentElement.dataset.face, looks: ['v1', 'v2', 'v3', 'v4'].map(k => TUBE_ST[k].tvFilter) }),
   setFace: f => applyFace(f, true),
   // the big tube view (tests): open on a tube, close, zoom about a canvas point, pick a tube or a look, and its state
