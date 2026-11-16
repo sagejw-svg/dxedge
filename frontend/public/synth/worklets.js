@@ -48,8 +48,10 @@ export function trackNode(ctx, n) {
 export function releaseNodes(ctx) {
   const l = ctx.__nodes || [];
   for (const n of l) {
-    n.port.onmessage = null;
-    try { n.port.close(); } catch (e) { /* already closed */ }
+    if (n.port) {                         // trackNode() may list a node without one
+      n.port.onmessage = null;
+      try { n.port.close(); } catch (e) { /* already closed */ }
+    }
     try { n.disconnect(); } catch (e) { /* already torn down */ }
   }
   ctx.__nodes = [];
