@@ -4682,11 +4682,14 @@ const MW = strip('mwStrip', false, v => { perf('mw', v); rec({ t: 'mw', v }); })
 // computer keyboard. Codes, not e.key: Shift turns ";" into ":" and would miss the keyup.
 const CODEMAP = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12, KeyO: 13, KeyL: 14, KeyP: 15, Semicolon: 16, Quote: 17 };
 const keyDown = new Map();   // code -> note
+// Space pressed the pedal from the page: its keyup lets go even if focus has moved into a text box
+// meanwhile (a click or Tab into the tempo box), or the pedal stayed down (review R1116-1).
+let spaceSus = false;
 function typing(e) { const t = e.target; return t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable); }
 window.addEventListener('keydown', e => {
   if (typing(e)) return;
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undoPatch(); return; }
-  if (e.code === 'Space') { if (e.metaKey || e.ctrlKey || e.altKey) return; e.preventDefault(); if (!e.repeat) setSustain(true); return; }
+  if (e.code === 'Space') { if (e.metaKey || e.ctrlKey || e.altKey) return; e.preventDefault(); if (!e.repeat) { spaceSus = true; setSustain(true); } return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const semi = CODEMAP[e.code];
   if (semi == null) {
@@ -4704,7 +4707,7 @@ window.addEventListener('keydown', e => {
   keyDown.set(e.code, n); noteOn(n, vel, 'key:' + e.code);
 });
 window.addEventListener('keyup', e => {
-  if (e.code === 'Space') { if (!typing(e)) setSustain(false); return; }
+  if (e.code === 'Space') { if (!typing(e) || spaceSus) setSustain(false); spaceSus = false; return; }
   if (keyDown.has(e.code)) { const n = keyDown.get(e.code); keyDown.delete(e.code); noteOff(n, 'key:' + e.code); }
 });
 $('velV').textContent = Math.round(vel * 127);

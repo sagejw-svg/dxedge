@@ -187,7 +187,9 @@ export function createDeck(api) {
   function setAssign(i, d) {
     if (!Fi.song || i < 0 || i >= Fi.assign.length) return;
     Fi.assign[i] = d; showFile();
-    if (P.playing && P.src === 'file') { const pos = P.schedPos; stop(); play('file', pos); }
+    // Restart from what is sounding now, not from where scheduling has reached: stop flushes every
+    // note sent ahead (up to 150 ms of them), so restarting at schedPos dropped those (review R1116-2).
+    if (P.playing && P.src === 'file') { const pos = Math.max(0, Math.min(P.schedPos, posNow())); stop(); play('file', pos); }
   }
 
   // ---------------------------------------------------------------- player

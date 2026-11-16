@@ -2625,6 +2625,24 @@ with sync_playwright() as pw:
     ck(f"M. CC 121 resets the controllers: bent {hz_b:.1f} Hz, then {hz_r:.1f} Hz (A3 220); strips home, pedal up ({rs_})",
        abs(hz_b - 246.9) < 7 and abs(hz_r - 220) < 3 and abs(rs_["pb"]) < 0.01 and abs(rs_["mw"]) < 0.01 and rs_["sus"] is False, (oc, hz_b, hz_r, rs_))
 
+    # R1116-2: moving a track to another device while the file plays restarted it at the scheduling
+    # position, 150 ms ahead of the sound, so the notes already sent in that window were flushed and lost.
+    RUN = mthd(1, 3, 96) + mtrk([0] + tempo(500000) + EOT) \
+        + mtrk([0] + tname("Run") + sum(([0 if k == 0 else 2, 0x90, 60 + k % 12, 100, 10, 0x80, 60 + k % 12, 0] for k in range(40)), []) + EOT) \
+        + mtrk([0] + tname("Low") + [0, 0x91, 36, 100] + vlq(480) + [0x81, 36, 0] + EOT)
+    pg.evaluate("__synth.panic()"); pg.evaluate("a => __synth.deck().importBytes(a, 'run.mid')", RUN)
+    pg.evaluate("""() => { const E = __synth.engine(); window.__ra = { log: [], ph: 0, o: E.sendTo };
+      E.sendTo = (d, m) => { if (m.t === 'on' && m.pb) __ra.log.push({ n: m.n, at: m.at, ph: __ra.ph }); return __ra.o.call(E, d, m); }; }""")
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(1000)
+    ra_fr = pg.evaluate("() => { const f = Math.round(__synth.engine().transport.state().frame); __ra.ph = 1; __synth.deck().assign(1, 'filament'); return f; }")
+    pg.wait_for_timeout(2200)
+    ra = pg.evaluate("() => { __synth.engine().sendTo = __ra.o; __synth.deck().stop(); return __ra.log; }")
+    ra_mel = [x for x in ra if x["n"] != 36]
+    ra_lost = [x for x in ra_mel if x["ph"] == 0 and x["at"] > ra_fr]
+    ra_land = sorted(set(x["at"] for x in ra_mel if not (x["ph"] == 0 and x["at"] > ra_fr)))
+    ck(f"M. moving a track to another device mid-play keeps every note: {len(ra_land)} of 40 melody notes land ({len(ra_lost)} had been sent ahead and were flushed by the restart) (review R1116-2)",
+       len(ra_land) >= 40 and any(x["ph"] == 1 for x in ra_mel), (ra_fr, len(ra_lost), len(ra_land)))
+
     # Review 17 Oct: Render WAV went through no master bus, so a reverb you could hear was missing
     # from the file. The deck now hands the master state to the offline render.
     pg.evaluate("a => __synth.deck().importBytes(a, 'melody.mid')", MEL)
@@ -3754,6 +3772,19 @@ with sync_playwright() as pw:
     pg.keyboard.press("z")
     pg.keyboard.down(" "); ck("space is the sustain pedal", pg.evaluate("__synth.state()")["sustain"]); pg.keyboard.up(" ")
     ck("sustain pedal up", not pg.evaluate("__synth.state()")["sustain"])
+    # R1116-1: Space held, then focus moved into a text box (a click or Tab into the tempo box) before
+    # Space came up: the keyup was taken for typing and the pedal stayed down, so every later note rang on.
+    # A space typed inside a box must still leave the pedal alone. The box is a plain text input added for
+    # the check, so it is visible whichever tab is showing.
+    pg.evaluate("() => { const i = document.createElement('input'); i.type = 'text'; i.id = 'spBox'; i.setAttribute('aria-label', 'test box'); i.style.cssText = 'position:fixed;top:0;left:0;z-index:99999'; document.body.appendChild(i); document.activeElement && document.activeElement.blur(); }")
+    pg.keyboard.down(" "); sp_on = pg.evaluate("__synth.state()")["sustain"]
+    pg.focus("#spBox"); sp_in = pg.evaluate("document.activeElement.id"); pg.keyboard.up(" "); sp_box = pg.evaluate("__synth.state()")["sustain"]
+    sp_lamp = pg.evaluate("document.getElementById('holdBtn').getAttribute('aria-pressed')")
+    pg.evaluate("() => { document.activeElement.blur(); document.getElementById('holdBtn').click(); }"); pg.focus("#spBox"); pg.keyboard.press(" ")
+    sp_typed = pg.evaluate("__synth.state()")["sustain"]
+    pg.evaluate("() => { document.getElementById('spBox').remove(); document.getElementById('holdBtn').click(); }")
+    ck(f"K. Space down on the page, up inside a text box: the pedal lets go (sustain {sp_on} then {sp_box}, hold lamp {sp_lamp}); a space typed in a box leaves the hold on ({sp_typed}) (review R1116-1)",
+       sp_on is True and sp_in == "spBox" and sp_box is False and sp_lamp == "false" and sp_typed is True and not pg.evaluate("__synth.state()")["sustain"], (sp_on, sp_in, sp_box, sp_lamp, sp_typed))
 
     # ---------------------------------------------------------------- stuck keys
     # A second keydown that is not marked repeat (Shift reissues the key this way) used to

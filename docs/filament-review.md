@@ -17,19 +17,23 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1116-4 | confusing | c, e | MIDI CC 123 or 120 (All Notes Off, All Sound Off) from a keyboard stops the MIDI deck's playback (and, by the code, the song library's): they run Panic, not a note release | measured (deck), inferred (library) |
+| R1116-3 | confusing | e | Moving a track to another device while the file plays does not strike the notes already held in it again: a bass held from 0 s falls silent for the rest of its note | measured |
+| R1116-5 | confusing | d | Rack tempo box: Escape leaves the typed 150 showing while the clock stays at 100; typing 99,5 sets 240 BPM (the comma is dropped, 995 clamped) | measured |
+| R1116-6 | confusing | e | A format 2 .mid (independent sequences) imports and plays all its tracks at once, split across Filament and Cathode, with no word | measured |
 | R1115-1 | confusing | a | Rhumbatron: blow is sample-identical to bow on every body; on the plate, bow and blow are sample-identical to pluck, so two of the four exciter chips change nothing there | measured |
 | R1115-2 | confusing | a | Orthicon with loop off: the scan runs to the last column and holds it for good; a key or a new picture does not restart it, nor Generate by the code (15 Nov: the Scan note now says so; what should restart it is open) | measured (Generate inferred) |
 | R1114-4 | missing | g | Hexode has no on-screen keys: on a phone with no hardware keyboard or MIDI, only Demo 1 and Demo 2 make a sound | measured (no keys), inferred (impact) |
 | R1114-2 | confusing | f | A damaged .mid (Greensleeves cut to half its bytes) loads in the song library with no warning, as "Greensleeves · 96 BPM · 1 channel" (the whole file has 3) | measured |
 | R1114-3 | confusing | e, f | A deck take exported as .mid and opened in the song library is titled "Tempo" (the name of the take's tempo track) | measured |
-| R1113-4 | confusing | d | Rack tempo 120.5 typed in the box reads "121" while the transport runs at 120.5 (the box rounds; the clock does not) | measured |
+| R1113-4 | confusing | d | Rack tempo 120.5 typed in the box reads "121" while the transport runs at 120.5 (the box rounds; the clock does not); still open 16 Nov | measured |
 | R1113-6 | confusing | e | A .mid cut short says "This MIDI file has data with no status byte", not that the file is incomplete | measured |
 | R1113-3 | missing | c | MIDI program change is ignored: a keyboard's patch buttons do nothing (no patch change, no word) | measured (ignored), inferred (expectation) |
 | R1113-7 | missing | e | Recording along with a playing file: the take starts at its own first note and plays alone, so a part played over a backing file does not line up with it | inferred (code) |
 | R1112-1 | confusing | a, b | Orthicon: a starter picture from the Picture card (Bell Partials, Harmonic Stack ...) is gone after a reload, a link or a saved user patch reopened; the scan plays Ember Ridge's picture while the readout shows the patch's name, and the link's note says only a "painted or dropped" picture is left out; still open 15 Nov (Bell Partials comes back as Ember Ridge's ridge after a reload) | measured |
 | R1111-4 | confusing | f | Surprise me drops its draw without a word when the rail moves during the render (about 1.4 s); the toast still holds the previous surprise's text | measured (dropped), inferred (what a user sees) |
-| R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean) | measured |
-| R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code | measured (delay), inferred (reverb) |
+| R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean); still open 16 Nov (30% back to 100%, 40x) | measured |
+| R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code; 16 Nov: delay off 54x, reverb off 47x and compressor off (threshold -30, ratio 8) 33x the held sine's step | measured |
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
 | R1109-1 | confusing | a | Theremin: the on and off switch does not stop the pad; with it off, a press switches it on and plays; still open 15 Nov | measured |
 | R1109-2 | confusing | a | Theremin: on a mono patch a key takes the pad's voice while the readout and glow still show the pad's note | measured (mono), inferred (full poly pool) |
@@ -38,7 +42,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5); still open 14 Nov (37 strikes under Beethoven 5 after a reload) | measured (run kept, strikes), inferred (surprise) |
 | R1104-4 | confusing | c, d | Panic leaves the Mix desk delay and room returns and the patch's own output room ringing; the room's tail then refills the master reverb | measured |
 | R1106-2 | confusing | a | LC bank with the stereo offset: at 1 octave the sides differ far more than on the other models (side 1.7 dB over the left channel, Valve 12 -8 dB) and mono loses 0.55 dB; the LC note does not carry the mono warning the Ladder and Poly notes do | measured (width, mono), inferred (impact) |
-| R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
+| R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it; still open 16 Nov (repeat 30 against repeat 1: 90% -11.1 dB, 95% +4.9 dB, 100% +13.7 dB) | measured |
 | R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch (2 Nov: the spring reverb is a patch field too, so it follows the same way) | measured (cut), inferred (impact, spring) |
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
@@ -75,7 +79,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link; 14 Nov: 531, no skip link | measured |
 | R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1); 14 Nov: the ensemble mode chips are named only "I", "II", "I+II" | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
-| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120) | measured |
+| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120); 16 Nov: rack at 40 to 240, master tempo 120 | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
@@ -83,7 +87,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2558,3 +2562,116 @@ Cathode; the other 16 already matched).
 
 Areas c to h. Phone sweeps were limited to three devices. Suggested next: c, d and e, including a take on
 Orthicon with loop off and the wax lamp's music warming with the deck playing.
+
+## 2026-11-16 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `6131af0`, sw.js
+`dxedge-v221` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path is
+still gone; the binary is now at `chromium-1243/chrome-linux64/chrome`) at 1366 x 900 and 375 x 812 (touch,
+2x), plus the Rack tab at 761, 800 and 1024 px for the 16 Nov Mix card move. No page or console errors in any
+run. Audio was read from the live output with the master recorder (24-bit WAV decoded in the script), from
+`__synth.render` and from the deck's Render WAV download. Focus tonight: the pedal and computer keys when
+focus moves, MIDI messages a keyboard or DAW sends besides notes, the mixer and master bus moves over a held
+sine (the 14 Nov mixer change), the tempo box, Render WAV after the 16 Nov worklet release change, odd .mid
+files, a track reassigned mid-play, and the wax lamp's music warming with the deck playing.
+
+### What worked (measured)
+
+- Computer keys: Shift+A plays C3 and lets go; A held, then Meta down, A up, Meta up leaves nothing held.
+- MIDI: a note-on at velocity 0 lets the note go. CC 64 down, a note, CC 64 up are all in a take (sus on at
+  0, the note, sus off at 0.44 s).
+- Mixer moves over a held A2 sine on the live output (14 Nov change): mute on and off, level 1 to 0.2 to 1,
+  another strip's solo on and off, and pan hard left and back are all clean (largest sample step 1.0x the
+  sine's own). Mute plus solo on one strip mutes it; two strips soloed both play.
+- Tempo box: abc and an empty box go back to 120; -5 and 0 clamp to 40, 1e3 to 240; " 90 " sets 90; a blur
+  commits like Enter.
+- Deck import: a file with running status, note-on velocity 0 as note off, a tempo change from 120 to 60
+  at beat 2 and two overlapping note-ons on one key reads with every event at the right time (beat 3 at
+  2.0 s, length 2.5 s), plays, stops with nothing held, and ends with nothing held.
+- Render WAV (button, 16 Nov worklet release change): five renders in a row of a two-track file each gave a
+  valid 16-bit 48 kHz WAV of 3.958 s (song 1.958 s plus the 2 s tail), peaks 0.60 to 0.72, no NaN, about 2 s
+  each, no errors. At deck tempo 50% the render is 5.917 s (the last event at 3.917 s plus 2 s), as expected.
+- Wax lamp, music warms the bulb on, deck playing a chord file on the Rack tab: the level read 0.36 to 0.48
+  and the music term rose from 0 to 0.62 in 6 s; the wax went 22 to 34 °C ("warming up").
+- Rack tab at 761, 800, 1024 and 1366 px: no sideways scroll, no control past the right edge (527 controls).
+- Phone 375 px: three taps on the keys with the deck armed record a three-note take; no sideways scroll.
+
+### Findings
+
+**R1116-1. The Space pedal sticks if Space comes up in a text box.** Area c. Broken. Measured. Fixed tonight.
+- Steps: hold Space (the pedal), then click into the rack tempo box (or press Tab onto it), then let go of
+  Space. Play a note.
+- Expected: the pedal lets go with the key that pressed it.
+- Actual (live): sustain stayed on and the hold lamp stayed lit; a note let go at once was still sounding 3 s
+  later (1 voice). The same with the project and mix name boxes and with Tab. The keyup handler skipped
+  Space whenever the target was a text box, to let people type spaces, so the keyup that matched the page's
+  keydown was dropped.
+- Fix: the page remembers when Space pressed the pedal, and that Space's keyup lets go wherever focus is. A
+  space typed in a box (keydown in the box) still leaves the pedal and the hold button alone. Check: "K.
+  Space down on the page, up inside a text box: the pedal lets go ... (review R1116-1)" (fails on the live
+  tree: sustain stays on; passes on this tree).
+
+**R1116-2. Moving a track to another device mid-play drops notes.** Area e. Broken. Measured. Fixed tonight.
+- Steps: import a file with a fast part (40 notes about 60 ms apart) and a bass part, play, and press the
+  bass's Filament chip after about 1 s.
+- Expected: the file carries on from where it is, now on the new device.
+- Actual (live): 2 to 4 of the 40 melody notes never sound (three runs: 3, 4, 2) and nothing plays for
+  about 160 ms. The deck restarted from the scheduling position, up to 150 ms ahead of the sound, after
+  Stop had flushed the notes already sent for that window.
+- Fix: the restart now starts from the position you hear (`posNow`, never past the scheduling position), so
+  the flushed notes are sent again. Measured on a local server: 40 of 40 land; the restart still leaves the
+  deck's usual 60 ms start gap. Check: "M. moving a track to another device mid-play keeps every note ...
+  (review R1116-2)" (fails on the live tree, 38 of 40; passes on this tree).
+
+**R1116-3. A reassigned track does not pick up its held notes.** Area e. Confusing. Measured.
+- Steps: as R1116-2, with the bass part one note held from 0 to 2.5 s; move it to Filament at 1 s.
+- Actual: the bass stops on Cathode (Stop's panic) and is never struck on Filament, so it is silent for the
+  rest of its 1.5 s. Expected by a DAW user: the held note sounds on the new device ("note chase").
+- Note: a small feature (strike the notes that are inside their length at the restart point), not a defect.
+  Left for James (Open items).
+
+**R1116-4. All Notes Off from a keyboard stops the deck.** Area c, e. Confusing. Measured (deck), inferred
+from the code (song library).
+- Steps: play a take or a file on the deck; send CC 123 (or CC 120) over MIDI, as many keyboards and DAWs do
+  on stop, on a panic key, or when the DAW's transport stops.
+- Actual: the deck stops playing (playing true, then false 50 ms after the message). `midiEvent` maps 120
+  and 123 to Panic, and Panic also stops the deck and the library player.
+- Expected (MIDI spec): All Notes Off releases notes played from that input; it is not a transport stop.
+- Note: whether a keyboard's panic should stop the deck is a call. Options: CC 120 and 123 release input
+  notes only (Panic stays a page button), or keep it and say so. Left for James (Open items).
+
+**R1116-5. The tempo box: Escape and a decimal comma.** Area d. Confusing. Measured.
+- Steps: with the clock at 100, type 150 in the rack tempo box and press Escape. Separately, type 99,5 and
+  press Enter.
+- Actual: after Escape the box reads 150 while the clock stays at 100 (no revert, no commit). 99,5 sets the
+  clock to 240 (the comma is dropped, 995 clamped). Expected: Escape puts back 100; 99,5 is read as 99.5 or
+  refused.
+- Note: related to R1113-4 (the box rounds 120.5 to 121). Not fixed (two fixes already).
+
+**R1116-6. A format 2 file plays all its sequences at once.** Area e. Confusing. Measured.
+- Steps: import a format 2 .mid (two independent sequences, both on channel 1).
+- Actual: "f2.mid · 0:01.1 · 100 BPM · 2 tracks"; the two sequences are assigned Filament and Cathode and
+  play together. Format 2 means separate patterns, played one after another or one at a time.
+- Note: format 2 files are rare. Options: play them in order, or say "format 2: tracks played together".
+
+### Still open, re-measured tonight
+
+- R1110-3 and R1110-4 (live output, held A2 sine): master volume 30% back to 100% 40x the sine's own step;
+  delay off 54x, reverb off 47x, and the compressor off (threshold -30, ratio 8) 33x. Every mixer strip move
+  is clean (1.0x), so only the master bus switches and the master volume still step.
+- R1101-2: tape echo, a short Wide Novachord Strings note, 200 ms, tone 10, drive 0, repeat 30 against
+  repeat 1: 90% -11.1 dB, 95% +4.9 dB, 100% +13.7 dB.
+- R1113-4: 120.5 reads 121, the clock runs at 120.5. R1017-5: the rack at 40 to 240 leaves the master tempo
+  at 120.
+
+### Notes (not findings)
+
+- Five Render WAVs of one file in the same minute get the same file name; the browser numbers them.
+- The rack tempo box is a number box with step 1, which is why the browser rounds what it shows.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1104-4 and R1101-3 were not re-run, and the deck was not tried on Orthicon with loop
+off (the recorder takes Filament and Cathode only, R1023-3). Suggested next: f, g and h, including the 16
+Nov nightly's 13 new factory patches loaded from a project, and a Tab walk of the Rack tab after the Mix card
+move.
