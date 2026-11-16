@@ -5,7 +5,7 @@
 import { makeKnob } from './knob.js';
 import { getDevice } from './device.js';
 import { normalizeThy, THY_DEFAULT, THY_WAVES, THY_RANGES } from './thyratron.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./thyratron.worklet.js', import.meta.url).href;
 
@@ -14,7 +14,7 @@ const RANGE_LABEL = { lo: 'LO', '32': "32'", '16': "16'", '8': "8'", '4': "4'", 
 
 export async function createThyNode(ctx, { patch, events, active, destination } = {}) {
   if (!ctx.__thyratron) { await loadWorklet(ctx, WORKLET); ctx.__thyratron = true; }
-  const node = new AudioWorkletNode(ctx, 'thyratron', {
+  const node = workletNode(ctx, 'thyratron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeThy(patch), events: events || [], active: active !== false },
   });
@@ -26,7 +26,7 @@ export async function renderThyAudio({ patch, events = [], seconds = 1, sampleRa
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }));
   const node = await createThyNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context already dropped it */ }
   return buf;
 }

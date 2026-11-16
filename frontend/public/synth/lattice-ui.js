@@ -6,14 +6,14 @@
 
 import { latticeDevice, normalizeLattice, LATTICE_DEFAULT, SRC_IDS, DEST_IDS, SRC_LABELS, DEST_LABELS, TABLE_IDS, WARP_IDS, MODE_IDS, ROUTE_IDS, LFO_N } from './lattice.js';
 import { previewFrame, tableFromMono, FRAMES, CYCLE, MIPS } from './lattice-dsp.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./lattice.worklet.js', import.meta.url).href;
 const TABLE_LEN = MIPS * FRAMES * CYCLE;
 
 export async function createLatticeNode(ctx, { patch, events, active, table, destination } = {}) {
   if (!ctx.__lattice) { await loadWorklet(ctx, WORKLET); ctx.__lattice = true; }
-  const node = new AudioWorkletNode(ctx, 'lattice', {
+  const node = workletNode(ctx, 'lattice', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeLattice(patch),
@@ -30,7 +30,7 @@ export async function renderLattice({ patch, events = [], seconds = 1, sampleRat
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }));
   const node = await createLatticeNode(ctx, { patch, events: ev, active: true, table, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* context is done */ }
   return buf;
 }

@@ -5,13 +5,13 @@ import { houseFont } from './fread.js';
 import {
   additronDevice, normalizeAdditron, AD_DEFAULT, PARTS, FOOT, REG, spectrumOf,
 } from './additron.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./additron.worklet.js', import.meta.url).href;
 
 export async function createAdditronNode(ctx, { patch, events, active, destination } = {}) {
   if (!ctx.__additron) { await loadWorklet(ctx, WORKLET); ctx.__additron = true; }
-  const node = new AudioWorkletNode(ctx, 'additron', {
+  const node = workletNode(ctx, 'additron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeAdditron(patch),
@@ -27,7 +27,7 @@ export async function renderAdditronAudio({ patch, events = [], seconds = 1, sam
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: e.at == null ? 0 : Math.round((+e.at || 0) * sampleRate) }));
   const node = await createAdditronNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }

@@ -6,7 +6,7 @@ import { houseFont } from './fread.js';
 import {
   phantastronDevice, normalizePhantastron, PHANTA_DEFAULT, PADS, CARTS, toggleWire, SEED_MAX,
 } from './phantastron.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./phantastron.worklet.js', import.meta.url).href;
 const WIRE_COL = ['#ffb347', '#7dffb3', '#ff6b6b', '#d38cff', '#7ad7ff', '#f2e7c9'];
@@ -17,7 +17,7 @@ function isRack(engine) {
 
 export async function createPhantastronNode(ctx, { patch, events, active, destination } = {}) {
   if (!ctx.__phantastron) { await loadWorklet(ctx, WORKLET); ctx.__phantastron = true; }
-  const node = new AudioWorkletNode(ctx, 'phantastron', {
+  const node = workletNode(ctx, 'phantastron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizePhantastron(patch),
@@ -34,7 +34,7 @@ export async function renderPhantastronBuffer({ patch, events = [], seconds = 1,
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: e.at == null ? 0 : Math.round(e.at * sampleRate) }));
   const node = await createPhantastronNode(ctx, { patch: p, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* already closed */ }
   return buf;
 }

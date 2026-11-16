@@ -12,13 +12,13 @@ import {
   smearGrid, blurGrid, shiftGrid, stretchGrid, freezeColumn, quantizeGrid,
   DRAWN, drawnGrid, generatePicture, overGrid, summarizeGrid, pictureShare,
 } from './orthicon-dsp.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./orthicon.worklet.js', import.meta.url).href;
 
 export async function createOrthiconNode(ctx, { patch, events, active, destination, grid } = {}) {
   if (!ctx.__orthicon) { await loadWorklet(ctx, WORKLET); ctx.__orthicon = true; }
-  const node = new AudioWorkletNode(ctx, 'orthicon', {
+  const node = workletNode(ctx, 'orthicon', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeOrthicon(patch),
@@ -37,7 +37,7 @@ export async function renderOrthiconAudio({ patch, events = [], seconds = 1, sam
   const node = await createOrthiconNode(ctx, {
     patch, events: ev, active: true, destination: ctx.destination, grid: grid || null,
   });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }
@@ -50,7 +50,7 @@ function isRack(engine) {
 export async function recordOrthicon(ctx, source, seconds) {
   if (!ctx.__orthicon) { await loadWorklet(ctx, WORKLET); ctx.__orthicon = true; }
   if (ctx.state !== 'running') await ctx.resume();
-  const cap = new AudioWorkletNode(ctx, 'orthicon-capture', {
+  const cap = workletNode(ctx, 'orthicon-capture', {
     numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { seconds },
   });

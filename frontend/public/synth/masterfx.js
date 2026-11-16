@@ -6,7 +6,7 @@
 // The reverb's structure is the public-domain Freeverb design; the worklet header
 // records that. The delay and the compressor are original.
 
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode } from './worklets.js';
 
 const WORKLET = new URL('./master.worklet.js', import.meta.url).href;
 
@@ -176,7 +176,7 @@ export async function makeMasterFx(ctx, initial) {
   let cap = null, waitEnd = null, recording = false;
   function ensureNode() {
     if (node) return node;
-    node = new AudioWorkletNode(ctx, 'filament-master', {
+    node = workletNode(ctx, 'filament-master', {
       numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
       // Speakers, not discrete: a mono bus is heard in both speakers, and a
       // stereo bus keeps its channels. Discrete would record a mono signal on

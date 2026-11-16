@@ -7,7 +7,7 @@ import {
   normalizePentagrid, PENTA_DEFAULT, PENTA_BAND, MODES,
   bandOf, condFromSolar, stationNear, makeQso,
 } from './pentagrid.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./pentagrid.worklet.js', import.meta.url).href;
 const TUNE_MIN = 3500;
@@ -15,7 +15,7 @@ const TUNE_MAX = 30000;
 
 export async function createPentagridNode(ctx, { patch, events, active, destination } = {}) {
   if (!ctx.__pentagrid) { await loadWorklet(ctx, WORKLET); ctx.__pentagrid = true; }
-  const node = new AudioWorkletNode(ctx, 'pentagrid', {
+  const node = workletNode(ctx, 'pentagrid', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizePentagrid(patch), events: events || [], active: active !== false },
   });
@@ -27,7 +27,7 @@ export async function renderPentagridAudio({ patch, events = [], seconds = 1, sa
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }));
   const node = await createPentagridNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context already dropped it */ }
   return buf;
 }

@@ -13,7 +13,7 @@ import { makeMasterFx } from './masterfx.js';
 import { createMixer } from './mixer.js';
 import { createTransport } from './transport.js';
 import { RACK_API, getDevice, listDevices, registerDevice } from './device.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, trackNode, renderAndRelease } from './worklets.js';
 
 export const deviceOf = p => (p && p.device === 'cathode' ? 'cathode' : 'filament');
 export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : normalize(p));
@@ -50,6 +50,7 @@ export async function createEngine(ctx, opts = {}) {
     E.echo = makeTapeEcho(ctx, await probeEchoLatency(ctx.sampleRate));                 // ensemble > tape echo > the chain (EQ, output tubes, ...)
     await springLoad;
     E.spring = makeSpring(ctx);                                                          // tape echo > spring reverb > the chain
+    trackNode(ctx, E.spring.node);                                                       // released after an offline render
     E.ens.output.connect(E.echo.input);
     E.echo.output.connect(E.spring.input);
     E.spring.output.connect(E.C.input);
@@ -91,7 +92,7 @@ export async function createEngine(ctx, opts = {}) {
   const ctl = { bend: 0, mw: 0, at: 0 };
   function nodeFor(dev, events, playing) {
     if (E.nodes[dev]) return E.nodes[dev];
-    const n = new AudioWorkletNode(ctx, dev, {
+    const n = workletNode(ctx, dev, {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
       processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device, playing: !!playing, clock: clockMsg() },
     });
@@ -267,7 +268,7 @@ export async function renderOffline({ patch, patches, device, events = [], secon
     const step = Math.max(1, Math.ceil(seconds / 50));
     for (let t = step; t < seconds; t += step) ctx.suspend(t).then(() => { onProgress(t / seconds); ctx.resume(); });
   }
-  return ctx.startRendering();
+  return renderAndRelease(ctx);
 }
 
 // One MIDI message (status, data1, data2) as an engine event, or null. The page and the tests

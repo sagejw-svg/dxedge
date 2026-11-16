@@ -3,7 +3,7 @@
 
 import { trochotronDevice, normalizeTrochotron, TROCHO_DEFAULT, SEED_MAX } from './trochotron.js';
 import { pieceOf, shareOf, parseShare, midiOf, logisticR, GENERATORS, SCALE_NAMES, KEYS, ROUTES } from './trochotron-gen.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./trochotron.worklet.js', import.meta.url).href;
 const GEN_LABEL = {
@@ -15,7 +15,7 @@ function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
 
 export async function createTrochotronNode(ctx, { patch, notes, events, active, destination, playing } = {}) {
   if (!ctx.__trochotron) { await loadWorklet(ctx, WORKLET); ctx.__trochotron = true; }
-  const node = new AudioWorkletNode(ctx, 'trochotron', {
+  const node = workletNode(ctx, 'trochotron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeTrochotron(patch),
@@ -37,7 +37,7 @@ export async function renderTrochotronBuffer({ patch, events = [], seconds = 1, 
   const node = await createTrochotronNode(ctx, {
     patch: p, notes: piece.notes, events: ev, active: true, destination: ctx.destination, playing: playing !== false,
   });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* already closed */ }
   return buf;
 }

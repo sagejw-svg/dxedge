@@ -12,7 +12,7 @@ import { scoreFromBytes, prepareScore } from './heptode-score.js';
 import { trackColor } from './heptode-family.js';
 import { FREAD_FMT, addFread, houseFont } from './fread.js';
 import { createHeptodeEngine, postHeptode, renderHeptode, VOICES } from './heptode-dsp.js';
-import { loadWorklet } from './worklets.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./heptode.worklet.js', import.meta.url).href;
 
@@ -30,7 +30,7 @@ function copyScore(score) {
 
 export async function createHeptodeNode(ctx, { patch, events, active, destination, score, playing } = {}) {
   if (!ctx.__heptode) { await loadWorklet(ctx, WORKLET); ctx.__heptode = true; }
-  const node = new AudioWorkletNode(ctx, 'heptode', {
+  const node = workletNode(ctx, 'heptode', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeHeptode(patch),
@@ -50,7 +50,7 @@ export async function renderHeptodeBuffer({ patch, events = [], seconds = 1, sam
   const node = await createHeptodeNode(ctx, {
     patch, events: ev, active: true, destination: ctx.destination, score, playing,
   });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }
