@@ -166,13 +166,10 @@ def _trademark_check():
 _trademark_check()
 
 from playwright.sync_api import sync_playwright
-_CANDIDATES = [
-    os.environ.get("SYNTH_CHROMIUM", ""),
-    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-    "/opt/google/chrome/chrome",
-    "/usr/local/bin/chrome",
-]
-CHROME = next(p for p in _CANDIDATES if p and os.path.exists(p))
+# the browser: SYNTH_CHROMIUM, else the newest Playwright Chromium, else a system Chrome (synth_chromium.py)
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from synth_chromium import find_chromium
+CHROME = find_chromium()
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path=CHROME, args=["--autoplay-policy=no-user-gesture-required"])
     pg = b.new_page(viewport={"width": 1366, "height": 1000}); errs = []

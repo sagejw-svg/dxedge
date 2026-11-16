@@ -118,13 +118,10 @@ DENY = """
 """
 
 from playwright.sync_api import sync_playwright
-_CANDIDATES = [
-    os.environ.get("SYNTH_CHROMIUM", ""),
-    "/usr/bin/google-chrome",
-    "/opt/google/chrome/chrome",
-    "/usr/bin/chromium",
-]
-CHROME = next(p for p in _CANDIDATES if p and os.path.exists(p))
+# the browser: SYNTH_CHROMIUM, else the newest Playwright Chromium, else a system Chrome (synth_chromium.py)
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from synth_chromium import find_chromium
+CHROME = find_chromium()
 
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path=CHROME, args=[

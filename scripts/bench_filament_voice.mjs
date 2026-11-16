@@ -16,7 +16,7 @@
 // What it measures: the Filament worklet alone (no rack, no browser), 6 s at 48 kHz in 128-frame
 // blocks (--seconds to change it), process CPU time (user + system) per render, best of the rounds. Each render runs in a
 // fresh child process so one version's JIT state never helps the other. The cases are test 9's
-// (8 voices on each filter model, stereo offset, 16 voices), Sallen-Key 12 with its high-pass,
+// (8 voices on each filter model, the LC bank included, stereo offset, 16 voices), Sallen-Key 12 with its high-pass,
 // Poly 24 screaming and driven, SVF 12 morphed, screaming and swept, and the low pass gate in two of its modes at 8 voices, plus wider coverage for the
 // equivalence check: LFOs on everything, noise, sync, FM and ring, glide, high resonance, a still
 // note with no drift, patch changes mid-note (stereo offset on, loop tube, model, drive), and filter
@@ -87,6 +87,13 @@ const CASES = {
   era39sq: big('valve12', p => { p.era = { on: true, shape: 'organ', tone: 0, vib: 0, tabs: { body: true, open: true } }; }),
   era39steal: big('valve12', p => { p.voice.count = 4; p.era = { on: true, shape: 'piano', tone: 0.5, vib: 40, rate: 9, vel: 0.8, tabs: { voice: true, mellow: true, thin: true } }; }),
   era39chg: big('valve12', p => { p.drift = 0; p.era = { on: true, shape: 'swell', tone: 0.3, vib: 10, tabs: { edge: true } }; }),
+  // the LC bank as a filter model (16 Nov improvement: test 9 has had an "lc, 8 voices" line since the model
+  // landed, the bench had no case for it): test 9's patch, then every tab in at full resonance and drive with
+  // the stereo offset, and the bank in slot B behind Ladder 24. A ref without the model plays Valve 12.
+  lc: big('lc'),
+  lchot: big('lc', p => { p.filt.res = 1; p.filt.drive = 9; p.filt.offset = 0.4;
+    p.filt.tabs = { body: true, voice: true, edge: true, mellow: true, thin: true, open: true }; p.lfo1 = { rate: 3, cutoff: 1, wave: 'tri' }; }),
+  lcB: big('ladder24', p => { p.filtB = { route: 'serial', model: 'lc', cutoff: 600, res: 0.6, tabs: { voice: true, edge: true } }; }),
 };
 const EV = [48, 52, 55, 59, 60, 64, 67, 71].map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
 // Cathode (the mono device in the same worklet file): factory patches by name, a held line with glide,
