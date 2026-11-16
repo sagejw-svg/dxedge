@@ -669,15 +669,16 @@ with sync_playwright() as pw:
         L, R = render(sine_b("off"), note(45, 0.05) + [{"at": 0.4, "t": "patch", "load": False, "p": sine_b(rt)}], 1.2, rack=False)
         s_ = np.abs(np.diff(L)) + np.abs(np.diff(R)); steady, worstst = float(np.max(s_[int(1.0 * SR):])), float(np.max(s_))
         ck(f"Fb. no click when the route goes from off to {rt} under a held note (worst step {worstst:.5f}, steady {steady:.5f})", worstst <= 2.0 * steady + 1e-4, (worstst, steady))
-    # the schema: defaults, ranges, enums; old patches load with B off; no factory patch uses B yet
+    # the schema: defaults, ranges, enums; old patches load with B off. The 27 factory patches from before 16 Nov
+    # never used B; three of the 16 Nov set do (serial, split, parallel), and the list must be exactly those three
     nz = pg.evaluate("""() => { const N = __synth.eq.normalize, d = N({}).filtB;
       return { d: [d.route, d.model, d.cutoff, d.res, d.keytrack, d.env, d.morph, d.bal].join(','),
                lpg: N({ filtB: { model: 'lpg' } }).filtB.model, bad: N({ filtB: { route: 'sideways' } }).filtB.route, sp: N({ filtB: { route: 'split' } }).filtB.route,
                lo: [N({ filtB: { cutoff: 1, res: -1, bal: -5, morph: -1 } }).filtB].map(b => [b.cutoff, b.res, b.bal, b.morph].join(','))[0],
                hi: [N({ filtB: { cutoff: 1e6, res: 5, bal: 5, morph: 9 } }).filtB].map(b => [b.cutoff, b.res, b.bal, b.morph].join(','))[0],
                fac: __synth.factory().map(f => __synth.factoryPatch(f.name)).filter(p => p.filtB.route !== 'off').map(p => p.name) }; }""")
-    ck(f"Fb. filtB defaults to off (SVF 12, 2 kHz, flat, key tracking 50%); only the four routes and the six models other than the low pass gate load; ranges clamp; no factory patch turns it on ({nz})",
-       nz == {"d": "off,svf12,2000,0,0.5,0,0,0", "lpg": "svf12", "bad": "off", "sp": "split", "lo": "20,0,-1,0", "hi": "20000,1,1,3", "fac": []}, nz)
+    ck(f"Fb. filtB defaults to off (SVF 12, 2 kHz, flat, key tracking 50%); only the four routes and the six models other than the low pass gate load; ranges clamp; only the three 16 Nov patches turn it on, so no older patch sounds different ({nz})",
+       nz == {"d": "off,svf12,2000,0,0.5,0,0,0", "lpg": "svf12", "bad": "off", "sp": "split", "lo": "20,0,-1,0", "hi": "20000,1,1,3", "fac": ["Serial Grit Bass", "Split Horizon", "Twin Pizzicato"]}, nz)
 
     # ---------------------------------------------------------------- Fp. the filter response plot (28 Oct)
     # The plot comes from the worklet's own filter code run in a worker (filtplot.js), so these check it
@@ -788,10 +789,10 @@ with sync_playwright() as pw:
        bool(_ws) and _ws == _jl(_pj, "MOD_SRC") and _wd == _jl(_pj, "MOD_DST") and len(_mdc) == len(_wd) - 1 and all(_wd[i].lower() == k for k, i in _mdc.items()), (_ws, _wd, _mdc))
     nm_ = pg.evaluate("""async () => { const m = await import('./patches.js'); const d = m.normalize({});
       const j = m.normalize({ mod: { s1: { src: 'lfo1', dst: 'cut', amt: 5 }, s2: { src: 'bogus', dst: 'pitch', amt: -0.5 }, s9: { src: 'vel', dst: 'res', amt: 1 } } });
-      return { d: d.mod, j: j.mod, v: j.v, fac: m.FACTORY.every(p => Object.values(m.normalize(p).mod).every(s => s.src === 'off' && s.dst === 'off' && s.amt === 0)) }; }""")
+      return { d: d.mod, j: j.mod, v: j.v, fac: m.FACTORY.filter(p => !Object.values(m.normalize(p).mod).every(s => s.src === 'off' && s.dst === 'off' && s.amt === 0)).map(p => p.name) }; }""")
     off8 = all(nm_["d"].get(f"s{i}") == {"src": "off", "dst": "off", "amt": 0} for i in range(1, 9)) and len(nm_["d"]) == 8
-    ck("Mm. the schema: a patch with no matrix loads with all eight slots off, every factory patch has them off (no patch sounds different), and a bad slot is clamped or dropped (schema stays v:1)",
-       off8 and nm_["fac"] and nm_["v"] == 1 and nm_["j"]["s1"] == {"src": "lfo1", "dst": "cut", "amt": 1} and nm_["j"]["s2"] == {"src": "off", "dst": "pitch", "amt": -0.5} and "s9" not in nm_["j"], nm_)
+    ck("Mm. the schema: a patch with no matrix loads with all eight slots off, every factory patch but the 16 Nov Sync Snap Bass has them off (no older patch sounds different), and a bad slot is clamped or dropped (schema stays v:1)",
+       off8 and nm_["fac"] == ["Sync Snap Bass"] and nm_["v"] == 1 and nm_["j"]["s1"] == {"src": "lfo1", "dst": "cut", "amt": 1} and nm_["j"]["s2"] == {"src": "off", "dst": "pitch", "amt": -0.5} and "s9" not in nm_["j"], nm_)
     def mm(**slots): return {k: dict({"src": "off", "dst": "off", "amt": 0}, **v) for k, v in slots.items()}
     def cents(f, ref): return 1200 * math.log2(f / ref)
     sine = lambda **o: dict({"wave": "sine", "level": 0.5}, **o)
@@ -1377,10 +1378,10 @@ with sync_playwright() as pw:
       return { a: d.filt.tabs, b: d.filtB.tabs, jm: j.filt.model, jbm: j.filtB.model, ja: j.filt.tabs, jb: j.filtB.tabs, v: j.v,
         enA: m.ENUMS['filt.model'], enB: m.ENUMS['filtB.model'], fac: m.FACTORY.filter(p => p.filt.model === 'lc' || p.filtB.model === 'lc').map(p => p.name) }; }""")
     _dt = {"body": True, "voice": True, "edge": False, "mellow": True, "thin": False, "open": False}
-    ck(f"Lc. the schema: a patch with no tabs gets body, voice and mellow on both slots (the worklet's LC_T0 {_lc_w} agrees); 'lc' is a model in slot A and slot B; no tab in reads as open; no factory patch uses it, so no patch sounds different (schema stays v:1) ({lcn_})",
+    ck(f"Lc. the schema: a patch with no tabs gets body, voice and mellow on both slots (the worklet's LC_T0 {_lc_w} agrees); 'lc' is a model in slot A and slot B; no tab in reads as open; only the 16 Nov Vowel Bank uses it, so no older patch sounds different (schema stays v:1) ({lcn_})",
        lcn_["a"] == _dt and lcn_["b"] == _dt and _lc_w == [int(lcn_["a"][t_]) for t_ in _LCT] and "lc" in lcn_["enA"] and "lc" in lcn_["enB"]
        and lcn_["jm"] == "lc" and lcn_["jbm"] == "lc" and lcn_["ja"]["open"] is True and lcn_["jb"]["edge"] is True and lcn_["jb"]["body"] is True
-       and not lcn_["fac"] and lcn_["v"] == 1, lcn_)
+       and lcn_["fac"] == ["Vowel Bank"] and lcn_["v"] == 1, lcn_)
     def lc_tabs(**k_): return {t_: bool(k_.get(t_, False)) for t_ in _LCT}
     def lc_model(f, cut, res, tb):
         fs_ = 2 * SR; qm = 10 ** (res - 0.3); qb = qm ** 0.5; n_ = max(1, sum(tb[t_] for t_ in _LCT)); h_ = 0
@@ -1672,6 +1673,71 @@ with sync_playwright() as pw:
         wf_ = max(folds_)
         ck(f"7. mono fold: {n} loses {wf_[0]:.1f} dB folded to mono, the worse of two renders ({folds_[0][0]:.2f}, {folds_[1][0]:.2f}; limit 3)", wf_[0] <= 3.0, folds_)
         ck(f"7. {n} sounds, and stays under 0 dBFS", all(1e-3 < f_[1] and f_[2] <= 1.0 for f_ in folds_), [(db(f_[1]), f_[2]) for f_ in folds_])
+
+    # ---------------------------------------------------------------- Nf. the 16 Nov factory patches (toward "about 40")
+    # The 27 older patches keep their names and order; 13 new ones follow. Each new one is level matched by
+    # measurement, safe played hard, and the feature it is the first factory patch on is audible in it.
+    NF_OLD = ["Plate Bass", "Diode Squelch", "Cellar Sub", "Filament Lead", "Screaming 12AX7", "Snarl Lead", "Wide Novachord Strings",
+              "Black Light Pad", "Velvet Brass", "Notch Drift", "Bakelite Organ", "Hollow Pluck", "Magic Eye Sweep", "Shortwave Drift",
+              "CW Practice Tone", "Seven Filaments", "Twin Sweep", "Haunted Organ", "Theremin Wail", "Horror Pad", "Creaky Drone",
+              "Ghost Choir", "Sub Heartbeat", "Glass Music Box", "Eerie Bells", "Exposition Choir", "Parlor Harp"]
+    NF_NEW = ["Serial Grit Bass", "Rubber Bass", "Sync Snap Bass", "Echo Lead", "Split Horizon", "Vowel Bank", "Tine Piano", "Reed Keys",
+              "Spring Clavier", "Spring Twang", "Twin Pizzicato", "Tape Wobble", "Sample Hold Bleeps"]
+    fac_ = pg.evaluate("__synth.factory()")
+    cats_ = {}
+    for f_ in fac_: cats_[f_["cat"]] = cats_.get(f_["cat"], 0) + 1
+    ck(f"Nf. 40 Filament factory patches: the 27 older ones first, names and order unchanged, then the 13 from 16 Nov ({cats_})",
+       [f_["name"] for f_ in fac_] == NF_OLD + NF_NEW, [f_["name"] for f_ in fac_])
+    ck(f"Nf. every category of the design brief (Bass, Lead, Pad, Keys, Pluck, FX) holds at least 4 patches ({cats_})",
+       all(cats_.get(c_, 0) >= 4 for c_ in ("Bass", "Lead", "Pad", "Keys", "Pluck", "FX")), cats_)
+    def nf_notes(P_): return [36] if P_["cat"] == "Bass" else ([60] if P_["voice"]["mode"] != "poly" else [48, 55, 60, 64])
+    def nf_loud(L_, R_):
+        x_ = (L_ ** 2 + R_ ** 2) / 2; w_ = int(0.3 * SR)
+        return 10 * math.log10(np.convolve(x_, np.ones(w_) / w_, "valid").max() + 1e-12)
+    def nf_bands(x_):
+        X_ = np.abs(np.fft.rfft(x_ * np.hanning(len(x_)))) ** 2; f_ = np.fft.rfftfreq(len(x_), 1 / SR)
+        return np.array([10 * math.log10(np.sum(X_[(f_ >= lo_) & (f_ < 2 * lo_)]) + 1e-20) for lo_ in (62.5, 125, 250, 500, 1000, 2000, 4000, 8000)])
+    nf_lv, nf_hard = {}, {}
+    for n_ in NF_NEW:
+        P_ = pg.evaluate("n => __synth.factoryPatch(n)", n_); ks_ = nf_notes(P_)
+        # the power mean of two renders: random oscillator start phases move one render's 300 ms peak by up to
+        # about 3 dB on the plucks and Serial Grit Bass (measured 16 Nov: -17.5 to -14.8 over 8 renders)
+        lv2_ = [nf_loud(*render(P_, [e for k_ in ks_ for e in note(k_, 0.05, 1.85)], 2.6)) for _r in range(2)]
+        nf_lv[n_] = round(10 * math.log10(np.mean([10 ** (v_ / 10) for v_ in lv2_])), 1)
+        L_, R_ = render(P_, [e for k_ in ks_ for e in note(k_, 0.05, 1.85, 1.0)], 2.6)
+        nf_hard[n_] = (bool(np.all(np.isfinite(L_)) and np.all(np.isfinite(R_))), round(db(max(np.max(np.abs(L_)), np.max(np.abs(R_)))), 1))
+    ck(f"Nf. each new patch on test 7's notes lands at -18 to -13 dB (300 ms loudness, the power mean of two renders; the older non-Halloween set reads -17.8 to -12.5): {nf_lv}",
+       all(-18 <= v_ <= -13 for v_ in nf_lv.values()), nf_lv)
+    ck(f"Nf. each new patch played at full velocity is finite and under 0 dBFS (peak dBFS): {nf_hard}",
+       all(ok_ and pk_ <= 0 for ok_, pk_ in nf_hard.values()), nf_hard)
+    # the feature each one is the first factory patch on, switched off in a copy: the tail (echo, spring) or
+    # the spectrum (Filter B routes, the mod matrix, the LC bank) must move by a clear margin
+    nf_off = {"Serial Grit Bass": {"filtB": {"route": "off"}}, "Split Horizon": {"filtB": {"route": "off"}}, "Twin Pizzicato": {"filtB": {"route": "off"}},
+              "Sync Snap Bass": {"mod": {"s1": {"src": "off", "dst": "off", "amt": 0}}}, "Vowel Bank": {"filt": {"model": "valve12"}},
+              "Echo Lead": {"echo": {"on": False}}, "Tape Wobble": {"echo": {"on": False}}, "Spring Clavier": {"spring": {"on": False}}, "Spring Twang": {"spring": {"on": False}}}
+    nf_tail, nf_spec = {}, {}
+    for n_, off_ in nf_off.items():
+        P_ = pg.evaluate("n => __synth.factoryPatch(n)", n_); ks_ = nf_notes(P_); Q_ = json.loads(json.dumps(P_))
+        for sec_, v_ in off_.items(): Q_[sec_].update(v_)
+        ev_ = [e for k_ in ks_ for e in note(k_, 0.05, 1.2)]
+        (La, Ra), (Lb, Rb) = render(P_, ev_, 2.4), render(Q_, ev_, 2.4)
+        if "echo" in off_ or "spring" in off_:
+            t_ = slice(int(1.45 * SR), int(2.3 * SR))
+            nf_tail[n_] = round(db(math.sqrt(np.mean(La[t_] ** 2 + Ra[t_] ** 2))) - db(math.sqrt(np.mean(Lb[t_] ** 2 + Rb[t_] ** 2)) + 1e-12), 1)
+        elif n_ == "Sync Snap Bass":   # the matrix's envelope sweep on the synced oscillator is over by 0.3 s
+            t_ = slice(int(0.06 * SR), int(0.3 * SR))
+            def nf_cen(x_):
+                X_ = np.abs(np.fft.rfft(x_ * np.hanning(len(x_)))); f_ = np.fft.rfftfreq(len(x_), 1 / SR); return float(np.sum(X_ * f_) / np.sum(X_))
+            nf_sweep = (round(nf_cen(La[t_] + Ra[t_])), round(nf_cen(Lb[t_] + Rb[t_])))
+        else:   # read on the held chord
+            t_ = slice(int(0.25 * SR), int(1.15 * SR))
+            nf_spec[n_] = round(float(np.max(np.abs(nf_bands(La[t_] + Ra[t_]) - nf_bands(Lb[t_] + Rb[t_])))), 1)
+    ck(f"Nf. the echo and spring patches ring on after the keys let go: the tail 0.25 to 1.1 s after note off is 10 dB or more above the same patch with the effect off ({nf_tail} dB)",
+       len(nf_tail) == 4 and all(v_ >= 10 for v_ in nf_tail.values()), nf_tail)
+    ck(f"Nf. Filter B on Serial Grit Bass, Split Horizon and Twin Pizzicato and the LC bank on Vowel Bank each move an octave band by 3 dB or more against the patch without it ({nf_spec} dB)",
+       len(nf_spec) == 4 and all(v_ >= 3 for v_ in nf_spec.values()), nf_spec)
+    ck(f"Nf. Sync Snap Bass: the matrix's filter envelope on the synced oscillator 2 lifts the spectral centroid of the first 0.3 s by a tenth or more (16 Nov: 926 against 761 Hz; the same patch read within 3 Hz over five renders each) ({nf_sweep[0]} Hz against {nf_sweep[1]} Hz without the slot)",
+       nf_sweep[0] >= 1.1 * nf_sweep[1], nf_sweep)
 
     # ---------------------------------------------------------------- 8. aliasing baseline
     for wave in ("saw", "pulse"):
@@ -2918,13 +2984,14 @@ with sync_playwright() as pw:
           const c = CM.normalizeC({ device: 'cathode', echo: { on: true, mode: 'offset', sync: '1/4', fb: 40 } }).echo;
           const d = DM.normalizeDrum({ echo: { on: true, mode: 'pingpong' } }).echo;
           const onF = PM.FACTORY.filter(p => p.echo && p.echo.on).map(p => p.name), onC = CM.C_FACTORY.filter(p => p.echo && p.echo.on).map(p => p.name);
-          return { old, bad, c: [c.on, c.mode, c.sync, c.fb, c.time], d: [d.on, d.mode, d.mix], onF, onC, nF: PM.FACTORY.length, allF: PM.FACTORY.every(p => p.echo && p.echo.mode === 'mono') }; }""")
+          return { old, bad, c: [c.on, c.mode, c.sync, c.fb, c.time], d: [d.on, d.mode, d.mix], onF, onC, nF: PM.FACTORY.length, notMono: PM.FACTORY.filter(p => !(p.echo && p.echo.mode === 'mono')).map(p => p.name) }; }""")
         ck("Te. schema: a patch from before the echo loads with it off at the defaults",
            nz["old"] == {"on": False, "mode": "mono", "time": 375, "sync": "off", "fb": 35, "mix": 30, "wow": 20, "flutter": 20, "drive": 3, "tone": 5}, nz["old"])
         ck("Te. schema: junk clamps (time 40, feedback 100, mix 0, flutter 100, drive 10, tone 0) and unknown names fall back (mono, sync off)",
            nz["bad"] == {"on": True, "mode": "mono", "time": 40, "sync": "off", "fb": 100, "mix": 0, "wow": 20, "flutter": 100, "drive": 10, "tone": 0}, nz["bad"])
         ck("Te. schema: Cathode and Dekatron patches carry the same echo fields", nz["c"] == [True, "offset", "1/4", 40, 375] and nz["d"] == [True, "pingpong", 30], nz)
-        ck(f"Te. schema: no factory patch switches the echo on, so none sounds different ({nz['nF']} Filament patches)", nz["onF"] == [] and nz["onC"] == [] and nz["allF"], nz)
+        ck(f"Te. schema: only the two 16 Nov patches (Echo Lead, Tape Wobble) switch the echo on or leave mono, so no older patch sounds different ({nz['nF']} Filament patches)",
+           nz["onF"] == ["Echo Lead", "Tape Wobble"] and nz["onC"] == [] and nz["notMono"] == ["Echo Lead", "Tape Wobble"], nz)
         # idle: off unplugs the feed (offline at once); live, off waits for the fade and on replugs at once
         idl = pg.evaluate("""async () => { const eng = await import('/synth/engine.js'), PM = await import('/synth/patches.js');
           const ctx = new OfflineAudioContext(2, 4800, 48000), E = await eng.createEngine(ctx, { patch: PM.normalize({}), events: [] });
@@ -3160,7 +3227,8 @@ with sync_playwright() as pw:
         ck("Sp. schema: junk clamps (mix 100, decay 0.5, drip 0, drive 10) and a non-number keeps the default (tone 5)",
            nz["bad"] == {"on": True, "mix": 100, "decay": 0.5, "tone": 5, "drip": 0, "drive": 10}, nz["bad"])
         ck("Sp. schema: Cathode and Dekatron patches carry the same spring fields", nz["c"] == [True, 4, 25] and nz["d"] == [True, 60, 2.5], nz)
-        ck(f"Sp. schema: no factory patch switches the spring on, so none sounds different ({nz['nF']} Filament patches)", nz["onF"] == [] and nz["onC"] == [], nz)
+        ck(f"Sp. schema: only the two 16 Nov patches (Spring Clavier, Spring Twang) switch the spring on, so no older patch sounds different ({nz['nF']} Filament patches)",
+           nz["onF"] == ["Spring Clavier", "Spring Twang"] and nz["onC"] == [], nz)
         # rack.js is imported inside worklet scopes (heptode-dsp.js reaches it through patches.js), which have no URL or window:
         # a module that imports patches.js must still register its processor (a first build made the spring's URL at the top
         # of rack.js, and Heptode's worklet stopped loading, and with it every device hosted after it)
