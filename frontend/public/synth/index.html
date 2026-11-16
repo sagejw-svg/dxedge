@@ -1158,6 +1158,19 @@
   /* desktop: everything visible, and a wide monitor uses the width */
   @media (min-width: 761px) {
     .mod[data-wide] { grid-column: span 2; }
+    /* The Mix and Master cards take a row of their own on every desktop width (graphics, 16 Nov). From about 830 to 1099 px
+       the panel has three columns, so the Mix card (two columns, over 2,200 px tall with its strips in one column) shared a
+       row with one card, and the grid stretched that card to the Mix card's height: Orthicon's Scan, Trochotron's Shape,
+       Rhumbatron's Body, Additron's Spin, Pentagrid's Receiver, Thyratron's Mod and Cathode's Room each stood about 1,800 to
+       2,100 px tall over a handful of knobs. The strips stay one column here: two columns at this width leave stub faders. */
+    #mHost, #mMaster { grid-column: 1 / -1; }
+    /* Slider grids take as many columns as fit at a usable width: a narrow card gets one column,
+       so a fader never shrinks to a stub between its label and its value. From 761 px (was 1100, 16 Nov): a card the Mix
+       card no longer stretches sits alone in its row and the row fill widens it to the panel, so one column of faders
+       would run about 800 px; this way Rhumbatron's Body and Trochotron's Shape get two or three columns there. */
+    .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+    /* a filled card can hold several slider columns: a wider gutter keeps one column's readout off the next one's name */
+    .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { column-gap: 26px; }
     input[type="range"] { min-height: 22px; }
   }
   @media (min-width: 1100px) {
@@ -1172,12 +1185,7 @@
     #mHost, #mMaster { grid-column: 1 / -1; }
     #mHost { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; align-items: start; }
     #mHost > h3, #mHost > .hostbar, #mHost > .note { grid-column: 1 / -1; }
-    /* Slider grids take as many columns as fit at a usable width: a narrow card gets one column,
-       so a fader never shrinks to a stub between its label and its value. */
     .rn-grid { grid-template-columns: 1fr 1fr; }
-    .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
-    /* a filled card can hold several slider columns: a wider gutter keeps one column's readout off the next one's name */
-    .tr-grid, .ph-grid, .rhum-grid, .hep-sliders { column-gap: 26px; }
   }
   @media (min-width: 1680px) {
     #mHost { grid-template-columns: 1fr 1fr 1fr; }
