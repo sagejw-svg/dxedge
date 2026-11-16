@@ -29,9 +29,9 @@
       "from": "2026-11-23",
       "to": "2026-11-29",
       "scenes": [
-        { "id": "thanksgiving-table", "name": "Thanksgiving table", "src": "thanksgiving/table.jpg", "lamp": { "x": 0.22, "y": 0.72, "s": 0.18, "rot": -1, "tilt": 8, "skew": 0 } },
-        { "id": "thanksgiving-hearth", "name": "Thanksgiving hearth", "src": "thanksgiving/hearth.jpg", "lamp": { "x": 0.78, "y": 0.64, "s": 0.22, "rot": 2, "tilt": 6, "skew": 1 } },
-        { "id": "thanksgiving-kitchen", "name": "Thanksgiving kitchen", "src": "thanksgiving/kitchen.jpg", "lamp": { "x": 0.40, "y": 0.58, "s": 0.15, "rot": 1, "tilt": 10, "skew": -1 } }
+        { "id": "thanksgiving-table", "name": "Thanksgiving table", "src": "thanksgiving/table.jpg", "lamp": { "x": 0.13, "y": 0.90, "s": 0.15, "rot": -1, "tilt": 8, "skew": 0 } },
+        { "id": "thanksgiving-hearth", "name": "Thanksgiving hearth", "src": "thanksgiving/hearth.jpg", "lamp": { "x": 0.50, "y": 0.93, "s": 0.18, "rot": 2, "tilt": 5, "skew": 1 } },
+        { "id": "thanksgiving-store", "name": "Country store", "src": "thanksgiving/store.jpg", "lamp": { "x": 0.78, "y": 0.86, "s": 0.16, "rot": -2, "tilt": 4, "skew": -1 } }
       ]
     },
     {

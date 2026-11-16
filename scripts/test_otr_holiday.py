@@ -5,7 +5,9 @@ The daily blocks stay schedule.json. holidays.json holds civil-date ranges in
 America/Los_Angeles: Thanksgiving Nov 23–29 (heaviest Nov 26), Christmas
 Dec 18–26 (heaviest Dec 24–25), and New Year's Dec 30–Jan 1 (heaviest
 Dec 31 and Jan 1). Every referenced episode has to be a real catalog row
-whose archive URL answers.
+whose archive URL answers. The slideshow uses the same Pacific dates: the
+three Thanksgiving rooms join the rotation only on Nov 23–29, and stay out
+on Nov 22 and Nov 30. Christmas and New Year's rooms are still hooks only.
 
 Run:  python3 scripts/test_otr_holiday.py
 """
@@ -143,13 +145,43 @@ season = next((s for s in scenes.get("seasons") or [] if s.get("id") == "thanksg
 ck("slideshow has a Thanksgiving scene hook for the same dates",
    season and season.get("tz") == "America/Los_Angeles" and season.get("from") == "2026-11-23" and season.get("to") == "2026-11-29"
    and season.get("scenes"), season and season.get("id"))
-missing_art = []
-for sc in (season or {}).get("scenes") or []:
-    path = os.path.join(OTR, "scenes", sc.get("src") or "")
-    if not os.path.isfile(path):
-        missing_art.append(sc.get("src"))
-ck("Thanksgiving scene art is not invented; the hook falls back until files arrive",
-   missing_art and len(missing_art) == len(season["scenes"]), missing_art)
+
+def jpeg_size(path):
+    data = open(path, "rb").read()
+    if data[:3] != b"\xff\xd8\xff":
+        return None
+    i = 2
+    while i + 8 < len(data):
+        if data[i] != 0xFF:
+            return None
+        marker = data[i + 1]
+        if marker in (0xC0, 0xC1, 0xC2):
+            h = int.from_bytes(data[i + 5:i + 7], "big")
+            w = int.from_bytes(data[i + 7:i + 9], "big")
+            return w, h
+        if marker in (0xD8, 0xD9):
+            i += 2
+            continue
+        seglen = int.from_bytes(data[i + 2:i + 4], "big")
+        if seglen < 2:
+            return None
+        i += 2 + seglen
+    return None
+
+
+room_size = jpeg_size(os.path.join(OTR, "scenes", scenes["scenes"][0]["src"]))
+want_art = [
+    ("thanksgiving-table", "Thanksgiving table", "thanksgiving/table.jpg"),
+    ("thanksgiving-hearth", "Thanksgiving hearth", "thanksgiving/hearth.jpg"),
+    ("thanksgiving-store", "Country store", "thanksgiving/store.jpg"),
+]
+got_art = [(sc.get("id"), sc.get("name"), sc.get("src")) for sc in (season or {}).get("scenes") or []]
+sizes = []
+for _i, _n, src in got_art:
+    path = os.path.join(OTR, "scenes", src or "")
+    sizes.append(jpeg_size(path) if src and os.path.isfile(path) else None)
+ck("Thanksgiving rooms are the same 1280x720 JPEG size as the year-round rooms",
+   room_size == (1280, 720) and got_art == want_art and sizes == [room_size] * 3, (room_size, got_art, sizes))
 for sid, start, end in (
     ("christmas-2026", "2026-12-18", "2026-12-26"),
     ("newyear-2026", "2026-12-30", "2027-01-01"),
@@ -387,19 +419,85 @@ with sync_playwright() as p:
         page.wait_for_function("window.__otr && __otr.slideshow && __otr.slideshow.ready()", timeout=20000)
         return page, err, c
 
-    sp, serr, sc = open_otr("?sceneDate=2026-11-26")
-    season_on = sp.evaluate("__otr.slideshow.season()")
-    ids_on = sp.evaluate("__otr.slideshow.scenes()")
-    ck("Thanksgiving scene hook is active with no art, so the rooms stay the year-round set",
-       season_on["active"] is True and season_on["id"] == "thanksgiving-2026" and season_on["art"] == 0
-       and season_on["fallback"] is True and ids_on[0] == "space" and ids_on[1] == "farm"
-       and "thanksgiving-table" not in ids_on and not serr, (season_on, ids_on, serr[:3]))
-    sc.close()
+    year_ids = [s["id"] for s in scenes["scenes"]]
+    tg_ids = ["thanksgiving-table", "thanksgiving-hearth", "thanksgiving-store"]
 
-    sp2, serr2, sc2 = open_otr("?sceneDate=2026-11-22")
-    season_off = sp2.evaluate("__otr.slideshow.season()")
-    ck("Nov 22 does not turn the scene hook on", season_off["active"] is False and not serr2, (season_off, serr2[:3]))
-    sc2.close()
+    def open_scenes(query="", tz="America/Los_Angeles", at=None, basic=False):
+        c = browser.new_context(viewport={"width": 1280, "height": 900}, timezone_id=tz)
+        if basic:
+            c.add_init_script("localStorage.setItem('otr_mode','basic')")
+        page = c.new_page()
+        err = []
+        page.on("pageerror", lambda e: err.append(str(e)))
+        if at:
+            page.clock.install(time=at)
+        page.goto(BASE + "/otr/" + query)
+        page.wait_for_function("window.__otr && __otr.slideshow && __otr.slideshow.ready()", timeout=20000)
+        return page, err, c
+
+    def read_scenes(page):
+        return page.evaluate("__otr.slideshow.season()"), page.evaluate("__otr.slideshow.scenes()")
+
+    def tg_on(info, ids, date):
+        return (info["active"] is True and info["id"] == "thanksgiving-2026" and info["date"] == date
+                and info["art"] == 3 and info["fallback"] is False and ids == year_ids + tg_ids)
+
+    def tg_off(info, ids, date):
+        return (info["active"] is False and info["art"] == 0 and info["fallback"] is True
+                and info["date"] == date and ids == year_ids and not any(i.startswith("thanksgiving") for i in ids))
+
+    # sceneDate is the Pacific civil date the season hook compares. Nov 22 and
+    # Nov 30 are outside; Nov 23 through Nov 29 are inside.
+    for date, want in (
+        ("2026-11-22", False),
+        ("2026-11-23", True),
+        ("2026-11-29", True),
+        ("2026-11-30", False),
+    ):
+        page, err, c = open_scenes("?sceneDate=" + date)
+        info, ids = read_scenes(page)
+        ck(f"{date} Pacific {'adds' if want else 'does not add'} the Thanksgiving rooms",
+           (tg_on(info, ids, date) if want else tg_off(info, ids, date)) and not err,
+           (info, ids, err[:3]))
+        c.close()
+
+    page, err, c = open_scenes("?sceneDate=2026-11-26")
+    info, ids = read_scenes(page)
+    page.click("#slideBtn")
+    page.wait_for_function("() => __otr.slideshow.on()", timeout=5000)
+    opener = page.evaluate("__otr.slideshow.current()")
+    table = page.evaluate("(i) => __otr.slideshow.go(i)", len(year_ids))
+    ck("Nov 26 Pacific Slideshow keeps the year-round opener and includes the three rooms",
+       tg_on(info, ids, "2026-11-26") and opener["id"] == "space" and "space.jpg" in opener["src"]
+       and table["id"] == "thanksgiving-table" and "thanksgiving/table.jpg" in table["src"] and not err,
+       (info, ids, opener, table, err[:3]))
+    c.close()
+
+    # Viewer zone is New York. Late November 2026 is PST (UTC-8), so 07:30Z is
+    # still the previous Pacific date while New York is already on the next one.
+    for iso, date, want in (
+        ("2026-11-23T07:30:00Z", "2026-11-22", False),
+        ("2026-11-23T08:30:00Z", "2026-11-23", True),
+        ("2026-11-30T07:30:00Z", "2026-11-29", True),
+        ("2026-11-30T08:30:00Z", "2026-11-30", False),
+    ):
+        page, err, c = open_scenes(tz="America/New_York", at=iso)
+        info, ids = read_scenes(page)
+        ck(f"{iso} is {date} Pacific, Thanksgiving rooms {'on' if want else 'off'}",
+           (tg_on(info, ids, date) if want else tg_off(info, ids, date)) and not err,
+           (info, ids, err[:3]))
+        c.close()
+
+    page, err, c = open_scenes("?sceneDate=2026-11-26", basic=True)
+    info, ids = read_scenes(page)
+    basic_btn = page.is_visible("#slideBtnBasic")
+    adv_btn = page.is_visible("#slideBtn")
+    page.click("#slideBtnBasic")
+    page.wait_for_function("() => __otr.slideshow.on() && document.getElementById('otr-basic').contains(document.getElementById('slideStage'))", timeout=5000)
+    ck("Basic mode on Nov 26 still opens Slideshow with the Thanksgiving rooms",
+       tg_on(info, ids, "2026-11-26") and basic_btn and not adv_btn and not err,
+       (info, ids, basic_btn, adv_btn, err[:3]))
+    c.close()
 
     def scene_ck(query, sid, label):
         page, err, c = open_otr(query)
