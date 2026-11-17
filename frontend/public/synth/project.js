@@ -1,5 +1,5 @@
-// A project is the rack's document: both device patches, the mixer, the tempo
-// and which device the keyboard plays. It is plain JSON (kind 'dxrack', v 1).
+// A project is the rack's document: both device patches, the mixer, the tempo,
+// which device the keyboard plays and the paper roll. It is plain JSON (kind 'dxrack', v 1).
 // The page keeps one in localStorage and can download or upload the same file.
 //
 // These functions do not touch the DOM or the audio graph. The page applies a
@@ -22,9 +22,20 @@ import { normalizeResnatron } from './resnatron.js';
 import { normalizeStrip, normalizeBus } from './mixer.js';
 import { normalizeArmed } from './mixsession.js';
 import { clampTempo, normalizeSig } from './transport.js';
+import { normalizeRoll } from './paperroll.js';
 
 export const PROJECT_SCHEMA = 1;
 export const PROJECT_KEY = 'dxrack_project';
+
+// The paper roll in the project (17 Nov 2026): its pattern, the device it plays ('lit' is the device lit on
+// the rail) and its run switch. Optional: a project saved before 17 Nov has no roll, and loading one leaves
+// the roll as it is. A file's dest is a plain device id or 'lit'; the strip checks it against the rack again
+// when it applies the project.
+export function normalizeProjectRoll(r) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+  const dest = typeof r.dest === 'string' && /^[a-z][a-z0-9]{0,31}$/.test(r.dest) ? r.dest : 'lit';
+  return { pat: normalizeRoll(r.pat), dest, run: r.run === true };
+}
 
 export function normalizeProject(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -54,7 +65,7 @@ export function normalizeProject(raw) {
   if (devs.additron) devices.additron = { patch: normalizeAdditron(devs.additron.patch) };
   if (devs.rhumbatron) devices.rhumbatron = { patch: normalizeRhumbatron(devs.rhumbatron.patch) };
   if (devs.resnatron) devices.resnatron = { patch: normalizeResnatron(devs.resnatron.patch) };
-  return {
+  const out = {
     v: PROJECT_SCHEMA, kind: 'dxrack', name,
     tempo: clampTempo(src.tempo == null ? 120 : src.tempo),
     timeSig: normalizeSig(src.timeSig),
@@ -64,6 +75,9 @@ export function normalizeProject(raw) {
     bus: normalizeBus(src.bus),
     devices,
   };
+  const roll = normalizeProjectRoll(src.roll);
+  if (roll) out.roll = roll;
+  return out;
 }
 
 export function saveLocal(storage, project) {

@@ -1957,7 +1957,7 @@
             <span class="htag" aria-hidden="true">project</span>
             <span class="hwin"><input id="projName" type="text" maxlength="40" value="Untitled" aria-label="Project name" title="Project name"></span>
             <span class="hjoin" role="group" aria-label="Project">
-              <button class="btn small" id="projSave" aria-label="Save project" title="Keep this project (the patches, the mix and the tempo) in this browser">save</button>
+              <button class="btn small" id="projSave" aria-label="Save project" title="Keep this project (the patches, the mix, the tempo and the paper roll) in this browser">save</button>
               <button class="btn small" id="projLoad" aria-label="Load saved project" title="Load the project saved in this browser">load</button>
               <button class="btn small" id="projDown" aria-label="Download project" title="Download the project as a JSON file">download</button>
               <label class="btn small filebtn" for="projFile" title="Load a project file (JSON)">upload<input id="projFile" type="file" accept="application/json,.json" aria-label="Upload project"></label>
@@ -2092,7 +2092,7 @@
           <label class="tempo">transpose <input type="range" id="rollTr" aria-label="Transpose, semitones"><output class="fread" id="rollTrV" for="rollTr" aria-hidden="true"></output></label>
         </div>
         <div class="drow"><span class="chips" id="rollDest" role="group" aria-label="The device the roll plays"><span class="cl">plays</span></span></div>
-        <p class="note">Sixteen steps of punched paper, read as it passes the brass bar. A hole plays its note; accent plays it at the accent velocity; slide holds it into the next hole so a one-voice device glides; tie carries the note before it through the step. Run on and the roll plays whenever the rack transport does, beside a song from the library and Dekatron's pattern. Play here starts the transport from the top. It plays the device lit on the rail, or the one you pick. Key in: each key you play sets the picked step and moves on. The roll is kept in this browser.</p>
+        <p class="note">Sixteen steps of punched paper, read as it passes the brass bar. A hole plays its note; accent plays it at the accent velocity; slide holds it into the next hole so a one-voice device glides; tie carries the note before it through the step. Run on and the roll plays whenever the rack transport does, beside a song from the library and Dekatron's pattern. Play here starts the transport from the top. It plays the device lit on the rail, or the one you pick. Key in: each key you play sets the picked step and moves on. The roll is kept in this browser, and a project (Rack tab) saves and loads it with the patches and the mix.</p>
       </div>
     </section>
 
@@ -2155,6 +2155,7 @@ import { createEngine, renderOffline, midiEvent, deviceOf, normalizeAny } from '
 import { createDeck } from './deck.js';
 import { createPlayer } from './player.js';
 import { createRoll } from './paperroll-ui.js';
+import { ROLL_KEY } from './paperroll.js';
 import { createTheremin } from './theremin-ui.js';
 import { listDevices } from './device.js';
 import { encodePatch, decodePatch, readDoc, patchDoc, patchFileName, safeJSON, MAX_JSON } from './share.js';
@@ -2454,6 +2455,13 @@ function pushPatch(load) {
 // live ones are empty and default. A save in that window keeps what the saved project has (review R1027-1).
 function liveArmed() { return booted || !bootProj ? mixArmed.slice() : normalizeArmed(bootProj.armed); }
 function liveBus() { return E && (booted || !bootProj) ? E.mix.bus() : (bootProj ? bootProj.bus : null); }
+// The paper roll goes into the project (17 Nov). Before the strip is built (the page's `roll` is declared
+// further down) the roll kept in this browser stands in for it.
+function rollForProject() {
+  try { if (roll) return roll.project(); } catch (e) {}
+  const saved = store.get(ROLL_KEY, null);
+  return saved && saved.pat ? { pat: saved.pat, dest: saved.dest, run: saved.run === true } : null;
+}
 function collectProject() {
   const st = E ? E.transport.state() : null;
   return normalizeProject({
@@ -2464,6 +2472,7 @@ function collectProject() {
     mixer: E ? E.mix.all() : (bootProj ? bootProj.mixer : null),
     armed: liveArmed(),
     bus: liveBus(),
+    roll: rollForProject(),
     devices: { filament: { patch: patchOf('filament') }, cathode: { patch: patchOf('cathode') }, mote: { patch: patchOf('mote') }, heptode: { patch: patchOf('heptode') }, geissler: { patch: patchOf('geissler') }, pentagrid: { patch: patchOf('pentagrid') }, orthicon: { patch: patchOf('orthicon') }, trochotron: { patch: patchOf('trochotron') }, gyrotron: { patch: patchOf('gyrotron') }, klystron: { patch: patchOf('klystron') }, phantastron: { patch: patchOf('phantastron') }, additron: { patch: patchOf('additron') }, rhumbatron: { patch: patchOf('rhumbatron') }, resnatron: { patch: patchOf('resnatron') } },
   });
 }
@@ -2664,6 +2673,12 @@ function applyProject(raw) {
     if (proj.devices.resnatron && dev !== 'resnatron') rnHost.setPatch(DS.resnatron.cur);
     syncHostUI();
   });
+  // a project saved before 17 Nov has no roll and leaves the roll as it is
+  if (proj.roll) {
+    let done = false;
+    try { if (roll) done = roll.applyProject(proj.roll); } catch (e) {}
+    if (!done) store.set(ROLL_KEY, { pat: proj.roll.pat, dest: proj.roll.dest, run: proj.roll.run, edited: true });
+  }
   saveLocal(localStorage, proj);
   return proj;
 }

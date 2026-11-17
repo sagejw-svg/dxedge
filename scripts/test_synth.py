@@ -7439,6 +7439,101 @@ with sync_playwright() as pw:
     ck("Pr. closing the roll strip turns key in off; a key played after leaves the roll as it was",
        (not ki_r["st"]["keyIn"]) and ki_r["st"]["pat"]["steps"][0]["n"] == 36 and ki_r["st"]["sel"] == 0 and not ki_r["st"]["edited"] and ki_r["pressed"] == "false",
        (ki_r["st"]["keyIn"], ki_r["st"]["pat"]["steps"][0], ki_r["st"]["sel"], ki_r["st"]["edited"], ki_r["pressed"]))
+    # the roll in the project file (17 Nov): the pattern, the device it plays and the run switch go into a project; a
+    # project saved before then has no roll and leaves the roll as it is; a file's dest the rack does not have plays the lit device
+    pps = pr.evaluate("""async () => {
+      const P = await import('/synth/project.js'), M = await import('/synth/paperroll.js');
+      const old = P.normalizeProject({ name: 'Old', devices: {} });
+      const bad = P.normalizeProject({ roll: { pat: { len: 99, rate: 'x', steps: [{ n: 300, g: 1 }] }, dest: '__proto__', run: 'yes' } });
+      const odd = ['constructor', 'Cathode', 'a b', '', 7, 'x'.repeat(40), 'cathode'].map(d => P.normalizeProject({ roll: { dest: d } }).roll.dest);
+      const arr = P.normalizeProject({ roll: [1, 2] }), nul = P.normalizeProject({ roll: null });
+      const good = P.normalizeProject({ roll: { pat: M.ROLL_FACTORY[3], dest: 'cathode', run: true } });
+      const again = P.normalizeProject(JSON.parse(JSON.stringify(good)));
+      return { oldHas: 'roll' in old, arrHas: 'roll' in arr, nulHas: 'roll' in nul, bad: bad.roll, odd,
+        good: { dest: good.roll.dest, run: good.roll.run, same: JSON.stringify(good.roll.pat) === JSON.stringify(M.ROLL_FACTORY[3]) },
+        stable: JSON.stringify(again) === JSON.stringify(good), v: good.v, kind: good.kind };
+    }""")
+    ck("Pr. project schema: no roll stays no roll (old projects); a roll's pattern normalizes, run is on only for true, a dest that is not a plain id is the lit device; still v1",
+       not pps["oldHas"] and not pps["arrHas"] and not pps["nulHas"] and pps["bad"]["dest"] == "lit" and pps["bad"]["run"] is False
+       and pps["bad"]["pat"]["len"] == 16 and pps["bad"]["pat"]["rate"] == "16" and pps["bad"]["pat"]["steps"][0] == {"n": 127, "g": 1, "a": 0, "s": 0, "t": 0}
+       and len(pps["bad"]["pat"]["steps"]) == 16 and pps["odd"] == ["constructor", "lit", "lit", "lit", "lit", "lit", "cathode"]
+       and pps["good"] == {"dest": "cathode", "run": True, "same": True} and pps["stable"] and pps["v"] == 1 and pps["kind"] == "dxrack", pps)
+    rp = pr.evaluate("""() => {
+      __synth.transport().stop(); __synth.transport().stop(); __synth.setDevice('filament');
+      const R = __synth.roll();
+      R.set(R.factory()[3]); R.edit(p => { p.steps[0].n = 41; p.tr = 5; p.swing = 0.25; }); R.dest('cathode'); R.run(true);
+      const want = R.project();
+      const saved = __synth.saveProject(), collected = __synth.project();
+      R.set(R.factory()[1]); R.dest('lit'); R.run(false);
+      const loaded = __synth.loadProject();
+      const st = R.state();
+      R.set(R.factory()[2]); R.dest('lit'); R.run(false);
+      __synth.applyProject({ kind: 'dxrack', name: 'Before rolls', device: 'filament' });
+      const kept = R.state();
+      __synth.applyProject({ kind: 'dxrack', name: 'Factory roll', device: 'filament', roll: { pat: R.factory()[4], dest: 'constructor', run: false } });
+      const fac = R.state();
+      __synth.applyProject({ kind: 'dxrack', name: 'Gone device', device: 'filament', roll: { pat: R.factory()[4], dest: 'nosuch', run: false } });
+      const gone = R.state();
+      return { want, inSaved: saved.roll, inCollected: collected.roll, loadedRoll: loaded && loaded.roll, st, kept, fac, gone,
+        stat: document.getElementById('rollStat').textContent, title: document.getElementById('projSave').title };
+    }""")
+    ck(f"Pr. save project carries the roll (pattern with its edits, dest cathode, run on), and load project puts it back, edit mark on (status '{rp['stat']}')",
+       rp["inSaved"] == rp["want"] and rp["inCollected"] == rp["want"] and rp["loadedRoll"] == rp["want"]
+       and rp["st"]["pat"] == rp["want"]["pat"] and rp["st"]["dest"] == "cathode" and rp["st"]["run"] is True and rp["st"]["edited"]
+       and rp["st"]["pat"]["steps"][0]["n"] == 41 and rp["st"]["pat"]["tr"] == 5 and "paper roll" in rp["title"],
+       (rp["want"], rp["st"]["dest"], rp["st"]["run"], rp["st"]["edited"]))
+    ck("Pr. a project with no roll (saved before 17 Nov) leaves the roll as it was",
+       rp["kept"]["pat"]["name"] == "Walking Tens" and not rp["kept"]["edited"] and rp["kept"]["run"] is False and rp["kept"]["dest"] == "lit",
+       (rp["kept"]["pat"]["name"], rp["kept"]["edited"], rp["kept"]["run"], rp["kept"]["dest"]))
+    ck("Pr. a project with a factory roll as shipped loads it unmarked; a dest this rack does not have ('constructor', 'nosuch') plays the lit device",
+       rp["fac"]["pat"]["name"] == "Arc Arpeggio" and not rp["fac"]["edited"] and rp["fac"]["dest"] == "lit" and rp["gone"]["dest"] == "lit",
+       (rp["fac"]["pat"]["name"], rp["fac"]["edited"], rp["fac"]["dest"], rp["gone"]["dest"]))
+    # a project applied while the transport plays with run off: run comes on and the roll strikes on the grid from now,
+    # nothing owed from the steps that passed while it was off
+    pr.evaluate("""() => { __synth.transport().stop(); __synth.setDevice('filament'); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();
+      __synth.transport().setTempo(120); __synth.transport().locate(0); __synth.transport().play(); }""")
+    pr.wait_for_timeout(1500)
+    lv = pr.evaluate("""() => { const R = __synth.roll(); const s0 = R.state().skipped, n0 = R.log().length; R.clearLog();
+      const t0 = __synth.engine().ctx.currentTime;
+      __synth.applyProject({ kind: 'dxrack', name: 'Mid play', device: 'filament', tempo: 120, roll: { pat: R.factory()[1], dest: 'lit', run: true } });
+      return { s0, n0, t0 }; }""")
+    pr.wait_for_timeout(900)
+    lv2 = pr.evaluate("() => { const R = __synth.roll(); const L = R.log(); __synth.transport().stop(); return { log: L, st: R.state() }; }")
+    ons = [e for e in lv2["log"] if e["t"] == "on"]; skips = [e for e in lv2["log"] if e["t"] == "skip"]
+    gaps_l = [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(ons, ons[1:])]
+    first_l = (ons[0]["want"] - lv["t0"]) if ons else None
+    ck(f"Pr. a project that turns run on under a playing transport: no strikes while off ({lv['n0']}), then {len(ons)} strikes 125 ms apart from {None if first_l is None else round(first_l * 1000)} ms after it, none skipped ({len(skips)})",
+       lv["n0"] == 0 and len(ons) >= 5 and not skips and lv2["st"]["skipped"] == lv["s0"] and first_l is not None and -0.002 <= first_l <= 0.13 + 0.15
+       and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_l), (lv, gaps_l, first_l, len(skips)))
+    # the run switch itself, the same way (bug fixed 17 Nov): on main, run on after 1.5 s off logged 12 to 14 passed steps as
+    # skipped and could strike the first note up to 21 ms late (measured, 3 trials)
+    pr.evaluate("""() => { __synth.transport().stop(); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();
+      __synth.transport().setTempo(120); __synth.transport().locate(0); __synth.transport().play(); }""")
+    pr.wait_for_timeout(1500)
+    rv = pr.evaluate("() => { const R = __synth.roll(); const s0 = R.state().skipped; R.clearLog(); const t0 = __synth.engine().ctx.currentTime; document.getElementById('rollRun').click(); return { s0, t0 }; }")
+    pr.wait_for_timeout(900)
+    rv2 = pr.evaluate("() => { const R = __synth.roll(); const L = R.log(); __synth.transport().stop(); return { log: L, st: R.state() }; }")
+    ons_r = [e for e in rv2["log"] if e["t"] == "on"]; sk_r = [e for e in rv2["log"] if e["t"] == "skip"]
+    gaps_r = [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(ons_r, ons_r[1:])]
+    first_r = (ons_r[0]["want"] - rv["t0"]) if ons_r else None
+    ck(f"Pr. the run key turned on under a playing transport starts on the grid from now: {len(ons_r)} strikes 125 ms apart, the first {None if first_r is None else round(first_r * 1000)} ms after it, none skipped ({len(sk_r)})",
+       rv2["st"]["run"] is True and len(ons_r) >= 5 and not sk_r and rv2["st"]["skipped"] == rv["s0"] and first_r is not None and -0.002 <= first_r <= 0.13 + 0.15
+       and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_r), (rv, gaps_r, first_r, len(sk_r)))
+    pr.wait_for_timeout(400)
+    # the project file row: download carries the roll, upload puts it back, and it is kept across a reload
+    pr.wait_for_timeout(400)
+    fileproj = pr.evaluate("""() => { const R = __synth.roll(); R.set(R.factory()[5]); R.edit(p => { p.steps[1].g = 1; p.steps[1].n = 50; p.gate = 0.8; }); R.dest('cathode'); R.run(true);
+      const p = __synth.project(); p.name = 'Roll File'; R.set(R.factory()[1]); R.dest('lit'); R.run(false); return p; }""")
+    pr.set_input_files("#projFile", files=[{"name": "filament-roll-file.json", "mimeType": "application/json", "buffer": json.dumps(fileproj).encode()}])
+    pr.wait_for_function("() => __synth.roll().state().dest === 'cathode'", timeout=5000)
+    up = pr.evaluate("() => ({ st: __synth.roll().state(), toast: document.getElementById('toast').textContent })")
+    pr.reload(); pr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    rk = pr.evaluate("__synth.roll().state()")
+    ck(f"Pr. upload project puts the file's roll back ('{up['toast']}'), and the roll is kept across a reload",
+       up["st"]["pat"] == fileproj["roll"]["pat"] and up["st"]["dest"] == "cathode" and up["st"]["run"] is True and up["st"]["edited"] and "Roll File" in up["toast"]
+       and rk["pat"] == fileproj["roll"]["pat"] and rk["dest"] == "cathode" and rk["run"] is True,
+       (up["st"]["pat"]["name"], up["st"]["dest"], up["st"]["run"], up["toast"], rk["pat"]["name"], rk["dest"]))
+    pr.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); }")
     pr.evaluate("__synth.transport().stop()")
     ck("Pr. no page errors (desktop)", not prerr, prerr)
     prx.close()

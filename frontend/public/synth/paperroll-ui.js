@@ -181,10 +181,41 @@ export function createRoll(api) {
     if (!playing || !anchor) return;
     k = firstStep(schedBeat + 1e-6); cov = k;
   }
-  // Run off under a playing transport stops new strikes; the notes already struck end on time.
+  // Run off under a playing transport stops new strikes; the notes already struck end on time. Run on under a
+  // playing transport starts on the grid from the beat now: before 17 Nov it caught up on every step that passed
+  // while it was off (12 to 14 logged as skipped after 1.5 s at 120 BPM, and a strike up to 21 ms late, measured).
   function setRun(on) {
-    run = !!on; save();
+    const was = run;
+    run = !!on;
+    if (run && !was) resync();
+    save();
     paintButtons(); paintStat(); dirty = true;
+  }
+
+  // ------------------------------------------------------------ the project file (17 Nov)
+  // A project carries the pattern, the device the roll plays and the run switch (project.js). Applying one
+  // leaves the transport alone. A dest this rack does not have plays the lit device. The edit mark is on
+  // unless the pattern is one of the factory rolls as shipped. Under a playing transport the new pattern
+  // picks the grid up after the last step already scheduled, as a factory roll picked from the list does;
+  // if run comes on, setRun picks it up from the beat now.
+  function toProject() { return { pat: clone(pat), dest, run }; }
+  function fromProject(r) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return false;
+    const p = normalizeRoll(clone(r.pat));
+    const ids = targets().map(t => t.id);
+    pat = p; sel = Math.min(sel, pat.len - 1);
+    edited = !ROLL_FACTORY.some(f => JSON.stringify(normalizeRoll(clone(f))) === JSON.stringify(p));
+    dest = typeof r.dest === 'string' && ids.includes(r.dest) ? r.dest : 'lit';
+    regrid();
+    if ((r.run === true) !== run) setRun(r.run === true);
+    save(); paintAll();
+    if (open) paintDest();
+    return true;
+  }
+  function resync() {
+    if (!playing || !anchor) return;
+    const b = Math.max(schedBeat, beatNow());
+    k = firstStep(b + 1e-6); cov = k; schedBeat = b;
   }
 
   // ------------------------------------------------------------ editing
@@ -510,7 +541,11 @@ export function createRoll(api) {
     draw: () => { draw(performance.now()); return { ms: drawMs, stats: Object.assign({}, stats) }; },
     stats: () => Object.assign({ ms: drawMs }, stats),
   };
+  test.project = () => toProject();
+  test.applyProject = r => fromProject(r);
   return {
+    project: toProject,
+    applyProject: fromProject,
     frame(now) { if (open && (dirty || playing)) draw(now); },
     keyIn: (n, v) => keyNote(n, v),
     test,
