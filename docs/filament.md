@@ -1937,8 +1937,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (16 Nov): 1. a user patch wraps the desktop patch bar at 1024 px; 2. Trochotron's seed row (the last white field on the rack, seen again tonight);
-3. Gyrotron's route menu; 4. Rhumbatron's body and exciter chips; 5. Lattice's LFO and Face cards stretched at 900 to 1099 px (new, measured); 6. rail plate titles at 761 to 959 px; 7. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
+Rank of the open items (17 Nov): 1. Trochotron's seed row (the last white field on the rack, seen again tonight at 1366 px: "42" in a white box beside loose keys);
+2. Gyrotron's route menu; 3. Rhumbatron's body and exciter chips; 4. Lattice's LFO and Face cards stretched at 900 to 1099 px (measured 16 Nov); 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
 The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rack black and black light) belongs to the nightly; this job leaves those parts alone until it closes. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
@@ -2255,9 +2255,24 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
 - [ ] Rail plates on a 761 to 959 px window (27 Oct, measured): the role drops because the plates are 103 to 136 px; a
   title on each plate (the role) would keep it reachable by hover there.
 
-- [ ] A user patch wraps the desktop patch bar at 1024 px (13 Nov, measured): with delete in the row the bar goes from one
-  row (46 px) to two (80 px), so the rack moves down 34 px when a user patch loads. A narrower select from 1020 to 1199 px
-  while delete shows, or the 1100 px tier's limit key on the second row, would hold it.
+- [x] 17 Nov: the desktop patch strip holds one row in every state (the top item of 16 Nov, "a user patch wraps the desktop patch
+  bar at 1024 px", grew to the save form). Measured before on main: a user patch's delete key wrapped the strip from one row (46 px)
+  to two (80 px) from 1020 to about 1059 px, and opening the save form wrapped it from 1020 to 1299 px on a factory patch (1020 to
+  1365 px on a user patch; it held at 1199 and from 1300 only because of where the width tiers fall), so the rack moved 34 px down
+  each time you pressed save or loaded a user patch. Seen: the size switch dropped alone onto a second row. Delete on desktop was
+  the same grey as init. Now, from 1020 px: while the save form is open the name field and its ok and cancel take the edit keys'
+  place right after the stepper (save, undo, init and delete step aside while a name is typed; cancel, Escape or a save gives them
+  back with focus on save, as before), and MIDI steps aside as it did. The field's basis is 112 px at 1020 to 1099, 140 px at
+  1100 to 1299 and 170 px above, and it grows into the strip's spare room up to about 252 px. On a user patch from 1020 to 1099 px
+  the patch name's window is 160 px (200 for a factory patch). Delete reads red on desktop (the rec key's colour, 5.5:1 measured,
+  the phone's delete since 13 Nov) and its label and title name the patch ("Delete "My Patch" from this browser"). Measured after:
+  one row and the rack unmoved at 13 widths from 1020 to 1920 px in all four states (factory, user, form closed, form open); the
+  name field 129 px at 1020, 208 at 1099, 252 from 1280; 761 to 1019 px keep their two rows and the edit keys while naming; the
+  phone layout unchanged (the form leaves the edit keys where they were at 375 px); no sideways scroll. Cost: the patch name is
+  40 px narrower on a user patch at 1020 to 1099 px, and keyboard focus order in the open form still follows the page (stepper,
+  volume, limit, rec, master, then the name field) though the field now shows beside the stepper; it gets focus when it opens, so
+  only a Shift+Tab out of it notices. Static, so nothing for reduced motion. CSS and one label line in `fillSelect`; no handler,
+  patch, DSP or worklet touched. New checks: Hs. (11).
 - [ ] Gyrotron's route menu (13 Nov, seen at 1366 px): ROUTE is the browser's select stretched across about 700 px of its card,
   the only full-width plain select on the rack. A joined switch of the route choices, or the patch name's amber window at a
   fixed width, would match.
@@ -2268,6 +2283,7 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
   lit state on the rack; a call for James with the Lattice and Mote palette item.
 
 ## Open items for James
+- Graphics 17 Nov, the patch strip on a desktop or laptop window (1020 px and wider): a layout change, no sound change. Before: pressing save (or loading one of your own patches on a window about 1020 to 1060 px wide) wrapped the strip to two rows, the size switch dropped alone onto the second row and the whole rack jumped 34 px down until you closed the form. Now the strip stays one row and the rack stays put: while you type a name, the name field with ok and cancel sits where save, undo, init and delete were (they come back when the form closes), and the field is wider than before where the strip has room (about 250 px at 1280 and up, 170 before). Delete on your own patches is now red, as it is on a phone. Calls I made: hiding the edit keys while naming (the alternative was a narrower volume fader or patch name in every state), and a 160 px patch name window instead of 200 on a user patch at 1020 to 1099 px.
 - Nightly 17 Nov, the paper roll in the project file: please try it. Set up a roll, then Rack tab, project row, save (or download); change the roll; load (or upload) and the roll comes back with its device and run switch. Calls I made that you may want changed: (1) the project carries run as it was saved, so a project saved with run lit plays its roll the next time the transport plays (loading never starts the transport); (2) a project saved before tonight has no roll, and loading it leaves the current roll alone rather than clearing it; (3) the page still boots with the roll kept in this browser, not the saved project's, the same way the patches do; (4) the roll is one pattern per project; named user rolls and a chain of rolls are the next slice. Also fixed: Run lit while the transport plays now starts on the next step instead of catching up on the steps that passed. Next: unless you say otherwise, the next nightly takes the next open slice under the paper roll (several named user rolls and a chain of rolls, song mode). The '73-style monosynth still waits for its name.
 - Improvement 16 Nov, the suite's length: `scripts/test_synth.py` on origin/main ran about 27 minutes alone on the job box (2 cores), and the scheduled job prompts give it up to 25. It still finishes, so nothing failed, but a job that holds to 25 minutes would cut it off. The longest part is test 9 (about 170 s, INFO lines only, no pass or fail), then the MIDI file section (about 120 s). Options: (1) raise the prompts' limit to 35 minutes; (2) shorten test 9's renders (12 s to 6 s would save roughly a minute, estimated not measured, and its lines, already noisy, would get noisier); (3) leave it. Unless you say otherwise, the improvement job leaves it and keeps measuring. Also fixed tonight, no action needed: the prompts' Chromium path (chromium-1194) no longer exists on the box; the synth test scripts now find the installed Chromium on their own.
 - Review 16 Nov (`docs/filament-review.md`), two MIDI deck calls: (1) R1116-4, MIDI CC 123 or 120 (All Notes Off, All Sound Off) runs the page's Panic, which also stops the deck's playback and the song library; many keyboards and DAWs send them on stop or from a panic key. Options: from MIDI they release input notes only (the Panic button still stops everything), or keep it and say so. (2) R1116-3, moving a track to another device while a file plays does not strike again the notes already held in that track (a long bass note falls silent for the rest of its length). Options: strike the notes that are inside their length at the restart point, or leave it. Fixed tonight, nothing to decide: the Space pedal stuck down when Space came up inside a text box (R1116-1), and moving a track mid-play dropped the notes sent ahead (R1116-2). Also open, small: R1116-5 (the tempo box keeps a typed value after Escape, and 99,5 reads as 995), R1116-6 (a format 2 file plays its sequences together).

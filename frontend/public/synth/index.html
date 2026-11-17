@@ -184,6 +184,25 @@
     .top > .bar #midiBtn .long { display: none; }
   }
   @media (min-width: 761px) and (max-width: 1019px) { .top > .bar .bsep { display: none; } }
+  /* graphics 17 Nov: the strip keeps one row from 1020 px in every state, so the rack never jumps while you work a patch.
+     Measured before: a user patch's delete key wrapped the strip to two rows (46 to 80 px) from 1020 to about 1059 px,
+     and opening the save form wrapped it from 1020 to 1299 px (to 1365 px on a user patch), moving the rack 34 px down
+     each time. Now the name field takes the edit keys' place while it is open (save, undo, init and delete mean nothing
+     while a name is being typed; closing the form gives them back, focus on save as before), its window is a little
+     narrower below 1300 px, and on a user patch from 1020 to 1099 px the patch name's window gives up 40 px. Delete
+     reads red on desktop as it does on a phone (the rec key's colour), so it does not look like another init. */
+  @media (min-width: 761px) { .top > .bar .pedit > #delP { color: var(--red); } .top > .bar .pedit > #delP:hover { color: #ff8a8a; } }
+  @media (min-width: 1020px) {
+    .top > .bar > .pstep { order: -2; }
+    .top > .bar > .saveform.open { order: -1; flex: 1 1 auto; max-width: 346px; }
+    .top > .bar .saveform input { flex: 1 1 auto; } /* the width below is the basis the row is decided on; spare room widens it */
+    .top > .bar:has(> .saveform.open) > .pedit { display: none; }
+  }
+  @media (min-width: 1020px) and (max-width: 1299px) { .top > .bar .saveform input { width: 140px; } }
+  @media (min-width: 1020px) and (max-width: 1099px) {
+    .top > .bar .saveform input { width: 112px; }
+    .top > .bar:has(#delP:not([hidden])) #patchSel { width: 160px; max-width: 160px; }
+  }
   @media (max-width: 760px) { .top .bar .bsep, .top .intro-measure { display: none; } }
 
   /* the instrument: walnut cheeks, brushed panel */
@@ -4046,6 +4065,7 @@ function fillSelect() {
   $('delP').hidden = !(curKey.startsWith('u:') && !edited);
   $('delF').hidden = $('delP').hidden;
   $('delF').setAttribute('aria-label', $('delF').hidden ? 'Delete' : 'Delete "' + curKey.slice(2) + '" from this browser');
+  $('delP').setAttribute('aria-label', $('delF').getAttribute('aria-label')); $('delP').title = $('delP').hidden ? '' : $('delF').getAttribute('aria-label') + '.';
 }
 function loadKey(key) {
   const e = allPatches().find(x => x.key === key); if (!e) return;
