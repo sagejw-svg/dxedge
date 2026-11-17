@@ -1009,15 +1009,20 @@ class Filament extends AudioWorkletProcessor {
       // and the resonance scales their Q (LC_Q: 1 at 0.3, so 0.3 is 1939 mode's voicing): the band-passes by
       // q, the low- and high-pass by its square root. The band-passes keep unity peak gain, plus sqrt(q) of
       // make-up so a broad sound keeps its level as they narrow. Several tabs in share 1/sqrt(n), as in 1939 mode.
+      // A section whose tab is out gets weight 0 and nothing else: lc() skips it on that weight, so its
+      // coefficients are never read until a tab change brings it in, and that change re-runs this (setPatch
+      // rebuilds the tables and bumps coefEpoch). F_G is not written: lc() is the only filter that runs on
+      // model 7, it reads no F_G, and any other model rewrites F_G here before it runs (17 Nov improvement).
       const qm = Math.pow(10, res - LC_Q0), qb = Math.sqrt(qm), r = fc / LC_REF, t = tb || LC_T0;
       const n = t[0] + t[1] + t[2] + t[3] + t[4] + t[5], gn = LC_G / Math.sqrt(n > 1 ? n : 1);
       for (let j = 0; j < 5; j++) {
+        if (t[j] === 0) { s[F_LW + j] = 0; continue; }
         const e = E_LC[j], bp = e[0] === 0, fj = clamp(e[1] * r, 16, sr * 0.45), g = Math.tan(Math.PI * fj / fs);
         const k = 1 / (e[2] * (bp ? qm : qb)), a1 = 1 / (1 + g * (g + k)), o = F_LK + j * 4;
         s[o] = a1; s[o + 1] = g * a1; s[o + 2] = g * g * a1; s[o + 3] = k;
         s[F_LW + j] = t[j] * e[3] * gn * (bp ? qb : 1);
       }
-      s[F_LW + 5] = t[5] * gn; s[F_G] = Math.tan(Math.PI * fc / fs); s[F_K] = 0; s[F_COMP] = 1;
+      s[F_LW + 5] = t[5] * gn; s[F_K] = 0; s[F_COMP] = 1;
       return;
     } else if (model === 6) {
       // Low pass gate: no calibration (it never self-oscillates, and the knob is the -3 dB point at
