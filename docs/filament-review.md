@@ -17,6 +17,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1117-3 | confusing | h | Rack headings jump from the one H1 to H3: no H2 on the page (30 H3 shown on the desktop rack), so a screen reader's heading list has no section level | measured |
 | R1116-4 | confusing | c, e | MIDI CC 123 or 120 (All Notes Off, All Sound Off) from a keyboard stops the MIDI deck's playback (and, by the code, the song library's): they run Panic, not a note release | measured (deck), inferred (library) |
 | R1116-3 | confusing | e | Moving a track to another device while the file plays does not strike the notes already held in it again: a bass held from 0 s falls silent for the rest of its note | measured |
 | R1116-5 | confusing | d | Rack tempo box: Escape leaves the typed 150 showing while the clock stays at 100; typing 99,5 sets 240 BPM (the comma is dropped, 995 clamped) | measured |
@@ -63,20 +64,20 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog); 15 Nov: 7 more devices, no dialog | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall; still open 11 Nov | measured |
-| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes) | measured |
+| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes); 17 Nov: still 13 unnamed at 1366, 683 and 375 px, the page 1154 px wide at 683 and 375 | measured |
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note"; still open 29 Oct | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
-| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 11 Nov (14 devices) | measured (Gleam inferred) |
+| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 11 Nov (14 devices); 17 Nov: the paper roll is in now, the four patches and the master bus are still not | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
 | R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
-| R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 11 Nov (4 buttons, no name or title) | measured (11 Nov) |
-| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link; 14 Nov: 531, no skip link | measured |
+| R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct; 17 Nov: a focused panel button and the LCD select still change no style (by .focus()) | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 11 Nov (4 buttons, no name or title); 17 Nov: still 4, both sizes | measured (11 Nov) |
+| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link; 14 Nov: 531, no skip link; 17 Nov: about 538 tab stops, the first is Previous patch, no skip link | measured |
 | R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1); 14 Nov: the ensemble mode chips are named only "I", "II", "I+II" | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
 | R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120); 16 Nov: rack at 40 to 240, master tempo 120 | measured |
@@ -2675,3 +2676,92 @@ Areas a, b, f, g, h. R1104-4 and R1101-3 were not re-run, and the deck was not t
 off (the recorder takes Filament and Cathode only, R1023-3). Suggested next: f, g and h, including the 16
 Nov nightly's 13 new factory patches loaded from a project, and a Tab walk of the Rack tab after the Mix card
 move.
+
+## 2026-11-17 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `94c8279`, sw.js
+`dxedge-v224` (live and main agree). Playwright's own Chromium 1243 headless at 1366 x 900, 683 x 450 (the
+desktop at 200% zoom) and 375 x 812 (touch). No page or console errors on the rack, Hexode or Anode in any
+run. Audio on the vendored pages was read with an analyser tapped in front of each page's destination; the
+library loop was counted from the note ons the player hands the engine. Focus tonight: the project file
+round trip now that the paper roll is in it (17 Nov), odd project files, every library song, the library's
+loop and tempo, keyboard use of the channel and track chips, the page outline, and the outboard pages at
+200% zoom.
+
+### What worked (measured)
+
+- Project round trip through the file: tempo 133, 3/4, a Cathode strip at level 0.42 and pan -0.3, an
+  edited roll step and the roll sent to Cathode, downloaded, opened in a fresh browser: the project read
+  back is identical key for key, the roll's step and destination included. The toast and the tempo box
+  agree.
+- Odd project files: a project from before 17 Nov (no roll) leaves the roll as it is, as the code says; a
+  `v: 2` file with an unknown field loads; a cut JSON file says "That file is not a project."; a project
+  loaded while the roll plays keeps it playing, and stop leaves every strip at 0 and nothing held.
+- All 21 library songs load with title, composer, tempo and channel count (Greensleeves 96 BPM, 3
+  channels; Beethoven 5 108 BPM; the nine Halloween songs name their presets).
+- Library tempo: Beethoven 5 slowed to 60 BPM mid-song reads 60 BPM and its length goes from 0:15.4 to
+  0:27.8; stop leaves all 18 strips at 0 and nothing held.
+- Accessibility sweep at 1366, 683 and 375 px on the rack: `lang="en"`, no duplicate ids, no
+  `aria-labelledby`, `aria-describedby`, `aria-controls` or `label for` pointing at a missing id, no image
+  without alt, no visible control without a name, no sideways scroll at any of the three widths.
+- Anode at 1366 and 375: starts on a click (peak 0.62), no sideways scroll, links back to /synth/.
+- Hexode: computer key A sounds (peak 0.31), two links back to /synth/.
+
+### Findings
+
+**R1117-1. A song in the library ends at its last note off, not where the file ends.** Areas f, e.
+Confusing. Measured. Fixed tonight.
+- Steps: open in the library a .mid whose tracks run past the last note (a bar ending on a rest, or a
+  deck take with silence after its last note; here a 2 s file at 120 BPM with one 0.25 s note), loop on,
+  play.
+- Expected: it repeats every 2 s (4 beats), as the deck plays the same file.
+- Actual: the library read 0.5 beats and repeated every 0.25 s (15 note ons in 4.2 s); with a 0.1 s note
+  (0.2 beats, under the loop floor of 0.25) it played once and stopped with loop on. The deck reads both
+  files as 2 s. None of the 21 library songs has padding, so they do not change.
+- Fix: `parseMidi` takes the song's length from the latest end of track as well as the last event
+  (`midisong.js`). After: 3 ons in 4.2 s (0, 2, 4 s). Check: "P. a .mid that ends after a rest keeps its
+  length ... (review R1117-1)" (fails on `94c8279`: 0.5 beats).
+
+**R1117-2. Pressing a library channel chip or a deck track chip from the keyboard drops the focus.**
+Areas f, e, h. Confusing. Measured. Fixed tonight.
+- Steps: load Greensleeves, Tab to "Channel 2: play on Filament", press Enter (or, on the deck, import a
+  two-track file and press Enter on "A: play on Cathode").
+- Expected: the route changes and focus stays on the chip.
+- Actual: the route changes, but the list is rebuilt and focus falls to the page body (no ring, and a
+  screen reader loses its place); the same while the song plays.
+- Fix: both lists put the focus back on the rebuilt copy of the pressed chip when focus was in the list
+  (`player.js`, `deck.js`). Check: "P. a library channel chip and a deck track chip keep the keyboard
+  focus after Enter (review R1117-2)" (fails on `94c8279`: focus on the body for both).
+
+**R1117-3. The rack's headings skip a level.** Area h. Confusing. Measured (levels), inferred (impact).
+- Steps: list the page's headings (a screen reader's heading list, or the DOM).
+- Expected: H1, then a level per section (device panels, rack cards) under it.
+- Actual: one H1 and then only H3 (30 shown on the desktop rack, 4 on a phone); no H2 anywhere. Heading
+  navigation still works, but the outline has no section level and the device a panel belongs to is not
+  a heading. Not fixed: the H3s carry styles across the page; a design call (H2 per device or card).
+
+### Still open, re-measured tonight
+
+- R1020-3: a project file now carries the roll (17 Nov) and 14 device patches; still no Thyratron, Gleam,
+  Dekatron or Lattice patch and no master bus.
+- R1114-3: a deck take opened in the library is still titled "Tempo" (seen again in tonight's loop files).
+- R1020-6: Hexode, a focused panel button and the LCD select change no style (focus set by script).
+- R1020-7: Anode's four regenerate buttons still named only "⟳", both sizes.
+- R1020-8: about 538 desktop tab stops; the first is Previous patch; no skip link.
+- R1024-3: Hexode, 13 unnamed toggles at all three widths; the page is 1154 px wide at 683 and 375 px, so
+  at 200% zoom on a laptop it scrolls sideways.
+- R1114-4: Hexode still has no on-screen keys.
+
+### Notes (not findings)
+
+- The project file name drops letters outside a to z: "Round Trip ü" downloads as
+  `filament-round-trip.json`, "日本語" would be `filament-project.json`. The name inside the file is kept.
+- Loading a library song sets the rack tempo to the song's (Beethoven 5 sets 108); a saved project then
+  carries it. Expected from the design, worth knowing.
+
+### Not covered tonight
+
+Areas a to e (e only where the deck shares tonight's fixes). Iris, Sculpt, Hand Orchestra, Aether and
+Gleam's outboard page were not played. From the 16 Nov suggestion, the 16 Nov factory patches loaded from a
+project and a full Tab walk of the Rack tab after the Mix card move were not done. Suggested next: a and b, including Orthicon's starter pictures
+(R1112-1) and the Theremin switch (R1109-1).

@@ -7165,6 +7165,28 @@ with sync_playwright() as pw:
     head = L[int(0.08 * SR):int(0.40 * SR)]
     b440, b65 = tone_amp(head, 440.0), tone_amp(head, 65.406)
     ck("P. routing channel 2 off drops C2 by 30 dB or more and keeps A4", b65 < a65 / 31.6 and b440 > 0.02, (db(b65), db(a65), b440))
+    # (after the route-test renders above, which use the song loaded there)
+    # A file ends where its tracks end, not at its last note off: a 2 s take with one 0.25 s note is 4 beats
+    # long in the library, as the deck reads it, so loop repeats every 2 s (review R1117-1)
+    eot = pg.evaluate("""() => { const S = __synth;
+      const mk = (len, d) => [...S.smf.write({ bpm: 120, length: len, parts: [{ ch: 0, name: 'Blip', events: [{ time: 0, data: [0x90, 72, 100] }, { time: d, data: [0x80, 72, 0] }] }] })];
+      const a = S.player().parse(mk(2, 0.25)), b = S.player().parse(mk(0, 0.25)), deck = S.smf.read(mk(2, 0.25)).song.length;
+      return { padded: a.beats, bare: b.beats, deck, padSec: a.seconds }; }""")
+    ck(f"P. a .mid that ends after a rest keeps its length: 2 s file reads {eot['padded']} beats ({eot['padSec']} s; deck {eot['deck']} s), no padding reads {eot['bare']} (review R1117-1)",
+       abs(eot["padded"] - 4) < 1e-6 and abs(eot["padSec"] - eot["deck"]) < 1e-6 and abs(eot["bare"] - 0.5) < 1e-6, eot)
+    # Pressing a channel chip from the keyboard rebuilds the list; focus stays on the chip, not the page (review R1117-2)
+    pg.evaluate("__synth.player().importBytes([...__synth.smf.write({ bpm: 120, length: 2, parts: [{ ch: 0, name: 'A', events: [{ time: 0, data: [0x90, 60, 90] }, { time: 1, data: [0x80, 60, 0] }] }, { ch: 1, name: 'B', events: [{ time: 0, data: [0x90, 48, 90] }, { time: 1, data: [0x80, 48, 0] }] }] })], 'focus.mid')")
+    pg.focus("#libChannels button[data-ch='2'][data-dev='filament']")
+    pg.keyboard.press("Enter"); pg.wait_for_timeout(100)
+    lf = pg.evaluate("(() => { const e = document.activeElement; return { label: e.getAttribute('aria-label'), pressed: e.getAttribute('aria-pressed'), route: __synth.player().routing()['2'] }; })()")
+    pg.evaluate("__synth.deck().importBytes([...__synth.smf.write({ bpm: 120, length: 2, parts: [{ ch: 0, name: 'A', events: [{ time: 0, data: [0x90, 60, 90] }, { time: 1, data: [0x80, 60, 0] }] }, { ch: 1, name: 'B', events: [{ time: 0, data: [0x90, 48, 90] }, { time: 1, data: [0x80, 48, 0] }] }] })], 'focus.mid')")
+    pg.wait_for_timeout(100)
+    pg.focus("#trackList button[data-trk='0'][data-v='cathode']")
+    pg.keyboard.press("Enter"); pg.wait_for_timeout(100)
+    df = pg.evaluate("(() => { const e = document.activeElement; return { label: e.getAttribute('aria-label'), pressed: e.getAttribute('aria-pressed') }; })()")
+    ck(f"P. a library channel chip and a deck track chip keep the keyboard focus after Enter (library {lf['label']!r}, deck {df['label']!r}) (review R1117-2)",
+       lf["label"] == "Channel 2: play on Filament" and lf["pressed"] == "true" and lf["route"] == "filament"
+       and df["label"] == "A: play on Cathode" and df["pressed"] == "true", (lf, df))
 
     hats_on = pg.evaluate("""async () => {
       await __synth.player().loadId('dx-pixel-march');

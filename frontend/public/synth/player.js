@@ -155,7 +155,11 @@ export function createPlayer(api) {
   }
   function paintLists() {
     const tracks = $('libTracks'), chans = $('libChannels');
+    // A chip pressed from the keyboard is rebuilt here; keep the focus on its new copy (review R1117-2)
+    const fe = document.activeElement;
+    const keep = fe && chans.contains(fe) && fe.dataset ? { ch: fe.dataset.ch, dev: fe.dataset.dev } : null;
     tracks.innerHTML = ''; chans.innerHTML = '';
+    if (keep) queueMicrotask(() => { const b = [...chans.querySelectorAll('button')].find(x => x.dataset.ch === keep.ch && x.dataset.dev === keep.dev); if (b) b.focus(); });
     if (!song) return;
     song.tracks.forEach(t => {
       const row = document.createElement('div'); row.className = 'trk';

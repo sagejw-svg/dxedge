@@ -168,7 +168,11 @@ export function createDeck(api) {
     if (!s) { $('fileStat').textContent = 'Drop a .mid file here, or press import.'; host.innerHTML = ''; return; }
     if (!P.playing) $('posV').textContent = fmtT(0) + ' / ' + fmtT(s.length);
     $('fileStat').textContent = Fi.name + ' · ' + fmtT(s.length) + ' · ' + Math.round(s.bpm) + ' BPM · ' + s.parts.length + (s.parts.length === 1 ? ' track' : ' tracks');
+    // A chip pressed from the keyboard is rebuilt here; keep the focus on its new copy (review R1117-2)
+    const fe = document.activeElement;
+    const keep = fe && host.contains(fe) && fe.dataset ? { trk: fe.dataset.trk, v: fe.dataset.v } : null;
     host.innerHTML = '';
+    if (keep) queueMicrotask(() => { const b = [...host.querySelectorAll('button')].find(x => x.dataset.trk === keep.trk && x.dataset.v === keep.v); if (b) b.focus(); });
     s.parts.forEach((p, i) => {
       const row = document.createElement('div'); row.className = 'trk';
       const nm = document.createElement('span'); nm.className = 'tn'; nm.textContent = p.name;
