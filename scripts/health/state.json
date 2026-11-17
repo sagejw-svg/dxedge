@@ -255,7 +255,8 @@
    "environment": "No MCP browser tools for a TENTH consecutive night: no claude-in-chrome, no remote-devices, no device bridge, cloud container only. Plain headless chromium.launch() reached dxedge.net directly, so chromium-reaches-dxedge-directly stays settled. CLONE-FIRST DISCIPLINE FOLLOWED: the repo was cloned and this file read in full BEFORE any site probe except the one Step 1 cert fetch, which the brief orders first. SUBSTITUTION DISCIPLINE HELD: every third-party verdict came from WebFetch and every dxedge.net body came from the browser same-origin. No curl, no python requests, no browser navigation to any third-party host. webfetch-subagent-quoting-limit applied again: /api/debug refused a verbatim body quote at a 125-character limit, so that verdict rests on its structured answer. PAT: still works, Mem note still says it expires about 2026-08-27, still the pat-expiry-note-stale item. NO PushNotification tool in this session for a FOURTH consecutive night.",
    "cert": {
     "status": "ok",
-    "evidence": "WebFetch of /api/health?cb=20261116a returned HTTP 200 application/json with no TLS wording: no CERTIFICATE_VERIFY_FAILED, no 'certificate has expired'. Five further WebFetches of dxedge.net paths across the run were equally clean. consecutive_cert_failures stays 0. Per the openssl caveat in the brief, no TLS verdict was attempted from the shell."
+    "evidence": "WebFetch of /api/health?cb=20261116a returned HTTP 200 application/json with no TLS wording: no CERTIFICATE_VERIFY_FAILED, no 'certificate has expired'. Five further WebFetches of dxedge.net paths across the run were equally clean. consecutive_cert_failures stays 0. Per the openssl caveat in the brief, no TLS verdict was attempted from the shell.",
+    "expiry": "NOT read directly, per chromium-securitydetails-shows-the-proxy-ca and crt.sh being bot_walled_skip_by_design. Last CT-confirmed expiry remains 2026-11-29T13:08:28Z from the 09-25 read, now about 12 days out. WORTH FLAGGING FOR THE NEXT RUN: certbot renews at 30 days remaining, so that window opened around 2026-10-30 and the live certificate is very probably ALREADY a newer one that no run has read. The stale 11-29 figure should therefore not be reported as an imminent expiry. If a future run can reach crt.sh on a retry, re-read it and replace this number."
    },
    "main_dashboard": {
     "status": "clean",
@@ -330,6 +331,12 @@
    "notification": {
     "push": "IMPOSSIBLE. No PushNotification tool exists in this session, confirmed by a ToolSearch for push/notification/alert/ntfy which returned only messaging and email tools. Fourth consecutive night.",
     "email": "SENT. Something is broken and a new decision is needed, so the Step 6 quiet-night branch does not apply, following the 11-15 precedent. Written with NO literal email address anywhere in the body per email-body-must-carry-no-literal-address."
+   },
+   "post_deploy": {
+    "commit": "319be51",
+    "deploy_result": "SUCCESS, nothing broken. Verified about 5.5 minutes after the push.",
+    "evidence": "/api/health returned status ok (timestamp 05:22:28Z, sfi 108, k_index 2, spots 273, feed_proxy true, version 2.0). sw.js still serves dxedge-v222, matching HEAD, as expected for a state-file-only commit with no frontend source change. Main dashboard: zero non-200, zero bad panels. /aethersdr/: zero non-200, zero bad panels. /cyber/: the ONLY failure was the CISA advisories 502, and all 7 tabs were clean including Post-Quantum at 1,125 chars and the NVD panel. So BOTH of tonight's transient failures were absent on the post-deploy load, which is the third independent confirmation that they recover without intervention.",
+    "revert_needed": false
    }
   }
  ],
