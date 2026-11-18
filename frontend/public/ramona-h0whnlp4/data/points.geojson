@@ -1,0 +1,413 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.8547712,
+     33.0281264
+    ]
+   },
+   "properties": {
+    "name": "Wilson family, 740 Progress Lane, Ramona, CA (pin)",
+    "type": "home",
+    "dates": null,
+    "dist_from_pin": "0.0 km N",
+    "note": "Lot centroid. First structure seen 1977, house clear by 1980.",
+    "source": "San Diego County parcels_all_for_public_use; US Census geocoder; UCSB aerials"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.86392,
+     33.04464
+    ]
+   },
+   "properties": {
+    "name": "Ramona Town Hall (Barnett Hall)",
+    "type": "landmark",
+    "dates": "1894; NRHP 1994",
+    "dist_from_pin": "2.02 km NNW",
+    "note": "Adobe hall given by Augustus & Martha Barnett 'to the towns people of Nuevo' on 22 Feb 1894. Designed by William S. Hebbard.",
+    "source": "Wikipedia 'Ramona, California'; US Census geocoder"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.863,
+     33.04515
+    ]
+   },
+   "properties": {
+    "name": "Verlaque House / Guy B. Woodward Museum",
+    "type": "landmark",
+    "dates": "1886; NRHP 1991",
+    "dist_from_pin": "2.03 km NNW",
+    "note": "Built by Theophile Verlaque in 1886 beside the Verlaque store, which held the Nuevo post office from 1883.",
+    "source": "Wikipedia 'Ramona, California'; SD History Center J. 1990; US Census geocoder"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.863,
+     33.04515
+    ]
+   },
+   "properties": {
+    "name": "Nuevo / Ramona post office (Verlaque store site, approx.)",
+    "type": "post office",
+    "dates": "Nuevo 1883-09-24; Ramona 1886-11-12; back to Nuevo 1887-01-31; Ramona again from 1895-06-18",
+    "dist_from_pin": "2.03 km NNW",
+    "note": "Amos Verlaque's 1883 store and post office on the Julian wagon road. Point is approximate (same block as the Verlaque House).",
+    "source": "Frickstad 1955 (via goldennuggetlibrary search snippet); sandiegohistoryseeker.com 2018"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.7467,
+     33.06533
+    ]
+   },
+   "properties": {
+    "name": "Ballena (settlement and post office)",
+    "type": "post office",
+    "dates": "1870-07-27 to 1894-09-26; 1896-08-12 to 1902-08-30 (mail to Witch Creek)",
+    "dist_from_pin": "10.89 km ENE",
+    "note": "Stage-road settlement in Ballena Valley east of Ramona. GNIS populated-place point.",
+    "source": "Frickstad 1955; USGS GNIS 1701295"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "Almond post office",
+    "type": "post office",
+    "dates": "1896-05-16 to 1914-02-15 (mail to Ramona)",
+    "dist_from_pin": null,
+    "note": "Location unknown.",
+    "source": "Frickstad 1955"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "Witch Creek post office",
+    "type": "post office",
+    "dates": "received Ballena mail 1902",
+    "dist_from_pin": null,
+    "note": "Location not pinned (Witch Creek Mountain is ~13 km ENE).",
+    "source": "Frickstad 1955; GNIS 251751"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.91667,
+     33.05
+    ]
+   },
+   "properties": {
+    "name": "Rancho Santa Maria (Valle de Pamo) - grant reference point",
+    "type": "rancho",
+    "dates": "granted 1843-11-25; patent 1872-07-30",
+    "dist_from_pin": "6.26 km WNW",
+    "note": "17,708.85-acre Mexican grant to José Joaquín Ortega & Edward Stokes. The pin is inside the grant (no PLSS sections here). Point is the land-case reference coordinate (33°03'N 116°55'W), not the grant center.",
+    "source": "UC Berkeley land case 195 SD (digicoll.lib.berkeley.edu/record/268899); BLM CadNSDI (no section at pin)"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.82115,
+     33.01586
+    ]
+   },
+   "properties": {
+    "name": "San Vicente Valley gold placers",
+    "type": "gold",
+    "dates": "past producer",
+    "dist_from_pin": "3.42 km ESE",
+    "note": "Placer gold deposits.",
+    "source": "USGS MRDS 10214088"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.80415,
+     33.03506
+    ]
+   },
+   "properties": {
+    "name": "Ballena placer deposits",
+    "type": "gold",
+    "dates": "past producer",
+    "dist_from_pin": "4.79 km E",
+    "note": "Placer gold.",
+    "source": "USGS MRDS 10189543"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.83615,
+     32.98366
+    ]
+   },
+   "properties": {
+    "name": "Klondike claim",
+    "type": "gold",
+    "dates": "occurrence",
+    "dist_from_pin": "5.21 km SSE",
+    "note": "Gold occurrence.",
+    "source": "USGS MRDS 10165308"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.87445,
+     33.04176
+    ]
+   },
+   "properties": {
+    "name": "Hatfield Creek claim",
+    "type": "gem",
+    "dates": "unknown",
+    "dist_from_pin": "2.38 km NW",
+    "note": "Gem claim.",
+    "source": "USGS MRDS 10214055"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.79145,
+     33.05676
+    ]
+   },
+   "properties": {
+    "name": "Little Three Mine",
+    "type": "gem",
+    "dates": "past producer",
+    "dist_from_pin": "6.7 km ENE",
+    "note": "Famous Ramona gem pegmatite: topaz, tourmaline, spessartine. Part of a cluster with the Hercules, Surprise, A.B.C., Cable and Lookout mines.",
+    "source": "USGS MRDS 10165156"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.79255,
+     33.05946
+    ]
+   },
+   "properties": {
+    "name": "Hercules prospect",
+    "type": "gem",
+    "dates": "past producer",
+    "dist_from_pin": "6.76 km ENE",
+    "note": "Gem pegmatite.",
+    "source": "USGS MRDS 10165145"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.78665,
+     33.05256
+    ]
+   },
+   "properties": {
+    "name": "Surprise Mine",
+    "type": "gem",
+    "dates": "past producer",
+    "dist_from_pin": "6.91 km ENE",
+    "note": "Gem pegmatite.",
+    "source": "USGS MRDS 10262271"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.80475,
+     33.06366
+    ]
+   },
+   "properties": {
+    "name": "A.B.C. Mine",
+    "type": "gem",
+    "dates": "past producer",
+    "dist_from_pin": "6.1 km NE",
+    "note": "Gem pegmatite.",
+    "source": "USGS MRDS 10237672"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.82946,
+     33.07117
+    ]
+   },
+   "properties": {
+    "name": "Daley mine (Ramona)",
+    "type": "copper",
+    "dates": "past producer",
+    "dist_from_pin": "5.31 km NNE",
+    "note": "Copper-silver.",
+    "source": "USGS MRDS 10077250"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.85335,
+     32.97256
+    ]
+   },
+   "properties": {
+    "name": "Daley Mine (San Vicente)",
+    "type": "copper",
+    "dates": "past producer",
+    "dist_from_pin": "6.15 km S",
+    "note": "Copper.",
+    "source": "USGS MRDS 10213569"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.79975,
+     32.98616
+    ]
+   },
+   "properties": {
+    "name": "McFall Mine",
+    "type": "garnet",
+    "dates": "past producer",
+    "dist_from_pin": "6.92 km SE",
+    "note": "Abrasive garnet.",
+    "source": "USGS MRDS 10164909"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.82168,
+     33.05562
+    ]
+   },
+   "properties": {
+    "name": "Hatfield Creek quarry",
+    "type": "stone",
+    "dates": "producer",
+    "dist_from_pin": "4.33 km NE",
+    "note": "Building and crushed stone.",
+    "source": "USGS MRDS 10077257"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.66945,
+     32.99034
+    ]
+   },
+   "properties": {
+    "name": "Last Chance Mine (Boulder Creek district)",
+    "type": "gold",
+    "dates": "past producer",
+    "dist_from_pin": "17.79 km ESE",
+    "note": "Lode gold.",
+    "source": "USGS MRDS 10077260"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -116.60198,
+     33.07866
+    ]
+   },
+   "properties": {
+    "name": "Julian (gold town)",
+    "type": "gold",
+    "dates": "placer find 1869-70",
+    "dist_from_pin": "24.25 km ENE",
+    "note": "San Diego County's gold-rush town, founded on the 1869-70 gold finds.",
+    "source": "USGS GNIS 1652732; Wikipedia 'Julian, California'"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "Cedar fire edge (nearest)",
+    "type": "fire",
+    "dates": "2003-10-25",
+    "dist_from_pin": null,
+    "note": "270,686 ac. Nearest mapped edge ~1.6 km SE of the pin. The parcel is outside the perimeter.",
+    "source": "CAL FIRE FRAP perimeters"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "Witch fire edge (nearest)",
+    "type": "fire",
+    "dates": "2007-10-21",
+    "dist_from_pin": null,
+    "note": "162,070 ac. Nearest mapped edge ~1.1 km E of the pin. The parcel is outside the perimeter.",
+    "source": "CAL FIRE FRAP perimeters"
+   }
+  }
+ ]
+}

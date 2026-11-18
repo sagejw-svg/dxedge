@@ -61,6 +61,11 @@ services:
       # container. Empty until the finished file is copied onto the host.
       # See nginx/nginx.conf location ^~ /otr/media/latenight/.
       - /var/lib/dxedge/otr-media:/var/lib/dxedge/otr-media:ro
+      # Sky deep-zoom tile pyramids, built on the host by
+      # scripts/build_sky_tiles.sh (kicked off by the deploy). Not in git.
+      # See nginx/nginx.conf location ^~ /ranch-z4swx8er55/tiles/ and
+      # /ramona-h0whnlp4/tiles/.
+      - /var/lib/dxedge/sky-tiles:/var/lib/dxedge/sky-tiles:ro
     depends_on:
       backend:
         condition: service_healthy

@@ -133,6 +133,10 @@ jobs:
             # working copy: whatever origin/main is, is what it should be.
             git fetch origin main
             git reset --hard origin/main
+            # Sky deep-zoom tiles live on this host, outside git and outside
+            # frontend/dist, and nginx bind-mounts the directory read-only.
+            # It must exist before compose (re)creates nginx.
+            install -d -m 755 /var/lib/dxedge/sky-tiles
             # Store a present secret without printing it. Refuse values that
             # would break a dotenv line. An absent secret does not touch the file.
             write_secret() {
@@ -253,6 +257,16 @@ jobs:
                 esac
               fi
             fi
+
+            # Sky deep-zoom tiles: built here from the release originals by
+            # scripts/build_sky_tiles.sh, never committed. Idempotent (skips
+            # pyramids that exist) and flock-guarded, and run in the
+            # background so a first build (about 1 GB download plus a few
+            # minutes of vips) never holds the deploy or trips the SSH
+            # timeout. Until the pyramids exist the pages fall back to the
+            # committed web JPGs. Log: /var/log/dxedge_sky_tiles.log
+            setsid nohup bash scripts/build_sky_tiles.sh all /var/lib/dxedge/sky-tiles >> /var/log/dxedge_sky_tiles.log 2>&1 < /dev/null &
+            echo "[$(date)] sky tile build started in the background" >> $LOG
 
             # Certificate guard. Exits immediately unless the cert is expired or
             # within 30 days of it. Never fails the deploy: it always exits 0.
@@ -425,6 +439,31 @@ jobs:
           echo "$html" | grep -q '/eob2/assets/index-DXq18miT.js' || { echo "ERROR: /eob2/ is not the published engine"; exit 1; }
           js=$(curl -sf https://dxedge.net/eob2/assets/index-DXq18miT.js)
           echo "$js" | grep -q 'Drop the DARKMOON folder here' || { echo "ERROR: /eob2/ bundle has no folder picker"; exit 1; }
+
+      # The two Sky pages are unlisted: 200, noindex in both the header and
+      # the markup, and never listed in robots.txt (a Disallow line would
+      # advertise the slug). The tile pyramids are built on the droplet in
+      # the background, so a missing tiles/index.json on a first deploy is
+      # not a failure; the pages fall back to the web JPGs.
+      - name: Verify the Sky pages are live and unlisted
+        run: |
+          for P in ranch-z4swx8er55 ramona-h0whnlp4 sky-f1st035d; do
+            code=$(curl -s -o /tmp/sky.html -D /tmp/sky.h -w '%{http_code}' "https://dxedge.net/$P/")
+            echo "/$P/ $code"
+            [ "$code" = "200" ] || { echo "ERROR: /$P/ is not 200"; exit 1; }
+            grep -qi '^x-robots-tag: noindex' /tmp/sky.h || { echo "ERROR: /$P/ has no X-Robots-Tag noindex header"; exit 1; }
+            grep -q 'name="robots" content="noindex, nofollow"' /tmp/sky.html || { echo "ERROR: /$P/ markup is missing noindex"; exit 1; }
+            if grep -qi 'immutable' /tmp/sky.h; then echo "ERROR: /$P/ is served immutable"; exit 1; fi
+          done
+          curl -sf https://dxedge.net/sky-f1st035d/sky.js | grep -q 'window.__sky' || { echo "ERROR: viewer script is not the published one"; exit 1; }
+          curl -sf https://dxedge.net/ranch-z4swx8er55/data/site.json | python3 -c "import sys,json; d=json.load(sys.stdin); assert len(d['slides'])==18, 'ranch site.json'"
+          curl -sf https://dxedge.net/ramona-h0whnlp4/data/site.json | python3 -c "import sys,json; d=json.load(sys.stdin); assert len(d['slides'])==42, 'ramona site.json'"
+          r=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/robots.txt)
+          if [ "$r" = "200" ] && curl -s https://dxedge.net/robots.txt | grep -qE 'z4swx8er55|h0whnlp4|f1st035d'; then
+            echo "ERROR: robots.txt names a hidden Sky path"; exit 1
+          fi
+          t=$(curl -s -o /dev/null -w '%{http_code}' https://dxedge.net/ranch-z4swx8er55/tiles/index.json)
+          echo "ranch tiles/index.json $t (404 is expected until the first background build finishes)"
 
       - name: Verify feed proxy is live
         run: |

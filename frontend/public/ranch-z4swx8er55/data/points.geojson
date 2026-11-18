@@ -1,0 +1,305 @@
+{
+ "type": "FeatureCollection",
+ "name": "ranch_points",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.1295293,
+     35.8426537
+    ]
+   },
+   "properties": {
+    "name": "Ranch pin (Wilson family ranch)",
+    "type": "pin",
+    "dates": "family since ~1976 (per James)",
+    "source": "coordinates provided by James",
+    "notes": "T24S R8E sec. 17, Mount Diablo Meridian (BLM CadNSDI); ~150 m outside the current Fort Hunter Liggett boundary (US Census TIGERweb Military Installations).",
+    "distance_km": 0,
+    "direction_from_pin": "-"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.09048,
+     35.80664
+    ]
+   },
+   "properties": {
+    "name": "Bryson Post Office (Sapaque area)",
+    "type": "post_office",
+    "dates": "1887-11-09 to 1937-11-15 (mail to Bradley); moved 1889, 1898, 1899, 1905, 1906",
+    "source": "https://goldennuggetlibrary.sfgenealogy.org/po_mon.htm (Frickstad, A Century of California Post Offices 1848-1954); https://indexes.montereyhistory.org/sites/default/files/issues/1969/vol-13-num-1-march-1969.pdf (Noticias/Puerto de Monterey, Mar 1969); https://kids.kiddle.co/Bryson,_California; GNIS 252862 (Bryson populated place)",
+    "notes": "Coordinates are the GNIS point for the Bryson community, not a confirmed post-office building site (the office moved several times). Bryson was originally called Sapaque.",
+    "distance_km": 5.33,
+    "direction_from_pin": "SE"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "Gem Post Office",
+    "type": "post_office",
+    "dates": "1894-08-03 to 1899-08-31 (mail to Bryson)",
+    "source": "https://goldennuggetlibrary.sfgenealogy.org/po_mon.htm (Frickstad, A Century of California Post Offices 1848-1954); https://indexes.montereyhistory.org/sites/default/files/issues/1969/vol-13-num-1-march-1969.pdf (Noticias/Puerto de Monterey, Mar 1969)",
+    "notes": "\"Located on top of the ridge between Pleyto and Bryson\"; exact site unknown, so no coordinates."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.08326,
+     35.94414
+    ]
+   },
+   "properties": {
+    "name": "Lockwood Post Office",
+    "type": "post_office",
+    "dates": "1888-07-23 to present",
+    "source": "https://goldennuggetlibrary.sfgenealogy.org/po_mon.htm (Frickstad, A Century of California Post Offices 1848-1954); https://lockwood.one-name.net/lockwood,ca.htm; GNIS 1660933",
+    "notes": "Named for Belva Ann Lockwood. The original townsite is mostly gone; the current PO is on the highway. Coordinates are the GNIS community point.",
+    "distance_km": 12.01,
+    "direction_from_pin": "NNE"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -120.99715,
+     35.86108
+    ]
+   },
+   "properties": {
+    "name": "Pleyto (Pleito) Post Office",
+    "type": "post_office",
+    "dates": "Pleito: 1870-12-14 to 1872-08-26, 1874-11-06 to 1876-09-12, 1884-10-03; renamed Pleyto 1884-12-08; closed 1925-02-14 (mail to Bradley)",
+    "source": "https://goldennuggetlibrary.sfgenealogy.org/po_mon.htm (Frickstad, A Century of California Post Offices 1848-1954); GNIS 1670149 Pleyto (historical); https://mchsmuseum.com/local-history/american-era-settlement/overview-of-post-hispanic-monterey-county-history/",
+    "notes": "The old Pleito site now lies under Lake San Antonio.",
+    "distance_km": 12.13,
+    "direction_from_pin": "E"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.17605,
+     35.97081
+    ]
+   },
+   "properties": {
+    "name": "Jolon Post Office",
+    "type": "post_office",
+    "dates": "by 1878 in the Dutton (Dutton-Tidball) Hotel; Francis Sylvester petitioned in 1858",
+    "source": "https://www.militarymuseum.org/FtHLiggett.html; GNIS 274725",
+    "notes": "Coordinates are the GNIS point for Jolon village. Exact open/close dates not confirmed.",
+    "distance_km": 14.83,
+    "direction_from_pin": "NNW"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "San Antonio Post Office (Lowe's Station)",
+    "type": "post_office",
+    "dates": "1858-12-16 to 1887-09-28 (mail to King City)",
+    "source": "https://goldennuggetlibrary.sfgenealogy.org/po_mon.htm (Frickstad, A Century of California Post Offices 1848-1954); MCHS overview",
+    "notes": "Stage stop at the east end of Jolon Valley; exact site not located."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "name": "Nasimento / Veratina Post Office",
+    "type": "post_office",
+    "dates": "Nasimento 1887-12-03; renamed Veratina 1888-11-07; closed 1895-07-11 (mail to Bradley)",
+    "source": "https://goldennuggetlibrary.sfgenealogy.org/po_mon.htm (Frickstad, A Century of California Post Offices 1848-1954); https://indexes.montereyhistory.org/sites/default/files/issues/1969/vol-13-num-1-march-1969.pdf (Noticias/Puerto de Monterey, Mar 1969)",
+    "notes": "Location not found."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.13905,
+     35.85245
+    ]
+   },
+   "properties": {
+    "name": "Botts quicksilver mine (Bryson Mine / Botts deposit)",
+    "type": "mine_mercury",
+    "dates": "produced to 1940; owner Victor Botts in 1941 (8-pipe retort, 1941)",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10040673 ; https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10188593 ; https://www.mindat.org/loc-83469.html ; Hart 1966, CDMG County Report 5",
+    "notes": "Cinnabar in sandstone on a NE-trending fault; SE1/4 sec. 7 T24S R8E, south side of Sycamore Creek; now inside Fort Hunter Liggett. The 1919 USGS Bryson topo labels a \"QUICKSILVER MINE\" here.",
+    "distance_km": 1.39,
+    "direction_from_pin": "NW"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.14543,
+     35.85856
+    ]
+   },
+   "properties": {
+    "name": "Bryson Mine (quicksilver)",
+    "type": "mine_mercury",
+    "dates": "produced to 1941",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10040674 ; https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10159973 ; Holmes 1965, USBM IC 8252",
+    "notes": "Sec. 7 T24S R8E. Location is only to the section centre (+/-1 km). It may be the same workings as Botts (MRDS lists \"Bryson Mine\" as an alias).",
+    "distance_km": 2.28,
+    "direction_from_pin": "NW"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.10789,
+     35.78885
+    ]
+   },
+   "properties": {
+    "name": "S. P. Dayton Ranch gold placer",
+    "type": "mine_gold",
+    "dates": "reported 1935",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10165466 ; Calif. Jour. Mines & Geol. v.31 (1935) p.423",
+    "notes": "Placer gold occurrence; location accuracy +/-1 km; San Luis Obispo County.",
+    "distance_km": 6.28,
+    "direction_from_pin": "SSE"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.27849,
+     35.76325
+    ]
+   },
+   "properties": {
+    "name": "Polar Star quicksilver mine",
+    "type": "mine_mercury",
+    "dates": "producer",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10286696",
+    "notes": "Nearest group of Santa Lucia quicksilver mines to the SW.",
+    "distance_km": 16.09,
+    "direction_from_pin": "WSW"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.09039,
+     35.68996
+    ]
+   },
+   "properties": {
+    "name": "Pine Mountain / Buckeye / Little Almaden quicksilver mines",
+    "type": "mine_mercury",
+    "dates": "past producers",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10141086 ; https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10103824 ; https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10103823",
+    "notes": "Cluster of mercury mines to the south.",
+    "distance_km": 17.31,
+    "direction_from_pin": "SSE"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -120.89944,
+     35.62056
+    ]
+   },
+   "properties": {
+    "name": "Klau / Buena Vista quicksilver mines",
+    "type": "mine_mercury",
+    "dates": "past producers",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10040886 ; https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10077393",
+    "notes": "Major mercury mines west of Paso Robles.",
+    "distance_km": 32.26,
+    "direction_from_pin": "SE"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.3877,
+     35.87435
+    ]
+   },
+   "properties": {
+    "name": "Los Burros gold mine (Los Burros district)",
+    "type": "mine_gold",
+    "dates": "past producer",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10139971",
+    "notes": "Los Burros Mining District, near the coast ridge.",
+    "distance_km": 23.58,
+    "direction_from_pin": "W"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.3988,
+     35.88665
+    ]
+   },
+   "properties": {
+    "name": "Melville gold mine",
+    "type": "mine_gold",
+    "dates": "prospect",
+    "source": "https://mrdata.usgs.gov/mrds/show-mrds.php?dep_id=10189201",
+    "notes": "Los Burros district.",
+    "distance_km": 24.8,
+    "direction_from_pin": "WNW"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -121.3925,
+     35.88111
+    ]
+   },
+   "properties": {
+    "name": "Manchester townsite / Last Chance (Buclimo) gold mine area",
+    "type": "mine_gold",
+    "dates": "town c.1875-1895; Last Chance lode found 1887 by W. D. Cruikshank; produced about $62,000",
+    "source": "https://en.wikipedia.org/wiki/Manchester,_Monterey_County,_California",
+    "notes": "Coordinates are the Manchester townsite. The Last Chance mine was \"at the head of Alder Creek\"; it is not in MRDS, so its exact point is unknown.",
+    "distance_km": 24.13,
+    "direction_from_pin": "W"
+   }
+  }
+ ]
+}
