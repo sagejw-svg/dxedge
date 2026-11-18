@@ -194,6 +194,9 @@ export function mountThyPanel(container, hooks) {
   const fmtS = v => v < 1 ? Math.round(v * 1000) + 'ms' : v.toFixed(2) + 's';
   const fmtHz = v => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + 'k' : Math.round(v) + '';
   const pct = v => Math.round(v * 100) + '%';
+  // osc 3's rate reads in hertz with decimals: fmtHz rounded it, so 0.05 to 0.49 Hz read "0" and 0.5 read "1"
+  // (review 18 Nov, R1118-1)
+  const fmtRate = v => (v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : String(Math.round(v))) + ' Hz';
 
   addKnob(kPlay, 'glide', 'glide', 0, 3, 0.001, v => v < 0.001 ? 'off' : fmtS(v), 'Time to glide most of the way to the next note');
   addKnob(kPlay, 'tune', 'tune', -100, 100, 1, v => (v > 0 ? '+' : '') + Math.round(v) + '¢', 'Master tune, in cents');
@@ -242,7 +245,7 @@ export function mountThyPanel(container, hooks) {
     oscHost.appendChild(box);
     addKnob(ks, id + '.tune', 'tune', -12, 12, 0.01, v => (v > 0 ? '+' : '') + (Math.round(v * 100) / 100) + ' st', 'Tune, in semitones');
     addKnob(ks, id + '.level', 'level', 0, 1, 0.01, pct);
-    if (id === 'osc3') addLog(ks, 'osc3.rate', 'rate', 0.05, 40, fmtHz, 'Rate when oscillator 3 is the low oscillator');
+    if (id === 'osc3') addLog(ks, 'osc3.rate', 'rate', 0.05, 40, fmtRate, 'Rate when oscillator 3 is the low oscillator (lfo on)');
   });
 
   addKnob(kMix, 'mix.noise', 'noise', 0, 1, 0.01, pct, 'Noise level into the ladder');
@@ -282,6 +285,10 @@ export function mountThyPanel(container, hooks) {
       lfo.setAttribute('aria-pressed', String(!!p.osc3.lfo));
       lfo.textContent = p.osc3.lfo ? 'lfo on' : 'lfo';
     }
+    // the rate only runs osc 3 while lfo is on: dim it otherwise, as the tape echo's time dims under sync
+    // (review 18 Nov, R1118-2)
+    const rate = knobs['osc3.rate'];
+    if (rate && rate.el) rate.el.style.opacity = p.osc3.lfo ? '' : '0.45';
     Object.keys(knobs).forEach(path => knobs[path].set(getPath(p, path)));
   }
   paint();

@@ -72,7 +72,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
-| R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
+| R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question; 18 Nov: measured on Filament ("Mine" from Plate Bass, then "Mine" from Echo Lead: no dialog, one "Mine" left holding Echo Lead, the toast says only Saved "Mine") | measured |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
 | R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct; 17 Nov: a focused panel button and the LCD select still change no style (by .focus()) | measured |
@@ -88,7 +88,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2765,3 +2765,113 @@ Areas a to e (e only where the deck shares tonight's fixes). Iris, Sculpt, Hand 
 Gleam's outboard page were not played. From the 16 Nov suggestion, the 16 Nov factory patches loaded from a
 project and a full Tab walk of the Rack tab after the Mix card move were not done. Suggested next: a and b, including Orthicon's starter pictures
 (R1112-1) and the Theremin switch (R1109-1).
+
+## 2026-11-18 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `e9abb28`, sw.js
+`dxedge-v227` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path in
+the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any
+run. Focus tonight: what landed since the last a and b night (15 Nov): the 13 Filament factory patches of
+16 Nov and the features they are the first to use (Filter B, the mod matrix, the LC bank, the tape echo,
+the spring); a knob sweep with offline renders on Thyratron and Cathode; every factory patch; user patches
+on nine devices; and the first day's patches of seven hosted devices.
+
+Method note: Filament and Cathode renders are not repeatable sample for sample (drift, and on Cathode
+the patch's own movement), so a knob is read against the spread of two renders of the untouched patch
+(the largest octave-band change, held 0.05 to 0.6 s and tail from 0.7 s). Thyratron renders are
+repeatable (two renders of Walnut Bass differ by 0.0 dB), so its readings are exact.
+
+### What worked (measured)
+
+- Area b, all 142 factory patches on the 18 devices picked from the menu (Filament now 40): each shows
+  under its own name, its key and its patch name agree, no errors.
+- The 13 new Filament patches: each lights the panel the way its patch reads (tape echo on for Echo Lead
+  and Tape Wobble, spring on for Spring Clavier and Spring Twang, Filter B serial on Serial Grit Bass,
+  split on Split Horizon, parallel on Twin Pizzicato, LC bank in slot A on Vowel Bank, LP gate on Rubber
+  Bass, the matrix reading "1 of 8 on" on Sync Snap Bass). A four-note chord at 0.8 and a seven-note chord
+  at full velocity render finite on all 13; highest peak 0.92 (Vowel Bank, full velocity).
+- Filter B (Wide Novachord Strings): with the route on A only, the section's knobs sit at 0.45 opacity and
+  the note says B is off. In serial, every knob moves the field its label names: cutoff at 20 Hz takes the
+  note to -60.7 dBFS RMS, env at -100 to -37.5, res at 10 lifts the peak from 0.47 to 0.84.
+- Mod matrix: the seven sources that move on their own (both envelopes, both LFOs, velocity, key, random)
+  into cutoff each change the sound by 12 dB or more in an octave band (spread of two renders 4.8 dB);
+  mod wheel and pressure change nothing with no wheel or pressure sent, as expected. From velocity (a
+  steady source) at +100% or -100%, 12 of the 17 destinations move the sound well past the spread (3.8 dB):
+  pitch, osc 2 pitch, pulse width, both osc levels, sub, noise, cutoff, resonance, morph, level and pan
+  (pan +100% puts the right side 15.9 dB over the left, -100% the left 16.5 dB over the right). B cutoff
+  and B resonance change nothing while Filter B is off, as expected. FM, ring and V1 drive sit near the
+  spread on this patch (5.7, 6.0 and 4.9 dB); set straight on the patch for comparison, osc 2 FM at 100%
+  moves it 33.5 dB and the matrix's velocity to FM at +100% 22.3 dB, so FM works and is gentle on saws.
+  The count reads "1 of 8 on" and the pilot lights.
+- Tape echo (Echo Lead, wow and flutter at 0, a 40 ms note): sync off repeats every 330 ms as the time
+  knob reads; 1/4 at 120 BPM every 500 ms, at 90 BPM every 667 ms, 1/8 at 120 every 250 ms; while synced
+  the time knob dims and its title says it is the time when sync is off. Mono, ping-pong and offset give
+  three different stereo pictures (side over left 0.49, 0.77, 0.97). The on switch moves the tail's octave bands by 52 dB.
+- Spring reverb (Spring Twang): mix at 0 drops the tail 44 dB, decay 0.5 s against 6 s moves the tail
+  38 dB, tone moves it 20 to 28 dB; every render finite, highest peak 0.28.
+- Thyratron (Walnut Bass), 26 knobs at both ends: each moves the field its label names; level 0 is silent;
+  cutoff at 20 Hz costs 9 dB RMS; every render finite, highest peak 0.76 (emphasis 100%). Glide and bend
+  change nothing on one note with no bend sent, as expected; the mod wheel's pitch and cutoff depths
+  change the sound with a wheel event (mod cutoff 4 oct with osc 3 as an LFO at 6 Hz swings the centroid
+  between 560 and 1340 Hz).
+- Cathode (Plate Screamer), 38 knobs at both ends: each moves the field its label names; VCA level 0 is
+  silent; every render finite, highest peak 0.76 (VCA bias 100%).
+- User patches through the form on Filament, Cathode, Thyratron, Lattice, Gleam, Pentagrid, Gyrotron,
+  Dekatron and Klystron: the form offers "name 2", the toast says saved, a reload brings each device back
+  on its user patch with every field equal, picking it again from Yours gives the same patch, and delete
+  lands on the device's own first sound with a toast. On a phone the save form's delete key is named for
+  the patch and works.
+- Old patches: the 40 factory patches of Thyratron (6), Lattice (8), Gleam (6), Pentagrid (6), Dekatron
+  (6), Gyrotron (3) and Klystron (5) as they were on their first day (14 and 15 Oct), imported as patch
+  files, load as "* name (edited)" with no errors. Rendered against today's patch of the same name:
+  Thyratron 0.0 dB on all six, Lattice within 0.8 dB on all eight.
+- Phone 375 px: Filter B, the matrix, the tape echo and the spring on their tabs: no sideways scroll, no
+  control under 24 px, nothing past the right edge.
+
+### Findings
+
+**R1118-1. Thyratron: osc 3's rate reads whole hertz with no unit.** Area a. Confusing. Measured.
+Fixed tonight.
+- Steps: Thyratron, osc 3, rate knob; Home, then step up.
+- Expected: the readout says the rate the knob sets (0.05 to 40 Hz).
+- Actual: the readout rounded to a whole number and had no unit: 0.05 to 0.49 Hz read "0", 0.5 read "1",
+  Walnut Bass's 3 Hz read "3" (the same formatter as the ladder's cutoff).
+- Fix: the rate has its own readout: "0.05 Hz" below 1 Hz, "3.0 Hz" below 10, "40 Hz" above. Check:
+  "T. osc 3's rate knob is dimmed while lfo is off ... reads in hertz at both ends" (fails on the live
+  tree: "0" and "40", and the knob lit with lfo off).
+
+**R1118-2. Thyratron: the rate knob looks live while it does nothing.** Area a. Confusing. Measured.
+Fixed tonight.
+- Steps: Thyratron, Walnut Bass (osc 3's lfo key off). Turn rate to 0.5, 6 and 40 Hz and render a held C3
+  with the wheel up.
+- Expected: a knob that does nothing in this state says so, as Filter B's knobs do with the route on A
+  only and the tape echo's time does under sync (both dim to 0.45).
+- Actual: the three renders were sample-identical (osc 3 follows the keyboard until lfo is on), while the
+  knob stayed fully lit. Its title did say "when oscillator 3 is the low oscillator", but nothing else.
+- Fix: the rate knob dims to 0.45 while lfo is off and lights when it is on, also on a patch pick (Pilot
+  Lead, lfo on, lights it); the title now ends "(lfo on)". Same check as R1118-1.
+
+**R1022-6 (from 22 Oct), now measured.** Saving "Mine" from Plate Bass and then "Mine" again from Echo
+Lead asks nothing: Yours holds one "Mine", now Echo Lead, and the toast says only Saved "Mine" in this
+browser. Left open with R1025-3 (delete with no confirmation): whether to ask, or to say "Replaced", is a
+call for James.
+
+### Still open, re-measured tonight
+
+- R1025-3: delete still removes a user patch at once with no dialog (nine devices tonight, and the phone's
+  save form).
+- R1031-3: switching the arpeggiator on and pressing the next-patch arrow turns it off again.
+- R1115-1: Rhumbatron blow and bow renders still sample-identical (difference 0.0) on a held A3.
+
+### Notes (not findings)
+
+- Filament's V1 drive into the mod matrix, and V1 drive itself at 10 against 3 on Wide Novachord Strings,
+  move the octave bands by only about 3 dB, inside the spread of two renders. Read as V1 being gentle on
+  that patch, not as a fault; not reported.
+- Dekatron's offline render (`drumRender`) is silent for key events, so tonight's old Dekatron patches
+  were checked for loading only.
+
+### Not covered tonight
+
+Areas c to h. No knob sweep on Lattice, Gleam or the master bus this night. Suggested next: c, d and e,
+with a take on Thyratron with osc 3 as an LFO and the tape echo synced while the deck plays.

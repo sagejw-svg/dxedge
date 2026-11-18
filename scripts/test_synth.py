@@ -2312,7 +2312,17 @@ with sync_playwright() as pw:
        and not pg.is_visible("#mFilt") and not pg.is_visible("#mCLpf") and pg.get_attribute("#devT", "aria-pressed") == "true"
        and "THYRA" in pg.inner_text("#devTitle") and pg.inner_text("#nameV1") == "LADDER")
     pg.click('#thyOsc .chip[data-path="osc1.wave"][data-val="square"]')
+    rate_q = """() => { const k = document.querySelector('#thyOsc .knob[data-path="osc3.rate"]'); return { op: getComputedStyle(k).opacity, lfo: __synth.patch().osc3.lfo, read: k.getAttribute('aria-valuetext') }; }"""
+    rate_off = pg.evaluate(rate_q)
     pg.click("#thyLfo"); pg.wait_for_timeout(150)
+    rate_on = pg.evaluate(rate_q)
+    pg.focus('#thyOsc .knob[data-path="osc3.rate"]'); pg.keyboard.press("Home"); pg.wait_for_timeout(60)
+    rate_lo = pg.evaluate(rate_q)["read"]
+    pg.keyboard.press("End"); pg.wait_for_timeout(60)
+    rate_hi = pg.evaluate(rate_q)["read"]
+    ck(f"T. osc 3's rate knob is dimmed while lfo is off and lit when it is on, and reads in hertz at both ends, not \"0\" at 0.05 Hz (review R1118-1, R1118-2: {rate_off}, {rate_on}, {rate_lo}, {rate_hi})",
+       rate_off["lfo"] is False and float(rate_off["op"]) < 0.6 and rate_on["lfo"] is True and float(rate_on["op"]) > 0.95
+       and rate_lo == "0.05 Hz" and rate_hi == "40 Hz")
     ck("T. a waveform chip and the low-oscillator switch edit the patch",
        pg.evaluate("__synth.patch().osc1.wave") == "square" and pg.evaluate("__synth.patch().osc3.lfo") is True)
     pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
