@@ -1,0 +1,2894 @@
+{
+ "slug": "ramona-h0whnlp4",
+ "title": "Ramona Sky",
+ "subtitle": "Wilson family, 740 Progress Lane, Ramona, CA, 1903-2026",
+ "label": "Wilson family, 740 Progress Lane, Ramona, CA",
+ "pin": {
+  "lat": 33.0281264,
+  "lon": -116.8547712
+ },
+ "location_lines": [
+  "Wilson family, 740 Progress Lane, Ramona, CA",
+  "33.0281264, -116.8547712 (WGS84, centroid of the lot)",
+  "T13S R1E, San Bernardino Meridian, inside the former Rancho Santa María (Valle de Pamo) grant; never sectioned, so no federal homestead patent",
+  "Santa Maria Valley, about 2 km SSE of Ramona's historic Main Street, at about 1,490 ft"
+ ],
+ "intro": [
+  "Before 1769: Kumeyaay (Diegueño) homeland.",
+  "1843-11-25: Gov. Micheltorena grants Rancho Valle de Pamo / Santa María (4 leagues) to José Joaquín Ortega and Edward Stokes.",
+  "1872-07-30: US patent to Ortega et al. for 17,708.85 acres, the root of title for the lot.",
+  "1869-70: gold is found at Julian, ~24 km ENE. The Julian wagon road ran through the valley.",
+  "1883: Amos Verlaque builds a store and post office on the Julian road; the settlement is called Nuevo.",
+  "1886: Milton Santee's Santa Maria Land & Water Co. subdivides the valley and names it Ramona, after Helen Hunt Jackson's novel.",
+  "1895-06-18: the post office name settles on Ramona for good.",
+  "1939-1963: farm fields at the lot.",
+  "1974-75: Progress Lane appears as a graded track.",
+  "1975-77: the first structure appears on the lot; the house is clear by 1980 and mapped on the 1982 USGS revision.",
+  "2003 Cedar fire: nearest edge ~1.6 km SE. 2007 Witch fire: nearest edge ~1.1 km E. The lot did not burn.",
+  "2006: the Ramona Valley becomes a wine AVA."
+ ],
+ "owners": [
+  [
+   "before 1843",
+   "Kumeyaay homeland; Mission San Diego sphere",
+   "regional"
+  ],
+  [
+   "1843-1872",
+   "Rancho grantees J. J. Ortega and E. Stokes (Stokes died 1847)",
+   "grant"
+  ],
+  [
+   "1872",
+   "US patent to José Joaquín Ortega et al.",
+   "sourced"
+  ],
+  [
+   "1872-1886",
+   "unknown chain of rancho owners",
+   "unknown"
+  ],
+  [
+   "1886 onward",
+   "Santa Maria Land & Water Co. subdivides the Ramona townsite. Whether this lot was in its tract is likely but unverified.",
+   "inference"
+  ],
+  [
+   "1886-1970s",
+   "unknown (farmland)",
+   "unknown"
+  ],
+  [
+   "1970s, house built ~1977-80",
+   "unknown builder/owner",
+   "unknown"
+  ],
+  [
+   "present",
+   "Wilson family (purchase year unknown)",
+   "family"
+  ]
+ ],
+ "owners_note": "Ownership history: research in progress. The chain of title from the 1872 patent to the present is unknown.",
+ "map": {
+  "icons": {
+   "home": "pin",
+   "post office": "po",
+   "gold": "mine-gold",
+   "gem": "mine-purple",
+   "copper": "mine-gray",
+   "garnet": "mine-gray",
+   "stone": "mine-gray",
+   "landmark": "landmark",
+   "rancho": "rancho",
+   "fire": "fire"
+  },
+  "legend": [
+   [
+    "po",
+    "Post office"
+   ],
+   [
+    "mine-gold",
+    "Gold"
+   ],
+   [
+    "mine-purple",
+    "Gem pegmatite"
+   ],
+   [
+    "mine-gray",
+    "Copper, garnet, stone"
+   ],
+   [
+    "landmark",
+    "Landmark"
+   ],
+   [
+    "rancho",
+    "Rancho reference"
+   ]
+  ],
+  "zoom": 12,
+  "parcel": "parcel_outline.geojson"
+ },
+ "credits": {
+  "imagery": [
+   "USGS Historical Topographic Map Collection",
+   "UCSB Library FrameFinder: C-5750 (1939), AXN (1953), CAS-SD (1963), AMI-SD (1974-80), NAPP",
+   "County of San Diego / SanGIS historical orthoimagery (1995-2012)",
+   "USDA FSA NAIP",
+   "USGS/NASA Landsat",
+   "Contains modified Copernicus Sentinel data 2026 (ESA), via Microsoft Planetary Computer",
+   "Esri World Imagery / Wayback (Maxar GeoEye-1 2022, WorldView-3 2025, Vantor Legion-06 2026)"
+  ],
+  "history": [
+   "UC Berkeley land case 195 SD",
+   "Smythe, History of San Diego",
+   "San Diego History Center Journal (Oct 1990)",
+   "Frickstad, A Century of California Post Offices",
+   "USGS MRDS",
+   "USGS GNIS",
+   "CAL FIRE FRAP",
+   "Wikipedia (Ramona, Julian)",
+   "Full URL list: history.md"
+  ],
+  "accuracy": "UCSB frames are georeferenced to about 10-20 m. Mine coordinates are from USGS MRDS.",
+  "esri_note": "The three Esri images are shown from the committed web copies only, or streamed live from Esri with attribution. No Esri tiles are re-hosted here. County orthos: credit County of San Diego / SanGIS."
+ },
+ "sister": {
+  "slug": "ranch-z4swx8er55",
+  "title": "Ranch Sky"
+ },
+ "slides": [
+  {
+   "file": "1903_usgs-topo-ramona30.jpg",
+   "year": 1903,
+   "date": "1903 (surveyed 1901)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 30' (1:125,000)",
+   "caption": "Earliest map. The Ramona townsite street grid is already laid out across the Santa Maria Valley, and the rancho name 'DE PAMO' is printed across it. The pin is in an empty grid block about 1.5 km SE of the town center. ~8 km square.",
+   "owner": "unknown (former Rancho Santa María land; probably part of the 1886 Ramona townsite tract, an inference)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1903_usgs-topo-ramona30_fullsheet",
+     "file": "1903_usgs-topo-ramona30_fullsheet.tif",
+     "label": null,
+     "width": 4967,
+     "height": 5971,
+     "pin_px": [
+      1546.5,
+      5211.5
+     ],
+     "parcel_px": [
+      [
+       1549.5,
+       5208.5
+      ],
+      [
+       1549.5,
+       5209.5
+      ],
+      [
+       1549.5,
+       5212.5
+      ],
+      [
+       1543.5,
+       5212.5
+      ],
+      [
+       1543.5,
+       5212.5
+      ],
+      [
+       1543.5,
+       5210.5
+      ],
+      [
+       1543.5,
+       5209.5
+      ],
+      [
+       1543.5,
+       5208.5
+      ],
+      [
+       1544.5,
+       5208.5
+      ],
+      [
+       1549.5,
+       5208.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1939_ucsb-c-5750.jpg",
+   "year": 1939,
+   "date": "1939 (flight C-5750; exact day not in index)",
+   "source": "UCSB Library FrameFinder - flight C-5750, frame 213-56 (1:20,000)",
+   "caption": "Earliest aerial photo. Farm fields on the section-line road grid, with a dark strip of trees or crop just NW. No building on the parcel. ~1.2 km square; position accurate to roughly 10-20 m (matched to later imagery).",
+   "owner": "unknown (former Rancho Santa María land; probably part of the 1886 Ramona townsite tract, an inference)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1939_ucsb-c-5750_213-56_georef",
+     "file": "1939_ucsb-c-5750_213-56_georef.tif",
+     "label": null,
+     "width": 5538,
+     "height": 5493,
+     "pin_px": [
+      3740.5,
+      3576.5
+     ],
+     "parcel_px": [
+      [
+       3766.5,
+       3551.5
+      ],
+      [
+       3766.5,
+       3559.5
+      ],
+      [
+       3767.5,
+       3598.5
+      ],
+      [
+       3702.5,
+       3598.5
+      ],
+      [
+       3702.5,
+       3598.5
+      ],
+      [
+       3702.5,
+       3568.5
+      ],
+      [
+       3702.5,
+       3560.5
+      ],
+      [
+       3702.5,
+       3552.5
+      ],
+      [
+       3711.5,
+       3551.5
+      ],
+      [
+       3766.5,
+       3551.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1942_usgs-topo-ramona15.jpg",
+   "year": 1942,
+   "date": "1942 (from 1939 aerial photos; 1947 print)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 15' (1:62,500)",
+   "caption": "Roads on the grid around the pin, scattered farm buildings, and town to the NW. Nothing mapped at the pin. ~5 km square.",
+   "owner": "unknown (former Rancho Santa María land; probably part of the 1886 Ramona townsite tract, an inference)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1942_usgs-topo-ramona15_fullsheet",
+     "file": "1942_usgs-topo-ramona15_fullsheet.tif",
+     "label": null,
+     "width": 4975,
+     "height": 6542,
+     "pin_px": [
+      2876.5,
+      4818.5
+     ],
+     "parcel_px": [
+      [
+       2881.5,
+       4814.5
+      ],
+      [
+       2881.5,
+       4815.5
+      ],
+      [
+       2881.5,
+       4822.5
+      ],
+      [
+       2870.5,
+       4822.5
+      ],
+      [
+       2870.5,
+       4822.5
+      ],
+      [
+       2870.5,
+       4817.5
+      ],
+      [
+       2870.5,
+       4816.5
+      ],
+      [
+       2870.5,
+       4814.5
+      ],
+      [
+       2872.5,
+       4814.5
+      ],
+      [
+       2881.5,
+       4814.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1953_ucsb-axn-1953.jpg",
+   "year": 1953,
+   "date": "1953 (flight AXN; exact day not in index)",
+   "source": "UCSB Library FrameFinder - flight AXN-1953, frame 5M-133 (1:20,000)",
+   "caption": "Open field at the parcel. Big grain or pasture fields fill the block. No buildings or lane yet.",
+   "owner": "unknown (former Rancho Santa María land; probably part of the 1886 Ramona townsite tract, an inference)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1953_ucsb-axn-1953_5m-133_georef",
+     "file": "1953_ucsb-axn-1953_5m-133_georef.tif",
+     "label": null,
+     "width": 6557,
+     "height": 6600,
+     "pin_px": [
+      4570.5,
+      2254.5
+     ],
+     "parcel_px": [
+      [
+       4597.5,
+       2228.5
+      ],
+      [
+       4597.5,
+       2237.5
+      ],
+      [
+       4597.5,
+       2276.5
+      ],
+      [
+       4531.5,
+       2276.5
+      ],
+      [
+       4531.5,
+       2276.5
+      ],
+      [
+       4531.5,
+       2246.5
+      ],
+      [
+       4531.5,
+       2237.5
+      ],
+      [
+       4531.5,
+       2229.5
+      ],
+      [
+       4541.5,
+       2229.5
+      ],
+      [
+       4597.5,
+       2228.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1955_usgs-topo-ramona7.5.jpg",
+   "year": 1955,
+   "date": "1955 (1949 photos, field-checked 1955; 1957 print)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 7.5' (1:24,000)",
+   "caption": "First detailed map. The pin sits on open ground near the 1,500 ft contour, with a small 'Reservoir' about 230 m WSW. No building or road at the pin. ~2.4 km square.",
+   "owner": "unknown (former Rancho Santa María land; probably part of the 1886 Ramona townsite tract, an inference)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1955_usgs-topo-ramona7.5_fullsheet",
+     "file": "1955_usgs-topo-ramona7.5_fullsheet.tif",
+     "label": null,
+     "width": 6596,
+     "height": 8058,
+     "pin_px": [
+      1375.5,
+      5675.5
+     ],
+     "parcel_px": [
+      [
+       1386.5,
+       5664.5
+      ],
+      [
+       1386.5,
+       5668.5
+      ],
+      [
+       1386.5,
+       5684.5
+      ],
+      [
+       1359.5,
+       5684.5
+      ],
+      [
+       1358.5,
+       5684.5
+      ],
+      [
+       1359.5,
+       5671.5
+      ],
+      [
+       1359.5,
+       5668.5
+      ],
+      [
+       1359.5,
+       5664.5
+      ],
+      [
+       1363.5,
+       5664.5
+      ],
+      [
+       1386.5,
+       5664.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1963_ucsb-cas-sd.jpg",
+   "year": 1963,
+   "date": "1963 (flight CAS-SD; exact day not in index)",
+   "source": "UCSB Library FrameFinder - flight CAS-SD, frame 1-123 (1:20,000)",
+   "caption": "Still farmland. A diagonal dirt track crosses the field where the parcel is now. No buildings.",
+   "owner": "unknown (former Rancho Santa María land; probably part of the 1886 Ramona townsite tract, an inference)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1963_ucsb-cas-sd_1-123_georef",
+     "file": "1963_ucsb-cas-sd_1-123_georef.tif",
+     "label": null,
+     "width": 5928,
+     "height": 5939,
+     "pin_px": [
+      3341.5,
+      3946.5
+     ],
+     "parcel_px": [
+      [
+       3367.5,
+       3921.5
+      ],
+      [
+       3367.5,
+       3929.5
+      ],
+      [
+       3368.5,
+       3968.5
+      ],
+      [
+       3303.5,
+       3968.5
+      ],
+      [
+       3303.5,
+       3968.5
+      ],
+      [
+       3303.5,
+       3938.5
+      ],
+      [
+       3303.5,
+       3930.5
+      ],
+      [
+       3303.5,
+       3922.5
+      ],
+      [
+       3312.5,
+       3921.5
+      ],
+      [
+       3367.5,
+       3921.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1971_usgs-topo-ramona7.5-photorevised.jpg",
+   "year": 1971,
+   "date": "1971 (photorevised from 1971 photos; 1973 print)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 7.5' photorevised",
+   "caption": "Purple marks what's new since 1955: houses spreading south from town. Still nothing at the pin.",
+   "owner": "unknown",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1971_usgs-topo-ramona7.5-photorevised_fullsheet",
+     "file": "1971_usgs-topo-ramona7.5-photorevised_fullsheet.tif",
+     "label": null,
+     "width": 6863,
+     "height": 8058,
+     "pin_px": [
+      1483.5,
+      5662.5
+     ],
+     "parcel_px": [
+      [
+       1494.5,
+       5651.5
+      ],
+      [
+       1494.5,
+       5655.5
+      ],
+      [
+       1495.5,
+       5671.5
+      ],
+      [
+       1467.5,
+       5671.5
+      ],
+      [
+       1467.5,
+       5671.5
+      ],
+      [
+       1467.5,
+       5658.5
+      ],
+      [
+       1467.5,
+       5655.5
+      ],
+      [
+       1467.5,
+       5651.5
+      ],
+      [
+       1471.5,
+       5651.5
+      ],
+      [
+       1494.5,
+       5651.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1972-09-13_landsat.jpg",
+   "year": 1972,
+   "date": "1972-09-13",
+   "source": "USGS/NASA Landsat 1 MSS, Collection 2 Level-1 (Microsoft Planetary Computer)",
+   "caption": "One of the first Landsat images ever taken (Landsat 1 launched July 1972). False color: plants show red. 60 m pixels, so no lot detail. ~10 km square.",
+   "owner": "unknown",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1972-09-13_landsat1-mss_60m_40km",
+     "file": "1972-09-13_landsat1-mss_60m_40km.tif",
+     "label": null,
+     "width": 667,
+     "height": 667,
+     "pin_px": [
+      333.5,
+      333.5
+     ],
+     "parcel_px": [
+      [
+       333.5,
+       332.5
+      ],
+      [
+       333.5,
+       333.5
+      ],
+      [
+       333.5,
+       333.5
+      ],
+      [
+       332.5,
+       333.5
+      ],
+      [
+       332.5,
+       333.5
+      ],
+      [
+       332.5,
+       333.5
+      ],
+      [
+       332.5,
+       333.5
+      ],
+      [
+       332.5,
+       332.5
+      ],
+      [
+       332.5,
+       332.5
+      ],
+      [
+       333.5,
+       332.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1974-02-24_ucsb-ami-sd-74.jpg",
+   "year": 1974,
+   "date": "1974-02-24",
+   "source": "UCSB Library FrameFinder - flight AMI-SD-74, frame 7070 (1:34,000)",
+   "caption": "First sign of the lane: a faint east-west track runs along the parcel's north edge, where Progress Lane is now. The lot itself is still empty.",
+   "owner": "unknown",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1974-02-24_ucsb-ami-sd-74_7070_georef",
+     "file": "1974-02-24_ucsb-ami-sd-74_7070_georef.tif",
+     "label": null,
+     "width": 5510,
+     "height": 5522,
+     "pin_px": [
+      3689.5,
+      3987.5
+     ],
+     "parcel_px": [
+      [
+       3705.5,
+       3972.5
+      ],
+      [
+       3705.5,
+       3976.5
+      ],
+      [
+       3705.5,
+       3999.5
+      ],
+      [
+       3667.5,
+       3999.5
+      ],
+      [
+       3666.5,
+       3999.5
+      ],
+      [
+       3667.5,
+       3982.5
+      ],
+      [
+       3667.5,
+       3977.5
+      ],
+      [
+       3667.5,
+       3972.5
+      ],
+      [
+       3672.5,
+       3972.5
+      ],
+      [
+       3705.5,
+       3972.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1975_usgs-topo-ramona7.5-photorevised.jpg",
+   "year": 1975,
+   "date": "1975 (photorevised from 1975 photos; 1978 print)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 7.5' photorevised",
+   "caption": "New purple roads and houses NE of the pin. Nothing mapped on the parcel yet.",
+   "owner": "unknown",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1975_usgs-topo-ramona7.5-photorevised_fullsheet",
+     "file": "1975_usgs-topo-ramona7.5-photorevised_fullsheet.tif",
+     "label": null,
+     "width": 6596,
+     "height": 8046,
+     "pin_px": [
+      1337.5,
+      5658.5
+     ],
+     "parcel_px": [
+      [
+       1348.5,
+       5647.5
+      ],
+      [
+       1348.5,
+       5651.5
+      ],
+      [
+       1349.5,
+       5667.5
+      ],
+      [
+       1321.5,
+       5667.5
+      ],
+      [
+       1321.5,
+       5667.5
+      ],
+      [
+       1321.5,
+       5654.5
+      ],
+      [
+       1321.5,
+       5651.5
+      ],
+      [
+       1321.5,
+       5647.5
+      ],
+      [
+       1325.5,
+       5647.5
+      ],
+      [
+       1348.5,
+       5647.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1975-07-03_ucsb-ami-sd-75.jpg",
+   "year": 1975,
+   "date": "1975-07-03",
+   "source": "UCSB Library FrameFinder - flight AMI-SD-75, frame 7681 (1:36,000)",
+   "caption": "Lanes are graded east-west and north-south around the block, and new houses stand to the NE. The parcel is still empty.",
+   "owner": "unknown",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1975-07-03_ucsb-ami-sd-75_7681_georef",
+     "file": "1975-07-03_ucsb-ami-sd-75_7681_georef.tif",
+     "label": null,
+     "width": 5444,
+     "height": 5471,
+     "pin_px": [
+      3675.5,
+      3578.5
+     ],
+     "parcel_px": [
+      [
+       3690.5,
+       3564.5
+      ],
+      [
+       3691.5,
+       3568.5
+      ],
+      [
+       3691.5,
+       3590.5
+      ],
+      [
+       3654.5,
+       3590.5
+      ],
+      [
+       3654.5,
+       3590.5
+      ],
+      [
+       3654.5,
+       3573.5
+      ],
+      [
+       3654.5,
+       3569.5
+      ],
+      [
+       3654.5,
+       3564.5
+      ],
+      [
+       3659.5,
+       3564.5
+      ],
+      [
+       3690.5,
+       3564.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1977-07-02_ucsb-ami-sd-77.jpg",
+   "year": 1977,
+   "date": "1977-07-02",
+   "source": "UCSB Library FrameFinder - flight AMI-SD-77, frame 8693 (1:36,000)",
+   "caption": "First structure seen inside the parcel, on its north side by the lane. Several neighbouring lots are being built on too. This frame is pale and overexposed.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1977-07-02_ucsb-ami-sd-77_8693_georef",
+     "file": "1977-07-02_ucsb-ami-sd-77_8693_georef.tif",
+     "label": null,
+     "width": 5875,
+     "height": 5913,
+     "pin_px": [
+      2668.5,
+      2526.5
+     ],
+     "parcel_px": [
+      [
+       2683.5,
+       2512.5
+      ],
+      [
+       2683.5,
+       2516.5
+      ],
+      [
+       2683.5,
+       2538.5
+      ],
+      [
+       2647.5,
+       2538.5
+      ],
+      [
+       2646.5,
+       2538.5
+      ],
+      [
+       2647.5,
+       2521.5
+      ],
+      [
+       2647.5,
+       2517.5
+      ],
+      [
+       2647.5,
+       2512.5
+      ],
+      [
+       2652.5,
+       2512.5
+      ],
+      [
+       2683.5,
+       2512.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1980-04-09_ucsb-ami-sd-80.jpg",
+   "year": 1980,
+   "date": "1980-04-09",
+   "source": "UCSB Library FrameFinder - flight AMI-SD-80, frame 10114 (1:34,000)",
+   "caption": "A house stands on the north part of the parcel, and the surrounding blocks are filling with homes on 0.5-1 acre lots.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1980-04-09_ucsb-ami-sd-80_10114_georef",
+     "file": "1980-04-09_ucsb-ami-sd-80_10114_georef.tif",
+     "label": null,
+     "width": 5897,
+     "height": 5896,
+     "pin_px": [
+      3578.5,
+      3804.5
+     ],
+     "parcel_px": [
+      [
+       3594.5,
+       3789.5
+      ],
+      [
+       3594.5,
+       3794.5
+      ],
+      [
+       3594.5,
+       3817.5
+      ],
+      [
+       3555.5,
+       3817.5
+      ],
+      [
+       3555.5,
+       3817.5
+      ],
+      [
+       3555.5,
+       3799.5
+      ],
+      [
+       3555.5,
+       3794.5
+      ],
+      [
+       3555.5,
+       3789.5
+      ],
+      [
+       3561.5,
+       3789.5
+      ],
+      [
+       3594.5,
+       3789.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1982_usgs-topo-ramona7.5-revised.jpg",
+   "year": 1982,
+   "date": "1982 (revised from 1980 photos; 1984 print)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 7.5' revised",
+   "caption": "First map to show Progress Lane (purple, east-west) and a building symbol on the parcel.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1982_usgs-topo-ramona7.5-revised_fullsheet",
+     "file": "1982_usgs-topo-ramona7.5-revised_fullsheet.tif",
+     "label": null,
+     "width": 6592,
+     "height": 8025,
+     "pin_px": [
+      1310.5,
+      5643.5
+     ],
+     "parcel_px": [
+      [
+       1321.5,
+       5632.5
+      ],
+      [
+       1321.5,
+       5636.5
+      ],
+      [
+       1321.5,
+       5652.5
+      ],
+      [
+       1294.5,
+       5652.5
+      ],
+      [
+       1294.5,
+       5652.5
+      ],
+      [
+       1294.5,
+       5639.5
+      ],
+      [
+       1294.5,
+       5636.5
+      ],
+      [
+       1294.5,
+       5632.5
+      ],
+      [
+       1298.5,
+       5632.5
+      ],
+      [
+       1321.5,
+       5632.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1984-05-06_landsat.jpg",
+   "year": 1984,
+   "date": "1984-05-06",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Regional spring view: the Ramona town core, the airport strip to the NW, and the patchwork of fields south of town. 30 m pixels. ~10 km square.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1984-05-06_landsat5-tm_30m_30km",
+     "file": "1984-05-06_landsat5-tm_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      500.5,
+      500.5
+     ],
+     "parcel_px": [
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       499.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1988_usgs-topo-ramona7.5-revised.jpg",
+   "year": 1988,
+   "date": "1988 (revised from 1985 photos)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 7.5' revised",
+   "caption": "More lanes and houses filled in. The building at the parcel is still shown.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1988_usgs-topo-ramona7.5-revised_fullsheet",
+     "file": "1988_usgs-topo-ramona7.5-revised_fullsheet.tif",
+     "label": null,
+     "width": 6600,
+     "height": 8025,
+     "pin_px": [
+      1367.5,
+      5616.5
+     ],
+     "parcel_px": [
+      [
+       1378.5,
+       5606.5
+      ],
+      [
+       1378.5,
+       5609.5
+      ],
+      [
+       1378.5,
+       5625.5
+      ],
+      [
+       1351.5,
+       5625.5
+      ],
+      [
+       1351.5,
+       5625.5
+      ],
+      [
+       1351.5,
+       5613.5
+      ],
+      [
+       1351.5,
+       5609.5
+      ],
+      [
+       1351.5,
+       5606.5
+      ],
+      [
+       1355.5,
+       5606.5
+      ],
+      [
+       1378.5,
+       5606.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1990-08-30_ucsb-napp.jpg",
+   "year": 1990,
+   "date": "1990-08-30",
+   "source": "UCSB Library FrameFinder - NAPP, frame 1852-75 (1:40,000)",
+   "caption": "Late-summer view. The house and the lane grid are in place. The bright, sun-washed scan blurs detail.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1990-08-30_ucsb-napp_1852-75_georef",
+     "file": "1990-08-30_ucsb-napp_1852-75_georef.tif",
+     "label": null,
+     "width": 6395,
+     "height": 6356,
+     "pin_px": [
+      2553.5,
+      1443.5
+     ],
+     "parcel_px": [
+      [
+       2567.5,
+       1430.5
+      ],
+      [
+       2567.5,
+       1434.5
+      ],
+      [
+       2567.5,
+       1454.5
+      ],
+      [
+       2534.5,
+       1454.5
+      ],
+      [
+       2534.5,
+       1454.5
+      ],
+      [
+       2534.5,
+       1439.5
+      ],
+      [
+       2534.5,
+       1435.5
+      ],
+      [
+       2534.5,
+       1430.5
+      ],
+      [
+       2539.5,
+       1430.5
+      ],
+      [
+       2567.5,
+       1430.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1994-06-01_ucsb-napp-2c.jpg",
+   "year": 1994,
+   "date": "1994-06-01",
+   "source": "UCSB Library FrameFinder - NAPP-2C, frame 6859-77 (1:40,000)",
+   "caption": "The house on the north side of the lot is clearly visible, and the neighbourhood is almost fully built out.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1994-06-01_ucsb-napp-2c_6859-77_georef",
+     "file": "1994-06-01_ucsb-napp-2c_6859-77_georef.tif",
+     "label": null,
+     "width": 5959,
+     "height": 5989,
+     "pin_px": [
+      2409.5,
+      3187.5
+     ],
+     "parcel_px": [
+      [
+       2423.5,
+       3174.5
+      ],
+      [
+       2423.5,
+       3178.5
+      ],
+      [
+       2423.5,
+       3198.5
+      ],
+      [
+       2389.5,
+       3198.5
+      ],
+      [
+       2389.5,
+       3198.5
+      ],
+      [
+       2389.5,
+       3183.5
+      ],
+      [
+       2389.5,
+       3178.5
+      ],
+      [
+       2389.5,
+       3174.5
+      ],
+      [
+       2394.5,
+       3174.5
+      ],
+      [
+       2423.5,
+       3174.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1995_sdcounty-ortho.jpg",
+   "year": 1995,
+   "date": "1995 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 1995 black & white",
+   "caption": "County orthophoto: house, driveway and yard trees on the parcel.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1995_sdcounty-ortho-bw_0.6m_2km",
+     "file": "1995_sdcounty-ortho-bw_0.6m_2km.tif",
+     "label": null,
+     "width": 3333,
+     "height": 3333,
+     "pin_px": [
+      1666.5,
+      1666.5
+     ],
+     "parcel_px": [
+      [
+       1704.5,
+       1630.5
+      ],
+      [
+       1704.5,
+       1642.5
+      ],
+      [
+       1705.5,
+       1697.5
+      ],
+      [
+       1612.5,
+       1697.5
+      ],
+      [
+       1611.5,
+       1697.5
+      ],
+      [
+       1612.5,
+       1654.5
+      ],
+      [
+       1612.5,
+       1642.5
+      ],
+      [
+       1612.5,
+       1631.5
+      ],
+      [
+       1625.5,
+       1630.5
+      ],
+      [
+       1704.5,
+       1630.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1996-05-07_landsat.jpg",
+   "year": 1996,
+   "date": "1996-05-07",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Regional spring view. Ramona has spread well beyond its 1980s footprint. ~10 km square.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1996-05-07_landsat5-tm_30m_30km",
+     "file": "1996-05-07_landsat5-tm_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      500.5,
+      500.5
+     ],
+     "parcel_px": [
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       499.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1996-06-05_ucsb-napp.jpg",
+   "year": 1996,
+   "date": "1996-06-05",
+   "source": "UCSB Library FrameFinder - NAPP-2C color-infrared, frame 9554-139 (1:40,000)",
+   "caption": "Color-infrared film: trees and lawns show red. Same house layout as 1994.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1996-06-05_ucsb-napp-2c_9554-139_georef",
+     "file": "1996-06-05_ucsb-napp-2c_9554-139_georef.tif",
+     "label": null,
+     "width": 6658,
+     "height": 6632,
+     "pin_px": [
+      2552.5,
+      3459.5
+     ],
+     "parcel_px": [
+      [
+       2566.5,
+       3445.5
+      ],
+      [
+       2566.5,
+       3450.5
+      ],
+      [
+       2566.5,
+       3470.5
+      ],
+      [
+       2532.5,
+       3470.5
+      ],
+      [
+       2532.5,
+       3470.5
+      ],
+      [
+       2532.5,
+       3454.5
+      ],
+      [
+       2532.5,
+       3450.5
+      ],
+      [
+       2532.5,
+       3446.5
+      ],
+      [
+       2537.5,
+       3445.5
+      ],
+      [
+       2566.5,
+       3445.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1997_sdcounty-ortho.jpg",
+   "year": 1997,
+   "date": "1997 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 1997 color-infrared",
+   "caption": "Infrared: the red canopy shows mature yard trees around the house.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1997_sdcounty-ortho-cir_0.6m_2km",
+     "file": "1997_sdcounty-ortho-cir_0.6m_2km.tif",
+     "label": null,
+     "width": 3333,
+     "height": 3333,
+     "pin_px": [
+      1666.5,
+      1666.5
+     ],
+     "parcel_px": [
+      [
+       1704.5,
+       1630.5
+      ],
+      [
+       1704.5,
+       1642.5
+      ],
+      [
+       1705.5,
+       1697.5
+      ],
+      [
+       1612.5,
+       1697.5
+      ],
+      [
+       1611.5,
+       1697.5
+      ],
+      [
+       1612.5,
+       1654.5
+      ],
+      [
+       1612.5,
+       1642.5
+      ],
+      [
+       1612.5,
+       1631.5
+      ],
+      [
+       1625.5,
+       1630.5
+      ],
+      [
+       1704.5,
+       1630.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "1997_usgs-topo-ramona7.5.jpg",
+   "year": 1997,
+   "date": "1997 (edited 1997 from 1994 photos; 2000 print)",
+   "source": "USGS Historical Topographic Map Collection - Ramona 7.5'",
+   "caption": "Last USGS paper edition. All buildings are now drawn in black, with one at the parcel.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1997_usgs-topo-ramona7.5_fullsheet",
+     "file": "1997_usgs-topo-ramona7.5_fullsheet.tif",
+     "label": null,
+     "width": 6604,
+     "height": 8050,
+     "pin_px": [
+      1304.5,
+      5615.5
+     ],
+     "parcel_px": [
+      [
+       1315.5,
+       5605.5
+      ],
+      [
+       1315.5,
+       5608.5
+      ],
+      [
+       1315.5,
+       5624.5
+      ],
+      [
+       1288.5,
+       5624.5
+      ],
+      [
+       1287.5,
+       5624.5
+      ],
+      [
+       1288.5,
+       5612.5
+      ],
+      [
+       1288.5,
+       5608.5
+      ],
+      [
+       1288.5,
+       5605.5
+      ],
+      [
+       1291.5,
+       5605.5
+      ],
+      [
+       1315.5,
+       5605.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2000_sdcounty-ortho.jpg",
+   "year": 2000,
+   "date": "2000 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2000 color-infrared",
+   "caption": "No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2000_sdcounty-ortho-cir_0.6m_2km",
+     "file": "2000_sdcounty-ortho-cir_0.6m_2km.tif",
+     "label": null,
+     "width": 3333,
+     "height": 3333,
+     "pin_px": [
+      1666.5,
+      1666.5
+     ],
+     "parcel_px": [
+      [
+       1704.5,
+       1630.5
+      ],
+      [
+       1704.5,
+       1642.5
+      ],
+      [
+       1705.5,
+       1697.5
+      ],
+      [
+       1612.5,
+       1697.5
+      ],
+      [
+       1611.5,
+       1697.5
+      ],
+      [
+       1612.5,
+       1654.5
+      ],
+      [
+       1612.5,
+       1642.5
+      ],
+      [
+       1612.5,
+       1631.5
+      ],
+      [
+       1625.5,
+       1630.5
+      ],
+      [
+       1704.5,
+       1630.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2002-05-29_ucsb-napp.jpg",
+   "year": 2002,
+   "date": "2002-05-29",
+   "source": "UCSB Library FrameFinder - NAPP-3C color-infrared, frame 12481-16 (1:40,000)",
+   "caption": "No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2002-05-29_ucsb-napp-3c_12481-16_georef",
+     "file": "2002-05-29_ucsb-napp-3c_12481-16_georef.tif",
+     "label": null,
+     "width": 5828,
+     "height": 5881,
+     "pin_px": [
+      2089.5,
+      3165.5
+     ],
+     "parcel_px": [
+      [
+       2103.5,
+       3152.5
+      ],
+      [
+       2103.5,
+       3157.5
+      ],
+      [
+       2103.5,
+       3176.5
+      ],
+      [
+       2070.5,
+       3176.5
+      ],
+      [
+       2070.5,
+       3176.5
+      ],
+      [
+       2070.5,
+       3161.5
+      ],
+      [
+       2070.5,
+       3157.5
+      ],
+      [
+       2070.5,
+       3153.5
+      ],
+      [
+       2075.5,
+       3152.5
+      ],
+      [
+       2103.5,
+       3152.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2003-11-19_landsat.jpg",
+   "year": 2003,
+   "date": "2003-11-19",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Three weeks after the Cedar fire (started 2003-10-25). Burned hills show red to the south and SE. The mapped fire edge is ~1.6 km SE of the pin, so the parcel did not burn. ~12 km square.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2003-11-19_landsat5-tm-swir-nir-red_30m_30km",
+     "file": "2003-11-19_landsat5-tm-swir-nir-red_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      500.5,
+      500.5
+     ],
+     "parcel_px": [
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       499.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2004_sdcounty-ortho.jpg",
+   "year": 2004,
+   "date": "2004 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2004 true color",
+   "caption": "First true-color county view: white-roofed house on the north half of the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2004_sdcounty-ortho-color_0.3m_2km",
+     "file": "2004_sdcounty-ortho-color_0.3m_2km.tif",
+     "label": null,
+     "width": 6667,
+     "height": 6667,
+     "pin_px": [
+      3333.5,
+      3333.5
+     ],
+     "parcel_px": [
+      [
+       3409.5,
+       3260.5
+      ],
+      [
+       3409.5,
+       3284.5
+      ],
+      [
+       3410.5,
+       3394.5
+      ],
+      [
+       3225.5,
+       3394.5
+      ],
+      [
+       3223.5,
+       3394.5
+      ],
+      [
+       3224.5,
+       3309.5
+      ],
+      [
+       3224.5,
+       3285.5
+      ],
+      [
+       3225.5,
+       3262.5
+      ],
+      [
+       3251.5,
+       3261.5
+      ],
+      [
+       3409.5,
+       3260.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2006_sdcounty-ortho.jpg",
+   "year": 2006,
+   "date": "2006 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2006 true color",
+   "caption": "No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2006_sdcounty-ortho-color_0.3m_2km",
+     "file": "2006_sdcounty-ortho-color_0.3m_2km.tif",
+     "label": null,
+     "width": 6667,
+     "height": 6667,
+     "pin_px": [
+      3333.5,
+      3333.5
+     ],
+     "parcel_px": [
+      [
+       3409.5,
+       3260.5
+      ],
+      [
+       3409.5,
+       3284.5
+      ],
+      [
+       3410.5,
+       3394.5
+      ],
+      [
+       3225.5,
+       3394.5
+      ],
+      [
+       3223.5,
+       3394.5
+      ],
+      [
+       3224.5,
+       3309.5
+      ],
+      [
+       3224.5,
+       3285.5
+      ],
+      [
+       3225.5,
+       3262.5
+      ],
+      [
+       3251.5,
+       3261.5
+      ],
+      [
+       3409.5,
+       3260.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2008_sdcounty-ortho.jpg",
+   "year": 2008,
+   "date": "2008 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2008 true color",
+   "caption": "No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2008_sdcounty-ortho-color_0.3m_2km",
+     "file": "2008_sdcounty-ortho-color_0.3m_2km.tif",
+     "label": null,
+     "width": 6667,
+     "height": 6667,
+     "pin_px": [
+      3333.5,
+      3333.5
+     ],
+     "parcel_px": [
+      [
+       3409.5,
+       3260.5
+      ],
+      [
+       3409.5,
+       3284.5
+      ],
+      [
+       3410.5,
+       3394.5
+      ],
+      [
+       3225.5,
+       3394.5
+      ],
+      [
+       3223.5,
+       3394.5
+      ],
+      [
+       3224.5,
+       3309.5
+      ],
+      [
+       3224.5,
+       3285.5
+      ],
+      [
+       3225.5,
+       3262.5
+      ],
+      [
+       3251.5,
+       3261.5
+      ],
+      [
+       3409.5,
+       3260.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2008-01-17_landsat.jpg",
+   "year": 2008,
+   "date": "2008-01-17",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Three months after the Witch fire (started 2007-10-21). The fresh burn shows red on the hills N and E of town. The mapped fire edge is ~1.1 km E of the pin, so the parcel did not burn.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2008-01-17_landsat5-tm-swir-nir-red_30m_30km",
+     "file": "2008-01-17_landsat5-tm-swir-nir-red_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      500.5,
+      500.5
+     ],
+     "parcel_px": [
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ],
+      [
+       500.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       500.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       498.5,
+       499.5
+      ],
+      [
+       499.5,
+       499.5
+      ],
+      [
+       500.5,
+       499.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2012_sdcounty-ortho.jpg",
+   "year": 2012,
+   "date": "2012 (day not published)",
+   "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2012 true color",
+   "caption": "Sharpest county view, about 30 cm. No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2012_sdcounty-ortho-color_0.3m_2km",
+     "file": "2012_sdcounty-ortho-color_0.3m_2km.tif",
+     "label": null,
+     "width": 6667,
+     "height": 6667,
+     "pin_px": [
+      3333.5,
+      3333.5
+     ],
+     "parcel_px": [
+      [
+       3409.5,
+       3260.5
+      ],
+      [
+       3409.5,
+       3284.5
+      ],
+      [
+       3410.5,
+       3394.5
+      ],
+      [
+       3225.5,
+       3394.5
+      ],
+      [
+       3223.5,
+       3394.5
+      ],
+      [
+       3224.5,
+       3309.5
+      ],
+      [
+       3224.5,
+       3285.5
+      ],
+      [
+       3225.5,
+       3262.5
+      ],
+      [
+       3251.5,
+       3261.5
+      ],
+      [
+       3409.5,
+       3260.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2012-05-07_usda-naip.jpg",
+   "year": 2012,
+   "date": "2012-05-07",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "NAIP 1 m. House and yard are unchanged.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2012-05-07_usda-naip_1m_5km",
+     "file": "2012-05-07_usda-naip_1m_5km.tif",
+     "label": null,
+     "width": 5000,
+     "height": 5000,
+     "pin_px": [
+      2500.5,
+      2500.5
+     ],
+     "parcel_px": [
+      [
+       2522.5,
+       2478.5
+      ],
+      [
+       2522.5,
+       2485.5
+      ],
+      [
+       2523.5,
+       2518.5
+      ],
+      [
+       2467.5,
+       2518.5
+      ],
+      [
+       2467.5,
+       2518.5
+      ],
+      [
+       2467.5,
+       2492.5
+      ],
+      [
+       2467.5,
+       2485.5
+      ],
+      [
+       2467.5,
+       2478.5
+      ],
+      [
+       2475.5,
+       2478.5
+      ],
+      [
+       2522.5,
+       2478.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2014-05-29_usda-naip.jpg",
+   "year": 2014,
+   "date": "2014-05-29",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "NAIP 1 m, in a drought year: brown fields all around.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2014-05-29_usda-naip_1m_5km",
+     "file": "2014-05-29_usda-naip_1m_5km.tif",
+     "label": null,
+     "width": 5000,
+     "height": 5000,
+     "pin_px": [
+      2500.5,
+      2500.5
+     ],
+     "parcel_px": [
+      [
+       2522.5,
+       2478.5
+      ],
+      [
+       2522.5,
+       2485.5
+      ],
+      [
+       2523.5,
+       2518.5
+      ],
+      [
+       2467.5,
+       2518.5
+      ],
+      [
+       2467.5,
+       2518.5
+      ],
+      [
+       2467.5,
+       2492.5
+      ],
+      [
+       2467.5,
+       2485.5
+      ],
+      [
+       2467.5,
+       2478.5
+      ],
+      [
+       2475.5,
+       2478.5
+      ],
+      [
+       2522.5,
+       2478.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2016-04-24_usda-naip.jpg",
+   "year": 2016,
+   "date": "2016-04-24",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "NAIP 0.6 m. Rooftop solar panels appear on the house just east.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2016-04-24_usda-naip_0.6m_5km",
+     "file": "2016-04-24_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ],
+     "parcel_px": [
+      [
+       4204.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4142.5
+      ],
+      [
+       4205.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4197.5
+      ],
+      [
+       4111.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4154.5
+      ],
+      [
+       4112.5,
+       4142.5
+      ],
+      [
+       4112.5,
+       4131.5
+      ],
+      [
+       4125.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4130.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2018-08-23_usda-naip.jpg",
+   "year": 2018,
+   "date": "2018-08-23",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "NAIP 0.6 m, late summer. A small light-blue item shows at the west side of the house (unidentified).",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2018-08-23_usda-naip_0.6m_5km",
+     "file": "2018-08-23_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ],
+     "parcel_px": [
+      [
+       4204.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4142.5
+      ],
+      [
+       4205.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4197.5
+      ],
+      [
+       4111.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4154.5
+      ],
+      [
+       4112.5,
+       4142.5
+      ],
+      [
+       4112.5,
+       4131.5
+      ],
+      [
+       4125.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4130.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2020-04-15_usda-naip.jpg",
+   "year": 2020,
+   "date": "2020-04-15",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "NAIP 0.6 m after a wet spring, so everything is green.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2020-04-15_usda-naip_0.6m_5km",
+     "file": "2020-04-15_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ],
+     "parcel_px": [
+      [
+       4204.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4142.5
+      ],
+      [
+       4205.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4197.5
+      ],
+      [
+       4111.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4154.5
+      ],
+      [
+       4112.5,
+       4142.5
+      ],
+      [
+       4112.5,
+       4131.5
+      ],
+      [
+       4125.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4130.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2022-04-19_usda-naip.jpg",
+   "year": 2022,
+   "date": "2022-04-19",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "NAIP 0.6 m. No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2022-04-19_usda-naip_0.6m_5km",
+     "file": "2022-04-19_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ],
+     "parcel_px": [
+      [
+       4204.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4142.5
+      ],
+      [
+       4205.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4197.5
+      ],
+      [
+       4111.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4154.5
+      ],
+      [
+       4112.5,
+       4142.5
+      ],
+      [
+       4112.5,
+       4131.5
+      ],
+      [
+       4125.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4130.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2022-12-23_esri-wayback.jpg",
+   "year": 2022,
+   "date": "2022-12-23",
+   "source": "Esri World Imagery Wayback - Maxar GeoEye-1 satellite, 0.46 m",
+   "caption": "High-resolution winter satellite view. No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": true,
+   "hires": [
+    {
+     "name": "2022-12-23_esri-wayback_geoeye1_z19_3km",
+     "file": "2022-12-23_esri-wayback_geoeye1_z19_3km.tif",
+     "label": null,
+     "width": 12288,
+     "height": 12288,
+     "pin_px": [
+      6119.5,
+      6194.5
+     ],
+     "parcel_px": [
+      [
+       6210.5,
+       6106.5
+      ],
+      [
+       6211.5,
+       6135.5
+      ],
+      [
+       6211.5,
+       6267.5
+      ],
+      [
+       5989.5,
+       6268.5
+      ],
+      [
+       5988.5,
+       6268.5
+      ],
+      [
+       5989.5,
+       6165.5
+      ],
+      [
+       5989.5,
+       6136.5
+      ],
+      [
+       5990.5,
+       6108.5
+      ],
+      [
+       6021.5,
+       6107.5
+      ],
+      [
+       6210.5,
+       6106.5
+      ]
+     ]
+    }
+   ],
+   "esri_live": {
+    "kind": "wayback",
+    "release_date": null,
+    "release": null,
+    "max_zoom": 19,
+    "note": "Maxar GeoEye-1 capture 2022-12-23; Wayback release not recorded"
+   }
+  },
+  {
+   "file": "2024-05-06_usda-naip.jpg",
+   "year": 2024,
+   "date": "2024-05-06",
+   "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+   "caption": "Latest NAIP, 0.6 m. No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2024-05-06_usda-naip_0.6m_5km",
+     "file": "2024-05-06_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ],
+     "parcel_px": [
+      [
+       4204.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4142.5
+      ],
+      [
+       4205.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4197.5
+      ],
+      [
+       4111.5,
+       4197.5
+      ],
+      [
+       4112.5,
+       4154.5
+      ],
+      [
+       4112.5,
+       4142.5
+      ],
+      [
+       4112.5,
+       4131.5
+      ],
+      [
+       4125.5,
+       4130.5
+      ],
+      [
+       4204.5,
+       4130.5
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "file": "2025-05-01_esri-wayback.jpg",
+   "year": 2025,
+   "date": "2025-05-01",
+   "source": "Esri World Imagery Wayback - Vantor WorldView-3 satellite, 0.31 m",
+   "caption": "Sharpest free satellite view, 31 cm. No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": true,
+   "hires": [
+    {
+     "name": "2025-05-01_esri-wayback_worldview3_z19_3km",
+     "file": "2025-05-01_esri-wayback_worldview3_z19_3km.tif",
+     "label": null,
+     "width": 12288,
+     "height": 12288,
+     "pin_px": [
+      6119.5,
+      6194.5
+     ],
+     "parcel_px": [
+      [
+       6210.5,
+       6106.5
+      ],
+      [
+       6211.5,
+       6135.5
+      ],
+      [
+       6211.5,
+       6267.5
+      ],
+      [
+       5989.5,
+       6268.5
+      ],
+      [
+       5988.5,
+       6268.5
+      ],
+      [
+       5989.5,
+       6165.5
+      ],
+      [
+       5989.5,
+       6136.5
+      ],
+      [
+       5990.5,
+       6108.5
+      ],
+      [
+       6021.5,
+       6107.5
+      ],
+      [
+       6210.5,
+       6106.5
+      ]
+     ]
+    }
+   ],
+   "esri_live": {
+    "kind": "wayback",
+    "release_date": null,
+    "release": null,
+    "max_zoom": 19,
+    "note": "Vantor WorldView-3 capture 2025-05-01; Wayback release not recorded"
+   }
+  },
+  {
+   "file": "2026-03-23_esri-wayback.jpg",
+   "year": 2026,
+   "date": "2026-03-23",
+   "source": "Esri World Imagery Wayback - Vantor Legion-06 satellite, 0.34 m (current World Imagery)",
+   "caption": "Current Esri basemap image. No visible change to the lot.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": true,
+   "hires": [
+    {
+     "name": "2026-03-23_esri-worldimagery_legion06_z19_3km",
+     "file": "2026-03-23_esri-worldimagery_legion06_z19_3km.tif",
+     "label": null,
+     "width": 12288,
+     "height": 12288,
+     "pin_px": [
+      6119.5,
+      6194.5
+     ],
+     "parcel_px": [
+      [
+       6210.5,
+       6106.5
+      ],
+      [
+       6211.5,
+       6135.5
+      ],
+      [
+       6211.5,
+       6267.5
+      ],
+      [
+       5989.5,
+       6268.5
+      ],
+      [
+       5988.5,
+       6268.5
+      ],
+      [
+       5989.5,
+       6165.5
+      ],
+      [
+       5989.5,
+       6136.5
+      ],
+      [
+       5990.5,
+       6108.5
+      ],
+      [
+       6021.5,
+       6107.5
+      ],
+      [
+       6210.5,
+       6106.5
+      ]
+     ]
+    }
+   ],
+   "esri_live": {
+    "kind": "current",
+    "release_date": null,
+    "max_zoom": 19
+   }
+  },
+  {
+   "file": "2026-11-08_sentinel2.jpg",
+   "year": 2026,
+   "date": "2026-11-08",
+   "source": "Copernicus Sentinel-2B L2A, 10 m (ESA, via Microsoft Planetary Computer)",
+   "caption": "Newest clear satellite pass, 10 days before this was compiled. Neighbourhood scale only. ~4 km square.",
+   "owner": "unknown (Wilson family at present; purchase year unknown)",
+   "facts": [],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2026-11-08_sentinel2b_10m_20km",
+     "file": "2026-11-08_sentinel2b_10m_20km.tif",
+     "label": null,
+     "width": 2000,
+     "height": 2000,
+     "pin_px": [
+      1000.5,
+      999.5
+     ],
+     "parcel_px": [
+      [
+       1002.5,
+       997.5
+      ],
+      [
+       1002.5,
+       998.5
+      ],
+      [
+       1002.5,
+       1001.5
+      ],
+      [
+       996.5,
+       1001.5
+      ],
+      [
+       996.5,
+       1001.5
+      ],
+      [
+       996.5,
+       999.5
+      ],
+      [
+       996.5,
+       998.5
+      ],
+      [
+       996.5,
+       997.5
+      ],
+      [
+       997.5,
+       997.5
+      ],
+      [
+       1002.5,
+       997.5
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

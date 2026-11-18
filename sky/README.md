@@ -19,22 +19,27 @@ The data was compiled in November 2026 from free, public, no-login sources. The 
 3. **Never invent history.** Unknown owners stay "unknown", and guesses are labelled as guesses.
 4. Pages using this data must be `noindex` (meta tag plus an `X-Robots-Tag` header), unlinked from navigation, and **not** listed in robots.txt.
 
-## Contents
+## Where things live
+
+The published data moved out of this folder and into the page folders on
+2026-11-18, so the pages can serve it directly:
 
 | Path | What |
 |---|---|
-| `ranch/*.jpg` (18) | Web images (1000-1400 px) with a burned-in pin ring and caption, oldest first |
-| `ranch/manifest.json` | Per-image `{file, year, date, source, caption}` |
-| `ranch/points.geojson` | Pin, 7 post offices (3 unlocated), 10 mercury/gold mine features, with distance and direction from the pin |
-| `ranch/history.md` | Timeline, owner by era, BLM GLO land patents, per-photo facts, sources, gaps |
-| `ranch/homesteaders.md` | Genealogy notes on the 1883-1931 patentees, with sources and confidence levels |
-| `ramona/*.jpg` (42) | Web images with a pin ring, lot box and caption |
-| `ramona/manifest.json` | Per-image metadata (sanitized) |
-| `ramona/points.geojson` | 24 sites: gem and gold mines, post offices, landmarks, rancho reference, fire edges (sanitized) |
-| `ramona/parcel_outline.geojson` | Approximate lot outline (geometry only) |
-| `ramona/history.md` | Rancho Santa María, Nuevo/Ramona, build timeline, fires, mines, sources (sanitized) |
-| `hires_manifest.txt` | Names of the hi-res release assets |
-| `fetch_hires.sh` | Downloads the hi-res files |
+| `frontend/public/ranch-z4swx8er55/` | Ranch Sky page (`index.html`), its `README.md`, and `data/` |
+| `frontend/public/ranch-z4swx8er55/data/` | 18 web JPGs, `manifest.json`, `site.json`, `points.geojson`, `history.md`, `homesteaders.md` |
+| `frontend/public/ramona-h0whnlp4/` | Ramona Sky page (`index.html`), its `README.md`, and `data/` |
+| `frontend/public/ramona-h0whnlp4/data/` | 42 web JPGs, `manifest.json`, `site.json`, `points.geojson`, `parcel_outline.geojson`, `history.md` (all sanitized) |
+| `frontend/public/sky-f1st035d/` | Shared viewer (`sky.js`, `sky.css`), the unlisted index page, and `vendor/` (OpenSeadragon 6.1.1, Leaflet 1.9.4) |
+| `scripts/build_sky_tiles.sh` | Builds the deep-zoom pyramids from the hi-res originals (run on the droplet by the deploy) |
+| `scripts/sky_geometry.py` | Recomputes pin and lot-outline pixel positions in each `site.json` from the originals |
+| `sky/hires_manifest.txt` | Names of the hi-res release assets |
+| `sky/fetch_hires.sh` | Downloads the hi-res files into `sky/<site>/hires/` (git-ignored) |
+
+`manifest.json` is the original per-image list from the data drop. `site.json`
+is what the pages read: the same images plus the land owner for each era, the
+overlay facts, the hi-res file for each slide and its pixel geometry, the
+timeline, the owner-by-era table and the credits.
 
 ## Hi-res files (not in git)
 
@@ -53,11 +58,18 @@ sky/fetch_hires.sh          # both sites -> sky/ranch/hires/, sky/ramona/hires/
 sky/fetch_hires.sh ramona   # one site
 ```
 
-`hires/` folders are git-ignored. To build deep-zoom tiles:
+`hires/` folders are git-ignored. The deep-zoom tiles are a derived cache,
+not committed (about 900 MB and 46,000 files for both sites). The deploy runs
+`scripts/build_sky_tiles.sh` on the droplet, which downloads the originals
+if needed and writes the pyramids to `/var/lib/dxedge/sky-tiles/<site>/`,
+served by nginx at `/<slug>/tiles/`. To rebuild anywhere:
 
 ```bash
-vips dzsave sky/ramona/hires/<file>.tif out/<name> --tile-size 256 --overlap 1 --suffix .jpg[Q=85]
+scripts/build_sky_tiles.sh all /some/output/dir      # needs vips, python3, curl
 ```
+
+Esri images are never tiled (see the Esri row below); those slides show the
+committed web JPG or stream live Esri tiles with attribution.
 
 ## Credits and source licenses
 
@@ -75,4 +87,4 @@ vips dzsave sky/ramona/hires/<file>.tif out/<name> --tile-size 256 --overlap 1 -
 | CAL FIRE FRAP historic fire perimeters | Fire distances | Public data. Credit CAL FIRE FRAP. |
 | Frickstad, *A Century of California Post Offices 1848-1954* (1955); Monterey County Historical Society; San Diego History Center *Journal*; UC Berkeley land case files; Smythe, *History of San Diego*; Find a Grave; Wikipedia | History text | Facts with citations. Full URLs are in each `history.md` and `homesteaders.md`. |
 
-Prepared by Grok Bot for James Wilson, 2026-11-18.
+Data prepared by Grok Bot for James Wilson, 2026-11-18. Pages and viewer built by Claude, 2026-11-18.

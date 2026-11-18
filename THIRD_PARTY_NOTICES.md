@@ -165,3 +165,19 @@ Changed here: `vision_bundle.mjs` has its `sourceMappingURL` comment removed. Th
 
 Hand Orchestra (`/synth/hand-orchestra/`, 0.10.21) and Aether (`/synth/hand-aether/`, 0.10.17)
 load the same library and model from jsDelivr and Google storage in the browser; they do not ship it.
+
+## OpenSeadragon 6.1.1 (Sky pages, `frontend/public/sky-f1st035d/vendor/openseadragon/`)
+
+Deep-zoom image viewer used by the two unlisted Sky photo-history pages.
+https://github.com/openseadragon/openseadragon
+Copyright (C) 2009 CodePlex Foundation, (C) 2010-2025 OpenSeadragon contributors
+BSD 3-Clause License. The full text is `frontend/public/sky-f1st035d/vendor/openseadragon/LICENSE.txt`.
+Files as published in the npm package build: `openseadragon.min.js` and `images/`.
+
+## Leaflet 1.9.4 (Sky pages, `frontend/public/sky-f1st035d/vendor/leaflet/`)
+
+Map library for the Sky points map and the live Esri slides.
+https://github.com/Leaflet/Leaflet
+Copyright (c) 2010-2023 Volodymyr Agafonkin, (c) 2010-2011 CloudMade
+BSD 2-Clause License. The full text is `frontend/public/sky-f1st035d/vendor/leaflet/LICENSE`.
+Files as published in the npm package dist: `leaflet.js`, `leaflet.css` and `images/`.
