@@ -581,12 +581,63 @@
   body[data-dev="trochotron"] #mSpk, body[data-dev="trochotron"] #mRoom, body[data-dev="trochotron"] #chassis { display: none !important; }
   #trCanvas { width: 100%; height: 280px; max-width: 100%; display: block; touch-action: none; border-radius: 8px; background: #07060d; cursor: crosshair; }
   #trRules { margin: 8px 0 0; font-size: 12px; line-height: 1.45; white-space: pre-wrap; color: #d7c4ff; max-height: 8.5em; overflow: auto; }
-  .tr-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; max-width: 100%; }
   .tr-grid { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 8px; max-width: 100%; }
   .tr-slide { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .tr-slide input { flex: 1 1 auto; min-width: 0; }
-  .tr-read { color: #cbb6e8; font-size: 12px; }
-  #trSeed { width: 7.5em; }
+  /* Trochotron's Seed and Shape rows (graphics, 18 Nov). Each group is an engraved tag (SEED, PIECE, RULE, VIEW, SCALE,
+     VOICES, KEY, ROUTE) and one joined switch in a recessed tray, the Orthicon and Phantastron cards' finish in
+     Trochotron's violet: the tray's black shows through a 1 px gap and the keys grow to fill each line, so a switch
+     that wraps reads as a keypad with no holes. The seed is a recessed amber window between previous and next keys
+     (random at the switch's end); play has a lamp, violet while the piece plays; the piece's summary sits in a
+     readout window whose lamp is lit while the piece has notes; key and route are amber windows with an engraved
+     caret. Before, the seed was the browser's white number box, the last white field on the rack, beside loose keys,
+     and every other row was loose chips. Static (the lamps do not pulse), so nothing for reduced motion. */
+  #trRoot .trrows { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 30px; margin-top: 10px; max-width: 100%; }
+  #trRoot .trrows > .trrow { margin-top: 0; flex: 0 1 auto; }
+  #trRoot .trrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 10px; margin-top: 8px; max-width: 100%; min-width: 0; }
+  #trRoot .trtag { flex: 0 0 auto; min-width: 46px; white-space: nowrap; font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #b9a3dc;
+    text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(240,230,255,0.08); }
+  #trRoot .trsw { display: flex; flex-wrap: wrap; gap: 1px; margin: 0; flex: 0 1 auto; min-width: 0;
+    background: #000; border: 1px solid #000; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 1px 0 rgba(240,230,255,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #trRoot .trsw > .chip, #trRoot .trsw > .btn { flex: 1 1 auto; margin: 0; border: 0; border-radius: 0; min-height: 30px; padding: 3px 10px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; font-size: 11.5px; font-weight: 400;
+    background: linear-gradient(180deg, #241b36, #150f22); color: #d7c4ff; box-shadow: inset 0 1px 0 rgba(240,230,255,0.07); }
+  #trRoot .trsw > .chip:hover:not([aria-pressed="true"]), #trRoot .trsw > .btn:hover { color: #f4e9ff; }
+  body[data-dev="trochotron"] #trRoot .trsw > .chip[aria-pressed="true"] { color: #1a1028; font-weight: 600; background: linear-gradient(180deg, #f2e2ff, #cfa9f4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), inset 0 0 8px rgba(255,245,255,0.25); }
+  #trRoot .trsw > :focus-visible { position: relative; z-index: 1; outline: 2px solid #c9a6ff; outline-offset: -3px; }
+  #trRoot #trSeedDn, #trRoot #trSeedUp { flex: 0 0 auto; min-width: 32px; font-size: 14px; line-height: 1; }
+  #trRoot #trSeed { -moz-appearance: textfield; appearance: textfield; box-sizing: border-box; flex: 0 0 auto; align-self: stretch; height: auto; min-height: 30px;
+    width: 11.5ch; min-width: 0; margin: 0; padding: 3px 8px; border: 0; border-radius: 0; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; caret-color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 12px; letter-spacing: 0;
+    text-align: center; font-variant-numeric: tabular-nums; }
+  #trRoot #trSeed::-webkit-inner-spin-button, #trRoot #trSeed::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #trRoot #trSeed:hover { color: #ffe2b0; }
+  #trRoot #trSeed:focus-visible { outline: 2px solid #e7c56a; outline-offset: -3px; }
+  #trRoot .trlamp i, #trRoot .trread i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2c2340; box-shadow: inset 0 0 2px #000; }
+  body[data-dev="trochotron"] #trRoot .trlamp[data-on="1"] i { background: #f2e2ff; box-shadow: 0 0 0 1px #5a3d86, 0 0 8px #e7c4ff; }
+  body[data-dev="trochotron"] #trRoot .trlamp[data-on="1"] { color: #f4e9ff; }
+  #trRoot .trread { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 9em; min-width: 0; max-width: 340px; min-height: 26px; padding: 3px 10px; box-sizing: border-box;
+    border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(240,230,255,0.07);
+    font-size: 11px; color: #b89a7a; }
+  #trRoot .trread .trname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #trRoot .trread[data-on="1"] { color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
+  body[data-dev="trochotron"] #trRoot .trread[data-on="1"] i { background: #e7c4ff; box-shadow: 0 0 6px #e7c4ff; }
+  #trRoot :is(#trKey, #trRoute) { -webkit-appearance: none; appearance: none; margin: 0; min-height: 30px; box-sizing: border-box; padding: 3px 24px 3px 10px;
+    border: 1px solid #000; border-radius: 6px; font: inherit; font-size: 12px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M.8.8 4.5 4.6 8.2.8' fill='none' stroke='%23c98a3a' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 9px center,
+      linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: 0 1px 0 rgba(240,230,255,0.06), inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); }
+  #trRoot #trKey { width: calc(2ch + 42px); }
+  #trRoot #trRoute { width: calc(14ch + 42px); }
+  #trCanvas { margin-top: 10px; box-shadow: 0 0 0 1px #000, 0 0 0 2px #2a2040, 0 0 18px rgba(201,166,255,0.07); }
+  #trRoot :is(#trKey, #trRoute):hover { color: #ffe2b0; border-color: #000; }
+  #trRoot :is(#trKey, #trRoute):focus-visible { outline: 2px solid #e7c56a; outline-offset: 1px; }
+  #trRoot :is(#trKey, #trRoute) option { background: #150f22; color: #f0e6ff; text-shadow: none; }
   body[data-dev="trochotron"] #trRoot .mod { background: #120e1c; border-color: #3a2c55; }
   body[data-dev="trochotron"] #trRoot h3 { color: #f0e6ff; letter-spacing: 1.6px; }
   body[data-dev="trochotron"] #trRoot .chip[aria-pressed="true"] { background: #e7c4ff; border-color: #e7c4ff; color: #1a1028; }
@@ -1493,6 +1544,22 @@
   /* under 360 px the name takes its own line so a long name is not cut; the chips share the next */
   @media (max-width: 359px) { .mixrow .who { flex-basis: 100%; } .mixrow .chip { flex: 1 1 0; } }
   @media (max-width: 359px) { :is(#mOrthStage, #mOrthScan) .orsw > .chip, :is(#mOrthStage, #mOrthScan) .orsw > .btn { padding: 4px 6px; font-size: 11px; } }
+  /* Trochotron's rows on a phone (graphics, 18 Nov): the switches take the card's width with 44 px keys and the tags
+     drop, except KEY and ROUTE, whose amber windows would not say what they are on their own. */
+  @media (max-width: 760px) {
+    #trRoot .trrows { display: block; margin-top: 0; }
+    #trRoot .trrow, #trRoot .trrows > .trrow { margin-top: 8px; flex-wrap: wrap; }
+    #trRoot .trrow:not(.trsel) .trtag { display: none; }
+    #trRoot .trsw { flex: 1 1 100%; max-width: 100%; }
+    #trRoot .trsw > .chip, #trRoot .trsw > .btn { min-height: 44px; min-width: 44px; padding: 4px 9px; }
+    #trRoot #trSeedDn, #trRoot #trSeedUp { min-width: 44px; }
+    #trRoot #trSeed { flex: 1 1 10ch; width: 10ch; min-height: 44px; }
+    #trRoot .trread { flex: 1 1 100%; max-width: 100%; min-height: 32px; }
+    #trRoot .trrow.trsel { flex-wrap: nowrap; }
+    #trRoot .trrow.trsel .trtag { flex: 0 0 50px; min-width: 0; letter-spacing: 1px; }
+    #trRoot :is(#trKey, #trRoute) { flex: 1 1 auto; width: auto; min-width: 0; max-width: none; min-height: 44px; }
+  }
+  @media (max-width: 359px) { #trRoot .trsw > .chip, #trRoot .trsw > .btn { padding: 4px 6px; font-size: 11px; } }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } #takeStat::before, .klread i, #mOrthStage .orread i { animation: none !important; }
     .racklinks .devlink, .racklinks .devlink::before, .racklinks .devlink::after { transition: none; } .rail .devbtn { transition: none; } .rail::before, .rail::after, .racklinks::before, .racklinks::after { transition: none; } .racklinks .devlink:hover::after, .racklinks .devlink:focus-visible::after { transform: none; } }
 </style>

@@ -12,7 +12,7 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Mw. (the Mix card's own row from 761 px: the Mix and Master cards fill the width, the seven cards it stretched end at their controls, slider grids take columns, the strips' columns, no sideways scroll, reduced motion), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Hs. (the desktop patch strip holds one row from 1020 px on a factory or a user patch with the save form closed or open, the form in the edit keys' place, delete red), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again, an offline render lets go of its nodes), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Mw. (the Mix card's own row from 761 px: the Mix and Master cards fill the width, the seven cards it stretched end at their controls, slider grids take columns, the strips' columns, no sideways scroll, reduced motion), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Ts. (Trochotron's Seed and Shape rows: tagged joined switches, the seed's amber window and steppers, play's lamp, the summary window, the key and route windows, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Hs. (the desktop patch strip holds one row from 1020 px on a factory or a user patch with the save form closed or open, the form in the edit keys' place, delete red), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again, an offline render lets go of its nodes), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
 Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
@@ -6357,6 +6357,116 @@ with sync_playwright() as pw:
            pk["cart"] == "chirp" and pk["lit"] == ["chirp"] and pw_["wires"] == 2 and pl["wires"] == 0 and pl["wtext"] == "no bends", (pk["lit"], pk["cart"], pw_["wires"], pl["wires"], pl["wtext"]))
         pcx.close()
     ck("Pc. no page errors (Phantastron's cartridge row)", not pcerr, pcerr)
+    # Ts. Trochotron's Seed and Shape rows (graphics, 18 Nov 2026). Before, the seed was the browser's white number box
+    # ("42", the last white field on the rack) beside loose random, play, stop, copy link and export .mid keys, and the
+    # generator, view, scale and voices chips were loose rows; key and route were plain selects. Now: each group is an
+    # engraved tag and one joined switch in a recessed tray (Trochotron's violet), the seed a recessed amber window
+    # between previous and next keys, play a key with a lamp, the piece's summary in a readout window with a lamp, and
+    # key and route amber windows with an engraved caret. The tags drop on a phone except KEY and ROUTE.
+    TS_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const swInfo = id => { const s = document.getElementById(id), c = getComputedStyle(s), kids = [...s.children].filter(k => k.offsetParent), kr = kids.map(R);
+        return { ids: kids.map(k => k.id || k.dataset.gen || k.dataset.scale || k.dataset.voices), role: s.getAttribute('role'), label: s.getAttribute('aria-label'),
+          bg: c.backgroundColor, shadow: c.boxShadow, lines: new Set(kr.map(k => Math.round(k.t))).size, r: R(s),
+          join: kr.every((k, i) => i === 0 || Math.abs(k.t - kr[i - 1].t) > 1 || Math.abs(k.l - kr[i - 1].r) < 1.1) }; };
+      const sws = Object.fromEntries(['trSeedSw', 'trPieceSw', 'trGens', 'trViewSw', 'trScales', 'trVoices'].map(id => [id, swInfo(id)]));
+      const sd = document.getElementById('trSeed'), sc = getComputedStyle(sd);
+      const play = document.getElementById('trPlayBtn'), pl = getComputedStyle(play.querySelector('i'));
+      const rw = document.getElementById('trReadWin'), rc = getComputedStyle(rw), rl = getComputedStyle(rw.querySelector('i'));
+      const lit = document.querySelector('#trGens [aria-pressed="true"]'), unlit = document.querySelector('#trGens [aria-pressed="false"]');
+      const lc = getComputedStyle(lit), uc = getComputedStyle(unlit);
+      const cv = document.createElement('canvas').getContext('2d');
+      const sels = ['trKey', 'trRoute'].map(id => { const s = document.getElementById(id), c = getComputedStyle(s); cv.font = c.font;
+        const tw = cv.measureText(s.options[s.selectedIndex].text).width, room = s.clientWidth - parseFloat(c.paddingLeft) - parseFloat(c.paddingRight);
+        return { id, bg: c.backgroundImage, color: c.color, appearance: c.appearance, shadow: c.boxShadow, fits: tw <= room + 0.5, tw, room, r: s.offsetParent ? R(s) : null }; });
+      const vis = sel => [...document.querySelectorAll(sel)].filter(e => e.offsetParent);
+      const small = vis('#trRoot button, #trRoot input, #trRoot select').map(e => [e.id || e.textContent.trim(), R(e)]).filter(([, q]) => q.w < 44 || q.h < 44).map(([n, q]) => n + ' ' + Math.round(q.w) + 'x' + Math.round(q.h));
+      const keyMinH = Math.min(...vis('#trRoot .trsw > *').map(e => R(e).h));
+      return { sws, seedBg: sd.offsetParent ? sc.backgroundImage : '', seedColor: sc.color, seedShadow: sc.boxShadow, appearance: sc.appearance, seedVal: sd.value, seedW: R(sd).w,
+        playOn: play.dataset.on, playText: play.textContent, playLamp: pl.backgroundColor, playAnim: pl.animationName,
+        readOn: rw.dataset.on, readText: rw.textContent, readColor: rc.color, readBg: rc.backgroundImage, readShadow: rc.boxShadow, readLamp: rl.backgroundColor, readAnim: rl.animationName,
+        read: rw.offsetParent ? R(rw) : null, litBg: lc.backgroundImage, litColor: lc.color, unBg: uc.backgroundImage, unColor: uc.color, sels,
+        tags: vis('#trRoot .trtag').map(t => t.textContent.toUpperCase() + '|' + getComputedStyle(t).textTransform),
+        white: vis('#trRoot input, #trRoot select').filter(e => /rgb\\(255, 255, 255\\)/.test(getComputedStyle(e).backgroundColor)).map(e => e.id),
+        play: document.getElementById('mTrPlay').offsetParent ? R(document.getElementById('mTrPlay')) : null,
+        shape: document.getElementById('mTrShape').offsetParent ? R(document.getElementById('mTrShape')) : null,
+        small, keyMinH, seed: __synth.patch().seed, gen: __synth.patch().generator, playing: !!__synth.trochotronState().playing,
+        anim: vis('#trRoot .trsw > *, #trRoot .trtag').map(e => getComputedStyle(e).animationName).filter(a => a !== 'none'),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    def _ts_con(fg, bgimg):
+        f = _dk_lum(_dk_rgbs(fg)[0]); stops = _ob_stops(bgimg) or [[0, 0, 0]]
+        return min((max(f, _dk_lum(c)) + 0.05) / (min(f, _dk_lum(c)) + 0.05) for c in stops)
+    tserr = []
+    for ts_w, ts_mob, ts_rm in ((1366, False, "no-preference"), (800, False, "no-preference"), (375, True, "reduce"), (320, True, "no-preference")):
+        tsx = b.new_context(viewport={"width": ts_w, "height": 667 if ts_mob else 1000}, is_mobile=ts_mob, has_touch=ts_mob, reduced_motion=ts_rm)
+        tsp = tsx.new_page(); tsp.on("pageerror", lambda e: tserr.append(str(e)))
+        tsp.goto(BASE); tsp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        tsp.evaluate("__synth.setDevice('trochotron')"); tsp.wait_for_timeout(300)
+        tsp.evaluate("() => __synth.setPatch({ device: 'trochotron', seed: 42, generator: 'mandelbrot', voices: 3, scale: 'dorian', key: 2, route: 'internal' })"); tsp.wait_for_timeout(200)
+        if ts_mob: tsp.click(".tabs [data-go='play']"); tsp.wait_for_timeout(200)
+        ts = tsp.evaluate(TS_MEAS); S_ = ts["sws"]
+        seed_con, read_con = _ts_con(ts["seedColor"], ts["seedBg"]), _ts_con(ts["readColor"], ts["readBg"])
+        lit_con, un_con = _ts_con(ts["litColor"], ts["litBg"]), _ts_con(ts["unColor"], ts["unBg"])
+        info(f"Ts. {ts_w} px", f"Seed card {ts['play']['h']:.0f} px, seed window {ts['seedW']:.0f} px, keys {ts['keyMinH']:.0f} px tall or more, seed {seed_con:.1f}:1, readout {read_con:.1f}:1, lit {lit_con:.1f}:1, unlit {un_con:.1f}:1")
+        play_sw = ("trSeedSw", "trPieceSw", "trGens", "trViewSw")
+        ck(f"Ts. at {ts_w} px seed, piece, rule and view are each one joined switch in a recessed tray (named groups), no white field left on Trochotron",
+           all(S_[k]["join"] and S_[k]["bg"] == "rgb(0, 0, 0)" and "inset" in S_[k]["shadow"] and S_[k]["role"] == "group" for k in play_sw)
+           and [S_[k]["label"] for k in play_sw] == ["Seed", "Piece", "Rule", "View"]
+           and S_["trSeedSw"]["ids"] == ["trSeedDn", "trSeed", "trSeedUp", "trRandom"] and S_["trPieceSw"]["ids"] == ["trPlayBtn", "trStopBtn", "trLink", "trMidi"]
+           and S_["trViewSw"]["ids"] == ["trZoomIn", "trZoomOut", "trReset"] and len(S_["trGens"]["ids"]) == 6 and not ts["white"], (S_, ts["white"]))
+        ck(f"Ts. at {ts_w} px the seed is a recessed amber window ({seed_con:.1f}:1), the rule's lit key violet ({lit_con:.1f}:1) and the rest dark ({un_con:.1f}:1), all 4.5:1 or more",
+           "gradient" in ts["seedBg"] and "inset" in ts["seedShadow"] and ts["appearance"] == "textfield" and ts["seedVal"] == "42"
+           and seed_con >= 4.5 and lit_con >= 4.5 and un_con >= 4.5 and "gradient" in ts["litBg"] and "gradient" in ts["unBg"], ts)
+        ck(f"Ts. at {ts_w} px the piece's summary sits in a readout window ({read_con:.1f}:1) whose lamp is lit while the piece has notes, inside the card",
+           ts["read"] is not None and ts["readOn"] == "1" and "notes" in ts["readText"] and "gradient" in ts["readBg"] and "inset" in ts["readShadow"]
+           and ts["readLamp"] == "rgb(231, 196, 255)" and read_con >= 4.5 and ts["read"]["r"] <= ts["play"]["r"] + 0.5, ts)
+        tsp.click("#trSeedUp"); tsp.wait_for_timeout(100)
+        up = tsp.evaluate(TS_MEAS)
+        tsp.click("#trSeedDn"); tsp.click("#trSeedDn"); tsp.wait_for_timeout(100)
+        dn = tsp.evaluate(TS_MEAS)
+        ck(f"Ts. at {ts_w} px next and previous step the seed by one, in the patch and in the window (42, 43, 41)",
+           up["seed"] == 43 and up["seedVal"] == "43" and dn["seed"] == 41 and dn["seedVal"] == "41", (up["seed"], up["seedVal"], dn["seed"], dn["seedVal"]))
+        tsp.click("#trGens [data-gen='julia']"); tsp.wait_for_timeout(150)
+        gj = tsp.evaluate(TS_MEAS)
+        ck(f"Ts. at {ts_w} px a rule key sets the generator and lights only itself",
+           gj["gen"] == "julia" and tsp.evaluate("[...document.querySelectorAll('#trGens [aria-pressed=\"true\"]')].map(b => b.dataset.gen)") == ["julia"], gj["gen"])
+        tsp.click("#trPlayBtn"); tsp.wait_for_timeout(300)
+        pn = tsp.evaluate(TS_MEAS)
+        tsp.click("#trStopBtn"); tsp.wait_for_timeout(300)
+        po = tsp.evaluate(TS_MEAS)
+        ck(f"Ts. at {ts_w} px play is a key with a lamp: dark at rest, lit violet and reading 'playing' while the piece plays, dark again after stop, steady (no animation)",
+           ts["playOn"] == "0" and ts["playLamp"] == "rgb(44, 35, 64)" and ts["playText"] == "play" and pn["playing"] and pn["playOn"] == "1"
+           and pn["playText"] == "playing" and pn["playLamp"] == "rgb(242, 226, 255)" and pn["playAnim"] == "none" and ts["readAnim"] == "none"
+           and not po["playing"] and po["playOn"] == "0" and po["playText"] == "play" and po["playLamp"] == "rgb(44, 35, 64)", (ts["playLamp"], pn, po))
+        ck(f"Ts. at {ts_w} px the keys and tags hold still (static, so reduced motion has nothing to stop)", not ts["anim"], ts["anim"])
+        if ts_mob:
+            ck(f"Ts. on a {ts_w} px phone the Seed card's tags drop, every key and the seed are 44 px or more, no sideways scroll",
+               not ts["tags"] and not ts["small"] and ts["sw"] <= ts["iw"] == ts_w
+               and all(S_[k]["r"]["r"] <= ts["play"]["r"] + 0.5 for k in play_sw), (ts["tags"], ts["small"], ts["sw"]))
+            tsp.click(".tabs [data-go='shape']"); tsp.wait_for_timeout(200)
+        else:
+            ck(f"Ts. at {ts_w} px SEED, PIECE, RULE and VIEW are engraved tags, every switch one line, keys 30 px tall, the seed shows ten digits (110 px or less wide)",
+               ts["tags"][:4] == ["SEED|uppercase", "PIECE|uppercase", "RULE|uppercase", "VIEW|uppercase"] and all(S_[k]["lines"] == 1 for k in play_sw)
+               and ts["keyMinH"] >= 29.5 and ts["seedW"] <= 110, ts)
+            if ts_w == 1366:
+                ck("Ts. at 1366 px the seed and piece switches share one line", abs(S_["trSeedSw"]["r"]["t"] - S_["trPieceSw"]["r"]["t"]) < 1, (S_["trSeedSw"]["r"], S_["trPieceSw"]["r"]))
+        sh = tsp.evaluate(TS_MEAS); S2 = sh["sws"]
+        sel_con = [_ts_con(s_["color"], s_["bg"]) for s_ in sh["sels"]]
+        ck(f"Ts. at {ts_w} px scale and voices are joined switches, key and route amber windows with a caret ({sel_con[0]:.1f}:1, {sel_con[1]:.1f}:1), 'D' and 'built-in voice' shown whole",
+           all(S2[k]["join"] and S2[k]["bg"] == "rgb(0, 0, 0)" and S2[k]["role"] == "group" for k in ("trScales", "trVoices"))
+           and [S2[k]["label"] for k in ("trScales", "trVoices")] == ["Scale", "Voices"] and len(S2["trScales"]["ids"]) == 6 and len(S2["trVoices"]["ids"]) == 3
+           and all(s_["appearance"] == "none" and "gradient" in s_["bg"] and "url(" in s_["bg"] and s_["fits"] and s_["r"] for s_ in sh["sels"])
+           and min(sel_con) >= 4.5 and not sh["white"], (S2, sh["sels"]))
+        if ts_mob:
+            ck(f"Ts. on a {ts_w} px phone the Shape card keeps only KEY and ROUTE, every key and select 44 px or more, the windows inside the card, no sideways scroll",
+               sh["tags"] == ["KEY|uppercase", "ROUTE|uppercase"] and not sh["small"] and sh["sw"] <= sh["iw"] == ts_w
+               and all(s_["r"]["r"] <= sh["shape"]["r"] + 0.5 for s_ in sh["sels"]), (sh["tags"], sh["small"], sh["sels"]))
+        else:
+            ck(f"Ts. at {ts_w} px SCALE, VOICES, KEY and ROUTE are engraved tags and scale and voices each take one line",
+               sh["tags"][4:] == ["SCALE|uppercase", "VOICES|uppercase", "KEY|uppercase", "ROUTE|uppercase"] and S2["trScales"]["lines"] == 1 and S2["trVoices"]["lines"] == 1, sh["tags"])
+        tsp.select_option("#trRoute", "filament"); tsp.wait_for_timeout(100)
+        ck(f"Ts. at {ts_w} px the route window still sets the route", tsp.evaluate("__synth.patch().route") == "filament")
+        tsx.close()
+    ck("Ts. no page errors (Trochotron's Seed and Shape rows)", not tserr, tserr)
     # Hf. the Rack tab's project, mix and patch rows (graphics, 11 Nov 2026). Before, loose keys beside plain dark text
     # boxes ("Untitled" clipped in a 74 px box at 1366 px), seven loose rows on a 375 px phone. Now: one faceplate, each
     # row an engraved tag, the name in a recessed amber readout window and its keys as one joined switch; the patch

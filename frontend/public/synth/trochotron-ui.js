@@ -323,32 +323,55 @@ export function mountTrochotronPanel(container, hooks) {
   host.setHooks(hooks);
   const play = section('play', 'mTrPlay', 'Seed');
   play.dataset.full = '';
-  const bar = el('div', { class: 'tr-bar' });
-  const seed = el('input', { id: 'trSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', 'aria-label': 'Seed' });
-  const random = el('button', { id: 'trRandom', class: 'btn small', type: 'button' }, 'random');
-  const playBtn = el('button', { id: 'trPlayBtn', class: 'btn small', type: 'button' }, 'play');
-  const stopBtn = el('button', { id: 'trStopBtn', class: 'btn small', type: 'button' }, 'stop');
-  const linkBtn = el('button', { id: 'trLink', class: 'btn small', type: 'button' }, 'copy link');
-  const midiBtn = el('button', { id: 'trMidi', class: 'btn small', type: 'button' }, 'export .mid');
-  bar.append(seed, random, playBtn, stopBtn, linkBtn, midiBtn);
-  const gens = el('div', { class: 'chips', id: 'trGens' });
+  // Seed and Shape rows (graphics, 18 Nov): each group is an engraved tag and one joined switch in a recessed tray
+  // (the Orthicon and Phantastron cards' finish, the lit key in Trochotron's violet). The seed sits in a recessed
+  // amber window between previous and next keys, with random at the end of the same switch; play carries a lamp that
+  // lights while the piece plays; the piece's summary sits in a readout window with a lamp. Before, the seed was the
+  // browser's white number box (the last white field on the rack) beside loose keys. The ids are unchanged.
+  const tag = text => el('span', { class: 'trtag', 'aria-hidden': 'true' }, text);
+  const row = (...kids) => { const r = el('div', { class: 'trrow' }); r.append(...kids); return r; };
+  const sw = (id, label) => el('div', { class: 'trsw', id, role: 'group', 'aria-label': label });
+  const key_ = (id, text, label) => {
+    const b = el('button', { id, class: 'btn small', type: 'button' }, text);
+    if (label) b.setAttribute('aria-label', label);
+    return b;
+  };
+  const seedSw = sw('trSeedSw', 'Seed');
+  const seedDn = key_('trSeedDn', '‹', 'Previous seed');
+  const seed = el('input', { id: 'trSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', inputmode: 'numeric', 'aria-label': 'Seed' });
+  const seedUp = key_('trSeedUp', '›', 'Next seed');
+  const random = key_('trRandom', 'random');
+  seedSw.append(seedDn, seed, seedUp, random);
+  const pieceSw = sw('trPieceSw', 'Piece');
+  const playBtn = el('button', { id: 'trPlayBtn', class: 'btn small trlamp', type: 'button', 'data-on': '0' });
+  const playName = el('span', { class: 'trname' }, 'play');
+  playBtn.append(el('i', { 'aria-hidden': 'true' }), playName);
+  const stopBtn = key_('trStopBtn', 'stop');
+  const linkBtn = key_('trLink', 'copy link');
+  const midiBtn = key_('trMidi', 'export .mid');
+  pieceSw.append(playBtn, stopBtn, linkBtn, midiBtn);
+  const bar = el('div', { class: 'trrows' });
+  bar.append(row(tag('seed'), seedSw), row(tag('piece'), pieceSw));
+  const gens = sw('trGens', 'Rule');
   GENERATORS.forEach(id => {
     const b = el('button', { class: 'chip', type: 'button', 'data-gen': id, 'aria-pressed': 'false' }, GEN_LABEL[id]);
     b.addEventListener('click', () => { mutate({ generator: id }); });
     gens.appendChild(b);
   });
-  const viewRow = el('div', { class: 'tr-bar' });
-  const zoomIn = el('button', { id: 'trZoomIn', class: 'btn small', type: 'button' }, 'zoom in');
-  const zoomOut = el('button', { id: 'trZoomOut', class: 'btn small', type: 'button' }, 'zoom out');
-  const reset = el('button', { id: 'trReset', class: 'btn small', type: 'button' }, 'reset view');
-  const read = el('span', { id: 'trRead', class: 'tr-read' }, '');
-  viewRow.append(zoomIn, zoomOut, reset, read);
+  const viewSw = sw('trViewSw', 'View');
+  const zoomIn = key_('trZoomIn', 'zoom in');
+  const zoomOut = key_('trZoomOut', 'zoom out');
+  const reset = key_('trReset', 'reset view');
+  viewSw.append(zoomIn, zoomOut, reset);
+  const readWin = el('span', { id: 'trReadWin', class: 'trread', 'data-on': '0' });
+  const read = el('span', { id: 'trRead', class: 'trname' }, '');
+  readWin.append(el('i', { 'aria-hidden': 'true' }), read);
   const canvas = el('canvas', { id: 'trCanvas', 'aria-label': 'Fractal and notes. Drag to move the view. The wheel zooms.' });
   const rules = el('pre', { id: 'trRules' });
-  play.append(bar, gens, viewRow, canvas, rules);
+  play.append(bar, row(tag('rule'), gens), row(tag('view'), viewSw, readWin), canvas, rules);
 
   const shape = section('shape', 'mTrShape', 'Shape');
-  const scales = el('div', { class: 'chips', id: 'trScales' });
+  const scales = sw('trScales', 'Scale');
   SCALE_NAMES.forEach(id => {
     const b = el('button', { class: 'chip', type: 'button', 'data-scale': id, 'aria-pressed': 'false' }, id);
     b.addEventListener('click', () => mutate({ scale: id }));
@@ -359,7 +382,7 @@ export function mountTrochotronPanel(container, hooks) {
     const o = el('option', { value: String(i) }, name);
     key.appendChild(o);
   });
-  const voices = el('div', { class: 'chips', id: 'trVoices' });
+  const voices = sw('trVoices', 'Voices');
   [['1', 'lead'], ['2', 'mid + lead'], ['3', 'bass mid lead']].forEach(([n, label]) => {
     const b = el('button', { class: 'chip', type: 'button', 'data-voices': n, 'aria-pressed': 'false' }, label);
     b.addEventListener('click', () => mutate({ voices: +n }));
@@ -385,9 +408,11 @@ export function mountTrochotronPanel(container, hooks) {
   const timbre = slider('trTimbre', 'timbre', 0, 1, 0.01);
   const grid = el('div', { class: 'tr-grid' });
   grid.append(depth.wrap, tempo.wrap, density.wrap, chaos.wrap, timbre.wrap);
-  const row2 = el('div', { class: 'tr-bar' });
-  row2.append(key, route);
-  shape.append(scales, voices, row2, grid);
+  const shapeRows = el('div', { class: 'trrows' });
+  const keyRow = row(tag('key'), key), routeRow = row(tag('route'), route);
+  keyRow.classList.add('trsel'); routeRow.classList.add('trsel');
+  shapeRows.append(row(tag('scale'), scales), row(tag('voices'), voices), keyRow, routeRow);
+  shape.append(shapeRows, grid);
 
   container.append(play, shape);
 
@@ -420,7 +445,8 @@ export function mountTrochotronPanel(container, hooks) {
     rules.textContent = piece.rules || '';
     const g = p.generator === 'julia' ? 'Julia' : p.generator === 'mandelbrot' ? 'Mandelbrot' : GEN_LABEL[p.generator];
     read.textContent = g + ' · ' + piece.notes.length + ' notes · ' + KEYS[p.key] + ' ' + p.scale;
-    playBtn.textContent = host.meter().playing ? 'playing' : 'play';
+    readWin.dataset.on = piece.notes.length ? '1' : '0';
+    setPlaying(!!host.meter().playing);
     drawPiece(canvas, piece, p, host.meter().beat || 0);
   }
   function commitSeed() {
@@ -428,6 +454,18 @@ export function mountTrochotronPanel(container, hooks) {
     const n = Math.min(SEED_MAX, Math.max(0, Math.floor(+seed.value || 0)));
     if (n !== current().seed) mutate({ seed: n });
   }
+  function setPlaying(on) {
+    const v = on ? '1' : '0';
+    if (playBtn.dataset.on === v) return;
+    playBtn.dataset.on = v;
+    playName.textContent = on ? 'playing' : 'play';
+  }
+  function stepSeed(d) {
+    const n = Math.min(SEED_MAX, Math.max(0, current().seed + d));
+    if (n !== current().seed) mutate({ seed: n });
+  }
+  seedDn.addEventListener('click', () => stepSeed(-1));
+  seedUp.addEventListener('click', () => stepSeed(1));
   seed.addEventListener('change', commitSeed);
   seed.addEventListener('keydown', e => { if (e.key === 'Enter') commitSeed(); e.stopPropagation(); });
   random.addEventListener('click', () => {
@@ -510,8 +548,9 @@ export function mountTrochotronPanel(container, hooks) {
   }, { passive: false });
   host.setPieceListener(() => sync());
   host.setMeterListener(() => {
-    if (host.meter().playing) drawPiece(canvas, host.piece(), current(), host.meter().beat || 0);
-    else playBtn.textContent = 'play';
+    const on = !!host.meter().playing;
+    setPlaying(on);
+    if (on) drawPiece(canvas, host.piece(), current(), host.meter().beat || 0);
   });
   sync();
   return { sync, canvas };
