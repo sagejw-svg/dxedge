@@ -1,6 +1,7 @@
-# Wilson family, Ramona, CA: history notes for the photo-history site
+# Wilson family, 740 Progress Lane, Ramona, CA: history notes for the photo-history site
 
-**Pin:** 33.0281264, -116.8547712 (WGS84), the centroid of the family's lot (from San Diego County's public parcel layer). *Showing this exact pin publicly is pending James's confirmation.*
+**Place:** Wilson family, 740 Progress Lane, Ramona, CA.
+**Pin:** 33.0281264, -116.8547712 (WGS84), the centroid of the lot (from San Diego County's public parcel layer).
 **Land survey:** BLM CadNSDI returns township 13S 1E, San Bernardino Meridian, but **no section**. That's because the land lies inside the Mexican grant **Rancho Santa María (Valle de Pamo)**, which was never cut into PLSS sections. So there is no federal homestead patent for this lot. The title runs back through the rancho patent.
 **Setting:** the lot is in the Santa Maria Valley, about 2.0 km SSE of Ramona's historic Main Street, at about 1,490 ft.
 
@@ -27,7 +28,7 @@
 | 1928, 1945, 1953, 1956, 1967, 1978-79 | Wildfires burned within 1.3-3 km of the pin. None of the mapped perimeters covers it. | CAL FIRE FRAP |
 | 1939-1963 | Aerial photos show **farm fields** at the lot. | UCSB 1939, 1953, 1963 |
 | mid-1900s | Ramona is called "The Turkey Capital of the World". | SD History Center J. 1990; Wikipedia |
-| 1974-1975 | The **lane** alignment appears as a graded track on the parcel's north edge, and houses go up to the NE. | UCSB AMI-SD-74/75 |
+| 1974-1975 | The **Progress Lane** alignment appears as a graded track on the parcel's north edge, and houses go up to the NE. | UCSB AMI-SD-74/75 |
 | **1977-1980** | **First structure on the parcel** (1977-07-02 photo). The house is clear in the 1980-04-09 photo and on the 1982 USGS revision. | UCSB AMI-SD-77/80; USGS 1982 |
 | 1970-1990 | Ramona grows from ~5,000 people to five times that. | SD History Center J. 1990 |
 | 2003-10-25 | **Cedar fire** starts east of San Diego Country Estates. Its nearest edge is **~1.6 km SE** of the pin. | Wikipedia; CAL FIRE FRAP |
@@ -46,7 +47,7 @@
 | 1886 → | Santa Maria Land & Water Co. buys and subdivides the Ramona townsite. *Whether this exact lot was in its tract* is likely (the 1903 grid covers it) but not verified. | inference |
 | 1886-1970s | **unknown** (farmland) | unknown |
 | 1970s split / house built ~1977-80 | **unknown** builder or owner | unknown |
-| present | Wilson family (family statement). Purchase date not documented here. | family |
+| present | Wilson family (family statement). Purchase year unknown. | family |
 
 ---
 
@@ -60,11 +61,11 @@
 6. **1963 UCSB CAS-SD.** Still a field, with a diagonal farm track.
 7. **1971 USGS photorevised.** Purple houses spread south from town, but the pin is still empty.
 8. **1972-09-13 Landsat 1.** One of the first Landsat images ever.
-9. **1974-02-24 UCSB.** Faint track where the lane runs now.
+9. **1974-02-24 UCSB.** Faint track where Progress Lane runs now.
 10. **1975-07-03 UCSB, and 1975 topo.** Lanes graded, houses to the NE, lot empty.
 11. **1977-07-02 UCSB.** **First structure on the lot.**
 12. **1980-04-09 UCSB.** House present, and the block is filling in.
-13. **1982 USGS revised.** The lane and the building are mapped.
+13. **1982 USGS revised.** Progress Lane and the building are mapped.
 14. **1984 Landsat 5.** Regional view.
 15. **1988 USGS revised.** More infill.
 16. **1990-08-30 NAPP.** House visible (bright scan).
@@ -129,7 +130,7 @@ No mercury (quicksilver) mines are recorded in MRDS within the ~19 km search box
 ## 5. Gaps and leads
 
 - **Chain of title 1872-present is unknown.** It would need county deed or recorder records, a title report, or the 1886 Santa Maria Land & Water Co. subdivision map (County Recorder map no. unknown).
-- **The parcel/tract map that created the lots on the lane** (~1974-77) wasn't found. The public "Lots" layer has no lot number here.
+- **The parcel/tract map that created the Progress Lane lots** (~1974-77) wasn't found. The public "Lots" layer has no lot number here.
 - Exact build year is unknown. The imagery brackets it to **after 1975-07-03 and by 1977-07-02** for a first structure, with a house certain by 1980-04-09. The 1977 frame is overexposed, so the assessor's "year built" would confirm it.
 - The UCSB 1939, 1953 and 1963 frames carry **year-only dates** in the index. The 1974-1980 AMI frames were georeferenced by matching to the 1990 NAPP frame and then to each other (accuracy ~10-20 m). The 1953 match had a looser fit.
 - **No 1928 aerial** is free for this spot. The SanGIS/County 1928 set wasn't found as a public service.
