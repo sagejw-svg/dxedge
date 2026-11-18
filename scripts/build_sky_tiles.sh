@@ -23,6 +23,11 @@
 # from the deploy (it takes a flock), and from cron. Needs: bash, python3,
 # vips (libvips-tools), curl. As root it installs libvips-tools if missing.
 set -euo pipefail
+# nginx runs as an unprivileged user inside its container and reads the output
+# directory through a read-only bind mount, so everything written here must be
+# world-readable. The deploy's SSH session has arrived with a restrictive
+# umask before, which left the site directories 700 and every tile a 403.
+umask 022
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(dirname "$HERE")"
@@ -106,6 +111,9 @@ names = sorted(f[:-4] for f in os.listdir(d) if f.endswith(".dzi"))
 json.dump({"tiles": names}, open(os.path.join(d, "index.json"), "w"))
 PY
 done
+
+# Belt and braces for directories created by an earlier run under a bad umask.
+chmod -R u+rwX,go+rX "$OUT" 2>/dev/null || true
 
 log "done: built $built, already present $skipped, esri skipped $esri -> $OUT"
 log "size $(du -sh "$OUT" 2>/dev/null | cut -f1)"
