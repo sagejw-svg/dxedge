@@ -2251,6 +2251,12 @@ import { resnatronDevice, normalizeResnatron, RN_FACTORY, RN_DEFAULT, RN_CATS, s
 import { createResnatronHost, mountResnatronPanel, renderResnatronBuffer } from './resnatron-ui.js';
 
 const $ = id => document.getElementById(id);
+// Write only on a change (improvement, 18 Nov). The frame loop rewrote the same readouts 30 times a second:
+// each textContent write replaces the text node (a childList mutation that woke the slider observer below
+// into a scan of every range input on the page) and each attribute or class write queues a mutation record.
+// The DOM ends each frame the same either way.
+const setText = (el, s) => { s = String(s); if (el && el.textContent !== s) el.textContent = s; };
+const setAttr = (el, k, v) => { v = String(v); if (el && el.getAttribute(k) !== v) el.setAttribute(k, v); };
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -2615,8 +2621,8 @@ function applySession(raw) {
 function paintHost(st) {
   st = st || (E && E.transport.state());
   if (!st || !$('trPos')) return;
-  $('trPos').textContent = (Math.floor(st.bar) + 1) + '.' + (Math.floor(st.beatInBar) + 1) + (st.playing ? ' · playing' : ' · stopped');
-  $('trPlay').setAttribute('aria-pressed', String(!!st.playing));
+  setText($('trPos'), (Math.floor(st.bar) + 1) + '.' + (Math.floor(st.beatInBar) + 1) + (st.playing ? ' · playing' : ' · stopped'));
+  setAttr($('trPlay'), 'aria-pressed', !!st.playing);
   $('hostPilot').classList.toggle('off', !st.playing);
 }
 function syncHostUI() {
@@ -4072,7 +4078,11 @@ setMasterVol(masterVol, false);
 paintUndo();
 const uiSizeCtl = mountUiSize(document.getElementById('uiSize'));
 bindFineControls(document);
-const fineWatch = new MutationObserver(() => bindFineControls(document));
+// Only a record that adds an element can bring a new range input; text and readout changes (several a frame)
+// used to rescan all of them (improvement, 18 Nov).
+const fineWatch = new MutationObserver(recs => {
+  if (recs.some(r => { for (const n of r.addedNodes) if (n.nodeType === 1) return true; return false; })) bindFineControls(document);
+});
 fineWatch.observe(document.body, { childList: true, subtree: true });
 
 // ---------------------------------------------------------------- patch list
@@ -5299,8 +5309,9 @@ function frame(now) {
     if (dev === 'filament' && $('fpCv').offsetParent) drawFp(now, E && E.meters ? E.meters.filament : null);
   }
   const cpuSrc = thyOn ? tm : klOn ? klm : phOn ? phm : adOn ? adm : gyOn ? gym : rhumOn ? rhm : rnOn ? rnm : trOn ? trm : orthOn ? om : moteOn ? mm : latOn ? lm : drumOn ? dm : gleamOn ? gm : hepOn ? hm : geissOn ? zm : pentaOn ? pm : m;
-  $('voicesV').textContent = (cpuSrc && cpuSrc.voices) || 0;
-  const cpu = (cpuSrc && cpuSrc.cpu) || 0; $('cpuV').textContent = Math.round(cpu * 100) + '%'; $('lampCpu').className = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
+  setText($('voicesV'), (cpuSrc && cpuSrc.voices) || 0);
+  const cpu = (cpuSrc && cpuSrc.cpu) || 0, cpuLamp = cpu > 0.6 ? 'on' : cpu > 0 ? 'green' : '';
+  setText($('cpuV'), Math.round(cpu * 100) + '%'); if ($('lampCpu').className !== cpuLamp) $('lampCpu').className = cpuLamp;
 }
 requestAnimationFrame(frame);
 

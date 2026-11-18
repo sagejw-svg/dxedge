@@ -517,8 +517,12 @@ export function mountHeptodePanel(container, hooks) {
     });
   }
 
+  // While the roll is not on screen (another device lit, or another Heptode tab on a phone) it has no box,
+  // and redrawRoll drew a 320 x 150 stand-in 60 times a second, resetting the canvas's width and height
+  // each time (improvement, 18 Nov). The frame that shows the roll again runs before that frame paints,
+  // and the direct redrawRoll calls (a song loaded, a file dropped) still draw at once.
   function frame() {
-    redrawRoll();
+    if (roll.clientWidth || roll.clientHeight) redrawRoll();
     raf = requestAnimationFrame(frame);
   }
   raf = requestAnimationFrame(frame);

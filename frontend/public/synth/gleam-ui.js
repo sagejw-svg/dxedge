@@ -785,24 +785,30 @@ export function mountGleamPad(container, host, opts) {
     if (opts && opts.edited) opts.edited(next);
     sync();
   }
+  // sync() runs on every animation frame (draw calls it), lit or not, so it writes only what changed
+  // (improvement, 18 Nov): the same thirteen aria-pressed values and the same readout text were written
+  // 60 times a second, each one a mutation record, and the text a childList change that woke the page's
+  // slider observer. The panel ends each frame the same either way.
+  function press(b, on) { const v = String(on); if (b && b.getAttribute('aria-pressed') !== v) b.setAttribute('aria-pressed', v); }
+  function setVal(el, v) { v = String(v); if (el && el.value !== v) el.value = v; }
   function sync() {
     const p = patch();
-    MODES.forEach(m => { const b = buttons['gleamMode-' + m]; if (b) b.setAttribute('aria-pressed', String(p.mode === m)); });
-    SCALES.forEach(s => { const b = buttons['gleamScale-' + s]; if (b) b.setAttribute('aria-pressed', String(p.scale === s)); });
-    root.value = String(p.root);
-    buttons.gleamHrtf.setAttribute('aria-pressed', String(!!p.hrtf));
-    buttons.gleamStutter.setAttribute('aria-pressed', String(!!p.stutter));
-    buttons.gleamHold.setAttribute('aria-pressed', String(!!p.hold));
-    if (gen && document.activeElement !== gen) gen.value = p.generator;
+    MODES.forEach(m => press(buttons['gleamMode-' + m], p.mode === m));
+    SCALES.forEach(s => press(buttons['gleamScale-' + s], p.scale === s));
+    setVal(root, p.root);
+    press(buttons.gleamHrtf, !!p.hrtf);
+    press(buttons.gleamStutter, !!p.stutter);
+    press(buttons.gleamHold, !!p.hold);
+    if (gen && document.activeElement !== gen) setVal(gen, p.generator);
     ['gleamLevel', 'gleamRate', 'gleamDepth', 'gleamSeed'].forEach(id => {
       const el = document.getElementById(id);
       if (!el || document.activeElement === el) return;
       const key = id === 'gleamLevel' ? 'level' : id === 'gleamRate' ? 'rate' : id === 'gleamDepth' ? 'depth' : 'seed';
-      el.value = String(p[key]);
+      setVal(el, p[key]);
     });
     const info = host.tape();
-    buttons.gleamRec.setAttribute('aria-pressed', String(!!info.recording));
-    buttons.gleamLoop.setAttribute('aria-pressed', String(!!host.loopOn()));
+    press(buttons.gleamRec, !!info.recording);
+    press(buttons.gleamLoop, !!host.loopOn());
     const g = host.generator();
     const note = p.mode === 'effect'
       ? 'Effect. Across sweeps the filter, up raises delay feedback' + (p.stutter ? ', pressure stutters.' : '.')
@@ -814,7 +820,7 @@ export function mountGleamPad(container, host, opts) {
     const extra = (p.hold ? '  HOLD' + (heldN ? ' ' + heldN : '') : '')
       + (p.generator === 'off' ? '' : '  ' + p.generator + genNote)
       + (info.duration ? '  take ' + info.duration.toFixed(1) + 's' : '');
-    read.textContent = note + extra;
+    if (read.textContent !== note + extra) read.textContent = note + extra;
   }
   function noteName(midi) {
     const n = Math.round(midi);
