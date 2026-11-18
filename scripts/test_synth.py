@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Mw. (the Mix card's own row from 761 px: the Mix and Master cards fill the width, the seven cards it stretched end at their controls, slider grids take columns, the strips' columns, no sideways scroll, reduced motion), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Hs. (the desktop patch strip holds one row from 1020 px on a factory or a user patch with the save form closed or open, the form in the edit keys' place, delete red), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again, an offline render lets go of its nodes), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -7653,6 +7653,167 @@ with sync_playwright() as pw:
     ck(f"Pr. reduced motion: the paper holds still (position {rd['stats']['pos']}) while the roll plays ({rn} strikes), no page errors",
        rd["stats"]["pos"] == 0 and rn >= 4 and not rrerr, (rd, rn, rrerr))
     rrx.close()
+
+    # ---------------------------------------------------------------- Rc. named user rolls and the chain (0.3, 18 Nov)
+    # The paper roll's next slice: rolls kept by name in this browser, and a chain (song mode) that plays rolls in
+    # turn, each a number of times, then comes round again. The plan for a segment is pure (paperroll.js: segPlan,
+    # chainSegments, chainAt, chainScore); these check it, the live timing against it, the strip, the project and a phone.
+    rcx = b.new_context(viewport={"width": 1366, "height": 1000}); rc = rcx.new_page(); rcerr = []
+    rc.on("pageerror", lambda e: rcerr.append(str(e)))
+    rc.goto(BASE); rc.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    rcs = rc.evaluate("""async () => {
+      const M = await import('/synth/paperroll.js');
+      const F = M.ROLL_FACTORY, j = o => JSON.parse(JSON.stringify(o));
+      const many = Array.from({ length: 70 }, (_, i) => ({ name: 'R' + i, steps: [{ n: 50, g: 1 }] }));
+      const ur = M.normalizeUserRolls([{ name: '  My   Roll ', len: 4 }, { name: 'my roll' }, { name: 'octave PUMP' }, { name: '' }, null, [1], { name: 'x'.repeat(60) }]);
+      const capped = M.normalizeUserRolls(many).length;
+      const ch = M.normalizeChain({ on: 'yes', items: [{ name: 'Octave Pump', reps: 0 }, { name: 'B', reps: 99, pat: { len: 4 } }, { reps: 2 }, null, { name: '', pat: { name: 'From Pat' } }].concat(Array.from({ length: 20 }, () => ({ name: 'Z' }))) });
+      const on = M.normalizeChain({ on: true, items: [] }).on;
+      const chainA = M.normalizeChain({ on: true, items: [{ name: 'Octave Pump', reps: 2 }, { name: 'Slow Bells', reps: 1 }] });
+      const segs = M.chainSegments(chainA, []);
+      const at = [0, 7.99, 8, 11.999, 12, 20.5, -3].map(b => { const a = M.chainAt(segs, b); return [a.idx, a.start, a.pass]; });
+      // a tie run and a slide on a segment's last step end at the gate there, never past the end
+      const tp = M.normalizeRoll({ len: 4, gate: 0.5, steps: [{ n: 50, g: 0, t: 1 }, { n: 52, g: 1 }, { n: 55, g: 1 }, { n: 57, g: 1 }] });
+      const inRoll = M.rollPlan(tp, 0, 4, 0).notes.map(x => [x.k, x.len, x.off]);
+      const inSeg = M.segPlan(tp, 4, 0, 4, 0).notes.map(x => [x.k, x.len, x.off, x.slide]);
+      const sp = M.normalizeRoll({ len: 2, gate: 0.5, steps: [{ n: 50, g: 1 }, { n: 52, g: 1, s: 1 }] });
+      const slideSeg = M.segPlan(sp, 4, 0, 4, 0).notes.map(x => [x.k, x.off, x.slide]);
+      const slideRoll = M.rollPlan(sp, 0, 4, 0).notes.map(x => [x.k, x.off, x.slide]);
+      const sc = M.chainScore(chainA, [], 2, 120, 'filament');
+      const ons = sc.filter(e => e.t === 'on'), offs = sc.filter(e => e.t === 'off');
+      const pump = M.rollScore(F[1], 32, 120, 'filament').filter(e => e.t === 'on');
+      const userWins = M.resolveChainRoll({ name: 'Octave Pump', pat: F[2] }, [{ name: 'Octave Pump' }]);
+      const copy = M.resolveChainRoll({ name: 'Elsewhere', pat: M.normalizeRoll({ name: 'Elsewhere', len: 3 }) }, []);
+      return { ur: ur.map(r => [r.name, r.len]), capped, ch: { on: ch.on, n: ch.items.length, first: [ch.items[0].name, ch.items[0].reps], second: [ch.items[1].name, ch.items[1].reps, ch.items[1].pat.len, ch.items[1].pat.name], third: ch.items[2].name }, on,
+        at, inRoll, inSeg, slideSeg, slideRoll,
+        firstSeg1: ons.find(e => e.seg === 1).at, seg0n: ons.filter(e => e.seg === 0).length / 2, pumpN: pump.length,
+        sameAsRoll: JSON.stringify(ons.filter(e => e.seg === 0).slice(0, pump.length).map(e => [e.at, e.n, e.v])) === JSON.stringify(pump.map(e => [e.at, e.n, e.v])),
+        pass2: ons.filter(e => e.at >= 6 - 1e-9)[0].at, maxOff1: Math.max(...offs.filter(e => e.seg === 1 && e.at < 6.5).map(e => e.at)),
+        userWins: userWins.name, copy: copy.len, stable: JSON.stringify(M.normalizeChain(j(chainA))) === JSON.stringify(chainA) };
+    }""")
+    ck(f"Rc. user rolls: names are trimmed, a second copy of a name (any case), a factory name and an empty name are dropped, at most 64 ({rcs['ur']}, {rcs['capped']} of 70)",
+       rcs["ur"] == [["My Roll", 4], ["x" * 40, 16]] and rcs["capped"] == 64, rcs)
+    ck("Rc. chain schema: on only for true; reps 1 to 16; an entry takes its pattern's name when it has none, a nameless one is dropped; at most 16; a chain with no rolls can be on but plays nothing; normal twice is the same",
+       rcs["ch"] == {"on": False, "n": 16, "first": ["Octave Pump", 1], "second": ["B", 16, 4, "B"], "third": "From Pat"} and rcs["on"] is True and rcs["stable"], rcs["ch"])
+    ck(f"Rc. chainAt: Octave Pump x2 (8 beats) then Slow Bells (4 beats) comes round every 12 beats ({rcs['at']})",
+       rcs["at"] == [[0, 0, 0], [0, 0, 0], [1, 8, 0], [1, 8, 0], [0, 12, 1], [1, 20, 1], [0, 0, 0]], rcs["at"])
+    ck(f"Rc. a segment's end: a tie run on the last step ends at the gate there, not across the loop ({rcs['inSeg']}; the looping roll: {rcs['inRoll']}); a slide on the last step does not reach the next roll ({rcs['slideSeg']})",
+       rcs["inSeg"] == [[1, 1, 0.375, False], [2, 1, 0.625, False], [3, 1, 0.875, False]] and rcs["inRoll"][-1] == [3, 2, 1.125]
+       and rcs["slideSeg"] == [[0, 0.125, False], [1, 0.52, True], [2, 0.625, False], [3, 0.875, False]] and rcs["slideRoll"][3] == [3, 1.02, True], rcs)
+    ck(f"Rc. chainScore at 120 BPM: Octave Pump twice ({rcs['seg0n']:.0f} strikes a pass) is the roll's own score, Slow Bells strikes at {rcs['firstSeg1']} s, the second pass at {rcs['pass2']} s, and no note of Slow Bells holds past its end ({rcs['maxOff1']} s)",
+       rcs["sameAsRoll"] and rcs["firstSeg1"] == 4 and rcs["pass2"] == 6 and rcs["maxOff1"] <= 6 + 1e-9 and rcs["seg0n"] == rcs["pumpN"], rcs)
+    ck("Rc. an entry plays your roll of that name, else the factory roll, else its own copy", rcs["userWins"] == "Octave Pump" and rcs["copy"] == 3, rcs)
+    # save, the list, delete, the refusals, through the strip's own controls
+    rc.evaluate("() => { const R = __synth.roll(); R.open(true); R.set(R.factory()[2]); R.edit(p => { p.steps[0].n = 47; }); }")
+    rc.fill("#rollName", "Walk Low"); rc.click("#rollSave")
+    sv = rc.evaluate("""() => { const R = __synth.roll(), o = [...document.querySelectorAll('#rollPick optgroup')].map(g => [g.label, [...g.children].map(c => c.value + ':' + c.textContent)]);
+      return { st: R.state(), msg: R.msg(), groups: o, pick: document.getElementById('rollPick').value, del: document.getElementById('rollDel').disabled, stat: document.getElementById('rollStat').textContent }; }""")
+    ck(f"Rc. save roll keeps the paper by the name in the box: in the list under 'Your rolls', loaded and unmarked ('{sv['msg']}', '{sv['stat']}')",
+       sv["st"]["users"] == ["Walk Low"] and sv["st"]["pat"]["name"] == "Walk Low" and not sv["st"]["edited"] and sv["pick"] == "u0" and not sv["del"]
+       and sv["groups"][0][0] == "Factory" and sv["groups"][0][1][3] == "3:Tie and Slide" and sv["groups"][1] == ["Your rolls", ["u0:Walk Low"]] and "Walk Low" in sv["stat"], sv)
+    rc.fill("#rollName", "slow BELLS"); rc.click("#rollSave"); ref = rc.evaluate("() => ({ st: __synth.roll().state(), msg: __synth.roll().msg() })")
+    rc.evaluate("() => __synth.roll().edit(p => { p.steps[1].n = 59; })")
+    rc.fill("#rollName", "walk low"); rc.press("#rollName", "Enter"); over = rc.evaluate("() => ({ st: __synth.roll().state(), u: __synth.roll().users(), msg: __synth.roll().msg() })")
+    ck(f"Rc. a factory name is refused ('{ref['msg']}'); the same name in another case saves over the roll, Enter in the box saves ('{over['msg']}')",
+       ref["st"]["users"] == ["Walk Low"] and ref["st"]["pat"]["name"] == "Walk Low" and "factory" in ref["msg"]
+       and over["st"]["users"] == ["walk low"] and over["u"][0]["steps"][1]["n"] == 59 and over["u"][0]["steps"][0]["n"] == 47 and not over["st"]["edited"], (ref, over["st"]["users"], over["msg"]))
+    rc.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[1]); }")
+    rc.select_option("#rollPick", "u0"); lu = rc.evaluate("() => __synth.roll().state()")
+    rc.click("#rollDel"); dl = rc.evaluate("() => ({ st: __synth.roll().state(), msg: __synth.roll().msg(), opts: document.querySelectorAll('#rollPick option').length, del: document.getElementById('rollDel').disabled })")
+    ck(f"Rc. the list loads your roll unmarked; delete takes it out of the list, the paper keeps it marked edited ('{dl['msg']}')",
+       lu["pat"]["name"] == "walk low" and not lu["edited"] and lu["pat"]["steps"][1]["n"] == 59
+       and dl["st"]["users"] == [] and dl["st"]["pat"]["name"] == "walk low" and dl["st"]["edited"] and dl["opts"] == 7 and dl["del"], (lu["pat"]["name"], dl))
+    # the chain row
+    rc.evaluate("() => { const R = __synth.roll(); R.chain({ on: false, items: [] }); R.set(R.factory()[1]); R.edit(p => { p.tr = 2; }); }")
+    rc.click("#rollChainOn"); rc.click("#rollChainAdd"); refused = rc.evaluate("() => ({ st: __synth.roll().state(), msg: __synth.roll().msg() })")
+    rc.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[1]); }"); rc.click("#rollChainAdd")
+    rc.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[5]); R.edit(p => { p.steps[0].n = 74; }); R.saveAs('Bell Two'); }"); rc.click("#rollChainAdd")
+    rc.click("#rollChain li:nth-child(1) button[aria-label^='Play Octave Pump more']")
+    rc.click("#rollChain li:nth-child(1) button[aria-label^='Play Octave Pump more']")
+    rc.click("#rollChain li:nth-child(1) button[aria-label^='Play Octave Pump fewer']")
+    rc.click("#rollChain li:nth-child(2) button[aria-label^='Move']")
+    mv = rc.evaluate("() => __synth.roll().state().chain.items.map(i => [i.name, i.reps])")
+    rc.click("#rollChain li:nth-child(2) button[aria-label^='Move']")
+    rc.click("#rollChainOn")
+    cr = rc.evaluate("""() => ({ st: __synth.roll().state(), pressed: document.getElementById('rollChainOn').getAttribute('aria-pressed'), n: document.getElementById('rollChainN').textContent,
+      rows: [...document.querySelectorAll('#rollChain li .rcname')].map(e => e.textContent), stat: document.getElementById('rollStat').textContent }); """)
+    ck(f"Rc. the chain row: chain will not light empty, an edited roll is refused until saved ('{refused['msg']}'); + this roll, reps + and -, move earlier, and the chain key lit ({cr['rows']}, '{cr['stat']}')",
+       refused["st"]["chain"] == {"on": False, "items": []} and "Save" in refused["msg"]
+       and mv == [["Bell Two", 1], ["Octave Pump", 2]] and cr["st"]["chain"]["on"] is True and cr["pressed"] == "true" and cr["n"] == "2 rolls"
+       and cr["rows"] == ["1. Octave Pump × 2", "2. Bell Two × 1"] and cr["stat"].startswith("chain"), (refused, mv, cr))
+    # live: the chain against its own score, the paper following the roll it reads
+    rc.evaluate("""() => { __synth.transport().stop(); __synth.setDevice('filament'); __synth.setMixer('dekatron', { mute: true });
+      const R = __synth.roll(); R.dest('lit'); R.clearLog(); __synth.transport().setTempo(120); R.play(); }""")
+    rc.wait_for_timeout(2500)
+    h1 = rc.evaluate("() => ({ st: __synth.roll().state(), pos: document.getElementById('rollPos').textContent })")
+    rc.wait_for_timeout(2300)
+    h2 = rc.evaluate("() => ({ st: __synth.roll().state(), pos: document.getElementById('rollPos').textContent, d: __synth.roll().draw() })")
+    rc.wait_for_timeout(2500)
+    lr = rc.evaluate("() => { const R = __synth.roll(); const L = R.log(); return { L, score: R.chainScore(2, 120, 'filament'), st: R.state() }; }")
+    lst = [e for e in lr["L"] if e["t"] in ("on", "skip")]; lsk = [e for e in lst if e["t"] == "skip"]
+    sons = [e for e in lr["score"] if e["t"] == "on"]
+    t0 = lst[0]["want"] if lst else 0
+    got = [(round(e["want"] - t0, 3), e["n"], e.get("seg")) for e in lst]
+    want = [(round(e["at"], 3), e["n"], e["seg"]) for e in sons][:len(got)]
+    ck(f"Rc. live at 120 BPM: {len(got)} steps planned over 7 s land on the chain's score within 2 ms, Octave Pump twice then Bell Two from 4 s and round again at 6 s",
+       len(got) >= 40 and len(lsk) <= len(got) // 4 and all(abs(a[0] - w[0]) <= 0.002 and a[1] == w[1] and a[2] == w[2] for a, w in zip(got, want))
+       and any(g_[2] == 1 for g_ in got) and any(g_[0] >= 6 and g_[2] == 0 for g_ in got), (got[:6], [x for x in zip(got, want) if abs(x[0][0] - x[1][0]) > 0.002 or x[0][1:] != x[1][1:]][:4], len(lsk)))
+    info("Rc. live", f"{len(got) - len(lsk)} strikes sent, {len(lsk)} dropped as more than 60 ms late")
+    ck(f"Rc. the paper reads what it plays: Octave Pump at 2.5 s ('{h1['pos']}'), Bell Two at 4.8 s ('{h2['pos']}', the editor holds it unmarked), the paper from its own step 0 ({h2['d']['stats']['pos']:.2f} steps)",
+       h1["st"]["heard"]["idx"] == 0 and h1["st"]["pat"]["name"] == "Octave Pump" and h1["pos"].startswith("1/2")
+       and h2["st"]["heard"]["idx"] == 1 and h2["st"]["pat"]["name"] == "Bell Two" and not h2["st"]["edited"] and h2["pos"].startswith("2/2") and 0.5 <= h2["d"]["stats"]["pos"] < 8, (h1, h2["st"]["heard"], h2["pos"], h2["d"]))
+    # a roll saved by name while the chain plays is heard the next time its turn comes
+    rc.evaluate("() => { const R = __synth.roll(); R.clearLog(); const u = R.users()[0]; u.steps[0].n = 76; R.set(u); R.saveAs('Bell Two'); }")
+    rc.wait_for_timeout(6300)
+    sv2 = rc.evaluate("() => { const R = __synth.roll(); const L = R.log(); return L.filter(e => (e.t === 'on' || e.t === 'skip') && e.seg === 1).map(e => e.n); }")
+    ck(f"Rc. Bell Two saved again while the chain plays (its first note 74 to 76): its next turn plays 76 ({sv2[:3]})", len(sv2) >= 3 and sv2[0] == 76 and 74 not in sv2, sv2)
+    # the chain key off under a playing transport: the paper's roll carries on on the grid, no burst
+    rc.evaluate("() => { const R = __synth.roll(); R.clearLog(); R.set(R.factory()[1]); document.getElementById('rollChainOn').click(); }")
+    rc.wait_for_timeout(1200)
+    co = rc.evaluate("() => { const R = __synth.roll(); const L = R.log(); R.stop(); return { L, st: R.state() }; }")
+    cons = [e for e in co["L"] if e["t"] in ("on", "skip")]; cgaps = sorted(set(round(b_["want"] - a_["want"], 4) for a_, b_ in zip(cons, cons[1:])))
+    ck(f"Rc. chain off while it plays: the paper's roll carries on 125 ms a step, no burst ({cgaps}, {len(cons)} steps, none tagged with a chain segment)",
+       not co["st"]["chain"]["on"] and len(cons) >= 6 and all(abs(g_ - 0.125) < 0.002 for g_ in cgaps) and not any("seg" in e for e in cons), (cgaps, len(cons)))
+    rc.wait_for_timeout(300)
+    # the project file: the chain with each roll's copy; a project saved before 18 Nov leaves the chain alone
+    pj = rc.evaluate("""() => { const R = __synth.roll(); R.chainOn(true);
+      const want = R.project(); const saved = __synth.saveProject();
+      R.chain({ on: false, items: [] }); const loaded = __synth.loadProject(); const st = R.state();
+      __synth.applyProject({ kind: 'dxrack', name: 'No chain', device: 'filament', roll: { pat: R.factory()[2], dest: 'lit', run: false } });
+      const kept = R.state();
+      const away = JSON.parse(JSON.stringify(want)); away.chain.items[1].name = 'Elsewhere'; away.chain.items[1].pat.name = 'Elsewhere'; away.chain.items[1].pat.steps[0].n = 81;
+      __synth.applyProject({ kind: 'dxrack', name: 'Other browser', device: 'filament', roll: away });
+      const sc = R.chainScore(1, 120, 'x').filter(e => e.t === 'on' && e.seg === 1);
+      return { want: want.chain, saved: saved.roll.chain, st: st.chain, kept: kept.chain, away: R.state().chain.items.map(i => i.name), first: sc.length ? sc[0].n : null }; }""")
+    ck(f"Rc. save project carries the chain with a copy of each roll and load puts it back; a project with no chain leaves it; a roll this browser does not have plays the file's copy ({pj['away']}, first note {pj['first']})",
+       pj["saved"] == pj["want"] and pj["st"] == pj["want"] and pj["want"]["on"] is True and [i["name"] for i in pj["want"]["items"]] == ["Octave Pump", "Bell Two"]
+       and pj["want"]["items"][1]["pat"]["steps"][0]["n"] == 76 and pj["kept"] == pj["want"] and pj["away"] == ["Octave Pump", "Elsewhere"] and pj["first"] == 81, (pj["want"]["on"], pj["away"], pj["first"]))
+    rc.evaluate("() => { const R = __synth.roll(); R.chain({ on: true, items: [{ name: 'Octave Pump', reps: 3 }, { name: 'Bell Two', reps: 2 }] }); R.saveAs('Kept Roll'); }")
+    rc.reload(); rc.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    kp = rc.evaluate("() => ({ st: __synth.roll().state(), opts: [...document.querySelectorAll('#rollPick optgroup')].map(g => g.label) })")
+    ck("Rc. your rolls and the chain are kept in this browser across a reload",
+       kp["st"]["users"] == ["Bell Two", "Kept Roll"] and [(i["name"], i["reps"]) for i in kp["st"]["chain"]["items"]] == [("Octave Pump", 3), ("Bell Two", 2)] and kp["st"]["chain"]["on"] is True
+       and kp["opts"] == ["Factory", "Your rolls"], (kp["st"]["users"], kp["st"]["chain"]))
+    rc.evaluate("() => { const R = __synth.roll(); R.chain({ on: false, items: [] }); R.set(R.factory()[1]); R.run(false); }")
+    ck("Rc. no page errors (desktop)", not rcerr, rcerr)
+    rcx.close()
+    # a phone: the new rows keep 44 px targets and no sideways scroll with a chain of three
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        rpx = b.new_context(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); rp_ = rpx.new_page(); rperr = []
+        rp_.on("pageerror", lambda e: rperr.append(str(e)))
+        rp_.goto(BASE); rp_.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+        rp_.evaluate("""() => { const R = __synth.roll(); R.saveAs('A Rather Long Roll Name For A Phone'); R.chain({ on: true, items: [{ name: 'Octave Pump', reps: 2 }, { name: 'A Rather Long Roll Name For A Phone' }, { name: 'Slow Bells', reps: 16 }] });
+          document.getElementById('rollBtn').click(); }""")
+        rp_.wait_for_timeout(250)
+        rv_ = rp_.evaluate("""() => { const sel = '#rollMine button, #rollMine input, #rollChainRow button, #rollChain button';
+          const small = [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length).map(e => [e.id || e.getAttribute('aria-label') || e.textContent.trim(), e.getBoundingClientRect()])
+            .filter(([s, r]) => r.width < 44 || r.height < 44).map(([s, r]) => s + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          const out = [...document.querySelectorAll('#roll *')].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect()).filter(r => r.right > innerWidth + 0.5 || r.left < -0.5).length;
+          return { small, out, sw: document.documentElement.scrollWidth, iw: innerWidth, n: document.querySelectorAll('#rollChain li').length }; }""")
+        ck(f"Rc. {pw_}px: the save row, the chain row and a chain of three keep every key and the name box 44 px or more, inside the screen, no sideways scroll ({rv_['small']}, {rv_['out']} outside)",
+           rv_["n"] == 3 and not rv_["small"] and rv_["out"] == 0 and rv_["sw"] <= rv_["iw"] == pw_ and not rperr, (rv_, rperr))
+        if pw_ == 375: rp_.locator("#roll").screenshot(path=os.path.join(SHOTS, "synth_roll_chain_phone.png"))
+        rpx.close()
 
     # ---------------------------------------------------------------- Th. Theremin mode (0.3, 9 Nov)
     # A pad on Filament's Play tab: across is pitch, up is volume, one sliding note; the magic eye shows

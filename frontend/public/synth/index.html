@@ -1003,11 +1003,11 @@
     background: linear-gradient(180deg, #050403, #0d0a06);
     box-shadow: inset 0 0 0 1px #000, inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(255,236,210,0.08); }
   .hwin:focus-within { box-shadow: inset 0 0 0 1px #000, inset 0 1px 3px rgba(0,0,0,0.95), 0 0 0 2px var(--amber); }
-  #mHost .hwin > input { flex: 1 1 auto; align-self: stretch; box-sizing: border-box; width: 0; min-width: 0; height: auto; min-height: 26px; margin: 0; padding: 3px 9px 3px 0;
+  #mHost .hwin > input, #roll .hwin > input { flex: 1 1 auto; align-self: stretch; box-sizing: border-box; width: 0; min-width: 0; height: auto; min-height: 26px; margin: 0; padding: 3px 9px 3px 0;
     border: 0; border-radius: 0; background: transparent; outline: none;
     color: #ffd08a; caret-color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 12px; letter-spacing: 0.2px; text-overflow: ellipsis; }
-  #mHost .hwin > input::placeholder { color: #a58d6c; text-shadow: none; opacity: 1; }
-  #mHost .hwin > input::selection { background: rgba(255,179,71,0.35); color: #fff3dc; }
+  #mHost .hwin > input::placeholder, #roll .hwin > input::placeholder { color: #a58d6c; text-shadow: none; opacity: 1; }
+  #mHost .hwin > input::selection, #roll .hwin > input::selection { background: rgba(255,179,71,0.35); color: #fff3dc; }
   .hlamp { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2a2a2a; box-shadow: inset 0 0 2px #000; }
   .hwin:has(> input:not(:placeholder-shown)) > .hlamp { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
   .hjoin { display: inline-flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 0; align-items: stretch; border-radius: 7px;
@@ -1157,6 +1157,14 @@
   #rollBody .tempo input { width: 96px; }
   #rollLenV { min-width: 3ch; justify-content: center; }
   #rollPick { max-width: 100%; }
+  /* named user rolls and the chain (18 Nov) */
+  #rollNameWin { flex: 0 1 16em; }
+  #rollChain { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  #rollChain:empty { display: none; }
+  #rollChain .rchain { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid #2c2c2c; border-radius: 4px; background: rgba(0,0,0,0.25); }
+  #rollChain .rcname { min-width: 9ch; }
+  #rollChain .btn:disabled, #rollDel:disabled { opacity: 0.45; cursor: default; }
+  #roll:has(#rollChainOn[aria-pressed="true"]) #rollChain .rchain { border-color: #5a4320; }
   .tempo { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
   .tempo input { width: 130px; accent-color: var(--amber); min-height: 34px; }
   .library select.btn { max-width: 100%; }
@@ -1448,7 +1456,8 @@
     .kctl .hide-s { display: none; }
     .deck { padding: 6px; margin: 6px 4px 0; } .deck::before, .deck::after, .deck .label { display: none; } .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; } .tempo { flex: 1 1 100%; }
     #libPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
-    #rollPick { min-height: 44px; height: 44px; flex: 1 1 100%; } canvas#rollCv { height: 120px; } #rollBody .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; }
+    #rollPick { min-height: 44px; height: 44px; flex: 1 1 100%; }
+    #rollNameWin { flex: 1 1 100%; } #rollName { min-height: 44px; height: 44px; } #rollChain .rchain { flex: 1 1 100%; } #rollChain .rcname { flex: 1 1 auto; } canvas#rollCv { height: 120px; } #rollBody .tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; }
     .mixrow { grid-template-columns: 1fr 1fr; } .mixrow .who { grid-column: 1 / -1; }
     #mixBus label { flex: 1 1 100%; } #mixBus input[type="range"] { flex: 1 1 auto; width: auto; }
     .volab { flex: 1 1 160px; min-width: 0; max-width: 100%; }
@@ -2095,7 +2104,7 @@
           </span>
         </div>
         <div class="drow">
-          <select class="btn" id="rollPick" aria-label="Factory rolls"></select>
+          <select class="btn" id="rollPick" aria-label="Rolls: the factory rolls and yours"></select>
           <span class="cl">length</span>
           <button class="btn small" id="rollLenDn" aria-label="Fewer steps">&minus;</button>
           <span class="dstat" id="rollLenV">16</span>
@@ -2110,8 +2119,23 @@
           <label class="tempo">accent <input type="range" id="rollAcc" aria-label="Accent velocity"><output class="fread" id="rollAccV" for="rollAcc" aria-hidden="true"></output></label>
           <label class="tempo">transpose <input type="range" id="rollTr" aria-label="Transpose, semitones"><output class="fread" id="rollTrV" for="rollTr" aria-hidden="true"></output></label>
         </div>
+        <div class="drow" id="rollMine">
+          <span class="cl">yours</span>
+          <span class="hwin" id="rollNameWin"><input id="rollName" type="text" maxlength="40" placeholder="roll name" autocomplete="off" spellcheck="false" aria-label="Name to save this roll under" title="Name to save this roll under"></span>
+          <button class="btn small" id="rollSave" title="Keep this roll in this browser by the name in the box. The same name again replaces it.">save roll</button>
+          <button class="btn small" id="rollDel" title="Delete the loaded roll from your rolls">delete</button>
+          <span class="dstat" id="rollMsg" role="status" aria-live="polite"></span>
+        </div>
+        <div class="drow" id="rollChainRow">
+          <span class="cl">chain</span>
+          <button class="btn small" id="rollChainOn" aria-pressed="false" title="Play the chain of rolls in turn instead of the paper alone">chain</button>
+          <button class="btn small" id="rollChainAdd" title="Add the roll on the paper to the end of the chain">+ this roll</button>
+          <button class="btn small" id="rollChainClear" title="Empty the chain">clear chain</button>
+          <span class="dstat" id="rollChainN">empty</span>
+        </div>
+        <ol id="rollChain" aria-label="The chain: its rolls in the order they play"></ol>
         <div class="drow"><span class="chips" id="rollDest" role="group" aria-label="The device the roll plays"><span class="cl">plays</span></span></div>
-        <p class="note">Sixteen steps of punched paper, read as it passes the brass bar. A hole plays its note; accent plays it at the accent velocity; slide holds it into the next hole so a one-voice device glides; tie carries the note before it through the step. Run on and the roll plays whenever the rack transport does, beside a song from the library and Dekatron's pattern. Play here starts the transport from the top. It plays the device lit on the rail, or the one you pick. Key in: each key you play sets the picked step and moves on. The roll is kept in this browser, and a project (Rack tab) saves and loads it with the patches and the mix.</p>
+        <p class="note">Sixteen steps of punched paper, read as it passes the brass bar. A hole plays its note; accent plays it at the accent velocity; slide holds it into the next hole so a one-voice device glides; tie carries the note before it through the step. Run on and the roll plays whenever the rack transport does, beside a song from the library and Dekatron's pattern. Play here starts the transport from the top. It plays the device lit on the rail, or the one you pick. Key in: each key you play sets the picked step and moves on. Save roll keeps the paper under a name in your rolls (the list above). The chain plays rolls in turn, each as many times as you set, then comes round again: add the roll on the paper with + this roll, light chain, and play; the paper shows the roll being read. The roll, your rolls and the chain are kept in this browser, and a project (Rack tab) saves and loads the roll and the chain with the patches and the mix.</p>
       </div>
     </section>
 
@@ -2479,7 +2503,7 @@ function liveBus() { return E && (booted || !bootProj) ? E.mix.bus() : (bootProj
 function rollForProject() {
   try { if (roll) return roll.project(); } catch (e) {}
   const saved = store.get(ROLL_KEY, null);
-  return saved && saved.pat ? { pat: saved.pat, dest: saved.dest, run: saved.run === true } : null;
+  return saved && saved.pat ? Object.assign({ pat: saved.pat, dest: saved.dest, run: saved.run === true }, saved.chain ? { chain: saved.chain } : {}) : null;
 }
 function collectProject() {
   const st = E ? E.transport.state() : null;
@@ -2696,7 +2720,10 @@ function applyProject(raw) {
   if (proj.roll) {
     let done = false;
     try { if (roll) done = roll.applyProject(proj.roll); } catch (e) {}
-    if (!done) store.set(ROLL_KEY, { pat: proj.roll.pat, dest: proj.roll.dest, run: proj.roll.run, edited: true });
+    if (!done) {
+      const was = store.get(ROLL_KEY, null) || {};
+      store.set(ROLL_KEY, { pat: proj.roll.pat, dest: proj.roll.dest, run: proj.roll.run, edited: true, chain: proj.roll.chain || was.chain });
+    }
   }
   saveLocal(localStorage, proj);
   return proj;

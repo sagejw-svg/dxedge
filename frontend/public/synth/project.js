@@ -22,7 +22,7 @@ import { normalizeResnatron } from './resnatron.js';
 import { normalizeStrip, normalizeBus } from './mixer.js';
 import { normalizeArmed } from './mixsession.js';
 import { clampTempo, normalizeSig } from './transport.js';
-import { normalizeRoll } from './paperroll.js';
+import { normalizeRoll, normalizeChain } from './paperroll.js';
 
 export const PROJECT_SCHEMA = 1;
 export const PROJECT_KEY = 'dxrack_project';
@@ -30,11 +30,15 @@ export const PROJECT_KEY = 'dxrack_project';
 // The paper roll in the project (17 Nov 2026): its pattern, the device it plays ('lit' is the device lit on
 // the rail) and its run switch. Optional: a project saved before 17 Nov has no roll, and loading one leaves
 // the roll as it is. A file's dest is a plain device id or 'lit'; the strip checks it against the rack again
-// when it applies the project.
+// when it applies the project. Since 18 Nov a roll may also carry `chain` (song mode: rolls by name, each
+// with a copy of its pattern), still v 1.
 export function normalizeProjectRoll(r) {
   if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
   const dest = typeof r.dest === 'string' && /^[a-z][a-z0-9]{0,31}$/.test(r.dest) ? r.dest : 'lit';
-  return { pat: normalizeRoll(r.pat), dest, run: r.run === true };
+  const out = { pat: normalizeRoll(r.pat), dest, run: r.run === true };
+  // the chain (18 Nov): optional too; a project saved before has none and leaves the chain as it is
+  if (r.chain && typeof r.chain === 'object' && !Array.isArray(r.chain)) out.chain = normalizeChain(r.chain);
+  return out;
 }
 
 export function normalizeProject(raw) {

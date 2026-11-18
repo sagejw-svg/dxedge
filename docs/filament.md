@@ -75,8 +75,8 @@ task can read it).
 | `frontend/public/synth/smf.js` | Our own Standard MIDI File reader and writer (pure functions): `readSMF`, `songOf` (tempo map to seconds, multi-channel tracks split per channel, format 2 played in sequence), `writeSMF` (format 1, 480 ppq), `bytesOf` |
 | `frontend/public/synth/deck.js` | The MIDI deck above the keys: recorder, import with the track list and device chips, the player (150 ms lookahead, 25 ms timer, frame-exact `at`), Render WAV. Its clock is private; it still uses `smf.js` |
 | `frontend/public/synth/player.js` | Song library player. Loads a bundled file, an opened file, or a drop, and plays it on `host.transport` (play, stop, tempo). Each MIDI channel routes to a device |
-| `frontend/public/synth/paperroll.js` | The paper roll's pure part: the pattern schema (`kind: 'paperroll'`, `v: 1`; 16 steps of note, punch, accent, slide, tie; length, step rate, gate, swing, velocity, accent velocity, transpose), `normalizeRoll`, `rollPlan` (the notes that start on a run of steps, ties and slides resolved), `rollScore`, six factory rolls |
-| `frontend/public/synth/paperroll-ui.js` | The paper roll strip under the song library: the step editor, the scheduler on `host.transport` (150 ms lookahead, a 25 ms timer, frame stamps, the library player's delivery paths; a strike more than 60 ms late is dropped), the canvas of punched paper moving past a brass reader. State in localStorage `filament_roll` |
+| `frontend/public/synth/paperroll.js` | The paper roll's pure part: the pattern schema (`kind: 'paperroll'`, `v: 1`; 16 steps of note, punch, accent, slide, tie; length, step rate, gate, swing, velocity, accent velocity, transpose), `normalizeRoll`, `rollPlan` (the notes that start on a run of steps, ties and slides resolved), `rollScore`, six factory rolls; since 18 Nov the user rolls (`normalizeUserRolls`, localStorage `filament_rolls`) and the chain (`normalizeChain`, `chainSegments`, `chainAt`, `segPlan`, `chainScore`) |
+| `frontend/public/synth/paperroll-ui.js` | The paper roll strip under the song library: the step editor, the scheduler on `host.transport` (150 ms lookahead, a 25 ms timer, frame stamps, the library player's delivery paths; a strike more than 60 ms late is dropped), the canvas of punched paper moving past a brass reader. State in localStorage `filament_roll` (with the chain since 18 Nov); save roll, delete, the chain row and the chain's segment scheduler |
 | `frontend/public/synth/theremin.js` | Theremin mode's pure part: the page settings (`filament_theremin`: on, the pad's left note C1 to C4, 1 to 5 octaves across, snap, volume range 12 to 60 dB), `normalizeThm`, `padPitch` (across to a fractional MIDI pitch, snap pulling toward the nearest note), `padLevel` (up to a level: the bottom 3% is silence, then the range in dB to 0 dB at the top), `tuneOf` (nearest note and cents). Our own code. |
 | `frontend/public/synth/theremin-ui.js` | The Theremin section (Filament's Pad tab on a phone): the pad (pointer, one note at a time, and keys: Enter, arrows, Escape), the chips and knobs, the readout, the pad drawn in the page's frame loop, and `eye()`, which the frame loop asks for the magic eye's tuning while the pad is held. Sends `{t:'thm',on,p,a}` to Filament's worklet. Our own code. |
 | `frontend/public/synth/share.js` | Patch links and patch files (10 Nov 2026), our own code: the `dxpatch` document (`kind: 'dxpatch'`, `v: 1`, `device`, `name`, `patch`, the whole normalized patch, not a difference from today's defaults), `encodePatch` (the `?p=` text: `1z` + base64url of the JSON deflated with CompressionStream 'deflate-raw', or `1j` + base64url of the plain JSON where a browser has no CompressionStream), `decodePatch` (reads at most 65536 characters and inflates at most 262144 bytes), `readDoc` (a dxpatch, or a bare patch on the device it names or the lit one; never a project or a mix), `safeJSON` (drops `__proto__`, `constructor` and `prototype` keys), `patchFileName`. index.html applies a document through the device's own normalizer (`applyPatchDoc`, the menu's path, so undo goes back) and reads `?p=` once at boot, then takes it off the address |
@@ -1044,9 +1044,22 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         dest must be a plain device id this rack has, else the roll plays the lit device. The edit mark is off only when the
         pattern is a factory roll as shipped. Applied under a playing transport, a roll whose run comes on starts on the grid
         from the beat now. The boot still reads the roll from `filament_roll`, as the patches keep their own keys.
-  - [ ] Still open: several named user rolls and a chain of rolls (song mode); the
-        MIDI deck recording the roll's notes, and the master Render WAV including it; the on-screen keys lighting with the roll's
-        notes; per-step velocity or probability, if wanted.
+  - [x] Named user rolls and a chain of rolls, song mode (18 Nov 2026, nightly). A "yours" row: a name box, save roll and delete.
+        Save keeps the paper under the name in the box (the roll's own name if the box is empty); the same name again, in any case,
+        saves over it; a factory roll's name is refused. Up to 64, kept in localStorage `filament_rolls`; the roll list shows them under
+        "Your rolls" after the factory group (factory values stay their index, so old links to the list hold). Delete takes the loaded
+        user roll out of the list and leaves it on the paper, marked edited. A "chain" row: the chain key, + this roll (the roll on the
+        paper, which must be a factory roll as shipped or a saved user roll), clear chain, and a list of up to 16 entries, each with
+        reps - and + (1 to 16), move earlier and remove. With chain lit and run on, the roll plays the chain from the transport's beat 0:
+        each entry's roll `reps` times, then the next, and round again; the paper and the editor take the roll the reader is on, and
+        the position window reads "entry/entries · step". An entry names its roll and keeps a copy: it plays your roll of that name,
+        else the factory roll, else its copy, and the rolls are read again at each change of entry, so a roll saved by name while the
+        chain plays is heard on its next turn. Nothing crosses an entry's end: a tie run or a slide on the last step ends at the gate
+        there (`segPlan`). The chain is kept in `filament_roll` and goes into a project with each entry's copy (`roll.chain`,
+        optional, still `v: 1`; a project without one leaves the chain alone). Chain on or off, or an entry changed, under a playing
+        transport picks up on the grid from the beat now. No device's audio path changed.
+  - [ ] Still open: the MIDI deck recording the roll's notes, and the master Render WAV including it; the on-screen keys lighting
+        with the roll's notes; per-step velocity or probability, if wanted.
 - [ ] Theremin mode with the magic eye as tuning indicator - first slice 9 Nov 2026 (nightly). Filament only.
   - [x] The pad: a Theremin section on Filament's panel (a full row on a desktop; on a phone its own Pad tab after Play, the pad
         240 px tall, since the Play tab already shows four sections). Across is
