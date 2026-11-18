@@ -396,6 +396,12 @@
    "notification": {
     "push": "IMPOSSIBLE. No PushNotification tool exists in this session, confirmed by a keyword ToolSearch for push/notification/alert/ntfy (which returned only Monitor) and by a direct select: query for PushNotification, SendPushNotification and Notify (no matches). FIFTH consecutive night.",
     "email": "SENT. Not a quiet night in the Step 6 sense: a long-standing failing panel changed state on new structural evidence, and James holds an open decision whose premise that evidence removes, which is the same reason the 11-12 closure gave for telling him. Written with NO literal email address in the body per email-body-must-carry-no-literal-address."
+   },
+   "post_deploy": {
+    "commit": "b701e3c",
+    "deploy_result": "SUCCESS, nothing broken. Verified about 7 minutes after the push.",
+    "evidence": "/api/health read same-origin returned status ok with a FRESH timestamp of 2026-11-18T05:21:26Z, sfi 108, k_index 2, spots 403 (down from 500 pre-push, so the backend really did restart and re-fetch), feed_proxy true, forever_zoom true, version 2.0. sat_tles and pota_spots were back to 0, which is the expected post-restart cold cache per empty-feedproxy-cache-signals-a-backend-restart and not a regression. /cyber/ reloaded with 12 requests, zero non-200, zero console issues, 8 panels with zero .feed-error and zero stuck .loading, so the CISA advisories panel was healthy on a THIRD independent load tonight. /aethersdr/ reloaded with 9 requests and the same all-clean result. sw.js still serves dxedge-v226 matching HEAD, correct for a commit that touched no frontend source.",
+    "caveat": "A SECOND small commit was pushed after this to record the post-deploy result, following the 11-17 convention. Its own deploy is not separately verified, which is the usual and accepted regress for this routine; it touches only scripts/health/state.json and no site code."
    }
   }
  ],
