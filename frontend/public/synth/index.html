@@ -586,13 +586,68 @@
   .tr-slide { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .tr-slide input { flex: 1 1 auto; min-width: 0; }
   .tr-read { color: #cbb6e8; font-size: 12px; }
-  #trSeed { width: 7.5em; }
   body[data-dev="trochotron"] #trRoot .mod { background: #120e1c; border-color: #3a2c55; }
   body[data-dev="trochotron"] #trRoot h3 { color: #f0e6ff; letter-spacing: 1.6px; }
   body[data-dev="trochotron"] #trRoot .chip[aria-pressed="true"] { background: #e7c4ff; border-color: #e7c4ff; color: #1a1028; }
   body[data-dev="trochotron"] .devbtn[aria-pressed="true"] { color: #f4e9ff; border-color: #c9a6ff; background: rgba(201, 166, 255, 0.12); }
   body[data-dev="trochotron"] .devbtn[aria-pressed="true"] i { background: #c9a6ff; box-shadow: 0 0 7px #c9a6ff; }
   body[data-dev="trochotron"] .tabs button[aria-selected="true"] { color: #f4e9ff; border-color: #c9a6ff; background: rgba(201, 166, 255, 0.12); }
+  /* Trochotron's seed and shape rows (graphics, 19 Nov). Each row is an engraved tag (seed, walk, view, scale, voices) and
+     joined switches in a recessed tray, the Orthicon and Phantastron finish in Trochotron's violet: the tray's black shows
+     through a 1 px gap and the keys grow to fill each line, so a switch that wraps reads as a keypad with no holes. The seed
+     is a recessed amber window joined to random (the Phantastron and Orthicon seed windows); play has a lamp, violet while
+     the piece plays; the walk's readout sits in a recessed amber window whose lamp lights with it. Key and route are dark
+     windows with amber text (the patch name's finish), each with its tag. Before, the seed was the browser's white number
+     box beside loose keys, the walk, scale and voice chips were loose, and key and route were plain grey selects.
+     Static apart from the lamps, which switch and never animate, so nothing for reduced motion. */
+  #trRoot .tr-row { flex-wrap: nowrap; gap: 6px 10px; margin: 8px 0 0; align-items: center; }
+  #trRoot .tr-row:first-of-type { margin-top: 10px; }
+  #trRoot .tr-seedrow, #trRoot .tr-viewrow, #trRoot .tr-selrow { flex-wrap: wrap; }
+  #trRoot .tr-viewrow { margin-bottom: 10px; }
+  #trRoot .tr-selrow { margin-bottom: 6px; }
+  #trRoot .tr-tag { flex: 0 0 52px; white-space: nowrap; font-size: 9.5px; letter-spacing: 1.4px; color: #b9a6d6;
+    text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(240,230,255,0.08); }
+  #trRoot .tr-join { display: flex; flex-wrap: wrap; gap: 1px; flex: 0 1 auto; min-width: 0; margin: 0;
+    background: #000; border: 1px solid #000; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 1px 0 rgba(240,230,255,0.06), inset 0 1px 3px rgba(0,0,0,0.9); }
+  #trRoot .tr-join > .chip { flex: 1 1 auto; margin: 0; border: 0; border-radius: 0; min-height: 30px; padding: 3px 10px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; font-size: 11.5px; font-weight: 400;
+    background: linear-gradient(180deg, #221a35, #140f20); color: #ddd0f2; box-shadow: inset 0 1px 0 rgba(240,230,255,0.07); }
+  #trRoot .tr-join > .chip:hover:not([aria-pressed="true"]) { color: #ffe2b0; }
+  body[data-dev="trochotron"] #trRoot .tr-join > .chip[aria-pressed="true"] { color: #1a1028; font-weight: 600; border: 0;
+    background: linear-gradient(180deg, #f1dcff, #cfa8f2); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), inset 0 0 8px rgba(255,240,255,0.25); }
+  #trRoot .tr-join > :focus-visible { position: relative; z-index: 1; outline: 2px solid #e7c4ff; outline-offset: -3px; }
+  #trRoot .tr-play i, #trRoot .tr-readwin i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #2c2440; box-shadow: inset 0 0 2px #000; }
+  #trRoot .tr-play[data-on="1"] { color: #f4e9ff; }
+  #trRoot .tr-play[data-on="1"] i { background: #e7c4ff; box-shadow: 0 0 0 1px #5a3c84, 0 0 7px #e7c4ff; }
+  #trSeed { -moz-appearance: textfield; appearance: textfield; box-sizing: border-box; flex: 0 0 auto; align-self: stretch; height: auto; min-height: 30px;
+    width: 13ch; min-width: 0; margin: 0; padding: 3px 8px; border: 0; border-radius: 0; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; caret-color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font: inherit; font-size: 12px; letter-spacing: 0;
+    text-align: center; font-variant-numeric: tabular-nums; }
+  #trSeed::-webkit-inner-spin-button, #trSeed::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #trSeed:hover { color: #ffe2b0; }
+  #trSeed:focus-visible { outline: 2px solid #e7c56a; outline-offset: -3px; position: relative; z-index: 1; }
+  #trRoot .tr-readwin { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 14em; min-width: 0; max-width: 360px; min-height: 26px; padding: 3px 10px;
+    box-sizing: border-box; border: 1px solid #000; border-radius: 4px; background: linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 14px rgba(255,150,40,0.05), 0 1px 0 rgba(240,230,255,0.07); }
+  #trRoot .tr-readwin .tr-read { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px;
+    color: #ffd08a; text-shadow: 0 0 6px rgba(255,170,60,0.45); }
+  #trRoot .tr-readwin[data-on="1"] i { background: #e7c4ff; box-shadow: 0 0 6px #e7c4ff; }
+  #trRoot .tr-cell { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+  #trRoot .tr-cell .tr-tag { flex-basis: 52px; }
+  #trRoot .tr-routecell .tr-tag { flex-basis: auto; }
+  #trRoot .tr-routecell { margin-left: 14px; }
+  #trRoot select.tr-sel { -webkit-appearance: none; appearance: none; margin: 0; min-height: 30px; padding: 3px 24px 3px 10px; border: 1px solid #000; border-radius: 6px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M.8.8 4.5 4.6 8.2.8' fill='none' stroke='%23c98a3a' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 9px center,
+      linear-gradient(180deg, #050403, #0d0a06);
+    box-shadow: 0 1px 0 rgba(240,230,255,0.06), inset 0 1px 3px rgba(0,0,0,0.95), inset 0 0 12px rgba(255,150,40,0.06);
+    color: #ffd08a; text-shadow: 0 0 5px rgba(255,170,60,0.4); font-size: 12px; letter-spacing: 0; }
+  #trRoot select.tr-sel:hover { color: #ffe2b0; }
+  #trRoot select.tr-sel:focus-visible { outline: 2px solid #e7c4ff; outline-offset: 1px; }
+  #trRoot select.tr-sel option { background: #121212; color: var(--text); text-shadow: none; }
+  #trKey { width: 7.5ch; }
+  #trRoute { min-width: 15ch; }
   body[data-dev="gyrotron"] #mStereo, body[data-dev="gyrotron"] #mEns, body[data-dev="gyrotron"] #mOut,
   body[data-dev="gyrotron"] #mSpk, body[data-dev="gyrotron"] #mRoom, body[data-dev="gyrotron"] #chassis { display: none !important; }
   #gyCanvas { width: 100%; height: 280px; max-width: 100%; display: block; touch-action: none; border-radius: 8px; border: 1px solid #4a3024; background: #140e0c; cursor: crosshair; }
@@ -1385,6 +1440,20 @@
     #phRoot .ph-join > .chip, #phRoot .ph-lift { min-height: 44px; min-width: 44px; padding: 4px 4px; font-size: 12px; }
     #phRoot .ph-lift { padding: 4px 12px; }
     #phRoot .ph-wirerow .ph-wires { flex: 1 1 0; min-height: 44px; }
+    /* Trochotron's rows on a phone (graphics, 19 Nov): the self-explaining tags drop, key and to stay; each switch fills its
+       line and every key, the seed window and the selects are 44 px or more. */
+    #trRoot .tr-tag:not(.tr-keeptag) { display: none; }
+    #trRoot .tr-row { flex-wrap: wrap; gap: 8px; }
+    #trRoot .tr-join { flex: 1 1 auto; }
+    #trRoot #trGens, #trRoot #trScales, #trRoot #trVoices, #trRoot #trViewJoin { flex: 1 1 100%; }
+    #trRoot .tr-join > .chip { min-height: 44px; min-width: 44px; padding: 4px 8px; font-size: 12px; }
+    #trSeed { min-height: 44px; flex: 1 1 10ch; width: auto; }
+    #trRoot .tr-readwin { flex: 1 1 100%; max-width: 100%; min-height: 32px; }
+    #trRoot .tr-cell .tr-tag { flex-basis: auto; }
+    #trRoot .tr-routecell { margin-left: 6px; flex: 1 1 auto; }
+    #trRoot .tr-routecell select { flex: 1 1 auto; min-width: 0; }
+    #trRoot select.tr-sel { min-height: 44px; }
+    #trRoot #trSeedJoin > #trRandom { flex: 0 0 auto; padding: 4px 14px; }
     body[data-dev="additron"] .tabs [data-go="osc"], body[data-dev="additron"] .tabs [data-go="filter"],
     body[data-dev="additron"] .tabs [data-go="mod"], body[data-dev="additron"] .tabs [data-go="stereo"],
     body[data-dev="additron"] .tabs [data-go="patch"], body[data-dev="additron"] .tabs [data-go="voice"],

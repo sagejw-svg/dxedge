@@ -323,53 +323,79 @@ export function mountTrochotronPanel(container, hooks) {
   host.setHooks(hooks);
   const play = section('play', 'mTrPlay', 'Seed');
   play.dataset.full = '';
-  const bar = el('div', { class: 'tr-bar' });
-  const seed = el('input', { id: 'trSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', 'aria-label': 'Seed' });
-  const random = el('button', { id: 'trRandom', class: 'btn small', type: 'button' }, 'random');
-  const playBtn = el('button', { id: 'trPlayBtn', class: 'btn small', type: 'button' }, 'play');
-  const stopBtn = el('button', { id: 'trStopBtn', class: 'btn small', type: 'button' }, 'stop');
-  const linkBtn = el('button', { id: 'trLink', class: 'btn small', type: 'button' }, 'copy link');
-  const midiBtn = el('button', { id: 'trMidi', class: 'btn small', type: 'button' }, 'export .mid');
-  bar.append(seed, random, playBtn, stopBtn, linkBtn, midiBtn);
-  const gens = el('div', { class: 'chips', id: 'trGens' });
+  // Graphics 19 Nov: each control row is an engraved tag and joined switches in a recessed tray (the Orthicon and
+  // Phantastron finish), the seed a recessed amber window, play a key with a lamp. Ids and handlers are unchanged.
+  const tag = text => el('span', { class: 'geiss-lab tr-tag', 'aria-hidden': 'true' }, text);
+  const join = (id, label) => el('div', Object.assign({ class: 'tr-join', role: 'group', 'aria-label': label }, id ? { id } : {}));
+  const bar = el('div', { class: 'tr-bar tr-row tr-seedrow' });
+  const seed = el('input', { id: 'trSeed', type: 'number', min: '0', max: String(SEED_MAX), step: '1', 'aria-label': 'Seed',
+    title: 'Seed. The same seed and settings grow the same piece.' });
+  const random = el('button', { id: 'trRandom', class: 'chip', type: 'button' }, 'random');
+  const playBtn = el('button', { id: 'trPlayBtn', class: 'chip tr-play', type: 'button', 'data-on': '0' });
+  const playName = el('span', { class: 'tr-playname' }, 'play');
+  playBtn.append(el('i', { 'aria-hidden': 'true' }), playName);
+  const stopBtn = el('button', { id: 'trStopBtn', class: 'chip', type: 'button' }, 'stop');
+  const linkBtn = el('button', { id: 'trLink', class: 'chip', type: 'button' }, 'copy link');
+  const midiBtn = el('button', { id: 'trMidi', class: 'chip', type: 'button' }, 'export .mid');
+  const seedJoin = join('trSeedJoin', 'Seed');
+  seedJoin.append(seed, random);
+  const runJoin = join('trRunJoin', 'Play the piece');
+  runJoin.append(playBtn, stopBtn);
+  const outJoin = join('trOutJoin', 'Share the piece');
+  outJoin.append(linkBtn, midiBtn);
+  bar.append(tag('seed'), seedJoin, runJoin, outJoin);
+  const gens = join('trGens', 'Walk');
+  gens.classList.add('chips');
   GENERATORS.forEach(id => {
     const b = el('button', { class: 'chip', type: 'button', 'data-gen': id, 'aria-pressed': 'false' }, GEN_LABEL[id]);
     b.addEventListener('click', () => { mutate({ generator: id }); });
     gens.appendChild(b);
   });
-  const viewRow = el('div', { class: 'tr-bar' });
-  const zoomIn = el('button', { id: 'trZoomIn', class: 'btn small', type: 'button' }, 'zoom in');
-  const zoomOut = el('button', { id: 'trZoomOut', class: 'btn small', type: 'button' }, 'zoom out');
-  const reset = el('button', { id: 'trReset', class: 'btn small', type: 'button' }, 'reset view');
+  const genRow = el('div', { class: 'tr-bar tr-row' });
+  genRow.append(tag('walk'), gens);
+  const viewRow = el('div', { class: 'tr-bar tr-row tr-viewrow' });
+  const zoomIn = el('button', { id: 'trZoomIn', class: 'chip', type: 'button' }, 'zoom in');
+  const zoomOut = el('button', { id: 'trZoomOut', class: 'chip', type: 'button' }, 'zoom out');
+  const reset = el('button', { id: 'trReset', class: 'chip', type: 'button' }, 'reset view');
+  const viewJoin = join('trViewJoin', 'View');
+  viewJoin.append(zoomIn, zoomOut, reset);
   const read = el('span', { id: 'trRead', class: 'tr-read' }, '');
-  viewRow.append(zoomIn, zoomOut, reset, read);
+  const readWin = el('span', { class: 'tr-readwin', id: 'trReadWin', 'data-on': '0' });
+  readWin.append(el('i', { 'aria-hidden': 'true' }), read);
+  viewRow.append(tag('view'), viewJoin, readWin);
   const canvas = el('canvas', { id: 'trCanvas', 'aria-label': 'Fractal and notes. Drag to move the view. The wheel zooms.' });
   const rules = el('pre', { id: 'trRules' });
-  play.append(bar, gens, viewRow, canvas, rules);
+  play.append(bar, genRow, viewRow, canvas, rules);
 
   const shape = section('shape', 'mTrShape', 'Shape');
-  const scales = el('div', { class: 'chips', id: 'trScales' });
+  const scales = join('trScales', 'Scale');
+  scales.classList.add('chips');
   SCALE_NAMES.forEach(id => {
     const b = el('button', { class: 'chip', type: 'button', 'data-scale': id, 'aria-pressed': 'false' }, id);
     b.addEventListener('click', () => mutate({ scale: id }));
     scales.appendChild(b);
   });
-  const key = el('select', { id: 'trKey', class: 'btn', 'aria-label': 'Key' });
+  const key = el('select', { id: 'trKey', class: 'btn tr-sel', 'aria-label': 'Key' });
   KEYS.forEach((name, i) => {
     const o = el('option', { value: String(i) }, name);
     key.appendChild(o);
   });
-  const voices = el('div', { class: 'chips', id: 'trVoices' });
+  const voices = join('trVoices', 'Voices');
+  voices.classList.add('chips');
   [['1', 'lead'], ['2', 'mid + lead'], ['3', 'bass mid lead']].forEach(([n, label]) => {
     const b = el('button', { class: 'chip', type: 'button', 'data-voices': n, 'aria-pressed': 'false' }, label);
     b.addEventListener('click', () => mutate({ voices: +n }));
     voices.appendChild(b);
   });
-  const route = el('select', { id: 'trRoute', class: 'btn', 'aria-label': 'Route notes to' });
+  const route = el('select', { id: 'trRoute', class: 'btn tr-sel', 'aria-label': 'Route notes to' });
   ROUTES.forEach(id => {
     const o = el('option', { value: id }, id === 'internal' ? 'built-in voice' : id);
     route.appendChild(o);
   });
+  const scaleRow = el('div', { class: 'tr-bar tr-row' });
+  scaleRow.append(tag('scale'), scales);
+  const voiceRow = el('div', { class: 'tr-bar tr-row' });
+  voiceRow.append(tag('voices'), voices);
   function slider(id, label, min, max, step) {
     const wrap = el('label', { class: 'tr-slide' });
     wrap.append(document.createTextNode(label + ' '));
@@ -385,9 +411,13 @@ export function mountTrochotronPanel(container, hooks) {
   const timbre = slider('trTimbre', 'timbre', 0, 1, 0.01);
   const grid = el('div', { class: 'tr-grid' });
   grid.append(depth.wrap, tempo.wrap, density.wrap, chaos.wrap, timbre.wrap);
-  const row2 = el('div', { class: 'tr-bar' });
-  row2.append(key, route);
-  shape.append(scales, voices, row2, grid);
+  const row2 = el('div', { class: 'tr-bar tr-row tr-selrow' });
+  const keyCell = el('span', { class: 'tr-cell' });
+  keyCell.append(el('span', { class: 'geiss-lab tr-tag tr-keeptag', 'aria-hidden': 'true' }, 'key'), key);
+  const routeCell = el('span', { class: 'tr-cell tr-routecell' });
+  routeCell.append(el('span', { class: 'geiss-lab tr-tag tr-keeptag', 'aria-hidden': 'true' }, 'to'), route);
+  row2.append(keyCell, routeCell);
+  shape.append(scaleRow, voiceRow, row2, grid);
 
   container.append(play, shape);
 
@@ -420,8 +450,15 @@ export function mountTrochotronPanel(container, hooks) {
     rules.textContent = piece.rules || '';
     const g = p.generator === 'julia' ? 'Julia' : p.generator === 'mandelbrot' ? 'Mandelbrot' : GEN_LABEL[p.generator];
     read.textContent = g + ' · ' + piece.notes.length + ' notes · ' + KEYS[p.key] + ' ' + p.scale;
-    playBtn.textContent = host.meter().playing ? 'playing' : 'play';
+    setPlaying(!!host.meter().playing);
     drawPiece(canvas, piece, p, host.meter().beat || 0);
+  }
+  function setPlaying(on) {
+    const word = on ? 'playing' : 'play';
+    if (playName.textContent !== word) playName.textContent = word;
+    const d = on ? '1' : '0';
+    if (playBtn.dataset.on !== d) playBtn.dataset.on = d;
+    if (readWin.dataset.on !== d) readWin.dataset.on = d;
   }
   function commitSeed() {
     // a typed seed past a uint32 is held at the top, not wrapped round by the normalizer's >>> 0
@@ -510,8 +547,9 @@ export function mountTrochotronPanel(container, hooks) {
   }, { passive: false });
   host.setPieceListener(() => sync());
   host.setMeterListener(() => {
+    // the lamp follows the meter both ways: a click's sync can run before the first playing meter arrives
+    setPlaying(!!host.meter().playing);
     if (host.meter().playing) drawPiece(canvas, host.piece(), current(), host.meter().beat || 0);
-    else playBtn.textContent = 'play';
   });
   sync();
   return { sync, canvas };

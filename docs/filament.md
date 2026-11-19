@@ -1988,8 +1988,8 @@ and proven by measurement), test suite health, load time and memory, code health
 The 3 AM graphics job (scheduled task) ships one visual improvement a night, no audio or DSP changes.
 Ranked from screenshots at 1366x1000 and 375x667 (every rail device, every phone tab). It leaves the tube
 visuals alone while the Tube show item in 0.3 is open. Measured means a script read it; seen means a screenshot.
-Rank of the open items (17 Nov): 1. Trochotron's seed row (the last white field on the rack, seen again tonight at 1366 px: "42" in a white box beside loose keys);
-2. Gyrotron's route menu; 3. Rhumbatron's body and exciter chips; 4. Lattice's LFO and Face cards stretched at 900 to 1099 px (measured 16 Nov); 5. rail plate titles at 761 to 959 px; 6. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
+Rank of the open items (19 Nov, seen again tonight at 1366 and 375 px): 1. Gyrotron's route menu (still the browser's select across its card);
+2. Rhumbatron's body and exciter chips (still two rows of loose chips on a phone); 3. Lattice's LFO and Face cards stretched at 900 to 1099 px (measured 16 Nov); 4. rail plate titles at 761 to 959 px; 5. the phone first screen's slimmer chassis (once the Tube show item closes); then the rest as listed.
 The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rack black and black light) belongs to the nightly; this job leaves those parts alone until it closes. The wide-cards item for the three slider devices is mostly answered by the row fill (see 1 Nov). The Lattice and Mote palette item waits on James.
 
 - [x] 23 Oct: Mix desk strips. Measured before: the strip the keys play carried the class `keys`, which is
@@ -2260,9 +2260,22 @@ The faces item in 0.3 (rail, outboard row, mix desk, MIDI deck, keybed under rac
 - [ ] Lattice's cards at 900 to 1099 px (16 Nov, measured, found on the way): the LFO card shares a row with the Matrix (1,234 px),
   765 px empty at 900, 865 at 1024; Face 691 px empty beside Vis at 1024. Not the Mix card, so tonight's change does not touch it.
   Start-aligning those cards, or a wide Matrix that takes its own row below 1100 px, would fix it.
-- [ ] Trochotron's seed row (15 Nov, seen at 1366 and 375 px): the seed is the browser's white number box ("42"), the only white
-  field left on the rack, beside loose random, play, stop, copy link and export .mid keys; the key select and "built-in voice" in
-  Shape are plain selects. The Orthicon and Phantastron seed windows (recessed amber) and a tagged joined switch would match.
+- [x] 19 Nov: Trochotron's seed and shape rows (the top item of 17 Nov). Seen before at 1366 and 375 px: the seed was the browser's
+  white number box ("42"), the last white field on the rack, beside loose random, play, stop, copy link and export .mid keys; the
+  walk, scale and voice chips were loose rows; the walk's readout was bare violet text; key and route ("D", "built-in voice") were
+  plain grey selects. Measured before: Seed card 490 px and Shape card 174 px tall at 1366; 582 and 506 px at 375. Now: every row
+  is an engraved tag (SEED, WALK, VIEW, SCALE, VOICES) and joined switches in a recessed tray, the Orthicon and Phantastron finish
+  in Trochotron's violet (lit key 9.2:1, unlit 11.3:1 measured). The seed is a recessed amber window joined to random (13.8:1,
+  ten digits fit); play and stop are one switch and play has a lamp, violet while the piece plays; copy link and export .mid are
+  one switch; zoom in, zoom out and reset view are one switch beside the walk's readout in a recessed amber window (13.8:1) whose
+  lamp lights with play. Key and route are dark windows with amber text and a chevron (the patch name's finish, 13.8:1), each
+  with its tag (KEY, TO). On a phone the self-explaining tags drop and KEY and TO stay; every key, the seed window and both
+  selects are 44 px or more; no sideways scroll at 320 to 1366 px. Found on the way, measured on main: the play key never read
+  "playing" when the click's own redraw ran before the first playing meter (the meter listener only ever set "play"); the lamp
+  and the word now follow the meter both ways. Cost: the Seed card is 508 px at 1366 (18 more), 609 at 375 (27 more), 663 at
+  320; the Shape card 190 px at 1366 (16 more), 515 at 375 (9 more, the selects grew to 44 px). Static apart from the lamps,
+  which switch and never animate, so nothing for reduced motion. Ids, handlers and the tab order are unchanged; no patch, DSP or
+  worklet touched. New checks: Tc. (29).
 - [x] 13 Nov: the patch name window on a phone and a small tablet (the top item of 12 Nov, plus a defect found tonight).
   Measured before: a user patch added a 57 px delete key to the joined edit keys, so the name window fell from 137 to 80 px at
   375 px ("My Te..."), 122 to 65 at 360, 152 to 95 at 390, and at 320 px the edit keys wrapped onto a row of their own (the
