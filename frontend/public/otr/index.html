@@ -1658,6 +1658,11 @@
   // (or reloading) rejoins live. Station-only shows live in byId but not in CAT.shows, so the builder,
   // search and the footer count never see them.
   var NETWORKS = ['nbc','cbs','abc','mutual'], NETS = {}, NET_ORDER = [], netGuideDay = -1, netGuideSel = null;
+  // The four grids load in parallel and whichever lands first used to become the
+  // guide's selection for good (CBS usually beat NBC). netGuideAuto stays true
+  // until a person or a tune-in picks a network, so later arrivals can still
+  // move the default to the tuned network or the first in NETWORKS order.
+  var netGuideAuto = true;
   function loadNetworks(){
     // one shared file of station-only shows (stations/shows.json), then each network's grid
     getJSON('stations/shows.json').catch(function(){ return null; }).then(function(extra){
@@ -1905,7 +1910,7 @@
       c.innerHTML = '<div class="st-head"><span class="st-name">'+escapeHtml(N.name)+'<span class="st-season">live</span></span>'+
         '<span class="st-actions"><span class="st-count">'+netShowCount(N)+' shows</span></span></div>'+
         '<div class="st-now"></div><div class="st-bar"><i></i></div><div class="st-left"><span class="l"></span><span class="rejoin" style="display:none">rejoin live</span></div><div class="st-next"></div>';
-      c.onclick = function(){ startNetwork(id); setGuideNet(id); };
+      c.onclick = function(){ startNetwork(id); setGuideNet(id, true); };
       el.appendChild(c);
     });
     row.hidden = !NET_ORDER.length;
@@ -1914,14 +1919,16 @@
     var pick=$('netGuidePick'); pick.innerHTML='';
     NET_ORDER.forEach(function(id){
       var b=document.createElement('button'); b.type='button'; b.className='gchip'; b.dataset.net=id; b.textContent=NETS[id].name;
-      b.onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); setGuideNet(id); if(!$('netGuide').open) $('netGuide').open=true; };
+      b.onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); setGuideNet(id, true); if(!$('netGuide').open) $('netGuide').open=true; };
       pick.appendChild(b);
     });
-    setGuideNet(netGuideSel && NETS[netGuideSel] ? netGuideSel : (state.network && NETS[state.network] ? state.network : NET_ORDER[0]));
+    var tuned = state.network && NETS[state.network] ? state.network : null;
+    setGuideNet(!netGuideAuto && netGuideSel && NETS[netGuideSel] ? netGuideSel : (tuned || NET_ORDER[0]), !!tuned);
     markActiveChip();
   }
-  function setGuideNet(id){
+  function setGuideNet(id, explicit){
     if(!NETS[id]) return;
+    if(explicit) netGuideAuto = false;
     var changed = netGuideSel!==id; netGuideSel=id;
     $('netGuideName').textContent = NETS[id].grid.long || NETS[id].name;
     $('netGuideDay').textContent = OTRStation.DAYS[new Date().getDay()]+', your local time';
@@ -2688,7 +2695,7 @@
     if(CAT && CAT.channels.length) return { kind:'ch', id:CAT.channels[0], name:titleCase(CAT.channels[0]) };
     return null;
   }
-  function tuneTarget(tg){ wakeAudio(); if(tg.kind==='net'){ startNetwork(tg.id); setGuideNet(tg.id); } else startChannel(tg.id); }
+  function tuneTarget(tg){ wakeAudio(); if(tg.kind==='net'){ startNetwork(tg.id); setGuideNet(tg.id, true); } else startChannel(tg.id); }
   function nowOn(tg){
     var now=Date.now()/1000;
     if(tg.kind==='net'){ var N=NETS[tg.id], a=N && N.onAir(now); if(!a) return null; var d=N.describe(a.item); return { show:d.show, title:niceTitle(d.title) }; }

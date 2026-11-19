@@ -48,7 +48,7 @@
     <input id="call" maxlength="12" autocomplete="off" autocapitalize="characters" autocorrect="off"
            spellcheck="false" placeholder="KK6ZZZ" aria-label="Your callsign">
   </div>
-  <div id="foot" class="hide">dx//edge &middot; <a href="/">dxedge.net</a> &middot; m mutes &middot; p pauses</div>
+  <div id="foot" class="hide">dx//edge &middot; <a href="/">dxedge.net</a> &middot; m mutes &middot; p pauses &middot; or tap the HUD icons</div>
 </div>
 <script src="/lib/stat.js"></script>
 <script>
@@ -561,8 +561,8 @@ window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (GAME_KEYS.includes(e.code)) e.preventDefault();
   if (e.repeat) { keys[e.code] = true; return; }
-  if (e.code === 'KeyM') { muted = !muted; try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (x) {} pops.push({ x: W / 2, y: H - 100, text: muted ? 'MUTED' : 'SOUND ON', c: C.dim, t: 0, life: 0.9 }); return; }
-  if (e.code === 'KeyP' || e.code === 'Escape') { if (state === 'play') { paused = !paused; lastFrame = 0; } return; }
+  if (e.code === 'KeyM') { toggleMute(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (e.code === 'Enter' || e.code === 'Space') { if (anyStart()) return; }
   keys[e.code] = true;
   prime();
@@ -570,11 +570,28 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; ptr.down = false; });
 
+function toggleMute() {
+  muted = !muted; try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (x) {}
+  pops.push({ x: W / 2, y: H - 100, text: muted ? 'MUTED' : 'SOUND ON', c: C.dim, t: 0, life: 0.9 });
+}
+function togglePause() { if (state === 'play') { paused = !paused; lastFrame = 0; } }
+// HUD buttons (v0.2): phones have no M or P key, so the HUD carries a mute
+// and a pause target at its right edge during play. Logical coordinates.
+const BTN = { w: 26, h: 24, gap: 4 };
+BTN.pause = { x: W - 8 - BTN.w, y: (HUD - BTN.h) / 2 };
+BTN.mute  = { x: BTN.pause.x - BTN.gap - BTN.w, y: BTN.pause.y };
+function hitBtn(b, x, y) { return x >= b.x - 4 && x <= b.x + BTN.w + 4 && y >= b.y - 4 && y <= b.y + BTN.h + 4; }
 function px(ev) { const r = cv.getBoundingClientRect(); return (ev.clientX - r.left) / r.width * W; }
+function py(ev) { const r = cv.getBoundingClientRect(); return (ev.clientY - r.top) / r.height * H; }
 cv.addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
   if (document.activeElement === callEl) { callEl.blur(); return; }
   try { cv.focus({ preventScroll: true }); } catch (e) { cv.focus(); }
+  if (state === 'play') {
+    const x = px(ev), y = py(ev);
+    if (hitBtn(BTN.pause, x, y)) { togglePause(); return; }
+    if (hitBtn(BTN.mute, x, y)) { toggleMute(); return; }
+  }
   if (anyStart()) return;
   try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
   ptr.down = true; ptr.x = px(ev);
@@ -633,8 +650,10 @@ function draw() {
   cx.font = '700 14px ' + FONT; const dxw = cx.measureText('DX: ' + n + ' / ' + DXCC_TOTAL).width;
   text('DE ' + call, 12 + dxw + 12, HUD / 2 + 1, 10, C.muted, 'left');
   text('WAVE ' + wave, W / 2, HUD / 2, 11, C.muted, 'center');
-  text('HI ' + hi, W - 12, HUD / 2 - 6, 9, C.dim, 'right');
-  for (let i = 0; i < lives; i++) { cx.fillStyle = C.green; cx.fillRect(W - 12 - (i + 1) * 12, HUD / 2 + 3, 8, 5); }
+  const hudR = BTN.mute.x - 10;   // right edge for HI and lives, left of the buttons
+  text('HI ' + hi, hudR, HUD / 2 - 6, 9, C.dim, 'right');
+  for (let i = 0; i < lives; i++) { cx.fillStyle = C.green; cx.fillRect(hudR - (i + 1) * 12, HUD / 2 + 3, 8, 5); }
+  drawHudButtons();
 
   // enemies
   enemies.forEach(e => {
@@ -685,6 +704,26 @@ function draw() {
     text('space or tap to resume', W / 2, H / 2 + 20, 11, C.muted, 'center');
   }
   if (state === 'over') drawOver();
+}
+
+function drawHudButtons() {
+  // mute: a small speaker, struck through when muted. pause: two bars, or a
+  // play triangle while paused. Outlined boxes so they read as tap targets.
+  [BTN.mute, BTN.pause].forEach(b => {
+    cx.strokeStyle = C.border; cx.lineWidth = 1;
+    cx.strokeRect(b.x + 0.5, b.y + 0.5, BTN.w - 1, BTN.h - 1);
+  });
+  const m = BTN.mute, mx = m.x + BTN.w / 2, my = m.y + BTN.h / 2;
+  cx.fillStyle = muted ? C.dim : C.muted;
+  cx.beginPath(); cx.moveTo(mx - 7, my - 3); cx.lineTo(mx - 3, my - 3); cx.lineTo(mx + 1, my - 7);
+  cx.lineTo(mx + 1, my + 7); cx.lineTo(mx - 3, my + 3); cx.lineTo(mx - 7, my + 3); cx.closePath(); cx.fill();
+  cx.strokeStyle = muted ? C.dim : C.muted; cx.lineWidth = 1.5;
+  if (muted) { cx.beginPath(); cx.moveTo(mx - 8, my - 8); cx.lineTo(mx + 8, my + 8); cx.stroke(); }
+  else { cx.beginPath(); cx.arc(mx + 2, my, 5, -0.9, 0.9); cx.stroke(); }
+  const p = BTN.pause, pcx = p.x + BTN.w / 2, pcy = p.y + BTN.h / 2;
+  cx.fillStyle = C.muted;
+  if (paused) { cx.beginPath(); cx.moveTo(pcx - 4, pcy - 6); cx.lineTo(pcx + 6, pcy); cx.lineTo(pcx - 4, pcy + 6); cx.closePath(); cx.fill(); }
+  else { cx.fillRect(pcx - 5, pcy - 6, 3, 12); cx.fillRect(pcx + 2, pcy - 6, 3, 12); }
 }
 
 function drawTitle() {
@@ -765,7 +804,7 @@ try { cv.focus({ preventScroll: true }); } catch (e) {}
 requestAnimationFrame(frame);
 
 // test hook, not used by the game
-window.__dx = { update, start, get call() { return call; }, setCall, get state() { return state; }, get worked() { return worked; }, get enemies() { return enemies; }, get dxs() { return dxs; }, get ebullets() { return ebullets; }, get msg() { return msg; }, form: () => form, get lives() { return lives; }, get wave() { return wave; }, ship: () => ship, keys, spawnDX, makeCall, ENT, gameOver };
+window.__dx = { update, start, get call() { return call; }, setCall, get state() { return state; }, get worked() { return worked; }, get enemies() { return enemies; }, get dxs() { return dxs; }, get ebullets() { return ebullets; }, get msg() { return msg; }, form: () => form, get lives() { return lives; }, get wave() { return wave; }, get paused() { return paused; }, get muted() { return muted; }, BTN, ship: () => ship, keys, spawnDX, makeCall, ENT, gameOver };
 })();
 </script>
 </body>

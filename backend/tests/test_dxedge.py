@@ -61,8 +61,7 @@ class TestDXCC:
 # ─── VOACAP Engine ───────────────────────────────────────────────────────────
 
 from voacap_engine import (maidenhead_to_latlon, great_circle,
-                            solar_zenith, estimate_fof2,
-                            circuit_reliability, predict_path)
+                            solar_zenith, f2_layer_strength, predict_path)
 
 class TestVOACAP:
     def test_maidenhead_cm95(self):
@@ -88,22 +87,48 @@ class TestVOACAP:
         # San Diego midnight is ~7-8Z
         assert solar_zenith(32.7, -117.1, 7) > 90
 
-    def test_fof2_day_higher_than_night(self):
-        assert estimate_fof2(120, 30) > estimate_fof2(120, 105)
+    # f2_layer_strength(zenith, sfi) is a 0-1 electron density proxy; the
+    # engine maps it to an approximate foF2 as strength * 8 MHz.
+    def test_f2_day_higher_than_night(self):
+        assert f2_layer_strength(30, 120) > f2_layer_strength(105, 120)
 
-    def test_fof2_high_sfi_higher(self):
-        # At noon (zenith=20), high SFI should give higher fof2
-        assert estimate_fof2(200, 20) > estimate_fof2(70, 20)
-        # Values should be physically plausible (3.5-15 MHz range)
-        assert 3.5 <= estimate_fof2(120, 30) <= 15
+    def test_f2_high_sfi_higher(self):
+        # At noon (zenith=20), high SFI should give a stronger layer
+        assert f2_layer_strength(20, 200) > f2_layer_strength(20, 70)
 
-    def test_reliability_above_muf_is_zero(self):
-        assert circuit_reliability(28.0, 14.0, 4.0, 9000, 2) == 0.0
+    def test_f2_bounded_and_plausible(self):
+        for z in (0, 30, 60, 89, 95, 105, 150):
+            for sfi in (70, 120, 200):
+                v = f2_layer_strength(z, sfi)
+                assert 0.0 < v <= 1.0
+        # Full sun at SFI 120 should land near foF2 ~ 8 MHz (strength ~ 1)
+        assert 0.6 <= f2_layer_strength(30, 120) <= 1.0
+        # Night never drops to zero (residual ionization)
+        assert f2_layer_strength(120, 70) >= 0.05
+
+    def test_f2_twilight_monotonic(self):
+        # Across the terminator the layer should only weaken
+        prev = f2_layer_strength(85, 120)
+        for z in range(86, 110):
+            cur = f2_layer_strength(z, 120)
+            assert cur <= prev + 1e-9
+            prev = cur
+
+    def test_band_above_muf_is_zero(self):
+        # With the sun down everywhere on a SD->EU path and a weak sun,
+        # 10 m should be above the MUF and score zero.
+        r = predict_path("DM12", "EU", sfi=70, kp=2, ssn=20)
+        night = [h for h in r["hours"] if h["muf"] < 15]
+        assert night, "expected at least one low-MUF hour"
+        for h in night:
+            assert h["bands"]["10m"] == 0.0
 
     def test_high_kp_lowers_reliability(self):
-        lo = circuit_reliability(14.2, 20.0, 5.0, 9000, kp=1)
-        hi = circuit_reliability(14.2, 20.0, 5.0, 9000, kp=7)
-        assert lo > hi
+        lo = predict_path("DM12", "EU", sfi=120, kp=1, ssn=80)
+        hi = predict_path("DM12", "EU", sfi=120, kp=7, ssn=80)
+        lo_sum = sum(v for h in lo["hours"] for v in h["bands"].values())
+        hi_sum = sum(v for h in hi["hours"] for v in h["bands"].values())
+        assert lo_sum > hi_sum
 
     def test_predict_path_structure(self):
         r = predict_path("CM95", "EU", sfi=120, kp=2, ssn=80)
