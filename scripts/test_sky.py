@@ -95,8 +95,9 @@ def main():
         errors, failed = [], []
         external = ("arcgis", "nationalmap")
         page.on("pageerror", lambda e: errors.append(str(e)))
-        # Without a tile build, tiles/index.json 404s by design (the page falls back).
-        page.on("console", lambda m: errors.append(m.text) if m.type == "error" and not (tiles_dir is None and "404" in m.text) else None)
+        # Without a tile build, tiles/index.json 404s (or 403s on a live host whose
+        # pyramids are still being built) by design: the page falls back.
+        page.on("console", lambda m: errors.append(m.text) if m.type == "error" and not (tiles_dir is None and ("404" in m.text or "403" in m.text)) else None)
         page.on("requestfailed", lambda r: failed.append(r.url) if not any(x in r.url for x in external) else None)
         page.on("response", lambda r: failed.append("%d %s" % (r.status, r.url)) if r.status >= 400 and not any(x in r.url for x in external) and not r.url.endswith("tiles/index.json") else None)
 
