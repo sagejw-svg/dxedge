@@ -52,7 +52,9 @@ downloads them into `sky/ranch/hires/`.
   `tiles/index.json`, builds one full-screen slide per image, and mounts an
   OpenSeadragon viewer for the current slide and its neighbours.
 - A slide uses `tiles/<name>.dzi` when the pyramid exists, else the web JPG.
-  The pin ring is an HTML overlay placed from `pin_px` in `site.json`.
+  The location marker is four red crosshair ticks on the frame edges, aligned
+  with the pin from `pin_px` in `site.json` and recomputed on every pan, zoom
+  and resize; a tick hides when the pin is off that edge.
 - Images are pictures until tapped or clicked; then the gestures turn on
   (pinch, drag, scroll-zoom) and "Done zooming" hands scrolling back to the
   page. Keys: arrows, PgUp/PgDn, Home/End, M for the map, Esc.

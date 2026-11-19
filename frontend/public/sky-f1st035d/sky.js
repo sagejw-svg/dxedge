@@ -132,7 +132,7 @@
       sec.appendChild(buildCard(s, i));
       stack.appendChild(sec);
       sections.push(sec);
-      slides.push({ sec: sec, view: view, osd: null, leaflet: null, srcIndex: 0, explore: false });
+      slides.push({ sec: sec, view: view, osd: null, leaflet: null, ticks: null, srcIndex: 0, explore: false });
     });
 
     // about / credits
@@ -418,7 +418,35 @@
     }
     if (sl.leaflet) { try { sl.leaflet.remove(); } catch (e) { } sl.leaflet = null; }
     sl.view.innerHTML = '';
+    if (sl.ticks) { sl.ticks.remove(); sl.ticks = null; }
     sl.mounted = null;
+  }
+
+  // Four thin red ticks on the edges of the slide frame, aligned with the pin:
+  // top and bottom share the pin's x, left and right share its y. Each tick
+  // hides when the pin is off that edge's axis. The caller recomputes on every
+  // move, zoom and resize.
+  function makeTicks(sl) {
+    if (sl.ticks) sl.ticks.remove();
+    var box = el('div', 'sky-ticks');
+    var t = { top: el('div', 'tick top'), bottom: el('div', 'tick bottom'), left: el('div', 'tick left'), right: el('div', 'tick right') };
+    Object.keys(t).forEach(function (k) { box.appendChild(t[k]); });
+    sl.sec.appendChild(box);
+    sl.ticks = box;
+    return {
+      // x, y: pin position in the viewer element's pixels. The tick frame is
+      // inset from the viewer by the top bar and the scrubber, so translate.
+      update: function (x, y) {
+        var vr = sl.view.getBoundingClientRect(), br = box.getBoundingClientRect();
+        x = x + vr.left - br.left; y = y + vr.top - br.top;
+        var w = br.width, h = br.height;
+        var xin = x >= 0 && x <= w, yin = y >= 0 && y <= h;
+        t.top.style.display = t.bottom.style.display = xin ? '' : 'none';
+        t.left.style.display = t.right.style.display = yin ? '' : 'none';
+        if (xin) { t.top.style.left = t.bottom.style.left = x + 'px'; }
+        if (yin) { t.left.style.top = t.right.style.top = y + 'px'; }
+      }
+    };
   }
 
   function mountSlide(i, force) {
@@ -475,10 +503,17 @@
       if (viewer.__destroyWhenOpen) { try { viewer.destroy(); } catch (e) { } return; }
       var size = viewer.world.getItemAt(0).getContentSize();
       var W = size.x, H = size.y;
-      // Pin ring
+      // Location marker: four edge ticks on the frame, not a dot on the image.
       if (opt.pin && !opt.fallback) {
-        var ring = el('div', 'sky-pin');
-        viewer.addOverlay({ element: ring, location: new OpenSeadragon.Point(opt.pin[0] / W, opt.pin[1] / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
+        var ticks = makeTicks(sl);
+        var vpPin = new OpenSeadragon.Point(opt.pin[0] / W, opt.pin[1] / W);
+        var updateTicks = function () {
+          if (!sl.osd) return;
+          var p = viewer.viewport.viewportToViewerElementCoordinates(vpPin);
+          ticks.update(p.x, p.y);
+        };
+        ['animation', 'viewport-change', 'resize', 'rotate', 'flip', 'animation-finish'].forEach(function (ev) { viewer.addHandler(ev, updateTicks); });
+        updateTicks();
       }
       // Lot outline
       if (opt.parcel && !opt.fallback) {
@@ -522,10 +557,16 @@
     var m = L.map(sl.view, { zoomControl: true, attributionControl: true, maxZoom: s.esri_live.max_zoom || 19, minZoom: 12, zoomSnap: 0.5 });
     L.tileLayer(esriTemplate(s.esri_live), { maxNativeZoom: s.esri_live.max_zoom || 19, maxZoom: 19, attribution: 'Esri, Maxar/Vantor, Earthstar Geographics, Microsoft, and the GIS User Community' }).addTo(m);
     var pin = [site.pin.lat, site.pin.lon];
-    L.circleMarker(pin, { radius: 12, color: '#00ff9d', weight: 2, fill: false }).addTo(m);
-    L.circleMarker(pin, { radius: 2, color: '#00ff9d', fill: true, fillOpacity: 1 }).addTo(m);
     if (parcel) L.geoJSON(parcel, { style: { color: '#ffb347', weight: 1.5, fillOpacity: 0.06 } }).addTo(m);
     m.setView(pin, 17);
+    var ticks = makeTicks(sl);
+    var updateTicks = function () {
+      if (!sl.leaflet) return;
+      var p = m.latLngToContainerPoint(pin);
+      ticks.update(p.x, p.y);
+    };
+    m.on('move zoom moveend zoomend resize viewreset', updateTicks);
+    updateTicks();
     ['dragging', 'touchZoom', 'doubleClickZoom', 'scrollWheelZoom', 'boxZoom', 'keyboard'].forEach(function (k) { if (m[k] && !sl.explore) m[k].disable(); });
     sl.leaflet = m;
     var note = document.getElementById('note-' + i);

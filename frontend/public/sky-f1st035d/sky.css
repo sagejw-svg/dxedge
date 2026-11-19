@@ -76,16 +76,20 @@ button { font-family: inherit; }
 }
 .sky-slide.explore .sky-done { display: inline-block; }
 
-/* Pin ring and lot outline overlays (OpenSeadragon overlays) */
-.sky-pin {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 2px solid var(--green); box-shadow: 0 0 0 2px rgba(0,0,0,0.6), 0 0 12px rgba(0,255,157,0.6);
-  pointer-events: none;
+/* Location marker: surveyor-style crosshair ticks on the frame edges, aligned
+   with the pin. Positioned by sky.js on every move, zoom and resize. */
+.sky-ticks { position: absolute; top: 44px; right: var(--scrub-w); bottom: 0; left: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+.sky-ticks .tick {
+  position: absolute; background: #e53935;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
 }
-.sky-pin::after {
-  content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
-  border-radius: 50%; background: var(--green);
-}
+.sky-ticks .top, .sky-ticks .bottom { width: 2px; height: 14px; margin-left: -1px; }
+.sky-ticks .left, .sky-ticks .right { width: 14px; height: 2px; margin-top: -1px; }
+.sky-ticks .top { top: 0; }
+.sky-ticks .bottom { bottom: 0; }
+.sky-ticks .left { left: 0; }
+.sky-ticks .right { right: 0; }
+/* Lot outline overlay (OpenSeadragon overlay) */
 .sky-parcel { pointer-events: none; overflow: visible; }
 .sky-parcel polygon { fill: rgba(255, 179, 71, 0.08); stroke: var(--amber); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 
@@ -206,4 +210,5 @@ button { font-family: inherit; }
   .sky-title { padding: 70px 18px 70px; }
   .sky-about { padding: 70px 18px 80px; }
   .sky-tap { padding-bottom: 0; align-items: flex-start; padding-top: 56px; }
+  .sky-ticks { right: 0; bottom: 44px; }
 }

@@ -128,7 +128,15 @@ def main():
                 page.wait_for_selector("#view-%d canvas" % tile_slide, timeout=15000)
                 time.sleep(2.5)
                 check(len(tile_urls) > 0, "deep-zoom tiles loaded for slide %d (%d tiles)" % (tile_slide, len(tile_urls)))
-                check(page.locator("#view-%d .sky-pin" % tile_slide).count() == 1, "pin ring overlay on the tiled slide")
+                vis = page.evaluate("() => Array.from(document.querySelector('.sky-slide.current').querySelectorAll('.sky-ticks .tick')).map(t => t.style.display !== 'none' && t.getBoundingClientRect().width > 0)")
+                check(len(vis) == 4 and all(vis), "four edge ticks visible with the pin on screen (%s)" % vis)
+                # ticks follow the viewport: pan the pin off the left edge, left/right ticks stay, top/bottom hide
+                page.evaluate("() => { const v = window.__sky.slides[%d].osd; const b = v.viewport.getBounds(); v.viewport.panBy(new OpenSeadragon.Point(b.width * 2, 0), true); }" % tile_slide)
+                time.sleep(0.5)
+                vis2 = page.evaluate("() => Array.from(document.querySelector('.sky-slide.current').querySelectorAll('.sky-ticks .tick')).map(t => t.style.display !== 'none')")
+                check(vis2 == [False, False, True, True], "top/bottom ticks hide when the pin leaves the frame horizontally (%s)" % vis2)
+                page.evaluate("() => window.__sky.slides[%d].osd.viewport.goHome(true)" % tile_slide)
+                time.sleep(0.5)
                 if site == "ramona":
                     check(page.locator("#view-%d svg.sky-parcel" % tile_slide).count() == 1, "lot outline overlay on the tiled slide")
                 shot(page, "%s-%s-tiles" % (label, slug))
