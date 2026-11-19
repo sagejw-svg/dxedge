@@ -2,7 +2,7 @@
 
 This folder holds the data for two unlisted photo-history pages on dxedge.net:
 - **`ranch/`**: the Wilson family ranch at Sapaque / Waller Creek, south Monterey County, CA. 18 images, 1919-2026. Pin 35.8426537, -121.1295293, NE1/4 SW1/4 Sec 17 T24S R8E, Mount Diablo Meridian.
-- **`ramona/`**: Wilson family, 740 Progress Lane, Ramona, CA (San Diego County). 42 images, 1903-2026. Pin 33.0281264, -116.8547712.
+- **`ramona/`**: Staggs family, 740 Progress Lane, Ramona, CA (San Diego County). 42 images, 1903-2026. Pin 33.0281264, -116.8547712.
 
 Each page scrolls oldest to newest, with deep zoom and an overlay per photo (year, date, source credit, land owner for that era, location, facts). There is also a map layer of historic post offices, mines and landmarks.
 
@@ -13,7 +13,7 @@ The data was compiled in November 2026 from free, public, no-login sources. The 
 1. **No archaeological sites.** Never include, mention, depict or map any cave, rock shelter, rock-art, midden, milling or other archaeological or cultural site on or near either property. General regional history of the Salinan and Kumeyaay peoples, with no locations, is fine.
 2. **No private contact or parcel data.**
    - The ranch has no street address; show only its pin and survey section.
-   - Ramona shows its street address: label it "Wilson family, 740 Progress Lane, Ramona, CA" (approved by James Wilson, 2026-11-18).
+   - Ramona shows its street address: label it "Staggs family, 740 Progress Lane, Ramona, CA" (approved by James Wilson, 2026-11-18).
    - Never add assessor parcel numbers (APNs), phone numbers, emails or owner contact details anywhere.
    - Do not name living people beyond what appears in published obituaries.
 3. **Never invent history.** Unknown owners stay "unknown", and guesses are labelled as guesses.

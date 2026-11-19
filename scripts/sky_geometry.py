@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Fill pixel geometry into a Sky site.json from the hi-res originals.
 
-For every slide's hi-res image this writes width, height, the pin's pixel
-position and, when the site has a parcel outline, the outline's pixel
-vertices. The viewer draws the pin ring and the lot outline from these
-numbers as HTML/SVG overlays on top of the clean tiles.
+For every slide's hi-res image this writes width, height and the pin's pixel
+position (and, if site.json "map.parcel" names an outline file, its pixel
+vertices; neither site does since 2026-11-18). The viewer places the edge
+ticks from these numbers on top of the clean tiles.
 
 Usage:
   scripts/sky_geometry.py ranch   # reads sky/ranch/hires/, edits

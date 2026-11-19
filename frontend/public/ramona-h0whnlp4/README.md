@@ -1,11 +1,10 @@
 # Ramona Sky
 
-An unlisted photo history of the Wilson family's place at 740 Progress Lane,
+An unlisted photo history of the Staggs family's place at 740 Progress Lane,
 Ramona, California (San Diego County): 42 images from the 1903 USGS topo to a
 Sentinel-2 pass on 2026-11-08, oldest first, with deep zoom, an overlay per
 image (year, date, source, land owner for that era, location, caption), the
-approximate lot outline, and a map of nearby gem and gold mines, post offices
-and landmarks.
+and a map of nearby gem and gold mines, post offices and landmarks.
 
 Live at `https://dxedge.net/ramona-h0whnlp4/`. The page is not linked from
 anywhere on dxedge.net, carries `noindex, nofollow` in its markup and an
@@ -14,8 +13,8 @@ Sister page: Ranch Sky at `/ranch-z4swx8er55/`.
 
 ## The place
 
-- Label: Wilson family, 740 Progress Lane, Ramona, CA (street address and
-  exact pin approved for display by James Wilson, 2026-11-18)
+- Label: Staggs family, 740 Progress Lane, Ramona, CA (street address, family
+  name and exact pin approved for display by James Wilson, 2026-11-18)
 - Pin: 33.0281264, -116.8547712 (WGS84, centroid of the lot)
 - T13S R1E, San Bernardino Meridian, inside the former Rancho Santa María
   (Valle de Pamo) grant; never sectioned, so there is no federal homestead
@@ -44,9 +43,9 @@ Sister page: Ranch Sky at `/ranch-z4swx8er55/`.
 | `data/site.json` | Everything the page shows: slides with owner, hi-res file and pixel geometry (pin and lot outline), location, timeline, owner-by-era table, map legend, credits |
 | `data/manifest.json` | The sanitized per-image list from the data drop |
 | `data/points.geojson` | 24 sites: gem and gold mines, post offices, landmarks, rancho reference, fire edges (sanitized) |
-| `data/parcel_outline.geojson` | Approximate lot outline, geometry only |
+| `data/parcel_outline.geojson` | Approximate lot outline, geometry only. Kept as data; not drawn on the page |
 | `data/history.md` | Rancho Santa María, Nuevo/Ramona, build timeline, fires, mines, sources (sanitized) |
-| `data/*.jpg` (42) | Web images with a pin ring, lot box and caption burned in. Thumbnails and fallbacks |
+| `data/*.jpg` (42) | Clean web images, 1400 px, a pin-centred window in UTM 11N with nothing drawn on them (rebuilt by `scripts/build_sky_web.py`). Thumbnails and fallbacks |
 | `tiles/` (not in git) | Deep-zoom pyramids served by nginx from `/var/lib/dxedge/sky-tiles/ramona/` |
 
 Hi-res originals (42 files, about 645 MB): GitHub release `sky-assets-v1`
@@ -56,15 +55,14 @@ downloads them into `sky/ramona/hires/`.
 ## How the page works
 
 Same viewer as Ranch Sky (`../sky-f1st035d/sky.js`); see that page's README.
-On this page the lot outline from `parcel_outline.geojson` is drawn as an SVG
-overlay on the deep-zoom tiles, positioned from `parcel_px` in `site.json`,
-and on the map.
+The lot outline is not drawn (removed 2026-11-18 at James's request).
 
 ## Rebuilding
 
 ```bash
 sky/fetch_hires.sh ramona                          # originals -> sky/ramona/hires/
-python3 scripts/sky_geometry.py ramona             # refresh pin and lot pixel geometry in data/site.json (needs GDAL)
+python3 scripts/sky_geometry.py ramona             # refresh pin pixel geometry in data/site.json (needs GDAL)
+python3 scripts/build_sky_web.py ramona            # regenerate the clean web JPGs (needs GDAL)
 scripts/build_sky_tiles.sh ramona /var/lib/dxedge/sky-tiles  # pyramids (needs libvips-tools)
 ```
 
@@ -117,7 +115,7 @@ are from USGS MRDS.
 
 ## Open items
 
-- Wilson purchase year: unknown (shown as unknown).
+- Staggs purchase year: unknown (shown as unknown).
 - Chain of title 1872 to present; exact build year (assessor).
 - Esri and county image terms.
 - Internet Archive mirror and Wayback Machine capture: not done yet. A

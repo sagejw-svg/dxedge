@@ -19,7 +19,7 @@
   var DATA = SLUG_DIR + '/data/';
   var TILES = SLUG_DIR + '/tiles/';
 
-  var site = null, points = null, parcel = null, tileIndex = null;
+  var site = null, points = null, tileIndex = null;
   var slides = [];          // per-slide runtime state
   var current = -1;
   var sections = [];        // all scroll sections (title, slides..., about)
@@ -46,10 +46,6 @@
     fetchJSON(TILES + 'index.json').catch(function () { return null; })
   ]).then(function (res) {
     site = res[0]; points = res[1]; tileIndex = res[2];
-    var p = site.map && site.map.parcel ? fetchJSON(DATA + site.map.parcel).catch(function () { return null; }) : Promise.resolve(null);
-    return p;
-  }).then(function (pc) {
-    parcel = pc;
     build();
   }).catch(function (err) {
     document.getElementById('app').innerHTML = '<p style="padding:80px 24px;color:#ff5d5d">Could not load this page\'s data: ' + esc(err.message) + '</p>';
@@ -132,7 +128,7 @@
       sec.appendChild(buildCard(s, i));
       stack.appendChild(sec);
       sections.push(sec);
-      slides.push({ sec: sec, view: view, osd: null, leaflet: null, srcIndex: 0, explore: false });
+      slides.push({ sec: sec, view: view, osd: null, leaflet: null, ticks: null, srcIndex: 0, explore: false });
     });
 
     // about / credits
@@ -398,11 +394,8 @@
       sl.osd.setMouseNavEnabled(on);
       if (sl.osd.outerTracker) sl.osd.outerTracker.setTracking(on);
     }
-    if (sl.leaflet) {
-      ['dragging', 'touchZoom', 'doubleClickZoom', 'scrollWheelZoom', 'boxZoom', 'keyboard'].forEach(function (h) {
-        if (sl.leaflet[h]) on ? sl.leaflet[h].enable() : sl.leaflet[h].disable();
-      });
-    }
+    var s = site.slides[i];
+    if (s.esri && s.esri_live && esriTemplate(s.esri_live)) mountSlide(i, false);
     if (on) sl.sec.scrollIntoView({ block: 'start' });
   }
 
@@ -416,34 +409,76 @@
       if (v.__opened) { try { v.destroy(); } catch (e) { } }
       else v.__destroyWhenOpen = true;
     }
-    if (sl.leaflet) { try { sl.leaflet.remove(); } catch (e) { } sl.leaflet = null; }
+    if (sl.leaflet) {
+      try { sl.leaflet.remove(); } catch (e) { }
+      sl.leaflet = null;
+      // Leaflet leaves its classes, tabindex and inline style on the container.
+      sl.view.className = 'sky-view';
+      sl.view.removeAttribute('tabindex');
+      sl.view.removeAttribute('style');
+    }
     sl.view.innerHTML = '';
+    if (sl.ticks) { sl.ticks.remove(); sl.ticks = null; }
     sl.mounted = null;
+  }
+
+  // Four thin red ticks on the edges of the slide frame, aligned with the pin:
+  // top and bottom share the pin's x, left and right share its y. Each tick
+  // hides when the pin is off that edge's axis. The caller recomputes on every
+  // move, zoom and resize.
+  function makeTicks(sl) {
+    if (sl.ticks) sl.ticks.remove();
+    var box = el('div', 'sky-ticks');
+    var t = { top: el('div', 'tick top'), bottom: el('div', 'tick bottom'), left: el('div', 'tick left'), right: el('div', 'tick right') };
+    Object.keys(t).forEach(function (k) { box.appendChild(t[k]); });
+    sl.sec.appendChild(box);
+    sl.ticks = box;
+    return {
+      // x, y: pin position in the viewer element's pixels. The tick frame is
+      // inset from the viewer by the top bar and the scrubber, so translate.
+      update: function (x, y) {
+        var vr = sl.view.getBoundingClientRect(), br = box.getBoundingClientRect();
+        x = x + vr.left - br.left; y = y + vr.top - br.top;
+        var w = br.width, h = br.height;
+        var xin = x >= 0 && x <= w, yin = y >= 0 && y <= h;
+        t.top.style.display = t.bottom.style.display = xin ? '' : 'none';
+        t.left.style.display = t.right.style.display = yin ? '' : 'none';
+        if (xin) { t.top.style.left = t.bottom.style.left = x + 'px'; }
+        if (yin) { t.left.style.top = t.right.style.top = y + 'px'; }
+      }
+    };
   }
 
   function mountSlide(i, force) {
     var sl = slides[i], s = site.slides[i];
     var h = s.hires[sl.srcIndex] || s.hires[0];
-    var key = (h ? h.name : s.file) + (sl.srcIndex);
+    var live = !!(s.esri && s.esri_live && esriTemplate(s.esri_live) && sl.explore);
+    var key = (h ? h.name : s.file) + ':' + sl.srcIndex + (live ? ':live' : '');
     if (!force && sl.mounted === key) return;
     unmountSlide(i);
     sl.mounted = key;
     var note = document.getElementById('note-' + i);
     note.textContent = '';
 
-    // 1. Esri slide with a live source: stream Esri tiles with attribution.
-    if (s.esri && s.esri_live && esriTemplate(s.esri_live)) {
+    // 1. Esri slide with a live source, and only while the user is exploring
+    //    it: stream Esri tiles with attribution. While merely scrolled past,
+    //    the slide is a plain picture like every other, so a live map never
+    //    holds events, focus or network while it is just on screen.
+    if (live) {
       mountLeafletSlide(i, s, h);
       return;
     }
     // 2. Deep zoom from our own pyramid (never for Esri images).
     if (h && !s.esri && hasTiles(h.name)) {
-      mountOSD(i, { tileSource: TILES + h.name + '.dzi', w: h.width, h: h.height, pin: h.pin_px, parcel: h.parcel_px });
+      mountOSD(i, { tileSource: TILES + h.name + '.dzi', w: h.width, h: h.height, pin: h.pin_px });
       return;
     }
-    // 3. Fallback: the committed web JPG (pin ring and caption burned in).
-    mountOSD(i, { tileSource: { type: 'image', url: DATA + s.file }, fallback: true });
-    if (s.esri) note.textContent = 'Esri image: shown from the web copy only (' + (s.esri_live && s.esri_live.note ? s.esri_live.note + '; ' : '') + 'no re-hosted tiles). Zoom is limited.';
+    // 3. Fallback: the committed web JPG, a clean pin-centred window with
+    //    nothing drawn on it; the pin is at its centre (site.json "web").
+    var web = s.web || {};
+    mountOSD(i, { tileSource: { type: 'image', url: DATA + s.file }, fallback: true, w: web.width, h: web.height, pin: web.pin_px });
+    if (s.esri && s.esri_live && esriTemplate(s.esri_live)) note.textContent = 'Esri image, web copy. Tap to zoom for the live Esri imagery (streamed with attribution; no re-hosted tiles).';
+    else if (s.esri) note.textContent = 'Esri image: shown from the web copy only (' + (s.esri_live && s.esri_live.note ? s.esri_live.note + '; ' : '') + 'no re-hosted tiles). Zoom is limited.';
     else if (h) note.textContent = 'Deep-zoom tiles for this image are not available yet; showing the web copy.';
   }
 
@@ -475,26 +510,20 @@
       if (viewer.__destroyWhenOpen) { try { viewer.destroy(); } catch (e) { } return; }
       var size = viewer.world.getItemAt(0).getContentSize();
       var W = size.x, H = size.y;
-      // Pin ring
-      if (opt.pin && !opt.fallback) {
-        var ring = el('div', 'sky-pin');
-        viewer.addOverlay({ element: ring, location: new OpenSeadragon.Point(opt.pin[0] / W, opt.pin[1] / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
-      }
-      // Lot outline
-      if (opt.parcel && !opt.fallback) {
-        var xs = opt.parcel.map(function (p) { return p[0]; }), ys = opt.parcel.map(function (p) { return p[1]; });
-        var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
-        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', 'sky-parcel');
-        svg.setAttribute('viewBox', x0 + ' ' + y0 + ' ' + (x1 - x0) + ' ' + (y1 - y0));
-        svg.setAttribute('preserveAspectRatio', 'none');
-        var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        poly.setAttribute('points', opt.parcel.map(function (p) { return p[0] + ',' + p[1]; }).join(' '));
-        svg.appendChild(poly);
-        viewer.addOverlay({ element: svg, location: new OpenSeadragon.Rect(x0 / W, y0 / W, (x1 - x0) / W, (y1 - y0) / W) });
+      // Location marker: four edge ticks on the frame, not a dot on the image.
+      if (opt.pin) {
+        var ticks = makeTicks(sl);
+        var vpPin = new OpenSeadragon.Point(opt.pin[0] / W, opt.pin[1] / W);
+        var updateTicks = function () {
+          if (!sl.osd) return;
+          var p = viewer.viewport.viewportToViewerElementCoordinates(vpPin);
+          ticks.update(p.x, p.y);
+        };
+        ['animation', 'viewport-change', 'resize', 'rotate', 'flip', 'animation-finish'].forEach(function (ev) { viewer.addHandler(ev, updateTicks); });
+        updateTicks();
       }
       // Opening view: whole image for small frames, a window around the pin for big sheets.
-      if (opt.pin && !opt.fallback && W > 2600) {
+      if (opt.pin && W > 2600) {
         var win = Math.max(2000, W / 3);
         var ar = sl.view.clientWidth / Math.max(1, sl.view.clientHeight);
         var ww = win / W, wh = (win / ar) / W;
@@ -505,7 +534,7 @@
       viewer.__opened = true;
       if (viewer.__destroyWhenOpen) { try { viewer.destroy(); } catch (e) { } return; }
       var note = document.getElementById('note-' + i);
-      if (!opt.fallback) { opt.fallback = true; sl.mounted = null; mountOSD(i, { tileSource: { type: 'image', url: DATA + site.slides[i].file }, fallback: true }); if (note) note.textContent = 'Tiles failed to load; showing the web copy.'; }
+      if (!opt.fallback) { var web = site.slides[i].web || {}; opt.fallback = true; sl.mounted = null; mountOSD(i, { tileSource: { type: 'image', url: DATA + site.slides[i].file }, fallback: true, w: web.width, h: web.height, pin: web.pin_px }); if (note) note.textContent = 'Tiles failed to load; showing the web copy.'; }
     });
     sl.osd = viewer;
   }
@@ -522,14 +551,18 @@
     var m = L.map(sl.view, { zoomControl: true, attributionControl: true, maxZoom: s.esri_live.max_zoom || 19, minZoom: 12, zoomSnap: 0.5 });
     L.tileLayer(esriTemplate(s.esri_live), { maxNativeZoom: s.esri_live.max_zoom || 19, maxZoom: 19, attribution: 'Esri, Maxar/Vantor, Earthstar Geographics, Microsoft, and the GIS User Community' }).addTo(m);
     var pin = [site.pin.lat, site.pin.lon];
-    L.circleMarker(pin, { radius: 12, color: '#00ff9d', weight: 2, fill: false }).addTo(m);
-    L.circleMarker(pin, { radius: 2, color: '#00ff9d', fill: true, fillOpacity: 1 }).addTo(m);
-    if (parcel) L.geoJSON(parcel, { style: { color: '#ffb347', weight: 1.5, fillOpacity: 0.06 } }).addTo(m);
     m.setView(pin, 17);
-    ['dragging', 'touchZoom', 'doubleClickZoom', 'scrollWheelZoom', 'boxZoom', 'keyboard'].forEach(function (k) { if (m[k] && !sl.explore) m[k].disable(); });
+    var ticks = makeTicks(sl);
+    var updateTicks = function () {
+      if (!sl.leaflet) return;
+      var p = m.latLngToContainerPoint(pin);
+      ticks.update(p.x, p.y);
+    };
+    m.on('move zoom moveend zoomend resize viewreset', updateTicks);
+    updateTicks();
     sl.leaflet = m;
     var note = document.getElementById('note-' + i);
-    note.textContent = 'Live Esri World Imagery (current release), streamed from Esri with attribution. The committed web copy is from ' + s.date + '.';
+    note.textContent = 'Live Esri World Imagery (current release), streamed from Esri with attribution. The committed web copy is from ' + s.date + '. Tap Done to return to the picture.';
     setTimeout(function () { m.invalidateSize(); }, 50);
   }
 
@@ -577,7 +610,6 @@
         Object.keys(baseLayers).forEach(function (k) { leafletMap.removeLayer(baseLayers[k]); });
         baseLayers[mapPanel.base.value].addTo(leafletMap);
       });
-      if (parcel) L.geoJSON(parcel, { style: { color: '#ffb347', weight: 1.5, fillOpacity: 0.08 } }).addTo(leafletMap);
       var icons = site.map.icons || {};
       var unknownItems = [];
       var bounds = L.latLngBounds([pin]);

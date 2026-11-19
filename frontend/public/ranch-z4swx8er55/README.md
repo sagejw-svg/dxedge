@@ -39,7 +39,7 @@ Sister page: Ramona Sky at `/ramona-h0whnlp4/`.
 | `data/points.geojson` | The pin, 7 post offices (3 unlocated), 10 mercury and gold mine features |
 | `data/history.md` | Timeline, owner by era, BLM GLO land patents, per-photo facts, full source URLs, gaps |
 | `data/homesteaders.md` | Genealogy notes on the 1883-1931 patentees with sources and confidence levels |
-| `data/*.jpg` (18) | Web images (1000-1400 px) with a pin ring and caption burned in. Thumbnails and fallbacks |
+| `data/*.jpg` (18) | Clean web images, 1400 px, a pin-centred window in UTM 10N with nothing drawn on them (rebuilt by `scripts/build_sky_web.py`). Thumbnails and fallbacks |
 | `tiles/` (not in git) | Deep-zoom pyramids served by nginx from `/var/lib/dxedge/sky-tiles/ranch/` |
 
 Hi-res originals (23 files, about 366 MB): GitHub release `sky-assets-v1`
@@ -52,7 +52,9 @@ downloads them into `sky/ranch/hires/`.
   `tiles/index.json`, builds one full-screen slide per image, and mounts an
   OpenSeadragon viewer for the current slide and its neighbours.
 - A slide uses `tiles/<name>.dzi` when the pyramid exists, else the web JPG.
-  The pin ring is an HTML overlay placed from `pin_px` in `site.json`.
+  The location marker is four red crosshair ticks on the frame edges, aligned
+  with the pin from `pin_px` in `site.json` and recomputed on every pan, zoom
+  and resize; a tick hides when the pin is off that edge.
 - Images are pictures until tapped or clicked; then the gestures turn on
   (pinch, drag, scroll-zoom) and "Done zooming" hands scrolling back to the
   page. Keys: arrows, PgUp/PgDn, Home/End, M for the map, Esc.
@@ -67,6 +69,7 @@ downloads them into `sky/ranch/hires/`.
 ```bash
 sky/fetch_hires.sh ranch                           # originals -> sky/ranch/hires/
 python3 scripts/sky_geometry.py ranch              # refresh pixel geometry in data/site.json (needs GDAL)
+python3 scripts/build_sky_web.py ranch             # regenerate the clean web JPGs (needs GDAL)
 scripts/build_sky_tiles.sh ranch /var/lib/dxedge/sky-tiles   # pyramids (needs libvips-tools)
 ```
 

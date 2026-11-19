@@ -1,6 +1,6 @@
-# Wilson family, 740 Progress Lane, Ramona, CA: history notes for the photo-history site
+# Staggs family, 740 Progress Lane, Ramona, CA: history notes for the photo-history site
 
-**Place:** Wilson family, 740 Progress Lane, Ramona, CA.
+**Place:** Staggs family, 740 Progress Lane, Ramona, CA.
 **Pin:** 33.0281264, -116.8547712 (WGS84), the centroid of the lot (from San Diego County's public parcel layer).
 **Land survey:** BLM CadNSDI returns township 13S 1E, San Bernardino Meridian, but **no section**. That's because the land lies inside the Mexican grant **Rancho Santa María (Valle de Pamo)**, which was never cut into PLSS sections. So there is no federal homestead patent for this lot. The title runs back through the rancho patent.
 **Setting:** the lot is in the Santa Maria Valley, about 2.0 km SSE of Ramona's historic Main Street, at about 1,490 ft.
@@ -47,7 +47,7 @@
 | 1886 → | Santa Maria Land & Water Co. buys and subdivides the Ramona townsite. *Whether this exact lot was in its tract* is likely (the 1903 grid covers it) but not verified. | inference |
 | 1886-1970s | **unknown** (farmland) | unknown |
 | 1970s split / house built ~1977-80 | **unknown** builder or owner | unknown |
-| present | Wilson family (family statement). Purchase year unknown. | family |
+| present | Staggs family (family statement). Purchase year unknown. | family |
 
 ---
 
