@@ -137,8 +137,7 @@ def main():
                 check(vis2 == [False, False, True, True], "top/bottom ticks hide when the pin leaves the frame horizontally (%s)" % vis2)
                 page.evaluate("() => window.__sky.slides[%d].osd.viewport.goHome(true)" % tile_slide)
                 time.sleep(0.5)
-                if site == "ramona":
-                    check(page.locator("#view-%d svg.sky-parcel" % tile_slide).count() == 1, "lot outline overlay on the tiled slide")
+                check(page.locator("#view-%d svg.sky-parcel" % tile_slide).count() == 0, "no lot outline drawn on the tiled slide")
                 shot(page, "%s-%s-tiles" % (label, slug))
             else:
                 print("skip  no tile pyramids available; fallback JPGs in use")
@@ -146,6 +145,9 @@ def main():
                 page.evaluate("window.__sky.goTo(1, true)")
                 page.wait_for_function("window.__sky.current() === 1", timeout=10000)
                 page.wait_for_selector("#view-1 canvas", timeout=15000)
+                time.sleep(1.5)
+                vis = page.evaluate("() => Array.from(document.querySelector('.sky-slide.current').querySelectorAll('.sky-ticks .tick')).map(t => t.style.display !== 'none' && t.getBoundingClientRect().width > 0)")
+                check(len(vis) == 4 and all(vis), "four edge ticks visible on the web-copy fallback (%s)" % vis)
 
             page.evaluate("window.__sky.setExplore(%d, true)" % tile_slide)
             check(page.locator(".sky-slide.explore").count() == 1, "explore mode on")
@@ -171,8 +173,23 @@ def main():
             time.sleep(2)
             note = page.locator("#note-%d" % esri_idx).inner_text()
             check("Esri" in note, "Esri slide %d carries an Esri note" % esri_idx)
-            check(page.locator("#view-%d canvas, #view-%d .leaflet-container" % (esri_idx, esri_idx)).count() >= 1, "Esri slide shows the web copy or a live map")
+            check(page.locator("#view-%d canvas" % esri_idx).count() >= 1, "Esri slide shows the web copy while browsing")
             shot(page, "%s-%s-esri" % (label, slug))
+            live_idx = page.evaluate("() => window.__sky.site.slides.findIndex(s => s.esri && s.esri_live && s.esri_live.kind === 'current')")
+            if live_idx >= 0:
+                page.evaluate("window.__sky.goTo(%d, true)" % live_idx)
+                page.wait_for_function("window.__sky.current() === %d" % live_idx, timeout=10000)
+                time.sleep(1.5)
+                check(page.locator("#view-%d.leaflet-container" % live_idx).count() == 0 and page.locator("#view-%d canvas" % live_idx).count() >= 1, "live Esri slide is a plain picture while browsing")
+                page.evaluate("window.__sky.setExplore(%d, true)" % live_idx)
+                page.wait_for_selector("#view-%d.leaflet-container" % live_idx, timeout=10000)
+                time.sleep(1)
+                check(page.evaluate("window.__sky.slides[%d].leaflet.dragging.enabled()" % live_idx) is True, "live Esri map mounts with gestures in explore mode")
+                vis = page.evaluate("() => Array.from(document.querySelector('.sky-slide.current').querySelectorAll('.sky-ticks .tick')).map(t => t.style.display !== 'none')")
+                check(len(vis) == 4 and all(vis), "edge ticks on the live Esri map (%s)" % vis)
+                page.keyboard.press("Escape")
+                time.sleep(1)
+                check(page.locator("#view-%d.leaflet-container" % live_idx).count() == 0 and page.evaluate("window.__sky.slides[%d].leaflet" % live_idx) is None, "live map is torn down on Done")
 
             if mobile:
                 card = page.locator(".sky-slide.current .sky-card")

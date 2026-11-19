@@ -89,10 +89,6 @@ button { font-family: inherit; }
 .sky-ticks .bottom { bottom: 0; }
 .sky-ticks .left { left: 0; }
 .sky-ticks .right { right: 0; }
-/* Lot outline overlay (OpenSeadragon overlay) */
-.sky-parcel { pointer-events: none; overflow: visible; }
-.sky-parcel polygon { fill: rgba(255, 179, 71, 0.08); stroke: var(--amber); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-
 /* Overlay card */
 .sky-card {
   position: absolute; z-index: 20; right: calc(var(--scrub-w) + 12px); top: 56px; width: var(--card-w); max-height: calc(100vh - 80px);
