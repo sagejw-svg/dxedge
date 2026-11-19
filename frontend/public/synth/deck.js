@@ -83,9 +83,11 @@ export function createDeck(api) {
   const now = () => performance.now() / 1000;
   // ---------------------------------------------------------------- recorder
   let rendering = false;
-  const T = { armed: false, rec: false, t0: 0, events: [], length: 0, names: {}, ctl: {}, held: {} };
+  const T = { armed: false, rec: false, t0: 0, events: [], length: 0, names: {}, ctl: {}, held: {}, ctxOff: null };
   DEVS.forEach(d => { T.ctl[d] = { bend: 0, mw: 0, sus: false, at: 0 }; });
-  function rec(dev, m) {
+  // `when` (performance seconds) is for notes scheduled ahead (the paper roll, recAt); without it the
+  // event happened now.
+  function rec(dev, m, when) {
     const c = T.ctl[dev];
     // The recorder takes Filament and Cathode only. Anything else the keys play is not recorded,
     // and must not throw: the page calls rec() after every note, wheel and pedal on every device.
@@ -95,10 +97,10 @@ export function createDeck(api) {
     }
     if (m.t === 'bend') c.bend = m.v; else if (m.t === 'mw') c.mw = m.v; else if (m.t === 'sus') c.sus = !!m.on; else if (m.t === 'at') c.at = m.v;
     if (!T.armed && !T.rec) return;
-    const t = now();
+    const t = when == null ? now() : when;
     if (!T.rec) {
       if (m.t !== 'on') return;
-      T.rec = true; T.armed = false; T.t0 = t; T.events = []; T.names = {}; T.held = {};
+      T.rec = true; T.armed = false; T.t0 = t; T.events = []; T.names = {}; T.held = {}; T.ctxOff = null;
       if (c.sus) T.events.push({ time: 0, dev, m: { t: 'sus', on: true } });
       if (c.bend) T.events.push({ time: 0, dev, m: { t: 'bend', v: c.bend } });
       if (c.mw) T.events.push({ time: 0, dev, m: { t: 'mw', v: c.mw } });
@@ -106,15 +108,68 @@ export function createDeck(api) {
     }
     if (!T.names[dev]) T.names[dev] = api.patchName(dev);
     const h = T.held[dev] || (T.held[dev] = new Set());
+    // A scheduled off for a note already let go is the roll's stop sending a queued off again sooner:
+    // it moves that off earlier instead of adding a second one.
+    if (m.t === 'off' && when != null && !h.has(m.n)) {
+      for (let i = T.events.length - 1; i >= 0; i--) {
+        const e = T.events[i];
+        if (e.dev === dev && e.m.t === 'off' && e.m.n === m.n) { if (e.time > t - T.t0) e.time = t - T.t0; break; }
+      }
+      return;
+    }
     if (m.t === 'on') h.add(m.n); else if (m.t === 'off') h.delete(m.n);
     T.events.push({ time: t - T.t0, dev, m: Object.assign({}, m) });
+    showTake();
+  }
+  // The paper roll's notes (19 Nov 2026): the roll schedules each note up to 150 ms ahead with the
+  // AudioContext time it sounds at, so the take files it at that time, not when it was sent.
+  // The two clocks are lined up once per take (currentTime moves in 128-frame steps, so reading it per
+  // note would put up to 3 ms of jitter between steps the roll spaced exactly).
+  function recAt(dev, m, at) {
+    const c = api.ctx();
+    if (!c || !m || (m.t !== 'on' && m.t !== 'off')) return;
+    const off = T.rec && T.ctxOff != null ? T.ctxOff : now() - c.currentTime;
+    rec(dev, { t: m.t, n: m.n, v: m.v }, at + off);
+    if (T.rec && T.ctxOff == null) T.ctxOff = off;
+  }
+  const RANK = { off: 0, on: 2 };
+  const byTime = (a, b) => a.time - b.time || (a.m.t in RANK ? RANK[a.m.t] : 1) - (b.m.t in RANK ? RANK[b.m.t] : 1);
+  // The transport stopped under the roll: Filament or Cathode drops what it still had queued, so notes
+  // the take filed past this moment never sounded. They go; the offs the roll sends again now follow.
+  function recFlush(dev, at) {
+    const c = api.ctx();
+    if (!T.rec || !c || !T.ctl[dev]) return;
+    const tt = at + (T.ctxOff != null ? T.ctxOff : now() - c.currentTime) - T.t0;
+    T.events = T.events.filter(e => !(e.dev === dev && (e.m.t === 'on' || e.m.t === 'off') && e.time > tt + 1e-9));
+    const h = new Set();
+    T.events.filter(e => e.dev === dev).sort(byTime).forEach(e => { if (e.m.t === 'on') h.add(e.m.n); else if (e.m.t === 'off') h.delete(e.m.n); });
+    T.held[dev] = h;
     showTake();
   }
   function stopRec() {
     if (T.armed) { T.armed = false; showTake(); return; }
     if (!T.rec) return;
-    T.rec = false; T.length = now() - T.t0; P.last = 'take';
-    Object.keys(T.held).forEach(d => T.held[d].forEach(n => T.events.push({ time: T.length, dev: d, m: { t: 'off', n } })));
+    T.rec = false; P.last = 'take';
+    let end = now() - T.t0;
+    // Scheduled notes can be filed ahead of now, and a key played just before a scheduled first note
+    // lands before the take's 0. The take is what sounded from its first note to Stop: in time order,
+    // nothing struck after Stop, an off due after it comes back to Stop, and a take starts at 0.
+    T.events.sort(byTime);
+    const t0 = T.events.length ? Math.min(0, T.events[0].time) : 0;
+    if (t0 < 0) { T.events.forEach(e => { e.time -= t0; }); end -= t0; }
+    const sounding = {}, kept = [];
+    T.events.forEach(e => {
+      const s = sounding[e.dev] || (sounding[e.dev] = new Map()), k = s.get(e.m.n) || 0;
+      if (e.time > end) {
+        if (e.m.t === 'off' && k > 0) { e.time = end; kept.push(e); s.set(e.m.n, k - 1); }
+        else if (e.m.t !== 'on' && e.m.t !== 'off') { e.time = end; kept.push(e); }
+        return;
+      }
+      if (e.m.t === 'on') s.set(e.m.n, k + 1); else if (e.m.t === 'off' && k > 0) s.set(e.m.n, k - 1);
+      kept.push(e);
+    });
+    T.events = kept; T.length = end;
+    Object.keys(sounding).forEach(d => sounding[d].forEach((k, n) => { for (let i = 0; i < k; i++) T.events.push({ time: T.length, dev: d, m: { t: 'off', n } }); }));
     T.held = {};
     // A pedal still down at Stop goes up at the end of the take, so an exported file does not leave
     // CC 64 held for whatever follows it in another program.
@@ -350,14 +405,14 @@ export function createDeck(api) {
   showTake(); showFile();
 
   return {
-    rec, stop, silence: stopPlayback, lit: n => (P.lit.get(n) || 0) > 0,
+    rec, recAt, recFlush, stop, silence: stopPlayback, lit: n => (P.lit.get(n) || 0) > 0,
     // test hooks
     test: {
       importBytes: (arr, name) => importBytes(Uint8Array.from(arr), name),
       song: () => Fi.song && { name: Fi.name, length: Fi.song.length, bpm: Fi.song.bpm, parts: Fi.song.parts.map(p => ({ name: p.name, chans: p.chans, notes: p.notes, mean: p.mean })), assign: Fi.assign.slice() },
       assign: (i, d) => setAssign(i, d),
       take: () => ({ armed: T.armed, rec: T.rec, length: T.length, events: T.events.map(e => Object.assign({ time: e.time, dev: e.dev }, e.m)) }),
-      arm: () => { T.armed = true; showTake(); }, stopRec,
+      arm: () => { T.armed = true; showTake(); }, stopRec, recAt,
       exportBytes: () => [...exportBytes()],
       play: src => play(src || 'file'), stop, playing: () => P.playing, position: () => posNow(), rate: () => P.rate,
       sounding: () => { const o = {}; P.used.forEach(d => { o[d] = [...(P.sounding[d] || new Map()).keys()]; }); return o; },

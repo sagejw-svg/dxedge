@@ -79,6 +79,8 @@ export function createRoll(api) {
       }
     } else if (d === 'filament' || d === 'cathode') E.sendTo(d, framed);
     else if (E.devices[d]) E.devices[d].midi(framed);
+    // the MIDI deck's recorder takes the note at the time it sounds (it keeps Filament and Cathode only)
+    if (api.rec && (msg.t === 'on' || msg.t === 'off')) api.rec(d, msg, at);
     // a resent off (after a stop's flush) moves its first entry to the time it now goes, so the log keeps one off per strike
     if (entry) { entry.at = at; entry.resent = true; return entry; }
     const e = { t: msg.t, n: msg.n, v: msg.v, dev: d, at, want: want == null ? at : want, now: c.currentTime };
@@ -91,7 +93,7 @@ export function createRoll(api) {
   // just after its own strike, in case that strike is still queued.
   function letGo() {
     const E = api.engine(), c = api.ctx(), now = c ? c.currentTime : 0;
-    if (E) armed.forEach(d => { if (d === 'filament' || d === 'cathode') E.sendTo(d, { t: 'flush' }); });
+    if (E) armed.forEach(d => { if (d === 'filament' || d === 'cathode') { E.sendTo(d, { t: 'flush' }); if (api.recFlush) api.recFlush(d, now); } });
     queuedOffs.forEach(x => { if (x.at > now) send(x.dev, { t: 'off', n: x.n }, now, null, x.entry); });
     queuedOffs.length = 0;
     pend.forEach(x => send(x.dev, { t: 'off', n: x.n }, (x.dev === 'filament' || x.dev === 'cathode') ? now : Math.max(now, x.onTime + 0.002)));
@@ -276,6 +278,25 @@ export function createRoll(api) {
     if (run && !was) resync();
     save();
     paintButtons(); paintStat(); dirty = true;
+  }
+
+  // ------------------------------------------------------------ the master Render WAV (19 Nov)
+  // The roll as it plays from the transport's beat 0 for `seconds` at `tempo` on its device: the plain
+  // roll (rollScore) or the chain (chainScore), the same plans the live scheduler and the suite read.
+  // null while run is off, so a render with the roll switched off is what it was before.
+  function renderScore(seconds, tempo) {
+    if (!run) return null;
+    const d = destDev(), spb = 60 / (tempo || 120), beats = Math.max(0, +seconds || 0) / spb;
+    let ev = [];
+    if (chainOn()) {
+      const total = chainSegments(chain, users).reduce((a, s) => a + s.beats, 0);
+      if (total > 0) ev = chainScore(chain, users, Math.min(100000, Math.ceil(beats / total) + 1), tempo, d);
+    } else {
+      ev = rollScore(pat, Math.min(100000, Math.ceil(beats / (ROLL_RATES[pat.rate] || 0.25)) + 1), tempo, d);
+    }
+    const out = [];
+    ev.forEach(e => { if (e.at < seconds) out.push(e.t === 'on' ? { at: e.at, dev: d, t: 'on', n: e.n, v: e.v } : { at: e.at, dev: d, t: 'off', n: e.n }); });
+    return { dev: d, chain: chainOn(), events: out };
   }
 
   // ------------------------------------------------------------ the project file (17 Nov)
@@ -746,11 +767,13 @@ export function createRoll(api) {
     draw: () => { draw(performance.now()); return { ms: drawMs, stats: Object.assign({}, stats) }; },
     stats: () => Object.assign({ ms: drawMs }, stats),
   };
+  test.renderScore = (seconds, tempo) => renderScore(seconds, tempo);
   test.project = () => toProject();
   test.applyProject = r => fromProject(r);
   return {
     project: toProject,
     applyProject: fromProject,
+    renderScore,
     frame(now) { if (playing) hear(); if (open && (dirty || playing)) draw(now); },
     keyIn: (n, v) => keyNote(n, v),
     test,

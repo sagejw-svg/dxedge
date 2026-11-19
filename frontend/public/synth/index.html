@@ -2159,7 +2159,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to any device on the rack (its row of chips lists them), or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
-    <p><b style="color:var(--muted)">Paper roll.</b> Open roll for a 16-step sequencer drawn as punched paper. Tap a step to pick it and tap again to punch it; set its note, accent, slide or tie with the buttons below the paper, or turn on key in and play the notes. Play on the strip starts the rack transport. With run lit the roll plays whenever the transport does, beside a song or a Dekatron pattern, on the device lit on the rail or the one you pick.</p>
+    <p><b style="color:var(--muted)">Paper roll.</b> Open roll for a 16-step sequencer drawn as punched paper. Tap a step to pick it and tap again to punch it; set its note, accent, slide or tie with the buttons below the paper, or turn on key in and play the notes. Play on the strip starts the rack transport. With run lit the roll plays whenever the transport does, beside a song or a Dekatron pattern, on the device lit on the rail or the one you pick. While it plays Filament or Cathode, an armed MIDI deck records its notes into the take, and render wav on the Master strip plays it from its first step.</p>
     <p><b style="color:var(--muted)">Sculpt.</b> A hand instrument on its own page: <a href="/synth/hand-sculpt/">pinch a glowing orb</a> and move it in the space in front of you. The camera picture stays in the browser.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
@@ -4922,6 +4922,8 @@ roll = createRoll({
   wakeDevice: id => wakeDevice(id), sleepDevice: id => sleepDevice(id),
   busy: d => !!(player && player.test.devices().includes(d)),
   reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  rec: (d, m, at) => { if (deck) deck.recAt(d, m, at); },     // the MIDI deck records the roll's notes (19 Nov)
+  recFlush: (d, at) => { if (deck) deck.recFlush(d, at); },   // and drops the ones a stop flushed before they sounded
 });
 
 // ---------------------------------------------------------------- the chassis
@@ -5361,6 +5363,16 @@ const master = mountMaster({
   host: $('masterHost'), store, withEngine, getEngine: () => E, toast,
   getNotes: () => heldNotes(), getPatch: () => cur,
   wavArm, wavPrefix,
+  // Render WAV takes the paper roll while its run is on (19 Nov): its notes from beat 0 on its device.
+  // Filament and Cathode only; the render engine hosts those two.
+  rollRender: (seconds, tempo) => {
+    const r = roll ? roll.renderScore(seconds, tempo) : null;
+    if (!r) return null;
+    const both = r.dev === 'filament' || r.dev === 'cathode';
+    return Object.assign(r, { name: (DEVS[r.dev] && DEVS[r.dev].name) || r.dev, ok: both,
+      patches: { filament: patchOf('filament'), cathode: patchOf('cathode') },
+      device: dev === 'filament' || dev === 'cathode' ? dev : r.dev });
+  },
 });
 
 // Dekatron's panel. It edits whichever object drumPatch() returns, so it can be built
@@ -6342,6 +6354,8 @@ window.__synth = {
   uiSize: () => document.documentElement.getAttribute('data-ui'),
   setUiSize: s => { const n = applyUiSize(s); try { localStorage.setItem('dxedge_ui_size', n); } catch (e) {} if (uiSizeCtl) document.querySelectorAll('#uiSize [data-ui-size]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-ui-size') === n))); return n; },
   renderWav: opts => master.renderWav(opts || {}),
+  renderPlan: secs => master.renderPlan(secs),          // what render wav plays (the keys held, the roll while its run is on)
+  renderButton: secs => master.renderButton(secs),      // that render, without the download
   recordStart: () => master.recordStart(),
   recordStop: () => master.recordStop(),
 };

@@ -44,7 +44,7 @@ export function mountMaster(api) {
       '<button type="button" class="chip" id="fxLim" aria-pressed="true">limit</button>' +
       '<span class="knobs" id="fxCompKn"></span>' +
     '</div>' +
-    '<div class="note">Delay, reverb and the bus compressor sit on the master, after every device. Bypass leaves the sound untouched. Record, here or the red rec button, and render save a 24-bit, 44.1 kHz stereo WAV, up to 10 minutes. The file is named for the lit device, or rack when several are playing.</div>';
+    '<div class="note">Delay, reverb and the bus compressor sit on the master, after every device. Bypass leaves the sound untouched. Record, here or the red rec button, and render save a 24-bit, 44.1 kHz stereo WAV, up to 10 minutes. The file is named for the lit device, or rack when several are playing. Render plays the keys you hold (middle C if none), and the paper roll from its first step while its run is on and it plays Filament or Cathode.</div>';
 
   const $ = id => host.querySelector('#' + id) || document.getElementById(id);
   const divSel = $('fxDiv');
@@ -218,6 +218,24 @@ export function mountMaster(api) {
   }
   recButtons().forEach(b => b.addEventListener('click', onRecClick));
 
+  // What render wav plays (19 Nov 2026): the keys held (middle C if none) and, while its run is on, the
+  // paper roll from its first step at the rack tempo on its device. With the roll in and no key held
+  // there is no middle C. A roll on a device other than Filament or Cathode is left out and the status says so.
+  function renderPlan(seconds) {
+    const tempo = rackTempo(), notes = api.getNotes();
+    const rr = api.rollRender ? api.rollRender(seconds, tempo) : null;
+    const roll = rr && rr.ok ? rr : null;
+    const keys = (notes.length ? notes : roll ? [] : [60]).map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
+    const o = { patch: api.getPatch(), events: keys, seconds, rack: true, master: state, tempo };
+    let note = '';
+    if (roll) {
+      o.events = keys.concat(roll.events); o.patches = roll.patches; o.device = roll.device;
+      const n = roll.events.filter(e => e.t === 'on').length;
+      note = ' · with the ' + (roll.chain ? 'chain' : 'roll') + ' (' + n + (n === 1 ? ' note' : ' notes') + ' on ' + roll.name + ')';
+    } else if (rr) note = ' · the roll plays ' + rr.name + ', which render does not take';
+    return { opts: o, note, roll: roll ? roll.dev : null };
+  }
+
   let rendering = false;
   $('wavGo').addEventListener('click', async () => {
     if (rendering) return;
@@ -227,11 +245,10 @@ export function mountMaster(api) {
     $('wavSecs').value = String(seconds);
     stat('rendering ' + seconds + 's…');
     try {
-      const notes = api.getNotes();
-      const events = (notes.length ? notes : [60]).map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
-      const w = await renderToWav({ patch: api.getPatch(), events, seconds, rack: true, master: state, tempo: rackTempo() });
+      const plan = renderPlan(seconds);
+      const w = await renderToWav(plan.opts);
       const name = downloadWav(w.bytes, wavName(prefix(false)));
-      stat('saved ' + name + ' · ' + w.frames + ' frames');
+      stat('saved ' + name + ' · ' + w.frames + ' frames' + plan.note);
     } catch (e) {
       console.error(e);
       stat('render failed');
@@ -252,6 +269,15 @@ export function mountMaster(api) {
       const w = await stopRec(false);
       if (!w) return null;
       return { b64: bytesToB64(w.bytes), bytes: w.bytes.length, frames: w.frames, sr: w.sampleRate, bits: 24, channels: 2, name: w.name };
+    },
+    // test hooks: what render wav would play, and that render without the download
+    renderPlan(seconds) {
+      const p = renderPlan(seconds);
+      return { events: p.opts.events.map(e => Object.assign({}, e)), device: p.opts.device || null, both: !!p.opts.patches, tempo: p.opts.tempo, note: p.note, roll: p.roll };
+    },
+    async renderButton(seconds) {
+      const p = renderPlan(seconds), w = await renderToWav(p.opts);
+      return { b64: bytesToB64(w.bytes), bytes: w.bytes.length, frames: w.frames, sr: w.sampleRate, note: p.note };
     },
     async renderWav(opts) {
       const w = await renderToWav(Object.assign({ patch: api.getPatch(), master: state, rack: true, tempo: rackTempo() }, opts));
