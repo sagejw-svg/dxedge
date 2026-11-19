@@ -1,7 +1,7 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights. On 2026-09-26 James dropped SOTA, dxsummit.fi, and fiiir.com from the product. See known issue dropped-sota-dxsummit-fiiir. Do not restore them and do not health-check them as missing features. Older run notes that say they were left in place are historical. The removal was rebased onto main and applied on 2026-10-15; the synth rack is unrelated and stays.",
  "schema_version": 1,
- "last_run": "2026-11-19T05:20:00Z",
+ "last_run": "2026-11-19T05:17:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
   {
@@ -458,6 +458,12 @@
    "notification": {
     "push": "IMPOSSIBLE and also NOT NEEDED. No PushNotification tool exists in this session, confirmed by a keyword ToolSearch (push/notification/alert/ntfy returned only Monitor) and by a direct select: query for PushNotification, SendPushNotification and Notify (no matches). SIXTH consecutive night. No decision needed James tonight in any case.",
     "email": "NOT SENT, deliberately, under Step 6's 'nothing was broken and nothing was fixed' branch. Zero repairs, zero new findings, and every open item is already with James. The 11-18 email was justified by a long-standing failing panel changing state; tonight nothing changed state, so a mail would have been noise."
+   },
+   "post_deploy": {
+    "commit": "5620273",
+    "deploy_result": "SUCCESS, nothing broken. Verified about 6 minutes after the push.",
+    "evidence": "/api/health returned status ok with a FRESH timestamp of 2026-11-19T05:13:48Z, sfi 108, spots 483 (up from 357 pre-push, so the backend really did restart and re-fetch), feed_proxy true, version 2.0. /cyber/ reloaded with 12 requests, zero non-200, zero console issues, 8 panels with zero .feed-error and zero stuck .loading, so every cyber feed was healthy on a SECOND independent load tonight. /aethersdr/ reloaded with 9 requests and the same all-clean result. No revert was needed.",
+    "caveat": "A second small commit was pushed after this to record the post-deploy result, following the 11-17 and 11-18 convention. Its own deploy is not separately verified, which is the usual and accepted regress for this routine; it touches only scripts/health/state.json and no site code."
    }
   }
  ],
