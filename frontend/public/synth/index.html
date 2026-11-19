@@ -4928,12 +4928,14 @@ deck = createDeck({
   patchOf: d => (d === dev ? cur : DS[d].cur), patchName: d => (d === dev ? cur : DS[d].cur).name || DEVS[d].name,
   master: () => master.get(),
   lit: n => paintKey(n, false),
+  pedal: d => sustainOn && susSent.has(d),   // the page's pedal is down on this device (review R1119-1)
 });
 player = createPlayer({
   dev: () => dev, ctx: () => ctx, engine: () => E, wake, withEngine, toast,
   patchOf: d => (d === dev ? cur : DS[d].cur),
   devices: () => listDevices(),
   lit: n => paintKey(n, false),
+  pedal: d => sustainOn && susSent.has(d),
   wakeDevice: id => wakeDevice(id), sleepDevice: id => sleepDevice(id),
   // A library song can name a factory preset per device. An unknown name is skipped.
   // Dekatron's pattern is its own patch, so it goes to the drum host rather than

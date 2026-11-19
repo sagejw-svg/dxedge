@@ -268,11 +268,15 @@ export function createDeck(api) {
     if (e.m.t === 'on') { s.set(e.m.n, (s.get(e.m.n) || 0) + 1); P.touched[e.dev].add(e.m.n); lightLater(e.m.n, true, t); }
     else if (e.m.t === 'off' && s.has(e.m.n)) { const k = s.get(e.m.n) - 1; if (k > 0) s.set(e.m.n, k); else s.delete(e.m.n); lightLater(e.m.n, false, t); }
   }
-  function releaseAt(t) {         // note offs for whatever playback still holds, sustain off
+  // The page's own pedal (space, hold, CC 64) shares the device's sustain with playback. Where it is
+  // down, the end of a file or a stop leaves the pedal down rather than lifting it under the player's
+  // foot: before, the next note played with the pedal still down was not held (review R1119-1).
+  const pedalDown = d => !!(api.pedal && api.pedal(d));
+  function releaseAt(t) {         // note offs for whatever playback still holds, sustain off (unless the page's pedal is down)
     P.used.forEach(d => {
       P.sounding[d].forEach((k, n) => { for (let i = 0; i < k; i++) send({ dev: d, m: { t: 'off', n } }, t); });
       const at = Math.round(t * api.ctx().sampleRate);
-      api.engine().sendTo(d, { t: 'sus', on: false, at, pb: true });
+      api.engine().sendTo(d, { t: 'sus', on: pedalDown(d), at, pb: true });
       // bend, wheel and pressure back to rest too, so a file or take that ends bent does not start
       // its next loop pass out of tune (review R1113-1)
       ['bend', 'mw', 'at'].forEach(k => api.engine().sendTo(d, { t: k, v: 0, at, pb: true }));
@@ -292,7 +296,10 @@ export function createDeck(api) {
       const tEnd = ctxAt(P.length);
       if (!P.ended) { releaseAt(tEnd); P.ended = true; }
       if (P.loop && P.length > 0.05) { P.anchorCtx = tEnd; P.anchorPos = 0; P.schedPos = 0; P.idx = 0; P.ended = false; continue; }
-      if (c.currentTime >= tEnd) { stop(); return; }
+      // The end of the file: releaseAt has already let go of every note playback held, so this
+      // does not flush and panic as Stop does; a panic here also cut the keys and the pedal notes
+      // the player was holding over the last bar (review R1119-2).
+      if (c.currentTime >= tEnd) { if (T.rec || T.armed) stopRec(); stopPlayback(true); return; }
       break;
     }
     $('posV').textContent = fmtT(Math.min(P.length, Math.max(0, posNow()))) + ' / ' + fmtT(P.length);
@@ -317,17 +324,20 @@ export function createDeck(api) {
     });
     return true;
   }
-  function stopPlayback() {
+  function stopPlayback(ended) {
     if (!P.playing) return;
     P.playing = false; clearInterval(P.timer); P.timer = 0;
     const E = api.engine();
     P.used.forEach(d => {
       // Flush drops note offs that were scheduled but had not landed. Panic is all-notes-off,
       // so a note the tracker missed still goes silent. It does not stop a take being recorded.
-      E.sendTo(d, { t: 'flush' });
-      E.sendTo(d, { t: 'panic' });
+      // At the file's own end (ended) every off has landed, so the keys held on the page are spared.
+      if (!ended) {
+        E.sendTo(d, { t: 'flush' });
+        E.sendTo(d, { t: 'panic' });
+        ['sus', 'bend', 'mw', 'at'].forEach(t => E.sendTo(d, t === 'sus' ? { t, on: pedalDown(d) } : { t, v: 0 }));
+      }
       P.sounding[d].clear(); P.touched[d].clear();
-      ['sus', 'bend', 'mw', 'at'].forEach(t => E.sendTo(d, t === 'sus' ? { t, on: false } : { t, v: 0 }));
       E.playing(d, false);
     });
     P.timeouts.forEach(id => clearTimeout(id)); P.timeouts.clear();

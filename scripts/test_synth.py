@@ -2650,6 +2650,47 @@ with sync_playwright() as pw:
     ck(f"M. moving a track to another device mid-play keeps every note: {len(ra_land)} of 40 melody notes land ({len(ra_lost)} had been sent ahead and were flushed by the restart) (review R1116-2)",
        len(ra_land) >= 40 and any(x["ph"] == 1 for x in ra_mel), (ra_fr, len(ra_lost), len(ra_land)))
 
+    # R1119-1: the deck's file end and stop, and the song library's stop, sent a pedal-up to the device
+    # while the page's pedal (CC 64, space or hold) was still down, so the next note played with the pedal
+    # down was not held, and at a file's end a note the pedal was holding went off under the player's foot.
+    pg.evaluate("__synth.panic()"); pg.evaluate("p => __synth.setPatch(p)", sine); pg.wait_for_timeout(150)
+    PED = mthd(0, 1, 96) + mtrk([0] + tempo(500000) + [0, 0x90, 76, 100] + vlq(24) + [0x80, 76, 0] + EOT)
+    fnotes = lambda: pg.evaluate("() => ((__synth.engine().meters.filament || {}).notes || []).slice()")
+    ped_res = {}
+    for kind_ in ("deck end", "deck stop", "library stop"):
+        pg.evaluate("__synth.midi([0xB0, 64, 127])"); pg.evaluate("__synth.midi([0x90, 50, 100])"); pg.wait_for_timeout(120)
+        pg.evaluate("__synth.midi([0x80, 50, 0])"); pg.wait_for_timeout(150)
+        if kind_ == "deck end":
+            pg.evaluate("a => __synth.deck().importBytes(a, 'ped.mid')", PED); pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(900)
+        elif kind_ == "deck stop":
+            pg.evaluate("a => __synth.deck().importBytes(a, 'ped.mid')", PED); pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(100)
+            pg.evaluate("__synth.deck().stop()"); pg.wait_for_timeout(200)
+        else:
+            pg.evaluate("a => __synth.player().importBytes(a, 'ped.mid')", PED); pg.wait_for_timeout(200)
+            pg.evaluate("__synth.player().play()"); pg.wait_for_timeout(150); pg.evaluate("__synth.player().stop()"); pg.wait_for_timeout(200)
+        kept_ = 50 in fnotes()
+        pg.evaluate("__synth.midi([0x90, 52, 100])"); pg.wait_for_timeout(120); pg.evaluate("__synth.midi([0x80, 52, 0])"); pg.wait_for_timeout(300)
+        held_ = 52 in fnotes(); sus_ = pg.evaluate("__synth.state().sustain")
+        pg.evaluate("__synth.midi([0xB0, 64, 0])"); pg.wait_for_timeout(300)
+        ped_res[kind_] = {"kept": kept_, "next held": held_, "page pedal": sus_, "after pedal up": fnotes()}
+        pg.evaluate("__synth.panic()"); pg.wait_for_timeout(100)
+    ck(f"M. the pedal stays down through the deck's file end, the deck's stop and the library's stop: the next note is held, a held note survives a file end, and pedal-up lets go ({ped_res}) (review R1119-1)",
+       all(r["next held"] and r["page pedal"] is True and r["after pedal up"] == [] for r in ped_res.values()), ped_res)
+    # R1119-2: the file's own end ran Stop's flush and panic, so a chord held on the keys (or by the pedal)
+    # over the last bar was cut the moment the file ended. Stop pressed by hand still silences everything.
+    pg.evaluate("a => __synth.deck().importBytes(a, 'ped.mid')", PED)
+    pg.evaluate("__synth.midi([0x90, 50, 100])"); pg.evaluate("__synth.midi([0xB0, 64, 127])"); pg.evaluate("__synth.midi([0x90, 53, 100])")
+    pg.wait_for_timeout(100); pg.evaluate("__synth.midi([0x80, 53, 0])"); pg.wait_for_timeout(100)
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(900)
+    end_ = {"playing": pg.evaluate("__synth.deck().playing()"), "notes": sorted(fnotes())}
+    pg.evaluate("__synth.midi([0xB0, 64, 0])"); pg.evaluate("__synth.midi([0x80, 50, 0])"); pg.wait_for_timeout(300)
+    end_["released"] = fnotes()
+    pg.evaluate("__synth.midi([0x90, 50, 100])"); pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(60)
+    pg.evaluate("__synth.deck().stop()"); pg.wait_for_timeout(200)
+    end_["after Stop"] = fnotes(); pg.evaluate("__synth.midi([0x80, 50, 0])"); pg.evaluate("__synth.panic()")
+    ck(f"M. a file's own end keeps the key held on the page (50) and the note the pedal holds (53); the file's last note rings on under the pedal; letting go releases them all; Stop still silences ({end_}) (review R1119-2)",
+       end_["playing"] is False and {50, 53} <= set(end_["notes"]) and end_["released"] == [] and end_["after Stop"] == [], end_)
+
     # Review 17 Oct: Render WAV went through no master bus, so a reverb you could hear was missing
     # from the file. The deck now hands the master state to the offline render.
     pg.evaluate("a => __synth.deck().importBytes(a, 'melody.mid')", MEL)

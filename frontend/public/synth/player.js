@@ -96,7 +96,7 @@ export function createPlayer(api) {
         E.sendTo(d, { t: 'flush' });
         E.sendTo(d, { t: 'panic' });
         touched[d].forEach(n => E.sendTo(d, { t: 'off', n }));
-        E.sendTo(d, { t: 'sus', on: false });
+        E.sendTo(d, { t: 'sus', on: !!(api.pedal && api.pedal(d)) });   // the page's pedal stays down if it is (review R1119-1)
         E.sendTo(d, { t: 'bend', v: 0 });
         E.sendTo(d, { t: 'mw', v: 0 });
         E.sendTo(d, { t: 'at', v: 0 });
@@ -108,7 +108,7 @@ export function createPlayer(api) {
         if (touched[d].size && node && node.port) node.port.postMessage({ t: 'panic' });
       } else if (E.devices[d]) {
         touched[d].forEach(n => E.devices[d].midi({ t: 'off', n }));
-        E.devices[d].midi({ t: 'sus', on: false });
+        E.devices[d].midi({ t: 'sus', on: !!(api.pedal && api.pedal(d)) });
       }
       if (sounding[d]) sounding[d].clear();
       touched[d].clear();

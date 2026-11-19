@@ -17,6 +17,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1119-3 | confusing | c, e, f | Stopping the MIDI deck, or the song library's stop or end (and its play, by the code), runs a panic on Filament and Cathode, so a chord the player is holding on the keys or the pedal goes silent while the keys are still down | measured (deck stop, library stop), inferred (library end and play) |
+| R1119-4 | confusing | d | The master strip's render wav plays the held keys at velocity 0.8 whatever they were played at, and C4 when nothing is held; the panel does not say either | measured |
+| R1119-5 | confusing | c | MIDI channel is ignored for notes: C4 on channel 1 and channel 2, then channel 1's note off, ends the note while channel 2 still holds it | measured |
 | R1117-3 | confusing | h | Rack headings jump from the one H1 to H3: no H2 on the page (30 H3 shown on the desktop rack), so a screen reader's heading list has no section level | measured |
 | R1116-4 | confusing | c, e | MIDI CC 123 or 120 (All Notes Off, All Sound Off) from a keyboard stops the MIDI deck's playback (and, by the code, the song library's): they run Panic, not a note release | measured (deck), inferred (library) |
 | R1116-3 | confusing | e | Moving a track to another device while the file plays does not strike the notes already held in it again: a bass held from 0 s falls silent for the rest of its note | measured |
@@ -88,7 +91,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov), R1119-1 and R1119-2 (19 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2875,3 +2878,92 @@ call for James.
 
 Areas c to h. No knob sweep on Lattice, Gleam or the master bus this night. Suggested next: c, d and e,
 with a take on Thyratron with osc 3 as an LFO and the tape echo synced while the deck plays.
+
+## 2026-11-19 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/ is still cut short by the server (the 19 Nov check and debug's open
+item): from this job's network at about 4:30 AM PT, `/synth/` uncompressed stopped at 147,231 bytes (the file
+is 511,772), `/assets/index-BGbcUbUl.js` at 147,225 of 739,986, and in Chromium two of four loads of
+`/synth/` never became ready in 90 s (one at 1366 px and one at 375 px; the two that loaded had no page or
+console errors and no sideways scroll). Live sw.js `dxedge-v231`, main `dxedge-v232` at `a141ce1`: the
+deploy is still failing. So tonight's sound and behavior measurements were taken on a local server of
+origin/main `a141ce1` (the tree the next deploy ships), Chromium 1243 headless at 1366 x 900, with the master
+recorder (24-bit WAV decoded in the script), `__synth.renderButton` and the Filament voice meters. Focus
+tonight: the pedal and held keys against the MIDI deck and the song library, a file's end, loop at 200% and
+50% with a tempo change mid-loop, a file with a note that never gets its off, two MIDI channels on one key,
+and the master bus with values out of range and at its extremes.
+
+### What worked (measured)
+
+- Deck loop at 200% wraps a 2.0 s file every 1.0 s; moving the tempo to 50% mid-loop carries on from where
+  it is and wraps after 4.0 s; Stop leaves no voice and nothing in `sounding`.
+- A file whose first note never gets its note off (and a second note after it) imports as 1.0 s, plays and
+  ends with no voice held 2.5 s later.
+- Master bus with every value out of range (feedback 5, mix -1, size 9, ratio 0, makeup 99, ceiling +12, a
+  bogus division) clamps to its limits (feedback 0.95, size 1, ratio 1, makeup 24, ceiling 0, division 1/8);
+  the render is a valid 24-bit 44.1 kHz WAV with no NaN.
+- Master render wav of a held A3, 3 s: valid RIFF/WAVE, 132,300 frames, peak 0.49, no NaN, no sample at
+  full scale. Delay feedback 1 and reverb size 1 at mix 1 with the limiter on: peak 0.89, nothing at full
+  scale (with the compressor off it clips, as R1017-9 says).
+- Deck Stop with a key held on the page leaves no hard click on the master recording (largest sample step
+  0.075 against 0.042 in the held note before it).
+
+### Findings
+
+**R1119-1. The pedal stops holding after the deck or the library lets go.** Areas c, e. Broken. Measured.
+Fixed tonight.
+- Steps: press the pedal (CC 64, space or hold) and keep it down. Play a short file on the MIDI deck to its
+  end (or press its Stop, or play and stop a song in the song library). With the pedal still down, play
+  and release a key.
+- Expected: the note is held, as it is with no file played.
+- Actual (main `a141ce1`): the note is let go at once in all three cases (Filament's meter: 1 voice
+  releasing, no held note), while the hold lamp and `state().sustain` still read down. Control, no file:
+  the note is held. Lifting and pressing the pedal again puts it right. Cause (code): the deck's end and
+  stop, and the library's stop, send a pedal-up to the device; Filament has one sustain flag for the page
+  and playback.
+- Fix: the deck and the library send the page's own pedal state instead of a pedal-up, on the devices the
+  pedal was sent to (`api.pedal(d)`). With the pedal down, a file's last notes ring on under it, as on a
+  piano, and go with the pedal. Check: "M. the pedal stays down through the deck's file end, the deck's
+  stop and the library's stop ... (review R1119-1)" (fails on `a141ce1`: next held False in all three;
+  passes on this tree).
+
+**R1119-2. A file's own end cuts the chord you are holding.** Area e. Broken. Measured. Fixed tonight.
+- Steps: hold a key (or play one under the pedal) while a file plays on the same device; let the file run
+  to its end.
+- Expected: the file's notes end; the key you are holding keeps sounding until you let go.
+- Actual (main `a141ce1`): the held key and the pedal's note go silent the moment the file ends (Filament
+  0 voices, the key still down on the page). Cause (code): at its end the deck ran Stop, whose flush and
+  panic are for notes the player may have missed; at the end every note off has already been sent.
+- Fix: the end skips the flush and the panic (the loop's wrap already worked this way); the deck's Stop
+  button and Panic are unchanged. Check: "M. a file's own end keeps the key held on the page (50) and the
+  note the pedal holds (53) ... (review R1119-2)" (fails on `a141ce1`: notes []; passes on this tree).
+
+**R1119-3. Stop cuts the keys you are holding.** Areas c, e, f. Confusing. Measured (deck Stop, library
+stop), inferred from the code (library end and play).
+- Steps: hold C3 on the page while a file plays on Filament; press the deck's Stop (or stop a library song).
+- Actual: C3 goes silent at once while the key is still down (`state().down` [48], Filament 0 voices). The
+  song library's own end runs the same silence (transport stop), and so does its play (`startFrom` calls
+  `silence()` first). The 30 Oct library note "a key held through a library play and stop is still held"
+  read the page's key list, not the sound.
+- Note: the panic is there to catch a note the tracker missed after the flush, so it is a design call:
+  keep it (Stop is a panic for playback), or make the voices tell playback notes from key notes (the
+  Filament worklet already marks them `pb`) and stop only those. Left for James (Open items).
+
+**R1119-4. Master render wav: fixed velocity and a C4 nobody played.** Area d. Confusing. Measured.
+- Steps: hold A3 at full velocity (MIDI velocity 127) and press render wav on the master strip.
+- Actual: the render plan plays A3 at velocity 0.8; with nothing held the render plays C4 (by the code,
+  `[60]`). The strip says neither. Expected by a first-time user: the chord as played, or a note on the
+  panel saying what is rendered.
+
+**R1119-5. Two MIDI channels on one key share one note.** Area c. Confusing. Measured.
+- Steps: note on C4 on channel 1 and on channel 2, then note off on channel 1 only.
+- Actual: the note ends (no held note) while channel 2 still holds it; channel 2's off then does nothing.
+  The page keys notes by number, not by channel. Matters for a split or layered keyboard or a DAW sending
+  two parts to one device; rare.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. Nothing was re-run on the live site beyond the loads above. Not re-measured: R1116-4
+(CC 123 stops the deck), R1116-5 (tempo box), R1110-3 and R1110-4 (master volume and bus switch steps),
+R1101-2 (tape echo feedback). Suggested next: f, g and h, and re-run tonight's two fixes on the live site
+once the deploy works.
