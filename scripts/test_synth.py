@@ -7735,6 +7735,27 @@ with sync_playwright() as pw:
     ck(f"Pr. a project that turns run on under a playing transport: no strikes while off ({lv['n0']}), then {len(ons)} strikes 125 ms apart from {None if first_l is None else round(first_l * 1000)} ms after it, none skipped ({len(skips)})",
        lv["n0"] == 0 and len(ons) >= 5 and not skips and lv2["st"]["skipped"] == lv["s0"] and first_l is not None and -0.002 <= first_l <= 0.13 + 0.15
        and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_l), (lv, gaps_l, first_l, len(skips)))
+    # the same with the page busy after the apply, until 90 ms past the next step (improvement 20 Nov): the check above
+    # failed once on main when the box was loaded (first strike 200 ms after, one step skipped). Run on waited for the
+    # next timer tick to fill the lookahead, so a stall past the first step dropped it: 1 skip in 5 of 5 trials on
+    # main, 0 in 7 of 7 with resync filling the lookahead at once (measured). Deterministic: the stall is set from the
+    # transport's own position, so on main the first step is always over LATE (60 ms) when the timer comes round.
+    pr.evaluate("""() => { __synth.transport().stop(); __synth.setDevice('filament'); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();
+      __synth.transport().setTempo(120); __synth.transport().locate(0); __synth.transport().play(); }""")
+    pr.wait_for_timeout(600)
+    lb = pr.evaluate("""() => { const R = __synth.roll(), T = __synth.transport(), c = __synth.engine().ctx; R.clearLog();
+      __synth.applyProject({ kind: 'dxrack', name: 'Busy page', device: 'filament', tempo: 120, roll: { pat: R.factory()[1], dest: 'lit', run: true } });
+      const t1 = c.currentTime, pos = T.position(), next = (Math.floor(pos / 0.25 + 1e-6) + 1) * 0.25, d1 = (next - pos) * 0.5;
+      const until = performance.now() + (d1 + 0.09) * 1000; while (performance.now() < until) {}
+      return { t1, d1 }; }""")
+    pr.wait_for_timeout(700)
+    lb2 = pr.evaluate("() => { const R = __synth.roll(); const L = R.log(); __synth.transport().stop(); return L; }")
+    ons_b = [e for e in lb2 if e["t"] == "on"]; skips_b = [e for e in lb2 if e["t"] == "skip"]
+    gaps_b = [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(ons_b, ons_b[1:])]
+    first_b = (ons_b[0]["want"] - lb["t1"]) if ons_b else None
+    ck(f"Pr. run on from a project, then the page busy until 90 ms past the next step: none skipped ({len(skips_b)}), first strike {None if first_b is None else round(first_b * 1000)} ms after (the next step is {round(lb['d1'] * 1000)} ms), {len(ons_b)} strikes 125 ms apart (improvement 20 Nov)",
+       not skips_b and len(ons_b) >= 5 and first_b is not None and -0.01 <= first_b <= lb["d1"] + 0.002
+       and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_b), (lb, gaps_b, first_b, [round((e["at"] - e["want"]) * 1000) for e in skips_b]))
     # the run switch itself, the same way (bug fixed 17 Nov): on main, run on after 1.5 s off logged 12 to 14 passed steps as
     # skipped and could strike the first note up to 21 ms late (measured, 3 trials)
     pr.evaluate("""() => { __synth.transport().stop(); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();

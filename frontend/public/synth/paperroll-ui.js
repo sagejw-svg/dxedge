@@ -351,11 +351,16 @@ export function createRoll(api) {
     if (open) paintDest();
     return true;
   }
+  // The grid is picked up from the beat now and the lookahead is filled at once, as startFrom does. Until 20 Nov
+  // it waited for the next timer tick, so a page busy for more than about 135 ms after run came on (a project
+  // applied under a playing transport, a slow box) reached the first step over LATE and dropped it as skipped
+  // (measured: 1 skip in 5 of 5 trials with a 90 ms stall past the next step; failed the suite once on main).
   function resync() {
     if (!playing || !anchor) return;
     const b = Math.max(schedBeat, beatNow());
     k = firstStep(b + 1e-6); cov = k; schedBeat = b;
     if (chainOn()) chainSeek(b + 1e-6); else { seg = null; segQ.length = 0; heard = null; }
+    pump();
   }
 
   // ------------------------------------------------------------ editing
