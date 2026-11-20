@@ -73,11 +73,14 @@ for sl in s["slides"]:
 PY
 )
 
-  # Fetch the originals once if any non-Esri file is missing.
+  # Fetch the originals only if a pyramid still has to be built and its
+  # original is not on disk. Once every pyramid exists this is a no-op, so a
+  # deploy never re-downloads a gigabyte for nothing.
   need_fetch=0
   for row in "${rows[@]}"; do
     IFS=$'\t' read -r name file is_esri <<<"$row"
     [[ "$is_esri" == "1" ]] && continue
+    [[ -s "$dest/$name.dzi" ]] && continue
     [[ -s "$hires/$file" ]] || need_fetch=1
   done
   if [[ "$need_fetch" == "1" ]]; then
@@ -114,6 +117,35 @@ done
 
 # Belt and braces for directories created by an earlier run under a bad umask.
 chmod -R u+rwX,go+rX "$OUT" 2>/dev/null || true
+
+# The originals are only an input. They live in the GitHub release and are
+# about 1 GB for both sites, which filled the droplet's disk on 2026-11-19
+# (every response was cut at 139 KB and deploys failed). Keep them only
+# when asked (SKY_KEEP_HIRES=1), and only ever remove them when every
+# non-Esri pyramid for that site is in place.
+if [[ "${SKY_KEEP_HIRES:-0}" != "1" ]]; then
+  for site in ranch ramona; do
+    [[ "$WHICH" == "all" || "$WHICH" == "$site" ]] || continue
+    dest="$OUT/$site"; hires="$ROOT/sky/$site/hires"
+    [[ -d "$hires" ]] || continue
+    complete=1
+    while IFS=$'\t' read -r name file is_esri; do
+      [[ "$is_esri" == "1" ]] && continue
+      [[ -s "$dest/$name.dzi" ]] || complete=0
+    done < <(python3 - "$ROOT/frontend/public/${SLUG[$site]}/data/site.json" <<'PY'
+import json, sys
+s = json.load(open(sys.argv[1]))
+for sl in s["slides"]:
+    for h in sl["hires"]:
+        print(f'{h["name"]}\t{h["file"]}\t{int(bool(sl.get("esri")))}')
+PY
+)
+    if [[ "$complete" == "1" ]]; then
+      log "$site: all pyramids present; removing originals in $hires ($(du -sh "$hires" 2>/dev/null | cut -f1))"
+      rm -rf "$hires"
+    fi
+  done
+fi
 
 log "done: built $built, already present $skipped, esri skipped $esri -> $OUT"
 log "size $(du -sh "$OUT" 2>/dev/null | cut -f1)"
