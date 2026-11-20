@@ -5,7 +5,8 @@ Stores DX spots and solar readings so data survives container restarts.
 import sqlite3
 import json
 import logging
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -201,8 +202,26 @@ def load_latest_solar() -> dict | None:
 
 # --- PSK spots ---
 
+# psk_spots keeps a rolling window. Every fetch stamps its spots with the
+# fetch time, so UNIQUE(callsign, band, timestamp) never dedupes across
+# fetches and the table grows by a full batch per call. With no pruning it
+# reached 70.9 million rows and 16 GB by Nov 2026 (prune_old_psk existed but
+# was never called), which is what filled the droplet's disk.
+PSK_RETENTION_HOURS = 24
+PSK_PRUNE_INTERVAL_S = 600
+_last_psk_prune = None  # None: prune on the first save after start
+
+
+def _psk_cutoff(hours: int) -> str:
+    # Same format the rows are written in (datetime.isoformat with +00:00),
+    # so plain string comparison orders correctly. SQLite's datetime('now')
+    # uses a space instead of 'T' and compares wrong against these rows.
+    return (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+
 def save_psk_spots(spots: list[dict], grid: str):
-    """Save PSKReporter spots."""
+    """Save PSKReporter spots, pruning the table at most every 10 minutes."""
+    global _last_psk_prune
     if not spots:
         return
     now = datetime.now(timezone.utc).isoformat()
@@ -217,6 +236,12 @@ def save_psk_spots(spots: list[dict], grid: str):
         """, [
             {**s, "timestamp": now} for s in spots
         ])
+    if _last_psk_prune is None or time.monotonic() - _last_psk_prune > PSK_PRUNE_INTERVAL_S:
+        _last_psk_prune = time.monotonic()
+        try:
+            prune_old_psk(PSK_RETENTION_HOURS)
+        except sqlite3.Error as e:
+            logger.warning(f"PSK prune failed: {e}")
 
 
 def load_psk_spots(grid4: str, hours: int = 2) -> list[dict]:
@@ -224,18 +249,18 @@ def load_psk_spots(grid4: str, hours: int = 2) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute("""
             SELECT * FROM psk_spots
-            WHERE timestamp >= datetime('now', ? || ' hours')
+            WHERE timestamp >= ?
             ORDER BY snr DESC
-        """, (f"-{hours}",)).fetchall()
+        """, (_psk_cutoff(hours),)).fetchall()
     return [dict(r) for r in rows]
 
 
-def prune_old_psk(hours: int = 6):
+def prune_old_psk(hours: int = PSK_RETENTION_HOURS) -> int:
     with get_conn() as conn:
-        conn.execute(
-            "DELETE FROM psk_spots WHERE timestamp < datetime('now', ? || ' hours')",
-            (f"-{hours}",)
+        cur = conn.execute(
+            "DELETE FROM psk_spots WHERE timestamp < ?", (_psk_cutoff(hours),)
         )
+        return cur.rowcount
 
 
 # --- Alert subscriptions ---
