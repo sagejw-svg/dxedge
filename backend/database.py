@@ -255,12 +255,27 @@ def load_psk_spots(grid4: str, hours: int = 2) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def prune_old_psk(hours: int = PSK_RETENTION_HOURS) -> int:
-    with get_conn() as conn:
-        cur = conn.execute(
-            "DELETE FROM psk_spots WHERE timestamp < ?", (_psk_cutoff(hours),)
-        )
-        return cur.rowcount
+def prune_old_psk(hours: int = PSK_RETENTION_HOURS, batch: int = 5000,
+                  max_batches: int = 20) -> int:
+    """Delete expired PSK rows in small transactions.
+
+    Bounded on purpose: one DELETE over a huge backlog writes every touched
+    page to the WAL, can fill the disk, and holds the write lock for minutes.
+    At most batch * max_batches rows go per call; steady state is far below.
+    """
+    cutoff = _psk_cutoff(hours)
+    total = 0
+    for _ in range(max_batches):
+        with get_conn() as conn:
+            n = conn.execute(
+                "DELETE FROM psk_spots WHERE rowid IN "
+                "(SELECT rowid FROM psk_spots WHERE timestamp < ? LIMIT ?)",
+                (cutoff, batch),
+            ).rowcount
+        total += n
+        if n < batch:
+            break
+    return total
 
 
 # --- Alert subscriptions ---
