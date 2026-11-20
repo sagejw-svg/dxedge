@@ -81,6 +81,8 @@ export function createRoll(api) {
     else if (E.devices[d]) E.devices[d].midi(framed);
     // the MIDI deck's recorder takes the note at the time it sounds (it keeps Filament and Cathode only)
     if (api.rec && (msg.t === 'on' || msg.t === 'off')) api.rec(d, msg, at);
+    // the on-screen keys light as the note sounds and go out with its off (a resent off already has its own)
+    if (!entry && (msg.t === 'on' || msg.t === 'off')) lightAt(msg.n, msg.t === 'on', at);
     // a resent off (after a stop's flush) moves its first entry to the time it now goes, so the log keeps one off per strike
     if (entry) { entry.at = at; entry.resent = true; return entry; }
     const e = { t: msg.t, n: msg.n, v: msg.v, dev: d, at, want: want == null ? at : want, now: c.currentTime };
@@ -88,6 +90,28 @@ export function createRoll(api) {
     if (log.length > 600) log.splice(0, log.length - 600);
     return e;
   }
+  // ------------------------------------------------------------ the on-screen keys (20 Nov)
+  // A note the roll sends lights its key on the keybed at the time it sounds and lets it go at the time its
+  // off does, the way the library player and the MIDI deck light theirs. Counted per pitch, so a pitch struck
+  // twice before its first off (a slide into itself, a tie run's seam) goes out only with its last off.
+  // Display only: the page asks lit(n) when it paints a key.
+  const lit = new Map(), lightT = new Map();
+  function lightAt(n, on, at) {
+    const c = api.ctx(); if (!c || !api.lit) return;
+    const id = setTimeout(() => {
+      lightT.delete(id);
+      const k = (lit.get(n) || 0) + (on ? 1 : -1);
+      if (k > 0) lit.set(n, k); else lit.delete(n);
+      api.lit(n);
+    }, Math.max(0, (at - c.currentTime) * 1000));
+    lightT.set(id, { n, on, at });
+  }
+  function unlightAll() {
+    lightT.forEach((x, id) => clearTimeout(id)); lightT.clear();
+    const ns = [...lit.keys()]; lit.clear();
+    if (api.lit) ns.forEach(n => api.lit(n));
+  }
+
   // The transport stopped: Filament and Cathode drop what is still queued (the library player does the
   // same on the same stop), then every note the roll holds goes off now. Another device gets its off
   // just after its own strike, in case that strike is still queued.
@@ -98,6 +122,7 @@ export function createRoll(api) {
     queuedOffs.length = 0;
     pend.forEach(x => send(x.dev, { t: 'off', n: x.n }, (x.dev === 'filament' || x.dev === 'cathode') ? now : Math.max(now, x.onTime + 0.002)));
     pend.length = 0;
+    unlightAll();   // what was queued no longer sounds, and every note the roll held is off now
     if (E) armed.forEach(d => {
       if ((d === 'filament' || d === 'cathode') && !(api.busy && api.busy(d))) E.playing(d, false);
     });
@@ -766,6 +791,8 @@ export function createRoll(api) {
     play: userPlay, stop: userStop,
     draw: () => { draw(performance.now()); return { ms: drawMs, stats: Object.assign({}, stats) }; },
     stats: () => Object.assign({ ms: drawMs }, stats),
+    lit: () => [...lit.entries()].filter(e => e[1] > 0).map(e => e[0]).sort((a, b) => a - b),
+    lightsPending: () => lightT.size,
   };
   test.renderScore = (seconds, tempo) => renderScore(seconds, tempo);
   test.project = () => toProject();
@@ -776,6 +803,7 @@ export function createRoll(api) {
     renderScore,
     frame(now) { if (playing) hear(); if (open && (dirty || playing)) draw(now); },
     keyIn: (n, v) => keyNote(n, v),
+    lit: n => (lit.get(n) || 0) > 0,
     test,
   };
 }

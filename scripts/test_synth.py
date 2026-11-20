@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Mw. (the Mix card's own row from 761 px: the Mix and Master cards fill the width, the seven cards it stretched end at their controls, slider grids take columns, the strips' columns, no sideways scroll, reduced motion), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Tc. (Trochotron's seed and shape rows: seven tagged joined switches, the seed and readout amber windows, key and route windows, play's lamp, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Hs. (the desktop patch strip holds one row from 1020 px on a factory or a user patch with the save form closed or open, the form in the edit keys' place, delete red), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again, an offline render lets go of its nodes), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Rr. (the paper roll recorded and rendered: the MIDI deck's take against the roll's own log, Stop and the transport's stop inside a take, a key over the roll, the export, devices the recorder does not take, the Master strip's render plan and its audio against the score), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Rr. (the paper roll recorded and rendered: the MIDI deck's take against the roll's own log, Stop and the transport's stop inside a take, a key over the roll, the export, devices the recorder does not take, the Master strip's render plan and its audio against the score), Rk. (the on-screen keys lighting with the roll's notes: timing against the roll's log, offs, Stop, ties, an octave change, the transport's stop, run off, another device, the page's own keys), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -8094,6 +8094,95 @@ with sync_playwright() as pw:
     rr.evaluate("() => { const R = __synth.roll(); R.run(false); R.dest('lit'); R.set(R.factory()[1]); }")
     ck("Rr. no page errors", not rrerr, rrerr)
     rrx.close()
+    # ---------------------------------------------------------------- Rk. the on-screen keys light with the roll (0.3, 20 Nov)
+    # Each note the roll sends lights its key on the keybed at the time it sounds and lets it go with its off,
+    # counted per pitch, as the library player and the MIDI deck light theirs. A MutationObserver stamps each
+    # key's change with the AudioContext time; the roll's own log has the times the notes were sent to sound at.
+    rkx = b.new_context(viewport={"width": 1366, "height": 1000}); rk = rkx.new_page(); rkerr = []
+    rk.on("pageerror", lambda e: rkerr.append(str(e)))
+    rk.goto(BASE); rk.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    # A record's new value is the next record's old value for the same key (or the key's class now), so a key lit
+    # and put out inside one task still reads as two changes, and a class change that is not 'down' reads as none.
+    RK_JS = """window.__rkWatch = () => { const c = __synth.engine().ctx, tr = [];
+        const mo = new MutationObserver(ms => { const t = c.currentTime;
+          ms.forEach((m, i) => { const el = m.target; if (!el.classList || !el.classList.contains('key')) return;
+            let nxt = null; for (let j = i + 1; j < ms.length; j++) if (ms[j].target === el) { nxt = ms[j].oldValue || ''; break; }
+            if (nxt == null) nxt = el.className;
+            const was = (m.oldValue || '').split(' ').includes('down'), now = nxt.split(' ').includes('down');
+            if (was !== now) tr.push({ n: +el.dataset.n, was, t }); }); });
+        mo.observe(document.getElementById('keys'), { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+        return { tr, stop: () => mo.disconnect() }; };
+      window.__rkDown = () => [...document.querySelectorAll('#keys .key.down')].map(k => +k.dataset.n).sort((a, b) => a - b);"""
+    rk.evaluate("() => { " + RK_JS + " }")
+    RK_PAT = {"name": "Key Four", "len": 4, "rate": "16", "gate": 0.5, "vel": 0.6, "acc": 1.0,
+              "steps": [{"n": 60, "g": 1, "a": 1}, {"n": 64, "g": 1}, {"n": 67, "g": 1}, {"n": 72, "g": 1}]}
+    RK_HOLD = {"name": "Key Hold", "len": 16, "rate": "16", "gate": 1.0, "vel": 0.6, "acc": 1.0,
+               "steps": [{"n": 60, "g": 1}] + [{"n": 60, "g": 1, "t": 1} for _ in range(15)]}
+    def rk_run(js_setup, secs=1.6, js_mid=None, mid_at=0.5):
+        return rk.evaluate("""async ([setup, secs, mid, midAt]) => {
+          const R = __synth.roll(), T = __synth.transport();
+          T.stop(); T.stop(); T.setTempo(120); R.run(false); await new Promise(r => setTimeout(r, 300));
+          eval(setup); await new Promise(r => setTimeout(r, 100));
+          const W = __rkWatch(); R.clearLog(); R.play();
+          let mido = null;
+          if (mid) { await new Promise(r => setTimeout(r, midAt * 1000)); mido = await eval(mid); await new Promise(r => setTimeout(r, (secs - midAt) * 1000)); }
+          else await new Promise(r => setTimeout(r, secs * 1000));
+          const stopAt = __synth.engine().ctx.currentTime, litBefore = __rkDown();
+          R.stop(); const rightAfter = __rkDown();
+          await new Promise(r => setTimeout(r, 400)); W.stop();
+          return { log: R.log(), tr: W.tr, stopAt, litBefore, rightAfter, after: __rkDown(), pend: R.lightsPending(), lit: R.lit(), mid: mido, oct: __synth.state().oct }; }""", [js_setup, secs, js_mid, mid_at])
+    def rk_match(r):
+        # pair each sounded strike with the first unused change of its key from out to down at or after its time
+        # (the stamp reads ctx.currentTime, which moves in audio callback chunks, so up to 50 ms early counts);
+        # a key that lit with no strike near it counts as stray
+        cut = r["stopAt"] - 0.3
+        ons = [e for e in r["log"] if e["t"] == "on" and e["at"] < cut]
+        ups = [x for x in r["tr"] if not x["was"]]
+        used = [False] * len(ups); late, miss = [], 0
+        for e in ons:
+            for i, x in enumerate(ups):
+                if not used[i] and x["n"] == e["n"] and e["at"] - 0.05 <= x["t"] <= e["at"] + 0.6:
+                    used[i] = True; late.append(max(0.0, x["t"] - e["at"])); break
+            else: miss += 1
+        stray = sum(1 for i, x in enumerate(ups) if not used[i] and x["t"] < cut)
+        return len(ons), late, stray, miss
+    r1 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_PAT))
+    n1, late1, early1, miss1 = rk_match(r1)
+    med1 = sorted(late1)[len(late1) // 2] if late1 else 9
+    ck(f"Rk. the roll on Filament lights each note's key as it sounds: {n1} strikes, {len(late1)} lit ({miss1} missed, {early1} lit with no strike), lateness median {med1 * 1000:.0f} ms, worst {max(late1 or [9]) * 1000:.0f} ms",
+       n1 >= 6 and miss1 == 0 and early1 == 0 and len(late1) == n1 and med1 < 0.15, (n1, late1, early1, miss1))
+    downs1 = [x for x in r1["tr"] if x["was"]]
+    pitches1 = sorted(set(e["n"] for e in r1["log"] if e["t"] == "on"))
+    ck(f"Rk. each lit key goes out with its off at gate 50%: {len(downs1)} keys out for {len(late1)} lit, the keys {pitches1}",
+       len(downs1) >= len(late1) - 1 and pitches1 == [60, 64, 67, 72], (len(downs1), len(late1)))
+    ck(f"Rk. Stop on the roll puts every roll key out at once ({r1['litBefore']} before, {r1['rightAfter']} right after), with no light left waiting ({r1['pend']} pending, {r1['after']} down 400 ms later)",
+       r1["rightAfter"] == [] and r1["after"] == [] and r1["pend"] == 0 and r1["lit"] == [], r1)
+    r2 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_HOLD), secs=1.2,
+                js_mid="(() => { const a = __rkDown(); document.getElementById('octDn').click(); const b = __rkDown(); document.getElementById('octUp').click(); return { a, b, c: __rkDown() }; })()", mid_at=0.7)
+    ck(f"Rk. a tied note holds its key down through the ties ({r2['mid']['a']} at 0.7 s, {r2['litBefore']} at 1.2 s) and the keybed rebuilt by an octave change keeps it lit ({r2['mid']['b']} an octave down, {r2['mid']['c']} back)",
+       r2["mid"]["a"] == [60] and r2["mid"]["b"] == [60] and r2["mid"]["c"] == [60] and r2["litBefore"] == [60] and r2["after"] == [], r2["mid"])
+    r3 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_HOLD), secs=0.9,
+                js_mid="(async () => { const a = __rkDown(); __synth.transport().stop(); const b = __rkDown(); await new Promise(r => setTimeout(r, 300)); return { a, b, c: __rkDown(), pend: __synth.roll().lightsPending() }; })()", mid_at=0.5)
+    ck(f"Rk. the transport stopping under a held roll note puts its key out at once ({r3['mid']['a']} before, {r3['mid']['b']} right after, {r3['mid']['c']} 300 ms later, {r3['mid']['pend']} pending)",
+       r3["mid"]["a"] == [60] and r3["mid"]["b"] == [] and r3["mid"]["c"] == [] and r3["mid"]["pend"] == 0, r3["mid"])
+    r4 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_PAT),
+                js_mid="(async () => { __synth.roll().run(false); await new Promise(r => setTimeout(r, 800)); return { down: __rkDown(), pend: __synth.roll().lightsPending(), playing: __synth.roll().state().playing, struck: __synth.roll().log().filter(e => e.t === 'on' && e.now > __synth.engine().ctx.currentTime - 0.75).length }; })()", mid_at=0.6, secs=1.6)
+    ck(f"Rk. run off under the playing transport: no new strikes, the notes already struck end on time and their keys go out ({r4['mid']['down']} down and {r4['mid']['pend']} pending 800 ms later, {r4['mid']['struck']} struck after)",
+       r4["mid"]["down"] == [] and r4["mid"]["pend"] == 0 and r4["mid"]["playing"] and r4["mid"]["struck"] == 0, r4["mid"])
+    r5 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('cathode');" % json.dumps(RK_PAT))
+    n5, late5, early5, miss5 = rk_match(r5)
+    devs5 = sorted(set(e["dev"] for e in r5["log"] if e["t"] == "on"))
+    ck(f"Rk. the roll on Cathode while Filament is lit lights the keys too, as the library and the deck do ({n5} strikes on {devs5}, {len(late5)} lit, {miss5} missed), and Stop leaves none down",
+       devs5 == ["cathode"] and n5 >= 6 and miss5 == 0 and early5 == 0 and r5["after"] == [] and r5["pend"] == 0, (n5, len(late5), miss5, early5))
+    r6 = rk.evaluate("""async () => {
+      const R = __synth.roll(); __synth.setDevice('filament'); R.dest('lit'); R.set(R.factory()[1]);
+      __synth.noteOn(62, 0.8); const a = __rkDown(); __synth.noteOff(62); const b = __rkDown();
+      return { a, b, lit: R.lit() }; }""")
+    ck(f"Rk. with the roll stopped the keys are the page's own: a key played lights ({r6['a']}) and goes out on release ({r6['b']}), the roll lights nothing ({r6['lit']})",
+       62 in r6["a"] and r6["b"] == [] and r6["lit"] == [], r6)
+    rk.evaluate("() => { const R = __synth.roll(); R.run(false); R.dest('lit'); R.set(R.factory()[1]); }")
+    ck("Rk. no page errors", not rkerr, rkerr)
+    rkx.close()
     # ---------------------------------------------------------------- Th. Theremin mode (0.3, 9 Nov)
     # A pad on Filament's Play tab: across is pitch, up is volume, one sliding note; the magic eye shows
     # its tuning. The worklet takes {t:'thm',on,p,a} and holds one voice (note 128) at that fractional

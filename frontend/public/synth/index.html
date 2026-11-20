@@ -4714,14 +4714,14 @@ function buildKeys() {
       if (pc === 0) el.innerHTML = '<span class="kn">C' + (Math.floor(n / 12) - 1) + '</span>';
     }
     host.appendChild(el); keyEls.set(n, el);
-    if (held(n) || (deck && deck.lit(n)) || (player && player.lit(n))) el.classList.add('down');
+    if (held(n) || (deck && deck.lit(n)) || (player && player.lit(n)) || (roll && roll.lit(n))) el.classList.add('down');
   }
   host.style.width = edges[whites] + 'px';
   $('octV').textContent = 'C' + baseOct;
   // phones: start the scroll on the middle C of the visible range
   if (phone) { const w = $('keyswrap'); w.scrollLeft = Math.max(0, 7 * 44 - w.clientWidth / 2 + 3 * 44); }
 }
-function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || held(n) || !!(deck && deck.lit(n)) || !!(player && player.lit(n))); }
+function paintKey(n, on) { const el = keyEls.get(n); if (el) el.classList.toggle('down', !!on || held(n) || !!(deck && deck.lit(n)) || !!(player && player.lit(n)) || !!(roll && roll.lit(n))); }
 buildKeys();
 let lastAvail = $('keyswrap').clientWidth;
 const keyFit = new ResizeObserver(() => {
@@ -4995,6 +4995,7 @@ roll = createRoll({
   reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   rec: (d, m, at) => { if (deck) deck.recAt(d, m, at); },     // the MIDI deck records the roll's notes (19 Nov)
   recFlush: (d, at) => { if (deck) deck.recFlush(d, at); },   // and drops the ones a stop flushed before they sounded
+  lit: n => paintKey(n, false),                                // the on-screen keys light with the roll's notes (20 Nov)
 });
 
 // ---------------------------------------------------------------- the chassis
