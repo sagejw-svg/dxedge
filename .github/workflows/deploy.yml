@@ -271,6 +271,11 @@ jobs:
             # Certificate guard. Exits immediately unless the cert is expired or
             # within 30 days of it. Never fails the deploy: it always exits 0.
             bash scripts/cert_repair.sh || true
+
+            # Daily host health snapshot (memory, swap, disk, database size,
+            # logs, SSH counts) for the weekly review. Idempotent, never
+            # fails the deploy. See scripts/health/install_host_check.sh.
+            bash scripts/health/install_host_check.sh || true
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete: $(git rev-parse --short HEAD)" >> $LOG
 
       - name: Verify cache headers on the files that carry a deploy
