@@ -20,7 +20,7 @@ import { normalizeAdditron } from './additron.js';
 import { normalizeRhumbatron } from './rhumbatron.js';
 import { normalizeResnatron } from './resnatron.js';
 import { normalizeStrip, normalizeBus } from './mixer.js';
-import { normalizeArmed } from './mixsession.js';
+import { normalizeArmed, MIX_CHANNELS } from './mixsession.js';
 import { clampTempo, normalizeSig } from './transport.js';
 import { normalizeRoll, normalizeChain } from './paperroll.js';
 
@@ -46,7 +46,9 @@ export function normalizeProject(raw) {
   const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' || src.device === 'thyratron' || src.device === 'gleam' || src.device === 'mote' || src.device === 'heptode' || src.device === 'geissler' || src.device === 'pentagrid' || src.device === 'orthicon' || src.device === 'trochotron' || src.device === 'gyrotron' || src.device === 'klystron' || src.device === 'phantastron' || src.device === 'additron' || src.device === 'rhumbatron' || src.device === 'resnatron' ? src.device : 'filament';
   const name = String(src.name == null ? 'Untitled' : src.name).trim().slice(0, 40) || 'Untitled';
   const mixerIn = src.mixer && typeof src.mixer === 'object' ? src.mixer : {};
-  const ids = new Set(['filament', 'cathode']);
+  // Every rack strip, as a mix session does: a strip the file does not carry (a project saved before
+  // that device existed) loads at its defaults instead of keeping the page's mute or solo (review R1120-1).
+  const ids = new Set(['filament', 'cathode'].concat(MIX_CHANNELS.map(c => c.id)));
   Object.keys(mixerIn).forEach(k => { if (k && String(k).length < 40) ids.add(String(k)); });
   const mixer = {};
   ids.forEach(id => { mixer[id] = normalizeStrip(mixerIn[id]); });

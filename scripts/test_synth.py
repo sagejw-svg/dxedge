@@ -7673,6 +7673,21 @@ with sync_playwright() as pw:
        and pps["bad"]["pat"]["len"] == 16 and pps["bad"]["pat"]["rate"] == "16" and pps["bad"]["pat"]["steps"][0] == {"n": 127, "g": 1, "a": 0, "s": 0, "t": 0}
        and len(pps["bad"]["pat"]["steps"]) == 16 and pps["odd"] == ["constructor", "lit", "lit", "lit", "lit", "lit", "cathode"]
        and pps["good"] == {"dest": "cathode", "run": True, "same": True} and pps["stable"] and pps["v"] == 1 and pps["kind"] == "dxrack", pps)
+    # A project file without a strip (saved before that device was on the rack) loads it at its defaults: until 20 Nov
+    # the page's own strip stayed, so a Lattice solo left from before silenced the project's Filament (review R1120-1)
+    pms = pr.evaluate("""async () => {
+      const P = await import('/synth/project.js');
+      const keys = Object.keys(P.normalizeProject({ mixer: { filament: { level: 0.5 } } }).mixer).sort();
+      __synth.setMixer('lattice', { solo: true }); __synth.setMixer('thyratron', { mute: true, level: 0.2 }); __synth.setMixer('resnatron', { pan: -0.5, sendR: 0.4 });
+      __synth.applyProject({ v: 1, kind: 'dxrack', name: 'Old mix', device: 'filament', tempo: 120, mixer: { filament: { level: 0.7 }, cathode: { level: 1 } }, devices: {} });
+      const m = __synth.mixer();
+      const pressed = [...document.querySelectorAll('[id^=mix][id$=Solo], [id^=mix][id$=Mute]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.id);
+      return { keys, lattice: m.lattice, thyratron: m.thyratron, resnatron: m.resnatron, filament: m.filament, pressed };
+    }""")
+    dflt = {"level": 1, "pan": 0, "mute": False, "solo": False, "sendR": 0, "sendD": 0}
+    ck(f"Pr. a project file without a strip loads that strip at its defaults: a Lattice solo, a Thyratron mute and a Resnatron pan left on the page are cleared, the file's Filament level is kept (pressed {pms['pressed']}) (review R1120-1)",
+       len(pms["keys"]) == 18 and pms["lattice"] == dflt and pms["thyratron"] == dflt and pms["resnatron"] == dflt
+       and abs(pms["filament"]["level"] - 0.7) < 1e-9 and pms["pressed"] == [], pms)
     rp = pr.evaluate("""() => {
       __synth.transport().stop(); __synth.transport().stop(); __synth.setDevice('filament');
       const R = __synth.roll();

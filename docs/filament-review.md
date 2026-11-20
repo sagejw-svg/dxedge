@@ -17,6 +17,8 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1120-2 | missing | f | A project keeps neither the song library's song nor its channel routing (nor, by the code, the deck's file): Greensleeves with channel 3 sent to Cathode, project saved, page reloaded, project loaded: the library is empty and the routing is gone (the song's 96 BPM is kept as the project tempo) | measured |
+| R1120-3 | confusing | h | Tab order jumps back up: after the header's patch, volume, record and size controls (stops 1 to 14), stop 15 is "Tip the developer" at the very top of the page (y 16 px at 1366, 8 px at 375), then focus drops to the rail | measured |
 | R1119-3 | confusing | c, e, f | Stopping the MIDI deck, or the song library's stop or end (and its play, by the code), runs a panic on Filament and Cathode, so a chord the player is holding on the keys or the pedal goes silent while the keys are still down | measured (deck stop, library stop), inferred (library end and play) |
 | R1119-4 | confusing | d | The master strip's render wav plays the held keys at velocity 0.8 whatever they were played at, and C4 when nothing is held; the panel does not say either | measured |
 | R1119-5 | confusing | c | MIDI channel is ignored for notes: C4 on channel 1 and channel 2, then channel 1's note off, ends the note while channel 2 still holds it | measured |
@@ -91,7 +93,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov), R1119-1 and R1119-2 (19 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov), R1119-1 and R1119-2 (19 Nov), R1120-1 (20 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -2967,3 +2969,78 @@ Areas a, b, f, g, h. Nothing was re-run on the live site beyond the loads above.
 (CC 123 stops the deck), R1116-5 (tempo box), R1110-3 and R1110-4 (master volume and bus switch steps),
 R1101-2 (tape echo feedback). Suggested next: f, g and h, and re-run tonight's two fixes on the live site
 once the deploy works.
+
+## 2026-11-20 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `1389659`, sw.js
+`dxedge-v235` (live and main agree). Playwright's Chromium 1243 headless at 1366 x 900 and 375 x 812
+(touch), plus a reduced-motion context at both sizes. No page or console errors and no failed requests on
+the rack, Hexode, Anode, Gleam, Iris, Hand Orchestra, Sculpt or Aether in any run. Audio on the rack was
+read from the master recorder (`engine().fx.recordStart` and `recordStop`, after the master volume); on the
+vendored pages from an analyser tapped in front of each page's destination. Focus tonight: project files
+from before today's strips, what a project carries besides the patches, every library song through the
+master, the outboard pages, and the Tab order and focus rings.
+
+### What worked (measured)
+
+- All 21 library songs, 5 s each through the master recorder: peaks 0.59 (Dies irae) to 0.97 (The
+  Entertainer), no sample at full scale, no NaN; after each stop, 0 voices and nothing held.
+- Project save, then a different factory patch, then load: Filament comes back as Filament Lead (shown
+  "* Filament Lead (edited)", a known pattern); undo steps back to the patch before the load.
+- A project file picked in the upload key loads with the toast `Loaded "Old".`; the project's tempo, name
+  and strips in the file apply.
+- Vendored pages: Hexode sounds from computer key A (analyser peak 0.26 at 1366 and 375) and links back
+  twice ("Filament rack", "the Filament rack"); Anode starts on a click (peak 0.52 at 1366, 0.53 at 375),
+  no sideways scroll, links back. Gleam, Iris, Hand Orchestra, Sculpt and Aether load at both sizes with
+  `lang="en"`, one H1, no sideways scroll and a link back to the rack.
+- Accessibility on the rack: no control without a name (543 shown at 1366, 112 at 375), no duplicate ids,
+  no positive tabindex, every one of the first 70 Tab stops at both sizes shows an outline and is visible.
+  With reduced motion the tube show reports `reduced: true` with flare and arcs at 0, and the only running
+  animation is the correlation marker's CSS transition (as on earlier nights).
+
+### Findings
+
+**R1120-1. An older project file leaves the page's own strips as they were, so a leftover solo silences
+it.** Area f. Broken. Measured. Fixed tonight.
+- Steps: solo the Lattice strip (or mute Thyratron), then load or upload a project file that carries
+  only some strips (any project saved before a device joined the rack; here a file with only Filament and
+  Cathode strips); play a note on Filament.
+- Expected: the project's mix: strips it does not carry at their defaults, as a mix session file loads.
+- Actual (main `1389659`, live): the Lattice solo and the Thyratron mute stay on and stay pressed in the
+  Mix desk; Filament's note through the master is silent (recorder peak 0 after the load, 0.354 before
+  the solo). `normalizeProject` kept only the strips the file named plus Filament and Cathode, and the
+  mixer's `load` leaves every strip it is not given.
+- Fix: a project's mixer carries every rack strip, defaults for those the file leaves out
+  (`project.js`, the list from `mixsession.js`, the same one a mix session uses). After: all 18 strips
+  load, the solo and mute are cleared, the file's Filament level 0.7 is kept. Check: "Pr. a project file
+  without a strip loads that strip at its defaults ... (review R1120-1)" (fails on `1389659`: 2 strips,
+  Lattice solo and Thyratron mute still pressed).
+
+**R1120-2. A project does not keep the song you set up in the library.** Area f. Missing. Measured.
+- Steps: load Greensleeves in the library, send channel 3 to Cathode, save the project, reload the page,
+  load the project.
+- Expected (a musician's reading of "project"): the song and its routing come back with the patches.
+- Actual: after the reload and the load the library has no song and no routing; the project file has no
+  field for them (keys: armed, bus, device, devices, kind, mixer, name, roll, tempo, timeSig, v). The
+  song's 96 BPM survives as the project tempo. The deck's imported file is not kept either (by the code).
+  Not fixed: a schema addition (a library id is small; an imported .mid would need its bytes or a name).
+
+**R1120-3. Tab order jumps back to the top of the page.** Area h. Confusing. Measured.
+- Steps: from the top, press Tab.
+- Actual: stops 1 to 14 are the header's patch, volume, record, MIDI and size controls (y 135 to 141 px
+  at 1366); stop 15 is "Tip the developer" at y 16 px, above them; stop 16 drops to the rail. The same at
+  375 px (y 8 px after the size keys at 164 px). A sighted keyboard user sees the ring leap up and back.
+  Not fixed: the link's place in the DOM sets the header's layout; a layout call.
+
+### Still open, re-measured tonight
+
+- Hexode still 1154 px wide at 375 px (scrolls sideways), as in R1024-3's notes.
+- R1025-5: phone footer links still 13 px tall (Tip the developer 113 x 13, Hand Orchestra 93 x 13,
+  Hexode 40 x 13, Anode 33 x 13, DXEdge 40 x 13, Old Time Radio 93 x 13).
+- R1017-10: phone pitch and mod strips still 22 px wide.
+
+### Not covered tonight
+
+Areas a to e. Not re-measured: R1020-6, R1020-7, R1020-8 (no full Tab walk tonight, only the first 70
+stops), R1114-4, R1117-3. Suggested next: a and b, including R1115-1 (Rhumbatron exciters) and R1109-1
+(Theremin switch), and a full Tab walk of the Rack tab.
