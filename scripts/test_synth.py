@@ -7975,11 +7975,15 @@ with sync_playwright() as pw:
     tk = t1["take"]; tev = tk["events"]
     t_on = [e for e in tev if e["t"] == "on"]; l_on = [e for e in t1["log"] if e["t"] == "on"]
     l_in = [e for e in l_on if e["at"] <= t1["stopAt"] + 1e-6]
+    # stopAt is read just before D.stopRec(), and ctx.currentTime can move on between the two reads (one render
+    # quantum or more on a loaded box), so a note due in that gap sounded before the deck's own stop (20 Nov: a
+    # take of 18 against 17 failed main this way). Allow notes due up to 30 ms after stopAt.
+    l_in2 = [e for e in l_on if e["at"] <= t1["stopAt"] + 0.03]
     dt_t = [round(b_["time"] - a_["time"], 6) for a_, b_ in zip(t_on, t_on[1:])]
     dt_l = [round(b_["at"] - a_["at"], 6) for a_, b_ in zip(l_in, l_in[1:])]
     ck(f"Rr. the roll on Filament records into an armed take: {len(t_on)} notes, the first at 0, each where the roll struck it (largest error {max([abs(a_ - b_) for a_, b_ in zip(dt_t, dt_l)] or [0]) * 1000:.3f} ms), pitches and velocities as struck",
-       len(t_on) >= 8 and tev[0]["time"] == 0 and len(t_on) in (len(l_in), len(l_in) - 1) and all(abs(a_ - b_) <= 0.0005 for a_, b_ in zip(dt_t, dt_l))
-       and [(e["n"], e["v"]) for e in t_on] == [(e["n"], e["v"]) for e in l_in[:len(t_on)]] and all(e["dev"] == "filament" for e in tev if e["t"] in ("on", "off")),
+       len(t_on) >= 8 and tev[0]["time"] == 0 and len(l_in) - 1 <= len(t_on) <= len(l_in2) and all(abs(a_ - b_) <= 0.0005 for a_, b_ in zip(dt_t, dt_l))
+       and [(e["n"], e["v"]) for e in t_on] == [(e["n"], e["v"]) for e in l_in2[:len(t_on)]] and all(e["dev"] == "filament" for e in tev if e["t"] in ("on", "off")),
        (len(t_on), len(l_in), dt_t[:6], dt_l[:6]))
     n1, bad1, open1 = pairs(tev)
     held_len = [round(min(f["time"] for f in tev if f["t"] == "off" and f["n"] == e["n"] and f["time"] >= e["time"]) - e["time"], 4) for e in t_on[:-2]]
