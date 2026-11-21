@@ -17,6 +17,9 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1121-3 | confusing | a | Gleam: generator rate, depth and seed stay fully lit with the generator off, where they change nothing (renders at both ends of each sample-identical to the untouched patch) | measured |
+| R1121-5 | confusing | a | Lattice: the "user" table chip with no WAV imported plays the glass table with no word (osc B on user and on glass give the same octave bands, -21.8 dBFS RMS both) | measured |
+| R1121-4 | confusing | a | Gleam is quiet next to the rack: Amber Field, one finger at pressure 0.8, peaks 0.06 (-24 dBFS) offline, about 13 dB under Filament's one note (-11.2 dBFS peak on 20 Nov) | measured (Gleam), inferred (comparison across nights) |
 | R1120-2 | missing | f | A project keeps neither the song library's song nor its channel routing (nor, by the code, the deck's file): Greensleeves with channel 3 sent to Cathode, project saved, page reloaded, project loaded: the library is empty and the routing is gone (the song's 96 BPM is kept as the project tempo) | measured |
 | R1120-3 | confusing | h | Tab order jumps back up: after the header's patch, volume, record and size controls (stops 1 to 14), stop 15 is "Tip the developer" at the very top of the page (y 16 px at 1366, 8 px at 375), then focus drops to the rail | measured |
 | R1119-3 | confusing | c, e, f | Stopping the MIDI deck, or the song library's stop or end (and its play, by the code), runs a panic on Filament and Cathode, so a chord the player is holding on the keys or the pedal goes silent while the keys are still down | measured (deck stop, library stop), inferred (library end and play) |
@@ -66,7 +69,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
-| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog); 15 Nov: 7 more devices, no dialog | measured |
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog); 15 Nov: 7 more devices, no dialog; 21 Nov: 9 more devices (Mote to Resnatron), no dialog | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
 | R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall; still open 11 Nov | measured |
 | R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes); 17 Nov: still 13 unnamed at 1366, 683 and 375 px, the page 1154 px wide at 683 and 375 | measured |
@@ -93,7 +96,7 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
 | R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov), R1119-1 and R1119-2 (19 Nov), R1120-1 (20 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov), R1119-1 and R1119-2 (19 Nov), R1120-1 (20 Nov), R1121-1 and R1121-2 (21 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -3044,3 +3047,99 @@ it.** Area f. Broken. Measured. Fixed tonight.
 Areas a to e. Not re-measured: R1020-6, R1020-7, R1020-8 (no full Tab walk tonight, only the first 70
 stops), R1114-4, R1117-3. Suggested next: a and b, including R1115-1 (Rhumbatron exciters) and R1109-1
 (Theremin switch), and a full Tab walk of the Rack tab.
+
+## 2026-11-21 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, origin/main `aebafa0`, sw.js `dxedge-v238` (live and main agree).
+Playwright's own Chromium 1243 headless (the `chromium-1194` path in the task prompt is still gone) at
+1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus tonight: the knob
+sweep the 18 Nov night left for Lattice and Gleam, Trochotron's seed and shape rows (restyled 19 Nov),
+every factory patch on every device, and user patches on the nine devices 18 Nov did not cover.
+
+Method note: Lattice renders are not repeatable sample for sample even at one unison voice (four
+repeats of the untouched patch differ by 0.8 to 2.7 dB in the largest octave band), so a slider is read
+against that spread (Glass Pad with unison 1, a C4 and G4 held 0.02 to 1.2 s, hold and tail windows).
+Gleam renders are repeatable (difference 0.0 dB).
+
+### What worked (measured)
+
+- Area b, all 142 factory patches on the 18 devices picked from the menu: each shows under its own name,
+  the menu and the patch name agree, no errors.
+- User patches through the save form on Mote, Heptode, Geissler, Orthicon, Trochotron, Phantastron,
+  Additron, Rhumbatron and Resnatron: the form offers "name 2", the toast says saved, a reload brings each
+  device back on its user patch with every field equal, and delete lands on the device's first sound with
+  a toast.
+- Lattice, 45 sliders at both ends: every slider that acts on Glass Pad moves the sound past the spread
+  (oscillator octave, semi and fine 63 to 126 dB in a band, A cutoff at 20 Hz -60.8 dBFS RMS, level 0
+  silent, sub and noise at 100% 80 and 100 dB). Readouts match the value at both ends. Every render
+  finite, highest peak 0.98 (level 100%). Sliders with nothing to act on in this patch (LFO 3 and 4,
+  the four macros, the mod envelope: no matrix route reads them) change nothing, as the matrix note says.
+- Lattice chips (34): every table, filter mode and route chip lights its own aria-pressed and edits its
+  field; each warp mode with its amount from 0 to 100% moves the sound (osc A: bend 15.9, sync 49.1, FM
+  from B 48.0 dB; osc B: bend 8.3, sync 37.4, self 21.7 dB).
+- Gleam: mode, scale, root key and HRTF each edit their field and change the render (scale 5.1 to 10.4
+  dB, room 83 dB, HRTF 6.8 dB); level at 0 is silent and reads "off".
+- Trochotron, both sizes: the walk, scale and voices rows set their field and their aria-pressed; random
+  draws a new seed into the box; play lights and the meter runs (4 voices), stop ends it (0 voices); a
+  typed negative, fractional or empty seed is shown as the seed used (0, 3, 0). At 375 px the rows are
+  44 px tall, scale and voices sit under the Shape tab, no sideways scroll.
+
+### Findings
+
+**R1121-1. Lattice: sliders that do nothing look live.** Area a. Confusing. Measured. Fixed tonight.
+- Steps: Lattice, Glass Pad (both warps off), unison set to 1. Move osc A or osc B Warp, Detune, Spread
+  from end to end and render.
+- Expected: a control that does nothing in this state says so, as Thyratron's osc 3 rate does since
+  R1118-2.
+- Actual: osc B warp 0 against 100% moved the render 0.7 and 2.3 dB, osc A warp (off) 1.0 dB, detune 1.2,
+  spread 0.8 and 1.5 dB, all inside the spread of repeat renders; the sliders were fully lit.
+- Fix: in `lattice-ui.js` a warp amount dims to 0.45 while its oscillator's warp is off, detune and spread
+  while unison is 1, each with a title that says why; they light when a warp chip or a unison count
+  makes them act. Check: "W. a warp amount dims while its warp is off ... (review R1121-1)" (fails on
+  `aebafa0`).
+
+**R1121-2. Trochotron: the seed box keeps a seed past the top on show.** Area a. Confusing. Measured.
+Fixed tonight.
+- Steps: Trochotron, type 99999999999 in the seed box, Enter, then Tab.
+- Expected: the box shows the seed the piece uses, as Phantastron's box does.
+- Actual: the piece used 4294967295 while the box went on showing 99999999999 (after Enter and after
+  Tab). A negative or fractional seed was shown corrected; only a clamp to the seed already in use was not,
+  because no edit happened, so nothing rewrote the box.
+- Fix: `commitSeed` writes the seed in use back into the box. Check: "R. a typed seed past the top shows
+  the seed that is used ... (review R1121-2)" (fails on `aebafa0`).
+
+**R1121-3. Gleam: generator controls look live with the generator off.** Area a. Confusing. Measured.
+Left open (the same fix as R1121-1 would do; one fix pair a night).
+- Steps: Gleam, Amber Field (generator off). Move rate, depth and seed end to end and render a touch.
+- Expected: they dim, or say they wait for a generator.
+- Actual: six renders sample-identical to the untouched patch; the three faders at full opacity, enabled.
+
+**R1121-4. Gleam is much quieter than the rest of the rack.** Area a, b. Confusing. Measured (Gleam),
+inferred (comparison).
+- Steps: Gleam, Amber Field, one finger at x 0.43, y 0.5, pressure 0.8, offline render.
+- Expected: about the level of one note on Filament or Lattice.
+- Actual: peak 0.06 (-24 dBFS), RMS -32.4 dBFS; Lattice Glass Pad's two notes -16 dBFS RMS tonight,
+  Filament's one note -11.2 dBFS peak on 20 Nov. Level 100% lifts Gleam only 1.4 dB. Not checked: the
+  other six Gleam patches, or the live chain after the mixer.
+
+**R1121-5. Lattice: "user" with no WAV imported plays the glass table.** Area a. Confusing. Measured.
+- Steps: Lattice, fresh browser (no WAV dropped), osc B table chip "user".
+- Expected: a word that no table is loaded (or the chip waits for a WAV).
+- Actual: the chip lights and the sound is the glass table's (osc B alone: same octave bands, -21.8 dBFS
+  RMS on both). Related to R1103-1 (an imported table does not survive a reload).
+
+### Still open, re-measured tonight
+
+- R1025-3: delete still removes a user patch at once with no dialog (nine more devices tonight).
+
+### Notes (not findings)
+
+- Lattice PWM: warp amount 0 and 100% sound the same (1.5 and 0.6 dB). The pulse width runs 12% to 88%,
+  and those two widths have the same harmonic magnitudes; the middle of the travel is where it changes.
+  Read as the nature of PWM, not a fault.
+- Gleam's stutter chip changes nothing in field mode (render 0.0 dB); the panel note mentions stutter only
+  in effect mode. Not reported.
+
+### Not covered tonight
+
+Areas c to h. Gleam's other six patches for loudness. Suggested next: c, d and e.

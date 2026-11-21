@@ -5058,6 +5058,15 @@ with sync_playwright() as pw:
         rp.fill(sel_, "5000000000"); rp.press(sel_, "Enter")
         rp.wait_for_timeout(150)
         rseed[dv_] = {"seed": rp.evaluate("__synth.patch().seed"), "max": rp.get_attribute(sel_, "max")}
+    # Review 21 Nov (R1121-2): Trochotron's box kept a typed 99999999999 on show while the piece used 4294967295
+    # (Phantastron's box already showed the clamped seed)
+    rbox = {}
+    for dv_, sel_ in (("trochotron", "#trSeed"), ("phantastron", "#phSeed")):
+        rp.evaluate("d => __synth.setDevice(d)", dv_); rp.wait_for_selector(sel_, state="visible", timeout=10000)
+        rp.fill(sel_, "99999999999"); rp.press(sel_, "Enter"); rp.wait_for_timeout(120)
+        rbox[dv_] = [rp.evaluate("__synth.patch().seed"), rp.input_value(sel_)]
+        rp.press(sel_, "Tab"); rp.wait_for_timeout(120)
+        rbox[dv_].append(rp.input_value(sel_))
     rp.evaluate("__synth.setDevice('gyrotron')"); rp.wait_for_selector("#gyCanvas", state="visible", timeout=10000)
     rp.evaluate("() => __synth.setPatch({ device: 'gyrotron', name: 'Low Root', root: 30 })")
     rp.wait_for_function("() => __synth.patch().root === 30", timeout=5000); rp.wait_for_timeout(100)
@@ -5066,6 +5075,8 @@ with sync_playwright() as pw:
     rp.close()
     ck(f"R. a typed seed of 5000000000 is held at 4294967295 on Trochotron and Phantastron (not wrapped to 705032704), and each field's max says so ({rseed})",
        all(v_ == {"seed": 4294967295, "max": "4294967295"} for v_ in rseed.values()) and len(rseed) == 2, rseed)
+    ck(f"R. a typed seed past the top shows the seed that is used, 4294967295, in the box on Trochotron and Phantastron, after Enter and after Tab (review R1121-2: {rbox})",
+       all(v_ == [4294967295, "4294967295", "4294967295"] for v_ in rbox.values()) and len(rbox) == 2, rbox)
     ck(f"R. Gyrotron's root knob spans its table row (24..96) and a patch with root 30 reads 30 on it ({rroot})",
        rroot == {"root": 30, "min": "24", "max": "96", "now": "30", "kv": "30"} and not rperr, (rroot, rperr))
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
@@ -8618,6 +8629,18 @@ with sync_playwright() as pw:
     moved = float(pg.get_attribute("#latPos", "data-pos") or "0")
     ck(f"W. the position readout follows the envelope ({moved:.2f})", moved > 0.25, moved)
     pg.evaluate("__synth.noteOff(64)")
+    # Review 21 Nov (R1121-1): a warp amount with its warp off, and unison detune and spread at one voice, change
+    # nothing in the sound (measured within the spread of two renders) but looked fully live. They dim now.
+    idle_q = """() => Object.fromEntries(['osc1.warpAmt', 'osc2.warpAmt', 'unison.detune', 'unison.spread'].map(p => {
+      const l = document.querySelector('.lat-sl[data-path="' + p + '"]'); return [p, l ? +getComputedStyle(l).opacity : -1]; }))"""
+    idle0 = pg.evaluate(idle_q)
+    pg.click('.lat-chip[data-path="osc1.warp"][data-val="sync"]')
+    pg.evaluate("""() => { const i = document.querySelector('.lat-sl[data-path="unison.count"] input'); i.value = '3'; i.dispatchEvent(new Event('input', { bubbles: true })); }""")
+    pg.wait_for_timeout(60)
+    idle1 = pg.evaluate(idle_q)
+    ck(f"W. a warp amount dims while its warp is off, unison detune and spread dim at one voice, and each lights when it acts (review R1121-1: {idle0}, {idle1})",
+       all(0 <= v < 0.6 for v in idle0.values()) and idle1['osc1.warpAmt'] > 0.95 and 0 <= idle1['osc2.warpAmt'] < 0.6
+       and idle1['unison.detune'] > 0.95 and idle1['unison.spread'] > 0.95 and pg.evaluate("__synth.patch().unison.count") == 3)
     pg.screenshot(path=os.path.join(SHOTS, "synth_lattice_desktop.png"), full_page=True)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
     ck("W. no page errors", not errs, errs)

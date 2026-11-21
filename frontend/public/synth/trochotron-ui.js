@@ -464,6 +464,8 @@ export function mountTrochotronPanel(container, hooks) {
     // a typed seed past a uint32 is held at the top, not wrapped round by the normalizer's >>> 0
     const n = Math.min(SEED_MAX, Math.max(0, Math.floor(+seed.value || 0)));
     if (n !== current().seed) mutate({ seed: n });
+    // the box shows the seed that is used, also when the typed one was clamped to it (review R1121-2)
+    seed.value = String(current().seed);
   }
   seed.addEventListener('change', commitSeed);
   seed.addEventListener('keydown', e => { if (e.key === 'Enter') commitSeed(); e.stopPropagation(); });

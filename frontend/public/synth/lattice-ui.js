@@ -272,6 +272,7 @@ export function mountLatticePanel(container, hooks) {
   function addSlider(host, label, path, min, max, step, fmt) {
     const lab = document.createElement('label');
     lab.className = 'lat-sl';
+    lab.dataset.path = path;
     const name = document.createElement('span');
     name.textContent = label;
     const input = document.createElement('input');
@@ -291,11 +292,12 @@ export function mountLatticePanel(container, hooks) {
       const v = +input.value;
       setPath(patch(), path, v);
       show(v);
+      dims();
       edited();
     });
     lab.appendChild(name); lab.appendChild(input); lab.appendChild(val);
     host.appendChild(lab);
-    sliders.push({ input, read, show, path });
+    sliders.push({ input, read, show, path, lab });
   }
   function sliderGrid(host) {
     const g = document.createElement('div');
@@ -518,6 +520,23 @@ export function mountLatticePanel(container, hooks) {
   srcRow.addEventListener('pointerup', endDrag);
   srcRow.addEventListener('pointercancel', endDrag);
 
+  // A slider that does nothing in the patch's present state dims, as Thyratron's osc 3 rate does with lfo off
+  // (review R1121-1): an oscillator's warp amount while its warp is off, unison detune and spread at one voice.
+  function dims() {
+    const p = patch();
+    const idle = {
+      'osc1.warpAmt': p.osc1.warp === 'off' ? 'Does nothing while this oscillator\'s warp is off' : '',
+      'osc2.warpAmt': p.osc2.warp === 'off' ? 'Does nothing while this oscillator\'s warp is off' : '',
+      'unison.detune': p.unison.count <= 1 ? 'Does nothing with one unison voice' : '',
+      'unison.spread': p.unison.count <= 1 ? 'Does nothing with one unison voice' : '',
+    };
+    sliders.forEach(s => {
+      if (!(s.path in idle)) return;
+      s.lab.style.opacity = idle[s.path] ? '0.45' : '';
+      s.lab.title = idle[s.path];
+      s.lab.dataset.idle = idle[s.path] ? '1' : '';
+    });
+  }
   function sync() {
     writing = true;
     sliders.forEach(s => {
@@ -525,6 +544,7 @@ export function mountLatticePanel(container, hooks) {
       s.input.value = String(v);
       s.show(v);
     });
+    dims();
     container.querySelectorAll('.lat-chip').forEach(b => {
       b.setAttribute('aria-pressed', String(getPath(patch(), b.dataset.path) === b.dataset.val));
     });
