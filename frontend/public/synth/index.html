@@ -2228,7 +2228,7 @@
       A MIDI keyboard works in Chrome, Edge and Firefox after you press Connect MIDI. Safari has no Web MIDI, so on an iPhone or a Mac in Safari use the keys on screen.</p>
     <p><b style="color:var(--muted)">MIDI files.</b> Press rec and play: the first note starts the take, on whichever device the rail has lit. Play it back, or download it as a .mid. Import a .mid (or drop one on the strip) and pick Filament, Cathode or off for each track; both devices play at once. Render wav writes the file (or the take) through both devices and the rack, up to 10 minutes. Files stay in your browser; nothing is uploaded.</p>
         <p><b style="color:var(--muted)">Song library.</b> Open songs and pick a tune, or drop a .mid file on that strip. Play and stop are the rack transport, and the tempo box (Rack tab) sets the speed. Each MIDI channel can go to any device on the rack (its row of chips lists them), or off. Channel 10 starts on Dekatron. The bundled tunes are public domain, or original demos written for this page. Songs in the Halloween set load a matching Filament preset and a matching Cathode preset. Mountain King, Cellar Stairs and Porch Ghost also load a Dekatron pattern, and their hat part plays on Dekatron.</p>
-    <p><b style="color:var(--muted)">Paper roll.</b> Open roll for a 16-step sequencer drawn as punched paper. Tap a step to pick it and tap again to punch it; set its note, accent, slide or tie with the buttons below the paper, or turn on key in and play the notes. Play on the strip starts the rack transport. With run lit the roll plays whenever the transport does, beside a song or a Dekatron pattern, on the device lit on the rail or the one you pick. While it plays Filament or Cathode, an armed MIDI deck records its notes into the take, and render wav on the Master strip plays it from its first step.</p>
+    <p><b style="color:var(--muted)">Paper roll.</b> Open roll for a 16-step sequencer drawn as punched paper. Tap a step to pick it and tap again to punch it; set its note, accent, slide or tie with the buttons below the paper, or turn on key in and play the notes. Play on the strip starts the rack transport. With run lit the roll plays whenever the transport does, beside a song or a Dekatron pattern, on the device lit on the rail or the one you pick. While it plays Filament or Cathode, an armed MIDI deck records its notes into the take. Render wav on the Master strip plays it from its first step, on whichever device it plays.</p>
     <p><b style="color:var(--muted)">Sculpt.</b> A hand instrument on its own page: <a href="/synth/hand-sculpt/">pinch a glowing orb</a> and move it in the space in front of you. The camera picture stays in the browser.</p>
     <p><b style="color:var(--muted)">Privacy.</b> No ads, no cookies, no accounts. Your patches and settings stay in this browser. DXEdge counts visits anonymously, the same way as the rest of the site.
       <a href="https://ko-fi.com/oldtimeradio" target="_blank" rel="noopener">Tip the developer</a>: helps cover hosting and development.</p>
@@ -2318,6 +2318,7 @@ import { rhumbatronDevice, normalizeRhumbatron, RHUM_FACTORY, RHUM_DEFAULT, RHUM
 import { createRhumbatronHost, mountRhumbatronPanel, renderRhumbatronBuffer } from './rhumbatron-ui.js';
 import { resnatronDevice, normalizeResnatron, RN_FACTORY, RN_DEFAULT, RN_CATS, shareOf as rnShareOf, parseShare as rnParseShare } from './resnatron.js';
 import { createResnatronHost, mountResnatronPanel, renderResnatronBuffer } from './resnatron-ui.js';
+import { rollHosted } from './rollrender.js';
 
 const $ = id => document.getElementById(id);
 const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -5436,14 +5437,25 @@ const master = mountMaster({
   getNotes: () => heldNotes(), getPatch: () => cur,
   wavArm, wavPrefix,
   // Render WAV takes the paper roll while its run is on (19 Nov): its notes from beat 0 on its device.
-  // Filament and Cathode only; the render engine hosts those two.
+  // Filament and Cathode play in the render engine itself; since 21 Nov a roll on any other rack device
+  // renders that device beside them on its own strip (rollrender.js), with what its host holds now.
   rollRender: (seconds, tempo) => {
     const r = roll ? roll.renderScore(seconds, tempo) : null;
     if (!r) return null;
     const both = r.dev === 'filament' || r.dev === 'cathode';
-    return Object.assign(r, { name: (DEVS[r.dev] && DEVS[r.dev].name) || r.dev, ok: both,
+    const rackDev = dev === 'filament' || dev === 'cathode' ? dev : 'filament';
+    const out = Object.assign(r, { name: (DEVS[r.dev] && DEVS[r.dev].name) || r.dev, ok: both,
       patches: { filament: patchOf('filament'), cathode: patchOf('cathode') },
-      device: dev === 'filament' || dev === 'cathode' ? dev : r.dev });
+      device: both ? (dev === 'filament' || dev === 'cathode' ? dev : r.dev) : rackDev, lit: dev });
+    if (!both && DS[r.dev]) {
+      const extra = {
+        lattice: () => ({ table: latticeHost.userTable() }), mote: () => ({ buffer: moteHost.buffer() }),
+        klystron: () => ({ buffer: klHost.buffer() }), orthicon: () => ({ grid: orthiconHost.grid() }),
+        heptode: () => ({ score: heptodeHost.score() }),
+      }[r.dev];
+      out.hosted = rollHosted(r.dev, r.events.map(e => { const o = Object.assign({}, e); delete o.dev; return o; }), patchOf(r.dev), extra ? extra() : null);
+    }
+    return out;
   },
 });
 
@@ -6387,6 +6399,7 @@ window.__synth = {
   },
   smf: { write: o => [...writeSMF(o)], read: arr => { const f = readSMF(Uint8Array.from(arr)); return { format: f.format, ppq: f.ppq, tempos: f.tempos, timeSig: f.timeSig, song: songOf(f) }; }, bytesOf },
   // Two-device render: opts {patches:{filament, cathode}, device, events:[{at, dev, t, ...}], seconds}
+  devPatch: id => (DS[id] ? clone(patchOf(id)) : null),
   render2: async opts => { const buf = await renderOffline(opts); return { sr: buf.sampleRate, L: b64(buf.getChannelData(0)), R: b64(buf.getChannelData(1)) }; },
   // Offline render: opts {patch, events:[{at (s), t, n, v, ...}], seconds, rack, mono}. Returns base64 float32 L and R.
   // MIDI bytes as a score: [{at (s), data:[status, d1, d2]}], mapped with the same midiEvent() as a keyboard.

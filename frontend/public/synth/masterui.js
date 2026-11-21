@@ -220,16 +220,25 @@ export function mountMaster(api) {
 
   // What render wav plays (19 Nov 2026): the keys held (middle C if none) and, while its run is on, the
   // paper roll from its first step at the rack tempo on its device. With the roll in and no key held
-  // there is no middle C. A roll on a device other than Filament or Cathode is left out and the status says so.
+  // there is no middle C. Since 21 Nov a roll on any other rack device renders that device on its own strip
+  // (opts.hosted, rollrender.js); a roll on a device the page cannot build is left out and the status says so.
   function renderPlan(seconds) {
     const tempo = rackTempo(), notes = api.getNotes();
     const rr = api.rollRender ? api.rollRender(seconds, tempo) : null;
-    const roll = rr && rr.ok ? rr : null;
+    const roll = rr && (rr.ok || rr.hosted) ? rr : null;
     const keys = (notes.length ? notes : roll ? [] : [60]).map(n => ({ at: 0, t: 'on', n, v: 0.8 }));
     const o = { patch: api.getPatch(), events: keys, seconds, rack: true, master: state, tempo };
     let note = '';
     if (roll) {
-      o.events = keys.concat(roll.events); o.patches = roll.patches; o.device = roll.device;
+      o.patches = roll.patches; o.device = roll.device;
+      if (roll.ok) o.events = keys.concat(roll.events);
+      else {
+        // the roll on another rack device (21 Nov): that device renders on its own strip beside the rack's
+        // device; keys held while it is the lit device play on it too, as they would live
+        const h = roll.hosted;
+        if (roll.lit === roll.dev) { h.events = keys.concat(h.events).sort((a, b) => a.at - b.at); o.events = []; }
+        o.hosted = [h];
+      }
       const n = roll.events.filter(e => e.t === 'on').length;
       note = ' · with the ' + (roll.chain ? 'chain' : 'roll') + ' (' + n + (n === 1 ? ' note' : ' notes') + ' on ' + roll.name + ')';
     } else if (rr) note = ' · the roll plays ' + rr.name + ', which render does not take';
@@ -273,7 +282,8 @@ export function mountMaster(api) {
     // test hooks: what render wav would play, and that render without the download
     renderPlan(seconds) {
       const p = renderPlan(seconds);
-      return { events: p.opts.events.map(e => Object.assign({}, e)), device: p.opts.device || null, both: !!p.opts.patches, tempo: p.opts.tempo, note: p.note, roll: p.roll };
+      const hosted = (p.opts.hosted || []).map(h => ({ dev: h.dev, events: h.events.map(e => Object.assign({}, e)) }));
+      return { events: p.opts.events.map(e => Object.assign({}, e)), device: p.opts.device || null, both: !!p.opts.patches, tempo: p.opts.tempo, note: p.note, roll: p.roll, hosted };
     },
     async renderButton(seconds) {
       const p = renderPlan(seconds), w = await renderToWav(p.opts);

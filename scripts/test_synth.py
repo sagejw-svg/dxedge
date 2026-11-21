@@ -15,7 +15,7 @@ plus S. (the stereo round), C. (Cathode, the second device: filters, normals, ca
 panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Mw. (the Mix card's own row from 761 px: the Mix and Master cards fill the width, the seven cards it stretched end at their controls, slider grids take columns, the strips' columns, no sideways scroll, reduced motion), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Tc. (Trochotron's seed and shape rows: seven tagged joined switches, the seed and readout amber windows, key and route windows, play's lamp, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Hs. (the desktop patch strip holds one row from 1020 px on a factory or a user patch with the save form closed or open, the form in the edit keys' place, delete red), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again, an offline render lets go of its nodes), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Rr. (the paper roll recorded and rendered: the MIDI deck's take against the roll's own log, Stop and the transport's stop inside a take, a key over the roll, the export, devices the recorder does not take, the Master strip's render plan and its audio against the score), Rk. (the on-screen keys lighting with the roll's notes: timing against the roll's log, offs, Stop, ties, an octave change, the transport's stop, run off, another device, the page's own keys), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Rr. (the paper roll recorded and rendered: the MIDI deck's take against the roll's own log, Stop and the transport's stop inside a take, a key over the roll, the export, devices the recorder does not take, the Master strip's render plan and its audio against the score), Rh. (the roll on the 16 other rack devices in render wav: the plan against the score, each device against an independent render, silence without notes, the shared output chain in the path, a key held on the roll's device), Rk. (the on-screen keys lighting with the roll's notes: timing against the roll's log, offs, Stop, ties, an octave change, the transport's stop, run off, another device, the page's own keys), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -8074,13 +8074,13 @@ with sync_playwright() as pw:
       R.run(true); const on = __synth.renderPlan(4);
       const want = R.score(64, 120, 'filament').filter(e => e.at < 4);
       R.dest('cathode'); const cath = __synth.renderPlan(4);
-      R.dest('thyratron'); const thy = __synth.renderPlan(4);
+      R.dest('thyratron'); const thy = __synth.renderPlan(4); const wantT = R.score(64, 120, 'thyratron').filter(e => e.at < 4);
       R.dest('lit'); T.setTempo(90); const slow = __synth.renderPlan(4); const wantS = R.score(64, 90, 'filament').filter(e => e.at < 4); T.setTempo(120);
       R.chain({ on: true, items: [{ name: 'Octave Pump', reps: 1 }, { name: 'Slow Bells', reps: 1 }] });
       const ch = __synth.renderPlan(6); const wantC = R.chainScore(4, 120, 'filament').filter(e => e.at < 6);
       R.chain({ on: false, items: [] });
       __synth.noteOn(55, 0.8); const held = __synth.renderPlan(2); __synth.noteOff(55);
-      return { off, on, want, cath, thy, slow, wantS, ch, wantC, held }; }""")
+      return { off, on, want, cath, thy, wantT, slow, wantS, ch, wantC, held }; }""")
     sig = lambda evs: [(e["t"], e["n"], round(e["at"], 9)) for e in evs]
     ck("Rr. render wav with the roll's run off plays what it did before: middle C at 0 on the lit device, no roll",
        rp["off"]["events"] == [{"at": 0, "t": "on", "n": 60, "v": 0.8}] and rp["off"]["roll"] is None and rp["off"]["note"] == "" and not rp["off"]["both"], rp["off"])
@@ -8091,9 +8091,11 @@ with sync_playwright() as pw:
        rp["cath"]["device"] == "filament" and rp["cath"]["both"] and all(e["dev"] == "cathode" for e in rp["cath"]["events"]) and "on Cathode" in rp["cath"]["note"]
        and sig(rp["slow"]["events"]) == sig(rp["wantS"]) and abs(rp["slow"]["events"][2]["at"] - 60 / 90 / 4) < 1e-9
        and sig(rp["ch"]["events"]) == sig(rp["wantC"]) and "with the chain" in rp["ch"]["note"], (rp["cath"]["device"], rp["slow"]["events"][:3], rp["ch"]["note"]))
-    ck(f"Rr. the roll on a device render does not host is left out and the status says so ('{rp['thy']['note'].strip(' ·')}'); a held key plays with the roll",
-       rp["thy"]["events"] == [{"at": 0, "t": "on", "n": 60, "v": 0.8}] and "Thyratron" in rp["thy"]["note"] and rp["thy"]["roll"] is None
-       and rp["held"]["events"][0] == {"at": 0, "t": "on", "n": 55, "v": 0.8} and sum(1 for e in rp["held"]["events"] if e["t"] == "on" and e.get("dev") == "filament") == 16, (rp["thy"], rp["held"]["events"][:2]))
+    th_h = rp["thy"]["hosted"]
+    ck(f"Rr. the roll on Thyratron while Filament is lit renders on Thyratron on its own strip (21 Nov; before, it was left out): exactly the roll's score, no middle C, Filament's rack ('{rp['thy']['note'].strip(' ·')}'); a held key plays with the roll",
+       rp["thy"]["events"] == [] and len(th_h) == 1 and th_h[0]["dev"] == "thyratron" and sig(th_h[0]["events"]) == sig(rp["wantT"]) and "with the roll (32 notes on Thyratron)" in rp["thy"]["note"]
+       and rp["thy"]["roll"] == "thyratron" and rp["thy"]["device"] == "filament" and rp["thy"]["both"]
+       and rp["held"]["events"][0] == {"at": 0, "t": "on", "n": 55, "v": 0.8} and sum(1 for e in rp["held"]["events"] if e["t"] == "on" and e.get("dev") == "filament") == 16, (rp["thy"]["note"], rp["thy"]["events"][:2], th_h[:1] and th_h[0]["events"][:2], rp["held"]["events"][:2]))
     def wav_lr(r_):
         raw = base64.b64decode(r_["b64"]); i_ = raw.find(b"data"); d_ = np.frombuffer(raw[i_ + 8:], dtype=np.uint8)
         n_ = len(d_) // 6; d_ = d_[:n_ * 6].reshape(n_, 6).astype(np.int32)
@@ -8127,6 +8129,71 @@ with sync_playwright() as pw:
     c_db = db(float(np.sqrt(np.mean(np.square(cL))))); cc = float(np.corrcoef(env10(cL[:nn]), env10(fL[:nn]))[0, 1])
     ck(f"Rr. the roll on Cathode renders through Cathode on the same steps ({c_db:.1f} dB, envelope against the Filament reference r = {cc:.3f}, '{ra['cbtn']['note'].strip(' ·')}')",
        c_db > -50 and cc > 0.6 and "on Cathode" in ra["cbtn"]["note"] and ra["cbtn"]["frames"] == 88200, (c_db, cc, ra["cbtn"]["note"]))
+    # ---------------------------------------------------------------- Rh. the roll on the other rack devices in render wav (21 Nov)
+    # Each device builds its own node in the render's context with the roll's notes (rollrender.js) on its own
+    # mixer strip, in front of the shared ensemble and output chain. The reference is an independent render:
+    # the events from R.score, the patch from devPatch, the device through rollHosted and renderOffline.
+    # Measured 21 Nov: 14 of the 16 render the same twice (r = 1.000); Lattice (unison phases) and Mote (the
+    # reference has no host sound) vary, r 0.54 and 0.70, levels within 1 dB. Room and width off on the rack
+    # patch, so the envelope is the notes', not the room's.
+    RH_DEVS = ["dekatron", "lattice", "thyratron", "gleam", "mote", "heptode", "geissler", "pentagrid", "orthicon",
+               "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron"]
+    RH_QUIET = ["dekatron", "lattice", "thyratron", "gleam", "heptode", "trochotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron"]
+    rh = rr.evaluate("""async ([devs, quiet]) => { const R = __synth.roll(), T = __synth.transport(); T.stop(); T.setTempo(120);
+      __synth.setDevice('filament'); const P0 = JSON.parse(JSON.stringify(__synth.patch()));
+      const P = JSON.parse(JSON.stringify(P0)); P.out.roomOn = false; P.out.wOn = false; __synth.setPatch(P);
+      R.set(R.factory()[1]); R.chainOn(false); R.run(true);
+      const RR = await import('/synth/rollrender.js'), E = await import('/synth/engine.js');
+      const enc = x => { const b = new Uint8Array(x.buffer.slice(0)); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
+      const out = {}, plans = {};
+      for (const d of devs) {
+        R.dest(d); const plan = __synth.renderPlan(2); const t0 = performance.now(); const btn = await __synth.renderButton(2); const ms = performance.now() - t0;
+        const ev = R.score(32, 120, d).filter(e => e.at < 2).map(e => e.t === 'on' ? { at: e.at, t: 'on', n: e.n, v: e.v } : { at: e.at, t: 'off', n: e.n });
+        const ref = await E.renderOffline({ patch: __synth.patch(), events: [], hosted: [RR.rollHosted(d, ev, __synth.devPatch(d), null)], seconds: 2, sampleRate: 44100, rack: true, master: __synth.master(), tempo: 120 });
+        let q = null;
+        if (quiet.includes(d)) {
+          const c = new OfflineAudioContext(2, 44100, 44100), h = RR.rollHosted(d, [], __synth.devPatch(d), null), m = await h.create(c, []);
+          (m.sum || m).connect(c.destination); const qb = await c.startRendering(); let pk = 0; const L = qb.getChannelData(0); for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i])); q = pk;
+        }
+        out[d] = { btn: btn.b64, frames: btn.frames, note: btn.note, ref: enc(ref.getChannelData(0)), q, ms };
+        plans[d] = { plan, want: ev };
+      }
+      // the shared output chain is in the device's path: the rack patch's graphic EQ, every band at -12 dB, takes Thyratron's render down
+      R.dest('thyratron'); const lv0 = await __synth.renderButton(2);
+      const P6 = JSON.parse(JSON.stringify(P)); P6.out.eqOn = true; P6.out.eqGains = P6.out.eqGains.map(() => -12); __synth.setPatch(P6); const lv6 = await __synth.renderButton(2);
+      // a key held while the roll's device is lit plays on that device beside the roll; the rack stays Filament's
+      __synth.setPatch(P0); __synth.setDevice('thyratron'); __synth.noteOn(55, 0.8); const litT = __synth.renderPlan(2); __synth.noteOff(55);
+      __synth.setDevice('filament'); __synth.noteOn(55, 0.8); const litF = __synth.renderPlan(2); __synth.noteOff(55);
+      R.run(false); R.dest('lit');
+      return { out, plans, lv0: lv0.b64, lv6: lv6.b64, litT, litF }; }""", [RH_DEVS, RH_QUIET])
+    bad_plan = []
+    for d in RH_DEVS:
+        pl = rh["plans"][d]["plan"]; h_ = pl["hosted"]
+        if not (pl["events"] == [] and len(h_) == 1 and h_[0]["dev"] == d and sig(h_[0]["events"]) == sig(rh["plans"][d]["want"]) and pl["roll"] == d and pl["device"] == "filament" and "with the roll (16 notes on " in pl["note"]):
+            bad_plan.append((d, pl["note"], len(h_)))
+    ck(f"Rh. render wav with the roll on each of the {len(RH_DEVS)} other rack devices plays exactly the roll's score on that device, on its own strip, no middle C, with Filament's rack",
+       not bad_plan, bad_plan)
+    rows, bad = [], []
+    for d in RH_DEVS:
+        o = rh["out"][d]; bL, _ = wav_lr({"b64": o["btn"]}); fL = np.frombuffer(base64.b64decode(o["ref"]), dtype=np.float32)
+        nn_ = min(len(bL), len(fL)); lb = db(float(np.sqrt(np.mean(np.square(bL[:nn_]))))); lf = db(float(np.sqrt(np.mean(np.square(fL[:nn_])))))
+        r_ = float(np.corrcoef(env10(bL[:nn_]), env10(fL[:nn_]))[0, 1]) if lb > -100 and lf > -100 else 0.0
+        rows.append((d, round(lb, 1), round(r_, 3), round(o["ms"])))
+        if not (o["frames"] == 88200 and np.all(np.isfinite(bL)) and lb > -60 and abs(lb - lf) < 3 and r_ > 0.3 and "on " in o["note"]):
+            bad.append((d, o["frames"], round(lb, 1), round(lf, 1), round(r_, 3)))
+    rs = sorted(x[2] for x in rows)
+    ck(f"Rh. each device's render sounds like an independent render of the roll's score through the rack: levels {min(x[1] for x in rows):.1f} to {max(x[1] for x in rows):.1f} dB, within 3 dB of the reference, 30 ms envelope r {rs[0]:.2f} at the lowest, {sum(1 for x in rs if x > 0.95)} of {len(rs)} above 0.95; render time {min(x[3] for x in rows)} to {max(x[3] for x in rows)} ms for 2 s",
+       not bad and sum(1 for x in rs if x > 0.95) >= len(rs) - 3, (bad, rows))
+    loud_q = [(d, rh["out"][d]["q"]) for d in RH_QUIET if not (rh["out"][d]["q"] is not None and rh["out"][d]["q"] < 1e-5)]
+    ck(f"Rh. the sound is the roll's: the {len(RH_QUIET)} devices that sound only when played are silent with no notes (peak below -100 dBFS)",
+       not loud_q, loud_q)
+    a0, _ = wav_lr({"b64": rh["lv0"]}); a6, _ = wav_lr({"b64": rh["lv6"]}); d6 = db(float(np.sqrt(np.mean(np.square(a6))))) - db(float(np.sqrt(np.mean(np.square(a0)))))
+    ck(f"Rh. the roll's device goes through the shared output chain: the rack patch's graphic EQ with every band at -12 dB moves Thyratron's render {d6:+.1f} dB",
+       -18.0 < d6 < -6.0, d6)
+    lt, lf_ = rh["litT"], rh["litF"]
+    ck("Rh. a key held while the roll's device is lit plays on it with the roll (Thyratron lit: the key in its events, none on the rack); with Filament lit the key stays on Filament",
+       lt["events"] == [] and lt["hosted"] and lt["hosted"][0]["events"][0] == {"at": 0, "t": "on", "n": 55, "v": 0.8} and lt["device"] == "filament"
+       and lf_["events"] == [{"at": 0, "t": "on", "n": 55, "v": 0.8}] and lf_["hosted"] and not any(e["n"] == 55 for e in lf_["hosted"][0]["events"] if e["t"] == "on" and e["at"] == 0), (lt["events"], lt["hosted"][0]["events"][:2] if lt["hosted"] else None, lf_["events"]))
     rr.evaluate("() => { const R = __synth.roll(); R.run(false); R.dest('lit'); R.set(R.factory()[1]); }")
     ck("Rr. no page errors", not rrerr, rrerr)
     rrx.close()

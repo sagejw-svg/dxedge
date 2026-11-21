@@ -249,8 +249,11 @@ export async function createEngine(ctx, opts = {}) {
 // Two-device form: patches {filament, cathode} and device (whose patch sets the rack, default
 // the patch's device); an event with dev:'cathode' or dev:'filament' goes to that device, one
 // without dev to the rack's device. onProgress(fraction) is called as the render runs.
+// hosted (21 Nov): other rack devices in the same render, [{dev, events, create}]: create(ctx, framed)
+// builds the device's own node in this context with its events (times in frames) and the node goes
+// into the mixer on its own strip, in front of the shared ensemble and output chain, as it does live.
 // Returns the AudioBuffer.
-export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo, master = null, masterFx = true }) {
+export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo, master = null, masterFx = true, hosted = [] }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
   const frame = e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {});
   let main = patch, others = [];
@@ -263,6 +266,12 @@ export async function renderOffline({ patch, patches, device, events = [], secon
     events = events.filter(e => !e.dev || e.dev === dev0);
   }
   const E = await createEngine(ctx, { patch: main, events: events.map(frame), rack, others, mixer, tempo, master, masterFx });
+  for (const h of (hosted || [])) {
+    if (!h || typeof h.create !== 'function' || !h.dev || h.dev === 'filament' || h.dev === 'cathode') continue;
+    const made = await h.create(ctx, (h.events || []).map(frame));
+    const out = made && (made.sum || made.output || made);
+    if (out && typeof out.connect === 'function') E.mix.attach(h.dev, out);
+  }
   if (mono) E.mono(true);
   if (onProgress) {
     const step = Math.max(1, Math.ceil(seconds / 50));

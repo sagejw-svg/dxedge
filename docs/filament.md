@@ -76,6 +76,7 @@ task can read it).
 | `frontend/public/synth/deck.js` | The MIDI deck above the keys: recorder (since 19 Nov also the paper roll's scheduled notes, `recAt` and `recFlush`), import with the track list and device chips, the player (150 ms lookahead, 25 ms timer, frame-exact `at`), Render WAV. Its clock is private; it still uses `smf.js` |
 | `frontend/public/synth/player.js` | Song library player. Loads a bundled file, an opened file, or a drop, and plays it on `host.transport` (play, stop, tempo). Each MIDI channel routes to a device |
 | `frontend/public/synth/paperroll.js` | The paper roll's pure part: the pattern schema (`kind: 'paperroll'`, `v: 1`; 16 steps of note, punch, accent, slide, tie; length, step rate, gate, swing, velocity, accent velocity, transpose), `normalizeRoll`, `rollPlan` (the notes that start on a run of steps, ties and slides resolved), `rollScore`, six factory rolls; since 18 Nov the user rolls (`normalizeUserRolls`, localStorage `filament_rolls`) and the chain (`normalizeChain`, `chainSegments`, `chainAt`, `segPlan`, `chainScore`) |
+| `frontend/public/synth/rollrender.js` | The paper roll on the 16 rack devices other than Filament and Cathode in the Master strip's render wav (21 Nov): `rollHosted(dev, events, patch, extra)` gives `renderOffline` a `hosted` entry that builds the device's own node in the render's context with the roll's notes as its processor events (Dekatron gets a trig per drum voice, as the roll strikes it live); the engine puts it on its own mixer strip in front of the shared ensemble and output chain. Our own code |
 | `frontend/public/synth/paperroll-ui.js` | The paper roll strip under the song library: the step editor, the scheduler on `host.transport` (150 ms lookahead, a 25 ms timer, frame stamps, the library player's delivery paths; a strike more than 60 ms late is dropped), the canvas of punched paper moving past a brass reader. State in localStorage `filament_roll` (with the chain since 18 Nov); save roll, delete, the chain row and the chain's segment scheduler |
 | `frontend/public/synth/theremin.js` | Theremin mode's pure part: the page settings (`filament_theremin`: on, the pad's left note C1 to C4, 1 to 5 octaves across, snap, volume range 12 to 60 dB), `normalizeThm`, `padPitch` (across to a fractional MIDI pitch, snap pulling toward the nearest note), `padLevel` (up to a level: the bottom 3% is silence, then the range in dB to 0 dB at the top), `tuneOf` (nearest note and cents). Our own code. |
 | `frontend/public/synth/theremin-ui.js` | The Theremin section (Filament's Pad tab on a phone): the pad (pointer, one note at a time, and keys: Enter, arrows, Escape), the chips and knobs, the readout, the pad drawn in the page's frame loop, and `eye()`, which the frame loop asks for the magic eye's tuning while the pad is held. Sends `{t:'thm',on,p,a}` to Filament's worklet. Our own code. |
@@ -1079,8 +1080,21 @@ Presets use each device's own patch schema. Filament and Cathode use the categor
         a restart put every roll key out at once and drop the lights still waiting; run off lets the struck notes end on
         time and their keys go out with them; a tie run holds its key down; the keybed rebuilt by an octave change keeps a
         lit key lit. A skipped (late) step lights nothing. Display only: no device's audio path changed.
-  - [ ] Still open: the master Render WAV for a roll on the other rack devices (needs those devices in the offline render);
-        per-step velocity or probability, if wanted.
+  - [x] The master Render WAV for a roll on the other rack devices (21 Nov 2026, nightly). With run on and the roll on any of
+        the 16 rack devices other than Filament and Cathode, render wav builds that device's own node in the render
+        (`rollrender.js`, `renderOffline`'s new `hosted` option) with the roll's notes as its processor events, the way each
+        device's own offline render takes notes, and puts it on its own mixer strip in front of the shared ensemble and output
+        chain, as it sits live; the rack is the lit device's if that is Filament or Cathode, else Filament's (the shared output
+        knobs stay on Filament's patch while another device is lit). Dekatron gets a trig per drum voice, as the roll strikes it
+        live. What a device holds outside its patch comes from its host on the page: Mote's loaded sound, Klystron's recording,
+        Lattice's dropped table, Orthicon's picture, Heptode's song. Trochotron's piece and Heptode's song render stopped (the
+        roll's notes only); Mote, Geissler, Pentagrid, Orthicon and Gyrotron make sound of their own when awake, so their
+        render carries it beside the roll's notes, as the roll waking them live does. Keys held while the roll's device is lit
+        play on it beside the roll; with Filament or Cathode lit they stay there. The status reads "with the roll (N notes on
+        Device)". No device's audio path changed and no patch sounds different: only render wav with the roll on one of these
+        devices does something new (before, it left the roll out and said so).
+  - [ ] Still open: per-step velocity or probability, if wanted; the mix desk's strip levels, mutes and sends are not in
+        render wav (that was so for Filament and Cathode before tonight too).
 - [ ] Theremin mode with the magic eye as tuning indicator - first slice 9 Nov 2026 (nightly). Filament only.
   - [x] The pad: a Theremin section on Filament's panel (a full row on a desktop; on a phone its own Pad tab after Play, the pad
         240 px tall, since the Play tab already shows four sections). Across is
