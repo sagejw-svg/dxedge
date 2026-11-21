@@ -587,9 +587,10 @@
     "email": "NOT SENT, DELIBERATELY, and this is the Step 6 quiet-night branch rather than a failure. Zero repairs were made and no surface was found broken, which is exactly the condition under which the brief says to send nothing. The email channel was NOT exercised tonight, so email-body-must-carry-no-literal-address is neither confirmed nor challenged by this run; it remains proven on 11-16, 11-17 and 11-20 and should be applied unchanged on the next night that needs a send."
    },
    "post_deploy": {
-    "commit": "PENDING at the time this entry was composed; the state commit is this run's only push. See the next run's reading of sw.js for independent confirmation that it landed.",
-    "deploy_result": "To be verified in-run after the push. A state-file-only commit touches nothing the frontend bundles, so the expected signature is simply a successful Action and an unchanged live sw.js at 'dxedge-v237'.",
-    "note": "Because this commit changes no deployed artifact, the usual sw.js tripwire cannot confirm it landed. Verification is therefore /api/health still ok after the deploy window plus the three surfaces still rendering, which is what this run checked."
+    "commit": "6fcf458",
+    "deploy_result": "SUCCESS, verified in-run at 05:20Z, about nine minutes after the push. Third consecutive night of successful deploys.",
+    "evidence": "All three surfaces re-rendered CLEAN in a real browser after the deploy window: / bodyLen 2042 with #root populated, /cyber/ bodyLen 6341, /aethersdr/ bodyLen 3893, and every one of the three with zero non-200 responses, zero failed requests, zero console messages, zero .feed-error and zero leftover .loading. /api/health status ok with a fresh timestamp 2026-11-21T05:20:53Z, feed_proxy true, forever_zoom true, version 2.0. Live sw.js still serves 'dxedge-v237', matching repo HEAD, which is the CORRECT result for a scripts-only commit and not a sign the deploy was skipped. The positive confirmation that the deploy actually ran is the backend having restarted: /api/health spots fell from 500 to 187, a cold cache re-filling, the same signature recorded on 11-20.",
+    "caveat": "The truncation defect is NOT proven fixed by any of this and nothing this run did could have fixed it. All of tonight's readings, before and after the deploy, came from good windows. The defect remains open and should be expected to recur. This entry is written before the follow-up commit carrying it is pushed, so the next run's reading of this file is the confirmation that the follow-up landed."
    }
   }
  ],
