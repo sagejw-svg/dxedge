@@ -11,6 +11,8 @@
 import {
   ROLL_KEY, ROLL_STEPS, ROLL_RATES, ROLL_RATE_NAMES, ROLL_RANGE, ROLL_FACTORY,
   normalizeRoll, rollPlan, rollScore, stepBeat, noteName,
+  ROLLS_KEY, ROLL_USER_MAX, CHAIN_MAX, CHAIN_REPS, rollName, isFactoryName, normalizeUserRolls, normalizeChain,
+  resolveChainRoll, chainSegments, chainAt, segPlan, chainScore,
 } from './paperroll.js';
 import { voiceForNote } from './drums.js';
 
@@ -26,6 +28,12 @@ export function createRoll(api) {
   let run = saved.run === true;          // off until the strip's play (or run) turns it on, so a library song never brings the roll in by surprise
   let edited = !!saved.edited;
   let sel = 0, keyIn = false, open = false;
+  // named user rolls (their own key) and the chain (song mode), 18 Nov
+  let users = normalizeUserRolls(api.store.get(ROLLS_KEY, []));
+  let chain = normalizeChain(saved.chain);
+  let seg = null, j = 0;              // the chain segment being scheduled and its next local step
+  const segQ = [];                    // segments scheduled, for the reader: { start, idx, pass, name, pat, steps }
+  let heard = null;                   // the segment under the reader now
   // the scheduler
   let playing = false, timer = 0, anchor = null, pendingTempo = null, k = 0, cov = 0, schedBeat = 0, unsub = null;
   const pend = [];                    // notes on, waiting for their off: { n, dev, offBeat, onTime }
@@ -38,7 +46,9 @@ export function createRoll(api) {
   const log = [];                     // delivered messages, for the test hook
   let drawMs = 0, dirty = true, winLo = 36, winN = 25, skipped = 0;
 
-  function save() { api.store.set(ROLL_KEY, { pat, dest, run, edited }); }
+  function save() { api.store.set(ROLL_KEY, { pat, dest, run, edited, chain }); }
+  function saveUsers() { api.store.set(ROLLS_KEY, users); }
+  function chainOn() { return chain.on && chain.items.length > 0; }
 
   // ------------------------------------------------------------ delivery (the library player's paths)
   function targets() {
@@ -69,6 +79,10 @@ export function createRoll(api) {
       }
     } else if (d === 'filament' || d === 'cathode') E.sendTo(d, framed);
     else if (E.devices[d]) E.devices[d].midi(framed);
+    // the MIDI deck's recorder takes the note at the time it sounds (it keeps Filament and Cathode only)
+    if (api.rec && (msg.t === 'on' || msg.t === 'off')) api.rec(d, msg, at);
+    // the on-screen keys light as the note sounds and go out with its off (a resent off already has its own)
+    if (!entry && (msg.t === 'on' || msg.t === 'off')) lightAt(msg.n, msg.t === 'on', at);
     // a resent off (after a stop's flush) moves its first entry to the time it now goes, so the log keeps one off per strike
     if (entry) { entry.at = at; entry.resent = true; return entry; }
     const e = { t: msg.t, n: msg.n, v: msg.v, dev: d, at, want: want == null ? at : want, now: c.currentTime };
@@ -76,16 +90,39 @@ export function createRoll(api) {
     if (log.length > 600) log.splice(0, log.length - 600);
     return e;
   }
+  // ------------------------------------------------------------ the on-screen keys (20 Nov)
+  // A note the roll sends lights its key on the keybed at the time it sounds and lets it go at the time its
+  // off does, the way the library player and the MIDI deck light theirs. Counted per pitch, so a pitch struck
+  // twice before its first off (a slide into itself, a tie run's seam) goes out only with its last off.
+  // Display only: the page asks lit(n) when it paints a key.
+  const lit = new Map(), lightT = new Map();
+  function lightAt(n, on, at) {
+    const c = api.ctx(); if (!c || !api.lit) return;
+    const id = setTimeout(() => {
+      lightT.delete(id);
+      const k = (lit.get(n) || 0) + (on ? 1 : -1);
+      if (k > 0) lit.set(n, k); else lit.delete(n);
+      api.lit(n);
+    }, Math.max(0, (at - c.currentTime) * 1000));
+    lightT.set(id, { n, on, at });
+  }
+  function unlightAll() {
+    lightT.forEach((x, id) => clearTimeout(id)); lightT.clear();
+    const ns = [...lit.keys()]; lit.clear();
+    if (api.lit) ns.forEach(n => api.lit(n));
+  }
+
   // The transport stopped: Filament and Cathode drop what is still queued (the library player does the
   // same on the same stop), then every note the roll holds goes off now. Another device gets its off
   // just after its own strike, in case that strike is still queued.
   function letGo() {
     const E = api.engine(), c = api.ctx(), now = c ? c.currentTime : 0;
-    if (E) armed.forEach(d => { if (d === 'filament' || d === 'cathode') E.sendTo(d, { t: 'flush' }); });
+    if (E) armed.forEach(d => { if (d === 'filament' || d === 'cathode') { E.sendTo(d, { t: 'flush' }); if (api.recFlush) api.recFlush(d, now); } });
     queuedOffs.forEach(x => { if (x.at > now) send(x.dev, { t: 'off', n: x.n }, now, null, x.entry); });
     queuedOffs.length = 0;
     pend.forEach(x => send(x.dev, { t: 'off', n: x.n }, (x.dev === 'filament' || x.dev === 'cathode') ? now : Math.max(now, x.onTime + 0.002)));
     pend.length = 0;
+    unlightAll();   // what was queued no longer sounds, and every note the roll held is off now
     if (E) armed.forEach(d => {
       if ((d === 'filament' || d === 'cathode') && !(api.busy && api.busy(d))) E.playing(d, false);
     });
@@ -101,7 +138,11 @@ export function createRoll(api) {
     return anchor.beat + (c.currentTime - anchor.time) / (60 / anchor.tempo);
   }
   // the step under the reader now (the scheduler itself runs up to 150 ms ahead of it)
-  function curStep() { return mod(Math.floor(Math.max(0, beatNow()) / ROLL_RATES[pat.rate] + 1e-9), pat.len); }
+  function curStep() {
+    const lb = chainLocal();
+    if (lb != null) return mod(Math.floor(lb / ROLL_RATES[heard.pat.rate] + 1e-9), heard.pat.len);
+    return mod(Math.floor(Math.max(0, beatNow()) / ROLL_RATES[pat.rate] + 1e-9), pat.len);
+  }
   function timeAt(b) { return anchor.time + (b - anchor.beat) * (60 / anchor.tempo); }
   function firstStep(b) {
     const sb = ROLL_RATES[pat.rate];
@@ -128,24 +169,14 @@ export function createRoll(api) {
       pendingTempo = null;
     }
     const horizon = beatNow() + LOOK / (60 / anchor.tempo);
-    if (run) {
+    if (run && chainOn()) pumpChain(horizon, c);
+    else if (run) {
       let guard = 0;
       while (stepBeat(pat, k) <= horizon && guard++ < 256) {
         const b = stepBeat(pat, k);
         flushOffs(b);
         const r = rollPlan(pat, k, k + 1, cov); cov = r.cov;
-        r.notes.forEach(x => {
-          const d = destDev(); if (!d) return;
-          arm(d);
-          // A step the timer reached late (a starved page) plays now and keeps its length; one more than
-          // 60 ms late is dropped, so a stall never comes out as a burst of notes.
-          const want = timeAt(x.on), t = Math.max(c.currentTime, want);
-          if (t - want > LATE) { skipped++; log.push({ t: 'skip', n: x.n, dev: d, at: t, want, now: c.currentTime }); return; }
-          send(d, { t: 'on', n: x.n, v: x.v }, t, want);
-          pend.push({ n: x.n, dev: d, offBeat: x.off, onTime: t, late: t - want });
-          flares.push({ time: t, n: x.n, i: x.i });
-          if (flares.length > 32) flares.shift();
-        });
+        r.notes.forEach(x => strike(x, 0, c));
         schedBeat = b;
         k++;
       }
@@ -154,16 +185,98 @@ export function createRoll(api) {
     { const now = c.currentTime; for (let j = queuedOffs.length - 1; j >= 0; j--) if (queuedOffs[j].at < now - 0.05) queuedOffs.splice(j, 1); }
     paintStat();
   }
+  // A note from the plan, struck `base` beats after the roll's (or the segment's) step 0.
+  function strike(x, base, c, segIdx) {
+    const d = destDev(); if (!d) return;
+    arm(d);
+    // A step the timer reached late (a starved page) plays now and keeps its length; one more than
+    // 60 ms late is dropped, so a stall never comes out as a burst of notes.
+    const want = timeAt(base + x.on), t = Math.max(c.currentTime, want);
+    if (t - want > LATE) {
+      skipped++;
+      const sk = { t: 'skip', n: x.n, dev: d, at: t, want, now: c.currentTime };
+      if (segIdx != null) sk.seg = segIdx;
+      log.push(sk); return;
+    }
+    const e = send(d, { t: 'on', n: x.n, v: x.v }, t, want);
+    if (e && segIdx != null) e.seg = segIdx;
+    pend.push({ n: x.n, dev: d, offBeat: base + x.off, onTime: t, late: t - want });
+    flares.push({ time: t, n: x.n, i: x.i });
+    if (flares.length > 32) flares.shift();
+  }
+
+  // ------------------------------------------------------------ the chain (song mode, 18 Nov)
+  // The chain plays its rolls one after another from the transport's beat 0, each `reps` times, and comes
+  // round again. The segments are read again at every change of roll, so a roll saved under its name while
+  // the chain plays is heard the next time its turn comes. Nothing crosses a segment's end (segPlan).
+  function setSeg(sg, at) {
+    seg = { idx: at.idx, pass: at.pass, start: at.start, name: sg.name, pat: clone(sg.pat), steps: sg.steps, beats: sg.beats };
+    segQ.push({ start: seg.start, idx: seg.idx, pass: seg.pass, name: seg.name, pat: seg.pat, steps: seg.steps });
+    if (segQ.length > 8) segQ.shift();
+  }
+  // the segment holding beat b, and its first local step at or after b
+  function chainSeek(b) {
+    seg = null; segQ.length = 0; heard = null;
+    const segs = chainSegments(chain, users), at = chainAt(segs, b);
+    if (!at) return;
+    setSeg(segs[at.idx], at);
+    j = 0;
+    while (j < seg.steps && seg.start + stepBeat(seg.pat, j) < b - 1e-9) j++;
+    cov = j;
+  }
+  function nextSeg() {
+    const segs = chainSegments(chain, users);
+    if (!segs.length) { seg = null; return; }
+    let idx = seg.idx + 1, pass = seg.pass;
+    if (idx >= segs.length) { idx = 0; pass++; }
+    setSeg(segs[idx], { idx, pass, start: seg.start + seg.beats });
+    j = 0; cov = 0;
+  }
+  function pumpChain(horizon, c) {
+    if (!seg) chainSeek(Math.max(schedBeat, beatNow()));
+    let guard = 0;
+    while (seg && guard++ < 256) {
+      if (j >= seg.steps) { nextSeg(); continue; }
+      const b = seg.start + stepBeat(seg.pat, j);
+      if (b > horizon) break;
+      flushOffs(b);
+      const r = segPlan(seg.pat, seg.steps, j, j + 1, cov); cov = r.cov;
+      r.notes.forEach(x => strike(x, seg.start, c, seg.idx));
+      schedBeat = b;
+      j++;
+    }
+    hear();
+  }
+  // The reader shows the roll it is reading: when the segment under it changes, the paper (and the editor)
+  // take that roll. Its edits stay on the paper only until the chain moves on, unless saved by name.
+  function hear() {
+    if (!playing || !anchor || !chainOn()) return;
+    const bn = beatNow();
+    let h = null;
+    segQ.forEach(q => { if (q.start <= bn + 1e-9) h = q; });
+    if (!h || h === heard) return;
+    heard = h;
+    pat = clone(h.pat); edited = false; sel = Math.min(sel, pat.len - 1);
+    save(); paintAll();
+  }
+  function chainLocal() {
+    if (!(playing && anchor && run && chainOn() && heard)) return null;
+    return Math.max(0, beatNow() - heard.start);
+  }
+
   function startFrom(ev) {
     letGo();
     anchor = { time: ev.time, beat: ev.beat, tempo: ev.tempo };
     k = firstStep(ev.beat); cov = k; schedBeat = ev.beat; pendingTempo = null;
+    seg = null; segQ.length = 0; heard = null;
+    if (chainOn()) chainSeek(ev.beat);
     playing = true;
     clearInterval(timer); timer = setInterval(pump, TICK);
     pump(); paintButtons(); dirty = true;
   }
   function halt() {
     playing = false; clearInterval(timer); timer = 0; anchor = null;
+    seg = null; segQ.length = 0; heard = null;
     letGo(); paintButtons(); paintStat(); dirty = true;
   }
   function onTransport(ev) {
@@ -178,13 +291,76 @@ export function createRoll(api) {
   // A rate change (or a length change) under a running roll picks the step grid up again from the
   // last beat it scheduled, so the next step lands on the new grid rather than jumping back.
   function regrid() {
-    if (!playing || !anchor) return;
+    if (!playing || !anchor || chainOn()) return;   // the chain plays its own copies; edits on the paper do not move it
     k = firstStep(schedBeat + 1e-6); cov = k;
   }
-  // Run off under a playing transport stops new strikes; the notes already struck end on time.
+  // Run off under a playing transport stops new strikes; the notes already struck end on time. Run on under a
+  // playing transport starts on the grid from the beat now: before 17 Nov it caught up on every step that passed
+  // while it was off (12 to 14 logged as skipped after 1.5 s at 120 BPM, and a strike up to 21 ms late, measured).
   function setRun(on) {
-    run = !!on; save();
+    const was = run;
+    run = !!on;
+    if (run && !was) resync();
+    save();
     paintButtons(); paintStat(); dirty = true;
+  }
+
+  // ------------------------------------------------------------ the master Render WAV (19 Nov)
+  // The roll as it plays from the transport's beat 0 for `seconds` at `tempo` on its device: the plain
+  // roll (rollScore) or the chain (chainScore), the same plans the live scheduler and the suite read.
+  // null while run is off, so a render with the roll switched off is what it was before.
+  function renderScore(seconds, tempo) {
+    if (!run) return null;
+    const d = destDev(), spb = 60 / (tempo || 120), beats = Math.max(0, +seconds || 0) / spb;
+    let ev = [];
+    if (chainOn()) {
+      const total = chainSegments(chain, users).reduce((a, s) => a + s.beats, 0);
+      if (total > 0) ev = chainScore(chain, users, Math.min(100000, Math.ceil(beats / total) + 1), tempo, d);
+    } else {
+      ev = rollScore(pat, Math.min(100000, Math.ceil(beats / (ROLL_RATES[pat.rate] || 0.25)) + 1), tempo, d);
+    }
+    const out = [];
+    ev.forEach(e => { if (e.at < seconds) out.push(e.t === 'on' ? { at: e.at, dev: d, t: 'on', n: e.n, v: e.v } : { at: e.at, dev: d, t: 'off', n: e.n }); });
+    return { dev: d, chain: chainOn(), events: out };
+  }
+
+  // ------------------------------------------------------------ the project file (17 Nov)
+  // A project carries the pattern, the device the roll plays and the run switch (project.js). Applying one
+  // leaves the transport alone. A dest this rack does not have plays the lit device. The edit mark is on
+  // unless the pattern is one of the factory rolls as shipped. Under a playing transport the new pattern
+  // picks the grid up after the last step already scheduled, as a factory roll picked from the list does;
+  // if run comes on, setRun picks it up from the beat now.
+  // the chain goes with it, each entry carrying the roll it plays now, so the file plays the same elsewhere
+  function chainForProject() {
+    return { on: chain.on, items: chain.items.map(it => ({ name: it.name, reps: it.reps, pat: clone(resolveChainRoll(it, users)) })) };
+  }
+  function toProject() { return { pat: clone(pat), dest, run, chain: chainForProject() }; }
+  function fromProject(r) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return false;
+    const p = normalizeRoll(clone(r.pat));
+    const ids = targets().map(t => t.id);
+    pat = p; sel = Math.min(sel, pat.len - 1);
+    edited = !ROLL_FACTORY.concat(users).some(f => JSON.stringify(normalizeRoll(clone(f))) === JSON.stringify(p));
+    // a project saved before 18 Nov has no chain and leaves the chain as it is
+    if (r.chain && typeof r.chain === 'object' && !Array.isArray(r.chain)) { chain = normalizeChain(clone(r.chain)); paintChain(); }
+    dest = typeof r.dest === 'string' && ids.includes(r.dest) ? r.dest : 'lit';
+    regrid();
+    if ((r.run === true) !== run) setRun(r.run === true);
+    else if (r.chain) resync();
+    save(); paintAll();
+    if (open) paintDest();
+    return true;
+  }
+  // The grid is picked up from the beat now and the lookahead is filled at once, as startFrom does. Until 20 Nov
+  // it waited for the next timer tick, so a page busy for more than about 135 ms after run came on (a project
+  // applied under a playing transport, a slow box) reached the first step over LATE and dropped it as skipped
+  // (measured: 1 skip in 5 of 5 trials with a 90 ms stall past the next step; failed the suite once on main).
+  function resync() {
+    if (!playing || !anchor) return;
+    const b = Math.max(schedBeat, beatNow());
+    k = firstStep(b + 1e-6); cov = k; schedBeat = b;
+    if (chainOn()) chainSeek(b + 1e-6); else { seg = null; segQ.length = 0; heard = null; }
+    pump();
   }
 
   // ------------------------------------------------------------ editing
@@ -218,8 +394,9 @@ export function createRoll(api) {
   function paintStat() {
     const t = targets().find(x => x.id === dest);
     const who = dest === 'lit' ? 'lit device' : (t ? t.name : dest);
-    const a = pat.name + (edited ? ' *' : '') + ' · ' + pat.len + ' × ' + ROLL_RATE_NAMES[pat.rate] + ' · ' + who;
-    const b = playing && run ? 'step ' + (curStep() + 1) + '/' + pat.len : '';
+    const a = (chainOn() ? 'chain · ' : '') + pat.name + (edited ? ' *' : '') + ' · ' + pat.len + ' × ' + ROLL_RATE_NAMES[pat.rate] + ' · ' + who;
+    let b = playing && run ? 'step ' + (curStep() + 1) + '/' + pat.len : '';
+    if (b && chainOn() && heard) b = (heard.idx + 1) + '/' + chain.items.length + ' · ' + 'step ' + (curStep() + 1) + '/' + heard.pat.len;
     if ($('rollStat').textContent !== a) $('rollStat').textContent = a;
     if ($('rollPos').textContent !== b) $('rollPos').textContent = b;
   }
@@ -238,8 +415,11 @@ export function createRoll(api) {
       $(id + 'V').textContent = fmt(v);
       el.setAttribute('aria-valuetext', fmt(v));
     });
-    const sl = $('rollPick'); const fi = ROLL_FACTORY.findIndex(f => f.name === pat.name);
-    sl.value = fi >= 0 ? String(fi) : '';
+    const sl = $('rollPick'); const fi = ROLL_FACTORY.findIndex(f => f.name === pat.name), ui = users.findIndex(u => u.name === pat.name);
+    sl.value = edited ? '' : (fi >= 0 ? String(fi) : (ui >= 0 ? 'u' + ui : ''));
+    $('rollDel').disabled = !(ui >= 0);
+    $('rollDel').setAttribute('aria-label', ui >= 0 ? 'Delete your roll ' + pat.name : 'Delete: load one of your rolls first');
+    if (document.activeElement !== $('rollName')) $('rollName').value = isFactoryName(pat.name) ? '' : pat.name;
   }
   function paintDest() {
     const box = $('rollDest'); box.querySelectorAll('.chip').forEach(b => b.remove());
@@ -256,6 +436,7 @@ export function createRoll(api) {
     });
   }
   function paintAll() { paintButtons(); paintStat(); paintEdit(); dirty = true; }
+  function say(msg) { const m = $('rollMsg'); if (m) m.textContent = msg; }
   function openBody(on) {
     open = !!on; $('rollBody').hidden = !open; $('rollBtn').setAttribute('aria-expanded', String(open));
     // Key in only while the strip is open: closed, the keys would rewrite steps nobody can see (review R1108-2).
@@ -277,10 +458,104 @@ export function createRoll(api) {
   function userStop() { api.withEngine(() => { api.engine().transport.stop(); }); }
 
   // the pattern list
+  // Factory rolls keep their plain index as the value; the user's are 'u' and an index, in a group of their own.
   const pick = $('rollPick');
-  const blank = document.createElement('option'); blank.value = ''; blank.textContent = 'Rolls…'; pick.appendChild(blank);
-  ROLL_FACTORY.forEach((f, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = f.name; pick.appendChild(o); });
-  pick.addEventListener('change', () => { const i = pick.value; if (i !== '') load(ROLL_FACTORY[+i]); });
+  function fillPick() {
+    pick.textContent = '';
+    const blank = document.createElement('option'); blank.value = ''; blank.textContent = 'Rolls…'; pick.appendChild(blank);
+    const fg = document.createElement('optgroup'); fg.label = 'Factory';
+    ROLL_FACTORY.forEach((f, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = f.name; fg.appendChild(o); });
+    pick.appendChild(fg);
+    if (users.length) {
+      const ug = document.createElement('optgroup'); ug.label = 'Your rolls';
+      users.forEach((u, i) => { const o = document.createElement('option'); o.value = 'u' + i; o.textContent = u.name; ug.appendChild(o); });
+      pick.appendChild(ug);
+    }
+  }
+  fillPick();
+  pick.addEventListener('change', () => {
+    const v = pick.value; if (v === '') return;
+    if (v[0] === 'u') { const u = users[+v.slice(1)]; if (u) { load(u); say('Loaded ' + u.name + '.'); } }
+    else load(ROLL_FACTORY[+v]);
+  });
+
+  // ------------------------------------------------------------ named user rolls (18 Nov)
+  // Save keeps the paper under the name in the box (the roll's own name when the box is empty); the same
+  // name again replaces that roll. Factory names are taken. Delete removes the loaded user roll from the
+  // list; the paper keeps it, marked edited, and a chain entry naming it plays its own copy.
+  function saveUser(nameIn) {
+    const name = rollName(nameIn == null ? $('rollName').value : nameIn) || rollName(pat.name);
+    if (!name) { say('Name the roll first.'); return false; }
+    if (isFactoryName(name)) { say('"' + name + '" is a factory roll; pick another name.'); return false; }
+    const at = users.findIndex(u => u.name.toLowerCase() === name.toLowerCase());
+    if (at < 0 && users.length >= ROLL_USER_MAX) { say('You have ' + ROLL_USER_MAX + ' rolls; delete one first.'); return false; }
+    pat.name = name;
+    const copy = normalizeRoll(clone(pat));
+    if (at >= 0) users[at] = copy; else users.push(copy);
+    chain.items.forEach(it => { if (it.name.toLowerCase() === name.toLowerCase()) { it.name = name; it.pat = clone(copy); } });
+    edited = false;
+    saveUsers(); save(); fillPick(); paintAll(); paintChain();
+    say((at >= 0 ? 'Saved over ' : 'Saved ') + name + '.');
+    return true;
+  }
+  function deleteUser() {
+    const at = users.findIndex(u => u.name === pat.name);
+    if (at < 0) { say('Load one of your rolls to delete it.'); return false; }
+    const name = users[at].name;
+    users.splice(at, 1);
+    edited = true;
+    saveUsers(); save(); fillPick(); paintAll(); paintChain();
+    say('Deleted ' + name + '. It stays on the paper until you load another roll.');
+    return true;
+  }
+  $('rollSave').addEventListener('click', () => saveUser());
+  // the page's own key handler leaves text boxes alone (and still sees a Space let go here), so only Enter is taken
+  $('rollName').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveUser(); } });
+  $('rollDel').addEventListener('click', () => deleteUser());
+
+  // ------------------------------------------------------------ the chain row (18 Nov)
+  function chainChanged() {
+    save(); paintChain(); paintStat();
+    if (playing && run) resync();
+  }
+  function chainAdd() {
+    if (chain.items.length >= CHAIN_MAX) { say('The chain holds ' + CHAIN_MAX + ' rolls.'); return false; }
+    const known = !edited && (ROLL_FACTORY.some(f => f.name === pat.name) || users.some(u => u.name === pat.name));
+    if (!known) { say('Save this roll by name first, so the chain can find it.'); return false; }
+    chain.items.push({ name: pat.name, reps: 1, pat: normalizeRoll(clone(pat)) });
+    say('Added ' + pat.name + ' to the chain (' + chain.items.length + ').');
+    chainChanged();
+    return true;
+  }
+  function chainSet(i, f) { const it = chain.items[i]; if (!it) return; f(it); chainChanged(); }
+  function paintChain() {
+    const on = $('rollChainOn'); if (!on) return;
+    on.setAttribute('aria-pressed', String(chain.on));
+    const ol = $('rollChain'); ol.textContent = '';
+    $('rollChainN').textContent = chain.items.length ? chain.items.length + ' ' + (chain.items.length === 1 ? 'roll' : 'rolls') : 'empty';
+    chain.items.forEach((it, i) => {
+      const li = document.createElement('li'); li.className = 'rchain';
+      const nm = document.createElement('span'); nm.className = 'dstat rcname';
+      nm.textContent = (i + 1) + '. ' + it.name + ' × ' + it.reps;
+      li.appendChild(nm);
+      const btn = (txt, label, fn, dis) => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = txt;
+        b.setAttribute('aria-label', label); b.disabled = !!dis; b.addEventListener('click', fn); li.appendChild(b); return b;
+      };
+      btn('\u2212', 'Play ' + it.name + ' fewer times (' + it.reps + ')', () => chainSet(i, x => { x.reps = Math.max(1, x.reps - 1); }), it.reps <= 1);
+      btn('+', 'Play ' + it.name + ' more times (' + it.reps + ')', () => chainSet(i, x => { x.reps = Math.min(CHAIN_REPS, x.reps + 1); }), it.reps >= CHAIN_REPS);
+      btn('\u25B2', 'Move ' + it.name + ' earlier', () => { if (i > 0) { const t = chain.items[i - 1]; chain.items[i - 1] = chain.items[i]; chain.items[i] = t; chainChanged(); } }, i === 0);
+      btn('\u2715', 'Take ' + it.name + ' out of the chain', () => { chain.items.splice(i, 1); chainChanged(); });
+      ol.appendChild(li);
+    });
+  }
+  $('rollChainOn').addEventListener('click', () => {
+    if (!chain.on && !chain.items.length) { say('Add a roll to the chain first.'); return; }
+    chain.on = !chain.on; chainChanged();
+  });
+  $('rollChainAdd').addEventListener('click', () => chainAdd());
+  $('rollChainClear').addEventListener('click', () => { chain.items = []; chain.on = false; chainChanged(); say('The chain is empty.'); });
+  paintChain();
   // the rate chips
   const rates = $('rollRates');
   ['8', '8t', '16', '16t', '32'].forEach(r => {
@@ -321,6 +596,8 @@ export function createRoll(api) {
     const E = api.engine();
     if (api.reduceMotion) return 0;
     const sb = ROLL_RATES[pat.rate];
+    const lb = chainLocal();
+    if (lb != null) return lb / ROLL_RATES[heard.pat.rate];
     if (playing && anchor && run) return Math.max(0, beatNow()) / sb;
     const b = E ? E.transport.state().beat : 0;
     return Math.max(0, b) / sb;
@@ -492,7 +769,17 @@ export function createRoll(api) {
   paintAll();
 
   const test = {
-    state: () => ({ pat: clone(pat), dest, run, playing, k, sel, keyIn, edited, open, pend: pend.length, armed: [...armed], skipped }),
+    state: () => ({ pat: clone(pat), dest, run, playing, k, sel, keyIn, edited, open, pend: pend.length, armed: [...armed], skipped,
+      chain: clone(chain), users: users.map(u => u.name), seg: seg ? { idx: seg.idx, pass: seg.pass, start: seg.start, j } : null,
+      heard: heard ? { idx: heard.idx, pass: heard.pass, start: heard.start, name: heard.name } : null }),
+    users: () => users.map(clone),
+    saveAs: name => saveUser(name),
+    remove: () => deleteUser(),
+    chainAdd: () => chainAdd(),
+    chain: c => { if (c != null) { chain = normalizeChain(clone(c)); chainChanged(); } return clone(chain); },
+    chainOn: on => { if (on != null) { chain.on = !!on; chainChanged(); } return chain.on; },
+    chainScore: (passes, tempo, dev) => chainScore(chain, users, passes, tempo, dev),
+    msg: () => ($('rollMsg') ? $('rollMsg').textContent : ''),
     set: p => load(p),
     edit: fn => { fn(pat); changed(true); return clone(pat); },
     factory: () => ROLL_FACTORY.map(clone),
@@ -509,10 +796,19 @@ export function createRoll(api) {
     play: userPlay, stop: userStop,
     draw: () => { draw(performance.now()); return { ms: drawMs, stats: Object.assign({}, stats) }; },
     stats: () => Object.assign({ ms: drawMs }, stats),
+    lit: () => [...lit.entries()].filter(e => e[1] > 0).map(e => e[0]).sort((a, b) => a - b),
+    lightsPending: () => lightT.size,
   };
+  test.renderScore = (seconds, tempo) => renderScore(seconds, tempo);
+  test.project = () => toProject();
+  test.applyProject = r => fromProject(r);
   return {
-    frame(now) { if (open && (dirty || playing)) draw(now); },
+    project: toProject,
+    applyProject: fromProject,
+    renderScore,
+    frame(now) { if (playing) hear(); if (open && (dirty || playing)) draw(now); },
     keyIn: (n, v) => keyNote(n, v),
+    lit: n => (lit.get(n) || 0) > 0,
     test,
   };
 }

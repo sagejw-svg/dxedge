@@ -96,7 +96,7 @@ export function createPlayer(api) {
         E.sendTo(d, { t: 'flush' });
         E.sendTo(d, { t: 'panic' });
         touched[d].forEach(n => E.sendTo(d, { t: 'off', n }));
-        E.sendTo(d, { t: 'sus', on: false });
+        E.sendTo(d, { t: 'sus', on: !!(api.pedal && api.pedal(d)) });   // the page's pedal stays down if it is (review R1119-1)
         E.sendTo(d, { t: 'bend', v: 0 });
         E.sendTo(d, { t: 'mw', v: 0 });
         E.sendTo(d, { t: 'at', v: 0 });
@@ -108,7 +108,7 @@ export function createPlayer(api) {
         if (touched[d].size && node && node.port) node.port.postMessage({ t: 'panic' });
       } else if (E.devices[d]) {
         touched[d].forEach(n => E.devices[d].midi({ t: 'off', n }));
-        E.devices[d].midi({ t: 'sus', on: false });
+        E.devices[d].midi({ t: 'sus', on: !!(api.pedal && api.pedal(d)) });
       }
       if (sounding[d]) sounding[d].clear();
       touched[d].clear();
@@ -155,7 +155,11 @@ export function createPlayer(api) {
   }
   function paintLists() {
     const tracks = $('libTracks'), chans = $('libChannels');
+    // A chip pressed from the keyboard is rebuilt here; keep the focus on its new copy (review R1117-2)
+    const fe = document.activeElement;
+    const keep = fe && chans.contains(fe) && fe.dataset ? { ch: fe.dataset.ch, dev: fe.dataset.dev } : null;
     tracks.innerHTML = ''; chans.innerHTML = '';
+    if (keep) queueMicrotask(() => { const b = [...chans.querySelectorAll('button')].find(x => x.dataset.ch === keep.ch && x.dataset.dev === keep.dev); if (b) b.focus(); });
     if (!song) return;
     song.tracks.forEach(t => {
       const row = document.createElement('div'); row.className = 'trk';
@@ -221,7 +225,9 @@ export function createPlayer(api) {
     let next;
     try { next = parseMidi(bytes); }
     catch (e) {
-      $('libStat').textContent = (fileName || 'That file') + ': ' + e.message;
+      // the previous song stays loaded and play still plays it, so the status says so (review R1114-1)
+      const kept = song ? ' Still loaded: ' + (meta && meta.title || song.name || 'the previous song') + '.' : '';
+      $('libStat').textContent = (fileName || 'That file') + ': ' + e.message + kept;
       api.toast(e.message, 5000);
       return false;
     }

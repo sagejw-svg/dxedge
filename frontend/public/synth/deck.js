@@ -83,9 +83,11 @@ export function createDeck(api) {
   const now = () => performance.now() / 1000;
   // ---------------------------------------------------------------- recorder
   let rendering = false;
-  const T = { armed: false, rec: false, t0: 0, events: [], length: 0, names: {}, ctl: {}, held: {} };
+  const T = { armed: false, rec: false, t0: 0, events: [], length: 0, names: {}, ctl: {}, held: {}, ctxOff: null };
   DEVS.forEach(d => { T.ctl[d] = { bend: 0, mw: 0, sus: false, at: 0 }; });
-  function rec(dev, m) {
+  // `when` (performance seconds) is for notes scheduled ahead (the paper roll, recAt); without it the
+  // event happened now.
+  function rec(dev, m, when) {
     const c = T.ctl[dev];
     // The recorder takes Filament and Cathode only. Anything else the keys play is not recorded,
     // and must not throw: the page calls rec() after every note, wheel and pedal on every device.
@@ -95,10 +97,10 @@ export function createDeck(api) {
     }
     if (m.t === 'bend') c.bend = m.v; else if (m.t === 'mw') c.mw = m.v; else if (m.t === 'sus') c.sus = !!m.on; else if (m.t === 'at') c.at = m.v;
     if (!T.armed && !T.rec) return;
-    const t = now();
+    const t = when == null ? now() : when;
     if (!T.rec) {
       if (m.t !== 'on') return;
-      T.rec = true; T.armed = false; T.t0 = t; T.events = []; T.names = {}; T.held = {};
+      T.rec = true; T.armed = false; T.t0 = t; T.events = []; T.names = {}; T.held = {}; T.ctxOff = null;
       if (c.sus) T.events.push({ time: 0, dev, m: { t: 'sus', on: true } });
       if (c.bend) T.events.push({ time: 0, dev, m: { t: 'bend', v: c.bend } });
       if (c.mw) T.events.push({ time: 0, dev, m: { t: 'mw', v: c.mw } });
@@ -106,15 +108,68 @@ export function createDeck(api) {
     }
     if (!T.names[dev]) T.names[dev] = api.patchName(dev);
     const h = T.held[dev] || (T.held[dev] = new Set());
+    // A scheduled off for a note already let go is the roll's stop sending a queued off again sooner:
+    // it moves that off earlier instead of adding a second one.
+    if (m.t === 'off' && when != null && !h.has(m.n)) {
+      for (let i = T.events.length - 1; i >= 0; i--) {
+        const e = T.events[i];
+        if (e.dev === dev && e.m.t === 'off' && e.m.n === m.n) { if (e.time > t - T.t0) e.time = t - T.t0; break; }
+      }
+      return;
+    }
     if (m.t === 'on') h.add(m.n); else if (m.t === 'off') h.delete(m.n);
     T.events.push({ time: t - T.t0, dev, m: Object.assign({}, m) });
+    showTake();
+  }
+  // The paper roll's notes (19 Nov 2026): the roll schedules each note up to 150 ms ahead with the
+  // AudioContext time it sounds at, so the take files it at that time, not when it was sent.
+  // The two clocks are lined up once per take (currentTime moves in 128-frame steps, so reading it per
+  // note would put up to 3 ms of jitter between steps the roll spaced exactly).
+  function recAt(dev, m, at) {
+    const c = api.ctx();
+    if (!c || !m || (m.t !== 'on' && m.t !== 'off')) return;
+    const off = T.rec && T.ctxOff != null ? T.ctxOff : now() - c.currentTime;
+    rec(dev, { t: m.t, n: m.n, v: m.v }, at + off);
+    if (T.rec && T.ctxOff == null) T.ctxOff = off;
+  }
+  const RANK = { off: 0, on: 2 };
+  const byTime = (a, b) => a.time - b.time || (a.m.t in RANK ? RANK[a.m.t] : 1) - (b.m.t in RANK ? RANK[b.m.t] : 1);
+  // The transport stopped under the roll: Filament or Cathode drops what it still had queued, so notes
+  // the take filed past this moment never sounded. They go; the offs the roll sends again now follow.
+  function recFlush(dev, at) {
+    const c = api.ctx();
+    if (!T.rec || !c || !T.ctl[dev]) return;
+    const tt = at + (T.ctxOff != null ? T.ctxOff : now() - c.currentTime) - T.t0;
+    T.events = T.events.filter(e => !(e.dev === dev && (e.m.t === 'on' || e.m.t === 'off') && e.time > tt + 1e-9));
+    const h = new Set();
+    T.events.filter(e => e.dev === dev).sort(byTime).forEach(e => { if (e.m.t === 'on') h.add(e.m.n); else if (e.m.t === 'off') h.delete(e.m.n); });
+    T.held[dev] = h;
     showTake();
   }
   function stopRec() {
     if (T.armed) { T.armed = false; showTake(); return; }
     if (!T.rec) return;
-    T.rec = false; T.length = now() - T.t0;
-    Object.keys(T.held).forEach(d => T.held[d].forEach(n => T.events.push({ time: T.length, dev: d, m: { t: 'off', n } })));
+    T.rec = false; P.last = 'take';
+    let end = now() - T.t0;
+    // Scheduled notes can be filed ahead of now, and a key played just before a scheduled first note
+    // lands before the take's 0. The take is what sounded from its first note to Stop: in time order,
+    // nothing struck after Stop, an off due after it comes back to Stop, and a take starts at 0.
+    T.events.sort(byTime);
+    const t0 = T.events.length ? Math.min(0, T.events[0].time) : 0;
+    if (t0 < 0) { T.events.forEach(e => { e.time -= t0; }); end -= t0; }
+    const sounding = {}, kept = [];
+    T.events.forEach(e => {
+      const s = sounding[e.dev] || (sounding[e.dev] = new Map()), k = s.get(e.m.n) || 0;
+      if (e.time > end) {
+        if (e.m.t === 'off' && k > 0) { e.time = end; kept.push(e); s.set(e.m.n, k - 1); }
+        else if (e.m.t !== 'on' && e.m.t !== 'off') { e.time = end; kept.push(e); }
+        return;
+      }
+      if (e.m.t === 'on') s.set(e.m.n, k + 1); else if (e.m.t === 'off' && k > 0) s.set(e.m.n, k - 1);
+      kept.push(e);
+    });
+    T.events = kept; T.length = end;
+    Object.keys(sounding).forEach(d => sounding[d].forEach((k, n) => { for (let i = 0; i < k; i++) T.events.push({ time: T.length, dev: d, m: { t: 'off', n } }); }));
     T.held = {};
     // A pedal still down at Stop goes up at the end of the take, so an exported file does not leave
     // CC 64 held for whatever follows it in another program.
@@ -146,11 +201,14 @@ export function createDeck(api) {
   const Fi = { name: '', song: null, assign: [] };
   function importBytes(bytes, name) {
     let song;
+    // A file that fails leaves the previous one loaded (its tracks, play and Render WAV), so the status says so (review R1113-5)
+    const kept = Fi.song ? ' Still loaded: ' + Fi.name + '.' : '';
     try { song = songOf(readSMF(bytes)); }
-    catch (e) { $('fileStat').textContent = (name || 'That file') + ': ' + e.message; api.toast(e.message, 5000); return false; }
-    if (!song.parts.some(p => p.notes)) { $('fileStat').textContent = (name || 'That file') + ' has no notes to play.'; return false; }
+    catch (e) { $('fileStat').textContent = (name || 'That file') + ': ' + e.message + kept; api.toast(e.message, 5000); return false; }
+    if (!song.parts.some(p => p.notes)) { $('fileStat').textContent = (name || 'That file') + ' has no notes to play.' + kept; return false; }
     if (P.playing) stop();
     Fi.name = name || 'file.mid'; Fi.song = song; Fi.assign = defaultAssign(song.parts, api.dev());
+    P.last = 'file';     // Render WAV takes what came in last: this file, until a take is recorded or played (R1110-2)
     openBody(true); showFile();
     return true;
   }
@@ -165,7 +223,11 @@ export function createDeck(api) {
     if (!s) { $('fileStat').textContent = 'Drop a .mid file here, or press import.'; host.innerHTML = ''; return; }
     if (!P.playing) $('posV').textContent = fmtT(0) + ' / ' + fmtT(s.length);
     $('fileStat').textContent = Fi.name + ' · ' + fmtT(s.length) + ' · ' + Math.round(s.bpm) + ' BPM · ' + s.parts.length + (s.parts.length === 1 ? ' track' : ' tracks');
+    // A chip pressed from the keyboard is rebuilt here; keep the focus on its new copy (review R1117-2)
+    const fe = document.activeElement;
+    const keep = fe && host.contains(fe) && fe.dataset ? { trk: fe.dataset.trk, v: fe.dataset.v } : null;
     host.innerHTML = '';
+    if (keep) queueMicrotask(() => { const b = [...host.querySelectorAll('button')].find(x => x.dataset.trk === keep.trk && x.dataset.v === keep.v); if (b) b.focus(); });
     s.parts.forEach((p, i) => {
       const row = document.createElement('div'); row.className = 'trk';
       const nm = document.createElement('span'); nm.className = 'tn'; nm.textContent = p.name;
@@ -184,7 +246,9 @@ export function createDeck(api) {
   function setAssign(i, d) {
     if (!Fi.song || i < 0 || i >= Fi.assign.length) return;
     Fi.assign[i] = d; showFile();
-    if (P.playing && P.src === 'file') { const pos = P.schedPos; stop(); play('file', pos); }
+    // Restart from what is sounding now, not from where scheduling has reached: stop flushes every
+    // note sent ahead (up to 150 ms of them), so restarting at schedPos dropped those (review R1116-2).
+    if (P.playing && P.src === 'file') { const pos = Math.max(0, Math.min(P.schedPos, posNow())); stop(); play('file', pos); }
   }
 
   // ---------------------------------------------------------------- player
@@ -204,10 +268,18 @@ export function createDeck(api) {
     if (e.m.t === 'on') { s.set(e.m.n, (s.get(e.m.n) || 0) + 1); P.touched[e.dev].add(e.m.n); lightLater(e.m.n, true, t); }
     else if (e.m.t === 'off' && s.has(e.m.n)) { const k = s.get(e.m.n) - 1; if (k > 0) s.set(e.m.n, k); else s.delete(e.m.n); lightLater(e.m.n, false, t); }
   }
-  function releaseAt(t) {         // note offs for whatever playback still holds, sustain off
+  // The page's own pedal (space, hold, CC 64) shares the device's sustain with playback. Where it is
+  // down, the end of a file or a stop leaves the pedal down rather than lifting it under the player's
+  // foot: before, the next note played with the pedal still down was not held (review R1119-1).
+  const pedalDown = d => !!(api.pedal && api.pedal(d));
+  function releaseAt(t) {         // note offs for whatever playback still holds, sustain off (unless the page's pedal is down)
     P.used.forEach(d => {
       P.sounding[d].forEach((k, n) => { for (let i = 0; i < k; i++) send({ dev: d, m: { t: 'off', n } }, t); });
-      api.engine().sendTo(d, { t: 'sus', on: false, at: Math.round(t * api.ctx().sampleRate), pb: true });
+      const at = Math.round(t * api.ctx().sampleRate);
+      api.engine().sendTo(d, { t: 'sus', on: pedalDown(d), at, pb: true });
+      // bend, wheel and pressure back to rest too, so a file or take that ends bent does not start
+      // its next loop pass out of tune (review R1113-1)
+      ['bend', 'mw', 'at'].forEach(k => api.engine().sendTo(d, { t: k, v: 0, at, pb: true }));
     });
   }
   function pump() {
@@ -224,7 +296,10 @@ export function createDeck(api) {
       const tEnd = ctxAt(P.length);
       if (!P.ended) { releaseAt(tEnd); P.ended = true; }
       if (P.loop && P.length > 0.05) { P.anchorCtx = tEnd; P.anchorPos = 0; P.schedPos = 0; P.idx = 0; P.ended = false; continue; }
-      if (c.currentTime >= tEnd) { stop(); return; }
+      // The end of the file: releaseAt has already let go of every note playback held, so this
+      // does not flush and panic as Stop does; a panic here also cut the keys and the pedal notes
+      // the player was holding over the last bar (review R1119-2).
+      if (c.currentTime >= tEnd) { if (T.rec || T.armed) stopRec(); stopPlayback(true); return; }
       break;
     }
     $('posV').textContent = fmtT(Math.min(P.length, Math.max(0, posNow()))) + ' / ' + fmtT(P.length);
@@ -249,17 +324,20 @@ export function createDeck(api) {
     });
     return true;
   }
-  function stopPlayback() {
+  function stopPlayback(ended) {
     if (!P.playing) return;
     P.playing = false; clearInterval(P.timer); P.timer = 0;
     const E = api.engine();
     P.used.forEach(d => {
       // Flush drops note offs that were scheduled but had not landed. Panic is all-notes-off,
       // so a note the tracker missed still goes silent. It does not stop a take being recorded.
-      E.sendTo(d, { t: 'flush' });
-      E.sendTo(d, { t: 'panic' });
+      // At the file's own end (ended) every off has landed, so the keys held on the page are spared.
+      if (!ended) {
+        E.sendTo(d, { t: 'flush' });
+        E.sendTo(d, { t: 'panic' });
+        ['sus', 'bend', 'mw', 'at'].forEach(t => E.sendTo(d, t === 'sus' ? { t, on: pedalDown(d) } : { t, v: 0 }));
+      }
       P.sounding[d].clear(); P.touched[d].clear();
-      ['sus', 'bend', 'mw', 'at'].forEach(t => E.sendTo(d, t === 'sus' ? { t, on: false } : { t, v: 0 }));
       E.playing(d, false);
     });
     P.timeouts.forEach(id => clearTimeout(id)); P.timeouts.clear();
@@ -337,14 +415,14 @@ export function createDeck(api) {
   showTake(); showFile();
 
   return {
-    rec, stop, silence: stopPlayback, lit: n => (P.lit.get(n) || 0) > 0,
+    rec, recAt, recFlush, stop, silence: stopPlayback, lit: n => (P.lit.get(n) || 0) > 0,
     // test hooks
     test: {
       importBytes: (arr, name) => importBytes(Uint8Array.from(arr), name),
       song: () => Fi.song && { name: Fi.name, length: Fi.song.length, bpm: Fi.song.bpm, parts: Fi.song.parts.map(p => ({ name: p.name, chans: p.chans, notes: p.notes, mean: p.mean })), assign: Fi.assign.slice() },
       assign: (i, d) => setAssign(i, d),
       take: () => ({ armed: T.armed, rec: T.rec, length: T.length, events: T.events.map(e => Object.assign({ time: e.time, dev: e.dev }, e.m)) }),
-      arm: () => { T.armed = true; showTake(); }, stopRec,
+      arm: () => { T.armed = true; showTake(); }, stopRec, recAt,
       exportBytes: () => [...exportBytes()],
       play: src => play(src || 'file'), stop, playing: () => P.playing, position: () => posNow(), rate: () => P.rate,
       sounding: () => { const o = {}; P.used.forEach(d => { o[d] = [...(P.sounding[d] || new Map()).keys()]; }); return o; },

@@ -1,5 +1,5 @@
-// A project is the rack's document: both device patches, the mixer, the tempo
-// and which device the keyboard plays. It is plain JSON (kind 'dxrack', v 1).
+// A project is the rack's document: both device patches, the mixer, the tempo,
+// which device the keyboard plays and the paper roll. It is plain JSON (kind 'dxrack', v 1).
 // The page keeps one in localStorage and can download or upload the same file.
 //
 // These functions do not touch the DOM or the audio graph. The page applies a
@@ -20,18 +20,35 @@ import { normalizeAdditron } from './additron.js';
 import { normalizeRhumbatron } from './rhumbatron.js';
 import { normalizeResnatron } from './resnatron.js';
 import { normalizeStrip, normalizeBus } from './mixer.js';
-import { normalizeArmed } from './mixsession.js';
+import { normalizeArmed, MIX_CHANNELS } from './mixsession.js';
 import { clampTempo, normalizeSig } from './transport.js';
+import { normalizeRoll, normalizeChain } from './paperroll.js';
 
 export const PROJECT_SCHEMA = 1;
 export const PROJECT_KEY = 'dxrack_project';
+
+// The paper roll in the project (17 Nov 2026): its pattern, the device it plays ('lit' is the device lit on
+// the rail) and its run switch. Optional: a project saved before 17 Nov has no roll, and loading one leaves
+// the roll as it is. A file's dest is a plain device id or 'lit'; the strip checks it against the rack again
+// when it applies the project. Since 18 Nov a roll may also carry `chain` (song mode: rolls by name, each
+// with a copy of its pattern), still v 1.
+export function normalizeProjectRoll(r) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+  const dest = typeof r.dest === 'string' && /^[a-z][a-z0-9]{0,31}$/.test(r.dest) ? r.dest : 'lit';
+  const out = { pat: normalizeRoll(r.pat), dest, run: r.run === true };
+  // the chain (18 Nov): optional too; a project saved before has none and leaves the chain as it is
+  if (r.chain && typeof r.chain === 'object' && !Array.isArray(r.chain)) out.chain = normalizeChain(r.chain);
+  return out;
+}
 
 export function normalizeProject(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
   const device = src.device === 'cathode' || src.device === 'dekatron' || src.device === 'lattice' || src.device === 'thyratron' || src.device === 'gleam' || src.device === 'mote' || src.device === 'heptode' || src.device === 'geissler' || src.device === 'pentagrid' || src.device === 'orthicon' || src.device === 'trochotron' || src.device === 'gyrotron' || src.device === 'klystron' || src.device === 'phantastron' || src.device === 'additron' || src.device === 'rhumbatron' || src.device === 'resnatron' ? src.device : 'filament';
   const name = String(src.name == null ? 'Untitled' : src.name).trim().slice(0, 40) || 'Untitled';
   const mixerIn = src.mixer && typeof src.mixer === 'object' ? src.mixer : {};
-  const ids = new Set(['filament', 'cathode']);
+  // Every rack strip, as a mix session does: a strip the file does not carry (a project saved before
+  // that device existed) loads at its defaults instead of keeping the page's mute or solo (review R1120-1).
+  const ids = new Set(['filament', 'cathode'].concat(MIX_CHANNELS.map(c => c.id)));
   Object.keys(mixerIn).forEach(k => { if (k && String(k).length < 40) ids.add(String(k)); });
   const mixer = {};
   ids.forEach(id => { mixer[id] = normalizeStrip(mixerIn[id]); });
@@ -54,7 +71,7 @@ export function normalizeProject(raw) {
   if (devs.additron) devices.additron = { patch: normalizeAdditron(devs.additron.patch) };
   if (devs.rhumbatron) devices.rhumbatron = { patch: normalizeRhumbatron(devs.rhumbatron.patch) };
   if (devs.resnatron) devices.resnatron = { patch: normalizeResnatron(devs.resnatron.patch) };
-  return {
+  const out = {
     v: PROJECT_SCHEMA, kind: 'dxrack', name,
     tempo: clampTempo(src.tempo == null ? 120 : src.tempo),
     timeSig: normalizeSig(src.timeSig),
@@ -64,6 +81,9 @@ export function normalizeProject(raw) {
     bus: normalizeBus(src.bus),
     devices,
   };
+  const roll = normalizeProjectRoll(src.roll);
+  if (roll) out.roll = roll;
+  return out;
 }
 
 export function saveLocal(storage, project) {

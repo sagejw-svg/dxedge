@@ -11,6 +11,11 @@
  * That mode ignores a saved layout and uses each room's own pose from
  * scenes.json, so the lamp is not stuck in one spot. Offline, composite the
  * same files: the picture URL plus the lamp object (x, y, s, rot, tilt, skew).
+ *
+ * seasons in scenes.json is a civil-date hook. While today (in that season's
+ * zone) falls inside from..to, rooms whose picture files exist join the end of
+ * the rotation. Missing files are left out, and if none exist the year-round
+ * rooms stay exactly as they are. ?sceneDate=YYYY-MM-DD pretends that civil date.
  */
 (function () {
   'use strict';
@@ -22,7 +27,8 @@
   if (BASE.slice(-1) !== '/') BASE += '/';
   var ROOT = BASE + 'scenes/';
 
-  var pack = null, scenes = [], index = 0, on = false, stream = false;
+  var pack = null, scenes = [], index = 0, on = false, stream = false, slidesReady = false;
+  var seasonInfo = { id: null, active: false, art: 0, fallback: true, date: null };
   var custom = {}, shownAt = 0, timer = 0, raf = 0, drag = null, front = 0;
   var reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var stage, frame, wrap, cv, cap, resetBtn, bgs, buttons = [];
@@ -355,9 +361,40 @@
     writeSaved();
   }
 
-  function boot(data) {
-    pack = data || {};
-    scenes = (pack.scenes || []).filter(function (s) { return s && s.src && s.lamp; });
+  function civilToday(tz) {
+    var fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz || 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+    var g = {};
+    fmt.formatToParts(new Date()).forEach(function (p) { if (p.type !== 'literal') g[p.type] = p.value; });
+    return g.year + '-' + g.month + '-' + g.day;
+  }
+  function askedDate() {
+    var m = /[?&]sceneDate=(\d{4}-\d{2}-\d{2})/.exec(location.search || '');
+    return m ? m[1] : '';
+  }
+  function seasonFor(data, dateKey) {
+    var list = (data && data.seasons) || [];
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (!s || !s.from || !s.to) continue;
+      var d = dateKey || civilToday(s.tz || 'America/Los_Angeles');
+      if (d >= s.from && d <= s.to) return { season: s, date: d };
+    }
+    return null;
+  }
+  function probe(src) {
+    var u = url(src);
+    return fetch(u, { method: 'HEAD', cache: 'no-cache' }).then(function (r) {
+      if (r.ok) return true;
+      if (r.status !== 405 && r.status !== 501) return false;
+      return fetch(u, { headers: { Range: 'bytes=0-0' }, cache: 'no-cache' }).then(function (g) {
+        return g.ok;
+      }, function () { return false; });
+    }, function () { return false; });
+  }
+  function finishBoot(list) {
+    scenes = list;
     var fade = reduce ? 0 : (pack.fadeMs || 1400);
     if (bgs && bgs[0]) {
       bgs[0].style.transitionDuration = fade + 'ms';
@@ -373,12 +410,45 @@
     } else if (flag === 'on' || readOn()) {
       setOn(true);
     }
+    slidesReady = true;
     window.__otr = window.__otr || {};
     window.__otr.slideshow = api;
   }
+  function boot(data) {
+    pack = data || {};
+    var base = (pack.scenes || []).filter(function (s) { return s && s.src && s.lamp; });
+    var hit = seasonFor(pack, askedDate());
+    seasonInfo = {
+      id: hit ? hit.season.id : null,
+      active: !!hit,
+      art: 0,
+      fallback: true,
+      date: hit ? hit.date : (askedDate() || civilToday('America/Los_Angeles'))
+    };
+    if (!hit) {
+      finishBoot(base);
+      return;
+    }
+    var specs = (hit.season.scenes || []).filter(function (s) { return s && s.src && s.lamp; });
+    Promise.all(specs.map(function (s) {
+      return probe(s.src).then(function (ok) { return ok ? s : null; });
+    })).then(function (rows) {
+      var extra = rows.filter(Boolean);
+      seasonInfo.art = extra.length;
+      seasonInfo.fallback = extra.length === 0;
+      // Year-round rooms stay first, so a missing set does not change the opener.
+      finishBoot(base.concat(extra));
+    });
+  }
 
   var api = {
-    ready: function () { return !!pack; },
+    ready: function () { return slidesReady; },
+    season: function () {
+      return {
+        id: seasonInfo.id, active: !!seasonInfo.active, art: seasonInfo.art,
+        fallback: !!seasonInfo.fallback, date: seasonInfo.date
+      };
+    },
     on: function (v) { if (v == null) return on; return setOn(!!v); },
     stream: function () { return stream; },
     scenes: function () { return scenes.map(function (s) { return s.id; }); },

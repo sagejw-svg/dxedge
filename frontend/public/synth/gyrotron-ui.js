@@ -7,6 +7,7 @@ import { makeKnob } from './knob.js';
 import { gyrotronDevice, normalizeGyrotron, GYRO_DEFAULT, midiOf } from './gyrotron.js';
 import { voiceForNote } from './drums.js';
 import { SCALE_IDS, TOOLS, ROUTES, CORE_RANGE } from './gyrotron-world.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./gyrotron.worklet.js', import.meta.url).href;
 
@@ -24,8 +25,8 @@ const TOOL_LABEL = { well: 'well', body: 'body', fling: 'fling' };
 export { midiOf };
 
 export async function createGyrotronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__gyrotron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__gyrotron = true; }
-  const node = new AudioWorkletNode(ctx, 'gyrotron', {
+  if (!ctx.__gyrotron) { await loadWorklet(ctx, WORKLET); ctx.__gyrotron = true; }
+  const node = workletNode(ctx, 'gyrotron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeGyrotron(patch || GYRO_DEFAULT),
@@ -41,7 +42,7 @@ export async function renderGyrotronBuffer({ patch, events = [], seconds = 1, sa
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: e.at == null ? 0 : Math.round(e.at * sampleRate) }));
   const node = await createGyrotronNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }

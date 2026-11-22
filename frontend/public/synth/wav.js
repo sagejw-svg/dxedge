@@ -72,6 +72,8 @@ export async function renderToWav(opts) {
   const seconds = Math.max(0.05, Math.min(600, +opts.seconds || 1));
   const buf = await renderOffline({
     patch: opts.patch,
+    patches: opts.patches,               // with device: the two-device form (the paper roll on the other device)
+    device: opts.device,
     events: opts.events || [],
     seconds,
     sampleRate: SR,
@@ -80,6 +82,7 @@ export async function renderToWav(opts) {
     master: opts.master || null,
     masterFx: opts.masterFx !== false,
     tempo: opts.tempo,
+    hosted: opts.hosted || [],           // other rack devices in the render (the paper roll on them, 21 Nov)
   });
   const bytes = encodeWav24(buf.getChannelData(0), buf.getChannelData(1), buf.sampleRate || SR);
   return { bytes, frames: buf.length, sampleRate: SR, bits: 24, channels: 2, seconds };

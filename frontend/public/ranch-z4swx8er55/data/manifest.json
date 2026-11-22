@@ -1,0 +1,128 @@
+[
+ {
+  "file": "1919_usgs-topo-bryson15.jpg",
+  "year": 1919,
+  "date": "1919 (surveyed 1917)",
+  "source": "USGS Historical Topographic Map Collection - Bryson 15' (1:62,500)",
+  "caption": "Earliest map: Waller Creek and the South Fork drawn through section 17; no roads or buildings shown at the pin. ~6 km square."
+ },
+ {
+  "file": "1949_usgs-topo-7.5min.jpg",
+  "year": 1949,
+  "date": "1949 (from 1947 aerial photos; 1952-53 prints)",
+  "source": "USGS Historical Topographic Map Collection - Burnett Peak & Bryson 7.5' (1:24,000)",
+  "caption": "First detailed map: pin on Waller Creek drainage just SE of the 1202 ft knob, beside the Hunter Liggett Military Reservation boundary. No buildings or roads at the pin. ~3 km square."
+ },
+ {
+  "file": "1961_usgs-topo-bryson15.jpg",
+  "year": 1961,
+  "date": "1961 (from 1960 aerial photos; 1968 print)",
+  "source": "USGS Historical Topographic Map Collection - Bryson 15' (1:62,500)",
+  "caption": "Mid-century map with green woodland tint; Beartrap Road, Bald Mountain and Smith Ranch nearby. Nothing mapped at the pin. ~6 km square."
+ },
+ {
+  "file": "1973-04-21_landsat.jpg",
+  "year": 1973,
+  "date": "1973-04-21",
+  "source": "USGS/NASA Landsat 1 MSS, Collection 2 Level-1 (Microsoft Planetary Computer)",
+  "caption": "Earliest satellite view, in false color (vegetation shows red), 60 m pixels. ~10 km square, so no ranch-scale detail."
+ },
+ {
+  "file": "1979_usgs-topo-7.5min-photorevised.jpg",
+  "year": 1979,
+  "date": "1979 (photo-inspected/revised from 1976 photos)",
+  "source": "USGS Historical Topographic Map Collection - Burnett Peak & Bryson 7.5' (1:24,000)",
+  "caption": "Map edition from around when the family arrived (~1976). No new roads or buildings shown at the pin; purple 1979 revisions are on the Bryson (east) sheet. ~3 km square."
+ },
+ {
+  "file": "1984-05-27_landsat.jpg",
+  "year": 1984,
+  "date": "1984-05-27",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Natural color, 30 m pixels; ~6 km square. Shows the landscape, not individual buildings."
+ },
+ {
+  "file": "1994-05-11_ucsb-napp.jpg",
+  "year": 1994,
+  "date": "1994-05-11",
+  "source": "USGS NAPP 2C aerial photo, frame 6917-208 - UCSB Library FrameFinder (free download)",
+  "caption": "Earliest aerial photo of the site: cleared homesite with a loop drive at the pin, a dirt road along the creek, and the two ponds about 0.8 km to the SSW. ~2.4 km square."
+ },
+ {
+  "file": "1995_usgs-topo-7.5min.jpg",
+  "year": 1995,
+  "date": "1995 (from 1994 photos; 2000 print)",
+  "source": "USGS Historical Topographic Map Collection - Burnett Peak 7.5' (+ 1985 Bryson print on the east side)",
+  "caption": "Latest printed topo: dirt roads (dashed) at the pin and along the creek, and the Fort Hunter Liggett boundary (red band) just north/west. ~3 km square."
+ },
+ {
+  "file": "1996-05-12_landsat.jpg",
+  "year": 1996,
+  "date": "1996-05-12",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Natural color, 30 m pixels; ~6 km square."
+ },
+ {
+  "file": "2002-05-31_ucsb-napp.jpg",
+  "year": 2002,
+  "date": "2002-05-31",
+  "source": "USGS NAPP 3C color-infrared aerial photo, frame 12452-152 - UCSB Library FrameFinder (free download)",
+  "caption": "Color infrared (vegetation shows red); low-resolution scan (~3 m). Loop drive and creek road unchanged. ~3 km square."
+ },
+ {
+  "file": "2005-06-06_landsat.jpg",
+  "year": 2005,
+  "date": "2005-06-06",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Natural color, 30 m pixels; ~6 km square."
+ },
+ {
+  "file": "2010-05-08_esri-wayback.jpg",
+  "year": 2010,
+  "date": "2010-05-08",
+  "source": "Esri World Imagery Wayback (release 2014-02-20; Microsoft UltraCam-G aerial, 0.3 m)",
+  "caption": "Sharp spring aerial: homesite and loop drive, plus two tracks climbing the slope to the north-east. ~2.4 km square."
+ },
+ {
+  "file": "2012-05-20_usda-naip.jpg",
+  "year": 2012,
+  "date": "2012-05-18/20",
+  "source": "USDA FSA NAIP 1 m (Microsoft Planetary Computer)",
+  "caption": "Bright roofs at the pin and at a neighbouring clearing ~250 m west. ~2.4 km square."
+ },
+ {
+  "file": "2016-06-25_usda-naip.jpg",
+  "year": 2016,
+  "date": "2016-06-25",
+  "source": "USDA FSA NAIP 0.6 m (Microsoft Planetary Computer)",
+  "caption": "A larger graded, bare-ground area now opens just north of the house. ~2.4 km square."
+ },
+ {
+  "file": "2020-07-04_usda-naip.jpg",
+  "year": 2020,
+  "date": "2020-06-16 & 2020-07-04",
+  "source": "USDA FSA NAIP 0.6 m (Microsoft Planetary Computer)",
+  "caption": "The graded area north and north-east of the house keeps growing. ~2.4 km square."
+ },
+ {
+  "file": "2024-05-26_usda-naip.jpg",
+  "year": 2024,
+  "date": "2024-05-26",
+  "source": "USDA FSA NAIP 0.6 m (Microsoft Planetary Computer)",
+  "caption": "Largest cleared area yet north and north-east of the house, with new tracks and pads. ~2.4 km square."
+ },
+ {
+  "file": "2025-07-08_esri-wayback.jpg",
+  "year": 2025,
+  "date": "2025-07-08",
+  "source": "Esri World Imagery (current; Wayback release 2026-02-26; Vantor Legion-02 satellite, 0.34 m)",
+  "caption": "Latest sub-meter view: graded area north of the house still open and summer-dry grass. ~2.4 km square."
+ },
+ {
+  "file": "2026-11-11_sentinel2.jpg",
+  "year": 2026,
+  "date": "2026-11-11",
+  "source": "Copernicus Sentinel-2B L2A (ESA), via Microsoft Planetary Computer",
+  "caption": "Most recent clear satellite pass (one week ago), 10 m pixels; ~4 km square."
+ }
+]

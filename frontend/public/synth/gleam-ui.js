@@ -10,6 +10,7 @@ import {
 } from './gleam.js';
 import { createGleamFx } from './gleam-fx.js';
 import { FREAD_FMT, addFread, houseFont } from './fread.js';
+import { loadWorklet as loadModule, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./gleam.worklet.js', import.meta.url).href;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -20,7 +21,7 @@ function isRack(engine) {
 
 async function loadWorklet(ctx) {
   if (ctx.__gleamWorklet) return;
-  await ctx.audioWorklet.addModule(WORKLET);
+  await loadModule(ctx, WORKLET);
   ctx.__gleamWorklet = true;
 }
 
@@ -89,7 +90,7 @@ export async function createGleamNode(ctx, { patch, events, active, destination 
   await loadWorklet(ctx);
   const p = normalizeGleam(patch);
   const outputs = VOICE_COUNT + 2;
-  const node = new AudioWorkletNode(ctx, 'gleam', {
+  const node = workletNode(ctx, 'gleam', {
     numberOfInputs: 0,
     numberOfOutputs: outputs,
     outputChannelCount: new Array(outputs).fill(2),
@@ -207,7 +208,7 @@ export async function renderGleamBuffer({ patch, events = [], seconds = 1, sampl
   });
   const graph = await createGleamNode(ctx, { patch: p, events: queued, active: true, destination: ctx.destination });
   if (graph.hrtf) places.forEach(pl => graph.place(pl.slot, pl.pan, pl.depth));
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { graph.node.disconnect(); } catch (e) { /* context is closing */ }
   try { graph.sum.disconnect(); } catch (e) { /* already torn down */ }
   return buf;

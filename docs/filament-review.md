@@ -17,18 +17,46 @@ Newest severity first. IDs are `R<date>-<n>`.
 
 | ID | Severity | Area | Finding | Basis |
 |-|-|-|-|-|
+| R1121-3 | confusing | a | Gleam: generator rate, depth and seed stay fully lit with the generator off, where they change nothing (renders at both ends of each sample-identical to the untouched patch) | measured |
+| R1121-5 | confusing | a | Lattice: the "user" table chip with no WAV imported plays the glass table with no word (osc B on user and on glass give the same octave bands, -21.8 dBFS RMS both) | measured |
+| R1121-4 | confusing | a | Gleam is quiet next to the rack: Amber Field, one finger at pressure 0.8, peaks 0.06 (-24 dBFS) offline, about 13 dB under Filament's one note (-11.2 dBFS peak on 20 Nov) | measured (Gleam), inferred (comparison across nights) |
+| R1120-2 | missing | f | A project keeps neither the song library's song nor its channel routing (nor, by the code, the deck's file): Greensleeves with channel 3 sent to Cathode, project saved, page reloaded, project loaded: the library is empty and the routing is gone (the song's 96 BPM is kept as the project tempo) | measured |
+| R1120-3 | confusing | h | Tab order jumps back up: after the header's patch, volume, record and size controls (stops 1 to 14), stop 15 is "Tip the developer" at the very top of the page (y 16 px at 1366, 8 px at 375), then focus drops to the rail | measured |
+| R1119-3 | confusing | c, e, f | Stopping the MIDI deck, or the song library's stop or end (and its play, by the code), runs a panic on Filament and Cathode, so a chord the player is holding on the keys or the pedal goes silent while the keys are still down | measured (deck stop, library stop), inferred (library end and play) |
+| R1119-4 | confusing | d | The master strip's render wav plays the held keys at velocity 0.8 whatever they were played at, and C4 when nothing is held; the panel does not say either | measured |
+| R1119-5 | confusing | c | MIDI channel is ignored for notes: C4 on channel 1 and channel 2, then channel 1's note off, ends the note while channel 2 still holds it | measured |
+| R1117-3 | confusing | h | Rack headings jump from the one H1 to H3: no H2 on the page (30 H3 shown on the desktop rack), so a screen reader's heading list has no section level | measured |
+| R1116-4 | confusing | c, e | MIDI CC 123 or 120 (All Notes Off, All Sound Off) from a keyboard stops the MIDI deck's playback (and, by the code, the song library's): they run Panic, not a note release | measured (deck), inferred (library) |
+| R1116-3 | confusing | e | Moving a track to another device while the file plays does not strike the notes already held in it again: a bass held from 0 s falls silent for the rest of its note | measured |
+| R1116-5 | confusing | d | Rack tempo box: Escape leaves the typed 150 showing while the clock stays at 100; typing 99,5 sets 240 BPM (the comma is dropped, 995 clamped) | measured |
+| R1116-6 | confusing | e | A format 2 .mid (independent sequences) imports and plays all its tracks at once, split across Filament and Cathode, with no word | measured |
+| R1115-1 | confusing | a | Rhumbatron: blow is sample-identical to bow on every body; on the plate, bow and blow are sample-identical to pluck, so two of the four exciter chips change nothing there | measured |
+| R1115-2 | confusing | a | Orthicon with loop off: the scan runs to the last column and holds it for good; a key or a new picture does not restart it, nor Generate by the code (15 Nov: the Scan note now says so; what should restart it is open) | measured (Generate inferred) |
+| R1114-4 | missing | g | Hexode has no on-screen keys: on a phone with no hardware keyboard or MIDI, only Demo 1 and Demo 2 make a sound | measured (no keys), inferred (impact) |
+| R1114-2 | confusing | f | A damaged .mid (Greensleeves cut to half its bytes) loads in the song library with no warning, as "Greensleeves · 96 BPM · 1 channel" (the whole file has 3) | measured |
+| R1114-3 | confusing | e, f | A deck take exported as .mid and opened in the song library is titled "Tempo" (the name of the take's tempo track) | measured |
+| R1113-4 | confusing | d | Rack tempo 120.5 typed in the box reads "121" while the transport runs at 120.5 (the box rounds; the clock does not); still open 16 Nov | measured |
+| R1113-6 | confusing | e | A .mid cut short says "This MIDI file has data with no status byte", not that the file is incomplete | measured |
+| R1113-3 | missing | c | MIDI program change is ignored: a keyboard's patch buttons do nothing (no patch change, no word) | measured (ignored), inferred (expectation) |
+| R1113-7 | missing | e | Recording along with a playing file: the take starts at its own first note and plays alone, so a part played over a backing file does not line up with it | inferred (code) |
+| R1112-1 | confusing | a, b | Orthicon: a starter picture from the Picture card (Bell Partials, Harmonic Stack ...) is gone after a reload, a link or a saved user patch reopened; the scan plays Ember Ridge's picture while the readout shows the patch's name, and the link's note says only a "painted or dropped" picture is left out; still open 15 Nov (Bell Partials comes back as Ember Ridge's ridge after a reload) | measured |
+| R1111-4 | confusing | f | Surprise me drops its draw without a word when the rail moves during the render (about 1.4 s); the toast still holds the previous surprise's text | measured (dropped), inferred (what a user sees) |
+| R1110-3 | confusing | d | Master volume jumps in one sample: clicking the slider from 100% to 30% over a held A2 sine steps 12x to 22x the sine's own (an arrow key's 1% step is clean); still open 16 Nov (30% back to 100%, 40x) | measured |
+| R1110-4 | confusing | d | Switching the master delay off cuts its echoes and returns the dry level at once (2.7x the held sine's step); the reverb is the same by the code; 16 Nov: delay off 54x, reverb off 47x and compressor off (threshold -30, ratio 8) 33x the held sine's step | measured |
 | R1103-1 | broken | a, b | A Lattice patch made from an imported WAV comes back on reload without the WAV (plays a factory table, panel still says user); one imported table is shared by every patch | measured (table, sound), inferred (shared) |
+| R1109-1 | confusing | a | Theremin: the on and off switch does not stop the pad; with it off, a press switches it on and plays; still open 15 Nov | measured |
+| R1109-2 | confusing | a | Theremin: on a mono patch a key takes the pad's voice while the readout and glow still show the pad's note | measured (mono), inferred (full poly pool) |
 | R1108-3 | confusing | f | The paper roll's play starts Dekatron's own step pattern too: Blank Roll's play is a drum beat only (Dekatron strip 0.56), Octave Pump on Filament comes with the factory beat under it; same root as R1030-3 | measured |
 | R1108-4 | confusing | f | The paper roll offers Heptode as a device chip, but it plays nothing (17 strikes, strip 0); same as R1030-4 for the library | measured |
-| R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5) | measured (run kept, strikes), inferred (surprise) |
+| R1108-5 | confusing | f | After one press of the roll's play, run stays on across reloads, so every later library song brings the roll in with it (20 roll strikes under Beethoven 5); still open 14 Nov (37 strikes under Beethoven 5 after a reload) | measured (run kept, strikes), inferred (surprise) |
 | R1104-4 | confusing | c, d | Panic leaves the Mix desk delay and room returns and the patch's own output room ringing; the room's tail then refills the master reverb | measured |
 | R1106-2 | confusing | a | LC bank with the stereo offset: at 1 octave the sides differ far more than on the other models (side 1.7 dB over the left channel, Valve 12 -8 dB) and mono loses 0.55 dB; the LC note does not carry the mono warning the Ladder and Poly notes do | measured (width, mono), inferred (impact) |
-| R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it | measured |
+| R1101-2 | confusing | d | Tape echo feedback runs hotter than its knob: 95% never decays and 100% grows about 12 dB over 30 repeats before the record amp holds it; still open 16 Nov (repeat 30 against repeat 1: 90% -11.1 dB, 95% +4.9 dB, 100% +13.7 dB) | measured |
 | R1101-3 | confusing | d | Moving the rail from Filament to Cathode (or picking a patch with the echo off) cuts the tape echo's tail within 0.1 s: the shared echo follows the lit device's patch (2 Nov: the spring reverb is a patch field too, so it follows the same way) | measured (cut), inferred (impact, spring) |
 | R1101-4 | confusing | d, h | Log-scaled knobs show their quantized position, not the patch value: the tape echo's default 375 ms reads "376ms" | measured |
 | R1031-3 | confusing | a, b | Picking a patch (or an arrow) switches a running arpeggiator off and resets its settings: the arp lives in the patch | measured |
 | R1031-4 | missing | a, e | A MIDI take records the keys, not the arpeggio, so an exported .mid is a held chord elsewhere | measured (take), inferred (impact) |
-| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 5 Nov | measured |
+| R1030-3 | confusing | f | Dekatron's own step pattern plays under every library song (Greensleeves, Beethoven), and on top of a song's own channel 10 part; still open 11 Nov (all 21 songs, Dekatron strip 0.28 to 0.62); 14 Nov: Beethoven 5, routed to channels 1 to 3 only, Dekatron strip 0.52 | measured |
 | R1030-4 | confusing | f | Heptode is offered as a channel target in the library but plays nothing, on or off the rail; still open 2 Nov | measured |
 | R1030-5 | confusing | f | Changing a channel's device while a song plays sends Dekatron a panic, which stops its pattern for the rest of the run | inferred (code) |
 | R1029-3 | confusing | d | The header's record (and the master strip's) captures after the master volume: at volume 25% the WAV is 11.5 dB quieter | measured |
@@ -41,35 +69,34 @@ Newest severity first. IDs are `R<date>-<n>`.
 | R1026-4 | confusing | d | Master reverb at mix 1 is about 10 dB louder than dry (chord peak 0.57 dry, 1.77 wet; 3.1 at size 1, damp 0) | measured |
 | R1026-5 | confusing | c, h | Space on a focused button is the sustain pedal, so Space never presses hold, the deck, or any chip (Enter does); still open 29 Oct | measured |
 | R1026-7 | confusing | e | First switch to Trochotron (151 ms) or Lattice (125 ms) blocks the page about as long as the deck's 150 ms lookahead | measured (block), inferred (stutter) |
-| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov) | measured |
+| R1025-3 | confusing | b | Delete removes a user patch at once: no confirmation; undo gives back its sound as an edited patch, not the list entry, and the toast does not say so (3 Nov); still open 12 Nov (6 devices, no dialog); 15 Nov: 7 more devices, no dialog; 21 Nov: 9 more devices (Mote to Resnatron), no dialog | measured |
 | R1025-4 | confusing | a, h | Cathode pitch mod A and B: an arrow key moves 0.1% of travel; 100 presses reach +24 cents | measured |
-| R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall | measured |
-| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state | measured |
+| R1025-5 | confusing | h | Phone: the footer links (Tip the developer, Hand Orchestra, Hexode, Anode) are 13 px tall; still open 11 Nov | measured |
+| R1024-3 | confusing | g, h | Hexode: the 13 operator On/Off and Fixed toggles have no name and no pressed state; still open 11 Nov (13 unnamed at both sizes); 17 Nov: still 13 unnamed at 1366, 683 and 375 px, the page 1154 px wide at 683 and 375 | measured |
 | R1023-3 | confusing | c, e | Armed devices other than Filament and Cathode are left out of a MIDI take with no word; with only those armed the deck sits on "armed: play a note"; still open 29 Oct | measured |
 | R1023-4 | confusing | c | A pitch bend or mod wheel moved before a strip is armed stays on the old device after arming | inferred (code) |
 | R1023-5 | missing | c | Gleam ignores the sustain pedal (CC64) and the keyboard's hold button | measured (CC64), inferred (hold button) |
-| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 8 Nov | measured (Gleam inferred) |
+| R1020-3 | missing | f | A project leaves out the Thyratron, Dekatron, Lattice and Gleam patches and the master bus (and, since 8 Nov, the paper roll, listed as not in its first slice); still open 11 Nov (14 devices); 17 Nov: the paper roll is in now, the four patches and the master bus are still not | measured (Gleam inferred) |
 | R1017-3 | missing | e | MIDI deck Render WAV ignores the mixer (level, pan, mute, solo, sends); still open 29 Oct | measured |
 | R1022-3 | confusing | a, b | Phantastron is 20 to 30 dB quieter than the other devices; its first patch peaks at 0.03; still open 25 Oct | measured |
 | R1022-4 | confusing | a | Phantastron's bits slider at 1 to 3 (and a GND to BITS wire) silences the speaking carts | measured |
-| R1022-5 | confusing | b | Delete lands on the first patch in list order, not the device's own first sound; still open 3 Nov | measured |
-| R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question | inferred (code) |
+| R1022-6 | confusing | b | Save over an existing user patch name replaces it with no question; 18 Nov: measured on Filament ("Mine" from Plate Bass, then "Mine" from Echo Lead: no dialog, one "Mine" left holding Echo Lead, the toast says only Saved "Mine") | measured |
 | R1020-4 | confusing | f | A Halloween song replaces the lit device's patch, even an edited one, with no notice | measured |
 | R1020-5 | confusing | f | A song loaded before every device has attached is routed against the devices present then | inferred |
-| R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct | measured |
-| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 8 Nov (4 buttons, no name or title) | measured (8 Nov) |
-| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491 | measured |
-| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1) | measured |
+| R1020-6 | confusing | g | Hexode: Hold and the original panel controls show no focus ring; still open 24 Oct; 17 Nov: a focused panel button and the LCD select still change no style (by .focus()) | measured |
+| R1020-7 | confusing | g | Anode: the regenerate buttons are named only by the glyph "⟳"; still open 11 Nov (4 buttons, no name or title); 17 Nov: still 4, both sizes | measured (11 Nov) |
+| R1020-8 | confusing | h | Desktop rack: 553 tab stops with the paper roll open (8 Nov; 503 on 5 Nov, 426 on 27 Oct) and no skip link; the roll starts at stop 491; 11 Nov: 525 with the roll closed, still no skip link; 14 Nov: 531, no skip link; 17 Nov: about 538 tab stops, the first is Previous patch, no skip link | measured |
+| R1020-9 | confusing | h | Control names repeat across sections with no section in the name: "sine" x5, "level", "cutoff", "mix" x4, the tube chips x3 (5 Nov; the on and off switches are fixed by R1105-1); 14 Nov: the ensemble mode chips are named only "I", "II", "I+II" | measured |
 | R1017-4 | confusing | e | Deck Render WAV writes 16-bit 48 kHz; the master render and record write 24-bit 44.1 kHz | measured |
-| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 1 Nov | measured |
+| R1017-5 | confusing | d | Separate tempos: rack transport (now also the tape echo's sync), master delay tempo knob, deck 50-200%; still open 10 Nov (rack at 90 BPM, master tempo stays 120); 16 Nov: rack at 40 to 240, master tempo 120 | measured |
 | R1017-6 | confusing | d, e | Two buttons both read "● rec" (header records audio, deck records MIDI); two "render wav" buttons render different things | measured |
 | R1017-7 | confusing | c | At 1366 px the keyboard sits 4191 px down a 4862 px page, under all 18 mixer strips | measured |
 | R1017-8 | confusing | d | Mixer strip meters are pre-fader: a muted strip still shows level; still open 29 Oct | measured |
-| R1017-9 | confusing | d | No output protection unless the compressor is on: delay plus reverb can hard-clip at 0 dBFS; still open 7 Nov (226,954 samples at full scale in 4 s) | measured |
-| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 29 Oct | measured |
-| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 29 Oct | measured, impact inferred |
+| R1017-9 | confusing | d | No output protection unless the compressor is on: delay plus reverb can hard-clip at 0 dBFS; still open 7 Nov (226,954 samples at full scale in 4 s); 13 Nov: the master "limit" switch now holds the ceiling (-1.0 dBFS peak with delay feedback 0.95 and reverb size 1), but it is off by default | measured |
+| R1017-10 | confusing | c | Phone: pitch and mod strips are 22 px wide (target rule is 44 px); still open 10 Nov | measured |
+| R1017-11 | confusing | c | Phone: the octave readout says C3 while the first visible key is C4; still open 10 Nov | measured, impact inferred |
 
-Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov). Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 20 Oct: 1154 px wide).
+Fixed: R1017-1 and R1017-2 (17 Oct), R1020-1 and R1020-2 (20 Oct), R1022-1 and R1022-2 (22 Oct), R1023-1 and R1023-2 (23 Oct), R1024-1 and R1024-2 (24 Oct; R1024-2 also covers the mute and solo part of R1020-9), R1025-1 and R1025-2 (25 Oct), R1026-1 and R1026-2 (26 Oct), R1027-1 (27 Oct), R1028-1 and R1026-6 (28 Oct), R1029-1 and R1029-2 (29 Oct), R1030-1 and R1030-2 (30 Oct), R1031-1 and R1031-2 (31 Oct), R1101-1 (1 Nov), R1102-1 (also closes R1030-6) and R1102-2 (2 Nov), R1103-2 (3 Nov), R1104-1, R1104-2 and R1104-3 (4 Nov; R1104-2 and R1104-3 are one change), R1105-1 and R1105-2 (5 Nov), R1106-1 and R1103-3 (6 Nov), R1107-1 (7 Nov), R1108-1 and R1108-2 (8 Nov), R1109-3 and R1109-4 (9 Nov), R1110-1 and R1110-2 (10 Nov), R1111-1 and R1111-2 (11 Nov), R1112-2 and R1112-3 (12 Nov), R1113-1 and R1113-2 (13 Nov), R1114-1 and R1113-5 (14 Nov), R1022-5 (15 Nov), R1116-1 and R1116-2 (16 Nov), R1118-1 and R1118-2 (18 Nov), R1119-1 and R1119-2 (19 Nov), R1120-1 (20 Nov), R1121-1 and R1121-2 (21 Nov). R1111-3 (site down) cleared: dxedge.net answered 200 on 12 Nov from 12:20 UTC. Still open from the nightly checks: Hexode scrolls sideways at 375 px (measured again 11 Nov: 1154 px wide).
 
 ## 2026-10-17 (review, areas c, d, e)
 
@@ -1845,3 +1872,1274 @@ Measured. Fixed tonight.
 Areas a, b, c, d, e. The song library's 21 songs were not replayed one by one (the roll was the
 focus). Suggested next: a and b (Klystron's new source row against its sound, the roll's six
 factory rolls on Cathode and Thyratron with slides), then c with the roll's key in from MIDI.
+
+
+## 2026-11-09 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `75f767a`, sw.js
+`dxedge-v195` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194`
+path in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console
+errors in any run. Focus tonight: area a on Theremin mode (new last night, Filament's Pad section),
+Klystron's joined vowel and source rows (graphics, 8 Nov), and a keyboard sweep of every knob on all
+18 devices; area b on every factory patch from the menu, offline renders of all 27 Filament factory
+patches with the keys and with the pad, user patches saved, reloaded and deleted on Klystron,
+Additron and Resnatron, and the save form's edge cases on Filament, Cathode and Lattice.
+
+### What worked (measured)
+
+- Area b, all 129 factory patches on the 18 devices picked from the menu at 1366 px (Filament 27,
+  Cathode 19, Thyratron 6, Gleam 7, Mote 3, Heptode 1, Geissler 3, Pentagrid 6, Orthicon 5, Trochotron 6,
+  Gyrotron 3, Klystron 5, Phantastron 6, Additron 5, Rhumbatron 7, Resnatron 4, Dekatron 8, Lattice 8):
+  each one shows under its own name, not as edited, no errors.
+- Offline, through the rack, a four-note chord on all 27 Filament factory patches: finite, peak 0.15 to
+  0.90 (none over 0 dBFS), RMS -27.8 to -13.2 dBFS (Eerie Bells and Glass Music Box quietest, as on 6 Nov).
+- The same 27 played from the pad (C4 at 0.8, a slide to G4 +30 cents at full level, let go): finite,
+  peak 0.12 to 0.60. Exposition Choir and Parlor Harp are silent on the pad because they are 1939 mode
+  patches; the readout says "resting: 1939 mode cannot slide a note", as designed.
+- Knob sweep, Home and End by keyboard on every visible slider: Filament 113, Cathode 65, Thyratron 28,
+  Mote 17, Gyrotron 17, Klystron 18, Additron 15, Pentagrid 14, Dekatron 13, Geissler 12, Orthicon 9, and
+  the pitch and mod strips on the rest. Every one changes its device's patch except the two Theremin
+  knobs (page settings, by design) and the pitch and mod strips (spring back, by design). No readout
+  showed NaN, undefined or Infinity.
+- User patches on Klystron, Additron and Resnatron: saved from the form, current after a reload, in the
+  menu, delete shown and working (it lands on Buncher Ah, Copper Flute and Cavity Saw).
+- Save form: Enter saves, Escape cancels, a factory name is still refused (R1103-2).
+- Theremin pad, sound (offline, sine patch): a jump across the whole pad (C3 to C6 in one message), the
+  level from the floor to the top, and the release all stay within the steady sine's own sample step
+  (0.0184 to 0.0186 against 0.0186), so no clicks; the tail after release is -146 dB. Pitch bend at
+  full reaches the pad's note (440 Hz to 494 Hz, +2 semitones).
+- Theremin pad, page: a menu pick or the next arrow while the pad is held keeps the note sounding and
+  a later move slides it; Panic, the rail and 1939 mode let it go (as the suite checks). A window blur
+  ends the note; a mouse still held needs a fresh press. With the pedal down, letting go silences the
+  note (its level goes to 0) and keeps one voice until the pedal comes up, then 0 voices: nothing stuck.
+  Snap and range knobs reach 0 to 100% and 12 to 60 dB by Home and End, and the map follows (halfway
+  is -31 dB at 60 dB of range, -5.9 dB at 12). The pad shows a 2 px amber focus ring.
+- Phone 375 px: Filament's tabs are Play, Pad, Osc, Filter, Mod, Stereo, Rack, Mix; the pad is 313 x 240
+  px with every chip and the on switch 44 px tall; a touch drag plays and slides (to 76.05) without
+  scrolling the page, and lifting ends it. No sideways scroll.
+- Klystron: the source switch shows vowel lit, file and mic not; the vowel row's i lights alone after a
+  click and marks the patch edited.
+
+### Findings
+
+**R1109-1. The Theremin on and off switch does not stop the pad.** Area a. Confusing. Measured.
+- Steps: Filament, Theremin section, switch it off; press the pad.
+- Expected: off means the pad rests (a guard against a stray touch), or there is no switch.
+- Actual: the press switches the mode back on and plays (state on, note sounding, the switch reads
+  "on"). The readout says so ("off: touch the pad to switch it on"), so off only changes the pilot lamp
+  and the readout. A design call for James: make off a real rest, or drop the switch and keep the lamp.
+
+**R1109-2. On a mono patch a key takes the pad's voice, and the pad's readout does not say so.** Area a.
+Confusing. Measured (mono), inferred (a full poly pool).
+- Steps: Filament, voice mode mono, hold the pad at F#4, play C4 on the keys, let it go.
+- Actual: while the key is down C4 sounds (the meter's pad note is gone, notes [60]) but the readout keeps
+  "F#4 ±0 cents, -7 dB", the pad's glow stays, and the eye drops back to level. Key up: the pad's note
+  comes back (mono falls back to the held list). From the code, in poly the same steal happens once
+  every voice is in use, and there the pad does not come back until it is moved.
+- Options: the pad keeps its voice (keys play around it), or the readout says "a key has the voice".
+
+**R1109-3. Save with an empty name did nothing and left the last toast up.** Area b. Confusing.
+Measured. Fixed tonight.
+- Steps: save, clear the name (or type only spaces), press ok or Enter.
+- Actual: the form stayed open with no word; if a toast was still up it read "Saved ..." from the save
+  before, which reads as success.
+- Fix: the toast says "Type a name for the patch first." and focus stays in the name.
+
+**R1109-4. Closing the save form dropped keyboard focus to the page.** Area b (and h). Confusing.
+Measured. Fixed tonight.
+- Steps: Tab to save, Enter, then Escape, cancel, or type a name and Enter.
+- Actual: focus went to the page body each time; the next Tab went on from the MIDI button.
+- Fix: closing the form hands focus back to save. Enter in the name field now holds back its default,
+  because with focus already back on save the same key would have pressed it and opened the form again.
+- Check: "Pn. save with an empty name says so ..." and "Pn. closing the save form by Escape, cancel or a
+  save hands focus back to save" (both fail on the live tree: toast "", focus BODY three times).
+
+### Still open, re-measured tonight
+
+- R1025-3: delete still removes a user patch at once with no question (Klystron, Additron, Resnatron).
+- R1103-1: not re-run; `lattice*.js` is unchanged since 3 Nov, so it stands.
+
+### Notes (not findings)
+
+- The pad keeps its place for Enter as a position, not a pitch: after "from" C1, Enter plays C2 where it
+  played C4 before. The code comment says so; a keyboard user may expect the pitch to stay.
+- The MIDI deck does not record the pad (listed under the Theremin item's "still open").
+
+### Not covered tonight
+
+Areas c to h. Suggested next: c, d and e, including the pad with the deck armed, the pad under the
+master echo, and the pad on a phone with a second finger on the keys.
+
+## 2026-11-10 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `2770f23`, sw.js
+`dxedge-v199`. Playwright's own Chromium 1243 headless (the `chromium-1194` path is still gone) at
+1366 x 900 and 375 x 812 (touch, 2x). No page or console errors on the live site in any run. Audio was
+read from the live output with the master recorder (24-bit WAV decoded in the script) and from the deck's
+Render WAV downloads. Clicks are the largest sample-to-sample step over the steady signal's own largest
+step, on a held A2 sine (Filament, osc 1 sine, osc 2 off). Focus tonight: what a knob move on the master
+bus does to a held note, the deck's Render WAV after a mix of takes and files, and the pedal and keys
+across a rail switch and a patch link (new on 10 Nov).
+
+### What worked (measured)
+
+- Deck take on Wide Novachord Strings: three notes from the keys, 6 events, "take 0:01.5, 3 notes";
+  played back and stopped, 0 voices left.
+- A file built in the test with a tempo change (120 BPM for two beats, then 60) reads its notes at 0, 1
+  and 2 s and a length of 3 s, as it should. A file with running status and note-on velocity 0 as the
+  off reads 2 notes, 1 s, plays to its end and stops by itself with 0 voices.
+- Loop on, deck tempo moved to 180% while playing: still looping 3.5 s later; Stop leaves 0 voices and no
+  key lit.
+- Render WAV files: RIFF size matches the file, 48 kHz 16-bit stereo, no NaN, peaks 0.33 and 0.47.
+- Armed on Thyratron, a note: the deck says "armed: the recorder takes Filament and Cathode only".
+- Pedal (CC64) down on Filament, a note, key up, rail to Cathode: the pedal state is let go, and after
+  the pedal-up 0 voices on both.
+- Computer key A held on Filament, a Cathode patch link applied (`__synth.share.apply`), A let go:
+  the rail moves to Cathode, 0 voices on both, no key left down, sustain off.
+- Master compressor switched on over the held sine: 1.07x (no click). Master volume in 1% steps (an arrow
+  key): 1.0x.
+- Phone 375 px: a tap on a key sounds and lets go; the deck opens with no sideways scroll and no button
+  under 44 px.
+
+### Findings
+
+**R1110-1. Master bus moves click on a held note.** Area d. Broken. Measured. Fixed tonight.
+- Steps: hold a note (a sine or a bass shows it best), switch the master delay on, then turn the master
+  tempo knob one BPM, or change the delay division, its mix or the reverb's mix, or switch the delay on.
+- Expected: the echoes follow the new time and the mix moves without a tick.
+- Actual (live): one BPM (120 to 121) with the delay synced at 1/8 was 31x the sine's own step; delay
+  time 375 to 376 ms free 4x; 1/8 to 1/4 22x; delay mix 0.35 to 0.37 2x and 0.35 to 0.8 21x; reverb mix
+  0.28 to 0.30 4x and 0.28 to 0.8 42x; switching the delay on 9x (the first echo of the held note starts
+  at full level, 15x at 0.53 s).
+- Cause (code): `master.worklet.js` read the delay at the new length from the next sample and used the
+  new mix at once.
+- Fix: a new delay time crossfades from the old tap to the new one over 20 ms (a change during a fade
+  waits for it to end); the delay and reverb mixes ramp (at most 5 ms for 0 to 1, landing exactly),
+  from 0 when the effect is switched on; a delay switched on fills its line over the same glide. All start at their
+  targets, so an offline render is unchanged. Measured on a local server, old tree against new, with the
+  windows the check uses: tempo 12.7x to 1.0x, division 3.1x to 1.0x, delay mix 77x to 1.12x, reverb mix
+  24x to 1.04x, delay on 3.3x to 1.0x, ping-pong tempo 4.2x to 1.22x. A first try with a 10 ms one-pole
+  glide failed two Panic checks (a delay switched back on must match a new bus within 4 blocks); the
+  ramp lands exactly and passes them. Check: "Mx. a master bus move glides
+  with no click" (within 2x).
+
+**R1110-2. Render WAV renders the old take after a file is imported.** Area e. Confusing. Measured.
+Fixed tonight.
+- Steps: record a take and play it, then import a .mid file (its tracks show, its play key lights), then
+  press Render WAV.
+- Expected: the file on show.
+- Actual: `filament-take-....wav`, 3.5 s (the take's 1.5 s and the tail), not the 4 s file; the file
+  renders only after it has been played once. The reverse held too: after playing a file, a new take
+  rendered the file.
+- Cause (code): `deck.js` chose by the last thing played.
+- Fix: an import makes the file the deck's subject and a finished take makes the take; playing either
+  still does. Check: "M. Render WAV renders what came in last" (fails on the old tree: both downloads
+  were the take).
+
+**R1110-3. Master volume jumps in one sample.** Area d. Confusing. Measured. Not fixed.
+- Steps: hold a note, click the vol slider far from its thumb (100% to 30%).
+- Actual: 12x to 22x the held sine's step (two runs). An arrow key's 1% step is clean (1.0x).
+- Note: `setMasterVol` sets `E.master.gain.value`. A `setTargetAtTime` glide would fix it, but the
+  check "Desk. master volume is the output gain and is not a patch" reads the gain straight after the
+  set, so it would need to wait for the glide. Left for James (Open items) rather than change that check.
+
+**R1110-4. Switching a master effect off cuts it at once.** Area d. Confusing. Measured (delay), inferred
+(reverb).
+- Steps: hold a note with the master delay on, switch the delay off.
+- Actual: the echoes stop and the dry level returns in one sample: 2.7x the held sine's step. The
+  worklet's off branch passes the input straight through, and the reverb's is the same.
+- Note: an off that fades would mean the effect keeps running until its tail is gone, which touches the
+  "off is a straight wire" rule. A design call; not fixed.
+
+### Still open, re-measured tonight
+
+- R1017-5: the rack transport at 90 BPM leaves the master delay's tempo at 120.
+- R1017-10 and R1017-11 (phone): strips 22 px wide; octave readout C3 with C4 the first key.
+
+### Not reported
+
+- The Theremin pad is not recorded by the deck: already listed as still open under the Theremin roadmap
+  item.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1104-4 (Panic and the other tails) and R1101-2 and R1101-3 (tape echo) were not
+re-run. Suggested next: a and b, including the new patch links (`?p=`) for every device's factory patches
+from a phone, and Phantastron's new seed stepper.
+
+
+## 2026-11-11 (review, areas f, g, h)
+
+The live site was down for this run (R1111-3): every dxedge.net URL answered 502 Bad Gateway from nginx
+from 12:24 UTC (4:24 AM PT) to at least 12:41 UTC, while other hosts loaded fine from the same box.
+So everything below was measured on the repo tree at origin/main `b5596c6` (sw.js `dxedge-v203`, the
+same code the 2 AM check found live and matching), served by a local static server the way the suite
+serves it, with the service worker blocked. Chromium 1243 headless (the `chromium-1194` path is still
+gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus tonight:
+what landed since the last f, g, h night: patch links and patch files (10 Nov), Surprise me (11 Nov) and
+the Rack tab's new project, mix and patch faceplate (11 Nov), then the project round trip, all 21 library
+songs, the vendored and linked pages, and a keyboard walk of the faceplate.
+
+### What worked (measured)
+
+- Patch files on all 18 devices: a dxpatch file of each device's second factory patch, uploaded while
+  lit on Filament, lands on its own device with the patch identical field for field, menu
+  "* name (edited)", toast "Loaded ... on <device>." Thyratron, Lattice, Gleam and the other devices
+  that attach late are included.
+- Copy link (the key, not the hook): a 1277 character link to Filament Lead, the same text in the box
+  and on the clipboard, toast "Link copied: Filament, "Filament Lead"", the window's lamp turns amber.
+  Opened in a fresh context: same patch, `?p=` gone from the address, a held C4 sounds, undo is lit;
+  undo goes back to that page's own previous patch and a reload keeps it. A Cathode link opened on a
+  page lit on Thyratron switches the rail to Cathode with the patch, and undo stays on Cathode.
+- Surprise me: the key is disabled with `aria-busy` while it renders (1.4 s here); the patch lands with
+  its toast; its link opens the same patch elsewhere; a held A3 keeps sounding through a press and
+  releases cleanly after; on Thyratron it says it draws for Filament and Cathode only.
+- Project: save, change patch, tempo, mute and name, load saved: 0 differences against the saved
+  project. Download (`filament-review-nov11.json`), upload in a fresh context: 0 differences, and 0
+  after a reload. A project given to the patch row, and the reverse, are refused and leave everything.
+- Library: all 21 songs load, play 2.5 s with their routed devices sounding (Filament 0.09 to 0.44,
+  Cathode 0.12 to 0.92 strip peak), stop, and 2.5 s later no strip is above 0.003 and no note is
+  held on Filament or Cathode.
+- Vendored and linked pages, both sizes: Hexode plays a held key (peak 0.26) and links to /synth/ and
+  Anode; Anode starts from its start key (0.48 desktop, 0.65 phone) and links back to /synth/ and
+  Hexode; Gleam's full page sounds under a drag (0.04); Iris and Hand Orchestra load with their links
+  (camera not tested). No page errors on any of them.
+- Phone 375 on the Rack tab: no sideways scroll; every faceplate key and window is 44 px tall
+  (project keys 64 to 90 px wide, patch keys 87 to 108 px).
+
+### Findings
+
+**R1111-1. A keyboard cannot upload a project, a mix or a patch.** Area h. Broken. Measured. Fixed tonight.
+- Steps: Rack tab, Tab through the faceplate from the project name.
+- Expected: save, load, download, upload on each row, each with a ring; Enter on upload opens the picker.
+- Actual: Tab went from download straight to the next row's name window (projDown to mixName, mixDown
+  to shareUrl, shareDown to surprise me). The three upload keys are labels over a file input set to
+  `display: none` (since the rack framework, 13 Oct), so neither is in the tab order. The same rule
+  hid Mote's Load file, Heptode's Open MIDI and Orthicon's Image and Audio from the keyboard.
+- Fix: `.filebtn input` is transparent instead, laid over its label (same size, no pointer events), so
+  it stays in the tab order; the label wears the amber ring while its input has keyboard focus. Mouse
+  and touch still open the picker through the label (checked at both sizes); the phone layout is
+  unchanged (labels 77 to 87 x 44 px). Mote's and Heptode's file keys are now reached by Tab too.
+- Check: "Sh. Tab reaches each upload key ... and Enter clicks it". It reads the click Enter makes on
+  the input, not the picker: headless Chrome showed the picker for only 3 of 9 Enter and 4 of 9 Space
+  presses on the fixed tree, on any of the three inputs, while the click reached the input every time.
+  Unfixed: Tab lands on mixName, shareUrl and surpriseBtn.
+- Found on the way: the first version hid the input at 1 px, and the suite's phone checks ("10. 375px" and
+  "390px": every mix desk control 44 px or more) read the input itself, so it failed four checks. The
+  input now covers its label, border included (a second try at the padding box measured 42 px), which
+  passes them without touching the checks.
+
+**R1111-2. A file on the wrong row says only "not a project" or "not a mix".** Area f. Confusing.
+Measured. Fixed tonight.
+- Steps: Rack tab; upload a patch file with the project row's upload (or a project with the mix row's).
+- Expected: the row says which row takes that file, as the patch row already did.
+- Actual: "That file is not a project." and "That file is not a mix." With three keys all reading
+  "upload" on one faceplate since today's graphics change, the wrong row is an easy pick.
+- Fix: one helper names the file's kind (project, mix, patch, or a bare patch that names a device) and
+  every row says "That is a patch file, not a project. Upload it on the patch row." and so on; anything
+  else still says "That file is not a project." (or mix, or patch). The patch row's two messages
+  changed wording to match ("on the project row" instead of "with the project keys above").
+- Check: "Sh. an upload key given another row's file names the row that takes it" (6 cases). Unfixed:
+  4 of 6 had no row named.
+
+**R1111-3. dxedge.net down.** All areas. Broken. Measured.
+- Steps: open https://dxedge.net/synth/ (or /, /sw.js, /otr/, www).
+- Actual: 502 Bad Gateway, `server: nginx/1.31.1`, on 4 tries from 12:24 to 12:27 UTC and again at
+  12:41 UTC. example.com, ntfy.sh and google.com loaded from the same box, so it is the site, not this
+  network (inferred). The last pushes to main were the graphics run's at 12:15 UTC; whether the deploy
+  caused it is not known from here. Nothing in this job can reach the droplet. James was paged (the
+  ntfy topic answered 429, so the page went by the routine's own notification).
+
+**R1111-4. Surprise me drops its draw without a word when the rail moves.** Area f. Confusing.
+Measured (dropped), inferred (what a user sees).
+- Steps: Filament, press surprise me, switch the rail to Cathode within the render (about 1.4 s).
+- Expected: the patch lands on Filament anyway, or a toast says it was dropped.
+- Actual: nothing lands and no new toast; the toast text is still the previous press's
+  "Surprise: ... on Filament". The code returns `why: 'moved'` on purpose (leave the new device alone),
+  so this is about saying so. A one-line toast ("Surprise for Filament dropped: the rail moved") would do.
+
+### Still open, re-measured tonight
+
+- R1020-3: a project still carries 14 devices (no Thyratron, Dekatron, Lattice, Gleam) and no master bus.
+- R1030-3: Dekatron's pattern plays under all 21 library songs (strip peak 0.28 to 0.62), including
+  the eight with no channel 10.
+- R1020-4: the eight Halloween songs replace the lit Filament patch (Haunted Organ, Horror Pad, Eerie
+  Bells and so on).
+- R1020-7: Anode's four "⟳" buttons still have no name or title.
+- R1020-8: 525 desktop tab stops with the roll closed, no skip link.
+- R1024-3: Hexode has 13 unnamed controls at both sizes; Hexode still 1154 px wide at 375 px.
+- R1025-5: the phone footer links are still 13 px tall.
+
+### Not reported
+
+- After a patch link, undo goes back to the page's previous patch and shows it as "(edited)" even when
+  that was an unedited factory patch. Same family as R1025-3 (undo restores the sound, not the entry).
+- Filament Lead reports two voices for one held key (`notes` [60, 60]): its unison, not a stuck note
+  (both released).
+- Lattice's Import WAV uses its own hidden input (`display: block`, zero width), not `.filebtn`; it was
+  not walked tonight.
+
+### Not covered tonight
+
+Areas a, b, c, d, e. Nothing on the live site (down). Iris and Hand Orchestra were not played (camera).
+Suggested next: a and b (Surprise me's draws by ear against the factory set, Klystron's source row),
+and a recheck of every live page once the site is back.
+
+## 2026-11-12 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `bd6b166`, sw.js
+`dxedge-v207` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path
+in the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in
+any run. The site was back (200) after the 11 Nov outage (R1111-3). Focus tonight: what landed since the
+last a and b night (9 Nov): patch links and files (10 Nov), Surprise me (11 Nov), faces and Orthicon's
+Picture card (12 Nov), Phantastron's seed stepper (10 Nov); plus every factory patch, user patches on five
+more devices, and the first day's patches.
+
+### What worked (measured)
+
+- Area b, all 129 factory patches on the 18 devices picked from the menu: each shows under its own name,
+  not as edited, no errors.
+- Old patches still load: the 12 Filament factory patches from 12 Oct (`69a1385`) and the 11 Cathode ones
+  from 13 Oct (`d094c5b`), imported as bare patch files, load on the lit device as "* name (edited)" and
+  render finite, none over 0 dBFS. Against today's factory patch of the same name the chord is within
+  1 dB on 17 of 23; Diode Squelch (3.9 dB), Magic Eye Sweep (3.3), Bakelite Organ (2.1) and Wide Novachord
+  Strings (1.0) differ, which reads as later voicing changes to those factory patches, not a load fault.
+- Patch links opened on a fresh page, 11 devices (Thyratron, Lattice, Additron, Rhumbatron, Klystron,
+  Cathode, Dekatron, Mote, Gyrotron, Phantastron, Resnatron): the rail moves to the device, the menu reads
+  "* Review <device> (edited)", `?p=` leaves the address, the patch equals the normalized original, and a
+  held C major chord recorded from the live output sits within 0.7 dB of the same factory patch picked
+  from the menu on Thyratron, Lattice, Additron, Rhumbatron and Cathode. Mote, Dekatron, Gyrotron,
+  Phantastron and Resnatron land 1.7 to 4.5 dB apart; they run patterns, orbits or random phrases, and
+  their own run-to-run spread was not measured. Klystron: see the notes.
+- User patches through the form on Lattice, Dekatron, Gyrotron, Pentagrid and Thyratron, and a Surprise me
+  draw on Filament: saved, current after a reload, in the menu, deleted with a toast. Phone 375 px, Cathode:
+  save name, ok and cancel are 44 px and fit, delete is 57 x 44 px, no sideways scroll.
+- Phone 375 px: every tab of all 18 devices (75 tabs) has no sideways scroll.
+- Faces: on all 18 devices, at 1366 px, no text that reads at 3:1 or better on walnut drops below 3:1 under
+  rack black or black light (a screenshot with text hidden gives each label's real background; 353 to 648
+  labels a device). The low-contrast labels that exist are the same on all three faces.
+- Phantastron seed: next and previous step by one; 0 is the floor and 4294967295 the ceiling on both keys;
+  typed -5 lands on 0, 1e12 on the ceiling, 12.7 on 12.
+- Orthicon's Picture card: each starter picture lights its key and names itself in the window; Generate
+  with seed 42 reads "Generated 42 · major" and sounds; an empty or negative seed falls back to 1.
+
+### Findings
+
+**R1112-1. Orthicon: a starter picture does not survive a reload, a link or a saved patch.** Area a, b.
+Confusing. Measured.
+- Steps: Orthicon, Scan tab, pick Bell Partials on the Picture card, play C4 (RMS -21.5 dBFS). Then either
+  reload, or copy link and open it, or save as "Bell mine", reload and pick it.
+- Expected: the picture comes back, since it is one of the page's own eight, not a painting or a file.
+- Actual: the patch's `picture` is `custom` in each case and the scan plays Ember Ridge's picture again
+  (RMS -13.3 to -13.7 dBFS, the level of the factory patch). After the reload of the saved patch the
+  window reads "Bell mine" over the ridge picture. Copy link and download warn only that "a painted or
+  dropped picture is not in it". Switching the rail away and back without a reload keeps it.
+- Cause (code): picking a starter picture draws it into the canvas and sets `picture: 'custom'`; the
+  patch's picture field only knows the five factory pictures (`PICTURES` in `orthicon.js`).
+- Left for James (Open items): carry the starter picture's id in the patch (a schema change), or say so in
+  the notes.
+
+**R1112-2. Save offered "<name> 2" for a name nobody had.** Area b. Confusing. Measured. Fixed tonight.
+- Steps: Filament, Rack tab, surprise me (seed 12345 gives "Copper Line 2345"), save.
+- Expected: the form offers "Copper Line 2345".
+- Actual: it offered "Copper Line 2345 2". The same for a patch from a link or a file. And on a factory
+  patch it offered "Plate Bass 2" even when a user patch already had that name, so pressing ok replaced it
+  with no word (part of R1022-6).
+- Fix: a user patch still offers its own name; any other patch offers its name when no factory or user
+  patch has it, and otherwise the first free number ("Plate Bass 3"). Check: "Pn. save offers a free name
+  as it is and a taken one with the first free number" (fails on the live tree: "Pn Unused Name 4821 2",
+  and "Plate Bass 2" with a "Plate Bass 2" saved).
+
+**R1112-3. Download patch did not say what the file leaves out.** Area b. Confusing. Measured. Fixed tonight.
+- Steps: Orthicon (or Mote, Klystron, Lattice), Rack tab, download.
+- Actual: the toast said "Downloaded orthicon-ember-ridge.json"; copy link on the same patch says "A
+  painted or dropped picture is not in it.", and the file carries the same patch.
+- Fix: the download toast adds the same sentence on those four devices. Check: "Sh. download patch says
+  what the file leaves out where copy link does" (fails on the live tree).
+
+### Still open, re-measured tonight
+
+- R1022-5: deleting a Cathode user patch on a phone lands on Grid Bias Bass, not Plate Screamer.
+- R1025-3: delete still removes a user patch at once with no dialog (Lattice, Dekatron, Gyrotron, Pentagrid,
+  Thyratron, Cathode).
+- R1022-3: Phantastron's Nursery Clock, one C4 held 1.5 s, records at -47 dBFS RMS from the live output.
+
+### Notes (not findings)
+
+- Klystron's Held Frost freezes the grains it has: opened from a link on a fresh page it recorded at
+  -28 dBFS, picked from the menu on a page that had played other patches -39 dBFS. Inferred: the freeze
+  holds whatever the buffer had, so the same patch sounds different by history. Expected for a freeze.
+- Neighbouring Phantastron seeds (7 and 8 on Nursery Clock) correlate at 0.8 over 1.5 s: a step of one
+  changes the phrase only a little.
+- Surprise me names end in the seed's last four digits, so a saved draw keeps a number in its name.
+
+### Not covered tonight
+
+Areas c to h. Area a by ear on Surprise me draws, and the knob sweep, were not repeated (9 Nov).
+Suggested next: c, d and e, including a take on a Surprise me draw and the patch link row with the deck.
+
+## 2026-11-13 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `93ebfae`, sw.js
+`dxedge-v211` (live matched main). Playwright's own Chromium 1243 headless (the `chromium-1194` path is
+still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors on the live site in any
+run. Audio was read from the live output with the master recorder (24-bit WAV decoded in the script)
+and from `__synth.renderWav`. Pitch is the FFT peak over 0.25 s on a sine patch (Filament, osc 1 sine,
+ensemble and room off). Focus tonight: what a MIDI keyboard or DAW sends besides notes (CC 121, program
+change, repeated note-ons, two sources on one note), the deck's loop with controllers, bad and odd
+.mid files, the tempo box, and the master bus at its extremes.
+
+### What worked (measured)
+
+- Pitch bend range: full up and down on A3 read 246.6 Hz and 196.2 Hz (2 semitones, as the patch says).
+- Two MIDI note-ons on A3 with one note-off: silent after the off, nothing held.
+- A3 from MIDI and the same on-screen key held with the mouse: the MIDI off leaves the mouse's note
+  sounding (1 voice); mouse up leaves 0 voices.
+- Computer keys do not play while typing in the tempo, project name, mix name, patch link or render
+  length boxes.
+- 30 fast retriggers of C4 with the pedal down: 1 voice, not 30.
+- Master bus extremes on Screaming 12AX7 with a 7-note chord at full velocity: no NaN in any render.
+  Compressor at threshold -60, ratio 20, attack 0.1 ms, release 5 ms, knee 0, makeup 24: peak -29.9 dBFS
+  with or without its limiter. The master "limit" switch alone holds -1.0 dBFS with delay feedback 0.95,
+  mix 1 and reverb size 1, damp 0, mix 1, and -6.0 dBFS with the ceiling at -6.
+- Deck import messages: a non-MIDI file says "not a Standard MIDI File (no MThd header)", a header with
+  no tracks says "no tracks". A format 0 file with channels 1, 2 and 10 in one track splits into three
+  parts, assigned Filament, Cathode and off.
+- Phone 375 px: the deck opens with no sideways scroll and no control under 44 px; armed, two taps on
+  a key record a two-note take.
+
+### Findings
+
+**R1113-1. A looping file or take that ends bent comes round out of tune.** Area e. Broken. Measured.
+Fixed tonight.
+- Steps: import (or record) something whose last controller move leaves the pitch bend up (or the
+  wheel up), switch loop on, play.
+- Expected: every pass sounds like the first.
+- Actual (live): a 1 s file, A3 from 0 to 0.4 s and a full bend up at 0.45 s: the first pass at 220.0 Hz,
+  every later pass at 247 Hz (2 semitones sharp) until Stop.
+- Cause (code): at the loop's end `deck.js` sent note offs and a pedal-up, but left bend, wheel and
+  pressure where the file had put them; Stop resets them, the loop did not.
+- Fix: the end of each pass now also sends bend, wheel and pressure back to rest at the same sample.
+  Measured on a local server, old tree against new: passes 220.0, 247.0, 247.0 Hz against 220.0, 220.0,
+  220.0 Hz. Check: "M. loop: a file that ends with the bend up comes round in tune".
+
+**R1113-2. MIDI CC 121 (Reset All Controllers) is ignored.** Area c. Broken. Measured. Fixed tonight.
+- Steps: hold a note from a MIDI keyboard, bend up (and push the wheel, press the pedal), then send CC 121
+  (many keyboards and DAWs send it on stop or on a reset button).
+- Expected: bend to centre, wheel and pressure to 0, pedal up, as the MIDI spec asks.
+- Actual (live): the note stayed at 247.6 Hz after CC 121 (A3 bent 2 semitones); the strips stayed up
+  and sustain stayed on. Only CC 120 and 123 were handled (as Panic).
+- Fix: the page's MIDI input resets bend, wheel and pressure (and their strips) and lets go of the pedal
+  on CC 121, unless the user has mapped CC 121 to a knob with Learn. Files are unchanged (the player
+  already drops CCs it does not use). Measured on a local server: after CC 121 the note read 247.6 Hz
+  (old) and 220.0 Hz (new); strips 1 and 1 against 0 and 0; sustain on against off. Check: "M. CC 121
+  resets the controllers".
+
+**R1113-3. Program change does nothing.** Area c. Missing. Measured (ignored), inferred (expectation).
+- Steps: send a program change (0xC0, 5) over MIDI, as a keyboard's patch buttons do.
+- Actual: the patch stays; nothing says the message was seen. `midiEvent` returns nothing for 0xC0.
+- Note: which list a program number picks (the lit device's factory list, the menu order, user patches
+  too) is a design call. Left for James (Open items).
+
+**R1113-4. The tempo box rounds what it shows, not what it sets.** Area d. Confusing. Measured.
+- Steps: type 120.5 in the rack's tempo box, press Enter.
+- Expected: the box and the clock agree.
+- Actual: the box reads 121, the transport runs at 120.5 (and the master delay's own tempo stays 120,
+  R1017-5). `commitTempo` passes the raw value to `setTempo` and shows `Math.round` of it.
+- Note: either round the value set (the box's step is 1) or show the decimal. Not fixed tonight (two
+  fixes already).
+
+**R1113-5. A failed import leaves the old file behind a new error.** Area e. Confusing. Measured.
+- Steps: import a good .mid (three tracks show), then import a file that is not MIDI.
+- Actual: the status line reads "bad.mid: This is not a Standard MIDI File (no MThd header)." while
+  good.mid's three tracks stay listed and its play key stays enabled and plays good.mid.
+- Expected: the error, plus a word that the previous file is still loaded (or its name back in the
+  status line after the error).
+
+**R1113-6. A file cut short gives a puzzling message.** Area e. Confusing. Measured.
+- Steps: import a .mid truncated in the middle of its track (a broken download).
+- Actual: "This MIDI file has data with no status byte." Expected: that the file ends early or is
+  damaged.
+
+**R1113-7. Recording along with a file does not line up.** Area e. Missing. Inferred (code).
+- Steps: import a backing file, press its play, arm rec and play along.
+- Actual (code): the take's zero is its own first note, the file's notes are not recorded, and play
+  take plays the take alone (play stops any other playback). So an overdub is not possible, and an
+  exported take does not line up with the file it was played over.
+- Note: a feature (record from the file's start, or merge the take into the file), not a defect. Open
+  items.
+
+### Still open, re-measured tonight
+
+- R1017-5: the rack transport at 100 BPM leaves the master's tempo at 120.
+- R1017-9: see the table; the "limit" switch protects the output, but it is off by default.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1110-3, R1110-4, R1104-4, R1101-2 and R1101-3 were not re-run. Suggested next:
+f, g and h, including the paper roll's play with a song (R1108-3 to R1108-5) and focus order on the
+deck after an import.
+
+## 2026-11-14 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `b4b3248`, sw.js
+`dxedge-v212` (the 2 AM check found live and main matching). Playwright's own Chromium 1243 headless (the
+`chromium-1194` path is still gone) at 1366 x 900 and 375 x 812 (touch). No page or console errors on the
+rack or on any vendored or linked page in any run. Audio on the vendored pages was read with an analyser
+tapped in front of each page's destination. Focus tonight: what failed imports and odd files do in the
+song library, the roll and a song after a reload, a project loaded mid-song, a keyboard walk of every
+desktop tab stop for a visible ring, focus order after a deck import, reduced motion across all 18
+devices, and the outboard pages at both sizes.
+
+### What worked (measured)
+
+- Focus: a Tab walk of all 531 desktop stops; every stop changes its own style or its label's on focus
+  except the project, mix and patch link name windows, and those three wear an amber ring on their
+  window (checked by screenshot). No control on the rack without a name at either size (531 desktop,
+  107 phone).
+- Deck import from the keyboard: after a two-track file loads, Tab goes file, play, loop, tempo,
+  render wav, then each track's Filament, Cathode and off chips in order, then the library.
+- Song library: Beethoven 5 plays (Filament 0.22, Cathode 0.39 strip peak), stops, and 2.5 s later
+  every strip reads 0 and no note is held. Saving the project and loading it while the song plays
+  keeps the song playing with nothing held.
+- Library errors: a junk file and an empty file say "This is not a MIDI file the player can read."
+- Reduced motion: the only running CSS animation on an idle page is the correlation marker. With no
+  input, a canvas still moved only on devices whose own strip meter moved in the same window (Mote,
+  Geissler, Pentagrid, Orthicon, Gyrotron) and on the tubes and eye of the three tube devices, whose
+  steady glow follows the level; nothing moved on the other ten. Inferred: that motion follows sound,
+  as the Tv. and Tb. checks intend.
+- Outboard pages, both sizes: Hexode (computer key A, peak 0.34 desktop, 0.30 phone), Anode (start,
+  0.66 and 0.80), Gleam (a drag, 0.04 and 0.05), Iris (fake camera, 0.36), Sculpt (0.06) all sound;
+  each links back to /synth/. Hand Orchestra and Aether stay silent without hands in view (expected).
+- Phone 375 px: no sideways scroll on the rack; the only controls under 24 px are the six footer links.
+
+### Findings
+
+**R1114-1. A failed song library import leaves the old song loaded behind the error.** Area f.
+Confusing. Measured. Fixed tonight.
+- Steps: load Greensleeves, then open (or drop) a file that is not MIDI.
+- Expected: the error, and a word that Greensleeves is still what play plays.
+- Actual: the status reads only "junk.mid: This is not a MIDI file the player can read."; play stays
+  lit and plays Greensleeves. Same as R1113-5 on the deck.
+- Fix: the error ends with "Still loaded: <title>." when a song is loaded. Check: "P. a failed import
+  says the previous song is still loaded (review R1114-1)" (fails on `b4b3248`: no "Still loaded").
+
+**R1113-5 (from 13 Nov), fixed tonight.** The deck's failed import (not MIDI, or a file with no notes)
+now ends "Still loaded: two.mid." when a file is loaded. Check: "M. a failed import says the previous
+file is still loaded (review R1113-5)" (fails on `b4b3248`).
+
+**R1114-2. A damaged .mid loads in the library with no word.** Area f. Confusing. Measured.
+- Steps: open a .mid cut short (here the library's own Greensleeves, first 406 of 812 bytes).
+- Expected: "This file ends early or is damaged", or the song with a warning.
+- Actual: it loads as "Greensleeves · 96 BPM · 1 channel" (the whole file has 3), with no warning,
+  and plays what survived. The deck's own reader refuses such a file (R1113-6, with a puzzling message);
+  the library's reader (vendored @tonejs/midi) is lenient. Not fixed: the check would go in our reading
+  around the vendored parser; left as a finding.
+
+**R1114-3. A deck take opened in the song library is called "Tempo".** Areas e, f. Confusing. Measured.
+- Steps: record a two-note take on the deck, export it (or take the bytes the export writes), open the
+  .mid with the library's open .mid.
+- Expected: the file's name, or the take's track name.
+- Actual: "Tempo · 120 BPM · 1 channel". `writeSMF` names its first track "Tempo", and the library
+  takes the first track's name as the song's name. Suggested: the library falls back to the file
+  name when the name is "Tempo" (or the writer names track 0 after the file). Not fixed tonight (two
+  fixes already).
+
+**R1114-4. Hexode cannot be played by touch.** Area g. Missing. Measured (no keys), inferred (impact).
+- Steps: open /synth/fm/ on a phone (the rack's outboard tray links to it).
+- Expected: some way to play a note.
+- Actual: no on-screen keyboard; the page says computer keys and MIDI play it. A phone with neither
+  has only Demo 1 and Demo 2. Anode, Gleam and the rack all play by touch. Vendored code; a design
+  call (add keys, or say on the outboard link that it needs a keyboard). Left for James.
+
+### Still open, re-measured tonight
+
+- R1030-3: Dekatron's pattern under Beethoven 5 (strip 0.52); the song routes only channels 1 to 3.
+- R1108-5: after one roll play and a reload, run is still on; Beethoven 5 then brings 37 roll strikes.
+- R1020-3: a project still carries 14 devices (no Thyratron, Gleam, Dekatron, Lattice) and no master
+  bus or roll.
+- R1020-7: Anode's four regenerate buttons are still named only "⟳".
+- R1020-8: 531 desktop tab stops, no skip link.
+- R1020-9: Filament's ensemble chips are named "I", "II", "I+II" with no section.
+- R1024-3: Hexode, 13 unnamed controls at both sizes; 1154 px wide at 375.
+- R1025-5: the six phone footer links are 13 px tall.
+
+### Notes (not findings)
+
+- The deck and the library both open .mid files and play them differently (deck: tracks to Filament or
+  Cathode, its own tempo percent, Render WAV; library: channels to any device on the rack transport).
+  Already listed as a known limit in `docs/filament.md`; worth a line in each section's help text.
+- Enter on the deck's import key did not raise a file chooser in headless Chrome (same headless
+  behaviour noted 11 Nov); the click reaches the input.
+
+### Not covered tonight
+
+Areas a to e. Iris, Sculpt, Hand Orchestra and Aether were not played with real hands or a camera.
+Suggested next: a and b, including Orthicon's starter pictures (R1112-1) and the Theremin switch (R1109-1).
+
+## 2026-11-15 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `4d330c6`, sw.js
+`dxedge-v217` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path is
+still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus tonight:
+what landed since the last a and b night (12 Nov): Orthicon's Scan card as joined switches (graphics,
+15 Nov) and the wax lamp on the Rack tab (nightly, 15 Nov); a full control sweep with offline renders on
+Orthicon, Additron and Rhumbatron; every factory patch; user patches on six devices not covered on 12 Nov;
+and the first day's (15 Oct) patches of four devices.
+
+### What worked (measured)
+
+- Area a, offline renders through `window.__synth` with a held C4: every visible control on Orthicon
+  (7 knobs, 13 switches), Additron (13 knobs, the morph slider, 14 keys) and Rhumbatron (6 sliders,
+  7 chips), each at both ends (End and Home for knobs and sliders): each moves the patch field its label
+  names, and every render is finite with no sample over 0 dBFS (highest peak 0.884, Orthicon inverse FFT).
+  Level at 0 is silent on all three. Every switch on Orthicon's new Scan card lights its own key and
+  changes the field it names; scale major, minor, pentatonic, whole and chromatic each change the sound.
+- Additron's click: at 100% the first 10 ms carry about 15 dB more high-frequency energy than at 0, so it
+  works, but it is quiet next to the note (-37 against -22 dBFS). Perc decay changes nothing while perc is
+  off, as expected.
+- Orthicon's high knob moves the sound on a wide picture (Harmonic Stack: centroid 189 Hz at 1 kHz, 567 Hz
+  at 16 kHz). On Ember Ridge the first 1.5 s sit in the lowest rows, so high changes nothing audible there.
+- Wax lamp: the switch turns it off ("off · the wax has set") and on; four colourways tried give four
+  different pictures; three bases listed; fresh wax draws a new seed and starts warming again; "music
+  warms the bulb" presses; bulb and speed knobs named; every setting comes back after a reload.
+- Area b, all 129 factory patches on the 18 devices picked from the menu: each shows under its own name,
+  not edited, no errors. Rhumbatron's next arrow walks the menu and wraps.
+- User patches through the form on Rhumbatron, Orthicon, Trochotron, Mote, Geissler and Phantastron:
+  saved, current after a reload, deleted with a toast, and delete lands on the device's own first sound.
+- Old patches: the 23 factory patches of Rhumbatron (7), Additron (5), Orthicon (5) and Trochotron (6) as
+  they were on 15 Oct (`7fd1418`), imported as patch files, load as "* name (edited)"; the 17 rendered
+  (Trochotron not rendered) match today's factory patch of the same name to 0.1 dB.
+- Phone 375 px: every tab of Cathode, Rhumbatron and Orthicon has no sideways scroll and no control under
+  24 px except the bend and mod strips, which are tall and narrow by design.
+
+### Findings
+
+**R1115-1. Rhumbatron: blow is bow, and on the plate both are pluck.** Area a. Confusing. Measured.
+- Steps: Rhumbatron, Copper Wire; pick bow, render a held A3; pick blow, render again. Then the same on
+  bore and on plate, and pluck on plate.
+- Expected: four exciters, four ways of putting energy in (a bow drags, a breath pushes).
+- Actual: blow and bow renders are sample-identical (difference 0.0) on string, bore and plate, and on the
+  factory patches Horsehair and Chimney Bore. On the plate, bow and blow are also sample-identical to pluck;
+  only strike differs. So on a plate two of the four chips do nothing, and blow never differs from bow.
+- Cause (code): `rhumbatron-dsp.js` treats `bow` and `blow` the same everywhere, and the plate path only
+  asks whether the exciter is strike.
+- Left for James (Open items): give blow its own excitation (a breath noise and a reed-like limit), or merge
+  the two chips; and on a plate, dim the chips that do not apply or make bow sustain the plate.
+
+**R1115-2. Orthicon with loop off holds the last column for good.** Area a. Confusing. Measured
+(key, picture), inferred from the code (Generate). The note fixed tonight; the restart left for James.
+- Steps: Orthicon, Ember Ridge, speed 48 (a pass is 2 s), loop off. Wait 3 s. Play a key, then pick a
+  starter picture.
+- Expected: the help said only "Loop wraps the picture", so off reads as "play the picture once". A user
+  would expect it to stop, or a key or a new picture to start the pass again.
+- Actual: after one pass the playhead sits on column 95 of 96 (meter column 0.99) and the last column drones
+  at the same level (-14.9 dBFS from 2.5 to 4 s offline). A key (keys off) and a new picture leave it there;
+  only loop on (or hold on and off) moves it. A new picture with loop off plays only its last column.
+- Fix (wording only): the Scan note now says "with loop off the scan plays once and then holds the last
+  column until loop or hold moves it". Check: "Or. with loop off the scan holds its last column ... and the
+  Scan note says so (review R1115-2)" (fails on the live tree: the note has no such words).
+- Left for James (Open items): should a new picture, Generate or a key restart a one-shot scan, and should
+  loop off end in silence instead of a drone? Rewinding on every new grid would also rewind on each paint
+  stroke, so it needs a call.
+
+**R1022-5 (from 22 Oct), fixed tonight.** Delete landed on the first patch in list order: Filament on Plate
+Bass, Cathode on Grid Bias Bass (desktop and phone, re-measured tonight), while a fresh page opens on Wide
+Novachord Strings and Plate Screamer. Delete now loads the device's own first sound (`first` in the device
+table), falling back to list order if that name is missing. Check: "Pn. delete lands on the patch the device
+opens with on a fresh page, on all 18 devices (review R1022-5 ...)" (fails on the live tree: Filament and
+Cathode; the other 16 already matched).
+
+### Still open, re-measured tonight
+
+- R1109-1: with the Theremin switched off, a press on the pad switches it on and sends a note.
+- R1112-1: Bell Partials picked on Orthicon comes back after a reload as Ember Ridge's ridge, the patch
+  still `picture: 'custom'`.
+- R1025-3: delete still removes a user patch at once with no dialog (Rhumbatron, Orthicon, Trochotron,
+  Mote, Geissler, Phantastron, Cathode on a phone).
+
+### Notes (not findings)
+
+- A patch file that equals a factory patch loads as "* name (edited)". It reads as a change that is not
+  there; noted, not reported, since a file is an outside source.
+- Additron's "full" and "quint" keys keep the shape on stops while "odd" switches it to hand. Inferred:
+  odd cannot be set on the drawbars, so it goes to the drawn harmonics. Consistent, but not said.
+- Rhumbatron's pressure knob on a pluck changes the sound only a little (about 2 to 3 dB across the
+  spectrum end to end).
+
+### Not covered tonight
+
+Areas c to h. Phone sweeps were limited to three devices. Suggested next: c, d and e, including a take on
+Orthicon with loop off and the wax lamp's music warming with the deck playing.
+
+## 2026-11-16 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `6131af0`, sw.js
+`dxedge-v221` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path is
+still gone; the binary is now at `chromium-1243/chrome-linux64/chrome`) at 1366 x 900 and 375 x 812 (touch,
+2x), plus the Rack tab at 761, 800 and 1024 px for the 16 Nov Mix card move. No page or console errors in any
+run. Audio was read from the live output with the master recorder (24-bit WAV decoded in the script), from
+`__synth.render` and from the deck's Render WAV download. Focus tonight: the pedal and computer keys when
+focus moves, MIDI messages a keyboard or DAW sends besides notes, the mixer and master bus moves over a held
+sine (the 14 Nov mixer change), the tempo box, Render WAV after the 16 Nov worklet release change, odd .mid
+files, a track reassigned mid-play, and the wax lamp's music warming with the deck playing.
+
+### What worked (measured)
+
+- Computer keys: Shift+A plays C3 and lets go; A held, then Meta down, A up, Meta up leaves nothing held.
+- MIDI: a note-on at velocity 0 lets the note go. CC 64 down, a note, CC 64 up are all in a take (sus on at
+  0, the note, sus off at 0.44 s).
+- Mixer moves over a held A2 sine on the live output (14 Nov change): mute on and off, level 1 to 0.2 to 1,
+  another strip's solo on and off, and pan hard left and back are all clean (largest sample step 1.0x the
+  sine's own). Mute plus solo on one strip mutes it; two strips soloed both play.
+- Tempo box: abc and an empty box go back to 120; -5 and 0 clamp to 40, 1e3 to 240; " 90 " sets 90; a blur
+  commits like Enter.
+- Deck import: a file with running status, note-on velocity 0 as note off, a tempo change from 120 to 60
+  at beat 2 and two overlapping note-ons on one key reads with every event at the right time (beat 3 at
+  2.0 s, length 2.5 s), plays, stops with nothing held, and ends with nothing held.
+- Render WAV (button, 16 Nov worklet release change): five renders in a row of a two-track file each gave a
+  valid 16-bit 48 kHz WAV of 3.958 s (song 1.958 s plus the 2 s tail), peaks 0.60 to 0.72, no NaN, about 2 s
+  each, no errors. At deck tempo 50% the render is 5.917 s (the last event at 3.917 s plus 2 s), as expected.
+- Wax lamp, music warms the bulb on, deck playing a chord file on the Rack tab: the level read 0.36 to 0.48
+  and the music term rose from 0 to 0.62 in 6 s; the wax went 22 to 34 °C ("warming up").
+- Rack tab at 761, 800, 1024 and 1366 px: no sideways scroll, no control past the right edge (527 controls).
+- Phone 375 px: three taps on the keys with the deck armed record a three-note take; no sideways scroll.
+
+### Findings
+
+**R1116-1. The Space pedal sticks if Space comes up in a text box.** Area c. Broken. Measured. Fixed tonight.
+- Steps: hold Space (the pedal), then click into the rack tempo box (or press Tab onto it), then let go of
+  Space. Play a note.
+- Expected: the pedal lets go with the key that pressed it.
+- Actual (live): sustain stayed on and the hold lamp stayed lit; a note let go at once was still sounding 3 s
+  later (1 voice). The same with the project and mix name boxes and with Tab. The keyup handler skipped
+  Space whenever the target was a text box, to let people type spaces, so the keyup that matched the page's
+  keydown was dropped.
+- Fix: the page remembers when Space pressed the pedal, and that Space's keyup lets go wherever focus is. A
+  space typed in a box (keydown in the box) still leaves the pedal and the hold button alone. Check: "K.
+  Space down on the page, up inside a text box: the pedal lets go ... (review R1116-1)" (fails on the live
+  tree: sustain stays on; passes on this tree).
+
+**R1116-2. Moving a track to another device mid-play drops notes.** Area e. Broken. Measured. Fixed tonight.
+- Steps: import a file with a fast part (40 notes about 60 ms apart) and a bass part, play, and press the
+  bass's Filament chip after about 1 s.
+- Expected: the file carries on from where it is, now on the new device.
+- Actual (live): 2 to 4 of the 40 melody notes never sound (three runs: 3, 4, 2) and nothing plays for
+  about 160 ms. The deck restarted from the scheduling position, up to 150 ms ahead of the sound, after
+  Stop had flushed the notes already sent for that window.
+- Fix: the restart now starts from the position you hear (`posNow`, never past the scheduling position), so
+  the flushed notes are sent again. Measured on a local server: 40 of 40 land; the restart still leaves the
+  deck's usual 60 ms start gap. Check: "M. moving a track to another device mid-play keeps every note ...
+  (review R1116-2)" (fails on the live tree, 38 of 40; passes on this tree).
+
+**R1116-3. A reassigned track does not pick up its held notes.** Area e. Confusing. Measured.
+- Steps: as R1116-2, with the bass part one note held from 0 to 2.5 s; move it to Filament at 1 s.
+- Actual: the bass stops on Cathode (Stop's panic) and is never struck on Filament, so it is silent for the
+  rest of its 1.5 s. Expected by a DAW user: the held note sounds on the new device ("note chase").
+- Note: a small feature (strike the notes that are inside their length at the restart point), not a defect.
+  Left for James (Open items).
+
+**R1116-4. All Notes Off from a keyboard stops the deck.** Area c, e. Confusing. Measured (deck), inferred
+from the code (song library).
+- Steps: play a take or a file on the deck; send CC 123 (or CC 120) over MIDI, as many keyboards and DAWs do
+  on stop, on a panic key, or when the DAW's transport stops.
+- Actual: the deck stops playing (playing true, then false 50 ms after the message). `midiEvent` maps 120
+  and 123 to Panic, and Panic also stops the deck and the library player.
+- Expected (MIDI spec): All Notes Off releases notes played from that input; it is not a transport stop.
+- Note: whether a keyboard's panic should stop the deck is a call. Options: CC 120 and 123 release input
+  notes only (Panic stays a page button), or keep it and say so. Left for James (Open items).
+
+**R1116-5. The tempo box: Escape and a decimal comma.** Area d. Confusing. Measured.
+- Steps: with the clock at 100, type 150 in the rack tempo box and press Escape. Separately, type 99,5 and
+  press Enter.
+- Actual: after Escape the box reads 150 while the clock stays at 100 (no revert, no commit). 99,5 sets the
+  clock to 240 (the comma is dropped, 995 clamped). Expected: Escape puts back 100; 99,5 is read as 99.5 or
+  refused.
+- Note: related to R1113-4 (the box rounds 120.5 to 121). Not fixed (two fixes already).
+
+**R1116-6. A format 2 file plays all its sequences at once.** Area e. Confusing. Measured.
+- Steps: import a format 2 .mid (two independent sequences, both on channel 1).
+- Actual: "f2.mid · 0:01.1 · 100 BPM · 2 tracks"; the two sequences are assigned Filament and Cathode and
+  play together. Format 2 means separate patterns, played one after another or one at a time.
+- Note: format 2 files are rare. Options: play them in order, or say "format 2: tracks played together".
+
+### Still open, re-measured tonight
+
+- R1110-3 and R1110-4 (live output, held A2 sine): master volume 30% back to 100% 40x the sine's own step;
+  delay off 54x, reverb off 47x, and the compressor off (threshold -30, ratio 8) 33x. Every mixer strip move
+  is clean (1.0x), so only the master bus switches and the master volume still step.
+- R1101-2: tape echo, a short Wide Novachord Strings note, 200 ms, tone 10, drive 0, repeat 30 against
+  repeat 1: 90% -11.1 dB, 95% +4.9 dB, 100% +13.7 dB.
+- R1113-4: 120.5 reads 121, the clock runs at 120.5. R1017-5: the rack at 40 to 240 leaves the master tempo
+  at 120.
+
+### Notes (not findings)
+
+- Five Render WAVs of one file in the same minute get the same file name; the browser numbers them.
+- The rack tempo box is a number box with step 1, which is why the browser rounds what it shows.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. R1104-4 and R1101-3 were not re-run, and the deck was not tried on Orthicon with loop
+off (the recorder takes Filament and Cathode only, R1023-3). Suggested next: f, g and h, including the 16
+Nov nightly's 13 new factory patches loaded from a project, and a Tab walk of the Rack tab after the Mix card
+move.
+
+## 2026-11-17 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `94c8279`, sw.js
+`dxedge-v224` (live and main agree). Playwright's own Chromium 1243 headless at 1366 x 900, 683 x 450 (the
+desktop at 200% zoom) and 375 x 812 (touch). No page or console errors on the rack, Hexode or Anode in any
+run. Audio on the vendored pages was read with an analyser tapped in front of each page's destination; the
+library loop was counted from the note ons the player hands the engine. Focus tonight: the project file
+round trip now that the paper roll is in it (17 Nov), odd project files, every library song, the library's
+loop and tempo, keyboard use of the channel and track chips, the page outline, and the outboard pages at
+200% zoom.
+
+### What worked (measured)
+
+- Project round trip through the file: tempo 133, 3/4, a Cathode strip at level 0.42 and pan -0.3, an
+  edited roll step and the roll sent to Cathode, downloaded, opened in a fresh browser: the project read
+  back is identical key for key, the roll's step and destination included. The toast and the tempo box
+  agree.
+- Odd project files: a project from before 17 Nov (no roll) leaves the roll as it is, as the code says; a
+  `v: 2` file with an unknown field loads; a cut JSON file says "That file is not a project."; a project
+  loaded while the roll plays keeps it playing, and stop leaves every strip at 0 and nothing held.
+- All 21 library songs load with title, composer, tempo and channel count (Greensleeves 96 BPM, 3
+  channels; Beethoven 5 108 BPM; the nine Halloween songs name their presets).
+- Library tempo: Beethoven 5 slowed to 60 BPM mid-song reads 60 BPM and its length goes from 0:15.4 to
+  0:27.8; stop leaves all 18 strips at 0 and nothing held.
+- Accessibility sweep at 1366, 683 and 375 px on the rack: `lang="en"`, no duplicate ids, no
+  `aria-labelledby`, `aria-describedby`, `aria-controls` or `label for` pointing at a missing id, no image
+  without alt, no visible control without a name, no sideways scroll at any of the three widths.
+- Anode at 1366 and 375: starts on a click (peak 0.62), no sideways scroll, links back to /synth/.
+- Hexode: computer key A sounds (peak 0.31), two links back to /synth/.
+
+### Findings
+
+**R1117-1. A song in the library ends at its last note off, not where the file ends.** Areas f, e.
+Confusing. Measured. Fixed tonight.
+- Steps: open in the library a .mid whose tracks run past the last note (a bar ending on a rest, or a
+  deck take with silence after its last note; here a 2 s file at 120 BPM with one 0.25 s note), loop on,
+  play.
+- Expected: it repeats every 2 s (4 beats), as the deck plays the same file.
+- Actual: the library read 0.5 beats and repeated every 0.25 s (15 note ons in 4.2 s); with a 0.1 s note
+  (0.2 beats, under the loop floor of 0.25) it played once and stopped with loop on. The deck reads both
+  files as 2 s. None of the 21 library songs has padding, so they do not change.
+- Fix: `parseMidi` takes the song's length from the latest end of track as well as the last event
+  (`midisong.js`). After: 3 ons in 4.2 s (0, 2, 4 s). Check: "P. a .mid that ends after a rest keeps its
+  length ... (review R1117-1)" (fails on `94c8279`: 0.5 beats).
+
+**R1117-2. Pressing a library channel chip or a deck track chip from the keyboard drops the focus.**
+Areas f, e, h. Confusing. Measured. Fixed tonight.
+- Steps: load Greensleeves, Tab to "Channel 2: play on Filament", press Enter (or, on the deck, import a
+  two-track file and press Enter on "A: play on Cathode").
+- Expected: the route changes and focus stays on the chip.
+- Actual: the route changes, but the list is rebuilt and focus falls to the page body (no ring, and a
+  screen reader loses its place); the same while the song plays.
+- Fix: both lists put the focus back on the rebuilt copy of the pressed chip when focus was in the list
+  (`player.js`, `deck.js`). Check: "P. a library channel chip and a deck track chip keep the keyboard
+  focus after Enter (review R1117-2)" (fails on `94c8279`: focus on the body for both).
+
+**R1117-3. The rack's headings skip a level.** Area h. Confusing. Measured (levels), inferred (impact).
+- Steps: list the page's headings (a screen reader's heading list, or the DOM).
+- Expected: H1, then a level per section (device panels, rack cards) under it.
+- Actual: one H1 and then only H3 (30 shown on the desktop rack, 4 on a phone); no H2 anywhere. Heading
+  navigation still works, but the outline has no section level and the device a panel belongs to is not
+  a heading. Not fixed: the H3s carry styles across the page; a design call (H2 per device or card).
+
+### Still open, re-measured tonight
+
+- R1020-3: a project file now carries the roll (17 Nov) and 14 device patches; still no Thyratron, Gleam,
+  Dekatron or Lattice patch and no master bus.
+- R1114-3: a deck take opened in the library is still titled "Tempo" (seen again in tonight's loop files).
+- R1020-6: Hexode, a focused panel button and the LCD select change no style (focus set by script).
+- R1020-7: Anode's four regenerate buttons still named only "⟳", both sizes.
+- R1020-8: about 538 desktop tab stops; the first is Previous patch; no skip link.
+- R1024-3: Hexode, 13 unnamed toggles at all three widths; the page is 1154 px wide at 683 and 375 px, so
+  at 200% zoom on a laptop it scrolls sideways.
+- R1114-4: Hexode still has no on-screen keys.
+
+### Notes (not findings)
+
+- The project file name drops letters outside a to z: "Round Trip ü" downloads as
+  `filament-round-trip.json`, "日本語" would be `filament-project.json`. The name inside the file is kept.
+- Loading a library song sets the rack tempo to the song's (Beethoven 5 sets 108); a saved project then
+  carries it. Expected from the design, worth knowing.
+
+### Not covered tonight
+
+Areas a to e (e only where the deck shares tonight's fixes). Iris, Sculpt, Hand Orchestra, Aether and
+Gleam's outboard page were not played. From the 16 Nov suggestion, the 16 Nov factory patches loaded from a
+project and a full Tab walk of the Rack tab after the Mix card move were not done. Suggested next: a and b, including Orthicon's starter pictures
+(R1112-1) and the Theremin switch (R1109-1).
+
+## 2026-11-18 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `e9abb28`, sw.js
+`dxedge-v227` (live and main agree). Playwright's own Chromium 1243 headless (the `chromium-1194` path in
+the task prompt is still gone) at 1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any
+run. Focus tonight: what landed since the last a and b night (15 Nov): the 13 Filament factory patches of
+16 Nov and the features they are the first to use (Filter B, the mod matrix, the LC bank, the tape echo,
+the spring); a knob sweep with offline renders on Thyratron and Cathode; every factory patch; user patches
+on nine devices; and the first day's patches of seven hosted devices.
+
+Method note: Filament and Cathode renders are not repeatable sample for sample (drift, and on Cathode
+the patch's own movement), so a knob is read against the spread of two renders of the untouched patch
+(the largest octave-band change, held 0.05 to 0.6 s and tail from 0.7 s). Thyratron renders are
+repeatable (two renders of Walnut Bass differ by 0.0 dB), so its readings are exact.
+
+### What worked (measured)
+
+- Area b, all 142 factory patches on the 18 devices picked from the menu (Filament now 40): each shows
+  under its own name, its key and its patch name agree, no errors.
+- The 13 new Filament patches: each lights the panel the way its patch reads (tape echo on for Echo Lead
+  and Tape Wobble, spring on for Spring Clavier and Spring Twang, Filter B serial on Serial Grit Bass,
+  split on Split Horizon, parallel on Twin Pizzicato, LC bank in slot A on Vowel Bank, LP gate on Rubber
+  Bass, the matrix reading "1 of 8 on" on Sync Snap Bass). A four-note chord at 0.8 and a seven-note chord
+  at full velocity render finite on all 13; highest peak 0.92 (Vowel Bank, full velocity).
+- Filter B (Wide Novachord Strings): with the route on A only, the section's knobs sit at 0.45 opacity and
+  the note says B is off. In serial, every knob moves the field its label names: cutoff at 20 Hz takes the
+  note to -60.7 dBFS RMS, env at -100 to -37.5, res at 10 lifts the peak from 0.47 to 0.84.
+- Mod matrix: the seven sources that move on their own (both envelopes, both LFOs, velocity, key, random)
+  into cutoff each change the sound by 12 dB or more in an octave band (spread of two renders 4.8 dB);
+  mod wheel and pressure change nothing with no wheel or pressure sent, as expected. From velocity (a
+  steady source) at +100% or -100%, 12 of the 17 destinations move the sound well past the spread (3.8 dB):
+  pitch, osc 2 pitch, pulse width, both osc levels, sub, noise, cutoff, resonance, morph, level and pan
+  (pan +100% puts the right side 15.9 dB over the left, -100% the left 16.5 dB over the right). B cutoff
+  and B resonance change nothing while Filter B is off, as expected. FM, ring and V1 drive sit near the
+  spread on this patch (5.7, 6.0 and 4.9 dB); set straight on the patch for comparison, osc 2 FM at 100%
+  moves it 33.5 dB and the matrix's velocity to FM at +100% 22.3 dB, so FM works and is gentle on saws.
+  The count reads "1 of 8 on" and the pilot lights.
+- Tape echo (Echo Lead, wow and flutter at 0, a 40 ms note): sync off repeats every 330 ms as the time
+  knob reads; 1/4 at 120 BPM every 500 ms, at 90 BPM every 667 ms, 1/8 at 120 every 250 ms; while synced
+  the time knob dims and its title says it is the time when sync is off. Mono, ping-pong and offset give
+  three different stereo pictures (side over left 0.49, 0.77, 0.97). The on switch moves the tail's octave bands by 52 dB.
+- Spring reverb (Spring Twang): mix at 0 drops the tail 44 dB, decay 0.5 s against 6 s moves the tail
+  38 dB, tone moves it 20 to 28 dB; every render finite, highest peak 0.28.
+- Thyratron (Walnut Bass), 26 knobs at both ends: each moves the field its label names; level 0 is silent;
+  cutoff at 20 Hz costs 9 dB RMS; every render finite, highest peak 0.76 (emphasis 100%). Glide and bend
+  change nothing on one note with no bend sent, as expected; the mod wheel's pitch and cutoff depths
+  change the sound with a wheel event (mod cutoff 4 oct with osc 3 as an LFO at 6 Hz swings the centroid
+  between 560 and 1340 Hz).
+- Cathode (Plate Screamer), 38 knobs at both ends: each moves the field its label names; VCA level 0 is
+  silent; every render finite, highest peak 0.76 (VCA bias 100%).
+- User patches through the form on Filament, Cathode, Thyratron, Lattice, Gleam, Pentagrid, Gyrotron,
+  Dekatron and Klystron: the form offers "name 2", the toast says saved, a reload brings each device back
+  on its user patch with every field equal, picking it again from Yours gives the same patch, and delete
+  lands on the device's own first sound with a toast. On a phone the save form's delete key is named for
+  the patch and works.
+- Old patches: the 40 factory patches of Thyratron (6), Lattice (8), Gleam (6), Pentagrid (6), Dekatron
+  (6), Gyrotron (3) and Klystron (5) as they were on their first day (14 and 15 Oct), imported as patch
+  files, load as "* name (edited)" with no errors. Rendered against today's patch of the same name:
+  Thyratron 0.0 dB on all six, Lattice within 0.8 dB on all eight.
+- Phone 375 px: Filter B, the matrix, the tape echo and the spring on their tabs: no sideways scroll, no
+  control under 24 px, nothing past the right edge.
+
+### Findings
+
+**R1118-1. Thyratron: osc 3's rate reads whole hertz with no unit.** Area a. Confusing. Measured.
+Fixed tonight.
+- Steps: Thyratron, osc 3, rate knob; Home, then step up.
+- Expected: the readout says the rate the knob sets (0.05 to 40 Hz).
+- Actual: the readout rounded to a whole number and had no unit: 0.05 to 0.49 Hz read "0", 0.5 read "1",
+  Walnut Bass's 3 Hz read "3" (the same formatter as the ladder's cutoff).
+- Fix: the rate has its own readout: "0.05 Hz" below 1 Hz, "3.0 Hz" below 10, "40 Hz" above. Check:
+  "T. osc 3's rate knob is dimmed while lfo is off ... reads in hertz at both ends" (fails on the live
+  tree: "0" and "40", and the knob lit with lfo off).
+
+**R1118-2. Thyratron: the rate knob looks live while it does nothing.** Area a. Confusing. Measured.
+Fixed tonight.
+- Steps: Thyratron, Walnut Bass (osc 3's lfo key off). Turn rate to 0.5, 6 and 40 Hz and render a held C3
+  with the wheel up.
+- Expected: a knob that does nothing in this state says so, as Filter B's knobs do with the route on A
+  only and the tape echo's time does under sync (both dim to 0.45).
+- Actual: the three renders were sample-identical (osc 3 follows the keyboard until lfo is on), while the
+  knob stayed fully lit. Its title did say "when oscillator 3 is the low oscillator", but nothing else.
+- Fix: the rate knob dims to 0.45 while lfo is off and lights when it is on, also on a patch pick (Pilot
+  Lead, lfo on, lights it); the title now ends "(lfo on)". Same check as R1118-1.
+
+**R1022-6 (from 22 Oct), now measured.** Saving "Mine" from Plate Bass and then "Mine" again from Echo
+Lead asks nothing: Yours holds one "Mine", now Echo Lead, and the toast says only Saved "Mine" in this
+browser. Left open with R1025-3 (delete with no confirmation): whether to ask, or to say "Replaced", is a
+call for James.
+
+### Still open, re-measured tonight
+
+- R1025-3: delete still removes a user patch at once with no dialog (nine devices tonight, and the phone's
+  save form).
+- R1031-3: switching the arpeggiator on and pressing the next-patch arrow turns it off again.
+- R1115-1: Rhumbatron blow and bow renders still sample-identical (difference 0.0) on a held A3.
+
+### Notes (not findings)
+
+- Filament's V1 drive into the mod matrix, and V1 drive itself at 10 against 3 on Wide Novachord Strings,
+  move the octave bands by only about 3 dB, inside the spread of two renders. Read as V1 being gentle on
+  that patch, not as a fault; not reported.
+- Dekatron's offline render (`drumRender`) is silent for key events, so tonight's old Dekatron patches
+  were checked for loading only.
+
+### Not covered tonight
+
+Areas c to h. No knob sweep on Lattice, Gleam or the master bus this night. Suggested next: c, d and e,
+with a take on Thyratron with osc 3 as an LFO and the tape echo synced while the deck plays.
+
+## 2026-11-19 (review, areas c, d, e)
+
+Live site https://dxedge.net/synth/ is still cut short by the server (the 19 Nov check and debug's open
+item): from this job's network at about 4:30 AM PT, `/synth/` uncompressed stopped at 147,231 bytes (the file
+is 511,772), `/assets/index-BGbcUbUl.js` at 147,225 of 739,986, and in Chromium two of four loads of
+`/synth/` never became ready in 90 s (one at 1366 px and one at 375 px; the two that loaded had no page or
+console errors and no sideways scroll). Live sw.js `dxedge-v231`, main `dxedge-v232` at `a141ce1`: the
+deploy is still failing. So tonight's sound and behavior measurements were taken on a local server of
+origin/main `a141ce1` (the tree the next deploy ships), Chromium 1243 headless at 1366 x 900, with the master
+recorder (24-bit WAV decoded in the script), `__synth.renderButton` and the Filament voice meters. Focus
+tonight: the pedal and held keys against the MIDI deck and the song library, a file's end, loop at 200% and
+50% with a tempo change mid-loop, a file with a note that never gets its off, two MIDI channels on one key,
+and the master bus with values out of range and at its extremes.
+
+### What worked (measured)
+
+- Deck loop at 200% wraps a 2.0 s file every 1.0 s; moving the tempo to 50% mid-loop carries on from where
+  it is and wraps after 4.0 s; Stop leaves no voice and nothing in `sounding`.
+- A file whose first note never gets its note off (and a second note after it) imports as 1.0 s, plays and
+  ends with no voice held 2.5 s later.
+- Master bus with every value out of range (feedback 5, mix -1, size 9, ratio 0, makeup 99, ceiling +12, a
+  bogus division) clamps to its limits (feedback 0.95, size 1, ratio 1, makeup 24, ceiling 0, division 1/8);
+  the render is a valid 24-bit 44.1 kHz WAV with no NaN.
+- Master render wav of a held A3, 3 s: valid RIFF/WAVE, 132,300 frames, peak 0.49, no NaN, no sample at
+  full scale. Delay feedback 1 and reverb size 1 at mix 1 with the limiter on: peak 0.89, nothing at full
+  scale (with the compressor off it clips, as R1017-9 says).
+- Deck Stop with a key held on the page leaves no hard click on the master recording (largest sample step
+  0.075 against 0.042 in the held note before it).
+
+### Findings
+
+**R1119-1. The pedal stops holding after the deck or the library lets go.** Areas c, e. Broken. Measured.
+Fixed tonight.
+- Steps: press the pedal (CC 64, space or hold) and keep it down. Play a short file on the MIDI deck to its
+  end (or press its Stop, or play and stop a song in the song library). With the pedal still down, play
+  and release a key.
+- Expected: the note is held, as it is with no file played.
+- Actual (main `a141ce1`): the note is let go at once in all three cases (Filament's meter: 1 voice
+  releasing, no held note), while the hold lamp and `state().sustain` still read down. Control, no file:
+  the note is held. Lifting and pressing the pedal again puts it right. Cause (code): the deck's end and
+  stop, and the library's stop, send a pedal-up to the device; Filament has one sustain flag for the page
+  and playback.
+- Fix: the deck and the library send the page's own pedal state instead of a pedal-up, on the devices the
+  pedal was sent to (`api.pedal(d)`). With the pedal down, a file's last notes ring on under it, as on a
+  piano, and go with the pedal. Check: "M. the pedal stays down through the deck's file end, the deck's
+  stop and the library's stop ... (review R1119-1)" (fails on `a141ce1`: next held False in all three;
+  passes on this tree).
+
+**R1119-2. A file's own end cuts the chord you are holding.** Area e. Broken. Measured. Fixed tonight.
+- Steps: hold a key (or play one under the pedal) while a file plays on the same device; let the file run
+  to its end.
+- Expected: the file's notes end; the key you are holding keeps sounding until you let go.
+- Actual (main `a141ce1`): the held key and the pedal's note go silent the moment the file ends (Filament
+  0 voices, the key still down on the page). Cause (code): at its end the deck ran Stop, whose flush and
+  panic are for notes the player may have missed; at the end every note off has already been sent.
+- Fix: the end skips the flush and the panic (the loop's wrap already worked this way); the deck's Stop
+  button and Panic are unchanged. Check: "M. a file's own end keeps the key held on the page (50) and the
+  note the pedal holds (53) ... (review R1119-2)" (fails on `a141ce1`: notes []; passes on this tree).
+
+**R1119-3. Stop cuts the keys you are holding.** Areas c, e, f. Confusing. Measured (deck Stop, library
+stop), inferred from the code (library end and play).
+- Steps: hold C3 on the page while a file plays on Filament; press the deck's Stop (or stop a library song).
+- Actual: C3 goes silent at once while the key is still down (`state().down` [48], Filament 0 voices). The
+  song library's own end runs the same silence (transport stop), and so does its play (`startFrom` calls
+  `silence()` first). The 30 Oct library note "a key held through a library play and stop is still held"
+  read the page's key list, not the sound.
+- Note: the panic is there to catch a note the tracker missed after the flush, so it is a design call:
+  keep it (Stop is a panic for playback), or make the voices tell playback notes from key notes (the
+  Filament worklet already marks them `pb`) and stop only those. Left for James (Open items).
+
+**R1119-4. Master render wav: fixed velocity and a C4 nobody played.** Area d. Confusing. Measured.
+- Steps: hold A3 at full velocity (MIDI velocity 127) and press render wav on the master strip.
+- Actual: the render plan plays A3 at velocity 0.8; with nothing held the render plays C4 (by the code,
+  `[60]`). The strip says neither. Expected by a first-time user: the chord as played, or a note on the
+  panel saying what is rendered.
+
+**R1119-5. Two MIDI channels on one key share one note.** Area c. Confusing. Measured.
+- Steps: note on C4 on channel 1 and on channel 2, then note off on channel 1 only.
+- Actual: the note ends (no held note) while channel 2 still holds it; channel 2's off then does nothing.
+  The page keys notes by number, not by channel. Matters for a split or layered keyboard or a DAW sending
+  two parts to one device; rare.
+
+### Not covered tonight
+
+Areas a, b, f, g, h. Nothing was re-run on the live site beyond the loads above. Not re-measured: R1116-4
+(CC 123 stops the deck), R1116-5 (tempo box), R1110-3 and R1110-4 (master volume and bus switch steps),
+R1101-2 (tape echo feedback). Suggested next: f, g and h, and re-run tonight's two fixes on the live site
+once the deploy works.
+
+## 2026-11-20 (review, areas f, g, h)
+
+Live site https://dxedge.net/synth/, page version `0.19-resnatron`, origin/main `1389659`, sw.js
+`dxedge-v235` (live and main agree). Playwright's Chromium 1243 headless at 1366 x 900 and 375 x 812
+(touch), plus a reduced-motion context at both sizes. No page or console errors and no failed requests on
+the rack, Hexode, Anode, Gleam, Iris, Hand Orchestra, Sculpt or Aether in any run. Audio on the rack was
+read from the master recorder (`engine().fx.recordStart` and `recordStop`, after the master volume); on the
+vendored pages from an analyser tapped in front of each page's destination. Focus tonight: project files
+from before today's strips, what a project carries besides the patches, every library song through the
+master, the outboard pages, and the Tab order and focus rings.
+
+### What worked (measured)
+
+- All 21 library songs, 5 s each through the master recorder: peaks 0.59 (Dies irae) to 0.97 (The
+  Entertainer), no sample at full scale, no NaN; after each stop, 0 voices and nothing held.
+- Project save, then a different factory patch, then load: Filament comes back as Filament Lead (shown
+  "* Filament Lead (edited)", a known pattern); undo steps back to the patch before the load.
+- A project file picked in the upload key loads with the toast `Loaded "Old".`; the project's tempo, name
+  and strips in the file apply.
+- Vendored pages: Hexode sounds from computer key A (analyser peak 0.26 at 1366 and 375) and links back
+  twice ("Filament rack", "the Filament rack"); Anode starts on a click (peak 0.52 at 1366, 0.53 at 375),
+  no sideways scroll, links back. Gleam, Iris, Hand Orchestra, Sculpt and Aether load at both sizes with
+  `lang="en"`, one H1, no sideways scroll and a link back to the rack.
+- Accessibility on the rack: no control without a name (543 shown at 1366, 112 at 375), no duplicate ids,
+  no positive tabindex, every one of the first 70 Tab stops at both sizes shows an outline and is visible.
+  With reduced motion the tube show reports `reduced: true` with flare and arcs at 0, and the only running
+  animation is the correlation marker's CSS transition (as on earlier nights).
+
+### Findings
+
+**R1120-1. An older project file leaves the page's own strips as they were, so a leftover solo silences
+it.** Area f. Broken. Measured. Fixed tonight.
+- Steps: solo the Lattice strip (or mute Thyratron), then load or upload a project file that carries
+  only some strips (any project saved before a device joined the rack; here a file with only Filament and
+  Cathode strips); play a note on Filament.
+- Expected: the project's mix: strips it does not carry at their defaults, as a mix session file loads.
+- Actual (main `1389659`, live): the Lattice solo and the Thyratron mute stay on and stay pressed in the
+  Mix desk; Filament's note through the master is silent (recorder peak 0 after the load, 0.354 before
+  the solo). `normalizeProject` kept only the strips the file named plus Filament and Cathode, and the
+  mixer's `load` leaves every strip it is not given.
+- Fix: a project's mixer carries every rack strip, defaults for those the file leaves out
+  (`project.js`, the list from `mixsession.js`, the same one a mix session uses). After: all 18 strips
+  load, the solo and mute are cleared, the file's Filament level 0.7 is kept. Check: "Pr. a project file
+  without a strip loads that strip at its defaults ... (review R1120-1)" (fails on `1389659`: 2 strips,
+  Lattice solo and Thyratron mute still pressed).
+
+**R1120-2. A project does not keep the song you set up in the library.** Area f. Missing. Measured.
+- Steps: load Greensleeves in the library, send channel 3 to Cathode, save the project, reload the page,
+  load the project.
+- Expected (a musician's reading of "project"): the song and its routing come back with the patches.
+- Actual: after the reload and the load the library has no song and no routing; the project file has no
+  field for them (keys: armed, bus, device, devices, kind, mixer, name, roll, tempo, timeSig, v). The
+  song's 96 BPM survives as the project tempo. The deck's imported file is not kept either (by the code).
+  Not fixed: a schema addition (a library id is small; an imported .mid would need its bytes or a name).
+
+**R1120-3. Tab order jumps back to the top of the page.** Area h. Confusing. Measured.
+- Steps: from the top, press Tab.
+- Actual: stops 1 to 14 are the header's patch, volume, record, MIDI and size controls (y 135 to 141 px
+  at 1366); stop 15 is "Tip the developer" at y 16 px, above them; stop 16 drops to the rail. The same at
+  375 px (y 8 px after the size keys at 164 px). A sighted keyboard user sees the ring leap up and back.
+  Not fixed: the link's place in the DOM sets the header's layout; a layout call.
+
+### Still open, re-measured tonight
+
+- Hexode still 1154 px wide at 375 px (scrolls sideways), as in R1024-3's notes.
+- R1025-5: phone footer links still 13 px tall (Tip the developer 113 x 13, Hand Orchestra 93 x 13,
+  Hexode 40 x 13, Anode 33 x 13, DXEdge 40 x 13, Old Time Radio 93 x 13).
+- R1017-10: phone pitch and mod strips still 22 px wide.
+
+### Not covered tonight
+
+Areas a to e. Not re-measured: R1020-6, R1020-7, R1020-8 (no full Tab walk tonight, only the first 70
+stops), R1114-4, R1117-3. Suggested next: a and b, including R1115-1 (Rhumbatron exciters) and R1109-1
+(Theremin switch), and a full Tab walk of the Rack tab.
+
+## 2026-11-21 (review, areas a, b)
+
+Live site https://dxedge.net/synth/, origin/main `aebafa0`, sw.js `dxedge-v238` (live and main agree).
+Playwright's own Chromium 1243 headless (the `chromium-1194` path in the task prompt is still gone) at
+1366 x 900 and 375 x 812 (touch, 2x). No page or console errors in any run. Focus tonight: the knob
+sweep the 18 Nov night left for Lattice and Gleam, Trochotron's seed and shape rows (restyled 19 Nov),
+every factory patch on every device, and user patches on the nine devices 18 Nov did not cover.
+
+Method note: Lattice renders are not repeatable sample for sample even at one unison voice (four
+repeats of the untouched patch differ by 0.8 to 2.7 dB in the largest octave band), so a slider is read
+against that spread (Glass Pad with unison 1, a C4 and G4 held 0.02 to 1.2 s, hold and tail windows).
+Gleam renders are repeatable (difference 0.0 dB).
+
+### What worked (measured)
+
+- Area b, all 142 factory patches on the 18 devices picked from the menu: each shows under its own name,
+  the menu and the patch name agree, no errors.
+- User patches through the save form on Mote, Heptode, Geissler, Orthicon, Trochotron, Phantastron,
+  Additron, Rhumbatron and Resnatron: the form offers "name 2", the toast says saved, a reload brings each
+  device back on its user patch with every field equal, and delete lands on the device's first sound with
+  a toast.
+- Lattice, 45 sliders at both ends: every slider that acts on Glass Pad moves the sound past the spread
+  (oscillator octave, semi and fine 63 to 126 dB in a band, A cutoff at 20 Hz -60.8 dBFS RMS, level 0
+  silent, sub and noise at 100% 80 and 100 dB). Readouts match the value at both ends. Every render
+  finite, highest peak 0.98 (level 100%). Sliders with nothing to act on in this patch (LFO 3 and 4,
+  the four macros, the mod envelope: no matrix route reads them) change nothing, as the matrix note says.
+- Lattice chips (34): every table, filter mode and route chip lights its own aria-pressed and edits its
+  field; each warp mode with its amount from 0 to 100% moves the sound (osc A: bend 15.9, sync 49.1, FM
+  from B 48.0 dB; osc B: bend 8.3, sync 37.4, self 21.7 dB).
+- Gleam: mode, scale, root key and HRTF each edit their field and change the render (scale 5.1 to 10.4
+  dB, room 83 dB, HRTF 6.8 dB); level at 0 is silent and reads "off".
+- Trochotron, both sizes: the walk, scale and voices rows set their field and their aria-pressed; random
+  draws a new seed into the box; play lights and the meter runs (4 voices), stop ends it (0 voices); a
+  typed negative, fractional or empty seed is shown as the seed used (0, 3, 0). At 375 px the rows are
+  44 px tall, scale and voices sit under the Shape tab, no sideways scroll.
+
+### Findings
+
+**R1121-1. Lattice: sliders that do nothing look live.** Area a. Confusing. Measured. Fixed tonight.
+- Steps: Lattice, Glass Pad (both warps off), unison set to 1. Move osc A or osc B Warp, Detune, Spread
+  from end to end and render.
+- Expected: a control that does nothing in this state says so, as Thyratron's osc 3 rate does since
+  R1118-2.
+- Actual: osc B warp 0 against 100% moved the render 0.7 and 2.3 dB, osc A warp (off) 1.0 dB, detune 1.2,
+  spread 0.8 and 1.5 dB, all inside the spread of repeat renders; the sliders were fully lit.
+- Fix: in `lattice-ui.js` a warp amount dims to 0.45 while its oscillator's warp is off, detune and spread
+  while unison is 1, each with a title that says why; they light when a warp chip or a unison count
+  makes them act. Check: "W. a warp amount dims while its warp is off ... (review R1121-1)" (fails on
+  `aebafa0`).
+
+**R1121-2. Trochotron: the seed box keeps a seed past the top on show.** Area a. Confusing. Measured.
+Fixed tonight.
+- Steps: Trochotron, type 99999999999 in the seed box, Enter, then Tab.
+- Expected: the box shows the seed the piece uses, as Phantastron's box does.
+- Actual: the piece used 4294967295 while the box went on showing 99999999999 (after Enter and after
+  Tab). A negative or fractional seed was shown corrected; only a clamp to the seed already in use was not,
+  because no edit happened, so nothing rewrote the box.
+- Fix: `commitSeed` writes the seed in use back into the box. Check: "R. a typed seed past the top shows
+  the seed that is used ... (review R1121-2)" (fails on `aebafa0`).
+
+**R1121-3. Gleam: generator controls look live with the generator off.** Area a. Confusing. Measured.
+Left open (the same fix as R1121-1 would do; one fix pair a night).
+- Steps: Gleam, Amber Field (generator off). Move rate, depth and seed end to end and render a touch.
+- Expected: they dim, or say they wait for a generator.
+- Actual: six renders sample-identical to the untouched patch; the three faders at full opacity, enabled.
+
+**R1121-4. Gleam is much quieter than the rest of the rack.** Area a, b. Confusing. Measured (Gleam),
+inferred (comparison).
+- Steps: Gleam, Amber Field, one finger at x 0.43, y 0.5, pressure 0.8, offline render.
+- Expected: about the level of one note on Filament or Lattice.
+- Actual: peak 0.06 (-24 dBFS), RMS -32.4 dBFS; Lattice Glass Pad's two notes -16 dBFS RMS tonight,
+  Filament's one note -11.2 dBFS peak on 20 Nov. Level 100% lifts Gleam only 1.4 dB. Not checked: the
+  other six Gleam patches, or the live chain after the mixer.
+
+**R1121-5. Lattice: "user" with no WAV imported plays the glass table.** Area a. Confusing. Measured.
+- Steps: Lattice, fresh browser (no WAV dropped), osc B table chip "user".
+- Expected: a word that no table is loaded (or the chip waits for a WAV).
+- Actual: the chip lights and the sound is the glass table's (osc B alone: same octave bands, -21.8 dBFS
+  RMS on both). Related to R1103-1 (an imported table does not survive a reload).
+
+### Still open, re-measured tonight
+
+- R1025-3: delete still removes a user patch at once with no dialog (nine more devices tonight).
+
+### Notes (not findings)
+
+- Lattice PWM: warp amount 0 and 100% sound the same (1.5 and 0.6 dB). The pulse width runs 12% to 88%,
+  and those two widths have the same harmonic magnitudes; the middle of the travel is where it changes.
+  Read as the nature of PWM, not a fault.
+- Gleam's stutter chip changes nothing in field mode (render 0.0 dB); the panel note mentions stutter only
+  in effect mode. Not reported.
+
+### Not covered tonight
+
+Areas c to h. Gleam's other six patches for loudness. Suggested next: c, d and e.

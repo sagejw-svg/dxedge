@@ -13,6 +13,7 @@ import { makeMasterFx } from './masterfx.js';
 import { createMixer } from './mixer.js';
 import { createTransport } from './transport.js';
 import { RACK_API, getDevice, listDevices, registerDevice } from './device.js';
+import { loadWorklet, workletNode, trackNode, renderAndRelease } from './worklets.js';
 
 export const deviceOf = p => (p && p.device === 'cathode' ? 'cathode' : 'filament');
 export const normalizeAny = p => (deviceOf(p) === 'cathode' ? normalizeC(p) : normalize(p));
@@ -34,7 +35,11 @@ export function rackState(p) {
 }
 
 export async function createEngine(ctx, opts = {}) {
-  if (!ctx.__filament) { await ctx.audioWorklet.addModule(WORKLET); ctx.__filament = true; }
+  // The spring's module loads beside the voice's rather than after it (an offline render pays both
+  // on every new context); awaited below, and the catch only keeps an early failure from going unhandled.
+  const springLoad = opts.rack !== false ? loadSpring(ctx) : null;
+  if (springLoad) springLoad.catch(() => {});
+  if (!ctx.__filament) { await loadWorklet(ctx, WORKLET); ctx.__filament = true; }
   const E = { ctx, C: null, master: ctx.createGain(), meter: { v1: 0, v2: 0, voices: 0, cpu: 0, notes: [] }, nodes: {}, patches: {}, meters: {} };
   E.master.gain.value = opts.volume == null ? 1 : opts.volume;
   let patch = normalizeAny(opts.patch);
@@ -43,8 +48,9 @@ export async function createEngine(ctx, opts = {}) {
     E.C = makeSynthChain(ctx);
     E.ens = makeEnsemble(ctx);
     E.echo = makeTapeEcho(ctx, await probeEchoLatency(ctx.sampleRate));                 // ensemble > tape echo > the chain (EQ, output tubes, ...)
-    await loadSpring(ctx);
+    await springLoad;
     E.spring = makeSpring(ctx);                                                          // tape echo > spring reverb > the chain
+    trackNode(ctx, E.spring.node);                                                       // released after an offline render
     E.ens.output.connect(E.echo.input);
     E.echo.output.connect(E.spring.input);
     E.spring.output.connect(E.C.input);
@@ -86,7 +92,7 @@ export async function createEngine(ctx, opts = {}) {
   const ctl = { bend: 0, mw: 0, at: 0 };
   function nodeFor(dev, events, playing) {
     if (E.nodes[dev]) return E.nodes[dev];
-    const n = new AudioWorkletNode(ctx, dev, {
+    const n = workletNode(ctx, dev, {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
       processorOptions: { tubes: tubeData(), patch: E.patches[dev] || normalizeAny({ device: dev }), events: events || [], active: dev === E.device, playing: !!playing, clock: clockMsg() },
     });
@@ -243,8 +249,11 @@ export async function createEngine(ctx, opts = {}) {
 // Two-device form: patches {filament, cathode} and device (whose patch sets the rack, default
 // the patch's device); an event with dev:'cathode' or dev:'filament' goes to that device, one
 // without dev to the rack's device. onProgress(fraction) is called as the render runs.
+// hosted (21 Nov): other rack devices in the same render, [{dev, events, create}]: create(ctx, framed)
+// builds the device's own node in this context with its events (times in frames) and the node goes
+// into the mixer on its own strip, in front of the shared ensemble and output chain, as it does live.
 // Returns the AudioBuffer.
-export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo, master = null, masterFx = true }) {
+export async function renderOffline({ patch, patches, device, events = [], seconds = 1, sampleRate = 48000, rack = true, mono = false, onProgress, mixer, tempo, master = null, masterFx = true, hosted = [] }) {
   const ctx = new OfflineAudioContext(2, Math.round(seconds * sampleRate), sampleRate);
   const frame = e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }, e.t === 'patch' ? { p: normalizeAny(e.p) } : {});
   let main = patch, others = [];
@@ -257,12 +266,18 @@ export async function renderOffline({ patch, patches, device, events = [], secon
     events = events.filter(e => !e.dev || e.dev === dev0);
   }
   const E = await createEngine(ctx, { patch: main, events: events.map(frame), rack, others, mixer, tempo, master, masterFx });
+  for (const h of (hosted || [])) {
+    if (!h || typeof h.create !== 'function' || !h.dev || h.dev === 'filament' || h.dev === 'cathode') continue;
+    const made = await h.create(ctx, (h.events || []).map(frame));
+    const out = made && (made.sum || made.output || made);
+    if (out && typeof out.connect === 'function') E.mix.attach(h.dev, out);
+  }
   if (mono) E.mono(true);
   if (onProgress) {
     const step = Math.max(1, Math.ceil(seconds / 50));
     for (let t = step; t < seconds; t += step) ctx.suspend(t).then(() => { onProgress(t / seconds); ctx.resume(); });
   }
-  return ctx.startRendering();
+  return renderAndRelease(ctx);
 }
 
 // One MIDI message (status, data1, data2) as an engine event, or null. The page and the tests

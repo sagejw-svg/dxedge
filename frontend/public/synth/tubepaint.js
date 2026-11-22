@@ -447,4 +447,5 @@ function paintTubeShow(cv, now, st, view, sh, z, px, py, q){
       c.strokeStyle=rgba(SHOW_ARC,0.35*a*k); c.lineWidth=3; c.stroke(); c.strokeStyle=rgba([255,255,255],0.95*a*k); c.lineWidth=0.9; c.stroke(); } }
   c.restore(); return o;
 }
-export { paintTubeState, paintTubeShow, TUBE_LOOKS, LOOK_BY, fitCanvas, rgba, mix };
+// the wax lamp (waxlamp.js) paints with the same helpers, looks and 120 x 200 space
+export { paintTubeState, paintTubeShow, TUBE_LOOKS, LOOK_BY, fitCanvas, rgba, mix, mulberry32, clampN, thermCol, thermRGB, lookOverlay, TW, TH };

@@ -12,10 +12,10 @@ Numbered checks follow the design brief's test list (dxedge-synth-design.md):
   7 mono fold                          8 aliasing baseline        9 CPU (logged)
   10 layout                            12 MIDI
 plus S. (the stereo round), C. (Cathode, the second device: filters, normals, cables, the patch
-panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
+panel, the rack rail), D. (Dekatron, the drum machine: voices, the step clock, the panel), T. (Thyratron, the monophonic ladder: presets, self-oscillation, glide, the note stack), W. (Lattice, the wavetable: mipmaps, warp, filters, the matrix, a WAV import), G. (Gleam, the touch field: scales, voices, pan, room, gestures, the effect pad), Mo. (Mote, the granular instrument), H. (Heptode, the MIDI-file player), Gs. (Geissler, the generative meadow), Pg. (Pentagrid, the shortwave receiver: Morse timing, tuning pitch, presets, notes), Or. (Orthicon, the spectral painter), Fr. (Trochotron, the fractal seed: determinism, zoom, a non-silent take, note release), Gy. (Gyrotron, the gravity sequencer: orbits, collisions, crossings, MIDI, the master recorder), Kl. (Klystron, the granular vocoder: vowels, a file modulator, freeze, the mouth pad), Ph. (Phantastron, the bent toy: clock, bits, a stuck loop, wires, a non-silent take, panic), Ad. (Additron, the additive organ: drawbars, a drawn spectrum, morph, per-partial decay, the rotor), Rh. (Rhumbatron, the physical model: strings, bores, plates, strike point, damping, coupling), Rn. (Resnatron, the patch bay: cables, starters, a share link, filter, delay, panic), Sh. (patch links and patch files: every factory patch through ?p=, the sound after the trip, damaged and hostile links, a link opened on a fresh page, undo and reload, files in and out, the keys, phones), Su. (Surprise me: the draws' limits over 200 seeds a device, fitted draws measured under the limiter, never silent, in tune and mono-safe, the key, undo, phones), Op. (Orthicon's Picture card: joined switches, the seed and name windows, the lamp's states, phones), Os. (Orthicon's Scan card: phase, engine, scale and play as tagged joined switches, one line on a wide card, the tags kept on a phone), Mw. (the Mix card's own row from 761 px: the Mix and Master cards fill the width, the seven cards it stretched end at their controls, slider grids take columns, the strips' columns, no sideways scroll, reduced motion), Pc. (Phantastron's cartridge row: the joined cartridge switch, the CART and BENDS tags, the readout and lift wires on one line, phones), Tc. (Trochotron's seed and shape rows: seven tagged joined switches, the seed and readout amber windows, key and route windows, play's lamp, phones), Pd. (delete in the save form on a phone: the name window and the header keep their size on a user patch, the form's joined keys, the field's window, what delete removes, the name's floor from 490 to 760 px), Hs. (the desktop patch strip holds one row from 1020 px on a factory or a user patch with the save form closed or open, the form in the edit keys' place, delete red), Wl. (worklet modules: each added once a context, the hosted ones asked for together at boot, a failed load tried again, an offline render lets go of its nodes), Sn. (subnormals: every hosted device's state after a chord and 13 s of silence holds no subnormal double), Fc. (faces: walnut adds no rule, rack black and black light restyle the cabinet, panel, chassis and plates, text contrast, black light's chassis tube look, kept across a reload, bad stored values, every device, phones), Fd. (faces, second slice: the rail, outboard tray, mix desk, deck, library, roll and keybed take the face, walnut still adds no rule, label contrast, the amber and green accents kept, hover, the keys, phones), Ll. (the wax lamp, the brief's lava lamp module: the section and its defaults, rests off screen, paints in view, the seeded wax melts and rises at 25 W and stays down at 15 W, music warms the bulb, the live level, settings kept and normalized, the black light look, every device, reduced motion, phones), M. (MIDI files: the SMF reader and writer, the recorder, import, the player
 with both devices at once, Render WAV), the master bus (reverb, tempo-synced delay, compressor/limiter, 24-bit WAV), R. (the rack framework: device contract, mixer, clock,
 project), P. (the song library: @tonejs/midi parse, transport playback, channel routing,
-Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
+Halloween presets), Sv. (SVF 12, the state variable multimode filter: morph, singing, slew), Lg. (the low pass gate: the vactrol's light and lag, filter and level together, the gate modes, Hollow Pluck), Tv. (the tube show: flares, flares from the meters of Dekatron, Thyratron, Lattice and Gleam, heat, arcs, blue glow, resonance, voice lamps, off/subtle/full, reduced motion), Tb. (the big tube view: open and close, focus, the chassis resting under it, the show at full size, zoom about the cursor, pan, the keys, looks, reduced motion, phones), Ar. (the arpeggiator: modes, octaves, the step on the rack tempo and transport, gate, swing, latch, the pedal, switching it on and off over held keys, the panel), Er. (1939 mode: divide-down pitch and phase lock, the square and the staircase, the fixed resonators and the tone tabs, the seven shapes, the pedal's release, the six-channel vibrato, bend, unison, velocity, switching on over a held note, fuzz, the two factory patches, the panel, phones), Lc. (the LC bank as a filter model in slots A and B: the schema, the response against the bank, resonance, never singing, level, the drive's clip, extremes, slot B serial and split, a tab change over a held note, the panel, phones), Pn. (the patch arrows walk the menu in the order it shows), Nf. (the 16 Nov factory patches: the list and its order, the categories, level, full-velocity peak, each new patch's feature measurable), Te. (the tape echo: head times, the loop, feedback, ping-pong, offset, sync, tone, the record amp, wow and flutter, runaway, a straight wire when off, schema, idle, the panel), Sp. (the spring reverb: transit times, the drip's chirp, decay, tone, the tube driver, two springs, runaway, a straight wire when off, schema, a worklet scope, idle, the panel, panic), Rc. (the paper roll's named user rolls and chain: the user list and chain schema, segment ends, chainAt and chainScore, save, refusals, delete, the chain row, live timing against the score, the paper following the roll it reads, a roll saved while the chain plays, chain off mid-play, the project, a reload, phones), Rr. (the paper roll recorded and rendered: the MIDI deck's take against the roll's own log, Stop and the transport's stop inside a take, a key over the roll, the export, devices the recorder does not take, the Master strip's render plan and its audio against the score), Rw. (the roll on the 16 other rack devices in render wav: the plan against the score, each device against an independent render, silence without notes, the shared output chain in the path, a key held on the roll's device), Rk. (the on-screen keys lighting with the roll's notes: timing against the roll's log, offs, Stop, ties, an octave change, the transport's stop, run off, another device, the page's own keys), Q. (the graphic EQ: measured curve against the plot, presets, bypass,
 level, both devices, the schema, the section in the page), a slashless /synth load through the service worker, and playing-it checks (keys,
 computer keyboard, patches, knobs, persistence).
 
@@ -166,13 +166,10 @@ def _trademark_check():
 _trademark_check()
 
 from playwright.sync_api import sync_playwright
-_CANDIDATES = [
-    os.environ.get("SYNTH_CHROMIUM", ""),
-    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-    "/opt/google/chrome/chrome",
-    "/usr/local/bin/chrome",
-]
-CHROME = next(p for p in _CANDIDATES if p and os.path.exists(p))
+# the browser: SYNTH_CHROMIUM, else the newest Playwright Chromium, else a system Chrome (synth_chromium.py)
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from synth_chromium import find_chromium
+CHROME = find_chromium()
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path=CHROME, args=["--autoplay-policy=no-user-gesture-required"])
     pg = b.new_page(viewport={"width": 1366, "height": 1000}); errs = []
@@ -669,15 +666,16 @@ with sync_playwright() as pw:
         L, R = render(sine_b("off"), note(45, 0.05) + [{"at": 0.4, "t": "patch", "load": False, "p": sine_b(rt)}], 1.2, rack=False)
         s_ = np.abs(np.diff(L)) + np.abs(np.diff(R)); steady, worstst = float(np.max(s_[int(1.0 * SR):])), float(np.max(s_))
         ck(f"Fb. no click when the route goes from off to {rt} under a held note (worst step {worstst:.5f}, steady {steady:.5f})", worstst <= 2.0 * steady + 1e-4, (worstst, steady))
-    # the schema: defaults, ranges, enums; old patches load with B off; no factory patch uses B yet
+    # the schema: defaults, ranges, enums; old patches load with B off. The 27 factory patches from before 16 Nov
+    # never used B; three of the 16 Nov set do (serial, split, parallel), and the list must be exactly those three
     nz = pg.evaluate("""() => { const N = __synth.eq.normalize, d = N({}).filtB;
       return { d: [d.route, d.model, d.cutoff, d.res, d.keytrack, d.env, d.morph, d.bal].join(','),
                lpg: N({ filtB: { model: 'lpg' } }).filtB.model, bad: N({ filtB: { route: 'sideways' } }).filtB.route, sp: N({ filtB: { route: 'split' } }).filtB.route,
                lo: [N({ filtB: { cutoff: 1, res: -1, bal: -5, morph: -1 } }).filtB].map(b => [b.cutoff, b.res, b.bal, b.morph].join(','))[0],
                hi: [N({ filtB: { cutoff: 1e6, res: 5, bal: 5, morph: 9 } }).filtB].map(b => [b.cutoff, b.res, b.bal, b.morph].join(','))[0],
                fac: __synth.factory().map(f => __synth.factoryPatch(f.name)).filter(p => p.filtB.route !== 'off').map(p => p.name) }; }""")
-    ck(f"Fb. filtB defaults to off (SVF 12, 2 kHz, flat, key tracking 50%); only the four routes and the six models other than the low pass gate load; ranges clamp; no factory patch turns it on ({nz})",
-       nz == {"d": "off,svf12,2000,0,0.5,0,0,0", "lpg": "svf12", "bad": "off", "sp": "split", "lo": "20,0,-1,0", "hi": "20000,1,1,3", "fac": []}, nz)
+    ck(f"Fb. filtB defaults to off (SVF 12, 2 kHz, flat, key tracking 50%); only the four routes and the six models other than the low pass gate load; ranges clamp; only the three 16 Nov patches turn it on, so no older patch sounds different ({nz})",
+       nz == {"d": "off,svf12,2000,0,0.5,0,0,0", "lpg": "svf12", "bad": "off", "sp": "split", "lo": "20,0,-1,0", "hi": "20000,1,1,3", "fac": ["Serial Grit Bass", "Split Horizon", "Twin Pizzicato"]}, nz)
 
     # ---------------------------------------------------------------- Fp. the filter response plot (28 Oct)
     # The plot comes from the worklet's own filter code run in a worker (filtplot.js), so these check it
@@ -788,10 +786,10 @@ with sync_playwright() as pw:
        bool(_ws) and _ws == _jl(_pj, "MOD_SRC") and _wd == _jl(_pj, "MOD_DST") and len(_mdc) == len(_wd) - 1 and all(_wd[i].lower() == k for k, i in _mdc.items()), (_ws, _wd, _mdc))
     nm_ = pg.evaluate("""async () => { const m = await import('./patches.js'); const d = m.normalize({});
       const j = m.normalize({ mod: { s1: { src: 'lfo1', dst: 'cut', amt: 5 }, s2: { src: 'bogus', dst: 'pitch', amt: -0.5 }, s9: { src: 'vel', dst: 'res', amt: 1 } } });
-      return { d: d.mod, j: j.mod, v: j.v, fac: m.FACTORY.every(p => Object.values(m.normalize(p).mod).every(s => s.src === 'off' && s.dst === 'off' && s.amt === 0)) }; }""")
+      return { d: d.mod, j: j.mod, v: j.v, fac: m.FACTORY.filter(p => !Object.values(m.normalize(p).mod).every(s => s.src === 'off' && s.dst === 'off' && s.amt === 0)).map(p => p.name) }; }""")
     off8 = all(nm_["d"].get(f"s{i}") == {"src": "off", "dst": "off", "amt": 0} for i in range(1, 9)) and len(nm_["d"]) == 8
-    ck("Mm. the schema: a patch with no matrix loads with all eight slots off, every factory patch has them off (no patch sounds different), and a bad slot is clamped or dropped (schema stays v:1)",
-       off8 and nm_["fac"] and nm_["v"] == 1 and nm_["j"]["s1"] == {"src": "lfo1", "dst": "cut", "amt": 1} and nm_["j"]["s2"] == {"src": "off", "dst": "pitch", "amt": -0.5} and "s9" not in nm_["j"], nm_)
+    ck("Mm. the schema: a patch with no matrix loads with all eight slots off, every factory patch but the 16 Nov Sync Snap Bass has them off (no older patch sounds different), and a bad slot is clamped or dropped (schema stays v:1)",
+       off8 and nm_["fac"] == ["Sync Snap Bass"] and nm_["v"] == 1 and nm_["j"]["s1"] == {"src": "lfo1", "dst": "cut", "amt": 1} and nm_["j"]["s2"] == {"src": "off", "dst": "pitch", "amt": -0.5} and "s9" not in nm_["j"], nm_)
     def mm(**slots): return {k: dict({"src": "off", "dst": "off", "amt": 0}, **v) for k, v in slots.items()}
     def cents(f, ref): return 1200 * math.log2(f / ref)
     sine = lambda **o: dict({"wave": "sine", "level": 0.5}, **o)
@@ -1377,10 +1375,10 @@ with sync_playwright() as pw:
       return { a: d.filt.tabs, b: d.filtB.tabs, jm: j.filt.model, jbm: j.filtB.model, ja: j.filt.tabs, jb: j.filtB.tabs, v: j.v,
         enA: m.ENUMS['filt.model'], enB: m.ENUMS['filtB.model'], fac: m.FACTORY.filter(p => p.filt.model === 'lc' || p.filtB.model === 'lc').map(p => p.name) }; }""")
     _dt = {"body": True, "voice": True, "edge": False, "mellow": True, "thin": False, "open": False}
-    ck(f"Lc. the schema: a patch with no tabs gets body, voice and mellow on both slots (the worklet's LC_T0 {_lc_w} agrees); 'lc' is a model in slot A and slot B; no tab in reads as open; no factory patch uses it, so no patch sounds different (schema stays v:1) ({lcn_})",
+    ck(f"Lc. the schema: a patch with no tabs gets body, voice and mellow on both slots (the worklet's LC_T0 {_lc_w} agrees); 'lc' is a model in slot A and slot B; no tab in reads as open; only the 16 Nov Vowel Bank uses it, so no older patch sounds different (schema stays v:1) ({lcn_})",
        lcn_["a"] == _dt and lcn_["b"] == _dt and _lc_w == [int(lcn_["a"][t_]) for t_ in _LCT] and "lc" in lcn_["enA"] and "lc" in lcn_["enB"]
        and lcn_["jm"] == "lc" and lcn_["jbm"] == "lc" and lcn_["ja"]["open"] is True and lcn_["jb"]["edge"] is True and lcn_["jb"]["body"] is True
-       and not lcn_["fac"] and lcn_["v"] == 1, lcn_)
+       and lcn_["fac"] == ["Vowel Bank"] and lcn_["v"] == 1, lcn_)
     def lc_tabs(**k_): return {t_: bool(k_.get(t_, False)) for t_ in _LCT}
     def lc_model(f, cut, res, tb):
         fs_ = 2 * SR; qm = 10 ** (res - 0.3); qb = qm ** 0.5; n_ = max(1, sum(tb[t_] for t_ in _LCT)); h_ = 0
@@ -1410,11 +1408,20 @@ with sync_playwright() as pw:
     ck(f"Lc. resonance narrows the peaks: the voice tab's 850 Hz over 425 Hz is {pr_} dB at resonance 0, 0.3 and 1 (rising, at least 15 dB from 0 to 1)", pr_[0] < pr_[0.3] < pr_[1] and pr_[1] - pr_[0] >= 15, pr_)
     L_, _ = render(patch(osc1={"level": 0}, filt={"model": "lc", "cutoff": 850, "res": 1, "tabs": lc_tabs(body=True, voice=True, edge=True)}), note(60), 1.0, rack=False)
     ck(f"Lc. it never sings: full resonance with no input stays silent ({db(_arms(L_)):.0f} dBFS, want under -120)", db(_arms(L_)) < -120 and np.all(np.isfinite(L_)), db(_arms(L_)))
+    # Each oscillator starts at a random phase (voice.worklet.js), and a chord's notes share partials
+    # (C3 and C4, the G's third harmonic and C's second), so one render's level moves with how those land:
+    # measured 11 Nov, 10 renders a setting, single renders spread 0.9 to 2.2 dB within a setting and 3.1 dB
+    # across resonance in a failing suite run, while the power means across resonance spread 1.1 dB. The level
+    # is the power mean of LC_N renders, so the bounds read the level, not the draw.
+    LC_N = 4
     def lc_ch(filt):
-        L_, _ = render(patch(filt=filt), [e for n_ in (48, 55, 60, 64) for e in note(n_)], 1.0, rack=False); return db(_arms(L_[SR // 2:]))
+        ps_ = []
+        for _ in range(LC_N):
+            L_, _ = render(patch(filt=filt), [e for n_ in (48, 55, 60, 64) for e in note(n_)], 1.0, rack=False); ps_.append(_arms(L_[SR // 2:]) ** 2)
+        return db(math.sqrt(sum(ps_) / len(ps_)))
     lv_ = {"valve12": lc_ch({"model": "valve12", "cutoff": 1800, "res": 0.3, "keytrack": 0.5}), "lc": lc_ch({"model": "lc", "cutoff": 1800, "res": 0.3, "keytrack": 0.5})}
     lr_ = {r_: lc_ch({"model": "lc", "cutoff": 850, "res": r_}) for r_ in (0, 0.3, 0.6, 1)}
-    ck(f"Lc. level: a saw chord on the default tabs sits within 3 dB of Valve 12 at the same knobs ({lv_['lc'] - lv_['valve12']:+.1f} dB), and within 3 dB of itself from resonance 0 to 1 ({[round(v_ - lr_[0.3], 1) for v_ in lr_.values()]})",
+    ck(f"Lc. level: a saw chord on the default tabs sits within 3 dB of Valve 12 at the same knobs ({lv_['lc'] - lv_['valve12']:+.1f} dB), and within 3 dB of itself from resonance 0 to 1 ({[round(v_ - lr_[0.3], 1) for v_ in lr_.values()]}; each the power mean of {LC_N} renders)",
        abs(lv_["lc"] - lv_["valve12"]) <= 3 and max(lr_.values()) - min(lr_.values()) <= 3, (lv_, lr_))
     def lc_h3(d_):
         L_, _ = render(patch(osc1={"wave": "sine", "level": 0.8, "fixed": 300}, filt={"model": "lc", "cutoff": 850, "res": 0.3, "drive": d_, "tabs": lc_tabs(open=True)}), note(60), 0.7, rack=False)
@@ -1500,6 +1507,65 @@ with sync_playwright() as pw:
       document.getElementById('saveNo').click(); return { f, names, open }; }""")
     ck(f"Pn. save refuses a factory name in any case ('{sv_['f'].lower()}' beside '{sv_['f']}'): the menu lists it once and the form stays open ({sv_['names']})",
        sv_["names"] == [sv_["f"]] and sv_["open"] is True, sv_)
+    # review 9 Nov, R1109-3: ok with an empty name did nothing and left the last toast ("Saved ...") up;
+    # R1109-4: closing the form (Escape, cancel, a save) dropped keyboard focus to the page body
+    sfa_ = lambda: pg.evaluate("(() => { const a = document.activeElement; return a ? (a.id || a.tagName) : null; })()")
+    sfo_ = lambda: pg.evaluate("document.getElementById('saveForm').classList.contains('open')")
+    sfr_ = {}
+    pg.focus("#saveP"); pg.keyboard.press("Enter"); pg.wait_for_timeout(60)
+    pg.fill("#saveName", "   "); pg.keyboard.press("Enter"); pg.wait_for_timeout(60)
+    sfr_["empty"] = (pg.evaluate("document.getElementById('toast').textContent"), sfo_(), sfa_())
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(60); sfr_["escape"] = (sfo_(), sfa_())
+    pg.focus("#saveP"); pg.keyboard.press("Enter"); pg.wait_for_timeout(60); pg.evaluate("document.getElementById('saveNo').click()"); pg.wait_for_timeout(60); sfr_["cancel"] = (sfo_(), sfa_())
+    pg.focus("#saveP"); pg.keyboard.press("Enter"); pg.wait_for_timeout(60); pg.fill("#saveName", "Pn focus check"); pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
+    sfr_["save"] = (sfo_(), sfa_(), pg.evaluate("document.getElementById('patchSel').selectedOptions[0].textContent"))
+    if sfr_["save"][2] == "Pn focus check": pg.evaluate("document.getElementById('delP').click()"); pg.wait_for_timeout(80)
+    ck(f"Pn. save with an empty name says so and keeps the form open with focus in the name ({sfr_['empty']})",
+       sfr_["empty"][0] == "Type a name for the patch first." and sfr_["empty"][1] is True and sfr_["empty"][2] == "saveName", sfr_)
+    ck(f"Pn. closing the save form by Escape, cancel or a save hands focus back to save ({sfr_['escape']}, {sfr_['cancel']}, {sfr_['save']})",
+       sfr_["escape"] == (False, "saveP") and sfr_["cancel"] == (False, "saveP") and sfr_["save"][:2] == (False, "saveP"), sfr_)
+    # review 12 Nov, R1112-2: the save form offered name + " 2" for every patch that was not a user patch, so a Surprise me
+    # draw or a linked patch offered "Copper Line 2345 2", and a factory patch offered "<name> 2" even when a user patch
+    # already had that name (a save then replaced it). A free name is offered as is; a taken one gets the first free number.
+    snf_ = pg.evaluate("""async () => {
+      const w = () => new Promise(r => setTimeout(r, 40)), sel = document.getElementById('patchSel');
+      const offer = async () => { document.getElementById('saveP').click(); await w(); const v = document.getElementById('saveName').value; document.getElementById('saveNo').click(); await w(); return v; };
+      const pick = async n => { const o = [...sel.options].find(o => o.textContent === n); sel.value = o.value; sel.dispatchEvent(new Event('change')); await w(); };
+      const f = __synth.factory()[0];
+      const out = { f: f.name };
+      await __synth.share.apply(await __synth.share.encode(__synth.device(), Object.assign({}, f, { name: 'Pn Unused Name 4821' }))); await w();
+      out.fresh = await offer();
+      await __synth.share.apply(await __synth.share.encode(__synth.device(), Object.assign({}, f, { name: f.name.toLowerCase() }))); await w();
+      out.lower = await offer();
+      await pick(f.name); out.factory = await offer();
+      document.getElementById('saveP').click(); await w(); document.getElementById('saveName').value = f.name + ' 2'; document.getElementById('saveOk').click(); await w();
+      out.user = await offer();
+      await pick(f.name); out.factory2 = await offer();
+      await pick(f.name + ' 2'); document.getElementById('delP').click(); await w();
+      return out; }""")
+    ck(f"Pn. save offers a free name as it is and a taken one with the first free number (link '{snf_['fresh']}', '{snf_['lower']}', factory '{snf_['factory']}', user '{snf_['user']}', factory with '{snf_['f']} 2' saved '{snf_['factory2']}')",
+       snf_["fresh"] == "Pn Unused Name 4821" and snf_["lower"] == snf_["f"].lower() + " 2" and snf_["factory"] == snf_["f"] + " 2"
+       and snf_["user"] == snf_["f"] + " 2" and snf_["factory2"] == snf_["f"] + " 3", snf_)
+    # review 22 Oct, R1022-5 (re-measured 15 Nov): delete landed on the first patch in the factory list, not the device's
+    # own first sound, so Filament went to Plate Bass and Cathode to Grid Bias Bass. Delete now lands where a fresh page opens.
+    pdl_ = b.new_page(viewport={"width": 1366, "height": 900})
+    pdl_.goto(BASE); pdl_.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=60000); pdl_.wait_for_timeout(200)
+    pdl_r = pdl_.evaluate("""async () => {
+      const w = (ms) => new Promise(r => setTimeout(r, ms || 60)), out = [];
+      for (const d of __synth.share.factories().map(f => f.device)) {
+        await Promise.resolve(__synth.setDevice(d)); await w(150);
+        const opens = __synth.share.menu();
+        document.getElementById('saveP').click(); await w();
+        document.getElementById('saveName').value = 'Pdl Review ' + d; document.getElementById('saveOk').click(); await w();
+        const saved = __synth.share.menu();
+        document.getElementById('delP').click(); await w(100);
+        out.push({ d, opens, saved, lands: __synth.share.menu(), key: __synth.share.key() });
+      }
+      return out; }""")
+    pdl_.close()
+    pdl_bad = [x for x in pdl_r if x["saved"] != "Pdl Review " + x["d"] or x["lands"] != x["opens"] or x["key"] != "f:" + x["opens"]]
+    ck(f"Pn. delete lands on the patch the device opens with on a fresh page, on all {len(pdl_r)} devices (review R1022-5; Filament {next((x['lands'] for x in pdl_r if x['d'] == 'filament'), None)}, Cathode {next((x['lands'] for x in pdl_r if x['d'] == 'cathode'), None)})",
+       len(pdl_r) >= 18 and not pdl_bad, pdl_bad or pdl_r)
     # review 3 Nov, R1103-3 (fixed 6 Nov): on a phone the save name field was 28 px tall beside 44 px keys
     phs_ = b.new_page(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True)
     phs_.goto(BASE); phs_.wait_for_function("window.__synth && __synth.ready()", timeout=20000); phs_.wait_for_timeout(200)
@@ -1604,6 +1670,71 @@ with sync_playwright() as pw:
         wf_ = max(folds_)
         ck(f"7. mono fold: {n} loses {wf_[0]:.1f} dB folded to mono, the worse of two renders ({folds_[0][0]:.2f}, {folds_[1][0]:.2f}; limit 3)", wf_[0] <= 3.0, folds_)
         ck(f"7. {n} sounds, and stays under 0 dBFS", all(1e-3 < f_[1] and f_[2] <= 1.0 for f_ in folds_), [(db(f_[1]), f_[2]) for f_ in folds_])
+
+    # ---------------------------------------------------------------- Nf. the 16 Nov factory patches (toward "about 40")
+    # The 27 older patches keep their names and order; 13 new ones follow. Each new one is level matched by
+    # measurement, safe played hard, and the feature it is the first factory patch on is audible in it.
+    NF_OLD = ["Plate Bass", "Diode Squelch", "Cellar Sub", "Filament Lead", "Screaming 12AX7", "Snarl Lead", "Wide Novachord Strings",
+              "Black Light Pad", "Velvet Brass", "Notch Drift", "Bakelite Organ", "Hollow Pluck", "Magic Eye Sweep", "Shortwave Drift",
+              "CW Practice Tone", "Seven Filaments", "Twin Sweep", "Haunted Organ", "Theremin Wail", "Horror Pad", "Creaky Drone",
+              "Ghost Choir", "Sub Heartbeat", "Glass Music Box", "Eerie Bells", "Exposition Choir", "Parlor Harp"]
+    NF_NEW = ["Serial Grit Bass", "Rubber Bass", "Sync Snap Bass", "Echo Lead", "Split Horizon", "Vowel Bank", "Tine Piano", "Reed Keys",
+              "Spring Clavier", "Spring Twang", "Twin Pizzicato", "Tape Wobble", "Sample Hold Bleeps"]
+    fac_ = pg.evaluate("__synth.factory()")
+    cats_ = {}
+    for f_ in fac_: cats_[f_["cat"]] = cats_.get(f_["cat"], 0) + 1
+    ck(f"Nf. 40 Filament factory patches: the 27 older ones first, names and order unchanged, then the 13 from 16 Nov ({cats_})",
+       [f_["name"] for f_ in fac_] == NF_OLD + NF_NEW, [f_["name"] for f_ in fac_])
+    ck(f"Nf. every category of the design brief (Bass, Lead, Pad, Keys, Pluck, FX) holds at least 4 patches ({cats_})",
+       all(cats_.get(c_, 0) >= 4 for c_ in ("Bass", "Lead", "Pad", "Keys", "Pluck", "FX")), cats_)
+    def nf_notes(P_): return [36] if P_["cat"] == "Bass" else ([60] if P_["voice"]["mode"] != "poly" else [48, 55, 60, 64])
+    def nf_loud(L_, R_):
+        x_ = (L_ ** 2 + R_ ** 2) / 2; w_ = int(0.3 * SR)
+        return 10 * math.log10(np.convolve(x_, np.ones(w_) / w_, "valid").max() + 1e-12)
+    def nf_bands(x_):
+        X_ = np.abs(np.fft.rfft(x_ * np.hanning(len(x_)))) ** 2; f_ = np.fft.rfftfreq(len(x_), 1 / SR)
+        return np.array([10 * math.log10(np.sum(X_[(f_ >= lo_) & (f_ < 2 * lo_)]) + 1e-20) for lo_ in (62.5, 125, 250, 500, 1000, 2000, 4000, 8000)])
+    nf_lv, nf_hard = {}, {}
+    for n_ in NF_NEW:
+        P_ = pg.evaluate("n => __synth.factoryPatch(n)", n_); ks_ = nf_notes(P_)
+        # the power mean of two renders: random oscillator start phases move one render's 300 ms peak by up to
+        # about 3 dB on the plucks and Serial Grit Bass (measured 16 Nov: -17.5 to -14.8 over 8 renders)
+        lv2_ = [nf_loud(*render(P_, [e for k_ in ks_ for e in note(k_, 0.05, 1.85)], 2.6)) for _r in range(2)]
+        nf_lv[n_] = round(10 * math.log10(np.mean([10 ** (v_ / 10) for v_ in lv2_])), 1)
+        L_, R_ = render(P_, [e for k_ in ks_ for e in note(k_, 0.05, 1.85, 1.0)], 2.6)
+        nf_hard[n_] = (bool(np.all(np.isfinite(L_)) and np.all(np.isfinite(R_))), round(db(max(np.max(np.abs(L_)), np.max(np.abs(R_)))), 1))
+    ck(f"Nf. each new patch on test 7's notes lands at -18 to -13 dB (300 ms loudness, the power mean of two renders; the older non-Halloween set reads -17.8 to -12.5): {nf_lv}",
+       all(-18 <= v_ <= -13 for v_ in nf_lv.values()), nf_lv)
+    ck(f"Nf. each new patch played at full velocity is finite and under 0 dBFS (peak dBFS): {nf_hard}",
+       all(ok_ and pk_ <= 0 for ok_, pk_ in nf_hard.values()), nf_hard)
+    # the feature each one is the first factory patch on, switched off in a copy: the tail (echo, spring) or
+    # the spectrum (Filter B routes, the mod matrix, the LC bank) must move by a clear margin
+    nf_off = {"Serial Grit Bass": {"filtB": {"route": "off"}}, "Split Horizon": {"filtB": {"route": "off"}}, "Twin Pizzicato": {"filtB": {"route": "off"}},
+              "Sync Snap Bass": {"mod": {"s1": {"src": "off", "dst": "off", "amt": 0}}}, "Vowel Bank": {"filt": {"model": "valve12"}},
+              "Echo Lead": {"echo": {"on": False}}, "Tape Wobble": {"echo": {"on": False}}, "Spring Clavier": {"spring": {"on": False}}, "Spring Twang": {"spring": {"on": False}}}
+    nf_tail, nf_spec = {}, {}
+    for n_, off_ in nf_off.items():
+        P_ = pg.evaluate("n => __synth.factoryPatch(n)", n_); ks_ = nf_notes(P_); Q_ = json.loads(json.dumps(P_))
+        for sec_, v_ in off_.items(): Q_[sec_].update(v_)
+        ev_ = [e for k_ in ks_ for e in note(k_, 0.05, 1.2)]
+        (La, Ra), (Lb, Rb) = render(P_, ev_, 2.4), render(Q_, ev_, 2.4)
+        if "echo" in off_ or "spring" in off_:
+            t_ = slice(int(1.45 * SR), int(2.3 * SR))
+            nf_tail[n_] = round(db(math.sqrt(np.mean(La[t_] ** 2 + Ra[t_] ** 2))) - db(math.sqrt(np.mean(Lb[t_] ** 2 + Rb[t_] ** 2)) + 1e-12), 1)
+        elif n_ == "Sync Snap Bass":   # the matrix's envelope sweep on the synced oscillator is over by 0.3 s
+            t_ = slice(int(0.06 * SR), int(0.3 * SR))
+            def nf_cen(x_):
+                X_ = np.abs(np.fft.rfft(x_ * np.hanning(len(x_)))); f_ = np.fft.rfftfreq(len(x_), 1 / SR); return float(np.sum(X_ * f_) / np.sum(X_))
+            nf_sweep = (round(nf_cen(La[t_] + Ra[t_])), round(nf_cen(Lb[t_] + Rb[t_])))
+        else:   # read on the held chord
+            t_ = slice(int(0.25 * SR), int(1.15 * SR))
+            nf_spec[n_] = round(float(np.max(np.abs(nf_bands(La[t_] + Ra[t_]) - nf_bands(Lb[t_] + Rb[t_])))), 1)
+    ck(f"Nf. the echo and spring patches ring on after the keys let go: the tail 0.25 to 1.1 s after note off is 10 dB or more above the same patch with the effect off ({nf_tail} dB)",
+       len(nf_tail) == 4 and all(v_ >= 10 for v_ in nf_tail.values()), nf_tail)
+    ck(f"Nf. Filter B on Serial Grit Bass, Split Horizon and Twin Pizzicato and the LC bank on Vowel Bank each move an octave band by 3 dB or more against the patch without it ({nf_spec} dB)",
+       len(nf_spec) == 4 and all(v_ >= 3 for v_ in nf_spec.values()), nf_spec)
+    ck(f"Nf. Sync Snap Bass: the matrix's filter envelope on the synced oscillator 2 lifts the spectral centroid of the first 0.3 s by a tenth or more (16 Nov: 926 against 761 Hz; the same patch read within 3 Hz over five renders each) ({nf_sweep[0]} Hz against {nf_sweep[1]} Hz without the slot)",
+       nf_sweep[0] >= 1.1 * nf_sweep[1], nf_sweep)
 
     # ---------------------------------------------------------------- 8. aliasing baseline
     for wave in ("saw", "pulse"):
@@ -2181,7 +2312,17 @@ with sync_playwright() as pw:
        and not pg.is_visible("#mFilt") and not pg.is_visible("#mCLpf") and pg.get_attribute("#devT", "aria-pressed") == "true"
        and "THYRA" in pg.inner_text("#devTitle") and pg.inner_text("#nameV1") == "LADDER")
     pg.click('#thyOsc .chip[data-path="osc1.wave"][data-val="square"]')
+    rate_q = """() => { const k = document.querySelector('#thyOsc .knob[data-path="osc3.rate"]'); return { op: getComputedStyle(k).opacity, lfo: __synth.patch().osc3.lfo, read: k.getAttribute('aria-valuetext') }; }"""
+    rate_off = pg.evaluate(rate_q)
     pg.click("#thyLfo"); pg.wait_for_timeout(150)
+    rate_on = pg.evaluate(rate_q)
+    pg.focus('#thyOsc .knob[data-path="osc3.rate"]'); pg.keyboard.press("Home"); pg.wait_for_timeout(60)
+    rate_lo = pg.evaluate(rate_q)["read"]
+    pg.keyboard.press("End"); pg.wait_for_timeout(60)
+    rate_hi = pg.evaluate(rate_q)["read"]
+    ck(f"T. osc 3's rate knob is dimmed while lfo is off and lit when it is on, and reads in hertz at both ends, not \"0\" at 0.05 Hz (review R1118-1, R1118-2: {rate_off}, {rate_on}, {rate_lo}, {rate_hi})",
+       rate_off["lfo"] is False and float(rate_off["op"]) < 0.6 and rate_on["lfo"] is True and float(rate_on["op"]) > 0.95
+       and rate_lo == "0.05 Hz" and rate_hi == "40 Hz")
     ck("T. a waveform chip and the low-oscillator switch edit the patch",
        pg.evaluate("__synth.patch().osc1.wave") == "square" and pg.evaluate("__synth.patch().osc3.lfo") is True)
     pg.reload(); pg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); pg.wait_for_timeout(200)
@@ -2240,6 +2381,28 @@ with sync_playwright() as pw:
     ck("M. a SMPTE-timed file is refused with a clear message", ok is False and "SMPTE" in pg.inner_text("#fileStat"), pg.inner_text("#fileStat"))
     ok = pg.evaluate("a => __synth.deck().importBytes(a, 'junk.mid')", list(b"RIFF....junk"))
     ck("M. a file that is not MIDI is refused with a clear message", ok is False and "not a Standard MIDI File" in pg.inner_text("#fileStat"))
+    # Robustness (10 Nov). A dense one-track file: a part's lowest and highest note were Math.min(...notes), which
+    # overflows the stack past about 124000 notes, so a 1 MB file was refused with "Maximum call stack size
+    # exceeded". The file is built in the page, byte by byte like the others here (concat, not a spread, for the
+    # same reason). 130000 notes, A on and off 12 ticks apart at 96 ppq, pitches 48 to 71 in turn.
+    DENSE = """n => { const t = [];
+      for (let i = 0; i < n; i++) t.push(0, 0x90, 48 + i % 24, 100, 12, 0x80, 48 + i % 24, 0);
+      t.push(0, 0xFF, 0x2F, 0); const L = t.length;
+      return [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96, 0x4D, 0x54, 0x72, 0x6B, (L >>> 24) & 255, (L >> 16) & 255, (L >> 8) & 255, L & 255].concat(t); }"""
+    dense_r = pg.evaluate("""([mk, n]) => { const a = (0, eval)(mk)(n); let ok; try { ok = __synth.deck().importBytes(a, 'dense.mid'); } catch (e) { ok = 'threw ' + e.message; }
+      let parts; try { parts = __synth.smf.read(a).song.parts.map(p => [p.notes, p.lo, p.hi]); } catch (e) { parts = 'threw ' + e.message; }
+      return { ok, bytes: a.length, stat: document.getElementById('fileStat').textContent, parts }; }""", [DENSE, 130000])
+    ck("M. a dense one-track file (130000 notes, about 1 MB) loads, with its lowest and highest note",
+       dense_r["ok"] is True and dense_r["parts"] == [[130000, 48, 71]] and "stack" not in dense_r["stat"], dense_r)
+    # A tempo of 0 microseconds a quarter put every later note at the same instant and read as "Infinity BPM"; it is
+    # skipped, so the file plays at the default 120 BPM: notes at 0 and 0.5 s, each half a second long.
+    Z0 = [0] + tempo(0) + [0, 0x90, 60, 100] + vlq(96) + [0x80, 60, 0] + [0, 0x90, 64, 100] + vlq(96) + [0x80, 64, 0] + EOT
+    r = pg.evaluate("a => __synth.smf.read(a)", mthd(0, 1, 96) + mtrk(Z0)); s_ = r["song"]
+    t_ = [round(e["time"], 4) for e in s_["parts"][0]["events"]] if s_["parts"] else []
+    ok = pg.evaluate("a => __synth.deck().importBytes(a, 'zero-tempo.mid')", mthd(0, 1, 96) + mtrk(Z0))
+    ck("M. a tempo of 0 in a file is skipped: 120 BPM, notes at 0 and 0.5 s, 1 s long, and the deck says 120 BPM",
+       r["tempos"] == [] and s_["bpm"] == 120 and t_ == [0, 0.5, 0.5, 1.0] and abs(s_["length"] - 1.0) < 1e-9 and ok is True and "120 BPM" in pg.inner_text("#fileStat"),
+       (r["tempos"], s_["bpm"], t_, s_["length"], pg.inner_text("#fileStat")))
 
     # round trip: write then read gives the same events, timing within one tick at 480 ppq, 120 BPM (1.04 ms)
     parts = [{"name": "Filament: Test", "ch": 0, "events": [{"time": 0.0, "data": [0x90, 60, 100]}, {"time": 0.1234, "data": [0xE0, 0, 96]}, {"time": 0.3337, "data": [0xB0, 1, 77]},
@@ -2287,6 +2450,16 @@ with sync_playwright() as pw:
     pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
     sg = pg.evaluate("__synth.deck().song()")
     ck("M. defaults: first melodic track on Filament, the lowest-pitched on Cathode, channel 10 off", sg["assign"] == ["filament", "cathode", "off"], sg)
+    # A file that fails leaves the previous one loaded, playable and rendering, so the status names it (review R1113-5)
+    kept = pg.evaluate("""() => { const r = [];
+      for (const [a, nm] of [[[82, 73, 70, 70, 1, 2, 3, 4], 'bad.mid'], [[77, 84, 104, 100, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96, 77, 84, 114, 107, 0, 0, 0, 4, 0, 255, 47, 0], 'empty.mid']]) {
+        const ok = __synth.deck().importBytes(a, nm);
+        r.push({ ok, stat: document.getElementById('fileStat').textContent, song: (__synth.deck().song() || {}).name, play: !document.getElementById('playFile').disabled });
+      }
+      return r; }""")
+    ck("M. a failed import says the previous file is still loaded (review R1113-5)",
+       all(k["ok"] is False and k["stat"].endswith("Still loaded: two.mid.") and k["play"] for k in kept) and "not a Standard MIDI File" in kept[0]["stat"] and "no notes" in kept[1]["stat"], kept)
+    pg.evaluate("a => __synth.deck().importBytes(a, 'two.mid')", TWO)
     tri = cpatch(vco1={"wave": "tri", "scale": 8, "level": 0.8})
     _, (L, R) = render_deck(sine, tri)
     seg = L[int(0.2 * SR):int(0.9 * SR)]; seg2 = L[int(1.2 * SR):int(1.9 * SR)]
@@ -2394,6 +2567,129 @@ with sync_playwright() as pw:
     ck("M. Render WAV: both devices are in it (the C4 chord root and the D2 bass)", tone_amp(seg, 261.63) > 30 * tone_amp(seg, 480.0) and tone_amp(seg, 73.42) > 30 * tone_amp(seg, 480.0)
        and float(np.max(np.abs(pcm))) <= 1.0, (db(tone_amp(seg, 261.63)), db(tone_amp(seg, 73.42)), db(tone_amp(seg, 480.0))))
     ck("M. Render WAV: a progress note, then the result", "rendered" in pg.inner_text("#wavStat"), pg.inner_text("#wavStat"))
+
+    # Review 10 Nov (R1110-2): Render WAV picked the take whenever the take was the last thing played, so
+    # a file imported after that (on show in the track list, its play key lit) rendered the old take
+    # instead. It now renders what came in last: the file after an import, the take after a recording.
+    pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.noteOn(60, 0.8); await w(200); __synth.noteOff(60); await w(100); __synth.deck().stopRec();
+      __synth.deck().play('take'); await w(300); __synth.deck().stop(); }""")
+    pg.evaluate("a => __synth.deck().importBytes(a, 'after.mid')", TWO)
+    with pg.expect_download(timeout=60000) as dl:
+        pg.click("#wavBtn")
+    wsrc = [dl.value.suggested_filename]
+    pg.evaluate("__synth.deck().arm()")
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.noteOn(62, 0.8); await w(200); __synth.noteOff(62); await w(100); __synth.deck().stopRec(); }""")
+    with pg.expect_download(timeout=60000) as dl:
+        pg.click("#wavBtn")
+    wsrc.append(dl.value.suggested_filename)
+    ck("M. Render WAV renders what came in last: a file imported after a take was played, then a take recorded after that",
+       wsrc[0].startswith("filament-after-") and wsrc[1].startswith("filament-take-"), wsrc)
+
+    # Review 13 Nov: two pitch faults heard through the live output (the master recorder, 24-bit WAV).
+    def _rec24(r_):
+        b_ = base64.b64decode(r_["b64"]); i_ = 12; sr_ = 0; dat_ = b""
+        while i_ + 8 <= len(b_):
+            cid_, sz_ = b_[i_:i_ + 4], int.from_bytes(b_[i_ + 4:i_ + 8], "little")
+            if cid_ == b"fmt ": sr_ = int.from_bytes(b_[i_ + 12:i_ + 16], "little")
+            if cid_ == b"data": dat_ = b_[i_ + 8:i_ + 8 + sz_]
+            i_ += 8 + sz_ + (sz_ & 1)
+        a_ = np.frombuffer(dat_[:len(dat_) // 6 * 6], dtype=np.uint8).reshape(-1, 3).astype(np.int32)
+        v_ = a_[:, 0] | (a_[:, 1] << 8) | (a_[:, 2] << 16); v_ = np.where(v_ >= 1 << 23, v_ - (1 << 24), v_) / float(1 << 23)
+        return sr_, v_.reshape(-1, 2)[:, 0]
+    def _pitch(x_, sr_, t0_, t1_):
+        s_ = x_[int(t0_ * sr_):int(t1_ * sr_)]
+        if len(s_) < 256: return 0.0
+        w_ = np.abs(np.fft.rfft(s_ * np.hanning(len(s_)), 1 << 18)); return float(np.argmax(w_) * sr_ / (1 << 18))
+    def _onsets(x_, sr_, thr=0.02, hop=0.02):
+        n_ = int(len(x_) / sr_ / hop); e_ = [float(np.sqrt(np.mean(x_[int(i * hop * sr_):int((i + 1) * hop * sr_)] ** 2))) for i in range(n_)]
+        return [i * hop for i in range(1, n_) if e_[i] > thr and e_[i - 1] <= thr]
+    # R1113-1: a looping file that ends with the pitch bend up started every later pass bent (a sine A3 at
+    # 220 Hz came round at 247 Hz). The loop wrap now sends bend, wheel and pressure back to rest.
+    pg.evaluate("__synth.panic()"); pg.evaluate("p => __synth.setPatch(p)", sine); pg.wait_for_timeout(150)
+    BEND_END = mthd(0, 1, 96) + mtrk([0] + tempo(500000) + [0, 0x90, 57, 100] + vlq(77) + [0x80, 57, 0]
+                                     + vlq(10) + [0xE0, 0x7F, 0x7F] + vlq(105) + [0xFF, 0x2F, 0])
+    pg.evaluate("a => __synth.deck().importBytes(a, 'bendend.mid')", BEND_END)
+    pg.click("#loopBtn"); pg.evaluate("() => __synth.recordStart()"); pg.wait_for_timeout(150)
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(2700)
+    pg.click("#stopBtn"); pg.click("#loopBtn")
+    sr_b, Lb = _rec24(pg.evaluate("() => __synth.recordStop()"))
+    ons = _onsets(Lb, sr_b); hz = [round(_pitch(Lb, sr_b, o + 0.05, o + 0.3), 1) for o in ons]
+    ck(f"M. loop: a file that ends with the bend up comes round in tune (passes at {hz} Hz)",
+       len(hz) >= 2 and all(abs(h - 220) < 3 for h in hz), (ons, hz))
+    # R1113-2: CC 121 (Reset All Controllers) was ignored, so a bend held over it stayed.
+    pg.evaluate("__synth.panic()"); pg.evaluate("__synth.midi([0xE0, 0, 64])"); pg.wait_for_timeout(100)
+    pg.evaluate("() => __synth.recordStart()"); pg.wait_for_timeout(100)
+    pg.evaluate("""async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+      __synth.midi([0x90, 57, 100]); await w(300); __synth.midi([0xE0, 0x7F, 0x7F]); __synth.midi([0xB0, 1, 127]);
+      __synth.midi([0xB0, 64, 127]); await w(400); __synth.midi([0xB0, 121, 0]); await w(500); }""")
+    rs_ = pg.evaluate("() => ({ pb: +document.getElementById('pbStrip').getAttribute('aria-valuenow'), mw: +document.getElementById('mwStrip').getAttribute('aria-valuenow'), sus: __synth.state().sustain })")
+    sr_c, Lc = _rec24(pg.evaluate("() => __synth.recordStop()")); pg.evaluate("__synth.midi([0x80, 57, 0])"); pg.evaluate("__synth.panic()")
+    oc = _onsets(Lc, sr_c); o0 = oc[0] if oc else 0.0
+    hz_b, hz_r = _pitch(Lc, sr_c, o0 + 0.45, o0 + 0.68), _pitch(Lc, sr_c, o0 + 0.8, o0 + 1.15)
+    ck(f"M. CC 121 resets the controllers: bent {hz_b:.1f} Hz, then {hz_r:.1f} Hz (A3 220); strips home, pedal up ({rs_})",
+       abs(hz_b - 246.9) < 7 and abs(hz_r - 220) < 3 and abs(rs_["pb"]) < 0.01 and abs(rs_["mw"]) < 0.01 and rs_["sus"] is False, (oc, hz_b, hz_r, rs_))
+
+    # R1116-2: moving a track to another device while the file plays restarted it at the scheduling
+    # position, 150 ms ahead of the sound, so the notes already sent in that window were flushed and lost.
+    RUN = mthd(1, 3, 96) + mtrk([0] + tempo(500000) + EOT) \
+        + mtrk([0] + tname("Run") + sum(([0 if k == 0 else 2, 0x90, 60 + k % 12, 100, 10, 0x80, 60 + k % 12, 0] for k in range(40)), []) + EOT) \
+        + mtrk([0] + tname("Low") + [0, 0x91, 36, 100] + vlq(480) + [0x81, 36, 0] + EOT)
+    pg.evaluate("__synth.panic()"); pg.evaluate("a => __synth.deck().importBytes(a, 'run.mid')", RUN)
+    pg.evaluate("""() => { const E = __synth.engine(); window.__ra = { log: [], ph: 0, o: E.sendTo };
+      E.sendTo = (d, m) => { if (m.t === 'on' && m.pb) __ra.log.push({ n: m.n, at: m.at, ph: __ra.ph }); return __ra.o.call(E, d, m); }; }""")
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(1000)
+    ra_fr = pg.evaluate("() => { const f = Math.round(__synth.engine().transport.state().frame); __ra.ph = 1; __synth.deck().assign(1, 'filament'); return f; }")
+    pg.wait_for_timeout(2200)
+    ra = pg.evaluate("() => { __synth.engine().sendTo = __ra.o; __synth.deck().stop(); return __ra.log; }")
+    ra_mel = [x for x in ra if x["n"] != 36]
+    ra_lost = [x for x in ra_mel if x["ph"] == 0 and x["at"] > ra_fr]
+    ra_land = sorted(set(x["at"] for x in ra_mel if not (x["ph"] == 0 and x["at"] > ra_fr)))
+    ck(f"M. moving a track to another device mid-play keeps every note: {len(ra_land)} of 40 melody notes land ({len(ra_lost)} had been sent ahead and were flushed by the restart) (review R1116-2)",
+       len(ra_land) >= 40 and any(x["ph"] == 1 for x in ra_mel), (ra_fr, len(ra_lost), len(ra_land)))
+
+    # R1119-1: the deck's file end and stop, and the song library's stop, sent a pedal-up to the device
+    # while the page's pedal (CC 64, space or hold) was still down, so the next note played with the pedal
+    # down was not held, and at a file's end a note the pedal was holding went off under the player's foot.
+    pg.evaluate("__synth.panic()"); pg.evaluate("p => __synth.setPatch(p)", sine); pg.wait_for_timeout(150)
+    PED = mthd(0, 1, 96) + mtrk([0] + tempo(500000) + [0, 0x90, 76, 100] + vlq(24) + [0x80, 76, 0] + EOT)
+    fnotes = lambda: pg.evaluate("() => ((__synth.engine().meters.filament || {}).notes || []).slice()")
+    ped_res = {}
+    for kind_ in ("deck end", "deck stop", "library stop"):
+        pg.evaluate("__synth.midi([0xB0, 64, 127])"); pg.evaluate("__synth.midi([0x90, 50, 100])"); pg.wait_for_timeout(120)
+        pg.evaluate("__synth.midi([0x80, 50, 0])"); pg.wait_for_timeout(150)
+        if kind_ == "deck end":
+            pg.evaluate("a => __synth.deck().importBytes(a, 'ped.mid')", PED); pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(900)
+        elif kind_ == "deck stop":
+            pg.evaluate("a => __synth.deck().importBytes(a, 'ped.mid')", PED); pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(100)
+            pg.evaluate("__synth.deck().stop()"); pg.wait_for_timeout(200)
+        else:
+            pg.evaluate("a => __synth.player().importBytes(a, 'ped.mid')", PED); pg.wait_for_timeout(200)
+            pg.evaluate("__synth.player().play()"); pg.wait_for_timeout(150); pg.evaluate("__synth.player().stop()"); pg.wait_for_timeout(200)
+        kept_ = 50 in fnotes()
+        pg.evaluate("__synth.midi([0x90, 52, 100])"); pg.wait_for_timeout(120); pg.evaluate("__synth.midi([0x80, 52, 0])"); pg.wait_for_timeout(300)
+        held_ = 52 in fnotes(); sus_ = pg.evaluate("__synth.state().sustain")
+        pg.evaluate("__synth.midi([0xB0, 64, 0])"); pg.wait_for_timeout(300)
+        ped_res[kind_] = {"kept": kept_, "next held": held_, "page pedal": sus_, "after pedal up": fnotes()}
+        pg.evaluate("__synth.panic()"); pg.wait_for_timeout(100)
+    ck(f"M. the pedal stays down through the deck's file end, the deck's stop and the library's stop: the next note is held, a held note survives a file end, and pedal-up lets go ({ped_res}) (review R1119-1)",
+       all(r["next held"] and r["page pedal"] is True and r["after pedal up"] == [] for r in ped_res.values()), ped_res)
+    # R1119-2: the file's own end ran Stop's flush and panic, so a chord held on the keys (or by the pedal)
+    # over the last bar was cut the moment the file ended. Stop pressed by hand still silences everything.
+    pg.evaluate("a => __synth.deck().importBytes(a, 'ped.mid')", PED)
+    pg.evaluate("__synth.midi([0x90, 50, 100])"); pg.evaluate("__synth.midi([0xB0, 64, 127])"); pg.evaluate("__synth.midi([0x90, 53, 100])")
+    pg.wait_for_timeout(100); pg.evaluate("__synth.midi([0x80, 53, 0])"); pg.wait_for_timeout(100)
+    pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(900)
+    end_ = {"playing": pg.evaluate("__synth.deck().playing()"), "notes": sorted(fnotes())}
+    pg.evaluate("__synth.midi([0xB0, 64, 0])"); pg.evaluate("__synth.midi([0x80, 50, 0])"); pg.wait_for_timeout(300)
+    end_["released"] = fnotes()
+    pg.evaluate("__synth.midi([0x90, 50, 100])"); pg.evaluate("__synth.deck().play('file')"); pg.wait_for_timeout(60)
+    pg.evaluate("__synth.deck().stop()"); pg.wait_for_timeout(200)
+    end_["after Stop"] = fnotes(); pg.evaluate("__synth.midi([0x80, 50, 0])"); pg.evaluate("__synth.panic()")
+    ck(f"M. a file's own end keeps the key held on the page (50) and the note the pedal holds (53); the file's last note rings on under the pedal; letting go releases them all; Stop still silences ({end_}) (review R1119-2)",
+       end_["playing"] is False and {50, 53} <= set(end_["notes"]) and end_["released"] == [] and end_["after Stop"] == [], end_)
 
     # Review 17 Oct: Render WAV went through no master bus, so a reverb you could hear was missing
     # from the file. The deck now hands the master state to the offline render.
@@ -2754,13 +3050,14 @@ with sync_playwright() as pw:
           const c = CM.normalizeC({ device: 'cathode', echo: { on: true, mode: 'offset', sync: '1/4', fb: 40 } }).echo;
           const d = DM.normalizeDrum({ echo: { on: true, mode: 'pingpong' } }).echo;
           const onF = PM.FACTORY.filter(p => p.echo && p.echo.on).map(p => p.name), onC = CM.C_FACTORY.filter(p => p.echo && p.echo.on).map(p => p.name);
-          return { old, bad, c: [c.on, c.mode, c.sync, c.fb, c.time], d: [d.on, d.mode, d.mix], onF, onC, nF: PM.FACTORY.length, allF: PM.FACTORY.every(p => p.echo && p.echo.mode === 'mono') }; }""")
+          return { old, bad, c: [c.on, c.mode, c.sync, c.fb, c.time], d: [d.on, d.mode, d.mix], onF, onC, nF: PM.FACTORY.length, notMono: PM.FACTORY.filter(p => !(p.echo && p.echo.mode === 'mono')).map(p => p.name) }; }""")
         ck("Te. schema: a patch from before the echo loads with it off at the defaults",
            nz["old"] == {"on": False, "mode": "mono", "time": 375, "sync": "off", "fb": 35, "mix": 30, "wow": 20, "flutter": 20, "drive": 3, "tone": 5}, nz["old"])
         ck("Te. schema: junk clamps (time 40, feedback 100, mix 0, flutter 100, drive 10, tone 0) and unknown names fall back (mono, sync off)",
            nz["bad"] == {"on": True, "mode": "mono", "time": 40, "sync": "off", "fb": 100, "mix": 0, "wow": 20, "flutter": 100, "drive": 10, "tone": 0}, nz["bad"])
         ck("Te. schema: Cathode and Dekatron patches carry the same echo fields", nz["c"] == [True, "offset", "1/4", 40, 375] and nz["d"] == [True, "pingpong", 30], nz)
-        ck(f"Te. schema: no factory patch switches the echo on, so none sounds different ({nz['nF']} Filament patches)", nz["onF"] == [] and nz["onC"] == [] and nz["allF"], nz)
+        ck(f"Te. schema: only the two 16 Nov patches (Echo Lead, Tape Wobble) switch the echo on or leave mono, so no older patch sounds different ({nz['nF']} Filament patches)",
+           nz["onF"] == ["Echo Lead", "Tape Wobble"] and nz["onC"] == [] and nz["notMono"] == ["Echo Lead", "Tape Wobble"], nz)
         # idle: off unplugs the feed (offline at once); live, off waits for the fade and on replugs at once
         idl = pg.evaluate("""async () => { const eng = await import('/synth/engine.js'), PM = await import('/synth/patches.js');
           const ctx = new OfflineAudioContext(2, 4800, 48000), E = await eng.createEngine(ctx, { patch: PM.normalize({}), events: [] });
@@ -2996,7 +3293,8 @@ with sync_playwright() as pw:
         ck("Sp. schema: junk clamps (mix 100, decay 0.5, drip 0, drive 10) and a non-number keeps the default (tone 5)",
            nz["bad"] == {"on": True, "mix": 100, "decay": 0.5, "tone": 5, "drip": 0, "drive": 10}, nz["bad"])
         ck("Sp. schema: Cathode and Dekatron patches carry the same spring fields", nz["c"] == [True, 4, 25] and nz["d"] == [True, 60, 2.5], nz)
-        ck(f"Sp. schema: no factory patch switches the spring on, so none sounds different ({nz['nF']} Filament patches)", nz["onF"] == [] and nz["onC"] == [], nz)
+        ck(f"Sp. schema: only the two 16 Nov patches (Spring Clavier, Spring Twang) switch the spring on, so no older patch sounds different ({nz['nF']} Filament patches)",
+           nz["onF"] == ["Spring Clavier", "Spring Twang"] and nz["onC"] == [], nz)
         # rack.js is imported inside worklet scopes (heptode-dsp.js reaches it through patches.js), which have no URL or window:
         # a module that imports patches.js must still register its processor (a first build made the spring's URL at the top
         # of rack.js, and Heptode's worklet stopped loading, and with it every device hosted after it)
@@ -3522,6 +3820,19 @@ with sync_playwright() as pw:
     pg.keyboard.press("z")
     pg.keyboard.down(" "); ck("space is the sustain pedal", pg.evaluate("__synth.state()")["sustain"]); pg.keyboard.up(" ")
     ck("sustain pedal up", not pg.evaluate("__synth.state()")["sustain"])
+    # R1116-1: Space held, then focus moved into a text box (a click or Tab into the tempo box) before
+    # Space came up: the keyup was taken for typing and the pedal stayed down, so every later note rang on.
+    # A space typed inside a box must still leave the pedal alone. The box is a plain text input added for
+    # the check, so it is visible whichever tab is showing.
+    pg.evaluate("() => { const i = document.createElement('input'); i.type = 'text'; i.id = 'spBox'; i.setAttribute('aria-label', 'test box'); i.style.cssText = 'position:fixed;top:0;left:0;z-index:99999'; document.body.appendChild(i); document.activeElement && document.activeElement.blur(); }")
+    pg.keyboard.down(" "); sp_on = pg.evaluate("__synth.state()")["sustain"]
+    pg.focus("#spBox"); sp_in = pg.evaluate("document.activeElement.id"); pg.keyboard.up(" "); sp_box = pg.evaluate("__synth.state()")["sustain"]
+    sp_lamp = pg.evaluate("document.getElementById('holdBtn').getAttribute('aria-pressed')")
+    pg.evaluate("() => { document.activeElement.blur(); document.getElementById('holdBtn').click(); }"); pg.focus("#spBox"); pg.keyboard.press(" ")
+    sp_typed = pg.evaluate("__synth.state()")["sustain"]
+    pg.evaluate("() => { document.getElementById('spBox').remove(); document.getElementById('holdBtn').click(); }")
+    ck(f"K. Space down on the page, up inside a text box: the pedal lets go (sustain {sp_on} then {sp_box}, hold lamp {sp_lamp}); a space typed in a box leaves the hold on ({sp_typed}) (review R1116-1)",
+       sp_on is True and sp_in == "spBox" and sp_box is False and sp_lamp == "false" and sp_typed is True and not pg.evaluate("__synth.state()")["sustain"], (sp_on, sp_in, sp_box, sp_lamp, sp_typed))
 
     # ---------------------------------------------------------------- stuck keys
     # A second keydown that is not marked repeat (Shift reissues the key this way) used to
@@ -4747,6 +5058,15 @@ with sync_playwright() as pw:
         rp.fill(sel_, "5000000000"); rp.press(sel_, "Enter")
         rp.wait_for_timeout(150)
         rseed[dv_] = {"seed": rp.evaluate("__synth.patch().seed"), "max": rp.get_attribute(sel_, "max")}
+    # Review 21 Nov (R1121-2): Trochotron's box kept a typed 99999999999 on show while the piece used 4294967295
+    # (Phantastron's box already showed the clamped seed)
+    rbox = {}
+    for dv_, sel_ in (("trochotron", "#trSeed"), ("phantastron", "#phSeed")):
+        rp.evaluate("d => __synth.setDevice(d)", dv_); rp.wait_for_selector(sel_, state="visible", timeout=10000)
+        rp.fill(sel_, "99999999999"); rp.press(sel_, "Enter"); rp.wait_for_timeout(120)
+        rbox[dv_] = [rp.evaluate("__synth.patch().seed"), rp.input_value(sel_)]
+        rp.press(sel_, "Tab"); rp.wait_for_timeout(120)
+        rbox[dv_].append(rp.input_value(sel_))
     rp.evaluate("__synth.setDevice('gyrotron')"); rp.wait_for_selector("#gyCanvas", state="visible", timeout=10000)
     rp.evaluate("() => __synth.setPatch({ device: 'gyrotron', name: 'Low Root', root: 30 })")
     rp.wait_for_function("() => __synth.patch().root === 30", timeout=5000); rp.wait_for_timeout(100)
@@ -4755,6 +5075,8 @@ with sync_playwright() as pw:
     rp.close()
     ck(f"R. a typed seed of 5000000000 is held at 4294967295 on Trochotron and Phantastron (not wrapped to 705032704), and each field's max says so ({rseed})",
        all(v_ == {"seed": 4294967295, "max": "4294967295"} for v_ in rseed.values()) and len(rseed) == 2, rseed)
+    ck(f"R. a typed seed past the top shows the seed that is used, 4294967295, in the box on Trochotron and Phantastron, after Enter and after Tab (review R1121-2: {rbox})",
+       all(v_ == [4294967295, "4294967295", "4294967295"] for v_ in rbox.values()) and len(rbox) == 2, rbox)
     ck(f"R. Gyrotron's root knob spans its table row (24..96) and a patch with root 30 reads 30 on it ({rroot})",
        rroot == {"root": 30, "min": "24", "max": "96", "now": "30", "kv": "30"} and not rperr, (rroot, rperr))
     ck("R. a project normalizes tempo, mixer, both patches and a file name", pure["name"] == "Night Shift" and pure["pTempo"] == 40 and pure["pDev"] == "filament" and pure["pMix"]["level"] == 1 and pure["pMix"]["pan"] == -1 and pure["pMix"]["mute"] and pure["wave"] == "sine" and pure["catDev"] == "cathode" and pure["file"] == "filament-night-shift.json", pure)
@@ -4956,11 +5278,17 @@ with sync_playwright() as pw:
     # Review 27 Oct (R1027-1): the saved arms and desk bus come back only when the boot finishes (several
     # seconds on a phone or a slow link). Save project or save mix in that window wrote no arms and the
     # default bus over the saved ones. Holding one device's worklet back keeps the page in that window.
+    # 12 Nov 2026: the hold was a context.route() abort of resnatron.worklet.js, which never fired (measured:
+    # 0 route hits; a worklet's module fetch does not reach Playwright's routes here), so the window was only
+    # the boot's own length, and the check passed while the boot took more than 400 ms after ready(). With the
+    # worklet modules loading together it can finish inside that, so the hold is now in the page, the way the
+    # M. checks hold it: Resnatron's addModule waits on a promise nothing resolves.
     bctx = b.new_context(viewport={"width": 1366, "height": 900}, service_workers="block"); bpg = bctx.new_page()
     bpg.goto(BASE); bpg.wait_for_function("window.__synth && __synth.booted()", timeout=30000)
     bpg.evaluate("""() => { const p = __synth.project(); p.name = 'Early'; p.armed = ['cathode', 'thyratron'];
       p.bus = { reverbSeconds: 2.2, delayTime: 0.5, delayFeedback: 0.6 }; localStorage.setItem('dxrack_project', JSON.stringify(p)); }""")
-    bctx.route("**/resnatron.worklet.js", lambda r: r.abort())
+    bctx.add_init_script("""(() => { const am = AudioWorklet.prototype.addModule; const hold = new Promise(() => {});
+      AudioWorklet.prototype.addModule = function (url, o) { return String(url).includes('resnatron.worklet') ? hold : am.call(this, url, o); }; })()""")
     bpg.reload(); bpg.wait_for_function("window.__synth && __synth.ready()", timeout=20000); bpg.wait_for_timeout(400)
     early = bpg.evaluate("""() => { const booted = __synth.booted(); document.getElementById('projSave').click();
       const p = JSON.parse(localStorage.getItem('dxrack_project')); const m = __synth.mixSession();
@@ -5134,6 +5462,170 @@ with sync_playwright() as pw:
         uni_res.append((uname, round(worst / max(steady, 1e-9), 2)))
     ck("Mx. a strip going back to unity glides there with no click (unmute, level, pan, a solo let go: largest step within 1.5x the held sine's own)",
        all(x is not None and x < 1.5 for _, x in uni_res), uni_res)
+    # Review 10 Nov (R1110-1): a master bus move landed in one sample. On the held A2 sine through the live
+    # output one BPM on the master tempo knob with the delay synced was 31x the sine's own largest step, a
+    # delay mix 0.35 to 0.8 21x, a reverb mix 0.28 to 0.8 42x, switching the delay on 9x. The delay now
+    # crossfades to a new time over 20 ms, the wet mixes ramp (5 ms for 0 to 1, landing exactly), and a delay switched on fills its line
+    # over the same glide (its first echo of a held note started at full level: 15x).
+    mb_cases = [("tempo 120 to 121, delay on 1/8", {"delay": {"on": True, "sync": True, "div": "1/8", "mix": 0.35, "feedback": 0.35}}, {"tempo": 121}),
+                ("delay 1/8 to 1/4", {"delay": {"on": True, "sync": True, "div": "1/8", "mix": 0.35, "feedback": 0.35}}, {"delay": {"div": "1/4"}}),
+                ("delay mix 0.35 to 0.8", {"delay": {"on": True, "sync": True, "div": "1/8", "mix": 0.35, "feedback": 0.35}}, {"delay": {"mix": 0.8}}),
+                ("reverb mix 0.28 to 0.8", {"reverb": {"on": True, "mix": 0.28}}, {"reverb": {"mix": 0.8}}),
+                ("delay switched on", {"delay": {"on": False}}, {"delay": {"on": True, "mix": 0.35}})]
+    mb_m0 = pg.evaluate("() => JSON.parse(JSON.stringify(__synth.master()))")
+    mb_res = []
+    for mname, ma, mb in mb_cases:
+        r = pg.evaluate("""async ([a, b]) => {
+          const w = ms => new Promise(r => setTimeout(r, ms));
+          __synth.setMaster({ tempo: 120, delay: { on: false }, reverb: { on: false }, comp: { on: false } }); await w(200);
+          __synth.setMaster(a); await w(200);
+          __synth.noteOn(45, 0.8); await w(600); await __synth.recordStart(); await w(250);
+          __synth.setMaster(b); await w(700);
+          const rec = await __synth.recordStop(); __synth.noteOff(45); await w(300);
+          return rec && rec.b64; }""", [ma, mb])
+        mwav = parse_wav(base64.b64decode(r)) if r else None
+        if not mwav: mb_res.append((mname, None)); continue
+        u8 = np.frombuffer(mwav["data"][:len(mwav["data"]) // 6 * 6], np.uint8).reshape(-1, 6).astype(np.int32)
+        v = u8[:, 0] | (u8[:, 1] << 8) | (u8[:, 2] << 16); v = np.where(v & 0x800000, v - 0x1000000, v) / 8388607.0
+        srr = mwav["rate"]; d = np.abs(np.diff(v))
+        # the larger of the steady steps before the move and after it has settled (a reverb mix of 0.8 is
+        # rougher than the sine alone; that is the effect, not a click)
+        steady = max(float(np.max(d[int(0.03 * srr):int(0.2 * srr)])), float(np.max(d[int(0.75 * srr):int(0.95 * srr)])))
+        worst = float(np.max(d[int(0.03 * srr):int(0.95 * srr)]))
+        mb_res.append((mname, round(worst / max(steady, 1e-9), 2)))
+    pg.evaluate("m => __synth.setMaster(m)", mb_m0)
+    ck("Mx. a master bus move glides with no click (tempo with the delay synced, delay division, delay and reverb mix, delay on: largest step within 2x the steady signal's own)",
+       all(x is not None and x < 2 for _, x in mb_res), mb_res)
+    # Improvement 9 Nov: the wait before the reroute above is counted on the audio clock. It was a 200 ms
+    # wall-clock timer, while the glide runs on ctx.currentTime; under load the audio clock fell behind
+    # (measured: 177 ms of audio in 276 ms of wall time), and the check above failed now and then (42x). Here
+    # the audio clock stops outright: a mixer on its own context, a stereo DC source, the context suspended
+    # right after the move back and held 450 ms (past the old timer), then resumed. Deterministic: the largest
+    # sample step is read in units of the glide's own first step (0.5 / 960), so a reroute before the glide
+    # lands is the whole jump (960x on main), and the glide alone is 1x or less.
+    # Improvement 14 Nov: a sounding live strip is not rewired back to the wire any more (see "Wiring" in
+    # mixer.js): it keeps its chain and glides, so the route reads 'chain' while stopped and after.
+    stall = pg.evaluate("""async () => {
+      const { createMixer } = await import('/synth/mixer.js');
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const cases = [['unmute', 'a', { mute: true }, { mute: false }], ['level 0.3 back to 1', 'a', { level: 0.3 }, { level: 1 }],
+                     ['pan hard left back to centre', 'a', { pan: -1 }, { pan: 0 }], ['a solo let go', 'b', { solo: true }, { solo: false }]];
+      const CAP = "registerProcessor('mx-stall-cap', class extends AudioWorkletProcessor { process(i) { const x = i[0]; if (x && x.length) this.port.postMessage([x[0].slice(), (x[1] || x[0]).slice()]); return true; } });";
+      const url = URL.createObjectURL(new Blob([CAP], { type: 'application/javascript' }));
+      const out = [];
+      for (const [name, id, a, b] of cases) {
+        const ctx = new AudioContext({ sampleRate: 48000 });
+        try { await ctx.resume(); await ctx.audioWorklet.addModule(url); } catch (e) { out.push([name, null, String(e)]); continue; }
+        const mx = createMixer(ctx), sum = ctx.createGain(), hush = ctx.createGain(); hush.gain.value = 0;
+        const cap = new AudioWorkletNode(ctx, 'mx-stall-cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit' });
+        const dc = ctx.createConstantSource(); dc.offset.value = 0.5;
+        const st = ctx.createChannelMerger(2); dc.connect(st, 0, 0); dc.connect(st, 0, 1);
+        const L = [], R = []; let on = false;
+        cap.port.onmessage = e => { if (on) { L.push(e.data[0]); R.push(e.data[1]); } };
+        sum.connect(cap); cap.connect(hush); hush.connect(ctx.destination);
+        mx.attach('a', st); mx.connect(sum); dc.start();
+        await w(300); on = true; await w(200);
+        mx.set(id, a); await w(300);
+        mx.set(id, b); await ctx.suspend(); await w(450);
+        const route = () => (mx.route ? mx.route('a') : 'no route()'), held = route();
+        await ctx.resume(); await w(600);
+        on = false;
+        let worst = 0;
+        for (const side of [L, R]) {
+          const n = side.reduce((s, x) => s + x.length, 0), v = new Float32Array(n); let o = 0;
+          side.forEach(x => { v.set(x, o); o += x.length; });
+          for (let i = 1; i < n; i++) worst = Math.max(worst, Math.abs(v[i] - v[i - 1]));
+        }
+        out.push([name, +(worst / (0.5 / 960)).toFixed(2), held, route()]);
+        try { dc.stop(); await ctx.close(); } catch (e) {}
+      }
+      return out; }""")
+    ck("Mx. with the audio clock stopped right after a sounding strip goes back to unity, the move still glides on the audio clock (largest step within 1.5x the glide's own; the strip stays on its chain, no rewire)",
+       len(stall) == 4 and all(s[1] is not None and s[1] < 1.5 and s[2] == "chain" and s[3] == "chain" for s in stall), stall)
+    # Improvement 14 Nov: a move used to rewire the strip with two graph calls (disconnect, then connect), and
+    # the audio thread can render a quantum between them: on a busy machine the strip went silent for 128
+    # samples, a click (the live "back to unity" check above failed once at 43.6x the held sine's step). Here
+    # the main thread is held 6 ms after every disconnect(), so any such window is hit every time: a stereo
+    # DC 0.5 on strip a, moved once first (its first move off the wire is the one rewire with sound left,
+    # see mixer.js), then 3 rounds of level 0.999, pan hard left, mute and a solo on strip b, each and back.
+    # Any step over 0.05 is a dropout (the glides step 0.0005 or less). On origin/main 16 of the 24 moves
+    # dropped out (64 steps of 0.5, measured). A silent strip c is moved and moved back: it takes its chain
+    # and goes back to the wire (the chain costs the audio thread; a silent strip has nothing to lose).
+    # Then, with no stall: a sounding strip moved and back at its defaults passes its samples unchanged (a
+    # stereo pair through the strip against the same pair wired past it), and a mono source reaches both sides.
+    gapless = pg.evaluate("""async () => {
+      const { createMixer } = await import('/synth/mixer.js');
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const CAP = "registerProcessor('mx-gap-cap', class extends AudioWorkletProcessor { process(i) { const x = i[0]; if (x && x.length) this.port.postMessage(x.map(c => c.slice())); return true; } });";
+      const url = URL.createObjectURL(new Blob([CAP], { type: 'application/javascript' }));
+      const join = (B, k) => { const n = B.reduce((s, x) => s + x[k].length, 0), v = new Float32Array(n); let o = 0; B.forEach(x => { v.set(x[k], o); o += x[k].length; }); return v; };
+      const out = {};
+      { // 1. moves with the main thread held after every disconnect
+        const ctx = new AudioContext({ sampleRate: 48000 }); await ctx.resume(); await ctx.audioWorklet.addModule(url);
+        const mx = createMixer(ctx), sum = ctx.createGain(), hush = ctx.createGain(); hush.gain.value = 0;
+        const cap = new AudioWorkletNode(ctx, 'mx-gap-cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit' });
+        const dc = ctx.createConstantSource(); dc.offset.value = 0.5;
+        const st = ctx.createChannelMerger(2); dc.connect(st, 0, 0); dc.connect(st, 0, 1);
+        const z = ctx.createConstantSource(); z.offset.value = 0; const st2 = ctx.createChannelMerger(2); z.connect(st2, 0, 0); z.connect(st2, 0, 1);
+        const z3 = ctx.createConstantSource(); z3.offset.value = 0;
+        sum.connect(cap); cap.connect(hush); hush.connect(ctx.destination);
+        mx.attach('a', st); mx.attach('b', st2); mx.attach('c', z3); mx.connect(sum); dc.start(); z.start(); z3.start();
+        await w(200); mx.set('a', { level: 0.999 }); await w(250); mx.set('a', { level: 1 }); await w(300);
+        const B = []; let on = false; cap.port.onmessage = e => { if (on) B.push(e.data); };
+        const orig = AudioNode.prototype.disconnect; let held = 0;
+        AudioNode.prototype.disconnect = function (...a) { const r = orig.apply(this, a); held++; const t = performance.now() + 6; while (performance.now() < t) {} return r; };
+        const moves = [['a', { level: 0.999 }, { level: 1 }], ['a', { pan: -1 }, { pan: 0 }], ['a', { mute: true }, { mute: false }], ['b', { solo: true }, { solo: false }]];
+        try {
+          await w(300); on = true; await w(100);
+          for (let c = 0; c < 3; c++) for (const [id, a, b] of moves) { mx.set(id, a); await w(250); mx.set(id, b); await w(350); }
+          await w(200);
+        } finally { AudioNode.prototype.disconnect = orig; }
+        on = false;
+        mx.set('c', { level: 0.5 }); const cOff = mx.route('c'); await w(300); mx.set('c', { level: 1 }); const cBack = mx.route('c');
+        let worst = 0, jumps = 0;
+        for (const k of [0, 1]) { const v = join(B, k); for (let i = 1; i < v.length; i++) { const d = Math.abs(v[i] - v[i - 1]); if (d > worst) worst = d; if (d > 0.05) jumps++; } }
+        out.moves = { worst: +worst.toFixed(4), jumps, held, seconds: +(B.length * 128 / 48000).toFixed(1), route: mx.route('a'), b: mx.route('b'), c: [cOff, cBack] };
+        try { dc.stop(); z.stop(); z3.stop(); await ctx.close(); } catch (e) {}
+      }
+      { // 2. defaults pass the samples unchanged; a mono source reaches both sides
+        const ctx = new AudioContext({ sampleRate: 48000 }); await ctx.resume(); await ctx.audioWorklet.addModule(url);
+        const mx = createMixer(ctx), sum = ctx.createGain(), hush = ctx.createGain(); hush.gain.value = 0;
+        const cap = new AudioWorkletNode(ctx, 'mx-gap-cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 6, channelCountMode: 'explicit', channelInterpretation: 'discrete' });
+        const all = ctx.createChannelMerger(6), sp = ctx.createChannelSplitter(2), sp2 = ctx.createChannelSplitter(2);
+        const osc = ctx.createOscillator(); osc.frequency.value = 233.3;
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 3.1; const lg = ctx.createGain(); lg.gain.value = 0.3; lfo.connect(lg);
+        const st = ctx.createChannelMerger(2); osc.connect(st, 0, 0); lg.connect(st, 0, 1);   // two different sides
+        const mono = ctx.createOscillator(); mono.frequency.value = 411.7;
+        const mxm = createMixer(ctx), msum = ctx.createGain();
+        mx.attach('a', st); mx.connect(sum); mxm.attach('m', mono); mxm.connect(msum);
+        sum.connect(sp); sp.connect(all, 0, 0); sp.connect(all, 1, 1);
+        const ref = ctx.createChannelMerger(2); osc.connect(ref, 0, 0); lg.connect(ref, 0, 1);   // the same sides past the mixer (it rewires st's outputs)
+        const sp3 = ctx.createChannelSplitter(2); ref.connect(sp3); sp3.connect(all, 0, 2); sp3.connect(all, 1, 3);
+        msum.channelCount = 2; msum.channelCountMode = 'explicit'; msum.connect(sp2); sp2.connect(all, 0, 4); sp2.connect(all, 1, 5);
+        all.connect(cap); cap.connect(hush); hush.connect(ctx.destination);
+        osc.start(); lfo.start(); mono.start();
+        const B = []; let on = false; cap.port.onmessage = e => { if (on) B.push(e.data); };
+        await w(200); mx.set('a', { level: 0.5, pan: 0.4 }); await w(300); mx.set('a', { level: 1, pan: 0 }); await w(600);
+        on = true; await w(500); on = false;
+        const v = [0, 1, 2, 3, 4, 5].map(k => join(B, k));
+        let dl = 0, dr = 0, peakL = 0, peakR = 0, ml = 0, mr = 0, mdiff = 0;
+        for (let i = 0; i < v[0].length; i++) {
+          dl = Math.max(dl, Math.abs(v[0][i] - v[2][i])); dr = Math.max(dr, Math.abs(v[1][i] - v[3][i]));
+          peakL = Math.max(peakL, Math.abs(v[0][i])); peakR = Math.max(peakR, Math.abs(v[1][i]));
+          ml = Math.max(ml, Math.abs(v[4][i])); mr = Math.max(mr, Math.abs(v[5][i])); mdiff = Math.max(mdiff, Math.abs(v[4][i] - v[5][i]));
+        }
+        out.unity = { dl, dr, peakL: +peakL.toFixed(3), peakR: +peakR.toFixed(3), monoL: +ml.toFixed(3), monoR: +mr.toFixed(3), mdiff, n: v[0].length, route: mx.route('a') };
+        try { osc.stop(); lfo.stop(); mono.stop(); await ctx.close(); } catch (e) {}
+      }
+      return out; }""")
+    gm = gapless.get("moves", {})
+    ck(f"Mx. a sounding strip's moves never drop it out, even with the main thread held 6 ms after every disconnect (24 moves on a DC 0.5: largest step {gm.get('worst')}, steps over 0.05: {gm.get('jumps')}, want 0); a silent strip moved and back returns to the wire",
+       gm.get("jumps") == 0 and gm.get("worst") is not None and gm["worst"] < 0.05 and gm.get("seconds", 0) > 7 and gm.get("route") == "chain"
+       and gm.get("b") == "direct" and gm.get("c") == ["chain", "direct"], gm)
+    gu = gapless.get("unity", {})
+    ck("Mx. a sounding live strip moved and back at its defaults passes its samples unchanged on both sides, and a mono source reaches both sides at the same level",
+       gu.get("n", 0) > 10000 and gu.get("dl") == 0 and gu.get("dr") == 0 and gu.get("peakL", 0) > 0.9 and 0.25 < gu.get("peakR", 0) < 0.35
+       and gu.get("monoL", 0) > 0.9 and gu.get("mdiff") == 0 and gu.get("route") == "chain", gu)
     pg.evaluate("() => __synth.setMixer('filament', { level: 1, pan: 0, mute: false, solo: false, sendR: 0, sendD: 0 })")
     pg.evaluate("() => { __synth.panic(); __synth.mixArm(['filament', 'cathode']); }")
     pg.evaluate("""() => {
@@ -5512,12 +6004,150 @@ with sync_playwright() as pw:
             ck("Pk. at 1366 px the name window keeps its 240 px", abs(pk["sel"]["w"] - 240) < 1, pk["sel"])
         pkp.click("#saveP"); pkp.wait_for_timeout(100); pkp.fill("#saveName", "Pk Test"); pkp.click("#saveOk"); pkp.wait_for_timeout(200)
         pk2 = pkp.evaluate(PK_MEAS)
-        ck(f"Pk. at {pk_w} px a user patch adds delete to the joined edit keys, rounded at its end, init square",
-           pk2["edJoin"] and len(pk2["ed"]) == 4 and pk2["lastId"] == "delP" and pk2["endR"] > 0
-           and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") == 0 and pk2["sw"] <= pk2["iw"], pk2)
-        pkp.on("dialog", lambda d: d.accept()); pkp.click("#delP"); pkp.wait_for_timeout(150)
+        if pk_mob:
+            # graphics 13 Nov: on a phone delete moved from the patch row into the save form (Pd. below)
+            ck(f"Pk. on a {pk_w} px phone a user patch keeps save, undo and init as the joined edit keys, init rounded at its end, and the name window as wide as a factory patch's ({pk2['sel']['w']:.0f} against {pk['sel']['w']:.0f} px)",
+               pk2["edJoin"] and len(pk2["ed"]) == 3
+               and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") > 0
+               and abs(pk2["sel"]["w"] - pk["sel"]["w"]) < 1 and pk2["sw"] <= pk2["iw"], pk2)
+            pkp.click("#saveP"); pkp.wait_for_timeout(100); pkp.click("#delF"); pkp.wait_for_timeout(150)
+        else:
+            ck(f"Pk. at {pk_w} px a user patch adds delete to the joined edit keys, rounded at its end, init square",
+               pk2["edJoin"] and len(pk2["ed"]) == 4 and pk2["lastId"] == "delP" and pk2["endR"] > 0
+               and pkp.evaluate("parseFloat(getComputedStyle(document.getElementById('initBtn')).borderTopRightRadius)") == 0 and pk2["sw"] <= pk2["iw"], pk2)
+            pkp.on("dialog", lambda d: d.accept()); pkp.click("#delP"); pkp.wait_for_timeout(150)
         pkx.close()
     ck("Pk. no page errors (patch keys)", not pkerr, pkerr)
+    # Pd. delete in the save form on a phone (graphics, 13 Nov 2026). Before, a user patch added a 57 px delete key to the
+    # patch row, so the name window fell from 136 to 80 px at 375 ("My Te...") and at 320 px the edit keys wrapped onto a
+    # row of their own (the header 50 px taller while a user patch was loaded). Now, under 761 px, delete is the last key
+    # of the save form's joined switch (red), and the save form's name field is the patch name's recessed amber window.
+    PD_MEAS = """() => { const R = id => { const e = document.getElementById(id); if (!e || e.hidden || !e.getClientRects().length) return null; const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const ks = ['saveOk', 'saveNo', 'delF'].map(R).filter(Boolean), cs = id => getComputedStyle(document.getElementById(id));
+      const tray = document.querySelector('#saveForm .sfkeys');
+      return { sel: R('patchSel'), bar: R('patchStep') && document.querySelector('.top > .bar').getBoundingClientRect().height, edT: R('saveP') && R('saveP').t, stT: R('prevP').t,
+        delP: R('delP'), inp: R('saveName'), ks, join: ks.every((k, i) => i === 0 || (Math.abs(k.l - ks[i - 1].r) < 0.6 && Math.abs(k.t - ks[i - 1].t) < 0.6)),
+        small: ks.filter(k => k.w < 44 || k.h < 44).length, tray: tray ? getComputedStyle(tray).boxShadow.includes('inset') : false,
+        delC: cs('delF').color, delBg: cs('delF').backgroundImage, okC: cs('saveOk').color, okBg: cs('saveOk').backgroundImage,
+        inC: cs('saveName').color, inBg: cs('saveName').backgroundImage, inSh: cs('saveName').boxShadow,
+        endR: parseFloat(cs('delF').borderTopRightRadius), noR: parseFloat(cs('saveNo').borderTopRightRadius),
+        label: document.getElementById('delF').getAttribute('aria-label') || '', focus: document.activeElement && document.activeElement.id,
+        users: [...document.querySelectorAll('#patchSel option')].map(o => o.value).filter(v => v.startsWith('u:')),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pderr = []
+    for pd_w, pd_mob in ((320, True), (375, True), (760, True), (1366, False)):
+        pdx = b.new_context(viewport={"width": pd_w, "height": 667 if pd_mob else 1000}, is_mobile=pd_mob, has_touch=pd_mob, reduced_motion="reduce")
+        pdp = pdx.new_page(); pdp.on("pageerror", lambda e: pderr.append(str(e)))
+        pdp.goto(BASE); pdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); pdp.wait_for_timeout(200)
+        pd0 = pdp.evaluate(PD_MEAS)
+        pdp.click("#saveP"); pdp.wait_for_timeout(100)
+        pdf = pdp.evaluate(PD_MEAS)
+        ck(f"Pd. at {pd_w} px the save form on a factory patch is ok and cancel joined in a recessed tray, no delete, cancel rounded at its end",
+           pdf["join"] and len(pdf["ks"]) == 2 and pdf["tray"] and pdf["noR"] > 0, pdf)
+        pdp.fill("#saveName", "Pd Test Patch"); pdp.click("#saveOk"); pdp.wait_for_timeout(200)
+        pd1 = pdp.evaluate(PD_MEAS)
+        pdp.click("#saveP"); pdp.wait_for_timeout(100)
+        pd2 = pdp.evaluate(PD_MEAS)
+        in_con = _ob_con(pd2["inC"], pd2["inBg"])
+        ck(f"Pd. at {pd_w} px the save form's name field is a recessed amber window ({in_con:.1f}:1, want 4.5 or more)",
+           "gradient" in pd2["inBg"] and "inset" in pd2["inSh"] and in_con >= 4.5, (pd2["inC"], pd2["inBg"][:60], pd2["inSh"][:60]))
+        if pd_mob:
+            del_con = _ob_con(pd2["delC"], pd2["delBg"])
+            info(f"Pd. {pd_w} px", f"name window factory {pd0['sel']['w']:.0f}, user {pd1['sel']['w']:.0f} px; header {pd0['bar']:.0f} / {pd1['bar']:.0f} px; delete {del_con:.1f}:1")
+            ck(f"Pd. on a {pd_w} px phone a user patch leaves the patch row as it was: no delete key there, the name window {pd1['sel']['w']:.0f} px (factory {pd0['sel']['w']:.0f}), the edit keys on the name's row, the header the same height",
+               pd1["delP"] is None and abs(pd1["sel"]["w"] - pd0["sel"]["w"]) < 1 and abs(pd1["edT"] - pd1["stT"]) < 1 and abs(pd1["bar"] - pd0["bar"]) < 1, (pd0, pd1))
+            ck(f"Pd. on a {pd_w} px phone the save form on a user patch ends in a red delete key ({del_con:.1f}:1) joined to ok and cancel, every key 44 px, labelled with the patch's name, no sideways scroll",
+               pd2["join"] and len(pd2["ks"]) == 3 and pd2["small"] == 0 and pd2["endR"] > 0 and pd2["noR"] == 0 and del_con >= 4.5
+               and "rgb(255, 92, 92)" in pd2["delC"] and '"Pd Test Patch"' in pd2["label"] and pd2["sw"] <= pd2["iw"], pd2)
+            pdp.fill("#saveName", "Some Other Name"); pdp.click("#delF"); pdp.wait_for_timeout(200)
+            pd3 = pdp.evaluate(PD_MEAS)
+            ck(f"Pd. on a {pd_w} px phone the form's delete removes the loaded user patch (not the typed name), closes the form and hands focus to save",
+               "u:Pd Test Patch" not in pd3["users"] and not pd3["users"] and pd3["inp"] is None and pd3["focus"] == "saveP"
+               and pdp.evaluate("document.getElementById('patchSel').value").startswith("f:"), pd3)
+        else:
+            ck("Pd. at 1366 px a user patch keeps delete in the patch row and the save form has none",
+               pd1["delP"] is not None and len(pd2["ks"]) == 2 and pd2["noR"] > 0 and pd2["sw"] <= pd2["iw"], (pd1["delP"], pd2["ks"]))
+            pdp.click("#saveNo"); pdp.wait_for_timeout(80); pdp.click("#delP"); pdp.wait_for_timeout(150)
+        pdx.close()
+    # and from 490 to 760 px the volume slot joined the name's row and squeezed the name to 34 to 87 px (measured on main
+    # 13 Nov: 34 at 500, 44 at 700, 49 at 760); the step now has a floor, so the name keeps about 130 px or more
+    for pd_w in (520, 667, 740):
+        pdx = b.new_context(viewport={"width": pd_w, "height": 375 if pd_w == 667 else 700}, is_mobile=True, has_touch=True)
+        pdp = pdx.new_page(); pdp.on("pageerror", lambda e: pderr.append(str(e)))
+        pdp.goto(BASE); pdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); pdp.wait_for_timeout(150)
+        pdn = pdp.evaluate(PD_MEAS)
+        ck(f"Pd. at {pd_w} px the patch name window is {pdn['sel']['w']:.0f} px (want 120 or more; 34 to 87 before), the header {pdn['bar']:.0f} px"
+           + (" (98 as before)" if pd_w != 520 else " (three rows, as on a phone)") + ", no sideways scroll",
+           pdn["sel"]["w"] >= 120 and pdn["sw"] <= pd_w and (abs(pdn["bar"] - 98) < 1 if pd_w != 520 else pdn["bar"] < 160), pdn)
+        pdx.close()
+    ck("Pd. no page errors (delete in the save form)", not pderr, pderr)
+    # Hs. the patch strip holds one row from 1020 px in every state (graphics, 17 Nov 2026). Measured before on main: a user
+    # patch's delete key wrapped the strip from 46 to 80 px at 1020 to about 1059 px, and opening the save form wrapped it at
+    # 1020 to 1299 px (to 1365 px on a user patch), so the rack moved 34 px down while a patch was being saved or deleted.
+    # Now the open save form takes the edit keys' place (right after the stepper), its field narrows to 112 or 140 px below
+    # 1300 px and grows into spare room, and on a user patch at 1020 to 1099 px the name window is 160 px. Delete reads red.
+    HS_MEAS = """() => { const R = e => { if (!e || e.hidden || !e.getClientRects().length) return null; const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, w: q.width, h: q.height }; };
+      const $ = id => document.getElementById(id), bar = document.querySelector('.top > .bar'), cs = getComputedStyle($('delP'));
+      return { bar: bar.getBoundingClientRect().height, rack: document.querySelector('.inst').getBoundingClientRect().top + scrollY,
+        step: R($('patchStep')), edit: R($('patchEdit')), form: R($('saveForm')), name: R($('saveName')), sel: R($('patchSel')), midi: R($('midiBtn')),
+        open: $('saveForm').classList.contains('open'), del: R($('delP')), delC: cs.color, delBg: cs.backgroundImage,
+        delLabel: $('delP').getAttribute('aria-label') || '', delTitle: $('delP').title, focus: document.activeElement && document.activeElement.id,
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    hserr = []
+    hsx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce")
+    hsp = hsx.new_page(); hsp.on("pageerror", lambda e: hserr.append(str(e)))
+    hsp.goto(BASE); hsp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); hsp.wait_for_timeout(200)
+    hs_rows, hs_bad, hs_place, hs_min = {}, [], [], {}
+    def hs_states(w):
+        hsp.set_viewport_size({"width": w, "height": 1000}); hsp.wait_for_timeout(200)
+        out = {"closed": hsp.evaluate(HS_MEAS)}
+        hsp.click("#saveP"); hsp.wait_for_timeout(120); out["open"] = hsp.evaluate(HS_MEAS)
+        hsp.click("#saveNo"); hsp.wait_for_timeout(120); out["after"] = hsp.evaluate(HS_MEAS)
+        return out
+    HS_W = (1020, 1024, 1059, 1099, 1100, 1199, 1200, 1280, 1299, 1300, 1365, 1366, 1920)
+    for kind in ("factory", "user"):
+        if kind == "user":
+            hsp.set_viewport_size({"width": 1366, "height": 1000}); hsp.wait_for_timeout(150)
+            hsp.click("#saveP"); hsp.fill("#saveName", "Hs Night Drive Pad"); hsp.click("#saveOk"); hsp.wait_for_timeout(250)
+        for w in HS_W:
+            st = hs_states(w); hs_rows[(kind, w)] = st
+            c, o, a = st["closed"], st["open"], st["after"]
+            if not (c["bar"] < 60 and o["bar"] < 60 and abs(o["rack"] - c["rack"]) <= 1 and abs(a["rack"] - c["rack"]) <= 1 and c["sw"] <= w and o["sw"] <= w):
+                hs_bad.append((kind, w, round(c["bar"]), round(o["bar"]), round(c["rack"]), round(o["rack"])))
+            if not (o["edit"] is None and o["form"] and abs(o["form"]["l"] - o["step"]["r"] - 6) < 1.5 and abs(o["form"]["t"] - o["step"]["t"]) < 8 and o["midi"] is None
+                    and a["edit"] is not None and a["focus"] == "saveP" and not a["open"]):
+                hs_place.append((kind, w, o["edit"], o["form"] and round(o["form"]["l"]), round(o["step"]["r"]), o["midi"], a["focus"]))
+            hs_min[(kind, w)] = round(o["name"]["w"]) if o["name"] else 0
+    info("Hs. strip", "rack top " + ", ".join(f"{w}: {hs_rows[('factory', w)]['closed']['rack']:.0f}" for w in (1024, 1280, 1366)) + "; name field " + ", ".join(f"{w}: {hs_min[('user', w)]}" for w in (1020, 1099, 1100, 1299, 1366)))
+    ck(f"Hs. from 1020 to 1920 px the patch strip is one row on a factory patch and a user patch, with the save form closed and open, and the rack does not move ({len(HS_W)} widths; 80 px and 34 px down on main)",
+       not hs_bad, hs_bad)
+    ck("Hs. the open save form takes the edit keys' place right after the stepper on the same row, MIDI steps aside, and cancel gives the keys back with focus on save",
+       not hs_place, hs_place)
+    ck(f"Hs. the save form's name field is 112 px or more at every width and grows into spare room ({hs_min[('factory', 1020)]} px at 1020, {hs_min[('factory', 1366)]} at 1366; want 240 or more from 1280)",
+       min(hs_min.values()) >= 112 and all(v >= 240 for (k, w), v in hs_min.items() if w >= 1280), hs_min)
+    hs_u = hs_rows[("user", 1024)]["closed"]; hs_u2 = hs_rows[("user", 1100)]["closed"]; hs_f = hs_rows[("factory", 1024)]["closed"]
+    ck(f"Hs. a user patch narrows the name window only from 1020 to 1099 px ({hs_u['sel']['w']:.0f} px at 1024, factory {hs_f['sel']['w']:.0f}; {hs_u2['sel']['w']:.0f} at 1100)",
+       abs(hs_u["sel"]["w"] - 160) < 1 and abs(hs_f["sel"]["w"] - 200) < 1 and abs(hs_u2["sel"]["w"] - 200) < 1
+       and abs(hs_rows[("user", 1366)]["closed"]["sel"]["w"] - 240) < 1, (hs_u["sel"], hs_f["sel"], hs_u2["sel"]))
+    hs_d = hs_rows[("user", 1366)]["closed"]; hs_dc = _ob_con(hs_d["delC"], hs_d["delBg"])
+    ck(f"Hs. on desktop delete reads red, the rec key's colour ({hs_dc:.1f}:1, want 4.5 or more), and its label and title name the patch",
+       "rgb(255, 92, 92)" in hs_d["delC"] and hs_dc >= 4.5 and '"Hs Night Drive Pad"' in hs_d["delLabel"] and '"Hs Night Drive Pad"' in hs_d["delTitle"], (hs_d["delC"], hs_d["delLabel"], hs_d["delTitle"]))
+    for w in (761, 800, 1019):
+        st = hs_states(w)
+        ck(f"Hs. at {w} px the strip keeps its two rows with the form closed and open on a user patch, the edit keys stay while naming, no sideways scroll",
+           st["closed"]["bar"] < 100 and st["open"]["bar"] < 100 and st["open"]["edit"] is not None and st["open"]["sw"] <= w, (st["closed"]["bar"], st["open"]["bar"], st["open"]["edit"]))
+    hsp.set_viewport_size({"width": 1366, "height": 1000}); hsp.wait_for_timeout(150)
+    hsp.on("dialog", lambda d: d.accept()); hsp.click("#delP"); hsp.wait_for_timeout(150)
+    ck("Hs. delete on desktop still removes the user patch", not hsp.evaluate("[...document.querySelectorAll('#patchSel option')].some(o => o.value.startsWith('u:'))"))
+    hsx.close()
+    hsx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True)
+    hsp = hsx.new_page(); hsp.on("pageerror", lambda e: hserr.append(str(e)))
+    hsp.goto(BASE); hsp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); hsp.wait_for_timeout(200)
+    hs_p0 = hsp.evaluate(HS_MEAS); hsp.tap("#saveP"); hsp.wait_for_timeout(120); hs_p1 = hsp.evaluate(HS_MEAS); hsp.tap("#saveNo")
+    ck("Hs. on a 375 px phone the save form leaves the edit keys where they were (the phone layout is unchanged), no sideways scroll",
+       hs_p1["edit"] is not None and hs_p0["edit"] is not None and abs(hs_p1["edit"]["t"] - hs_p0["edit"]["t"]) < 1 and hs_p1["sw"] <= 375, (hs_p0["edit"], hs_p1["edit"]))
+    hsx.close()
+    ck("Hs. no page errors (patch strip states)", not hserr, hserr)
     # Cf. canvas lettering in the house face (graphics, 7 Nov 2026). Before, six canvases on five devices set the browser's
     # sans-serif (Klystron's mouth pad, Phantastron's board, Additron's spectrum, Rhumbatron's cavity, Heptode's place
     # field; Gleam's effect mode too). Now every canvas font on the rack is the --font-mono stack, Rhumbatron's caption is
@@ -5664,6 +6294,463 @@ with sync_playwright() as pw:
            kv["state"] == "vowel" and kv["pressed"] == ["vowel"] and ksp.evaluate("__synth.patch().source") == "vowel", kv)
         ksx.close()
     ck("Ks. no page errors (Klystron's source row)", not kserr, kserr)
+    # Ps. Phantastron's seed row and bends readout (graphics, 10 Nov 2026). Before, the seed was the browser's white
+    # number box (the only white control on the rack, seen at 1366 px) and the wired bends were bare "no bends" text
+    # after the chips. Now: the seed in a recessed amber window between previous and next keys (one joined stepper),
+    # run a key with a lamp, and the bends in a recessed readout window whose lamp lights once a wire is in.
+    PS_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, w: q.width, h: q.height }; };
+      const sd = document.getElementById('phSeed'), cs = getComputedStyle(sd), keys = [...document.querySelectorAll('#phSeedStep > *')];
+      const kr = keys.map(R), join = kr.every((k, i) => i === 0 || (Math.abs(k.l - kr[i - 1].r) < 0.6 && Math.abs(k.t - kr[i - 1].t) < 0.6));
+      const run = document.getElementById('phRun'), rl = getComputedStyle(run.querySelector('i'));
+      const ww = document.getElementById('phWireWin'), wc = getComputedStyle(ww), wl = getComputedStyle(ww.querySelector('i'));
+      const card = R(document.getElementById('phBend')), pcard = R(document.getElementById('phPlay'));
+      return { ids: keys.map(e => e.id), join, seedBg: cs.backgroundImage, seedBgC: cs.backgroundColor, seedColor: cs.color, seedShadow: cs.boxShadow,
+        appearance: cs.appearance, seedVal: sd.value, seedW: R(sd).w, step: R(document.getElementById('phSeedStep')), keyMin: Math.min(...kr.map(k => Math.min(k.w, k.h))),
+        run: R(run), runPressed: run.getAttribute('aria-pressed'), runText: run.textContent, runLamp: rl.backgroundColor, runAnim: rl.animationName,
+        win: ww.offsetParent ? R(ww) : null, card, pcard, on: ww.dataset.on, wtext: document.getElementById('phWires').textContent, wtitle: ww.title,
+        wColor: wc.color, wBg: wc.backgroundImage, wShadow: wc.boxShadow, wLamp: wl.backgroundColor, wAnim: wl.animationName,
+        white: [...document.querySelectorAll('#phRoot input, #phRoot select')].filter(e => e.offsetParent && /rgb\\(255, 255, 255\\)/.test(getComputedStyle(e).backgroundColor)).map(e => e.id),
+        seed: __synth.patch().seed, prun: !!__synth.patch().run, sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pserr = []
+    for ps_w, ps_mob, ps_rm in ((1366, False, "no-preference"), (375, True, "reduce")):
+        psx = b.new_context(viewport={"width": ps_w, "height": 667 if ps_mob else 1000}, is_mobile=ps_mob, has_touch=ps_mob, reduced_motion=ps_rm)
+        psp = psx.new_page(); psp.on("pageerror", lambda e: pserr.append(str(e)))
+        psp.goto(BASE); psp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        psp.evaluate("__synth.setDevice('phantastron')"); psp.wait_for_timeout(300)
+        if ps_mob: psp.click(".tabs [data-go='bend']"); psp.wait_for_timeout(200)
+        ps = psp.evaluate(PS_MEAS)
+        ps_con = _ob_con(ps["seedColor"], ps["seedBg"])
+        info(f"Ps. {ps_w} px", f"seed window {ps['seedW']:.0f} px, stepper {ps['step']['w']:.0f} px, keys {ps['keyMin']:.0f} px, run {ps['run']['h']:.0f} px tall")
+        ck(f"Ps. at {ps_w} px the seed is a recessed amber window ({ps_con:.1f}:1, want 4.5 or more) between previous and next keys, one joined stepper, no white field left on Phantastron",
+           ps["ids"] == ["phSeedDn", "phSeed", "phSeedUp"] and ps["join"] and "gradient" in ps["seedBg"] and "inset" in ps["seedShadow"] and ps_con >= 4.5
+           and ps["appearance"] == "textfield" and ps["seedVal"] == "17" and not ps["white"], ps)
+        psp.click("#phSeedUp"); psp.wait_for_timeout(100)
+        up = psp.evaluate(PS_MEAS)
+        psp.click("#phSeedDn"); psp.click("#phSeedDn"); psp.wait_for_timeout(100)
+        dn = psp.evaluate(PS_MEAS)
+        ck(f"Ps. at {ps_w} px next and previous step the seed by one, in the patch and in the window (17, 18, 16)",
+           up["seed"] == 18 and up["seedVal"] == "18" and dn["seed"] == 16 and dn["seedVal"] == "16", (up["seed"], up["seedVal"], dn["seed"], dn["seedVal"]))
+        psp.click("#phRun"); psp.wait_for_timeout(150)
+        rn = psp.evaluate(PS_MEAS)
+        psp.click("#phRun"); psp.wait_for_timeout(150)
+        ro = psp.evaluate(PS_MEAS)
+        ck(f"Ps. at {ps_w} px run is a key with a lamp: dark at rest, lit while the toy runs, steady (no animation)",
+           ps["runLamp"] == "rgb(38, 51, 43)" and rn["prun"] and rn["runPressed"] == "true" and rn["runText"] == "running" and rn["runLamp"] == "rgb(255, 243, 196)"
+           and rn["runAnim"] == "none" and not ro["prun"] and ro["runLamp"] == "rgb(38, 51, 43)" and ro["runText"] == "run", (ps["runLamp"], rn, ro["runLamp"]))
+        if ps_mob:
+            ck(f"Ps. on a {ps_w} px phone the seed keys and run are 44 px or more, the row ends inside the card, no sideways scroll",
+               ps["keyMin"] >= 44 and ps["run"]["h"] >= 44 and ps["run"]["r"] <= ps["card"]["r"] and ps["step"]["r"] <= ps["card"]["r"] and ps["sw"] <= ps["iw"] == ps_w, ps)
+            psp.click(".tabs [data-go='play']"); psp.wait_for_timeout(200)
+        else:
+            ck("Ps. at 1366 px the seed keys keep a compact height (30 px or more) and the seed shows ten digits (110 px or less wide)",
+               ps["keyMin"] >= 29.5 and ps["seedW"] <= 110 and ps["step"]["r"] <= ps["card"]["r"], ps)
+        w0 = psp.evaluate(PS_MEAS)
+        w0_con = _ob_con(w0["wColor"], w0["wBg"])
+        ck(f"Ps. at {ps_w} px the bends sit in a recessed readout window, dark lamp and dim text with none wired ({w0_con:.1f}:1, want 4.5 or more)",
+           w0["win"] is not None and w0["on"] == "0" and w0["wtext"] == "no bends" and "gradient" in w0["wBg"] and "inset" in w0["wShadow"]
+           and w0["wLamp"] == "rgb(38, 51, 43)" and w0_con >= 4.5 and w0["win"]["r"] <= w0["pcard"]["r"], w0)
+        psp.evaluate("() => { const q = __synth.patch(); q.wires = [['vcc','rate'],['clk','bits'],['nse','form'],['out','fb'],['gnd','loop'],['clk','pitch']]; __synth.setPatch(q); }")
+        psp.wait_for_timeout(200)
+        w1 = psp.evaluate(PS_MEAS)
+        w1_con = _ob_con(w1["wColor"], w1["wBg"])
+        ck(f"Ps. at {ps_w} px six wired bends light a gold lamp and amber text ({w1_con:.1f}:1), the list clipped inside the window and whole in its title, no sideways scroll",
+           w1["on"] == "1" and w1["wLamp"] == "rgb(231, 197, 106)" and w1["wAnim"] == "none" and w1_con >= 4.5 and "VCC\u2192RATE" in w1["wtext"]
+           and w1["wtitle"].count("\u2192") == 6 and w1["win"]["r"] <= w1["pcard"]["r"] + 0.5 and w1["win"]["h"] < 50 and w1["sw"] <= w1["iw"], w1)
+        psx.close()
+    ck("Ps. no page errors (Phantastron's seed row and bends readout)", not pserr, pserr)
+    # Pc. Phantastron's cartridge row (graphics, 14 Nov 2026). Before, six loose chips and lift wires on one row; on a
+    # 375 px phone three rows (babble alone on the second, lift wires alone on the third) above the bends readout, the
+    # Board card 529 px tall. Now: a CART tag and the six cartridges as one joined switch in a recessed tray (lit key
+    # gold), and a BENDS tag with the readout and lift wires on the next line; the tags drop on a phone.
+    def _pc_con(fg, bgimg):
+        f = _dk_lum(_dk_rgbs(fg)[0]); stops = _ob_stops(bgimg) or [[0, 0, 0]]
+        return min((max(f, _dk_lum(c)) + 0.05) / (min(f, _dk_lum(c)) + 0.05) for c in stops)
+    PC_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const sw = document.getElementById('phCarts'), swc = getComputedStyle(sw), keys = [...sw.querySelectorAll('[data-cart]')], kr = keys.map(R);
+      const tops = [...new Set(kr.map(k => Math.round(k.t)))];
+      const join = kr.every((k, i) => i === 0 || Math.abs(k.t - kr[i - 1].t) > 1 || Math.abs(k.l - kr[i - 1].r) < 1.1);
+      const lit = keys.filter(k => k.getAttribute('aria-pressed') === 'true'), unlit = keys.find(k => k.getAttribute('aria-pressed') !== 'true');
+      const lc = lit[0] && getComputedStyle(lit[0]), uc = getComputedStyle(unlit);
+      const tags = [...document.querySelectorAll('#phPlay .ph-tag')].map(t => t.offsetParent ? t.textContent.trim().toUpperCase() + '|' + getComputedStyle(t).textTransform : null);
+      const lift = document.getElementById('phLift'), win = document.getElementById('phWireWin');
+      return { lines: tops.length, join, n: keys.length, keyMinW: Math.min(...kr.map(k => k.w)), keyMinH: Math.min(...kr.map(k => k.h)),
+        trayBg: swc.backgroundColor, trayShadow: swc.boxShadow, role: sw.getAttribute('role'), label: sw.getAttribute('aria-label'),
+        lit: lit.map(k => k.dataset.cart), litBg: lc ? lc.backgroundImage : '', litColor: lc ? lc.color : '', unBg: uc.backgroundImage, unColor: uc.color,
+        tags, sw: R(sw), lift: R(lift), win: R(win), card: R(document.getElementById('phPlay')), liftText: lift.textContent,
+        order: [...document.querySelectorAll('#phPlay button')].map(b => b.dataset.cart || b.id),
+        cart: __synth.patch().cart, wires: __synth.patch().wires.length, wtext: document.getElementById('phWires').textContent,
+        anim: [...keys, lift].map(k => getComputedStyle(k).animationName).filter(a => a !== 'none'),
+        sw2: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    pcerr = []
+    for pc_w, pc_mob, pc_rm in ((1366, False, "no-preference"), (800, False, "no-preference"), (375, True, "reduce"), (320, True, "no-preference")):
+        pcx = b.new_context(viewport={"width": pc_w, "height": 667 if pc_mob else 1000}, is_mobile=pc_mob, has_touch=pc_mob, reduced_motion=pc_rm)
+        pcp = pcx.new_page(); pcp.on("pageerror", lambda e: pcerr.append(str(e)))
+        pcp.goto(BASE); pcp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        pcp.evaluate("__synth.setDevice('phantastron')"); pcp.wait_for_timeout(300)
+        if pc_mob: pcp.click(".tabs [data-go='play']"); pcp.wait_for_timeout(200)
+        pc = pcp.evaluate(PC_MEAS)
+        lit_con, un_con = _pc_con(pc["litColor"], pc["litBg"]), _pc_con(pc["unColor"], pc["unBg"])
+        info(f"Pc. {pc_w} px", f"Board card {pc['card']['h']:.0f} px tall, switch {pc['sw']['w']:.0f} px on {pc['lines']} line(s), keys {pc['keyMinW']:.0f}x{pc['keyMinH']:.0f} px or more, lit {lit_con:.1f}:1, unlit {un_con:.1f}:1")
+        ck(f"Pc. at {pc_w} px the six cartridges are one joined switch in a recessed tray (a named group), the patch's cartridge lit gold ({lit_con:.1f}:1) and the rest board green ({un_con:.1f}:1), both 4.5:1 or more",
+           pc["n"] == 6 and pc["join"] and pc["trayBg"] == "rgb(0, 0, 0)" and "inset" in pc["trayShadow"] and pc["role"] == "group" and pc["label"] == "Cartridge"
+           and pc["lit"] == [pc["cart"]] and "gradient" in pc["litBg"] and "gradient" in pc["unBg"] and lit_con >= 4.5 and un_con >= 4.5, pc)
+        ck(f"Pc. at {pc_w} px the bends readout and lift wires share the line under the switch, both inside the card, and the tab order is the cartridges then lift wires",
+           abs(pc["win"]["t"] - pc["lift"]["t"]) < 1 and pc["win"]["r"] <= pc["lift"]["l"] and pc["win"]["t"] >= pc["sw"]["b"]
+           and pc["lift"]["r"] <= pc["card"]["r"] and pc["sw"]["r"] <= pc["card"]["r"] + 0.5 and pc["liftText"] == "lift wires"
+           and pc["order"][:7] == ["lull", "count", "chirp", "bark", "tone", "babble", "phLift"], pc)
+        ck(f"Pc. at {pc_w} px the keys hold still (no animation; static, so reduced motion has nothing to stop)", not pc["anim"], pc["anim"])
+        if pc_mob:
+            ck(f"Pc. on a {pc_w} px phone the tags drop, every cartridge key and lift wires are 44 px or more, no sideways scroll",
+               all(t is None for t in pc["tags"]) and pc["keyMinW"] >= 44 and pc["keyMinH"] >= 44 and pc["lift"]["h"] >= 44 and pc["lift"]["w"] >= 44
+               and pc["sw2"] <= pc["iw"] == pc_w, pc)
+            if pc_w == 375:
+                ck("Pc. on a 375 px phone the six cartridges take one line and the Board card is 480 px or less (was 529: babble and lift wires each had a row)",
+                   pc["lines"] == 1 and pc["card"]["h"] <= 480, (pc["lines"], pc["card"]))
+        else:
+            ck(f"Pc. at {pc_w} px CART and BENDS are engraved tags at the left of the two rows, the switch on one line, keys 30 px tall",
+               pc["tags"] == ["CART|uppercase", "BENDS|uppercase"] and pc["lines"] == 1 and pc["keyMinH"] >= 29.5 and pc["lift"]["h"] >= 29.5, pc)
+        pcp.click("#phCarts [data-cart='chirp']"); pcp.wait_for_timeout(150)
+        pk = pcp.evaluate(PC_MEAS)
+        pcp.evaluate("() => { const q = __synth.patch(); q.wires = [['vcc','rate'],['gnd','loop']]; __synth.setPatch(q); }"); pcp.wait_for_timeout(150)
+        pw_ = pcp.evaluate(PC_MEAS)
+        pcp.click("#phLift"); pcp.wait_for_timeout(150)
+        pl = pcp.evaluate(PC_MEAS)
+        ck(f"Pc. at {pc_w} px a cartridge key sets the cartridge and lights only itself, and lift wires still clears the board",
+           pk["cart"] == "chirp" and pk["lit"] == ["chirp"] and pw_["wires"] == 2 and pl["wires"] == 0 and pl["wtext"] == "no bends", (pk["lit"], pk["cart"], pw_["wires"], pl["wires"], pl["wtext"]))
+        pcx.close()
+    ck("Pc. no page errors (Phantastron's cartridge row)", not pcerr, pcerr)
+    # Tc. Trochotron's seed and shape rows (graphics, 19 Nov 2026). Before, the seed was the browser's white number box
+    # ("42") beside loose random, play, stop, copy link and export .mid keys; the walk, scale and voice chips were loose
+    # and key and route were plain grey selects. Now each row is an engraved tag and joined switches in a recessed tray,
+    # the seed a recessed amber window joined to random, play a key with a lamp (violet while the piece plays), the
+    # walk's readout in an amber window, key and route dark amber windows; the self-explaining tags drop on a phone.
+    TC_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const G = id => document.getElementById(id), C = e => getComputedStyle(e);
+      const joins = ['trSeedJoin', 'trRunJoin', 'trOutJoin', 'trGens', 'trViewJoin', 'trScales', 'trVoices'].map(id => { const j = G(id), jc = C(j), ks = [...j.children], kr = ks.map(R);
+        return { id, role: j.getAttribute('role'), label: j.getAttribute('aria-label'), bg: jc.backgroundColor, shadow: jc.boxShadow, n: ks.length,
+          join: kr.every((k, i) => i === 0 || Math.abs(k.t - kr[i - 1].t) > 1 || Math.abs(k.l - kr[i - 1].r) < 1.1),
+          keyMinW: Math.min(...kr.map(k => k.w)), keyMinH: Math.min(...kr.map(k => k.h)), r: R(j).r }; });
+      const keys = [...document.querySelectorAll('#trRoot .tr-join > .chip')];
+      const lit = keys.filter(k => k.getAttribute('aria-pressed') === 'true'), unlit = keys.find(k => k.getAttribute('aria-pressed') !== 'true');
+      const seed = G('trSeed'), sc = C(seed), win = G('trReadWin'), rd = G('trRead'), play = G('trPlayBtn'), lamp = play.querySelector('i');
+      const sels = ['trKey', 'trRoute'].map(id => { const e = G(id), c = C(e); return { id, bg: c.backgroundImage, color: c.color, app: c.appearance, h: R(e).h, w: R(e).w, r: R(e).r }; });
+      const tags = [...document.querySelectorAll('#trRoot .tr-tag')].map(t => t.offsetParent ? t.textContent.trim().toUpperCase() + '|' + C(t).textTransform : null);
+      const cards = ['mTrPlay', 'mTrShape'].map(id => G(id)).filter(e => e.offsetParent);
+      return { joins, lit: lit.map(k => k.dataset.gen || k.dataset.scale || k.dataset.voices), litBg: lit[0] ? C(lit[0]).backgroundImage : '', litColor: lit[0] ? C(lit[0]).color : '',
+        unBg: C(unlit).backgroundImage, unColor: C(unlit).color, seedBg: sc.backgroundImage, seedColor: sc.color, seedApp: sc.appearance, seedW: R(seed).w, seedH: R(seed).h,
+        winBg: C(win).backgroundImage, winShadow: C(win).boxShadow, readColor: C(rd).color, readText: rd.textContent, winOn: win.dataset.on, playOn: play.dataset.on,
+        playText: play.textContent, lampBg: C(lamp).backgroundColor, sels, tags,
+        anim: [...keys, seed, lamp, win.querySelector('i')].map(k => C(k).animationName).filter(a => a !== 'none'),
+        cardR: cards.length ? Math.max(...cards.map(e => R(e).r)) : 0, gen: __synth.patch().generator, scale: __synth.patch().scale, seedVal: __synth.patch().seed,
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    tcerr = []
+    for tc_w, tc_mob, tc_rm in ((1366, False, "no-preference"), (800, False, "reduce"), (375, True, "reduce"), (320, True, "no-preference")):
+        tcx = b.new_context(viewport={"width": tc_w, "height": 667 if tc_mob else 1000}, is_mobile=tc_mob, has_touch=tc_mob, reduced_motion=tc_rm)
+        tcp = tcx.new_page(); tcp.on("pageerror", lambda e: tcerr.append(str(e)))
+        tcp.goto(BASE); tcp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        tcp.evaluate("__synth.setDevice('trochotron')"); tcp.wait_for_timeout(300)
+        if tc_mob: tcp.click(".tabs [data-go='play']"); tcp.wait_for_timeout(200)
+        tc = tcp.evaluate(TC_MEAS)
+        lit_con, un_con = _pc_con(tc["litColor"], tc["litBg"]), _pc_con(tc["unColor"], tc["unBg"])
+        seed_con, read_con = _pc_con(tc["seedColor"], tc["seedBg"]), _pc_con(tc["readColor"], tc["winBg"])
+        sel_con = min(_pc_con(x["color"], x["bg"]) for x in tc["sels"])
+        info(f"Tc. {tc_w} px", f"seed window {tc['seedW']:.0f}x{tc['seedH']:.0f} px, lit {lit_con:.1f}:1, unlit {un_con:.1f}:1, seed {seed_con:.1f}:1, readout {read_con:.1f}:1, key and route {sel_con:.1f}:1")
+        ck(f"Tc. at {tc_w} px the seed, play, share, walk, view, scale and voice keys are seven joined switches in recessed trays (named groups), lit violet ({lit_con:.1f}:1) and unlit ({un_con:.1f}:1) both 4.5:1 or more",
+           len(tc["joins"]) == 7 and all(j["role"] == "group" and j["label"] and j["bg"] == "rgb(0, 0, 0)" and "inset" in j["shadow"] and j["join"] for j in tc["joins"])
+           and sorted(tc["lit"]) == sorted([tc["gen"], tc["scale"], str(tcp.evaluate("__synth.patch().voices"))]) and "gradient" in tc["litBg"] and "gradient" in tc["unBg"]
+           and lit_con >= 4.5 and un_con >= 4.5 and all(j["r"] <= tc["cardR"] + 0.5 for j in tc["joins"]), tc)
+        ck(f"Tc. at {tc_w} px the seed is a recessed amber window, not the browser's white box ({seed_con:.1f}:1), the walk's readout an amber window ({read_con:.1f}:1), key and route dark amber windows ({sel_con:.1f}:1)",
+           "gradient" in tc["seedBg"] and tc["seedApp"] == "textfield" and tc["seedColor"] == "rgb(255, 208, 138)" and seed_con >= 4.5
+           and "gradient" in tc["winBg"] and "inset" in tc["winShadow"] and read_con >= 4.5 and "notes" in tc["readText"]
+           and all("gradient" in x["bg"] and x["app"] == "none" and x["color"] == "rgb(255, 208, 138)" for x in tc["sels"]) and sel_con >= 4.5, tc)
+        ck(f"Tc. at {tc_w} px nothing on the rows animates (the lamps switch; reduced motion has nothing to stop)", not tc["anim"], tc["anim"])
+        if tc_mob:
+            sh_ = None
+            tcp.click(".tabs [data-go='shape']"); tcp.wait_for_timeout(200); sh_ = tcp.evaluate(TC_MEAS); tcp.click(".tabs [data-go='play']"); tcp.wait_for_timeout(200)
+            ck(f"Tc. on a {tc_w} px phone the seed, walk, view, scale and voices tags drop and key and to stay, every key, the seed window and both selects are 44 px or more, no sideways scroll",
+               [t for t in sh_["tags"] if t] == ["KEY|uppercase", "TO|uppercase"] and all(t is None for t in tc["tags"][:3])
+               and all(j["keyMinH"] >= 44 and j["keyMinW"] >= 44 for j in tc["joins"] if j["id"] in ("trSeedJoin", "trRunJoin", "trOutJoin", "trGens", "trViewJoin"))
+               and all(j["keyMinH"] >= 44 and j["keyMinW"] >= 44 for j in sh_["joins"] if j["id"] in ("trScales", "trVoices"))
+               and tc["seedH"] >= 44 and all(x["h"] >= 44 and x["r"] <= sh_["cardR"] + 0.5 for x in sh_["sels"]) and tc["sw"] <= tc["iw"] == tc_w and sh_["sw"] <= tc_w, (tc, sh_))
+        else:
+            ck(f"Tc. at {tc_w} px SEED, WALK, VIEW, SCALE, VOICES, KEY and TO are engraved tags, the keys 30 px tall, the seed window shows ten digits",
+               tc["tags"] == ["SEED|uppercase", "WALK|uppercase", "VIEW|uppercase", "SCALE|uppercase", "VOICES|uppercase", "KEY|uppercase", "TO|uppercase"]
+               and all(j["keyMinH"] >= 29.5 for j in tc["joins"]) and tc["seedW"] >= 90 and tc["sw"] <= tc["iw"]
+               and tcp.evaluate("(() => { const s = document.getElementById('trSeed'), v = s.value; s.value = '4294967295'; const ok = s.scrollWidth <= s.clientWidth; s.value = v; return ok; })()"), tc)
+        ck(f"Tc. at {tc_w} px stopped, play's lamp and the readout's lamp are dark and play reads play",
+           tc["playOn"] == "0" and tc["winOn"] == "0" and tc["playText"] == "play" and tc["lampBg"] == "rgb(44, 36, 64)", (tc["playOn"], tc["winOn"], tc["playText"], tc["lampBg"]))
+        tcp.evaluate("() => __synth.setPatch({ device: 'trochotron', seed: 42, generator: 'thue', voices: 3, tempo: 140, route: 'internal', level: 0.2 })"); tcp.wait_for_timeout(120)
+        tcp.click("#trPlayBtn"); tcp.wait_for_function("() => __synth.trochotronState().playing === true", timeout=3000); tcp.wait_for_timeout(250)
+        tp = tcp.evaluate(TC_MEAS)
+        tcp.click("#trStopBtn"); tcp.wait_for_function("() => __synth.trochotronState().playing === false", timeout=3000); tcp.wait_for_timeout(250)
+        ts = tcp.evaluate(TC_MEAS)
+        ck(f"Tc. at {tc_w} px play lights its lamp and the readout's lamp violet and reads playing; stop puts both out",
+           tp["playOn"] == "1" and tp["winOn"] == "1" and tp["playText"] == "playing" and tp["lampBg"] == "rgb(231, 196, 255)"
+           and ts["playOn"] == "0" and ts["winOn"] == "0" and ts["playText"] == "play", (tp["playOn"], tp["winOn"], tp["playText"], tp["lampBg"], ts["playOn"], ts["playText"]))
+        tcp.fill("#trSeed", "777"); tcp.press("#trSeed", "Enter"); tcp.wait_for_timeout(120)
+        tcp.click("#trGens [data-gen='lorenz']"); tcp.wait_for_timeout(120)
+        tk = tcp.evaluate(TC_MEAS)
+        ck(f"Tc. at {tc_w} px the seed window still sets the seed and a walk key sets the walk and lights only itself",
+           tk["seedVal"] == 777 and tk["gen"] == "lorenz" and "lorenz" in tk["lit"] and tcp.evaluate("[...document.querySelectorAll('#trGens [aria-pressed=\"true\"]')].length") == 1, (tk["seedVal"], tk["gen"], tk["lit"]))
+        tcx.close()
+    ck("Tc. no page errors (Trochotron's seed and shape rows)", not tcerr, tcerr)
+    # Hf. the Rack tab's project, mix and patch rows (graphics, 11 Nov 2026). Before, loose keys beside plain dark text
+    # boxes ("Untitled" clipped in a 74 px box at 1366 px), seven loose rows on a 375 px phone. Now: one faceplate, each
+    # row an engraved tag, the name in a recessed amber readout window and its keys as one joined switch; the patch
+    # link's window has a lamp that lights once a link is in it.
+    HF_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const face = document.querySelector('#mHost > .hfiles'), fr = face ? R(face) : null, fc = face ? getComputedStyle(face) : null;
+      const rows = ['projBar', 'mixBar', 'shareBar'].map(id => { const row = document.getElementById(id); const tag = row.querySelector('.htag'), win = row.querySelector('.hwin'), inp = win.querySelector('input');
+        const keys = [...row.querySelectorAll('.hjoin > .btn')], kr = keys.map(R), ic = getComputedStyle(inp), wc = getComputedStyle(win), tc = getComputedStyle(tag);
+        const join = kr.every((k, i) => i === 0 || (Math.abs(k.l - kr[i - 1].r) < 1.1 && Math.abs(k.t - kr[i - 1].t) < 0.6));
+        const lamp = win.querySelector('.hlamp'), lc = lamp && getComputedStyle(lamp);
+        const label = keys.map(k => { const inn = k.querySelector('input[type=file]'); const nm = inn ? inn.getAttribute('aria-label') : k.getAttribute('aria-label'); return !!nm && nm.toLowerCase().includes(k.textContent.trim().toLowerCase()); });
+        const all = [...row.children].map(R);
+        return { id, inside: fr ? all.every(q => q.l >= fr.l - 0.5 && q.r <= fr.r + 0.5) : false, tag: tag.textContent, tagColor: tc.color, tagBg: tc.backgroundImage,
+          winBg: wc.backgroundImage, winShadow: wc.boxShadow, color: ic.color, inBg: ic.backgroundColor, ph: getComputedStyle(inp, '::placeholder').color,
+          clip: inp.scrollWidth > inp.clientWidth + 1, win: R(win), inp: R(inp), keyMin: Math.min(...kr.map(k => Math.min(k.w, k.h))), keyH: kr.map(k => k.h), join, label, n: keys.length,
+          lamp: lc ? lc.backgroundColor : null, lampAnim: lc ? lc.animationName : null, val: inp.value }; });
+      const sp = document.getElementById('surpriseBtn');
+      return { face: !!face, faceBg: fc && fc.backgroundImage, rows, surprise: R(sp), rowsH: fr && fr.h, sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    hferr = []
+    for hf_w, hf_mob, hf_rm in ((1366, False, "no-preference"), (800, False, "no-preference"), (375, True, "reduce"), (320, True, "no-preference"), (412, True, "no-preference")):
+        hfx = b.new_context(viewport={"width": hf_w, "height": 667 if hf_mob else 1000}, is_mobile=hf_mob, has_touch=hf_mob, reduced_motion=hf_rm)
+        hfp = hfx.new_page(); hfp.on("pageerror", lambda e: hferr.append(str(e)))
+        hfp.goto(BASE); hfp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        if hf_mob: hfp.tap('.tabs [data-go="rack"]'); hfp.wait_for_timeout(250)
+        hfp.evaluate("document.getElementById('shareBar').scrollIntoView({ block: 'center' })"); hfp.wait_for_timeout(100)
+        hf = hfp.evaluate(HF_MEAS); rows = {r["id"]: r for r in hf["rows"]}
+        cons = {k: (_ob_con(r["color"], r["winBg"]), _ob_con(r["tagColor"], r["tagBg"])) for k, r in rows.items()}
+        ph_con = _ob_con(rows["shareBar"]["ph"], rows["shareBar"]["winBg"])
+        info(f"Hf. {hf_w} px", f"faceplate {hf['rowsH']:.0f} px tall; windows {', '.join('%s %.0f' % (k, r['win']['w']) for k, r in rows.items())} px; text {min(c[0] for c in cons.values()):.1f}:1, tags {min(c[1] for c in cons.values()):.1f}:1, placeholder {ph_con:.1f}:1")
+        ck(f"Hf. at {hf_w} px the project, mix and patch rows sit on one faceplate: each an engraved tag, the name in a recessed amber window and its keys as one joined switch",
+           hf["face"] and "gradient" in (hf["faceBg"] or "") and [r["tag"] for r in hf["rows"]] == ["project", "mix", "patch"]
+           and all(r["inside"] and r["join"] and "gradient" in r["winBg"] and "inset" in r["winShadow"] and r["inBg"] == "rgba(0, 0, 0, 0)" for r in hf["rows"])
+           and [r["n"] for r in hf["rows"]] == [4, 4, 3], hf)
+        ck(f"Hf. at {hf_w} px the names read in their windows (text {min(c[0] for c in cons.values()):.1f}:1, tags {min(c[1] for c in cons.values()):.1f}:1, the empty link's placeholder {ph_con:.1f}:1; want 4.5 or more) and Untitled and Mix are not clipped",
+           all(c[0] >= 4.5 and c[1] >= 4.5 for c in cons.values()) and ph_con >= 4.5 and not rows["projBar"]["clip"] and not rows["mixBar"]["clip"], (cons, ph_con, rows["projBar"]["clip"]))
+        ck(f"Hf. at {hf_w} px every key's screen reader name holds its visible word (save is Save project, upload is Upload mix)", all(all(r["label"]) for r in hf["rows"]), [r["label"] for r in hf["rows"]])
+        ck(f"Hf. at {hf_w} px each name window keeps room for its name ({min(r['win']['w'] for r in hf['rows']):.0f} px or more, want 120): the keys never squeeze it shut",
+           all(r["win"]["w"] >= 120 for r in hf["rows"]), [(r["id"], r["win"]["w"]) for r in hf["rows"]])
+        if hf_mob:
+            ck(f"Hf. on a {hf_w} px phone every key and the surprise key are 44 px or more, the name boxes 44 px tall, no sideways scroll",
+               all(r["keyMin"] >= 44 and r["inp"]["h"] >= 44 for r in hf["rows"]) and hf["surprise"]["h"] >= 44 and hf["sw"] <= hf["iw"] == hf_w, hf)
+        elif hf_w >= 1100:
+            ck("Hf. at 1366 px the keys keep the desk's compact height (28 px) and the project and mix rows share a line, the patch row under them",
+               all(abs(h - 28) < 1 for r in hf["rows"] for h in r["keyH"]) and abs(rows["projBar"]["win"]["t"] - rows["mixBar"]["win"]["t"]) < 1
+               and rows["shareBar"]["win"]["t"] > rows["projBar"]["win"]["b"] and rows["projBar"]["win"]["w"] >= 160 and hf["sw"] <= hf["iw"], hf)
+        hfp.evaluate("document.getElementById('shareCopy').click()"); hfp.wait_for_timeout(400)
+        h1 = hfp.evaluate(HF_MEAS)["rows"][2]
+        ck(f"Hf. at {hf_w} px the patch link's lamp is dark with no link and lit amber once copy link has filled the window, steady (no animation)",
+           rows["shareBar"]["lamp"] == "rgb(42, 42, 42)" and rows["shareBar"]["val"] == "" and h1["val"].startswith("http") and h1["lamp"] == "rgb(255, 179, 71)" and h1["lampAnim"] == "none",
+           (rows["shareBar"]["lamp"], h1["lamp"], h1["val"][:40]))
+        hfx.close()
+    ck("Hf. no page errors (the project, mix and patch rows)", not hferr, hferr)
+    # Op. Orthicon's Picture card (graphics, 12 Nov 2026). Before, five loose rows of chips and header buttons under the canvas,
+    # the picture's name bare grey text, the seed the browser's number box, and on a 375 px phone eleven ragged rows (the card
+    # 1062 px tall, seen). Now: each row an engraved tag and one joined switch in a recessed tray (the keys grow to fill a
+    # wrapped line, so a narrow card reads as a keypad), the lit key in Orthicon's green, the seed a recessed amber window, and
+    # the name in a recessed readout window with a lamp: green for a picture, amber for a file, red while a capture runs.
+    OP_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const ids = ['orthiconBrushes', 'orthiconEdits', 'orthiconSources', 'orthiconPictures', 'orthiconGenerateRow'];
+      const sws = ids.map(id => { const sw = document.getElementById(id), cs = getComputedStyle(sw), row = sw.parentElement, tag = row.querySelector('.ortag');
+        const keys = [...sw.children].filter(k => k.offsetParent), kr = keys.map(R);
+        const join = kr.every((k, i) => i === 0 || (Math.abs(k.t - kr[i - 1].t) < 0.6 ? Math.abs(k.l - kr[i - 1].r) <= 1.6 : k.t >= kr[i - 1].b - 0.6));
+        const unlit = keys.filter(k => k.tagName !== 'INPUT' && k.getAttribute('aria-pressed') !== 'true' && !k.disabled).map(k => { const c = getComputedStyle(k); return { color: c.color, bg: c.backgroundImage, rad: c.borderTopLeftRadius }; });
+        const lit = keys.filter(k => k.getAttribute('aria-pressed') === 'true').map(k => { const c = getComputedStyle(k); return { color: c.color, bg: c.backgroundImage }; });
+        return { id, cls: sw.classList.contains('orsw'), role: sw.getAttribute('role'), label: sw.getAttribute('aria-label'), bg: cs.backgroundColor, shadow: cs.boxShadow,
+          rad: cs.borderTopLeftRadius, box: R(sw), n: keys.length, join, lines: new Set(kr.map(k => Math.round(k.t))).size, unlit, lit,
+          minKey: Math.min(...kr.map(k => Math.min(k.w, k.h))), keyH: Math.min(...kr.map(k => k.h)),
+          tag: tag ? { text: tag.textContent, shown: !!tag.offsetParent, color: getComputedStyle(tag).color, r: R(tag) } : null }; });
+      const win = document.getElementById('orthiconNow'), wc = getComputedStyle(win), wl = getComputedStyle(win.querySelector('i'));
+      const sd = document.getElementById('orthiconSeed'), sc = getComputedStyle(sd), img = getComputedStyle(document.getElementById('orthiconImageBtn'));
+      const card = R(document.getElementById('mOrthStage')), st = getComputedStyle(document.getElementById('mOrthStage'));
+      return { sws, card, cardBg: st.backgroundColor,
+        win: { box: R(win), src: win.dataset.src, text: document.getElementById('orthiconName').textContent, title: win.title, color: wc.color, bg: wc.backgroundImage,
+          shadow: wc.boxShadow, lamp: wl.backgroundColor, anim: wl.animationName },
+        seed: { color: sc.color, bg: sc.backgroundImage, shadow: sc.boxShadow, appearance: sc.appearance, w: R(sd).w, val: sd.value },
+        imgAlign: img.alignItems, imgDisplay: img.display,
+        white: [...document.querySelectorAll('#orthiconRoot input, #orthiconRoot select, #orthiconRoot button')].filter(e => e.offsetParent && /rgb\\(255, 255, 255\\)/.test(getComputedStyle(e).backgroundColor)).map(e => e.id || e.textContent),
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    def _op_wav():
+        import io, wave as _w
+        bio = io.BytesIO(); wf = _w.open(bio, "wb"); wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(22050)
+        wf.writeframes(b"".join(int(12000 * math.sin(2 * math.pi * 440 * i / 22050)).to_bytes(2, "little", signed=True) for i in range(22050)))
+        wf.close(); return bio.getvalue()
+    operr = []
+    for op_w, op_mob, op_rm in ((1366, False, "no-preference"), (375, True, "reduce")):
+        opx = b.new_context(viewport={"width": op_w, "height": 667 if op_mob else 1000}, is_mobile=op_mob, has_touch=op_mob, reduced_motion=op_rm)
+        opp = opx.new_page(); opp.on("pageerror", lambda e: operr.append(str(e)))
+        opp.goto(BASE); opp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        opp.evaluate("__synth.setDevice('orthicon')"); opp.wait_for_timeout(400)
+        if op_mob: opp.click(".tabs [data-go='play']"); opp.wait_for_timeout(200)
+        op = opp.evaluate(OP_MEAS); S = {x["id"]: x for x in op["sws"]}
+        unlit_con = min(_ob_con(u["color"], u["bg"]) for x in op["sws"] for u in x["unlit"])
+        lit_con = min(_ob_con(u["color"], u["bg"]) for x in op["sws"] for u in x["lit"])
+        info(f"Op. {op_w} px", f"Picture card {op['card']['h']:.0f} px tall; lines {', '.join('%s %d' % (x['id'][8:], x['lines']) for x in op['sws'])}; keys {min(x['minKey'] for x in op['sws']):.0f} px; unlit {unlit_con:.1f}:1, lit {lit_con:.1f}:1")
+        ck(f"Op. at {op_w} px the five rows are joined switches in a recessed tray (brush 5, edit 9, source 4, pictures 8, seed 4), keys square-cornered and touching, named groups",
+           all(x["cls"] and x["role"] == "group" and x["label"] and x["bg"] == "rgb(0, 0, 0)" and "inset" in x["shadow"] and x["rad"] == "7px" and x["join"]
+               and all(u["rad"] == "0px" for u in x["unlit"]) for x in op["sws"])
+           and [S[k]["n"] for k in ("orthiconBrushes", "orthiconEdits", "orthiconSources", "orthiconPictures", "orthiconGenerateRow")] == [5, 9, 4, 8, 4], op["sws"])
+        ck(f"Op. at {op_w} px key text reads on its key (unlit {unlit_con:.1f}:1, lit {lit_con:.1f}:1, want 4.5 or more); the lit brush is Orthicon's green",
+           unlit_con >= 4.5 and lit_con >= 4.5 and S["orthiconBrushes"]["lit"] and "gradient" in S["orthiconBrushes"]["lit"][0]["bg"], (unlit_con, lit_con, S["orthiconBrushes"]["lit"]))
+        sd_con = _ob_con(op["seed"]["color"], op["seed"]["bg"]); w_con = _ob_con(op["win"]["color"], op["win"]["bg"])
+        ck(f"Op. at {op_w} px the seed is a recessed amber window ({sd_con:.1f}:1) and no Orthicon control is a white field; the file keys centre their word",
+           "gradient" in op["seed"]["bg"] and "inset" in op["seed"]["shadow"] and op["seed"]["appearance"] == "textfield" and sd_con >= 4.5 and not op["white"]
+           and op["imgDisplay"] in ("flex", "inline-flex") and op["imgAlign"] == "center", (op["seed"], op["white"], op["imgDisplay"], op["imgAlign"]))
+        ck(f"Op. at {op_w} px the picture's name sits in a recessed readout window ({w_con:.1f}:1) with a green lamp for a drawn picture, titled with the name",
+           "gradient" in op["win"]["bg"] and "inset" in op["win"]["shadow"] and w_con >= 4.5 and op["win"]["src"] == "pic" and op["win"]["lamp"] == "rgb(198, 227, 138)"
+           and op["win"]["text"] and op["win"]["title"] == op["win"]["text"] and op["win"]["box"]["r"] <= op["card"]["r"], op["win"])
+        opp.click("#orthiconClear"); opp.wait_for_timeout(150)
+        cl = opp.evaluate(OP_MEAS)["win"]
+        opp.click("#orthiconPictures [data-picture='stack']"); opp.wait_for_timeout(150)
+        st_ = opp.evaluate(OP_MEAS); pk = [u for u in st_["sws"] if u["id"] == "orthiconPictures"][0]
+        ck(f"Op. at {op_w} px a cleared canvas darkens the lamp; a starter picture lights its key and the green lamp again",
+           cl["src"] == "empty" and cl["lamp"] == "rgb(38, 51, 43)" and st_["win"]["src"] == "pic" and st_["win"]["lamp"] == "rgb(198, 227, 138)" and len(pk["lit"]) == 1,
+           (cl, st_["win"], pk["lit"]))
+        opp.set_input_files("#orthiconAudio", files=[{"name": "tone.wav", "mimeType": "audio/wav", "buffer": _op_wav()}])
+        try: opp.wait_for_function("document.getElementById('orthiconNow').dataset.src === 'file'", timeout=5000)
+        except Exception: pass
+        fl = opp.evaluate(OP_MEAS)["win"]
+        opp.evaluate("document.getElementById('orthiconMic').setAttribute('aria-pressed', 'true')"); opp.wait_for_timeout(80)
+        lv = opp.evaluate(OP_MEAS)["win"]
+        opp.evaluate("document.getElementById('orthiconMic').setAttribute('aria-pressed', 'false')"); opp.wait_for_timeout(80)
+        ck(f"Op. at {op_w} px an analysed file lights the lamp amber; a live capture lights it red, " + ("steady with reduced motion" if op_rm == "reduce" else "pulsing"),
+           fl["src"] == "file" and fl["lamp"] == "rgb(255, 179, 71)" and lv["lamp"] != fl["lamp"]
+           and _dk_rgbs(lv["lamp"])[0][0] > 150 and _dk_rgbs(lv["lamp"])[0][1] < 120
+           and (lv["anim"] == "none" if op_rm == "reduce" else lv["anim"] == "deckRec"), (fl, lv))
+        if op_mob:
+            ck(f"Op. on a {op_w} px phone every key and the seed are 44 px or more, the tags drop, the switches end inside the card, no sideways scroll",
+               all(x["minKey"] >= 44 and not x["tag"]["shown"] and x["box"]["r"] <= op["card"]["r"] + 0.5 for x in op["sws"]) and op["sw"] <= op["iw"] == op_w, op)
+            ck(f"Op. on a {op_w} px phone the brushes and the sources each fit one line, the edits two, the pictures three or fewer",
+               S["orthiconBrushes"]["lines"] == 1 and S["orthiconSources"]["lines"] == 1 and S["orthiconEdits"]["lines"] == 2 and S["orthiconPictures"]["lines"] <= 3,
+               [(x["id"], x["lines"]) for x in op["sws"]])
+        else:
+            tag_con = min(_ob_con(x["tag"]["color"], op["cardBg"]) for x in op["sws"])
+            ck(f"Op. at 1366 px each switch is one line of compact keys (30 px or more), every switch starts at the same column after its engraved tag ({tag_con:.1f}:1)",
+               all(x["lines"] == 1 and x["keyH"] >= 29.5 and x["tag"]["shown"] and x["tag"]["r"]["r"] <= x["box"]["l"] for x in op["sws"])
+               and len({round(x["box"]["l"]) for x in op["sws"]}) == 1 and tag_con >= 4.5 and op["seed"]["w"] <= 110,
+               [(x["id"], x["lines"], x["keyH"], x["box"]["l"]) for x in op["sws"]])
+        opx.close()
+    ck("Op. no page errors (Orthicon's Picture card)", not operr, operr)
+    # Os. Orthicon's Scan card (graphics, 15 Nov 2026). Before, the phase, engine, scale and play chips were one loose row
+    # ("coherent random additive inverse FFT off major minor ...") with nothing between the groups (seen at 1366 px). Now each
+    # group is an engraved tag and one joined switch in a recessed tray (the Picture card's finish); on a wide card the four
+    # groups share a line, and on a phone the tags stay in a narrow column so "off" still reads as the scale.
+    OS_MEAS = """() => { const R = e => { const q = e.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, w: q.width, h: q.height }; };
+      const ids = ['orthiconPhase', 'orthiconEngine', 'orthiconScale', 'orthiconToggles'];
+      const sws = ids.map(id => { const sw = document.getElementById(id), cs = getComputedStyle(sw), row = sw.parentElement, tag = row.querySelector('.ortag');
+        const keys = [...sw.children], kr = keys.map(R);
+        const join = kr.every((k, i) => i === 0 || (Math.abs(k.t - kr[i - 1].t) < 0.6 ? Math.abs(k.l - kr[i - 1].r) <= 1.6 : k.t >= kr[i - 1].b - 0.6));
+        const st = k => { const c = getComputedStyle(k); return { color: c.color, bg: c.backgroundImage, rad: c.borderTopLeftRadius, anim: c.animationName, tr: c.transitionDuration }; };
+        return { id, cls: sw.classList.contains('orsw'), role: sw.getAttribute('role'), label: sw.getAttribute('aria-label'), bg: cs.backgroundColor, shadow: cs.boxShadow,
+          rad: cs.borderTopLeftRadius, box: R(sw), row: R(row), n: keys.length, join, lines: new Set(kr.map(k => Math.round(k.t))).size,
+          unlit: keys.filter(k => k.getAttribute('aria-pressed') !== 'true').map(st), lit: keys.filter(k => k.getAttribute('aria-pressed') === 'true').map(k => Object.assign(st(k), { text: k.textContent })),
+          minKey: Math.min(...kr.map(k => Math.min(k.w, k.h))), keyH: Math.min(...kr.map(k => k.h)), words: keys.map(k => k.textContent),
+          tag: tag ? { text: tag.textContent, shown: !!tag.offsetParent, color: getComputedStyle(tag).color, r: R(tag), hidden: tag.getAttribute('aria-hidden') } : null }; });
+      const card = document.getElementById('mOrthScan'), order = [...card.querySelectorAll('button')].map(b => b.textContent);
+      return { sws, card: R(card), cardBg: getComputedStyle(card).backgroundColor, order, knobsTop: R(document.getElementById('kOrthScan')).t,
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    oserr = []
+    for os_w, os_mob, os_rm in ((1366, False, "no-preference"), (800, False, "no-preference"), (375, True, "reduce"), (320, True, "no-preference")):
+        osx = b.new_context(viewport={"width": os_w, "height": 667 if os_mob else 1000}, is_mobile=os_mob, has_touch=os_mob, reduced_motion=os_rm)
+        osp = osx.new_page(); osp.on("pageerror", lambda e: oserr.append(str(e)))
+        osp.goto(BASE); osp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        osp.evaluate("__synth.setDevice('orthicon')"); osp.wait_for_timeout(400)
+        if os_mob: osp.click(".tabs [data-go='scan']"); osp.wait_for_timeout(200)
+        osm = osp.evaluate(OS_MEAS); S = {x["id"]: x for x in osm["sws"]}
+        un_con = min(_ob_con(u["color"], u["bg"]) for x in osm["sws"] for u in x["unlit"])
+        lit_con = min(_ob_con(u["color"], u["bg"]) for x in osm["sws"] for u in x["lit"])
+        tag_con = min(_ob_con(x["tag"]["color"], osm["cardBg"]) for x in osm["sws"])
+        info(f"Os. {os_w} px", f"Scan card {osm['card']['h']:.0f} px tall; lines {', '.join('%s %d' % (x['id'][8:], x['lines']) for x in osm['sws'])}; keys {min(x['minKey'] for x in osm['sws']):.0f} px; unlit {un_con:.1f}:1, lit {lit_con:.1f}:1, tags {tag_con:.1f}:1")
+        ck(f"Os. at {os_w} px phase, engine, scale and play are four joined switches in a recessed tray (2, 2, 6 and 3 keys), square-cornered and touching, named groups, each under an engraved tag",
+           all(x["cls"] and x["role"] == "group" and x["label"] and x["bg"] == "rgb(0, 0, 0)" and "inset" in x["shadow"] and x["rad"] == "7px" and x["join"]
+               and all(u["rad"] == "0px" for u in x["unlit"]) and x["tag"] and x["tag"]["hidden"] == "true" for x in osm["sws"])
+           and [x["n"] for x in osm["sws"]] == [2, 2, 6, 3] and [x["tag"]["text"] for x in osm["sws"]] == ["phase", "engine", "scale", "play"], osm["sws"])
+        ck(f"Os. at {os_w} px key text reads on its key (unlit {un_con:.1f}:1, lit {lit_con:.1f}:1) and the tags on the card ({tag_con:.1f}:1), all 4.5 or more; one lit key in each choice group, Orthicon's green",
+           un_con >= 4.5 and lit_con >= 4.5 and tag_con >= 4.5 and all(len(S[k]["lit"]) == 1 and "gradient" in S[k]["lit"][0]["bg"] for k in ("orthiconPhase", "orthiconEngine", "orthiconScale")),
+           (un_con, lit_con, tag_con, [(x["id"], x["lit"]) for x in osm["sws"]]))
+        ck(f"Os. at {os_w} px the tab order is unchanged (phase, engine, scale, then loop, hold, keys) and the switches sit above the knobs, inside the card",
+           osm["order"][:12] == ["coherent", "random", "additive", "inverse FFT", "off", "major", "minor", "pentatonic", "whole", "chromatic", "loop", "hold"] and osm["order"][12].startswith("keys")
+           and all(x["box"]["b"] <= osm["knobsTop"] and x["box"]["r"] <= osm["card"]["r"] + 0.5 for x in osm["sws"]), osm["order"])
+        ck(f"Os. at {os_w} px the keys hold still (no animation or transition; static, so reduced motion has nothing to stop)",
+           all(u["anim"] == "none" and u["tr"] in ("0s", "") for x in osm["sws"] for u in x["unlit"] + x["lit"]), [(x["id"], [u["anim"] for u in x["unlit"]]) for x in osm["sws"]])
+        if os_mob:
+            ck(f"Os. on a {os_w} px phone the tags stay in a column at the left of their switches, every key 44 px or more, no sideways scroll",
+               all(x["tag"]["shown"] and x["tag"]["r"]["r"] <= x["box"]["l"] and x["minKey"] >= 44 for x in osm["sws"])
+               and len({round(x["box"]["l"]) for x in osm["sws"]}) == 1 and osm["sw"] <= osm["iw"] == os_w, osm)
+            ck(f"Os. on a {os_w} px phone phase, engine and play take one line each and the scale three or fewer",
+               all(S[k]["lines"] == 1 for k in ("orthiconPhase", "orthiconEngine", "orthiconToggles")) and S["orthiconScale"]["lines"] <= 3,
+               [(x["id"], x["lines"]) for x in osm["sws"]])
+        else:
+            ck(f"Os. at {os_w} px each switch is one line of compact keys (30 px), its tag at its left" + (", all four groups on one line and the card no taller than before (208 px)" if os_w >= 1300 else ""),
+               all(x["lines"] == 1 and x["keyH"] >= 29.5 and x["tag"]["shown"] and x["tag"]["r"]["r"] <= x["box"]["l"] for x in osm["sws"])
+               and (os_w < 1300 or (len({round(x["row"]["t"]) for x in osm["sws"]}) == 1 and osm["card"]["h"] <= 208)) and osm["sw"] <= osm["iw"],
+               [(x["id"], x["lines"], x["keyH"], x["row"]["t"]) for x in osm["sws"]])
+        osp.click("#orthiconScale >> text=minor"); osp.wait_for_timeout(120)
+        osp.click("#orthiconEngine >> text=inverse FFT"); osp.wait_for_timeout(120)
+        osp.click("#orthiconToggles >> text=hold"); osp.wait_for_timeout(120)
+        o2 = osp.evaluate(OS_MEAS); S2 = {x["id"]: x for x in o2["sws"]}; pt = osp.evaluate("() => { const p = __synth.patch(); return [p.scale, p.engine, p.hold, p.phase]; }")
+        ck(f"Os. at {os_w} px a key sets its own field and lights only itself in its group (minor, inverse FFT, hold on; phase untouched)",
+           pt[0] == "minor" and pt[1] == "ifft" and pt[2] is True and pt[3] == "coherent"
+           and [u["text"] for u in S2["orthiconScale"]["lit"]] == ["minor"] and [u["text"] for u in S2["orthiconEngine"]["lit"]] == ["inverse FFT"]
+           and [u["text"] for u in S2["orthiconPhase"]["lit"]] == ["coherent"] and "hold" in [u["text"] for u in S2["orthiconToggles"]["lit"]], (pt, [(x["id"], x["lit"]) for x in o2["sws"]]))
+        osx.close()
+    ck("Os. no page errors (Orthicon's Scan card)", not oserr, oserr)
+    # Mw. the Mix card's own row from 761 px (graphics, 16 Nov 2026). Measured before on main at 900, 1024 and 1099 px: the
+    # panel has three columns, the Mix card spanned two and shared its row with one card, and the grid stretched that card to
+    # the Mix card's 2,272 px, so Cathode's Room, Thyratron's Mod, Pentagrid's Receiver, Orthicon's Scan, Trochotron's Shape,
+    # Additron's Spin and Rhumbatron's Body each had 1,726 to 2,126 px of empty panel under their controls. Now the Mix and
+    # Master cards take a whole row on every desktop width, and the slider grids take columns from 761 px (was 1100), so a
+    # freed slider card that the row fill widens does not run one 800 px fader per row.
+    MW_MEAS = """() => { const R = e => e.getBoundingClientRect(), panel = document.getElementById('panel'), pr = R(panel), ps = getComputedStyle(panel);
+      const mods = [...panel.querySelectorAll('.mod')].filter(m => m.offsetParent && R(m).height > 0);
+      const host = R(document.getElementById('mHost')), mast = R(document.getElementById('mMaster'));
+      const inner = { l: pr.left + parseFloat(ps.paddingLeft), r: pr.right - parseFloat(ps.paddingRight) };
+      const beside = id => { const c = R(document.getElementById(id)); return mods.filter(m => m.id !== id && R(m).top < c.bottom - 1 && R(m).bottom > c.top + 1).map(m => m.id); };
+      const empty = mods.map(m => { const r = R(m); let cb = r.top; for (const c of m.children) { const q = R(c); if (q.height > 0 && getComputedStyle(c).display !== 'none') cb = Math.max(cb, q.bottom); }
+        return { id: m.id, h: Math.round(r.height), empty: Math.round(r.bottom - cb - (parseFloat(getComputedStyle(m).paddingBottom) || 0)) }; });
+      const grids = [...document.querySelectorAll('.tr-grid, .ph-grid, .rhum-grid, .hep-sliders')].filter(g => g.offsetParent).map(g => {
+        const f = [...g.querySelectorAll('input[type=range]')].filter(i => i.offsetParent).map(i => R(i).width);
+        return { card: g.closest('.mod').id, cols: getComputedStyle(g).gridTemplateColumns.split(' ').length, fader: f.length ? Math.min(...f) : 0 }; });
+      return { host: { l: host.left, r: host.right, h: host.height }, mast: { l: mast.left, r: mast.right }, inner, hostBeside: beside('mHost'), mastBeside: beside('mMaster'),
+        hostCols: getComputedStyle(document.getElementById('mHost')).gridTemplateColumns.split(' ').length, empty, grids,
+        sw: document.documentElement.scrollWidth, iw: innerWidth }; }"""
+    MW_FREED = {"cathode": "mRoom", "thyratron": "mThyMod", "pentagrid": "mPentaRx", "orthicon": "mOrthScan", "trochotron": "mTrShape", "additron": "mAdSpin", "rhumbatron": "mRhumBody"}
+    mwerr = []
+    for mw_w in (761, 900, 1024, 1099, 1366):
+        mwx = b.new_context(viewport={"width": mw_w, "height": 900}, reduced_motion="reduce" if mw_w == 1024 else "no-preference")
+        mwp = mwx.new_page(); mwp.on("pageerror", lambda e: mwerr.append(str(e)))
+        mwp.goto(BASE); mwp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        mw_rows = {}
+        for d, cid in MW_FREED.items():
+            mwp.evaluate(f"__synth.setDevice('{d}')"); mwp.wait_for_timeout(350)
+            mw_rows[d] = (cid, mwp.evaluate(MW_MEAS))
+        mw_worst = max((next(x for x in m["empty"] if x["id"] == cid)["empty"], d) for d, (cid, m) in mw_rows.items())
+        info(f"Mw. {mw_w} px", f"Mix card {mw_rows['orthicon'][1]['host']['h']:.0f} px tall, {mw_rows['orthicon'][1]['hostCols']} strip column(s); the most empty panel left under a freed card {mw_worst[0]} px ({mw_worst[1]}); "
+             + ", ".join(f"{g['card']} {g['cols']} col {g['fader']:.0f} px" for d in ('trochotron', 'rhumbatron') for g in mw_rows[d][1]['grids']))
+        ck(f"Mw. at {mw_w} px the Mix and Master cards each fill the panel's width and share their row with no other card, on all seven devices whose card it used to stretch",
+           all(abs(m["host"]["l"] - m["inner"]["l"]) <= 1 and abs(m["host"]["r"] - m["inner"]["r"]) <= 1 and abs(m["mast"]["l"] - m["inner"]["l"]) <= 1 and abs(m["mast"]["r"] - m["inner"]["r"]) <= 1
+               and not m["hostBeside"] and not m["mastBeside"] for _, m in mw_rows.values()),
+           {d: (m["host"], m["inner"], m["hostBeside"], m["mastBeside"]) for d, (_, m) in mw_rows.items()})
+        # at 1100 px and up the Mix card had its own row already; a card there is only as tall as its row partners (Pentagrid's
+        # Receiver beside the Face card, 200 px at 1366), the grid's ordinary equal rows, so the bound is looser there
+        mw_lim = 120 if mw_w < 1100 else 250
+        ck(f"Mw. at {mw_w} px Cathode's Room, Thyratron's Mod, Pentagrid's Receiver, Orthicon's Scan, Trochotron's Shape, Additron's Spin and Rhumbatron's Body end within {mw_lim} px of their controls (worst {mw_worst[0]} px, {mw_worst[1]}; was 1,726 to 2,126 px at 900 to 1099)",
+           mw_worst[0] <= mw_lim, {d: next(x for x in m["empty"] if x["id"] == cid) for d, (cid, m) in mw_rows.items()})
+        mw_g = [g for d in ("trochotron", "rhumbatron") for g in mw_rows[d][1]["grids"]]
+        ck(f"Mw. at {mw_w} px Trochotron's and Rhumbatron's sliders sit in two or more columns and no fader is a stub (" + ", ".join(f"{g['cols']} col, {g['fader']:.0f} px" for g in mw_g) + "; want 100 px or more)",
+           mw_g and all(g["cols"] >= 2 and g["fader"] >= 100 for g in mw_g), mw_g)
+        if mw_w >= 1100:
+            ck(f"Mw. at {mw_w} px the Mix card keeps its two strip columns", all(m["hostCols"] == 2 for _, m in mw_rows.values()), [m["hostCols"] for _, m in mw_rows.values()])
+        else:
+            ck(f"Mw. at {mw_w} px the strips stay one column (two at this width leave stub faders)", all(m["hostCols"] == 1 for _, m in mw_rows.values()), [m["hostCols"] for _, m in mw_rows.values()])
+        ck(f"Mw. at {mw_w} px no sideways scroll on any of the seven devices", all(m["sw"] <= m["iw"] for _, m in mw_rows.values()), [(d, m["sw"], m["iw"]) for d, (_, m) in mw_rows.items()])
+        if mw_w == 1024:
+            mw_tr = mwp.evaluate("() => [document.getElementById('mHost'), document.getElementById('mRhumBody')].map(e => { const c = getComputedStyle(e); return [c.animationName, c.transitionDuration]; })")
+            ck("Mw. with reduced motion the placement is static: the Mix card and a freed card carry no animation or transition", all(a == "none" and t in ("0s", "") for a, t in mw_tr), mw_tr)
+        mwx.close()
+    ck("Mw. no page errors (the Mix card's own row)", not mwerr, mwerr)
     rpx = b.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True); rpp = rpx.new_page(); rperr = []
     rpp.on("pageerror", lambda e: rperr.append(str(e)))
     rpp.goto(BASE); rpp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
@@ -6180,6 +7267,11 @@ with sync_playwright() as pw:
       __synth.transport().setTempo(120);
       return { ok, name: __synth.player().song().name, route: __synth.player().routing(), ons, slowAt: slow.at, score: __synth.player().score() };
     }""")
+    # A file that fails leaves the previous song loaded and playable, so the status names it (review R1114-1)
+    lkept = pg.evaluate("""() => { const ok = __synth.player().importBytes([1, 2, 3, 4, 5, 6, 7, 8], 'junk.mid');
+      return { ok, stat: document.getElementById('libStat').textContent, song: (__synth.player().song() || {}).name, play: !document.getElementById('libPlay').disabled }; }""")
+    ck("P. a failed import says the previous song is still loaded (review R1114-1)",
+       lkept["ok"] is False and lkept["stat"].startswith("junk.mid: ") and lkept["stat"].endswith("Still loaded: route-test.mid.") and lkept["song"] == "route-test" and lkept["play"], lkept)
     ons = route["ons"]
     ck("P. channel 1 goes to Filament and channel 2 to Cathode",
        route["ok"] and route["name"] == "route-test" and route["route"].get("1") == "filament" and route["route"].get("2") == "cathode", route["route"])
@@ -6210,6 +7302,28 @@ with sync_playwright() as pw:
     head = L[int(0.08 * SR):int(0.40 * SR)]
     b440, b65 = tone_amp(head, 440.0), tone_amp(head, 65.406)
     ck("P. routing channel 2 off drops C2 by 30 dB or more and keeps A4", b65 < a65 / 31.6 and b440 > 0.02, (db(b65), db(a65), b440))
+    # (after the route-test renders above, which use the song loaded there)
+    # A file ends where its tracks end, not at its last note off: a 2 s take with one 0.25 s note is 4 beats
+    # long in the library, as the deck reads it, so loop repeats every 2 s (review R1117-1)
+    eot = pg.evaluate("""() => { const S = __synth;
+      const mk = (len, d) => [...S.smf.write({ bpm: 120, length: len, parts: [{ ch: 0, name: 'Blip', events: [{ time: 0, data: [0x90, 72, 100] }, { time: d, data: [0x80, 72, 0] }] }] })];
+      const a = S.player().parse(mk(2, 0.25)), b = S.player().parse(mk(0, 0.25)), deck = S.smf.read(mk(2, 0.25)).song.length;
+      return { padded: a.beats, bare: b.beats, deck, padSec: a.seconds }; }""")
+    ck(f"P. a .mid that ends after a rest keeps its length: 2 s file reads {eot['padded']} beats ({eot['padSec']} s; deck {eot['deck']} s), no padding reads {eot['bare']} (review R1117-1)",
+       abs(eot["padded"] - 4) < 1e-6 and abs(eot["padSec"] - eot["deck"]) < 1e-6 and abs(eot["bare"] - 0.5) < 1e-6, eot)
+    # Pressing a channel chip from the keyboard rebuilds the list; focus stays on the chip, not the page (review R1117-2)
+    pg.evaluate("__synth.player().importBytes([...__synth.smf.write({ bpm: 120, length: 2, parts: [{ ch: 0, name: 'A', events: [{ time: 0, data: [0x90, 60, 90] }, { time: 1, data: [0x80, 60, 0] }] }, { ch: 1, name: 'B', events: [{ time: 0, data: [0x90, 48, 90] }, { time: 1, data: [0x80, 48, 0] }] }] })], 'focus.mid')")
+    pg.focus("#libChannels button[data-ch='2'][data-dev='filament']")
+    pg.keyboard.press("Enter"); pg.wait_for_timeout(100)
+    lf = pg.evaluate("(() => { const e = document.activeElement; return { label: e.getAttribute('aria-label'), pressed: e.getAttribute('aria-pressed'), route: __synth.player().routing()['2'] }; })()")
+    pg.evaluate("__synth.deck().importBytes([...__synth.smf.write({ bpm: 120, length: 2, parts: [{ ch: 0, name: 'A', events: [{ time: 0, data: [0x90, 60, 90] }, { time: 1, data: [0x80, 60, 0] }] }, { ch: 1, name: 'B', events: [{ time: 0, data: [0x90, 48, 90] }, { time: 1, data: [0x80, 48, 0] }] }] })], 'focus.mid')")
+    pg.wait_for_timeout(100)
+    pg.focus("#trackList button[data-trk='0'][data-v='cathode']")
+    pg.keyboard.press("Enter"); pg.wait_for_timeout(100)
+    df = pg.evaluate("(() => { const e = document.activeElement; return { label: e.getAttribute('aria-label'), pressed: e.getAttribute('aria-pressed') }; })()")
+    ck(f"P. a library channel chip and a deck track chip keep the keyboard focus after Enter (library {lf['label']!r}, deck {df['label']!r}) (review R1117-2)",
+       lf["label"] == "Channel 2: play on Filament" and lf["pressed"] == "true" and lf["route"] == "filament"
+       and df["label"] == "A: play on Cathode" and df["pressed"] == "true", (lf, df))
 
     hats_on = pg.evaluate("""async () => {
       await __synth.player().loadId('dx-pixel-march');
@@ -6551,6 +7665,137 @@ with sync_playwright() as pw:
     ck("Pr. closing the roll strip turns key in off; a key played after leaves the roll as it was",
        (not ki_r["st"]["keyIn"]) and ki_r["st"]["pat"]["steps"][0]["n"] == 36 and ki_r["st"]["sel"] == 0 and not ki_r["st"]["edited"] and ki_r["pressed"] == "false",
        (ki_r["st"]["keyIn"], ki_r["st"]["pat"]["steps"][0], ki_r["st"]["sel"], ki_r["st"]["edited"], ki_r["pressed"]))
+    # the roll in the project file (17 Nov): the pattern, the device it plays and the run switch go into a project; a
+    # project saved before then has no roll and leaves the roll as it is; a file's dest the rack does not have plays the lit device
+    pps = pr.evaluate("""async () => {
+      const P = await import('/synth/project.js'), M = await import('/synth/paperroll.js');
+      const old = P.normalizeProject({ name: 'Old', devices: {} });
+      const bad = P.normalizeProject({ roll: { pat: { len: 99, rate: 'x', steps: [{ n: 300, g: 1 }] }, dest: '__proto__', run: 'yes' } });
+      const odd = ['constructor', 'Cathode', 'a b', '', 7, 'x'.repeat(40), 'cathode'].map(d => P.normalizeProject({ roll: { dest: d } }).roll.dest);
+      const arr = P.normalizeProject({ roll: [1, 2] }), nul = P.normalizeProject({ roll: null });
+      const good = P.normalizeProject({ roll: { pat: M.ROLL_FACTORY[3], dest: 'cathode', run: true } });
+      const again = P.normalizeProject(JSON.parse(JSON.stringify(good)));
+      return { oldHas: 'roll' in old, arrHas: 'roll' in arr, nulHas: 'roll' in nul, bad: bad.roll, odd,
+        good: { dest: good.roll.dest, run: good.roll.run, same: JSON.stringify(good.roll.pat) === JSON.stringify(M.ROLL_FACTORY[3]) },
+        stable: JSON.stringify(again) === JSON.stringify(good), v: good.v, kind: good.kind };
+    }""")
+    ck("Pr. project schema: no roll stays no roll (old projects); a roll's pattern normalizes, run is on only for true, a dest that is not a plain id is the lit device; still v1",
+       not pps["oldHas"] and not pps["arrHas"] and not pps["nulHas"] and pps["bad"]["dest"] == "lit" and pps["bad"]["run"] is False
+       and pps["bad"]["pat"]["len"] == 16 and pps["bad"]["pat"]["rate"] == "16" and pps["bad"]["pat"]["steps"][0] == {"n": 127, "g": 1, "a": 0, "s": 0, "t": 0}
+       and len(pps["bad"]["pat"]["steps"]) == 16 and pps["odd"] == ["constructor", "lit", "lit", "lit", "lit", "lit", "cathode"]
+       and pps["good"] == {"dest": "cathode", "run": True, "same": True} and pps["stable"] and pps["v"] == 1 and pps["kind"] == "dxrack", pps)
+    # A project file without a strip (saved before that device was on the rack) loads it at its defaults: until 20 Nov
+    # the page's own strip stayed, so a Lattice solo left from before silenced the project's Filament (review R1120-1)
+    pms = pr.evaluate("""async () => {
+      const P = await import('/synth/project.js');
+      const keys = Object.keys(P.normalizeProject({ mixer: { filament: { level: 0.5 } } }).mixer).sort();
+      __synth.setMixer('lattice', { solo: true }); __synth.setMixer('thyratron', { mute: true, level: 0.2 }); __synth.setMixer('resnatron', { pan: -0.5, sendR: 0.4 });
+      __synth.applyProject({ v: 1, kind: 'dxrack', name: 'Old mix', device: 'filament', tempo: 120, mixer: { filament: { level: 0.7 }, cathode: { level: 1 } }, devices: {} });
+      const m = __synth.mixer();
+      const pressed = [...document.querySelectorAll('[id^=mix][id$=Solo], [id^=mix][id$=Mute]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.id);
+      return { keys, lattice: m.lattice, thyratron: m.thyratron, resnatron: m.resnatron, filament: m.filament, pressed };
+    }""")
+    dflt = {"level": 1, "pan": 0, "mute": False, "solo": False, "sendR": 0, "sendD": 0}
+    ck(f"Pr. a project file without a strip loads that strip at its defaults: a Lattice solo, a Thyratron mute and a Resnatron pan left on the page are cleared, the file's Filament level is kept (pressed {pms['pressed']}) (review R1120-1)",
+       len(pms["keys"]) == 18 and pms["lattice"] == dflt and pms["thyratron"] == dflt and pms["resnatron"] == dflt
+       and abs(pms["filament"]["level"] - 0.7) < 1e-9 and pms["pressed"] == [], pms)
+    rp = pr.evaluate("""() => {
+      __synth.transport().stop(); __synth.transport().stop(); __synth.setDevice('filament');
+      const R = __synth.roll();
+      R.set(R.factory()[3]); R.edit(p => { p.steps[0].n = 41; p.tr = 5; p.swing = 0.25; }); R.dest('cathode'); R.run(true);
+      const want = R.project();
+      const saved = __synth.saveProject(), collected = __synth.project();
+      R.set(R.factory()[1]); R.dest('lit'); R.run(false);
+      const loaded = __synth.loadProject();
+      const st = R.state();
+      R.set(R.factory()[2]); R.dest('lit'); R.run(false);
+      __synth.applyProject({ kind: 'dxrack', name: 'Before rolls', device: 'filament' });
+      const kept = R.state();
+      __synth.applyProject({ kind: 'dxrack', name: 'Factory roll', device: 'filament', roll: { pat: R.factory()[4], dest: 'constructor', run: false } });
+      const fac = R.state();
+      __synth.applyProject({ kind: 'dxrack', name: 'Gone device', device: 'filament', roll: { pat: R.factory()[4], dest: 'nosuch', run: false } });
+      const gone = R.state();
+      return { want, inSaved: saved.roll, inCollected: collected.roll, loadedRoll: loaded && loaded.roll, st, kept, fac, gone,
+        stat: document.getElementById('rollStat').textContent, title: document.getElementById('projSave').title };
+    }""")
+    ck(f"Pr. save project carries the roll (pattern with its edits, dest cathode, run on), and load project puts it back, edit mark on (status '{rp['stat']}')",
+       rp["inSaved"] == rp["want"] and rp["inCollected"] == rp["want"] and rp["loadedRoll"] == rp["want"]
+       and rp["st"]["pat"] == rp["want"]["pat"] and rp["st"]["dest"] == "cathode" and rp["st"]["run"] is True and rp["st"]["edited"]
+       and rp["st"]["pat"]["steps"][0]["n"] == 41 and rp["st"]["pat"]["tr"] == 5 and "paper roll" in rp["title"],
+       (rp["want"], rp["st"]["dest"], rp["st"]["run"], rp["st"]["edited"]))
+    ck("Pr. a project with no roll (saved before 17 Nov) leaves the roll as it was",
+       rp["kept"]["pat"]["name"] == "Walking Tens" and not rp["kept"]["edited"] and rp["kept"]["run"] is False and rp["kept"]["dest"] == "lit",
+       (rp["kept"]["pat"]["name"], rp["kept"]["edited"], rp["kept"]["run"], rp["kept"]["dest"]))
+    ck("Pr. a project with a factory roll as shipped loads it unmarked; a dest this rack does not have ('constructor', 'nosuch') plays the lit device",
+       rp["fac"]["pat"]["name"] == "Arc Arpeggio" and not rp["fac"]["edited"] and rp["fac"]["dest"] == "lit" and rp["gone"]["dest"] == "lit",
+       (rp["fac"]["pat"]["name"], rp["fac"]["edited"], rp["fac"]["dest"], rp["gone"]["dest"]))
+    # a project applied while the transport plays with run off: run comes on and the roll strikes on the grid from now,
+    # nothing owed from the steps that passed while it was off
+    pr.evaluate("""() => { __synth.transport().stop(); __synth.setDevice('filament'); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();
+      __synth.transport().setTempo(120); __synth.transport().locate(0); __synth.transport().play(); }""")
+    pr.wait_for_timeout(1500)
+    lv = pr.evaluate("""() => { const R = __synth.roll(); const s0 = R.state().skipped, n0 = R.log().length; R.clearLog();
+      const t0 = __synth.engine().ctx.currentTime;
+      __synth.applyProject({ kind: 'dxrack', name: 'Mid play', device: 'filament', tempo: 120, roll: { pat: R.factory()[1], dest: 'lit', run: true } });
+      return { s0, n0, t0 }; }""")
+    pr.wait_for_timeout(900)
+    lv2 = pr.evaluate("() => { const R = __synth.roll(); const L = R.log(); __synth.transport().stop(); return { log: L, st: R.state() }; }")
+    ons = [e for e in lv2["log"] if e["t"] == "on"]; skips = [e for e in lv2["log"] if e["t"] == "skip"]
+    gaps_l = [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(ons, ons[1:])]
+    first_l = (ons[0]["want"] - lv["t0"]) if ons else None
+    ck(f"Pr. a project that turns run on under a playing transport: no strikes while off ({lv['n0']}), then {len(ons)} strikes 125 ms apart from {None if first_l is None else round(first_l * 1000)} ms after it, none skipped ({len(skips)})",
+       lv["n0"] == 0 and len(ons) >= 5 and not skips and lv2["st"]["skipped"] == lv["s0"] and first_l is not None and -0.002 <= first_l <= 0.13 + 0.15
+       and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_l), (lv, gaps_l, first_l, len(skips)))
+    # the same with the page busy after the apply, until 90 ms past the next step (improvement 20 Nov): the check above
+    # failed once on main when the box was loaded (first strike 200 ms after, one step skipped). Run on waited for the
+    # next timer tick to fill the lookahead, so a stall past the first step dropped it: 1 skip in 5 of 5 trials on
+    # main, 0 in 7 of 7 with resync filling the lookahead at once (measured). Deterministic: the stall is set from the
+    # transport's own position, so on main the first step is always over LATE (60 ms) when the timer comes round.
+    pr.evaluate("""() => { __synth.transport().stop(); __synth.setDevice('filament'); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();
+      __synth.transport().setTempo(120); __synth.transport().locate(0); __synth.transport().play(); }""")
+    pr.wait_for_timeout(600)
+    lb = pr.evaluate("""() => { const R = __synth.roll(), T = __synth.transport(), c = __synth.engine().ctx; R.clearLog();
+      __synth.applyProject({ kind: 'dxrack', name: 'Busy page', device: 'filament', tempo: 120, roll: { pat: R.factory()[1], dest: 'lit', run: true } });
+      const t1 = c.currentTime, pos = T.position(), next = (Math.floor(pos / 0.25 + 1e-6) + 1) * 0.25, d1 = (next - pos) * 0.5;
+      const until = performance.now() + (d1 + 0.09) * 1000; while (performance.now() < until) {}
+      return { t1, d1 }; }""")
+    pr.wait_for_timeout(700)
+    lb2 = pr.evaluate("() => { const R = __synth.roll(); const L = R.log(); __synth.transport().stop(); return L; }")
+    ons_b = [e for e in lb2 if e["t"] == "on"]; skips_b = [e for e in lb2 if e["t"] == "skip"]
+    gaps_b = [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(ons_b, ons_b[1:])]
+    first_b = (ons_b[0]["want"] - lb["t1"]) if ons_b else None
+    ck(f"Pr. run on from a project, then the page busy until 90 ms past the next step: none skipped ({len(skips_b)}), first strike {None if first_b is None else round(first_b * 1000)} ms after (the next step is {round(lb['d1'] * 1000)} ms), {len(ons_b)} strikes 125 ms apart (improvement 20 Nov)",
+       not skips_b and len(ons_b) >= 5 and first_b is not None and -0.01 <= first_b <= lb["d1"] + 0.002
+       and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_b), (lb, gaps_b, first_b, [round((e["at"] - e["want"]) * 1000) for e in skips_b]))
+    # the run switch itself, the same way (bug fixed 17 Nov): on main, run on after 1.5 s off logged 12 to 14 passed steps as
+    # skipped and could strike the first note up to 21 ms late (measured, 3 trials)
+    pr.evaluate("""() => { __synth.transport().stop(); const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); R.clearLog();
+      __synth.transport().setTempo(120); __synth.transport().locate(0); __synth.transport().play(); }""")
+    pr.wait_for_timeout(1500)
+    rv = pr.evaluate("() => { const R = __synth.roll(); const s0 = R.state().skipped; R.clearLog(); const t0 = __synth.engine().ctx.currentTime; document.getElementById('rollRun').click(); return { s0, t0 }; }")
+    pr.wait_for_timeout(900)
+    rv2 = pr.evaluate("() => { const R = __synth.roll(); const L = R.log(); __synth.transport().stop(); return { log: L, st: R.state() }; }")
+    ons_r = [e for e in rv2["log"] if e["t"] == "on"]; sk_r = [e for e in rv2["log"] if e["t"] == "skip"]
+    gaps_r = [round(b_["want"] - a_["want"], 4) for a_, b_ in zip(ons_r, ons_r[1:])]
+    first_r = (ons_r[0]["want"] - rv["t0"]) if ons_r else None
+    ck(f"Pr. the run key turned on under a playing transport starts on the grid from now: {len(ons_r)} strikes 125 ms apart, the first {None if first_r is None else round(first_r * 1000)} ms after it, none skipped ({len(sk_r)})",
+       rv2["st"]["run"] is True and len(ons_r) >= 5 and not sk_r and rv2["st"]["skipped"] == rv["s0"] and first_r is not None and -0.002 <= first_r <= 0.13 + 0.15
+       and all(abs(g_ - 0.125) < 0.002 for g_ in gaps_r), (rv, gaps_r, first_r, len(sk_r)))
+    pr.wait_for_timeout(400)
+    # the project file row: download carries the roll, upload puts it back, and it is kept across a reload
+    pr.wait_for_timeout(400)
+    fileproj = pr.evaluate("""() => { const R = __synth.roll(); R.set(R.factory()[5]); R.edit(p => { p.steps[1].g = 1; p.steps[1].n = 50; p.gate = 0.8; }); R.dest('cathode'); R.run(true);
+      const p = __synth.project(); p.name = 'Roll File'; R.set(R.factory()[1]); R.dest('lit'); R.run(false); return p; }""")
+    pr.set_input_files("#projFile", files=[{"name": "filament-roll-file.json", "mimeType": "application/json", "buffer": json.dumps(fileproj).encode()}])
+    pr.wait_for_function("() => __synth.roll().state().dest === 'cathode'", timeout=5000)
+    up = pr.evaluate("() => ({ st: __synth.roll().state(), toast: document.getElementById('toast').textContent })")
+    pr.reload(); pr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    rk = pr.evaluate("__synth.roll().state()")
+    ck(f"Pr. upload project puts the file's roll back ('{up['toast']}'), and the roll is kept across a reload",
+       up["st"]["pat"] == fileproj["roll"]["pat"] and up["st"]["dest"] == "cathode" and up["st"]["run"] is True and up["st"]["edited"] and "Roll File" in up["toast"]
+       and rk["pat"] == fileproj["roll"]["pat"] and rk["dest"] == "cathode" and rk["run"] is True,
+       (up["st"]["pat"]["name"], up["st"]["dest"], up["st"]["run"], up["toast"], rk["pat"]["name"], rk["dest"]))
+    pr.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[1]); R.dest('lit'); R.run(false); }")
     pr.evaluate("__synth.transport().stop()")
     ck("Pr. no page errors (desktop)", not prerr, prerr)
     prx.close()
@@ -6581,6 +7826,603 @@ with sync_playwright() as pw:
     ck(f"Pr. reduced motion: the paper holds still (position {rd['stats']['pos']}) while the roll plays ({rn} strikes), no page errors",
        rd["stats"]["pos"] == 0 and rn >= 4 and not rrerr, (rd, rn, rrerr))
     rrx.close()
+
+    # ---------------------------------------------------------------- Rc. named user rolls and the chain (0.3, 18 Nov)
+    # The paper roll's next slice: rolls kept by name in this browser, and a chain (song mode) that plays rolls in
+    # turn, each a number of times, then comes round again. The plan for a segment is pure (paperroll.js: segPlan,
+    # chainSegments, chainAt, chainScore); these check it, the live timing against it, the strip, the project and a phone.
+    rcx = b.new_context(viewport={"width": 1366, "height": 1000}); rc = rcx.new_page(); rcerr = []
+    rc.on("pageerror", lambda e: rcerr.append(str(e)))
+    rc.goto(BASE); rc.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    rcs = rc.evaluate("""async () => {
+      const M = await import('/synth/paperroll.js');
+      const F = M.ROLL_FACTORY, j = o => JSON.parse(JSON.stringify(o));
+      const many = Array.from({ length: 70 }, (_, i) => ({ name: 'R' + i, steps: [{ n: 50, g: 1 }] }));
+      const ur = M.normalizeUserRolls([{ name: '  My   Roll ', len: 4 }, { name: 'my roll' }, { name: 'octave PUMP' }, { name: '' }, null, [1], { name: 'x'.repeat(60) }]);
+      const capped = M.normalizeUserRolls(many).length;
+      const ch = M.normalizeChain({ on: 'yes', items: [{ name: 'Octave Pump', reps: 0 }, { name: 'B', reps: 99, pat: { len: 4 } }, { reps: 2 }, null, { name: '', pat: { name: 'From Pat' } }].concat(Array.from({ length: 20 }, () => ({ name: 'Z' }))) });
+      const on = M.normalizeChain({ on: true, items: [] }).on;
+      const chainA = M.normalizeChain({ on: true, items: [{ name: 'Octave Pump', reps: 2 }, { name: 'Slow Bells', reps: 1 }] });
+      const segs = M.chainSegments(chainA, []);
+      const at = [0, 7.99, 8, 11.999, 12, 20.5, -3].map(b => { const a = M.chainAt(segs, b); return [a.idx, a.start, a.pass]; });
+      // a tie run and a slide on a segment's last step end at the gate there, never past the end
+      const tp = M.normalizeRoll({ len: 4, gate: 0.5, steps: [{ n: 50, g: 0, t: 1 }, { n: 52, g: 1 }, { n: 55, g: 1 }, { n: 57, g: 1 }] });
+      const inRoll = M.rollPlan(tp, 0, 4, 0).notes.map(x => [x.k, x.len, x.off]);
+      const inSeg = M.segPlan(tp, 4, 0, 4, 0).notes.map(x => [x.k, x.len, x.off, x.slide]);
+      const sp = M.normalizeRoll({ len: 2, gate: 0.5, steps: [{ n: 50, g: 1 }, { n: 52, g: 1, s: 1 }] });
+      const slideSeg = M.segPlan(sp, 4, 0, 4, 0).notes.map(x => [x.k, x.off, x.slide]);
+      const slideRoll = M.rollPlan(sp, 0, 4, 0).notes.map(x => [x.k, x.off, x.slide]);
+      const sc = M.chainScore(chainA, [], 2, 120, 'filament');
+      const ons = sc.filter(e => e.t === 'on'), offs = sc.filter(e => e.t === 'off');
+      const pump = M.rollScore(F[1], 32, 120, 'filament').filter(e => e.t === 'on');
+      const userWins = M.resolveChainRoll({ name: 'Octave Pump', pat: F[2] }, [{ name: 'Octave Pump' }]);
+      const copy = M.resolveChainRoll({ name: 'Elsewhere', pat: M.normalizeRoll({ name: 'Elsewhere', len: 3 }) }, []);
+      return { ur: ur.map(r => [r.name, r.len]), capped, ch: { on: ch.on, n: ch.items.length, first: [ch.items[0].name, ch.items[0].reps], second: [ch.items[1].name, ch.items[1].reps, ch.items[1].pat.len, ch.items[1].pat.name], third: ch.items[2].name }, on,
+        at, inRoll, inSeg, slideSeg, slideRoll,
+        firstSeg1: ons.find(e => e.seg === 1).at, seg0n: ons.filter(e => e.seg === 0).length / 2, pumpN: pump.length,
+        sameAsRoll: JSON.stringify(ons.filter(e => e.seg === 0).slice(0, pump.length).map(e => [e.at, e.n, e.v])) === JSON.stringify(pump.map(e => [e.at, e.n, e.v])),
+        pass2: ons.filter(e => e.at >= 6 - 1e-9)[0].at, maxOff1: Math.max(...offs.filter(e => e.seg === 1 && e.at < 6.5).map(e => e.at)),
+        userWins: userWins.name, copy: copy.len, stable: JSON.stringify(M.normalizeChain(j(chainA))) === JSON.stringify(chainA) };
+    }""")
+    ck(f"Rc. user rolls: names are trimmed, a second copy of a name (any case), a factory name and an empty name are dropped, at most 64 ({rcs['ur']}, {rcs['capped']} of 70)",
+       rcs["ur"] == [["My Roll", 4], ["x" * 40, 16]] and rcs["capped"] == 64, rcs)
+    ck("Rc. chain schema: on only for true; reps 1 to 16; an entry takes its pattern's name when it has none, a nameless one is dropped; at most 16; a chain with no rolls can be on but plays nothing; normal twice is the same",
+       rcs["ch"] == {"on": False, "n": 16, "first": ["Octave Pump", 1], "second": ["B", 16, 4, "B"], "third": "From Pat"} and rcs["on"] is True and rcs["stable"], rcs["ch"])
+    ck(f"Rc. chainAt: Octave Pump x2 (8 beats) then Slow Bells (4 beats) comes round every 12 beats ({rcs['at']})",
+       rcs["at"] == [[0, 0, 0], [0, 0, 0], [1, 8, 0], [1, 8, 0], [0, 12, 1], [1, 20, 1], [0, 0, 0]], rcs["at"])
+    ck(f"Rc. a segment's end: a tie run on the last step ends at the gate there, not across the loop ({rcs['inSeg']}; the looping roll: {rcs['inRoll']}); a slide on the last step does not reach the next roll ({rcs['slideSeg']})",
+       rcs["inSeg"] == [[1, 1, 0.375, False], [2, 1, 0.625, False], [3, 1, 0.875, False]] and rcs["inRoll"][-1] == [3, 2, 1.125]
+       and rcs["slideSeg"] == [[0, 0.125, False], [1, 0.52, True], [2, 0.625, False], [3, 0.875, False]] and rcs["slideRoll"][3] == [3, 1.02, True], rcs)
+    ck(f"Rc. chainScore at 120 BPM: Octave Pump twice ({rcs['seg0n']:.0f} strikes a pass) is the roll's own score, Slow Bells strikes at {rcs['firstSeg1']} s, the second pass at {rcs['pass2']} s, and no note of Slow Bells holds past its end ({rcs['maxOff1']} s)",
+       rcs["sameAsRoll"] and rcs["firstSeg1"] == 4 and rcs["pass2"] == 6 and rcs["maxOff1"] <= 6 + 1e-9 and rcs["seg0n"] == rcs["pumpN"], rcs)
+    ck("Rc. an entry plays your roll of that name, else the factory roll, else its own copy", rcs["userWins"] == "Octave Pump" and rcs["copy"] == 3, rcs)
+    # save, the list, delete, the refusals, through the strip's own controls
+    rc.evaluate("() => { const R = __synth.roll(); R.open(true); R.set(R.factory()[2]); R.edit(p => { p.steps[0].n = 47; }); }")
+    rc.fill("#rollName", "Walk Low"); rc.click("#rollSave")
+    sv = rc.evaluate("""() => { const R = __synth.roll(), o = [...document.querySelectorAll('#rollPick optgroup')].map(g => [g.label, [...g.children].map(c => c.value + ':' + c.textContent)]);
+      return { st: R.state(), msg: R.msg(), groups: o, pick: document.getElementById('rollPick').value, del: document.getElementById('rollDel').disabled, stat: document.getElementById('rollStat').textContent }; }""")
+    ck(f"Rc. save roll keeps the paper by the name in the box: in the list under 'Your rolls', loaded and unmarked ('{sv['msg']}', '{sv['stat']}')",
+       sv["st"]["users"] == ["Walk Low"] and sv["st"]["pat"]["name"] == "Walk Low" and not sv["st"]["edited"] and sv["pick"] == "u0" and not sv["del"]
+       and sv["groups"][0][0] == "Factory" and sv["groups"][0][1][3] == "3:Tie and Slide" and sv["groups"][1] == ["Your rolls", ["u0:Walk Low"]] and "Walk Low" in sv["stat"], sv)
+    rc.fill("#rollName", "slow BELLS"); rc.click("#rollSave"); ref = rc.evaluate("() => ({ st: __synth.roll().state(), msg: __synth.roll().msg() })")
+    rc.evaluate("() => __synth.roll().edit(p => { p.steps[1].n = 59; })")
+    rc.fill("#rollName", "walk low"); rc.press("#rollName", "Enter"); over = rc.evaluate("() => ({ st: __synth.roll().state(), u: __synth.roll().users(), msg: __synth.roll().msg() })")
+    ck(f"Rc. a factory name is refused ('{ref['msg']}'); the same name in another case saves over the roll, Enter in the box saves ('{over['msg']}')",
+       ref["st"]["users"] == ["Walk Low"] and ref["st"]["pat"]["name"] == "Walk Low" and "factory" in ref["msg"]
+       and over["st"]["users"] == ["walk low"] and over["u"][0]["steps"][1]["n"] == 59 and over["u"][0]["steps"][0]["n"] == 47 and not over["st"]["edited"], (ref, over["st"]["users"], over["msg"]))
+    rc.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[1]); }")
+    rc.select_option("#rollPick", "u0"); lu = rc.evaluate("() => __synth.roll().state()")
+    rc.click("#rollDel"); dl = rc.evaluate("() => ({ st: __synth.roll().state(), msg: __synth.roll().msg(), opts: document.querySelectorAll('#rollPick option').length, del: document.getElementById('rollDel').disabled })")
+    ck(f"Rc. the list loads your roll unmarked; delete takes it out of the list, the paper keeps it marked edited ('{dl['msg']}')",
+       lu["pat"]["name"] == "walk low" and not lu["edited"] and lu["pat"]["steps"][1]["n"] == 59
+       and dl["st"]["users"] == [] and dl["st"]["pat"]["name"] == "walk low" and dl["st"]["edited"] and dl["opts"] == 7 and dl["del"], (lu["pat"]["name"], dl))
+    # the chain row
+    rc.evaluate("() => { const R = __synth.roll(); R.chain({ on: false, items: [] }); R.set(R.factory()[1]); R.edit(p => { p.tr = 2; }); }")
+    rc.click("#rollChainOn"); rc.click("#rollChainAdd"); refused = rc.evaluate("() => ({ st: __synth.roll().state(), msg: __synth.roll().msg() })")
+    rc.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[1]); }"); rc.click("#rollChainAdd")
+    rc.evaluate("() => { const R = __synth.roll(); R.set(R.factory()[5]); R.edit(p => { p.steps[0].n = 74; }); R.saveAs('Bell Two'); }"); rc.click("#rollChainAdd")
+    rc.click("#rollChain li:nth-child(1) button[aria-label^='Play Octave Pump more']")
+    rc.click("#rollChain li:nth-child(1) button[aria-label^='Play Octave Pump more']")
+    rc.click("#rollChain li:nth-child(1) button[aria-label^='Play Octave Pump fewer']")
+    rc.click("#rollChain li:nth-child(2) button[aria-label^='Move']")
+    mv = rc.evaluate("() => __synth.roll().state().chain.items.map(i => [i.name, i.reps])")
+    rc.click("#rollChain li:nth-child(2) button[aria-label^='Move']")
+    rc.click("#rollChainOn")
+    cr = rc.evaluate("""() => ({ st: __synth.roll().state(), pressed: document.getElementById('rollChainOn').getAttribute('aria-pressed'), n: document.getElementById('rollChainN').textContent,
+      rows: [...document.querySelectorAll('#rollChain li .rcname')].map(e => e.textContent), stat: document.getElementById('rollStat').textContent }); """)
+    ck(f"Rc. the chain row: chain will not light empty, an edited roll is refused until saved ('{refused['msg']}'); + this roll, reps + and -, move earlier, and the chain key lit ({cr['rows']}, '{cr['stat']}')",
+       refused["st"]["chain"] == {"on": False, "items": []} and "Save" in refused["msg"]
+       and mv == [["Bell Two", 1], ["Octave Pump", 2]] and cr["st"]["chain"]["on"] is True and cr["pressed"] == "true" and cr["n"] == "2 rolls"
+       and cr["rows"] == ["1. Octave Pump × 2", "2. Bell Two × 1"] and cr["stat"].startswith("chain"), (refused, mv, cr))
+    # live: the chain against its own score, the paper following the roll it reads
+    rc.evaluate("""() => { __synth.transport().stop(); __synth.setDevice('filament'); __synth.setMixer('dekatron', { mute: true });
+      const R = __synth.roll(); R.dest('lit'); R.clearLog(); __synth.transport().setTempo(120); R.play(); }""")
+    rc.wait_for_timeout(2500)
+    h1 = rc.evaluate("() => ({ st: __synth.roll().state(), pos: document.getElementById('rollPos').textContent })")
+    rc.wait_for_timeout(2300)
+    h2 = rc.evaluate("() => ({ st: __synth.roll().state(), pos: document.getElementById('rollPos').textContent, d: __synth.roll().draw() })")
+    rc.wait_for_timeout(2500)
+    lr = rc.evaluate("() => { const R = __synth.roll(); const L = R.log(); return { L, score: R.chainScore(2, 120, 'filament'), st: R.state() }; }")
+    lst = [e for e in lr["L"] if e["t"] in ("on", "skip")]; lsk = [e for e in lst if e["t"] == "skip"]
+    sons = [e for e in lr["score"] if e["t"] == "on"]
+    t0 = lst[0]["want"] if lst else 0
+    got = [(round(e["want"] - t0, 3), e["n"], e.get("seg")) for e in lst]
+    want = [(round(e["at"], 3), e["n"], e["seg"]) for e in sons][:len(got)]
+    ck(f"Rc. live at 120 BPM: {len(got)} steps planned over 7 s land on the chain's score within 2 ms, Octave Pump twice then Bell Two from 4 s and round again at 6 s",
+       len(got) >= 40 and len(lsk) <= len(got) // 4 and all(abs(a[0] - w[0]) <= 0.002 and a[1] == w[1] and a[2] == w[2] for a, w in zip(got, want))
+       and any(g_[2] == 1 for g_ in got) and any(g_[0] >= 6 and g_[2] == 0 for g_ in got), (got[:6], [x for x in zip(got, want) if abs(x[0][0] - x[1][0]) > 0.002 or x[0][1:] != x[1][1:]][:4], len(lsk)))
+    info("Rc. live", f"{len(got) - len(lsk)} strikes sent, {len(lsk)} dropped as more than 60 ms late")
+    ck(f"Rc. the paper reads what it plays: Octave Pump at 2.5 s ('{h1['pos']}'), Bell Two at 4.8 s ('{h2['pos']}', the editor holds it unmarked), the paper from its own step 0 ({h2['d']['stats']['pos']:.2f} steps)",
+       h1["st"]["heard"]["idx"] == 0 and h1["st"]["pat"]["name"] == "Octave Pump" and h1["pos"].startswith("1/2")
+       and h2["st"]["heard"]["idx"] == 1 and h2["st"]["pat"]["name"] == "Bell Two" and not h2["st"]["edited"] and h2["pos"].startswith("2/2") and 0.5 <= h2["d"]["stats"]["pos"] < 8, (h1, h2["st"]["heard"], h2["pos"], h2["d"]))
+    # a roll saved by name while the chain plays is heard the next time its turn comes
+    rc.evaluate("() => { const R = __synth.roll(); R.clearLog(); const u = R.users()[0]; u.steps[0].n = 76; R.set(u); R.saveAs('Bell Two'); }")
+    rc.wait_for_timeout(6300)
+    sv2 = rc.evaluate("() => { const R = __synth.roll(); const L = R.log(); return L.filter(e => (e.t === 'on' || e.t === 'skip') && e.seg === 1).map(e => e.n); }")
+    ck(f"Rc. Bell Two saved again while the chain plays (its first note 74 to 76): its next turn plays 76 ({sv2[:3]})", len(sv2) >= 3 and sv2[0] == 76 and 74 not in sv2, sv2)
+    # the chain key off under a playing transport: the paper's roll carries on on the grid, no burst
+    rc.evaluate("() => { const R = __synth.roll(); R.clearLog(); R.set(R.factory()[1]); document.getElementById('rollChainOn').click(); }")
+    rc.wait_for_timeout(1200)
+    co = rc.evaluate("() => { const R = __synth.roll(); const L = R.log(); R.stop(); return { L, st: R.state() }; }")
+    cons = [e for e in co["L"] if e["t"] in ("on", "skip")]; cgaps = sorted(set(round(b_["want"] - a_["want"], 4) for a_, b_ in zip(cons, cons[1:])))
+    ck(f"Rc. chain off while it plays: the paper's roll carries on 125 ms a step, no burst ({cgaps}, {len(cons)} steps, none tagged with a chain segment)",
+       not co["st"]["chain"]["on"] and len(cons) >= 6 and all(abs(g_ - 0.125) < 0.002 for g_ in cgaps) and not any("seg" in e for e in cons), (cgaps, len(cons)))
+    rc.wait_for_timeout(300)
+    # the project file: the chain with each roll's copy; a project saved before 18 Nov leaves the chain alone
+    pj = rc.evaluate("""() => { const R = __synth.roll(); R.chainOn(true);
+      const want = R.project(); const saved = __synth.saveProject();
+      R.chain({ on: false, items: [] }); const loaded = __synth.loadProject(); const st = R.state();
+      __synth.applyProject({ kind: 'dxrack', name: 'No chain', device: 'filament', roll: { pat: R.factory()[2], dest: 'lit', run: false } });
+      const kept = R.state();
+      const away = JSON.parse(JSON.stringify(want)); away.chain.items[1].name = 'Elsewhere'; away.chain.items[1].pat.name = 'Elsewhere'; away.chain.items[1].pat.steps[0].n = 81;
+      __synth.applyProject({ kind: 'dxrack', name: 'Other browser', device: 'filament', roll: away });
+      const sc = R.chainScore(1, 120, 'x').filter(e => e.t === 'on' && e.seg === 1);
+      return { want: want.chain, saved: saved.roll.chain, st: st.chain, kept: kept.chain, away: R.state().chain.items.map(i => i.name), first: sc.length ? sc[0].n : null }; }""")
+    ck(f"Rc. save project carries the chain with a copy of each roll and load puts it back; a project with no chain leaves it; a roll this browser does not have plays the file's copy ({pj['away']}, first note {pj['first']})",
+       pj["saved"] == pj["want"] and pj["st"] == pj["want"] and pj["want"]["on"] is True and [i["name"] for i in pj["want"]["items"]] == ["Octave Pump", "Bell Two"]
+       and pj["want"]["items"][1]["pat"]["steps"][0]["n"] == 76 and pj["kept"] == pj["want"] and pj["away"] == ["Octave Pump", "Elsewhere"] and pj["first"] == 81, (pj["want"]["on"], pj["away"], pj["first"]))
+    rc.evaluate("() => { const R = __synth.roll(); R.chain({ on: true, items: [{ name: 'Octave Pump', reps: 3 }, { name: 'Bell Two', reps: 2 }] }); R.saveAs('Kept Roll'); }")
+    rc.reload(); rc.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    kp = rc.evaluate("() => ({ st: __synth.roll().state(), opts: [...document.querySelectorAll('#rollPick optgroup')].map(g => g.label) })")
+    ck("Rc. your rolls and the chain are kept in this browser across a reload",
+       kp["st"]["users"] == ["Bell Two", "Kept Roll"] and [(i["name"], i["reps"]) for i in kp["st"]["chain"]["items"]] == [("Octave Pump", 3), ("Bell Two", 2)] and kp["st"]["chain"]["on"] is True
+       and kp["opts"] == ["Factory", "Your rolls"], (kp["st"]["users"], kp["st"]["chain"]))
+    rc.evaluate("() => { const R = __synth.roll(); R.chain({ on: false, items: [] }); R.set(R.factory()[1]); R.run(false); }")
+    ck("Rc. no page errors (desktop)", not rcerr, rcerr)
+    rcx.close()
+    # a phone: the new rows keep 44 px targets and no sideways scroll with a chain of three
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        rpx = b.new_context(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); rp_ = rpx.new_page(); rperr = []
+        rp_.on("pageerror", lambda e: rperr.append(str(e)))
+        rp_.goto(BASE); rp_.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+        rp_.evaluate("""() => { const R = __synth.roll(); R.saveAs('A Rather Long Roll Name For A Phone'); R.chain({ on: true, items: [{ name: 'Octave Pump', reps: 2 }, { name: 'A Rather Long Roll Name For A Phone' }, { name: 'Slow Bells', reps: 16 }] });
+          document.getElementById('rollBtn').click(); }""")
+        rp_.wait_for_timeout(250)
+        rv_ = rp_.evaluate("""() => { const sel = '#rollMine button, #rollMine input, #rollChainRow button, #rollChain button';
+          const small = [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length).map(e => [e.id || e.getAttribute('aria-label') || e.textContent.trim(), e.getBoundingClientRect()])
+            .filter(([s, r]) => r.width < 44 || r.height < 44).map(([s, r]) => s + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          const out = [...document.querySelectorAll('#roll *')].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect()).filter(r => r.right > innerWidth + 0.5 || r.left < -0.5).length;
+          return { small, out, sw: document.documentElement.scrollWidth, iw: innerWidth, n: document.querySelectorAll('#rollChain li').length }; }""")
+        ck(f"Rc. {pw_}px: the save row, the chain row and a chain of three keep every key and the name box 44 px or more, inside the screen, no sideways scroll ({rv_['small']}, {rv_['out']} outside)",
+           rv_["n"] == 3 and not rv_["small"] and rv_["out"] == 0 and rv_["sw"] <= rv_["iw"] == pw_ and not rperr, (rv_, rperr))
+        if pw_ == 375: rp_.locator("#roll").screenshot(path=os.path.join(SHOTS, "synth_roll_chain_phone.png"))
+        rpx.close()
+
+    # ---------------------------------------------------------------- Rr. the paper roll recorded and rendered (0.3, 19 Nov)
+    # The roll's notes reach the MIDI deck's recorder at the time they sound (they are sent up to 150 ms ahead),
+    # and the Master strip's render wav plays the roll from its first step while its run is on. These check the
+    # take against the roll's own log, Stop and the transport's stop inside a take, a key played over the roll,
+    # the export, the devices the recorder does not take, and the render plan and its audio against the score.
+    rrx = b.new_context(viewport={"width": 1366, "height": 1000}); rr = rrx.new_page(); rrerr = []
+    rr.on("pageerror", lambda e: rrerr.append(str(e)))
+    rr.goto(BASE); rr.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    def rr_take(js_setup, secs=2.0, js_mid=None, stop_first="rec"):
+        return rr.evaluate("""async ([setup, secs, mid, first]) => {
+          const R = __synth.roll(), D = __synth.deck(), T = __synth.transport();
+          T.stop(); T.stop(); T.setTempo(120); D.stopRec(); await new Promise(r => setTimeout(r, 300));
+          eval(setup); D.arm(); R.clearLog(); R.play();
+          await new Promise(r => setTimeout(r, secs * 500)); if (mid) eval(mid); await new Promise(r => setTimeout(r, secs * 500));
+          let stopAt;
+          if (first === 'rec') { stopAt = __synth.engine().ctx.currentTime; D.stopRec(); R.stop(); }
+          else { R.stop(); await new Promise(r => setTimeout(r, 400)); stopAt = __synth.engine().ctx.currentTime; D.stopRec(); }
+          await new Promise(r => setTimeout(r, 400));
+          return { take: D.take(), log: R.log(), stopAt, stat: document.getElementById('takeStat').textContent }; }""", [js_setup, secs, js_mid, stop_first])
+    def pairs(evs):
+        held, bad, n = {}, 0, 0
+        for e in evs:
+            k = (e["dev"], e["n"]) if e["t"] in ("on", "off") else None
+            if not k: continue
+            if e["t"] == "on": held[k] = held.get(k, 0) + 1; n += 1
+            elif held.get(k, 0) > 0: held[k] -= 1
+            else: bad += 1
+        return n, bad, sum(held.values())
+    LIVE_RR = {"name": "Rec Four", "len": 4, "rate": "16", "gate": 0.5, "vel": 0.6, "acc": 1.0,
+               "steps": [{"n": 60, "g": 1, "a": 1}, {"n": 64, "g": 1}, {"n": 67, "g": 1}, {"n": 72, "g": 1}]}
+    t1 = rr_take("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(LIVE_RR))
+    tk = t1["take"]; tev = tk["events"]
+    t_on = [e for e in tev if e["t"] == "on"]; l_on = [e for e in t1["log"] if e["t"] == "on"]
+    l_in = [e for e in l_on if e["at"] <= t1["stopAt"] + 1e-6]
+    # stopAt is read just before D.stopRec(), and ctx.currentTime can move on between the two reads (one render
+    # quantum or more on a loaded box), so a note due in that gap sounded before the deck's own stop (20 Nov: a
+    # take of 18 against 17 failed main this way). Allow notes due up to 30 ms after stopAt.
+    l_in2 = [e for e in l_on if e["at"] <= t1["stopAt"] + 0.03]
+    dt_t = [round(b_["time"] - a_["time"], 6) for a_, b_ in zip(t_on, t_on[1:])]
+    dt_l = [round(b_["at"] - a_["at"], 6) for a_, b_ in zip(l_in, l_in[1:])]
+    ck(f"Rr. the roll on Filament records into an armed take: {len(t_on)} notes, the first at 0, each where the roll struck it (largest error {max([abs(a_ - b_) for a_, b_ in zip(dt_t, dt_l)] or [0]) * 1000:.3f} ms), pitches and velocities as struck",
+       len(t_on) >= 8 and tev[0]["time"] == 0 and len(l_in) - 1 <= len(t_on) <= len(l_in2) and all(abs(a_ - b_) <= 0.0005 for a_, b_ in zip(dt_t, dt_l))
+       and [(e["n"], e["v"]) for e in t_on] == [(e["n"], e["v"]) for e in l_in2[:len(t_on)]] and all(e["dev"] == "filament" for e in tev if e["t"] in ("on", "off")),
+       (len(t_on), len(l_in), dt_t[:6], dt_l[:6]))
+    n1, bad1, open1 = pairs(tev)
+    held_len = [round(min(f["time"] for f in tev if f["t"] == "off" and f["n"] == e["n"] and f["time"] >= e["time"]) - e["time"], 4) for e in t_on[:-2]]
+    ck(f"Rr. Stop on the deck while the roll plays: nothing after the take's end ({tk['length']:.3f} s), one off per note ({bad1} stray, {open1} open), each note held 62.5 ms as struck, in time order",
+       all(e["time"] <= tk["length"] + 1e-9 for e in tev) and bad1 == 0 and open1 == 0 and all(abs(h_ - 0.0625) <= 0.0006 for h_ in held_len)
+       and all(a_["time"] <= b_["time"] for a_, b_ in zip(tev, tev[1:])) and not tk["rec"], (tk["length"], bad1, open1, held_len[:6]))
+    ex1 = rr.evaluate("""async () => { const S = await import('/synth/smf.js'); const s = S.songOf(S.readSMF(Uint8Array.from(__synth.deck().exportBytes())));
+      return { parts: s.parts.map(p => [p.name, p.notes]), len: s.length }; }""")
+    ck(f"Rr. the take exports as a .mid with every roll note ({ex1['parts']})",
+       len(ex1["parts"]) == 1 and ex1["parts"][0][0].startswith("Filament: ") and ex1["parts"][0][1] == len(t_on), ex1)
+    ra1 = rr.evaluate("() => { const a = __synth.deck().renderArgs('take'); return { n: a.events.filter(e => e.t === 'on').length, secs: a.seconds }; }")
+    ck(f"Rr. the deck's render wav of that take carries the roll's notes ({ra1['n']})", ra1["n"] == len(t_on), ra1)
+    # the transport stops inside the take: the roll's queued offs come again sooner, and the take keeps one of each
+    t2 = rr_take("__synth.setDevice('filament'); R.set(R.factory()[1]); R.edit(p => { p.gate = 1; }); R.dest('lit');", secs=1.2, stop_first="transport")
+    n2, bad2, open2 = pairs(t2["take"]["events"])
+    offs2 = [e for e in t2["take"]["events"] if e["t"] == "off"]
+    ck(f"Rr. the transport stops inside the take (gate 100%): {n2} notes, one off each ({bad2} stray, {open2} open), the last off at the stop, none after the take's end",
+       n2 >= 3 and bad2 == 0 and open2 == 0 and len(offs2) == n2 and max(e["time"] for e in offs2) <= t2["take"]["length"] + 1e-9, (n2, bad2, open2, len(offs2)))
+    # a key played on the page over the roll goes into the same take, in time order
+    t3 = rr_take("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(LIVE_RR), secs=2.0,
+                 js_mid="__synth.noteOn(84, 0.5); setTimeout(() => __synth.noteOff(84), 200);")
+    k3 = [e for e in t3["take"]["events"] if e.get("n") == 84]
+    n3, bad3, open3 = pairs(t3["take"]["events"])
+    ck(f"Rr. a key played over the roll is in the same take ({[(e['t'], round(e['time'], 3)) for e in k3]}), in time order, one off per note",
+       [e["t"] for e in k3] == ["on", "off"] and 0.15 <= k3[1]["time"] - k3[0]["time"] <= 0.35 and bad3 == 0 and open3 == 0
+       and all(a_["time"] <= b_["time"] for a_, b_ in zip(t3["take"]["events"], t3["take"]["events"][1:])), (k3, bad3, open3))
+    # a key pressed just before a scheduled first note lands before the take's 0: the take moves to start at the key
+    k4 = rr.evaluate("""async () => { const D = __synth.deck(), c = __synth.engine().ctx; D.stopRec(); D.arm();
+      D.recAt('filament', { t: 'on', n: 62, v: 0.7 }, c.currentTime + 0.12); __synth.noteOn(65, 0.7);
+      await new Promise(r => setTimeout(r, 250)); D.recAt('filament', { t: 'off', n: 62 }, c.currentTime); __synth.noteOff(65);
+      await new Promise(r => setTimeout(r, 50)); D.stopRec(); return D.take(); }""")
+    e4 = [(e["t"], e["n"], round(e["time"], 3)) for e in k4["events"]]
+    ck(f"Rr. a key pressed before a scheduled first note sounds: the take starts at the key, the scheduled note about 120 ms later ({e4})",
+       len(e4) == 4 and e4[0][:2] == ("on", 65) and e4[0][2] == 0 and e4[1][:2] == ("on", 62) and 0.09 <= e4[1][2] <= 0.15 and all(x[2] >= 0 for x in e4), e4)
+    # Cathode while Filament is lit, and a device the recorder does not take
+    t5 = rr_take("__synth.setDevice('filament'); R.set(%s); R.dest('cathode');" % json.dumps(LIVE_RR), secs=1.2)
+    ex5 = rr.evaluate("""async () => { const S = await import('/synth/smf.js'); const s = S.songOf(S.readSMF(Uint8Array.from(__synth.deck().exportBytes()))); return s.parts.map(p => [p.name, p.notes, p.chans]); }""")
+    c5 = [e for e in t5["take"]["events"] if e["t"] == "on"]
+    l5 = [e for e in t5["log"] if e["t"] == "on" and e["at"] <= t5["stopAt"] + 1e-6]
+    ck(f"Rr. the roll on Cathode while Filament is lit records as Cathode ({len(c5)} notes of the {len(l5)} it struck before Stop; export {ex5})",
+       len(c5) >= 3 and len(c5) in (len(l5), len(l5) - 1) and all(e["dev"] == "cathode" for e in l5) and all(e["dev"] == "cathode" for e in t5["take"]["events"] if e["t"] in ("on", "off")) and len(ex5) == 1 and ex5[0][0].startswith("Cathode: ") and ex5[0][1] == len(c5), (len(c5), ex5))
+    t6 = rr.evaluate("""async () => { const R = __synth.roll(), D = __synth.deck(), T = __synth.transport(); T.stop(); D.stopRec(); __synth.deck().stopRec();
+      R.set(R.factory()[1]); R.dest('thyratron'); D.arm(); R.play(); await new Promise(r => setTimeout(r, 800));
+      const st = document.getElementById('takeStat').textContent, tk = D.take(), n = R.log().filter(e => e.t === 'on' && e.dev === 'thyratron').length;
+      R.stop(); D.stopRec(); R.dest('lit'); return { st, armed: tk.armed, rec: tk.rec, n }; }""")
+    ck(f"Rr. the roll on Thyratron does not start a take: the deck stays armed and says it takes Filament and Cathode only ('{t6['st']}', {t6['n']} notes struck)",
+       t6["n"] >= 3 and t6["armed"] and not t6["rec"] and "Filament and Cathode only" in t6["st"], t6)
+    # the Master strip's render wav
+    rp = rr.evaluate("""async () => { const R = __synth.roll(), T = __synth.transport(); T.stop(); T.setTempo(120);
+      __synth.setDevice('filament'); R.set(R.factory()[1]); R.dest('lit'); R.chainOn(false); R.run(false);
+      const off = __synth.renderPlan(4);
+      R.run(true); const on = __synth.renderPlan(4);
+      const want = R.score(64, 120, 'filament').filter(e => e.at < 4);
+      R.dest('cathode'); const cath = __synth.renderPlan(4);
+      R.dest('thyratron'); const thy = __synth.renderPlan(4); const wantT = R.score(64, 120, 'thyratron').filter(e => e.at < 4);
+      R.dest('lit'); T.setTempo(90); const slow = __synth.renderPlan(4); const wantS = R.score(64, 90, 'filament').filter(e => e.at < 4); T.setTempo(120);
+      R.chain({ on: true, items: [{ name: 'Octave Pump', reps: 1 }, { name: 'Slow Bells', reps: 1 }] });
+      const ch = __synth.renderPlan(6); const wantC = R.chainScore(4, 120, 'filament').filter(e => e.at < 6);
+      R.chain({ on: false, items: [] });
+      __synth.noteOn(55, 0.8); const held = __synth.renderPlan(2); __synth.noteOff(55);
+      return { off, on, want, cath, thy, wantT, slow, wantS, ch, wantC, held }; }""")
+    sig = lambda evs: [(e["t"], e["n"], round(e["at"], 9)) for e in evs]
+    ck("Rr. render wav with the roll's run off plays what it did before: middle C at 0 on the lit device, no roll",
+       rp["off"]["events"] == [{"at": 0, "t": "on", "n": 60, "v": 0.8}] and rp["off"]["roll"] is None and rp["off"]["note"] == "" and not rp["off"]["both"], rp["off"])
+    ck(f"Rr. with run on: the roll from its first step at the rack tempo, {sum(1 for e in rp['on']['events'] if e['t'] == 'on')} strikes in 4 s exactly as the roll's score, no middle C ('{rp['on']['note'].strip(' ·')}')",
+       sig(rp["on"]["events"]) == sig(rp["want"]) and all(e.get("dev") == "filament" for e in rp["on"]["events"]) and rp["on"]["roll"] == "filament" and "16 notes" not in rp["on"]["note"]
+       and "with the roll (32 notes on Filament)" in rp["on"]["note"], (rp["on"]["note"], sig(rp["on"]["events"])[:4], sig(rp["want"])[:4]))
+    ck(f"Rr. the roll on Cathode while Filament is lit renders on Cathode beside it (device {rp['cath']['device']}, both patches), at 90 BPM the steps follow the tempo, the chain plays its rolls in turn ('{rp['ch']['note'].strip(' ·')}')",
+       rp["cath"]["device"] == "filament" and rp["cath"]["both"] and all(e["dev"] == "cathode" for e in rp["cath"]["events"]) and "on Cathode" in rp["cath"]["note"]
+       and sig(rp["slow"]["events"]) == sig(rp["wantS"]) and abs(rp["slow"]["events"][2]["at"] - 60 / 90 / 4) < 1e-9
+       and sig(rp["ch"]["events"]) == sig(rp["wantC"]) and "with the chain" in rp["ch"]["note"], (rp["cath"]["device"], rp["slow"]["events"][:3], rp["ch"]["note"]))
+    th_h = rp["thy"]["hosted"]
+    ck(f"Rr. the roll on Thyratron while Filament is lit renders on Thyratron on its own strip (21 Nov; before, it was left out): exactly the roll's score, no middle C, Filament's rack ('{rp['thy']['note'].strip(' ·')}'); a held key plays with the roll",
+       rp["thy"]["events"] == [] and len(th_h) == 1 and th_h[0]["dev"] == "thyratron" and sig(th_h[0]["events"]) == sig(rp["wantT"]) and "with the roll (32 notes on Thyratron)" in rp["thy"]["note"]
+       and rp["thy"]["roll"] == "thyratron" and rp["thy"]["device"] == "filament" and rp["thy"]["both"]
+       and rp["held"]["events"][0] == {"at": 0, "t": "on", "n": 55, "v": 0.8} and sum(1 for e in rp["held"]["events"] if e["t"] == "on" and e.get("dev") == "filament") == 16, (rp["thy"]["note"], rp["thy"]["events"][:2], th_h[:1] and th_h[0]["events"][:2], rp["held"]["events"][:2]))
+    def wav_lr(r_):
+        raw = base64.b64decode(r_["b64"]); i_ = raw.find(b"data"); d_ = np.frombuffer(raw[i_ + 8:], dtype=np.uint8)
+        n_ = len(d_) // 6; d_ = d_[:n_ * 6].reshape(n_, 6).astype(np.int32)
+        L_ = d_[:, 0] | (d_[:, 1] << 8) | (d_[:, 2] << 16); R_ = d_[:, 3] | (d_[:, 4] << 8) | (d_[:, 5] << 16)
+        L_ = np.where(L_ & 0x800000, L_ - 0x1000000, L_) / 8388607.0; R_ = np.where(R_ & 0x800000, R_ - 0x1000000, R_) / 8388607.0
+        return L_, R_
+    ra = rr.evaluate("""async () => { const P = await import('/synth/patches.js'), R = __synth.roll(); __synth.setDevice('filament');
+      __synth.setPatch(JSON.parse(JSON.stringify(P.FACTORY.find(p => p.name === 'Rubber Bass')))); R.set(R.factory()[1]); R.chainOn(false); R.dest('lit'); R.run(true);
+      const btn = await __synth.renderButton(2);
+      const E = await import('/synth/engine.js'), plan = __synth.renderPlan(2);
+      const ev = R.score(32, 120, 'filament').filter(e => e.at < 2).map(e => e.t === 'on' ? { at: e.at, t: 'on', n: e.n, v: e.v } : { at: e.at, t: 'off', n: e.n });
+      const ref = await E.renderOffline({ patch: __synth.patch(), events: ev, seconds: 2, sampleRate: 44100, rack: true, master: __synth.master(), tempo: 120 });
+      const L = ref.getChannelData(0), R2 = ref.getChannelData(1);
+      const b = new Uint8Array(L.buffer.slice(0)), c = new Uint8Array(R2.buffer.slice(0)); let s = '', t = '';
+      for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+      for (let i = 0; i < c.length; i += 0x8000) t += String.fromCharCode.apply(null, c.subarray(i, i + 0x8000));
+      R.dest('cathode'); const cbtn = await __synth.renderButton(2);
+      R.run(false); const plain = await __synth.renderButton(2);
+      return { btn, ref: { L: btoa(s), R: btoa(t) }, cbtn, plain }; }""")
+    bL, bR = wav_lr(ra["btn"]); fL, fR = dec(ra["ref"]); cL, cR = wav_lr(ra["cbtn"]); pL, pR = wav_lr(ra["plain"])
+    # renders are not sample-identical run to run (the voices' drift and noise are seeded per render), so the
+    # check is the shape: the 30 ms loudness envelope of the button's render against an independent render, on
+    # Rubber Bass (a pad's slow attack hides the steps, and shorter frames follow the bass's own cycle: measured
+    # 19 Nov, button against reference r = 0.35 at 10 ms, 0.79 at 20, 0.93 at 30, 0.96 at 50; middle C held -0.10)
+    def env10(x): k_ = len(x) // 1323; return np.sqrt(np.mean(np.square(x[:k_ * 1323].reshape(k_, 1323)), axis=1))
+    nn = min(len(bL), len(fL))
+    cf = float(np.corrcoef(env10(bL[:nn]), env10(fL[:nn]))[0, 1]); cpn = float(np.corrcoef(env10(pL[:nn]), env10(bL[:nn]))[0, 1])
+    seg_db = [db(float(np.sqrt(np.mean(np.square(bL[int((k * 0.125) * 44100):int((k * 0.125 + 0.05) * 44100)]))))) for k in range(16)]
+    ck(f"Rr. render wav with the roll sounds like the roll's score through the rack (Rubber Bass): 30 ms envelope against an independent render of rollScore r = {cf:.3f}, sound in every step's first 50 ms ({min(seg_db):.1f} dB at the quietest); run off (middle C held) r = {cpn:.3f}",
+       ra["btn"]["frames"] == 88200 and nn == 88200 and cf > 0.8 and cpn < 0.5 and min(seg_db) > -60 and "with the roll" in ra["btn"]["note"] and ra["plain"]["note"] == "", (ra["btn"]["frames"], cf, cpn, [round(x, 1) for x in seg_db]))
+    c_db = db(float(np.sqrt(np.mean(np.square(cL))))); cc = float(np.corrcoef(env10(cL[:nn]), env10(fL[:nn]))[0, 1])
+    ck(f"Rr. the roll on Cathode renders through Cathode on the same steps ({c_db:.1f} dB, envelope against the Filament reference r = {cc:.3f}, '{ra['cbtn']['note'].strip(' ·')}')",
+       c_db > -50 and cc > 0.6 and "on Cathode" in ra["cbtn"]["note"] and ra["cbtn"]["frames"] == 88200, (c_db, cc, ra["cbtn"]["note"]))
+    # ---------------------------------------------------------------- Rw. the roll on the other rack devices in render wav (21 Nov)
+    # Each device builds its own node in the render's context with the roll's notes (rollrender.js) on its own
+    # mixer strip, in front of the shared ensemble and output chain. The reference is an independent render:
+    # the events from R.score, the patch from devPatch, the device through rollHosted and renderOffline.
+    # Measured 21 Nov: 14 of the 16 render the same twice (r = 1.000); Lattice (unison phases) and Mote (the
+    # reference has no host sound) vary, r 0.54 and 0.70, levels within 1 dB. Room and width off on the rack
+    # patch, so the envelope is the notes', not the room's.
+    RH_DEVS = ["dekatron", "lattice", "thyratron", "gleam", "mote", "heptode", "geissler", "pentagrid", "orthicon",
+               "trochotron", "gyrotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron"]
+    RH_QUIET = ["dekatron", "lattice", "thyratron", "gleam", "heptode", "trochotron", "klystron", "phantastron", "additron", "rhumbatron", "resnatron"]
+    rh = rr.evaluate("""async ([devs, quiet]) => { const R = __synth.roll(), T = __synth.transport(); T.stop(); T.setTempo(120);
+      __synth.setDevice('filament'); const P0 = JSON.parse(JSON.stringify(__synth.patch()));
+      const P = JSON.parse(JSON.stringify(P0)); P.out.roomOn = false; P.out.wOn = false; __synth.setPatch(P);
+      R.set(R.factory()[1]); R.chainOn(false); R.run(true);
+      const RR = await import('/synth/rollrender.js'), E = await import('/synth/engine.js');
+      const enc = x => { const b = new Uint8Array(x.buffer.slice(0)); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
+      const out = {}, plans = {};
+      for (const d of devs) {
+        R.dest(d); const plan = __synth.renderPlan(2); const t0 = performance.now(); const btn = await __synth.renderButton(2); const ms = performance.now() - t0;
+        const ev = R.score(32, 120, d).filter(e => e.at < 2).map(e => e.t === 'on' ? { at: e.at, t: 'on', n: e.n, v: e.v } : { at: e.at, t: 'off', n: e.n });
+        const ref = await E.renderOffline({ patch: __synth.patch(), events: [], hosted: [RR.rollHosted(d, ev, __synth.devPatch(d), null)], seconds: 2, sampleRate: 44100, rack: true, master: __synth.master(), tempo: 120 });
+        let q = null;
+        if (quiet.includes(d)) {
+          const c = new OfflineAudioContext(2, 44100, 44100), h = RR.rollHosted(d, [], __synth.devPatch(d), null), m = await h.create(c, []);
+          (m.sum || m).connect(c.destination); const qb = await c.startRendering(); let pk = 0; const L = qb.getChannelData(0); for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i])); q = pk;
+        }
+        out[d] = { btn: btn.b64, frames: btn.frames, note: btn.note, ref: enc(ref.getChannelData(0)), q, ms };
+        plans[d] = { plan, want: ev };
+      }
+      // the shared output chain is in the device's path: the rack patch's graphic EQ, every band at -12 dB, takes Thyratron's render down
+      R.dest('thyratron'); const lv0 = await __synth.renderButton(2);
+      const P6 = JSON.parse(JSON.stringify(P)); P6.out.eqOn = true; P6.out.eqGains = P6.out.eqGains.map(() => -12); __synth.setPatch(P6); const lv6 = await __synth.renderButton(2);
+      // a key held while the roll's device is lit plays on that device beside the roll; the rack stays Filament's
+      __synth.setPatch(P0); __synth.setDevice('thyratron'); __synth.noteOn(55, 0.8); const litT = __synth.renderPlan(2); __synth.noteOff(55);
+      __synth.setDevice('filament'); __synth.noteOn(55, 0.8); const litF = __synth.renderPlan(2); __synth.noteOff(55);
+      R.run(false); R.dest('lit');
+      return { out, plans, lv0: lv0.b64, lv6: lv6.b64, litT, litF }; }""", [RH_DEVS, RH_QUIET])
+    bad_plan = []
+    for d in RH_DEVS:
+        pl = rh["plans"][d]["plan"]; h_ = pl["hosted"]
+        if not (pl["events"] == [] and len(h_) == 1 and h_[0]["dev"] == d and sig(h_[0]["events"]) == sig(rh["plans"][d]["want"]) and pl["roll"] == d and pl["device"] == "filament" and "with the roll (16 notes on " in pl["note"]):
+            bad_plan.append((d, pl["note"], len(h_)))
+    ck(f"Rw. render wav with the roll on each of the {len(RH_DEVS)} other rack devices plays exactly the roll's score on that device, on its own strip, no middle C, with Filament's rack",
+       not bad_plan, bad_plan)
+    rows, bad = [], []
+    for d in RH_DEVS:
+        o = rh["out"][d]; bL, _ = wav_lr({"b64": o["btn"]}); fL = np.frombuffer(base64.b64decode(o["ref"]), dtype=np.float32)
+        nn_ = min(len(bL), len(fL)); lb = db(float(np.sqrt(np.mean(np.square(bL[:nn_]))))); lf = db(float(np.sqrt(np.mean(np.square(fL[:nn_])))))
+        r_ = float(np.corrcoef(env10(bL[:nn_]), env10(fL[:nn_]))[0, 1]) if lb > -100 and lf > -100 else 0.0
+        rows.append((d, round(lb, 1), round(r_, 3), round(o["ms"])))
+        if not (o["frames"] == 88200 and np.all(np.isfinite(bL)) and lb > -60 and abs(lb - lf) < 3 and r_ > 0.3 and "on " in o["note"]):
+            bad.append((d, o["frames"], round(lb, 1), round(lf, 1), round(r_, 3)))
+    rs = sorted(x[2] for x in rows)
+    ck(f"Rw. each device's render sounds like an independent render of the roll's score through the rack: levels {min(x[1] for x in rows):.1f} to {max(x[1] for x in rows):.1f} dB, within 3 dB of the reference, 30 ms envelope r {rs[0]:.2f} at the lowest, {sum(1 for x in rs if x > 0.95)} of {len(rs)} above 0.95; render time {min(x[3] for x in rows)} to {max(x[3] for x in rows)} ms for 2 s",
+       not bad and sum(1 for x in rs if x > 0.95) >= len(rs) - 3, (bad, rows))
+    loud_q = [(d, rh["out"][d]["q"]) for d in RH_QUIET if not (rh["out"][d]["q"] is not None and rh["out"][d]["q"] < 1e-5)]
+    ck(f"Rw. the sound is the roll's: the {len(RH_QUIET)} devices that sound only when played are silent with no notes (peak below -100 dBFS)",
+       not loud_q, loud_q)
+    a0, _ = wav_lr({"b64": rh["lv0"]}); a6, _ = wav_lr({"b64": rh["lv6"]}); d6 = db(float(np.sqrt(np.mean(np.square(a6))))) - db(float(np.sqrt(np.mean(np.square(a0)))))
+    ck(f"Rw. the roll's device goes through the shared output chain: the rack patch's graphic EQ with every band at -12 dB moves Thyratron's render {d6:+.1f} dB",
+       -18.0 < d6 < -6.0, d6)
+    lt, lf_ = rh["litT"], rh["litF"]
+    ck("Rw. a key held while the roll's device is lit plays on it with the roll (Thyratron lit: the key in its events, none on the rack); with Filament lit the key stays on Filament",
+       lt["events"] == [] and lt["hosted"] and lt["hosted"][0]["events"][0] == {"at": 0, "t": "on", "n": 55, "v": 0.8} and lt["device"] == "filament"
+       and lf_["events"] == [{"at": 0, "t": "on", "n": 55, "v": 0.8}] and lf_["hosted"] and not any(e["n"] == 55 for e in lf_["hosted"][0]["events"] if e["t"] == "on" and e["at"] == 0), (lt["events"], lt["hosted"][0]["events"][:2] if lt["hosted"] else None, lf_["events"]))
+    rr.evaluate("() => { const R = __synth.roll(); R.run(false); R.dest('lit'); R.set(R.factory()[1]); }")
+    ck("Rr. no page errors", not rrerr, rrerr)
+    rrx.close()
+    # ---------------------------------------------------------------- Rk. the on-screen keys light with the roll (0.3, 20 Nov)
+    # Each note the roll sends lights its key on the keybed at the time it sounds and lets it go with its off,
+    # counted per pitch, as the library player and the MIDI deck light theirs. A MutationObserver stamps each
+    # key's change with the AudioContext time; the roll's own log has the times the notes were sent to sound at.
+    rkx = b.new_context(viewport={"width": 1366, "height": 1000}); rk = rkx.new_page(); rkerr = []
+    rk.on("pageerror", lambda e: rkerr.append(str(e)))
+    rk.goto(BASE); rk.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    # A record's new value is the next record's old value for the same key (or the key's class now), so a key lit
+    # and put out inside one task still reads as two changes, and a class change that is not 'down' reads as none.
+    RK_JS = """window.__rkWatch = () => { const c = __synth.engine().ctx, tr = [];
+        const mo = new MutationObserver(ms => { const t = c.currentTime;
+          ms.forEach((m, i) => { const el = m.target; if (!el.classList || !el.classList.contains('key')) return;
+            let nxt = null; for (let j = i + 1; j < ms.length; j++) if (ms[j].target === el) { nxt = ms[j].oldValue || ''; break; }
+            if (nxt == null) nxt = el.className;
+            const was = (m.oldValue || '').split(' ').includes('down'), now = nxt.split(' ').includes('down');
+            if (was !== now) tr.push({ n: +el.dataset.n, was, t }); }); });
+        mo.observe(document.getElementById('keys'), { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+        return { tr, stop: () => mo.disconnect() }; };
+      window.__rkDown = () => [...document.querySelectorAll('#keys .key.down')].map(k => +k.dataset.n).sort((a, b) => a - b);"""
+    rk.evaluate("() => { " + RK_JS + " }")
+    RK_PAT = {"name": "Key Four", "len": 4, "rate": "16", "gate": 0.5, "vel": 0.6, "acc": 1.0,
+              "steps": [{"n": 60, "g": 1, "a": 1}, {"n": 64, "g": 1}, {"n": 67, "g": 1}, {"n": 72, "g": 1}]}
+    RK_HOLD = {"name": "Key Hold", "len": 16, "rate": "16", "gate": 1.0, "vel": 0.6, "acc": 1.0,
+               "steps": [{"n": 60, "g": 1}] + [{"n": 60, "g": 1, "t": 1} for _ in range(15)]}
+    def rk_run(js_setup, secs=1.6, js_mid=None, mid_at=0.5):
+        return rk.evaluate("""async ([setup, secs, mid, midAt]) => {
+          const R = __synth.roll(), T = __synth.transport();
+          T.stop(); T.stop(); T.setTempo(120); R.run(false); await new Promise(r => setTimeout(r, 300));
+          eval(setup); await new Promise(r => setTimeout(r, 100));
+          const W = __rkWatch(); R.clearLog(); R.play();
+          let mido = null;
+          if (mid) { await new Promise(r => setTimeout(r, midAt * 1000)); mido = await eval(mid); await new Promise(r => setTimeout(r, (secs - midAt) * 1000)); }
+          else await new Promise(r => setTimeout(r, secs * 1000));
+          const stopAt = __synth.engine().ctx.currentTime, litBefore = __rkDown();
+          R.stop(); const rightAfter = __rkDown();
+          await new Promise(r => setTimeout(r, 400)); W.stop();
+          return { log: R.log(), tr: W.tr, stopAt, litBefore, rightAfter, after: __rkDown(), pend: R.lightsPending(), lit: R.lit(), mid: mido, oct: __synth.state().oct }; }""", [js_setup, secs, js_mid, mid_at])
+    def rk_match(r):
+        # pair each sounded strike with the first unused change of its key from out to down at or after its time
+        # (the stamp reads ctx.currentTime, which moves in audio callback chunks, so up to 50 ms early counts);
+        # a key that lit with no strike near it counts as stray
+        cut = r["stopAt"] - 0.3
+        ons = [e for e in r["log"] if e["t"] == "on" and e["at"] < cut]
+        ups = [x for x in r["tr"] if not x["was"]]
+        used = [False] * len(ups); late, miss = [], 0
+        for e in ons:
+            for i, x in enumerate(ups):
+                if not used[i] and x["n"] == e["n"] and e["at"] - 0.05 <= x["t"] <= e["at"] + 0.6:
+                    used[i] = True; late.append(max(0.0, x["t"] - e["at"])); break
+            else: miss += 1
+        stray = sum(1 for i, x in enumerate(ups) if not used[i] and x["t"] < cut)
+        return len(ons), late, stray, miss
+    r1 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_PAT))
+    n1, late1, early1, miss1 = rk_match(r1)
+    med1 = sorted(late1)[len(late1) // 2] if late1 else 9
+    ck(f"Rk. the roll on Filament lights each note's key as it sounds: {n1} strikes, {len(late1)} lit ({miss1} missed, {early1} lit with no strike), lateness median {med1 * 1000:.0f} ms, worst {max(late1 or [9]) * 1000:.0f} ms",
+       n1 >= 6 and miss1 == 0 and early1 == 0 and len(late1) == n1 and med1 < 0.15, (n1, late1, early1, miss1))
+    downs1 = [x for x in r1["tr"] if x["was"]]
+    pitches1 = sorted(set(e["n"] for e in r1["log"] if e["t"] == "on"))
+    ck(f"Rk. each lit key goes out with its off at gate 50%: {len(downs1)} keys out for {len(late1)} lit, the keys {pitches1}",
+       len(downs1) >= len(late1) - 1 and pitches1 == [60, 64, 67, 72], (len(downs1), len(late1)))
+    ck(f"Rk. Stop on the roll puts every roll key out at once ({r1['litBefore']} before, {r1['rightAfter']} right after), with no light left waiting ({r1['pend']} pending, {r1['after']} down 400 ms later)",
+       r1["rightAfter"] == [] and r1["after"] == [] and r1["pend"] == 0 and r1["lit"] == [], r1)
+    r2 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_HOLD), secs=1.2,
+                js_mid="(() => { const a = __rkDown(); document.getElementById('octDn').click(); const b = __rkDown(); document.getElementById('octUp').click(); return { a, b, c: __rkDown() }; })()", mid_at=0.7)
+    ck(f"Rk. a tied note holds its key down through the ties ({r2['mid']['a']} at 0.7 s, {r2['litBefore']} at 1.2 s) and the keybed rebuilt by an octave change keeps it lit ({r2['mid']['b']} an octave down, {r2['mid']['c']} back)",
+       r2["mid"]["a"] == [60] and r2["mid"]["b"] == [60] and r2["mid"]["c"] == [60] and r2["litBefore"] == [60] and r2["after"] == [], r2["mid"])
+    r3 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_HOLD), secs=0.9,
+                js_mid="(async () => { const a = __rkDown(); __synth.transport().stop(); const b = __rkDown(); await new Promise(r => setTimeout(r, 300)); return { a, b, c: __rkDown(), pend: __synth.roll().lightsPending() }; })()", mid_at=0.5)
+    ck(f"Rk. the transport stopping under a held roll note puts its key out at once ({r3['mid']['a']} before, {r3['mid']['b']} right after, {r3['mid']['c']} 300 ms later, {r3['mid']['pend']} pending)",
+       r3["mid"]["a"] == [60] and r3["mid"]["b"] == [] and r3["mid"]["c"] == [] and r3["mid"]["pend"] == 0, r3["mid"])
+    r4 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('lit');" % json.dumps(RK_PAT),
+                js_mid="(async () => { __synth.roll().run(false); await new Promise(r => setTimeout(r, 800)); return { down: __rkDown(), pend: __synth.roll().lightsPending(), playing: __synth.roll().state().playing, struck: __synth.roll().log().filter(e => e.t === 'on' && e.now > __synth.engine().ctx.currentTime - 0.75).length }; })()", mid_at=0.6, secs=1.6)
+    ck(f"Rk. run off under the playing transport: no new strikes, the notes already struck end on time and their keys go out ({r4['mid']['down']} down and {r4['mid']['pend']} pending 800 ms later, {r4['mid']['struck']} struck after)",
+       r4["mid"]["down"] == [] and r4["mid"]["pend"] == 0 and r4["mid"]["playing"] and r4["mid"]["struck"] == 0, r4["mid"])
+    r5 = rk_run("__synth.setDevice('filament'); R.set(%s); R.dest('cathode');" % json.dumps(RK_PAT))
+    n5, late5, early5, miss5 = rk_match(r5)
+    devs5 = sorted(set(e["dev"] for e in r5["log"] if e["t"] == "on"))
+    ck(f"Rk. the roll on Cathode while Filament is lit lights the keys too, as the library and the deck do ({n5} strikes on {devs5}, {len(late5)} lit, {miss5} missed), and Stop leaves none down",
+       devs5 == ["cathode"] and n5 >= 6 and miss5 == 0 and early5 == 0 and r5["after"] == [] and r5["pend"] == 0, (n5, len(late5), miss5, early5))
+    r6 = rk.evaluate("""async () => {
+      const R = __synth.roll(); __synth.setDevice('filament'); R.dest('lit'); R.set(R.factory()[1]);
+      __synth.noteOn(62, 0.8); const a = __rkDown(); __synth.noteOff(62); const b = __rkDown();
+      return { a, b, lit: R.lit() }; }""")
+    ck(f"Rk. with the roll stopped the keys are the page's own: a key played lights ({r6['a']}) and goes out on release ({r6['b']}), the roll lights nothing ({r6['lit']})",
+       62 in r6["a"] and r6["b"] == [] and r6["lit"] == [], r6)
+    rk.evaluate("() => { const R = __synth.roll(); R.run(false); R.dest('lit'); R.set(R.factory()[1]); }")
+    ck("Rk. no page errors", not rkerr, rkerr)
+    rkx.close()
+    # ---------------------------------------------------------------- Th. Theremin mode (0.3, 9 Nov)
+    # A pad on Filament's Play tab: across is pitch, up is volume, one sliding note; the magic eye shows
+    # its tuning. The worklet takes {t:'thm',on,p,a} and holds one voice (note 128) at that fractional
+    # pitch and level. These check the sound (pitch, slide, level, release, keys and 1939 mode leave it
+    # alone), the pad's mapping, the pointer, the keys, the eye, persistence and the phone.
+    th_ = lambda at, on, p_, a_: {"at": at, "t": "thm", "on": on, "p": p_, "a": a_}
+    tsp = patch(osc1={"wave": "sine", "level": 0.8})
+    Lt, _ = render(tsp, [th_(0, True, 57, 1), th_(1.0, True, 57.5, 1), th_(2.0, True, 69, 1), th_(3.0, True, 69, 0.5), th_(3.5, True, 69, 0.1),
+                         th_(4.0, True, 69, 0), th_(4.5, True, 69, 1), th_(5.0, False, 69, 1)], 5.6, rack=False)
+    tseg = lambda a_, b_: Lt[int(a_ * SR):int(b_ * SR)]
+    tc = [1200 * math.log2(peak_freq(tseg(a_, b_)) / f_) for (a_, b_, f_) in ((0.3, 0.9, 220.0), (1.3, 1.9, 220 * 2 ** (0.5 / 12)), (2.3, 2.9, 440.0))]
+    ck(f"Th. the pad's note sounds at its fractional pitch: 57, 57.5 and 69 within 0.5 cent ({[round(c_, 3) for c_ in tc]})", max(abs(c_) for c_ in tc) <= 0.5, tc)
+    zx = tseg(1.98, 2.15); zc = np.where((zx[:-1] < 0) & (zx[1:] >= 0))[0]; zf = SR / np.diff(zc)
+    mid = int(np.sum((zf > 240) & (zf < 420)))
+    ck(f"Th. a move slides, it does not jump: 226 Hz to 440 Hz with {mid} cycles between 240 and 420 Hz, never falling (by more than the 4 Hz a whole-sample period reads)",
+       mid >= 3 and all(zf[i + 1] >= zf[i] - 6 for i in range(len(zf) - 1)) and abs(np.mean(zf[-8:]) - 440) < 3, [round(v_) for v_ in zf])
+    ta1 = tone_amp(tseg(2.5, 2.95), 440)
+    tlv = (db(tone_amp(tseg(3.2, 3.45), 440) / ta1), db(tone_amp(tseg(3.7, 3.95), 440) / ta1))
+    tsil, toff = db(np.sqrt(np.mean(tseg(4.2, 4.45) ** 2))), db(np.sqrt(np.mean(tseg(5.15, 5.5) ** 2)))
+    ck(f"Th. the level follows a: 0.5 is -6.0 dB, 0.1 is -20.0 dB (measured {tlv[0]:.2f}, {tlv[1]:.2f}), 0 is silence ({tsil:.0f} dB)",
+       abs(tlv[0] + 6.02) <= 0.2 and abs(tlv[1] + 20) <= 0.3 and tsil < -100, (tlv, tsil))
+    ck(f"Th. on false lets the note go with the patch's release (0.15 s later {toff:.0f} dB)", toff < -100, toff)
+    Lk, _ = render(tsp, [th_(0, True, 57, 1), {"at": 0.2, "t": "on", "n": 72, "v": 0.8}, {"at": 0.4, "t": "off", "n": 72}, {"at": 0.5, "t": "release"}], 1.0, rack=False)
+    tk = (db(tone_amp(Lk[int(0.05 * SR):int(0.19 * SR)], 220)), db(tone_amp(Lk[int(0.42 * SR):int(0.49 * SR)], 220)), db(np.sqrt(np.mean(Lk[int(0.7 * SR):] ** 2))))
+    ck(f"Th. a key played and let go beside it leaves the pad's note sounding ({tk[1]:.1f} dB against {tk[0]:.1f}); the page letting go of keys (release) ends it too ({tk[2]:.0f} dB)",
+       abs(tk[1] - tk[0]) < 0.5 and tk[2] < -100, tk)
+    Le, _ = render(patch(osc1={"wave": "sine"}, era={"on": True}), [th_(0, True, 57, 1)], 0.6, rack=False)
+    ck("Th. 1939 mode ignores the pad (its divided masters cannot slide): silence", db(np.sqrt(np.mean(Le[int(0.2 * SR):] ** 2))) < -100)
+    Lu, _ = render(patch(osc1={"wave": "sine"}, voice={"mode": "mono", "glide": 0.5}), [{"at": 0, "t": "on", "n": 45, "v": 0.8}, th_(0.3, True, 57, 1), th_(0.6, True, 69, 1)], 1.0, rack=False)
+    tu = 1200 * math.log2(peak_freq(Lu[int(0.75 * SR):int(0.98 * SR)]) / 440)
+    ck(f"Th. in mono mode the pad takes the voice and ignores the patch's 0.5 s glide (440 Hz {tu:+.2f} cents 0.15 s after the move)", abs(tu) < 1, tu)
+    thx = b.new_context(viewport={"width": 1366, "height": 1000}); tp = thx.new_page(); therr = []
+    tp.on("pageerror", lambda e: therr.append(str(e)))
+    tp.goto(BASE); tp.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    tmap = tp.evaluate("""async () => { const M = await import('/synth/theremin.js'); const d = M.normalizeThm({}), bad = M.normalizeThm({ low: 7, span: 9, snap: 4, depth: -3, on: 'yes' });
+      const sn = Object.assign({}, d, { snap: 1 }), half = Object.assign({}, d, { snap: 0.5 });
+      return { d, bad, p0: M.padPitch(0, d), p1: M.padPitch(1, d), pm: M.padPitch(0.5, d), s1: M.padPitch((60.4 - 48) / 36, sn), s5: M.padPitch((60.4 - 48) / 36, half),
+        l0: M.padLevel(0.02, d), l1: M.padLevel(1, d), lh: M.padLevel(0.03 + 0.97 * 0.5, d), t: M.tuneOf(60.3), tf: M.tuneOf(59.8) }; }""")
+    ck("Th. settings: C3 up 3 octaves, no snap, 36 dB, off by default; bad fields load as the defaults",
+       tmap["d"] == {"on": False, "low": 48, "span": 3, "snap": 0, "depth": 36} and tmap["bad"] == {"on": False, "low": 48, "span": 3, "snap": 1, "depth": 12}, tmap["bad"])
+    ck(f"Th. the pad's map: left C3 (48), right C6 (84), the middle F#4; snap 100% lands on 60, 50% keeps half the 40 cents ({tmap['s5']:.3f})",
+       tmap["p0"] == 48 and tmap["p1"] == 84 and tmap["pm"] == 66 and abs(tmap["s1"] - 60) < 1e-9 and abs(tmap["s5"] - 60.2) < 1e-9, tmap)
+    ck(f"Th. the volume map: the bottom 3% is silence, the top is 0 dB, halfway is -18 dB of 36 ({db(tmap['lh']):.2f})",
+       tmap["l0"] == 0 and abs(tmap["l1"] - 1) < 1e-12 and abs(db(tmap["lh"]) + 18) < 0.01, tmap)
+    ck("Th. tuning: 60.3 is C4 +30 cents, 59.8 is C4 -20", tmap["t"]["name"] == "C4" and abs(tmap["t"]["cents"] - 30) < 1e-6 and tmap["tf"]["name"] == "C4" and abs(tmap["tf"]["cents"] + 20) < 1e-6, (tmap["t"], tmap["tf"]))
+    tvis = tp.evaluate("() => { const s = document.getElementById('mThm'); return { shown: !!s.offsetParent, h: document.getElementById('thmCv').getBoundingClientRect().height, on: __synth.theremin().state().on, eye: __synth.eye().mode }; }")
+    ck("Th. the Theremin section shows on Filament's desktop panel, the pad 200 px tall, off on a fresh page, the eye on level", tvis["shown"] and tvis["h"] >= 190 and not tvis["on"] and tvis["eye"] == "level", tvis)
+    # a real pointer on the pad: down switches the mode on and plays, the pitch follows the position
+    cb = tp.evaluate("() => { const c = document.getElementById('thmCv'); c.scrollIntoView({ block: 'center' }); const r = c.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }")
+    on0 = tp.evaluate("__synth.tubeShow().onsets")
+    def th_wait(js):        # the eye moves in the frame loop, which a busy box can starve for a while: wait for it (up to 5 s)
+        try: tp.wait_for_function(js, timeout=5000)
+        except Exception: pass
+    tp.mouse.move(cb[0] + cb[2] * 0.5, cb[1] + cb[3] * 0.2); tp.mouse.down(); tp.wait_for_timeout(300)
+    th_wait("() => { const e = __synth.eye(); return e.mode === 'tune' && e.lv > 0.95; }")
+    tpd = tp.evaluate("() => ({ st: __synth.theremin().state(), eye: __synth.eye(), read: document.getElementById('thmRead').textContent, on: document.getElementById('thmOnBtn').getAttribute('aria-pressed'), on1: __synth.tubeShow().onsets })")
+    tmt = tp.evaluate("() => (__synth.meter() || {}).thm || null")
+    ck(f"Th. a press on the pad switches the mode on and plays F#4 at 80% height ({tpd['read']}); the meter reports it sounding at {tmt and round(tmt['p'], 3)}",
+       tpd["st"]["on"] and tpd["st"]["held"] and abs(tpd["st"]["pitch"] - 66) < 0.05 and tpd["on"] == "true" and tmt is not None and abs(tmt["p"] - tpd["st"]["pitch"]) < 0.01 and tpd["read"].startswith("F#4"), (tpd, tmt))
+    ck(f"Th. the press flares the tubes once (onsets {on0} to {tpd['on1']}), and the meter's note list leaves the pad's note out",
+       tpd["on1"] == on0 + 1 and 128 not in (tp.evaluate("(__synth.meter() || {}).notes") or []), (on0, tpd["on1"]))
+    ck(f"Th. on a note the magic eye reads tune and closes (lv {tpd['eye']['lv']:.2f})", tpd["eye"]["mode"] == "tune" and tpd["eye"]["lv"] > 0.9 and abs(tpd["eye"]["cents"]) < 2, tpd["eye"])
+    tp.mouse.move(cb[0] + cb[2] * ((66.25 - 48) / 36), cb[1] + cb[3] * 0.2); tp.wait_for_timeout(300)
+    th_wait("() => { const e = __synth.eye(); return e.cents > 22 && Math.abs(e.lv - 0.5) < 0.03; }")
+    te1 = tp.evaluate("__synth.eye()")
+    tp.mouse.move(cb[0] + cb[2] * ((65.6 - 48) / 36), cb[1] + cb[3] * 0.2); tp.wait_for_timeout(300)
+    th_wait("() => { const e = __synth.eye(); return e.cents < -37 && e.skew < -0.75; }")
+    te2 = tp.evaluate("__synth.eye()")
+    ck(f"Th. 25 cents sharp opens the eye halfway and leans it sharp (lv {te1['lv']:.2f}, skew {te1['skew']:.2f}); 40 cents flat opens it wider the other way (lv {te2['lv']:.2f}, skew {te2['skew']:.2f})",
+       abs(te1["cents"] - 25) < 3 and 0.4 < te1["lv"] < 0.6 and te1["skew"] > 0.3 and abs(te2["cents"] + 40) < 3 and te2["lv"] < 0.3 and te2["skew"] < -0.6, (te1, te2))
+    tp.mouse.up(); tp.wait_for_timeout(300)
+    th_wait("() => __synth.eye().mode === 'level' && !(__synth.meter() || {}).thm")
+    tup = tp.evaluate("() => ({ st: __synth.theremin().state(), eye: __synth.eye(), thm: (__synth.meter() || {}).thm || null, lab: document.getElementById('eyeLab').textContent })")
+    ck("Th. letting go ends the note; the eye goes back to level", not tup["st"]["held"] and tup["thm"] is None and tup["eye"]["mode"] == "level" and tup["lab"] == "level" and tup["st"]["on"], tup)
+    # keys: Enter plays, the arrows move it a semitone, Escape stops
+    tp.focus("#thmCv"); tp.keyboard.press("Enter"); tp.wait_for_timeout(100); k1 = tp.evaluate("__synth.theremin().state()")
+    tp.keyboard.press("ArrowRight"); tp.keyboard.press("ArrowRight"); tp.keyboard.press("Shift+ArrowLeft"); tp.wait_for_timeout(100); k2 = tp.evaluate("__synth.theremin().state()")
+    tp.keyboard.press("Escape"); tp.wait_for_timeout(100); k3 = tp.evaluate("__synth.theremin().state()")
+    ck(f"Th. keys on the pad: Enter plays (pitch {k1['pitch']}), two rights and a Shift left move it 1.9 semitones ({k2['pitch'] - k1['pitch'] if k2['pitch'] else None}), Escape stops",
+       k1["held"] and abs(k1["pitch"] - 60) < 1e-6 and k2["held"] and abs(k2["pitch"] - k1["pitch"] - 1.9) < 1e-6 and not k3["held"], (k1, k2, k3))
+    # the rail moving off Filament, Panic and 1939 mode all let the note go
+    tlet = {}
+    for how, js in (("rail", "() => { __synth.setDevice('cathode'); }"), ("panic", "() => __synth.panic()"),
+                    ("1939 mode", "() => { const p = __synth.patch(); p.era = Object.assign({}, p.era || {}, { on: true }); __synth.setPatch(p); }")):
+        tp.evaluate("() => { __synth.setDevice('filament'); const p = __synth.patch(); if (p.era && p.era.on) { p.era.on = false; __synth.setPatch(p); } }"); tp.wait_for_timeout(300)
+        tp.evaluate("__synth.theremin().press(0.5, 0.8)"); tp.wait_for_timeout(300)
+        was = tp.evaluate("__synth.theremin().state().held"); tp.evaluate(js); tp.wait_for_timeout(400)
+        tlet[how] = (was, tp.evaluate("__synth.theremin().state().held"), tp.evaluate("() => ((__synth.meter() || {}).voices || 0)") if how != "rail" else None)
+    ck(f"Th. moving the rail to Cathode, Panic and switching 1939 mode on each let the pad's note go ({tlet})", all(v_[0] and not v_[1] for v_ in tlet.values()), tlet)
+    rest = tp.evaluate("() => { const r = __synth.theremin().press(0.5, 0.8); return { r, held: __synth.theremin().state().held, read: document.getElementById('thmRead').textContent }; }")
+    ck(f"Th. while 1939 mode is on the pad rests ({rest['read']})", not rest["r"] and not rest["held"] and "1939" in rest["read"], rest)
+    tp.evaluate("() => { const p = __synth.patch(); p.era.on = false; __synth.setPatch(p); __synth.theremin().set({ low: 36, span: 2, snap: 0.25, depth: 48 }); }")
+    tp.reload(); tp.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+    tk_ = tp.evaluate("() => { const s = __synth.theremin().state(); return { low: s.low, span: s.span, snap: s.snap, depth: s.depth, on: s.on, pressed: [...document.querySelectorAll('#thmLow .chip[aria-pressed=true], #thmSpan .chip[aria-pressed=true]')].map(b => b.textContent) }; }")
+    ck("Th. the settings come back after a reload (C2, 2 octaves, snap 25%, 48 dB, on), and the chips show them",
+       tk_ == {"low": 36, "span": 2, "snap": 0.25, "depth": 48, "on": True, "pressed": ["C2", "2 oct"]}, tk_)
+    tp.evaluate("__synth.theremin().press(0.6, 0.7)"); tp.wait_for_timeout(800)
+    tdraw = tp.evaluate("() => { const c = document.getElementById('thmCv'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 4) s += x[i]; return { ms: __synth.theremin().state().drawMs, lit: s / (x.length / 4), w: c.width }; }")
+    tp.evaluate("__synth.theremin().release()")
+    info("Th. pad draw time a frame (ms) and canvas width", (round(tdraw["ms"], 3), tdraw["w"]))
+    ck(f"Th. the pad is painted ({tdraw['lit']:.1f} mean red) and draws in under 4 ms a frame ({tdraw['ms']:.2f} ms)", tdraw["lit"] > 3 and tdraw["ms"] < 4, tdraw)
+    ck("Th. no page errors (desktop)", not therr, therr)
+    thx.close()
+    for (pw_, ph_) in ((375, 667), (320, 568)):
+        tpx = b.new_context(viewport={"width": pw_, "height": ph_}, is_mobile=True, has_touch=True, device_scale_factor=2); tq = tpx.new_page(); tqerr = []
+        tq.on("pageerror", lambda e: tqerr.append(str(e)))
+        tq.goto(BASE); tq.wait_for_function("window.__synth && __synth.ready() && __synth.booted()", timeout=30000)
+        tabs0 = tq.evaluate("() => ({ pad: !!document.querySelector('.tabs [data-go=pad]').offsetParent, shown: !!document.getElementById('mThm').offsetParent, play: [...document.querySelectorAll('.mod')].filter(m => m.offsetParent).length })")
+        tq.tap('.tabs [data-go="pad"]'); tq.wait_for_timeout(200)
+        tq.evaluate("() => { const s = document.getElementById('mThm'); s.scrollIntoView(); }"); tq.wait_for_timeout(200)
+        tv_ = tq.evaluate("""() => { const sec = document.getElementById('mThm');
+          const small = [...sec.querySelectorAll('button, .knob')].filter(e => e.getClientRects().length).map(e => [e.textContent.trim() || e.getAttribute('aria-label'), e.getBoundingClientRect()])
+            .filter(([s, r]) => r.width < 44 || r.height < 44).map(([s, r]) => s + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          const c = document.getElementById('thmCv').getBoundingClientRect();
+          return { shown: !!sec.offsetParent, small, sw: document.documentElement.scrollWidth, iw: innerWidth, cl: c.left, cr: c.right, ch: c.height, mods: [...document.querySelectorAll('.mod')].filter(m => m.offsetParent).map(m => m.id) }; }""")
+        bx = tq.evaluate("() => { const r = document.getElementById('thmCv').getBoundingClientRect(); return [r.left + r.width * 0.25, r.top + r.height * 0.5]; }")
+        tq.touchscreen.tap(bx[0], bx[1]); tq.wait_for_timeout(150)
+        if pw_ == 375: tq.locator("#mThm").screenshot(path=os.path.join(SHOTS, "synth_theremin_phone.png"))
+        ck(f"Th. {pw_}px: the Pad tab shows the Theremin section alone ({tv_['mods']}), not the Play tab ({tabs0}), every button and knob 44 px or more, the pad 240 px tall inside the screen, no sideways scroll ({tv_['small']})",
+           tabs0["pad"] and not tabs0["shown"] and tabs0["play"] <= 4 and tv_["mods"] == ["mThm"] and not tv_["small"] and tv_["sw"] <= tv_["iw"] == pw_ and tv_["cl"] >= 0 and tv_["cr"] <= pw_ and tv_["ch"] >= 230, (tv_, tabs0))
+        tst = tq.evaluate("__synth.theremin().state()")
+        ck(f"Th. {pw_}px: a tap plays and ends (switched on: {tst['on']}, {tst['sent']} messages), no page errors", tst["on"] and not tst["held"] and tst["sent"] >= 2 and not tqerr, (tst, tqerr))
+        tq.evaluate("__synth.setDevice('cathode')"); tq.wait_for_timeout(250)
+        tcat = tq.evaluate("() => ({ tab: document.body.dataset.tab, pad: !!document.querySelector('.tabs [data-go=pad]').offsetParent })")
+        ck(f"Th. {pw_}px: on Cathode the Pad tab is gone and the panel is back on Play ({tcat})", tcat == {"tab": "play", "pad": False}, tcat)
+        tpx.close()
 
     # ---------------------------------------------------------------- W. Lattice wavetable
     def fold(freq, sr):
@@ -6787,6 +8629,18 @@ with sync_playwright() as pw:
     moved = float(pg.get_attribute("#latPos", "data-pos") or "0")
     ck(f"W. the position readout follows the envelope ({moved:.2f})", moved > 0.25, moved)
     pg.evaluate("__synth.noteOff(64)")
+    # Review 21 Nov (R1121-1): a warp amount with its warp off, and unison detune and spread at one voice, change
+    # nothing in the sound (measured within the spread of two renders) but looked fully live. They dim now.
+    idle_q = """() => Object.fromEntries(['osc1.warpAmt', 'osc2.warpAmt', 'unison.detune', 'unison.spread'].map(p => {
+      const l = document.querySelector('.lat-sl[data-path="' + p + '"]'); return [p, l ? +getComputedStyle(l).opacity : -1]; }))"""
+    idle0 = pg.evaluate(idle_q)
+    pg.click('.lat-chip[data-path="osc1.warp"][data-val="sync"]')
+    pg.evaluate("""() => { const i = document.querySelector('.lat-sl[data-path="unison.count"] input'); i.value = '3'; i.dispatchEvent(new Event('input', { bubbles: true })); }""")
+    pg.wait_for_timeout(60)
+    idle1 = pg.evaluate(idle_q)
+    ck(f"W. a warp amount dims while its warp is off, unison detune and spread dim at one voice, and each lights when it acts (review R1121-1: {idle0}, {idle1})",
+       all(0 <= v < 0.6 for v in idle0.values()) and idle1['osc1.warpAmt'] > 0.95 and 0 <= idle1['osc2.warpAmt'] < 0.6
+       and idle1['unison.detune'] > 0.95 and idle1['unison.spread'] > 0.95 and pg.evaluate("__synth.patch().unison.count") == 3)
     pg.screenshot(path=os.path.join(SHOTS, "synth_lattice_desktop.png"), full_page=True)
     pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
     ck("W. no page errors", not errs, errs)
@@ -7484,6 +9338,28 @@ with sync_playwright() as pw:
     }""")
     pg.wait_for_function("() => __synth.heptodeState().notes >= 3", timeout=5000)
     ck("H. dropping a .mid file loads its notes", pg.evaluate("__synth.heptodeState().notes") >= 3 and "phrase" in pg.evaluate("__synth.heptodeState().name").lower(), pg.evaluate("__synth.heptodeState()"))
+    # Robustness (10 Nov): a file the reader refuses, dropped on the roll, threw out of the file reader's callback (a
+    # page error, and the toast kept the last file's line). Now the toast carries the reader's message and the
+    # loaded score stays. Polled, not waited on, so a tree that never says it fails this check instead of the run.
+    hep_before = pg.evaluate("__synth.heptodeState()"); n_err = len(errs)
+    pg.evaluate("""() => { document.getElementById('toast').textContent = '';
+      const dt = new DataTransfer(); dt.items.add(new File([new TextEncoder().encode('RIFF....this is not midi')], 'junk.mid'));
+      document.getElementById('hepDrop').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt })); }""")
+    for _ in range(30):
+        pg.wait_for_timeout(100)
+        if "not a Standard MIDI File" in pg.inner_text("#toast") or len(errs) > n_err: break
+    hep_after = pg.evaluate("__synth.heptodeState()")
+    ck("H. a dropped file that is not MIDI says so, with no page error, and the loaded file stays",
+       "junk: This is not a Standard MIDI File" in pg.inner_text("#toast") and len(errs) == n_err
+       and hep_after["notes"] == hep_before["notes"] and hep_after["name"] == hep_before["name"], (pg.inner_text("#toast"), errs[n_err:], hep_after["notes"], hep_after["name"]))
+    # A dense one-channel file (130000 notes, built as in the M. check) threw "Maximum call stack size exceeded"
+    # out of the channel's lowest and highest note; it loads now (thinned to the panel's note cap, as before for
+    # any heavy file). Then the phrase goes back in for the checks below.
+    hep_dense = pg.evaluate("""([mk, n]) => { const a = (0, eval)(mk)(n); let ok; try { ok = __synth.heptodeLoad(a, 'dense'); } catch (e) { ok = 'threw ' + e.message; }
+      const s = __synth.heptodeState(); return { ok, notes: s.notes, name: s.name, toast: document.getElementById('toast').textContent }; }""", [DENSE, 130000])
+    ck("H. a dense one-channel file (130000 notes) loads", hep_dense["ok"] is True and hep_dense["notes"] > 0 and hep_dense["name"] == "dense"
+       and "stack" not in hep_dense["toast"], hep_dense)
+    pg.evaluate("() => __synth.heptodeLoad(__synth.heptodeFixture(), 'phrase')")
     pg.wait_for_timeout(150)
     hep_full = pg.evaluate(ROLL)
     ck("H. with a song loaded the roll leaves its empty state and its notes are painted in the window",
@@ -8013,6 +9889,13 @@ with sync_playwright() as pw:
        pg.evaluate("__synth.device()") == "orthicon" and pg.is_visible("#orthiconCanvas") and not pg.is_visible("#mFilt") and not pg.is_visible("#chassis"))
     help_o = pg.evaluate("""() => [...document.querySelectorAll('#mOrthStage .note, .intro[data-dev="orthicon"]')].map(n => n.textContent).join(' ')""")
     ck("Or. help says Capture rack is an input, not an export", "Capture rack is an input, not an export" in help_o, help_o)
+    # review 15 Nov, R1115-2: with loop off the scan runs to the last column and holds it (a key or a new picture does not
+    # restart it); the Scan card's note said only "Loop wraps the picture". The note now says what off does.
+    scan_note = pg.evaluate("""() => [...document.querySelectorAll('#orthiconRoot .note')].map(n => n.textContent).find(t => t.includes('columns per second')) || ''""")
+    lo_L, _lo_R = orender(dict(pg.evaluate("__synth.orthiconPatch('Ember Ridge')"), loop=False, speed=48), [], 4.0)
+    lo_a, lo_b = orms(lo_L[int(2.5 * SR):int(3.25 * SR)]), orms(lo_L[int(3.25 * SR):int(4.0 * SR)])
+    ck(f"Or. with loop off the scan holds its last column ({db(lo_a):.1f} then {db(lo_b):.1f} dBFS after the pass) and the Scan note says so (review R1115-2)",
+       "loop off" in scan_note and "last column" in scan_note and lo_a > 0.01 and abs(db(lo_a) - db(lo_b)) < 1.0, (scan_note, db(lo_a), db(lo_b)))
     pg.evaluate("""() => __synth.setPatch({ device: 'orthicon', picture: 'custom', brush: 'hard', brushSize: 1.2, keyboard: false, hold: true, engine: 'add', phase: 'coherent', width: 0, level: 1 })""")
     pg.wait_for_timeout(150)
     pg.evaluate("() => __synth.orthiconClear()")
@@ -9657,6 +11540,843 @@ with sync_playwright() as pw:
     pg.evaluate("__synth.setDevice('filament')")
     pg.wait_for_timeout(80)
     ck("Rn. no page errors", not errs, errs)
+
+    # ---------------------------------------------------------------- Sh. patch links and patch files (0.3, 10 Nov)
+    # ?p= carries one device's whole patch (share.js: a dxpatch document, deflated, base64url), and a JSON file carries
+    # the same document. Opening a link loads the patch on its device the way a pick from the menu does, then takes ?p=
+    # off the address. Every value comes back through the device's own normalizer.
+    sh = pg.evaluate("""async () => {
+      const S = __synth.share, out = { bad: [], plainBad: [], n: 0, maxLen: {}, tags: new Set() };
+      for (const { device, patches } of S.factories()) {
+        let mx = 0;
+        for (const p of patches) {
+          const want = JSON.stringify(S.normalize(device, p));
+          const t = await S.encode(device, p), back = await S.decode(t);
+          if (!back || back.device !== device || JSON.stringify(S.normalize(device, back.patch)) !== want) out.bad.push(device + ':' + p.name);
+          const t2 = await S.encode(device, p, false), b2 = await S.decode(t2);
+          if (!t2.startsWith('1j') || !b2 || JSON.stringify(S.normalize(device, b2.patch)) !== want) out.plainBad.push(device + ':' + p.name);
+          out.tags.add(t.slice(0, 2)); mx = Math.max(mx, t.length); out.n++;
+        }
+        out.maxLen[device] = mx;
+      }
+      out.tags = [...out.tags];
+      return out; }""")
+    info("Sh. longest ?p= text per device (characters)", sh["maxLen"])
+    ck(f"Sh. every factory patch on all {len(sh['maxLen'])} devices round-trips through a link, deflated and plain ({sh['n']} patches, longest {max(sh['maxLen'].values())} characters)",
+       len(sh["maxLen"]) == 18 and sh["n"] >= 120 and not sh["bad"] and not sh["plainBad"] and sh["tags"] == ["1z"] and max(sh["maxLen"].values()) < 2000, sh)
+    # a linked patch plays (Filament and Cathode, an edited patch each). A render is not sample-identical even twice in
+    # a row (free-running phases start at random), so the level is compared, with two renders of the original logged
+    # beside it as the yardstick.
+    sh_src = pg.evaluate("""async () => {
+      const f = __synth.factoryPatch('Wide Novachord Strings'); f.filt.cutoff = 1234.5; f.name = 'Sh Strings';
+      const c = __synth.cathodePatch('Plate Screamer'); c.name = 'Sh Screamer';
+      const back = async (d, p) => (await __synth.share.decode(await __synth.share.encode(d, p))).patch;
+      return { f, c, f2: await back('filament', f), c2: await back('cathode', c) }; }""")
+    def _sh_band(L, R):
+        x = (L + R)[int(0.05 * SR):int(0.5 * SR)]
+        frames = [np.abs(np.fft.rfft(x[i:i + 4096] * np.hanning(4096))) for i in range(0, len(x) - 4096, 2048)]
+        spec = np.mean(frames, axis=0); edges = np.geomspace(100, 16000, 25); fr = np.fft.rfftfreq(4096, 1 / SR)
+        bands = np.array([np.sqrt(np.mean(spec[(fr >= a) & (fr < b)] ** 2)) for a, b in zip(edges[:-1], edges[1:])])
+        return 20 * np.log10(np.sqrt(np.mean(x ** 2)) + 1e-12), 20 * np.log10(bands + 1e-9)
+    shd = []
+    for a_, b_ in (("f", "f2"), ("c", "c2")):
+        r0, s0 = _sh_band(*render(sh_src[a_], note(57, 0.0, 0.5), 0.8))
+        r1, s1 = _sh_band(*render(sh_src[a_], note(57, 0.0, 0.5), 0.8))
+        r2, s2 = _sh_band(*render(sh_src[b_], note(57, 0.0, 0.5), 0.8))
+        loud = s0 > s0.max() - 40
+        shd.append({"level": round(float(r0), 2), "twice_dB": round(float(abs(r1 - r0)), 3), "link_dB": round(float(abs(r2 - r0)), 3),
+                    "twice_band": round(float(np.max(np.abs(s1 - s0)[loud])), 2), "link_band": round(float(np.max(np.abs(s2 - s0)[loud])), 2)})
+    info("Sh. original twice against original and linked (level dB, worst band dB in the top 40 dB)", shd)
+    # The patch itself is identical after the trip (the checks above compare it field for field), so this is a sanity
+    # bound on the render, not a proof: two renders of one patch measured up to 1.7 dB apart in level (10 Nov), so the
+    # bound is 3 dB or twice that night's own gap between two renders of the original, whichever is larger.
+    ck(f"Sh. a linked patch plays at the original's level (Filament, Cathode: within {shd[0]['link_dB']:.2f} and {shd[1]['link_dB']:.2f} dB; two renders of the original {shd[0]['twice_dB']:.2f} and {shd[1]['twice_dB']:.2f} dB apart)",
+       all(d["level"] > -40 and d["link_dB"] <= max(3, 2 * d["twice_dB"]) for d in shd), shd)
+    # damaged and hostile links: nothing loads, nothing throws, nothing reaches a prototype
+    shx = pg.evaluate("""async () => {
+      const S = __synth.share, enc = new TextEncoder();
+      const b64 = bytes => { let s = ''; bytes.forEach(x => { s += String.fromCharCode(x); }); return btoa(s).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, ''); };
+      const plain = obj => '1j' + b64(enc.encode(typeof obj === 'string' ? obj : JSON.stringify(obj)));
+      const deflate = async bytes => { const cs = new CompressionStream('deflate-raw'); const w = cs.writable.getWriter(); w.write(bytes); w.close();
+        return new Uint8Array(await new Response(cs.readable).arrayBuffer()); };
+      const good = await S.encode('filament', __synth.factoryPatch('Wide Novachord Strings'));
+      const bomb = '1z' + b64(await deflate(enc.encode('{"kind":"dxpatch","v":1,"device":"filament","patch":{"name":"' + ' '.repeat(1 << 20) + '"}}')));
+      const r = {};
+      r.junk = await S.decode('not a patch!!!');
+      r.short = await S.decode('1z');
+      r.cut = await S.decode(good.slice(0, good.length - 12));
+      r.tag = await S.decode('2z' + good.slice(2));
+      r.v2 = await S.decode(plain({ kind: 'dxpatch', v: 2, device: 'filament', patch: { name: 'x' } }));
+      r.dev = await Promise.all(['constructor', '__proto__', 'toString', 'hasOwnProperty', 'nope', ''].map(d => S.decode(plain({ kind: 'dxpatch', v: 1, device: d, patch: { name: 'x' } }))));
+      r.arr = await S.decode(plain({ kind: 'dxpatch', v: 1, device: 'filament', patch: [1, 2] }));
+      r.notdoc = await S.decode(plain({ kind: 'dxrack', v: 1, device: 'filament', patch: { name: 'x' } }));
+      r.bombLen = bomb.length; r.bomb = await S.decode(bomb);
+      r.long = await S.decode('1j' + 'A'.repeat(70000));
+      const evil = plain('{"kind":"dxpatch","v":1,"device":"filament","patch":{"name":"Sh Evil","__proto__":{"polluted":1},"filt":{"cutoff":1e9,"res":-5,"constructor":{"prototype":{"polluted":2}}}}}');
+      const ap = await S.apply(evil);
+      r.evil = ap && { dev: ap.device, name: ap.patch.name, cut: ap.patch.filt.cutoff, res: ap.patch.filt.res, own: Object.prototype.hasOwnProperty.call(ap.patch, '__proto__'),
+        proto: Object.getPrototypeOf(ap.patch) === Object.prototype, polluted: ({}).polluted, objPoll: Object.prototype.polluted };
+      r.evilWant = (() => { const n = S.normalize('filament', { filt: { cutoff: 1e9, res: -5 } }); return { cut: n.filt.cutoff, res: n.filt.res }; })();
+      return r; }""")
+    ck("Sh. junk, a cut-off link, an unknown tag or version, an array, a project and a device named constructor, __proto__ or toString all read as no patch",
+       all(shx[k] is None for k in ("junk", "short", "cut", "tag", "v2", "arr", "notdoc")) and all(d is None for d in shx["dev"]), shx)
+    ck(f"Sh. a deflate bomb ({shx['bombLen']} characters inflating to 1 MB) and a 70000 character link read as no patch",
+       shx["bomb"] is None and shx["long"] is None and shx["bombLen"] < 65536, (shx["bomb"], shx["long"], shx["bombLen"]))
+    ck(f"Sh. a hostile link loads clamped (cutoff {shx['evil'] and shx['evil']['cut']}, res {shx['evil'] and shx['evil']['res']}) and its __proto__ and constructor keys reach no prototype",
+       shx["evil"] and shx["evil"]["dev"] == "filament" and shx["evil"]["name"] == "Sh Evil" and shx["evil"]["cut"] == shx["evilWant"]["cut"] and shx["evil"]["cut"] < 1e9
+       and shx["evil"]["res"] == shx["evilWant"]["res"] and not shx["evil"]["own"] and shx["evil"]["proto"] and shx["evil"].get("polluted") is None and shx["evil"].get("objPoll") is None, shx["evil"])
+    # opening a link on a fresh page: the rail moves to the link's device, the patch is the link's, undo goes back, the
+    # address loses ?p= and keeps the rest, and a reload keeps the patch without opening the link again
+    sh_q = pg.evaluate("""async () => { const p = __synth.cathodePatch('Plate Screamer'); p.name = 'Linked Screamer';
+      return { q: await __synth.share.encode('cathode', p), want: JSON.stringify(__synth.share.normalize('cathode', p)) }; }""")
+    shc = b.new_context(viewport={"width": 1366, "height": 1000}); shp = shc.new_page(); sherr = []; shp.on("pageerror", lambda e: sherr.append(str(e)))
+    shp.goto(BASE + "?keep=1&p=" + sh_q["q"]); shp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sh_boot = shp.evaluate("__synth.share.boot()"); shp.wait_for_timeout(250)
+    sh_st = shp.evaluate("""() => ({ dev: __synth.device(), patch: JSON.stringify(__synth.patch()), key: __synth.share.key(), menu: __synth.share.menu(),
+      search: location.search, toast: document.getElementById('toast').textContent })""")
+    ck(f"Sh. a link opened on a fresh page loads its patch on its own device ({sh_st['dev']}, menu '{sh_st['menu']}') and leaves the address without ?p=",
+       sh_boot == {"device": "cathode", "name": "Linked Screamer"} and sh_st["dev"] == "cathode" and sh_st["patch"] == sh_q["want"] and sh_st["key"] == "share"
+       and sh_st["menu"] == "* Linked Screamer (edited)" and sh_st["search"] == "?keep=1" and "Linked Screamer" in sh_st["toast"], sh_st)
+    shp.evaluate("__synth.undo()"); shp.wait_for_timeout(150)
+    sh_undo = shp.evaluate("__synth.patch().name")
+    shp.evaluate("q => __synth.share.apply(q)", sh_q["q"]); shp.wait_for_timeout(200)
+    shp.reload(); shp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); shp.wait_for_timeout(250)
+    sh_rl = shp.evaluate("({ dev: __synth.device(), patch: JSON.stringify(__synth.patch()), boot: null })")
+    sh_rl["boot"] = shp.evaluate("__synth.share.boot()")
+    ck(f"Sh. undo after a link goes back to the patch before it ({sh_undo}), and a reload keeps the linked patch without reading a link",
+       sh_undo == "Plate Screamer" and sh_rl["dev"] == "cathode" and sh_rl["patch"] == sh_q["want"] and sh_rl["boot"] is None, (sh_undo, sh_rl["dev"], sh_rl["boot"]))
+    shp.goto(BASE + "?p=1zNOTALINK"); shp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    sh_bad = shp.evaluate("async () => { const b = await __synth.share.boot(); return { b, dev: __synth.device(), patch: JSON.stringify(__synth.patch()), search: location.search, toast: document.getElementById('toast').textContent }; }")
+    ck("Sh. a damaged link at boot says it could not be read and leaves the lit patch alone",
+       sh_bad["b"] is None and sh_bad["dev"] == "cathode" and sh_bad["patch"] == sh_q["want"] and sh_bad["search"] == "" and "could not be read" in sh_bad["toast"], sh_bad)
+    shc.close()
+    ck("Sh. no page errors (links opened on fresh pages)", not sherr, sherr)
+    # patch files: the document, the name, the download key, the upload key, and what is refused
+    shf = pg.evaluate("""async () => {
+      const S = __synth.share; await __synth.setDevice('filament'); __synth.load('Wide Novachord Strings');
+      await new Promise(r => setTimeout(r, 80));
+      const before = JSON.stringify(__synth.patch()), doc = S.fileDoc(), name = S.fileName();
+      const thy = __synth.thyPatch('Walnut Bass'); thy.name = 'Sh Walnut';
+      const a = await S.importText(JSON.stringify({ kind: 'dxpatch', v: 1, device: 'thyratron', name: 'Sh Walnut', patch: thy }, null, 2));
+      await new Promise(r => setTimeout(r, 120));
+      const aDev = __synth.device(), aSame = JSON.stringify(__synth.patch()) === JSON.stringify(S.normalize('thyratron', thy)), aKey = S.key();
+      const bare = __synth.thyPatch('Walnut Bass'); delete bare.device; bare.name = 'Sh Bare';
+      const bb = await S.importText(JSON.stringify(bare)); const bDev = __synth.device(), bName = __synth.patch().name;
+      const held = JSON.stringify(__synth.patch());
+      const proj = await S.importText(JSON.stringify({ kind: 'dxrack', v: 1, name: 'P' })), mix = await S.importText(JSON.stringify({ kind: 'dxmix', v: 1 }));
+      const junk = await S.importText('{ not json'), big = await S.importText(' '.repeat(300000));
+      return { before, doc, name, a, aDev, aSame, aKey, bb, bDev, bName, proj, mix, junk, big, heldSame: held === JSON.stringify(__synth.patch()) }; }""")
+    ck(f"Sh. a patch file is a dxpatch document named for the device and the patch ({shf['name']})",
+       shf["doc"]["kind"] == "dxpatch" and shf["doc"]["v"] == 1 and shf["doc"]["device"] == "filament" and shf["doc"]["name"] == "Wide Novachord Strings"
+       and json.loads(shf["before"]) == shf["doc"]["patch"], (shf["doc"]["kind"], shf["name"]))
+    ck("Sh. a Thyratron patch file loads on Thyratron from Filament; a bare patch loads on the lit device",
+       shf["a"]["ok"] and shf["aDev"] == "thyratron" and shf["aSame"] and shf["aKey"] == "import" and shf["bb"]["ok"] and shf["bDev"] == "thyratron" and shf["bName"] == "Sh Bare"
+       and shf["name"] == "filament-wide-novachord-strings.json", shf)
+    ck("Sh. a project, a mix, broken JSON and a 300 kB file are refused with a reason, and the lit patch stays",
+       not shf["proj"]["ok"] and "project" in shf["proj"]["msg"] and not shf["mix"]["ok"] and "mix" in shf["mix"]["msg"] and not shf["junk"]["ok"] and not shf["big"]["ok"] and shf["heldSame"], shf)
+    # the keys on the Rack tab: copy patch link (with the clipboard), download patch, upload patch
+    pg.evaluate("() => { const p = __synth.cathodePatch('Plate Screamer'); p.name = 'Sh Keys'; return __synth.setPatch(p); }"); pg.wait_for_timeout(150)
+    shk_want = pg.evaluate("JSON.stringify(__synth.share.normalize('cathode', __synth.patch()))")
+    pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE.split("/synth/")[0])
+    pg.evaluate("document.getElementById('shareCopy').click()")
+    pg.wait_for_function("document.getElementById('shareUrl').value.includes('?p=')", timeout=5000)
+    shk = pg.evaluate("""async () => { const v = document.getElementById('shareUrl').value; let clip = ''; try { clip = await navigator.clipboard.readText(); } catch (e) { clip = 'ERR ' + e; }
+      const d = await __synth.share.decode(new URL(v).searchParams.get('p'));
+      return { v: v.slice(0, 60), len: v.length, clipSame: clip === v, dev: d && d.device, same: d && JSON.stringify(__synth.share.normalize(d.device, d.patch)), toast: document.getElementById('toast').textContent,
+        path: new URL(v).pathname, params: [...new URL(v).searchParams.keys()] }; }""")
+    ck(f"Sh. copy patch link puts a {shk['len']} character link to the lit patch in the box and on the clipboard",
+       shk["clipSame"] and shk["dev"] == "cathode" and shk["same"] == shk_want and shk["path"] == "/synth/" and shk["params"] == ["p"] and "Link copied" in shk["toast"], shk)
+    with pg.expect_download() as shdl:
+        pg.evaluate("document.getElementById('shareDown').click()")
+    sh_path = os.path.join(SHOTS, "sh_patch_test.json"); shdl.value.save_as(sh_path)
+    with open(sh_path) as fh: sh_file = json.load(fh)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    pg.set_input_files("#shareFile", sh_path); pg.wait_for_timeout(400)
+    shu = pg.evaluate("({ dev: __synth.device(), same: JSON.stringify(__synth.patch()), toast: document.getElementById('toast').textContent, val: document.getElementById('shareFile').value })")
+    ck(f"Sh. download patch saves {shdl.value.suggested_filename}, and upload patch loads it back on Cathode from Filament",
+       shdl.value.suggested_filename == "cathode-sh-keys.json" and sh_file["kind"] == "dxpatch" and sh_file["device"] == "cathode"
+       and shu["dev"] == "cathode" and shu["same"] == shk_want and "Loaded" in shu["toast"] and shu["val"] == "", (shdl.value.suggested_filename, shu))
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
+    # review 12 Nov, R1112-3: copy link said what a patch leaves out (Orthicon's picture, Mote's sound, Klystron's recording,
+    # Lattice's WAV) but download patch said only "Downloaded <file>", though the file carries the same patch
+    shnt = {}
+    for d_, want_ in (("orthicon", "picture"), ("cathode", None)):
+        pg.evaluate(f"Promise.resolve(__synth.setDevice('{d_}'))"); pg.wait_for_timeout(1500)
+        with pg.expect_download() as shdl2:
+            pg.evaluate("document.getElementById('shareDown').click()")
+        shnt[d_] = (shdl2.value.suggested_filename, pg.evaluate("document.getElementById('toast').textContent"))
+    ck(f"Sh. download patch says what the file leaves out where copy link does ({shnt['orthicon'][1]!r}) and nothing more elsewhere ({shnt['cathode'][1]!r})",
+       shnt["orthicon"][1].startswith("Downloaded orthicon-") and "picture is not in it" in shnt["orthicon"][1]
+       and shnt["cathode"][1].startswith("Downloaded cathode-") and "not in it" not in shnt["cathode"][1], shnt)
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(100)
+    # phones: the row sits in the Rack tab's Mix section, every key 44 px, no sideways scroll
+    for sh_w in (375, 320):
+        shm = b.new_context(viewport={"width": sh_w, "height": 667}, is_mobile=True, has_touch=True); shmp = shm.new_page(); shme = []; shmp.on("pageerror", lambda e: shme.append(str(e)))
+        shmp.goto(BASE); shmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); shmp.wait_for_timeout(200)
+        shmp.tap('.tabs [data-go="rack"]'); shmp.wait_for_timeout(250)
+        shmp.evaluate("document.getElementById('shareBar').scrollIntoView({ block: 'center' })"); shmp.wait_for_timeout(100)
+        shr = shmp.evaluate("""() => { const R = id => { const e = document.getElementById(id); const q = e.getBoundingClientRect(); return { w: Math.round(q.width), h: Math.round(q.height), vis: !!e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' }; };
+          const lab = document.querySelector('label[for="shareFile"]').getBoundingClientRect();
+          return { url: R('shareUrl'), copy: R('shareCopy'), down: R('shareDown'), up: { w: Math.round(lab.width), h: Math.round(lab.height) }, sw: document.documentElement.scrollWidth, iw: innerWidth }; }""")
+        ck(f"Sh. {sh_w} px phone: the patch link row shows on the Rack tab, every key and the box 44 px tall, no sideways scroll",
+           shr["copy"]["vis"] and shr["url"]["vis"] and all(shr[k]["h"] >= 44 and shr[k]["w"] >= 44 for k in ("copy", "down", "up")) and shr["url"]["h"] >= 44 and shr["sw"] <= shr["iw"], shr)
+        shm.close()
+        ck(f"Sh. {sh_w} px phone: no page errors", not shme, shme)
+    # Review 11 Nov (R1111-1): the three upload keys (project, mix, patch) are labels over a file input that was
+    # display: none, so Tab went from download straight past upload and a keyboard could not upload anything.
+    rv_up = {}
+    for rv_before, rv_input in (("projDown", "projFile"), ("mixDown", "mixFile"), ("shareDown", "shareFile")):
+        pg.focus("#" + rv_before); pg.keyboard.press("Tab"); pg.wait_for_timeout(50)
+        rv_at = pg.evaluate("""() => { const a = document.activeElement, l = a && a.closest('label.filebtn'); const cs = l ? getComputedStyle(l) : null;
+          return { id: a ? a.id : '', name: a ? a.getAttribute('aria-label') : '', ring: !!cs && cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2 }; }""")
+        # Enter on a focused file input clicks it, and that click is what opens the picker. Headless Chrome shows the
+        # picker itself only now and then (measured 11 Nov: 3 of 9 Enter presses and 4 of 9 Space presses, on any of
+        # the three inputs), so the check reads the click: it reaches the input and nothing cancels it.
+        rv_open = False
+        if rv_at["id"] == rv_input:
+            pg.evaluate("""(id) => { window.__rvClicks = []; document.getElementById(id).addEventListener('click', e => {
+              setTimeout(() => window.__rvClicks.push({ id: e.target.id, cancelled: e.defaultPrevented }), 0); }, { once: true }); }""", rv_input)
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
+            rv_clicks = pg.evaluate("window.__rvClicks")
+            rv_open = len(rv_clicks) == 1 and rv_clicks[0]["id"] == rv_input and not rv_clicks[0]["cancelled"]
+        rv_up[rv_input] = dict(rv_at, opens=rv_open)
+    ck("Sh. Tab reaches each upload key (project, mix, patch) after its download key, shows a ring, and Enter clicks it (opens the picker)",
+       all(v["id"] == k and v["ring"] and v["opens"] and v["name"] for k, v in rv_up.items()), rv_up)
+    # Review 11 Nov (R1111-2): with three upload keys on one faceplate, a file picked on the wrong row said only
+    # "not a project" or "not a mix"; the patch row already said which row takes it. Every row says so now.
+    rv_proj = pg.evaluate("() => __synth.project()")
+    rv_docs = {"project": rv_proj, "mix": {"v": 1, "kind": "dxmix", "name": "Mix"}, "patch": {"kind": "dxpatch", "v": 1, "device": "filament", "name": "Rv", "patch": {"v": 1, "name": "Rv"}}}
+    rv_msgs = {}
+    for rv_row, rv_inp in (("project", "projFile"), ("mix", "mixFile"), ("patch", "shareFile")):
+        for rv_kind, rv_doc in rv_docs.items():
+            if rv_kind == rv_row: continue
+            pg.evaluate("document.getElementById('toast').textContent = ''")
+            pg.set_input_files("#" + rv_inp, files=[{"name": rv_kind + ".json", "mimeType": "application/json", "buffer": json.dumps(rv_doc).encode()}])
+            pg.wait_for_function("document.getElementById('toast').textContent.length > 0", timeout=3000)
+            rv_msgs[rv_row + "<-" + rv_kind] = pg.evaluate("document.getElementById('toast').textContent")
+    ck("Sh. an upload key given another row's file names the row that takes it (project, mix, patch)",
+       all(("on the " + k.split("<-")[1] + " row") in m and ("not a " + k.split("<-")[0]) in m for k, m in rv_msgs.items()), rv_msgs)
+    ck("Sh. no page errors (main page)", not errs, errs)
+
+    # ---------------------------------------------------------------- Su. Surprise me (0.3, 11 Nov 2026)
+    # surprise.js draws a Filament or Cathode patch from a seed inside built-in limits; the page renders the draw
+    # offline at a known output level and sets out.level from it. Checked here: the draws' fields against the
+    # limits (200 seeds a device), and, measured on fitted draws by the suite's own renders: under the limiter's
+    # -1 dBFS threshold with a margin, never silent, in tune (the strongest partials on harmonics), mono-safe.
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    su_lim = pg.evaluate("""() => {
+      const out = {};
+      const leaves = (o, pre, acc) => { for (const k of Object.keys(o)) { const v = o[k], q = pre ? pre + '.' + k : k; if (v && typeof v === 'object' && !Array.isArray(v)) leaves(v, q, acc); else acc.push([q, v]); } return acc; };
+      const get = (o, q) => q.split('.').reduce((x, k) => (x == null ? undefined : x[k]), o);
+      for (const d of ['filament', 'cathode']) {
+        const r = { n: 0, same: 0, moved: [], cats: {}, bad: [], names: new Set(), dup: 0, det: true };
+        for (let i = 0; i < 200; i++) {
+          const seed = (i * 2654435761 + 7) >>> 0, raw = __synth.surprise.raw(d, seed), p = __synth.share.normalize(d, raw);
+          if (JSON.stringify(__synth.surprise.raw(d, seed)) !== JSON.stringify(raw)) r.det = false;
+          r.n++; r.cats[p.cat] = (r.cats[p.cat] || 0) + 1; if (r.names.has(p.name)) r.dup++; r.names.add(p.name);
+          // every number the draw sets is already in range: the normalizer leaves it as drawn
+          const mv = leaves(raw, '', []).filter(([q, v]) => typeof v !== 'object' && get(p, q) !== v && !(q === 'osc2.oct' && false));
+          if (!mv.length) r.same++; else if (r.moved.length < 4) r.moved.push([seed, mv.slice(0, 3)]);
+          const B = why => { if (r.bad.length < 8) r.bad.push([seed, why]); };
+          if (p.tune !== 0) B('tune ' + p.tune);
+          if (p.drift > 2.5) B('drift ' + p.drift);
+          if (p.out.eqOn || p.out.level !== 0) B('out');
+          if (d === 'filament') {
+            if (p.osc1.fixed || p.osc2.fixed) B('fixed');
+            if (p.osc1.semi !== 0 || Math.abs(p.osc1.fine) > 3 || p.osc1.oct > 0) B('osc1 pitch');
+            const iv = p.osc2.oct * 12 + p.osc2.semi;
+            if (![0, 12, -12, 7, 19, -5].includes(iv)) B('interval ' + iv);
+            if (Math.abs(p.osc2.fine) > ([0, 12, -12].includes(iv) ? 10 : 1.5)) B('osc2 fine ' + p.osc2.fine);
+            if (p.osc2.ring || (p.osc2.fm && ![0, 12, -12].includes(iv))) B('ring/fm');
+            if (p.lfo1.pitch > 9 || p.lfo2.pitch > 0 || p.lfo1.amp || p.lfo2.amp || p.lfo1.sync !== 'off') B('lfo');
+            if (p.filt.res > 0.75 || p.filt.model === 'lpg' || p.filt.offset !== 0 || p.filtB.route !== 'off') B('filter');
+            if (p.arp.on || p.era.on) B('arp/era');
+            if (Object.values(p.mod).some(m => m.dst !== 'off' && !['cut', 'pw', 'pan', 'morph'].includes(m.dst))) B('mod dst');
+            if (p.osc1.level < 0.6 || p.voice.level < 0.65 || p.envA.a > 1) B('level/attack');
+            if (p.voice.unison > 3 || p.voice.detune > 16 || p.out.width > 120) B('spread');
+          } else {
+            if (p.pm.b !== 0 || Math.abs(p.pm.a) > 0.08) B('pm');
+            const semi = p.vco2.semi, oct = Math.log2(p.vco1.scale / p.vco2.scale);
+            if (![0, 7, -5].includes(semi) || ![-1, 0, 1].includes(oct) || (semi !== 0 && oct !== 0)) B('interval ' + semi + ' ' + oct);
+            if (Math.abs(p.vco2.fine) > (semi === 0 ? 9 : 1.5)) B('vco2 fine');
+            if (p.vco1.wave === 'noise' || p.vco2.wave === 'ring' || p.cables.length) B('wave/cables');
+            if (p.lpf.peak > 0.72 || p.hpf.peak > 0.4 || p.hpf.cutoff > 150) B('filters');
+            if (p.vco1.level < 0.6 || p.vca.level < 0.65 || p.eg2.a > 1.2) B('level/attack');
+          }
+        }
+        r.names = r.names.size; out[d] = r;
+      }
+      return out; }""")
+    for d_ in ("filament", "cathode"):
+        r_ = su_lim[d_]; cats_want = {"filament": {"Bass", "Lead", "Pad", "Keys", "Pluck"}, "cathode": {"Bass", "Lead", "Sweep"}}[d_]
+        ck(f"Su. {d_}: 200 draws are a pure function of the seed, every field already in range (the normalizer moves none), names unique ({r_['names']})",
+           r_["det"] and r_["same"] == r_["n"] and r_["dup"] == 0, {k: r_[k] for k in ("det", "same", "n", "moved", "dup")})
+        ck(f"Su. {d_}: 200 draws keep the limits (tune 0, harmonic intervals, small detune and vibrato, no pitch or level routes, resonance under singing)",
+           not r_["bad"], r_["bad"])
+        ck(f"Su. {d_}: every archetype turns up in 200 draws ({r_['cats']})", set(r_["cats"]) == cats_want, r_["cats"])
+
+    su_fit = pg.evaluate("__synth.surprise.fit()")
+    def su_events(p_, dev_):
+        root = 36 if p_["cat"] == "Bass" else 60
+        ns = [root] if (dev_ == "cathode" or p_["cat"] == "Bass") else [root, root + 4, root + 7]
+        return ns, [e for n_ in ns for e in note(n_, 0.02, su_fit["hold"], v=1.0)]
+    def su_partials(x, base, f_top, k=3):
+        # the strongest k partials below f_top, each as cents from the nearest multiple of base
+        n_ = 1 << 17; X = np.abs(np.fft.rfft(x[:n_] * np.hanning(min(len(x), n_)), n_)); f_ = np.fft.rfftfreq(n_, 1 / SR)
+        band = (f_ > base * 0.9) & (f_ < f_top); idx = np.where(band)[0]; got = []
+        Xb = X.copy()
+        for _ in range(k):
+            j = idx[np.argmax(Xb[idx])]
+            if Xb[j] < X[idx].max() * 0.03: break
+            # the partial's power-weighted mean frequency within 40 cents of its peak: unison voices and detuned
+            # oscillators split a partial into close peaks a few cents either side, and the ear hears their middle
+            w_ = (f_ > f_[j] * 2 ** (-40 / 1200)) & (f_ < f_[j] * 2 ** (40 / 1200))
+            fq = float(np.sum(f_[w_] * X[w_] ** 2) / np.sum(X[w_] ** 2))
+            m_ = max(1, round(fq / base)); got.append((round(float(fq), 1), m_, round(1200 * math.log2(fq / (m_ * base)), 1)))
+            Xb[(f_ > fq - 25) & (f_ < fq + 25)] = 0
+        return got
+    su_rows = {"filament": [], "cathode": []}; su_ms = []
+    for d_ in ("filament", "cathode"):
+        for i_ in range(12):
+            seed_ = (i_ * 40503 + 11) & 0xffffffff
+            dr = pg.evaluate("a => __synth.surprise.draw(a[0], a[1])", [d_, seed_])
+            if not dr["patch"]:
+                su_rows[d_].append({"seed": seed_, "none": True, "tries": dr["tries"]}); continue
+            su_ms.append(dr["ms"]); P_ = dr["patch"]
+            ns_, ev_ = su_events(P_, d_)
+            # Three renders: a render is not sample-identical to the next (drift and noise are seeded per render),
+            # and on some draws that moves the loudest 100 ms a lot. Measured 19 Nov on seed 40514 (Rusty Growl, a
+            # ladder bass): 40 renders of the same events read -21.6 to -15.0 dBFS, and one suite render -13.0, which
+            # failed the -14 bound on origin/main e936a98 with no synth change since the last ALL PASS. So the
+            # loudness bound reads the median of three (what the fit aims at), and the peak bound the worst of three.
+            pk3_, rms3_ = [], []
+            for rep_ in range(3):
+                L_, R_ = render(P_, ev_, su_fit["seconds"], rack=True, masterFx=False)
+                pk3_.append(db(max(np.max(np.abs(L_)), np.max(np.abs(R_)))))
+                w_ = int(0.1 * SR); e_ = (L_ ** 2 + R_ ** 2) / 2
+                rms3_.append(db(math.sqrt(max(np.mean(e_[s0:s0 + w_]) for s0 in range(0, len(e_) - w_, w_ // 2)))))
+            pk_ = max(pk3_); rms_ = float(np.median(rms3_))
+            seg_ = slice(int(0.3 * SR), int(1.3 * SR))
+            st_ = math.sqrt((np.mean(L_[seg_] ** 2) + np.mean(R_[seg_] ** 2)) / 2); mo_ = math.sqrt(np.mean(((L_[seg_] + R_[seg_]) / 2) ** 2))
+            # tuning: one note, the voice alone (no echo, room or spring to smear it)
+            root_ = ns_[0]; f0_ = 440 * 2 ** ((root_ - 69) / 12)
+            Lv_, _ = render(P_, note(root_, 0.0, 1.5, v=0.8), 1.6, rack=False)
+            if d_ == "filament": base_ = f0_ * 2 ** P_["osc1"]["oct"] / 4
+            else: base_ = f0_ * 8 / P_["vco1"]["scale"] / 4
+            parts_ = su_partials(Lv_[int(0.35 * SR):int(1.45 * SR)], base_, base_ * 12)
+            su_rows[d_].append({"seed": seed_, "cat": P_["cat"], "name": P_["name"], "level": dr["level"], "tries": dr["tries"], "peak": round(pk_, 2), "rms": round(rms_, 2),
+                                "rms3": [round(x_, 2) for x_ in rms3_], "fold": round(db(st_) - db(mo_), 2), "parts": parts_, "model": P_.get("filt", {}).get("model") if d_ == "filament" else None})
+    info("Su. fitted draws (seed, cat, level, worst peak of 3 renders dBFS, loudest 100 ms of 3 renders dBFS, mono fold dB, partials (Hz, harmonic, cents))",
+         {d_: [(r_["seed"], r_.get("cat"), r_.get("level"), r_.get("peak"), r_.get("rms3"), r_.get("fold"), r_.get("parts")) for r_ in su_rows[d_]] for d_ in su_rows})
+    info("Su. draw and fit time in the page (ms, each: up to 4 offline renders of 1.6 s)", su_ms)
+    for d_ in ("filament", "cathode"):
+        rows_ = [r_ for r_ in su_rows[d_] if not r_.get("none")]
+        ck(f"Su. {d_}: 12 seeds each give a patch (none too quiet to fit after {su_fit['tries']} tries)", len(rows_) == 12, su_rows[d_])
+        pk_max = max(r_["peak"] for r_ in rows_); rms_min = min(r_["rms"] for r_ in rows_); rms_max = max(r_["rms"] for r_ in rows_)
+        ck(f"Su. {d_}: a fitted draw's held chord at full velocity peaks under the limiter's -1 dBFS threshold with 2 dB to spare (worst of 3 renders {pk_max:.2f} dBFS; the fit aims at {su_fit['peak']})",
+           pk_max <= -3.0, [(r_["seed"], r_["peak"]) for r_ in rows_])
+        ck(f"Su. {d_}: never silent, never hot: the loudest 100 ms of every fitted draw (median of 3 renders) sits between -30 and -14 dBFS ({rms_min:.1f} to {rms_max:.1f}; the fit aims at {su_fit['rms']} at most)",
+           rms_min >= -30 and rms_max <= -14, [(r_["seed"], r_["rms"]) for r_ in rows_])
+        badp = [(r_["seed"], r_["parts"]) for r_ in rows_ if len(r_["parts"]) == 0 or any(abs(c_) > 20 for (_f, _m, c_) in r_["parts"])]
+        ck(f"Su. {d_}: in tune: the strongest partials of every draw sit within 20 cents of a harmonic of the note (worst {max(abs(c_) for r_ in rows_ for (_f, _m, c_) in r_['parts']):.1f} cents)",
+           not badp, badp)
+        ck(f"Su. {d_}: mono-safe: every fitted draw loses 3 dB or less folded to mono (worst {max(r_['fold'] for r_ in rows_):.2f})", all(r_["fold"] <= 3.0 for r_ in rows_), [(r_["seed"], r_["fold"]) for r_ in rows_])
+    ck(f"Su. the draw and fit take under 6 s in the page (worst {max(su_ms) if su_ms else None} ms)", su_ms and max(su_ms) < 6000, su_ms)
+
+    # the key: on Filament and Cathode it loads a draw like a patch link (undo goes back); elsewhere it says so
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    su_before = pg.evaluate("JSON.stringify(__synth.patch())")
+    su_p = pg.evaluate("__synth.surprise.press(4242)")
+    su_last = pg.evaluate("__synth.surprise.last()")
+    su_d = pg.evaluate("s => __synth.surprise.raw('filament', s)", su_last["seed"])   # the seed the fit kept (4242 unless it was too quiet)
+    def su_strip(p_): q_ = json.loads(json.dumps(p_)); q_["out"]["level"] = 0; return q_
+    su_want = pg.evaluate("a => __synth.share.normalize('filament', a)", su_d)
+    ck(f"Su. surprise me on Filament loads the seed's draw ('{su_p['menu']}'), out.level set by the fit ({su_p['patch']['out']['level']} dB), the toast names it",
+       su_p["ok"] and su_p["device"] == "filament" and su_p["key"] == "surprise" and su_p["edited"] and su_p["menu"].startswith("* ") and su_p["menu"].endswith("(edited)")
+       and su_last["asked"] == 4242 and (su_last["tries"] == 1) == (su_last["seed"] == 4242) and su_strip(su_p["patch"]) == su_strip(su_want) and su_p["patch"]["out"]["level"] == su_last["level"] and "Surprise" in su_p["toast"], (su_p["menu"], su_p["toast"], su_last.get("tries"), su_last.get("seed")))
+    pg.evaluate("document.getElementById('undoBtn').click()"); pg.wait_for_timeout(100)
+    ck("Su. undo after surprise me goes back to the patch before it", pg.evaluate("JSON.stringify(__synth.patch())") == su_before)
+    pg.evaluate("__synth.setDevice('cathode')"); pg.wait_for_timeout(150)
+    su_pc = pg.evaluate("__synth.surprise.press(777)")
+    ck(f"Su. surprise me on Cathode loads a Cathode draw ('{su_pc['menu']}', {su_pc['patch'].get('cat')})",
+       su_pc["ok"] and su_pc["device"] == "cathode" and su_pc["patch"].get("device") == "cathode" and su_pc["patch"]["cat"] in ("Bass", "Lead", "Sweep") and su_pc["menu"].startswith("* "), su_pc["menu"])
+    su_two = pg.evaluate("Promise.all([__synth.surprise.press(1), __synth.surprise.press(2)]).then(x => x.map(y => [y.ok, y.why]))")
+    ck(f"Su. a second press while the first renders is ignored ({su_two})", su_two == [[True, None], [False, "busy"]], su_two)
+    pg.evaluate("__synth.setDevice('thyratron')"); pg.wait_for_timeout(150)
+    su_tb = pg.evaluate("JSON.stringify(__synth.patch())")
+    pg.evaluate("document.getElementById('surpriseBtn').click()"); pg.wait_for_timeout(150)
+    su_tt = pg.evaluate("({ same: JSON.stringify(__synth.patch()), toast: document.getElementById('toast').textContent })")
+    ck(f"Su. on Thyratron the key leaves the patch alone and says which devices it draws for ('{su_tt['toast']}')", su_tt["same"] == su_tb and "Filament and Cathode" in su_tt["toast"], su_tt["toast"])
+    pg.evaluate("__synth.setDevice('filament')"); pg.wait_for_timeout(150)
+    pg.evaluate("document.getElementById('surpriseBtn').click()")
+    pg.wait_for_function("!__synth.surprise.busy() && __synth.surprise.last() && __synth.surprise.last().asked !== 1", timeout=15000)
+    su_k = pg.evaluate("({ key: __synth.share.key(), menu: __synth.share.menu(), lvl: __synth.patch().out.level, dis: document.getElementById('surpriseBtn').disabled })")
+    ck(f"Su. the key itself draws a patch on Filament ('{su_k['menu']}') and is ready again", su_k["key"] == "surprise" and not su_k["dis"] and su_k["menu"].startswith("* "), su_k)
+    for su_w in (375, 320):
+        sm = b.new_context(viewport={"width": su_w, "height": 667}, is_mobile=True, has_touch=True); smp = sm.new_page(); sme = []; smp.on("pageerror", lambda e: sme.append(str(e)))
+        smp.goto(BASE); smp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); smp.wait_for_timeout(200)
+        smp.tap('.tabs [data-go="rack"]'); smp.wait_for_timeout(250)
+        smp.evaluate("document.getElementById('surpriseBtn').scrollIntoView({ block: 'center' })"); smp.wait_for_timeout(100)
+        smr = smp.evaluate("""() => { const e = document.getElementById('surpriseBtn'), q = e.getBoundingClientRect();
+          return { w: Math.round(q.width), h: Math.round(q.height), vis: !!e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden', sw: document.documentElement.scrollWidth, iw: innerWidth }; }""")
+        ck(f"Su. {su_w} px phone: surprise me shows on the Rack tab, 44 px or more, no sideways scroll ({smr['w']}x{smr['h']})",
+           smr["vis"] and smr["w"] >= 44 and smr["h"] >= 44 and smr["sw"] <= smr["iw"], smr)
+        smp.tap("#surpriseBtn")
+        try: smp.wait_for_function("__synth.surprise.last() && !__synth.surprise.busy()", timeout=20000); smok = smp.evaluate("__synth.share.key()")
+        except Exception as e_: smok = "timeout " + str(e_)[:80]
+        ck(f"Su. {su_w} px phone: a tap draws a patch ({smok})", smok == "surprise", smok)
+        sm.close()
+        ck(f"Su. {su_w} px phone: no page errors", not sme, sme)
+    ck("Su. no page errors (main page)", not errs, errs)
+
+    # ---------------------------------------------------------------- Fc. faces (0.3, 12 Nov 2026)
+    FC_JS = """() => { const props = ['backgroundImage', 'backgroundColor', 'color', 'borderTopColor', 'boxShadow', 'textShadow'];
+      return ['.inst', '.inst-in', '#chassis', '.plate', '.plate small', '#mOsc1', '#mOsc1 h3', '#mOsc1 .knob .kl', '#mOsc1 .knob .kv']
+        .map(q => { const e = document.querySelector(q); if (!e) return q + ' missing'; const c = getComputedStyle(e); return q + ' ' + props.map(p => c[p]).join(' | '); }); }"""
+    def fc_lum(rgb):
+        f = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        r, g, b_ = [f(v / 255) for v in rgb]; return 0.2126 * r + 0.7152 * g + 0.0722 * b_
+    def fc_ratio(a, c):
+        la, lc = fc_lum(a), fc_lum(c); return (max(la, lc) + 0.05) / (min(la, lc) + 0.05)
+    import re as _fcre
+    def fc_rgbs(txt):
+        return [tuple(int(x) for x in m) for m in _fcre.findall(r"rgb\((\d+), (\d+), (\d+)\)", txt)]
+    fcx = b.new_context(viewport={"width": 1366, "height": 1000}); fp = fcx.new_page(); ferr = []; fp.on("pageerror", lambda e: ferr.append(str(e)))
+    fp.goto(BASE); fp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fp.wait_for_timeout(300)
+    f0 = fp.evaluate("__synth.face()")
+    fchips = fp.evaluate("[...document.querySelectorAll('#faceChips .chip')].map(b => b.dataset.v + ':' + b.getAttribute('aria-pressed'))")
+    ck(f"Fc. a fresh browser gets the walnut face, chassis tubes in the natural look ({f0})",
+       f0["face"] == "walnut" and f0["attr"] == "walnut" and f0["looks"] == ["natural"] * 4, f0)
+    ck(f"Fc. three face chips, walnut pressed ({fchips})", fchips == ["walnut:true", "rack:false", "blacklight:false"], fchips)
+    fw = fp.evaluate(FC_JS)
+    fp.evaluate("document.documentElement.removeAttribute('data-face')"); fp.wait_for_timeout(50)
+    fnone = fp.evaluate(FC_JS)
+    fp.evaluate("document.documentElement.dataset.face = 'walnut'")
+    ck("Fc. walnut adds no rule: the cabinet, panel, chassis, plate, a module and its labels compute the same with no face set",
+       fw == fnone, [a for a, c in zip(fw, fnone) if a != c][:3])
+    fpatch0 = fp.evaluate("JSON.stringify(__synth.patch())")
+    fsty = {"walnut": fw}; fcon = {}
+    for fv in ("rack", "blacklight"):
+        fp.click(f'#faceChips .chip[data-v="{fv}"]'); fp.wait_for_timeout(200)
+        fsty[fv] = fp.evaluate(FC_JS)
+    fp.click('#faceChips .chip[data-v="rack"]'); fp.wait_for_timeout(150)
+    fr = fp.evaluate("({ f: __synth.face(), ls: localStorage.getItem('filament_face'), pressed: [...document.querySelectorAll('#faceChips .chip')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.v) })")
+    ck(f"Fc. rack black: the chip sets the face, keeps it in this browser and leaves the chassis tubes natural ({fr})",
+       fr["f"]["face"] == "rack" and fr["f"]["attr"] == "rack" and fr["ls"] == "rack" and fr["pressed"] == ["rack"] and fr["f"]["looks"] == ["natural"] * 4, fr)
+    fdiff = {fv: sum(1 for a, c in zip(fsty[fv], fw) if a != c) for fv in ("rack", "blacklight")}
+    ck(f"Fc. each face changes the cabinet, the panel, the chassis and the module plates ({fdiff} of {len(fw)} styled parts differ from walnut)",
+       all(fsty[fv][i] != fw[i] for fv in ("rack", "blacklight") for i in (0, 1, 2, 5)) and fsty["rack"][0] != fsty["blacklight"][0], fdiff)
+    ck("Fc. rack black and black light carry no walnut in the cheeks", all("rgb(58, 35, 20)" not in fsty[fv][0] and "rgb(90, 56, 32)" not in fsty[fv][0] for fv in ("rack", "blacklight"))
+       and "rgb(58, 35, 20)" in fw[0], [fsty[fv][0][:120] for fv in ("rack", "blacklight")])
+    for fv in ("walnut", "rack", "blacklight"):
+        st = fsty[fv]; panel = fc_rgbs(st[1].split(" | ")[0].split(" ", 1)[1]); brightest = max(panel, key=fc_lum) if panel else (0, 0, 0)
+        cols = {"module title": fc_rgbs(st[6].split(" | ")[2])[0], "knob label": fc_rgbs(st[7].split(" | ")[2])[0], "knob value": fc_rgbs(st[8].split(" | ")[2])[0]}
+        rat = {k: round(fc_ratio(c, brightest), 1) for k, c in cols.items()}; fcon[fv] = rat
+        ck(f"Fc. {fv}: module titles, knob labels and values read at 4.5:1 or more against the panel's lightest stop ({rat})", all(v >= 4.5 for v in rat.values()), (rat, brightest))
+    fp.click('#faceChips .chip[data-v="blacklight"]'); fp.wait_for_timeout(600)
+    fb = fp.evaluate("__synth.face()")
+    FC_PIX = """() => { const cv = document.getElementById('tubeV1'), c = cv.getContext('2d'), d = c.getImageData(0, 0, cv.width, cv.height).data; let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; } return [r / n, g / n, b / n]; }"""
+    fpix_b = fp.evaluate(FC_PIX)
+    fp.click('#faceChips .chip[data-v="walnut"]'); fp.wait_for_timeout(600)
+    fpix_w = fp.evaluate(FC_PIX); fw2 = fp.evaluate("__synth.face()")
+    ck(f"Fc. black light paints the chassis tubes in the black light look, walnut takes them back to natural ({fb['looks'][0]}, {fw2['looks'][0]})",
+       fb["looks"] == ["blacklight"] * 4 and fw2["looks"] == ["natural"] * 4, (fb, fw2))
+    ck(f"Fc. the V1 canvas turns violet under black light (mean RGB {[round(v) for v in fpix_b]} against {[round(v) for v in fpix_w]} in walnut)",
+       fpix_b[2] > fpix_b[1] and fpix_b[2] / max(1, fpix_b[1]) > 1.3 * fpix_w[2] / max(1, fpix_w[1]), (fpix_b, fpix_w))
+    ck("Fc. a face never touches the patch", fp.evaluate("JSON.stringify(__synth.patch())") == fpatch0)
+    fp.click('#faceChips .chip[data-v="blacklight"]'); fp.wait_for_timeout(100)
+    fp.reload(); fp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fp.wait_for_timeout(300)
+    frl = fp.evaluate("({ f: __synth.face(), pressed: document.querySelector('#faceChips .chip[aria-pressed=\"true\"]').dataset.v })")
+    ck(f"Fc. a reload keeps black light ({frl})", frl["f"]["face"] == "blacklight" and frl["f"]["attr"] == "blacklight" and frl["pressed"] == "blacklight" and frl["f"]["looks"] == ["blacklight"] * 4, frl)
+    for fbad in ("neon", "__proto__", ""):
+        fp.evaluate("v => localStorage.setItem('filament_face', v)", fbad); fp.reload(); fp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        fbd = fp.evaluate("__synth.face()")
+        ck(f"Fc. a stored face of {fbad!r} loads walnut", fbd["face"] == "walnut" and fbd["attr"] == "walnut" and fbd["looks"] == ["natural"] * 4, fbd)
+    ck("Fc. setFace refuses a face that does not exist", fp.evaluate("__synth.setFace('toString')") is False and fp.evaluate("__synth.face().face") == "walnut")
+    fnot = []
+    for fd in fp.evaluate("[...document.querySelectorAll('.devbtn')].map(b => b.dataset.d)"):
+        fp.evaluate("d => __synth.setDevice(d)", fd); fp.wait_for_timeout(120)
+        if not fp.is_visible("#faceChips .chip[data-v=\"rack\"]"): fnot.append(fd)
+    ck(f"Fc. the Face section shows on every rack device ({len(fp.evaluate('[...document.querySelectorAll(\'.devbtn\')]'))} devices; missing: {fnot})", not fnot, fnot)
+    fcx.close()
+    ck("Fc. no page errors", not ferr, ferr)
+    for fc_w in (375, 320):
+        fm = b.new_context(viewport={"width": fc_w, "height": 667}, is_mobile=True, has_touch=True); fmp = fm.new_page(); fme = []; fmp.on("pageerror", lambda e: fme.append(str(e)))
+        fmp.goto(BASE); fmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fmp.wait_for_timeout(200)
+        fmp.tap('.tabs [data-go="rack"]'); fmp.wait_for_timeout(250)
+        fmp.evaluate("document.getElementById('mFace').scrollIntoView({ block: 'center' })"); fmp.wait_for_timeout(100)
+        fmr = fmp.evaluate("""() => ({ sizes: [...document.querySelectorAll('#faceChips .chip')].map(e => { const q = e.getBoundingClientRect(); return [Math.round(q.width), Math.round(q.height)]; }),
+          sw: document.documentElement.scrollWidth, iw: innerWidth, vis: !!document.getElementById('mFace').offsetParent })""")
+        ck(f"Fc. {fc_w} px phone: the Face section is on the Rack tab, chips 44 px or more, no sideways scroll ({fmr['sizes']})",
+           fmr["vis"] and all(w_ >= 44 and h_ >= 44 for w_, h_ in fmr["sizes"]) and fmr["sw"] <= fmr["iw"], fmr)
+        fmp.tap('#faceChips .chip[data-v="rack"]'); fmp.wait_for_timeout(150)
+        ck(f"Fc. {fc_w} px phone: a tap sets rack black, no sideways scroll, no page errors", fmp.evaluate("__synth.face().face") == "rack"
+           and fmp.evaluate("document.documentElement.scrollWidth <= innerWidth") and not fme, fme)
+        fm.close()
+
+    # ---------------------------------------------------------------- Fd. faces, second slice (13 Nov 2026)
+    # The rail, the outboard tray, the mix desk (strips and the file faceplate), the MIDI deck, song library and paper
+    # roll strips, and the keybed now take the face too. Walnut still adds no rule; the amber accents keep their rules.
+    FD_PARTS = [("rail bay", ".rail"), ("rail tag", ".rail .label"), ("rail plate", "#devC"), ("rail plate role", "#devC small"),
+                ("outboard tray", ".racklinks"), ("outboard plate", ".racklinks .devlink"), ("outboard role", ".racklinks .devlink small"),
+                ("mix strip", '.mixrow[data-mix="lattice"]'), ("mix strip name", '.mixrow[data-mix="lattice"] .who'), ("mix fader name", '.mixrow[data-mix="lattice"] label'),
+                ("file faceplate", ".hfiles"), ("file tag", ".htag"), ("MIDI deck", "#deck"), ("deck tag", "#deck .label"), ("song library", "#library"),
+                ("paper roll strip", "#roll"), ("keybed", "#keybed"), ("bend strip", "#pbStrip"), ("strip name", ".stripcol .sl"), ("key controls", ".kctl"),
+                ("white key", ".key.w"), ("black key", ".key.b"), ("white key name", ".key.w .kn")]
+    import re as _fdre0; _fdre = _fdre0.compile(r"rgba\((\d+, \d+, \d+), 1\)")
+    FD_JS = """(parts) => { const props = ['backgroundImage', 'backgroundColor', 'color', 'borderTopColor', 'boxShadow'];
+      const out = {}; for (const [n, q] of parts) { const e = document.querySelector(q); if (!e) { out[n] = null; continue; }
+        const c = getComputedStyle(e); out[n] = props.map(p => c[p]); } return out; }"""
+    def fd_settled(js, arg=None, cap=40):   # read until two reads 100 ms apart agree (a hover or face transition has ended); 14 Nov: two runs read mid-transition
+        prev = fdp.evaluate(js, arg) if arg is not None else fdp.evaluate(js)
+        for _ in range(cap):
+            fdp.wait_for_timeout(100)
+            cur = fdp.evaluate(js, arg) if arg is not None else fdp.evaluate(js)
+            if cur == prev: return cur
+            prev = cur
+        return prev
+    def fd_stops(st):   # the opaque colour stops of a computed background (gradient stops, else the background colour)
+        cs = fc_rgbs(st[0]) if st[0] != "none" else []
+        return cs or fc_rgbs(st[1])
+    def fd_min_ratio(text_st, bg_st):
+        col = fc_rgbs(text_st[2])[0]; stops = fd_stops(bg_st)
+        return round(min(fc_ratio(col, c_) for c_ in stops), 2) if stops else 0
+    FD_TEXT = [("rail plate", "rail plate"), ("rail plate role", "rail plate"), ("rail tag", "rail tag"), ("outboard plate", "outboard plate"),
+               ("outboard role", "outboard plate"), ("mix strip name", "mix strip"), ("mix fader name", "mix strip"), ("file tag", "file tag"),
+               ("deck tag", "deck tag"), ("strip name", "keybed"), ("key controls", "keybed"), ("white key name", "white key")]
+    fdx = b.new_context(viewport={"width": 1366, "height": 1000}); fdp = fdx.new_page(); fde = []; fdp.on("pageerror", lambda e: fde.append(str(e)))
+    fdp.goto(BASE); fdp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fdp.wait_for_timeout(300)
+    fdp.mouse.move(2, 2)
+    fd = {"walnut": fd_settled(FD_JS, FD_PARTS)}
+    fdp.evaluate("document.documentElement.removeAttribute('data-face')"); fdp.wait_for_timeout(50)
+    fd_none = fdp.evaluate(FD_JS, FD_PARTS)
+    fdp.evaluate("document.documentElement.dataset.face = 'walnut'")
+    ck(f"Fd. walnut adds no rule to the rail, outboard tray, mix desk, transport strips or keybed ({len(FD_PARTS)} parts compute the same with no face set)",
+       fd["walnut"] == fd_none and all(v is not None for v in fd_none.values()), [k for k in fd_none if fd_none[k] != fd["walnut"][k] or fd_none[k] is None][:4])
+    fd_lit0 = fdp.evaluate("""() => { const k = document.querySelector('.key.w'), r = document.querySelector('.mixrow[data-mix="lattice"]'); const g = e => { const c = getComputedStyle(e); return [c.backgroundImage, c.color, c.borderTopColor, c.boxShadow]; };
+      k.classList.add('down'); r.classList.add('armed'); const o = { lit: g(document.getElementById('devF')), key: g(k), armed: g(r) }; r.classList.remove('armed'); r.classList.add('keyed'); o.keyed = g(r);
+      k.classList.remove('down'); r.classList.remove('keyed'); return o; }""")
+    fdp.hover(".racklinks .devlink"); fdp.wait_for_timeout(200)
+    fd_hov0 = fd_settled("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
+    fdp.mouse.move(2, 2)
+    fdpatch0 = fdp.evaluate("JSON.stringify(__synth.patch())")
+    fd_lit = {}; fd_hov = {}
+    for fv in ("rack", "blacklight"):
+        fdp.click(f'#faceChips .chip[data-v="{fv}"]'); fdp.mouse.move(2, 2); fdp.wait_for_timeout(250)
+        fd[fv] = fd_settled(FD_JS, FD_PARTS)
+        fd_lit[fv] = fdp.evaluate("""() => { const k = document.querySelector('.key.w'), r = document.querySelector('.mixrow[data-mix="lattice"]'); const g = e => { const c = getComputedStyle(e); return [c.backgroundImage, c.color, c.borderTopColor, c.boxShadow]; };
+          k.classList.add('down'); r.classList.add('armed'); const o = { lit: g(document.getElementById('devF')), key: g(k), armed: g(r) }; r.classList.remove('armed'); r.classList.add('keyed'); o.keyed = g(r);
+          k.classList.remove('down'); r.classList.remove('keyed'); return o; }""")
+        fdp.hover(".racklinks .devlink"); fdp.wait_for_timeout(200)
+        fd_hov[fv] = fd_settled("(() => { const c = getComputedStyle(document.querySelector('.racklinks .devlink')); return [c.color, c.borderTopColor]; })()")
+        fdp.mouse.move(2, 2)
+    FD_SURF = ["rail bay", "rail plate", "outboard tray", "outboard plate", "mix strip", "file faceplate", "MIDI deck", "song library", "paper roll strip", "keybed", "bend strip"]
+    for fv in ("rack", "blacklight"):
+        same = [n for n in FD_SURF if fd[fv][n][0] == fd["walnut"][n][0]]
+        ck(f"Fd. {fv}: the rail, outboard tray, mix desk, deck, library, roll and keybed surfaces all change from walnut (unchanged: {same})", not same, same)
+        ck(f"Fd. {fv}: the outboard plates lose their warm walnut brass (no rgb(42, 37, 30) stop)", "rgb(42, 37, 30)" not in fd[fv]["outboard plate"][0]
+           and "rgb(42, 37, 30)" in fd["walnut"]["outboard plate"][0], fd[fv]["outboard plate"][0][:140])
+        # rack black keeps walnut's ivory keys and their engraving on purpose (checked below), so only black light's key names count here
+        rat = {t: fd_min_ratio(fd[fv][t], fd[fv][bg]) for t, bg in FD_TEXT if fv == "blacklight" or t != "white key name"}
+        low = {k: v for k, v in rat.items() if v < 4.5}
+        ck(f"Fd. {fv}: every label on these parts reads at 4.5:1 or more against the darkest or lightest stop behind it (lowest {min(rat.values())}; under: {low})", not low, rat)
+        # the accents only: the lit plate's text and edge, a held key's face, an armed strip's edge and glow, the keyed strip's edge
+        fd_acc = lambda o: {"lit": o["lit"][1:3], "key": o["key"][0], "armed": o["armed"][2:4], "keyed": o["keyed"][2]}
+        ck(f"Fd. {fv}: the lit rail plate, a held key, an armed strip and the keyed strip keep their amber and green (same as walnut)", fd_acc(fd_lit[fv]) == fd_acc(fd_lit0),
+           {k: (fd_acc(fd_lit[fv])[k], fd_acc(fd_lit0)[k]) for k in fd_acc(fd_lit0) if fd_acc(fd_lit[fv])[k] != fd_acc(fd_lit0)[k]})
+        ck(f"Fd. {fv}: hovering an outboard plate still lights it amber ({fd_hov[fv]})", [fc_rgbs(_fdre.sub(r"rgb(\1)", v))[:1] for v in fd_hov[fv]] == [fc_rgbs(v)[:1] for v in fd_hov0], (fd_hov[fv], fd_hov0))
+    info("Fd. walnut label contrast on the same parts (lowest stop)", {t: fd_min_ratio(fd["walnut"][t], fd["walnut"][bg]) for t, bg in FD_TEXT})
+    ck("Fd. rack black keeps the ivory keys; black light makes the white keys fluoresce violet", fd["rack"]["white key"] == fd["walnut"]["white key"]
+       and fd["blacklight"]["white key"][0] != fd["walnut"]["white key"][0] and fd["blacklight"]["black key"][0] != fd["walnut"]["black key"][0])
+    ck("Fd. a face never touches the patch (second slice)", fdp.evaluate("JSON.stringify(__synth.patch())") == fdpatch0)
+    fdp.click('#faceChips .chip[data-v="walnut"]'); fdp.mouse.move(2, 2); fdp.wait_for_timeout(150)
+    fd_again = fd_settled(FD_JS, FD_PARTS)
+    ck("Fd. walnut again computes exactly what it did before a face was tried", fd_again == fd["walnut"], [k for k in fd_again if fd_again[k] != fd["walnut"][k]])
+    fdx.close()
+    ck("Fd. no page errors", not fde, fde)
+    for fd_w in (375, 320):
+        fm = b.new_context(viewport={"width": fd_w, "height": 667}, is_mobile=True, has_touch=True); fmp = fm.new_page(); fme = []; fmp.on("pageerror", lambda e: fme.append(str(e)))
+        fmp.goto(BASE); fmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); fmp.wait_for_timeout(200)
+        fdm = {}
+        for fv in ("walnut", "rack", "blacklight"):
+            fmp.evaluate("f => __synth.setFace(f)", fv); fmp.wait_for_timeout(150)
+            fdm[fv] = fmp.evaluate("""() => ({ fade: getComputedStyle(document.querySelector('.rail'), '::after').backgroundImage, bed: getComputedStyle(document.getElementById('keybed')).backgroundImage,
+              plate: getComputedStyle(document.getElementById('devC')).backgroundImage, sw: document.documentElement.scrollWidth, iw: innerWidth,
+              tgt: [...document.querySelectorAll('.rail .devbtn, .racklinks .devlink')].map(e => e.getBoundingClientRect()).filter(q => q.width).map(q => Math.min(q.width, q.height)).reduce((a, c) => Math.min(a, c), 99) })""")
+        fdc = all(fdm[fv][k] != fdm["walnut"][k] for fv in ("rack", "blacklight") for k in ("fade", "bed", "plate"))
+        ck(f"Fd. {fd_w} px phone: the rail's scroll fade, its plates and the keybed take each face; targets {min(fdm[fv]['tgt'] for fv in fdm)} px or more; no sideways scroll",
+           fdc and all(fdm[fv]["sw"] <= fdm[fv]["iw"] and fdm[fv]["tgt"] >= 44 for fv in fdm) and "rgb(10, 4, 20)" in fdm["blacklight"]["fade"] and not fme,
+           ({fv: {k: str(v)[:70] for k, v in fdm[fv].items()} for fv in fdm}, fme))
+        fm.close()
+
+    # ---------------------------------------------------------------- Ll. the wax lamp (0.3, 15 Nov 2026; the brief's lava lamp module)
+    # The /otr lamp (waxlamp.js) in a Rack tab section: a page setting, never the sound. Its simulation is seeded,
+    # so a restart with a seed and a run of simulated seconds is repeatable; "music warms the bulb" reads the output
+    # level the frame loop measures. It paints only while its canvas is in view.
+    LL_RUN = """(a) => { const L = __synth.lamp; L.set('lampW', a.w); L.set('lampMusic', !!a.music); L.restart(a.seed);
+      let up = 0, top = 0, st = null; for (let i = 0; i < a.sec / 10; i++) { st = L.advance(10, a.lv); up = Math.max(up, st.up); top = Math.max(top, st.top); }
+      return { up, top, melt: st.melt, waxT: st.waxT, tBot: st.tBot, music: L.state().music, status: L.state().status }; }"""
+    LL_PIX = """() => { const cv = document.getElementById('lampCv'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let n = 0, r = 0, g = 0, b = 0, lit = 0; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] > 0) { n++; r += d[i]; g += d[i + 1]; b += d[i + 2]; if (d[i] + d[i + 1] + d[i + 2] > 240) lit++; } }
+      return { share: n / (d.length / 4), lit: lit / (d.length / 4), rgb: n ? [r / n, g / n, b / n] : [0, 0, 0], w: cv.width, h: cv.height }; }"""
+    llx = b.new_context(viewport={"width": 1366, "height": 1000}); lp = llx.new_page(); lerr = []; lp.on("pageerror", lambda e: lerr.append(str(e)))
+    lp.goto(BASE); lp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); lp.wait_for_timeout(300)
+    l0 = lp.evaluate("""() => ({ st: __synth.lamp.state(), on: document.getElementById('lampOnBtn').getAttribute('aria-pressed'),
+      cols: [...document.querySelectorAll('#lampColSel option')].map(o => o.value), bases: [...document.querySelectorAll('#lampBaseSel option')].map(o => o.value),
+      knobs: [...document.querySelectorAll('#kLamp .knob')].map(k => k.getAttribute('aria-label')), tab: document.getElementById('mLamp').dataset.tab,
+      ls: localStorage.getItem('filament_lamp') })""")
+    ck(f"Ll. a fresh browser: the Wax lamp section on the Rack tab, switched on, 25 W, 1x, red / yellow on gold, music off ({l0['st']['set']})",
+       l0["tab"] == "rack" and l0["on"] == "true" and l0["st"]["set"] == {"lampOn": True, "lampCol": "classic", "lampBase": "gold", "lampW": 25, "lampTime": 1, "lampMusic": False}
+       and l0["ls"] is None and l0["st"]["look"] == "natural", l0)
+    ck(f"Ll. six wax colourways, three base finishes, bulb and speed knobs ({len(l0['cols'])}, {len(l0['bases'])}, {l0['knobs']})",
+       l0["cols"] == ["classic", "blue", "orange", "purple", "green", "bclear"] and l0["bases"] == ["gold", "silver", "black"]
+       and l0["knobs"] == ["Wax lamp bulb", "Wax lamp speed"], l0)
+    lp.evaluate("window.scrollTo(0, 0)"); lp.wait_for_timeout(400)
+    lf0 = lp.evaluate("__synth.lamp.state()"); lp.wait_for_timeout(1200); lf1 = lp.evaluate("__synth.lamp.state()")
+    ck(f"Ll. off screen the lamp rests: no paints in 1.2 s ({lf0['frames']} -> {lf1['frames']}, in view {lf1['inView']})",
+       not lf1["inView"] and lf1["frames"] == lf0["frames"], (lf0, lf1))
+    lp.evaluate("document.getElementById('mLamp').scrollIntoView({ block: 'center' })"); lp.wait_for_timeout(2000)
+    lf2 = lp.evaluate("__synth.lamp.state()"); lpx = lp.evaluate(LL_PIX)
+    ck(f"Ll. in view it paints, at most about 15 times a second ({lf2['frames'] - lf1['frames']} paints in 2 s) and the canvas is painted ({lpx['share']:.2f} of it, {lpx['lit']:.3f} lit)",
+       lf2["inView"] and 15 <= lf2["frames"] - lf1["frames"] <= 34 and lpx["share"] > 0.5 and lpx["lit"] > 0.01, (lf2, lpx))
+    info("Ll. paint time a frame (simulation steps included), 1366 px, headless, mean and worst ms", [round(lf2["drawMs"], 2), round(lf2["worstMs"], 2)])
+    ck(f"Ll. a cold lamp says it is warming up ({lf2['status']!r})", lf2["warming"] and lf2["status"].startswith("warming up"), lf2)
+    # the physics, seeded: a 25 W bulb melts the cake and sends wax up within 400 s; a 15 W bulb melts it but it stays down
+    lr25 = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 400, "lv": 0})
+    lr15 = lp.evaluate(LL_RUN, {"w": 15, "seed": 12345, "sec": 400, "lv": 0})
+    ck(f"Ll. 25 W: the wax melts ({lr25['melt']:.2f}) and rises (most risen {lr25['up']:.2f} of it, top {lr25['top']:.2f} of the bottle) within 400 s",
+       lr25["melt"] > 0.9 and lr25["up"] > 0.12 and lr25["top"] > 0.5, lr25)
+    ck(f"Ll. 15 W: a lazy lamp, the wax stays down (most risen {lr15['up']:.2f}, wax {lr15['waxT']:.1f} C against {lr25['waxT']:.1f} C at 25 W)",
+       lr15["up"] < 0.05 and lr15["waxT"] < lr25["waxT"], lr15)
+    lr25b = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 400, "lv": 0})
+    ck("Ll. the same seed and settings run the same wax", lr25b == lr25, (lr25b, lr25))
+    # music warms the bulb: the same 120 s with the switch on at full level runs hotter; off, the level does nothing
+    lm_on = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 120, "lv": 1, "music": True})
+    lm_off = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 120, "lv": 1, "music": False})
+    lm_0 = lp.evaluate(LL_RUN, {"w": 25, "seed": 12345, "sec": 120, "lv": 0})
+    ck(f"Ll. music warms the bulb: at full level the wax is {lm_on['waxT'] - lm_off['waxT']:.1f} C warmer and the bottom {lm_on['tBot'] - lm_off['tBot']:.1f} C warmer after 120 s",
+       lm_on["waxT"] - lm_off["waxT"] > 2 and lm_on["tBot"] - lm_off["tBot"] > 2 and lm_on["music"] == 1, (lm_on, lm_off))
+    ck("Ll. with the switch off the music level changes nothing", lm_off == lm_0 and lm_off["music"] == 0, (lm_off, lm_0))
+    # the live path: the frame loop hands the lamp the output level; a held chord lifts the heat, the status says so
+    lp.evaluate("__synth.lamp.set('lampMusic', true); __synth.lamp.restart(5)")
+    llv = lp.evaluate("""async () => { await __synth.engine().ctx.resume(); [48, 55, 60, 64].forEach(n => __synth.noteOn(n, 1));
+      await new Promise(r => setTimeout(r, 3000)); const s = __synth.lamp.state(); [48, 55, 60, 64].forEach(n => __synth.noteOff(n)); __synth.panic(); return s; }""")
+    ck(f"Ll. live: a held chord reaches the lamp (level {llv['level']:.2f}) and warms the bulb ({llv['music']:.2f} of the music heat after 3 s)",
+       llv["level"] > 0.05 and llv["music"] > 0.05, llv)
+    # the controls: switch, colours, base, knobs, kept in this browser, never in the patch
+    lpatch0 = lp.evaluate("JSON.stringify(__synth.patch())")
+    lp.click("#lampOnBtn"); lp.select_option("#lampColSel", "blue"); lp.select_option("#lampBaseSel", "black")
+    lp.focus("#kLamp .knob[aria-label='Wax lamp bulb']"); [lp.keyboard.press("ArrowUp") for _ in range(5)]
+    lc = lp.evaluate("({ st: __synth.lamp.state(), ls: JSON.parse(localStorage.getItem('filament_lamp')), on: document.getElementById('lampOnBtn').getAttribute('aria-pressed'), off: document.getElementById('mLamp').classList.contains('off') })")
+    ck(f"Ll. the switch, colours, base and bulb set the lamp and are kept in this browser ({lc['ls']})",
+       lc["ls"] == {"lampOn": False, "lampCol": "blue", "lampBase": "black", "lampW": 30, "lampTime": 1, "lampMusic": True} and lc["on"] == "false" and lc["off"]
+       and lc["st"]["set"] == lc["ls"], lc)
+    lp.wait_for_timeout(1500)
+    ck(f"Ll. switched off, the bulb gives no heat and the status says so ({lp.evaluate('__synth.lamp.state().status')!r})",
+       lp.evaluate("__synth.lamp.state().power") == 0 and lp.evaluate("__synth.lamp.state().status").startswith("off"))
+    ck("Ll. the lamp never touches the patch", lp.evaluate("JSON.stringify(__synth.patch())") == lpatch0)
+    lp.click('#faceChips .chip[data-v="blacklight"]'); lp.evaluate("document.getElementById('mLamp').scrollIntoView({ block: 'center' })"); lp.wait_for_timeout(500)
+    ck("Ll. under the black light face the lamp is painted in the black light look", lp.evaluate("__synth.lamp.state().look") == "blacklight")
+    lp.click('#faceChips .chip[data-v="walnut"]')
+    lp.reload(); lp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); lp.wait_for_timeout(200)
+    lrl = lp.evaluate("__synth.lamp.state().set")
+    ck(f"Ll. a reload keeps the lamp's settings ({lrl})", lrl == lc["ls"], lrl)
+    for lbad in ('{"lampW":999,"lampTime":-3,"lampCol":"__proto__","lampBase":"toString","lampOn":"no"}', "not json", "[1,2]"):
+        lp.evaluate("v => localStorage.setItem('filament_lamp', v)", lbad); lp.reload(); lp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+        lbs = lp.evaluate("__synth.lamp.state().set")
+        ck(f"Ll. stored settings {lbad[:24]!r} load in range ({lbs})", 15 <= lbs["lampW"] <= 40 and 1 <= lbs["lampTime"] <= 8
+           and lbs["lampCol"] in l0["cols"] and lbs["lampBase"] in l0["bases"] and isinstance(lbs["lampOn"], bool), lbs)
+    lnot = []
+    for ld in lp.evaluate("[...document.querySelectorAll('.devbtn')].map(b => b.dataset.d)"):
+        lp.evaluate("d => __synth.setDevice(d)", ld); lp.wait_for_timeout(120)
+        if not lp.is_visible("#lampCv"): lnot.append(ld)
+    ck(f"Ll. the Wax lamp section shows on every rack device (missing: {lnot})", not lnot, lnot)
+    llx.close()
+    ck("Ll. no page errors", not lerr, lerr)
+    # reduced motion: a fresh page starts with the lamp off and the speed held at 1x
+    lrx = b.new_context(viewport={"width": 1366, "height": 1000}, reduced_motion="reduce"); lrp = lrx.new_page()
+    lrp.goto(BASE); lrp.wait_for_function("window.__synth && __synth.ready()", timeout=30000)
+    lrs = lrp.evaluate("__synth.lamp.set('lampTime', 8)") and lrp.evaluate("__synth.lamp.state()")
+    ck(f"Ll. reduced motion: a fresh page has the lamp off and the speed held at 1x ({lrs['set']})", lrs["still"] and lrs["set"]["lampOn"] is False and lrs["set"]["lampTime"] == 1, lrs)
+    lrx.close()
+    for ll_w in (375, 320):
+        lm = b.new_context(viewport={"width": ll_w, "height": 667}, is_mobile=True, has_touch=True); lmp = lm.new_page(); lme = []; lmp.on("pageerror", lambda e: lme.append(str(e)))
+        lmp.goto(BASE); lmp.wait_for_function("window.__synth && __synth.ready()", timeout=30000); lmp.wait_for_timeout(200)
+        lmp.tap('.tabs [data-go="rack"]'); lmp.wait_for_timeout(250)
+        lmp.evaluate("document.getElementById('mLamp').scrollIntoView({ block: 'center' })"); lmp.wait_for_timeout(1200)
+        lmr = lmp.evaluate("""() => ({ sizes: [...document.querySelectorAll('#mLamp button, #mLamp select')].map(e => { const q = e.getBoundingClientRect(); return [e.id, Math.round(q.width), Math.round(q.height)]; }),
+          sw: document.documentElement.scrollWidth, iw: innerWidth, frames: __synth.lamp.state().frames, cw: document.getElementById('lampCv').getBoundingClientRect().width })""")
+        ck(f"Ll. {ll_w} px phone: the lamp paints, every key and menu 44 px or more, no sideways scroll ({lmr['sizes']})",
+           lmr["frames"] > 3 and all(w_ >= 44 and h_ >= 44 for _, w_, h_ in lmr["sizes"]) and lmr["sw"] <= lmr["iw"] and lmr["cw"] <= ll_w, lmr)
+        lmp.tap("#lampMusicBtn"); lmp.wait_for_timeout(100)
+        ck(f"Ll. {ll_w} px phone: a tap switches music warms the bulb, no page errors", lmp.evaluate("__synth.lamp.state().set.lampMusic") is True and not lme, lme)
+        lm.close()
+
+    # Wl. worklet modules (worklets.js, 12 Nov 2026). The boot used to ask for each hosted device's module only
+    # when the attach before it had finished; now the sixteen start together once the engine is up, and every
+    # caller on a context shares one addModule per URL. A fresh page logs each addModule and each worklet
+    # node it builds (a wrapper on the prototype and a subclass of AudioWorkletNode, this page only).
+    wlx = b.new_context(viewport={"width": 1366, "height": 1000}); wlp = wlx.new_page(); wle = []
+    wlp.on("pageerror", lambda e: wle.append(str(e)))
+    wlp.add_init_script("""(() => {
+      const log = window.__wlLog = [];
+      const add = AudioWorklet.prototype.addModule;
+      AudioWorklet.prototype.addModule = function (u, o) { log.push(['add', String(u).split('/').pop().split('?')[0], this]); return add.call(this, u, o); };
+      const N = window.AudioWorkletNode;
+      window.AudioWorkletNode = class extends N { constructor(c, n, o) { super(c, n, o); log.push(['node', n, c.audioWorklet]); } };
+    })()""")
+    wlp.goto(BASE); wlp.wait_for_function("window.__synth && __synth.booted()", timeout=60000); wlp.wait_for_timeout(300)
+    wlr = wlp.evaluate("""() => {
+      const live = __wlLog.filter(e => e[0] === 'node' && e[1] === 'filament').map(e => e[2])[0] || __wlLog.find(e => e[0] === 'add')[2];
+      const on = __wlLog.filter(e => e[2] === live);
+      const adds = on.filter(e => e[0] === 'add').map(e => e[1]);
+      const firstDrum = on.findIndex(e => e[0] === 'node' && e[1] === 'dekatron');
+      const hosted = ['drums', 'lattice', 'thyratron', 'gleam', 'mote', 'heptode', 'geissler', 'pentagrid', 'orthicon', 'trochotron', 'gyrotron', 'klystron', 'phantastron', 'additron', 'rhumbatron', 'resnatron'].map(n => n + '.worklet.js');
+      const before = new Set(on.slice(0, firstDrum < 0 ? on.length : firstDrum).filter(e => e[0] === 'add').map(e => e[1]));
+      return { adds, dup: adds.filter((a, i) => adds.indexOf(a) !== i), missing: hosted.concat(['voice.worklet.js', 'master.worklet.js', 'spring.worklet.js']).filter(h => !adds.includes(h)),
+               late: hosted.filter(h => !before.has(h)), firstDrum };
+    }""")
+    ck(f"Wl. the live context adds each worklet module once ({len(wlr['adds'])} adds; repeated: {wlr['dup']}; missing of the 19: {wlr['missing']})",
+       not wlr["dup"] and not wlr["missing"], wlr)
+    ck(f"Wl. all sixteen hosted devices' modules are asked for before Dekatron's node, the first attach, is built (asked for later: {wlr['late']})",
+       wlr["firstDrum"] >= 0 and not wlr["late"], wlr)
+    wlu = wlp.evaluate("""async () => {
+      const { loadWorklet, preloadWorklets } = await import('./worklets.js');
+      const ctx = new OfflineAudioContext(2, 128, 48000);
+      const n0 = __wlLog.length, adds = () => __wlLog.slice(n0).filter(e => e[0] === 'add' && e[2] === ctx.audioWorklet).length;
+      const url = new URL('./drums.worklet.js', location.href).href, bad = new URL('./no-such.worklet.js', location.href).href;
+      const p1 = loadWorklet(ctx, url), p2 = loadWorklet(ctx, url);
+      await p1; const sameP = p1 === p2, oneAdd = adds();
+      let node = true; try { new AudioWorkletNode(ctx, 'dekatron', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] }); } catch (e) { node = false; }
+      let e1 = null, e2 = null;
+      try { await loadWorklet(ctx, bad); } catch (e) { e1 = e.name || String(e); }
+      try { await loadWorklet(ctx, bad); } catch (e) { e2 = e.name || String(e); }
+      const badAdds = __wlLog.slice(n0).filter(e => e[0] === 'add' && e[1] === 'no-such.worklet.js').length;
+      preloadWorklets(ctx, [bad]);
+      await new Promise(r => setTimeout(r, 400));
+      return { sameP, oneAdd, node, e1, e2, badAdds };
+    }""")
+    ck(f"Wl. loadWorklet: two asks on one context share one promise and one addModule, and the processor is there after ({wlu})",
+       wlu["sameP"] and wlu["oneAdd"] == 1 and wlu["node"], wlu)
+    ck(f"Wl. loadWorklet: a module that fails to load rejects for its caller and is tried again on the next ask ({wlu['e1']}, {wlu['e2']}, {wlu['badAdds']} adds)",
+       wlu["e1"] and wlu["e2"] and wlu["badAdds"] == 2, wlu)
+    wlp.wait_for_timeout(200)
+    ck("Wl. a preload of a module that fails raises no page error (the attach that needs it reports it)", not wle, wle)
+    # 16 Nov: an offline render let go of nothing. A worklet node whose port has a message handler stays
+    # reachable through the port, so each render's context, worklet scope and graph were kept: measured on
+    # main in headless Chrome, about 24 MB of renderer memory kept per 2.6 s Filament render (forced GC), and
+    # a suite run with 80 more renders crashed its page. renderAndRelease() closes and disconnects the nodes
+    # workletNode() and trackNode() list on an offline context (measured after: about 7 MB a render, the rest
+    # held by Chrome itself with the context); a live context's nodes are never listed.
+    wlg = wlp.evaluate("""async () => {
+      const W = await import('./worklets.js');
+      const ctx = new OfflineAudioContext(2, 4800, 48000);
+      await W.loadWorklet(ctx, new URL('./drums.worklet.js', location.href).href);
+      const n = W.workletNode(ctx, 'dekatron', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+      n.port.onmessage = () => {}; n.connect(ctx.destination);
+      const g = W.trackNode(ctx, ctx.createGain());
+      const listed = ctx.__nodes.length;
+      const buf = await W.renderAndRelease(ctx);
+      const live = new AudioContext(); W.trackNode(live, live.createGain()); const liveListed = live.__nodes === undefined; await live.close();
+      return { listed, len: buf.length, left: ctx.__nodes.length, handler: n.port.onmessage === null, liveListed, gain: !!g };
+    }""")
+    ck(f"Wl. renderAndRelease renders, then lets go of the offline context's listed nodes (their port handler gone, the list empty); a live context lists nothing ({wlg})",
+       wlg == {"listed": 2, "len": 4800, "left": 0, "handler": True, "liveListed": True, "gain": True}, wlg)
+    import re as _re_wl
+    _wl_raw = []
+    for _f in sorted(os.listdir(os.path.join(ROOT, "synth"))):
+        # gleam-fx.js renders ordinary nodes only (no worklet); rack.js's spring node is listed by the engine
+        if not _f.endswith(".js") or _f in ("worklets.js", "rack.js", "gleam-fx.js"): continue
+        with open(os.path.join(ROOT, "synth", _f), encoding="utf-8") as _fh: _src = _fh.read()
+        if _re_wl.search(r"new AudioWorkletNode\(|\.startRendering\(", _src): _wl_raw.append(_f)
+    with open(os.path.join(ROOT, "synth", "engine.js"), encoding="utf-8") as _fh: _eng = _fh.read()
+    ck(f"Wl. every /synth page module makes worklet nodes with workletNode() and renders offline with renderAndRelease() (raw calls in: {_wl_raw}); the engine lists rack.js's spring node",
+       not _wl_raw and "trackNode(ctx, E.spring.node)" in _eng, _wl_raw)
+    wlx.close()
+    wlt = []
+    for _ in range(3):
+        wtx = b.new_context(viewport={"width": 1366, "height": 1000}); wtp = wtx.new_page()
+        wtp.add_init_script("(function poll(){ const S = window.__synth; if (S && S.ready && S.ready() && !window.__tr) window.__tr = performance.now(); if (S && S.booted && S.booted()) { window.__tb = performance.now(); return; } setTimeout(poll, 5); })()")
+        wtp.goto(BASE); wtp.wait_for_function("window.__tb", timeout=60000)
+        wlt.append([round(v) for v in wtp.evaluate("[window.__tr, window.__tb]")]); wtx.close()
+    info("Wl. boot (ready, booted) in ms from navigation, 3 cold loads, local server, 1366 px", wlt)
+
+    # Sn. subnormals in a silent tail (15 Nov 2026). A state that decays by a constant factor toward zero sinks
+    # into subnormal doubles, where arithmetic is many times slower, and a factor over 0.5 sticks at the smallest
+    # one for good, so a silent device kept paying for it. Each hosted device's processor runs on a blank
+    # same-origin page with stub worklet globals (the way scripts/scan_device_subnormals.mjs runs it in Node):
+    # one factory patch, a chord held 1 s, then 13 s of silence; its state is read every 4 blocks over the
+    # last 2.5 s. On origin/main `479f58d`: Dekatron's and Lattice's DC blockers, Additron's rotor crossover,
+    # Phantastron's output follower, Pentagrid's crackle spike and Gleam's meter peak.
+    snx = b.new_context(); snp = snx.new_page(); sne = []
+    snp.on("pageerror", lambda e: sne.append(str(e)))
+    snp.goto(BASE + "device.js")
+    snr = snp.evaluate("""async () => {
+      const SR = 48000, B = 128, MIN = 2.2250738585072014e-308, procs = {};
+      globalThis.sampleRate = SR; globalThis.currentFrame = 0; globalThis.currentTime = 0;
+      globalThis.registerProcessor = (n, c) => { procs[n] = c; };
+      globalThis.AudioWorkletProcessor = class { constructor() { this.port = { postMessage() {}, onmessage: null }; } };
+      let seed = 1;
+      Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      const scan = root => {
+        const hits = new Set(), seen = new Set();
+        const walk = (o, p, d) => {
+          if (o == null || d > 7) return;
+          if (typeof o === 'number') { if (o !== 0 && Math.abs(o) < MIN) hits.add(p); return; }
+          if (typeof o !== 'object' || seen.has(o)) return;
+          seen.add(o);
+          if (o instanceof Float64Array) { for (let i = 0; i < o.length; i++) if (o[i] !== 0 && Math.abs(o[i]) < MIN) { hits.add(p + '[]'); break; } return; }
+          if (ArrayBuffer.isView(o)) return;
+          if (Array.isArray(o)) { o.forEach(v => walk(v, p + '[]', d + 1)); return; }
+          if (o instanceof Map) { for (const v of o.values()) walk(v, p + '{}', d + 1); return; }
+          for (const k of Object.keys(o)) if (k !== 'port') walk(o[k], p ? p + '.' + k : k, d + 1);
+        };
+        walk(root, '', 0); return hits;
+      };
+      const reg = await import('./device.js');
+      const list = [['dekatron', 'drums'], ['thyratron', 'thyratron'], ['lattice', 'lattice', 'Soft Pluck'], ['gleam', 'gleam'],
+        ['mote', 'mote'], ['heptode', 'heptode'], ['geissler', 'geissler'], ['pentagrid', 'pentagrid', 'Shift Pair'],
+        ['orthicon', 'orthicon'], ['trochotron', 'trochotron'], ['gyrotron', 'gyrotron'], ['klystron', 'klystron'],
+        ['phantastron', 'phantastron'], ['additron', 'additron'], ['rhumbatron', 'rhumbatron'], ['resnatron', 'resnatron']];
+      const out = [];
+      for (const [id, mod, pick] of list) {
+        const dm = await import('./' + mod + '.js'); await import('./' + mod + '.worklet.js');
+        const desc = reg.getDevice(id) || Object.values(dm).find(v => v && typeof v === 'object' && v.id === id && v.processor);
+        const fac = (desc.factory && desc.factory.length) ? desc.factory : Object.entries(dm).find(([k, v]) => /FACTORY$/.test(k) && Array.isArray(v))[1];
+        const fp = pick ? fac.find(f => f.name === pick) : fac[0];
+        seed = 1;
+        const patch = desc.normalize ? desc.normalize(fp.patch || fp) : (fp.patch || fp);
+        const proc = new procs[desc.processor]({ processorOptions: { patch, events: [], active: true } });
+        const send = m => { if (proc.port.onmessage) proc.port.onmessage({ data: m }); };
+        const msgs = desc.messages || [], notes = [48, 55, 60, 64];
+        const L = new Float32Array(B), R = new Float32Array(B), iL = new Float32Array(B), iR = new Float32Array(B);
+        const n = Math.ceil(14 * SR / B), off = 2 + Math.round(SR / B), from = Math.round(11.5 * SR / B);
+        const fields = new Set(); let peak = 0, scans = 0;
+        for (let k = 0; k < n; k++) {
+          if (k === 2) {
+            if (id === 'dekatron') ['kick', 'snare', 'hatC', 'hatO', 'clap', 'tom', 'rim'].forEach(v => send({ t: 'trig', voice: v, v: 0.9 }));
+            else if (msgs.includes('on')) notes.forEach(x => send({ t: 'on', n: x, v: 0.8 }));
+          }
+          if (k === off && msgs.includes('off')) notes.forEach(x => send({ t: 'off', n: x }));
+          globalThis.currentFrame = k * B; globalThis.currentTime = k * B / SR;
+          L.fill(0); R.fill(0);
+          proc.process([[iL, iR]], [[L, R]], {});
+          if (k < off) for (let i = 0; i < B; i++) { const a = Math.max(Math.abs(L[i]), Math.abs(R[i])); if (a > peak) peak = a; }
+          if (k >= from && k % 4 === 0) { scans++; for (const f of scan(proc)) fields.add(f); }
+        }
+        out.push({ id, name: fp.name, peak: +peak.toFixed(3), scans, fields: [...fields] });
+      }
+      return out;
+    }""")
+    sn_bad = {r["id"]: r["fields"] for r in snr if r["fields"]}
+    ck(f"Sn. a silent tail holds no subnormal state: {len(snr)} hosted devices, a chord held 1 s then 13 s of silence, state read every 4 blocks over the last 2.5 s (holding one: {sn_bad or 'none'})",
+       len(snr) == 16 and all(r["scans"] > 100 for r in snr) and not sn_bad, snr)
+    sn_q = [r["id"] for r in snr if not r["peak"] > 0]
+    ck(f"Sn. every scanned device sounded while the chord was held, so the tail followed real playing (silent: {sn_q or 'none'}), no page errors",
+       not sn_q and not sne, [snr, sne])
+    snx.close()
 
     b.close()
 

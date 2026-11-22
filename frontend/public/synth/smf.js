@@ -56,7 +56,9 @@ export function readSMF(input, opts) {
       if (st === 0xFF) {                                  // meta
         const type = b[p + 1]; let n; [n, p] = vlq(b, p + 2);
         if (type === 0x2F) { p += n; break; }
-        if (type === 0x51 && n >= 3) { const t = { tick, uspq: (b[p] << 16) | (b[p + 1] << 8) | b[p + 2] }; tempos.push(t); tr.tempos.push(t); }
+        // A tempo of 0 microseconds a quarter is not a tempo: it put every later note at the same instant and
+        // read as Infinity BPM (measured 10 Nov). It is skipped, so the tempo before it holds.
+        if (type === 0x51 && n >= 3) { const uspq = (b[p] << 16) | (b[p + 1] << 8) | b[p + 2]; if (uspq > 0) { const t = { tick, uspq }; tempos.push(t); tr.tempos.push(t); } }
         else if (type === 0x58 && n >= 2 && !timeSig) timeSig = [b[p], 1 << b[p + 1]];
         else if (type === 0x03 && !tr.name) tr.name = str(b, p, n).replace(/[\x00-\x1f]/g, '').trim();
         p += n; run = 0; continue;
@@ -98,6 +100,16 @@ export function tickTimer(tempos, ppq) {
   };
 }
 
+// [lowest, highest] of a list of note numbers, [0, 0] when it is empty. A loop, not Math.min(...list): spreading
+// a list passes every item as an argument, and past about 124000 of them (one dense track) the call overflows the
+// stack, which refused a 1 MB file with "Maximum call stack size exceeded" (measured 10 Nov, Chrome 153).
+export function noteRange(list) {
+  if (!list.length) return [0, 0];
+  let lo = list[0], hi = list[0];
+  for (let i = 1; i < list.length; i++) { const v = list[i]; if (v < lo) lo = v; else if (v > hi) hi = v; }
+  return [lo, hi];
+}
+
 export function songOf(smf) {
   const parts = [];
   let offset = 0, length = 0;
@@ -115,9 +127,10 @@ export function songOf(smf) {
       const notes = evs.filter(e => (e.data[0] & 0xF0) === 0x90).map(e => e.data[1]);
       if (!notes.length && !evs.length) return;
       const name = (tr.name || 'Track ' + (ti + 1)) + (split ? ' ch ' + (g[0] + 1) : '');
+      const [lo, hi] = noteRange(notes);
       parts.push({
         name, chans: g.map(c => c + 1), track: ti, notes: notes.length,
-        lo: notes.length ? Math.min(...notes) : 0, hi: notes.length ? Math.max(...notes) : 0,
+        lo, hi,
         mean: notes.length ? notes.reduce((s, v) => s + v, 0) / notes.length : 0,
         events: evs.map(e => ({ time: off + time(e.tick), data: e.data })),
       });

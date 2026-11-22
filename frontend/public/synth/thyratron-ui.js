@@ -5,6 +5,7 @@
 import { makeKnob } from './knob.js';
 import { getDevice } from './device.js';
 import { normalizeThy, THY_DEFAULT, THY_WAVES, THY_RANGES } from './thyratron.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./thyratron.worklet.js', import.meta.url).href;
 
@@ -12,8 +13,8 @@ const WAVE_LABEL = { tri: 'tri', saw: 'saw', mix: 'mix', square: 'sq', wide: 'wi
 const RANGE_LABEL = { lo: 'LO', '32': "32'", '16': "16'", '8': "8'", '4': "4'", '2': "2'" };
 
 export async function createThyNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__thyratron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__thyratron = true; }
-  const node = new AudioWorkletNode(ctx, 'thyratron', {
+  if (!ctx.__thyratron) { await loadWorklet(ctx, WORKLET); ctx.__thyratron = true; }
+  const node = workletNode(ctx, 'thyratron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeThy(patch), events: events || [], active: active !== false },
   });
@@ -25,7 +26,7 @@ export async function renderThyAudio({ patch, events = [], seconds = 1, sampleRa
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }));
   const node = await createThyNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context already dropped it */ }
   return buf;
 }
@@ -193,6 +194,9 @@ export function mountThyPanel(container, hooks) {
   const fmtS = v => v < 1 ? Math.round(v * 1000) + 'ms' : v.toFixed(2) + 's';
   const fmtHz = v => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + 'k' : Math.round(v) + '';
   const pct = v => Math.round(v * 100) + '%';
+  // osc 3's rate reads in hertz with decimals: fmtHz rounded it, so 0.05 to 0.49 Hz read "0" and 0.5 read "1"
+  // (review 18 Nov, R1118-1)
+  const fmtRate = v => (v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : String(Math.round(v))) + ' Hz';
 
   addKnob(kPlay, 'glide', 'glide', 0, 3, 0.001, v => v < 0.001 ? 'off' : fmtS(v), 'Time to glide most of the way to the next note');
   addKnob(kPlay, 'tune', 'tune', -100, 100, 1, v => (v > 0 ? '+' : '') + Math.round(v) + '¢', 'Master tune, in cents');
@@ -241,7 +245,7 @@ export function mountThyPanel(container, hooks) {
     oscHost.appendChild(box);
     addKnob(ks, id + '.tune', 'tune', -12, 12, 0.01, v => (v > 0 ? '+' : '') + (Math.round(v * 100) / 100) + ' st', 'Tune, in semitones');
     addKnob(ks, id + '.level', 'level', 0, 1, 0.01, pct);
-    if (id === 'osc3') addLog(ks, 'osc3.rate', 'rate', 0.05, 40, fmtHz, 'Rate when oscillator 3 is the low oscillator');
+    if (id === 'osc3') addLog(ks, 'osc3.rate', 'rate', 0.05, 40, fmtRate, 'Rate when oscillator 3 is the low oscillator (lfo on)');
   });
 
   addKnob(kMix, 'mix.noise', 'noise', 0, 1, 0.01, pct, 'Noise level into the ladder');
@@ -281,6 +285,10 @@ export function mountThyPanel(container, hooks) {
       lfo.setAttribute('aria-pressed', String(!!p.osc3.lfo));
       lfo.textContent = p.osc3.lfo ? 'lfo on' : 'lfo';
     }
+    // the rate only runs osc 3 while lfo is on: dim it otherwise, as the tape echo's time dims under sync
+    // (review 18 Nov, R1118-2)
+    const rate = knobs['osc3.rate'];
+    if (rate && rate.el) rate.el.style.opacity = p.osc3.lfo ? '' : '0.45';
     Object.keys(knobs).forEach(path => knobs[path].set(getPath(p, path)));
   }
   paint();

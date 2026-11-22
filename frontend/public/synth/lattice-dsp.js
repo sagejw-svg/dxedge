@@ -30,6 +30,10 @@ const DEST = Object.create(null);
 DEST_IDS.forEach((id, i) => { DEST[id] = i; });
 
 const TAU = Math.PI * 2;
+// Below this a decaying state is set to exactly 0 at the end of a block, so it never sinks into subnormal
+// doubles (slow arithmetic, and a decay by a factor over 0.5 sticks at the smallest one for good). 1e-150 is
+// far below float32's smallest value, so nothing at that level can reach a sample. See docs/filament.md, 15 Nov.
+const DC_FLOOR = 1e-150;
 
 function clamp(n, a, b) { return n < a ? a : n > b ? b : n; }
 function num(v, d) { const n = +v; return Number.isFinite(n) ? n : d; }
@@ -893,6 +897,9 @@ export function renderBlock(eng, outL, outR, start) {
     if (pk > eng.peak) eng.peak = pk;
     if (pkR > eng.peak) eng.peak = pkR;
   }
+  // With silence in, the blocker's output only shrinks (y = a y); stop it at 0 instead of in subnormals.
+  if (yl < DC_FLOOR && yl > -DC_FLOOR) yl = 0;
+  if (yr < DC_FLOOR && yr > -DC_FLOOR) yr = 0;
   eng.dcLx = xl; eng.dcL = yl; eng.dcRx = xr; eng.dcR = yr;
   eng.vis.lfo = [lfoAt(shapes[0], eng.lfoPhase[0]), lfoAt(shapes[1], eng.lfoPhase[1]), lfoAt(shapes[2], eng.lfoPhase[2]), lfoAt(shapes[3], eng.lfoPhase[3])];
   eng.vis.slots = Array.from(slotVis);

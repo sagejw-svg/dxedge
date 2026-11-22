@@ -1,7 +1,7 @@
 // DXEdge Service Worker
 // Caches static assets for offline/fast load. Never caches API responses.
 
-const CACHE_NAME = 'dxedge-v195'
+const CACHE_NAME = 'dxedge-v239'
 const STATIC_ASSETS = [
   '/',
   '/world.json',
@@ -52,12 +52,19 @@ self.addEventListener('fetch', (event) => {
   // /otr/media/ is the Late Night master, about 1 GB. This worker refetches
   // by URL and would drop the Range header, then try to clone the whole
   // file into Cache Storage. Leave that path to the browser.
+  // The two Sky photo-history pages and their viewer folder are left to the
+  // browser entirely: the deep-zoom pyramids under /<slug>/tiles/ run to
+  // hundreds of megabytes and would fill Cache Storage, nginx already marks
+  // them immutable, and the pages themselves are unlisted and no-cache.
   if (url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/ws/') ||
       url.pathname.startsWith('/health/') ||
       url.pathname === '/news' ||
       url.pathname.startsWith('/news/') ||
       url.pathname.startsWith('/otr/media/') ||
+      url.pathname.startsWith('/ranch-z4swx8er55/') ||
+      url.pathname.startsWith('/ramona-h0whnlp4/') ||
+      url.pathname.startsWith('/sky-f1st035d/') ||
       url.origin !== location.origin) {
     return // Let the browser handle it
   }

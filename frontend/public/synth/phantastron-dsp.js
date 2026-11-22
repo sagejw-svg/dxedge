@@ -9,6 +9,10 @@ import { bendRaw, crush, loopWindow, normalizePhantastron, phraseOf } from './ph
 export const VOICES = 6;
 
 // Rounded shapes, not a copied formant table. f1, f2, f3, bandwidth, noise, label.
+// Below this a decaying state is set to exactly 0 at the end of a block, so it never sinks into subnormal
+// doubles (slow arithmetic, and a decay by a factor over 0.5 sticks at the smallest one for good). 1e-150 is
+// far below float32's smallest value, so nothing at that level can reach a sample. See docs/filament.md, 15 Nov.
+const ENV_FLOOR = 1e-150;
 const PHONES = [
   { f: [320, 860, 2300], bw: 90, n: 0.04 },
   { f: [460, 1680, 2500], bw: 110, n: 0.08 },
@@ -265,6 +269,8 @@ export function renderPhantastron(eng, L, R) {
     const envIn = al > ar ? al : ar;
     eng.outEnv += (envIn - eng.outEnv) * 0.01;
   }
+  // The output follower shrinks by 0.99 a sample in silence; stop it at 0 instead of in subnormals.
+  if (eng.outEnv < ENV_FLOOR) eng.outEnv = 0;
   eng.peak = peak;
   eng.played += frames;
   eng.meterN += frames;

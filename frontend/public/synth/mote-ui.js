@@ -6,12 +6,13 @@
 
 import { makeKnob } from './knob.js';
 import { moteDevice, normalizeMote, MOTE_DEFAULT, MOTE_FILES, WINDOWS, LFO_DEST } from './mote.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./mote.worklet.js', import.meta.url).href;
 
 export async function createMoteNode(ctx, { patch, events, active, destination, buffer } = {}) {
-  if (!ctx.__mote) { await ctx.audioWorklet.addModule(WORKLET); ctx.__mote = true; }
-  const node = new AudioWorkletNode(ctx, 'mote', {
+  if (!ctx.__mote) { await loadWorklet(ctx, WORKLET); ctx.__mote = true; }
+  const node = workletNode(ctx, 'mote', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeMote(patch),
@@ -28,7 +29,7 @@ export async function renderMote({ patch, events = [], seconds = 1, sampleRate =
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: e.at == null ? 0 : Math.round(e.at * sampleRate) }));
   const node = await createMoteNode(ctx, { patch, events: ev, active: true, destination: ctx.destination, buffer });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }
@@ -39,9 +40,9 @@ function isRack(engine) {
 
 // Record whatever is connected to a capture worklet. Resolves with {L, R, sr, n}.
 export async function recordNode(ctx, source, seconds) {
-  if (!ctx.__mote) { await ctx.audioWorklet.addModule(WORKLET); ctx.__mote = true; }
+  if (!ctx.__mote) { await loadWorklet(ctx, WORKLET); ctx.__mote = true; }
   if (ctx.state !== 'running') await ctx.resume();
-  const cap = new AudioWorkletNode(ctx, 'mote-capture', {
+  const cap = workletNode(ctx, 'mote-capture', {
     numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { seconds },
   });

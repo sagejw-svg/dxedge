@@ -12,6 +12,7 @@ import { scoreFromBytes, prepareScore } from './heptode-score.js';
 import { trackColor } from './heptode-family.js';
 import { FREAD_FMT, addFread, houseFont } from './fread.js';
 import { createHeptodeEngine, postHeptode, renderHeptode, VOICES } from './heptode-dsp.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./heptode.worklet.js', import.meta.url).href;
 
@@ -28,8 +29,8 @@ function copyScore(score) {
 }
 
 export async function createHeptodeNode(ctx, { patch, events, active, destination, score, playing } = {}) {
-  if (!ctx.__heptode) { await ctx.audioWorklet.addModule(WORKLET); ctx.__heptode = true; }
-  const node = new AudioWorkletNode(ctx, 'heptode', {
+  if (!ctx.__heptode) { await loadWorklet(ctx, WORKLET); ctx.__heptode = true; }
+  const node = workletNode(ctx, 'heptode', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeHeptode(patch),
@@ -49,7 +50,7 @@ export async function renderHeptodeBuffer({ patch, events = [], seconds = 1, sam
   const node = await createHeptodeNode(ctx, {
     patch, events: ev, active: true, destination: ctx.destination, score, playing,
   });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }
@@ -533,8 +534,19 @@ export function mountHeptodePanel(container, hooks) {
     sync();
     if (hooks.toast) hooks.toast((cooked.name || 'MIDI') + ' · ' + cooked.t.length + ' notes');
   }
+  // A file the reader refuses (not MIDI, cut short, SMPTE timing) used to throw out of the file reader's
+  // callback: a page error, no word on the panel and the toast still showing the last file (measured 10 Nov);
+  // the throw also skipped clearing the picker, so choosing the same file again fired no change (from the code).
+  // Now the reader's plain message is the toast and the score that was loaded stays. Returns whether it loaded.
   function takeBytes(bytes, name) {
-    publish(scoreFromBytes(bytes, name), name);
+    let raw;
+    try { raw = scoreFromBytes(bytes, name); }
+    catch (e) {
+      if (hooks.toast) hooks.toast((name || 'That file') + ': ' + (e && e.message || 'this file could not be read.'));
+      return false;
+    }
+    publish(raw, name);
+    return true;
   }
 
   file.addEventListener('change', () => {
@@ -542,8 +554,8 @@ export function mountHeptodePanel(container, hooks) {
     if (!f) return;
     const reader = new FileReader();
     reader.onload = () => {
-      takeBytes(new Uint8Array(reader.result), f.name.replace(/\.mid$/i, ''));
       file.value = '';
+      takeBytes(new Uint8Array(reader.result), f.name.replace(/\.mid$/i, ''));
     };
     reader.readAsArrayBuffer(f);
   });

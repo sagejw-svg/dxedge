@@ -8,6 +8,7 @@
 import { makeKnob } from './knob.js';
 import { drumDevice, normalizeDrum, DRUM_DEFAULT, VOICES, VOICE_LABELS, createHostClock } from './drums.js';
 import { createDrumEngine, postDrum, renderDrum } from './drums-dsp.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./drums.worklet.js', import.meta.url).href;
 const KNOBS = [
@@ -20,8 +21,8 @@ const KNOBS = [
 ];
 
 export async function createDrumNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__dekatron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__dekatron = true; }
-  const node = new AudioWorkletNode(ctx, 'dekatron', {
+  if (!ctx.__dekatron) { await loadWorklet(ctx, WORKLET); ctx.__dekatron = true; }
+  const node = workletNode(ctx, 'dekatron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeDrum(patch), events: events || [], active: active !== false },
   });
@@ -35,7 +36,7 @@ export async function renderDrums({ patch, events = [], seconds = 1, sampleRate 
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }));
   const node = await createDrumNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* already torn down with the context */ }
   return buf;
 }

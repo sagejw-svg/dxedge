@@ -9,6 +9,7 @@ import { voiceForNote } from './drums.js';
 import {
   SPECIES, SPECIES_NAME, TOOLS, SCALE_IDS, GRID_IDS, ROUTES,
 } from './geissler-world.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./geissler.worklet.js', import.meta.url).href;
 
@@ -21,8 +22,8 @@ const SCALE_LABEL = { major: 'major', minor: 'minor', penta: 'penta', dorian: 'd
 const GRID_LABEL = { free: 'free', 4: '1/4', 8: '1/8', 16: '1/16' };
 
 export async function createGeisslerNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__geissler) { await ctx.audioWorklet.addModule(WORKLET); ctx.__geissler = true; }
-  const node = new AudioWorkletNode(ctx, 'geissler', {
+  if (!ctx.__geissler) { await loadWorklet(ctx, WORKLET); ctx.__geissler = true; }
+  const node = workletNode(ctx, 'geissler', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeGeissler(patch || GEISSLER_DEFAULT),
@@ -38,7 +39,7 @@ export async function renderGeisslerBuffer({ patch, events = [], seconds = 1, sa
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: e.at == null ? 0 : Math.round(e.at * sampleRate) }));
   const node = await createGeisslerNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }

@@ -69,13 +69,10 @@ def zc_spread(x):
     return float(np.std(dt) / max(np.mean(dt), 1e-9))
 
 from playwright.sync_api import sync_playwright
-_CANDIDATES = [
-    os.environ.get("SYNTH_CHROMIUM", ""),
-    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-    "/opt/google/chrome/chrome",
-    "/usr/local/bin/chrome",
-]
-CHROME = next(p for p in _CANDIDATES if p and os.path.exists(p))
+# the browser: SYNTH_CHROMIUM, else the newest Playwright Chromium, else a system Chrome (synth_chromium.py)
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from synth_chromium import find_chromium
+CHROME = find_chromium()
 
 rack = open(os.path.join(ROOT, "synth", "index.html"), encoding="utf-8").read()
 ck("rack lists Aether", 'href="/synth/hand-aether/"' in rack and "AETHER" in rack)

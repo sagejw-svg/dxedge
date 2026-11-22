@@ -70,7 +70,12 @@ export function parseMidi(input) {
   const channels = [];
   tracks.forEach(t => { if (!channels.includes(t.channel)) channels.push(t.channel); });
   channels.sort((a, b) => a - b);
-  const beats = events[events.length - 1].beat;
+  // The song ends where its tracks end, not at its last note off, so a rest at the end of a bar (or the
+  // silence a deck take keeps after its last note) survives and loop repeats at the same point the deck
+  // does (review R1117-1). Only tracks the player reads count.
+  let endTick = 0;
+  (midi.tracks || []).forEach(tr => { if (tr.endOfTrackTicks > 0) endTick = Math.max(endTick, tr.endOfTrackTicks); });
+  const beats = Math.max(events[events.length - 1].beat, endTick / ppq);
   return {
     name: (midi.name || '').trim(),
     bpm, ppq, timeSig, beats,

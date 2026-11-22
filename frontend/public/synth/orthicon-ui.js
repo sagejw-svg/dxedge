@@ -12,12 +12,13 @@ import {
   smearGrid, blurGrid, shiftGrid, stretchGrid, freezeColumn, quantizeGrid,
   DRAWN, drawnGrid, generatePicture, overGrid, summarizeGrid, pictureShare,
 } from './orthicon-dsp.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./orthicon.worklet.js', import.meta.url).href;
 
 export async function createOrthiconNode(ctx, { patch, events, active, destination, grid } = {}) {
-  if (!ctx.__orthicon) { await ctx.audioWorklet.addModule(WORKLET); ctx.__orthicon = true; }
-  const node = new AudioWorkletNode(ctx, 'orthicon', {
+  if (!ctx.__orthicon) { await loadWorklet(ctx, WORKLET); ctx.__orthicon = true; }
+  const node = workletNode(ctx, 'orthicon', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: {
       patch: normalizeOrthicon(patch),
@@ -36,7 +37,7 @@ export async function renderOrthiconAudio({ patch, events = [], seconds = 1, sam
   const node = await createOrthiconNode(ctx, {
     patch, events: ev, active: true, destination: ctx.destination, grid: grid || null,
   });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context is already closed */ }
   return buf;
 }
@@ -47,9 +48,9 @@ function isRack(engine) {
 
 // Record whatever is connected to the capture worklet. Resolves with {L, R, sr, n}.
 export async function recordOrthicon(ctx, source, seconds) {
-  if (!ctx.__orthicon) { await ctx.audioWorklet.addModule(WORKLET); ctx.__orthicon = true; }
+  if (!ctx.__orthicon) { await loadWorklet(ctx, WORKLET); ctx.__orthicon = true; }
   if (ctx.state !== 'running') await ctx.resume();
-  const cap = new AudioWorkletNode(ctx, 'orthicon-capture', {
+  const cap = workletNode(ctx, 'orthicon-capture', {
     numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { seconds },
   });
@@ -271,18 +272,30 @@ export function mountOrthiconPanel(container, hooks) {
   canvas.id = 'orthiconCanvas';
   canvas.setAttribute('aria-label', 'Spectrogram. Time runs across, frequency runs up. Paint with the brushes.');
   stage.appendChild(canvas);
+  // Graphics 12 Nov: each control row is an engraved tag and one joined switch in a recessed tray (orrow, ortag, orsw).
+  function tagRow(tag, sw, label) {
+    const row = document.createElement('div');
+    row.className = 'orrow';
+    const t = document.createElement('span');
+    t.className = 'ortag'; t.textContent = tag; t.setAttribute('aria-hidden', 'true');
+    sw.classList.add('orsw');
+    sw.setAttribute('role', 'group'); sw.setAttribute('aria-label', label);
+    row.append(t, sw);
+    return row;
+  }
   const tools = document.createElement('div');
   tools.className = 'orth-tools';
   tools.id = 'orthiconBrushes';
-  stage.appendChild(tools);
+  stage.appendChild(tagRow('brush', tools, 'Brush'));
   const edits = document.createElement('div');
   edits.className = 'orth-tools';
   edits.id = 'orthiconEdits';
-  stage.appendChild(edits);
+  stage.appendChild(tagRow('edit', edits, 'Edit the picture'));
   const srcRow = document.createElement('div');
-  srcRow.className = 'row orth-tools';
+  srcRow.className = 'orth-tools';
   srcRow.id = 'orthiconSources';
-  stage.appendChild(srcRow);
+  const srcLine = tagRow('source', srcRow, 'Source');
+  stage.appendChild(srcLine);
   const imageLabel = document.createElement('label');
   imageLabel.className = 'btn small filebtn';
   imageLabel.id = 'orthiconImageBtn';
@@ -307,27 +320,41 @@ export function mountOrthiconPanel(container, hooks) {
   rack.type = 'button'; rack.className = 'btn small'; rack.id = 'orthiconRack'; rack.textContent = 'Capture rack';
   rack.title = 'Record the rack and analyse it into the picture. Capture rack is an input, not an export.';
   srcRow.append(imageLabel, audioLabel, mic, rack);
-  const name = document.createElement('div');
-  name.className = 'note'; name.id = 'orthiconName';
-  stage.appendChild(name);
+  const nowWin = document.createElement('div');
+  nowWin.className = 'orread'; nowWin.id = 'orthiconNow';
+  nowWin.setAttribute('aria-live', 'polite');
+  const nowLamp = document.createElement('i');
+  nowLamp.setAttribute('aria-hidden', 'true');
+  const name = document.createElement('span');
+  name.className = 'orname'; name.id = 'orthiconName';
+  nowWin.append(nowLamp, name);
+  srcLine.appendChild(nowWin);
   const hint = document.createElement('div');
   hint.className = 'note';
   hint.textContent = 'Paint time across and frequency up. The playhead scans the picture and resynthesizes it. Drop a PNG or JPG to play the picture, or load audio, the mic, or the rack. Capture rack is an input, not an export: it analyses the rack into this picture. Clear wipes the canvas. The pictures are drawn to be played: a harmonic stack, rising and falling sweeps, a formant choir, bell partials, a shimmer, rain, a spiral, and a starfield. Generate builds a new one from the seed, and the same seed is the same picture. Over paints on top of the canvas. Undo puts the previous picture back. A painting stays for this session. Keys mode: C4 is the picture\'s own pitch. The red rec button saves what you hear as a WAV.';
   stage.appendChild(hint);
 
   const scan = section('scan', 'mOrthScan', 'Scan');
-  const choiceRow = document.createElement('div');
-  choiceRow.className = 'chips'; choiceRow.id = 'orthiconChoices';
-  scan.appendChild(choiceRow);
+  // Graphics 15 Nov: phase, engine, scale and play are each a tagged joined switch (the Picture card's tagRow), not one loose row.
+  const scanRows = document.createElement('div');
+  scanRows.className = 'orrows'; scanRows.id = 'orthiconScanRows';
+  scan.appendChild(scanRows);
+  const choiceSw = {};
+  [['phase', 'orthiconPhase', 'Phase'], ['engine', 'orthiconEngine', 'Engine'], ['scale', 'orthiconScale', 'Scale mask']].forEach(([path, id, label]) => {
+    const sw = document.createElement('div');
+    sw.id = id;
+    choiceSw[path] = sw;
+    scanRows.appendChild(tagRow(path, sw, label));
+  });
   const toggles = document.createElement('div');
-  toggles.className = 'chips'; toggles.id = 'orthiconToggles';
-  scan.appendChild(toggles);
+  toggles.id = 'orthiconToggles';
+  scanRows.appendChild(tagRow('play', toggles, 'Playhead'));
   const knobsEl = document.createElement('div');
   knobsEl.className = 'knobs'; knobsEl.id = 'kOrthScan';
   scan.appendChild(knobsEl);
   const scanNote = document.createElement('div');
   scanNote.className = 'note';
-  scanNote.textContent = 'Speed is columns per second. Hold freezes the playhead. Loop wraps the picture. The curve bends brightness into amplitude. Coherent phase keeps a steady tone; random phase stirs it. The scale mask silences rows that are off the scale.';
+  scanNote.textContent = 'Speed is columns per second. Hold freezes the playhead. Loop wraps the picture; with loop off the scan plays once and then holds the last column until loop or hold moves it. The curve bends brightness into amplitude. Coherent phase keeps a steady tone; random phase stirs it. The scale mask silences rows that are off the scale.';
   scan.appendChild(scanNote);
 
   container.appendChild(stage);
@@ -438,7 +465,7 @@ export function mountOrthiconPanel(container, hooks) {
   const pics = document.createElement('div');
   pics.className = 'orth-tools';
   pics.id = 'orthiconPictures';
-  stage.insertBefore(pics, hint);
+  stage.insertBefore(tagRow('pictures', pics, 'Pictures'), hint);
   const picBtns = {};
   host.pictures().forEach(spec => {
     const b = chip(pics, spec.name, false, () => loadDrawn(spec.id));
@@ -450,7 +477,7 @@ export function mountOrthiconPanel(container, hooks) {
   const genRow = document.createElement('div');
   genRow.className = 'orth-tools';
   genRow.id = 'orthiconGenerateRow';
-  stage.insertBefore(genRow, hint);
+  stage.insertBefore(tagRow('seed', genRow, 'Generate from a seed'), hint);
   const seedInput = document.createElement('input');
   seedInput.type = 'number';
   seedInput.id = 'orthiconSeed';
@@ -515,7 +542,7 @@ export function mountOrthiconPanel(container, hooks) {
   const choiceBtns = [];
   function choices(path, values, labels) {
     values.forEach(v => {
-      const b = chip(choiceRow, (labels && labels[v]) || v, false, () => {
+      const b = chip(choiceSw[path], (labels && labels[v]) || v, false, () => {
         setPath(hooks.patch(), path, v);
         hooks.edited();
         sync();
@@ -595,7 +622,10 @@ export function mountOrthiconPanel(container, hooks) {
     toggleBtns.keyboard.textContent = p.keyboard ? 'keys on' : 'keys';
     const src = host.source();
     const caption = host.label();
+    nowWin.dataset.src = caption === 'Cleared' ? 'empty'
+      : src === 'image' || src === 'audio' || src === 'mic' || src === 'rack' ? 'file' : 'pic';
     name.textContent = caption ? caption : src === 'image' ? 'Image' : src === 'audio' ? 'Analysed audio' : src === 'mic' ? 'Microphone' : src === 'rack' ? 'Rack capture' : src === 'paint' || src === 'edit' || src === 'custom' || src === 'freeze' || src === 'quantize' ? 'Painted picture' : (p.name || 'Orthicon');
+    nowWin.title = name.textContent;
     Object.keys(picBtns).forEach(id => picBtns[id].setAttribute('aria-pressed', String(src === id)));
     overBtn.setAttribute('aria-pressed', String(paintOver));
     undoBtn.disabled = !host.canUndo();

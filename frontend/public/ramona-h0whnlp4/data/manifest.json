@@ -1,0 +1,296 @@
+[
+ {
+  "file": "1903_usgs-topo-ramona30.jpg",
+  "year": 1903,
+  "date": "1903 (surveyed 1901)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 30' (1:125,000)",
+  "caption": "Earliest map. The Ramona townsite street grid is already laid out across the Santa Maria Valley, and the rancho name 'DE PAMO' is printed across it. The pin is in an empty grid block about 1.5 km SE of the town center. ~8 km square."
+ },
+ {
+  "file": "1939_ucsb-c-5750.jpg",
+  "year": 1939,
+  "date": "1939 (flight C-5750; exact day not in index)",
+  "source": "UCSB Library FrameFinder - flight C-5750, frame 213-56 (1:20,000)",
+  "caption": "Earliest aerial photo. Farm fields on the section-line road grid, with a dark strip of trees or crop just NW. No building on the parcel. ~1.2 km square; position accurate to roughly 10-20 m (matched to later imagery)."
+ },
+ {
+  "file": "1942_usgs-topo-ramona15.jpg",
+  "year": 1942,
+  "date": "1942 (from 1939 aerial photos; 1947 print)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 15' (1:62,500)",
+  "caption": "Roads on the grid around the pin, scattered farm buildings, and town to the NW. Nothing mapped at the pin. ~5 km square."
+ },
+ {
+  "file": "1953_ucsb-axn-1953.jpg",
+  "year": 1953,
+  "date": "1953 (flight AXN; exact day not in index)",
+  "source": "UCSB Library FrameFinder - flight AXN-1953, frame 5M-133 (1:20,000)",
+  "caption": "Open field at the parcel. Big grain or pasture fields fill the block. No buildings or lane yet."
+ },
+ {
+  "file": "1955_usgs-topo-ramona7.5.jpg",
+  "year": 1955,
+  "date": "1955 (1949 photos, field-checked 1955; 1957 print)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 7.5' (1:24,000)",
+  "caption": "First detailed map. The pin sits on open ground near the 1,500 ft contour, with a small 'Reservoir' about 230 m WSW. No building or road at the pin. ~2.4 km square."
+ },
+ {
+  "file": "1963_ucsb-cas-sd.jpg",
+  "year": 1963,
+  "date": "1963 (flight CAS-SD; exact day not in index)",
+  "source": "UCSB Library FrameFinder - flight CAS-SD, frame 1-123 (1:20,000)",
+  "caption": "Still farmland. A diagonal dirt track crosses the field where the parcel is now. No buildings."
+ },
+ {
+  "file": "1971_usgs-topo-ramona7.5-photorevised.jpg",
+  "year": 1971,
+  "date": "1971 (photorevised from 1971 photos; 1973 print)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 7.5' photorevised",
+  "caption": "Purple marks what's new since 1955: houses spreading south from town. Still nothing at the pin."
+ },
+ {
+  "file": "1972-09-13_landsat.jpg",
+  "year": 1972,
+  "date": "1972-09-13",
+  "source": "USGS/NASA Landsat 1 MSS, Collection 2 Level-1 (Microsoft Planetary Computer)",
+  "caption": "One of the first Landsat images ever taken (Landsat 1 launched July 1972). False color: plants show red. 60 m pixels, so no lot detail. ~10 km square."
+ },
+ {
+  "file": "1974-02-24_ucsb-ami-sd-74.jpg",
+  "year": 1974,
+  "date": "1974-02-24",
+  "source": "UCSB Library FrameFinder - flight AMI-SD-74, frame 7070 (1:34,000)",
+  "caption": "First sign of the lane: a faint east-west track runs along the parcel's north edge, where Progress Lane is now. The lot itself is still empty."
+ },
+ {
+  "file": "1975_usgs-topo-ramona7.5-photorevised.jpg",
+  "year": 1975,
+  "date": "1975 (photorevised from 1975 photos; 1978 print)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 7.5' photorevised",
+  "caption": "New purple roads and houses NE of the pin. Nothing mapped on the parcel yet."
+ },
+ {
+  "file": "1975-07-03_ucsb-ami-sd-75.jpg",
+  "year": 1975,
+  "date": "1975-07-03",
+  "source": "UCSB Library FrameFinder - flight AMI-SD-75, frame 7681 (1:36,000)",
+  "caption": "Lanes are graded east-west and north-south around the block, and new houses stand to the NE. The parcel is still empty."
+ },
+ {
+  "file": "1977-07-02_ucsb-ami-sd-77.jpg",
+  "year": 1977,
+  "date": "1977-07-02",
+  "source": "UCSB Library FrameFinder - flight AMI-SD-77, frame 8693 (1:36,000)",
+  "caption": "First structure seen inside the parcel, on its north side by the lane. Several neighbouring lots are being built on too. This frame is pale and overexposed."
+ },
+ {
+  "file": "1980-04-09_ucsb-ami-sd-80.jpg",
+  "year": 1980,
+  "date": "1980-04-09",
+  "source": "UCSB Library FrameFinder - flight AMI-SD-80, frame 10114 (1:34,000)",
+  "caption": "A house stands on the north part of the parcel, and the surrounding blocks are filling with homes on 0.5-1 acre lots."
+ },
+ {
+  "file": "1982_usgs-topo-ramona7.5-revised.jpg",
+  "year": 1982,
+  "date": "1982 (revised from 1980 photos; 1984 print)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 7.5' revised",
+  "caption": "First map to show Progress Lane (purple, east-west) and a building symbol on the parcel."
+ },
+ {
+  "file": "1984-05-06_landsat.jpg",
+  "year": 1984,
+  "date": "1984-05-06",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Regional spring view: the Ramona town core, the airport strip to the NW, and the patchwork of fields south of town. 30 m pixels. ~10 km square."
+ },
+ {
+  "file": "1988_usgs-topo-ramona7.5-revised.jpg",
+  "year": 1988,
+  "date": "1988 (revised from 1985 photos)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 7.5' revised",
+  "caption": "More lanes and houses filled in. The building at the parcel is still shown."
+ },
+ {
+  "file": "1990-08-30_ucsb-napp.jpg",
+  "year": 1990,
+  "date": "1990-08-30",
+  "source": "UCSB Library FrameFinder - NAPP, frame 1852-75 (1:40,000)",
+  "caption": "Late-summer view. The house and the lane grid are in place. The bright, sun-washed scan blurs detail."
+ },
+ {
+  "file": "1994-06-01_ucsb-napp-2c.jpg",
+  "year": 1994,
+  "date": "1994-06-01",
+  "source": "UCSB Library FrameFinder - NAPP-2C, frame 6859-77 (1:40,000)",
+  "caption": "The house on the north side of the lot is clearly visible, and the neighbourhood is almost fully built out."
+ },
+ {
+  "file": "1995_sdcounty-ortho.jpg",
+  "year": 1995,
+  "date": "1995 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 1995 black & white",
+  "caption": "County orthophoto: house, driveway and yard trees on the parcel."
+ },
+ {
+  "file": "1996-05-07_landsat.jpg",
+  "year": 1996,
+  "date": "1996-05-07",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Regional spring view. Ramona has spread well beyond its 1980s footprint. ~10 km square."
+ },
+ {
+  "file": "1996-06-05_ucsb-napp.jpg",
+  "year": 1996,
+  "date": "1996-06-05",
+  "source": "UCSB Library FrameFinder - NAPP-2C color-infrared, frame 9554-139 (1:40,000)",
+  "caption": "Color-infrared film: trees and lawns show red. Same house layout as 1994."
+ },
+ {
+  "file": "1997_sdcounty-ortho.jpg",
+  "year": 1997,
+  "date": "1997 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 1997 color-infrared",
+  "caption": "Infrared: the red canopy shows mature yard trees around the house."
+ },
+ {
+  "file": "1997_usgs-topo-ramona7.5.jpg",
+  "year": 1997,
+  "date": "1997 (edited 1997 from 1994 photos; 2000 print)",
+  "source": "USGS Historical Topographic Map Collection - Ramona 7.5'",
+  "caption": "Last USGS paper edition. All buildings are now drawn in black, with one at the parcel."
+ },
+ {
+  "file": "2000_sdcounty-ortho.jpg",
+  "year": 2000,
+  "date": "2000 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2000 color-infrared",
+  "caption": "No visible change to the lot."
+ },
+ {
+  "file": "2002-05-29_ucsb-napp.jpg",
+  "year": 2002,
+  "date": "2002-05-29",
+  "source": "UCSB Library FrameFinder - NAPP-3C color-infrared, frame 12481-16 (1:40,000)",
+  "caption": "No visible change to the lot."
+ },
+ {
+  "file": "2003-11-19_landsat.jpg",
+  "year": 2003,
+  "date": "2003-11-19",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Three weeks after the Cedar fire (started 2003-10-25). Burned hills show red to the south and SE. The mapped fire edge is ~1.6 km SE of the pin, so the parcel did not burn. ~12 km square."
+ },
+ {
+  "file": "2004_sdcounty-ortho.jpg",
+  "year": 2004,
+  "date": "2004 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2004 true color",
+  "caption": "First true-color county view: white-roofed house on the north half of the lot."
+ },
+ {
+  "file": "2006_sdcounty-ortho.jpg",
+  "year": 2006,
+  "date": "2006 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2006 true color",
+  "caption": "No visible change to the lot."
+ },
+ {
+  "file": "2008_sdcounty-ortho.jpg",
+  "year": 2008,
+  "date": "2008 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2008 true color",
+  "caption": "No visible change to the lot."
+ },
+ {
+  "file": "2008-01-17_landsat.jpg",
+  "year": 2008,
+  "date": "2008-01-17",
+  "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+  "caption": "Three months after the Witch fire (started 2007-10-21). The fresh burn shows red on the hills N and E of town. The mapped fire edge is ~1.1 km E of the pin, so the parcel did not burn."
+ },
+ {
+  "file": "2012_sdcounty-ortho.jpg",
+  "year": 2012,
+  "date": "2012 (day not published)",
+  "source": "County of San Diego historical orthophoto (COSDBaseMap_Imagery_Historical) - 2012 true color",
+  "caption": "Sharpest county view, about 30 cm. No visible change to the lot."
+ },
+ {
+  "file": "2012-05-07_usda-naip.jpg",
+  "year": 2012,
+  "date": "2012-05-07",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "NAIP 1 m. House and yard are unchanged."
+ },
+ {
+  "file": "2014-05-29_usda-naip.jpg",
+  "year": 2014,
+  "date": "2014-05-29",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "NAIP 1 m, in a drought year: brown fields all around."
+ },
+ {
+  "file": "2016-04-24_usda-naip.jpg",
+  "year": 2016,
+  "date": "2016-04-24",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "NAIP 0.6 m. Rooftop solar panels appear on the house just east."
+ },
+ {
+  "file": "2018-08-23_usda-naip.jpg",
+  "year": 2018,
+  "date": "2018-08-23",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "NAIP 0.6 m, late summer. A small light-blue item shows at the west side of the house (unidentified)."
+ },
+ {
+  "file": "2020-04-15_usda-naip.jpg",
+  "year": 2020,
+  "date": "2020-04-15",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "NAIP 0.6 m after a wet spring, so everything is green."
+ },
+ {
+  "file": "2022-04-19_usda-naip.jpg",
+  "year": 2022,
+  "date": "2022-04-19",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "NAIP 0.6 m. No visible change to the lot."
+ },
+ {
+  "file": "2022-12-23_esri-wayback.jpg",
+  "year": 2022,
+  "date": "2022-12-23",
+  "source": "Esri World Imagery Wayback - Maxar GeoEye-1 satellite, 0.46 m",
+  "caption": "High-resolution winter satellite view. No visible change to the lot."
+ },
+ {
+  "file": "2024-05-06_usda-naip.jpg",
+  "year": 2024,
+  "date": "2024-05-06",
+  "source": "USDA FSA NAIP (Microsoft Planetary Computer)",
+  "caption": "Latest NAIP, 0.6 m. No visible change to the lot."
+ },
+ {
+  "file": "2025-05-01_esri-wayback.jpg",
+  "year": 2025,
+  "date": "2025-05-01",
+  "source": "Esri World Imagery Wayback - Vantor WorldView-3 satellite, 0.31 m",
+  "caption": "Sharpest free satellite view, 31 cm. No visible change to the lot."
+ },
+ {
+  "file": "2026-03-23_esri-wayback.jpg",
+  "year": 2026,
+  "date": "2026-03-23",
+  "source": "Esri World Imagery Wayback - Vantor Legion-06 satellite, 0.34 m (current World Imagery)",
+  "caption": "Current Esri basemap image. No visible change to the lot."
+ },
+ {
+  "file": "2026-11-08_sentinel2.jpg",
+  "year": 2026,
+  "date": "2026-11-08",
+  "source": "Copernicus Sentinel-2B L2A, 10 m (ESA, via Microsoft Planetary Computer)",
+  "caption": "Newest clear satellite pass, 10 days before this was compiled. Neighbourhood scale only. ~4 km square."
+ }
+]

@@ -6,13 +6,14 @@ import { FREAD_FMT, addFread } from './fread.js';
 import {
   RN_SPEC, RN_ORDER, RN_FACTORY, RN_DEFAULT, normalizeResnatron, shareOf,
 } from './resnatron.js';
+import { loadWorklet, workletNode, renderAndRelease } from './worklets.js';
 
 const WORKLET = new URL('./resnatron.worklet.js', import.meta.url).href;
 const CABLE_COL = ['#e0a36a', '#f2d3a2', '#7ec8c3', '#d98b6a', '#c9b6ff', '#e7e2d4'];
 
 export async function createResnatronNode(ctx, { patch, events, active, destination } = {}) {
-  if (!ctx.__resnatron) { await ctx.audioWorklet.addModule(WORKLET); ctx.__resnatron = true; }
-  const node = new AudioWorkletNode(ctx, 'resnatron', {
+  if (!ctx.__resnatron) { await loadWorklet(ctx, WORKLET); ctx.__resnatron = true; }
+  const node = workletNode(ctx, 'resnatron', {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
     processorOptions: { patch: normalizeResnatron(patch), events: events || [], active: active !== false },
   });
@@ -24,7 +25,7 @@ export async function renderResnatronBuffer({ patch, events = [], seconds = 1, s
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const ev = events.map(e => Object.assign({}, e, { at: Math.round((e.at || 0) * sampleRate) }));
   const node = await createResnatronNode(ctx, { patch, events: ev, active: true, destination: ctx.destination });
-  const buf = await ctx.startRendering();
+  const buf = await renderAndRelease(ctx);
   try { node.disconnect(); } catch (e) { /* the context already dropped it */ }
   return buf;
 }

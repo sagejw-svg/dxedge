@@ -115,6 +115,108 @@ export function rollScore(p, steps, tempo, dev) {
   return out;
 }
 
+// ------------------------------------------------------------ named user rolls and the chain (18 Nov 2026)
+// User rolls are kept in this browser under their own key, by name. A name is 1 to 40 characters and may
+// not be a factory roll's name (any case), so a name always says which roll it is.
+export const ROLLS_KEY = 'filament_rolls';
+export const ROLL_USER_MAX = 64;
+export const CHAIN_MAX = 16;
+export const CHAIN_REPS = 16;
+
+export function rollName(s) { return typeof s === 'string' ? s.trim().replace(/\s+/g, ' ').slice(0, 40) : ''; }
+export function isFactoryName(s) {
+  const n = rollName(s).toLowerCase();
+  return !!n && ROLL_FACTORY.some(f => f.name.toLowerCase() === n);
+}
+
+// The kept list: each a normal roll with a usable name; a factory name or a second copy of a name (any
+// case) is dropped, the first one kept; at most ROLL_USER_MAX.
+export function normalizeUserRolls(list) {
+  const out = [], seen = new Set();
+  (Array.isArray(list) ? list : []).forEach(r => {
+    if (out.length >= ROLL_USER_MAX || !r || typeof r !== 'object' || Array.isArray(r)) return;
+    const name = rollName(r.name), low = name.toLowerCase();
+    if (!name || seen.has(low) || isFactoryName(name)) return;
+    seen.add(low);
+    out.push(normalizeRoll(Object.assign({}, r, { name })));
+  });
+  return out;
+}
+
+// The chain (song mode): up to CHAIN_MAX entries, each a roll by name played `reps` times (1 to 16). Each
+// entry also keeps a copy of the roll (`pat`), so a chain in a project file plays on another browser, and
+// an entry whose roll was deleted still plays. `on` says the roll plays the chain instead of the paper.
+export function normalizeChain(c) {
+  c = c && typeof c === 'object' && !Array.isArray(c) ? c : {};
+  const items = [];
+  (Array.isArray(c.items) ? c.items : []).forEach(it => {
+    if (items.length >= CHAIN_MAX || !it || typeof it !== 'object' || Array.isArray(it)) return;
+    const name = rollName(it.name) || rollName(it.pat && it.pat.name);
+    if (!name) return;
+    items.push({ name, reps: num(it.reps, 1, CHAIN_REPS, 1, true), pat: normalizeRoll(Object.assign({}, it.pat, { name })) });
+  });
+  return { on: c.on === true, items };
+}
+
+// The roll an entry plays: a user roll of that name, else a factory roll of that name, else its own copy.
+export function resolveChainRoll(item, user) {
+  const u = (user || []).find(r => r.name === item.name);
+  if (u) return u;
+  const f = ROLL_FACTORY.find(r => r.name === item.name);
+  return f || item.pat;
+}
+
+// The chain as segments: each entry's roll, how many of its steps play (reps x length) and how many beats
+// that takes (steps x the step length; swing moves steps inside a segment, never its end).
+export function chainSegments(chain, user) {
+  return (chain && chain.items ? chain.items : []).map((it, i) => {
+    const pat = resolveChainRoll(it, user), steps = it.reps * pat.len;
+    return { i, name: it.name, reps: it.reps, pat, steps, beats: steps * (ROLL_RATES[pat.rate] || 0.25) };
+  });
+}
+
+// Where a beat (from the chain's start at beat 0) falls: the segment, the beat it starts on and the pass.
+export function chainAt(segs, beat) {
+  const total = (segs || []).reduce((a, s) => a + s.beats, 0);
+  if (!(total > 0)) return null;
+  const b = Math.max(0, beat);
+  let pass = Math.floor(b / total + 1e-12), start = pass * total, idx = 0;
+  while (idx < segs.length - 1 && b >= start + segs[idx].beats - 1e-9) { start += segs[idx].beats; idx++; }
+  return { idx, start, pass, total };
+}
+
+// The notes that start on local steps [j0, j1) of one segment (a roll played `steps` steps from its step 0).
+// As rollPlan, except nothing crosses the segment's end: a tie run stops there, and a slide on the last
+// step does not reach into the next roll; both end at the gate instead.
+export function segPlan(p, steps, j0, j1, cov) {
+  const r = rollPlan(p, j0, Math.min(j1, steps), cov);
+  const sb = ROLL_RATES[p.rate] || 0.25, end = steps * sb;
+  r.notes.forEach(x => {
+    if (x.k + x.len < steps) return;
+    const len = steps - x.k, a = stepBeat(p, x.k + len - 1);
+    x.len = len; x.slide = false;
+    x.off = Math.min(a + p.gate * (end - a), end);
+  });
+  return { notes: r.notes, cov: Math.min(r.cov, steps) };
+}
+
+// Seconds-based score of `passes` passes through the chain at a tempo, the shape of rollScore.
+export function chainScore(chain, user, passes, tempo, dev) {
+  const spb = 60 / (tempo || 120), segs = chainSegments(chain, user), out = [];
+  let start = 0;
+  for (let p = 0; p < (passes || 1); p++) {
+    segs.forEach(s => {
+      segPlan(s.pat, s.steps, 0, s.steps, 0).notes.forEach(x => {
+        out.push({ at: (start + x.on) * spb, beat: start + x.on, dev, t: 'on', n: x.n, v: x.v, seg: s.i });
+        out.push({ at: (start + x.off) * spb, beat: start + x.off, dev, t: 'off', n: x.n, seg: s.i });
+      });
+      start += s.beats;
+    });
+  }
+  out.sort((a, b) => a.at - b.at || (a.t === 'off' ? 0 : 1) - (b.t === 'off' ? 0 : 1));
+  return out;
+}
+
 // Factory rolls. Each step is [note, punched, accent, slide, tie]. Original patterns.
 const S = (n, g, a, s, t) => ({ n, g: g ? 1 : 0, a: a ? 1 : 0, s: s ? 1 : 0, t: t ? 1 : 0 });
 const roll = (name, rest, steps) => normalizeRoll(Object.assign({ name, steps: steps.map(x => S.apply(null, x)) }, rest));

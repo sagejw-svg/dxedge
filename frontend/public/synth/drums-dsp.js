@@ -5,6 +5,10 @@
 // The half-band is a windowed sinc we design in this file. Not a port of any drum model.
 
 export const VOICES = ['kick', 'snare', 'hatC', 'hatO', 'clap', 'tom', 'rim'];
+// Below this a decaying state is set to exactly 0 at the end of a block, so it never sinks into subnormal
+// doubles (slow arithmetic, and a decay by a factor over 0.5 sticks at the smallest one for good). 1e-150 is
+// far below float32's smallest value, so nothing at that level can reach a sample. See docs/filament.md, 15 Nov.
+const DC_FLOOR = 1e-150;
 const HAT = { hatC: 'hatO', hatO: 'hatC' };
 const RATIOS = [1, 1.37, 1.63, 1.97, 2.41, 2.93];
 
@@ -377,6 +381,9 @@ export function renderDrum(eng, outL, outR, start) {
     outL[i] = yl > 1 ? 1 : yl < -1 ? -1 : yl;
     outR[i] = yr > 1 ? 1 : yr < -1 ? -1 : yr;
   }
+  // With silence in, the blocker's output only shrinks (y = a y); stop it at 0 instead of in subnormals.
+  if (yl < DC_FLOOR && yl > -DC_FLOOR) yl = 0;
+  if (yr < DC_FLOOR && yr > -DC_FLOOR) yr = 0;
   eng.dcLx = xl; eng.dcL = yl; eng.dcRx = xr; eng.dcR = yr;
   if (!any && !eng.playing && !q.length) { /* tails done: the next empty blocks are cheap */ }
   eng.meterN += n; eng.cpuMs += Date.now() - t0; eng.cpuFrames += n;

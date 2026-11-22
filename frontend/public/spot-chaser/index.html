@@ -281,8 +281,17 @@ function utcHours() { const d = new Date(); return d.getUTCHours() + d.getUTCMin
 
 /* --- settings --------------------------------------------------------- */
 const params = new URLSearchParams(location.search)
-const DEF = { grid: 'DM12', mode: 'cw', len: 10, qrn: 'real', toneHz: 570, wpm: 18, volume: 40 }
-let S = { ...DEF, ...loadJSON(KEY.settings, {}) }
+// CW default follows the Morse trainer and Morse Invaders (12 wpm), not a
+// contest speed. If Morse Invaders has a saved speed on this device, a first
+// visit here starts there, so one speed carries across the CW games.
+const DEF = { grid: 'DM12', mode: 'cw', len: 10, qrn: 'real', toneHz: 570, wpm: 12, volume: 40 }
+const saved = loadJSON(KEY.settings, {})
+let S = { ...DEF, ...saved }
+if (saved.wpm == null) {
+  let mi = 0
+  try { mi = parseInt(localStorage.getItem('dxMorseInvaders_wpm'), 10) || 0 } catch (e) {}
+  if (mi) S.wpm = mi
+}
 const pGrid = params.get('grid')
 if (pGrid && gridToLatLon(pGrid)) S.grid = pGrid.toUpperCase()
 if (!gridToLatLon(S.grid)) S.grid = DEF.grid

@@ -1,0 +1,823 @@
+{
+ "slug": "ranch-z4swx8er55",
+ "title": "Ranch Sky",
+ "subtitle": "Wilson family ranch, Sapaque / Waller Creek, Monterey County, CA, 1919-2026",
+ "label": "Wilson family ranch",
+ "pin": {
+  "lat": 35.8426537,
+  "lon": -121.1295293
+ },
+ "location_lines": [
+  "35.8426537, -121.1295293 (WGS84)",
+  "NE1/4 SW1/4 Sec 17, T24S R8E, Mount Diablo Meridian",
+  "Monterey County, CA, Burnett Peak 7.5' quad",
+  "North side of the Waller Creek drainage; about 150 m outside the present Fort Hunter Liggett boundary"
+ ],
+ "intro": [
+  "1771: Mission San Antonio de Padua founded in Salinan territory.",
+  "1839-45: Mexican ranchos granted nearby: El Piojo, Los Ojitos, San Miguelito de Trinidad, Pleyto, Milpitas.",
+  "1880: Ray, Harris and Liddle families farming Sapaque Valley.",
+  "1887: Bryson PO opens. Same year, gold is found in the Los Burros district (Last Chance mine).",
+  "1908-23: Hearst buys up the valley.",
+  "1913 and 1942: big fires cross the pin.",
+  "1926: Lewis H. Smith patents the SW1/4 of Sec 17, which includes the pin.",
+  "1940-41: Army buys ~267,000 ac to form Hunter Liggett.",
+  "To 1941: Botts and Bryson quicksilver mines produce mercury 1.4-2.3 km NW.",
+  "1953: Sam Jones fire.",
+  "~1976: Wilson family arrives.",
+  "2016: Chimney fire passes within 3 km."
+ ],
+ "owners": [
+  [
+   "before 1771",
+   "Salinan homeland",
+   "regional sources"
+  ],
+  [
+   "1771-1834",
+   "Mission San Antonio de Padua sphere",
+   "regional; parcel-level unknown"
+  ],
+  [
+   "1834-1850s",
+   "Not in any confirmed Mexican rancho; probably public land",
+   "inference (regular PLSS section)"
+  ],
+  [
+   "1850s-1926",
+   "US public land; the pin (NESW Sec 17) was unpatented until 1926. Lewis H. Smith's homestead claim was probably pending: he got the adjacent SE1/4 in 1920.",
+   "patent dates: BLM GLO; pending claim is an inference"
+  ],
+  [
+   "1926-05-27",
+   "Lewis H. Smith: patent SER-979910, Sec 17 SW1/4 incl. the pin",
+   "BLM GLO"
+  ],
+  [
+   "1926-c.1976",
+   "unknown (needs county deed research). Hunter Liggett (1941) took adjacent land; the pin parcel apparently stayed outside.",
+   "unknown / 1949 topo + current boundary"
+  ],
+  [
+   "c.1976-present",
+   "Wilson family",
+   "family"
+  ]
+ ],
+ "owners_note": "Owners are shown only where a cited source supports them. Everything else says unknown.",
+ "homesteaders": [
+  "Three generations of the Stanley family homesteaded just south of the pin and are buried at Pleyto Cemetery, which was relocated when Lake San Antonio flooded old Pleyto.",
+  "The last homesteaders next to the pin, the Russells (1931), were a father and son; the son became a noted token-and-medal numismatist.",
+  "Full notes with sources and confidence levels are in homesteaders.md."
+ ],
+ "map": {
+  "icons": {
+   "pin": "pin",
+   "post_office": "po",
+   "mine_mercury": "mine-red",
+   "mine_gold": "mine-gold"
+  },
+  "legend": [
+   [
+    "po",
+    "Post office"
+   ],
+   [
+    "mine-red",
+    "Mercury (quicksilver) mine"
+   ],
+   [
+    "mine-gold",
+    "Gold mine"
+   ]
+  ],
+  "zoom": 11
+ },
+ "credits": {
+  "imagery": [
+   "USGS Historical Topographic Map Collection / The National Map",
+   "USGS/NASA Landsat Collection 2",
+   "USDA FSA NAIP",
+   "UCSB Library Map & Imagery Lab FrameFinder (NAPP frames)",
+   "Esri World Imagery and World Imagery Wayback (Microsoft UltraCam 2010; Vantor/Maxar Legion-02 2025)",
+   "Contains modified Copernicus Sentinel data 2026 (ESA)",
+   "Landsat, NAIP and Sentinel-2 accessed via Microsoft Planetary Computer"
+  ],
+  "history": [
+   "USGS MRDS",
+   "USGS GNIS",
+   "BLM GLO Records and CadNSDI PLSS",
+   "Frickstad, A Century of California Post Offices (1955)",
+   "Monterey County Historical Society",
+   "CAL FIRE FRAP fire perimeters",
+   "Wikipedia rancho, Jolon and Hunter Liggett articles",
+   "militarymuseum.org",
+   "Full URL list: history.md and homesteaders.md"
+  ],
+  "accuracy": "The 1994 and 2002 aerials were registered to NAIP and may be off by tens of metres. Mine coordinates are from USGS MRDS, about 0.5-1 km. There is no free aerial coverage of the pin before 1994.",
+  "esri_note": "The 2010 and 2025 Esri images are shown from the committed web copies only, or streamed live from Esri with attribution. No Esri tiles are re-hosted here."
+ },
+ "sister": {
+  "slug": "ramona-h0whnlp4",
+  "title": "Ramona Sky"
+ },
+ "slides": [
+  {
+   "file": "1919_usgs-topo-bryson15.jpg",
+   "year": 1919,
+   "date": "1919 (surveyed 1917)",
+   "source": "USGS Historical Topographic Map Collection - Bryson 15' (1:62,500)",
+   "caption": "Earliest map: Waller Creek and the South Fork drawn through section 17; no roads or buildings shown at the pin. ~6 km square.",
+   "owner": "US public land; Lewis H. Smith's homestead claim probably pending (he got the adjacent SE1/4 in 1920 and the pin's SW1/4 in 1926; the pending claim is an inference)",
+   "facts": [
+    "Waller Creek and its South Fork are already named.",
+    "\"Quicksilver Mine\" is printed on Sycamore Creek about 1.4 km NW: today's Botts mercury mine.",
+    "Bryson post office (opened 1887; the area was once called Sapaque) was ~5 km SE.",
+    "The \"Smith's Ranch\" label on this sheet may be Lewis H. Smith's place (inference, not confirmed)."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1919_usgs-topo-bryson15_fullsheet",
+     "file": "1919_usgs-topo-bryson15_fullsheet.tif",
+     "label": null,
+     "width": 4996,
+     "height": 6067,
+     "pin_px": [
+      2465.5,
+      3621.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 6.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1949_usgs-topo-7.5min.jpg",
+   "year": 1949,
+   "date": "1949 (from 1947 aerial photos; 1952-53 prints)",
+   "source": "USGS Historical Topographic Map Collection - Burnett Peak & Bryson 7.5' (1:24,000)",
+   "caption": "First detailed map: pin on Waller Creek drainage just SE of the 1202 ft knob, beside the Hunter Liggett Military Reservation boundary. No buildings or roads at the pin. ~3 km square.",
+   "owner": "after Lewis H. Smith's 1926 patent; later owners unknown",
+   "facts": [
+    "The new Hunter Liggett Military Reservation boundary (1941) is drawn right beside the pin.",
+    "No roads or buildings are mapped at the pin yet.",
+    "The Sam Jones fire (35,455 ac) swept this ground in July 1953."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1949_usgs-topo-burnettpeak_fullsheet",
+     "file": "1949_usgs-topo-burnettpeak_fullsheet.tif",
+     "label": "Burnett Peak sheet (west)",
+     "width": 6596,
+     "height": 8096,
+     "pin_px": [
+      5909.5,
+      2201.5
+     ]
+    },
+    {
+     "name": "1949_usgs-topo-bryson7.5_fullsheet",
+     "file": "1949_usgs-topo-bryson7.5_fullsheet.tif",
+     "label": "Bryson sheet (east)",
+     "width": 6600,
+     "height": 8083,
+     "pin_px": [
+      384.5,
+      2152.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 3.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1961_usgs-topo-bryson15.jpg",
+   "year": 1961,
+   "date": "1961 (from 1960 aerial photos; 1968 print)",
+   "source": "USGS Historical Topographic Map Collection - Bryson 15' (1:62,500)",
+   "caption": "Mid-century map with green woodland tint; Beartrap Road, Bald Mountain and Smith Ranch nearby. Nothing mapped at the pin. ~6 km square.",
+   "owner": "after Lewis H. Smith's 1926 patent; later owners unknown",
+   "facts": [
+    "Beartrap Road, Bald Mountain (2.3 km N) and Smith Ranch appear.",
+    "Bryson PO had closed in 1937.",
+    "The 1953 Sam Jones fire had burned over this ground.",
+    "The \"Smith's Ranch\" label may be Lewis H. Smith's place (inference, not confirmed)."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1961_usgs-topo-bryson15_fullsheet",
+     "file": "1961_usgs-topo-bryson15_fullsheet.tif",
+     "label": null,
+     "width": 5188,
+     "height": 6517,
+     "pin_px": [
+      2655.5,
+      3701.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 6.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1973-04-21_landsat.jpg",
+   "year": 1973,
+   "date": "1973-04-21",
+   "source": "USGS/NASA Landsat 1 MSS, Collection 2 Level-1 (Microsoft Planetary Computer)",
+   "caption": "Earliest satellite view, in false color (vegetation shows red), 60 m pixels. ~10 km square, so no ranch-scale detail.",
+   "owner": "after Lewis H. Smith's 1926 patent; later owners unknown",
+   "facts": [
+    "Landsat 1 (launched 1972) was the first civilian Earth-observation satellite program.",
+    "False color: red = green vegetation, 60 m pixels.",
+    "Lake San Antonio shows dark to the east, over the old Rancho Los Ojitos."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1973-04-21_landsat1-mss_60m_40km",
+     "file": "1973-04-21_landsat1-mss_60m_40km.tif",
+     "label": null,
+     "width": 667,
+     "height": 667,
+     "pin_px": [
+      333.5,
+      333.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 10.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1979_usgs-topo-7.5min-photorevised.jpg",
+   "year": 1979,
+   "date": "1979 (photo-inspected/revised from 1976 photos)",
+   "source": "USGS Historical Topographic Map Collection - Burnett Peak & Bryson 7.5' (1:24,000)",
+   "caption": "Map edition from around when the family arrived (~1976). No new roads or buildings shown at the pin; purple 1979 revisions are on the Bryson (east) sheet. ~3 km square.",
+   "owner": "Wilson family (from ~1976)",
+   "facts": [
+    "Map updated from 1976 aerial photos, around when the Wilson family arrived.",
+    "Purple tint marks the 1979 revisions on the Bryson sheet.",
+    "No structures are mapped at the pin yet."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1979_usgs-topo-burnettpeak_fullsheet",
+     "file": "1979_usgs-topo-burnettpeak_fullsheet.tif",
+     "label": "Burnett Peak sheet (west)",
+     "width": 6600,
+     "height": 8092,
+     "pin_px": [
+      5897.5,
+      2132.5
+     ]
+    },
+    {
+     "name": "1979_usgs-topo-bryson7.5_fullsheet",
+     "file": "1979_usgs-topo-bryson7.5_fullsheet.tif",
+     "label": "Bryson sheet (east)",
+     "width": 6604,
+     "height": 8079,
+     "pin_px": [
+      309.5,
+      2135.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 3.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1984-05-27_landsat.jpg",
+   "year": 1984,
+   "date": "1984-05-27",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Natural color, 30 m pixels; ~6 km square. Shows the landscape, not individual buildings.",
+   "owner": "Wilson family",
+   "facts": [
+    "Landsat 5 operated 1984-2013, a record run for an Earth-imaging satellite.",
+    "Spring-green hills across the Waller Creek / Nacimiento country."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1984-05-27_landsat5-tm_30m_30km",
+     "file": "1984-05-27_landsat5-tm_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      499.5,
+      500.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 6.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1994-05-11_ucsb-napp.jpg",
+   "year": 1994,
+   "date": "1994-05-11",
+   "source": "USGS NAPP 2C aerial photo, frame 6917-208 - UCSB Library FrameFinder (free download)",
+   "caption": "Earliest aerial photo of the site: cleared homesite with a loop drive at the pin, a dirt road along the creek, and the two ponds about 0.8 km to the SSW. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "First aerial photo of the homesite: a clearing with a loop drive and a dirt road along the creek.",
+    "Two ponds hold water ~0.8 km SSW.",
+    "Botts mine workings are 1.4 km NW, now inside the fort.",
+    "Registered to NAIP imagery; position may be off by tens of metres."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1994-05-11_ucsb-napp2c-6917-208_georef",
+     "file": "1994-05-11_ucsb-napp2c-6917-208_georef.tif",
+     "label": "Georeferenced frame",
+     "width": 6187,
+     "height": 6185,
+     "pin_px": [
+      1203.5,
+      3151.5
+     ]
+    },
+    {
+     "name": "1994-05-11_ucsb-napp2c-6917-208_fullframe-scan",
+     "file": "1994-05-11_ucsb-napp2c-6917-208_fullframe-scan.jpg",
+     "label": "Full frame scan (unrectified)",
+     "width": 5596,
+     "height": 5621,
+     "pin_px": null
+    }
+   ],
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1995_usgs-topo-7.5min.jpg",
+   "year": 1995,
+   "date": "1995 (from 1994 photos; 2000 print)",
+   "source": "USGS Historical Topographic Map Collection - Burnett Peak 7.5' (+ 1985 Bryson print on the east side)",
+   "caption": "Latest printed topo: dirt roads (dashed) at the pin and along the creek, and the Fort Hunter Liggett boundary (red band) just north/west. ~3 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Dirt roads now mapped at the pin.",
+    "Fort Hunter Liggett boundary printed as a red band just N/W; the pin is ~150 m outside it.",
+    "Last paper edition of the Burnett Peak quad."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1995_usgs-topo-burnettpeak_fullsheet",
+     "file": "1995_usgs-topo-burnettpeak_fullsheet.tif",
+     "label": "Burnett Peak sheet (west)",
+     "width": 6429,
+     "height": 8042,
+     "pin_px": [
+      5825.5,
+      2089.5
+     ]
+    },
+    {
+     "name": "1995_usgs-topo-bryson7.5-1985print_fullsheet",
+     "file": "1995_usgs-topo-bryson7.5-1985print_fullsheet.tif",
+     "label": "Bryson sheet, 1985 print (east)",
+     "width": 6450,
+     "height": 8033,
+     "pin_px": [
+      284.5,
+      2119.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 3.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "1996-05-12_landsat.jpg",
+   "year": 1996,
+   "date": "1996-05-12",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Natural color, 30 m pixels; ~6 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Regional spring view; Fort Hunter Liggett training lands lie west and north."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "1996-05-12_landsat5-tm_30m_30km",
+     "file": "1996-05-12_landsat5-tm_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      499.5,
+      500.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 6.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2002-05-31_ucsb-napp.jpg",
+   "year": 2002,
+   "date": "2002-05-31",
+   "source": "USGS NAPP 3C color-infrared aerial photo, frame 12452-152 - UCSB Library FrameFinder (free download)",
+   "caption": "Color infrared (vegetation shows red); low-resolution scan (~3 m). Loop drive and creek road unchanged. ~3 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Color-infrared film: healthy oaks and chaparral show red.",
+    "Homesite layout unchanged from 1994.",
+    "Registered to NAIP imagery; position may be off by tens of metres."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2002-05-31_ucsb-napp3c-12452-152_cir_georef",
+     "file": "2002-05-31_ucsb-napp3c-12452-152_cir_georef.tif",
+     "label": "Georeferenced frame",
+     "width": 2811,
+     "height": 2837,
+     "pin_px": [
+      2230.5,
+      1375.5
+     ]
+    },
+    {
+     "name": "2002-05-31_ucsb-napp3c-12452-152_cir_fullframe-scan",
+     "file": "2002-05-31_ucsb-napp3c-12452-152_cir_fullframe-scan.jpg",
+     "label": "Full frame scan (unrectified)",
+     "width": 2735,
+     "height": 2748,
+     "pin_px": null
+    }
+   ],
+   "web": {
+    "km": 3.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2005-06-06_landsat.jpg",
+   "year": 2005,
+   "date": "2005-06-06",
+   "source": "USGS/NASA Landsat 5 TM, Collection 2 Level-2 (Microsoft Planetary Computer)",
+   "caption": "Natural color, 30 m pixels; ~6 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Early-summer view as the grass starts to cure."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2005-06-06_landsat5-tm_30m_30km",
+     "file": "2005-06-06_landsat5-tm_30m_30km.tif",
+     "label": null,
+     "width": 1000,
+     "height": 1000,
+     "pin_px": [
+      499.5,
+      500.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 6.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2010-05-08_esri-wayback.jpg",
+   "year": 2010,
+   "date": "2010-05-08",
+   "source": "Esri World Imagery Wayback (release 2014-02-20; Microsoft UltraCam-G aerial, 0.3 m)",
+   "caption": "Sharp spring aerial: homesite and loop drive, plus two tracks climbing the slope to the north-east. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "0.3 m aerial detail.",
+    "Two tracks climb the slope NE of the house."
+   ],
+   "esri": true,
+   "hires": [
+    {
+     "name": "2010-05-08_esri-wayback_ultracam_z19_3km",
+     "file": "2010-05-08_esri-wayback_ultracam_z19_3km.tif",
+     "label": null,
+     "width": 12800,
+     "height": 12544,
+     "pin_px": [
+      6486.5,
+      6241.5
+     ]
+    }
+   ],
+   "esri_live": {
+    "kind": "wayback",
+    "release_date": "2014-02-20",
+    "release": null,
+    "max_zoom": 19
+   },
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2012-05-20_usda-naip.jpg",
+   "year": 2012,
+   "date": "2012-05-18/20",
+   "source": "USDA FSA NAIP 1 m (Microsoft Planetary Computer)",
+   "caption": "Bright roofs at the pin and at a neighbouring clearing ~250 m west. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Roofs visible at the pin and at a neighbouring clearing ~250 m W."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2012-05-20_usda-naip_1m_5km",
+     "file": "2012-05-20_usda-naip_1m_5km.tif",
+     "label": null,
+     "width": 5000,
+     "height": 5000,
+     "pin_px": [
+      2500.5,
+      2500.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2016-06-25_usda-naip.jpg",
+   "year": 2016,
+   "date": "2016-06-25",
+   "source": "USDA FSA NAIP 0.6 m (Microsoft Planetary Computer)",
+   "caption": "A larger graded, bare-ground area now opens just north of the house. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "A new graded area opens north of the house.",
+    "The Chimney fire (Aug 2016, 46,234 ac) burned within ~3 km to the SE weeks later."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2016-06-25_usda-naip_0.6m_5km",
+     "file": "2016-06-25_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2020-07-04_usda-naip.jpg",
+   "year": 2020,
+   "date": "2020-06-16 & 2020-07-04",
+   "source": "USDA FSA NAIP 0.6 m (Microsoft Planetary Computer)",
+   "caption": "The graded area north and north-east of the house keeps growing. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "The graded area keeps growing.",
+    "The tiny Copperhead fire (Oct 2020) was ~2.6 km away."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2020-07-04_usda-naip_0.6m_5km",
+     "file": "2020-07-04_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2024-05-26_usda-naip.jpg",
+   "year": 2024,
+   "date": "2024-05-26",
+   "source": "USDA FSA NAIP 0.6 m (Microsoft Planetary Computer)",
+   "caption": "Largest cleared area yet north and north-east of the house, with new tracks and pads. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Largest cleared area so far, with new tracks and pads."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2024-05-26_usda-naip_0.6m_5km",
+     "file": "2024-05-26_usda-naip_0.6m_5km.tif",
+     "label": null,
+     "width": 8333,
+     "height": 8333,
+     "pin_px": [
+      4166.5,
+      4166.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2025-07-08_esri-wayback.jpg",
+   "year": 2025,
+   "date": "2025-07-08",
+   "source": "Esri World Imagery (current; Wayback release 2026-02-26; Vantor Legion-02 satellite, 0.34 m)",
+   "caption": "Latest sub-meter view: graded area north of the house still open and summer-dry grass. ~2.4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "0.34 m commercial satellite view.",
+    "Summer-gold grass."
+   ],
+   "esri": true,
+   "hires": [
+    {
+     "name": "2025-07-08_esri-worldimagery_legion02_z19_3km",
+     "file": "2025-07-08_esri-worldimagery_legion02_z19_3km.tif",
+     "label": null,
+     "width": 12800,
+     "height": 12544,
+     "pin_px": [
+      6486.5,
+      6241.5
+     ]
+    }
+   ],
+   "esri_live": {
+    "kind": "current",
+    "release_date": "2026-02-26",
+    "max_zoom": 19
+   },
+   "web": {
+    "km": 2.4,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  },
+  {
+   "file": "2026-11-11_sentinel2.jpg",
+   "year": 2026,
+   "date": "2026-11-11",
+   "source": "Copernicus Sentinel-2B L2A (ESA), via Microsoft Planetary Computer",
+   "caption": "Most recent clear satellite pass (one week ago), 10 m pixels; ~4 km square.",
+   "owner": "Wilson family",
+   "facts": [
+    "Most recent clear satellite pass, one week before this record was compiled.",
+    "ESA Copernicus data, free worldwide."
+   ],
+   "esri": false,
+   "hires": [
+    {
+     "name": "2026-11-11_sentinel2b_10m_20km",
+     "file": "2026-11-11_sentinel2b_10m_20km.tif",
+     "label": null,
+     "width": 2000,
+     "height": 2000,
+     "pin_px": [
+      1000.5,
+      1000.5
+     ]
+    }
+   ],
+   "web": {
+    "km": 4.0,
+    "width": 1400,
+    "height": 1400,
+    "pin_px": [
+     700.0,
+     700.0
+    ]
+   }
+  }
+ ]
+}
