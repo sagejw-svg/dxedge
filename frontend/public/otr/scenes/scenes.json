@@ -20,6 +20,8 @@
     { "id": "diner", "name": "Diner", "src": "diner.jpg", "lamp": { "x": 0.55, "y": 0.50, "s": 0.18, "rot": 2, "tilt": 12, "skew": 0 } },
     { "id": "attic", "name": "Attic", "src": "attic.jpg", "lamp": { "x": 0.68, "y": 0.66, "s": 0.24, "rot": 1, "tilt": 6, "skew": -1 } }
   ],
+  "episodeArt": "episode-art/episode-art.json",
+  "episodeArtNote": "episodeArt is a map from a catalog episode file to pictures that replace the rooms above only while that episode is the one playing. Every other episode keeps these rooms. Seasons below still join on their dates.",
   "seasonNote": "seasons is a date-ranged hook for extra rooms. from and to are inclusive civil dates in tz. A season's pictures are used only when the files are actually there. If none of them are, the year-round rooms above stay as they are. Add Christmas the same way: another object, no code change. Do not draw the lamp into the file.",
   "seasons": [
     {

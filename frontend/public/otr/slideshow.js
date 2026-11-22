@@ -16,6 +16,11 @@
  * zone) falls inside from..to, rooms whose picture files exist join the end of
  * the rotation. Missing files are left out, and if none exist the year-round
  * rooms stay exactly as they are. ?sceneDate=YYYY-MM-DD pretends that civil date.
+ *
+ * episodeArt in scenes.json points at a map from a catalog episode file name
+ * to pictures under episode-art/. While that episode is the one playing, those
+ * pictures replace the rooms. Every other episode keeps the rooms, seasons
+ * included. A listed picture that is not on disk is left out.
  */
 (function () {
   'use strict';
@@ -26,9 +31,11 @@
   var BASE = window.__OTR_ASSET_BASE || '/otr/';
   if (BASE.slice(-1) !== '/') BASE += '/';
   var ROOT = BASE + 'scenes/';
+  var EP = BASE + 'episode-art/';
 
-  var pack = null, scenes = [], index = 0, on = false, stream = false, slidesReady = false;
+  var pack = null, scenes = [], baseScenes = [], index = 0, on = false, stream = false, slidesReady = false;
   var seasonInfo = { id: null, active: false, art: 0, fallback: true, date: null };
+  var episodePack = {}, artReady = {}, episodeKey = '', armedFile = null, baseIndex = 0, episodePos = {}, artToken = 0, episodeTimer = 0;
   var custom = {}, shownAt = 0, timer = 0, raf = 0, drag = null, front = 0;
   var reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var stage, frame, wrap, cv, cap, resetBtn, bgs, buttons = [];
@@ -57,7 +64,9 @@
   function writeSaved() {
     if (stream) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ on: on, i: index, custom: custom }));
+      // An episode's own pictures must not overwrite the room the listener
+      // was on. That index is what the rooms return to.
+      localStorage.setItem(KEY, JSON.stringify({ on: on, i: episodeKey ? baseIndex : index, custom: custom }));
     } catch (e) {}
   }
   function readOn() {
@@ -91,9 +100,10 @@
     if (frame && sc) frame.setAttribute('data-scene', sc.id);
   }
 
-  function url(src) {
+  function url(src, sc) {
     if (!src) return '';
     if (/^(https?:|\/)/.test(src)) return src;
+    if (sc && sc.episode) return EP + src;
     return ROOT + src;
   }
 
@@ -101,9 +111,10 @@
     if (!scenes.length) return;
     index = ((i % scenes.length) + scenes.length) % scenes.length;
     var sc = scene();
+    if (episodeKey) episodePos[episodeKey] = index;
     var incoming = bgs[1 - front];
     var outgoing = bgs[front];
-    incoming.style.backgroundImage = 'url("' + url(sc.src) + '")';
+    incoming.style.backgroundImage = 'url("' + url(sc.src, sc) + '")';
     if (fade && !reduce) {
       incoming.classList.remove('on');
       void incoming.offsetWidth;
@@ -383,8 +394,7 @@
     }
     return null;
   }
-  function probe(src) {
-    var u = url(src);
+  function probeAt(u) {
     return fetch(u, { method: 'HEAD', cache: 'no-cache' }).then(function (r) {
       if (r.ok) return true;
       if (r.status !== 405 && r.status !== 501) return false;
@@ -393,7 +403,148 @@
       }, function () { return false; });
     }, function () { return false; });
   }
+  function probe(src) { return probeAt(url(src)); }
+  function asset(path) {
+    if (!path) return '';
+    if (/^(https?:|\/)/.test(path)) return path;
+    return BASE + String(path).replace(/^\//, '');
+  }
+  function fileName(raw) {
+    if (!raw) return '';
+    var path = String(raw).split('?')[0].split('#')[0];
+    var seg = path.split('/').pop() || '';
+    try { seg = decodeURIComponent(seg); } catch (e) {}
+    return seg;
+  }
+  function playingFile() {
+    try {
+      var st = window.__otr && __otr.state;
+      var net = st && st.network;
+      if (net === 'listenotr' || net === 'scifi') {
+        var live = net === 'listenotr' ? window.__listenotr : window.__scifi;
+        if (!live || !live.onAir || (live.booted && !live.booted())) return '';
+        var air = live.onAir();
+        if (!air || air.kind !== 'show') return '';
+        return fileName(air.url);
+      }
+      if (window.__otr && __otr.currentInfo) {
+        var info = __otr.currentInfo();
+        if (info && !info.isAd && info.url) return fileName(info.url);
+      }
+    } catch (e) {}
+    return '';
+  }
+  function artRows(file) {
+    var eps = episodePack && episodePack.episodes;
+    if (!file || !eps) return null;
+    if (eps[file]) return eps[file];
+    try {
+      var enc = encodeURIComponent(file);
+      if (eps[enc]) return eps[enc];
+    } catch (e) {}
+    return null;
+  }
+  function lampOf(row) {
+    var d = { x: 0.86, y: 0.92, s: 0.16, rot: 0, tilt: 6, skew: 0 };
+    var src = (row && typeof row === 'object' && row.lamp) || episodePack.defaultLamp || d;
+    return {
+      x: src.x == null ? d.x : +src.x,
+      y: src.y == null ? d.y : +src.y,
+      s: src.s == null ? d.s : +src.s,
+      rot: src.rot == null ? d.rot : +src.rot,
+      tilt: src.tilt == null ? d.tilt : +src.tilt,
+      skew: src.skew == null ? d.skew : +src.skew
+    };
+  }
+  function episodeId(file, row, i) {
+    if (row && typeof row === 'object' && row.id) return String(row.id);
+    var stem = String(file || 'ep').replace(/\.[a-z0-9]+$/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (stem.length > 48) stem = stem.slice(0, 48);
+    return 'ep-' + (stem || 'ep') + '-' + (i + 1);
+  }
+  function sceneFrom(file, row, i) {
+    var src = typeof row === 'string' ? row : (row && row.src);
+    if (!src) return null;
+    return {
+      id: episodeId(file, row, i),
+      name: (row && typeof row === 'object' && row.name) || ('Scene ' + (i + 1)),
+      src: src,
+      lamp: lampOf(row),
+      episode: true
+    };
+  }
+  function resolveArt(file) {
+    if (Object.prototype.hasOwnProperty.call(artReady, file)) return Promise.resolve(artReady[file]);
+    var list = artRows(file);
+    if (!list || !list.length) {
+      artReady[file] = null;
+      return Promise.resolve(null);
+    }
+    var specs = [];
+    for (var i = 0; i < list.length; i++) {
+      var sc = sceneFrom(file, list[i], i);
+      if (sc) specs.push(sc);
+    }
+    if (!specs.length) {
+      artReady[file] = null;
+      return Promise.resolve(null);
+    }
+    return Promise.all(specs.map(function (s) {
+      return probeAt(url(s.src, s)).then(function (ok) { return ok ? s : null; });
+    })).then(function (rows) {
+      var art = rows.filter(Boolean);
+      artReady[file] = art.length ? art : null;
+      return artReady[file];
+    });
+  }
+  function enterEpisode(file, art, fade) {
+    var fresh = episodeKey !== file;
+    if (!episodeKey) baseIndex = index;
+    else if (fresh) episodePos[episodeKey] = index;
+    episodeKey = file;
+    scenes = art;
+    var at = episodePos[file] || 0;
+    if (at >= art.length) at = 0;
+    if (on) show(at, !!fade && fresh);
+    else index = at;
+  }
+  function leaveEpisode(fade) {
+    if (!episodeKey) return;
+    episodePos[episodeKey] = index;
+    episodeKey = '';
+    scenes = baseScenes;
+    var back = baseIndex;
+    if (back >= scenes.length) back = 0;
+    if (on && scenes.length) show(back, !!fade);
+    else index = back;
+  }
+  function watchEpisode() {
+    if (!slidesReady || !baseScenes.length) return;
+    var file = playingFile();
+    if (file === armedFile) return;
+    var token = ++artToken;
+    armedFile = file;
+    if (!artRows(file)) {
+      leaveEpisode(true);
+      return;
+    }
+    resolveArt(file).then(function (art) {
+      if (token !== artToken || armedFile !== file) return;
+      if (!art || !art.length) leaveEpisode(true);
+      else enterEpisode(file, art, true);
+    });
+  }
+  function loadEpisodePack(path) {
+    if (!path) return Promise.resolve(null);
+    return fetch(asset(path), { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) return null;
+      return r.json();
+    }, function () { return null; }).then(function (data) {
+      return (data && typeof data === 'object') ? data : null;
+    }, function () { return null; });
+  }
   function finishBoot(list) {
+    baseScenes = list;
     scenes = list;
     var fade = reduce ? 0 : (pack.fadeMs || 1400);
     if (bgs && bgs[0]) {
@@ -413,6 +564,8 @@
     slidesReady = true;
     window.__otr = window.__otr || {};
     window.__otr.slideshow = api;
+    watchEpisode();
+    if (!episodeTimer) episodeTimer = setInterval(watchEpisode, 400);
   }
   function boot(data) {
     pack = data || {};
@@ -425,19 +578,23 @@
       fallback: true,
       date: hit ? hit.date : (askedDate() || civilToday('America/Los_Angeles'))
     };
-    if (!hit) {
-      finishBoot(base);
-      return;
-    }
-    var specs = (hit.season.scenes || []).filter(function (s) { return s && s.src && s.lamp; });
-    Promise.all(specs.map(function (s) {
-      return probe(s.src).then(function (ok) { return ok ? s : null; });
-    })).then(function (rows) {
-      var extra = rows.filter(Boolean);
-      seasonInfo.art = extra.length;
-      seasonInfo.fallback = extra.length === 0;
+    var specs = hit ? (hit.season.scenes || []).filter(function (s) { return s && s.src && s.lamp; }) : [];
+    Promise.all([
+      loadEpisodePack(pack.episodeArt),
+      Promise.all(specs.map(function (s) {
+        return probe(s.src).then(function (ok) { return ok ? s : null; });
+      }))
+    ]).then(function (pair) {
+      episodePack = pair[0] || {};
+      var extra = (pair[1] || []).filter(Boolean);
+      if (hit) {
+        seasonInfo.art = extra.length;
+        seasonInfo.fallback = extra.length === 0;
+      }
       // Year-round rooms stay first, so a missing set does not change the opener.
       finishBoot(base.concat(extra));
+    }).catch(function () {
+      finishBoot(base);
     });
   }
 
@@ -452,10 +609,14 @@
     on: function (v) { if (v == null) return on; return setOn(!!v); },
     stream: function () { return stream; },
     scenes: function () { return scenes.map(function (s) { return s.id; }); },
+    episode: function () {
+      return { file: episodeKey || null, count: episodeKey ? scenes.length : 0 };
+    },
+    sync: function () { watchEpisode(); return api.episode(); },
     current: function () {
       var sc = scene();
       if (!sc) return null;
-      return { id: sc.id, name: sc.name, src: url(sc.src), index: index };
+      return { id: sc.id, name: sc.name, src: url(sc.src, sc), index: index };
     },
     go: function (i) { show(i, false); arm(); return api.current(); },
     next: function () { show(index + 1, true); arm(); return api.current(); },
