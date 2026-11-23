@@ -1,0 +1,265 @@
+/* Player: one page for listening and the picture.
+ * Landscape is the main arrangement. Portrait stacks the lamp above the
+ * controls. The same audio element and the same rack stay in place, so
+ * switching Basic, Advanced, and Player does not start a second player.
+ */
+
+html[data-otr-mode="player"] body {
+  overflow-x: hidden;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+html[data-otr-mode="player"] .wrap {
+  max-width: 1100px;
+  min-width: 0;
+}
+
+html[data-otr-mode="player"] #supportTop,
+html[data-otr-mode="player"] #support,
+html[data-otr-mode="player"] #foot,
+html[data-otr-mode="player"] #contWrap,
+html[data-otr-mode="player"] nav.tabs,
+html[data-otr-mode="player"] #builderPanel,
+html[data-otr-mode="player"] #settingsPane,
+html[data-otr-mode="player"] #greatsSec,
+html[data-otr-mode="player"] #netGuide,
+html[data-otr-mode="player"] .viz-wrap,
+html[data-otr-mode="player"] #advBtn,
+html[data-otr-mode="player"] #advClose,
+html[data-otr-mode="player"] .rack-h h2,
+html[data-otr-mode="player"] .rack-h .chain,
+html[data-otr-mode="player"] #tubeMod .tube-note,
+html[data-otr-mode="player"] #tubeMod #xferCv,
+html[data-otr-mode="player"] #tubeMod .knobs,
+html[data-otr-mode="player"] #eqMod .eq-foot,
+html[data-otr-mode="player"] #eqRead,
+html[data-otr-mode="player"] #eqBands,
+html[data-otr-mode="player"] .pane-h .hint { display: none !important; }
+
+html[data-otr-mode="player"] #channelsPane,
+html[data-otr-mode="player"] #searchPanel { display: block; min-width: 0; }
+html[data-otr-mode="player"] #searchPanel { margin-top: 4px; }
+html[data-otr-mode="player"] #results { max-height: 200px; overflow: auto; }
+
+/* Idle normally hides the transport until something plays. On this page the
+   controls stay in the same place, disabled until there is a show. */
+html[data-otr-mode="player"] .console.idle .transport,
+html[data-otr-mode="player"] .console.idle .sleep-left,
+html[data-otr-mode="player"] .console.cued .upnext { display: flex !important; }
+html[data-otr-mode="player"] .console.idle .sleep-left { display: block !important; }
+html[data-otr-mode="player"] #moreBtn,
+html[data-otr-mode="player"] .start-links,
+html[data-otr-mode="player"] .start-sub { display: none !important; }
+html[data-otr-mode="player"] .console.cued #prevBtn,
+html[data-otr-mode="player"] .console.cued #backBtn,
+html[data-otr-mode="player"] .console.cued #fwdBtn,
+html[data-otr-mode="player"] .console.cued #skipBtn { display: inline-flex !important; }
+
+html[data-otr-mode="player"] #console {
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 12px 14px 10px;
+  background: #101010;
+  min-width: 0;
+}
+html[data-otr-mode="player"] #npShow { font-size: 22px; }
+html[data-otr-mode="player"] .transport {
+  position: sticky;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 6;
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(16, 16, 16, 0.94);
+  border: 1px solid var(--border);
+}
+html[data-otr-mode="player"] .transport .btn,
+html[data-otr-mode="player"] #sleepSel,
+html[data-otr-mode="player"] #rateSel,
+html[data-otr-mode="player"] #advScene,
+html[data-otr-mode="player"] #lampColSel,
+html[data-otr-mode="player"] #eqPreset,
+html[data-otr-mode="player"] #playerMoreSound,
+html[data-otr-mode="player"] .lamp-bed .tchip {
+  min-height: 44px;
+}
+html[data-otr-mode="player"] .transport .btn.play { min-width: 108px; font-size: 15px; }
+html[data-otr-mode="player"] .vol { flex: 1 1 120px; min-width: 120px; }
+html[data-otr-mode="player"] #vol { width: 100%; min-height: 44px; }
+
+html[data-otr-mode="player"] #morePanel,
+html[data-otr-mode="player"] #morePanel[hidden] {
+  display: flex !important;
+  position: static;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 8px 0 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+html[data-otr-mode="player"] #morePanel .morep-h,
+html[data-otr-mode="player"] #popBtn2,
+html[data-otr-mode="player"] #linkBtn,
+html[data-otr-mode="player"] #moreRandom { display: none !important; }
+html[data-otr-mode="player"] #morePanel .mrow { min-height: 44px; }
+
+html[data-otr-mode="player"] .tools2 { display: none !important; }
+
+html[data-otr-mode="player"] #rack,
+html[data-otr-mode="player"] #rack.open {
+  display: block !important;
+  margin: 12px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  min-width: 0;
+}
+html[data-otr-mode="player"] .rack-h {
+  gap: 8px;
+  padding: 8px 12px;
+}
+html[data-otr-mode="player"] #advScene { flex: 1 1 180px; font-size: 14px; }
+
+html[data-otr-mode="player"] .rack-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "lamp"
+    "tube"
+    "eq";
+  gap: 10px;
+  align-items: start;
+  padding: 0;
+}
+html[data-otr-mode="player"] #lampMod,
+html[data-otr-mode="player"] #tubeMod,
+html[data-otr-mode="player"] #eqMod {
+  background: #101010;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 8px 10px 12px;
+  min-width: 0;
+}
+html[data-otr-mode="player"] #lampMod { grid-area: lamp; }
+html[data-otr-mode="player"] #tubeMod { grid-area: tube; }
+html[data-otr-mode="player"] #eqMod { grid-area: eq; }
+html[data-otr-mode="player"] #lampMod .mod-h,
+html[data-otr-mode="player"] #tubeMod .mod-h { min-height: 44px; }
+html[data-otr-mode="player"] canvas#lampCv {
+  width: 180px;
+  height: 300px;
+  background: #080504;
+}
+html[data-otr-mode="player"] #lampMod .lamp-stage {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+html[data-otr-mode="player"] canvas#tubeCv { width: 96px; height: 160px; }
+html[data-otr-mode="player"] #tubeMod .tubes {
+  max-height: 132px;
+  overflow: auto;
+}
+html[data-otr-mode="player"] #tubeMod .tchip { min-height: 36px; }
+html[data-otr-mode="player"] canvas#eqCv { height: 150px; }
+
+#playerMoreSound { display: none; }
+html[data-otr-mode="player"] #playerMoreSound {
+  display: inline-flex !important;
+  align-items: center;
+  margin: 0 12px 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+html[data-otr-mode="player"] #playerMoreSound[aria-expanded="true"] {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+html[data-otr-mode="player"] .rack-row2 { display: none; }
+html[data-otr-mode="player"] .rack-row2.is-open {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+html[data-otr-mode="player"] #channelsPane .pane-h h2 { font-size: 13px; margin: 8px 0; }
+html[data-otr-mode="player"] #networkChips,
+html[data-otr-mode="player"] #channelChips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+html[data-otr-mode="player"] #networkChips .station,
+html[data-otr-mode="player"] #channelChips .station {
+  flex: 0 0 210px;
+  min-height: 72px;
+}
+
+/* Landscape iPad and desktop: the show on the left, the lamp beside it.
+   Scenes sit on the lamp card. Tube and EQ stay on the same page, under the lamp. */
+@media (min-width: 900px) {
+  html[data-otr-mode="player"] .wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
+    grid-template-areas:
+      "head head"
+      "play rack"
+      "listen listen"
+      "search search";
+    column-gap: 16px;
+    row-gap: 12px;
+    align-items: start;
+    max-width: 1180px;
+  }
+  html[data-otr-mode="player"] header.top { grid-area: head; margin: 0; }
+  html[data-otr-mode="player"] #console { grid-area: play; margin: 0; }
+  html[data-otr-mode="player"] #rack,
+  html[data-otr-mode="player"] #rack.open { grid-area: rack; margin: 0; }
+  html[data-otr-mode="player"] #channelsPane { grid-area: listen; }
+  html[data-otr-mode="player"] #searchPanel { grid-area: search; margin: 0; }
+  html[data-otr-mode="player"] .rack-h {
+    margin: 0 0 10px;
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    background: #101010;
+  }
+  html[data-otr-mode="player"] .rack-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "lamp lamp"
+      "tube eq";
+  }
+  html[data-otr-mode="player"] canvas#lampCv { width: 132px; height: 188px; }
+  html[data-otr-mode="player"] canvas#tubeCv { width: 64px; height: 100px; }
+  html[data-otr-mode="player"] canvas#eqCv { height: 88px; }
+  html[data-otr-mode="player"] #tubeMod .mod-b { max-height: 168px; overflow: auto; }
+  html[data-otr-mode="player"] #tubeMod .tubes { max-height: none; }
+}
+
+@media (min-width: 1100px) {
+  html[data-otr-mode="player"] canvas#lampCv { width: 144px; height: 180px; }
+  html[data-otr-mode="player"] canvas#eqCv { height: 88px; }
+}
+
+@media (max-width: 899px) {
+  html[data-otr-mode="player"] #lampMod .lamp-stage { justify-content: center; }
+  html[data-otr-mode="player"] canvas#lampCv { width: min(200px, 46vw); height: min(340px, 78vw); }
+  html[data-otr-mode="player"] .rack-row2.is-open { grid-template-columns: minmax(0, 1fr); }
+}
