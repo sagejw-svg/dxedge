@@ -1,0 +1,26 @@
+{
+  "note": "Keys are catalog episode file names: the last segment of the archive URL, decoded, the same string as eps[][4] in catalog.json. While that episode is the one playing, the slideshow shows only these pictures, in order. Every other episode, a station break, and an idle player keep the rooms in scenes/scenes.json, including a season whose dates include today. A picture is a path relative to this folder, or an object with src and optional id, name, and lamp. Lamp fields match scenes.json (feet on a surface, as fractions of the frame). A missing file is left out; if none of an episode's pictures are there, the rooms stay as they are. Add Dimension X and X Minus One art by dropping the files in and adding a key. Do not draw the lamp into the file.",
+  "defaultLamp": { "x": 0.86, "y": 0.92, "s": 0.16, "rot": 0, "tilt": 6, "skew": 0 },
+  "episodes": {
+    "Dimension_X_1950-04-15__02_WithFoldedHands.mp3": [
+      {
+        "id": "dx-wfh-town",
+        "name": "Humanoids arrive",
+        "src": "dimension-x/with-folded-hands-1.jpg",
+        "lamp": { "x": 0.08, "y": 0.96, "s": 0.14, "rot": -1, "tilt": 6, "skew": 0 }
+      },
+      {
+        "id": "dx-wfh-knife",
+        "name": "To serve and obey",
+        "src": "dimension-x/with-folded-hands-2.jpg",
+        "lamp": { "x": 0.50, "y": 0.97, "s": 0.13, "rot": 1, "tilt": 8, "skew": 0 }
+      },
+      {
+        "id": "dx-wfh-bench",
+        "name": "With folded hands",
+        "src": "dimension-x/with-folded-hands-3.jpg",
+        "lamp": { "x": 0.07, "y": 0.94, "s": 0.14, "rot": 0, "tilt": 5, "skew": 0 }
+      }
+    ]
+  }
+}
