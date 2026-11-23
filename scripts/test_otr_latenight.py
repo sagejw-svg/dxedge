@@ -346,7 +346,7 @@ def main():
        'id="npDate"' in page_html
        and 'id="sleepSel"' in page_html
        and 'value="end">end of episode' in page_html
-       and "slideshow.js?v=1" in page_html
+       and "slideshow.js?v=2" in page_html
        and "basic.js?v=1" in page_html
        and "scifi-live.js?v=3" in page_html
        and "mode.js?v=1" in page_html)
