@@ -1,7 +1,7 @@
 {
  "_comment": "State for the nightly DXEdge health check. Written by the scheduled Claude run at 9:00 PM PT. Read this first, write it back at the end of every run, including quiet nights. On 2026-09-26 James dropped SOTA, dxsummit.fi, and fiiir.com from the product. See known issue dropped-sota-dxsummit-fiiir. Do not restore them and do not health-check them as missing features. Older run notes that say they were left in place are historical. The removal was rebased onto main and applied on 2026-10-15; the synth rack is unrelated and stays.",
  "schema_version": 1,
- "last_run": "2026-11-23T05:20:00Z",
+ "last_run": "2026-11-23T05:28:00Z",
  "consecutive_cert_failures": 0,
  "runs": [
   {
@@ -718,6 +718,15 @@
    "notification": {
     "push": "NOT SENT, and none was needed. Also IMPOSSIBLE: no PushNotification tool exists in this session, confirmed by a direct select: query for PushNotification and SendPushNotification (no matches) and by a keyword query that returned only Jam, Notion and Dropbox tools. TENTH consecutive night. The missing channel cost nothing tonight because no decision was pending. The ntfy fallback was NOT attempted, per the standing rule that reaching for an unapproved channel is substitution.",
     "email": "NOT SENT, DELIBERATELY, and this is the Step 6 quiet-night branch rather than a failure. Zero repairs were made and no surface was found newly broken: the one feed failure was an instance of an already-reported item that cleared within the run. The email channel was NOT exercised, so email-body-must-carry-no-literal-address is neither confirmed nor challenged tonight; it remains proven on 11-16, 11-17 and 11-20 and should be applied unchanged on the next night that needs a send."
+   },
+   "post_push": {
+    "commit": "a4ba40f",
+    "deploy_result": "SUCCESS, verified in-run at 05:20Z, about seven minutes after the push. SIXTH consecutive night of successful deploys.",
+    "evidence": "All three surfaces re-rendered CLEAN in a real browser after the deploy window: / bodyLen 2070 with #root populated, /cyber/ bodyLen 6344 with 8 .panel-body, /aethersdr/ bodyLen 3894 with 6 .panel-body, and every one of the three with ZERO non-200 responses, zero failed requests, zero console messages, zero page errors, zero .feed-error and zero leftover .loading. The /cyber/ NVD panel that failed on the night's first load rendered clean here too, its third consecutive clean render after the single 502. /api/health status ok with a fresh timestamp 2026-11-23T05:20:30Z, feed_proxy true, forever_zoom true, version 2.0. Live sw.js still serves 'dxedge-v239', matching repo HEAD, which is the CORRECT result for a scripts-only commit and NOT a sign the deploy was skipped.",
+    "restart_signature": "The positive confirmation that the deploy actually ran is the backend having restarted: /api/health read sat_tles 0 and pota_spots 0 again, down from the warm 9 and 24 measured earlier in the run, and /api/debug cache_keys fell to 10 from the 13 recorded at 05:04Z. Same cold-cache signature as 11-20, 11-21 and 11-22. Per empty-feedproxy-cache-signals-a-backend-restart this is the expected post-deploy shape and must not be re-reported as the known-bad 0/0 finding.",
+    "post_deploy_cyber_shape": "The post-deploy /cyber/ load made 8 /api/feed calls rather than 14, which is the documented first-tab-only behaviour per cyber-tabbed-panels-need-clicking and not a regression; the full ten-tab sweep was done pre-deploy.",
+    "aethersdr_label": "Still reading v26.11.4 post-deploy, still by luck rather than by fix.",
+    "caveat": "This entry was written and pushed after the deploy completed, so it is a confirmed result rather than a forward-looking note."
    }
   }
  ],
