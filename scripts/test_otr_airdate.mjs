@@ -20,20 +20,23 @@ function ck(name, cond, detail) {
   if (!cond) F.push(name);
 }
 
-function ep(showId, title) {
+function ep(showId, title, date) {
   const show = catalog.shows.find((s) => s.id === showId);
-  const row = show && show.eps.find((e) => e[0] === title);
+  const row = show && show.eps.find((e) => e[0] === title && e[1] === date);
   return row || null;
 }
 
 const samples = [
   ['dimension-x', 'Outer Limit', '08 Apr 1950'],
   ['dimension-x', 'With Folded Hands', '15 Apr 1950'],
+  ['x-minus-one', 'No Contact', '24 Apr 1955'],
+  ['x-minus-one', 'The Roads Must Roll', '04 Jan 1956'],
+  ['x-minus-one', 'Bad Medicine', '10 Jul 1956'],
   ['x-minus-one', 'Tunnel Under The World', '04 Sep 1956'],
   ['x-minus-one', 'Surface Tension', '28 Aug 1956']
 ];
 for (const [show, title, date] of samples) {
-  const row = ep(show, title);
+  const row = ep(show, title, date);
   ck(show + ' catalog keeps ' + title, !!row && row[1] === date, row && row[1]);
   ck(title + ' label', air.withAirDate(title, row && row[1]) === title + ' · ' + date, air.withAirDate(title, row && row[1]));
 }
