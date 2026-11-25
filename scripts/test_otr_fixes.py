@@ -98,10 +98,36 @@ def main():
         }""")
         ck("random: by-category stays in scope", catr["inScope"] and catr["rand"], catr)
 
-        # per-show archive.org link renders for the current show
+        # per-show archive.org link renders for the current show, and for the
+        # archive item that actually holds this episode (shows such as Gunsmoke
+        # are split across several items).
         pg.evaluate("window.__otr.startRandom(null,'x')"); pg.wait_for_timeout(150)
         arch = pg.evaluate("document.getElementById('npArchive').innerHTML")
         ck("archive.org link on now playing", 'archive.org/details/' in arch, arch[:80])
+        item = pg.evaluate("""() => {
+            const it = window.__otr.state.queue[window.__otr.state.qi];
+            const s = window.__otr.catalog().shows.find(x => x.id === it.showId);
+            const ep = s.eps[it.epIndex];
+            const id = s.ids[ep[3]] || s.ids[0];
+            return { id, html: document.getElementById('npArchive').innerHTML, skip: document.getElementById('skipBtn').disabled };
+        }""")
+        ck("archive.org link uses this episode's item", item["id"] and ('/details/' + item["id"]) in item["html"], item["id"])
+
+        # 15-second skip before the file reports a duration uses the catalog
+        # runtime instead of doing nothing.
+        seek = pg.evaluate("""() => {
+            window.__otr.playEpisode('quiet-please', 0);
+            const a = document.getElementById('audio');
+            const before = a.currentTime || 0;
+            const known = isFinite(a.duration) && a.duration > 0;
+            document.getElementById('fwdBtn').click();
+            return {
+              pending: window.__otr.state.pendingSeek, now: a.currentTime || 0, before, known,
+              disabled: document.getElementById('fwdBtn').disabled
+            };
+        }""")
+        moved = seek["pending"] == seek["before"] + 15 or (seek["known"] and seek["now"] >= seek["before"])
+        ck("forward 15 before metadata is remembered", moved and not seek["disabled"], seek)
 
         # iOS background-audio path (?ios=1): native playback, no Web Audio graph, viz locked
         pg.goto(f"http://127.0.0.1:{PORT}/index.html?ios=1")

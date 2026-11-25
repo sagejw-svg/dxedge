@@ -103,7 +103,7 @@
   .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--bg3); position: relative; cursor: pointer; }
   .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--amber); width: 0%; }
   .bar .buf  { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--border2); width: 0%; }
-  .time { font-variant-numeric: tabular-nums; min-width: 38px; }
+  .time { font-variant-numeric: tabular-nums; min-width: 4.8em; }
 
   .transport { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   .btn { border: 1px solid var(--border2); background: var(--bg2); color: var(--text); border-radius: 8px;
@@ -168,7 +168,8 @@
   body.otr-liveclock .bar[data-live-ro] { cursor: default; }
   .livebubble { display: none; position: absolute; z-index: 40; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
     background: #1a140c; color: #ffd08a; border: 1px solid #ffb347; border-radius: 6px; padding: 6px 8px;
-    font-size: 12px; line-height: 1.3; white-space: nowrap; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+    font-size: 12px; line-height: 1.3; white-space: normal; text-align: center; width: max-content; max-width: min(220px, calc(100vw - 24px));
+    pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
   .livetip.lock:hover > .livebubble, .livetip.lock.showtip > .livebubble, .livetip.lock:focus-within > .livebubble { display: block; }
   body.otr-liveclock .dock-bar { pointer-events: none; }
   .cue-resume { margin-top: 9px; }
@@ -1778,6 +1779,24 @@
     if(title) el.setAttribute('title', title); else el.removeAttribute('title');
     if(aria) el.setAttribute('aria-label', aria); else el.removeAttribute('aria-label');
   }
+  // Remember whether the control was already disabled, so leaving a live
+  // station does not turn on skip and seek while nothing is playing.
+  function rememberDisabled(el){
+    if(!el || (el.tagName!=='BUTTON' && el.tagName!=='SELECT')) return;
+    if(el.getAttribute('data-live-disabled')===null) el.setAttribute('data-live-disabled', el.disabled ? '1' : '0');
+  }
+  function restoreDisabled(el){
+    if(!el || (el.tagName!=='BUTTON' && el.tagName!=='SELECT')) return;
+    var was=el.getAttribute('data-live-disabled');
+    el.removeAttribute('data-live-disabled');
+    if(el.id==='prevBtn'||el.id==='backBtn'||el.id==='fwdBtn'||el.id==='skipBtn'||el.id==='dockSkip'||el.id==='linkBtn'){
+      var playing = state.queue.length && state.qi>=0;
+      el.disabled = el.id==='linkBtn' ? !(playing && currentItem() && !currentItem().isAd) : !playing;
+      return;
+    }
+    if(was===null) return;
+    el.disabled = was==='1';
+  }
   function lockEl(el, on){
     if(!el) return;
     var wrap = el.id==='rateRow' ? el : liveWrap(el);
@@ -1804,13 +1823,14 @@
       el.setAttribute('aria-disabled', 'true');
       el.setAttribute('aria-label', LIVE_PHRASE);
       el.setAttribute('title', LIVE_PHRASE);
+      rememberDisabled(el);
       if(el.tagName==='BUTTON' || el.tagName==='SELECT') el.disabled = true;
     } else {
       wrap.classList.remove('lock', 'showtip');
       wrap.removeAttribute('title');
       el.removeAttribute('aria-disabled');
       restoreAttrs(el);
-      if(el.tagName==='BUTTON' || el.tagName==='SELECT') el.disabled = false;
+      restoreDisabled(el);
     }
   }
   function applyLiveLocks(on){
@@ -1818,9 +1838,15 @@
     var rate = $('rateSel');
     if(rate){
       rememberAttrs(rate);
-      rate.disabled = !!on;
-      if(on){ rate.setAttribute('aria-label', LIVE_PHRASE); rate.setAttribute('title', LIVE_PHRASE); }
-      else restoreAttrs(rate);
+      if(on){
+        rememberDisabled(rate);
+        rate.disabled = true;
+        rate.setAttribute('aria-label', LIVE_PHRASE);
+        rate.setAttribute('title', LIVE_PHRASE);
+      } else {
+        restoreDisabled(rate);
+        restoreAttrs(rate);
+      }
     }
     lockEl($('rateRow'), on);
   }
@@ -2205,17 +2231,19 @@
     if(src.enh && seekTo>0){ seekRatio = Math.min(0.999, seekTo/itemDur(item)); seekTo = 0; } // joining mid-show: same point in the story
     state.startRatio = seekRatio;
     if(seekTo>0 || seekRatio>0){
-      var seekSrc = audio.src;
+      var seekSrc = audio.src, joinAt = seekTo, joinRatio = seekRatio;
       audio.addEventListener('loadedmetadata', function onMeta(){
         audio.removeEventListener('loadedmetadata', onMeta);
         if(audio.src !== seekSrc) return;                              // user moved on before it loaded
         var d=audio.duration;
-        if(seekRatio>0){
-          if(isFinite(d) && d>0){ if(state.live && seekRatio*d>=d-10){ next(true); return; } try{ audio.currentTime = seekRatio*d; }catch(e){} }
+        // A 15-second tap before metadata wins over the original join point.
+        if(state.pendingSeek>0){ joinAt=state.pendingSeek; state.pendingSeek=0; joinRatio=0; }
+        if(joinRatio>0){
+          if(isFinite(d) && d>0){ if(state.live && joinRatio*d>=d-10){ next(true); return; } try{ audio.currentTime = joinRatio*d; }catch(e){} }
           return;
         }
-        if(isFinite(d) && d>0 && seekTo>=d-10){ next(true); return; } // catalog runtime longer than the file
-        try{ audio.currentTime = seekTo; }catch(e){}
+        if(isFinite(d) && d>0 && joinAt>=d-10){ next(true); return; } // catalog runtime longer than the file
+        try{ audio.currentTime = joinAt; }catch(e){}
       });
     }
     setMediaSession(r);
@@ -2291,21 +2319,59 @@
     if(audio.paused){ audio.play().catch(function(){}); }
     else { audio.pause(); }
   };
-  $('skipBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } if(state.queue.length){ state.errCount=0; next(false); } };
-  $('prevBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } if(state.queue.length){ state.errCount=0; prev(); } };
+  function refuseLiveSkip(){
+    if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return true; }
+    if(state.network==='scifi'){ toast('Sci-Fi stays on the clock'); return true; }
+    return false;
+  }
+  $('skipBtn').onclick = function(){ if(refuseLiveSkip()) return; if(state.queue.length){ state.errCount=0; next(false); } };
+  $('prevBtn').onclick = function(){ if(refuseLiveSkip()) return; if(state.queue.length){ state.errCount=0; prev(); } };
   $('vol').oninput = function(){ audio.volume = parseFloat(this.value); if(window.__listenotr) __listenotr.volume(audio.volume); save('otr_vol', this.value); };
 
   // ---- seeking: 15 second back/forward, the bar, arrow keys and Prev's restart all come through here ----
   // Any seek on a live channel leaves the broadcast clock (status says time-shifted); tap the station to rejoin.
   function offClock(){ if(state.live){ state.live=false; state.shifted=true; if(!audio.paused) setStatus('playing'); } }
-  function seekTo(sec){
-    var d=audio.duration||currentDur(); if(!d || !state.queue.length) return;
-    offClock();
-    audio.currentTime = Math.max(0, Math.min(d, sec));   // seeking to the end fires 'ended', which moves on
+  function liveTransportLocked(){ return state.network==='listenotr' || state.network==='scifi'; }
+  function fileDur(){
+    var d=audio.duration;
+    return (d && isFinite(d) && d>0) ? d : 0;
   }
-  function seekBy(delta){ if(audio.duration) seekTo((audio.currentTime||0)+delta); }
-  $('backBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } seekBy(-15); };
-  $('fwdBtn').onclick = function(){ if(state.network==='listenotr'){ toast('Listenotr Radio stays on the clock'); return; } seekBy(15); };
+  function seekTo(sec){
+    if(liveTransportLocked()) return;
+    var known=fileDur(), d=known||currentDur();
+    if(!d || !state.queue.length) return;
+    offClock();
+    var target=Math.max(0, Math.min(d, sec));
+    // Before the file reports a duration, currentTime is ignored. Hold the
+    // target until loadedmetadata. A join offset already waiting there must
+    // not replace a seek the listener just asked for.
+    if(known && audio.readyState>=1){
+      try{ audio.currentTime=Math.min(target, known); }catch(e){}
+      return;
+    }
+    state.pendingSeek=target;
+    if(audio._otrSeekWait) return;
+    audio._otrSeekWait=true;
+    var seekSrc=audio.src;
+    audio.addEventListener('loadedmetadata', function onSeek(){
+      audio.removeEventListener('loadedmetadata', onSeek);
+      audio._otrSeekWait=false;
+      if(audio.src!==seekSrc || liveTransportLocked()) return;
+      var want=state.pendingSeek; state.pendingSeek=0;
+      if(!(want>0)) return;
+      var real=fileDur(); if(!real) return;
+      if(state.live && want>=real-10){ next(true); return; }
+      try{ audio.currentTime=Math.min(want, Math.max(0, real-0.05)); }catch(e){}
+    });
+  }
+  function seekBy(delta){
+    if(liveTransportLocked()) return;
+    var base=audio.currentTime||0;
+    if(!(base>0) && state.pendingSeek>0) base=state.pendingSeek;
+    seekTo(base+delta);
+  }
+  $('backBtn').onclick = function(){ if(refuseLiveSkip()) return; seekBy(-15); };
+  $('fwdBtn').onclick = function(){ if(refuseLiveSkip()) return; seekBy(15); };
 
   // ---- episode links: ?e=<episode key>&t=<seconds into the story> ----
   // t is on the catalog timeline, so it lands at the same point whichever copy the listener plays.
@@ -2333,7 +2399,9 @@
   $('rateSel').value = String(state.rate);
   function applyRate(){
     try{ audio.preservesPitch = true; audio.webkitPreservesPitch = true; }catch(e){}
-    if(state.network==='listenotr'){
+    // A new file fires loadedmetadata, which calls this. Sci-Fi and Listenotr
+    // must stay at 1x across that load. The saved library speed is left alone.
+    if(state.network==='listenotr' || state.network==='scifi'){
       audio.defaultPlaybackRate = 1; audio.playbackRate = 1;
       return;
     }
@@ -2341,7 +2409,7 @@
     if(state.rate!==1) offClock();
   }
   $('rateSel').onchange = function(){
-    if(state.network==='listenotr'){ $('rateSel').value=String(state.rate); applyRate(); return; }
+    if(state.network==='listenotr' || state.network==='scifi'){ $('rateSel').value='1'; applyRate(); return; }
     state.rate = parseFloat(this.value)||1; save('otr_rate', String(state.rate)); applyRate();
   };
   audio.addEventListener('loadedmetadata', applyRate);
@@ -2451,11 +2519,11 @@
   });
   function currentDur(){ var it=currentItem(); if(it){ var s=byId[it.showId]; if(s&&s.eps[it.epIndex]) return s.eps[it.epIndex][2]; } return 0; }
   $('bar').onclick = function(ev){
-    if(state.network==='listenotr'){ ev.preventDefault(); return; }
-    var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=audio.duration||currentDur(); if(d) seekTo(p*d);
+    if(liveTransportLocked()){ ev.preventDefault(); return; }
+    var rect=this.getBoundingClientRect(); var p=(ev.clientX-rect.left)/rect.width; var d=fileDur()||currentDur(); if(d) seekTo(p*d);
   };
   ['pointerdown','mousedown','dragstart'].forEach(function(evName){
-    $('bar').addEventListener(evName, function(ev){ if(state.network==='listenotr'){ ev.preventDefault(); ev.stopPropagation(); } });
+    $('bar').addEventListener(evName, function(ev){ if(liveTransportLocked()){ ev.preventDefault(); ev.stopPropagation(); } });
   });
 
   function clearWatch(){ if(state.playWatch){ clearTimeout(state.playWatch); state.playWatch=null; } }
@@ -2538,7 +2606,9 @@
   function renderNowPlaying(){
     var it = currentItem(); if(!it){ return; }
     var r = resolve(it); if(!r) return;
-    $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false; $('backBtn').disabled=false; $('fwdBtn').disabled=false; $('linkBtn').disabled=!!r.isAd;
+    if(!liveTransportLocked()){
+      $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false; $('backBtn').disabled=false; $('fwdBtn').disabled=false; $('linkBtn').disabled=!!r.isAd;
+    }
     $('vizIdle').style.display='none';
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
     if(r.isAd) setNpEp(null, null, r.title==='Commercial'?'Vintage advertisement':r.title);
@@ -2549,8 +2619,12 @@
       more.style.display = (r.summary.length>210)?'block':'none'; sum.classList.remove('open'); more.textContent='show more';
     } else { sum.textContent=''; sum.style.display='none'; more.style.display='none'; }
     var arch=$('npArchive');
-    if(!r.isAd && r.show.ids && r.show.ids.length){
-      arch.innerHTML='▸ <a href="https://archive.org/details/'+encodeURIComponent(r.show.ids[0])+'" target="_blank" rel="noopener">all '+escapeHtml(r.show.name)+' episodes on archive.org</a>';
+    var itemId = (!r.isAd && r.show.ids && r.ep) ? r.show.ids[r.ep[3]] : '';
+    if(!itemId && !r.isAd && r.show.ids && r.show.ids.length) itemId = r.show.ids[0];
+    if(itemId){
+      var several = r.show.ids && r.show.ids.length>1;
+      var archLabel = several ? 'this episode on archive.org' : ('all '+escapeHtml(r.show.name)+' episodes on archive.org');
+      arch.innerHTML='▸ <a href="https://archive.org/details/'+encodeURIComponent(itemId)+'" target="_blank" rel="noopener">'+archLabel+'</a>';
       arch.style.display='block';
     } else arch.style.display='none';
     // up next
@@ -5707,8 +5781,9 @@
     if(e.key===' '||e.key==='Spacebar'){ e.preventDefault(); $('playBtn').click(); }
     else if(e.key==='n'||e.key==='N'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; next(false); } }
     else if(e.key==='p'||e.key==='P'){ if(state.queue.length){ e.preventDefault(); state.errCount=0; prev(); } }
-    else if(e.key==='ArrowRight'){ if(audio.duration){ e.preventDefault(); seekBy(15); } }
-    else if(e.key==='ArrowLeft'){ if(audio.duration){ e.preventDefault(); seekBy(-15); } }
+    else if(e.key==='ArrowRight' || e.key==='ArrowLeft'){
+      if(fileDur() || currentDur()){ e.preventDefault(); seekBy(e.key==='ArrowRight' ? 15 : -15); }
+    }
   });
 
   // ---- headless test hook (see scripts/test_otr.py), mirrors window.__dx / __emu ----
