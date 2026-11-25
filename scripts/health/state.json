@@ -854,6 +854,13 @@
      "live-site-truncates-large-responses-intermittently"
     ],
     "note": "NOTHING new needs James tonight. The night's one visible defect is an unchanged recurrence of an item whose fix is already an open decision with him, and the CI broken list moved by zero entries. Every other open item is unchanged in substance. The brief's Step 6 quiet-night branch applies for the FIFTH consecutive night."
+   },
+   "post_push": {
+    "commit": "634e336",
+    "pushed": "2026-11-25T05:14Z, state.json only, 99 insertions 34 deletions, no site code touched.",
+    "deploy_result": "LANDED AND VERIFIED. Waited about six minutes, then re-measured all three surfaces in a real browser. /api/health returned status ok with a fresh timestamp 2026-11-25T05:21:00Z. Main dashboard: correct title, #root has 1 child. /cyber/: 8 .panel-body, ZERO .feed-error, zero leftover .loading. /aethersdr/: 6 .panel-body, ZERO .feed-error, zero leftover .loading, #aboutVersion still 'v0.5.5' as expected. ZERO non-200 responses across all three post-deploy loads. No revert needed.",
+    "restart_evidence": "POSITIVE PROOF the deploy actually landed, obtained without reading the workflow log (api.github.com is blocked), using the corollary in empty-feedproxy-cache-signals-a-backend-restart. The backend cache was reset between the pre-push and post-deploy reads: cached spots fell from 500 at 05:04Z to 131 at 05:21Z, and the 'contests' key that was present at 05:04Z is gone at 05:22Z. Every feedproxy key now in /api/debug is attributable to the post-deploy verification loads themselves, including an NVD key whose pubStartDate is stamped 05:21:10 rather than the 05:04:57 of the pre-push sweep. Since Cache.keys() never evicts, a shrunken key set can only mean the container restarted. That is this run's own exercise of the deploy lever and it worked, which also closes the deploy_tripwire gap noted above for tonight.",
+    "cold_cache_note": "sat_tles 0 and pota_spots 0 again in the post-deploy /api/health read. That is EXPECTED and is NOT a regression: the restart emptied the caches, and health-metric-cold-cache covers exactly this. Both data paths were proven healthy earlier in the run by direct probes of /api/pota and /api/satellites/positions."
    }
   }
  ],
