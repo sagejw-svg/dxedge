@@ -33,13 +33,20 @@ const samples = [
   ['x-minus-one', 'The Roads Must Roll', '04 Jan 1956'],
   ['x-minus-one', 'Bad Medicine', '10 Jul 1956'],
   ['x-minus-one', 'Tunnel Under The World', '04 Sep 1956'],
-  ['x-minus-one', 'Surface Tension', '28 Aug 1956']
+  ['x-minus-one', 'Surface Tension', '28 Aug 1956'],
+  ['gunsmoke', 'Post Martin', '13 Dec 1952'],
+  ['gunsmoke', 'The Brothers', '06 Sep 1952'],
+  ['gunsmoke', 'The Brothers', '30 Sep 1956']
 ];
 for (const [show, title, date] of samples) {
   const row = ep(show, title, date);
   ck(show + ' catalog keeps ' + title, !!row && row[1] === date, row && row[1]);
   ck(title + ' label', air.withAirDate(title, row && row[1]) === title + ' · ' + date, air.withAirDate(title, row && row[1]));
 }
+
+const sky = catalog.shows.find((s) => s.id === 'gunsmoke').eps.find((e) => e[0] === 'Sky rehearsal');
+ck('Sky rehearsal date stays blank', !!sky && sky[1] === '', sky && sky[1]);
+ck('blank gunsmoke date stays off the label', air.withAirDate('Sky rehearsal', sky && sky[1]) === 'Sky rehearsal');
 
 ck('ISO date matches the catalog spelling', air.formatAirDate('1950-04-08').text === '08 Apr 1950');
 ck('ISO date has no time-zone shift in the text', air.formatAirDate('1950-04-08').text === air.formatAirDate('08 Apr 1950').text);
