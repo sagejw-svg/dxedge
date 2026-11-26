@@ -919,9 +919,11 @@
     "note": "NOTHING new needs James tonight. The night's one visible defect is an unchanged recurrence of an item whose fix is already an open decision with him, and both CI lists moved by zero entries. Every other open item is unchanged in substance. The brief's Step 6 quiet-night branch applies for the SIXTH consecutive night: no email, no notification, state written and pushed."
    },
    "post_push": {
-    "commit": "PENDING, filled in by the post-deploy follow-up commit",
-    "pushed": "state.json only, no site code touched.",
-    "deploy_result": "see the follow-up entry appended after the deploy was verified"
+    "commit": "fa447e1",
+    "pushed": "2026-11-26T05:08Z, state.json only, 96 insertions 33 deletions, no site code touched.",
+    "deploy_result": "LANDED AND VERIFIED, and FASTER than any prior night on record. Waited and polled /api/debug at 30s intervals; the restart signal was already present on the FIRST poll at 05:11:41Z, roughly three minutes after the push, so the 6-to-10-minute figure in the brief is a ceiling rather than a floor for a state-file-only commit. All three surfaces were then re-measured in a real browser. /api/health returned status ok with a fresh timestamp 2026-11-26T05:13:12Z. Main dashboard: correct title, #root has 1 child, zero non-200. /cyber/: 8 .panel-body, ZERO .feed-error, zero leftover .loading, zero non-200. /aethersdr/: 6 .panel-body, ZERO .feed-error, zero leftover .loading, zero non-200, #aboutVersion still 'v0.5.5' as expected. ZERO non-200 responses across all three post-deploy loads. No revert needed.",
+    "restart_evidence": "POSITIVE PROOF the deploy actually landed, obtained without reading the workflow log (api.github.com is blocked), using empty-feedproxy-cache-signals-a-backend-restart. The backend cache was reset between the pre-push and post-deploy reads: cache_keys fell from TEN keys plus the fifteen feedproxy keys the cyber sweep had warmed (solar, spots, three psk grid keys, prev_sfi_alert, contests, rec_CM95_108_2, dashboard_CM95, voacap_summary_CM95_108_2) down to just TWO at 05:11:41Z (solar, spots), and cached spots fell from 500 at 05:04Z to 456 at 05:13Z. Since Cache.keys() never evicts, a shrunken key set can only mean the container restarted. That is this run's own exercise of the deploy lever and it worked, which also closes the deploy_tripwire gap noted above for tonight.",
+    "cold_cache_note": "sat_tles 0 and pota_spots 0 again in the post-deploy /api/health read. That is EXPECTED and is NOT a regression: the restart emptied the caches, and health-metric-cold-cache covers exactly this. Both data paths were proven healthy earlier in the run by direct probes of /api/pota and /api/satellites/positions, which returned live data."
    }
   }
  ],
