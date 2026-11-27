@@ -241,12 +241,37 @@ with sync_playwright() as p:
       __otr.adv.lamp.render(8000 + 16);
       __otr.adv.lamp.render(8000 + 4000);
       const afterHold = __otr.adv.lamp.bedtime().t;
+      // Phone frames are often 40-50ms. Those used to be thrown away (anything
+      // over 1/30s), so the wax sat still. Pause does not stop the clock.
+      let now = 400000;
+      function span(step, n) {
+        __otr.adv.lamp.set({ col: 'classic', on: true, motion: 'auto' });
+        __otr.adv.lamp.reset(11);
+        const t0 = __otr.adv.lamp.state().t;
+        now += 2000;
+        __otr.adv.lamp.render(now);
+        for (let i = 0; i < n; i++) { now += step; __otr.adv.lamp.render(now); }
+        return +(__otr.adv.lamp.state().t - t0).toFixed(3);
+      }
+      const phone = span(40, 30);
+      const slow = span(50, 30);
+      const desk = span(16, 40);
+      __otr.adv.lamp.set({ col: 'bedtime', motion: 'slow', on: true });
+      const b0 = __otr.adv.lamp.bedtime().clock(2);
+      now += 2000;
+      __otr.adv.lamp.render(now);
+      __otr.adv.lamp.render(now + 40);
+      const bed = +(__otr.adv.lamp.bedtime().t - b0).toFixed(3);
       __otr.adv.tv.close();
-      return { osc, steps, spike: +spike.toFixed(4), gap, heldT, afterHold };
+      return { osc, steps, spike: +spike.toFixed(4), gap, heldT, afterHold, phone, slow, desk, bed,
+        paused: document.getElementById('audio').paused };
     }""")
     ck("bedtime wax does not blink or jump across a full two-minute cycle", cont["osc"] == 0 and cont["spike"] < 0.05, cont)
     ck("a 30s stall does not fast-forward the drift", abs(cont["gap"]) < 0.001, cont)
     ck("hold still across frames does not move the clock", abs(cont["afterHold"] - cont["heldT"]) < 0.001, cont)
+    ck("a phone-paced frame still moves the wax, and pause does not stop it",
+       cont["paused"] and cont["phone"] > 0.4 and cont["slow"] > 0.4 and cont["desk"] > 0.4 and 0.03 <= cont["bed"] <= 0.05,
+       cont)
 
     # The physics lamp's grid used to follow the wax, so the outline chattered.
     phys = pg.evaluate("""async () => {

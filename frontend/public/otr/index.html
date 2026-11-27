@@ -4624,9 +4624,12 @@
   function lampGap(now, prev){
     if(!prev) return 0;
     var raw=(now-prev)/1000;
-    // A hidden tab, a stalled frame, or a clock jump must not fast-forward the wax.
-    if(!(raw>0) || raw>1/30) return 0;
-    return raw;
+    // A hidden tab or a clock jump must not fast-forward the wax. A slow frame
+    // is not a stall: a phone often paints this lamp slower than 30fps, and
+    // throwing away every gap over 1/30s left the wax frozen, paused or playing.
+    // One late frame still cannot leap, and a gap of a second or more is a stall.
+    if(!(raw>0) || raw>1) return 0;
+    return raw>0.1 ? 0.1 : raw;
   }
   function lampTick(now){
     if(bedtimeOn()){
