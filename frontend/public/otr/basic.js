@@ -53,11 +53,26 @@
     var consoleEl = $('console');
     var idle = !consoleEl || consoleEl.classList.contains('idle');
     var audio = $('audio');
+    var yt = $('otrNowYt');
+    function showYt(on) {
+      if (!yt) return;
+      var src = $('npYt');
+      var link = src && src.style.display !== 'none' && src.querySelector('a');
+      var live = window.__otr && __otr.state && __otr.state.network === 'listenotr';
+      if (on && !live && link && link.getAttribute('href')) {
+        yt.href = link.href;
+        yt.hidden = false;
+      } else {
+        yt.hidden = true;
+        yt.removeAttribute('href');
+      }
+    }
     if (idle) {
       showEl.textContent = 'Nothing playing yet';
       if (epEl) epEl.textContent = '';
       if (nextEl) nextEl.textContent = 'Pick a show below, or listen live';
       if (play) play.hidden = true;
+      showYt(false);
       return;
     }
     showEl.textContent = plain($('npShow')) || 'Now playing';
@@ -68,11 +83,12 @@
       play.hidden = false;
       play.textContent = (audio && !audio.paused) ? 'Pause' : 'Play';
     }
+    showYt(true);
   }
 
   function watchNow() {
     var obs = new MutationObserver(syncNow);
-    ['npShow', 'npEp', 'upnext'].forEach(function (id) {
+    ['npShow', 'npEp', 'upnext', 'npYt'].forEach(function (id) {
       var el = $(id);
       if (el) obs.observe(el, { childList: true, characterData: true, subtree: true });
     });
