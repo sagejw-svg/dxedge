@@ -606,11 +606,11 @@
   var path = location.pathname;
   var base = /\/otr(\/|$)/.test(path) ? '/otr/' : path.replace(/[^/]*$/, '');
   window.__OTR_ASSET_BASE = base;
-  document.write('<link rel="stylesheet" href="' + base + 'basic.css?v=1">');
+  document.write('<link rel="stylesheet" href="' + base + 'basic.css?v=2">');
   document.write('<link rel="stylesheet" href="' + base + 'latenight/link.css?v=1">');
   document.write('<script src="' + base + 'mode.js?v=1"><\/script>');
-  document.write('<script src="' + base + 'live/listenotr-radio.js?v=5"><\/script>');
-  document.write('<script src="' + base + 'live/scifi/scifi-live.js?v=3"><\/script>');
+  document.write('<script src="' + base + 'live/listenotr-radio.js?v=7"><\/script>');
+  document.write('<script src="' + base + 'live/scifi/scifi-live.js?v=4"><\/script>');
 })();
 </script>
 <script>
@@ -666,6 +666,7 @@
         <div class="otr-kicker">Now playing</div>
         <div class="otr-now-show" id="otrNowShow">Nothing playing yet</div>
         <div class="otr-now-ep" id="otrNowEp"></div>
+        <a class="otr-now-yt" id="otrNowYt" hidden target="_blank" rel="noopener">Watch on YouTube</a>
       </div>
       <div class="otr-now-col">
         <div class="otr-kicker">Up next</div>
@@ -709,6 +710,7 @@
         <div class="summary" id="npSummary"></div>
         <div class="more" id="npMore">show more</div>
         <div class="np-archive" id="npArchive"></div>
+        <div class="np-archive" id="npYt"></div>
 
         <div class="seek">
           <span class="time" id="tCur">0:00</span>
@@ -1104,6 +1106,31 @@
   function shuffleArr(a, rnd){ rnd=rnd||Math.random; for(var i=a.length-1;i>0;i--){ var j=Math.floor(rnd()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
   function epUrl(show, ep){ return CAT.prefix + show.ids[ep[3]] + '/' + ep[4]; }
+  // Episode rows: [title, airdate, seconds, archive index, filename, youtubeId?].
+  // youtubeId is optional. A row has one only when that broadcast has a known video.
+  function epYoutube(ep){
+    var id = ep && typeof ep[5] === 'string' ? ep[5] : '';
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
+  }
+  function paintYoutube(ep, isAd){
+    var el = $('npYt'); if(!el) return;
+    var id = !isAd && epYoutube(ep);
+    if(!id){
+      if(el.style.display !== 'none' || el.firstChild){ el.style.display = 'none'; el.textContent = ''; }
+      if(el.dataset.id) delete el.dataset.id;
+      return;
+    }
+    if(el.dataset.id === id && el.firstChild){ el.style.display = 'block'; return; }
+    el.dataset.id = id;
+    el.textContent = '';
+    var a = document.createElement('a');
+    a.href = 'https://www.youtube.com/watch?v=' + id;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Watch on YouTube';
+    el.appendChild(a);
+    el.style.display = 'block';
+  }
   function summaryFor(showId, epIndex){ if(SUMMAP && SUMMAP[showId]) return SUMMAP[showId][epIndex] || ''; return ''; }
 
   // Resolve data files against the player's directory so /otr (no slash), /otr/ and
@@ -1897,6 +1924,9 @@
       $('npShow').textContent = a.kind==='break' ? 'Listenotr Radio (Live)' : show;
       if(a.kind==='break') setNpEp(null, null, a.line||'Station break');
       else setNpEp(a.title||'', a.date);
+      var liveShow = (a.kind==='show' && a.showId) ? byId[a.showId] : null;
+      var liveEp = liveShow && a.epIndex != null ? liveShow.eps[a.epIndex] : null;
+      paintYoutube(liveEp, a.kind!=='show');
       if($('upnext')) $('upnext').innerHTML = a.nextShow ? ('<b>up next</b> &nbsp;'+escapeHtml(a.nextShow)+(a.nextTitle?' - '+epHtml(a.nextTitle, a.nextDate):'') ) : '';
       $('vizIdle').style.display='none';
       $('playBtn').disabled=false;
@@ -2536,13 +2566,15 @@
 
   // ---- now playing render ----
   function renderNowPlaying(){
-    var it = currentItem(); if(!it){ return; }
+    var it = currentItem();
+    if(!it){ if(state.network!=='listenotr') paintYoutube(null, true); return; }
     var r = resolve(it); if(!r) return;
     $('playBtn').disabled=false; $('skipBtn').disabled=false; $('prevBtn').disabled=false; $('backBtn').disabled=false; $('fwdBtn').disabled=false; $('linkBtn').disabled=!!r.isAd;
     $('vizIdle').style.display='none';
     $('npShow').textContent = r.isAd ? 'Commercial Break' : r.show.name;
     if(r.isAd) setNpEp(null, null, r.title==='Commercial'?'Vintage advertisement':r.title);
     else setNpEp(r.title, r.date);
+    paintYoutube(r.ep, !!r.isAd);
     renderSlotLine(state.network && it.net ? it : null);
     var sum = $('npSummary'), more=$('npMore');
     if(r.summary){ sum.textContent = r.summary; sum.style.display='block';
@@ -5893,7 +5925,7 @@
 })();
 </script>
 <script src="/lib/stat.js"></script>
-<script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'basic.js?v=1"><\/script>');</script>
+<script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'basic.js?v=2"><\/script>');</script>
 <script>document.write('<script src="' + (window.__OTR_ASSET_BASE || '/otr/') + 'player.js?v=1"><\/script>');</script>
 </body>
 </html>

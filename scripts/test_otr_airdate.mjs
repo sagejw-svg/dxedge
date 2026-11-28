@@ -44,6 +44,40 @@ for (const [show, title, date] of samples) {
   ck(title + ' label', air.withAirDate(title, row && row[1]) === title + ' · ' + date, air.withAirDate(title, row && row[1]));
 }
 
+// Broadcast numbers 10-24. Matched by catalog title and air date.
+// Cold Equations and Childs Play keep the catalog spelling.
+const YT = [
+  ['Nightmare', '21 Jul 1955', 'DBwxJavF8MA'],
+  ['The Embassy', '28 Jul 1955', '_tdJVxxMSQY'],
+  ['The Veldt', '04 Aug 1955', 'ytWyBQ3HplU'],
+  ['Almost Human', '11 Aug 1955', 'wlE1PszwZfM'],
+  ['Courtesy', '18 Aug 1955', 'MOkkk_rmGoY'],
+  ['Cold Equations', '25 Aug 1955', 'kyLeTnXU9lA'],
+  ['Shanghaied', '01 Sep 1955', 'WeJlYfA41Ts'],
+  ['The Martian Death March', '08 Sep 1955', '7HwsneMv5yc'],
+  ['The Castaways', '15 Sep 1955', 'ZfGVi44l2rU'],
+  ['And The Moon Be Still As Bright', '22 Sep 1955', 'nBvpmv1JiSc'],
+  ['First Contact', '06 Oct 1955', 'aBhv5lX9ei4'],
+  ['Childs Play', '20 Oct 1955', '9tdbuHA-Gs0'],
+  ['Requiem', '27 Oct 1955', 'E1hHJSBmrZg'],
+  ['Hello Tomorrow', '03 Nov 1955', 'lo7kJHvYkKg'],
+  ['Dwellers In Silence', '10 Nov 1955', 'tNwOkbH1bnI']
+];
+const ytIds = new Set(YT.map((row) => row[2]));
+for (const [title, date, id] of YT) {
+  const row = ep('x-minus-one', title, date);
+  ck(title + ' ' + date + ' youtube id', !!row && row[5] === id, row && row[5]);
+}
+const helloRepeat = ep('x-minus-one', 'Hello Tomorrow', '29 Feb 1956');
+ck('Hello Tomorrow repeat has no youtube id', !!helloRepeat && helloRepeat.length === 5, helloRepeat && helloRepeat.length);
+let strayYt = 0;
+for (const show of catalog.shows) {
+  for (const row of show.eps) {
+    if (row[5] != null && (!ytIds.has(row[5]) || !/^[A-Za-z0-9_-]{11}$/.test(row[5]))) strayYt++;
+  }
+}
+ck('youtube ids are only these fifteen X Minus One videos', strayYt === 0 && ytIds.size === 15, strayYt);
+
 const sky = catalog.shows.find((s) => s.id === 'gunsmoke').eps.find((e) => e[0] === 'Sky rehearsal');
 ck('Sky rehearsal date stays blank', !!sky && sky[1] === '', sky && sky[1]);
 ck('blank gunsmoke date stays off the label', air.withAirDate('Sky rehearsal', sky && sky[1]) === 'Sky rehearsal');

@@ -87,6 +87,9 @@ html[data-otr-mode="player"] #otr-basic { display: none !important; }
 .otr-now-show { font-size: 18px; color: #fff; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
 .otr-now-ep, .otr-now-next { color: var(--amber2); font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
 .otr-now-ep:empty { display: none; }
+.otr-now-yt { display: inline-block; margin-top: 4px; color: var(--muted); font-size: 12px; text-decoration: none; }
+.otr-now-yt:hover { color: var(--amber); text-decoration: underline; }
+.otr-now-yt[hidden] { display: none; }
 .otr-mini {
   border: 1px solid var(--amber); background: var(--amber); color: #1a1200; border-radius: 10px;
   min-height: 46px; min-width: 92px; padding: 8px 16px; font-family: var(--font-mono);

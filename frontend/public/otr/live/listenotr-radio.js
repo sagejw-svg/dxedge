@@ -392,6 +392,13 @@
   }
 
   function epUrl(show, ep){ return CAT.prefix + show.ids[ep[3]] + '/' + ep[4]; }
+  // Optional sixth catalog field: the YouTube id for this broadcast, when one is known.
+  function epYoutubeId(showId, epIndex){
+    var show = byId[showId];
+    var ep = show && show.eps && show.eps[epIndex];
+    var id = ep && typeof ep[5] === 'string' ? ep[5] : '';
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
+  }
   function choose(list, rnd){
     if (!list.length) return null;
     return list[Math.floor(rnd() * list.length)];
@@ -1032,6 +1039,15 @@
     text('lrKicker', a.kind === 'break' ? 'Station break' : 'Now playing');
     text('lrShow', a.kind === 'break' ? 'Listenotr Radio' : (a.show || ''));
     text('lrEp', a.kind === 'break' ? (a.line || '') : airTitle(a.title || '', a.date));
+    var ytEl = $('lrYt');
+    if (ytEl) {
+      var yid = a.kind === 'show' ? epYoutubeId(a.showId, a.epIndex) : '';
+      if (yid) {
+        var href = 'https://www.youtube.com/watch?v=' + yid;
+        if (ytEl.getAttribute('href') !== href) ytEl.setAttribute('href', href);
+        if (ytEl.hidden) ytEl.hidden = false;
+      } else if (!ytEl.hidden) ytEl.hidden = true;
+    }
     text('lrMeta', a.label || '');
     var frac = a.dur > 0 ? Math.max(0, Math.min(1, a.offset / a.dur)) : 0;
     var fill = $('lrFill');
@@ -1164,6 +1180,9 @@
     '#otr-live .lr-k{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#7c7c7c;margin-top:18px;}',
     '#otr-live .lr-show{font-size:22px;color:#fff;font-weight:600;line-height:1.3;margin-top:4px;}',
     '#otr-live .lr-ep{color:#ffd08a;font-size:15px;line-height:1.4;margin-top:2px;}',
+    '#otr-live .lr-yt{display:inline-block;margin-top:6px;color:#a6a6a6;font-size:12px;text-decoration:none;}',
+    '#otr-live .lr-yt:hover{color:#ffd08a;text-decoration:underline;}',
+    '#otr-live .lr-yt[hidden]{display:none;}',
     '#otr-live .lr-meta{color:#7c7c7c;font-size:12px;margin-top:4px;}',
     '#otr-live .lr-bar{height:6px;border-radius:3px;background:#1c1c1c;margin-top:12px;pointer-events:none;cursor:default;touch-action:none;}',
     '#otr-live .lr-bar i{display:block;height:100%;width:0;background:#ffb347;border-radius:3px;}',
@@ -1206,6 +1225,7 @@
     '<div class="lr-k" id="lrKicker">Now playing</div>',
     '<div id="lrLive" aria-live="polite"><div class="lr-show" id="lrShow">Tuning the lineup…</div>',
     '<div class="lr-ep" id="lrEp"></div></div>',
+    '<a class="lr-yt" id="lrYt" target="_blank" rel="noopener" hidden>Watch on YouTube</a>',
     '<div class="lr-meta" id="lrMeta"></div>',
     '<div class="lr-bar" id="lrBar" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-label="Elapsed. The broadcast stays on the clock."><i id="lrFill"></i></div>',
     '<div class="lr-left" id="lrLeft"></div>',

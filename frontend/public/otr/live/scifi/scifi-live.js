@@ -116,6 +116,43 @@
     return (typeof d === 'number' && d > 0) ? d : 1800;
   }
   function epUrl(show, ep) { return CAT.prefix + show.ids[ep[3]] + '/' + ep[4]; }
+  function episodeYoutube(showId, epIndex) {
+    var show = byId[showId];
+    var ep = show && show.eps && epIndex != null && show.eps[epIndex];
+    var id = ep && typeof ep[5] === 'string' ? ep[5] : '';
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
+  }
+  function fillNpYt(air) {
+    var el = document.getElementById('npYt');
+    if (!el) return;
+    var id = air && air.kind === 'show' ? episodeYoutube(air.showId, air.epIndex) : '';
+    if (!id) {
+      el.style.display = 'none';
+      el.textContent = '';
+      delete el.dataset.id;
+      return;
+    }
+    if (el.dataset.id === id && el.firstChild) { el.style.display = 'block'; return; }
+    el.dataset.id = id;
+    el.textContent = '';
+    var a = document.createElement('a');
+    a.href = 'https://www.youtube.com/watch?v=' + id;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Watch on YouTube';
+    el.appendChild(a);
+    el.style.display = 'block';
+  }
+  function fillSfYt(air) {
+    var el = document.getElementById('sfYt');
+    if (!el) return;
+    var id = air && air.kind === 'show' ? episodeYoutube(air.showId, air.epIndex) : '';
+    if (id) {
+      var href = 'https://www.youtube.com/watch?v=' + id;
+      if (el.getAttribute('href') !== href) el.setAttribute('href', href);
+      if (el.hidden) el.hidden = false;
+    } else if (!el.hidden) el.hidden = true;
+  }
 
   function clipOf(f) {
     return {
@@ -705,6 +742,7 @@
     if (sum) sum.style.display = 'none';
     if (more) more.style.display = 'none';
     if (arch) arch.style.display = 'none';
+    fillNpYt(air);
     var idle = document.getElementById('vizIdle');
     if (idle) idle.style.display = 'none';
     paintProgress();
@@ -897,6 +935,9 @@
     '#otr-scifi .sf-k{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#7c7c7c;margin-top:18px;}',
     '#otr-scifi .sf-show{font-size:22px;color:#fff;font-weight:600;margin-top:4px;}',
     '#otr-scifi .sf-ep{color:#ffd08a;font-size:15px;margin-top:2px;}',
+    '#otr-scifi .sf-yt{display:inline-block;margin-top:6px;color:#a6a6a6;font-size:12px;text-decoration:none;}',
+    '#otr-scifi .sf-yt:hover{color:#ffd08a;text-decoration:underline;}',
+    '#otr-scifi .sf-yt[hidden]{display:none;}',
     '#otr-scifi .sf-bar{height:6px;border-radius:3px;background:#1c1c1c;margin-top:12px;pointer-events:none;}',
     '#otr-scifi .sf-bar i{display:block;height:100%;width:0;background:#ffb347;border-radius:3px;}',
     '#otr-scifi .sf-left{color:#a6a6a6;font-size:12px;margin-top:4px;}',
@@ -932,6 +973,7 @@
       '<div class="sf-k" id="sfKicker">Now playing</div>',
       '<div class="sf-show" id="sfShow">Tuning the lineup...</div>',
       '<div class="sf-ep" id="sfEp"></div>',
+      '<a class="sf-yt" id="sfYt" target="_blank" rel="noopener" hidden>Watch on YouTube</a>',
       '<div class="sf-bar" id="sfBar" title="' + TIP + '"><i id="sfFill"></i></div>',
       '<div class="sf-left" id="sfLeft"></div>',
       '<div class="sf-k">Up next</div><div class="sf-ep" id="sfNext"></div>',
@@ -1033,6 +1075,7 @@
     if (kick) kick.textContent = air.kind === 'break' ? 'Station break' : 'Now playing';
     if (show) show.textContent = air.kind === 'break' ? 'Sci-Fi (Live)' : (air.show || '');
     if (ep) ep.textContent = air.kind === 'break' ? (air.cue && air.cue.text ? air.cue.text : 'Station break') : airTitle(air.title || '', air.date);
+    fillSfYt(air);
     if (next) next.textContent = air.nextShow ? (air.nextShow + (air.nextTitle ? ' - ' + airTitle(air.nextTitle, air.nextDate) : '')) : '';
     paintProgress();
     paintTransport();
